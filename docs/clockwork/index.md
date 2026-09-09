@@ -5,7 +5,7 @@ package: clockwork
 category: state
 keywords: [state-machine, finite-state, typed, actor, async-tasks]
 related: [herald, ripple, ward]
-exports: [defineMachine, ClockworkError, Machine, Actor, MachineConfig, MachineSnapshot, TransitionResult]
+exports: [defineMachine, ClockworkError, Machine, Actor, MachineConfig, MachineSnapshot]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -116,10 +116,10 @@ actor.send({ type: 'INC' });
 - **`machine.transition()`** — evaluates a transition without actor runtime work.
 - **`machine.createActor()`** — creates isolated, disposable runtime ownership.
 - **`reduce`** — returns a replacement context from a transition.
-- **`effects`** — run only after the actor commits and notifies subscribers.
+- **`effects`** — run after commit and stable subscriber notification.
 - **`invoke`** — runs cancellable asynchronous work on state entry.
 - **`after`** — schedules cancellable delayed transitions.
-- **`actor.snapshot`** — exposes the current readonly state/context value.
+- **`actor.snapshot`** — exposes the current shallow-frozen state/context value.
 
 </div>
 

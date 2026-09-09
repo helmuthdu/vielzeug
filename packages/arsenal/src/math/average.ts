@@ -12,16 +12,11 @@ import { sum } from './sum';
  *
  * @param array - The array to average.
  * @param callback - (optional) A callback function to map each item to a number.
- * @returns The average, or `undefined` if the array is empty or contains non-numeric values.
+ * @returns The average, or `undefined` if the array is empty.
+ * @throws {TypeError} If a value is not a finite number.
  */
-export function average<T>(array: T[], callback?: (item: T) => number): number | undefined {
+export function average<T>(array: readonly T[], callback?: (item: T) => number): number | undefined {
   if (array.length === 0) return undefined;
 
-  try {
-    const result = sum(array, callback) / array.length;
-
-    return Number.isNaN(result) ? undefined : result;
-  } catch {
-    return undefined;
-  }
+  return sum(array, callback) / array.length;
 }

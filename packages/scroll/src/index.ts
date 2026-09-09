@@ -31,6 +31,7 @@ export { createGroupedVirtualizer } from './grouped-virtualizer';
 export type {
   MeasurementCache,
   Overscan,
+  ScrollStore,
   ScrollTarget,
   ScrollToIndexOptions,
   VirtualItem,

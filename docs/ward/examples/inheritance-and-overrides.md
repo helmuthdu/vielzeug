@@ -1,37 +1,34 @@
 ---
-title: 'Ward Examples — Priority and Overrides'
-description: 'Use rule priority to override a broad staff permission for suspended users.'
+title: 'Ward Examples — Ordered Overrides'
+description: 'Express authorization overrides through rule order.'
 ---
 
-## Priority and Overrides
+## Ordered Overrides
 
 ### Problem
 
-Suspend a user without removing their broader staff role or rewriting every staff rule.
+A suspended role must override a broader staff role.
 
 ### Solution
 
-Add a more specific deny rule with a higher priority than the normal staff allow rule.
+A suspended-user deny must appear before the normal staff allow.
 
 ```ts
-import { createWard } from '@vielzeug/ward';
+import { allow, createWard, deny } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'staff', resource: 'posts', action: 'read', effect: 'allow', priority: 10 },
-  { role: 'suspended', resource: 'posts', action: 'read', effect: 'deny', priority: 100 },
+  deny('suspended', 'posts', ['read']),
+  allow('staff', 'posts', ['read']),
 ]);
 
-ward.explain({ principal: { id: 'u1', roles: ['staff', 'suspended'] }, resource: 'posts', action: 'read' }).allowed; // false
-ward.explain({ principal: { id: 'u2', roles: ['staff'] }, resource: 'posts', action: 'read' }).allowed; // true
+ward.decide({ action: 'read', principal: { id: 'u1', roles: ['staff', 'suspended'] }, resource: 'posts' }).effect; // deny
+ward.decide({ action: 'read', principal: { id: 'u2', roles: ['staff'] }, resource: 'posts' }).effect; // allow
 ```
 
 ### Pitfalls
 
-- Higher priority wins before effect; deny only breaks otherwise equal precedence.
-- Keep priority values intentional and documented rather than relying on declaration order.
+There is no priority score; declaration order is the complete precedence model.
 
 ### Related
 
-- [Rule Specificity](./disabling-wildcard-fallback.md)
-- [Trace a Decision](./trace-decision.md)
-- [Conflict Detection](./conflict-detection.md)
+- [Wildcard exceptions](./disabling-wildcard-fallback.md)

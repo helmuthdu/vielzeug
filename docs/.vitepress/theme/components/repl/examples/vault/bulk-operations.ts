@@ -1,12 +1,18 @@
 export const bulkOperationsExample = {
-  code: `import { table } from '@vielzeug/vault'
+  code: `import { s } from '@vielzeug/spell'
+import { table } from '@vielzeug/vault'
 import { createLocalStorage } from '@vielzeug/vault/local-storage'
 
+const ItemSchema = s.object({ id: s.number(), value: s.number() })
 const schema = {
   items: table('id'),
 }
 
-const db = createLocalStorage({ name: 'bulk-demo', schema })
+const db = createLocalStorage({
+  name: 'bulk-demo',
+  schema,
+  codecs: { items: ItemSchema },
+})
 
 const items = Array.from({ length: 10 }, (_, index) => ({
   id: index + 1,
@@ -24,11 +30,13 @@ console.log('getMany [1, 99, 3]:', first?.id, missing, third?.id)
 const deleted = await db.deleteMany('items', [1, 2, 3, 99])
 console.log('deleteMany [1,2,3,99] deleted:', deleted) // 3 (99 did not exist)
 
-// query-based delete for filter-driven removal
-const queryDeleted = await db.query('items').filter((item) => item.id <= 6).delete()
-console.log('Query-deleted items with id ≤ 6:', queryDeleted)
+// filter-driven removal: getAll + filter + deleteMany
+const remaining = await db.getAll('items')
+const toDelete = remaining.filter((item) => item.id <= 6).map((item) => item.id)
+const queryDeleted = await db.deleteMany('items', toDelete)
+console.log('Deleted items with id ≤ 6:', queryDeleted)
 
-console.log('Remaining count:', await db.query('items').count())
-console.log('First remaining item:', await db.query('items').orderBy('id', 'asc').first())`,
+console.log('Remaining count:', await db.count('items'))
+console.log('First remaining item:', (await db.getAll('items')).sort((a, b) => a.id - b.id)[0])`,
   name: 'Bulk Operations',
 };

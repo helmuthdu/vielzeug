@@ -1,18 +1,18 @@
-import { CourierError } from './errors';
+import { CourierError, classifyRequestError } from './errors.js';
 
 /**
- * Immutable request context passed through the interceptor pipeline.
+ * Immutable request context passed through the middleware pipeline.
  *
  * **Never mutate `init` or `headers` directly.** Use `ctx.withHeaders(updates)` to
  * produce a new context with merged headers — this is the safe, idiomatic pattern
- * for interceptors that need to add or override headers.
+ * for middleware that needs to add or override headers.
  *
  * @example
  * ```ts
  * // Correct — returns a new context
  * return next(ctx.withHeaders({ authorization: `Bearer ${token}` }));
  *
- * // Wrong — mutates shared state, risks stomping other interceptors
+ * // Wrong — mutates shared state, risks stomping other middleware
  * ctx.init.headers = { ...ctx.init.headers, authorization: `Bearer ${token}` };
  * ```
  */
@@ -21,7 +21,9 @@ export type FetchContext = {
   readonly init: Readonly<Omit<RequestInit, 'headers'>>;
   readonly url: string;
   /** Returns a new `FetchContext` with the given header overrides merged in (lowercase keys). */
-  withHeaders(updates: Record<string, string>): FetchContext;
+  withHeaders(updates: Record<string, string | undefined>): FetchContext;
+  /** Returns a new context with fetch-init overrides. */
+  withInit(updates: Partial<Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>>): FetchContext;
 };
 
 function makeFetchContext(
@@ -29,20 +31,29 @@ function makeFetchContext(
   headers: Record<string, string>,
   init: Omit<RequestInit, 'headers'>,
 ): FetchContext {
+  const immutableHeaders = Object.freeze({ ...headers });
+  const immutableInit = Object.freeze({ ...init });
   const ctx: FetchContext = {
-    headers,
-    init,
+    headers: immutableHeaders,
+    init: immutableInit,
     url,
-    withHeaders(updates: Record<string, string>): FetchContext {
-      const merged = { ...headers };
+    withHeaders(updates: Record<string, string | undefined>): FetchContext {
+      const merged = { ...immutableHeaders };
 
-      for (const [k, v] of Object.entries(updates)) merged[k.toLowerCase()] = v;
+      for (const [key, value] of Object.entries(updates)) {
+        const normalized = key.toLowerCase();
+        if (value === undefined) delete merged[normalized];
+        else merged[normalized] = value;
+      }
 
-      return makeFetchContext(url, merged, init);
+      return makeFetchContext(url, merged, immutableInit);
+    },
+    withInit(updates: Partial<Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>>): FetchContext {
+      return makeFetchContext(url, immutableHeaders, { ...immutableInit, ...updates });
     },
   };
 
-  return ctx;
+  return Object.freeze(ctx);
 }
 
 export function anySignal(...signals: ReadonlyArray<AbortSignal | null | undefined>): AbortSignal | undefined {
@@ -54,20 +65,28 @@ export function anySignal(...signals: ReadonlyArray<AbortSignal | null | undefin
 
   return AbortSignal.any(active);
 }
-export type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
+
+/** Middleware applied to every request. Compose policies like auth, logging, or tracing. */
+export type Middleware = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
 
 export type TransportOptions = {
   baseUrl?: string;
   fetch?: typeof globalThis.fetch;
-  headers?: Record<string, string>;
+  headers?: HeadersInit;
+  /** Immutable middleware chain. Configured once at construction; never mutated at runtime. */
+  middleware?: readonly Middleware[];
   timeout?: number;
 };
 
 export const DEFAULT_TIMEOUT = 30_000;
+const MAX_TIMEOUT = 2_147_483_647;
 
 export function validateTimeout(timeoutMs: number): void {
-  if ((timeoutMs <= 0 || !Number.isFinite(timeoutMs)) && timeoutMs !== Number.POSITIVE_INFINITY) {
-    throw new CourierError('[courier] timeout must be a positive number or Infinity');
+  if (
+    timeoutMs !== Number.POSITIVE_INFINITY &&
+    (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMEOUT)
+  ) {
+    throw new CourierError(`[courier] timeout must be an integer from 1 to ${MAX_TIMEOUT}, or Infinity`);
   }
 }
 
@@ -80,78 +99,46 @@ export function buildTimeoutSignal(timeoutMs: number, external?: AbortSignal | n
 }
 
 /**
- * Shared transport core: interceptor pipeline, header management, AbortController lifecycle.
- * HTTP requests and streams build on this to avoid duplicating infrastructure.
+ * Shared transport core: immutable middleware pipeline, header defaults, AbortController lifecycle.
+ * HTTP requests build on this. Middleware is fixed at construction — there is no runtime `use()`.
  */
 export function createTransportCore(opts: TransportOptions = {}) {
   const {
     baseUrl = '',
     fetch: fetchFn = globalThis.fetch,
     headers: initialHeaders = {},
+    middleware = [],
     timeout = DEFAULT_TIMEOUT,
   } = opts;
 
   validateTimeout(timeout);
 
-  const globalHeaders: Record<string, string> = Object.fromEntries(
-    Object.entries(initialHeaders).map(([k, v]) => [k.toLowerCase(), v]),
-  );
+  const globalHeaders: Record<string, string> = Object.fromEntries(new Headers(initialHeaders).entries());
   const activeControllers = new Set<AbortController>();
   const disposeController = new AbortController();
-  const interceptors: Interceptor[] = [];
-  let cachedPipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
   let disposed = false;
 
-  function getPipeline(): (ctx: FetchContext) => Promise<Response> {
-    if (cachedPipeline) return cachedPipeline;
-
-    const base: (ctx: FetchContext) => Promise<Response> = (ctx) =>
-      fetchFn(ctx.url, { ...ctx.init, headers: ctx.headers });
-
-    cachedPipeline =
-      interceptors.length === 0
-        ? base
-        : interceptors.reduceRight<(ctx: FetchContext) => Promise<Response>>(
-            (next, interceptor) => (ctx) => interceptor(ctx, next),
-            base,
-          );
-
-    return cachedPipeline;
-  }
-
-  function use(interceptor: Interceptor): () => void {
-    interceptors.push(interceptor);
-    cachedPipeline = null;
-
-    return () => {
-      const i = interceptors.indexOf(interceptor);
-
-      if (i !== -1) {
-        interceptors.splice(i, 1);
-        cachedPipeline = null;
-      }
-    };
-  }
-
-  function setHeaders(updates: Record<string, string | undefined>): void {
-    for (const [key, value] of Object.entries(updates)) {
-      const k = key.toLowerCase();
-
-      if (value === undefined) delete globalHeaders[k];
-      else globalHeaders[k] = value;
+  const base = async (ctx: FetchContext): Promise<Response> => {
+    try {
+      return await fetchFn(ctx.url, { ...ctx.init, headers: ctx.headers });
+    } catch (error) {
+      throw classifyRequestError(
+        error,
+        (ctx.init.method ?? 'GET').toUpperCase(),
+        ctx.url,
+        ctx.init.signal as AbortSignal | undefined,
+      );
     }
-  }
+  };
 
-  /** Returns a read-only snapshot of the current global headers. */
-  function getHeaders(): Readonly<Record<string, string>> {
-    return { ...globalHeaders };
-  }
+  const pipeline: (ctx: FetchContext) => Promise<Response> =
+    middleware.length === 0
+      ? base
+      : middleware.reduceRight<(ctx: FetchContext) => Promise<Response>>((next, mw) => (ctx) => mw(ctx, next), base);
 
   /** Merge global headers with optional per-request headers (normalised to lowercase). */
-  function mergeHeaders(perRequest?: Record<string, string>): Record<string, string> {
-    const normalized = perRequest
-      ? Object.fromEntries(Object.entries(perRequest).map(([k, v]) => [k.toLowerCase(), v]))
-      : undefined;
+  function mergeHeaders(perRequest?: HeadersInit): Record<string, string> {
+    const normalized = perRequest ? Object.fromEntries(new Headers(perRequest).entries()) : undefined;
 
     return { ...globalHeaders, ...normalized };
   }
@@ -164,7 +151,7 @@ export function createTransportCore(opts: TransportOptions = {}) {
   }
 
   /**
-   * Dispatch a request through the interceptor pipeline.
+   * Dispatch a request through the middleware pipeline.
    * Accepts a plain `{ url, headers, init }` object and promotes it to a
    * full `FetchContext` with `withHeaders()` before entering the pipeline.
    */
@@ -173,7 +160,7 @@ export function createTransportCore(opts: TransportOptions = {}) {
     init: Omit<RequestInit, 'headers'>;
     url: string;
   }): Promise<Response> {
-    return getPipeline()(makeFetchContext(raw.url, raw.headers, raw.init));
+    return pipeline(makeFetchContext(raw.url, raw.headers, raw.init));
   }
 
   function cancelAll(): void {
@@ -190,8 +177,6 @@ export function createTransportCore(opts: TransportOptions = {}) {
     for (const ac of activeControllers) ac.abort();
 
     activeControllers.clear();
-    interceptors.length = 0;
-    cachedPipeline = null;
   }
 
   return {
@@ -205,13 +190,10 @@ export function createTransportCore(opts: TransportOptions = {}) {
     get disposed() {
       return disposed;
     },
-    getHeaders,
     mergeHeaders,
-    setHeaders,
     /** Configured request timeout in ms. */
     timeout,
     track,
-    use,
   };
 }
 

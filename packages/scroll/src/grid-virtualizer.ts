@@ -1,9 +1,8 @@
-import type { Signal } from '@vielzeug/ripple';
-
 import { createScrollAdapter } from './_adapter';
 import { alignOffset } from './_alignment';
 import { createAxis1D, type VirtualItem } from './_axis1d';
 import {
+  createSnapshotStore,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   normalizeOverscan,
@@ -20,6 +19,7 @@ import {
   requirePositiveNumber,
   validateOverscan,
 } from './_validation';
+import type { ScrollStore } from './virtualizer';
 
 export type { VirtualItem };
 
@@ -72,8 +72,6 @@ export interface GridVirtualizerOptions {
   rowGap?: number;
   /** External measurement cache for rows. Share across instances for scroll restoration. */
   rowMeasurementCache?: Map<number, number>;
-  /** Optional signal factory for reactive state. */
-  toSignal?: (init: GridVirtualizerState) => Signal<GridVirtualizerState>;
 }
 
 /**
@@ -94,7 +92,7 @@ export interface GridVirtualizerUpdateOptions {
   rowGap?: number;
 }
 
-export interface GridVirtualizer {
+export interface GridVirtualizer extends ScrollStore<GridVirtualizerState> {
   readonly cols: VirtualItem[];
   readonly disposalSignal: AbortSignal;
   dispose: () => void;
@@ -155,16 +153,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   let onChange = options.onChange;
   let onRangeChange = options.onRangeChange;
 
-  // Optional signal for reactive state
-  let stateSignal: Signal<GridVirtualizerState> | null = null;
-  if (options.toSignal) {
-    const initialState: GridVirtualizerState = { cols: [], rows: [], totalHeight: 0, totalWidth: 0 };
-    stateSignal = options.toSignal(initialState);
-  }
-
-  // Helper to emit state to both callback and signal
+  // Publish state before invoking the render callback.
   function emitState(state: GridVirtualizerState): void {
-    if (stateSignal) stateSignal.value = state;
+    stateStore.publish(state);
     onChange?.(state);
   }
 
@@ -178,6 +169,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   let viewportWidth = 0;
   let rows: VirtualItem[] = [];
   let cols: VirtualItem[] = [];
+  const stateStore = createSnapshotStore<GridVirtualizerState>({ cols, rows, totalHeight: 0, totalWidth: 0 });
   let disposed = false;
 
   // ─── Axis1D instances (R1) ─────────────────────────────────────────────────
@@ -631,6 +623,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (disposed) return;
 
     disposed = true;
+    stateStore.dispose();
     ac.abort();
     adapter.detach();
   }
@@ -752,6 +745,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     get disposed() {
       return disposed;
     },
+    getSnapshot: stateStore.getSnapshot,
     invalidate,
     measureBatch,
     measureColEl,
@@ -772,6 +766,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       return scrollTop;
     },
     scrollToRow,
+    subscribe: stateStore.subscribe,
     [Symbol.dispose]: disposeImpl,
     get totalHeight() {
       return rowAx.totalSize;

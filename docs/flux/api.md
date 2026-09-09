@@ -1,6 +1,6 @@
 ---
 title: Flux — API Reference
-description: Complete reference for @vielzeug/flux streams, operators, channels, and adapters.
+description: Complete reference for @vielzeug/flux streams, operators, channels, and structural bridges.
 ---
 
 [[toc]]
@@ -22,6 +22,8 @@ description: Complete reference for @vielzeug/flux streams, operators, channels,
 | `toArray()` / `first()` / `last()` | Consume finite values | Async | Bound `toArray()` with `maxItems` |
 | `toAsyncIterable()` | Use `for await` | Async | Capacity and overflow required |
 | `createChannel()` | Imperative multicast boundary | Sync | Dispose to complete subscribers |
+| `fromStore()` | Bridge snapshot-based state | Lazy | Snapshot and subscribe are both required |
+| `fromSubscribe()` | Bridge callback-delivered values | Lazy | Registration must return teardown |
 
 ## Package Entry Point
 
@@ -30,10 +32,6 @@ description: Complete reference for @vielzeug/flux streams, operators, channels,
 | `@vielzeug/flux` | Core streams, operators, consumers, errors, and types |
 | `@vielzeug/flux/async` | `toAsyncIterable()` only |
 | `@vielzeug/flux/subjects` | `createChannel()` and channel types |
-| `@vielzeug/flux/ripple` | Ripple signal adapters |
-| `@vielzeug/flux/courier` | Courier query and SSE adapters |
-| `@vielzeug/flux/herald` | Herald bus adapters |
-| `@vielzeug/flux/pulse` | Pulse event and presence adapters |
 
 ## Core
 
@@ -149,7 +147,7 @@ Emits incrementing values starting at zero.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `every` | `number` | Non-negative interval duration in milliseconds |
+| `every` | `number` | Interval duration from 0 through 2,147,483,647 milliseconds |
 
 ---
 
@@ -163,8 +161,8 @@ Emits zero after `delay`; optionally continues at `interval`.
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `delay` | `number` | Non-negative initial delay in milliseconds |
-| `interval` | `number` | Optional non-negative repeat duration |
+| `delay` | `number` | Initial delay from 0 through 2,147,483,647 milliseconds |
+| `interval` | `number` | Optional repeat duration from 0 through 2,147,483,647 milliseconds |
 
 ## Transformation Operators
 
@@ -267,7 +265,7 @@ Emits latest value after configured silence. Pending value flushes on source com
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `duration` | `number` | Non-negative silence duration in milliseconds |
+| `duration` | `number` | Silence duration from 0 through 2,147,483,647 milliseconds |
 
 ---
 
@@ -281,7 +279,7 @@ Errors with `FluxTimeoutError` when source is silent too long.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `duration` | `number` | Non-negative inactivity duration in milliseconds |
+| `duration` | `number` | Inactivity duration from 0 through 2,147,483,647 milliseconds |
 
 ---
 
@@ -296,7 +294,7 @@ Resubscribes after source errors until attempts are exhausted.
 | Option | Type | Description |
 | --- | --- | --- |
 | `attempts` | `number` | Non-negative retry count |
-| `delay` | `number \| (attempt: number) => number` | Optional delay or backoff function |
+| `delay` | `number \| (attempt: number) => number` | Optional delay/backoff returning 0 through 2,147,483,647 milliseconds |
 
 ## Combination
 
@@ -336,7 +334,7 @@ Emits latest tuple after every source emits once. Completes without emission whe
 toArray<T>(source: Stream<T>, options: ToArrayOptions): Promise<T[]>
 ```
 
-Collects finite output. Rejects on source error, abort, or `maxItems` overflow.
+Collects finite output. Rejects on source error, the supplied signal's abort reason, or `maxItems` overflow.
 
 | Option | Type | Description |
 | --- | --- | --- |
@@ -348,20 +346,20 @@ Collects finite output. Rejects on source error, abort, or `maxItems` overflow.
 ### `first()`
 
 ```ts
-first<T>(source: Stream<T>, options?: ValueOptions): Promise<T>
+first<T>(source: Stream<T>, options?: ValueOptions<T>): Promise<T>
 ```
 
-Resolves first value and cancels source. Rejects on source error, abort, or empty completion (`FluxEmptyError`); pass `defaultValue` to resolve instead.
+Resolves first value and cancels source. Rejects on source error, the supplied signal's abort reason, or empty completion (`FluxEmptyError`); pass `defaultValue` to resolve instead.
 
 ---
 
 ### `last()`
 
 ```ts
-last<T>(source: Stream<T>, options?: ValueOptions): Promise<T>
+last<T>(source: Stream<T>, options?: ValueOptions<T>): Promise<T>
 ```
 
-Resolves last value on completion. Rejects on source error, abort, or empty completion (`FluxEmptyError`); pass `defaultValue` to resolve instead.
+Resolves last value on completion. Rejects on source error, the supplied signal's abort reason, or empty completion (`FluxEmptyError`); pass `defaultValue` to resolve instead.
 
 ## Async Conversion
 
@@ -371,7 +369,7 @@ Resolves last value on completion. Rejects on source error, abort, or empty comp
 toAsyncIterable<T>(source: Stream<T>, options: AsyncIterableOptions): AsyncIterable<T>
 ```
 
-Converts push stream to async iterable with bounded queue.
+Converts a push stream to an async iterable with a bounded queue. External cancellation rejects pending iteration with `signal.reason`; explicit iterator `return()` completes normally. Overflow `"error"` rejects with `FluxCapacityError`; unsupported policies throw `RangeError` before subscription.
 
 | Option | Type | Description |
 | --- | --- | --- |
@@ -387,7 +385,7 @@ Converts push stream to async iterable with bounded queue.
 createChannel<T>(options?: ChannelOptions<T>): Channel<T>
 ```
 
-Creates imperative multicast boundary. Disposal completes subscribers.
+Creates an imperative multicast boundary. Disposal completes subscribers and releases replay and pending values.
 
 > **`initial` + `replay` interaction:** When `initial` is set and `replay` is omitted, `replay` defaults to `1` so the initial value is retained. Setting `replay: 0` with `initial` throws `RangeError` — the initial value would be immediately dropped.
 
@@ -396,41 +394,26 @@ Creates imperative multicast boundary. Disposal completes subscribers.
 | `initial` | `T` | Optional initial replay value |
 | `replay` | `number` | Non-negative retained value count |
 
-## Adapters
+## Structural adapters
 
-### `@vielzeug/flux/ripple`
-
-```ts
-fromSignal<T>(source: Readable<T>): Stream<T>
-toSignal<T>(source: Stream<T>, options: ToSignalOptions<T>): SignalBinding<T>
-```
-
-`fromSignal()` emits current value first. `toSignal()` preserves final value then disposes binding when source completes, errors, or supplied signal aborts. On source error, `toSignal()` calls `options.onError` if provided (otherwise reports the error through the platform's unhandled-error channel — same path as a stream with no `error` observer), then disposes — the signal freezes at its last value. Pass `onError` to handle source errors explicitly.
-
-### `@vielzeug/flux/courier`
+### `fromStore()`
 
 ```ts
-fromQuery<T extends { key: readonly unknown[]; fetch: (...args: never[]) => Promise<unknown> }>(
-  cache: { getSnapshot<T>(key: readonly unknown[]): T | null; subscribe(key: readonly unknown[], listener: () => void): () => void },
-  definition: T,
-): Stream<AsyncState<Awaited<ReturnType<T['fetch']>>> | null>
+fromStore<T>(source: {
+  getSnapshot(): T;
+  subscribe(listener: () => void): () => void;
+}): Stream<T>
 ```
 
-`fromQuery()` infers data from `definition.fetch` and emits Courier-compatible `AsyncState` snapshots.
+Bridges snapshot-based state without package-specific dependencies. It emits the current snapshot, subscribes, rechecks for a subscription-time change, and reads the latest snapshot after each notification. Snapshot failure terminates without subscribing.
 
-### `@vielzeug/flux/herald`
+### `fromSubscribe()`
 
 ```ts
-fromBus<T extends EventMap, K extends EventKey<T>>(bus: Bus<T>, event: K): Stream<T[K]>
-toBus<T extends EventMap, K extends EventKey<T>>(bus: Bus<T>, event: K): Operator<T[K], T[K]>
+fromSubscribe<T>(subscribe: (listener: (value: T) => void) => () => void): Stream<T>
 ```
 
-### `@vielzeug/flux/pulse`
-
-```ts
-fromPulse<S extends PulseSchema, K extends EventKey<ServerEvents<S>>>(pulse: Pulse<S>, event: K): Stream<ServerEvents<S>[K]>
-fromRoomPresence<T>(room: PresenceRoomScope<T>): Stream<ReadonlyMap<string, T>>
-```
+Bridges callback-delivered event values. Registration runs once per Flux subscription and its teardown runs when that subscription closes.
 
 ## Types
 
@@ -470,7 +453,7 @@ type TimerOptions = { delay: number; interval?: number };
 type FlattenOptions = { concurrency: number; capacity: number };
 type RetryOptions = { attempts: number; delay?: number | ((attempt: number) => number) };
 type ToArrayOptions = { maxItems: number; signal?: AbortSignal };
-type ValueOptions = { signal?: AbortSignal; defaultValue?: unknown };
+type ValueOptions<T> = { signal?: AbortSignal; defaultValue?: T };
 type ChannelOptions<T> = { initial?: T; replay?: number };
 type Channel<T> = {
   [Symbol.dispose](): void;
@@ -479,15 +462,6 @@ type Channel<T> = {
   readonly disposed: boolean;
   send(value: T): void;
   readonly stream: Stream<T>;
-};
-type ToSignalOptions<T> = { initial: T; onError?: (reason: unknown) => void; signal?: AbortSignal };
-type SignalBinding<T> = {
-  [Symbol.dispose](): void;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  readonly signal: Readable<T>;
-  readonly value: T;
 };
 ```
 

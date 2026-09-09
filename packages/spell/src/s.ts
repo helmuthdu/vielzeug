@@ -1,4 +1,4 @@
-import { type AnySchema, type InferOutput, type InferSchemaMode, Schema } from './core';
+import { type AnySchema, type InferInput, type InferOutput, type InferSchemaMode, Schema } from './core';
 import { ArraySchema } from './schemas/array';
 import { BigIntSchema } from './schemas/bigint';
 import { BooleanSchema } from './schemas/boolean';
@@ -22,7 +22,6 @@ import { VariantSchema } from './schemas/variant';
 
 /* -------------------- Internal factory functions -------------------- */
 
-const sAny = (): Schema<unknown> => new Schema();
 const sArray = <T extends AnySchema>(schema: T): ArraySchema<T> => new ArraySchema(schema);
 const sBigint = (): BigIntSchema => new BigIntSchema();
 const sBoolean = (): BooleanSchema => new BooleanSchema();
@@ -33,8 +32,8 @@ const sIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema
   ...items: T
 ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
   new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
-const sLazy = <T extends AnySchema>(getter: () => T): LazySchema<InferOutput<T>, unknown, InferSchemaMode<T>> =>
-  new LazySchema(getter as unknown as () => Schema<InferOutput<T>, unknown, InferSchemaMode<T>>);
+const sLazy = <T extends AnySchema>(getter: () => T): LazySchema<InferOutput<T>, InferInput<T>, InferSchemaMode<T>> =>
+  new LazySchema(getter as unknown as () => Schema<InferOutput<T>, InferInput<T>, InferSchemaMode<T>>);
 const sLiteral = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
   new LiteralSchema(value);
 const sMap = <K extends AnySchema, V extends AnySchema>(keySchema: K, valueSchema: V): MapSchema<K, V> =>
@@ -78,7 +77,6 @@ const sCoerce = {
  * type User = Infer<typeof User>;
  */
 export const s = {
-  any: sAny,
   array: sArray,
   bigint: sBigint,
   boolean: sBoolean,

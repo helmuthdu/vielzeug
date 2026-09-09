@@ -8,7 +8,6 @@ export * from './linspace';
 export * from './median';
 export * from './mod';
 export * from './normalize';
-export * from './percent';
 export * from './range';
 export * from './round';
 export * from './standardDeviation';

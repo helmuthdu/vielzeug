@@ -1,9 +1,9 @@
-import { sleep } from '@vielzeug/arsenal/async';
+import { sleep } from '@vielzeug/arsenal';
 import { fireChange, fireClick, fireKeyDown } from '@vielzeug/assay';
 import { html } from '@vielzeug/ore';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
-import { ariaSortValue, type OreDataGridProps, sortIconName } from './datagrid';
+import { ariaSortValue, type DataGridSource, type OreDataGridProps, sortIconName } from './datagrid';
 
 // ── Pure helper unit tests (no DOM required) ──────────────────────────────────
 
@@ -59,6 +59,43 @@ const ROWS: User[] = [
   { age: 28, id: '3', name: 'Carol', role: 'Viewer' },
 ];
 
+const createSource = () => {
+  type State = DataGridSource<User>['state'];
+  const listeners = new Set<(state: State) => void>();
+  const next = vi.fn(() => Promise.resolve());
+  const previous = vi.fn(() => Promise.resolve());
+  const setParams = vi.fn(() => Promise.resolve());
+  let state: State = {
+    error: null,
+    items: [ROWS[0]],
+    loading: false,
+    pagination: { page: 1, pageCount: 2, pageSize: 1, totalItems: 2 },
+  };
+  const source: DataGridSource<User> = {
+    next,
+    previous,
+    setParams,
+    get state() {
+      return state;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+
+  return {
+    listenerCount: () => listeners.size,
+    next,
+    publish(nextState: State) {
+      state = nextState;
+      for (const listener of listeners) listener(state);
+    },
+    setParams,
+    source,
+  };
+};
+
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 
 // Derived from the real prop type so a future rename in datagrid.ts's `OreDataGridProps`
@@ -74,6 +111,7 @@ type GridElement = HTMLElement &
     | 'pageSizeOptions'
     | 'rows'
     | 'selectedKeys'
+    | 'source'
     | 'views'
   >;
 
@@ -718,6 +756,66 @@ describe('ore-datagrid', () => {
 
   // ── Disabled & loading ────────────────────────────────────────────────────────
 
+  describe('External source', () => {
+    it('renders source state and reacts to subscription updates', async () => {
+      const external = createSource();
+      fixture = await mountGrid({ source: external.source });
+
+      expect(getBodyRows(fixture)[0]?.textContent).toContain('Alice');
+      expect(external.listenerCount()).toBe(1);
+
+      external.publish({
+        error: null,
+        items: [ROWS[1]],
+        loading: false,
+        pagination: { page: 2, pageCount: 2, pageSize: 1, totalItems: 2 },
+      });
+      await Promise.resolve();
+
+      expect(getBodyRows(fixture)[0]?.textContent).toContain('Bob');
+    });
+
+    it('routes search and pagination commands to the source', async () => {
+      const external = createSource();
+      fixture = await mountGrid({ source: external.source });
+
+      fireClick(fixture.query('[aria-label="Search"]')!);
+      await Promise.resolve();
+      inputSearch(fixture.query('.dg-search-input') as HTMLElement, 'ali');
+      await sleep(300);
+      fireClick(fixture.query('[aria-label="Next page"]')!);
+
+      expect(external.setParams).toHaveBeenCalledWith('ali');
+      expect(external.next).toHaveBeenCalledOnce();
+    });
+
+    it('unsubscribes when the source is replaced', async () => {
+      const first = createSource();
+      const second = createSource();
+      fixture = await mountGrid({ source: first.source });
+      const element = fixture.element as GridElement;
+
+      element.source = second.source;
+      await Promise.resolve();
+
+      expect(first.listenerCount()).toBe(0);
+      expect(second.listenerCount()).toBe(1);
+    });
+
+    it('reports rejected source commands without an unhandled rejection', async () => {
+      const external = createSource();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      external.next.mockRejectedValueOnce(new Error('offline'));
+      fixture = await mountGrid({ source: external.source });
+
+      fireClick(fixture.query('[aria-label="Next page"]')!);
+      await Promise.resolve();
+
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('source command failed: Error: offline'));
+      warn.mockRestore();
+    });
+  });
+
   describe('Disabled & loading', () => {
     it('does not select rows when disabled', async () => {
       fixture = await mountGrid({ disabled: true, selectionMode: 'single' });
@@ -1183,7 +1281,7 @@ describe('ore-datagrid', () => {
       await Promise.resolve();
 
       expect(fixture.query('.open-user')?.textContent).toBe('Alice');
-      expect(getCell(fixture, 0, 0)?.title).toBe('Alice');
+      expect((getCell(fixture, 0, 0) as HTMLElement | undefined)?.title).toBe('Alice');
     });
 
     it('body cells have tabindex="-1" for keyboard navigation', async () => {

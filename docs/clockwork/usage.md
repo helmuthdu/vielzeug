@@ -37,7 +37,7 @@ actor.send({ type: 'TOGGLE' });
 
 ## Context reducers
 
-A reducer receives readonly context and returns the next context. Clockwork does not copy or freeze context at runtime, so do not mutate data that other code may retain.
+A reducer receives readonly context and returns the next context. Clockwork shallow-clones and freezes each snapshot and context record; nested values are not deep-cloned, so make explicit nested replacements.
 
 ```ts
 type Event = { type: 'DEC' } | { type: 'INC' } | { type: 'RESET' };
@@ -103,7 +103,7 @@ if (result.type === 'transition') {
 
 ## Effects
 
-Entry, exit, and transition effects run only through an actor. The actor commits, establishes the new state's timers and invokes, notifies subscribers, then runs exit, transition, and entry effects. Effects cannot change context; send a regular event for another state change.
+Entry, exit, and transition effects run only through an actor. The actor commits, establishes target-state timers and invokes, notifies a stable subscriber snapshot, then runs exit, transition, and entry effects. Subscriber failures are reported but cannot skip declared effects. Effects cannot change context; send a regular event for another state change.
 
 ```ts
 type WorkflowEvent = { type: 'SUBMIT' };
@@ -165,7 +165,7 @@ const loader = defineMachine<{ error: string; items: string[] }, LoadEvent>()({
 
 ## Delayed transitions
 
-`after` starts timers on state entry and cancels them on exit or disposal. Its guard and reducer receive `event: undefined`; a user event with `type: '$after'` remains a normal user event.
+`after` starts timers on state entry and cancels them on exit or disposal. Delay must be finite and between 0 and 2,147,483,647 milliseconds. Guards and reducers receive `event: undefined`; a user event with `type: '$after'` remains a normal user event.
 
 ```ts
 type NotificationEvent = { type: 'DISMISS' } | { message: string; type: 'SHOW' };
@@ -184,7 +184,7 @@ const notification = defineMachine<{ message: string }, NotificationEvent>()({
 
 ## Snapshot observation and persistence
 
-`actor.snapshot` is the current plain readonly snapshot; read it directly rather than calling a snapshot method. Use `subscribe()` to integrate a state library or persist future committed snapshots. Fresh actors run their initial entry effects and resources; restored actors start only the restored state's invokes and timers, not its entry effects.
+`actor.snapshot` is the current shallow-frozen `MachineSnapshot`; read it directly rather than calling a snapshot method. Use `subscribe()` to integrate a state library or persist future committed snapshots. Fresh actors run their initial entry effects and resources; restored actors start only the restored state's invokes and timers, not its entry effects.
 
 ```ts
 const stored = sessionStorage.getItem('wizard');
@@ -205,18 +205,19 @@ Validate untrusted persisted data before passing it to `createActor()`. Clockwor
 
 ## Error handling
 
-Use `onError` to choose what happens after failures from transitions, effects, invokes, or subscribers. The context identifies the runtime phase and state; an event is present when one triggered the failure. Return `'continue'` to keep the actor alive or `'dispose'` to end it.
+Guard, reducer, effect, invoke, timer, and transition-limit failures dispose the actor. Subscriber failures are reported but do not dispose the actor or interrupt remaining subscribers and declared effects.
+
+Use `onError` to observe either class without controlling disposition. The callback receives the error and its `phase` and `state`; callback failures are swallowed so observation cannot alter actor behavior.
 
 ```ts
 const actor = machine.createActor({
   onError(error, { event, phase, state }) {
     console.error({ error, event, phase, state });
-    return 'continue';
   },
 });
 ```
 
-Without `onError`, an actor disposes silently. Return `'dispose'` explicitly when an error handler logs an unrecoverable failure.
+For fatal machine failures, the observer runs before disposal. Without `onError`, fatal failures dispose silently.
 
 ## Debugging
 
@@ -269,9 +270,10 @@ Bridge the current actor snapshot into renderer state through one subscription. 
 ```ts [React]
 import { useSyncExternalStore } from 'react';
 
-function useActor<Snapshot>(actor: { readonly snapshot: Snapshot; subscribe(listener: (snapshot: Snapshot) => void): () => void }) {
+function useActor<Value>(actor: { readonly snapshot: Value; subscribe(listener: (snapshot: Value) => void): () => void }) {
   return useSyncExternalStore(
     (notify) => actor.subscribe(() => notify()),
+    () => actor.snapshot,
     () => actor.snapshot,
   );
 }
@@ -315,4 +317,4 @@ bus.on('REFRESH', () => actor.send({ type: 'FETCH' }));
 - Read the current snapshot from `actor.snapshot`, not a wrapper value.
 - Validate persisted context before restoring a snapshot.
 - Dispose every actor at its ownership boundary.
-- Route runtime failures through `onError` when the owner can recover.
+- Route runtime failures through the `onError` observer for logging and diagnostics.

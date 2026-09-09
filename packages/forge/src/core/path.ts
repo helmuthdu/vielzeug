@@ -1,17 +1,16 @@
-import { ForgeConfigError } from '../errors';
+import { isPlainObject as isRecord } from '@vielzeug/arsenal';
+
+import { ForgeConfigError } from '../errors.js';
+import type { ValidationIssue } from '../types.js';
 
 const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
+
+export { isRecord };
 
 export function isUnsafeKey(key: string): boolean {
   return !key || unsafeKeys.has(key);
 }
 
-type ErrorNode = string | ErrorTree | ErrorArray;
-export interface ErrorTree {
-  readonly [key: string]: ErrorNode;
-}
-type ErrorArray = ErrorNode[];
-type MutableErrorTree = Record<string, ErrorNode>;
 type RecordValue = Record<string, unknown>;
 type TreeValue = RecordValue | readonly unknown[];
 type MetaTree = true | MetaNode;
@@ -20,38 +19,63 @@ interface MetaNode {
 }
 export type MetaRoot = MetaNode;
 
-export function isRecord(value: unknown): value is RecordValue {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
-
-  const prototype = Object.getPrototypeOf(value);
-
-  return prototype === Object.prototype || prototype === null;
-}
-
 export function assertSafeKey(key: string): void {
   if (isUnsafeKey(key)) throw new ForgeConfigError(`Invalid field key '${key}'.`);
 }
 
-function isAtomicLeaf(value: unknown): boolean {
-  return (
-    (typeof Blob !== 'undefined' && value instanceof Blob) ||
-    (typeof File !== 'undefined' && value instanceof File) ||
-    value instanceof Date
+export function assertArrayIndex(index: number): void {
+  if (!Number.isSafeInteger(index) || index < 0) throw new ForgeConfigError(`Invalid array index ${index}.`);
+}
+
+function tag(value: object): string {
+  return Object.prototype.toString.call(value);
+}
+
+function isBlobLeaf(value: object): boolean {
+  return tag(value) === '[object Blob]' || tag(value) === '[object File]';
+}
+
+function invalidValue(): never {
+  throw new ForgeConfigError(
+    'Form values must contain only finite JSON primitives, plain objects, arrays, Date, File, or Blob.',
   );
 }
 
-export function immutable<T>(value: T): T {
-  if (Array.isArray(value)) return Object.freeze(value.map(immutable)) as T;
+export function immutable<T>(value: T, ancestors = new Set<object>()): T {
+  if (value === null || value === undefined || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : invalidValue();
+  if (typeof value !== 'object') return invalidValue();
 
-  if (value === null || typeof value !== 'object' || isAtomicLeaf(value)) return value;
-
-  if (!isRecord(value)) {
-    throw new ForgeConfigError(
-      'Form values must contain only plain objects, arrays, Date, File, Blob, or primitive values.',
-    );
+  const date = value as unknown as Date;
+  if (tag(value) === '[object Date]' && typeof date.getTime === 'function') {
+    const time = date.getTime();
+    if (!Number.isFinite(time)) return invalidValue();
+    return Object.freeze(new Date(time)) as T;
   }
 
-  return Object.freeze(Object.fromEntries(Object.entries(value).map(([key, child]) => [key, immutable(child)]))) as T;
+  if (isBlobLeaf(value)) return value;
+  if (ancestors.has(value)) throw new ForgeConfigError('Form values must not contain circular references.');
+
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const copy: unknown[] = [];
+      for (let index = 0; index < value.length; index++) {
+        if (!Object.hasOwn(value, index)) throw new ForgeConfigError('Form arrays must not contain empty slots.');
+        copy.push(immutable(value[index], ancestors));
+      }
+      return Object.freeze(copy) as T;
+    }
+
+    if (!isRecord(value)) return invalidValue();
+    const entries = Object.entries(value).map(([key, child]) => {
+      assertSafeKey(key);
+      return [key, immutable(child, ancestors)] as const;
+    });
+    return Object.freeze(Object.fromEntries(entries)) as T;
+  } finally {
+    ancestors.delete(value);
+  }
 }
 
 export function readAtPath<T>(value: unknown, path: readonly (string | number)[]): T | undefined {
@@ -59,7 +83,14 @@ export function readAtPath<T>(value: unknown, path: readonly (string | number)[]
 
   for (const key of path) {
     if (typeof key === 'number') {
-      if (!Array.isArray(current) || key < 0 || key >= current.length) return undefined;
+      if (
+        !Array.isArray(current) ||
+        !Number.isSafeInteger(key) ||
+        key < 0 ||
+        key >= current.length ||
+        !Object.hasOwn(current, key)
+      )
+        return undefined;
 
       current = current[key];
     } else {
@@ -77,7 +108,14 @@ export function hasAtPath(value: unknown, path: readonly (string | number)[]): b
 
   for (const key of path) {
     if (typeof key === 'number') {
-      if (!Array.isArray(current) || key < 0 || key >= current.length) return false;
+      if (
+        !Array.isArray(current) ||
+        !Number.isSafeInteger(key) ||
+        key < 0 ||
+        key >= current.length ||
+        !Object.hasOwn(current, key)
+      )
+        return false;
 
       current = current[key];
     } else {
@@ -94,6 +132,7 @@ export function writeAtPath<T extends TreeValue>(value: T, path: readonly (strin
   const [key, ...rest] = path;
 
   if (typeof key === 'number') {
+    assertArrayIndex(key);
     if (!Array.isArray(value)) {
       throw new ForgeConfigError(`Cannot index ${key} because the current value is not an array.`);
     }
@@ -140,6 +179,7 @@ export function resetAtPath<T extends TreeValue>(value: T, baseline: T, path: re
   const [key, ...rest] = path;
 
   if (typeof key === 'number') {
+    assertArrayIndex(key);
     if (!Array.isArray(value)) return value;
     if (!Array.isArray(baseline) || key >= baseline.length || key >= value.length) return value;
 
@@ -186,6 +226,7 @@ export function resetAtPath<T extends TreeValue>(value: T, baseline: T, path: re
 
 export function writeMeta(meta: MetaRoot, path: readonly (string | number)[], next: boolean): MetaRoot {
   const [key, ...rest] = path;
+  if (typeof key === 'number') assertArrayIndex(key);
   const stringKey = String(key);
   const copy: Record<string, MetaTree> = { ...meta };
 
@@ -207,6 +248,7 @@ export function readMeta(meta: MetaRoot, path: readonly (string | number)[]): bo
   let current: MetaTree | undefined = meta;
 
   for (const key of path) {
+    if (typeof key === 'number' && (!Number.isSafeInteger(key) || key < 0)) return false;
     const stringKey = String(key);
 
     if (!isRecord(current) || !Object.hasOwn(current, stringKey)) return false;
@@ -241,66 +283,26 @@ export function touchAll(value: unknown): MetaRoot {
   );
 }
 
-export function readError(errors: unknown, path: readonly (string | number)[]): string | undefined {
-  const error = readAtPath(errors, path);
+export function pathEquals(a: readonly (string | number)[], b: readonly (string | number)[]): boolean {
+  if (a.length !== b.length) return false;
 
-  return typeof error === 'string' ? error : undefined;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+
+  return true;
 }
 
-function writeErrorNode(
-  node: ErrorTree | ErrorArray | undefined,
+/** Derives a single field's error message from the flat issue list. */
+export function findIssue(
+  issues: readonly ValidationIssue[] | undefined,
   path: readonly (string | number)[],
-  message: string,
-): ErrorTree | ErrorArray {
-  const [key, ...rest] = path;
+): string | undefined {
+  if (!issues) return undefined;
 
-  if (typeof key === 'number') {
-    const arr: ErrorNode[] = Array.isArray(node) ? [...node] : [];
-
-    if (rest.length === 0) {
-      if (arr[key] === undefined) arr[key] = message;
-    } else {
-      arr[key] = writeErrorNode(arr[key] as ErrorTree | ErrorArray | undefined, rest, message);
-    }
-
-    return arr;
+  for (const issue of issues) {
+    if (pathEquals(issue.path, path)) return issue.message;
   }
 
-  if (isUnsafeKey(key)) return node ?? {};
-
-  const record: MutableErrorTree = isRecord(node) ? { ...node } : {};
-
-  if (rest.length === 0) {
-    if (record[key] === undefined) record[key] = message;
-  } else {
-    record[key] = writeErrorNode(record[key] as ErrorTree | ErrorArray | undefined, rest, message);
-  }
-
-  return record;
-}
-
-export function writeError(tree: ErrorTree, path: readonly (string | number)[], message: string): ErrorTree {
-  const result = writeErrorNode(tree, path, message);
-
-  return isRecord(result) ? result : tree;
-}
-
-export function normalizeErrors<T>(errors: T): T | undefined {
-  if (typeof errors === 'string') return errors;
-
-  if (Array.isArray(errors)) {
-    const normalized = errors.map((item) => normalizeErrors(item));
-
-    if (normalized.every((value) => value === undefined)) return undefined;
-
-    return Object.freeze(normalized) as T;
-  }
-
-  if (!isRecord(errors)) return undefined;
-
-  const entries = Object.entries(errors)
-    .map(([key, value]) => [key, normalizeErrors(value)] as const)
-    .filter(([, value]) => value !== undefined);
-
-  return entries.length === 0 ? undefined : (Object.freeze(Object.fromEntries(entries)) as T);
+  return undefined;
 }

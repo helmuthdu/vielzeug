@@ -1,5 +1,5 @@
 import { bind, define, getHost, html, onCleanup, onMounted, prop } from '@vielzeug/ore';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { computed, fromSubscribable, signal, watch } from '@vielzeug/ripple';
 import { createIntersection } from '@vielzeug/sentinel';
 import { sizableBundle } from '../../shared';
 import { reducedMotionMixin } from '../../styles';
@@ -126,11 +126,15 @@ define<OreSkeletonProps>(SKELETON_TAG, {
     onMounted(() => {
       const intersection = createIntersection(el, { threshold: 0 });
 
-      onCleanup(() => intersection.dispose());
-
-      watch(intersection, (state) => {
+      const intersectionState = fromSubscribable(intersection, { signal: intersection.disposalSignal });
+      const intersectionWatch = watch(intersectionState, (state) => {
         const paused = state === null ? false : !state.isIntersecting;
         isPaused.value = paused;
+      });
+
+      onCleanup(() => {
+        intersectionWatch.dispose();
+        intersection.dispose();
       });
     });
 

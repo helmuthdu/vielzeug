@@ -4,12 +4,9 @@ import { METHOD_NOT_FOUND, ProtocolError } from '@modelcontextprotocol/server';
 import { log } from '../_log.js';
 import { type Catalog, CatalogError } from '../catalog.js';
 import { packageTools } from './packages.js';
-import { refineTools } from './refine.js';
 import type { ToolDefinition } from './shared.js';
 
-export const ALL_TOOLS: readonly ToolDefinition[] = [...packageTools, ...refineTools];
-
-const byName = new Map(ALL_TOOLS.map((tool) => [tool.name, tool]));
+export { packageTools };
 
 function content(value: unknown) {
   return {
@@ -17,13 +14,16 @@ function content(value: unknown) {
   };
 }
 
-export function registerTools(server: Server, catalog: Catalog, debug = false): void {
+export function registerTools<CatalogType extends Catalog>(
+  server: Server,
+  catalog: CatalogType,
+  tools: readonly ToolDefinition<CatalogType>[],
+  debug = false,
+): void {
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+
   server.setRequestHandler('tools/list', () => ({
-    // `ToolSchema` is codex's own hand-rolled, precisely-typed shape (see tools/schema.ts); it's
-    // a valid JSON Schema object at the wire, just not structurally identical to the SDK's own
-    // generic recursive JSON-value type for `Tool.inputSchema`. Cast at this one wire boundary
-    // rather than loosen `ToolSchema`/`ToolProperty` themselves.
-    tools: ALL_TOOLS.map(
+    tools: tools.map(
       ({ description, inputSchema, name }): Tool => ({
         description,
         inputSchema: inputSchema as unknown as Tool['inputSchema'],

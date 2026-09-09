@@ -7,7 +7,7 @@ description: Practical Ore usage patterns for components, props, templates, slot
 
 ## Basic Usage
 
-`define(tag, definition)` registers a custom element.
+`define(tag, definition)` creates and registers a custom element. Call it from the module or browser bootstrap responsible for registration.
 
 Your `setup()` function receives typed prop signals and returns an `HTMLResult` directly. Its state belongs to the
 current connection: disconnect disposes it, and reconnecting the same element runs setup again.
@@ -190,7 +190,7 @@ define('task-list', {
 `each(source, key, render, fallback?)` takes positional arguments:
 
 - **source** — signal, getter, or plain array
-- **key** — function returning a unique key per item
+- **key** — function returning a unique string or number per item; number and string keys remain distinct
 - **render** — receives reactive `item` and `index` signals
 - **fallback** — optional, rendered when the list is empty
 
@@ -249,7 +249,7 @@ The `bind` config supports `attr`, `class`, `style`, and `on` sections.
 
 ## ARIA bindings
 
-Use `bind({ aria: config }, { target })` to reactively sync ARIA attributes to any element. Shorthand keys are normalised to `aria-*` automatically — `expanded` becomes `aria-expanded`, `role` is set verbatim.
+Use explicit `aria-*` keys in `bind({ attr: config }, { target })` to reactively sync ARIA attributes to any element.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
@@ -271,10 +271,10 @@ define('x-disclosure', {
         // bind() registers cleanup automatically when called inside setup
         bind(
           {
-            aria: {
-              controls: panelId,
-              expanded: () => String(open.value),
-              haspopup: 'region',
+            attr: {
+              'aria-controls': panelId,
+              'aria-expanded': () => String(open.value),
+              'aria-haspopup': 'region',
             },
           },
           { target: trigger },
@@ -294,7 +294,7 @@ Static values are applied once. Getter functions create reactive effects. Settin
 ```ts
 onMounted(() => {
   const trigger = document.querySelector('#trigger') as HTMLElement;
-  const stopAria = bind({ aria: { expanded: () => String(open.value) } }, { target: trigger });
+  const stopAria = bind({ attr: { 'aria-expanded': () => String(open.value) } }, { target: trigger });
 
   // Stop syncing when the trigger is replaced
   onCleanup(stopAria);
@@ -410,10 +410,11 @@ define('rating-input', {
 
 ## Sentinel Observers
 
-Use `@vielzeug/sentinel` for reactive browser and DOM observations. Create element-dependent Sentinels inside `onMounted()` and dispose them with the component.
+Use `@vielzeug/sentinel` for subscribable browser and DOM observations. Create element-dependent Sentinels inside `onMounted()` and dispose them with the component.
 
 ```ts
 import { define, html, onCleanup, onMounted, ref, watchEffect } from '@vielzeug/ore';
+import { fromSubscribable } from '@vielzeug/ripple';
 import { createElementSize, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 define('x-observed', {
@@ -426,9 +427,10 @@ define('x-observed', {
 
       try {
         const size = createElementSize(element);
+        const sizeState = fromSubscribable(size, { signal: size.disposalSignal });
 
         watchEffect(() => {
-          console.log(size.value?.width);
+          console.log(sizeState.value?.width);
         });
 
         onCleanup(() => size.dispose());

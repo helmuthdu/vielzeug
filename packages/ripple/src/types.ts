@@ -42,20 +42,39 @@ export interface Scope extends Disposable {
   run<T>(fn: () => T): T;
 }
 
-export type ReactiveEvent =
-  | { readonly kind: 'compute'; readonly name?: string }
-  | { readonly kind: 'effect'; readonly name?: string }
-  | { readonly kind: 'write'; readonly name?: string; readonly next: unknown; readonly previous: unknown }
-  | { readonly kind: 'dispose'; readonly name?: string; readonly node: 'effect' | 'scope' };
+/**
+ * Structural contract for external state sources that expose a snapshot and a
+ * subscription pair — the same shape React's `useSyncExternalStore` consumes.
+ * Packages can implement this without importing Ripple; `fromSubscribable()`
+ * bridges them into a reactive graph.
+ */
+export interface Subscribable<T> {
+  getSnapshot(): T;
+  subscribe(listener: () => void): Unsubscribe;
+}
 
-export type ReactiveObserver = (event: ReactiveEvent) => void;
-
-export type ReactiveErrorContext = {
-  readonly kind: 'cleanup' | 'effect' | 'listener' | 'observer';
+export type RippleErrorContext = {
+  readonly kind: 'cleanup' | 'computed' | 'effect' | 'listener';
   readonly name?: string;
 };
 
+export type RippleEvent =
+  | { readonly type: 'compute'; readonly name?: string }
+  | { readonly type: 'effect'; readonly name?: string }
+  | { readonly type: 'write'; readonly name?: string; readonly next: unknown; readonly previous: unknown }
+  | { readonly type: 'dispose'; readonly name?: string; readonly node: 'effect' | 'graph' | 'scope' }
+  | { readonly type: 'error'; readonly error: unknown; readonly context: RippleErrorContext };
+
+/**
+ * Deterministic error policy for runtime callback, cleanup, and listener
+ * failures. Error events are always emitted through `tap()` regardless of
+ * policy — this controls only whether failures also rethrow.
+ *
+ * - `'throw'` (default): rethrows the error asynchronously via `queueMicrotask`.
+ * - `'swallow'`: silences rethrow; observe failures only through `tap()`.
+ */
+export type RippleErrorPolicy = 'throw' | 'swallow';
+
 export type RippleOptions = {
-  observer?: ReactiveObserver;
-  onError?: (error: unknown, context: ReactiveErrorContext) => void;
+  errorPolicy?: RippleErrorPolicy;
 };

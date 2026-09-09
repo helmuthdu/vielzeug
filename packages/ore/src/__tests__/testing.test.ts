@@ -5,8 +5,8 @@ import { fireClick } from '@vielzeug/assay';
  */
 import { signal } from '@vielzeug/ripple';
 
-import { html, prop } from '../index';
-import { cleanup, mock, mount, mountComponent } from '../testing';
+import { html } from '../index';
+import { cleanup, mount } from '../testing';
 
 describe('Testing: Render Utilities', () => {
   describe('mount()', () => {
@@ -100,21 +100,6 @@ describe('Testing: Render Utilities', () => {
     });
   });
 
-  describe('mock()', () => {
-    it('should register a stub custom element', () => {
-      const mockName = 'mock-test-component';
-
-      mock(mockName, '<div class="mocked">Mocked</div>');
-      expect(customElements.get(mockName)).toBeDefined();
-
-      const element = document.createElement(mockName);
-
-      document.body.appendChild(element);
-      expect(element.innerHTML).toContain('Mocked');
-      element.remove();
-    });
-  });
-
   describe('cleanup()', () => {
     it('should remove all mounted components', async () => {
       await mount(
@@ -177,19 +162,6 @@ describe('Testing: Render Utilities', () => {
       // Idempotent: calling dispose again (directly or via Symbol.dispose) is a no-op.
       fixture.dispose();
       expect(fixture.disposed).toBe(true);
-    });
-  });
-
-  describe('mountComponent()', () => {
-    it('registers and mounts a component definition in one call', async () => {
-      const { query } = await mountComponent('mount-component-demo', {
-        props: { label: prop.string('hi') },
-        setup: (props) => html`
-          <span>${props.label}</span>
-        `,
-      });
-
-      expect(query('span')?.textContent).toBe('hi');
     });
   });
 

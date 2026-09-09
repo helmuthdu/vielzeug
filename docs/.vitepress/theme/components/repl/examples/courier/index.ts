@@ -1,9 +1,9 @@
+import { cachedReadExample } from './cached-read';
 import { createCourierExample } from './create-courier';
-import { queryHandleExample } from './query-handle';
-import { streamCancellationExample } from './stream-cancellation';
+import { middlewareExample } from './middleware';
 
 export const courierExamples = {
+  'cached-read': cachedReadExample,
   'create-courier': createCourierExample,
-  'query-handle': queryHandleExample,
-  'stream-cancellation': streamCancellationExample,
+  middleware: middlewareExample,
 };

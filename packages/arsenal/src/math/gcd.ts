@@ -15,6 +15,10 @@
  * @returns The greatest common divisor of `a` and `b`.
  */
 export function gcd(a: number, b: number): number {
+  if (!Number.isSafeInteger(a) || !Number.isSafeInteger(b)) {
+    throw new RangeError('gcd: inputs must be safe integers');
+  }
+
   let x = Math.abs(a);
   let y = Math.abs(b);
 

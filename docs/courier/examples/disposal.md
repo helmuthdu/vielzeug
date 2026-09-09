@@ -7,7 +7,7 @@ description: 'Cancel Courier work deterministically.'
 
 ### Problem
 
-A route can end while requests and streams are active, but the application client must remain usable elsewhere.
+A route can end while requests are active, but the application client must remain usable elsewhere.
 
 ### Solution
 
@@ -29,11 +29,11 @@ function shutdownApplication(): void {
 
 ### Pitfalls
 
-- A disposed client cannot start requests or streams.
+- A disposed client cannot start requests.
 - Create clients per application or SSR request scope, not per component render.
-- Unsubscribe cache listeners when their view or route ends; it does not dispose client.
+- `cancelAll()` aborts active direct and shared cached requests but retains settled cached values; use `clearCache()` when those values must also be removed.
 
 ### Related
 
 - [Best Practices](../usage.md#best-practices)
-- [Real-time Events](./sse-events.md)
+- [Error Handling Patterns](./error-handling-patterns.md)

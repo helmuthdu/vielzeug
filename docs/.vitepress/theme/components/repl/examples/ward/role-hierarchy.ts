@@ -1,16 +1,23 @@
 export const roleHierarchyExample = {
-  code: `import { allow, createWard } from '@vielzeug/ward'
+  code: `import { createWard } from '@vielzeug/ward'
+
+// Simulate role hierarchy via condition callbacks
+const hasRole = (role: string) => ({ principal }: { principal?: { roles: readonly string[] } | null }) =>
+  principal?.roles.includes(role) ?? false
 
 const ward = createWard([
-  allow('editor',    'posts', ['read']),
-  allow('moderator', 'posts', ['delete']),
+  { action: 'read',   resource: 'posts', effect: 'allow' },
+  { action: 'update', resource: 'posts', effect: 'allow', condition: hasRole('editor') },
+  { action: 'delete', resource: 'posts', effect: 'allow', condition: hasRole('admin') },
 ])
 
-const user  = { id: '42', roles: ['editor', 'moderator'] }
-const bound = ward.forUser(user)
+const editor = { id: 'u1', roles: ['editor'] }
+const admin  = { id: 'u2', roles: ['admin'] }
+const viewer = { id: 'u3', roles: ['viewer'] }
 
-console.log('Can read posts:   ', bound.explain({ action: 'read', resource: 'posts' }).allowed)
-console.log('Can delete posts: ', bound.explain({ action: 'delete', resource: 'posts' }).allowed)
-console.log('Allowed actions:  ', bound.allowedActions({ knownActions: ['read', 'delete', 'update'], resource: 'posts' }))`,
-  name: 'Bound Multi-Role Access',
+console.log('viewer read:  ', ward.decide({ action: 'read',   principal: viewer, resource: 'posts' }).effect) // allow
+console.log('editor update:', ward.decide({ action: 'update', principal: editor, resource: 'posts' }).effect) // allow
+console.log('admin  delete:', ward.decide({ action: 'delete', principal: admin,  resource: 'posts' }).effect) // allow
+console.log('viewer delete:', ward.decide({ action: 'delete', principal: viewer, resource: 'posts' }).effect) // deny`,
+  name: 'Role Hierarchy',
 };

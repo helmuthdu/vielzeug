@@ -7,7 +7,7 @@ import { createPositioner, type Positioner } from './float';
 import type { ComputePositionResult, ReferenceElement } from './types';
 
 export interface ReactivePositioner extends Positioner {
-  readonly position: Readable<ComputePositionResult | null>;
+  readonly position: Readable<ComputePositionResult>;
 }
 
 /** Creates a positioner with its latest result exposed as a Ripple readable. */
@@ -24,7 +24,5 @@ export function createReactivePositioner(
     },
   });
 
-  positioner.start();
-
-  return Object.assign(positioner, { position: position as Readable<ComputePositionResult | null> });
+  return Object.assign(positioner, { position: position as Readable<ComputePositionResult> });
 }

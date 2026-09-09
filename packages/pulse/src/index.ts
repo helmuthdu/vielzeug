@@ -13,6 +13,7 @@ export type {
   ChannelDefinitions,
   ClientEvents,
   EventKey,
+  ExternalStore,
   HeartbeatOptions,
   MessageMap,
   OutgoingMessage,

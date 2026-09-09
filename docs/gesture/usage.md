@@ -1,16 +1,20 @@
 ---
 title: Gesture — Usage Guide
-description: Track one-axis pointer movement and apply application-specific completion rules.
+description: Track unrestricted pointer dragging and axis-locked pans with application-owned rendering and completion.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create one pan handle for the element that owns the interaction.
+Create one handle for the element that owns the interaction. This example creates its surface, applies the required touch policy, and disposes the handle when the page unloads.
 
 ```ts
 import { createPanGesture } from '@vielzeug/gesture';
+
+const row = document.body.appendChild(document.createElement('div'));
+row.textContent = 'Swipe to archive';
+row.style.touchAction = 'pan-y';
 
 const pan = createPanGesture(row, {
   axis: 'x',
@@ -19,11 +23,40 @@ const pan = createPanGesture(row, {
   },
   onEnd: ({ distance, reason }) => {
     row.style.transform = '';
-
-    if (reason === 'release' && Math.abs(distance) >= 64) archive();
+    if (reason === 'release' && Math.abs(distance) >= 64) {
+      pan.dispose();
+      row.remove();
+    }
   },
 });
+
+window.addEventListener('pagehide', () => pan.dispose(), { once: true });
 ```
+
+## Track Two-Dimensional Dragging
+
+Use `createDragGesture()` when movement must remain unrestricted in both dimensions:
+
+```ts
+import { createDragGesture } from '@vielzeug/gesture';
+
+const card = document.querySelector<HTMLElement>('[data-draggable]');
+if (!card) throw new Error('Missing [data-draggable] element');
+
+const drag = createDragGesture(card, {
+  activationDistance: 6,
+  onMove: ({ delta }) => {
+    card.style.translate = `${delta.x}px ${delta.y}px`;
+  },
+  onEnd: () => {
+    card.style.translate = '';
+  },
+});
+
+window.addEventListener('pagehide', () => drag.dispose(), { once: true });
+```
+
+`start`, `current`, and `delta` are readonly `{ x, y }` points. Set `touch-action: none` when the surface owns movement in both dimensions. Drag recognition does not provide previews, drop targets, DOM movement, or `DataTransfer`; use Dnd for those semantics.
 
 ## Completion Rules
 
@@ -46,6 +79,19 @@ const pan = createPanGesture(panel, {
 
 The gesture remains pending during small movement. It activates only after movement favors the configured axis. Cross-axis movement ends the pending interaction without invoking callbacks.
 
+The default `activationDistance` is 6 pixels. Tune direction-recognition slop for touch density or component-specific needs:
+
+```ts
+const pan = createPanGesture(row, {
+  axis: 'x',
+  activationDistance: 12,
+  onMove,
+  onEnd,
+});
+```
+
+Set `activationDistance: 0` when the first pointer move with non-zero displacement should activate immediately. Zero-motion events remain pending.
+
 Use the corresponding `touch-action` value so the browser retains native scrolling on the other axis.
 
 ```css
@@ -60,7 +106,7 @@ const pan = createPanGesture(row, { axis: 'x', onMove });
 
 ## Pointer Capture
 
-Pointer capture is enabled by default. After axis intent is accepted, Gesture captures the pointer on the bound target while continuing to track movement through document-level listeners. This is the reliable default for ordinary drag surfaces.
+Pointer capture is enabled by default. After axis intent is accepted, Gesture attempts to capture the pointer while continuing to track movement through document-level listeners. Capture failure—for example after target detachment or pointer termination—falls back to document tracking without stranding the session.
 
 Disable capture when nested or newly revealed controls must retain native pointer-up and click targeting:
 
@@ -107,19 +153,32 @@ const pan = createPanGesture(row, {
 });
 ```
 
-When the getter becomes `true`, the next pointer event cancels an active pan.
+When the getter becomes `true`, the next pointer event cancels an active pan. Window blur or a hidden owner document also cancels active tracking so a lost release cannot block later gestures.
+
+Gesture snapshots fixed callbacks and capture policy at construction. Use the `axis` and `disabled` functions for behavior that must remain dynamic instead of mutating the options object.
 
 ## Lifecycle
 
 Dispose the target-bound handle when its owning UI scope unmounts.
 
 ```ts
-const pan = createPanGesture(element, { onEnd, onMove });
+const element = document.querySelector<HTMLElement>('[data-pan]');
+if (!element) throw new Error('Missing [data-pan] element');
 
-onCleanup(() => pan.dispose());
+const owner = new AbortController();
+const request = new AbortController();
+const pan = createPanGesture(element, {
+  axis: 'x',
+  signal: owner.signal,
+});
+
+const childSignal = AbortSignal.any([pan.disposalSignal, request.signal]);
+window.addEventListener('pagehide', () => owner.abort(), { once: true });
 ```
 
-Use `cancel()` to stop a pending or active interaction without disposing the handle. An active interaction emits `onEnd` with `reason: 'cancel'`.
+Pass `{ signal }` to dispose with an existing owner signal. `disposalSignal` always aborts when Gesture finishes teardown, so child work can compose with the handle regardless of how disposal starts.
+
+Use `cancel()` to stop a pending or active interaction without disposing the handle. An active interaction emits `onEnd` with `reason: 'cancel'`. Call `cancel()` before `dispose()` when a connected surface needs its `onEnd` reset path; disposal itself does not invoke callbacks.
 
 ## Framework Integration
 
@@ -233,14 +292,14 @@ const pan = createPanGesture(panel, {
 
 ### Gesture + Dnd
 
-Gesture tracks a constrained pointer pan. Dnd owns draggable items, sortable lists, and drop targets. Keep them separate.
+Gesture owns pointer recognition: unrestricted two-dimensional drag and one-axis pan. Dnd builds touch sorting on `createDragGesture()`, then owns `DataTransfer`, previews, hit-testing, file drop zones, keyboard sorting, DOM reordering, and connected-list transactions. Use Dnd when an item is picked up and dropped; use Gesture directly when application code owns rendering and completion.
 
 ## Best Practices
 
 - **Set** `touch-action` for the axis the browser should continue scrolling.
 - **Use** `shouldStart` to exclude nested interactive controls.
 - **Disable** pointer capture when nested or newly revealed controls must keep native release targeting.
-- **Apply** thresholds and direction rules in `onEnd`.
+- **Apply** completion thresholds and direction rules in `onEnd`; use `activationDistance` only for recognition slop.
 - **Treat** `reason: 'cancel'` as a reset path, never a commit path.
 - **Keep** `onMove` rendering lightweight.
 - **Dispose** the handle when its target leaves the UI.

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Replace record bindings with ordered IDs and per-binding event control, add parser subpath and tap-based chord observability, and harden guarded chord lifecycle behavior.",
+      "packageName": "@vielzeug/keymap",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/keymap"
+}

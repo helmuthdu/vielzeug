@@ -9,9 +9,10 @@ import type {
   ComputedOptions,
   EffectHandle,
   EffectOptions,
-  ReactiveErrorContext,
-  ReactiveObserver,
   Readable,
+  RippleErrorContext,
+  RippleErrorPolicy,
+  RippleEvent,
   RippleOptions,
   Scope,
   Signal,
@@ -33,6 +34,7 @@ type ObserverNode = {
 
 type Owned = {
   dispose(): void;
+  setOwner(owner: ScopeNode | undefined): void;
 };
 
 abstract class ReactiveNode<T> {
@@ -92,7 +94,7 @@ class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
     const previous = this.current;
 
     this.current = next;
-    this.runtime.emit({ kind: 'write', name: this.name, next, previous });
+    this.runtime.emit({ name: this.name, next, previous, type: 'write' });
     this.runtime.propagate(() => this.notify());
   }
 
@@ -113,6 +115,7 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
   private current: T | typeof UNSET = UNSET;
   private readonly derive: () => T;
   private readonly equals: (previous: T, next: T) => boolean;
+  private owner: ScopeNode | undefined;
 
   constructor(runtime: ReactiveRuntime, derive: () => T, options?: ComputedOptions<T>) {
     super(runtime, options?.name);
@@ -142,13 +145,25 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
 
     if (!this.dirty) this.dirty = true;
 
-    if (this.dependents.size > 0 && this.refresh()) this.notify();
+    if (this.dependents.size > 0) {
+      try {
+        if (this.refresh()) this.notify();
+      } catch (error) {
+        this.runtime.report(error, { kind: 'computed', name: this.name });
+      }
+    }
+  }
+
+  setOwner(owner: ScopeNode | undefined): void {
+    this.owner = owner;
   }
 
   dispose(): void {
     if (this.disposed) return;
 
     this.disposed = true;
+    this.owner?.release(this);
+    this.owner = undefined;
     this.runtime.clearDependencies(this);
     this.dependents.clear();
   }
@@ -163,7 +178,7 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
     }
 
     this.computing = true;
-    this.runtime.emit({ kind: 'compute', name: this.name });
+    this.runtime.emit({ name: this.name, type: 'compute' });
 
     try {
       const next = this.runtime.collect(this, this.derive);
@@ -179,11 +194,12 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
   }
 }
 
-class ScopeNode implements Scope {
+class ScopeNode implements Scope, Owned {
   readonly disposalController = new AbortController();
   readonly owned = new Set<Owned>();
   readonly name: string | undefined;
   private isDisposed = false;
+  private owner: ScopeNode | undefined;
   private readonly runtime: ReactiveRuntime;
 
   constructor(runtime: ReactiveRuntime, name?: string) {
@@ -199,6 +215,19 @@ class ScopeNode implements Scope {
     return this.disposalController.signal;
   }
 
+  own(value: Owned): void {
+    value.setOwner(this);
+    this.owned.add(value);
+  }
+
+  release(value: Owned): void {
+    this.owned.delete(value);
+  }
+
+  setOwner(owner: ScopeNode | undefined): void {
+    this.owner = owner;
+  }
+
   run<T>(fn: () => T): T {
     if (this.isDisposed) throw new RippleDisposedScopeError('Cannot run a disposed scope.');
 
@@ -209,10 +238,12 @@ class ScopeNode implements Scope {
     if (this.isDisposed) return;
 
     this.isDisposed = true;
+    this.owner?.release(this);
+    this.owner = undefined;
     for (const owned of [...this.owned].reverse()) owned.dispose();
     this.owned.clear();
     this.disposalController.abort();
-    this.runtime.emit({ kind: 'dispose', name: this.name, node: 'scope' });
+    this.runtime.emit({ name: this.name, node: 'scope', type: 'dispose' });
   }
 
   [Symbol.dispose](): void {
@@ -225,7 +256,8 @@ class EffectNode implements ObserverNode, EffectHandle {
   readonly disposalController = new AbortController();
   private cleanup: Cleanup | undefined;
   private isDisposed = false;
-  private owner: ScopeNode | undefined;
+  private ownershipScope: ScopeNode | undefined;
+  private runScope: ScopeNode | undefined;
   private scheduled = false;
   private readonly callback: () => Cleanup | undefined;
   private readonly options: EffectOptions | undefined;
@@ -243,6 +275,10 @@ class EffectNode implements ObserverNode, EffectHandle {
 
   get disposalSignal(): AbortSignal {
     return this.disposalController.signal;
+  }
+
+  setOwner(owner: ScopeNode | undefined): void {
+    this.ownershipScope = owner;
   }
 
   onDependencyChanged(): void {
@@ -267,18 +303,23 @@ class EffectNode implements ObserverNode, EffectHandle {
   run(): void {
     if (this.isDisposed) return;
 
-    this.owner?.dispose();
-    this.owner = undefined;
+    this.runScope?.dispose();
+    this.runScope = undefined;
     this.runCleanup();
-    this.runtime.emit({ kind: 'effect', name: this.options?.name });
+    this.runtime.emit({ name: this.options?.name, type: 'effect' });
 
     const owner = new ScopeNode(this.runtime);
 
     try {
       const cleanup = this.runtime.withEffectScope(owner, () => this.runtime.collectEffect(this, this.callback));
 
-      this.owner = owner;
+      this.runScope = owner;
       this.cleanup = typeof cleanup === 'function' ? cleanup : undefined;
+      if (this.isDisposed) {
+        this.runScope.dispose();
+        this.runScope = undefined;
+        this.runCleanup();
+      }
     } catch (error) {
       owner.dispose();
       this.runtime.report(error, { kind: 'effect', name: this.options?.name });
@@ -289,12 +330,14 @@ class EffectNode implements ObserverNode, EffectHandle {
     if (this.isDisposed) return;
 
     this.isDisposed = true;
-    this.owner?.dispose();
-    this.owner = undefined;
+    this.ownershipScope?.release(this);
+    this.ownershipScope = undefined;
+    this.runScope?.dispose();
+    this.runScope = undefined;
     this.runtime.clearDependencies(this);
     this.runCleanup();
     this.disposalController.abort();
-    this.runtime.emit({ kind: 'dispose', name: this.options?.name, node: 'effect' });
+    this.runtime.emit({ name: this.options?.name, node: 'effect', type: 'dispose' });
   }
 
   [Symbol.dispose](): void {
@@ -330,18 +373,11 @@ export class ReactiveRuntime {
   private readonly pending = new Set<EffectNode>();
   private readonly listeners = new Set<() => void>();
   private readonly rootScope: ScopeNode;
-  private readonly observer: ReactiveObserver | undefined;
-  private readonly onError: (error: unknown, context: ReactiveErrorContext) => void;
+  private readonly tappers = new Set<(event: RippleEvent) => void>();
+  private readonly errorPolicy: RippleErrorPolicy;
 
   constructor(options?: RippleOptions) {
-    this.observer = options?.observer;
-    this.onError =
-      options?.onError ??
-      ((error) => {
-        queueMicrotask(() => {
-          throw error;
-        });
-      });
+    this.errorPolicy = options?.errorPolicy ?? 'throw';
     this.rootScope = new ScopeNode(this, 'runtime');
     this.activeScope = this.rootScope;
   }
@@ -365,7 +401,7 @@ export class ReactiveRuntime {
 
     const node = new ComputedNode(this, derive, options);
 
-    (this.activeEffectScope ?? this.activeScope).owned.add(node);
+    (this.activeEffectScope ?? this.activeScope).own(node);
 
     return node;
   };
@@ -375,7 +411,7 @@ export class ReactiveRuntime {
 
     const node = new EffectNode(this, callback, options);
 
-    (this.activeEffectScope ?? this.activeScope).owned.add(node);
+    (this.activeEffectScope ?? this.activeScope).own(node);
     node.run();
 
     return node;
@@ -390,7 +426,7 @@ export class ReactiveRuntime {
     // effect run, they deliberately attach to the enclosing scope rather than the per-run owner:
     // keyed DOM directives retain item scopes across reconciliation runs and dispose them only
     // when the item itself leaves the collection.
-    this.activeScope.owned.add(scope);
+    this.activeScope.own(scope);
 
     return scope;
   };
@@ -407,11 +443,40 @@ export class ReactiveRuntime {
     return this.withObserver(undefined, fn);
   };
 
+  /** Runtime observability — see `Ripple.tap()`. */
+  readonly tap = (handler: (event: RippleEvent) => void, options?: { signal?: AbortSignal }): Unsubscribe => {
+    if (this.isDisposed) return () => {};
+
+    const signal = options?.signal;
+
+    if (signal?.aborted) {
+      this.tappers.delete(handler);
+      return () => {};
+    }
+
+    this.tappers.add(handler);
+
+    if (signal) {
+      const onAbort = () => this.tappers.delete(handler);
+
+      signal.addEventListener('abort', onAbort, { once: true });
+
+      return () => {
+        this.tappers.delete(handler);
+        signal.removeEventListener('abort', onAbort);
+      };
+    }
+
+    return () => this.tappers.delete(handler);
+  };
+
   dispose(): void {
     if (this.isDisposed) return;
 
     this.isDisposed = true;
     this.rootScope.dispose();
+    this.emit({ node: 'graph', type: 'dispose' });
+    this.tappers.clear();
   }
 
   /** Internal node guard: disposed runtimes allow inert reads but reject graph work and mutation. */
@@ -507,20 +572,24 @@ export class ReactiveRuntime {
     }
   }
 
-  emit(event: Parameters<ReactiveObserver>[0]): void {
-    try {
-      this.observer?.(event);
-    } catch (error) {
-      this.report(error, { kind: 'observer', name: event.name });
+  emit(event: RippleEvent): void {
+    if (this.tappers.size === 0) return;
+
+    for (const tapper of this.tappers) {
+      try {
+        tapper(event);
+      } catch {
+        // Observability must not affect runtime behavior.
+      }
     }
   }
 
-  report(error: unknown, context: ReactiveErrorContext): void {
-    try {
-      this.onError(error, context);
-    } catch (reporterError) {
+  report(error: unknown, context: RippleErrorContext): void {
+    this.emit({ context, error, type: 'error' });
+
+    if (this.errorPolicy === 'throw') {
       queueMicrotask(() => {
-        throw reporterError;
+        throw error;
       });
     }
   }
@@ -597,9 +666,10 @@ export class ReactiveRuntime {
 }
 
 export const isReactive = <T>(value: T | Readable<T>): value is Readable<T> => {
-  if (typeof value !== 'object' || value === null || !(REACTIVE in value)) return false;
+  if (typeof value !== 'object' || value === null || (value as { [REACTIVE]?: unknown })[REACTIVE] !== true)
+    return false;
 
-  const candidate = value as { peek?: unknown; subscribe?: unknown };
+  const candidate = value as { peek?: unknown; subscribe?: unknown; value?: unknown };
 
-  return typeof candidate.peek === 'function' && typeof candidate.subscribe === 'function';
+  return 'value' in candidate && typeof candidate.peek === 'function' && typeof candidate.subscribe === 'function';
 };

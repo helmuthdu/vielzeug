@@ -28,4 +28,4 @@ shuffle([1, 2, 3, 4, 5]); // e.g. [2, 4, 1, 5, 3]
 ### Related
 
 - [draw](./draw.md)
-- [sample](../array/sampleSize.md)
+- [sample](./draw.md)

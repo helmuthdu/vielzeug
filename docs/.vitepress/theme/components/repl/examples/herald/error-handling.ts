@@ -1,11 +1,15 @@
 export const errorHandlingExample = {
   code: `import { createBus, HeraldError } from '@vielzeug/herald'
 
-// onError captures listener throws — every listener still runs, even a buggy one
+// tap() captures every listener error; emit() rethrows the first after all listeners run
 const errors = []
 
-const bus = createBus({
-  onError: ({ err, event }) => errors.push({ event, message: err.message }),
+const bus = createBus()
+
+bus.tap((event) => {
+  if (event.type === 'error') {
+    errors.push({ event: event.event, message: event.error instanceof Error ? event.error.message : String(event.error) })
+  }
 })
 
 bus.on('order:placed', () => console.log('confirmation email sent'))
@@ -14,13 +18,15 @@ bus.on('order:placed', () => {
 })
 bus.on('order:placed', () => console.log('analytics event recorded')) // still runs
 
-bus.emit('order:placed', { id: 'ORD-1', total: 49.99 })
+try {
+  bus.emit('order:placed', { id: 'ORD-1', total: 49.99 })
+} catch (err) {
+  console.log('first error rethrown:', err.message)
+}
 
 console.log('captured errors:', errors)
 // [{ event: 'order:placed', message: 'inventory check failed' }]
 
-// Without onError, the first error rethrows once every listener has run —
-// instanceof HeraldError catches it without importing every herald error subclass
 try {
   bus.waitAny(['event-a']) // waitAny requires at least 2 event keys
 } catch (err) {

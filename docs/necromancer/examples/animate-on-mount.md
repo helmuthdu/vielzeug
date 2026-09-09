@@ -37,6 +37,7 @@ window.setTimeout(() => {
 
 - Start `animate()` only after the element is connected and has mounted in the browser.
 - Dispose the handle before or while removing the element if the animation may still be active.
+- Set an explicit `duration`; omitted timing fields retain native Web Animations API behavior.
 - Leave `motion` as `'system'` unless the animation is essential; reduced motion preserves the keyframes with instant timing.
 
 ### Related

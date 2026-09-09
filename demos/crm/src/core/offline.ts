@@ -55,9 +55,9 @@ export async function setupOfflineSync(): Promise<void> {
     void postmaster.enqueue('syncStage', { id: opportunityId, stage: to });
   });
   network.subscribe(() => {
-    if (network.value.online && networkStatus.value !== 'offline') void reconnect();
+    if (network.getSnapshot().online && networkStatus.value !== 'offline') void reconnect();
   });
-  await postmaster.start();
+  postmaster.start();
 }
 
 export function simulateOffline(): void {

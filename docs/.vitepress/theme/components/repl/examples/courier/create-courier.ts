@@ -10,28 +10,16 @@ const courier = createCourier({
   baseUrl: 'https://api.example.com',
   fetch,
   timeout: 8_000,
-  query: { staleTime: 10_000 },
+  middleware: [withLogging({ logger: (msg) => console.log(msg) })],
 })
-
-courier.use(withLogging({ logger: (msg) => console.log(msg) }))
 
 const user = await courier.get('/users/1')
 console.log('User:', user.name)
 
-const key = ['users', 1]
-await courier.queries.fetch({
-  key,
-  fetch: ({ signal }) => courier.get('/users/1', { signal }),
-})
-console.log('Cached user:', courier.queries.getSnapshot(key)?.data.name)
-
-const created = await courier.mutate({
-  request: ({ signal }) => courier.post('/users', { body: { name: 'Courier' }, signal }),
-  invalidateKeys: [['users']],
-})
-
+const created = await courier.request('/users', { method: 'POST', body: { name: 'Courier' } })
 console.log('Created id:', created.id)
+
 courier.dispose()
 console.log('✓ Client disposed')`,
-  name: 'createCourier - Unified Client',
+  name: 'createCourier - Transport Client',
 };

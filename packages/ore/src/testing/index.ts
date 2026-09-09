@@ -3,8 +3,7 @@
  *
  * ⚠️ Requires DOM environment (browser / jsdom / happy-dom)
  *
- * This barrel re-exports the full testing API for convenience.
- * For tree-shaking, import directly from the focused sub-modules.
+ * This is the package's only public testing entry point.
  */
 
 import { installFormInternalsPolyfill } from './form-internals-polyfill';
@@ -14,12 +13,10 @@ import { cleanup } from './mount';
 // see flush.ts). Exported here (not from the main `.` entry) so components with no interest
 // in the testing sub-path don't carry a testing-only error class in their public type surface.
 // Generic DOM interaction helpers belong to @vielzeug/assay, not this Ore-specific test API.
-export { walkFlatTree } from './dom';
-export { debugFlush, type FlushOptions, flush, OreTimeoutError } from './flush';
+export { type FlushOptions, flush, OreTimeoutError } from './flush';
 export { installFormInternalsPolyfill } from './form-internals-polyfill';
-export { cleanup, type Fixture, type MountOptions, type MountSetup, mock, mount, mountComponent } from './mount';
+export { cleanup, type Fixture, type MountOptions, type MountSetup, mount } from './mount';
 export { type HookFixture, renderHook } from './render-hook';
-export { resetOreForTests } from './reset';
 
 export type InstallOptions = {
   /**

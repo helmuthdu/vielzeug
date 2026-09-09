@@ -9,9 +9,13 @@ export type { OreCheckboxEvents, OreCheckboxProps } from './checkbox/checkbox';
 export { CHECKBOX_TAG } from './checkbox/checkbox';
 export type { OreCheckboxGroupEvents, OreCheckboxGroupProps } from './checkbox-group/checkbox-group';
 export { CHECKBOX_GROUP_CTX, CHECKBOX_GROUP_TAG } from './checkbox-group/checkbox-group';
-export type { OreComboboxEvents, OreComboboxProps } from './combobox/combobox';
-export { COMBOBOX_TAG } from './combobox/combobox';
-export type { OreComboboxOptionProps } from './combobox/combobox.types';
+export type {
+  ComboboxOptionInput,
+  OreComboboxEvents,
+  OreComboboxOptionProps,
+  OreComboboxProps,
+} from './combobox/combobox';
+export { COMBOBOX_OPTION_TAG, COMBOBOX_TAG } from './combobox/combobox';
 export type {
   DataGridColumn,
   DataGridLabels,

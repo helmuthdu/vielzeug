@@ -1,52 +1,5 @@
 import { s } from '../index';
 
-// ---------------------------------------------------------------------------
-// Instance .coerce() methods — chainable equivalent to s.coerce.*
-// ---------------------------------------------------------------------------
-
-describe('instance .coerce() — string', () => {
-  it('s.string().coerce() coerces like s.coerce.string()', () => {
-    expect(s.string().coerce().parse(42)).toBe('42');
-    expect(s.string().coerce().parse(true)).toBe('true');
-    expect(s.string().coerce().parse('hello')).toBe('hello');
-  });
-
-  it('s.string().coerce() does not coerce null/undefined', () => {
-    expect(() => s.string().coerce().parse(null)).toThrow();
-    expect(() => s.string().coerce().parse(undefined)).toThrow();
-  });
-});
-
-describe('instance .coerce() — number', () => {
-  it('s.number().coerce() coerces like s.coerce.number()', () => {
-    expect(s.number().coerce().parse('3.14')).toBe(3.14);
-    expect(s.number().coerce().parse(true)).toBe(1);
-  });
-});
-
-describe('instance .coerce() — boolean', () => {
-  it('s.boolean().coerce() coerces like s.coerce.boolean()', () => {
-    expect(s.boolean().coerce().parse('true')).toBe(true);
-    expect(s.boolean().coerce().parse(0)).toBe(false);
-  });
-});
-
-describe('instance .coerce() — bigint', () => {
-  it('s.bigint().coerce() coerces like s.coerce.bigint()', () => {
-    expect(s.bigint().coerce().parse('42')).toBe(42n);
-    expect(s.bigint().coerce().parse(100)).toBe(100n);
-  });
-});
-
-describe('instance .coerce() — date', () => {
-  it('s.date().coerce() coerces like s.coerce.date()', () => {
-    const ts = Date.now();
-
-    expect(s.date().coerce().parse(ts)).toBeInstanceOf(Date);
-    expect(s.date().coerce().parse('2024-01-15')).toBeInstanceOf(Date);
-  });
-});
-
 describe('s.coerce.string()', () => {
   it('coerces numbers and booleans to string', () => {
     expect(s.coerce.string().parse(42)).toBe('42');

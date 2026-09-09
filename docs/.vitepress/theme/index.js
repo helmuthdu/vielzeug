@@ -1,4 +1,7 @@
-import { defaultLogger } from '@vielzeug/rune';
+import { createLogger } from '@vielzeug/rune';
+
+const defaultLogger = createLogger();
+
 import DefaultTheme from 'vitepress/theme';
 
 import CodeWindow from './components/CodeWindow.vue';

@@ -1,42 +1,39 @@
+import { validateRecord } from './codec';
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 import { createObserverHub, getRecordKey } from './internal';
-import { createQueryBuilder, type QueryContext } from './query';
+import { createQueryBuilder } from './query';
 import { assertPositiveFinite } from './ttl';
 import type {
   AnySchema,
-  BaseAdapterOptions,
+  DocumentVaultStore,
+  DurableStoreOptions,
   KeyOf,
+  KeyValueVaultStore,
+  MemoryStoreOptions,
   RecordOf,
-  TransactionalVaultStore,
+  TableCodecs,
   TransactionContext,
-  VaultStore,
 } from './types';
 
 /* -------------------- Internal backend protocol -------------------- */
 
-/** @internal Full backend protocol implemented by each adapter. A single flat interface — no StorageCore/StorageBackend split. */
+/** @internal Full backend protocol implemented by each adapter. */
 export type StorageBackend<S extends AnySchema, K extends keyof S & string = keyof S & string> = {
   clear<T extends K>(table: T): Promise<void>;
-  /** Returns live (non-expired) record count for the table. */
-  count<T extends K>(table: T): Promise<number>;
+  count?<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
-  deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
+  deleteMany?<T extends K>(table: T, keys: readonly KeyOf<S, T>[]): Promise<number>;
   dispose?(): Promise<void>;
   get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
   getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
-  /**
-   * Optional: fetch all live primary keys without materialising full records.
-   * When present, `keys()` uses this instead of `getAll()` + key extraction.
-   * For tables with TTL, implementations may still fall back to `getAll()` to
-   * filter expired keys accurately.
-   */
   getAllKeys?<T extends K>(table: T): Promise<KeyOf<S, T>[]>;
+  getMany?<T extends K>(table: T, keys: readonly KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  has?<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   /**
-   * Optional: fetch multiple records by key in a single operation. Preserves key order; missing keys yield
-   * `undefined`. Falls back to N individual `get` calls when absent.
+   * Optional: lazy iteration over live records. Document stores implement this natively
+   * (IDB cursor, SQLite keyset pagination). Key-value stores fall back to getAll().
    */
-  getMany?<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
-  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  iterate?<T extends K>(table: T): AsyncIterable<RecordOf<S, T>>;
   /**
    * Optional: prune all expired records across all tables in a single atomic operation.
    * When present, `pruneExpired()` delegates here instead of calling `pruneExpiredInTable` N times.
@@ -44,7 +41,7 @@ export type StorageBackend<S extends AnySchema, K extends keyof S & string = key
   pruneAllExpired?(): Promise<Record<string, number>>;
   pruneExpiredInTable<T extends K>(table: T): Promise<number>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: number): Promise<void>;
-  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: number): Promise<void>;
+  putAll<T extends K>(table: T, values: readonly RecordOf<S, T>[], ttl?: number): Promise<void>;
 };
 
 /** @internal */
@@ -91,36 +88,21 @@ function verifyKey<S extends AnySchema, K extends keyof S & string>(
   }
 }
 
-function getManyWithFallback<S extends AnySchema, K extends keyof S & string>(
-  core: Pick<StorageBackend<S, K>, 'get' | 'getMany'>,
-  table: K,
-  keys: KeyOf<S, K>[],
-): Promise<Array<RecordOf<S, K> | undefined>> {
-  if (core.getMany) return core.getMany(table, keys);
+/* -------------------- Codec helpers -------------------- */
 
-  return Promise.all(keys.map((k) => core.get(table, k)));
-}
+export function makeValidator<S extends AnySchema>(
+  codecs: TableCodecs<S> | undefined,
+): <K extends keyof S & string>(table: K, value: RecordOf<S, K>) => RecordOf<S, K> {
+  return <K extends keyof S & string>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
+    const codec = codecs?.[table];
 
-function buildQueryCtx<S extends AnySchema, K extends keyof S & string>(
-  table: K,
-  core: Pick<StorageBackend<S, K>, 'deleteMany' | 'getAll'>,
-  schema: S,
-  onMutate: (t: K) => void,
-): QueryContext<RecordOf<S, K>> {
-  const deleteManyFn = async (records: RecordOf<S, K>[]): Promise<number> => {
-    if (records.length === 0) return 0;
+    if (!codec) return value;
 
-    const keys = records.map((r) => getRecordKey(schema, table, r));
-    const deleted = await core.deleteMany(table, keys);
-
-    if (deleted > 0) onMutate(table);
-
-    return deleted;
-  };
-
-  return {
-    deleteMany: deleteManyFn,
-    source: () => core.getAll(table),
+    try {
+      return validateRecord(codec, value);
+    } catch (err) {
+      throw new VaultError(`validation failed for table "${table}"`, { cause: err });
+    }
   };
 }
 
@@ -132,31 +114,24 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
   onMutate: (table: K) => void,
   validate?: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   scope?: ReadonlySet<string>,
+  isActive: () => boolean = () => true,
 ): TransactionContext<S, K> {
   const applyValidation = validate ?? ((_: K, v: RecordOf<S, K>) => v);
 
-  const checkScope = scope
-    ? (t: K): void => {
-        if (!scope.has(t)) {
-          throw new VaultScopeError(`table "${t}" is not part of this batch scope`);
-        }
-      }
-    : (_t: K): void => {};
+  const checkScope = (table: K): void => {
+    if (!isActive()) throw new VaultScopeError('transaction context is no longer active');
+    if (scope && !scope.has(table)) throw new VaultScopeError(`table "${table}" is not part of this batch scope`);
+  };
 
-  return {
+  const context: TransactionContext<S, K> = {
     async clear(table) {
       checkScope(table);
-
-      const live = await core.count(table);
-
       await core.clear(table);
-
-      if (live > 0) onMutate(table);
+      onMutate(table);
     },
     async count(table) {
       checkScope(table);
-
-      return core.count(table);
+      return core.count ? core.count(table) : (await core.getAll(table)).length;
     },
     async delete(table, key) {
       checkScope(table);
@@ -169,11 +144,14 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
     },
     async deleteMany(table, keys) {
       checkScope(table);
-
+      if (!core.deleteMany) {
+        const results = await Promise.all(keys.map((key) => core.delete(table, key)));
+        const deleted = results.filter(Boolean).length;
+        if (deleted > 0) onMutate(table);
+        return deleted;
+      }
       const deleted = await core.deleteMany(table, keys);
-
       if (deleted > 0) onMutate(table);
-
       return deleted;
     },
     async get(table, key) {
@@ -188,44 +166,41 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
     },
     async getMany(table, keys) {
       checkScope(table);
-
-      return getManyWithFallback(core, table, keys);
+      return core.getMany ? core.getMany(table, keys) : Promise.all(keys.map((key) => core.get(table, key)));
     },
     async has(table, key) {
       checkScope(table);
-
-      return core.has(table, key);
+      return core.has ? core.has(table, key) : (await core.get(table, key)) !== undefined;
     },
     async isEmpty(table) {
+      return (await context.count(table)) === 0;
+    },
+    iterate(table) {
       checkScope(table);
 
-      return (await core.count(table)) === 0;
+      if (core.iterate) return core.iterate(table);
+
+      // Fallback: iterate over getAll() materialized records.
+      return (async function* (): AsyncIterable<RecordOf<S, typeof table>> {
+        const records = await core.getAll(table);
+
+        for (const record of records) yield record;
+      })();
     },
     async keys(table, filter) {
       checkScope(table);
-
-      if (filter) {
-        const records = await core.getAll(table);
-        const keyField = schema[table].key;
-
-        return records.filter(filter).map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
-      }
-
-      // R1: prefer native getAllKeys when the backend supports it (e.g. IDB store.getAllKeys).
-      if (core.getAllKeys) {
-        return core.getAllKeys(table);
-      }
-
+      if (!filter && core.getAllKeys) return core.getAllKeys(table);
       const records = await core.getAll(table);
+      const selected = filter ? records.filter(filter) : records;
       const keyField = schema[table].key;
-
-      return records.map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
+      return selected.map((record) => (record as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
     },
     async put(table, value, ttl) {
       checkScope(table);
-
-      await core.put(table, applyValidation(table, value), resolveTtl(schema, table, ttl));
+      const canonical = applyValidation(table, value);
+      await core.put(table, canonical, resolveTtl(schema, table, ttl));
       onMutate(table);
+      return canonical;
     },
     async putAll(table, values, ttl) {
       checkScope(table);
@@ -239,52 +214,44 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
     },
     query(table) {
       checkScope(table);
-
-      return createQueryBuilder(buildQueryCtx(table, core, schema, onMutate));
+      return createQueryBuilder({
+        deleteMany: async (records) => {
+          const keys = records.map((record) => getRecordKey(schema, table, record));
+          return context.deleteMany(table, keys);
+        },
+        source: () => context.getAll(table),
+      });
     },
     async update(table, key, changes, ttl) {
-      checkScope(table);
-
-      const current = await core.get(table, key);
-
-      if (!current) return undefined;
-
+      const current = await context.get(table, key);
+      if (current === undefined) return undefined;
       const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
-
       verifyKey(schema, table, key, merged, 'update');
-      await core.put(table, applyValidation(table, merged), resolveTtl(schema, table, ttl));
-      onMutate(table);
-
-      return merged;
+      return context.put(table, merged, ttl);
     },
-    async upsert(table, key, fn, ttl) {
-      checkScope(table);
-
-      const existing = await core.get(table, key);
-      const value = fn(existing);
-
-      verifyKey(schema, table, key, value, 'upsert: fn()');
-      await core.put(table, applyValidation(table, value), resolveTtl(schema, table, ttl));
-      onMutate(table);
-
-      return value;
+    async upsert(table, key, update, ttl) {
+      const value = update(await context.get(table, key));
+      verifyKey(schema, table, key, value, 'upsert: update()');
+      return context.put(table, value, ttl);
     },
   };
+
+  return context;
 }
 
-/* -------------------- buildAdapterOps -------------------- */
+/* -------------------- buildKeyValueStore -------------------- */
 
-/** Builds the portable surface first; IndexedDB opts into transactions at its factory boundary. */
-export function buildAdapterOps<S extends AnySchema>(
+/** Builds a KeyValueVaultStore from a backend and options. */
+export function buildKeyValueStore<S extends AnySchema>(
   schema: S,
   core: StorageBackend<S>,
-  options?: BaseAdapterOptions<S> & {
+  options?: MemoryStoreOptions<S> & {
     onCrossTabMessage?: (notify: (table: keyof S & string) => void) => (() => void) | undefined;
     onMutation?: (table: keyof S & string) => void;
     onTransactions?: (deps: BatchDeps<S>) => void;
   },
-): VaultStore<S> {
-  const { validators } = options ?? {};
+): KeyValueVaultStore<S> {
+  const { codecs } = options ?? {};
 
   const observers = createObserverHub<S>((table) => core.getAll(table));
 
@@ -299,26 +266,13 @@ export function buildAdapterOps<S extends AnySchema>(
     observers.notify(table);
   };
 
-  // R6: Resolve optional backend capabilities once at construction — no per-call checks.
   const pruneAll = core.pruneAllExpired?.bind(core);
 
   const disconnectExternal = options?.onCrossTabMessage?.(notifyExternal) ?? undefined;
 
-  const validate = <K extends keyof S & string>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
-    const validator = validators?.[table];
-
-    if (!validator) return value;
-
-    try {
-      return validator.parse(value) as RecordOf<S, K>;
-    } catch (err) {
-      throw new VaultError(`validation failed for table "${table}"`, { cause: err });
-    }
-  };
+  const validate = makeValidator(codecs);
 
   options?.onTransactions?.({ notifyMutation, validate });
-
-  const txCtx = buildTxContext<S, keyof S & string>(schema, core, notifyMutation, validate);
 
   const disposeController = new AbortController();
   let disposed = false;
@@ -327,28 +281,33 @@ export function buildAdapterOps<S extends AnySchema>(
     if (disposed) throw new VaultDisposedError();
   };
 
-  const adapter: VaultStore<S> = {
+  const adapter: KeyValueVaultStore<S> = {
     async clear(table) {
       checkDisposed();
-      await txCtx.clear(table);
+      await core.clear(table);
+      notifyMutation(table);
     },
-
     async count(table) {
       checkDisposed();
-
-      return core.count(table);
+      return core.count ? core.count(table) : (await core.getAll(table)).length;
     },
 
     async delete(table, key) {
       checkDisposed();
 
-      return txCtx.delete(table, key);
-    },
+      const deleted = await core.delete(table, key);
 
+      if (deleted) notifyMutation(table);
+
+      return deleted;
+    },
     async deleteMany(table, keys) {
       checkDisposed();
-
-      return txCtx.deleteMany(table, keys);
+      const deleted = core.deleteMany
+        ? await core.deleteMany(table, keys)
+        : (await Promise.all(keys.map((key) => core.delete(table, key)))).filter(Boolean).length;
+      if (deleted > 0) notifyMutation(table);
+      return deleted;
     },
 
     get disposalSignal(): AbortSignal {
@@ -372,37 +331,32 @@ export function buildAdapterOps<S extends AnySchema>(
     async get(table, key) {
       checkDisposed();
 
-      return txCtx.get(table, key);
+      return core.get(table, key);
     },
 
     async getAll(table) {
       checkDisposed();
 
-      return txCtx.getAll(table);
+      return core.getAll(table);
     },
-
     async getMany(table, keys) {
       checkDisposed();
-
-      return txCtx.getMany(table, keys);
+      return core.getMany ? core.getMany(table, keys) : Promise.all(keys.map((key) => core.get(table, key)));
     },
-
     async has(table, key) {
       checkDisposed();
-
-      return txCtx.has(table, key);
+      return core.has ? core.has(table, key) : (await core.get(table, key)) !== undefined;
     },
-
     async isEmpty(table) {
-      checkDisposed();
-
-      return (await core.count(table)) === 0;
+      return (await adapter.count(table)) === 0;
     },
-
     async keys(table, filter) {
       checkDisposed();
-
-      return txCtx.keys(table, filter);
+      if (!filter && core.getAllKeys) return core.getAllKeys(table);
+      const records = await core.getAll(table);
+      const selected = filter ? records.filter(filter) : records;
+      const keyField = schema[table].key;
+      return selected.map((record) => (record as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
     },
 
     observe(table, listener, opts) {
@@ -417,6 +371,10 @@ export function buildAdapterOps<S extends AnySchema>(
       if (pruneAll) {
         const result = await pruneAll();
 
+        for (const [table, pruned] of Object.entries(result)) {
+          if (pruned > 0) notifyMutation(table as keyof S & string);
+        }
+
         return result as { [K in keyof S & string]: number };
       }
 
@@ -429,49 +387,202 @@ export function buildAdapterOps<S extends AnySchema>(
         }),
       );
 
+      for (const [table, pruned] of pairs) {
+        if (pruned > 0) notifyMutation(table);
+      }
+
       return Object.fromEntries(pairs) as { [K in keyof S & string]: number };
     },
 
     async put(table, value, ttl) {
       checkDisposed();
-      await txCtx.put(table, value, ttl);
+      const canonical = validate(table, value);
+      await core.put(table, canonical, resolveTtl(schema, table, ttl));
+      notifyMutation(table);
+      return canonical;
     },
 
     async putAll(table, values, ttl) {
       checkDisposed();
-      await txCtx.putAll(table, values, ttl);
-    },
 
+      if (values.length === 0) return;
+
+      const toWrite = values.map((v) => validate(table, v));
+
+      await core.putAll(table, toWrite, resolveTtl(schema, table, ttl));
+      notifyMutation(table);
+    },
     query(table) {
       checkDisposed();
-
-      return createQueryBuilder(buildQueryCtx(table, core, schema, notifyMutation));
+      return createQueryBuilder({
+        deleteMany: async (records) => {
+          const keys = records.map((record) => getRecordKey(schema, table, record));
+          return adapter.deleteMany(table, keys);
+        },
+        source: () => adapter.getAll(table),
+      });
+    },
+    async update(table, key, changes, ttl) {
+      const current = await adapter.get(table, key);
+      if (current === undefined) return undefined;
+      const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
+      verifyKey(schema, table, key, merged, 'update');
+      return adapter.put(table, merged, ttl);
+    },
+    async upsert(table, key, apply, ttl) {
+      const value = apply(await adapter.get(table, key));
+      verifyKey(schema, table, key, value, 'upsert: apply()');
+      return adapter.put(table, value, ttl);
     },
 
     async [Symbol.asyncDispose]() {
       await adapter.dispose();
-    },
-
-    async update(table, key, changes, ttl) {
-      checkDisposed();
-
-      return txCtx.update(table, key, changes, ttl);
-    },
-
-    async upsert(table, key, fn, ttl) {
-      checkDisposed();
-
-      return txCtx.upsert(table, key, fn, ttl);
     },
   };
 
   return adapter;
 }
 
-/** IndexedDB is the only backend that can bind this callback to one native transaction. */
-export function withIndexedDbTransactions<S extends AnySchema>(
-  store: VaultStore<S>,
+/* -------------------- buildDocumentStore -------------------- */
+
+/** A document store before batch() is attached. */
+export type DocumentVaultStoreWithoutBatch<S extends AnySchema> = Omit<DocumentVaultStore<S>, 'batch'>;
+
+/** Builds a DocumentVaultStore (without batch) from a backend, codecs, and options. */
+export function buildDocumentStore<S extends AnySchema>(
+  schema: S,
+  core: StorageBackend<S>,
+  options: DurableStoreOptions<S> & {
+    onCrossTabMessage?: (notify: (table: keyof S & string) => void) => (() => void) | undefined;
+    onMutation?: (table: keyof S & string) => void;
+    onTransactions?: (deps: BatchDeps<S>) => void;
+  },
+): DocumentVaultStoreWithoutBatch<S> {
+  const store = buildKeyValueStore(schema, core, options);
+
+  return Object.assign(store, {
+    iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>> {
+      if (store.disposed) throw new VaultDisposedError();
+      if (core.iterate) return core.iterate(table);
+      return (async function* (): AsyncIterable<RecordOf<S, K>> {
+        for (const record of await store.getAll(table)) yield record;
+      })();
+    },
+  });
+}
+
+/** Attaches a batch() implementation to a document store. */
+export function withBatch<S extends AnySchema>(
+  store: DocumentVaultStoreWithoutBatch<S>,
   batch: BatchImpl<S>,
-): TransactionalVaultStore<S> {
-  return Object.assign(store, { batch }) as TransactionalVaultStore<S>;
+  schema: S,
+): DocumentVaultStore<S> {
+  const runBatch: BatchImpl<S> = (tables, fn) => {
+    if (store.disposed) return Promise.reject(new VaultDisposedError());
+    return batch(tables, fn);
+  };
+
+  return Object.assign(store, {
+    batch: runBatch,
+    deleteMany<K extends keyof S & string>(table: K, keys: readonly KeyOf<S, K>[]) {
+      return runBatch([table], (tx) => tx.deleteMany(table, keys));
+    },
+    query<K extends keyof S & string>(table: K) {
+      if (store.disposed) throw new VaultDisposedError();
+      return createQueryBuilder({
+        deleteMany: async (records) => {
+          const keys = records.map((record) => getRecordKey(schema, table, record));
+          return runBatch([table], (tx) => tx.deleteMany(table, keys));
+        },
+        source: () => store.getAll(table),
+      });
+    },
+    update<K extends keyof S & string>(table: K, key: KeyOf<S, K>, changes: Partial<RecordOf<S, K>>, ttl?: number) {
+      return runBatch([table], (tx) => tx.update(table, key, changes, ttl));
+    },
+    upsert<K extends keyof S & string>(
+      table: K,
+      key: KeyOf<S, K>,
+      apply: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
+      ttl?: number,
+    ) {
+      return runBatch([table], (tx) => tx.upsert(table, key, apply, ttl));
+    },
+  }) as DocumentVaultStore<S>;
+}
+
+/* -------------------- Derived convenience helpers -------------------- */
+
+/** Check whether a record exists for the given key. */
+export async function has<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+  key: KeyOf<S, K>,
+): Promise<boolean> {
+  return store.has(table, key);
+}
+
+/** Count live records in a table. */
+export async function count<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+): Promise<number> {
+  return store.count(table);
+}
+
+/** Check whether a table has no live records. */
+export async function isEmpty<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+): Promise<boolean> {
+  return store.isEmpty(table);
+}
+
+/** Fetch multiple records by key. Preserves key order; missing keys yield `undefined`. */
+export async function getMany<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+  keys: readonly KeyOf<S, K>[],
+): Promise<Array<RecordOf<S, K> | undefined>> {
+  return store.getMany(table, keys);
+}
+
+/** Fetch all live primary keys for a table. */
+export async function keys<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+  filter?: (record: RecordOf<S, K>) => boolean,
+): Promise<KeyOf<S, K>[]> {
+  return store.keys(table, filter);
+}
+
+/** Delete multiple records by key. Returns the count of records that were actually deleted. */
+export async function deleteMany<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+  keys: readonly KeyOf<S, K>[],
+): Promise<number> {
+  return store.deleteMany(table, keys);
+}
+
+/** Partially update an existing record. Returns `undefined` when the key does not exist. */
+export async function update<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+  key: KeyOf<S, K>,
+  changes: Partial<RecordOf<S, K>>,
+  ttl?: number,
+): Promise<RecordOf<S, K> | undefined> {
+  return store.update(table, key, changes, ttl);
+}
+
+/** Read-modify-write: the callback receives the current record (or `undefined`) and returns the value to store. */
+export async function upsert<S extends AnySchema, K extends keyof S & string>(
+  store: KeyValueVaultStore<S>,
+  table: K,
+  key: KeyOf<S, K>,
+  apply: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
+  ttl?: number,
+): Promise<RecordOf<S, K>> {
+  return store.upsert(table, key, apply, ttl);
 }

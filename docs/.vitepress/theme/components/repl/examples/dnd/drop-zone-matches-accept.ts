@@ -1,5 +1,5 @@
 export const dropZoneMatchesAcceptExample = {
-  code: `import { matchesAccept } from '@vielzeug/dnd'
+  code: `import { matchesAccept } from '@vielzeug/dnd/drop'
 
 // matchesAccept tests a File against an accept pattern list
 const png = new File([''], 'photo.png', { type: 'image/png' })

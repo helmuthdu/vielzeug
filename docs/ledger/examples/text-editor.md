@@ -19,26 +19,30 @@ import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
 const textarea = document.getElementById('editor') as HTMLTextAreaElement;
-let previous = textarea.value;
+let committed = textarea.value;
 
 function recordEdit(next: string): Promise<void> {
-  const before = previous;
-  previous = next;
+  const before = committed;
 
   return ledger.do({
-    apply: () => { textarea.value = next; },
+    apply: () => { textarea.value = next; committed = next; },
     label: 'Type',
-    revert: () => { textarea.value = before; },
+    revert: () => { textarea.value = before; committed = before; },
   });
 }
 
-const reportHistoryError = (error: unknown): void => console.error(error);
-const map = createKeymap({
-  'ctrl+z': () => void ledger.undo().catch(reportHistoryError),
-  'ctrl+shift+z': () => void ledger.redo().catch(reportHistoryError),
-});
+const reportHistoryError = (error: unknown): void => recordHistoryFailure(error);
+const map = createKeymap([
+  { id: 'undo', shortcut: 'ctrl+z', handler: () => void ledger.undo().catch(reportHistoryError) },
+  { id: 'redo', shortcut: 'ctrl+shift+z', handler: () => void ledger.redo().catch(reportHistoryError) },
+]);
 
 map.mount(textarea);
+
+function disposeEditor(): void {
+  map.dispose();
+  ledger.dispose();
+}
 ```
 
 ### Pitfalls

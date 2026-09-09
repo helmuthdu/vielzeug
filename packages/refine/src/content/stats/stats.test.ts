@@ -88,7 +88,7 @@ describe('ore-stats', () => {
 
   it('falls back from invalid trend directions and variants', async () => {
     fixture = await mount('ore-stats', {
-      attrs: { trend: '12%', 'trend-direction': 'sideways', variant: 'glass' },
+      attrs: { trend: '12%', 'trend-direction': 'sideways', variant: 'unsupported' },
     });
 
     expect(fixture.query('[part="trend"]')?.getAttribute('data-direction')).toBe('neutral');

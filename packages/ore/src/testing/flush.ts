@@ -23,8 +23,6 @@ export interface FlushOptions {
    * Logger function called with each diagnostic message during the flush.
    * Pass `console.debug` or any `(msg: string) => void` to enable output.
    * Omit (or pass `undefined`) to disable all logging.
-   *
-   * Prefer `debugFlush()` (also from `@vielzeug/ore/testing`) over wiring this manually.
    */
   logger?: (msg: string) => void;
 }
@@ -86,23 +84,4 @@ export async function flush(options: FlushOptions = {}): Promise<void> {
   await Promise.resolve();
 
   logger?.('[flush] complete');
-}
-
-/**
- * `flush()` with debug logging pre-wired to `console.debug`. Logs each phase and pending-work
- * turn so you can diagnose unexpected update order or timing issues.
- *
- * @example
- * ```ts
- * import { debugFlush } from '@vielzeug/ore/testing';
- *
- * // in a test
- * await debugFlush();
- * // [flush] draining pending component work (scheduled mount callbacks)
- * // [flush] pending work remains, turn 1
- * // ...
- * ```
- */
-export async function debugFlush(): Promise<void> {
-  return flush({ logger: console.debug });
 }

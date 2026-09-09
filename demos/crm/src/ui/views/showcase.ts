@@ -67,16 +67,18 @@ define('crm-showcase-view', {
     const sandboxContainer = ref<HTMLElement>();
     let sandbox: SandboxHandle | null = null;
     const renderPreview = (name = 'John', company = 'Acme Corporation'): void => {
-      void sandbox?.render(
-        `<main><p>${escapeHtml(t('showcase.emailGreeting', { name }))}</p><p>${escapeHtml(t('showcase.emailThanks', { company }))}</p><p>${escapeHtml(t('common.sarahChen'))}<br>Vielzeug CRM</p></main>`,
-      );
+      void sandbox
+        ?.render(
+          `<main><p>${escapeHtml(t('showcase.emailGreeting', { name }))}</p><p>${escapeHtml(t('showcase.emailThanks', { company }))}</p><p>${escapeHtml(t('common.sarahChen'))}<br>Vielzeug CRM</p></main>`,
+        )
+        .catch(console.error);
     };
     onMounted(() => {
       const stop = effect(() => {
         const title = t('showcase.sandboxEmailPreview');
         sandbox?.dispose();
         sandbox = createSandbox(sandboxContainer.value!, {
-          namedStyles: {
+          styles: {
             base: 'body{margin:0;padding:24px;font:15px/1.6 system-ui;color:#26322d;background:#f7f5ef}main{max-width:42ch}p{margin:0 0 16px}',
           },
           title,

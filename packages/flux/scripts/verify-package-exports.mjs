@@ -10,7 +10,6 @@ const manifest = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'
 const fixture = await mkdtemp(resolve(tmpdir(), 'vielzeug-flux-'));
 const packageDir = resolve(fixture, 'node_modules', '@vielzeug');
 const packagePath = resolve(packageDir, 'flux');
-const ripplePath = resolve(packageDir, 'ripple');
 const specifiers = Object.keys(manifest.exports).map((entry) =>
   entry === '.' ? manifest.name : `${manifest.name}/${entry.slice(2)}`,
 );
@@ -18,7 +17,6 @@ const specifiers = Object.keys(manifest.exports).map((entry) =>
 try {
   await mkdir(packageDir, { recursive: true });
   await symlink(root, packagePath, 'dir');
-  await symlink(resolve(root, '..', 'ripple'), ripplePath, 'dir');
   await writeFile(resolve(fixture, 'esm.mjs'), `await Promise.all(${JSON.stringify(specifiers)}.map((specifier) => import(specifier)));\n`);
   await writeFile(
     resolve(fixture, 'cjs.cjs'),

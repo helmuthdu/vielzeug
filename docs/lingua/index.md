@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, catalog-loading]
 related: [ripple, wayfinder, courier]
-exports: [createCatalogTranslator, createTranslationStore, createTranslator, hydrateTranslationStore, LinguaError, LinguaDisposedError, LinguaInvalidCatalogError, LinguaInvalidLocaleError, LinguaInvalidPluralCountError, LinguaInvalidStateError, LinguaMissingCatalogError]
+exports: [createI18n, createTranslator, LinguaError, LinguaDisposedError, LinguaInvalidCatalogError, LinguaInvalidLocaleError, LinguaInvalidPluralCountError, LinguaInvalidStateError, LinguaMissingCatalogError, LinguaMissingKeyError, LinguaMissingValueError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -15,7 +15,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Lingua?
 
-Lingua separates immutable translation from mutable locale state. Use one catalog per locale, then select static or stateful API from whether locale can change.
+Lingua separates immutable translation from mutable locale state. Use `createTranslator` for one fixed-locale catalog, or `createI18n` when locale changes at runtime.
 
 ```ts
 // Before
@@ -30,7 +30,7 @@ const output = i18n.translate('inbox', { count });
 | Bundle size | <PackageInfo package="lingua" type="size" /> | Varies by selected modules | Varies by selected modules |
 | Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
 | Explicit plural catalog nodes | <ore-icon name="check" size="16"></ore-icon> | Convention/config dependent | ICU-message dependent |
-| Declared lazy locale catalogs | <ore-icon name="check" size="16"></ore-icon> | Plugin/config dependent | Application-defined |
+| Static and lazy locale catalogs | <ore-icon name="check" size="16"></ore-icon> | Plugin/config dependent | Application-defined |
 | Immutable locale snapshots | <ore-icon name="check" size="16"></ore-icon> | Application-defined | Application-defined |
 
 <div class="decision-callout">
@@ -61,17 +61,16 @@ yarn add @vielzeug/lingua
 
 ## Quick Start
 
-Create locale store with static catalogs, then dispose it when owner ends.
+Create an i18n instance with an eager default catalog and a loader for other locales.
 
 ```ts
-import { createTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
-const i18n = createTranslationStore({
-  catalogs: {
-    de: { inbox: { plural: { one: 'Eine Nachricht', other: '{count} Nachrichten' } } },
-    en: { inbox: { plural: { one: 'One message', other: '{count} messages' } } },
-  },
+const en = { inbox: { plural: { one: 'One message', other: '{count} messages' } } };
+const i18n = createI18n({
+  catalogs: { en },
   locale: 'en',
+  loadCatalog: (locale) => import(`./locales/${locale}.ts`).then((m) => m.default),
 });
 
 try {
@@ -87,15 +86,16 @@ try {
 
 <div class="features-grid">
 
-- `createCatalogTranslator()` compiles one immutable fixed-locale catalog.
-- `createTranslator()` compiles immutable locale-keyed catalogs.
-- `createTranslationStore()` manages locale changes and declared catalogs.
+- `createTranslator()` compiles one immutable fixed-locale catalog.
+- `createI18n()` manages eager catalogs, locale changes, and optional lazy loading.
 - `translate()` renders text and plural messages through explicit catalog nodes.
 - `translateDynamic()` makes runtime-key lookup explicit.
-- `load()` deduplicates lazy catalog loading per locale.
+- `parts()` returns typed discriminated parts for framework content.
+- `load()` deduplicates loading and resolves the active locale plus configured fallbacks.
 - `getSnapshot()` and `subscribe()` expose immutable translator revisions.
-- `serialize()` and `hydrateTranslationStore()` transfer resolved SSR catalogs.
-- `createFormatter()` and `validateCatalog()` remain isolated subpath tools.
+- `serialize()` and `state` option transfer resolved SSR catalogs.
+- `missing: 'throw' | 'key' | handler` controls failure behaviour.
+- `validateCatalog()` remains an isolated subpath tool.
 
 </div>
 

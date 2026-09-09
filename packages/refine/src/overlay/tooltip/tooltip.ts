@@ -1,17 +1,6 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import {
-  bind,
-  createStableId,
-  define,
-  getHost,
-  html,
-  onCleanup,
-  onMounted,
-  prop,
-  useEmit,
-  useSlots,
-} from '@vielzeug/ore';
+import { bind, createId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { type OverlayOpenChangeDetail, type OverlayOpenReason, parseStringTriggers } from '../../core';
 import { disablableBundle, sizableBundle } from '../../shared';
@@ -141,7 +130,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
     const activePlacement = signal<TooltipPlacement>('top');
-    const tooltipId = createStableId('tooltip');
+    const tooltipId = createId('tooltip');
     const triggers = computed<TooltipTrigger[]>(() => normalizeTriggers(props.trigger.value));
     let tooltipEl: HTMLElement | null = null;
     let showTimer: ReturnType<typeof setTimeout> | null = null;
@@ -161,7 +150,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
     };
 
     const floating = useFloatingTrigger({
-      bindTriggerAria: (triggerEl) => bind({ aria: { describedby: () => tooltipId } }, { target: triggerEl }),
+      bindTriggerAria: (triggerEl) => bind({ attr: { 'aria-describedby': () => tooltipId } }, { target: triggerEl }),
       defaultOpen: props['default-open'],
       disabled: isDisabled,
       getPanel: () => tooltipEl,

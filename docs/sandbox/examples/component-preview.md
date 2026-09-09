@@ -18,7 +18,7 @@ import { createSandbox } from '@vielzeug/sandbox';
 
 function createComponentPreview(container: HTMLElement, componentCss: string) {
   const sandbox = createSandbox(container, {
-    namedStyles: {
+    styles: {
       'component-css': componentCss,
     },
   });
@@ -68,7 +68,7 @@ The bridge script sets up a `ResizeObserver` on `document.body` automatically. W
 
 ### Pitfalls
 
-- **`namedStyles` keys must match between `createSandbox` and `updateStyle`** — if the key doesn't exist in the initial `namedStyles`, `updateStyle` still patches the baseline but there is no `<style id>` element in the live document to target.
+- **`styles` keys must match `updateStyle` calls** — if the key doesn't exist in the initial `styles`, `updateStyle` still patches the baseline but there is no `<style id>` element in the live document to target.
 - **Re-render replaces the document** — `render()` is a full document reset. Prefer `updateStyle()` for CSS-only changes.
 
 ### Related

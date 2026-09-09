@@ -1,125 +1,101 @@
-import { WILDCARD } from './constants';
 import { WardConfigError } from './errors';
-import type { NormalizedWardRule, WardRule } from './types';
+import type { WardAttributes, WardAttributeValue, WardRule } from './types';
 
-// ---------------------------------------------------------------------------
-// Internal types (shared across modules)
-// ---------------------------------------------------------------------------
+function snapshotValue(value: unknown, path: string, ancestors: Set<object>): WardAttributeValue {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') return value;
 
-/** A compiled entry stores the normalized rule plus pre-computed lookup values. */
-export type CompiledEntry<TAction extends string, TData> = {
-  /** Deny bonus (1 for deny, 0 for allow): tiebreaker when priority and score match. */
-  denyBonus: 0 | 1;
-  /** Original rule index, used in predicate error messages. */
-  index: number;
-  /** Resolved priority (defaults to 0 when not authored). */
-  priority: number;
-  /** Normalized roles array (always an array). */
-  roles: readonly string[];
-  /** The normalized, frozen compiled rule. */
-  rule: Readonly<NormalizedWardRule<TAction, TData>>;
-  /** Specificity score (0–5): roleScore(0|1) + resourceScore(0|1|2) + actionScore(0|1|2). */
-  score: number;
-};
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) throw new WardConfigError(`${path} must contain only finite numbers`);
+    return value;
+  }
 
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
+  if (typeof value !== 'object') {
+    throw new WardConfigError(`${path} must contain only JSON-compatible values`);
+  }
 
-export function validateRuleInput<TAction extends string, TData>(rule: WardRule<TAction, TData>, index: number): void {
+  if (ancestors.has(value)) throw new WardConfigError(`${path} must not contain circular references`);
+
+  const prototype = Object.getPrototypeOf(value);
+  if (!Array.isArray(value) && prototype !== Object.prototype && prototype !== null) {
+    throw new WardConfigError(`${path} must contain only arrays and plain objects`);
+  }
+
+  ancestors.add(value);
+
+  try {
+    if (Array.isArray(value)) {
+      return Object.freeze(Array.from(value, (item, index) => snapshotValue(item, `${path}[${index}]`, ancestors)));
+    }
+
+    return Object.freeze(
+      Object.fromEntries(
+        Object.keys(value).map((key) => [
+          key,
+          snapshotValue((value as Record<string, unknown>)[key], `${path}.${key}`, ancestors),
+        ]),
+      ),
+    );
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+export function snapshotAttributes(value: unknown, path: string): WardAttributes | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new WardConfigError(`${path} must be a plain object`);
+  }
+
+  return snapshotValue(value, path, new Set()) as WardAttributes;
+}
+
+/**
+ * Validates and snapshots a single rule definition at ward-creation time.
+ * Throws {@link WardConfigError} with a `Rule[index]`-prefixed message on failure.
+ */
+export function compileRule<TAction extends string, TResource extends string, TAttributes extends WardAttributes>(
+  rule: WardRule<TAction, TResource, TAttributes>,
+  index: number,
+): WardRule<TAction, TResource, TAttributes> {
   const at = `Rule[${index}]`;
-  const roles = Array.isArray(rule.role) ? rule.role : [rule.role];
 
-  if (roles.length === 0 || roles.some((r) => typeof r !== 'string' || !r.trim())) {
-    throw new WardConfigError(`${at}.role must be a non-empty string or non-empty array of strings`);
+  if (typeof rule !== 'object' || rule === null || Array.isArray(rule)) {
+    throw new WardConfigError(`${at} must be a plain object`);
+  }
+  const prototype = Object.getPrototypeOf(rule);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new WardConfigError(`${at} must be a plain object`);
+  }
+
+  if (typeof rule.action !== 'string' || !rule.action.trim()) {
+    throw new WardConfigError(`${at}.action must be a non-empty string`);
+  }
+
+  if (rule.action.endsWith(':')) {
+    throw new WardConfigError(`${at}.action '${rule.action}' ends with ':' — did you mean '${rule.action}*'?`);
   }
 
   if (typeof rule.resource !== 'string' || !rule.resource.trim()) {
     throw new WardConfigError(`${at}.resource must be a non-empty string`);
   }
 
-  if ((rule.resource as string).endsWith(':')) {
-    throw new WardConfigError(
-      `${at}.resource '${String(rule.resource)}' ends with ':' — did you mean '${String(rule.resource)}*'?`,
-    );
-  }
-
-  if (typeof rule.action !== 'string' || !(rule.action as string).trim()) {
-    throw new WardConfigError(`${at}.action must be a non-empty string`);
-  }
-
-  if ((rule.action as string).endsWith(':')) {
-    throw new WardConfigError(
-      `${at}.action '${String(rule.action)}' ends with ':' — did you mean '${String(rule.action)}*'?`,
-    );
+  if (rule.resource.endsWith(':')) {
+    throw new WardConfigError(`${at}.resource '${rule.resource}' ends with ':' — did you mean '${rule.resource}*'?`);
   }
 
   if (rule.effect !== 'allow' && rule.effect !== 'deny') {
     throw new WardConfigError(`${at}.effect must be "allow" or "deny"`);
   }
 
-  if (rule.priority !== undefined && (typeof rule.priority !== 'number' || !Number.isFinite(rule.priority))) {
-    throw new WardConfigError(`${at}.priority must be a finite number`);
+  if (rule.condition !== undefined && typeof rule.condition !== 'function') {
+    throw new WardConfigError(`${at}.condition must be a function`);
   }
 
-  if (rule.when !== undefined && typeof rule.when !== 'function') {
-    throw new WardConfigError(`${at}.when must be a function`);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Specificity
-// ---------------------------------------------------------------------------
-
-/**
- * Returns the specificity score for a single pattern field:
- * - 0: global wildcard (`*`)
- * - 1: namespace wildcard (e.g. `posts:*` or `read:*`)
- * - 2: exact string
- */
-export function patternScore(pattern: string): number {
-  if (pattern === WILDCARD) return 0;
-
-  if (pattern.endsWith(':*')) return 1;
-
-  return 2;
-}
-
-/**
- * Specificity: role(0|1) + resource(0|1|2) + action(0|1|2) = max 5.
- * Higher score = more specific = wins ties in priority.
- */
-function specificity<TAction extends string, TData>(rule: Readonly<NormalizedWardRule<TAction, TData>>): number {
-  const roleScore = rule.role.includes(WILDCARD) ? 0 : 1;
-
-  return roleScore + patternScore(rule.resource as string) + patternScore(rule.action as string);
-}
-
-// ---------------------------------------------------------------------------
-// Compilation
-// ---------------------------------------------------------------------------
-
-export function compileEntry<TAction extends string, TData>(
-  input: WardRule<TAction, TData>,
-  index: number,
-): CompiledEntry<TAction, TData> {
-  validateRuleInput(input, index);
-
-  const rawRoles = Array.isArray(input.role) ? [...input.role] : [input.role];
-  const roles: readonly string[] = Object.freeze([...new Set(rawRoles)]);
-
-  const rule = Object.freeze({
-    action: input.action,
-    effect: input.effect,
-    priority: input.priority ?? 0,
-    resource: input.resource,
-    role: roles,
-    ...(input.when !== undefined ? { when: input.when } : {}),
-  }) as Readonly<NormalizedWardRule<TAction, TData>>;
-
-  const score = specificity(rule);
-  const priority = rule.priority;
-  const denyBonus: 0 | 1 = rule.effect === 'deny' ? 1 : 0;
-
-  return { denyBonus, index, priority, roles, rule, score };
+  return Object.freeze({
+    action: rule.action,
+    ...(rule.attributes === undefined ? {} : { attributes: snapshotAttributes(rule.attributes, `${at}.attributes`) }),
+    ...(rule.condition === undefined ? {} : { condition: rule.condition }),
+    effect: rule.effect,
+    resource: rule.resource,
+  }) as WardRule<TAction, TResource, TAttributes>;
 }

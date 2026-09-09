@@ -26,8 +26,16 @@ function* generateRange(
   end: Temporal.ZonedDateTime,
   step: Temporal.DurationLike,
 ): Generator<Temporal.ZonedDateTime> {
-  for (let current = start; Temporal.ZonedDateTime.compare(current, end) <= 0; current = current.add(step)) {
+  for (let current = start; Temporal.ZonedDateTime.compare(current, end) <= 0; ) {
     yield current;
+
+    const next = current.add(step);
+
+    if (Temporal.ZonedDateTime.compare(next, current) <= 0) {
+      throw new TempoInvalidInputError('dateRange: step must advance time forward.');
+    }
+
+    current = next;
   }
 }
 
@@ -36,15 +44,25 @@ export function recurrence(
   rule: RecurrenceRule,
   options: TimeZoneOptions = {},
 ): Generator<Temporal.ZonedDateTime> {
+  const interval = rule.interval ?? 1;
+
+  if (!Number.isSafeInteger(interval) || interval <= 0) {
+    throw new TempoInvalidInputError('recurrence: interval must be a positive safe integer.');
+  }
+
+  if (rule.count !== undefined && (!Number.isSafeInteger(rule.count) || rule.count < 0)) {
+    throw new TempoInvalidInputError('recurrence: count must be a non-negative safe integer.');
+  }
+
   const timeZone = inferTimeZone(start, options);
   const step =
     rule.frequency === 'daily'
-      ? { days: rule.interval ?? 1 }
+      ? { days: interval }
       : rule.frequency === 'weekly'
-        ? { weeks: rule.interval ?? 1 }
+        ? { weeks: interval }
         : rule.frequency === 'monthly'
-          ? { months: rule.interval ?? 1 }
-          : { years: rule.interval ?? 1 };
+          ? { months: interval }
+          : { years: interval };
   const until = rule.until ? toInstant(rule.until, { timeZone }) : undefined;
 
   return generateRecurrence(toZoned(start, { timeZone }), step, rule.count, until);

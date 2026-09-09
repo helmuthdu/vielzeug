@@ -1,92 +1,70 @@
-import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
-import { createPagePagination, positiveInteger, sameQuery, totalItems } from './pagination';
-import type { PagePagination, PageQuery, PageQueryPatch, PageSource, PageSourceConfig } from './types';
+import { SourcererDisposedError } from './errors';
+import { createPagePagination, positiveInteger, totalItems } from './pagination';
+import type { PageSource, PageSourceConfig, PageSourceState } from './types';
 
-const normalizeQuery = <TFilter, TSort>(
-  current: PageQuery<TFilter, TSort>,
-  patch: PageQueryPatch<TFilter, TSort> = {},
-  maxPage?: number,
-): PageQuery<TFilter, TSort> => {
-  const page = patch.page ?? current.page;
-  const pageSize = patch.pageSize ?? current.pageSize;
-  const search = patch.search ?? current.search;
-  const resetsPage = 'filter' in patch || patch.pageSize !== undefined || patch.search !== undefined || 'sort' in patch;
+type Request<TParams> = Readonly<{ page: number; pageSize: number; params: TParams }>;
 
-  const requestedPage = patch.page ?? (resetsPage ? 1 : page);
-
-  return {
-    ...('filter' in patch
-      ? patch.filter !== undefined && { filter: patch.filter }
-      : current.filter !== undefined && { filter: current.filter }),
-    ...('sort' in patch
-      ? patch.sort !== undefined && { sort: patch.sort }
-      : current.sort !== undefined && { sort: current.sort }),
-    page:
-      maxPage === undefined
-        ? positiveInteger(requestedPage, 'page')
-        : Math.min(positiveInteger(requestedPage, 'page'), maxPage),
-    pageSize: positiveInteger(pageSize, 'pageSize'),
-    search,
-  };
-};
-
-/** Page sources retain loaded state while pendingQuery records newer work. */
-export function createPageSource<T, TFilter = unknown, TSort = unknown>(
-  config: PageSourceConfig<T, TFilter, TSort>,
-): PageSource<T, TFilter, TSort> {
-  const initialQuery: PageQuery<TFilter, TSort> = {
+/** Page sources retain committed items while replacement work is pending. */
+export function createPageSource<T, TParams = undefined>(config: PageSourceConfig<T, TParams>): PageSource<T, TParams> {
+  let requested: Request<TParams> = {
     page: 1,
-    pageSize: 20,
-    search: '',
+    pageSize: positiveInteger(config.pageSize ?? 20, 'pageSize'),
+    params: config.params as TParams,
   };
-  let requestedQuery = normalizeQuery(initialQuery, config.initialQuery);
-  const asyncSource = createAsyncSource<T, PageQuery<TFilter, TSort>, PagePagination>({
-    data: [],
+  let hasLoaded = false;
+  const asyncSource = createAsyncSource<PageSourceState<T, TParams>>({
     error: null,
-    isFetching: false,
-    pagination: createPagePagination(requestedQuery.page, requestedQuery.pageSize, 0),
-    query: requestedQuery,
+    items: [],
+    loading: false,
+    pagination: createPagePagination(requested.page, requested.pageSize, 0),
+    params: requested.params,
   });
+  const assertLive = (): void => {
+    if (asyncSource.disposed) throw new SourcererDisposedError();
+  };
+  const isCommitted = (request: Request<TParams>): boolean =>
+    asyncSource.state.pagination.page === request.page &&
+    asyncSource.state.pagination.pageSize === request.pageSize &&
+    Object.is(asyncSource.state.params, request.params);
 
-  const fetch = (query: PageQuery<TFilter, TSort>): Promise<void> =>
+  const fetch = (request: Request<TParams>): Promise<void> =>
     asyncSource.fetch({
-      load: (signal) => config.load({ query, signal }),
-      query,
-      success: (result) => {
-        const total = totalItems(result.total);
-        const pagination = createPagePagination(query.page, query.pageSize, total);
-        const loadedQuery = { ...query, page: pagination.index };
-
-        requestedQuery = loadedQuery;
-
-        return {
-          data: result.data,
-          error: null,
-          isFetching: false,
-          pagination,
-          query: loadedQuery,
-        };
+      commit: () => {
+        hasLoaded = true;
+        requested = request;
       },
+      failure: (previous, error) => ({ ...previous, error, loading: false, pendingParams: undefined }),
+      load: (signal) => config.load({ ...request, signal }),
+      pending: (previous) => ({
+        ...previous,
+        error: null,
+        loading: true,
+        ...(Object.is(request.params, previous.params) ? {} : { pendingParams: request.params }),
+      }),
+      success: (result) => ({
+        error: null,
+        items: [...result.items],
+        loading: false,
+        pagination: createPagePagination(request.page, request.pageSize, totalItems(result.totalItems)),
+        params: request.params,
+      }),
     });
 
-  const reload = (): Promise<void> => fetch(requestedQuery);
-
-  const setQuery = async (patch: PageQueryPatch<TFilter, TSort>): Promise<void> => {
-    const current = asyncSource.snapshot.pendingQuery ?? asyncSource.snapshot.query;
-    const next = normalizeQuery(
-      current,
-      patch,
-      asyncSource.snapshot.pagination.total > 0 ? asyncSource.snapshot.pagination.count : undefined,
-    );
-
-    if (sameQuery(next, requestedQuery)) return;
-
-    requestedQuery = next;
-    await fetch(next);
+  const goTo = async (page: number): Promise<void> => {
+    assertLive();
+    const normalized = hasLoaded
+      ? Math.min(positiveInteger(page, 'page'), asyncSource.state.pagination.pageCount)
+      : positiveInteger(page, 'page');
+    if (normalized === requested.page) {
+      if (!asyncSource.state.loading && (!hasLoaded || !isCommitted(requested))) await fetch(requested);
+      return;
+    }
+    requested = { ...requested, page: normalized };
+    await fetch(requested);
   };
 
-  const source: PageSource<T, TFilter, TSort> = {
+  const source: PageSource<T, TParams> = {
     get disposalSignal() {
       return asyncSource.disposalSignal;
     },
@@ -97,35 +75,53 @@ export function createPageSource<T, TFilter = unknown, TSort = unknown>(
       return asyncSource.disposed;
     },
 
-    page: {
-      go(index) {
-        return asyncSource.snapshot.isFetching ? Promise.resolve() : setQuery({ page: index });
-      },
-
-      last() {
-        return asyncSource.snapshot.isFetching
-          ? Promise.resolve()
-          : setQuery({ page: asyncSource.snapshot.pagination.count });
-      },
-
-      next() {
-        return asyncSource.snapshot.isFetching || !asyncSource.snapshot.pagination.hasNext
-          ? Promise.resolve()
-          : setQuery({ page: asyncSource.snapshot.pagination.index + 1 });
-      },
-
-      previous() {
-        return asyncSource.snapshot.isFetching || !asyncSource.snapshot.pagination.hasPrevious
-          ? Promise.resolve()
-          : setQuery({ page: asyncSource.snapshot.pagination.index - 1 });
-      },
+    first() {
+      return goTo(1);
     },
 
-    reload,
-    setQuery,
+    goTo,
 
-    get snapshot() {
-      return asyncSource.snapshot;
+    last() {
+      return goTo(asyncSource.state.pagination.pageCount);
+    },
+
+    async next() {
+      assertLive();
+      if (!hasLoaded || requested.page < asyncSource.state.pagination.pageCount) await goTo(requested.page + 1);
+    },
+
+    async previous() {
+      assertLive();
+      if (requested.page > 1) await goTo(requested.page - 1);
+    },
+
+    reload() {
+      return fetch(requested);
+    },
+
+    async setPageSize(pageSize) {
+      assertLive();
+      const normalized = positiveInteger(pageSize, 'pageSize');
+      if (normalized === requested.pageSize && requested.page === 1) {
+        if (!asyncSource.state.loading && !isCommitted(requested)) await fetch(requested);
+        return;
+      }
+      requested = { ...requested, page: 1, pageSize: normalized };
+      await fetch(requested);
+    },
+
+    async setParams(params) {
+      assertLive();
+      if (Object.is(params, requested.params)) {
+        if (!asyncSource.state.loading && !isCommitted(requested)) await fetch(requested);
+        return;
+      }
+      requested = { ...requested, page: 1, params };
+      await fetch(requested);
+    },
+
+    get state() {
+      return asyncSource.state;
     },
 
     subscribe: asyncSource.subscribe,
@@ -134,9 +130,6 @@ export function createPageSource<T, TFilter = unknown, TSort = unknown>(
       source.dispose();
     },
   };
-
-  if (config.autoStart !== false)
-    void reload().catch(() => warn('Initial load failed. Inspect source.snapshot.error.'));
 
   return source;
 }

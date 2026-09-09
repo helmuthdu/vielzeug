@@ -1,11 +1,11 @@
 ---
 title: Herald — Typed event bus for TypeScript
-description: Typed temporal event delivery with sync subscriptions, async waiting, streams, pipes, and AbortSignal lifecycle.
+description: Typed synchronous event delivery with wildcard subscriptions, one-shot waits, tracing, and AbortSignal lifecycle.
 package: herald
 category: events
-keywords: [event-bus, typed-events, pub-sub, async-streams, abort-signal]
+keywords: [event-bus, typed-events, pub-sub, async-wait, abort-signal]
 related: [ripple, wayfinder, familiar]
-exports: [createBus, pipeEvents, combineSignals, HeraldError, BusDisposedError, HeraldConfigError]
+exports: [createBus, HeraldError, BusDisposedError, HeraldConfigError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -15,7 +15,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Herald?
 
-Raw event emitters lose payload inference and leave waiting, streaming, cancellation, and teardown to every caller. Herald keeps events temporal: use [Ripple](/ripple/) when you need retained state.
+Raw event emitters lose payload inference and leave one-shot waiting, cancellation, diagnostics, and teardown to every caller. Herald keeps events temporal: use [Ripple](/ripple/) when you need retained state.
 
 ```ts
 // Before
@@ -37,13 +37,15 @@ const bus = createBus<AppEvents>();
 bus.on('user:login', ({ id }) => loadProfile(id));
 ```
 
+Delivery is synchronous and temporal: events are not retained or replayed. Listener failures do not stop later listeners; `emit()` rethrows the first failure after dispatch, while `tap()` exposes every failure for diagnostics.
+
 | Feature | Herald | mitt | EventEmitter3 |
 | --- | --- | --- | --- |
 | Bundle size | <PackageInfo package="herald" type="size" /> | ~200 B | ~1.5 kB |
 | Typed payloads | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Async wait and streams | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| One-shot async wait | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 | AbortSignal lifecycle | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Typed event pipes | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Runtime activity tracing | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 | Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
@@ -98,9 +100,9 @@ bus.dispose();
 - `onAny()` — cross-cutting event observation
 - `tap()` — observe bus activity for logging and diagnostics
 - `wait()` / `waitAny()` — one-shot async coordination
-- `events()` — bounded async event streams
-- `pipeEvents()` — compatible cross-bus forwarding
-- `AbortSignal` — cancellation and disposal ownership
+- `listenerCount()` / `wildcardCount()` / `eventNames()` — listener inspection
+- `error` tap events — isolate listener failures without interrupting delivery
+- `AbortSignal` — subscription, wait, tap, and disposal ownership
 - `createTestBus()` — emitted-payload recording for tests
 
 </div>

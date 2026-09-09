@@ -1,116 +1,90 @@
 ---
-title: Forge Migration
+title: Forge 3.0 Migration
+description: Migrate Forge forms to flat issues, Standard Schema, structural persistence, and hardened immutable values.
 ---
 
-# Forge Migration
+# Forge 3.0 Migration
 
-## Forge 2.2
+## Return flat validation issues
 
-Forge 2.2 unifies result types, adds `submit(signal?)`, adds array item field handles, and moves `toFormData` to its own subpath.
-
-### Unified result types
-
-`ValidationResult` and `SubmitResult` now share a `status` discriminator (`'aborted' | 'invalid' | 'ok' | 'valid'`). The old `ok`/`type` fields on `SubmitResult` are removed.
-
-```ts
-// Before
-const result = await form.submit(handler);
-if (!result.ok && result.type === 'validation') console.log(result.errors);
-
-// After
-const result = await form.submit(handler);
-if (result.status === 'invalid') console.log(result.errors);
+```diff
+- validate: () => ({ fields: { email: 'Invalid email' }, formError: undefined })
++ validate: () => [{ path: ['email'], message: 'Invalid email' }]
 ```
 
-### `submit(handler, signal?)`
+Read `result.issues` instead of `result.errors`. Form-level errors use `path: []` and remain available as `form.state.formError`.
 
-`submit` now accepts an optional `AbortSignal` and passes an `AbortSignal` to the handler. When the signal aborts, `submit` returns `{ status: 'aborted' }` instead of rejecting.
+Removed validation types:
 
-```ts
-// Before — no cancellation support
-const result = await form.submit(async (value) => save(value));
+- `FormErrors<TValues>`
+- `ValidationErrors<TValues>`
 
-// After — cancellable submission
-const controller = new AbortController();
-const result = await form.submit(async (value, signal) => save(value, signal), controller.signal);
+`ValidationResult` and `SubmitResult` no longer carry the form-value generic because their invalid branch contains portable flat issues.
+
+## Rename the Spell adapter
+
+```diff
+- import { customValidator } from '@vielzeug/forge/spell';
++ import { schemaValidator } from '@vielzeug/forge/schema';
+
+  const form = createForm({
+    initialValues,
+-   validate: customValidator(schema),
++   validate: schemaValidator(schema),
+  });
 ```
 
-### Array item field handles
+`schemaValidator()` accepts any Standard Schema-compatible validator. It uses validation output only to determine success and issues; schema transformations do not replace form values. Spell preserves union failures as stable union-level Standard Schema issues.
 
-`field.field(index)` now supports array items. Array-item Spell errors map to per-item fields instead of the parent array field.
+Cancellation settles Forge validation promptly even when the underlying schema promise continues running.
 
-```ts
-const items = form.field('items');
-items.field(0).set({ email: 'a@example.com' });
-items.field(0).field('email').error; // per-item error
+## Rename the persistence adapter
+
+```diff
+- import { loadForm, saveForm } from '@vielzeug/forge/vault';
++ import { loadForm, saveForm } from '@vielzeug/forge/persist';
 ```
 
-### `toFormData` moved to `@vielzeug/forge/form-data`
+Vault stores satisfy the structural persistence contract directly. Other stores may implement the same typed `get()` and `put()` operations.
+
+Pass cancellation as the final option:
 
 ```ts
-// Before
-import { toFormData } from '@vielzeug/forge';
-
-// After
-import { toFormData } from '@vielzeug/forge/form-data';
+await loadForm(form, store, 'drafts', 'profile', codec, { signal });
+await saveForm(form, store, 'drafts', codec, { signal });
 ```
 
-### `FormState` changes
+Loading returns `false` instead of overwriting edits made while the read was pending. Form disposal aborts active persistence operations.
 
-`FormState.valid` is replaced by `FormState.validity` (`'invalid' | 'unknown' | 'valid'`). `FormState.error` is replaced by `FormState.formError`. `FormState.hasErrors` is added.
+## Use deeply readonly snapshots
 
-```ts
-// Before
-form.state.valid;
-form.state.error;
+Public snapshots remain deeply readonly. Date mutator methods are no longer exposed on form snapshots.
 
-// After
-form.state.validity === 'valid';
-form.state.formError;
-form.state.hasErrors;
-```
+Dates are cloned when they enter the form and exposed without mutator methods. `File` and `Blob` preserve identity. Forge now rejects:
 
-### `Field.state` added
+- functions, symbols, bigint, and non-finite numbers
+- circular object graphs
+- sparse arrays
+- non-plain class instances
 
-`Field` now exposes a `state` property that returns `{ dirty, error, touched, value }` in a single snapshot.
+Array field indexes must be non-negative safe integers.
 
-### `Date` leaves accepted
+## Inspect explicit validity
 
-Form values now accept `Date` instances as atomic leaves. `Map` and `Set` remain rejected.
+`FormState.valid` is replaced by `FormState.validity`, whose value is `'invalid' | 'unknown' | 'valid'`.
 
-## Forge 2.0
+Existing issues remain visible while edited values have unknown validity. Call `validate()` according to the application’s blur, change, step, or submit policy.
 
-Forge 2.0 replaces the flat controller and Ripple runtime with explicit immutable forms, safe value constraints, and DOM, Spell `customValidator`, Vault adapters and removes the `./devtools` subpath and inlines the internal store into `createForm`.
+## Update FormData boundaries
 
-### Replace `debugForm()` with `form.subscribe()`
+`toFormData()` continues to flatten nested objects with dot notation and repeat scalar or binary array entries. Object keys containing dots and arrays containing nested objects now throw `ForgeConfigError` instead of silently colliding or producing `"[object Object]"`.
 
-The `@vielzeug/forge/devtools` subpath and `debugForm()` export are removed. The function was a thin wrapper over `form.subscribe()` and `console.debug()`. Replicate it inline:
+## NodeNext and errors
 
-```ts
-// Before
-import { debugForm } from '@vielzeug/forge/devtools';
-const stop = debugForm(form, { label: 'checkout' });
+Root and subpath declarations use explicit `.js` specifiers. Forge error names remain stable in minified ESM and CJS artifacts.
 
-// After
-const stop = form.subscribe((state) => {
-  console.debug('[forge:checkout]', state);
-}, { immediate: true });
-```
+---
 
-### No other public API changes
+# Forge 2.0 Migration
 
-`createForm`, `Form`, `Field`, all adapters (`/dom`, `/spell`, `/vault`), errors, and types are unchanged. The store inlining is internal — no behavior change.
-
-### Create explicit forms
-
-Replace flat controller usage with `createForm`. Treat form values and state as immutable snapshots; apply changes through the current form operations.
-
-### Move validation to constraints and adapters
-
-Encode safe value constraints in the form definition. Update validation integrations to use the DOM, Spell `customValidator`, or Vault adapter appropriate to the boundary.
-
-### Recheck submission and persistence
-
-Rework submission, reset, persistence, and disposal flows against the 2.0 form contract. Handle `ForgeSubmitError` and `ForgeValidationError` at existing application error boundaries.
-
-Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current form, adapter, and error contracts.
+Forge 2 introduced nested field handles, explicit validation and submission, terminal disposal, and immutable snapshots. Replace flat controller string paths with `form.field('name')` and dispose forms with their owner.

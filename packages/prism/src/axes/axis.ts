@@ -11,6 +11,14 @@ const defaultTickFormat = (v: Date | number | string): string =>
  * `renderGrid` so gridlines line up with axis ticks. `defaultPosition` must match the
  * one passed to the corresponding `renderAxis` call ('bottom' for xAxis, 'left' for yAxis).
  */
+export function positionAxis(parent: SVGGElement, position: AxisPosition, width: number, height: number): void {
+  const transform =
+    position === 'bottom' ? `translate(0,${height})` : position === 'right' ? `translate(${width},0)` : undefined;
+
+  if (transform) parent.setAttribute('transform', transform);
+  else parent.removeAttribute('transform');
+}
+
 export function resolveTickCount(config: AxisConfig, length: number, defaultPosition: AxisPosition): number {
   const position = config.position ?? defaultPosition;
   const isHorizontal = position === 'bottom' || position === 'top';
@@ -86,10 +94,10 @@ export function renderAxis(
     });
 
     if (isHorizontal) {
-      setAttributes(labelEl, { x: length / 2, y: tickSize * tickDirection * 3.5 });
+      setAttributes(labelEl, { x: length / 2, y: tickSize * tickDirection * 6 });
     } else {
       setAttributes(labelEl, {
-        transform: `translate(${tickSize * tickDirection * 4}, ${length / 2}) rotate(-90)`,
+        transform: `translate(${tickSize * tickDirection * 7}, ${length / 2}) rotate(-90)`,
       });
     }
 

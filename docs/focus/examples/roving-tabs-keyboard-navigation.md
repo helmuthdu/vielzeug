@@ -11,7 +11,7 @@ You need consistent Arrow/Home/End navigation for a tab list while leaving activ
 
 ### Solution
 
-Create a list-navigation handle scoped to the `tablist` element and focus tab buttons from the `onNavigate` callback. The handle owns the roving-index state; your component owns what "activation" means.
+Create a list-navigation model for the `tablist` and apply returned changes to roving tabindex and DOM focus. The model owns only navigation state; your component owns focus and activation.
 
 ```html
 <div role="tablist" aria-label="Sections" id="tablist">
@@ -20,6 +20,10 @@ Create a list-navigation handle scoped to the `tablist` element and focus tab bu
   <button role="tab" id="tab-api" aria-controls="panel-api" tabindex="-1">API</button>
   <button role="tab" id="tab-examples" aria-controls="panel-examples" tabindex="-1" aria-disabled="true">Examples</button>
 </div>
+<section role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">Overview content</section>
+<section role="tabpanel" id="panel-usage" aria-labelledby="tab-usage" hidden>Usage content</section>
+<section role="tabpanel" id="panel-api" aria-labelledby="tab-api" hidden>API content</section>
+<section role="tabpanel" id="panel-examples" aria-labelledby="tab-examples" hidden>Examples content</section>
 ```
 
 ```ts
@@ -29,23 +33,21 @@ const tablist = document.getElementById('tablist')!;
 const tabs = Array.from(tablist.querySelectorAll<HTMLButtonElement>('[role="tab"]'));
 
 const nav = createListNavigation({
-  getItems: () => tabs.filter((tab) => tab.getAttribute('aria-disabled') !== 'true'),
+  getItems: () => tabs,
   isItemDisabled: (tab) => tab.getAttribute('aria-disabled') === 'true',
   loop: true,
-  onNavigate: ({ index, item }) => {
-    // Roving tabindex: only the focused tab is in the tab order.
-    tabs.forEach((tab) => {
-      const isActive = tab === item;
-      tab.tabIndex = isActive ? 0 : -1;
-      tab.setAttribute('aria-selected', String(isActive));
-    });
-    item.focus();
-
-    // Keep the handle's index aligned with pointer-driven focus changes.
-    activeTabIndex = index;
-  },
   orientation: 'horizontal',
 });
+
+const applyChange = (change: { index: number; item: HTMLButtonElement } | null) => {
+  if (!change) return;
+  tabs.forEach((tab) => {
+    const isActive = tab === change.item;
+    tab.tabIndex = isActive ? 0 : -1;
+  });
+  change.item.focus();
+  activeTabIndex = change.index;
+};
 
 let activeTabIndex = 0;
 
@@ -56,7 +58,7 @@ tablist.addEventListener('keydown', (event) => {
     activateTab(event.target as HTMLButtonElement);
     return;
   }
-  nav.handleKeydown(event);
+  applyChange(nav.handleKeydown(event)?.change ?? null);
 });
 
 // Keep the handle's index in sync when focus enters from a pointer click.
@@ -68,16 +70,19 @@ tablist.addEventListener('click', (event) => {
 });
 
 function activateTab(tab: HTMLButtonElement): void {
+  tabs.forEach((candidate) => candidate.setAttribute('aria-selected', String(candidate === tab)));
   const panelId = tab.getAttribute('aria-controls');
   if (!panelId) return;
-  document.getElementById(panelId)?.scrollIntoView({ behavior: 'smooth' });
+  document.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel) => {
+    panel.hidden = panel.id !== panelId;
+  });
 }
 ```
 
 ### Pitfalls
 
-- **Roving tabindex is your responsibility.** Focus moves the active element but does not toggle `tabindex` — call `set(index)` from pointer click handlers so the next Tab keypress lands on the clicked tab, not the previously focused one.
-- **Filter disabled tabs in `getItems()`, not in `onNavigate`.** Returning a filtered list keeps index math consistent; skipping inside `onNavigate` desyncs the internal index from the visible focus. Pair it with `isItemDisabled` so the handle also skips disabled items during wrapping.
+- **Roving tabindex is your responsibility.** Focus returns navigation changes but does not move DOM focus or toggle `tabindex` — call `set(index)` from pointer click handlers so the next Tab keypress lands on the clicked tab, not the previously focused one.
+- **Keep all tabs in `getItems()` and mark disabled entries with `isItemDisabled`.** Filtering changes index meaning and can desynchronize pointer-driven `set(index)` calls.
 - **Separate focus movement from activation.** Automatic activation (focus → activate) is simpler but hostile to screen-magnifier users who Arrow through tabs to read labels. Default to manual activation on Enter/Space.
 - **Use `set(index)` when focus enters from pointer.** Otherwise the next Arrow key moves from the last keyboard-focused tab, not the clicked one.
 

@@ -1,9 +1,10 @@
-import { isPlainObject } from '@vielzeug/arsenal/guards';
+import { isPlainObject } from '@vielzeug/arsenal';
 
 import { SpellDefinitionError, SpellValidationError } from './errors';
 import { createParseContext } from './messages';
 import { defineOwnProperty } from './safe-object';
 import {
+  type AcceptsMissing,
   type AnySchema,
   type CheckContext,
   ErrorCode,
@@ -23,6 +24,7 @@ import {
   type SchemaDescriptor,
   type SchemaMode,
   type SchemaWalker,
+  type StandardSchemaV1,
   schemaInput,
   schemaMode,
   schemaOutput,
@@ -39,6 +41,7 @@ export {
   SpellValidationError,
 } from './errors';
 export {
+  type AcceptsMissing,
   type AnySchema,
   type CheckContext,
   ErrorCode,
@@ -58,6 +61,7 @@ export {
   type SchemaDescriptor,
   type SchemaMode,
   type SchemaWalker,
+  type StandardSchemaV1,
   schemaMode,
   type ValidateFn,
   type ValidateResult,
@@ -174,7 +178,9 @@ function normalizeValidateResult(result: ValidateResult, ctxIssues: Issue[], ctx
 
 /* -------------------- Base Schema -------------------- */
 
-export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 'sync'> {
+export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 'sync'>
+  implements StandardSchemaV1<Input, Output>
+{
   declare readonly [schemaInput]: Input;
   declare readonly [schemaMode]: Mode;
   declare readonly [schemaOutput]: Output;
@@ -184,6 +190,20 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
   protected _annotations: Record<string, unknown> = {};
 
   private _typeValidator: ValidateFn | null = null;
+
+  get '~standard'(): StandardSchemaV1.Props<Input, Output> {
+    return {
+      validate: async (value) => {
+        const result = await this.safeParseAsync(value);
+
+        if (result.success) return { value: result.data };
+
+        return { issues: result.error.issues.map(({ message, path }) => ({ message, path })) };
+      },
+      vendor: 'vielzeug',
+      version: 1,
+    };
+  }
 
   constructor(typeValidator?: ValidateFn) {
     this.state = defaultState<Output>();
@@ -387,12 +407,12 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
   /* -------------------- Nullability / Optionality -------------------- */
 
-  optional(): Schema<Output | undefined, Input | undefined, Mode> {
+  optional(): Schema<Output | undefined, Input | undefined, Mode> & AcceptsMissing {
     const cloned = this._clone() as unknown as Schema<Output | undefined, Input | undefined, Mode>;
 
     cloned.state.isOptional = true;
 
-    return cloned;
+    return cloned as Schema<Output | undefined, Input | undefined, Mode> & AcceptsMissing;
   }
 
   nullable(): Schema<Output | null, Input | null, Mode> {
@@ -403,13 +423,13 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return cloned;
   }
 
-  nullish(): Schema<Output | null | undefined, Input | null | undefined, Mode> {
+  nullish(): Schema<Output | null | undefined, Input | null | undefined, Mode> & AcceptsMissing {
     const cloned = this._clone() as unknown as Schema<Output | null | undefined, Input | null | undefined, Mode>;
 
     cloned.state.isOptional = true;
     cloned.state.isNullable = true;
 
-    return cloned;
+    return cloned as Schema<Output | null | undefined, Input | null | undefined, Mode> & AcceptsMissing;
   }
 
   required(): Schema<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode> {
@@ -422,21 +442,21 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
   /* -------------------- Transforms -------------------- */
 
-  default(defaultValue: Output | (() => Output)): this {
+  default(defaultValue: Output | (() => Output)): this & AcceptsMissing {
     const cloned = this._clone();
 
     cloned.state.defaultValue =
       typeof defaultValue === 'function' ? (defaultValue as () => Output) : () => materializeValue(defaultValue);
 
-    return cloned;
+    return cloned as this & AcceptsMissing;
   }
 
-  catch(fallback: Output | (() => Output)): this {
+  catch(fallback: Output | (() => Output)): this & AcceptsMissing {
     const cloned = this._clone();
 
     cloned.state.catch = typeof fallback === 'function' ? (fallback as () => Output) : () => materializeValue(fallback);
 
-    return cloned;
+    return cloned as this & AcceptsMissing;
   }
 
   transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input, Mode> {
@@ -525,7 +545,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
   }
 
   protected get _kind(): string {
-    return 'any';
+    return 'unknown';
   }
 
   /* -------------------- Protected helpers -------------------- */
@@ -578,7 +598,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
   }
 
   protected _toDescriptorImpl(): SchemaDescriptor {
-    return { ...this._describeBase(), kind: 'any' };
+    return { ...this._describeBase(), kind: 'unknown' };
   }
 
   /* -------------------- Private -------------------- */

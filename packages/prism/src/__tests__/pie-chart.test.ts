@@ -1,6 +1,4 @@
-import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { createPieChart } from '../charts/pie';
 
 const DATA = [
@@ -69,6 +67,21 @@ describe('createPieChart', () => {
     chart.dispose();
   });
 
+  it('keeps labels aligned when labelled and unlabelled slices change', () => {
+    const chart = createPieChart(container, {
+      data: [{ value: 40 }, { label: 'Second', value: 60 }],
+      transition: { duration: 0 },
+    });
+
+    expect(chart.el.querySelectorAll('.prism-pie-label')).toHaveLength(1);
+    expect(chart.el.querySelector('.prism-pie-label')?.textContent).toBe('Second');
+
+    chart.update([{ label: 'First', value: 40 }, { value: 60 }]);
+    expect(chart.el.querySelectorAll('.prism-pie-label')).toHaveLength(1);
+    expect(chart.el.querySelector('.prism-pie-label')?.textContent).toBe('First');
+    chart.dispose();
+  });
+
   it('no label elements when slices have no label', () => {
     const noLabel = [{ value: 30 }, { value: 50 }];
     const chart = createPieChart(container, { data: noLabel, transition: { duration: 0 } });
@@ -77,11 +90,11 @@ describe('createPieChart', () => {
     chart.dispose();
   });
 
-  it('accepts reactive data via signal and re-renders', () => {
-    const data = signal([...DATA]);
-    const chart = createPieChart(container, { data, transition: { duration: 0 } });
+  it('updates data explicitly', () => {
+    const chart = createPieChart(container, { data: DATA, transition: { duration: 0 } });
 
-    data.value = [...DATA, { label: 'D', value: 10 }];
+    chart.update([...DATA, { label: 'D', value: 10 }]);
+    expect(chart.el.querySelectorAll('.prism-pie-slice')).toHaveLength(4);
     chart.dispose();
   });
 
@@ -148,10 +161,11 @@ describe('createPieChart', () => {
     chart.dispose();
   });
 
-  it('has role=img on SVG', () => {
+  it('is decorative when a11y is omitted', () => {
     const chart = createPieChart(container, { data: DATA });
 
-    expect(chart.el.getAttribute('role')).toBe('img');
+    expect(chart.el.getAttribute('aria-hidden')).toBe('true');
+    expect(chart.el.hasAttribute('role')).toBe(false);
     chart.dispose();
   });
 

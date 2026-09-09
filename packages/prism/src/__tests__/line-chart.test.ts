@@ -1,7 +1,5 @@
-import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createLineChart } from '../charts/line';
-import type { ChartPlugin, ChartPluginContext } from '../types';
 
 describe('createLineChart', () => {
   let container: HTMLElement;
@@ -45,6 +43,21 @@ describe('createLineChart', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 
+  it('rolls back mounted resources when the initial render throws', () => {
+    expect(() =>
+      createLineChart(container, {
+        series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
+        xAxis: {
+          tickFormat: () => {
+            throw new Error('format failed');
+          },
+        },
+      }),
+    ).toThrow('Failed to render chart.');
+
+    expect(container.children).toHaveLength(0);
+  });
+
   it('double dispose is a no-op', () => {
     const chart = createLineChart(container, {
       series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
@@ -52,6 +65,15 @@ describe('createLineChart', () => {
 
     chart.dispose();
     expect(() => chart.dispose()).not.toThrow();
+  });
+
+  it('rejects updates after disposal', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
+    });
+
+    chart.dispose();
+    expect(() => chart.update([])).toThrow('Cannot update a disposed chart.');
   });
 
   it('disposed reflects lifecycle state', () => {
@@ -66,53 +88,44 @@ describe('createLineChart', () => {
     expect(chart.disposed).toBe(true);
   });
 
-  it('does not expose update() on ChartHandle', () => {
+  it('updates data explicitly', () => {
     const chart = createLineChart(container, {
-      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test', showPoints: true }],
     });
 
-    expect('update' in chart).toBe(false);
+    chart.update([
+      {
+        data: [
+          { key: 1, value: 10 },
+          { key: 2, value: 20 },
+          { key: 3, value: 30 },
+        ],
+        name: 'Test',
+        showPoints: true,
+      },
+    ]);
+
+    expect(chart.el.querySelectorAll('.prism-line-dot')).toHaveLength(3);
     chart.dispose();
   });
 
-  it('accepts reactive data via signals', () => {
-    const data = signal([
-      { key: 1, value: 10 },
-      { key: 2, value: 20 },
-    ]);
+  it('clears series, grid, and axis groups when updated with empty data (B6)', () => {
     const chart = createLineChart(container, {
-      series: [{ data, name: 'Reactive' }],
-    });
-
-    expect(chart.el).toBeInstanceOf(SVGSVGElement);
-    data.value = [
-      { key: 1, value: 10 },
-      { key: 2, value: 20 },
-      { key: 3, value: 30 },
-    ];
-    chart.dispose();
-  });
-
-  it('clears series, grid, and axis groups when reactive data becomes empty (B6)', async () => {
-    const data = signal([
-      { key: 1, value: 10 },
-      { key: 2, value: 20 },
-    ]);
-    const chart = createLineChart(container, {
-      series: [{ data, name: 'Reactive' }],
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'Test',
+        },
+      ],
       xAxis: { grid: true },
       yAxis: { grid: true },
     });
 
-    await new Promise((r) => requestAnimationFrame(r));
     expect(chart.el.querySelector('.prism-line-series')).not.toBeNull();
-    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
-    expect(chart.el.querySelector('.prism-axis-tick')).not.toBeNull();
-
-    data.value = [];
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
-
+    chart.update([{ data: [], name: 'Test' }]);
     expect(chart.el.querySelector('.prism-line-series')).toBeNull();
     expect(chart.el.querySelector('.prism-grid-line')).toBeNull();
     expect(chart.el.querySelector('.prism-axis-tick')).toBeNull();
@@ -279,21 +292,6 @@ describe('createLineChart', () => {
     chart.dispose();
   });
 
-  it('installs and disposes plugins', () => {
-    const install = vi.fn();
-    const dispose = vi.fn();
-    const plugin: ChartPlugin = { dispose, install };
-
-    const chart = createLineChart(container, {
-      plugins: [plugin],
-      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
-    });
-
-    expect(install).toHaveBeenCalledWith(expect.objectContaining({ container, svg: chart.el }));
-    chart.dispose();
-    expect(dispose).toHaveBeenCalledOnce();
-  });
-
   it('renders with Date key (time scale)', () => {
     const chart = createLineChart(container, {
       series: [
@@ -380,37 +378,17 @@ describe('createLineChart', () => {
     chart.dispose();
   });
 
-  it('plugin install receives ctx with dimensions and svg', () => {
-    let receivedCtx: ChartPluginContext | undefined;
-    const plugin: ChartPlugin = {
-      dispose: () => {},
-      install: (ctx) => {
-        receivedCtx = ctx;
-      },
-    };
-    const chart = createLineChart(container, {
-      plugins: [plugin],
-      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
-    });
-
-    expect(receivedCtx).toBeDefined();
-    expect(receivedCtx?.dimensions).toBeDefined();
-    expect(receivedCtx?.svg).toBe(chart.el);
-    chart.dispose();
-  });
-
   it('cancels an in-flight line transition on dispose (B9)', async () => {
     // The first-ever render has no prior `d` to tween from, so it draws synchronously —
-    // a reactive update on an already-mounted chart is what actually schedules the
+    // an update on an already-mounted chart is what actually schedules the
     // requestAnimationFrame loop the transition (and this cancellation) targets.
-    const data = signal([{ key: 1, value: 10 }]);
     const chart = createLineChart(container, {
-      series: [{ data, name: 'Test' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
       transition: { duration: 500 },
     });
 
     await new Promise((r) => requestAnimationFrame(r));
-    data.value = [{ key: 1, value: 90 }];
+    chart.update([{ data: [{ key: 1, value: 90 }], name: 'Test' }]);
     await new Promise((r) => requestAnimationFrame(r));
 
     const path = chart.el.querySelector('.prism-line-path') as SVGPathElement;

@@ -91,7 +91,7 @@ describe('ore-sidebar', () => {
 
   it('applies responsive collapse on media-query match', async () => {
     let changeHandler: (() => void) | undefined;
-    let mockMatchMedia: { matches: boolean };
+    let mockMatchMedia: { matches: boolean } = { matches: false };
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => {
@@ -101,7 +101,7 @@ describe('ore-sidebar', () => {
         },
         matches: false,
         removeEventListener: vi.fn(),
-      } as MediaQueryList;
+      } as unknown as MediaQueryList;
       return mockMatchMedia;
     });
 
@@ -121,7 +121,7 @@ describe('ore-sidebar', () => {
 
   it('enters bottom-nav mode when bottom-nav-at query matches', async () => {
     let changeHandler: (() => void) | undefined;
-    let mockMatchMedia: { matches: boolean };
+    let mockMatchMedia: { matches: boolean } = { matches: true };
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => {
@@ -131,7 +131,7 @@ describe('ore-sidebar', () => {
         },
         matches: true,
         removeEventListener: vi.fn(),
-      } as MediaQueryList;
+      } as unknown as MediaQueryList;
       return mockMatchMedia;
     });
 

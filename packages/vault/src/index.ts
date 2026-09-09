@@ -1,18 +1,33 @@
+export {
+  count,
+  deleteMany,
+  getMany,
+  has,
+  isEmpty,
+  keys,
+  update,
+  upsert,
+} from './adapter-core';
 export { VaultDisposedError, VaultError, VaultMigrationError, VaultQuotaError, VaultScopeError } from './errors';
 export type { QueryBuilder } from './query';
 export { isExpired, ttl } from './ttl';
 export type {
   AnySchema,
-  BaseAdapterOptions,
+  CodecInput,
+  DocumentVaultStore,
+  DurableStoreOptions,
   KeyOf,
+  KeyValueVaultStore,
+  MemoryStoreOptions,
   Observer,
+  RecordCodec,
   RecordOf,
-  RecordValidator,
+  RecordParser,
   SchemaEntry,
-  TableValidators,
-  TransactionalVaultStore,
+  TableCodecs,
+  TransactionContext,
   Unsubscribe,
+  VaultConveniences,
   VaultKey,
-  VaultStore,
 } from './types';
-export { table } from './types';
+export { table, validatorCodec } from './types';

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { BHD, CoinsError, EUR, exchange, exchangeRate, isExchangeRate, JPY, money, toDecimal, USD } from '../index';
+import {
+  CoinsError,
+  currency,
+  EUR,
+  exchange,
+  exchangeRate,
+  isExchangeRate,
+  JPY,
+  money,
+  toDecimal,
+  USD,
+} from '../index';
 
 describe('exchange', () => {
   it('converts equal-scale currencies exactly', () => {
@@ -18,6 +29,7 @@ describe('exchange', () => {
   });
 
   it('accounts for 2-to-3 currency scales and negative values', () => {
+    const BHD = currency({ code: 'BHD', minorUnit: 3 });
     const usdToBhd = exchangeRate({ from: USD, to: BHD, value: '0.377' });
 
     expect(toDecimal(exchange(money('1.00', USD), usdToBhd))).toBe('0.377');
@@ -30,11 +42,20 @@ describe('exchange', () => {
     expect(toDecimal(exchange(money(5n, USD, { unit: 'minor' }), half, { rounding: 'halfEven' }))).toBe('0.02');
   });
 
+  it('requires positive exact-string rates', () => {
+    expect(() => exchangeRate({ from: USD, to: EUR, value: '0' })).toThrow(
+      expect.objectContaining({ code: 'INVALID_DECIMAL' }),
+    );
+    expect(() => exchangeRate({ from: USD, to: EUR, value: 1.2 as never })).toThrow(
+      expect.objectContaining({ code: 'INVALID_DECIMAL' }),
+    );
+  });
+
   it('rejects forged rates and source mismatches', () => {
     const rate = exchangeRate({ from: USD, to: EUR, value: '1' });
 
     expect(() => exchange(money('1', EUR), rate as never)).toThrow(/Currency mismatch/);
-    expect(() => exchangeRate({ from: USD, to: EUR, value: '-1' })).toThrow(/negative/);
+    expect(() => exchangeRate({ from: USD, to: EUR, value: '-1' })).toThrow(/positive/);
 
     try {
       exchange(money('1', USD), Object.freeze({ ...rate }) as never);

@@ -1,7 +1,7 @@
 export const messagesOverrideExample = {
-  code: `import { diagnostics, s } from '@vielzeug/spell'
+  code: `import { createParseContext, s } from '@vielzeug/spell'
 
-const context = diagnostics.createParseContext({
+const context = createParseContext({
   object: { invalidKeys: () => 'Use only supported fields' },
 })
 

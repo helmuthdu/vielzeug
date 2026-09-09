@@ -12,15 +12,15 @@ const users = [
 const search = createReactiveSearch(users, { fields: ['name', 'email'], debounce: 0 })
 
 const show = (label) => {
-  console.log(label, '\\u2192', search.results.value.map(r => r.item.name).join(', ') || '(none)')
+  console.log(label, '\\u2192', search.getSnapshot().results.map(r => r.item.name).join(', ') || '(none)')
 }
 
 show('Empty query')    // all 4 users
 
-search.query.value = 'ali'
+search.setQuery('ali')
 show('Query: "ali"')   // Alice Johnson, Alicia Keys, Dave Alison
 
-search.query.value = 'alice'
+search.setQuery('alice')
 show('Query: "alice"') // Alice Johnson
 
 // Add a new user at runtime via the exposed index

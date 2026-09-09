@@ -1,43 +1,42 @@
 # @vielzeug/sourcerer
 
-Atomic reactive sources for local, numbered-page, cursor, and infinite collections.
+> Reactive collection sources with local, page, cursor, and infinite pagination
+
+## Installation
 
 ```sh
 pnpm add @vielzeug/sourcerer
+npm install @vielzeug/sourcerer
+yarn add @vielzeug/sourcerer
 ```
+
+## Quick Start
 
 ```ts
 import { createPageSource } from '@vielzeug/sourcerer';
 
 const users = createPageSource({
-  autoStart: false,
-  initialQuery: { pageSize: 20 },
-  load: async () => ({ data: [{ id: 1, name: 'Ada' }], total: 1 }),
+  load: async ({ page, pageSize }) => ({
+    items: [{ id: page, name: 'Ada' }].slice(0, pageSize),
+    totalItems: 1,
+  }),
+  pageSize: 20,
 });
 
 await users.reload();
-console.log(users.snapshot.data);
-console.log(users.snapshot.pagination.total);
+console.log(users.state.items);
+console.log(users.state.pagination.totalItems);
 users.dispose();
 ```
-
-Every source exposes an atomic `snapshot` and `subscribe(listener)`. `setQuery()` changes query fields; `page.*` changes page index. While newer work is active, `pendingQuery` records it without mixing it into loaded data. Page sources cancel superseded requests and preserve successful data on background refresh failures.
-
-| Factory | Purpose |
-| --- | --- |
-| `createLocalSource()` | Synchronous in-memory collection |
-| `createPageSource()` | Numbered async pages |
-| `createCursorSource()` | Cursor-based async pages |
-| `createInfiniteSource()` | Appended async pages |
-
-Sourcerer manages collection state and request succession. Configure retries, cache, polling, URL serialization, and optimistic mutation with your transport or application layer.
 
 ## Documentation
 
 - [Overview](https://vielzeug.dev/sourcerer/)
 - [Usage Guide](https://vielzeug.dev/sourcerer/usage)
 - [API Reference](https://vielzeug.dev/sourcerer/api)
+- [Examples](https://vielzeug.dev/sourcerer/examples)
+- [Migration Guide](https://vielzeug.dev/sourcerer/migration)
 
 ## License
 
-MIT © Helmuth Saatkamp — part of Vielzeug.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

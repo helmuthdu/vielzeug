@@ -26,7 +26,7 @@ function observeGrid(): () => void {
   try {
     const size = createElementSize(grid);
     const render = () => {
-      const width = size.value?.width;
+      const width = size.getSnapshot()?.width;
       if (width === undefined) return;
       const columns = width < 400 ? 1 : width < 800 ? 2 : 3;
       grid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;

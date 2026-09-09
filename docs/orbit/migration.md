@@ -4,9 +4,41 @@ title: Orbit Migration
 
 [[toc]]
 
-# Orbit Migration
+# Orbit 3.0 Migration
 
-## Orbit 2.0
+Orbit 3 makes `createPositioner()` active on construction and removes the separate startup phase.
+
+## Remove `start()` calls
+
+Create positioners after both elements mount. The initial position is applied before `createPositioner()` returns.
+
+```ts
+// Before
+const positioner = createPositioner(trigger, tooltip);
+positioner.start();
+```
+
+```ts
+// After
+const positioner = createPositioner(trigger, tooltip);
+```
+
+`Positioner.start()` is removed. Existing calls must be deleted.
+
+## Use the immediately available position
+
+`getPosition()` now returns `ComputePositionResult` instead of `ComputePositionResult | null` because construction applies the initial position synchronously. `ReactivePositioner.position` is likewise `Readable<ComputePositionResult>`.
+
+```ts
+const positioner = createPositioner(trigger, tooltip);
+const placement = positioner.getPosition().placement;
+```
+
+Create positioners only from a client mount lifecycle. Construction reads element geometry and, unless `autoUpdate: false` is set, installs update listeners immediately.
+
+---
+
+# Orbit 2.0 Migration
 
 Orbit 2.0 removes unused exports and speculative convenience wrappers, and aligns error handling with monorepo conventions.
 
@@ -25,7 +57,7 @@ Removed APIs:
 - `getRects()`
 - `OrbitError.is()`
 
-### Replace `computePositionAsync()` / `computePositionRaf()`
+## Replace `computePositionAsync()` / `computePositionRaf()`
 
 Use native deferral mechanisms directly.
 
@@ -48,7 +80,7 @@ const result = await new Promise((resolve) =>
 );
 ```
 
-### Replace `OrbitError.is()` with `instanceof`
+## Replace `OrbitError.is()` with `instanceof`
 
 The static type guard is removed. Use `instanceof OrbitError` to narrow unknown errors.
 
@@ -66,7 +98,7 @@ if (err instanceof OrbitError) {
 }
 ```
 
-### `getRects()` removed from public exports
+## `getRects()` removed from public exports
 
 `getRects()` was an internal helper leaked to the public API. If you need raw rect measurements, call `getBoundingClientRect()` directly.
 
@@ -82,7 +114,7 @@ const reference = ref.getBoundingClientRect();
 const floating = el.getBoundingClientRect();
 ```
 
-### Replace `float()`
+## Replace `float()`
 
 Create a positioner, then start and dispose it with your UI owner.
 
@@ -107,7 +139,7 @@ positioner.start();
 positioner.dispose();
 ```
 
-### Replace Middleware Composition
+## Replace Middleware Composition
 
 Build middleware arrays directly. `computePosition()` no longer filters falsy values or infers middleware data types.
 
@@ -121,7 +153,7 @@ const middleware = compose(offset(8), enabled && flip(), shift());
 const middleware = [offset(8), ...(enabled ? [flip()] : []), shift()];
 ```
 
-### Replace CSS Anchor Positioning
+## Replace CSS Anchor Positioning
 
 Use a standard client-owned positioner. Orbit no longer applies unsupported CSS anchor styles silently.
 
@@ -130,7 +162,7 @@ const positioner = createPositioner(trigger, panel, { placement: 'bottom' });
 positioner.start();
 ```
 
-### Remove SSR Alias
+## Remove SSR Alias
 
 Orbit imports are server-safe. Invoke positioning only after client mount, when DOM elements exist.
 
@@ -142,7 +174,7 @@ onMounted(() => {
 });
 ```
 
-### Replace Reactive Adapter
+## Replace Reactive Adapter
 
 `createReactivePositioner()` replaces `createFloatState()`.
 
@@ -154,7 +186,7 @@ const position = positioner.position.value;
 
 Install `@vielzeug/ripple` when importing `@vielzeug/orbit/reactive`.
 
-### Upgrade Checklist
+## Upgrade Checklist
 
 - Replace `computePositionAsync()` with `Promise.resolve().then(() => computePosition(...))`.
 - Replace `computePositionRaf()` with `requestAnimationFrame(() => computePosition(...))`.

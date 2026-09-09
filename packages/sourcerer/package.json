@@ -30,14 +30,18 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types",
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "verify:exports": "node verify-exports.mjs"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",

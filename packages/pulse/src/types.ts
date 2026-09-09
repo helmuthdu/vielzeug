@@ -1,4 +1,3 @@
-import type { Readable } from '@vielzeug/ripple';
 import type { PulseError } from './errors';
 
 // ─── Core map types ────────────────────────────────────────────────────────────
@@ -11,6 +10,14 @@ export type EventKey<T extends MessageMap> = keyof T & string;
 
 /** A function that removes a listener subscription. */
 export type Unsubscribe = () => void;
+
+// ─── External store ────────────────────────────────────────────────────────────
+
+/** Framework-neutral snapshot/subscription state source. */
+export interface ExternalStore<T> {
+  getSnapshot(): T;
+  subscribe(listener: () => void): Unsubscribe;
+}
 
 // ─── Schema ────────────────────────────────────────────────────────────────────
 
@@ -193,7 +200,7 @@ export type RoomScopeBase = {
 /** Room scope with reactive presence state tracking. */
 export type PresenceRoomScope<T = unknown> = RoomScopeBase & {
   /** Reactive map of `memberId → state`. Updates whenever any member joins, leaves, or updates. */
-  readonly presence: Readable<ReadonlyMap<string, T>>;
+  readonly presence: ExternalStore<ReadonlyMap<string, T>>;
   /**
    * Broadcast this client's presence state to all room members.
    * Throws `PulseConnectionError` unless the connection is open.
@@ -276,7 +283,7 @@ export type Pulse<S extends PulseSchema = PulseSchema> = {
   room<K extends keyof RoomMap<S> & string>(name: K, opts?: RoomOptions): RoomScope<RoomMap<S>[K]>;
 
   /** Reactive set of rooms the client is currently a confirmed member of. */
-  readonly rooms: Readable<ReadonlySet<string>>;
+  readonly rooms: ExternalStore<ReadonlySet<string>>;
 
   /**
    * Send a typed event to the server.
@@ -284,7 +291,7 @@ export type Pulse<S extends PulseSchema = PulseSchema> = {
    */
   send<K extends EventKey<ClientEvents<S>>>(event: K, payload: ClientEvents<S>[K]): void;
   /** Reactive connection status. */
-  readonly status: Readable<PulseStatus>;
+  readonly status: ExternalStore<PulseStatus>;
   /**
    * Observe runtime events (status-change, error, dispose) without affecting
    * pulse behavior. Handler errors are swallowed. Returns an unsubscribe function.

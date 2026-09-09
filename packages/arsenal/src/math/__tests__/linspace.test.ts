@@ -25,9 +25,10 @@ describe('linspace', () => {
     expect(linspace(10, 0, 5)).toEqual([10, 7.5, 5, 2.5, 0]);
   });
 
-  it('should return an empty array if steps is less than 1', () => {
-    expect(linspace(0, 10, 0)).toEqual([]);
-    expect(linspace(0, 10, -1)).toEqual([]);
+  it('rejects invalid step counts', () => {
+    expect(() => linspace(0, 10, 0)).toThrow(RangeError);
+    expect(() => linspace(0, 10, -1)).toThrow(RangeError);
+    expect(() => linspace(0, 10, 1.5)).toThrow(RangeError);
   });
 
   it('should handle min and max being the same', () => {

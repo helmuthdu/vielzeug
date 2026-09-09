@@ -1,4 +1,4 @@
-import { debounce } from '@vielzeug/arsenal/function';
+import { debounce } from '@vielzeug/arsenal';
 import {
   define,
   getHost,
@@ -137,8 +137,6 @@ const DEFAULT_LABELS: DataGridLabels = {
 
 export { COLUMN_TAG } from './datagrid-column';
 export type { DataGridColumn, DataGridView, FilterOperator, FilterOption } from './datagrid-model';
-
-// ── Pure module-level helpers ─────────────────────────────────────────────────
 
 /**
  * Returns the Lucide icon name for a column's sort state.
@@ -285,11 +283,11 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   /**
    * A reactive data source from `@vielzeug/sourcerer` (or any compatible object).
    * When set, the source drives row data, pagination, and search — the `rows` prop is ignored.
-   * Client-side sort and filter are bypassed; wire `sort-change` to `source.setQuery()` externally.
+   * Client-side sort and filter are bypassed; update source params from grid events externally.
    * @example
    * ```js
    * import { createPageSource } from '@vielzeug/sourcerer';
-   * const source = createPageSource({ load: ({ query, signal }) => api.users(query, { signal }) });
+   * const source = createPageSource({ load: ({ page, pageSize, signal }) => api.users({ page, pageSize }, { signal }) });
    * grid.source = source;
    * ```
    */
@@ -388,21 +386,23 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * sourcerer import is required in refine.
  *
  * When `source` is set on the grid:
- * - `rows` prop is ignored; `source.snapshot.data` drives displayed items.
- * - Pagination reads `source.snapshot.pagination`.
- * - Prev/next buttons call `source.page.previous()` / `source.page.next()`.
- * - Search calls `source.setQuery({ search })`.
- * - `source.snapshot.isFetching` contributes to the grid's `aria-busy` state.
- * - Client-side sort and filter are bypassed; wire `sort-change` to `source.setQuery()` externally.
+ * - `rows` prop is ignored; `source.state.items` drives displayed items.
+ * - Pagination reads `source.state.pagination`.
+ * - Prev/next buttons call `source.previous()` / `source.next()`.
+ * - Search calls `source.setParams(search)` when that optional method exists.
+ * - `source.state.loading` contributes to the grid's `aria-busy` state.
+ * - Client-side sort and filter are bypassed; update source params from grid events externally.
  *
  * @example
  * ```ts
  * import { createPageSource } from '@vielzeug/sourcerer';
  *
  * const source = createPageSource({
- *   load: ({ query, signal }) =>
- *     fetch(`/api/users?page=${query.page}&limit=${query.pageSize}&search=${query.search}`, { signal })
- *       .then(r => r.json()),
+ *   load: async ({ page, pageSize, params: search, signal }) => {
+ *     const result = await fetch(`/api/users?page=${page}&limit=${pageSize}&search=${search}`, { signal }).then(r => r.json());
+ *     return { items: result.data, totalItems: result.total };
+ *   },
+ *   params: '',
  * });
  *
  * const grid = document.querySelector('ore-datagrid');
@@ -410,27 +410,21 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * ```
  */
 export type DataGridSource<T = Record<string, unknown>> = {
-  readonly page?: {
-    next(): Promise<void> | void;
-    previous(): Promise<void> | void;
-  };
-  setQuery?(changes: { search?: string }): Promise<void> | void;
-  readonly snapshot: {
-    readonly data: readonly T[];
+  next(): Promise<void> | void;
+  previous(): Promise<void> | void;
+  setParams?(search: string): Promise<void> | void;
+  readonly state: {
     readonly error: { message: string } | null;
-    readonly isFetching: boolean;
+    readonly items: readonly T[];
+    readonly loading: boolean;
     readonly pagination: {
-      readonly count: number;
-      readonly hasNext: boolean;
-      readonly hasPrevious: boolean;
-      readonly index: number;
-      readonly kind: 'page';
-      readonly size: number;
-      readonly total: number;
+      readonly page: number;
+      readonly pageCount: number;
+      readonly pageSize: number;
+      readonly totalItems: number;
     };
-    readonly query: { readonly search?: string };
   };
-  subscribe(listener: (snapshot: DataGridSource<T>['snapshot']) => void): () => void;
+  subscribe(listener: (state: DataGridSource<T>['state']) => void): () => void;
 };
 
 export const DATAGRID_TAG = 'ore-datagrid' as const;
@@ -604,15 +598,15 @@ define<OreDataGridProps>(DATAGRID_TAG, {
           return;
         }
 
-        const update = (snapshot: DataGridSource['snapshot'] = src.snapshot): void => {
-          sourceItems.value = snapshot.data as Record<string, unknown>[];
+        const update = (state: DataGridSource['state'] = src.state): void => {
+          sourceItems.value = state.items as Record<string, unknown>[];
           sourceMeta.value = {
-            error: snapshot.error,
-            isLoading: snapshot.isFetching,
-            pageCount: snapshot.pagination.count,
-            pageNumber: snapshot.pagination.index,
-            pageSize: snapshot.pagination.size,
-            totalItems: snapshot.pagination.total,
+            error: state.error,
+            isLoading: state.loading,
+            pageCount: state.pagination.pageCount,
+            pageNumber: state.pagination.page,
+            pageSize: state.pagination.pageSize,
+            totalItems: state.pagination.totalItems,
           };
         };
 
@@ -673,12 +667,17 @@ define<OreDataGridProps>(DATAGRID_TAG, {
           ],
     );
 
+    const settleSourceCommand = (result: Promise<unknown> | void): void => {
+      if (result) void result.catch((error) => warn(`ore-datagrid: source command failed: ${String(error)}`));
+    };
+    const setSourceSearch = (search: string): void => {
+      settleSourceCommand(props.source.value?.setParams?.(search));
+    };
     const debouncedSearch = debounce((query: unknown) => {
-      const source = props.source.value;
-
-      if (source?.setQuery) void source.setQuery({ search: query as string });
+      if (props.source.value?.setParams) setSourceSearch(query as string);
       else model.setSearchQuery(query as string);
     }, 250);
+    onCleanup(debouncedSearch.cancel);
 
     // ── Sync external selected-keys prop into the feature model ───────────────
 
@@ -739,8 +738,8 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       const src = props.source.value;
 
       if (src) {
-        if (direction === 'prev') void src.page?.previous();
-        else void src.page?.next();
+        if (direction === 'prev') settleSourceCommand(src.previous());
+        else settleSourceCommand(src.next());
 
         return;
       }
@@ -1249,7 +1248,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                         if (e.key === 'Escape') {
                           const src = props.source.value;
 
-                          if (src?.setQuery) void src.setQuery({ search: '' });
+                          if (src?.setParams) setSourceSearch('');
 
                           model.toggleSearch();
                         }
@@ -1270,7 +1269,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
               @click="${() => {
                 const src = props.source.value;
 
-                if (src?.setQuery && model.searchActive.value) void src.setQuery({ search: '' });
+                if (src?.setParams && model.searchActive.value) setSourceSearch('');
 
                 model.toggleSearch();
               }}">

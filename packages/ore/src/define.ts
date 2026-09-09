@@ -3,7 +3,7 @@ import type { ComponentDefinition } from './component-types';
 import { ORE_ERRORS, OreApiError } from './errors';
 
 /**
- * Define and register a web component.
+ * Create and register a web component.
  *
  * The `setup` function runs for each connection and returns an `HTMLResult`.
  * Disconnecting disposes its state; reconnecting rebuilds it. All reactive
@@ -35,7 +35,6 @@ export function define<Props extends Record<string, unknown> = Record<never, nev
   definition: ComponentDefinition<Props>,
 ): void {
   if (!tag) throw new OreApiError(ORE_ERRORS.defineRequiresTag);
-
   if (customElements.get(tag)) throw new OreApiError(ORE_ERRORS.defineDuplicate(tag));
 
   const ComponentClass = createComponentClass(tag, definition);

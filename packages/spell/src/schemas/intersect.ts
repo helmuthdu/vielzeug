@@ -1,8 +1,9 @@
-import { isPlainObject } from '@vielzeug/arsenal/guards';
+import { isPlainObject } from '@vielzeug/arsenal';
 
 import type {
   AnySchema,
   CheckContext,
+  InferInput,
   InferOutput,
   InferSchemaMode,
   Issue,
@@ -42,7 +43,7 @@ function deepMerge(target: unknown, source: unknown): unknown {
 export class IntersectSchema<
   T extends readonly AnySchema[],
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number]>>,
-> extends Schema<UnionToIntersection<InferOutput<T[number]>>, unknown, Mode> {
+> extends Schema<UnionToIntersection<InferOutput<T[number]>>, UnionToIntersection<InferInput<T[number]>>, Mode> {
   readonly schemas: T;
 
   protected override get _kind(): string {

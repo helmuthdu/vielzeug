@@ -1,16 +1,15 @@
 import { warn } from '../../_dev';
-import { renderAxis, resolveTickCount } from '../../axes/axis';
+import { positionAxis, renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { normalizeCartesianSeries } from '../../core/cartesian-model';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
-import { resolveMaybeSignal } from '../../core/resolve';
 import { getMousePosition } from '../../interaction/events';
 import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
 import { createSvgElement } from '../../svg/element';
 import { seriesColor } from '../../theme';
-import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
+import type { BarChartConfig, BarSeriesConfig, BarVariant, ChartHandle } from '../../types';
 import { findCatIdx, findSeriesIdx, isOutsideBars } from './bar-hit-test';
 import { renderBars } from './bar-renderer';
 import type { BarScaleContext } from './bar-scale-context';
@@ -24,18 +23,17 @@ function variantFlags(variant: BarVariant): { horizontal: boolean; stacked: bool
 
 // ─── Chart ────────────────────────────────────────────────────────────────────
 
-export function createBarChart(container: HTMLElement, config: BarChartConfig): ChartHandle {
-  const seriesSignal = resolveMaybeSignal(config.series);
+export function createBarChart(container: HTMLElement, config: BarChartConfig): ChartHandle<BarSeriesConfig[]> {
+  let seriesList = config.series;
 
-  let scaffold: ChartHandle | undefined;
-
-  try {
-    scaffold = createChartScaffold(container, config, (ctx) => {
+  return createChartScaffold(
+    container,
+    config,
+    (ctx) => {
       const { groups, legend, tooltip } = ctx;
-      const dims = ctx.dimensions.value;
+      const dims = ctx.dimensions;
       const area = chartArea(dims.width, dims.height, dims.margin);
-      const seriesList = seriesSignal.value;
-      const sourceData = seriesList.map((series) => resolveMaybeSignal(series.data).value);
+      const sourceData = seriesList.map((series) => series.data);
       const model = normalizeCartesianSeries(seriesList, sourceData);
       const categories = model.domain;
       const allData = model.series.map(({ byKey }) => categories.map((key) => byKey.get(key)));
@@ -54,7 +52,6 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       };
 
       if (categories.length === 0) {
-        warn('createBarChart: no data');
         clearCartesianDom(groups, legend, tooltip);
 
         return;
@@ -125,10 +122,13 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
         const yAxis = categoryAxis(config.yAxis);
 
-        if (yAxis) renderAxis(groups.yAxis, catScale, yAxis, area.height, 'left');
+        if (yAxis) {
+          positionAxis(groups.yAxis, yAxis.position ?? 'left', area.width, area.height);
+          renderAxis(groups.yAxis, catScale, yAxis, area.height, 'left');
+        }
 
         if (config.xAxis) {
-          groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
+          positionAxis(groups.xAxis, config.xAxis.position ?? 'bottom', area.width, area.height);
           renderAxis(groups.xAxis, valScale, config.xAxis, area.width, 'bottom');
         }
       } else {
@@ -146,11 +146,14 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         const xAxis = categoryAxis(config.xAxis);
 
         if (xAxis) {
-          groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
+          positionAxis(groups.xAxis, xAxis.position ?? 'bottom', area.width, area.height);
           renderAxis(groups.xAxis, catScale, xAxis, area.width, 'bottom');
         }
 
-        if (config.yAxis) renderAxis(groups.yAxis, valScale, config.yAxis, area.height, 'left');
+        if (config.yAxis) {
+          positionAxis(groups.yAxis, config.yAxis.position ?? 'left', area.width, area.height);
+          renderAxis(groups.yAxis, valScale, config.yAxis, area.height, 'left');
+        }
       }
 
       // Series groups
@@ -207,7 +210,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       // ─── Event handlers (close over render-derived state) ─────────────────────
 
       const onMouseMove = (event: MouseEvent) => {
-        const d = ctx.dimensions.value;
+        const d = ctx.dimensions;
         const pos = getMousePosition(ctx.svg, event, d.margin.left, d.margin.top);
         const a = chartArea(d.width, d.height, d.margin);
 
@@ -256,7 +259,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       const onClick = (event: MouseEvent) => {
         if (!config.onClick) return;
 
-        const d = ctx.dimensions.value;
+        const d = ctx.dimensions;
         const pos = getMousePosition(ctx.svg, event, d.margin.left, d.margin.top);
         const a = chartArea(d.width, d.height, d.margin);
 
@@ -276,11 +279,9 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       };
 
       return { onClick, onMouseLeave, onMouseMove };
-    });
-
-    return scaffold;
-  } catch (error) {
-    scaffold?.dispose();
-    throw error;
-  }
+    },
+    (data) => {
+      seriesList = data;
+    },
+  );
 }

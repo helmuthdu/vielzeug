@@ -1,4 +1,4 @@
-import type { FamiliarRuntimeError } from './errors';
+import type { FamiliarRuntimeError } from './errors.js';
 
 export type WorkerStatus = 'idle' | 'running' | 'terminated';
 
@@ -30,7 +30,7 @@ export type RunOptions = {
   /** Per-operation timeout in milliseconds. Overrides WorkerOptions.timeout. */
   timeout?: number;
   /** Values transferred to the worker instead of structured-cloned. */
-  transferables?: Transferable[];
+  transferables?: readonly Transferable[];
 };
 
 export type DrainOptions = {
@@ -43,7 +43,6 @@ export interface PoolBase {
   dispose(): void;
   readonly disposed: boolean;
   drain(options?: DrainOptions): Promise<void>;
-  prime(): Promise<void>;
   readonly stats: WorkerStats;
   readonly status: WorkerStatus;
   [Symbol.asyncDispose](): Promise<void>;
@@ -58,22 +57,8 @@ export interface StreamWorkerPool<TInput, TChunk> extends PoolBase {
   runStream(input: TInput, options?: RunOptions): AsyncIterable<TChunk>;
 }
 
-export type TaskGroup<TInput, TOutput> = {
-  abort(reason?: unknown): void;
-  drain(): Promise<PromiseSettledResult<TOutput>[]>;
-  readonly name: string | undefined;
-  readonly pending: number;
-  run(input: TInput, options?: Omit<RunOptions, 'signal'>): Promise<TOutput>;
-  readonly size: number;
-};
-
-export type TaskGroupOptions = {
-  signal?: AbortSignal;
-};
-
 export type SlotStrategy<TInput, TOutput> = {
   cancel(reason: unknown): void;
-  prime(): Promise<void>;
   run(input: TInput, transferables: Transferable[], timeout: number | undefined): Promise<TOutput>;
   terminate(): void;
 };

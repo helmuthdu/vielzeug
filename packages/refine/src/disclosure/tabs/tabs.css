@@ -168,28 +168,6 @@
     display: none;
   }
 
-  /* ─── glass ─── */
-  :host([variant='glass']) {
-    --_tablist-bg: var(--tabs-tablist-bg, color-mix(in oklch, var(--color-secondary) 20%, transparent));
-    --_tablist-border-color: var(
-      --tabs-tablist-border-color,
-      color-mix(in oklch, var(--color-secondary-contrast) 15%, transparent)
-    );
-  }
-
-  :host([variant='glass']) [role='tablist'] {
-    padding: var(--size-1);
-    background: var(--_tablist-bg);
-    border: var(--border) solid var(--_tablist-border-color);
-    border-radius: var(--tabs-radius);
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-  }
-
-  :host([variant='glass']) .indicator {
-    display: none;
-  }
-
   /* ─── frost ─── */
   :host([variant='frost']) {
     --_tablist-bg: var(--tabs-tablist-bg, color-mix(in oklch, var(--color-canvas) 55%, transparent));

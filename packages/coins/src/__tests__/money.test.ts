@@ -5,6 +5,7 @@ import {
   add,
   CoinsError,
   compare,
+  decodeMoney,
   divide,
   EUR,
   isMoney,
@@ -12,7 +13,6 @@ import {
   money,
   multiply,
   negate,
-  parseMoney,
   round,
   subtract,
   toDecimal,
@@ -24,6 +24,17 @@ describe('money', () => {
     expect(money('19.99', USD)).toMatchObject({ amount: 1999n, currency: USD });
     expect(money(1999n, USD, { unit: 'minor' })).toMatchObject({ amount: 1999n, currency: USD });
     expect(money('19', JPY)).toMatchObject({ amount: 19n, currency: JPY });
+  });
+
+  it('rejects runtime numeric inputs and invalid rounding modes', () => {
+    expect(() => money(1.1 as never, USD)).toThrow(expect.objectContaining({ code: 'INVALID_DECIMAL' }));
+    expect(() => multiply(money('1', USD), 2 as never)).toThrow(expect.objectContaining({ code: 'INVALID_DECIMAL' }));
+    expect(() => money('1', USD, { rounding: 'invalid' as never })).toThrow(
+      expect.objectContaining({ code: 'INVALID_ROUNDING' }),
+    );
+    expect(() => multiply(money('1', USD), '2', { rounding: 'invalid' as never })).toThrow(
+      expect.objectContaining({ code: 'INVALID_ROUNDING' }),
+    );
   });
 
   it('rejects ambiguous bigint and over-precise decimal construction', () => {
@@ -77,12 +88,12 @@ describe('money', () => {
   });
 
   it('canonicalizes parsed values and rejects accessors', () => {
-    const parsed = parseMoney({ amount: 1n, currency: USD });
+    const parsed = decodeMoney({ amount: 1n, currency: USD });
 
     expect(Object.isFrozen(parsed)).toBe(true);
     expect(isMoney(parsed)).toBe(true);
     expect(isMoney(Object.freeze({ amount: 1n, currency: USD }))).toBe(false);
-    expect(() => parseMoney(Object.defineProperty({ currency: USD }, 'amount', { get: () => 1n }))).toThrow(/data/);
+    expect(() => decodeMoney(Object.defineProperty({ currency: USD }, 'amount', { get: () => 1n }))).toThrow(/data/);
     expect(new CoinsError('INVALID_MONEY', 'bad') instanceof CoinsError).toBe(true);
   });
 });

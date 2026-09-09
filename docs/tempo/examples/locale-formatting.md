@@ -27,6 +27,7 @@ const display = format(event, {
 const relative = formatRelative(event, {
   base: parse('2026-03-21T08:15:30Z', { as: 'instant' }),
   locale: 'de-DE',
+  timeZone: 'Europe/Berlin',
 });
 ```
 

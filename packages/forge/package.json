@@ -33,15 +33,15 @@
       "require": "./dist/form-data.cjs",
       "types": "./dist/form-data.d.ts"
     },
-    "./spell": {
-      "import": "./dist/spell.js",
-      "require": "./dist/spell.cjs",
-      "types": "./dist/spell.d.ts"
+    "./persist": {
+      "import": "./dist/persist.js",
+      "require": "./dist/persist.cjs",
+      "types": "./dist/persist.d.ts"
     },
-    "./vault": {
-      "import": "./dist/vault.js",
-      "require": "./dist/vault.cjs",
-      "types": "./dist/vault.d.ts"
+    "./schema": {
+      "import": "./dist/schema.js",
+      "require": "./dist/schema.cjs",
+      "types": "./dist/schema.d.ts"
     }
   },
   "typesVersions": {
@@ -52,11 +52,11 @@
       "form-data": [
         "dist/form-data.d.ts"
       ],
-      "spell": [
-        "dist/spell.d.ts"
+      "persist": [
+        "dist/persist.d.ts"
       ],
-      "vault": [
-        "dist/vault.d.ts"
+      "schema": [
+        "dist/schema.d.ts"
       ]
     }
   },
@@ -66,27 +66,19 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types",
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run test:types && pnpm --silent run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "test:types": "tsc -p tsconfig.type-tests.json",
+    "verify:exports": "node verify-exports.mjs"
   },
-  "dependencies": {},
-  "peerDependencies": {
-    "@vielzeug/spell": "workspace:*",
-    "@vielzeug/vault": "workspace:*"
-  },
-  "peerDependenciesMeta": {
-    "@vielzeug/spell": {
-      "optional": true
-    },
-    "@vielzeug/vault": {
-      "optional": true
-    }
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",

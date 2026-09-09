@@ -1,7 +1,6 @@
-import { fromRoomPresence } from '@vielzeug/flux/pulse';
-import { toSignal } from '@vielzeug/flux/ripple';
 import { createPulse } from '@vielzeug/pulse';
-import { computed } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
+import { computed, fromSubscribable } from '@vielzeug/ripple';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -113,8 +112,8 @@ class MockWebSocket {
 // Sentinel empty map used before setupRealtime() is called.
 const EMPTY_MAP: ReadonlyMap<string, PresenceUser> = new Map();
 
-// The toSignal binding; kept so callers can dispose it if needed.
-let _presenceBinding: ReturnType<typeof toSignal<ReadonlyMap<string, PresenceUser>>> | null = null;
+// The presence binding; kept so callers can dispose it if needed.
+let _presenceBinding: Readable<ReadonlyMap<string, PresenceUser>> | null = null;
 
 /**
  * A reactive signal of `memberId → PresenceUser` for the 'board' room.
@@ -152,7 +151,6 @@ export function setupRealtime(): void {
 
   const board = pulse.room('board');
 
-  const presence$ = fromRoomPresence(board);
-
-  _presenceBinding = toSignal(presence$, { initial: new Map<string, PresenceUser>() });
+  // Bridge Pulse's framework-neutral presence store into the Ripple graph.
+  _presenceBinding = fromSubscribable(board.presence);
 }

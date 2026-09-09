@@ -1,48 +1,48 @@
-import { effect, signal } from '@vielzeug/ripple';
-import { courier, fetchOrdersRequest } from './api';
+import { computed, resource } from '@vielzeug/ripple';
+import { fetchOrdersRequest } from './api';
 import { currentUser } from './auth';
 import type { Order } from './types';
 
-export const ordersSignal = signal<Order[]>([]);
-export const ordersLoading = signal<boolean>(true);
+// The current user's order list, driven by a `resource()` whose source reads
+// `currentUser.value.id`. When the user switches, the previous in-flight load is
+// aborted (its `AbortSignal` is cancelled) and a fresh one starts — so a slow
+// response for the old user can never overwrite the new user's list. While a refetch
+// is pending we surface the `previous` snapshot so the UI never flashes empty.
+const ordersResource = resource(
+  () => currentUser.value.id,
+  (userId, context) => fetchOrdersRequest(userId, context.signal),
+  { name: 'orders' },
+);
 
-effect(() => {
-  const userId = currentUser.value.id;
-  const key = ['orders', userId] as const;
-  const definition = {
-    fetch: () => fetchOrdersRequest(userId),
-    key,
-    staleTime: 15_000,
-  };
-  const sync = (): void => {
-    const state = courier.queries.getSnapshot<Order[]>(key);
+export const ordersSignal = computed<Order[]>(() => {
+  const state = ordersResource.value;
 
-    ordersSignal.value = state?.data ?? [];
-    ordersLoading.value = state?.isFetching ?? true;
-  };
-  const unsubscribe = courier.queries.subscribe(key, sync);
-
-  sync();
-  void courier.queries.fetch(definition);
-
-  return unsubscribe;
+  return state.status === 'success' ? state.value : (state.previous ?? []);
 });
 
-/** Revalidates every cached order list after the mock API changes. */
+export const ordersLoading = computed<boolean>(() => ordersResource.value.status === 'pending');
+
+// Every order across every customer (admin view). Not keyed by user, so the source is
+// a constant — it loads once and is refreshed explicitly via `reload()` after writes.
+const allOrdersResource = resource(
+  () => null,
+  (_source, context) => fetchOrdersRequest(undefined, context.signal),
+  { name: 'all-orders' },
+);
+
+export const allOrdersSignal = computed<Order[]>(() => {
+  const state = allOrdersResource.value;
+
+  return state.status === 'success' ? state.value : (state.previous ?? []);
+});
+
+/**
+ * Revalidates both the current user's order list and the all-orders list after the mock
+ * API changes. The mutating request helpers (`placeOrderRequest` / `updateOrderStatusRequest`)
+ * already invalidate the `['orders']` cache prefix, so each `reload()` here is a guaranteed
+ * cache miss and re-fetches from the in-memory server rather than returning stale cached data.
+ */
 export function refreshOrders(): void {
-  courier.queries.invalidate(['orders'], { refetch: true });
+  ordersResource.reload();
+  allOrdersResource.reload();
 }
-
-const allOrdersKey = ['orders', 'all'] as const;
-const allOrdersDefinition = {
-  fetch: () => fetchOrdersRequest(),
-  key: allOrdersKey,
-  staleTime: 15_000,
-};
-
-export const allOrdersSignal = signal<Order[]>([]);
-
-courier.queries.subscribe(allOrdersKey, () => {
-  allOrdersSignal.value = courier.queries.getSnapshot<Order[]>(allOrdersKey)?.data ?? [];
-});
-void courier.queries.fetch(allOrdersDefinition);

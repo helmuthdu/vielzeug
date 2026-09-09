@@ -3,13 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { SnapshotCatalog } from '../catalog.js';
 import { startHttpHost } from '../http.js';
+import { SnapshotRefineCatalog } from '../refine-catalog.js';
 import { loadSnapshot } from '../snapshot.js';
+import { registerRefineTools } from '../tools/refine.js';
 
 const roots: string[] = [];
 
-function catalog(): SnapshotCatalog {
+function catalog(): SnapshotRefineCatalog {
   const root = mkdtempSync(join(tmpdir(), 'codex-http-'));
   const directory = join(root, 'snapshots', 'test');
 
@@ -30,7 +31,7 @@ function catalog(): SnapshotCatalog {
   writeFileSync(join(directory, 'catalog.json'), JSON.stringify({ packages: [], version: '1.0.0' }));
   writeFileSync(join(directory, 'search.json'), '[]');
 
-  return new SnapshotCatalog(loadSnapshot(root));
+  return new SnapshotRefineCatalog(loadSnapshot(root));
 }
 
 afterEach(async () => {
@@ -67,6 +68,76 @@ describe('HTTP host', () => {
     }
   });
 
+  it('rejects non-loopback host options and hostile Host/Origin headers', async () => {
+    await expect(
+      startHttpHost({ catalog: catalog(), host: '0.0.0.0' as '127.0.0.1', port: 0, version: '1.0.0' }),
+    ).rejects.toThrow('loopback');
+
+    const host = await startHttpHost({ catalog: catalog(), port: 0, version: '1.0.0' });
+
+    try {
+      const response = await fetch(`http://${host.host}:${host.port}/`, {
+        body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'tools/list', params: {} }),
+        headers: {
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+          host: 'evil.example',
+          origin: 'http://evil.example',
+        },
+        method: 'POST',
+      });
+
+      expect(response.status).toBe(403);
+
+      const originResponse = await fetch(`http://${host.host}:${host.port}/`, {
+        body: JSON.stringify({ id: 2, jsonrpc: '2.0', method: 'tools/list', params: {} }),
+        headers: {
+          accept: 'application/json, text/event-stream',
+          'content-type': 'application/json',
+          origin: 'http://evil.example',
+        },
+        method: 'POST',
+      });
+
+      expect(originResponse.status).toBe(403);
+    } finally {
+      await host.dispose();
+    }
+  });
+
+  it('configures each request server once and exposes Refine tools when requested', async () => {
+    let configurations = 0;
+    const source = catalog();
+    const host = await startHttpHost({
+      catalog: source,
+      configureServer: (server) => {
+        configurations += 1;
+        registerRefineTools(server, source);
+      },
+      port: 0,
+      version: '1.0.0',
+    });
+
+    try {
+      expect(configurations).toBe(0);
+      const response = await fetch(`http://${host.host}:${host.port}/`, {
+        body: JSON.stringify({ id: 1, jsonrpc: '2.0', method: 'tools/list', params: {} }),
+        headers: { accept: 'application/json, text/event-stream', 'content-type': 'application/json' },
+        method: 'POST',
+      });
+      const { result } = await readMcpResult(response);
+      const tools = result as { tools: { name: string }[] };
+
+      expect(configurations).toBe(1);
+      expect(tools.tools.map((tool) => tool.name)).toContain('refine-list-components');
+      expect(host.disposed).toBe(false);
+    } finally {
+      await host.dispose();
+      expect(host.disposed).toBe(true);
+      expect(host.disposalSignal.aborted).toBe(true);
+    }
+  });
+
   it('answers a legacy-shaped tools/list call over the MCP endpoint', async () => {
     const host = await startHttpHost({ catalog: catalog(), port: 0, version: '1.0.0' });
 
@@ -83,6 +154,7 @@ describe('HTTP host', () => {
       const tools = result as { tools: { name: string }[] };
 
       expect(tools.tools.map((tool) => tool.name)).toContain('search-packages');
+      expect(tools.tools.map((tool) => tool.name)).not.toContain('refine-list-components');
     } finally {
       await host.dispose();
     }

@@ -22,6 +22,18 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
+    },
+    "./parse": {
+      "import": "./dist/parse.js",
+      "require": "./dist/parse.cjs",
+      "types": "./dist/parse.d.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "parse": [
+        "dist/parse.d.ts"
+      ]
     }
   },
   "sideEffects": false,

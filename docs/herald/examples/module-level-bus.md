@@ -24,8 +24,9 @@ type AppEvents = {
   'theme:change': 'light' | 'dark';
 };
 
-export const appBus = createBus<AppEvents>({
-  onError: ({ err, event, payload }) => console.error(`[bus] error in "${event}"`, err, payload),
+export const appBus = createBus<AppEvents>({ name: 'app' });
+appBus.tap((event) => {
+  if (event.type === 'error') reportError(event.error);
 });
 
 // src/cart/cart-module.ts
@@ -43,8 +44,8 @@ appBus.on('user:logout', clearCart);
 
 ### Related
 
-- [Shared Module Store (Ripple)](@vielzeug/ripple/examples/pattern-shared-module-store)
+- [Shared Module Store (Ripple)](/ripple/examples/pattern-shared-module-store)
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
-- [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Observe listener failures](./custom-error-boundary.md)
+- [Own subscription lifetimes](../usage.md#own-subscription-lifetimes)

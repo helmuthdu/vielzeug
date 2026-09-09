@@ -4,17 +4,17 @@ import { setLocale, t } from './i18n';
 afterEach(() => setLocale('en'));
 
 describe('CRM translations', () => {
-  it('switches translated UI text with the active locale', () => {
+  it('switches translated UI text with the active locale', async () => {
     expect(t('nav.overview')).toBe('Overview');
 
-    setLocale('de');
+    await setLocale('de');
 
     expect(t('nav.overview')).toBe('Übersicht');
     expect(t('action.newOpportunity')).toBe('Neue Verkaufschance');
   });
 
-  it('interpolates translated values', () => {
-    setLocale('de');
+  it('interpolates translated values', async () => {
+    await setLocale('de');
 
     expect(t('commandPalette.goTo', { name: t('nav.companies') })).toBe('Gehe zu Unternehmen');
   });

@@ -25,7 +25,7 @@ document.body.append(image);
 try {
   const intersection = createIntersection(image, { rootMargin: '200px' });
   const unsubscribe = intersection.subscribe(() => {
-    if (!intersection.value?.isIntersecting || !image.dataset.src) return;
+    if (!intersection.getSnapshot()?.isIntersecting || !image.dataset.src) return;
 
     image.src = image.dataset.src;
     delete image.dataset.src;

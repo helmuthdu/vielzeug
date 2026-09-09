@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Narrow route definitions while retaining typed view mapping, cached preloading, scroll coordination, and view transitions.",
+      "packageName": "@vielzeug/wayfinder",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wayfinder"
+}

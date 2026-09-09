@@ -50,12 +50,13 @@ describe('cart module', () => {
 
 ### Pitfalls
 
-- `createTestBus` delivers events synchronously. If your production code relies on microtask-level async delivery, the test may pass when the real code would fail. Verify the delivery timing matches production.
-- `testBus.emitted(event)` returns all payloads ever emitted under that name — not just the most recent. Assert on a specific index when emission order matters.
-- Calling `testBus.reset()` clears only the recorded emission history — it does **not** remove active listeners. Listeners registered before `reset()` continue to fire on subsequent emits.
+- `createTestBus()` uses the same synchronous delivery as `createBus()` and records dispatch before listeners run, including dispatches whose listeners throw.
+- `emitted(event)` returns every recorded payload in order and returns a copied array.
+- `reset()` clears only recording history; existing listeners remain active.
+- `allEmitted()` omits `__proto__`, `constructor`, and `prototype` keys to keep its plain result object safe. Use `emitted(event)` for those names.
 
 ### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
-- [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Observe listener failures](./custom-error-boundary.md)
+- [Test emissions](../usage.md#test-emissions)

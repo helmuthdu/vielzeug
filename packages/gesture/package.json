@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/gesture",
-  "version": "1.1.1",
-  "description": "Framework-neutral one-axis pointer pan recognition with lifecycle-owned handles",
+  "version": "2.0.0",
+  "description": "Framework-neutral pointer drag and one-axis pan recognition with lifecycle-owned handles",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -30,15 +30,19 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types",
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run test:types && pnpm --silent run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
-    "test": "vitest"
+    "test": "vitest",
+    "test:e2e": "playwright test",
+    "test:types": "tsc -p tsconfig.type-tests.json",
+    "verify:exports": "node verify-exports.mjs"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.4.1",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",

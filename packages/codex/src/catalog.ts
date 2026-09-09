@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CodexError } from './errors.js';
 import { type LoadedSnapshot, parseContent } from './snapshot.js';
-import type { CemDeclaration, DocPage, Example, PackageContent, PackageMeta, SearchRecord } from './types.js';
+import type { DocPage, Example, PackageContent, PackageMeta, SearchRecord } from './types.js';
 
 export type CatalogErrorCode = 'INVALID_ARG' | 'NOT_FOUND' | 'UNAVAILABLE';
 
@@ -24,14 +24,12 @@ export interface SearchHit {
 }
 
 export interface Catalog {
-  getComponent(tagName: string): CemDeclaration;
   getContent(slug: string): PackageContent;
   getDocs(slug: string, page: DocPage): string;
   getExample(slug: string, exampleId: string): Example;
   getPackage(slug: string): PackageMeta;
   getSource(slug: string): string;
   getTypeSignature(slug: string, symbol: string): string;
-  listComponents(): CemDeclaration[];
   listExamples(slug: string): Array<Pick<Example, 'id' | 'name'>>;
   listPackages(): PackageMeta[];
   search(query: string): SearchHit[];
@@ -106,18 +104,12 @@ function searchRecord(record: SearchRecord, query: string): RankedSearchHit | nu
 
 export class SnapshotCatalog implements Catalog {
   private readonly bySlug: Map<string, PackageMeta>;
-  private readonly componentsByTag: Map<string, CemDeclaration>;
   private readonly contentCache = new Map<string, PackageContent>();
   private readonly snapshot: LoadedSnapshot;
 
   constructor(snapshot: LoadedSnapshot) {
     this.snapshot = snapshot;
     this.bySlug = new Map(snapshot.catalog.packages.map((pkg) => [pkg.slug, pkg]));
-    this.componentsByTag = new Map(
-      snapshot.refineComponents.flatMap((component) =>
-        component.tagName ? [[component.tagName, component] as const] : [],
-      ),
-    );
   }
 
   getPackage(slug: string): PackageMeta {
@@ -208,22 +200,5 @@ export class SnapshotCatalog implements Catalog {
       .filter((result): result is RankedSearchHit => result !== null)
       .sort((left, right) => left.tier - right.tier || left.hit.slug.localeCompare(right.hit.slug))
       .map((result) => result.hit);
-  }
-
-  listComponents(): CemDeclaration[] {
-    if (this.snapshot.refineComponents.length === 0)
-      throw new CatalogError('UNAVAILABLE', 'Refine component metadata is unavailable in this snapshot.');
-
-    return this.snapshot.refineComponents;
-  }
-
-  getComponent(tagName: string): CemDeclaration {
-    this.listComponents();
-
-    const component = this.componentsByTag.get(tagName);
-
-    if (!component) throw new CatalogError('NOT_FOUND', `Component "${tagName}" not found.`);
-
-    return component;
   }
 }

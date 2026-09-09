@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 // .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
 /**
- * Regenerates the tool tables in README.md from the real `ALL_TOOLS` registry instead of a
+ * Regenerates the tool tables in docs/codex/tools.md from the real tool registries instead of a
  * hand-maintained table — the two used to drift (a removed tool stayed listed, a renamed one
  * kept its old name) with nothing catching it.
  *
- * Runs as a `postbuild` step (after `tsc`), not as part of `prepare:data`: `src/tools/index.ts`
- * imports its siblings with `.js` specifiers (required for the real NodeNext build), and
+ * Runs as a `postbuild` step (after `tsc`), not as part of `prepare:data`: `src/tools/*.ts`
+ * import their siblings with `.js` specifiers (required for the real NodeNext build), and
  * `node --experimental-strip-types` — unlike a bundler or `tsc` itself — does not rewrite those
  * back to `.ts` at run time, so this has to import the compiled `dist/` output, which only
  * exists after a build.
+ *
+ * Tool tables live in docs/codex/tools.md (not README.md) so the README stays uniform with the
+ * rest of the monorepo's standard README shape.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -20,16 +23,19 @@ import type { ToolDefinition } from '../src/tools/shared.ts';
 import { log } from './_log.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const readmePath = resolve(__dirname, '../README.md');
-const toolsEntry = resolve(__dirname, '../dist/tools/index.js');
+const toolsDocPath = resolve(__dirname, '../../../docs/codex/tools.md');
+const packageToolsEntry = resolve(__dirname, '../dist/tools/index.js');
+const refineToolsEntry = resolve(__dirname, '../dist/tools/refine.js');
 
-if (!existsSync(toolsEntry)) {
-  throw new Error(
-    `generate-tool-docs: ${toolsEntry} not found. Run \`pnpm build\` first — this reads compiled output.`,
-  );
+for (const entry of [packageToolsEntry, refineToolsEntry]) {
+  if (!existsSync(entry)) {
+    throw new Error(`generate-tool-docs: ${entry} not found. Run \`pnpm build\` first — this reads compiled output.`);
+  }
 }
 
-const { ALL_TOOLS } = (await import(toolsEntry)) as { ALL_TOOLS: ToolDefinition[] };
+const { packageTools } = (await import(packageToolsEntry)) as { packageTools: readonly ToolDefinition[] };
+const { refineTools } = (await import(refineToolsEntry)) as { refineTools: readonly ToolDefinition[] };
+const ALL_TOOLS = [...packageTools, ...refineTools];
 
 function formatInputs(tool: ToolDefinition): string {
   const names = Object.keys(tool.inputSchema.properties);
@@ -62,7 +68,7 @@ function replaceBetweenMarkers(content: string, marker: string, replacement: str
   const pattern = new RegExp(`${start}[\\s\\S]*?${end}`);
 
   if (!pattern.test(content)) {
-    throw new Error(`generate-tool-docs: README.md is missing the ${start} / ${end} marker pair.`);
+    throw new Error(`generate-tool-docs: docs/codex/tools.md is missing the ${start} / ${end} marker pair.`);
   }
 
   return content.replace(pattern, `${start}\n${replacement}\n${end}`);
@@ -71,10 +77,10 @@ function replaceBetweenMarkers(content: string, marker: string, replacement: str
 const generic = ALL_TOOLS.filter((t) => !t.name.startsWith('refine-'));
 const refine = ALL_TOOLS.filter((t) => t.name.startsWith('refine-'));
 
-let content = readFileSync(readmePath, 'utf8');
+let content = readFileSync(toolsDocPath, 'utf8');
 
 content = replaceBetweenMarkers(content, 'GENERIC', renderTable(generic));
 content = replaceBetweenMarkers(content, 'REFINE', renderTable(refine));
 
-writeFileSync(readmePath, content, 'utf8');
-log(`Refreshed tool tables in ${readmePath}`);
+writeFileSync(toolsDocPath, content, 'utf8');
+log(`Refreshed tool tables in ${toolsDocPath}`);

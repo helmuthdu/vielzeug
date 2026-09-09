@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/codex",
   "version": "2.3.2",
-  "description": "MCP server that exposes the vielzeug ecosystem to AI assistants — run locally over stdio or remotely over HTTP",
+  "description": "MCP server exposing Vielzeug documentation to AI assistants over local stdio or loopback HTTP",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -16,8 +16,30 @@
     "dist",
     "mcp-setup.json"
   ],
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./advanced": {
+      "types": "./dist/advanced.d.ts",
+      "import": "./dist/advanced.js"
+    },
+    "./refine": {
+      "types": "./dist/refine.d.ts",
+      "import": "./dist/refine.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "advanced": [
+        "dist/advanced.d.ts"
+      ],
+      "refine": [
+        "dist/refine.d.ts"
+      ]
+    }
   },
   "bin": {
     "codex": "./dist/cli.js"
@@ -28,7 +50,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc",
+    "build": "rm -rf dist && tsc && pnpm --silent run verify:exports",
     "dev": "node --experimental-strip-types ./scripts/dev.ts",
     "fix": "biome check --write src",
     "gen:tool-docs": "node --experimental-strip-types ./scripts/generate-tool-docs.ts",
@@ -40,7 +62,8 @@
     "start": "node dist/cli.js",
     "test": "pnpm --silent run test:unit && pnpm --silent run test:integration",
     "test:integration": "pnpm --silent run prepare:data && vitest run --project integration",
-    "test:unit": "vitest run --project unit"
+    "test:unit": "vitest run --project unit",
+    "verify:exports": "node verify-exports.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0"

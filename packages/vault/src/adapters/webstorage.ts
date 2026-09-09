@@ -1,4 +1,5 @@
-import { buildAdapterOps, type StorageBackend } from '../adapter-core';
+import { buildKeyValueStore, type StorageBackend } from '../adapter-core';
+import { decodeRecord, encodeRecord } from '../codec';
 import { VaultError, VaultQuotaError } from '../errors';
 import {
   decodeStorageTableFromKey,
@@ -7,13 +8,13 @@ import {
   encodeStorageTablePrefix,
   getRecordKey,
 } from '../internal';
-import { isExpired, parseStored } from '../ttl';
-import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, VaultStore } from '../types';
+import { isExpired, parseStored, type StoredRecord } from '../ttl';
+import type { AnySchema, DurableStoreOptions, KeyOf, KeyValueVaultStore, RecordOf } from '../types';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
 const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED']);
 
-type WebStorageOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
+type WebStorageOptions<S extends AnySchema> = DurableStoreOptions<S> & {
   name: string;
   /**
    * Called when localStorage/sessionStorage quota is exceeded on a write.
@@ -27,8 +28,12 @@ function createWebStorageAdapter<S extends AnySchema>(
     getStorage: () => Storage;
     storageLabel: string;
   },
-): VaultStore<S> {
-  const { getStorage, name, onQuotaExceeded, schema, storageLabel, validators } = options;
+): KeyValueVaultStore<S> {
+  const { getStorage, name, onQuotaExceeded, schema, storageLabel, codecs } = options;
+
+  if (!codecs) {
+    throw new VaultError(`${storageLabel} requires codecs for durable persistence`);
+  }
 
   let resolvedStorage: Storage;
 
@@ -72,12 +77,13 @@ function createWebStorageAdapter<S extends AnySchema>(
     }
   };
 
-  // Per-instance registry of all storage keys owned by this adapter instance.
-  // Populated once at construction; kept current by every mutation.
+  // Per-instance registry of storage keys owned by this namespace.
+  // Table-wide operations resynchronize it so same-window adapters stay consistent.
   const ownedKeys = new Set<string>();
 
-  const initOwnedKeys = (): void => {
+  const syncOwnedKeys = (): void => {
     const dbPrefix = encodeDbPrefix(name);
+    ownedKeys.clear();
 
     for (let i = 0; i < resolvedStorage.length; i++) {
       const key = resolvedStorage.key(i);
@@ -86,29 +92,32 @@ function createWebStorageAdapter<S extends AnySchema>(
     }
   };
 
-  initOwnedKeys();
+  syncOwnedKeys();
 
   /**
-   * Reads a single entry without side effects. Returns the live value,
+   * Reads a single entry without side effects. Returns the decoded live value,
    * or `undefined` if missing/expired/corrupt.
    *
    * Callers that want to evict stale entries must call `evict(storageKey)` explicitly.
-   * This design avoids the `{ cleanup?: boolean }` flag that required callers to remember
-   * to pass `{ cleanup: false }` inside loops.
    */
-  const parseEntry = <T extends object>(storageKey: string): T | undefined => {
+  const parseEntry = <T extends object>(table: keyof S, storageKey: string): T | undefined => {
     const raw = storage().getItem(storageKey);
 
     if (!raw) return undefined;
 
+    let stored: StoredRecord<unknown> | undefined;
     try {
-      const stored = parseStored<T>(JSON.parse(raw) as unknown);
-
-      if (!stored || isExpired(stored.expiresAt)) return undefined;
-
-      return stored.value;
+      stored = parseStored<unknown>(JSON.parse(raw) as unknown);
     } catch {
       return undefined;
+    }
+
+    if (!stored || isExpired(stored.expiresAt)) return undefined;
+
+    try {
+      return decodeRecord(codecs[table], stored.value) as unknown as T;
+    } catch (error) {
+      throw new VaultError(`validation failed for table "${String(table)}"`, { cause: error });
     }
   };
 
@@ -120,6 +129,7 @@ function createWebStorageAdapter<S extends AnySchema>(
 
   const core: StorageBackend<S> = {
     async clear<K extends keyof S & string>(table: K): Promise<void> {
+      syncOwnedKeys();
       const target = storage();
       const prefix = getPrefix(table);
       const toRemove: string[] = [];
@@ -134,33 +144,9 @@ function createWebStorageAdapter<S extends AnySchema>(
       }
     },
 
-    async count<K extends keyof S & string>(table: K): Promise<number> {
-      const prefix = getPrefix(table);
-      const expiredKeys: string[] = [];
-      let liveCount = 0;
-
-      for (const storageKey of ownedKeys) {
-        if (!storageKey.startsWith(prefix)) continue;
-
-        const value = parseEntry<RecordOf<S, K>>(storageKey);
-
-        if (value === undefined) {
-          expiredKeys.push(storageKey);
-        } else {
-          liveCount += 1;
-        }
-      }
-
-      for (const storageKey of expiredKeys) {
-        evict(storageKey);
-      }
-
-      return liveCount;
-    },
-
     async delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
       const storageKey = encodeStorageKey(name, table, key);
-      const value = parseEntry<RecordOf<S, K>>(storageKey);
+      const value = parseEntry<RecordOf<S, K>>(table, storageKey);
 
       if (value !== undefined) {
         evict(storageKey);
@@ -173,27 +159,9 @@ function createWebStorageAdapter<S extends AnySchema>(
       return false;
     },
 
-    async deleteMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
-      let deleted = 0;
-
-      for (const key of keys) {
-        const storageKey = encodeStorageKey(name, table, key);
-        const value = parseEntry<RecordOf<S, K>>(storageKey);
-
-        if (value !== undefined) {
-          evict(storageKey);
-          deleted += 1;
-        } else if (ownedKeys.has(storageKey)) {
-          evict(storageKey);
-        }
-      }
-
-      return deleted;
-    },
-
     async get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
       const storageKey = encodeStorageKey(name, table, key);
-      const value = parseEntry<RecordOf<S, K>>(storageKey);
+      const value = parseEntry<RecordOf<S, K>>(table, storageKey);
 
       if (value === undefined && ownedKeys.has(storageKey)) evict(storageKey);
 
@@ -201,6 +169,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]> {
+      syncOwnedKeys();
       const records: RecordOf<S, K>[] = [];
       const expiredKeys: string[] = [];
       const prefix = getPrefix(table);
@@ -208,7 +177,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       for (const storageKey of ownedKeys) {
         if (!storageKey.startsWith(prefix)) continue;
 
-        const value = parseEntry<RecordOf<S, K>>(storageKey);
+        const value = parseEntry<RecordOf<S, K>>(table, storageKey);
 
         if (value === undefined) {
           expiredKeys.push(storageKey);
@@ -225,42 +194,8 @@ function createWebStorageAdapter<S extends AnySchema>(
       return records;
     },
 
-    async getAllKeys<K extends keyof S & string>(table: K): Promise<KeyOf<S, K>[]> {
-      const prefix = getPrefix(table);
-      const keys: KeyOf<S, K>[] = [];
-      const expiredStorageKeys: string[] = [];
-
-      for (const storageKey of ownedKeys) {
-        if (!storageKey.startsWith(prefix)) continue;
-
-        const value = parseEntry<RecordOf<S, K>>(storageKey);
-
-        if (value === undefined) {
-          expiredStorageKeys.push(storageKey);
-          continue;
-        }
-
-        // Extract the record key from the already-decoded value (avoids a second parse).
-        keys.push((value as Record<string, unknown>)[schema[table].key] as KeyOf<S, K>);
-      }
-
-      for (const storageKey of expiredStorageKeys) {
-        evict(storageKey);
-      }
-
-      return keys;
-    },
-
-    async has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const storageKey = encodeStorageKey(name, table, key);
-      const value = parseEntry<RecordOf<S, K>>(storageKey);
-
-      if (value === undefined && ownedKeys.has(storageKey)) evict(storageKey);
-
-      return value !== undefined;
-    },
-
     async pruneExpiredInTable<K extends keyof S & string>(table: K): Promise<number> {
+      syncOwnedKeys();
       const prefix = getPrefix(table);
       const expiredKeys: string[] = [];
 
@@ -295,8 +230,9 @@ function createWebStorageAdapter<S extends AnySchema>(
     async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
       const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
       const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
+      const encoded = encodeRecord(codecs[table], value);
 
-      writeItem(table, storageKey, expiresAt === undefined ? { value } : { expiresAt, value });
+      writeItem(table, storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
       ownedKeys.add(storageKey);
     },
 
@@ -305,14 +241,16 @@ function createWebStorageAdapter<S extends AnySchema>(
 
       for (const value of values) {
         const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
+        const encoded = encodeRecord(codecs[table], value);
 
-        writeItem(table, storageKey, expiresAt === undefined ? { value } : { expiresAt, value });
+        writeItem(table, storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
         ownedKeys.add(storageKey);
       }
     },
   };
 
-  return buildAdapterOps(schema, core, {
+  return buildKeyValueStore(schema, core, {
+    codecs,
     onCrossTabMessage(notify) {
       if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
         return undefined;
@@ -350,11 +288,10 @@ function createWebStorageAdapter<S extends AnySchema>(
       return () => window.removeEventListener('storage', listener);
     },
     schema,
-    validators,
   });
 }
 
-export function createLocalStorage<S extends AnySchema>(options: WebStorageOptions<S>): VaultStore<S> {
+export function createLocalStorage<S extends AnySchema>(options: WebStorageOptions<S>): KeyValueVaultStore<S> {
   return createWebStorageAdapter({
     ...options,
     getStorage: () => (typeof window !== 'undefined' ? window.localStorage : localStorage),
@@ -362,7 +299,7 @@ export function createLocalStorage<S extends AnySchema>(options: WebStorageOptio
   });
 }
 
-export function createSessionStorage<S extends AnySchema>(options: WebStorageOptions<S>): VaultStore<S> {
+export function createSessionStorage<S extends AnySchema>(options: WebStorageOptions<S>): KeyValueVaultStore<S> {
   return createWebStorageAdapter({
     ...options,
     getStorage: () => (typeof window !== 'undefined' ? window.sessionStorage : sessionStorage),

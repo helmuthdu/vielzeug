@@ -18,6 +18,7 @@ import {
   CourierAbortError,
   CourierHttpError,
   CourierNetworkError,
+  CourierParseError,
   CourierTimeoutError,
   createCourier,
 } from '@vielzeug/courier';
@@ -32,6 +33,7 @@ async function loadUser(): Promise<string> {
     if (error instanceof CourierTimeoutError) return 'Timed out; retry.';
     if (CourierHttpError.is(error, 404)) return 'User not found.';
     if (error instanceof CourierNetworkError) return 'Check your connection.';
+    if (error instanceof CourierParseError) return 'The server returned an unreadable response.';
     throw error;
   }
 }
@@ -41,7 +43,7 @@ async function loadUser(): Promise<string> {
 
 - A `CourierHttpError` has a response; a `CourierNetworkError` does not.
 - Do not display cancellation as an application error during navigation.
-- A stream can throw the same request error classes as an HTTP call.
+- `CourierSchemaValidationError` carries the raw pre-validation `data`.
 
 ### Related
 

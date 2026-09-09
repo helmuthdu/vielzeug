@@ -1,35 +1,36 @@
 ---
 title: 'Tempo Examples — Date Ranges and Recurrence'
-description: 'Generate lazy timezone-aware calendar sequences with Tempo.'
+description: 'Generate validated lazy date ranges and recurring zoned values.'
 ---
 
 ## Date Ranges and Recurrence
 
 ### Problem
 
-Calendars and schedules need lazy sequences that preserve timezone and DST behavior.
+Calendar views and schedules need lazy zoned sequences that advance safely across DST changes.
 
 ### Solution
 
-Start with a zoned date-time, then use `dateRange()` or `recurrence()`.
+Use `dateRange()` for bounded ranges and `recurrence()` for count- or date-limited schedules.
 
 ```ts
 import { dateRange, parse, recurrence } from '@vielzeug/tempo';
 
-const start = parse('2026-03-01T00:00:00[Europe/Berlin]', { as: 'zonedDateTime' });
-const end = parse('2026-03-31T00:00:00[Europe/Berlin]', { as: 'zonedDateTime' });
+const start = parse('2026-03-01T09:00:00[America/New_York]', { as: 'zonedDateTime' });
+const end = parse('2026-03-03T09:00:00[America/New_York]', { as: 'zonedDateTime' });
 
 const days = [...dateRange(start, end, { days: 1 })];
-const meetings = [...recurrence(start, { count: 4, frequency: 'weekly' })];
+const fortnightly = [...recurrence(start, { count: 4, frequency: 'weekly', interval: 2 })];
 ```
 
 ### Pitfalls
 
-- `dateRange()` requires a forward-moving step.
-- Spreading a large generator materializes every result; prefer `for...of` for streams.
-- Plain inputs require an explicit `timeZone` option.
+- `dateRange()` rejects steps that do not advance time.
+- `recurrence()` requires a positive safe-integer interval and a non-negative safe-integer count.
+- Pass `timeZone` when the starting value is plain or an instant.
 
 ### Related
 
 - [DST-Safe Arithmetic](./dst-safe-arithmetic.md)
 - [Usage Guide](../usage.md)
+- [API Reference](../api.md)

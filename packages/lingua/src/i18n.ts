@@ -1,44 +1,78 @@
 import { error as logError } from './_dev';
 import { canonicalLocale, localeChain } from './_locale';
 import { createCatalogStore } from './_resources';
-import { LinguaDisposedError, LinguaInvalidStateError } from './errors';
+import { LinguaDisposedError, LinguaInvalidStateError, LinguaMissingCatalogError } from './errors';
 import { createTranslatorFromCompiled, type Translator } from './translator';
-import type { Catalog, Locale, SubscribeOptions, TranslationState, TranslationStoreOptions } from './types';
+import type { Catalog, I18nOptions, Locale, SubscribeOptions, TranslationState } from './types';
 
-export type TranslationSnapshot<C extends Catalog = Catalog> = {
+export type I18nSnapshot<C extends Catalog = Catalog> = {
   readonly locale: Locale;
   readonly revision: number;
   readonly translator: Translator<C>;
 };
 
-export type TranslationStore<C extends Catalog = Catalog> = Translator<C> & {
+export type I18n<C extends Catalog = Catalog> = Translator<C> & {
   [Symbol.dispose](): void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  getSnapshot(): TranslationSnapshot<C>;
+  getSnapshot(): I18nSnapshot<C>;
   isLoaded(options?: { locale?: Locale }): boolean;
   load(options?: { locale?: Locale }): Promise<void>;
   serialize(): TranslationState<C>;
   setLocale(locale: Locale): Promise<void>;
-  subscribe(listener: (snapshot: TranslationSnapshot<C>) => void, options?: SubscribeOptions): () => void;
+  subscribe(listener: (snapshot: I18nSnapshot<C>) => void, options?: SubscribeOptions): () => void;
 };
 
-export function createTranslationStore<C extends Catalog>(options: TranslationStoreOptions<C>): TranslationStore<C> {
-  const catalogs = createCatalogStore(options.catalogs);
+export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> {
+  if (options.state && options.state.version !== 4) {
+    throw new LinguaInvalidStateError(`Unsupported lingua state version: ${String(options.state.version)}.`);
+  }
+
   const fallback = options.fallback;
   const fallbackLocales = (Array.isArray(fallback) ? fallback : fallback ? [fallback] : []).map(canonicalLocale);
   const controller = new AbortController();
-  const subscribers = new Set<(snapshot: TranslationSnapshot<C>) => void>();
+  const subscribers = new Set<(snapshot: I18nSnapshot<C>) => void>();
   let disposed = false;
-  let locale = canonicalLocale(options.locale ?? 'en');
+  let locale = canonicalLocale(options.locale ?? options.state?.locale ?? 'en');
   let revision = 0;
+  let transition = 0;
 
-  const buildSnapshot = (): TranslationSnapshot<C> => ({
-    locale,
-    revision,
-    translator: createTranslatorFromCompiled<C>(catalogs.catalogMap(), { ...options, fallback, locale }),
-  });
+  const catalogs = createCatalogStore<C>({ catalogs: options.catalogs, loadCatalog: options.loadCatalog });
+
+  // Hydrate from serialized state (SSR).
+  if (options.state) {
+    for (const [stateLocale, catalog] of Object.entries(options.state.catalogs)) {
+      catalogs.hydrate(stateLocale, catalog);
+    }
+  }
+
+  const loadTargets = async (target: Locale): Promise<readonly Locale[]> => {
+    const changed: Locale[] = [];
+
+    for (const candidate of new Set([target, ...fallbackLocales])) {
+      if (await catalogs.load(candidate)) changed.push(candidate);
+    }
+
+    return changed;
+  };
+
+  const buildSnapshot = (): I18nSnapshot<C> => {
+    const ready = localeChain(locale, fallbackLocales).some(catalogs.isLoaded);
+    const missing = ready
+      ? options.missing
+      : () => {
+          throw new LinguaMissingCatalogError(
+            `No catalog loaded for locale "${locale}". Call load() before translating.`,
+          );
+        };
+
+    return {
+      locale,
+      revision,
+      translator: createTranslatorFromCompiled<C>(catalogs.catalogMap(), { fallback, locale, missing }),
+    };
+  };
   let snapshot = buildSnapshot();
 
   const assertLive = (): void => {
@@ -53,7 +87,7 @@ export function createTranslationStore<C extends Catalog>(options: TranslationSt
     controller.abort();
   };
 
-  const dispatch = (listener: (next: TranslationSnapshot<C>) => void): void => {
+  const dispatch = (listener: (next: I18nSnapshot<C>) => void): void => {
     try {
       listener(snapshot);
     } catch (error) {
@@ -88,18 +122,19 @@ export function createTranslationStore<C extends Catalog>(options: TranslationSt
       assertLive();
 
       const targetLocale = canonicalLocale(loadOptions?.locale ?? locale);
-      const changed = await catalogs.load(targetLocale);
+      const changed = await loadTargets(targetLocale);
 
-      if (!disposed && changed && relevant(targetLocale)) notify();
+      assertLive();
+      if (changed.some(relevant)) notify();
     },
     get locale() {
       return locale;
     },
-    segments(key: string, translateOptions) {
-      return snapshot.translator.segmentsDynamic(key, translateOptions);
+    parts(key: string, translateOptions) {
+      return snapshot.translator.partsDynamic(key, translateOptions);
     },
-    segmentsDynamic(key, translateOptions) {
-      return snapshot.translator.segmentsDynamic(key, translateOptions);
+    partsDynamic(key, translateOptions) {
+      return snapshot.translator.partsDynamic(key, translateOptions);
     },
     serialize() {
       assertLive();
@@ -110,8 +145,17 @@ export function createTranslationStore<C extends Catalog>(options: TranslationSt
       assertLive();
 
       const next = canonicalLocale(nextLocale);
+      const request = ++transition;
+      const changed = await loadTargets(next);
 
-      if (next === locale) return;
+      assertLive();
+      if (request !== transition) return;
+
+      if (next === locale) {
+        if (changed.some(relevant)) notify();
+
+        return;
+      }
 
       locale = next;
       notify();
@@ -140,16 +184,5 @@ export function createTranslationStore<C extends Catalog>(options: TranslationSt
     translateDynamic(key, translateOptions) {
       return snapshot.translator.translateDynamic(key, translateOptions);
     },
-  } as TranslationStore<C>;
-}
-
-export function hydrateTranslationStore<C extends Catalog>(
-  state: TranslationState<C>,
-  options?: Omit<TranslationStoreOptions<C>, 'locale' | 'catalogs'>,
-): TranslationStore<C> {
-  if (state.version !== 3) {
-    throw new LinguaInvalidStateError(`Unsupported lingua state version: ${String(state.version)}.`);
-  }
-
-  return createTranslationStore({ ...options, catalogs: state.catalogs, locale: state.locale });
+  } as I18n<C>;
 }

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Replace Ripple-backed signal reads with a zero-dependency, callback-safe getSnapshot external-store contract.",
+      "packageName": "@vielzeug/sentinel",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sentinel"
+}

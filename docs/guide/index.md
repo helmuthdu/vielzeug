@@ -154,20 +154,15 @@ if (!result.success) console.log(result.error.issues);
 
 ### Courier
 
-HTTP client with explicit cached reads, direct mutations, SSE streaming, and interceptors.
+HTTP transport built on native fetch with immutable middleware and structured errors.
 
 ```typescript
 import { createCourier } from '@vielzeug/courier';
 
-const courier = createCourier({ baseUrl: '/api', query: { staleTime: 5_000 } });
-const key = ['user', id] as const;
+const courier = createCourier({ baseUrl: '/api' });
 
-await courier.queries.fetch({
-  key,
-  fetch: ({ signal }) => courier.get<User>(`/users/${id}`, { signal }),
-});
-await courier.patch(`/users/${id}`, { body: { name: 'Alice' } });
-courier.queries.invalidate(key);
+const user = await courier.get<User>(`/users/${id}`);
+await courier.request(`/users/${id}`, { method: 'PATCH', body: { name: 'Alice' } });
 ```
 
 [Courier docs →](/courier/)
@@ -177,12 +172,17 @@ courier.queries.invalidate(key);
 Storage adapter for IndexedDB and localStorage — TTL expiration, reactive signals, schema validation, and a query builder.
 
 ```typescript
+import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 type User = { id: string; name: string; role: string };
 
-const db = createLocalStorage({ name: 'myapp', schema: { users: table<User>('id') } });
+const db = createLocalStorage({
+  codecs: { users: s.object({ id: s.string(), name: s.string(), role: s.string() }) },
+  name: 'myapp',
+  schema: { users: table<User>('id') },
+});
 
 await db.put('users', { id: '1', name: 'Alice', role: 'admin' });
 const admins = await db.query('users').equals('role', 'admin').toArray();
@@ -353,12 +353,12 @@ const api = await container.resolve(ApiToken);
 | **Clockwork + Ripple**      | Clockwork state and context are signals — bind them directly to effects or UI templates                      |
 | **Clockwork + Ward**        | Call Ward predicates inside Clockwork guards to block unauthorized transitions                               |
 | **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                    |
-| **Flux + Ripple**           | `fromSignal()` / `toSignal()` bridge signals and streams — Ripple for state, Flux for pipelines             |
-| **Flux + Herald**           | `fromBus()` / `toBus()` turn a Herald bus into a Flux stream and back                                       |
-| **Flux + Courier** | `fromQuery()` adapts Courier cache entries into stream pipelines |
-| **Flux + Pulse**            | `fromPulse()` / `fromRoomPresence()` convert Pulse WebSocket events and room presence into composable Flux streams              |
+| **Flux + Ripple**           | `fromStore()` bridges signal snapshots into Flux pipelines; explicit subscriptions write results back                         |
+| **Flux + Herald**           | `fromSubscribe()` bridges typed bus events; explicit subscriptions publish results back                                        |
+| **Flux + Sourcerer**        | `fromStore()` adapts query snapshots into stream pipelines                                                                      |
+| **Flux + Pulse**            | `fromSubscribe()` bridges WebSocket events while `fromStore()` bridges presence snapshots                                      |
 | **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
-| **Scout + Sourcerer**       | `toSearchMatcher()` wires a Scout index into `createLocalSource` as its matcher                 |
+| **Scout + Sourcerer**       | `toSearchMatcher()` adapts a Scout index into a filter predicate for derived arrays            |
 | **Keymap + Ledger**         | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |
 | **Keymap + Herald**         | Publish shortcut events to a bus instead of calling handlers directly — decouples keyboard from logic       |
 | **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values — bind directly to UI templates       |

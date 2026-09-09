@@ -103,6 +103,12 @@ describe('date', () => {
     expect(months).toContain(value);
   });
 
+  it.each([Number.NaN, -0.1, 1])('rejects an invalid custom RandomSource result: %s', (value) => {
+    const context: IllusionistContext = { locale: en, source: { next: () => value } };
+
+    expect(() => weekday(context)).toThrow(RangeError);
+  });
+
   it('between returns "from" when from > to', () => {
     const from = Temporal.ZonedDateTime.from('2020-12-31T00:00:00Z[UTC]');
     const to = Temporal.ZonedDateTime.from('2020-01-01T00:00:00Z[UTC]');

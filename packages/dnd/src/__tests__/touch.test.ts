@@ -1,38 +1,25 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createSortable, createSortableScope } from '../sortable';
-import { makeList } from './helpers';
+import { createSortable, createSortableScope } from '../sortable.js';
+import { makeList } from './helpers.js';
 
-type TestTouch = {
-  clientX: number;
-  clientY: number;
-  identifier: number;
-};
+const getKey = (element: HTMLElement): string => element.dataset.sortId ?? '';
 
-const point = (clientX: number, clientY: number, identifier = 1): TestTouch => ({
-  clientX,
-  clientY,
-  identifier,
-});
-
-function makeTouchEvent(type: string, touches: TestTouch[], changedTouches = touches): Event {
-  const event = new Event(type, { bubbles: true, cancelable: true });
-
-  Object.defineProperty(event, 'touches', { configurable: true, value: touches });
-  Object.defineProperty(event, 'changedTouches', { configurable: true, value: changedTouches });
-
-  return event;
+function dispatchPointer(
+  target: EventTarget,
+  type: string,
+  { clientX = 0, clientY = 0, isPrimary = true, pointerId = 1, pointerType = 'touch' }: PointerEventInit = {},
+): void {
+  target.dispatchEvent(
+    new PointerEvent(type, { bubbles: true, button: 0, clientX, clientY, isPrimary, pointerId, pointerType }),
+  );
 }
 
 function mockElementFromPoint(returns: Element | null): ReturnType<typeof vi.fn> {
   const fn = vi.fn().mockReturnValue(returns);
-
   document.elementFromPoint = fn as typeof document.elementFromPoint;
-
   return fn;
 }
-
-const getKey = (element: HTMLElement): string => element.dataset.sortId ?? '';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -42,42 +29,47 @@ afterEach(() => {
 });
 
 describe('sortable scope touch input', () => {
-  it('ignores unrelated draggable elements', () => {
-    const unrelated = document.createElement('div');
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects invalid activation distance %s',
+    (activationDistance) => {
+      expect(() => createSortableScope({ touch: { activationDistance } })).toThrow(/activationDistance/);
+    },
+  );
 
+  it('ignores unrelated and non-touch pointer input', () => {
+    const unrelated = document.body.appendChild(document.createElement('div'));
     unrelated.setAttribute('draggable', 'true');
-    document.body.appendChild(unrelated);
-
     const onDragStart = vi.fn();
-
     unrelated.addEventListener('dragstart', onDragStart);
     using _scope = createSortableScope({ touch: true });
-    mockElementFromPoint(unrelated);
 
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0)]));
+    dispatchPointer(unrelated, 'pointerdown');
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
+    expect(onDragStart).not.toHaveBeenCalled();
 
+    const { element, items } = makeList('a');
+    using _sortable = createSortable({ element, getKey, onDragStart, scope: _scope });
+    mockElementFromPoint(items[0]!);
+    dispatchPointer(items[0]!, 'pointerdown', { pointerType: 'mouse' });
+    dispatchPointer(document, 'pointermove', { clientX: 10, pointerType: 'mouse' });
     expect(onDragStart).not.toHaveBeenCalled();
   });
 
-  it('commits one structured move for a touch drag across connected lists', () => {
-    const {
-      element: sourceElement,
-      items: [sourceItem],
-    } = makeList('a1', 'a2');
+  it('commits one structured move across connected lists', () => {
+    const { element: sourceElement, items: sourceItems } = makeList('a1', 'a2');
     const { element: targetElement } = makeList('b1');
     const onMove = vi.fn();
-    const scope = createSortableScope({ onMove, touch: true });
-    const source = createSortable({ element: sourceElement, getKey, scope });
-    const target = createSortable({ element: targetElement, getKey, scope });
-    const elementFromPoint = mockElementFromPoint(sourceItem!);
+    using scope = createSortableScope({ onMove, touch: true });
+    using _source = createSortable({ element: sourceElement, getKey, scope });
+    using _target = createSortable({ element: targetElement, getKey, scope });
+    const elementFromPoint = mockElementFromPoint(sourceItems[0]!);
 
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0)]));
+    dispatchPointer(sourceItems[0]!, 'pointerdown');
     elementFromPoint.mockReturnValue(targetElement);
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0)]));
-    document.dispatchEvent(makeTouchEvent('touchend', [], [point(10, 0)]));
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
+    dispatchPointer(document, 'pointerup', { clientX: 10 });
 
-    expect(onMove).toHaveBeenCalledTimes(1);
+    expect(onMove).toHaveBeenCalledOnce();
     expect(onMove).toHaveBeenCalledWith(
       expect.objectContaining({
         itemId: 'a1',
@@ -87,246 +79,148 @@ describe('sortable scope touch input', () => {
         targetIds: ['b1', 'a1'],
       }),
     );
-
-    source.dispose();
-    target.dispose();
-    scope.dispose();
   });
 
-  it('supports touch drags from registered handles', () => {
+  it('supports registered handles', () => {
     const element = document.createElement('ul');
     const item = document.createElement('li');
     const handle = document.createElement('button');
-    const scope = createSortableScope({ touch: true });
-
     item.dataset.sortId = 'a';
     handle.className = 'handle';
     item.append(handle);
     element.append(item);
     document.body.appendChild(element);
-
-    const sortable = createSortable({ element, getKey, handle: '.handle', scope });
+    using scope = createSortableScope({ touch: true });
     const onDragStart = vi.fn();
-
-    item.addEventListener('dragstart', onDragStart);
+    using _sortable = createSortable({ element, getKey, handle: '.handle', onDragStart, scope });
     mockElementFromPoint(handle);
 
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0)]));
+    dispatchPointer(handle, 'pointerdown');
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
 
-    expect(onDragStart).toHaveBeenCalledTimes(1);
-
-    sortable.dispose();
-    scope.dispose();
+    expect(onDragStart).toHaveBeenCalledOnce();
   });
 
-  it('tracks the initiating touch when touch-list order changes', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
+  it('tracks only the initiating primary pointer', () => {
+    const { element, items } = makeList('a');
     const onDragStart = vi.fn();
-    const scope = createSortableScope({ touch: true });
-    const sortable = createSortable({ element, getKey, onDragStart, scope });
+    using scope = createSortableScope({ touch: true });
+    using _sortable = createSortable({ element, getKey, onDragStart, scope });
+    mockElementFromPoint(items[0]!);
 
-    const elementFromPoint = mockElementFromPoint(item!);
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(100, 0, 2), point(0, 0, 1)], [point(100, 0, 2)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(100, 0, 2), point(10, 0, 1)]));
+    dispatchPointer(items[0]!, 'pointerdown', { pointerId: 1 });
+    dispatchPointer(document, 'pointermove', { clientX: 20, isPrimary: false, pointerId: 2 });
+    expect(onDragStart).not.toHaveBeenCalled();
 
-    const dragStartEvent = onDragStart.mock.calls[0]?.[1] as DragEvent | undefined;
-
-    expect(onDragStart).toHaveBeenCalledTimes(1);
-    expect(dragStartEvent?.clientX).toBe(10);
-
-    const preview = document.body.querySelector<HTMLElement>('[data-dnd-touch-preview]');
-
-    elementFromPoint.mockClear();
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(200, 0, 2), point(10, 0, 1)], [point(200, 0, 2)]));
-
-    expect(preview?.style.transform).toBe('translate3d(0px, 0px, 0)');
-    expect(elementFromPoint).not.toHaveBeenCalled();
-
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(200, 0, 2), point(20, 0, 1)], [point(20, 0, 1)]));
-
-    expect(preview?.style.transform).toBe('translate3d(10px, 0px, 0)');
-
-    sortable.dispose();
-    scope.dispose();
+    dispatchPointer(document, 'pointermove', { clientX: 10, pointerId: 1 });
+    expect(onDragStart).toHaveBeenCalledOnce();
   });
 
-  it('ignores a secondary touch ending during an active drag', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
-    const onDragEnd = vi.fn();
-    const scope = createSortableScope({ touch: true });
-    const sortable = createSortable({ element, getKey, onDragEnd, scope });
+  it('moves an inert default preview from its activation point', () => {
+    const { element, items } = makeList('a');
+    items[0]!.textContent = 'Card content';
+    using scope = createSortableScope({ touch: true });
+    using _sortable = createSortable({ element, getKey, scope });
+    mockElementFromPoint(items[0]!);
 
-    mockElementFromPoint(item!);
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchend', [point(10, 0, 1)], [point(20, 0, 2)]));
-
-    expect(scope.isDragging).toBe(true);
-    expect(onDragEnd).not.toHaveBeenCalled();
-
-    document.dispatchEvent(makeTouchEvent('touchend', [], [point(10, 0, 1)]));
-
-    expect(scope.isDragging).toBe(false);
-    expect(onDragEnd).toHaveBeenCalledTimes(1);
-
-    sortable.dispose();
-    scope.dispose();
-  });
-
-  it('uses an inert outline instead of cloning the source item', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
-    const scope = createSortableScope({ touch: true });
-    const sortable = createSortable({ element, getKey, scope });
-
-    item!.textContent = 'Card content';
-    mockElementFromPoint(item!);
-
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0)]));
-
+    dispatchPointer(items[0]!, 'pointerdown');
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
     const preview = document.body.querySelector<HTMLElement>('[data-dnd-touch-preview]');
+    dispatchPointer(document, 'pointermove', { clientX: 20, clientY: 5 });
 
     expect(preview).not.toBeNull();
-    expect(preview).not.toBe(item);
+    expect(preview).not.toBe(items[0]);
     expect(preview?.textContent).toBe('');
     expect(preview?.style.borderWidth).toBe('2px');
-
-    sortable.dispose();
-    scope.dispose();
+    expect(preview?.style.transform).toBe('translate3d(10px, 5px, 0)');
   });
 
   it('allows callers to opt out of the preview', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
-    const scope = createSortableScope({ touch: { preview: false } });
-    const sortable = createSortable({ element, getKey, scope });
+    const { element, items } = makeList('a');
+    using scope = createSortableScope({ touch: { preview: false } });
+    using _sortable = createSortable({ element, getKey, scope });
+    mockElementFromPoint(items[0]!);
 
-    mockElementFromPoint(item!);
-
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0)]));
+    dispatchPointer(items[0]!, 'pointerdown');
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
 
     expect(document.body.querySelector('[data-dnd-touch-preview]')).toBeNull();
-
-    sortable.dispose();
-    scope.dispose();
   });
 
-  it('clones a custom preview without reparenting caller-owned DOM', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
+  it('clones custom previews without reparenting caller DOM', () => {
+    const { element, items } = makeList('a');
     const preview = document.createElement('span');
-
     preview.className = 'drag-preview';
     preview.textContent = 'Preview';
-    item?.append(preview);
+    items[0]!.append(preview);
+    using scope = createSortableScope({ touch: { preview: () => preview } });
+    using _sortable = createSortable({ element, getKey, scope });
+    mockElementFromPoint(items[0]!);
 
-    const scope = createSortableScope({ touch: { preview: () => preview } });
-    const sortable = createSortable({ element, getKey, scope });
-
-    mockElementFromPoint(item!);
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0)]));
-
+    dispatchPointer(items[0]!, 'pointerdown');
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
     const mountedPreview = document.body.querySelector<HTMLElement>('[data-dnd-touch-preview]');
+    dispatchPointer(document, 'pointerup', { clientX: 10 });
 
-    expect(preview.parentElement).toBe(item);
+    expect(preview.parentElement).toBe(items[0]);
     expect(mountedPreview).not.toBe(preview);
     expect(mountedPreview?.textContent).toBe('Preview');
-
-    document.dispatchEvent(makeTouchEvent('touchend', [], [point(10, 0)]));
-
-    expect(preview.parentElement).toBe(item);
-
-    sortable.dispose();
-    scope.dispose();
+    expect(document.body.querySelector('[data-dnd-touch-preview]')).toBeNull();
   });
 
-  it('clears a pending drag when the initiating touch is cancelled', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
+  it('clears pending input without starting a drag', () => {
+    const { element, items } = makeList('a');
     const onDragStart = vi.fn();
-    const scope = createSortableScope({ touch: true });
-    const sortable = createSortable({ element, getKey, onDragStart, scope });
+    using scope = createSortableScope({ touch: true });
+    using _sortable = createSortable({ element, getKey, onDragStart, scope });
+    mockElementFromPoint(items[0]!);
 
-    mockElementFromPoint(item!);
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchcancel', [], [point(0, 0, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0, 1)]));
+    dispatchPointer(items[0]!, 'pointerdown');
+    dispatchPointer(document, 'pointercancel');
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
 
     expect(onDragStart).not.toHaveBeenCalled();
     expect(scope.isDragging).toBe(false);
-
-    sortable.dispose();
-    scope.dispose();
   });
 
-  it('cancels rather than commits an active drag on touchcancel', () => {
-    const {
-      element,
-      items: [first, second],
-    } = makeList('a', 'b');
+  it('cancels rather than commits active input', () => {
+    const { element, items } = makeList('a', 'b');
     const onDragEnd = vi.fn();
     const onReorder = vi.fn();
-    const scope = createSortableScope({ touch: true });
-    const sortable = createSortable({ element, getKey, onDragEnd, onReorder, scope });
-    const elementFromPoint = mockElementFromPoint(first!);
+    using scope = createSortableScope({ touch: true });
+    using _sortable = createSortable({ element, getKey, onDragEnd, onReorder, scope });
+    const elementFromPoint = mockElementFromPoint(items[0]!);
 
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0, 1)]));
-    elementFromPoint.mockReturnValue(second!);
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 10, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchcancel', [], [point(10, 10, 1)]));
+    dispatchPointer(items[0]!, 'pointerdown');
+    elementFromPoint.mockReturnValue(items[1]!);
+    dispatchPointer(document, 'pointermove', { clientX: 10, clientY: 10 });
+    dispatchPointer(document, 'pointercancel', { clientX: 10, clientY: 10 });
 
     expect(scope.isDragging).toBe(false);
-    expect(onDragEnd).toHaveBeenCalledTimes(1);
+    expect(onDragEnd).toHaveBeenCalledOnce();
     expect(onReorder).not.toHaveBeenCalled();
     expect(Array.from(element.children).map((child) => (child as HTMLElement).dataset.sortId)).toEqual(['a', 'b']);
     expect(document.body.querySelector('[data-dnd-touch-preview]')).toBeNull();
-
-    sortable.dispose();
-    scope.dispose();
   });
 
-  it('cancels when touchcancel omits changedTouches', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
-    const onDragEnd = vi.fn();
-    const scope = createSortableScope({ touch: true });
-    const sortable = createSortable({ element, getKey, onDragEnd, scope });
+  it('cancels active input when its target sortable is disposed', () => {
+    const { element: sourceElement, items } = makeList('a');
+    const { element: targetElement } = makeList('b');
+    using scope = createSortableScope({ touch: true });
+    using _source = createSortable({ element: sourceElement, getKey, scope });
+    const target = createSortable({ element: targetElement, getKey, scope });
+    const elementFromPoint = mockElementFromPoint(items[0]!);
 
-    mockElementFromPoint(item!);
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0, 1)]));
-    document.dispatchEvent(makeTouchEvent('touchcancel', [], []));
+    dispatchPointer(items[0]!, 'pointerdown');
+    elementFromPoint.mockReturnValue(targetElement);
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
+    target.dispose();
 
     expect(scope.isDragging).toBe(false);
-    expect(onDragEnd).toHaveBeenCalledTimes(1);
     expect(document.body.querySelector('[data-dnd-touch-preview]')).toBeNull();
-
-    sortable.dispose();
-    scope.dispose();
   });
 
-  it('cleans pending and active touch sessions when the scope is disposed', () => {
+  it('cleans pending and active sessions when the scope is disposed', () => {
     const pendingList = makeList('pending');
     const pendingStart = vi.fn();
     const pendingScope = createSortableScope({ touch: true });
@@ -336,48 +230,23 @@ describe('sortable scope touch input', () => {
       onDragStart: pendingStart,
       scope: pendingScope,
     });
-
     mockElementFromPoint(pendingList.items[0]!);
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0, 1)]));
+    dispatchPointer(pendingList.items[0]!, 'pointerdown');
     pendingScope.dispose();
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0, 1)]));
-
+    dispatchPointer(document, 'pointermove', { clientX: 10 });
     expect(pendingStart).not.toHaveBeenCalled();
     expect(pendingSortable.disposed).toBe(true);
 
     const activeList = makeList('active');
     const activeScope = createSortableScope({ touch: true });
     const activeSortable = createSortable({ element: activeList.element, getKey, scope: activeScope });
-
     mockElementFromPoint(activeList.items[0]!);
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0, 2)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0, 2)]));
-
+    dispatchPointer(activeList.items[0]!, 'pointerdown', { pointerId: 2 });
+    dispatchPointer(document, 'pointermove', { clientX: 10, pointerId: 2 });
     expect(document.body.querySelector('[data-dnd-touch-preview]')).not.toBeNull();
 
     activeScope.dispose();
-
     expect(activeSortable.disposed).toBe(true);
     expect(document.body.querySelector('[data-dnd-touch-preview]')).toBeNull();
-  });
-
-  it('removes touch listeners when the scope is disposed', () => {
-    const {
-      element,
-      items: [item],
-    } = makeList('a');
-    const scope = createSortableScope({ touch: true });
-    const sortable = createSortable({ element, getKey, scope });
-    const onDragStart = vi.fn();
-
-    item?.addEventListener('dragstart', onDragStart);
-    mockElementFromPoint(item!);
-    scope.dispose();
-
-    document.dispatchEvent(makeTouchEvent('touchstart', [point(0, 0)]));
-    document.dispatchEvent(makeTouchEvent('touchmove', [point(10, 0)]));
-
-    expect(onDragStart).not.toHaveBeenCalled();
-    expect(sortable.disposed).toBe(true);
   });
 });

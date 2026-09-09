@@ -23,7 +23,7 @@ console.log(toDecimal(sum(shares)));
 
 ### Pitfalls
 
-Use decimal-string weights. `allocate` rejects empty, negative, and zero-total weights.
+Use a dense array of decimal-string weights. `allocate()` rejects empty, sparse, negative, and zero-total weights, and limits output to 100,000 parts. Remainders go to the largest fractional shares, with input order breaking ties; negative totals use the same distribution with negative signs.
 
 ### Related
 

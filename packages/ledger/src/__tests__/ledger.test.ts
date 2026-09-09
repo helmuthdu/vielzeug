@@ -214,6 +214,67 @@ describe('createLedger', () => {
     await expect(ledger.redo()).rejects.toBeInstanceOf(LedgerDisposedError);
     await expect(ledger.clear()).rejects.toBeInstanceOf(LedgerDisposedError);
   });
+
+  it('subscribes without an immediate notification and stops after unsubscribe', async () => {
+    const ledger = createLedger();
+    const listener = vi.fn();
+    const unsubscribe = ledger.state.subscribe(listener);
+
+    expect(listener).not.toHaveBeenCalled();
+
+    await ledger.do({ apply: vi.fn(), revert: vi.fn() });
+    expect(listener).toHaveBeenCalled();
+
+    const calls = listener.mock.calls.length;
+    unsubscribe();
+    await ledger.clear();
+
+    expect(listener).toHaveBeenCalledTimes(calls);
+    ledger.dispose();
+  });
+
+  it('isolates subscriber failures from operation bookkeeping', async () => {
+    const reports: VoidFunction[] = [];
+    const reportSpy = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation((callback) => reports.push(callback));
+    const ledger = createLedger();
+    const followingSubscriber = vi.fn();
+    const apply = vi.fn();
+
+    ledger.state.subscribe(() => {
+      throw new Error('subscriber failed');
+    });
+    ledger.state.subscribe(followingSubscriber);
+
+    await expect(ledger.do({ apply, revert: vi.fn() })).resolves.toBeUndefined();
+    await expect(ledger.whenIdle()).resolves.toBeUndefined();
+
+    expect(apply).toHaveBeenCalledOnce();
+    expect(followingSubscriber).toHaveBeenCalled();
+    expect(reports.length).toBeGreaterThan(0);
+    expect(ledger.state.value).toMatchObject({ queued: 0, running: 0 });
+    expect(ledger.state.value.undo).toHaveLength(1);
+    expect(() => ledger.dispose()).not.toThrow();
+    reportSpy.mockRestore();
+  });
+
+  it('does not notify subscribers added during the current state publication', async () => {
+    const ledger = createLedger();
+    const lateSubscriber = vi.fn();
+    let subscribed = false;
+
+    ledger.state.subscribe(() => {
+      if (subscribed) return;
+      subscribed = true;
+      ledger.state.subscribe(lateSubscriber);
+    });
+
+    const operation = ledger.do({ apply: vi.fn(), revert: vi.fn() });
+
+    expect(lateSubscriber).not.toHaveBeenCalled();
+    await operation;
+    expect(lateSubscriber).toHaveBeenCalled();
+    ledger.dispose();
+  });
 });
 
 describe('LedgerError', () => {

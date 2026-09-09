@@ -1,7 +1,6 @@
 import { isUnsafeKey } from '../_common/unsafePaths';
 import { filterMap } from '../array/filterMap';
 import { isEmpty } from '../guards/isEmpty';
-import { isNil } from '../guards/isNil';
 import { isPlainObject } from '../guards/isPlainObject';
 
 /**
@@ -30,7 +29,7 @@ export function prune<T>(value: T[]): Array<NonNullable<T>> | undefined;
 export function prune<T extends Record<string, unknown>>(value: T): Partial<T> | undefined;
 export function prune<T>(value: T): T | undefined;
 export function prune<T>(value: T): T | undefined {
-  if (isNil(value)) return undefined;
+  if (value === null || value === undefined) return undefined;
 
   if (typeof value === 'string') {
     const trimmed = value.trim();

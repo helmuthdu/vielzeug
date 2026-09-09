@@ -594,43 +594,44 @@ const virt = createVirtualizer(scrollEl, {
 
 ## Reactive Integration
 
-Expose virtualizer state to a reactive `Signal` from `@vielzeug/ripple` using the `toSignal` option. This works on all factories and pairs with your existing `onChange` callback.
+Every Scroll controller is a framework-neutral external store. Read its current state with `getSnapshot()` and observe future changes with `subscribe()`.
 
 ```ts
-import { createVirtualizer } from '@vielzeug/scroll';
-import { signal, effect } from '@vielzeug/ripple';
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  estimateSize: 36,
+});
 
-// Create an empty signal with the initial state shape
-const scrollState = signal({ items: [], stickyItems: [], totalSize: 0 });
+const unsubscribe = virt.subscribe(() => {
+  const { items, totalSize } = virt.getSnapshot();
+  console.log(`Visible: ${items.length} items, total height: ${totalSize}px`);
+});
+
+unsubscribe();
+virt.dispose();
+```
+
+Bridge the same controller into Ripple without adding Ripple as a Scroll dependency:
+
+```ts
+import { effect, fromSubscribable } from '@vielzeug/ripple';
+import { createVirtualizer } from '@vielzeug/scroll';
 
 const virt = createVirtualizer(scrollEl, {
   count: 1000,
   estimateSize: 36,
-  toSignal: () => scrollState, // Return the signal on each init
-  onChange: render, // Both signal and callback get the state
 });
-
-// React to state changes
-effect(() => {
-  const { totalSize, items } = scrollState.value;
+const scrollState = fromSubscribable(virt, { signal: virt.disposalSignal });
+const renderEffect = effect(() => {
+  const { items, totalSize } = scrollState.value;
   console.log(`Visible: ${items.length} items, total height: ${totalSize}px`);
 });
+
+renderEffect.dispose();
+virt.dispose();
 ```
 
-**Why a signal factory instead of a direct signal?**
-The `toSignal` option receives a factory function so that if your component mounts/unmounts and recreates the virtualizer, the signal is also recreated with a fresh initial state. If you want to share state across multiple virtualizers or preserve it across disposal, create the signal in outer scope and return it from the factory:
-
-```ts
-// Shared signal across remounts
-const scrollState = signal({ items: [], stickyItems: [], totalSize: 0 });
-
-function createList() {
-  return createVirtualizer(scrollEl, {
-    count: 1000,
-    toSignal: () => scrollState, // Always return the same instance
-  });
-}
-```
+The same contract works with `createDomVirtualList()`, `createVirtualScroller()`, `createGroupedVirtualizer()`, and `createGridVirtualizer()`.
 
 ## Framework Integration
 

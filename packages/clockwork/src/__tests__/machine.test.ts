@@ -25,7 +25,19 @@ describe('defineMachine', () => {
         idle: {
           on: { GO: { reduce: ({ context, event }) => ({ count: context.count + event.amount }), target: 'ready' } },
         },
-        ready: { on: { $after: { target: 'idle' } } },
+        ready: {
+          after: [
+            {
+              delay: 0,
+              guard: ({ event }) => {
+                const absent: undefined = event;
+                return absent === undefined;
+              },
+              target: 'idle',
+            },
+          ],
+          on: { $after: { target: 'idle' } },
+        },
       },
     });
     const typed: Machine<'idle' | 'ready', Context, Event> = machine;
@@ -55,8 +67,9 @@ describe('defineMachine', () => {
 
     expect(result).toEqual({ snapshot: { context: { count: 1 }, state: 'ready' }, type: 'transition' });
     expect(effect).not.toHaveBeenCalled();
-    expect(Object.isFrozen(machine.initialSnapshot)).toBe(false);
-    expect(machine.initialSnapshot.context).toBe(source);
+    expect(Object.isFrozen(machine.initialSnapshot)).toBe(true);
+    expect(Object.isFrozen(machine.initialSnapshot.context)).toBe(true);
+    expect(machine.initialSnapshot.context).not.toBe(source);
   });
 
   it('accepts ordinary and null-prototype context records but rejects arrays, null, and class instances', () => {
@@ -77,7 +90,9 @@ describe('defineMachine', () => {
       states: { idle: {} },
     });
 
-    expect(nullPrototypeMachine.initialSnapshot.context).toBe(nullPrototype);
+    expect(nullPrototypeMachine.initialSnapshot.context).not.toBe(nullPrototype);
+    expect(nullPrototypeMachine.initialSnapshot.context).toEqual(nullPrototype);
+    expect(Object.getPrototypeOf(nullPrototypeMachine.initialSnapshot.context)).toBeNull();
 
     for (const context of [[], null, new ContextClass()]) {
       const definition = {
@@ -137,6 +152,58 @@ describe('defineMachine', () => {
         definition as unknown as MachineConfig<'idle', Record<string, never>, { readonly type: string }>,
       ),
     ).toThrow(expect.objectContaining({ code }));
+  });
+
+  it('rejects array-backed definitions and delays beyond the platform timer limit', () => {
+    type Event = { readonly type: 'GO' };
+    const statesArray = { context: {}, initial: '0', states: [{}] } as unknown as MachineConfig<
+      '0',
+      Record<string, never>,
+      Event
+    >;
+
+    expect(() => defineMachine<Record<string, never>, Event>()(statesArray)).toThrow(
+      expect.objectContaining({ code: 'INVALID_DEFINITION' }),
+    );
+    expect(() =>
+      defineMachine<Record<string, never>, Event>()({
+        context: {},
+        initial: 'idle',
+        states: { idle: { after: [{ delay: 2_147_483_648, target: 'idle' }] } },
+      }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_AFTER_DELAY' }));
+  });
+
+  it('snapshots invoke definitions during compilation', async () => {
+    type Event = { readonly type: 'DONE' };
+    const calls: string[] = [];
+    const invoke = { src: () => void calls.push('original') };
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'loading',
+      states: { loading: { invoke: [invoke] } },
+    });
+
+    invoke.src = () => void calls.push('replacement');
+    const actor = machine.createActor();
+    await flush();
+
+    expect(calls).toEqual(['original']);
+    actor.dispose();
+  });
+
+  it('validates context and freezes snapshots for ignored transitions', () => {
+    type Context = { count: number };
+    type Event = { readonly type: 'UNKNOWN' };
+    const source = { count: 0 };
+    const machine = defineMachine<Context, Event>()({ context: source, initial: 'idle', states: { idle: {} } });
+
+    source.count = 2;
+    expect(machine.initialSnapshot.context.count).toBe(0);
+    expect(Object.isFrozen(machine.initialSnapshot.context)).toBe(true);
+    expect(() =>
+      machine.transition({ context: null as unknown as Context, state: 'idle' }, { type: 'UNKNOWN' }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_CONTEXT' }));
   });
 
   it('treats prototype-colliding state labels and event types as ordinary map keys', () => {
@@ -239,6 +306,32 @@ describe('actors', () => {
 
     expect(warn).not.toHaveBeenCalled();
     expect(actor.snapshot.state).toBe('idle');
+  });
+
+  it('applies fatal transition handling when actor.can() guards throw', () => {
+    type Event = { readonly type: 'GO' };
+    const phases: string[] = [];
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            GO: {
+              guard: () => {
+                throw new Error('guard');
+              },
+              target: 'idle',
+            },
+          },
+        },
+      },
+    });
+    const actor = machine.createActor({ onError: (_error, context) => phases.push(context.phase) });
+
+    expect(actor.can({ type: 'GO' })).toBe(false);
+    expect(phases).toEqual(['transition']);
+    expect(actor.disposed).toBe(true);
   });
 
   it('silently ignores valid but unhandled events', () => {
@@ -377,20 +470,48 @@ describe('actors', () => {
     expect(actor.disposed).toBe(true);
   });
 
-  it('uses explicit error dispositions and reports transition, subscriber, effect, and invoke phases', async () => {
-    type Event =
-      | { readonly type: 'EFFECT' }
-      | { readonly type: 'INVOKE' }
-      | { readonly type: 'SUBSCRIBER' }
-      | { readonly type: 'TRANSITION' }
-      | { readonly type: 'NEXT' };
+  it('isolates subscriber failures without skipping machine effects', () => {
+    type Event = { readonly type: 'GO' };
 
-    const phases: string[] = [];
+    const calls: string[] = [];
+    const errors: string[] = [];
     const machine = defineMachine<Record<string, never>, Event>()({
       context: {},
       initial: 'idle',
       states: {
-        done: {},
+        idle: {
+          exit: [() => calls.push('exit')],
+          on: { GO: { effects: [() => calls.push('transition')], target: 'ready' } },
+        },
+        ready: { entry: [() => calls.push('entry')] },
+      },
+    });
+    const actor = machine.createActor({
+      onError: (error, context) => errors.push(`${context.phase}:${(error as Error).message}`),
+    });
+
+    actor.subscribe(() => {
+      throw new Error('subscriber');
+    });
+    actor.send({ type: 'GO' });
+
+    expect(errors).toEqual(['subscriber:subscriber']);
+    expect(calls).toEqual(['exit', 'transition', 'entry']);
+    expect(actor.snapshot.state).toBe('ready');
+    expect(actor.disposed).toBe(false);
+  });
+
+  it.each([
+    ['transition', 'TRANSITION'],
+    ['effect', 'EFFECT'],
+    ['invoke', 'INVOKE'],
+  ] as const)('reports %s failures and disposes', async (phase, type) => {
+    type Event = { readonly type: 'EFFECT' | 'INVOKE' | 'TRANSITION' };
+    const observed: string[] = [];
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: {
         idle: {
           on: {
             EFFECT: {
@@ -402,8 +523,6 @@ describe('actors', () => {
               target: 'idle',
             },
             INVOKE: { target: 'invoking' },
-            NEXT: { target: 'done' },
-            SUBSCRIBER: { target: 'idle' },
             TRANSITION: {
               reduce: () => {
                 throw new Error('transition');
@@ -412,34 +531,19 @@ describe('actors', () => {
             },
           },
         },
-        invoking: { invoke: [{ src: () => Promise.reject(new Error('invoke')) }], on: { NEXT: { target: 'done' } } },
+        invoking: { invoke: [{ src: () => Promise.reject(new Error('invoke')) }] },
       },
     });
-    const actor = machine.createActor({
-      onError: (_error, context) => {
-        phases.push(context.phase);
+    const actor = machine.createActor({ onError: (_error, context) => observed.push(context.phase) });
 
-        return 'continue';
-      },
-    });
-
-    actor.subscribe(() => {
-      throw new Error('subscriber');
-    });
-
-    actor.send({ type: 'SUBSCRIBER' });
-    actor.send({ type: 'EFFECT' });
-    actor.send({ type: 'TRANSITION' });
-    actor.send({ type: 'INVOKE' });
+    actor.send({ type });
     await flush();
-    actor.send({ type: 'NEXT' });
 
-    expect(phases).toEqual(['subscriber', 'subscriber', 'effect', 'transition', 'subscriber', 'invoke', 'subscriber']);
-    expect(actor.disposed).toBe(false);
-    expect(actor.snapshot.state).toBe('done');
+    expect(observed).toEqual([phase]);
+    expect(actor.disposed).toBe(true);
   });
 
-  it('disposes when an error handler requests it and propagates thrown handler errors after disposal', () => {
+  it('always disposes on machine errors and isolates thrown observer errors', () => {
     type Event = { readonly type: 'GO' };
 
     const machine = defineMachine<Record<string, never>, Event>()({
@@ -461,10 +565,10 @@ describe('actors', () => {
       },
     });
 
-    const disposed = machine.createActor({ onError: () => 'dispose' });
+    const observed = machine.createActor({ onError: () => undefined });
 
-    disposed.send({ type: 'GO' });
-    expect(disposed.disposed).toBe(true);
+    observed.send({ type: 'GO' });
+    expect(observed.disposed).toBe(true);
 
     const actor = machine.createActor({
       onError: () => {
@@ -472,7 +576,36 @@ describe('actors', () => {
       },
     });
 
-    expect(() => actor.send({ type: 'GO' })).toThrow('handler');
+    expect(() => actor.send({ type: 'GO' })).not.toThrow();
+    expect(actor.disposed).toBe(true);
+  });
+
+  it('isolates observer failures during asynchronous invoke settlement', async () => {
+    type Event = { readonly type: 'DONE' };
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'loading',
+      states: {
+        loading: {
+          invoke: [
+            {
+              onDone: () => {
+                throw new Error('mapping');
+              },
+              src: () => Promise.resolve('done'),
+            },
+          ],
+        },
+      },
+    });
+    const actor = machine.createActor({
+      onError: () => {
+        throw new Error('observer');
+      },
+    });
+
+    await flush();
+
     expect(actor.disposed).toBe(true);
   });
 
@@ -495,7 +628,7 @@ describe('actors', () => {
     expect(actor.snapshot.state).toBe('loading');
   });
 
-  it('reports queued transition limits through the configured policy', () => {
+  it('reports queued transition limits through the observation callback', () => {
     type Event = { readonly type: 'GO' };
 
     const errors: string[] = [];
@@ -508,8 +641,6 @@ describe('actors', () => {
       maxTransitions: 2,
       onError: (error) => {
         errors.push((error as ClockworkError).code);
-
-        return 'dispose';
       },
     });
 
@@ -539,5 +670,28 @@ describe('actor.subscribe', () => {
     stop();
     actor.dispose();
     expect(actor.disposed).toBe(true);
+  });
+
+  it('uses a stable listener snapshot for each notification', () => {
+    type Event = { readonly type: 'GO' };
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: { idle: { on: { GO: { target: 'idle' } } } },
+    });
+    const actor = machine.createActor();
+    const calls: string[] = [];
+    const late = () => calls.push('late');
+
+    actor.subscribe(() => {
+      calls.push('first');
+      actor.subscribe(late);
+    });
+    actor.send({ type: 'GO' });
+    expect(calls).toEqual(['first']);
+
+    actor.send({ type: 'GO' });
+    expect(calls).toEqual(['first', 'first', 'late']);
+    actor.dispose();
   });
 });

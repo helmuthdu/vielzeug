@@ -1,23 +1,6 @@
 # @vielzeug/dnd
 
-> Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/dnd)](https://www.npmjs.com/package/@vielzeug/dnd) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/dnd` &nbsp;·&nbsp; **Category:** UI Interaction
-
-**Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `applyReorder`, `matchesAccept`
-
-**When to use:** File drop zones with MIME filtering and async validation, or sortable lists with keyboard, FLIP animation, and optimistic-update support — zero dependencies.
-
-**Related:** [@vielzeug/ore](https://vielzeug.dev/ore/) · [@vielzeug/scroll](https://vielzeug.dev/scroll/) · [@vielzeug/refine](https://vielzeug.dev/refine/)
-
-</details>
-
-`@vielzeug/dnd` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+> Drag-and-drop — drop zones and sortable lists
 
 ## Installation
 
@@ -30,7 +13,8 @@ yarn add @vielzeug/dnd
 ## Quick Start
 
 ```ts
-import { createDropZone, createSortable, createSortableScope } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
+import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 
 // Drop zone — with async validation and clipboard paste support
 using zone = createDropZone({
@@ -58,8 +42,8 @@ using sortable = createSortable({
   onBeforeReorder: (from, to) => {
     // snapshot element positions here for FLIP animations
   },
-  onReorder: ({ ids }) => {
-    setOrder(ids);
+  onReorder: ({ after }) => {
+    setOrder(after);
   },
   scope,
 });

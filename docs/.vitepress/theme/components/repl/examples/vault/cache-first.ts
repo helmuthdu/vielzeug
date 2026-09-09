@@ -1,8 +1,14 @@
 export const cacheFirstExample = {
-  code: `import { table, ttl } from '@vielzeug/vault'
+  code: `import { s } from '@vielzeug/spell'
+import { table, ttl } from '@vielzeug/vault'
 import { createLocalStorage } from '@vielzeug/vault/local-storage'
 
-const db = createLocalStorage({ name: 'cache-demo', schema: { cache: table('id') } })
+const CacheSchema = s.object({ data: s.string(), fetchedAt: s.number(), id: s.string() })
+const db = createLocalStorage({
+  name: 'cache-demo',
+  schema: { cache: table('id') },
+  codecs: { cache: CacheSchema },
+})
 
 async function getOrComputeConfig() {
   const existing = await db.get('cache', 'config')

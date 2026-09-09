@@ -21,7 +21,7 @@ const router = createRouter({
     home: { path: '/' },
     checkout: { path: '/checkout' },
   },
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 // One-off marketing URL that doesn't belong in the route table.

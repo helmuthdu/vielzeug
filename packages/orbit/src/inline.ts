@@ -58,7 +58,6 @@ export interface InlineOptions {
  *   placement: 'top',
  *   middleware: [inline({ x: cursorX, y: cursorY }), flip(), shift({ padding: 6 })],
  * });
- * positioner.start();
  * ```
  */
 export function inline(options: InlineOptions = {}): Middleware {

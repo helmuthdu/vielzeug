@@ -1,6 +1,5 @@
 import type { HeraldEvent } from '../index';
 import { BusDisposedError, createBus, HeraldConfigError, HeraldError } from '../index';
-import { pipeEvents } from '../pipe';
 
 type TestEvents = {
   count: number;
@@ -286,17 +285,7 @@ describe('createBus - emit behavior', () => {
     expect(calls).toEqual(['a', 'b', 'a', 'b', 'late']);
   });
 
-  it('rethrows listener errors by default', () => {
-    const bus = createBus<TestEvents>();
-
-    bus.on('count', () => {
-      throw new Error('boom');
-    });
-
-    expect(() => bus.emit('count', 1)).toThrow('boom');
-  });
-
-  it('without onError, still calls every remaining specific listener before rethrowing', () => {
+  it('runs every listener before rethrowing the first error', () => {
     const bus = createBus<TestEvents>();
     const after = vi.fn();
 
@@ -309,7 +298,7 @@ describe('createBus - emit behavior', () => {
     expect(after).toHaveBeenCalledWith(1);
   });
 
-  it('without onError, still calls wildcard listeners even when a specific listener throws', () => {
+  it('still calls wildcard listeners before rethrowing a specific listener error', () => {
     const bus = createBus<TestEvents>();
     const wildcard = vi.fn();
 
@@ -322,8 +311,9 @@ describe('createBus - emit behavior', () => {
     expect(wildcard).toHaveBeenCalledWith('count', 1);
   });
 
-  it('without onError, rethrows only the first error when multiple listeners throw', () => {
+  it('rethrows only the first error after every listener runs', () => {
     const bus = createBus<TestEvents>();
+    const after = vi.fn();
 
     bus.on('count', () => {
       throw new Error('first');
@@ -331,30 +321,40 @@ describe('createBus - emit behavior', () => {
     bus.on('count', () => {
       throw new Error('second');
     });
+    bus.on('count', after);
 
     expect(() => bus.emit('count', 1)).toThrow('first');
+    expect(after).toHaveBeenCalledWith(1);
   });
 
-  it('forwards listener errors to onError and continues remaining listeners', () => {
-    const onError = vi.fn();
-    const after = vi.fn();
-    const bus = createBus<TestEvents>({ onError });
+  it('reports every listener error through tap as error events', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
+    const bus = createBus<TestEvents>();
 
+    bus.tap((e) => events.push(e));
     bus.on('count', () => {
       throw new Error('boom');
     });
-    bus.on('count', after);
-
-    bus.emit('count', 99);
-
-    expect(onError).toHaveBeenCalledOnce();
-    expect(onError).toHaveBeenCalledWith({
-      err: expect.any(Error),
-      event: 'count',
-      payload: 99,
-      timestamp: expect.any(Number),
+    bus.on('count', () => {
+      throw new Error('boom2');
     });
-    expect(after).toHaveBeenCalledWith(99);
+
+    expect(() => bus.emit('count', 99)).toThrow('boom');
+
+    const errorEvents = events.filter((e) => e.type === 'error');
+
+    expect(errorEvents).toHaveLength(2);
+    expect(errorEvents[0]).toEqual({
+      error: expect.any(Error),
+      event: 'count',
+      type: 'error',
+    });
+    expect(errorEvents[1]).toEqual({
+      error: expect.any(Error),
+      event: 'count',
+      type: 'error',
+    });
+    bus.dispose();
   });
 
   it('onAny observes every emit, including emits with no specific listeners', () => {
@@ -523,139 +523,6 @@ describe('createBus - waitAny', () => {
   });
 });
 
-describe('createBus - events async generator', () => {
-  it('yields values in emission order', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count');
-
-    const first = stream.next();
-
-    bus.emit('count', 1);
-
-    expect((await first).value).toBe(1);
-
-    const second = stream.next();
-
-    bus.emit('count', 2);
-
-    expect((await second).value).toBe(2);
-
-    await stream.return(undefined);
-  });
-
-  it('captures events emitted before the first next() call (eager subscription)', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count');
-
-    // Emit before starting iteration — subscription is already active
-    bus.emit('count', 42);
-
-    expect(await stream.next()).toEqual({ done: false, value: 42 });
-
-    await stream.return(undefined);
-  });
-
-  it('throws HeraldConfigError synchronously when maxBuffer is not a positive number', () => {
-    const bus = createBus<TestEvents>();
-
-    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(HeraldConfigError);
-    expect(() => bus.events('count', { maxBuffer: -1 })).toThrow(HeraldConfigError);
-  });
-
-  it('drops oldest values when maxBuffer is exceeded', async () => {
-    const bus = createBus<TestEvents>();
-    // Emit all synchronously to test buffer overflow behavior deterministically
-    const stream = bus.events('count', { maxBuffer: 2 });
-    const first = stream.next();
-
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-    bus.emit('count', 3);
-
-    expect(await first).toEqual({ done: false, value: 2 });
-    expect(await stream.next()).toEqual({ done: false, value: 3 });
-
-    await stream.return(undefined);
-  });
-
-  it('finishes immediately when created with an already aborted signal', async () => {
-    const bus = createBus<TestEvents>();
-    const controller = new AbortController();
-
-    controller.abort();
-
-    const stream = bus.events('count', { signal: controller.signal });
-
-    await expect(stream.next()).resolves.toEqual({ done: true, value: undefined });
-  });
-
-  it('terminates when signal aborts', async () => {
-    const bus = createBus<TestEvents>();
-    const controller = new AbortController();
-    const collected: number[] = [];
-
-    const consume = (async () => {
-      for await (const value of bus.events('count', { signal: controller.signal })) {
-        collected.push(value);
-      }
-    })();
-
-    bus.emit('count', 10);
-    await new Promise((r) => setTimeout(r, 0));
-    controller.abort();
-
-    await consume;
-
-    expect(collected).toEqual([10]);
-  });
-
-  it('terminates when bus is disposed', async () => {
-    const bus = createBus<TestEvents>();
-    const collected: number[] = [];
-
-    const consume = (async () => {
-      for await (const value of bus.events('count')) {
-        collected.push(value);
-      }
-    })();
-
-    bus.emit('count', 10);
-    await new Promise((r) => setTimeout(r, 0));
-    bus.dispose();
-
-    await consume;
-
-    expect(collected).toEqual([10]);
-  });
-
-  it('Symbol.asyncDispose tears down the subscription', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count');
-
-    expect(bus.listenerCount('count')).toBe(1);
-
-    await stream[Symbol.asyncDispose]();
-
-    expect(bus.listenerCount('count')).toBe(0);
-  });
-
-  it('supports await using for automatic cleanup', async () => {
-    const bus = createBus<TestEvents>();
-    const collected: number[] = [];
-
-    {
-      await using stream = bus.events('count');
-
-      bus.emit('count', 1);
-      collected.push((await stream.next()).value as number);
-    }
-
-    // After the using block, the subscription should be gone
-    expect(bus.listenerCount('count')).toBe(0);
-    expect(collected).toEqual([1]);
-  });
-});
-
 describe('createBus - onAny (wildcard listener)', () => {
   it('receives all emitted events regardless of type', () => {
     const bus = createBus<TestEvents>();
@@ -772,19 +639,16 @@ describe('createBus - onAny (wildcard listener)', () => {
     expect(bus.listenerCount('count')).toBe(0); // no specific listeners for count
   });
 
-  it('errors forwarded to onError and remaining wildcard listeners continue', () => {
-    const onError = vi.fn();
+  it('runs every wildcard listener before rethrowing the first error', () => {
     const after = vi.fn();
-    const bus = createBus<TestEvents>({ onError });
+    const bus = createBus<TestEvents>();
 
     bus.onAny(() => {
       throw new Error('wildcard boom');
     });
     bus.onAny(after);
 
-    bus.emit('count', 1);
-
-    expect(onError).toHaveBeenCalledOnce();
+    expect(() => bus.emit('count', 1)).toThrow('wildcard boom');
     expect(after).toHaveBeenCalledWith('count', 1);
   });
 });
@@ -933,6 +797,21 @@ describe('createBus - tap()', () => {
     bus.dispose();
   });
 
+  it('emits subscribe-any and unsubscribe-any for wildcard listeners', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
+    const bus = createBus<TestEvents>();
+
+    bus.tap((event) => events.push(event));
+    const unsubscribe = bus.onAny(vi.fn());
+
+    expect(events).toContainEqual({ type: 'subscribe-any' });
+
+    unsubscribe();
+
+    expect(events).toContainEqual({ type: 'unsubscribe-any' });
+    bus.dispose();
+  });
+
   it('emits emit events with listener count and payload', () => {
     const events: HeraldEvent<TestEvents>[] = [];
     const bus = createBus<TestEvents>();
@@ -957,7 +836,7 @@ describe('createBus - tap()', () => {
     expect(events).toContainEqual({ type: 'dispose' });
   });
 
-  it('emits listener-error events when a listener throws', () => {
+  it('emits error events before rethrowing a listener failure', () => {
     const events: HeraldEvent<TestEvents>[] = [];
     const bus = createBus<TestEvents>();
 
@@ -968,10 +847,14 @@ describe('createBus - tap()', () => {
 
     expect(() => bus.emit('count', 1)).toThrow('boom');
 
-    const errorEvent = events.find((e) => e.type === 'listener-error');
+    const errorEvent = events.find((e) => e.type === 'error');
 
     expect(errorEvent).toBeDefined();
-    expect(errorEvent?.type === 'listener-error' && errorEvent.event).toBe('count');
+    expect(errorEvent).toEqual({
+      error: expect.any(Error),
+      event: 'count',
+      type: 'error',
+    });
     bus.dispose();
   });
 
@@ -1015,401 +898,6 @@ describe('createBus - tap()', () => {
   });
 });
 
-describe('pipeEvents() - via bus tests', () => {
-  it('forwards listed events from source to target', () => {
-    const source = createBus<TestEvents>();
-    const target = createBus<TestEvents>();
-    const listener = vi.fn();
-
-    target.on('count', listener);
-    pipeEvents(source, target, ['count']);
-
-    source.emit('count', 42);
-
-    expect(listener).toHaveBeenCalledWith(42);
-
-    source.dispose();
-    target.dispose();
-  });
-
-  it('forwards multiple events and supports renamed entries', () => {
-    type SourceEvents = { count: number; greet: { name: string } };
-    type TargetEvents = { count: number; hello: { name: string } };
-
-    const source = createBus<SourceEvents>();
-    const target = createBus<TargetEvents>();
-    const onCount = vi.fn();
-    const onHello = vi.fn();
-
-    target.on('count', onCount);
-    target.on('hello', onHello);
-    pipeEvents(source, target, ['count', { from: 'greet', to: 'hello' }]);
-
-    source.emit('count', 1);
-    source.emit('greet', { name: 'Alice' });
-
-    expect(onCount).toHaveBeenCalledWith(1);
-    expect(onHello).toHaveBeenCalledWith({ name: 'Alice' });
-
-    source.dispose();
-    target.dispose();
-  });
-
-  it('returned function stops forwarding', () => {
-    const source = createBus<TestEvents>();
-    const target = createBus<TestEvents>();
-    const listener = vi.fn();
-
-    target.on('count', listener);
-
-    const stop = pipeEvents(source, target, ['count']);
-
-    source.emit('count', 1);
-    stop();
-    source.emit('count', 2);
-
-    expect(listener).toHaveBeenCalledOnce();
-    expect(listener).toHaveBeenCalledWith(1);
-
-    source.dispose();
-    target.dispose();
-  });
-
-  it('tears down automatically when target is disposed', () => {
-    const source = createBus<TestEvents>();
-    const target = createBus<TestEvents>();
-    const listener = vi.fn();
-
-    target.on('count', listener);
-    pipeEvents(source, target, ['count']);
-
-    source.emit('count', 1);
-    target.dispose();
-    source.emit('count', 2);
-
-    expect(listener).toHaveBeenCalledOnce();
-    expect(listener).toHaveBeenCalledWith(1);
-
-    source.dispose();
-  });
-
-  it('respects an optional external signal for teardown', () => {
-    const source = createBus<TestEvents>();
-    const target = createBus<TestEvents>();
-    const listener = vi.fn();
-    const controller = new AbortController();
-
-    target.on('count', listener);
-    pipeEvents(source, target, ['count'], { signal: controller.signal });
-
-    source.emit('count', 1);
-    controller.abort();
-    source.emit('count', 2);
-
-    expect(listener).toHaveBeenCalledOnce();
-
-    source.dispose();
-    target.dispose();
-  });
-});
-
-// F5: emit() return value
-describe('createBus - emit() return value', () => {
-  it('returns 0 when there are no listeners', () => {
-    const bus = createBus<TestEvents>();
-
-    expect(bus.emit('count', 1)).toBe(0);
-
-    bus.dispose();
-  });
-
-  it('returns the number of specific listeners dispatched to', () => {
-    const bus = createBus<TestEvents>();
-
-    bus.on('count', vi.fn());
-    bus.on('count', vi.fn());
-
-    expect(bus.emit('count', 1)).toBe(2);
-
-    bus.dispose();
-  });
-
-  it('includes wildcard listeners in the dispatched count', () => {
-    const bus = createBus<TestEvents>();
-
-    bus.on('count', vi.fn()); // 1 specific
-    bus.onAny(vi.fn()); // 1 wildcard
-
-    expect(bus.emit('count', 1)).toBe(2);
-
-    bus.dispose();
-  });
-
-  it('returns 0 when the bus is disposed', () => {
-    const bus = createBus<TestEvents>();
-
-    bus.on('count', vi.fn());
-    bus.dispose();
-
-    expect(bus.emit('count', 1)).toBe(0);
-  });
-
-  it('returns 0 when middleware blocks dispatch', () => {
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (_event, _payload, _next) => {
-          /* do not call next() */
-        },
-      ],
-    });
-
-    bus.on('count', vi.fn());
-
-    expect(bus.emit('count', 1)).toBe(0);
-
-    bus.dispose();
-  });
-});
-
-// F6: Middleware pipeline
-describe('createBus - middleware', () => {
-  it('middleware runs before listeners', () => {
-    const order: string[] = [];
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (_event, _payload, next) => {
-          order.push('middleware');
-          next();
-        },
-      ],
-    });
-
-    bus.on('count', () => order.push('listener'));
-    bus.emit('count', 1);
-
-    expect(order).toEqual(['middleware', 'listener']);
-
-    bus.dispose();
-  });
-
-  it('multiple middleware run in order before listeners', () => {
-    const order: string[] = [];
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (_e, _p, next) => {
-          order.push('mw1');
-          next();
-        },
-        (_e, _p, next) => {
-          order.push('mw2');
-          next();
-        },
-      ],
-    });
-
-    bus.on('count', () => order.push('listener'));
-    bus.emit('count', 1);
-
-    expect(order).toEqual(['mw1', 'mw2', 'listener']);
-
-    bus.dispose();
-  });
-
-  it('middleware receives event name and payload', () => {
-    const captured: Array<{ event: string; payload: unknown }> = [];
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (event, payload, next) => {
-          captured.push({ event, payload });
-          next();
-        },
-      ],
-    });
-
-    bus.on('count', vi.fn());
-    bus.emit('count', 42);
-
-    expect(captured).toEqual([{ event: 'count', payload: 42 }]);
-
-    bus.dispose();
-  });
-
-  it('middleware can block dispatch by not calling next()', () => {
-    const listener = vi.fn();
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (_event, _payload, _next) => {
-          /* omit next() */
-        },
-      ],
-    });
-
-    bus.on('count', listener);
-    bus.emit('count', 1);
-
-    expect(listener).not.toHaveBeenCalled();
-
-    bus.dispose();
-  });
-
-  it('middleware does not run on a disposed bus', () => {
-    const mw = vi.fn((_e: string, _p: unknown, next: () => void) => next());
-    const bus = createBus<TestEvents>({ middleware: [mw] });
-
-    bus.dispose();
-    bus.emit('count', 1);
-
-    expect(mw).not.toHaveBeenCalled();
-  });
-
-  it('onAny still fires when middleware calls next()', () => {
-    const bus = createBus<TestEvents>({
-      middleware: [(_e, _p, next) => next()],
-    });
-    const observer = vi.fn();
-
-    bus.onAny(observer);
-    bus.emit('count', 7);
-
-    expect(observer).toHaveBeenCalledWith('count', 7);
-
-    bus.dispose();
-  });
-
-  it('middleware calling next() twice does not double-dispatch to listeners', () => {
-    const listener = vi.fn();
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (_event, _payload, next) => {
-          next();
-          next(); // second call must be a no-op
-        },
-      ],
-    });
-
-    bus.on('count', listener);
-    bus.emit('count', 1);
-
-    expect(listener).toHaveBeenCalledOnce();
-
-    bus.dispose();
-  });
-
-  it('a throwing middleware propagates out of emit()', () => {
-    const bus = createBus<TestEvents>({
-      middleware: [
-        () => {
-          throw new Error('mw boom');
-        },
-      ],
-    });
-
-    bus.on('count', vi.fn());
-
-    expect(() => bus.emit('count', 1)).toThrow('mw boom');
-
-    bus.dispose();
-  });
-});
-
-// F7: validatePayload hook
-describe('createBus - validatePayload', () => {
-  it('allows emission when validator does not throw', () => {
-    const listener = vi.fn();
-    const bus = createBus<TestEvents>({
-      validatePayload: (event, payload) => {
-        if (event === 'count' && typeof payload !== 'number') throw new Error('must be number');
-      },
-    });
-
-    bus.on('count', listener);
-    bus.emit('count', 5);
-
-    expect(listener).toHaveBeenCalledWith(5);
-
-    bus.dispose();
-  });
-
-  it('blocks emission and rethrows when validator throws (no onError)', () => {
-    const listener = vi.fn();
-    const bus = createBus<TestEvents>({
-      validatePayload: () => {
-        throw new Error('invalid');
-      },
-    });
-
-    bus.on('count', listener);
-
-    expect(() => bus.emit('count', 1)).toThrow('invalid');
-    expect(listener).not.toHaveBeenCalled();
-
-    bus.dispose();
-  });
-
-  it('blocks emission and forwards to onError when validator throws (with onError)', () => {
-    const onError = vi.fn();
-    const listener = vi.fn();
-    const bus = createBus<TestEvents>({
-      onError,
-      validatePayload: () => {
-        throw new Error('invalid');
-      },
-    });
-
-    bus.on('count', listener);
-
-    const count = bus.emit('count', 1);
-
-    expect(count).toBe(0);
-    expect(listener).not.toHaveBeenCalled();
-    expect(onError).toHaveBeenCalledOnce();
-    expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        err: expect.any(Error),
-        event: 'count',
-        payload: 1,
-      }),
-    );
-
-    bus.dispose();
-  });
-
-  it('runs before middleware', () => {
-    const order: string[] = [];
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (_e, _p, next) => {
-          order.push('middleware');
-          next();
-        },
-      ],
-      validatePayload: () => {
-        order.push('validate');
-      },
-    });
-
-    bus.on('count', () => order.push('listener'));
-    bus.emit('count', 1);
-
-    expect(order).toEqual(['validate', 'middleware', 'listener']);
-
-    bus.dispose();
-  });
-});
-
-describe('createBus - events() stream', () => {
-  it('Symbol.asyncDispose unsubscribes from the bus', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count');
-
-    expect(bus.listenerCount('count')).toBe(1);
-
-    await stream[Symbol.asyncDispose]();
-
-    expect(bus.listenerCount('count')).toBe(0);
-  });
-});
-
 describe('createBus - name option', () => {
   it('BusDisposedError message includes the bus name', async () => {
     const bus = createBus<TestEvents>({ name: 'myBus' });
@@ -1442,53 +930,6 @@ describe('createBus - name option', () => {
 
     bus.dispose();
     warnSpy.mockRestore();
-  });
-});
-
-describe('createBus - middleware double-next with chain', () => {
-  it('double-next in first middleware does not cause second middleware to run twice', () => {
-    const order: string[] = [];
-    const bus = createBus<TestEvents>({
-      middleware: [
-        (_event, _payload, next) => {
-          order.push('mw1-before');
-          next();
-          next(); // second call is no-op
-          order.push('mw1-after');
-        },
-        (_event, _payload, next) => {
-          order.push('mw2');
-          next();
-        },
-      ],
-    });
-
-    bus.on('count', () => order.push('listener'));
-    bus.emit('count', 1);
-
-    expect(order).toEqual(['mw1-before', 'mw2', 'listener', 'mw1-after']);
-
-    bus.dispose();
-  });
-});
-
-describe('createBus - events() maxBuffer', () => {
-  it('drops oldest values when maxBuffer is exceeded during buffering', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count', { maxBuffer: 2 });
-
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-    bus.emit('count', 3); // 1 dropped — only [2, 3] buffered
-
-    const first = await stream.next();
-    const second = await stream.next();
-
-    expect(first.value).toBe(2);
-    expect(second.value).toBe(3);
-
-    await stream[Symbol.asyncDispose]();
-    bus.dispose();
   });
 });
 
@@ -1537,25 +978,6 @@ describe('createBus - waitAny() guards', () => {
     expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(
       'waitAny() requires at least 2 event keys',
     );
-
-    bus.dispose();
-  });
-});
-
-describe('createBus - events() maxBuffer guards', () => {
-  it('throws HeraldConfigError when maxBuffer is NaN', () => {
-    const bus = createBus<TestEvents>();
-
-    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow(HeraldConfigError);
-    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow('maxBuffer must be a positive number');
-
-    bus.dispose();
-  });
-
-  it('throws HeraldConfigError when maxBuffer is 0', () => {
-    const bus = createBus<TestEvents>();
-
-    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(HeraldConfigError);
 
     bus.dispose();
   });

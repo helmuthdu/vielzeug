@@ -49,16 +49,15 @@ const queryAllByTestId = <E extends Element = Element>(root: QueryRoot, testId: 
   queryAll<E>(root, '[data-testid]').filter((element) => element.getAttribute('data-testid') === testId);
 
 const queryByText = <E extends Element = Element>(root: QueryRoot, text: string, selector = '*'): E | null => {
-  for (const el of root.querySelectorAll<E>(selector)) {
-    if (el.textContent?.trim() === text) return el;
+  for (const element of root.querySelectorAll<E>(selector)) {
+    if (element.textContent?.trim() === text) return element;
   }
 
   return null;
 };
 
-const queryAllByText = <E extends Element = Element>(root: QueryRoot, text: string, selector = '*'): E[] => {
-  return Array.from(root.querySelectorAll<E>(selector)).filter((el) => el.textContent?.trim() === text);
-};
+const queryAllByText = <E extends Element = Element>(root: QueryRoot, text: string, selector = '*'): E[] =>
+  queryAll<E>(root, selector).filter((element) => element.textContent?.trim() === text);
 
 /**
  * Queries the shadow root of a custom element for a matching CSS selector.

@@ -1,10 +1,12 @@
-import { link } from '../_link';
-import { assertNonNegativeInteger } from '../_numeric';
-import { tryCall } from '../_safe';
-import { defaultScheduler } from '../_scheduler';
-import { stream } from '../core';
-import { FluxCapacityError, FluxEmptyError } from '../errors';
-import type { Operator, Stream, Subscription } from '../types';
+import { abortError } from '@vielzeug/arsenal';
+
+import { link } from '../_link.js';
+import { assertDuration, assertNonNegativeInteger } from '../_numeric.js';
+import { tryCall } from '../_safe.js';
+import { defaultScheduler } from '../_scheduler.js';
+import { stream } from '../core.js';
+import { FluxCapacityError, FluxEmptyError } from '../errors.js';
+import type { Operator, Stream, Subscription } from '../types.js';
 
 export type RetryOptions = {
   attempts: number;
@@ -16,15 +18,11 @@ export type ToArrayOptions = {
   signal?: AbortSignal;
 };
 
-export type ValueOptions = {
+export type ValueOptions<T> = {
   signal?: AbortSignal;
   /** Resolved when the source completes empty instead of rejecting with `FluxEmptyError`. */
-  defaultValue?: unknown;
+  defaultValue?: T;
 };
-
-function abortError(): DOMException {
-  return new DOMException('Stream consumption aborted', 'AbortError');
-}
 
 export function retry<T>(options: RetryOptions): Operator<T, T> {
   assertNonNegativeInteger(options.attempts, 'retry attempts');
@@ -58,10 +56,13 @@ export function retry<T>(options: RetryOptions): Operator<T, T> {
 
               if (signal.aborted) return;
 
-              if (delay !== undefined && (!Number.isFinite(delay) || delay < 0)) {
-                sink.error(new RangeError('retry delay must be a finite number greater than or equal to zero'));
-
-                return;
+              if (delay !== undefined) {
+                try {
+                  assertDuration(delay, 'Retry delay');
+                } catch (reason) {
+                  sink.error(reason);
+                  return;
+                }
               }
 
               if (delay === undefined || delay === 0) {
@@ -87,12 +88,12 @@ export function retry<T>(options: RetryOptions): Operator<T, T> {
     });
 }
 
-export function first<T>(source: Stream<T>, options?: ValueOptions): Promise<T> {
+export function first<T>(source: Stream<T>, options?: ValueOptions<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const controller = new AbortController();
     const abort = (): void => {
       controller.abort();
-      reject(abortError());
+      reject(abortError(options?.signal, 'Stream consumption aborted'));
     };
 
     if (options?.signal?.aborted) {
@@ -126,12 +127,12 @@ export function first<T>(source: Stream<T>, options?: ValueOptions): Promise<T> 
   });
 }
 
-export function last<T>(source: Stream<T>, options?: ValueOptions): Promise<T> {
+export function last<T>(source: Stream<T>, options?: ValueOptions<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const controller = new AbortController();
     const abort = (): void => {
       controller.abort();
-      reject(abortError());
+      reject(abortError(options?.signal, 'Stream consumption aborted'));
     };
 
     if (options?.signal?.aborted) {
@@ -176,7 +177,7 @@ export function toArray<T>(source: Stream<T>, options: ToArrayOptions): Promise<
     const values: T[] = [];
     const abort = (): void => {
       controller.abort();
-      reject(abortError());
+      reject(abortError(options?.signal, 'Stream consumption aborted'));
     };
 
     if (options.signal?.aborted) {

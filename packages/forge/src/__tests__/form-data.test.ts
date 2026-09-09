@@ -57,6 +57,11 @@ describe('toFormData adapter', () => {
     expect((values[3] as File).size).toBe(blob.size);
   });
 
+  test('rejects ambiguous dot keys and nested array objects', () => {
+    expect(() => toFormData({ a: { b: 'nested' }, 'a.b': 'flat' })).toThrow(/dots/);
+    expect(() => toFormData({ items: [{ name: 'Ada' }] })).toThrow(/scalar or binary/);
+  });
+
   test('works when FileList is unavailable', () => {
     const original = globalThis.FileList;
 

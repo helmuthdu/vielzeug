@@ -10,7 +10,7 @@ import type { Model, PriceBreakdown } from './types';
 export function createBuildPreview(container: HTMLElement): SandboxHandle {
   return createSandbox(container, {
     lang: 'en',
-    namedStyles: {
+    styles: {
       base: `
       :root { color-scheme: light; }
       body { margin: 0; font-family: system-ui, sans-serif; background: #0b0c10; color: #f5f6f8; }

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/ward",
   "version": "2.3.0",
-  "description": "Role-based access control — typed permissions, wildcard patterns, and composable predicates",
+  "description": "Ordered authorization rules with immutable policies, typed decisions, and composable conditions",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

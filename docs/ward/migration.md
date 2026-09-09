@@ -1,130 +1,97 @@
 ---
-title: Ward Migration
-description: Migrate Ward middleware guards and configuration validation to Ward 2.
+title: Ward 3.0 Migration
+description: Migrate to Ward's immutable ordered decision model and typed attributes.
 ---
 
-[[toc]]
+# Ward 3.0 Migration
 
-## Ward 2.2 Changes
+## Evaluation is ordered
 
-Ward 2.2 removes redundant API surface and speculative type fields.
-
-Removed exports:
-
-- `ruleFor` — use `allow()` or `deny()` directly
-- `owns` (top-level) — use `predicate.owns()`
-- `WardEvent.type` field — single-variant, no longer needed
-
-### Replace `ruleFor` with `allow`/`deny`
+Priority, specificity scoring, conflict detection, and inheritance are removed. Rules run in declaration order and the first match wins. Put explicit denies and exceptions before broad allows.
 
 ```ts
 // Before
-ruleFor('allow', 'viewer', 'posts', ['read'])
-ruleFor('deny', 'blocked', 'posts', ['read', 'update'])
+allow('editor', 'posts', ['read'], { priority: 10 });
 
 // After
-allow('viewer', 'posts', ['read'])
-deny('blocked', 'posts', ['read', 'update'])
+createWard([
+  deny('suspended', 'posts', ['read']),
+  allow('editor', 'posts', ['read']),
+]);
 ```
 
-### Replace top-level `owns` with `predicate.owns`
+## Replace `explain()` with `decide()`
 
 ```ts
 // Before
-allow('editor', 'posts:*', ['update'], { when: owns('authorId') })
+const decision = ward.explain({ action: 'read', principal, resource: 'posts' });
+const allowed = decision.allowed;
 
 // After
-allow('editor', 'posts:*', ['update'], { when: predicate.owns('authorId') })
+const decision = ward.decide({ action: 'read', principal, resource: 'posts' });
+const allowed = decision.effect === 'allow';
 ```
 
-### Drop `WardEvent.type` checks
+`decide()` returns `matched: true` with an immutable matched rule, or `matched: false` for default deny. `trace()` and `rulesInScope()` are removed because declaration order and the returned rule provide the decision explanation.
 
-The `type: 'decision'` field was removed from `WardEvent`. Tap handlers no longer need to discriminate by type.
+## Bind principals with `forPrincipal()`
 
 ```ts
 // Before
-ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+const permissions = ward.forUser(principal);
+permissions.explain({ action: 'read', resource: 'posts' });
 
 // After
-ward.tap((event) => console.debug('ward:decision', event.decision));
+const permissions = ward.forPrincipal(principal);
+permissions.decide({ action: 'read', resource: 'posts' });
 ```
 
-## Ward 2.1 Changes
+An omitted principal and `null` now both represent anonymous access. Bound principals are immutable snapshots.
 
-Ward 2.1 accepts `allow()`/`deny()` results without spread and returns `NormalizedWardRule` from decision APIs.
-
-### Drop Spread Ceremony
-
-`createWard` now accepts a flat mix of single rules and rule arrays. `allow()`/`deny()` results can be passed directly — no `...` spread needed. Existing spread code still works.
+## Update batch checks
 
 ```ts
 // Before
-const ward = createWard([...allow('viewer', 'posts', ['read']), ...deny('blocked', 'posts', ['delete'])]);
+ward.checkAll(principal, [{ action: 'read', resource: 'posts' }]);
 
 // After
-const ward = createWard([allow('viewer', 'posts', ['read']), deny('blocked', 'posts', ['delete'])]);
+ward.checkAll([{ action: 'read', principal, resource: 'posts' }]);
+// or
+ward.forPrincipal(principal).checkAll([{ action: 'read', resource: 'posts' }]);
 ```
 
-### NormalizedWardRule in Decision Output
+`allowedActions()` remains available with typed actions, resources, and attributes.
 
-`WardDecision.rule`, `WardTraceCandidate.rule`, and `WardConflict` rule fields now reference `NormalizedWardRule` — `role` is always `readonly string[]` and `priority` is always `number`. Code that narrowed `decision.rule.role` to `string` should drop the narrowing; the runtime was already normalized.
+## Type attributes explicitly
 
-## Ward 2.0 Changes
-
-Ward 2.0 removes `guardRequest` / `guardRequestWith` middleware wrappers, validates `createWard` options, and warns on common policy misuse.
-
-Removed exports:
-
-- `guardRequest`
-- `guardRequestWith`
-- `GuardRequestInput`
-- `GuardRequestWithInput`
-- `GuardResult`
-- `PrincipalExtractor`
-- `WardRequest`
-
-Added:
-
-- `_dev.ts` development warning for ANONYMOUS-role rules with `when` predicates
-
-## Replace Middleware Guards
-
-Use `explain()` directly at request boundaries:
+The second generic now types resources. The third generic types decision attributes and condition keys.
 
 ```ts
-// Ward 1
-import { guardRequest, guardRequestWith } from '@vielzeug/ward';
+type Attributes = { authorId: string };
 
-const result = guardRequest({ ward, principal, resource: 'posts', action: 'read' });
-if (!result.granted) return res.status(403).json({ error: result.reason });
+const ward = createWard<'read' | 'update', 'posts', Attributes>([
+  allow<'read' | 'update', 'posts', Attributes>('editor', 'posts', ['update'], {
+    when: predicate.owns<Attributes>('authorId'),
+  }),
+]);
+
+ward.decide({ action: 'update', attributes: { authorId: post.authorId }, principal, resource: 'posts' });
 ```
+
+Rename prior `data` fields to `attributes`. Attribute values must be JSON-compatible, finite, and acyclic.
+
+## Update condition errors
+
+`WardPredicateError` is replaced by `WardConditionError`. Conditions must return a boolean synchronously. Thrown errors are preserved as `cause`; Promises and non-boolean results throw the same typed error.
+
+## Update observation
+
+`tap()` remains the decision-observation API, with a discriminated event object.
 
 ```ts
-// Ward 2
-const decision = ward.explain({ principal, resource: 'posts', action: 'read' });
-if (!decision.allowed) return res.status(403).json({ error: decision.reason });
+ward.tap((event) => {
+  if (event.type === 'decision') audit.write(event);
+});
 ```
 
-For async principal extraction:
-
-```ts
-// Ward 1
-const result = await guardRequestWith({ ward, req, extractPrincipal, resource: 'posts', action: 'read' });
-
-// Ward 2
-const principal = await extractPrincipal(req);
-const decision = ward.explain({ principal, resource: 'posts', action: 'read' });
-```
-
-## Options Validation
-
-Ward 2 validates `createWard` options at construction time:
-
-- `onConflict` must be a function or `undefined`.
-- `maxConflicts` must be a finite non-negative number.
-
-Invalid options throw `WardConfigError` before any rules compile.
-
-## Anonymous Predicate Warning
-
-Ward 2 emits a development warning when a rule pairs the `ANONYMOUS` role with a `when` predicate. Predicates are skipped for unauthenticated principals, so the rule can never match anonymous requests. This warning is tree-shaken from production builds.
+`allowedActions()` performs hypothetical checks and does not emit events.

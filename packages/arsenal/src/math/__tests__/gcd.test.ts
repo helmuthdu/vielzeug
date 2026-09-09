@@ -30,4 +30,8 @@ describe('gcd', () => {
   it('returns the number itself when equal', () => {
     expect(gcd(7, 7)).toBe(7);
   });
+
+  it('rejects non-integer inputs', () => {
+    expect(() => gcd(1.5, 3)).toThrow(RangeError);
+  });
 });

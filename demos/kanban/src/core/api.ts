@@ -13,7 +13,8 @@ const users: User[] = [...seedUsers];
 // edited entirely client-side through history.ts's ledger (instant, undoable) and
 // persisted locally via vault (persistence.ts); only the user directory is modeled
 // as network-fetched reference data, since that's the realistic shape of "user list"
-// in a real app and gives `@vielzeug/courier`'s query cache something genuine to cache.
+// in a real app and gives `@vielzeug/courier`'s opt-in read cache (request dedup + TTL)
+// something genuine to cache.
 // ---------------------------------------------------------------------------
 
 async function mockFetch(input: RequestInfo | URL): Promise<Response> {
@@ -42,5 +43,7 @@ export const courier = createCourier({ fetch: mockFetch });
 // ---------------------------------------------------------------------------
 
 export function getUsers(): Promise<User[]> {
-  return courier.get<User[]>('/api/users');
+  // Opt into courier's read cache: the `key` deduplicates in-flight requests and serves
+  // cached responses within `ttlMs`, so repeated calls for the user directory don't re-fetch.
+  return courier.get<User[]>('/api/users', { cache: { key: ['users'], ttlMs: 60_000 } });
 }

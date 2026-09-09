@@ -1,5 +1,5 @@
 import { escape } from '../escape';
-import { pad } from '../pad';
+import { padCenter } from '../padCenter';
 import { titleCase } from '../titleCase';
 import { unescape } from '../unescape';
 import { words } from '../words';
@@ -16,8 +16,8 @@ describe('string extras', () => {
   });
 
   it('pads strings evenly', () => {
-    expect(pad('hi', 6, '.')).toBe('..hi..');
-    expect(pad('cat', 8, '_')).toBe('__cat___');
+    expect(padCenter('hi', 6, '.')).toBe('..hi..');
+    expect(padCenter('cat', 8, '_')).toBe('__cat___');
   });
 
   it('escapes and unescapes HTML entities', () => {

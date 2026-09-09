@@ -32,7 +32,7 @@ export type FormatOptions =
   | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; pattern?: never; timeZone?: string }
   | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; timeZone?: string };
 
-export interface RelativeFormatOptions {
+export interface RelativeFormatOptions extends TimeZoneOptions {
   base?: RelativeTimeInput;
   locale?: Intl.LocalesArgument;
   numeric?: Intl.RelativeTimeFormatNumeric;

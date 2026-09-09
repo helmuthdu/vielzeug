@@ -47,10 +47,11 @@ const main = async () => {
       'LinguaInvalidPluralCountError',
       'LinguaInvalidStateError',
       'LinguaMissingCatalogError',
-      'createCatalogTranslator',
-      'createTranslationStore',
+      'LinguaMissingKeyError',
+      'LinguaMissingValueError',
+      'catalogKeys',
+      'createI18n',
       'createTranslator',
-      'hydrateTranslationStore',
     ],
     './format': ['createFormatter'],
     './validate': ['validateCatalog'],
@@ -81,7 +82,7 @@ const main = async () => {
   // literal (see vite.config.ts / vite.bundle.config.ts `define`). If the raw global
   // reference survives into any emitted file, the define was lost from that build
   // config and every dev warn + the lazy validate-chunk fetch is live in production again.
-  for (const artifact of ['dist/index.js', 'dist/format.js', 'dist/lingua.iife.js']) {
+  for (const artifact of ['dist/format.js', 'dist/index.js', 'dist/lingua.iife.js']) {
     const contents = await readFile(path.join(packageRoot, artifact), 'utf8');
 
     if (contents.includes('__LINGUA_PROD__')) {

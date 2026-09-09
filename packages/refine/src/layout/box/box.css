@@ -44,25 +44,8 @@
     --_shadow: none;
   }
 
-  /* Glass */
-  :host([variant='glass']:not([color])) {
-    --_bg: color-mix(in oklch, var(--color-secondary) 20%, transparent);
-    --_border-color: color-mix(in oklch, var(--color-secondary-contrast) 15%, transparent);
-  }
-
-  :host([variant='glass'][color]) {
-    --_bg: color-mix(in oklch, var(--_theme-base) 20%, transparent);
-    --_border-color: color-mix(in oklch, var(--_theme-contrast) 15%, transparent);
-    --_color: var(--_theme-content);
-  }
-
-  :host([variant='glass']) .box {
-    box-shadow: var(--shadow-md), var(--inset-shadow-xs);
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-  }
-
-  /* Subtle hover for solid/default + color (glass & frost manage their own hover) */
-  :host([color]:not([variant='glass'], [variant='frost']):hover) {
+  /* Subtle hover for solid/default + color (frost manages its own hover) */
+  :host([color]:not([variant='frost']):hover) {
     --_bg: color-mix(in oklch, var(--_theme-base) 16%, var(--color-contrast-50));
     --_border-color: var(--_theme-focus);
   }

@@ -33,31 +33,6 @@ describe('createIllusion', () => {
     expect(de.location.cities).toContain(german.location.city());
   });
 
-  it('sets disposed to true after dispose()', () => {
-    const illusionist = createIllusion({ locale: en, seed: 1 });
-
-    expect(illusionist.disposed).toBe(false);
-    illusionist.dispose();
-    expect(illusionist.disposed).toBe(true);
-  });
-
-  it('aborts the disposalSignal on dispose()', () => {
-    const illusionist = createIllusion({ locale: en, seed: 1 });
-
-    expect(illusionist.disposalSignal.aborted).toBe(false);
-    illusionist.dispose();
-    expect(illusionist.disposalSignal.aborted).toBe(true);
-  });
-
-  it('supports [Symbol.dispose]()', () => {
-    const illusionist = createIllusion({ locale: en, seed: 1 });
-
-    expect(illusionist.disposed).toBe(false);
-    illusionist[Symbol.dispose]();
-    expect(illusionist.disposed).toBe(true);
-    expect(illusionist.disposalSignal.aborted).toBe(true);
-  });
-
   it('is deterministic: same seed produces the same fullName', () => {
     const a = createIllusion({ locale: en, seed: 12345 });
     const b = createIllusion({ locale: en, seed: 12345 });

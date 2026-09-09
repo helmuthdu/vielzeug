@@ -11,30 +11,19 @@ In production you need structured JSON output for log aggregation, suppressed de
 
 ### Solution
 
-Use `child()` with environment-branched transports to route entries to `jsonTransport` and `remoteTransport` in production, and `consoleTransport` in development.
+Use `child()` with environment-branched transports to route entries to `jsonTransport` in production, and `consoleTransport` in development.
 
 ```ts
-import { defaultLogger } from '@vielzeug/rune';
-import { consoleTransport, jsonTransport, remoteTransport } from '@vielzeug/rune';
+import { consoleTransport, createLogger, jsonTransport } from '@vielzeug/rune';
 
 const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
 
-export const appLog = defaultLogger.child({
+export const appLog = createLogger({
   logLevel: isProd ? 'warn' : 'debug',
   transports: isProd
     ? [
         // NDJSON to stdout for log aggregation (ELK, Datadog, CloudWatch)
         jsonTransport({ level: 'warn' }),
-        // Forward errors to a remote endpoint
-        remoteTransport({
-          handler: async (type, data) => {
-            await fetch('/api/logs', {
-              body: JSON.stringify(data),
-              method: 'POST',
-            });
-          },
-          level: 'error',
-        }),
       ]
     : [consoleTransport()],
 }).withBindings({

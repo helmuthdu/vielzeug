@@ -1,33 +1,27 @@
 export { createCursorSource } from './cursorSource';
-export { SourcererConfigurationError, SourcererError } from './errors';
+export { SourcererConfigurationError, SourcererDisposedError, SourcererError } from './errors';
 export { createInfiniteSource } from './infiniteSource';
 export { createLocalSource } from './localSource';
 export { createPageSource } from './pageSource';
 export type {
-  AnyPagination,
+  CursorLoadContext,
   CursorPagination,
-  CursorQuery,
-  CursorQueryPatch,
   CursorResult,
   CursorSource,
   CursorSourceConfig,
-  InfiniteLoadQuery,
+  CursorSourceState,
+  InfiniteLoadContext,
   InfinitePagination,
-  InfiniteQuery,
-  InfiniteQueryPatch,
   InfiniteSource,
   InfiniteSourceConfig,
-  LoadContext,
-  LocalQuery,
-  LocalQueryPatch,
+  InfiniteSourceState,
   LocalSource,
   LocalSourceConfig,
+  LocalSourceState,
+  PageLoadContext,
   PagePagination,
-  PageQuery,
-  PageQueryPatch,
   PageResult,
   PageSource,
   PageSourceConfig,
-  Source,
-  SourceSnapshot,
+  PageSourceState,
 } from './types';

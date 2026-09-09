@@ -11,7 +11,6 @@ describe('@vielzeug/spell/json', () => {
     expect(toJson(s.number())).toEqual({ type: 'number' });
     expect(toJson(s.boolean())).toEqual({ type: 'boolean' });
     expect(toJson(s.bigint())).toEqual({ type: 'integer' });
-    expect(toJson(s.any())).toEqual({});
     expect(toJson(s.unknown())).toEqual({});
     expect(toJson(s.never())).toEqual({ not: {} });
     expect(toJson(s.literal('hello'))).toEqual({ const: 'hello' });

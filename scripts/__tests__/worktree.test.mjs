@@ -22,6 +22,7 @@ describe('readDependencyGraph()', () => {
 
   it('records real @vielzeug/* dependency edges, matching package.json', () => {
     expect(graph.get('ore').has('ripple')).toBe(true);
+    expect(graph.get('refine').has('ripple')).toBe(true);
     expect(graph.get('refine').has('arsenal')).toBe(true);
   });
 
@@ -29,12 +30,12 @@ describe('readDependencyGraph()', () => {
     expect(graph.get('ore').get('ripple')).toBe(false);
   });
 
-  it("marks flux's optional peerDependencies as optional", () => {
+  it("does not record removed Flux adapter edges", () => {
     const flux = graph.get('flux');
-    expect(flux.get('ripple')).toBe(true); // optional peer
-    expect(flux.get('courier')).toBe(true); // optional peer
-    expect(flux.get('herald')).toBe(true);
-    expect(flux.get('pulse')).toBe(true);
+    expect(flux.has('ripple')).toBe(false);
+    expect(flux.has('courier')).toBe(false);
+    expect(flux.has('herald')).toBe(false);
+    expect(flux.has('pulse')).toBe(false);
   });
 
   it('does not record non-@vielzeug dependencies', () => {

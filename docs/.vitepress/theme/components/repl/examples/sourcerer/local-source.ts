@@ -8,13 +8,14 @@ const users = [
 ]
 
 const source = createLocalSource(users, {
-  initialQuery: { pageSize: 2 },
-  match: (user, search) => user.name.toLowerCase().includes(search.toLowerCase()),
+  filter: (user, search) => user.name.toLowerCase().includes(search.toLowerCase()),
+  pageSize: 2,
+  params: '',
 })
 
-source.setQuery({ search: 'a' })
-console.log(source.snapshot.data)
-console.log(source.snapshot.pagination)
+source.setParams('a')
+console.log(source.state.items)
+console.log(source.state.pagination)
 
 source.dispose()`,
   name: 'Local Source',

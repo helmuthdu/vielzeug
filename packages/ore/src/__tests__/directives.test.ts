@@ -38,6 +38,47 @@ describe('Directive: each()', () => {
     expect(results.violations).toHaveLength(0);
   });
 
+  it('keeps numeric and string keys distinct', async () => {
+    const { queryAll } = await mount(
+      () => html`
+        ${each(
+          [
+            { id: 1, value: 'number' },
+            { id: '1', value: 'string' },
+          ],
+          (item) => item.id,
+          (item) => html`<span class="item">${() => item.value.value}</span>`,
+        )}
+      `,
+    );
+
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['number', 'string']);
+  });
+
+  it('does not subscribe list reconciliation to reactive values read by the key function', async () => {
+    const unrelated = signal(0);
+    let keyCalls = 0;
+
+    await mount(
+      () => html`
+        ${each(
+          [{ id: 1 }],
+          (item) => {
+            unrelated.value;
+            keyCalls++;
+            return item.id;
+          },
+          () => html`<span>item</span>`,
+        )}
+      `,
+    );
+
+    expect(keyCalls).toBe(1);
+
+    unrelated.value++;
+    expect(keyCalls).toBe(1);
+  });
+
   it('should render fallback for empty list', async () => {
     const { query } = await mount(() => {
       const items = signal<number[]>([]);
@@ -526,7 +567,7 @@ describe('Directive: each()', () => {
       expect.stringContaining('each-reconcile'),
       expect.objectContaining({ message: expect.stringContaining('duplicate key') }),
     );
-    expect(queryAll('.item')).toHaveLength(0);
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A', 'B']);
 
     // The list can still recover cleanly on the next update after the bad one.
     items.value = [{ id: 4, value: 'E' }];

@@ -17,8 +17,7 @@ export interface Positioner {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  getPosition(): ComputePositionResult | null;
-  start(): void;
+  getPosition(): ComputePositionResult;
   update(): void;
   [Symbol.dispose](): void;
 }
@@ -39,8 +38,8 @@ export function applyDefault(result: ComputePositionResult, floating: HTMLElemen
 /**
  * Creates a lifecycle-owned floating positioner.
  *
- * The positioner owns coordinate strategy, clipping-boundary resolution, updates, and cleanup.
- * Call `start()` once the elements are mounted, then call `dispose()` when their owner ends.
+ * The positioner starts immediately and owns coordinate strategy, clipping-boundary resolution,
+ * updates, and cleanup. Create it after the elements mount and dispose it when their owner ends.
  */
 export function createPositioner(
   reference: ReferenceElement,
@@ -59,8 +58,7 @@ export function createPositioner(
   let active = true;
   let disposed = false;
   let cleanup: (() => void) | undefined;
-  let lastPosition: ComputePositionResult | null = null;
-  let started = false;
+  let lastPosition: ComputePositionResult;
 
   function update(): void {
     if (!active) return;
@@ -73,16 +71,7 @@ export function createPositioner(
     (apply ?? ((position) => applyDefault(position, floating, strategy)))(result);
   }
 
-  function start(): void {
-    if (started || disposed) return;
-
-    started = true;
-
-    if (autoUpdateOptions === false) update();
-    else cleanup = autoUpdate(reference, floating, update, autoUpdateOptions);
-  }
-
-  return {
+  const positioner: Positioner = {
     get disposalSignal() {
       return controller.signal;
     },
@@ -98,7 +87,6 @@ export function createPositioner(
       return disposed;
     },
     getPosition: () => lastPosition,
-    start,
     [Symbol.dispose]() {
       this.dispose();
     },
@@ -106,4 +94,9 @@ export function createPositioner(
       if (!disposed) update();
     },
   };
+
+  if (autoUpdateOptions === false) update();
+  else cleanup = autoUpdate(reference, floating, update, autoUpdateOptions);
+
+  return positioner;
 }

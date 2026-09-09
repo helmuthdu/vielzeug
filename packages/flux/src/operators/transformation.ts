@@ -1,9 +1,9 @@
-import { link } from '../_link';
-import { assertPositiveInteger } from '../_numeric';
-import { tryCall } from '../_safe';
-import { stream } from '../core';
-import { FluxCapacityError } from '../errors';
-import type { Operator, Stream, Subscription } from '../types';
+import { link } from '../_link.js';
+import { assertPositiveInteger } from '../_numeric.js';
+import { tryCall } from '../_safe.js';
+import { stream } from '../core.js';
+import { FluxCapacityError } from '../errors.js';
+import type { Operator, Stream, Subscription } from '../types.js';
 
 export type FlattenOptions = {
   /** Maximum concurrently active inner subscriptions. Use `Infinity` for unbounded concurrency. */

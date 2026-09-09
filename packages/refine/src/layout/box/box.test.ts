@@ -27,9 +27,9 @@ describe('ore-box', () => {
 
   describe('Props', () => {
     it('applies variant', async () => {
-      fixture = await mount('ore-box', { attrs: { variant: 'glass' } });
+      fixture = await mount('ore-box', { attrs: { variant: 'solid' } });
 
-      expect(fixture.element.getAttribute('variant')).toBe('glass');
+      expect(fixture.element.getAttribute('variant')).toBe('solid');
     });
 
     it('applies color', async () => {
@@ -70,7 +70,7 @@ describe('ore-box', () => {
   });
 
   describe('Variants', () => {
-    for (const variant of ['solid', 'flat', 'glass', 'frost']) {
+    for (const variant of ['solid', 'flat', 'frost']) {
       it(`applies ${variant} variant`, async () => {
         fixture = await mount('ore-box', { attrs: { variant } });
 

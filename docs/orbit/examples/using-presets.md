@@ -18,13 +18,11 @@ import { createPositioner } from '@vielzeug/orbit';
 import { dropdown, tooltip } from '@vielzeug/orbit/presets';
 
 const tooltipPositioner = createPositioner(trigger, tooltipElement, tooltip());
-tooltipPositioner.start();
 
 const dropdownPositioner = createPositioner(select, panel, {
   ...dropdown({ offset: 4 }),
   strategy: 'absolute',
 });
-dropdownPositioner.start();
 ```
 
 ### Pitfalls

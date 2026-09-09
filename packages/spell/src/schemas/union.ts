@@ -1,6 +1,7 @@
 import type {
   AnySchema,
   CheckContext,
+  InferInput,
   InferOutput,
   InferSchemaMode,
   Issue,
@@ -18,7 +19,7 @@ import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
 export class UnionSchema<
   T extends readonly AnySchema[],
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number]>>,
-> extends Schema<InferOutput<T[number]>, unknown, Mode> {
+> extends Schema<InferOutput<T[number]>, InferInput<T[number]>, Mode> {
   readonly schemas: T;
 
   protected override get _kind(): string {

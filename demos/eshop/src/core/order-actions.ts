@@ -1,4 +1,4 @@
-import { courier, placeOrderRequest, updateOrderStatusRequest } from './api';
+import { placeOrderRequest, updateOrderStatusRequest } from './api';
 import { currentUser, getPrincipal, ward } from './auth';
 import { bus } from './events';
 import { formatOrderStatus } from './format';
@@ -16,8 +16,15 @@ function notify(message: string, variant: 'error' | 'info' | 'success' = 'error'
   else logger.info(message);
 }
 
-function explainOrderAction(action: OrderAction, order?: Order): ReturnType<typeof ward.explain> {
-  return ward.explain({ action, data: order, principal: getPrincipal(currentUser.value), resource: 'order' });
+function decideOrderAction(action: OrderAction, order?: Order): boolean {
+  return (
+    ward.decide({
+      action,
+      attributes: order ? { userId: order.userId } : undefined,
+      principal: getPrincipal(currentUser.value),
+      resource: 'order',
+    }).effect === 'allow'
+  );
 }
 
 /** The `ward` policy alone only checks ownership (see `core/auth.ts`) — it has no notion of an
@@ -25,35 +32,31 @@ function explainOrderAction(action: OrderAction, order?: Order): ReturnType<type
  * Guarding the terminal state here (rather than teaching `ward` about it) keeps the RBAC policy
  * about *who* can act, and this domain rule about *when* the action still makes sense. */
 export function canCancelOrder(order: Order): boolean {
-  return order.status !== 'cancelled' && explainOrderAction('cancel', order).allowed;
+  return order.status !== 'cancelled' && decideOrderAction('cancel', order);
 }
 
 export function canUpdateOrderStatus(order: Order): boolean {
-  return explainOrderAction('updateStatus', order).allowed;
+  return decideOrderAction('updateStatus', order);
 }
 
 /**
- * Places an order via a direct `@vielzeug/courier` mutation after a `@vielzeug/ward` permission
- * check. The order's user id is read fresh at mutation
+ * Places an order via a direct `@vielzeug/courier` request after a `@vielzeug/ward` permission
+ * check. The order's user id is read fresh at request
  * time (not captured once at module scope) so refreshes include the currently selected user's
  * order list even if Settings' user-switcher changed it mid-session.
  */
 export async function attemptPlaceOrder(order: Order): Promise<Order | null> {
-  if (!explainOrderAction('create').allowed) {
+  if (!decideOrderAction('create')) {
     notify(t('orders.notify.noPermissionPlace'));
 
     return null;
   }
 
   try {
-    const placed = await courier.mutate({
-      invalidateKeys: [['orders']],
-      onSuccess: (placedOrder) => {
-        bus.emit('order:placed', { orderId: placedOrder.id });
-      },
-      request: () => placeOrderRequest(order),
-    });
+    const placed = await placeOrderRequest(order);
 
+    bus.emit('order:placed', { orderId: placed.id });
+    refreshOrders();
     notify(t('orders.notify.placeSuccess'), 'success');
 
     return placed;
@@ -117,19 +120,25 @@ export async function attemptBulkUpdateOrderStatus(orders: Order[], status: Orde
 
   if (updatable.length === 0) return 0;
 
-  try {
-    await Promise.all(updatable.map((order) => updateOrderStatusRequest(order.id, status)));
+  // `allSettled` so a single failed patch can't skip `refreshOrders()` and leave the
+  // UI stale for the patches that did land — the mock server has already mutated for
+  // those, so we always revalidate and report how many actually succeeded.
+  const results = await Promise.allSettled(updatable.map((order) => updateOrderStatusRequest(order.id, status)));
 
-    refreshOrders();
+  refreshOrders();
 
-    for (const order of updatable) bus.emit('order:status-changed', { orderId: order.id, status });
+  let succeeded = 0;
+  results.forEach((result, index) => {
+    if (result.status !== 'fulfilled') return;
+    succeeded++;
+    bus.emit('order:status-changed', { orderId: updatable[index].id, status });
+  });
 
-    notify(t('admin.bulkUpdated', { count: updatable.length }), 'success');
-
-    return updatable.length;
-  } catch {
+  if (succeeded === 0) {
     notify(t('orders.notify.updateError'));
-
-    return 0;
+  } else {
+    notify(t('admin.bulkUpdated', { count: succeeded }), 'success');
   }
+
+  return succeeded;
 }

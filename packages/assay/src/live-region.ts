@@ -1,18 +1,23 @@
 import { AssayQueryError } from './errors';
-import { retry, type WaitOptions } from './wait';
+import { eventually, type WaitOptions } from './wait';
 
 /** Politeness levels for ARIA live regions. */
 export type LiveRegionPoliteness = 'assertive' | 'off' | 'polite';
 
 /**
  * ARIA roles that carry an implicit `aria-live` value per the WAI-ARIA spec.
- * `role="status"` → `polite`, `role="alert"` → `assertive`. Elements with these
- * roles are live regions even without an explicit `aria-live` attribute.
+ * `alert` is assertive; `log` and `status` are polite; `marquee` and `timer` are
+ * off. Elements with these roles are live regions without explicit `aria-live`.
  */
 const IMPLICIT_ROLE_POLITENESS: Record<string, LiveRegionPoliteness> = {
   alert: 'assertive',
+  log: 'polite',
+  marquee: 'off',
   status: 'polite',
+  timer: 'off',
 };
+const LIVE_REGION_SELECTOR =
+  '[aria-live], [role="alert"], [role="log"], [role="marquee"], [role="status"], [role="timer"]';
 
 export interface LiveRegionQueryOptions {
   /** The document to search. Defaults to the global `document`. */
@@ -42,13 +47,23 @@ function resolvePoliteness(el: HTMLElement): LiveRegionPoliteness | null {
   return null;
 }
 
+function candidates(root: ParentNode): HTMLElement[] {
+  const descendants = Array.from(root.querySelectorAll<HTMLElement>(LIVE_REGION_SELECTOR));
+  const rootElement = root as ParentNode & { matches?: (selector: string) => boolean };
+
+  return rootElement.matches?.(LIVE_REGION_SELECTOR) ? [root as HTMLElement, ...descendants] : descendants;
+}
+
+function matchesOptions(element: HTMLElement, politeness: LiveRegionPoliteness, role?: string): boolean {
+  return resolvePoliteness(element) === politeness && (role === undefined || element.getAttribute('role') === role);
+}
+
 /**
  * Queries the first live region matching the given politeness (and optional role)
  * within `root`. Returns `null` when none exists — safe to call before the region
  * has been lazily created.
  *
- * Matches both explicit `aria-live` attributes and implicit roles (`status` →
- * polite, `alert` → assertive) per the WAI-ARIA spec.
+ * Matches explicit `aria-live` attributes and implicit live-region roles.
  *
  * @example
  * const region = queryLiveRegion({ politeness: 'polite' });
@@ -61,17 +76,7 @@ export function queryLiveRegion(options: LiveRegionQueryOptions = {}): HTMLEleme
 
   if (!root) return null;
 
-  const candidates = Array.from(root.querySelectorAll<HTMLElement>('[aria-live], [role="status"], [role="alert"]'));
-
-  for (const el of candidates) {
-    if (resolvePoliteness(el) !== politeness) continue;
-
-    if (options.role !== undefined && el.getAttribute('role') !== options.role) continue;
-
-    return el;
-  }
-
-  return null;
+  return candidates(root).find((element) => matchesOptions(element, politeness, options.role)) ?? null;
 }
 
 /**
@@ -88,13 +93,7 @@ export function queryAllLiveRegions(options: LiveRegionQueryOptions = {}): HTMLE
 
   if (!root) return [];
 
-  return Array.from(root.querySelectorAll<HTMLElement>('[aria-live], [role="status"], [role="alert"]')).filter((el) => {
-    if (resolvePoliteness(el) !== politeness) return false;
-
-    if (options.role !== undefined && el.getAttribute('role') !== options.role) return false;
-
-    return true;
-  });
+  return candidates(root).filter((element) => matchesOptions(element, politeness, options.role));
 }
 
 export interface WaitForLiveRegionOptions extends WaitOptions {
@@ -117,29 +116,30 @@ export interface WaitForLiveRegionOptions extends WaitOptions {
  * correct approach rather than a single snapshot assertion.
  *
  * @example
- * await waitForLiveRegion({ text: '3 results found' });
- * await waitForLiveRegion({ politeness: 'assertive', text: 'Session expired' });
+ * await waitForLiveRegion('3 results found');
+ * await waitForLiveRegion('Session expired', { politeness: 'assertive' });
  */
 export async function waitForLiveRegion(text: string, options: WaitForLiveRegionOptions = {}): Promise<HTMLElement> {
   const politeness = options.politeness ?? 'polite';
   let matched: HTMLElement | null = null;
 
-  await retry(
+  await eventually(
     () => {
-      const region = queryLiveRegion({
+      const regions = queryAllLiveRegions({
         document: options.document,
         politeness,
         role: options.role,
         root: options.root,
       });
+      const region = regions.find((candidate) => candidate.textContent?.includes(text));
 
-      if (!region) throw new AssayQueryError(`No ${politeness} live region found.`);
-
-      if (!region.textContent?.includes(text)) {
-        throw new AssayQueryError(`Live region text "${region.textContent}" does not include "${text}".`);
+      if (region) {
+        matched = region;
+        return;
       }
 
-      matched = region;
+      if (regions.length === 0) throw new AssayQueryError(`No ${politeness} live region found.`);
+      throw new AssayQueryError(`No ${politeness} live region includes "${text}".`);
     },
     {
       interval: options.interval,
@@ -149,7 +149,7 @@ export async function waitForLiveRegion(text: string, options: WaitForLiveRegion
     },
   );
 
-  // `retry` only resolves once the assertion stops throwing, so `matched` is set.
+  // `eventually` only resolves once the assertion stops throwing, so `matched` is set.
   return matched!;
 }
 
@@ -163,20 +163,18 @@ export async function waitForLiveRegion(text: string, options: WaitForLiveRegion
 export async function waitForLiveRegionCleared(options: WaitForLiveRegionOptions = {}): Promise<void> {
   const politeness = options.politeness ?? 'polite';
 
-  await retry(
+  await eventually(
     () => {
-      const region = queryLiveRegion({
+      const regions = queryAllLiveRegions({
         document: options.document,
         politeness,
         role: options.role,
         root: options.root,
       });
 
-      if (!region) throw new AssayQueryError(`No ${politeness} live region found.`);
-
-      if (region.textContent !== '') {
-        throw new AssayQueryError(`Live region not cleared: "${region.textContent}".`);
-      }
+      if (regions.some((region) => region.textContent === '')) return;
+      if (regions.length === 0) throw new AssayQueryError(`No ${politeness} live region found.`);
+      throw new AssayQueryError(`No ${politeness} live region is cleared.`);
     },
     {
       interval: options.interval,

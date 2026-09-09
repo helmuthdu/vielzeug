@@ -16,7 +16,7 @@ import type { Primitive } from '../types';
 
  * @returns A new duplicate-free array.
  */
-export function uniq<T>(array: T[], selector?: (item: T) => Primitive): T[] {
+export function uniq<T>(array: readonly T[], selector?: (item: T) => Primitive): T[] {
   if (array.length <= 1) {
     return [...array];
   }

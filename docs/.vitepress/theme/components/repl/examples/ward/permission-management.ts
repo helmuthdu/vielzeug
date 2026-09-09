@@ -1,20 +1,22 @@
 export const permissionManagementExample = {
   code: `import { createWard } from '@vielzeug/ward'
 
-const ward = createWard([
-  { role: 'user', resource: 'comments', action: 'read', effect: 'allow' },
-  { role: 'moderator', resource: 'comments', action: 'delete', effect: 'allow' },
-  { role: 'banned', resource: 'comments', action: 'delete', effect: 'deny', priority: 100 },
-])
+// Rules are plain objects — build them dynamically from config or a database
+const rules = [
+  { action: 'read',   resource: 'comments', effect: 'allow' },
+  { action: 'write',  resource: 'comments', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('user') ?? false },
+  { action: 'delete', resource: 'comments', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('moderator') ?? false },
+]
 
-const moderator = { id: 'm1', roles: ['moderator'] }
-const bannedModerator = { id: 'm2', roles: ['moderator', 'banned'] }
+const ward = createWard(rules)
 
-console.log('Rules in scope for moderator:', ward.rulesInScope({ principal: moderator, resource: 'comments' }))
-console.log('Single decision:', ward.explain({ action: 'delete', principal: bannedModerator, resource: 'comments' }))
-console.log('Batch decisions:', ward.checkAll(bannedModerator, [
-  { resource: 'comments', action: 'read' },
-  { resource: 'comments', action: 'delete' },
-]))`,
-  name: 'Introspection and Batch Decisions',
+const user  = { id: 'u1', roles: ['user'] }
+const mod   = { id: 'u2', roles: ['moderator'] }
+const guest = { id: 'u3', roles: [] }
+
+console.log('guest read:  ', ward.decide({ action: 'read',   principal: guest, resource: 'comments' }).effect) // allow
+console.log('user  write: ', ward.decide({ action: 'write',  principal: user,  resource: 'comments' }).effect) // allow
+console.log('guest write: ', ward.decide({ action: 'write',  principal: guest, resource: 'comments' }).effect) // deny
+console.log('mod   delete:', ward.decide({ action: 'delete', principal: mod,   resource: 'comments' }).effect) // allow`,
+  name: 'Permission Management',
 };

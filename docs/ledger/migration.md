@@ -1,104 +1,135 @@
 ---
-title: Ledger 2.0 Migration
-description: Migrate Ledger 1.x reversible history, operation ownership, state snapshots, and cancellation to Ledger 2.
+title: Ledger — Migration Guide
+description: Migrate Ledger runtime injection, reactive state, reversible commands, cancellation, and lifecycle contracts.
 ---
 
 [[toc]]
 
-# Migration
+## Ledger 3.0
 
-## Ledger 2 Changes
+Ledger 3.0 removes its Ripple dependency and runtime injection. Command, queue, history, cancellation, composition, and command-error behavior remain unchanged. State subscriptions become framework-neutral invalidation callbacks with isolated listener failures.
 
-Ledger 2 accepts only reversible commands, publishes one `state` snapshot, and separates queued cancellation from active cooperative cancellation.
+### Remove the `runtime` option
 
-Removed APIs:
+```ts
+// Before
+import * as ripple from '@vielzeug/ripple';
+const ledger = createLedger({ maxHistory: 50, runtime: ripple });
 
-- `Command`
-- `CommandMeta`
-- `canUndo`, `canRedo`, `historySize`, `historySnapshot`, `isProcessing`, `pendingCount`
+// After
+const ledger = createLedger({ maxHistory: 50 });
+```
 
-## Rename Commands
+`LedgerOptions` now contains only `maxHistory`.
+
+### Adapt the structural state readable
+
+`ledger.state` is no longer a Ripple signal. It implements the exported `LedgerReadable` contract with readonly `value`, `peek()`, and `subscribe(listener)`. Subscriptions are invalidation callbacks: they are not immediate, receive no value argument, and run from a listener snapshot. Failures are rethrown in a microtask without interrupting Ledger bookkeeping or later subscribers.
+
+```ts
+// Before — Ripple dependency tracking
+const stop = effect(() => renderHistory(ledger.state.value));
+
+// After — framework-neutral subscription
+const render = () => renderHistory(ledger.state.value);
+render();
+const stop = ledger.state.subscribe(render);
+```
+
+Project it into Ripple explicitly when the application needs Ripple derivations:
+
+```ts
+import { signal } from '@vielzeug/ripple';
+
+const state = signal(ledger.state.value);
+const stop = ledger.state.subscribe(() => {
+  state.value = ledger.state.value;
+});
+```
+
+State replacements, history arrays, and history entries remain frozen. Metadata remains a caller-owned reference.
+
+---
+
+## Ledger 2.0
+
+Ledger 2.0 accepts only reversible commands, publishes one atomic state snapshot, and separates queued cancellation from active cooperative cancellation.
+
+### Rename commands
 
 Replace optional `execute` and `rollback` with required `apply` and `revert`.
 
 ```ts
-// Ledger 1
+// Before
 await ledger.do({
-  execute: () => saveNext(),
-  rollback: () => restorePrevious(),
+  execute: saveNext,
+  rollback: restorePrevious,
 });
-```
 
-```ts
-// Ledger 2
+// After
 await ledger.do({
-  apply: () => saveNext(),
-  revert: () => restorePrevious(),
+  apply: saveNext,
+  revert: restorePrevious,
 });
 ```
 
 Move irreversible work outside Ledger commands.
 
-## Replace Individual Readables
-
-Read history and queue state from `ledger.state`.
+### Replace individual readables
 
 ```ts
-// Ledger 1
+// Before
 if (ledger.canUndo.value) void ledger.undo();
 console.log(ledger.historySnapshot.value);
-```
 
-```ts
-// Ledger 2
+// After
 if (ledger.state.value.undo.length > 0) void ledger.undo();
 console.log(ledger.state.value.undo);
 ```
 
-`state` updates atomically for every Ledger transition.
+Removed names include `Command`, `CommandMeta`, `canUndo`, `canRedo`, `historySize`, `historySnapshot`, `isProcessing`, and `pendingCount`.
 
-## Handle Cancellation
+### Handle cancellation
 
-Queued cancelled work rejects `LedgerCancelledError` before user code starts. Active work receives `context.signal` and must stop cooperatively.
+Queued signal cancellation rejects with `LedgerCancelledError` before user code starts. Active work receives `context.signal` and must stop cooperatively.
 
 ```ts
 const controller = new AbortController();
 const operation = ledger.do(command, { signal: controller.signal });
-
 controller.abort();
+
 await operation.catch((error) => {
   if (!(error instanceof LedgerCancelledError)) throw error;
 });
 ```
 
-Use `whenIdle()` when an owner needs active work to settle after disposal.
+If active code ignores cancellation and finishes, its history transition is not committed. Ledger does not automatically compensate partial effects.
 
-## Compose Only Reversible Steps
+### Compose only reversible steps
 
-`compose()` now accepts `readonly ReversibleCommand[]`.
-
-```ts
-// Ledger 1
-compose([
-  { execute: updateState, rollback: restoreState },
-  { execute: () => bus.emit('saved') },
-]);
-```
+`compose()` accepts readonly reversible commands, applies them in order, and reverts or compensates in reverse order.
 
 ```ts
-// Ledger 2
-await ledger.do({ apply: updateState, revert: restoreState });
-bus.emit('saved');
+await ledger.do(
+  compose([
+    { apply: updateX, revert: restoreX },
+    { apply: updateY, revert: restoreY },
+  ], 'Move item'),
+);
 ```
 
-If application and compensation both fail, inspect `LedgerExecutionError.cause` as `AggregateError`.
+If application and compensation both fail, inspect `LedgerExecutionError.cause` as an `AggregateError`.
 
 ## Upgrade Checklist
 
+- Remove `LedgerOptions.runtime`.
+- Replace automatic Ripple dependency tracking with `ledger.state.subscribe()` or an explicit adapter signal.
+- Import `LedgerReadable` and `Unsubscribe` when framework adapters need explicit annotations.
 - Replace `Command` with `ReversibleCommand`.
-- Rename `execute`/`rollback` to `apply`/`revert`.
-- Move effects and notifications outside `compose()`.
-- Replace individual history readables with `state` reads.
-- Catch `LedgerCancelledError` separately from execution failures.
+- Rename `execute` / `rollback` to `apply` / `revert`.
+- Replace individual history readables with one `state` snapshot.
+- Catch `LedgerCancelledError` separately from execution and rollback failures.
+- Keep irreversible work outside commands.
 - Await `whenIdle()` at lifecycle drain boundaries.
-- Update `@vielzeug/ledger` to version 3.
+
+Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current contracts.

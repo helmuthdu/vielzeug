@@ -149,25 +149,37 @@ describe('createPositioner', () => {
     const { floating, reference } = makeElements({ height: 20, width: 40, x: 100, y: 100 }, { height: 20, width: 80 });
     const positioner = createPositioner(reference, floating, { autoUpdate: false, strategy: 'fixed' });
 
-    positioner.start();
-
     expect(positioner.getPosition()).toMatchObject({ x: 80, y: 120 });
     expect(floating.style.position).toBe('fixed');
     positioner.dispose();
     expect(positioner.disposed).toBe(true);
   });
 
-  it('does not start or update after disposal', () => {
+  it('applies on construction and does not update after disposal', () => {
     const { floating, reference } = makeElements({ height: 20, width: 40, x: 100, y: 100 }, { height: 20, width: 80 });
     const apply = vi.fn();
     const positioner = createPositioner(reference, floating, { apply, autoUpdate: false });
 
+    expect(apply).toHaveBeenCalledOnce();
+    expect(positioner.getPosition()).toMatchObject({ x: 80, y: 120 });
+
     positioner.dispose();
-    positioner.start();
     positioner.update();
 
-    expect(positioner.getPosition()).toBeNull();
-    expect(apply).not.toHaveBeenCalled();
+    expect(apply).toHaveBeenCalledOnce();
+  });
+
+  it('starts automatic updates on construction and removes listeners on disposal', () => {
+    const { floating, reference } = makeElements({ height: 20, width: 40, x: 100, y: 100 }, { height: 20, width: 80 });
+    const addEventListener = vi.spyOn(window, 'addEventListener');
+    const removeEventListener = vi.spyOn(window, 'removeEventListener');
+    const positioner = createPositioner(reference, floating);
+
+    expect(addEventListener).toHaveBeenCalledWith('resize', expect.any(Function), { passive: true });
+
+    positioner.dispose();
+
+    expect(removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function));
   });
 
   it('uses absolute coordinates for the floating offset parent', () => {
@@ -178,8 +190,6 @@ describe('createPositioner', () => {
     vi.spyOn(parent, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 100, width: 100, x: 20, y: 30 }));
 
     const positioner = createPositioner(reference, floating, { autoUpdate: false, strategy: 'absolute' });
-
-    positioner.start();
 
     expect(positioner.getPosition()).toMatchObject({ x: 60, y: 90 });
     positioner.dispose();
@@ -198,7 +208,7 @@ describe('createPositioner', () => {
     } as CSSStyleDeclaration);
 
     expect(getClippingAncestorRect(floating)).toMatchObject({ height: 100, width: 100 });
-    createPositioner(reference, floating, { autoUpdate: false }).start();
+    createPositioner(reference, floating, { autoUpdate: false }).dispose();
   });
 });
 

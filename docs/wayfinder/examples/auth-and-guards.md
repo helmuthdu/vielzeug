@@ -31,15 +31,13 @@ const router = createRouter({
   routes: {
     login: {
       path: '/login',
-      component: LoginPage,
     },
     dashboard: {
       path: '/dashboard',
       middleware: [requireAuth],
-      component: DashboardPage,
     },
   },
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 ```
 
@@ -52,11 +50,10 @@ import { createRouter, redirectTo } from '@vielzeug/wayfinder';
 
 const router = createRouter({
   routes: {
-    login: { path: '/login', component: LoginPage },
+    login: { path: '/login' },
     admin: {
       path: '/admin',
       middleware: [redirectTo({ name: 'login' }, { replace: true })],
-      component: AdminPage,
     },
   },
 });

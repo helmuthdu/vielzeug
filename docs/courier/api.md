@@ -1,6 +1,6 @@
 ---
 title: Courier — API Reference
-description: Reference for Courier HTTP, cache, mutation, interceptor, and stream APIs.
+description: Reference for Courier HTTP, cached read, prefetch, middleware, and error APIs.
 ---
 
 [[toc]]
@@ -9,20 +9,22 @@ description: Reference for Courier HTTP, cache, mutation, interceptor, and strea
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createCourier()` | Creates unified application client | Sync | Dispose only when whole scope ends |
-| `Courier` HTTP methods | Sends and parses HTTP requests | Async | Direct calls never deduplicate |
-| `queries.fetch()` | Fetches one keyed cache entry | Async | Key must include all response identity inputs |
-| `mutate()` | Runs one write operation | Async | It never retries automatically |
-| `events()` / `read()` | Opens abortable response iterators | Async iteration | Breaking iteration aborts request |
-| `withBearerAuth()` | Adds authorization interceptor | Sync | Token provider runs per request |
-| `withRequestId()` | Adds request identifier interceptor | Sync | Default generator uses `uuid()` |
+| `createCourier()` | Creates transport client | Sync | Dispose only when whole scope ends |
+| `request()` | Sends one HTTP request of any method | Async | Direct calls never deduplicate |
+| `get()` | Sends a GET, optionally through the explicit cache | Async | One key must identify one representation |
+| `prefetch()` | Warms a cached GET | Async | Request failures resolve after surfacing through `tap()` |
+| `invalidateCache()` / `clearCache()` | Removes cached values | Sync | Invalidation matches structured key prefixes |
+| `post()` / `put()` / `patch()` / `delete()` | Common write method conveniences | Async | Use `request()` for custom methods |
+| `withBearerAuth()` | Adds authorization middleware | Sync | Token provider runs per request |
+| `withRequestId()` | Adds request identifier middleware | Sync | Default generator uses `crypto.randomUUID()` |
 | `withLogging()` | Logs request result metadata | Sync | Requires explicit logger; URLs may contain sensitive query values |
+| `tap()` | Observe structured transport events | Sync | Observation only; optional signal owns lifetime |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/courier` | Client factory, errors, interceptors, and public types |
+| `@vielzeug/courier` | Client factory, errors, middleware helpers, and public types |
 
 ## Client
 
@@ -32,172 +34,145 @@ description: Reference for Courier HTTP, cache, mutation, interceptor, and strea
 createCourier(options?: CourierOptions): Courier;
 ```
 
-Returns client sharing transport configuration, headers, interceptors, cancellation, cache, mutations, and streams.
+Returns an HTTP client sharing base URL, default headers, immutable middleware, optional parsed-value cache, timeout, and cancellation lifecycle.
 
 | `CourierOptions` field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `baseUrl` | `string` | `''` | Prefix for relative request paths |
+| `cache.capacity` | `number` | `100` | Maximum cached entries; positive integer or `Infinity` |
+| `cache.ttlMs` | `number` | `30_000` | Default cache freshness; non-negative milliseconds or `Infinity` |
 | `fetch` | `typeof globalThis.fetch` | `globalThis.fetch` | Fetch implementation |
-| `headers` | `Record<string, string>` | `{}` | Global request headers |
-| `timeout` | `number` | `30_000` | Default HTTP timeout in milliseconds |
-| `query.staleTime` | `number` | `0` | Cache freshness duration |
-| `query.gcTime` | `number` | `300_000` | Garbage-collect entries with no subscribers after this duration (ms); `Infinity` disables |
+| `headers` | `HeadersInit` | `{}` | Default request headers (immutable; merged lowercase) |
+| `middleware` | `readonly Middleware[]` | `[]` | Immutable middleware chain configured at construction |
+| `timeout` | `number` | `30_000` | Integer milliseconds from 1 to 2,147,483,647, or `Infinity` |
 
 **Returns:** `Courier`.
 
 ```ts
-import { createCourier } from '@vielzeug/courier';
+import { createCourier, withBearerAuth } from '@vielzeug/courier';
 
-const courier = createCourier({ baseUrl: 'https://api.example.com' });
+const courier = createCourier({
+  baseUrl: 'https://api.example.com',
+  middleware: [withBearerAuth('token')],
+});
 ```
 
 | `Courier` member | Signature | Description |
 | --- | --- | --- |
-| `get` / `post` / `put` / `patch` / `delete` | `<T, P>(url: P, config?) => Promise<T>` | Sends one HTTP request |
-| `setHeaders` | `(updates) => void` | Updates global headers |
-| `getHeaders` | `() => Readonly<Record<string, string>>` | Returns header snapshot |
-| `use` | `(interceptor) => () => void` | Registers interceptor |
-| `cancelAll` | `() => void` | Aborts active HTTP, cache, and mutation work; a subsequent `queries.fetch()` starts a fresh request |
-| `queries` | `QueryCache` | Owns keyed cache entries |
-| `mutate` | `<T>(options) => Promise<T>` | Runs one write operation |
-| `events` | `<T, P>(url, options?) => AsyncIterableIterator<StreamEvent<T>>` | Opens SSE iterator |
-| `read` | `<T, P>(url, options?) => AsyncIterableIterator<T>` | Opens text or NDJSON iterator |
-| `dispose` | `() => void` | Final disposal; aborts work and clears cache |
+| `request` | `<T, P>(path, config?) => Promise<T>` | Sends one HTTP request; `config.method` defaults to `GET` |
+| `get` | `<T, P>(path, config?) => Promise<T>` | Sends GET; `cache` opts parsed responses into bounded caching |
+| `prefetch` | `<T, P>(path, config) => Promise<void>` | Warms one required structured cache key; failures are tap-observed |
+| `invalidateCache` | `(prefix: CourierCacheKey) => void` | Invalidates matching settled and pending key prefixes |
+| `clearCache` | `() => void` | Removes every cached and pending entry |
+| `post` | `<T, P>(path, config?) => Promise<T>` | Sends POST |
+| `put` | `<T, P>(path, config?) => Promise<T>` | Sends PUT |
+| `patch` | `<T, P>(path, config?) => Promise<T>` | Sends PATCH |
+| `delete` | `<T, P>(path, config?) => Promise<T>` | Sends DELETE |
+| `tap` | `(handler, options?: { signal?: AbortSignal }) => () => void` | Observes structured request and disposal events |
+| `cancelAll` | `() => void` | Aborts active requests; client remains usable |
+| `dispose` | `() => void` | Final teardown; aborts work and marks client unusable |
 | `disposed` | `boolean` | Whether final disposal occurred |
 | `disposalSignal` | `AbortSignal` | Aborts on final disposal |
 
 ---
 
-## Queries
+## Requests
 
-### `queries.fetch()`
+### `request()`
 
 ```ts
-fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
+request<T, P extends string>(path: P, config?: RequestConfig<P, T> & { method?: string }): Promise<T>;
 ```
 
-Registers latest definition for `definition.key`, then returns fresh cached data or runs its fetch function.
+Sends one HTTP request. `config.method` defaults to `GET`; pass any method (including custom verbs) to support it consistently.
 
-| Parameter | Type | Description |
+| `RequestConfig<P, T>` field | Type | Description |
 | --- | --- | --- |
-| `definition.key` | `QueryKey` | Cache identity; include every response identity input |
-| `definition.fetch` | `(context: QueryContext) => Promise<T>` | Request function for this key |
-| `definition.staleTime` | `number` | Per-entry freshness duration |
-| `options.force` | `boolean` | Fetch even when cached data is fresh |
+| `method` | `string` | HTTP method; defaults to `GET` |
+| `params` | `Record<string, string \| number \| boolean>` | Path parameters for `{param}` placeholders |
+| `query` | `Params` | Query string parameters |
+| `body` | `unknown` | BodyInit values pass through; streams use Node duplex; GET/HEAD reject bodies; other values encode as JSON |
+| `headers` | `HeadersInit` | Per-request headers merged with (and overriding) defaults |
+| `responseType` | `ResponseType` | Response parsing strategy |
+| `schema` | `{ parse(data: unknown): T }` | Optional parsed-response validator; incompatible with `responseType: 'raw'` |
+| `signal` | `AbortSignal` | External abort signal merged with internal cancellation |
+| `timeout` | `number` | Integer milliseconds from 1 to 2,147,483,647, or `Infinity`; overrides default |
+| `fetchInit` | `Omit<RequestInit, 'body' \| 'headers' \| 'method' \| 'signal'>` | Raw fetch options for advanced use |
 
-**Returns:** Cached or fetched data.
+**Returns:** Parsed response body (or `undefined` for empty bodies).
 
 ```ts
-const key = ['profile', 1] as const;
-await courier.queries.fetch({
-  key,
-  fetch: ({ signal }) => courier.get('/profile/{id}', { params: { id: 1 }, signal }),
+const created = await courier.request<User>('/users', {
+  method: 'POST',
+  body: { name: 'Ada' },
 });
 ```
 
-| `QueryCache` method | Returns | Description |
-| --- | --- | --- |
-| `get(key)` | `T \| undefined` | Returns successful cached data |
-| `getSnapshot(key)` | `AsyncState<T> \| null` | Returns snapshot by key |
-| `set(key, data, options?)` | `void` | Sets successful cache value |
-| `delete(key)` | `void` | Removes one cache entry and aborts its active fetch if present |
-| `invalidate(prefix, options?)` | `void` | Marks matching key prefixes stale; `options.refetch` triggers background refetch |
-| `keys()` | `QueryKey[]` | Lists known keys |
-| `subscribe(key, listener)` | `Unsubscribe` | Subscribes to one key |
-| `clear()` | `void` | Removes every cache entry |
-
----
-
-## Mutations
-
-### `mutate()`
+### `get()`
 
 ```ts
-mutate<T>(options: MutationOptions<T>): Promise<T>;
+get<T, P extends string>(path: P, config?: GetRequestConfig<P, T>): Promise<T>;
 ```
 
-Runs `options.request` once, then calls `onSuccess` after successful completion, then invalidates (and refetches) each key in `invalidateKeys`.
-
-| `MutationOptions<T>` field | Type | Description |
-| --- | --- | --- |
-| `request` | `(context: MutationContext) => Promise<T>` | Write operation |
-| `onSuccess` | `(data, queries) => void \| Promise<void>` | Cache update callback |
-| `invalidateKeys` | `readonly (readonly unknown[])[]` | Key prefixes to invalidate and refetch after success |
-| `signal` | `AbortSignal` | Caller-controlled cancellation |
-
-**Returns:** Request result.
-
----
-
-## Streams
-
-### `events()` and `read()`
+Convenience for `request(path, { ...config, method: 'GET' })`. A `cache` descriptor opts a parsed response into the bounded cache. It requires a structured key and may override the default TTL. Raw responses cannot be cached.
 
 ```ts
-events<T, P extends string>(url: P, options?: StreamOptions<P>): AsyncIterableIterator<StreamEvent<T>>;
-read<T, P extends string>(url: P, options?: StreamOptions<P> & { parse?: 'ndjson' | 'text' }): AsyncIterableIterator<T>;
-```
-
-Both iterators abort request when `return()` runs or `for await` loop exits. `events()` parses `event` and `data`
-fields; it does not retain event IDs or reconnect.
-
-`StreamOptions<P>` extends `RequestConfig<P>` (typed path params) with an optional `method` field. It omits
-`responseType` and `schema` (not applicable to streaming).
-
-**Returns:** Abortable async iterator.
-
----
-
-## Observability
-
-### `tap()`
-
-```ts
-tap(handler: (event: CourierEvent) => void, options?: { signal?: AbortSignal }): () => void;
-```
-
-Observe request lifecycle events without affecting courier behavior. Handler errors are swallowed. Returns an unsubscribe function.
-
-```ts
-type CourierEvent =
-  | { type: 'request-start'; method: string; url: string }
-  | { type: 'request-success'; method: string; url: string; status: number; duration: number }
-  | { type: 'request-error'; method: string; url: string; error: unknown }
-  | { type: 'dispose' };
-```
-
-**Example:**
-
-```ts
-const courier = createCourier({ baseUrl: '/api' });
-courier.tap((event) => {
-  if (event.type === 'request-error') console.error(event.method, event.url, event.error);
-  if (event.type === 'request-success') console.debug(event.method, event.url, event.duration);
+const user = await courier.get<User>('/users/{id}', {
+  cache: { key: ['users', 1], ttlMs: 10_000 },
+  params: { id: 1 },
 });
 ```
 
-For structured logging, route tap events to rune:
+## Cache
+
+### `prefetch()`
 
 ```ts
-import { createLogger } from '@vielzeug/rune';
-const log = createLogger({ name: 'courier' });
-courier.tap((event) => log.debug(event, `courier:${event.type}`));
+prefetch<T, P extends string>(path: P, config: PrefetchConfig<P, T>): Promise<void>;
 ```
 
-## Interceptors
+Starts the same cached GET used by `get()`. `config.cache` is required; `signal`, per-call `timeout`, and `responseType: 'raw'` are unavailable. Fresh values and pending loads are reused. The promise settles when the attempt finishes. Request failures emit `request-error` through `tap()` and resolve without caching data.
 
-### Interceptor helpers
+### `invalidateCache()` and `clearCache()`
 
 ```ts
-withBearerAuth(token: string | (() => string | Promise<string>)): Interceptor;
-withRequestId(options?: { generate?: () => string; header?: string }): Interceptor;
+invalidateCache(prefix: CourierCacheKey): void;
+clearCache(): void;
+```
+
+`invalidateCache()` removes every settled entry whose structured key starts with `prefix` and prevents matching pending loads from being stored. `clearCache()` applies that behavior to all entries. Existing waiters may still receive an invalidated in-flight result; `cancelAll()` or `dispose()` aborts physical work.
+
+---
+
+## Middleware
+
+Middleware is an immutable chain configured at construction. Each middleware receives an immutable `FetchContext` and a `next` function.
+
+```ts
+type Middleware = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
+```
+
+### Middleware helpers
+
+```ts
+withBearerAuth(token: string | (() => string | null | undefined | Promise<string | null | undefined>)): Middleware;
+withRequestId(options?: { generate?: () => string; header?: string }): Middleware;
 withLogging(options: {
   logger: (message: string, meta: { duration: number; method: string; status: number; url: string }) => void;
-}): Interceptor;
+}): Middleware;
 ```
 
-Each helper returns an `Interceptor` accepted by `courier.use()`. `withLogging` requires an explicit `logger`
-function — no default console output.
+Each helper returns a `Middleware` passed in the `middleware` option. `withLogging` requires an explicit `logger` function, isolates logger failures from requests, and has no default console output.
+
+```ts
+const courier = createCourier({
+  middleware: [
+    withBearerAuth(() => tokenStore.getAccessToken()),
+    withRequestId(),
+    withLogging({ logger: (msg) => console.log(msg) }),
+  ],
+});
+```
 
 ## Types
 
@@ -205,70 +180,78 @@ function — no default console output.
 type TransportOptions = {
   baseUrl?: string;
   fetch?: typeof globalThis.fetch;
-  headers?: Record<string, string>;
+  headers?: HeadersInit;
+  middleware?: readonly Middleware[];
   timeout?: number;
 };
 
+type CourierCacheKeyAtom = string | number | boolean | null;
+type CourierCacheKey = readonly [CourierCacheKeyAtom, ...CourierCacheKeyAtom[]];
+
+type CourierCacheOptions = {
+  capacity?: number;
+  ttlMs?: number;
+};
+
+type CourierReadCache = {
+  key: CourierCacheKey;
+  ttlMs?: number;
+};
+
 type CourierOptions = TransportOptions & {
-  query?: { gcTime?: number; staleTime?: number };
+  cache?: CourierCacheOptions;
 };
 
 type FetchContext = {
   readonly headers: Readonly<Record<string, string>>;
   readonly init: Readonly<Omit<RequestInit, 'headers'>>;
   readonly url: string;
-  withHeaders(updates: Record<string, string>): FetchContext;
+  withHeaders(updates: Record<string, string | undefined>): FetchContext;
+  withInit(updates: Partial<Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>>): FetchContext;
 };
 
-type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
+type Middleware = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
 
-type AsyncState<T> =
-  | { data: undefined; error: null; isFetching: boolean; status: 'loading'; updatedAt: undefined }
-  | { data: T; error: null; isFetching: boolean; status: 'success'; updatedAt: number }
-  | { data: T | undefined; error: Error; isFetching: false; status: 'error'; updatedAt: number };
-
-type QueryContext = { readonly key: QueryKey; readonly signal: AbortSignal };
-type QueryDefinition<T> = { fetch: (context: QueryContext) => Promise<T>; key: QueryKey; staleTime?: number };
-type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
-type QueryKeyAtom = string | number | boolean | null;
-type QueryCache = {
-  clear(): void;
-  delete(key: QueryKey): void;
-  fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
-  get<T>(key: QueryKey): T | undefined;
-  getSnapshot<T>(key: QueryKey): AsyncState<T> | null;
-  invalidate(prefix: readonly unknown[], options?: { refetch?: boolean }): void;
-  keys(): QueryKey[];
-  set<T>(key: QueryKey, data: T, options?: { updatedAt?: number }): void;
-  subscribe(key: QueryKey, listener: () => void): Unsubscribe;
-};
-type MutationContext = { readonly signal: AbortSignal };
-type MutationOptions<T> = {
-  invalidateKeys?: readonly (readonly unknown[])[];
-  onSuccess?: (data: T, queries: QueryCache) => void | Promise<void>;
-  request: (context: MutationContext) => Promise<T>;
-  signal?: AbortSignal;
-};
-type StreamEvent<T = unknown> = { readonly data: T; readonly event: string };
-type StreamOptions<P extends string = string> = Omit<RequestConfig<P>, 'responseType' | 'schema'> & {
-  method?: string;
-};
-type Unsubscribe = () => void;
+type CourierEvent =
+  | { type: 'request-start'; method: string; url: string }
+  | { type: 'request-success'; method: string; url: string; status: number; duration: number }
+  | { type: 'request-error'; method: string; url: string; error: unknown }
+  | { type: 'dispose' };
 ```
 
 ```ts
 type ParamValue = string | number | boolean | null | readonly (string | number | boolean | null)[] | undefined;
 type Params = Record<string, ParamValue>;
+type ResponseType = 'auto' | 'json' | 'text' | 'blob' | 'arrayBuffer' | 'raw';
 type RequestConfig<P extends string = string, T = unknown> = {
   body?: unknown;
+  method?: string;
   fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
-  headers?: Record<string, string>;
+  headers?: HeadersInit;
   params?: Record<string, string | number | boolean>;
   query?: Params;
-  responseType?: 'auto' | 'json' | 'text' | 'blob' | 'arrayBuffer' | 'raw';
+  responseType?: ResponseType;
   schema?: { parse(data: unknown): T };
   signal?: AbortSignal;
   timeout?: number;
+};
+
+type GetRequestConfig<P extends string = string, T = unknown> = Omit<
+  RequestConfig<P, T>,
+  'body' | 'method' | 'responseType'
+> &
+  ({ cache?: CourierReadCache; responseType?: Exclude<ResponseType, 'raw'> } | { cache?: never; responseType: 'raw' }) & {
+    body?: never;
+  };
+
+type PrefetchConfig<P extends string = string, T = unknown> = Omit<
+  GetRequestConfig<P, T>,
+  'cache' | 'responseType' | 'signal' | 'timeout'
+> & {
+  cache: CourierReadCache;
+  responseType?: Exclude<ResponseType, 'raw'>;
+  signal?: never;
+  timeout?: never;
 };
 ```
 
@@ -280,7 +263,9 @@ type RequestConfig<P extends string = string, T = unknown> = {
 | `CourierHttpError` | Non-2xx HTTP response | `status`, `data`, `headers`, `method`, `url`; `CourierHttpError.is(e, status?)` narrows by status |
 | `CourierNetworkError` | Request failure without response | `method`, `url`, `cause` |
 | `CourierTimeoutError` | Timeout signal aborts request | `method`, `url`, `cause` |
-| `CourierAbortError` | Caller, client, or iterator cancellation | `method`, `url`, `cause` |
+| `CourierAbortError` | Caller or client cancellation | `method`, `url`, `cause` |
 | `CourierSchemaValidationError` | Response schema fails | `data`, `cause` |
 | `CourierParseError` | Response body cannot parse | — |
 | `CourierDisposedError` | Work starts after disposal | — |
+
+Errors thrown directly by custom middleware are preserved rather than reclassified.

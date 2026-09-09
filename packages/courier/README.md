@@ -1,23 +1,6 @@
 # @vielzeug/courier
 
-> Type-safe HTTP, query cache, mutations, SSE, and streaming built on native fetch.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/courier)](https://www.npmjs.com/package/@vielzeug/courier) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
-
-**Key exports:** `createCourier`, `CourierError`, `CourierHttpError`, `CourierNetworkError`, `CourierTimeoutError`, `CourierAbortError`
-
-**When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with a shared interceptor pipeline.
-
-**Related:** [@vielzeug/spell](https://vielzeug.dev/spell/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/vault](https://vielzeug.dev/vault/)
-
-</details>
-
-`@vielzeug/courier` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+> Typed HTTP client with bounded structured-key caching, prefetching, immutable middleware, and structured errors
 
 ## Installation
 
@@ -30,37 +13,31 @@ yarn add @vielzeug/courier
 ## Quick Start
 
 ```ts
-import { createCourier } from '@vielzeug/courier';
+import { createCourier, withBearerAuth } from '@vielzeug/courier';
 
-type NewUser = { name: string };
 type User = { id: number; name: string };
 
-const client = createCourier({
+const courier = createCourier({
   baseUrl: 'https://api.example.com',
-  query: { staleTime: 5_000 },
+  middleware: [withBearerAuth('token')],
 });
+const usersKey = ['accounts', 'account-1', 'users'] as const;
 
-const userKey = ['users', 1] as const;
-await client.queries.fetch({
-  fetch: ({ signal }) => client.get<User>('/users/{id}', { params: { id: 1 }, signal }),
-  key: userKey,
-  staleTime: 5_000,
-});
+await courier.prefetch<User[]>('/users', { cache: { key: usersKey } });
+const users = await courier.get<User[]>('/users', { cache: { key: usersKey } });
+const created = await courier.post<User>('/users', { body: { name: 'Ada' } });
+courier.invalidateCache(['accounts', 'account-1', 'users']);
 
-const nextUser = await client.mutate({
-  request: ({ signal }) => client.post<User>('/users', { body: { name: 'Alice' }, signal }),
-  invalidateKeys: [['users']],
-});
+courier.dispose();
 ```
 
 ## Documentation
-
-Full docs: https://vielzeug.dev/courier/
 
 - [Overview](https://vielzeug.dev/courier/)
 - [Usage Guide](https://vielzeug.dev/courier/usage)
 - [API Reference](https://vielzeug.dev/courier/api)
 - [Examples](https://vielzeug.dev/courier/examples)
+- [Migration Guide](https://vielzeug.dev/courier/migration)
 
 ## License
 

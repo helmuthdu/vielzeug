@@ -1,12 +1,18 @@
 export const ttlExpirationExample = {
-  code: `import { table, ttl } from '@vielzeug/vault'
+  code: `import { s } from '@vielzeug/spell'
+import { table, ttl } from '@vielzeug/vault'
 import { createLocalStorage } from '@vielzeug/vault/local-storage'
 
+const CacheSchema = s.object({ data: s.string(), id: s.string() })
 const schema = {
   cache: table('id'),
 }
 
-const db = createLocalStorage({ name: 'cache-demo', schema })
+const db = createLocalStorage({
+  name: 'cache-demo',
+  schema,
+  codecs: { cache: CacheSchema },
+})
 
 // ttl helpers produce finite, positive millisecond durations
 await db.put('cache', { id: 'short', data: 'Expires in 1 second' }, ttl.seconds(1))

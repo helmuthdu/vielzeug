@@ -88,7 +88,7 @@ export type ArrayDiffOptions<T> = {
  * @param [options.compareFn] - Custom equality function. Defaults to deep `isEqual`.
  * @returns An object with `added` and `removed` arrays.
  */
-export function diffArrays<T>(before: T[], after: T[], options?: ArrayDiffOptions<T>): ArrayDiff<T> {
+export function diffArrays<T>(before: readonly T[], after: readonly T[], options?: ArrayDiffOptions<T>): ArrayDiff<T> {
   const compareFn = options?.compareFn ?? ((a: T, b: T) => isEqual(a, b));
 
   return {

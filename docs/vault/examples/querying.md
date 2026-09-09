@@ -1,9 +1,9 @@
 ---
-title: 'Vault Examples — Querying'
-description: 'Filter, sort, paginate, and count records with the query builder in @vielzeug/vault.'
+title: 'Vault Examples — Filtering'
+description: 'Filter, sort, and paginate records with getAll and derived helpers in @vielzeug/vault.'
 ---
 
-## Querying
+## Filtering
 
 ### Problem
 
@@ -11,9 +11,7 @@ You need to filter, sort, and paginate records from a table, and you need both a
 
 ### Solution
 
-Use `db.query(table)` to build a lazy pipeline. Chain filter operators (`filter`, `equals`) and presentation operators (`orderBy`, `limit`, `offset`). Call `toArray()`, `first()`, `count()`, or `delete()` as the terminal step.
-
-`count()` ignores `limit`, `offset`, and `orderBy` — it always returns the full filtered-set size. Use it for "page X of N" UIs without a second query.
+Use the bound fluent `query()` API for typed filtering, ordering, pagination, counting, and deletion. Queries compose over `getAll()`; for large document stores, use `iterate()` or IndexedDB's `getAllByIndex()`.
 
 ```ts
 import { table } from '@vielzeug/vault';
@@ -33,59 +31,34 @@ await db.putAll('products', [
 
 const pageSize = 2;
 const pageIndex = 0;
+const peripherals = db.query('products').equals('category', 'peripherals').orderBy('price');
 
-// Base query — shared between the page fetch and the total count
-const q = db.query('products').equals('category', 'peripherals').orderBy('price', 'asc');
-
-// Paginated fetch
-const page = await q
-  .limit(pageSize)
-  .offset(pageIndex * pageSize)
-  .toArray();
-// → [{ id: 4, ... price: 19 }, { id: 2, ... price: 49 }]
-
-// Total filtered count — ignores limit/offset/orderBy
-const total = await q.count();
-// → 3 (all peripherals, regardless of pagination)
-
-console.log(`Page ${pageIndex + 1} of ${Math.ceil(total / pageSize)}`); // Page 1 of 2
-
-// First matching record
-const cheapest = await db.query('products').orderBy('price', 'asc').first();
-
-// Predicate filter
-const expensive = await db
-  .query('products')
-  .filter((p) => p.price > 50)
-  .toArray();
-
-// Custom prefix match via filter()
+const page = await peripherals.offset(pageIndex * pageSize).limit(pageSize).toArray();
+const total = await peripherals.count();
+const cheapest = await db.query('products').orderBy('price').first();
+const expensive = await db.query('products').filter((product) => product.price > 50).toArray();
 const mice = await db
   .query('products')
-  .filter((p) => p.name.toLowerCase().startsWith('mou'))
+  .filter((product) => product.name.toLowerCase().startsWith('mou'))
   .toArray();
+const deleted = await db.query('products').filter((product) => product.price < 25).delete();
 
-// Delete via query — returns count of deleted records
-const deleted = await db
-  .query('products')
-  .filter((p) => p.price < 25)
-  .delete();
+console.log(`Page ${pageIndex + 1} of ${Math.ceil(total / pageSize)}`);
+console.log(await db.count('products'));
 
-(void page, total, cheapest, expensive, mice, deleted);
+(void page, cheapest, expensive, mice, deleted);
 ```
 
 ### Pitfalls
 
-- Query pipelines are lazy — calling `.limit(10)` does not execute anything. Only the terminal call (`toArray()`, `count()`, `first()`, `delete()`) triggers execution.
-- `count()` ignores `limit`, `offset`, and `orderBy`. It always returns the full filtered-set size — use it directly for paginated total-count queries.
-- `count()` still applies all filter operators (`filter`, `equals`). A bare `db.query('products').count()` returns all live records.
-- For range or prefix queries, use `.filter()` with a custom predicate. `equals()` is the only built-in field-level filter.
-- Queries scan the full table in memory. For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record.
+- `query()` composes over `getAll()` and materializes the table. For large tables, prefer `iterate()` or IndexedDB's `getAllByIndex()`.
+- `deleteMany()` returns the count of records that actually existed and were deleted, not the length of the keys array.
+- `count()` and `getAll()` both return only live records. Expired records can still occupy storage until you prune them.
 
 ### Related
 
 - [CRUD](./crud.md)
 - [Lazy Iteration — IndexedDB](./iterate.md)
 - [SQLite Transactions and Iteration](./sqlite.md)
-- [Usage Guide — Query Records](/vault/usage.md#query-records)
-- [API Reference — QueryBuilder](/vault/api.md#querybuilder)
+- [Usage Guide — Iterate and Filter Records](/vault/usage.md#iterate-and-filter-records)
+- [API Reference — Derived Helpers](/vault/api.md#derived-helpers)

@@ -13,7 +13,7 @@
  * @param callback - (optional) A callback function to map each item to a number.
  * @returns The median, or `undefined` if the array is empty.
  */
-export function median<T>(arr: T[], callback?: (item: T) => number): number | undefined {
+export function median<T>(arr: readonly T[], callback?: (item: T) => number): number | undefined {
   if (arr.length === 0) return undefined;
 
   const values = callback ? arr.map(callback) : [...(arr as unknown as number[])];

@@ -1,42 +1,45 @@
 ---
 title: 'Ward Examples — Auditing Decisions'
-description: 'Capture explained Ward decisions with tap() for audit pipelines.'
+description: 'Observe Ward decisions without changing authorization behavior.'
 ---
 
 ## Auditing Decisions
 
 ### Problem
 
-Record authorization decisions for diagnostics or an audit pipeline without duplicating logging at every call site.
+Authorization decisions need application-owned audit records.
 
 ### Solution
 
-Use `tap()` to observe decision events; route them to your audit store.
+Subscribe to typed decision events at the application boundary.
 
 ```ts
-import { createWard } from '@vielzeug/ward';
+import { createLogger } from '@vielzeug/rune';
+import { allow, createWard } from '@vielzeug/ward';
 
-const audit: string[] = [];
+const log = createLogger({ namespace: 'authorization' });
+const ward = createWard([allow('editor', 'posts', ['update'])]);
 
-const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }]);
-
-ward.tap((event) => {
-  const who = event.principal === null ? 'anonymous' : event.principal.id;
-  const outcome = event.decision.allowed ? 'allow' : event.decision.reason;
-  audit.push(`${who}:${event.resource}:${event.action}:${outcome}`);
+const stop = ward.tap((event) => {
+  log.info(event, `ward:${event.decision.effect}`);
 });
 
-ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', action: 'read' });
-ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', action: 'delete' });
+ward.decide({
+  action: 'update',
+  principal: { id: 'u1', roles: ['editor'] },
+  resource: 'posts',
+});
+
+stop();
 ```
 
 ### Pitfalls
 
-- Treat tap events as an event stream; send durable audit records to your own storage layer.
-- `trace()`, `allowedActions()`, and `rulesInScope()` are inspection APIs and do not fire decision events.
+- Handler failures are swallowed so observation cannot alter authorization.
+- The application owns transport, retention, and sensitive-data policy.
+- `allowedActions()` does not emit events because its checks are hypothetical.
 
 ### Related
 
-- [Trace a Decision](./trace-decision.md)
-- [Conflict Detection](./conflict-detection.md)
-- [Ward API Reference](../api.md)
+- [Explain a decision](./trace-decision.md)
+- [Bound UI permissions](./bound-guard-in-ui-layer.md)

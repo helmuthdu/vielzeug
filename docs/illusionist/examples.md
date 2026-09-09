@@ -23,7 +23,6 @@ const users = Array.from({ length: 10 }, () => ({
   zip: illusion.location.zipCode(),
 }));
 
-illusion.dispose();
 ```
 
 ## Seeded Test Data for Snapshot Testing
@@ -45,8 +44,7 @@ test('order receipt snapshot', () => {
   };
 
   expect(order).toMatchInlineSnapshot();
-  illusion.dispose();
-});
+  });
 ```
 
 ## Locale-Specific Data (German)
@@ -65,7 +63,6 @@ illusion.location.zipCode(); // '15268'
 illusion.date.weekday();     // 'Donnerstag'
 illusion.date.month();       // 'März'
 
-illusion.dispose();
 ```
 
 ## E-commerce Mock Data
@@ -95,7 +92,6 @@ const order = {
 };
 
 console.log(format(order.price, { locale: 'de-DE' }));
-illusion.dispose();
 ```
 
 ## Database Seeding Pattern
@@ -122,24 +118,4 @@ const customers = Array.from({ length: 100 }, () => ({
   createdAt: illusion.date.past({ years: 2 }),
 }));
 
-illusion.dispose();
-```
-
-## Disposal in Long-Running Processes
-
-Call `dispose()` when an instance is no longer needed. In long-running processes, use `using` to release instances automatically at scope exit.
-
-```ts
-import { createIllusion } from '@vielzeug/illusionist';
-import { en } from '@vielzeug/illusionist/locales';
-
-function generateBatch(seed: number) {
-  using illusion = createIllusion({ seed, locale: en });
-
-  return Array.from({ length: 5 }, () => ({
-    name: illusion.person.fullName(),
-    email: illusion.internet.email(),
-  }));
-  // illusion.dispose() runs automatically at scope exit
-}
 ```

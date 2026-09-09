@@ -1,184 +1,182 @@
-export type Disposable = {
-  [Symbol.dispose](): void;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-};
-
 export type PagePagination = Readonly<{
-  count: number;
   hasNext: boolean;
   hasPrevious: boolean;
-  index: number;
-  kind: 'page';
-  size: number;
-  total: number;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  totalItems: number;
 }>;
 
 export type CursorPagination<TCursor = string> = Readonly<{
-  hasNext: boolean;
-  hasPrevious: boolean;
-  kind: 'cursor';
   nextCursor?: TCursor;
+  pageSize: number;
   previousCursor?: TCursor;
-  total?: number;
+  totalItems?: number;
 }>;
 
 export type InfinitePagination = Readonly<{
   hasMore: boolean;
-  kind: 'infinite';
-  loaded: number;
-  total: number;
+  loadedItems: number;
+  pageSize: number;
+  totalItems: number;
 }>;
 
-export type AnyPagination = CursorPagination<unknown> | InfinitePagination | PagePagination;
-
-/** Loaded state remains internally consistent while pendingQuery describes newer work. */
-export type SourceSnapshot<T, TQuery, TPagination extends AnyPagination = AnyPagination> = Readonly<{
-  data: readonly T[];
+export type PageSourceState<T, TParams = undefined> = Readonly<{
   error: Error | null;
-  isFetching: boolean;
-  pagination: TPagination;
-  pendingQuery?: TQuery;
-  query: TQuery;
+  items: readonly T[];
+  loading: boolean;
+  pagination: PagePagination;
+  params: TParams;
+  pendingParams?: TParams;
 }>;
 
-export type Source<T, TQuery, TPagination extends AnyPagination = AnyPagination> = Disposable & {
-  readonly snapshot: SourceSnapshot<T, TQuery, TPagination>;
-  subscribe(listener: (snapshot: SourceSnapshot<T, TQuery, TPagination>) => void): () => void;
-};
-
-export type PageQuery<TFilter = unknown, TSort = unknown> = Readonly<{
-  filter?: TFilter;
+export type PageLoadContext<TParams = undefined> = Readonly<{
   page: number;
   pageSize: number;
-  search: string;
-  sort?: TSort;
-}>;
-
-export type PageQueryPatch<TFilter = unknown, TSort = unknown> = Readonly<{
-  filter?: TFilter | undefined;
-  page?: number;
-  pageSize?: number;
-  search?: string;
-  sort?: TSort | undefined;
-}>;
-
-export type PageResult<T> = Readonly<{
-  data: readonly T[];
-  total: number;
-}>;
-
-export type LoadContext<TQuery> = Readonly<{
-  query: TQuery;
+  params: TParams;
   signal: AbortSignal;
 }>;
 
-export type PageSource<T, TFilter = unknown, TSort = unknown> = Source<T, PageQuery<TFilter, TSort>, PagePagination> & {
-  readonly page: Readonly<{
-    go(index: number): Promise<void>;
-    last(): Promise<void>;
-    next(): Promise<void>;
-    previous(): Promise<void>;
-  }>;
+export type PageResult<T> = Readonly<{
+  items: readonly T[];
+  totalItems: number;
+}>;
+
+export type PageSource<T, TParams = undefined> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  first(): Promise<void>;
+  goTo(page: number): Promise<void>;
+  last(): Promise<void>;
+  next(): Promise<void>;
+  previous(): Promise<void>;
   reload(): Promise<void>;
-  setQuery(changes: PageQueryPatch<TFilter, TSort>): Promise<void>;
+  setPageSize(pageSize: number): Promise<void>;
+  setParams(params: TParams): Promise<void>;
+  readonly state: PageSourceState<T, TParams>;
+  subscribe(listener: (state: PageSourceState<T, TParams>) => void): () => void;
 };
 
-export type PageSourceConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
-  autoStart?: boolean;
-  initialQuery?: PageQueryPatch<TFilter, TSort>;
-  load(context: LoadContext<PageQuery<TFilter, TSort>>): Promise<PageResult<T>>;
+export type PageSourceConfig<T, TParams = undefined> = Readonly<
+  {
+    load(context: PageLoadContext<TParams>): Promise<PageResult<T>>;
+    pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;
+
+export type LocalSourceState<T, TParams = undefined> = Readonly<{
+  error: null;
+  items: readonly T[];
+  loading: false;
+  pagination: PagePagination;
+  params: TParams;
 }>;
 
-export type LocalQuery = Readonly<{
-  page: number;
-  pageSize: number;
-  search: string;
-}>;
-
-export type LocalQueryPatch = Readonly<{
-  page?: number;
-  pageSize?: number;
-  search?: string;
-}>;
-
-export type LocalSource<T> = Source<T, LocalQuery, PagePagination> & {
-  readonly page: Readonly<{
-    go(index: number): void;
-    last(): void;
-    next(): void;
-    previous(): void;
-  }>;
-  setData(data: readonly T[]): void;
-  setQuery(changes: LocalQueryPatch): void;
+export type LocalSource<T, TParams = undefined> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  first(): void;
+  goTo(page: number): void;
+  last(): void;
+  next(): void;
+  previous(): void;
+  setItems(items: readonly T[]): void;
+  setPageSize(pageSize: number): void;
+  setParams(params: TParams): void;
+  readonly state: LocalSourceState<T, TParams>;
+  subscribe(listener: (state: LocalSourceState<T, TParams>) => void): () => void;
 };
 
-export type LocalSourceConfig<T> = Readonly<{
-  initialQuery?: LocalQueryPatch;
-  match?: (item: T, search: string) => boolean;
+export type LocalSourceConfig<T, TParams = undefined> = Readonly<
+  {
+    filter?: (item: T, params: TParams) => boolean;
+    pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;
+
+export type CursorSourceState<T, TParams = undefined, TCursor = string> = Readonly<{
+  error: Error | null;
+  items: readonly T[];
+  loading: boolean;
+  pagination: CursorPagination<TCursor>;
+  params: TParams;
+  pendingParams?: TParams;
 }>;
 
-export type CursorQuery<TCursor = string> = Readonly<{
+export type CursorLoadContext<TParams = undefined, TCursor = string> = Readonly<{
   after?: TCursor;
   before?: TCursor;
   pageSize: number;
-  search: string;
-}>;
-
-export type CursorQueryPatch<TCursor = string> = Readonly<{
-  after?: TCursor | undefined;
-  before?: TCursor | undefined;
-  pageSize?: number;
-  search?: string;
+  params: TParams;
+  signal: AbortSignal;
 }>;
 
 export type CursorResult<T, TCursor = string> = Readonly<{
-  data: readonly T[];
+  items: readonly T[];
   nextCursor?: TCursor;
   previousCursor?: TCursor;
-  total?: number;
+  totalItems?: number;
 }>;
 
-export type CursorSource<T, TCursor = string> = Source<T, CursorQuery<TCursor>, CursorPagination<TCursor>> & {
-  readonly page: Readonly<{
-    next(): Promise<void>;
-    previous(): Promise<void>;
-  }>;
+export type CursorSource<T, TParams = undefined, TCursor = string> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  next(): Promise<void>;
+  previous(): Promise<void>;
   reload(): Promise<void>;
-  setQuery(changes: CursorQueryPatch<TCursor>): Promise<void>;
+  setPageSize(pageSize: number): Promise<void>;
+  setParams(params: TParams): Promise<void>;
+  readonly state: CursorSourceState<T, TParams, TCursor>;
+  subscribe(listener: (state: CursorSourceState<T, TParams, TCursor>) => void): () => void;
 };
 
-export type CursorSourceConfig<T, TCursor = string> = Readonly<{
-  autoStart?: boolean;
-  initialQuery?: CursorQueryPatch<TCursor>;
-  load(context: LoadContext<CursorQuery<TCursor>>): Promise<CursorResult<T, TCursor>>;
+export type CursorSourceConfig<T, TParams = undefined, TCursor = string> = Readonly<
+  {
+    after?: TCursor;
+    before?: TCursor;
+    load(context: CursorLoadContext<TParams, TCursor>): Promise<CursorResult<T, TCursor>>;
+    pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;
+
+export type InfiniteSourceState<T, TParams = undefined> = Readonly<{
+  error: Error | null;
+  items: readonly T[];
+  loading: boolean;
+  pagination: InfinitePagination;
+  params: TParams;
+  pendingParams?: TParams;
 }>;
 
-export type InfiniteQuery = Readonly<{
-  pageSize: number;
-  search: string;
-}>;
-
-export type InfiniteQueryPatch = Readonly<{
-  pageSize?: number;
-  search?: string;
-}>;
-
-export type InfiniteLoadQuery = Readonly<{
+export type InfiniteLoadContext<TParams = undefined> = Readonly<{
   page: number;
   pageSize: number;
-  search: string;
+  params: TParams;
+  signal: AbortSignal;
 }>;
 
-export type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
+export type InfiniteSource<T, TParams = undefined> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
   loadMore(): Promise<void>;
   reload(): Promise<void>;
-  setQuery(changes: InfiniteQueryPatch): Promise<void>;
+  setPageSize(pageSize: number): Promise<void>;
+  setParams(params: TParams): Promise<void>;
+  readonly state: InfiniteSourceState<T, TParams>;
+  subscribe(listener: (state: InfiniteSourceState<T, TParams>) => void): () => void;
 };
 
-export type InfiniteSourceConfig<T> = Readonly<{
-  autoStart?: boolean;
-  initialQuery?: InfiniteQueryPatch;
-  load(context: LoadContext<InfiniteLoadQuery>): Promise<PageResult<T>>;
-}>;
+export type InfiniteSourceConfig<T, TParams = undefined> = Readonly<
+  {
+    load(context: InfiniteLoadContext<TParams>): Promise<PageResult<T>>;
+    pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;

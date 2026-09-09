@@ -33,4 +33,4 @@ drawMany(servers, 10); // ['us-east', 'eu-west', 'ap-south'] (clamped to length)
 ### Related
 
 - [shuffle](./shuffle.md)
-- [sample](../array/sampleSize.md)
+- [sample](./draw.md)

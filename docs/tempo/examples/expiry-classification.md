@@ -37,5 +37,5 @@ const label = status ?? 'safe';
 
 ### Related
 
-- [Date Ranges and Recurrence](./date-ranges-and-recurrence.md)
+- [DST-Safe Arithmetic](./dst-safe-arithmetic.md)
 - [Usage Guide](../usage.md)

@@ -36,7 +36,7 @@ describe('createPanGesture', () => {
     return { dispatch, gesture, target };
   };
 
-  it('activates only after movement passes the internal slop on the configured axis', () => {
+  it('activates only after movement reaches the activation distance on the configured axis', () => {
     const onMove = vi.fn();
     const onStart = vi.fn();
     const { dispatch, gesture } = createGesture({ axis: 'x', onMove, onStart });
@@ -68,6 +68,37 @@ describe('createPanGesture', () => {
     expect(onMove).not.toHaveBeenCalled();
   });
 
+  it('honors a custom activation distance', () => {
+    const onStart = vi.fn();
+    const { dispatch, gesture } = createGesture({ activationDistance: 20, axis: 'x', onStart });
+
+    dispatch('pointerdown', { clientX: 0, clientY: 0 });
+    dispatch('pointermove', { clientX: 15, clientY: 0 });
+
+    expect(gesture.active).toBe(false);
+    expect(onStart).not.toHaveBeenCalled();
+
+    dispatch('pointermove', { clientX: 25, clientY: 0 });
+
+    expect(gesture.active).toBe(true);
+    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ distance: 25 }));
+  });
+
+  it('supports zero activation distance and rejects negative or non-finite values', () => {
+    const onStart = vi.fn();
+    const { dispatch } = createGesture({ activationDistance: 0, onStart });
+
+    dispatch('pointerdown', { clientX: 0 });
+    dispatch('pointermove', { clientX: 0 });
+    expect(onStart).not.toHaveBeenCalled();
+
+    dispatch('pointermove', { clientX: 0.1 });
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(() => createGesture({ activationDistance: -5 })).toThrow(RangeError);
+    expect(() => createGesture({ activationDistance: Number.POSITIVE_INFINITY })).toThrow(RangeError);
+    expect(() => createGesture({ activationDistance: Number.NaN })).toThrow(RangeError);
+  });
+
   it('ends an active pan once on pointer release', () => {
     const onEnd = vi.fn();
     const { dispatch, gesture, target } = createGesture({ axis: 'y', onEnd });
@@ -92,6 +123,18 @@ describe('createPanGesture', () => {
     expect(onEnd).toHaveBeenCalledOnce();
     expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ distance: 20, reason: 'cancel' }));
     expect(gesture.active).toBe(false);
+  });
+
+  it('cancels an active pan when its window loses focus', () => {
+    const onEnd = vi.fn();
+    const { dispatch, gesture } = createGesture({ onEnd });
+
+    dispatch('pointerdown', { clientX: 0 });
+    dispatch('pointermove', { clientX: 10 });
+    window.dispatchEvent(new Event('blur'));
+
+    expect(gesture.active).toBe(false);
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ reason: 'cancel' }));
   });
 
   it('tracks an active pointer outside the target', () => {
@@ -128,6 +171,73 @@ describe('createPanGesture', () => {
 
     expect(setPointerCapture).toHaveBeenCalledWith(1);
     expect(releasePointerCapture).toHaveBeenCalledWith(1);
+  });
+
+  it('continues without capture when pointer capture acquisition fails', () => {
+    const onEnd = vi.fn();
+    const onMove = vi.fn();
+    const onStart = vi.fn();
+    const { dispatch, gesture, target } = createGesture({ onEnd, onMove, onStart });
+
+    Object.defineProperty(target, 'setPointerCapture', {
+      value: () => {
+        throw new DOMException('Pointer is no longer active', 'NotFoundError');
+      },
+    });
+
+    dispatch('pointerdown', { clientX: 0 });
+    dispatch('pointermove', { clientX: 10 }, document);
+    dispatch('pointerup', { clientX: 20 }, document);
+
+    expect(onStart).toHaveBeenCalledOnce();
+    expect(onMove).toHaveBeenCalledOnce();
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ distance: 20, reason: 'release' }));
+    expect(gesture.active).toBe(false);
+  });
+
+  it('finishes cleanup when pointer capture release fails', () => {
+    const onEnd = vi.fn();
+    const { dispatch, gesture, target } = createGesture({ onEnd });
+
+    Object.defineProperties(target, {
+      hasPointerCapture: { value: () => true },
+      releasePointerCapture: {
+        value: () => {
+          throw new DOMException('Pointer ownership already ended', 'NotFoundError');
+        },
+      },
+      setPointerCapture: { value: () => undefined },
+    });
+
+    dispatch('pointerdown', { clientX: 0 });
+    dispatch('pointermove', { clientX: 10 });
+
+    expect(gesture.cancel()).toBe(true);
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ reason: 'cancel' }));
+    expect(gesture.active).toBe(false);
+  });
+
+  it('tracks pointer-shaped events without relying on the global realm constructor', () => {
+    const onStart = vi.fn();
+    const { gesture, target } = createGesture({ onStart, pointerCapture: false });
+    const dispatchPointerLike = (dispatchTarget: EventTarget, type: string, clientX: number) => {
+      const event = new Event(type, { bubbles: true });
+      Object.defineProperties(event, {
+        button: { value: 0 },
+        clientX: { value: clientX },
+        clientY: { value: 0 },
+        isPrimary: { value: true },
+        pointerId: { value: 1 },
+        pointerType: { value: 'touch' },
+      });
+      dispatchTarget.dispatchEvent(event);
+    };
+
+    dispatchPointerLike(target, 'pointerdown', 0);
+    dispatchPointerLike(document, 'pointermove', 10);
+
+    expect(gesture.active).toBe(true);
+    expect(onStart).toHaveBeenCalledOnce();
   });
 
   it('tracks across the document without capturing when pointer capture is disabled', () => {
@@ -185,10 +295,16 @@ describe('createPanGesture', () => {
     expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ distance: 20, reason: 'cancel' }));
   });
 
-  it('rejects non-primary pointers and non-primary mouse buttons', () => {
+  it('rejects an invalid fixed axis at creation', () => {
+    expect(() => createGesture({ axis: 'diagonal' as never })).toThrow(RangeError);
+  });
+
+  it('rejects non-primary pointers and secondary buttons for every pointer type', () => {
     const { dispatch, gesture } = createGesture();
 
     dispatch('pointerdown', { button: 1, pointerType: 'mouse' });
+    dispatch('pointerdown', { button: 2, pointerType: 'pen' });
+    dispatch('pointermove', { button: 2, clientX: 20, pointerType: 'pen' });
     expect(gesture.active).toBe(false);
 
     dispatch('pointerdown', { button: 0, isPrimary: false, pointerType: 'pen' });
@@ -223,6 +339,27 @@ describe('createPanGesture', () => {
 
     expect(onEnd.mock.calls[0]?.[0]).toEqual(expect.objectContaining({ axis: 'x', distance: 20 }));
     expect(onEnd.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ axis: 'y', distance: 30 }));
+  });
+
+  it('snapshots fixed options while dynamic getters remain live', () => {
+    let axis: 'x' | 'y' = 'x';
+    const initialMove = vi.fn();
+    const replacementMove = vi.fn();
+    const options: PanGestureOptions = { axis: () => axis, onMove: initialMove, pointerCapture: false };
+    const { dispatch, target } = createGesture(options);
+    const setPointerCapture = vi.fn();
+    Object.defineProperty(target, 'setPointerCapture', { value: setPointerCapture });
+    const mutable = options as { onMove?: PanGestureOptions['onMove']; pointerCapture?: boolean };
+
+    mutable.onMove = replacementMove;
+    mutable.pointerCapture = true;
+    axis = 'y';
+    dispatch('pointerdown', { clientX: 0, clientY: 0 });
+    dispatch('pointermove', { clientX: 0, clientY: 10 });
+
+    expect(initialMove).toHaveBeenCalledOnce();
+    expect(replacementMove).not.toHaveBeenCalled();
+    expect(setPointerCapture).not.toHaveBeenCalled();
   });
 
   it('cancel() emits one terminal cancellation and stops movement', () => {
@@ -269,6 +406,16 @@ describe('createPanGesture', () => {
     const { gesture } = createGesture();
 
     gesture[Symbol.dispose]();
+
+    expect(gesture.disposed).toBe(true);
+    expect(gesture.disposalSignal.aborted).toBe(true);
+  });
+
+  it('disposes with an external owner signal', () => {
+    const controller = new AbortController();
+    const { gesture } = createGesture({ signal: controller.signal });
+
+    controller.abort();
 
     expect(gesture.disposed).toBe(true);
     expect(gesture.disposalSignal.aborted).toBe(true);

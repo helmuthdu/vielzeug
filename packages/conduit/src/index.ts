@@ -1,4 +1,4 @@
-export { createContainer } from './container';
+export { createContainer } from './container.js';
 export {
   ConduitCircularDependencyError,
   ConduitDisposedError,
@@ -7,6 +7,19 @@ export {
   ConduitError,
   ConduitProviderNotFoundError,
   ConduitScopedResolutionError,
-} from './errors';
-export type { Container, FactoryOptions, InferTokens, Lifetime, ScopeToken, Token, ValueOptions } from './types';
-export { scope, token } from './types';
+} from './errors.js';
+export type {
+  Container,
+  FactoryOptions,
+  FactoryProvider,
+  InferServices,
+  InferTokens,
+  Lifetime,
+  Provider,
+  ScopeToken,
+  ServiceMap,
+  Token,
+  ValueOptions,
+  ValueProvider,
+} from './types.js';
+export { disposalSignalToken, factoryProvider, scope, token, valueProvider } from './types.js';

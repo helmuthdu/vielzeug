@@ -13,16 +13,16 @@ describe('createListNavigation', () => {
   it('navigates first and last while skipping disabled items', () => {
     const nav = createNavigation([{ disabled: true }, {}, {}]);
 
-    expect(nav.navigate('first')).toBe(1);
-    expect(nav.navigate('last')).toBe(2);
+    expect(nav.navigate('first')?.index).toBe(1);
+    expect(nav.navigate('last')?.index).toBe(2);
   });
 
   it('moves next and previous from the current index', () => {
     const nav = createNavigation([{}, { disabled: true }, {}]);
 
     nav.set(0);
-    expect(nav.navigate('next')).toBe(2);
-    expect(nav.navigate('prev')).toBe(0);
+    expect(nav.navigate('next')?.index).toBe(2);
+    expect(nav.navigate('prev')?.index).toBe(0);
   });
 
   it('wraps only when loop is enabled', () => {
@@ -30,28 +30,22 @@ describe('createListNavigation', () => {
     const bounded = createNavigation([{}, {}]);
 
     looping.set(1);
-    expect(looping.navigate('next')).toBe(0);
+    expect(looping.navigate('next')?.index).toBe(0);
 
     bounded.set(1);
-    expect(bounded.navigate('next')).toBe(1);
+    expect(bounded.navigate('next')).toBeNull();
   });
 
-  it('passes the selected item and the operation snapshot to onNavigate', () => {
+  it('returns the selected item and the operation snapshot from navigate', () => {
     const first = { label: 'first' };
     const second = { label: 'second' };
-    let items = [first, second];
-    const getItems = vi.fn(() => items);
-    const onNavigate = vi.fn(() => {
-      items = [second, first];
-    });
-    const nav = createListNavigation({ getItems, onNavigate });
+    const nav = createNavigation([first, second]);
 
     nav.set(0);
-    getItems.mockClear();
 
-    expect(nav.navigate('next')).toBe(1);
-    expect(getItems).toHaveBeenCalledOnce();
-    expect(onNavigate).toHaveBeenCalledWith({
+    const change = nav.navigate('next');
+
+    expect(change).toEqual({
       action: 'next',
       event: undefined,
       index: 1,
@@ -62,21 +56,21 @@ describe('createListNavigation', () => {
   it('does not infer disabled state from an item property', () => {
     const nav = createListNavigation({ getItems: () => [{ disabled: true }, { disabled: false }] });
 
-    expect(nav.navigate('first')).toBe(0);
+    expect(nav.navigate('first')?.index).toBe(0);
   });
 
-  it('supports rtl key mirroring and dynamic direction', () => {
-    let direction: 'ltr' | 'rtl' = 'ltr';
+  it('supports rtl key mirroring with dynamic direction', () => {
+    let dir: 'ltr' | 'rtl' = 'ltr';
     const nav = createNavigation([{}, {}], {
-      direction: () => direction,
-      orientation: 'horizontal',
+      direction: () => dir,
+      orientation: () => 'horizontal',
     });
 
     nav.set(0);
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     expect(nav.getIndex()).toBe(1);
 
-    direction = 'rtl';
+    dir = 'rtl';
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     expect(nav.getIndex()).toBe(0);
   });
@@ -87,7 +81,7 @@ describe('createListNavigation', () => {
     });
 
     nav.set(0);
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'j' }))).toBe(true);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'j' }))).not.toBeNull();
     expect(nav.getIndex()).toBe(1);
   });
 
@@ -95,14 +89,14 @@ describe('createListNavigation', () => {
     const nav = createNavigation([{}]);
     const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowDown' });
 
-    expect(nav.handleKeydown(event)).toBe(true);
+    nav.handleKeydown(event);
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it('returns false for keydown when disabled', () => {
-    const nav = createNavigation([{}, {}], { disabled: true });
+  it('returns null for keydown when disabled', () => {
+    const nav = createNavigation([{}, {}], { disabled: () => true });
 
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }))).toBe(false);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }))).toBeNull();
     expect(nav.getIndex()).toBe(-1);
   });
 
@@ -131,9 +125,9 @@ describe('createListNavigation', () => {
       typeahead: { getLabel: (item) => item.label ?? '' },
     });
 
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }))).toBe(true);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }))).not.toBeNull();
     expect(nav.getIndex()).toBe(0);
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'p' }))).toBe(true);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'p' }))).not.toBeNull();
     expect(nav.getIndex()).toBe(0);
   });
 
@@ -176,7 +170,7 @@ describe('createListNavigation', () => {
     });
 
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'z' }));
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'b' }))).toBe(true);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'b' }))).not.toBeNull();
     expect(nav.getIndex()).toBe(1);
   });
 
@@ -186,7 +180,7 @@ describe('createListNavigation', () => {
       typeahead: { getLabel: (item) => item.label ?? '' },
     });
 
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'b' }))).toBe(true);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'b' }))).not.toBeNull();
     expect(nav.getIndex()).toBe(1);
   });
 
@@ -195,8 +189,57 @@ describe('createListNavigation', () => {
       typeahead: { getLabel: (item) => item.label ?? '' },
     });
 
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { ctrlKey: true, key: 'a' }))).toBe(false);
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'Enter' }))).toBe(false);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { ctrlKey: true, key: 'a' }))).toBeNull();
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'Enter' }))).toBeNull();
+  });
+
+  it('distinguishes handled boundary keys from index changes', () => {
+    const nav = createNavigation([{}]);
+    nav.set(0);
+    const event = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowDown' });
+
+    const result = nav.handleKeydown(event);
+
+    expect(result).toEqual({ change: null, handled: true });
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('optionally prevents default for successful typeahead', () => {
+    const nav = createNavigation([{ label: 'Alpha' }], {
+      typeahead: { getLabel: (item) => item.label ?? '', preventDefault: true },
+    });
+    const event = new KeyboardEvent('keydown', { cancelable: true, key: 'a' });
+
+    expect(nav.handleKeydown(event)?.change?.index).toBe(0);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('ignores already handled and composing events', () => {
+    const nav = createNavigation([{ label: 'Alpha' }], { typeahead: { getLabel: (item) => item.label ?? '' } });
+    const handled = new KeyboardEvent('keydown', { cancelable: true, key: 'ArrowDown' });
+    handled.preventDefault();
+    const composing = new KeyboardEvent('keydown', { key: 'a' });
+    Object.defineProperty(composing, 'isComposing', { value: true });
+
+    expect(nav.handleKeydown(handled)).toBeNull();
+    expect(nav.handleKeydown(composing)).toBeNull();
+    expect(nav.getIndex()).toBe(-1);
+  });
+
+  it('rejects conflicting keys and invalid typeahead delays', () => {
+    expect(() => createNavigation([{}], { keys: { next: ['j'], prev: ['j'] } })).toThrow(/assigned/);
+    expect(() =>
+      createNavigation([{ label: 'Alpha' }], { typeahead: { delayMs: 0, getLabel: (item) => item.label ?? '' } }),
+    ).toThrow(/delay/);
+  });
+
+  it('rejects fractional indexes without corrupting active state', () => {
+    const nav = createNavigation([{}, {}]);
+    nav.set(0);
+
+    expect(nav.set(0.5)).toBe(-1);
+    expect(nav.getIndex()).toBe(-1);
+    expect(nav.getActiveItem()).toBeUndefined();
   });
 
   it('resets typeahead after directional navigation', () => {
@@ -210,41 +253,5 @@ describe('createListNavigation', () => {
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
 
     expect(nav.getIndex()).toBe(0);
-  });
-
-  it('becomes terminal when disposed', () => {
-    const onNavigate = vi.fn();
-    const nav = createNavigation([{}, {}], { onNavigate });
-
-    nav.set(0);
-    nav.dispose();
-
-    expect(nav.disposed).toBe(true);
-    expect(nav.disposalSignal.aborted).toBe(true);
-    expect(nav.getIndex()).toBe(-1);
-    expect(nav.getActiveItem()).toBeUndefined();
-    expect(nav.set(1)).toBe(-1);
-    expect(nav.navigate('next')).toBe(-1);
-    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }))).toBe(false);
-    expect(onNavigate).not.toHaveBeenCalled();
-  });
-
-  it('starts disposed when given an already-aborted signal', () => {
-    const controller = new AbortController();
-    controller.abort();
-
-    const nav = createNavigation([{}], { signal: controller.signal });
-
-    expect(nav.disposed).toBe(true);
-    expect(nav.disposalSignal.aborted).toBe(true);
-  });
-
-  it('disposes when its external signal aborts', () => {
-    const controller = new AbortController();
-    const nav = createNavigation([{}], { signal: controller.signal });
-
-    controller.abort();
-
-    expect(nav.disposed).toBe(true);
   });
 });

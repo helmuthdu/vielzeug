@@ -14,7 +14,7 @@ A domain model may have multiple valid shapes. You need to express those branche
 Use unions for alternative shapes, intersections for merged constraints, and variants for discriminated object unions.
 
 ```ts
-import { SpellValidationError, s } from '@vielzeug/spell';
+import { s } from '@vielzeug/spell';
 
 const Timestamped = s.object({
   createdAt: s.date(),
@@ -39,8 +39,8 @@ const Article = s.discriminatedUnion('kind', {
 const AuditedArticle = s.intersect(Article, Timestamped);
 const result = AuditedArticle.safeParse({ kind: 'published', title: 'Docs', createdAt: new Date() });
 
-if (!result.success && result.error instanceof SpellValidationError) {
-  console.log(result.error.bestMatch());
+if (!result.success) {
+  console.log(result.error.issues);
 }
 ```
 
@@ -48,7 +48,7 @@ if (!result.success && result.error instanceof SpellValidationError) {
 
 - Prefer `s.discriminatedUnion()` over `s.union()` when one field can discriminate the branches. Errors are smaller and branch selection is deterministic.
 - Intersections merge outputs deeply. Keep overlapping property names compatible across both sides.
-- `bestMatch()` is useful for union failures because it surfaces the branch that got closest to passing.
+- Plain unions report a stable union-level issue. Use a discriminated union when errors must identify one object branch.
 
 ### Related
 

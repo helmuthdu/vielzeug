@@ -1,5 +1,5 @@
 export const sortableListExample = {
-  code: `import { createSortable } from '@vielzeug/dnd'
+  code: `import { createSortable } from '@vielzeug/dnd/sortable'
 
 const listEl = document.createElement('ul')
 listEl.id = 'sortable-list'
@@ -16,10 +16,10 @@ const items = [
 const sortable = createSortable({
   element: listEl,
   getKey: (el) => el.dataset.id ?? '',
-  onReorder: ({ ids }) => {
-    console.log('Reordered:', ids.join(' → '))
-    render(ids)
-    sortable.sync()
+  onReorder: ({ after }) => {
+    console.log('Reordered:', after.join(' → '))
+    render(after)
+    sortable.refresh()
   },
 })
 
@@ -36,7 +36,7 @@ function render(order) {
 }
 
 render(items.map(i => i.id))
-sortable.sync()
+sortable.refresh()
 
 console.log('✓ Sortable list created at #sortable-list')`,
   name: 'createSortable - Drag to Reorder',

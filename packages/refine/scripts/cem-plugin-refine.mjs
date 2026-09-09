@@ -295,7 +295,7 @@ function buildDeclaration(tagName, className, lines) {
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
 export function refineCemPlugin() {
-  // Per-module store: tagName → raw JSDoc string, collected in analyzePhase
+  // Per-module store: tagName → source module and raw JSDoc, collected in analyzePhase
   const jsDocByTag = new Map();
 
   return {
@@ -321,11 +321,11 @@ export function refineCemPlugin() {
 
           if (!isStub) continue;
 
-          const jsDocRaw = jsDocByTag.get(decl.tagName);
+          const jsDoc = jsDocByTag.get(decl.tagName);
 
-          if (!jsDocRaw) continue;
+          if (!jsDoc) continue;
 
-          const lines = parseJsDocLines(jsDocRaw);
+          const lines = parseJsDocLines(jsDoc.raw);
 
           if (lines.length === 0) continue;
 
@@ -350,9 +350,37 @@ export function refineCemPlugin() {
           if (patched.demos?.length) decl.demos = patched.demos;
         }
       }
+
+      const modules = customElementsManifest.modules ?? [];
+      const documentedTags = new Set(
+        modules.flatMap((module) =>
+          (module.declarations ?? []).flatMap((declaration) => (declaration.tagName ? [declaration.tagName] : [])),
+        ),
+      );
+
+      for (const [tagName, jsDoc] of jsDocByTag) {
+        if (documentedTags.has(tagName)) continue;
+        const moduleDoc = modules.find((module) => module.path === jsDoc.modulePath);
+        if (!moduleDoc) continue;
+        const className = `${tagName
+          .split('-')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join('')}Element`;
+        const declaration = buildDeclaration(tagName, className, parseJsDocLines(jsDoc.raw));
+        moduleDoc.declarations ??= [];
+        moduleDoc.declarations.push(declaration);
+        moduleDoc.exports ??= [];
+        if (!moduleDoc.exports.some((entry) => entry.name === className)) {
+          moduleDoc.exports.push({
+            declaration: { module: moduleDoc.path, name: className },
+            kind: 'custom-element-definition',
+            name: className,
+          });
+        }
+      }
     },
 
-    analyzePhase({ ts, node, moduleDoc, context }) {
+    analyzePhase({ ts, node, moduleDoc }) {
       // ── Pass 1: collect JSDoc for customElements.define('ore-...') stubs ──────
       // These are handled by the built-in analyzer but produce bare declarations.
       // We store the JSDoc here so moduleLinkPhase can enrich them.
@@ -438,7 +466,7 @@ export function refineCemPlugin() {
                 }
               }
 
-              if (jsDocRaw) jsDocByTag.set(tagName, jsDocRaw);
+              if (jsDocRaw) jsDocByTag.set(tagName, { modulePath: moduleDoc.path, raw: jsDocRaw });
             }
           }
         }
@@ -483,7 +511,7 @@ export function refineCemPlugin() {
 
           if (!tagName || !tagName.startsWith('ore-')) return;
 
-          // Derive class name from tag: ore-foo-bar → SgFooBarElement
+          // Derive class name from tag: ore-foo-bar → OreFooBarElement
           const className =
             tagName
               .split('-')
@@ -554,12 +582,7 @@ export function refineCemPlugin() {
             }
           }
 
-          if (!jsDocRaw) return;
-
-          const lines = parseJsDocLines(jsDocRaw);
-
-          if (lines.length === 0) return;
-
+          const lines = jsDocRaw ? parseJsDocLines(jsDocRaw) : [];
           const declaration = buildDeclaration(tagName, className, lines);
 
           // Avoid duplicates (table.ts registers some elements via customElements.define too)

@@ -11,8 +11,10 @@ class TestResizeObserver implements ResizeObserver {
   readonly disconnect = vi.fn();
   readonly observe = vi.fn();
   readonly unobserve = vi.fn();
+  private readonly callback: ResizeObserverCallback;
 
-  constructor(private readonly callback: ResizeObserverCallback) {
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
     TestResizeObserver.current = this;
   }
 
@@ -35,10 +37,12 @@ class TestIntersectionObserver implements IntersectionObserver {
   readonly takeRecords = vi.fn(() => []);
   readonly unobserve = vi.fn();
 
-  constructor(
-    private readonly callback: IntersectionObserverCallback,
-    readonly options?: IntersectionObserverInit,
-  ) {
+  private readonly callback: IntersectionObserverCallback;
+  readonly options?: IntersectionObserverInit;
+
+  constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+    this.callback = callback;
+    this.options = options;
     TestIntersectionObserver.current = this;
   }
 
@@ -65,10 +69,10 @@ describe('element Sentinels', () => {
     const element = document.createElement('div');
     const sentinel = createElementSize(element);
 
-    expect(sentinel.value).toBeNull();
+    expect(sentinel.getSnapshot()).toBeNull();
 
     TestResizeObserver.current?.emit(320, 180);
-    expect(sentinel.value).toEqual({ height: 180, width: 320 });
+    expect(sentinel.getSnapshot()).toEqual({ height: 180, width: 320 });
 
     sentinel.dispose();
     expect(TestResizeObserver.current?.disconnect).toHaveBeenCalledOnce();
@@ -84,7 +88,7 @@ describe('element Sentinels', () => {
       threshold: 0.5,
     });
 
-    expect(sentinel.value).toBeNull();
+    expect(sentinel.getSnapshot()).toBeNull();
     expect(TestIntersectionObserver.current?.options).toMatchObject({
       root: document,
       rootMargin: '20px',
@@ -93,7 +97,7 @@ describe('element Sentinels', () => {
     });
 
     TestIntersectionObserver.current?.emit(true, 0.75);
-    expect(sentinel.value).toEqual({ intersectionRatio: 0.75, isIntersecting: true });
+    expect(sentinel.getSnapshot()).toEqual({ intersectionRatio: 0.75, isIntersecting: true });
 
     sentinel.dispose();
     expect(TestIntersectionObserver.current?.disconnect).toHaveBeenCalledOnce();

@@ -22,16 +22,6 @@ export class BooleanSchema<Input = boolean, Mode extends SchemaMode = 'sync'> ex
     );
   }
 
-  /**
-   * Returns a new schema that coerces the input to a boolean before validation.
-   * Accepts `'true'`, `'1'`, `1` as `true`; `'false'`, `'0'`, `0` as `false`.
-   *
-   * Equivalent to `s.coerce.boolean()`.
-   */
-  coerce(): BooleanSchema<unknown> {
-    return BooleanSchema.coerce();
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'boolean' };
   }

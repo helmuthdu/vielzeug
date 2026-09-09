@@ -52,7 +52,7 @@ export type OreCardProps = {
   /** Internal padding size */
   padding?: PaddingSize;
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'glass' | 'frost';
+  variant?: 'solid' | 'flat' | 'frost';
 };
 
 /**
@@ -60,7 +60,7 @@ export type OreCardProps = {
  *
  * @element ore-card
  *
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'glass' | 'frost'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'frost'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} padding - Internal padding: 'none' | 'sm' | 'md' | 'lg' | 'xl'
  * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
@@ -111,7 +111,7 @@ define<OreCardProps>(CARD_TAG, {
     interactive: prop.bool(false),
     orientation: prop.string<'horizontal'>(),
     padding: prop.string<PaddingSize>(),
-    variant: prop.string<'solid' | 'flat' | 'glass' | 'frost'>(),
+    variant: prop.string<'solid' | 'flat' | 'frost'>(),
   },
 
   setup(props) {
@@ -122,8 +122,8 @@ define<OreCardProps>(CARD_TAG, {
 
     bind({
       attr: {
-        ariaBusy: () => (props.loading.value ? 'true' : 'false'),
-        ariaDisabled: () => (props.interactive.value ? String(props.disabled.value) : null),
+        'aria-busy': () => (props.loading.value ? 'true' : 'false'),
+        'aria-disabled': () => (props.interactive.value ? String(props.disabled.value) : null),
         role: () => (props.interactive.value ? 'button' : null),
       },
     });

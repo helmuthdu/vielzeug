@@ -1,11 +1,11 @@
 ---
-title: Ward — Deterministic authorization for TypeScript
-description: Typed authorization policies with wildcard matching, deterministic precedence, and decision tracing.
+title: Ward — Ordered authorization rules
+description: Zero-dependency authorization decisions with ordered rules, role helpers, ownership predicates, and default deny.
 package: ward
-category: auth
-keywords: [authorization, rbac, permissions, policy, roles, wildcard, predicates]
-related: [wayfinder, conduit, herald]
-exports: [createWard, allow, deny, predicate, ANONYMOUS, WILDCARD, WardError, WardConfigError, WardPredicateError, NormalizedWardRule, matchesPattern, patternCovers]
+category: security
+keywords: [authorization, rbac, permissions, policy, roles, predicates]
+exports: [createWard, allow, deny, predicate, ANONYMOUS, WILDCARD, matchesPattern, patternCovers]
+related: [herald, postmaster, refine]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -15,112 +15,66 @@ environments: [browser, node, ssr, deno]
 
 ## Why Ward?
 
-Ward keeps authorization policies declarative and decision ordering deterministic. Define rules once, then explain or trace every permission decision without embedding role checks across handlers.
-
-```ts
-// Before
-const canUpdate = user.roles.includes('editor') && post.authorId === user.id;
-
-// After
-import { allow, createWard, predicate } from '@vielzeug/ward';
-
-const ward = createWard([
-  allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
-]);
-
-const decision = ward.explain({ principal: user, resource: 'posts', action: 'update', data: post });
-const canUpdate = decision.allowed;
-```
-
-| Feature                  | Ward                                         | CASL                                     | AccessControl                            |
-| ------------------------ | -------------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| Bundle size              | <PackageInfo package="ward" type="size" />   | Larger policy engine                     | Larger policy engine                     |
-| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Deterministic precedence | Priority, specificity, deny, order           | Rule-dependent                           | Role-grant dependent                     |
-| Decision tracing         | `trace()` candidates and winner              | Manual inspection                        | Manual inspection                        |
-
-<div class="decision-callout">
-
-**Use Ward when** your application needs typed role/resource/action policies with explainable, deterministic outcomes.
-
-**Consider framework-specific authorization when** your application only needs one framework's built-in route or component guard layer.
-
-</div>
-
-## Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/ward
-```
-
-```sh [npm]
-npm install @vielzeug/ward
-```
-
-```sh [yarn]
-yarn add @vielzeug/ward
-```
-
-:::
+Ward evaluates immutable ordered rules. The first matching rule wins; no match means deny. Typed action, resource, and attribute contracts keep role and ownership policies explicit.
 
 ## Quick Start
 
-Create a small policy and handle both allowed and denied decisions at the request boundary.
-
 ```ts
-import { allow, createWard } from '@vielzeug/ward';
+import { allow, createWard, deny, predicate, WILDCARD } from '@vielzeug/ward';
 
 const ward = createWard([
+  deny('blocked', WILDCARD, [WILDCARD]),
+  allow('editor', 'posts', ['read', 'update'], { when: predicate.owns('authorId') }),
   allow('viewer', 'posts', ['read']),
-  allow('editor', 'posts', ['update']),
 ]);
 
-const decision = ward.explain({
+const decision = ward.decide({
+  action: 'update',
+  attributes: { authorId: 'u1' },
   principal: { id: 'u1', roles: ['editor'] },
   resource: 'posts',
-  action: 'update',
 });
-
-if (decision.allowed) console.log('Update post');
-else console.log(decision.reason);
 ```
+
+| Feature | Ward | Inline conditionals |
+| --- | --- | --- |
+| Ordered first-match policy | <ore-icon name="check" size="16"></ore-icon> | Manual |
+| Default deny | <ore-icon name="check" size="16"></ore-icon> | Manual |
+| Typed actions | <ore-icon name="check" size="16"></ore-icon> | Partial |
+| Ownership predicates | <ore-icon name="check" size="16"></ore-icon> | Manual |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 ## Features
 
 <div class="features-grid">
 
-- `createWard()` creates immutable typed policy instances. Accepts `allow()`/`deny()` results directly — no spread needed.
-- `allow()` and `deny()` build role/resource/action rules.
-- `WILDCARD` and `ANONYMOUS` model broad or unauthenticated access explicitly.
-- `predicate.owns()` constrains rules with synchronous request data.
-- `explain()`, `trace()`, and `detectConflicts()` make policy decisions diagnosable.
-- `tap()` subscribes to decision events for logging and diagnostics.
-- `forUser()` creates a principal-bound view for repeated checks.
-- `checkAll()` evaluates multiple resource/action pairs in one call.
+- Ordered `allow` and `deny` decisions
+- Concise role/action rule factories
+- `predicate.owns()`, `and()`, `or()`, and `not()`
+- Exact, namespace, and wildcard action/resource patterns
+- Immutable rules, principals, and JSON-compatible attributes
+- Typed batch, bound-principal, and allowed-action checks
+- `tap()` decision observability
+- Default deny when no rule matches
 
 </div>
 
-## Documentation
+## Installation
 
-<div class="doc-links">
+```sh
+pnpm add @vielzeug/ward
+```
+
+## Documentation
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
 - [Migration Guide](./migration.md)
 
-</div>
-
 ## See Also
 
-<div class="see-also">
-
-- [Wayfinder](/wayfinder/) — route middleware can enforce Ward decisions during navigation.
-- [Conduit](/conduit/) — inject a Ward policy into application services.
-- [Herald](/herald/) — publish authorization outcomes as typed application events.
-
-</div>
+- [Postmaster](/postmaster/) — authorize durable job actions at application boundaries.
+- [Refine](/refine/) — consume decisions in accessible UI components.
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

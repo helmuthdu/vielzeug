@@ -18,12 +18,12 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `ScoutIndex.items`        | All indexed items in insertion order                  | Sync           | Returns a new array snapshot each call                        |
 | `ScoutIndex.revision`     | Monotonic counter incremented after each mutation     | Sync           | Use as a cache-busting token for external result caches       |
 | `ScoutIndex.onMutate()`   | Subscribe to changed index mutations                   | Sync           | A changed `setItems()` reconciliation emits once; no-ops emit nothing |
-| `createSearch()`          | Reactive search state backed by a `ScoutIndex`        | Sync           | Requires `@vielzeug/ripple` — dispose when done               |
+| `createSearch()`          | Atomic search store backed by a `ScoutIndex`           | Sync           | Read one snapshot and dispose the store when done             |
 | `createReactiveSearch()`  | One-call index + reactive search state                | Sync           | Exposes `.index` for incremental mutations                    |
 | `findMatchRanges()`       | Compute match ranges for a text + query pair          | Sync           | Returns sorted, non-overlapping `[start, end]` ranges         |
 | `highlight()`             | Split text into highlighted/unhighlighted fragments   | Sync           | Ranges must be sorted and non-overlapping                     |
 | `highlightField()`        | Highlight a named field from a `SearchResult`         | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern |
-| `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's `match` callback    | Sync           | Recomputes cached query matches after index mutation          |
+| `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's local `filter` callback | Sync        | Recomputes cached query matches after index mutation          |
 | `toFilterPredicate()`     | Snapshot predicate from a one-time query              | Sync           | Re-call when query or corpus changes                          |
 | `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter` — not applied inside `tokenize()` itself (see Pitfalls) |
 
@@ -158,7 +158,7 @@ unsubscribe();
 
 ## `createSearch(index, options?)`
 
-Wraps a `ScoutIndex` in a reactive search state powered by `@vielzeug/ripple` signals.
+Wraps a `ScoutIndex` in a zero-dependency external store. `getSnapshot()` returns the current query, loading flag, and results as one consistent snapshot; `subscribe()` notifies after the complete snapshot is committed.
 
 ```ts
 function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): SearchState<T>
@@ -177,30 +177,30 @@ function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): S
 
 | Member | Type | Description |
 | --- | --- | --- |
-| `query` | `Signal<string>` | Writable search query. Set `.value` to trigger search. |
-| `results` | `Readable<SearchResult<T>[]>` | Reactive results, updated after debounce. |
-| `isSearching` | `Readable<boolean>` | `true` during the debounce window. |
+| `getSnapshot()` | `() => SearchSnapshot<T>` | Returns the stable current snapshot. Identity changes only after a state transition. |
+| `setQuery(query)` | `(query: string) => void` | Starts or immediately commits a query according to `debounce`. |
+| `subscribe(listener, options?)` | `(listener, options?) => () => void` | Notifies after an atomic snapshot commit. Supports `{ signal }` cleanup. |
+| `tap(handler, options?)` | `(handler, options?) => () => void` | Observes typed state and disposal events. Handler errors are swallowed. |
 | `disposalSignal` | `AbortSignal` | Aborted when `dispose()` is called. Use to tie other lifecycles to this search. |
 | `disposed` | `boolean` | `true` after `dispose()` has been called. |
-| `clear()` | `() => void` | Resets query, cancels debounce, clears results synchronously. |
-| `dispose()` | `() => void` | Releases all reactive subscriptions. |
+| `clear()` | `() => void` | Resets query, cancels debounce, and restores empty-query results synchronously. |
+| `dispose()` | `() => void` | Releases timers and subscriptions. |
 | `[Symbol.dispose]()` | `() => void` | `using`-compatible disposal. |
 
 **Example**
 
 ```ts
 import { createIndex, createSearch } from '@vielzeug/scout';
-import { effect } from '@vielzeug/ripple';
 
 const users = [{ name: 'Ada Lovelace' }, { name: 'Grace Hopper' }];
 const index = createIndex(users, { fields: ['name'] });
 const search = createSearch(index, { debounce: 150 });
 
-effect(() => {
-  console.log(search.results.value.map((result) => result.item.name));
+search.subscribe(() => {
+  console.log(search.getSnapshot().results.map((result) => result.item.name));
 });
 
-search.query.value = 'ada';
+search.setQuery('ada');
 ```
 
 ---
@@ -237,7 +237,6 @@ function createReactiveSearch<T>(
 
 ```ts
 import { createReactiveSearch } from '@vielzeug/scout';
-import { effect } from '@vielzeug/ripple';
 
 const users = [{ email: 'ada@example.com', name: 'Ada Lovelace' }];
 const search = createReactiveSearch(users, {
@@ -245,7 +244,7 @@ const search = createReactiveSearch(users, {
   debounce: 150,
 });
 
-effect(() => console.log(search.results.value.map((result) => result.item.name)));
+search.subscribe(() => console.log(search.getSnapshot().results.map((result) => result.item.name)));
 
 search.index.add({ email: 'grace@example.com', name: 'Grace Hopper' });
 search.dispose();
@@ -326,7 +325,7 @@ When the field has no match (e.g. the query matched via a different field), retu
 
 ## `toSearchMatcher(index, options?)`
 
-Returns an `(item, query) => boolean` matcher compatible with `sourcerer`'s `match` option.
+Returns an `(item, query) => boolean` matcher compatible with Sourcerer's local `filter` option.
 
 ```ts
 function toSearchMatcher<T>(index: ScoutIndex<T>, options?: SearchConstraints): (item: T, query: string) => boolean
@@ -340,7 +339,9 @@ import { createLocalSource } from '@vielzeug/sourcerer';
 
 const users = [{ email: 'ada@example.com', name: 'Ada Lovelace' }];
 const index = createIndex(users, { fields: ['name', 'email'] });
-const source = createLocalSource(users, { match: toSearchMatcher(index) });
+const source = createLocalSource(users, { filter: toSearchMatcher(index), params: '' });
+
+source.setParams('ada');
 ```
 
 ---
@@ -466,22 +467,43 @@ type HighlightPart = {
 };
 ```
 
+### `SearchSnapshot<T>`
+
+```ts
+type SearchSnapshot<T> = Readonly<{
+  isSearching: boolean;
+  query: string;
+  results: ReadonlyArray<SearchResult<T>>;
+}>;
+```
+
+Snapshots and their result arrays are frozen at runtime.
+
+### `ScoutEvent<T>`
+
+```ts
+type ScoutEvent<T> =
+  | { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' }
+  | { readonly type: 'dispose' };
+```
+
 ### `SearchState<T>`
 
 ```ts
 type SearchState<T> = {
-  readonly query: Signal<string>;
-  readonly results: Readable<SearchResult<T>[]>;
-  readonly isSearching: Readable<boolean>;
   readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   clear(): void;
   dispose(): void;
+  getSnapshot(): SearchSnapshot<T>;
+  setQuery(query: string): void;
+  subscribe(listener: () => void, options?: { signal?: AbortSignal }): () => void;
+  tap(handler: (event: ScoutEvent<T>) => void, options?: { signal?: AbortSignal }): () => void;
   [Symbol.dispose](): void;
 };
 ```
 
-See `createSearch()` above for member descriptions.
+`subscribe()` observers are notified after the full snapshot commits. An observer error is reported asynchronously after the remaining observers run. `tap()` emits `state-change` and `dispose`; tapper errors are swallowed.
 
 ### `ReactiveSearch<T>`
 

@@ -1,6 +1,7 @@
 import { expectTypeOf } from 'vitest';
 
-import { type AnySchema, type InferInput, type InferOutput, type InferSchemaMode, s, schemaMode } from '../index';
+import { type AnySchema, type InferSchemaMode, schemaMode } from '../core';
+import { type InferInput, type InferOutput, type StandardSchemaV1, s } from '../index';
 
 describe('public type contracts', () => {
   it('keeps coercion input separate from parsed output', () => {
@@ -121,5 +122,46 @@ describe('public type contracts', () => {
     expectTypeOf<InferSchemaMode<typeof customAsync>>().toEqualTypeOf<'async'>();
     expectTypeOf<InferSchemaMode<typeof composite>>().toEqualTypeOf<'async'>();
     expectTypeOf<InferInput<typeof customAsync>>().toEqualTypeOf<{ source: string }>();
+  });
+
+  it('exposes the complete Standard Schema type contract', () => {
+    const schema = s.coerce.number().int();
+    const result = schema['~standard'].validate('42', { libraryOptions: { source: 'test' } });
+
+    expectTypeOf<StandardSchemaV1.InferInput<typeof schema>>().toEqualTypeOf<unknown>();
+    expectTypeOf<StandardSchemaV1.InferOutput<typeof schema>>().toEqualTypeOf<number>();
+    expectTypeOf(result).toEqualTypeOf<StandardSchemaV1.Result<number> | Promise<StandardSchemaV1.Result<number>>>();
+  });
+
+  it('preserves input types through composition', () => {
+    const textLength = s.string().transform((value) => value.length);
+    const array = s.array(textLength);
+    const set = s.set(textLength);
+    const map = s.map(textLength, textLength);
+    const record = s.record(s.string(), textLength);
+    const tuple = s.tuple([textLength, s.boolean()]);
+    const union = s.union(textLength, s.boolean());
+    const intersection = s.intersect(textLength, s.string().min(1));
+    const lazy = s.lazy(() => textLength);
+    const object = s.object({ count: s.coerce.number(), note: s.string().optional() });
+    const partial = object.partial();
+    const defaults = s.object({ name: s.string().default('anonymous'), retries: s.number().catch(0) });
+    const variant = s.discriminatedUnion('kind', { text: s.object({ value: textLength }) });
+
+    expectTypeOf<InferInput<typeof array>>().toEqualTypeOf<string[]>();
+    expectTypeOf<InferInput<typeof set>>().toEqualTypeOf<Set<string>>();
+    expectTypeOf<InferInput<typeof map>>().toEqualTypeOf<Map<string, string>>();
+    expectTypeOf<InferInput<typeof record>>().toEqualTypeOf<Record<string, string>>();
+    expectTypeOf<InferInput<typeof tuple>>().toEqualTypeOf<readonly [string, boolean]>();
+    expectTypeOf<InferInput<typeof union>>().toEqualTypeOf<string | boolean>();
+    expectTypeOf<InferInput<typeof intersection>>().toEqualTypeOf<string>();
+    expectTypeOf<InferInput<typeof lazy>>().toEqualTypeOf<string>();
+    expectTypeOf<InferInput<typeof object>>().toEqualTypeOf<{ count: unknown; note?: string | undefined }>();
+    expectTypeOf<InferInput<typeof partial>>().toEqualTypeOf<{ count?: unknown; note?: string | undefined }>();
+    expectTypeOf<InferInput<typeof defaults>>().toEqualTypeOf<{
+      name?: string | undefined;
+      retries?: number | undefined;
+    }>();
+    expectTypeOf<InferInput<typeof variant>>().toEqualTypeOf<{ kind: 'text'; value: string }>();
   });
 });

@@ -11,13 +11,13 @@ You need to extract an abort reason from a signal or construct a standard `Abort
 
 ### Solution
 
-Use `abortError(signal?)` to get the signal's `reason` if set, or create a new `DOMException('AbortError')`.
+Use `abortError(signal?, message?)` to get the signal's `reason` if set, or create a new `DOMException` with the optional fallback message.
 
 ```ts
-import { abortError } from '@vielzeug/arsenal';
+import { abortError } from '@vielzeug/arsenal/async';
 
 // Construct a standard AbortError
-throw abortError();
+throw abortError(undefined, 'Request cancelled');
 
 // Propagate the signal's own reason
 async function runWithSignal(signal: AbortSignal) {

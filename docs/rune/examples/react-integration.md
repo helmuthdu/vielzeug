@@ -14,10 +14,10 @@ Components deep in a React tree need to log without importing the logger directl
 Create the logger outside the component body or inside a stable initializer, and use `withBindings()` in `useEffect` to pin per-instance fields.
 
 ```tsx
-import { defaultLogger } from '@vielzeug/rune';
+import { createLogger } from '@vielzeug/rune';
 import { useEffect } from 'react';
 
-const log = defaultLogger.child({ namespace: 'UserProfile' });
+const log = createLogger({ namespace: 'UserProfile' });
 
 export function UserProfile({ userId }: { userId: string }) {
   useEffect(() => {

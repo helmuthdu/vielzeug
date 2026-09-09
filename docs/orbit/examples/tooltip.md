@@ -11,7 +11,7 @@ A tooltip must follow its trigger and stay visible within clipping boundaries.
 
 ### Solution
 
-Create and start a positioner when the tooltip becomes visible.
+Create a positioner when the tooltip becomes visible; it starts immediately.
 
 ```ts
 import { createPositioner, flip, offset, shift } from '@vielzeug/orbit';
@@ -21,14 +21,13 @@ const positioner = createPositioner(trigger, tooltip, {
   placement: 'top',
 });
 
-positioner.start();
 // On hide:
 positioner.dispose();
 ```
 
 ### Pitfalls
 
-- Start only after both elements mount.
+- Create the positioner only after both elements mount.
 - Dispose before removing the floating element.
 
 ### Related

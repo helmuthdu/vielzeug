@@ -50,28 +50,6 @@ describe('core/host.ts', () => {
       expect(element.classList.contains('is-open')).toBe(true);
     });
 
-    it('applies attr and aria together in one call, normalizing bare aria keys', async () => {
-      const open = signal(false);
-      const { element, flush } = await mount((_props) => {
-        bind({
-          aria: { expanded: () => String(open.value) },
-          attr: { 'data-widget': 'disclosure' },
-        });
-
-        return html`
-          <button>Open</button>
-        `;
-      });
-
-      expect(element.getAttribute('data-widget')).toBe('disclosure');
-      expect(element.getAttribute('aria-expanded')).toBe('false');
-
-      open.value = true;
-      await flush();
-
-      expect(element.getAttribute('aria-expanded')).toBe('true');
-    });
-
     it('applies class records with static and reactive values', async () => {
       const { element, flush } = await mount((_props) => {
         const open = signal(false);
@@ -271,7 +249,7 @@ describe('core/host.ts', () => {
     });
   });
 
-  describe('bind({ aria }, { target })', () => {
+  describe('bind({ attr }, { target })', () => {
     it('applies static ARIA attributes to a target element', async () => {
       const externalEl = document.createElement('div');
 
@@ -279,7 +257,7 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        bind({ aria: { label: 'Close dialog', role: 'dialog' } }, { target: externalEl });
+        bind({ attr: { 'aria-label': 'Close dialog', role: 'dialog' } }, { target: externalEl });
 
         return html`
           <div></div>
@@ -304,7 +282,7 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        bind({ aria: { expanded: () => expanded.value } }, { target: externalEl });
+        bind({ attr: { 'aria-expanded': () => expanded.value } }, { target: externalEl });
 
         return html`
           <div></div>
@@ -327,7 +305,7 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        bind({ aria: { label: () => label.value } }, { target: externalEl });
+        bind({ attr: { 'aria-label': () => label.value } }, { target: externalEl });
 
         return html`
           <div></div>
@@ -342,31 +320,14 @@ describe('core/host.ts', () => {
       expect(externalEl.hasAttribute('aria-label')).toBe(false);
     });
 
-    it('normalizes shorthand keys: "expanded" → "aria-expanded"', async () => {
+    it('accepts explicit ARIA attribute keys', async () => {
       const externalEl = document.createElement('div');
 
       document.body.appendChild(externalEl);
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        bind({ aria: { expanded: 'true' } }, { target: externalEl });
-
-        return html`
-          <div></div>
-        `;
-      });
-
-      expect(externalEl.getAttribute('aria-expanded')).toBe('true');
-    });
-
-    it('accepts fully-qualified keys: "aria-label" passes through unchanged', async () => {
-      const externalEl = document.createElement('div');
-
-      document.body.appendChild(externalEl);
-
-      await mount((_props) => {
-        onCleanup(() => externalEl.remove());
-        bind({ aria: { 'aria-label': 'Fully qualified' } }, { target: externalEl });
+        bind({ attr: { 'aria-label': 'Fully qualified' } }, { target: externalEl });
 
         return html`
           <div></div>
@@ -376,7 +337,7 @@ describe('core/host.ts', () => {
       expect(externalEl.getAttribute('aria-label')).toBe('Fully qualified');
     });
 
-    it('cleanup from returned fn stops reactive ARIA updates', async () => {
+    it('cleanup from returned fn stops reactive attribute updates', async () => {
       const expanded = signal<string>('false');
       const externalEl = document.createElement('div');
 
@@ -386,7 +347,7 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        cleanup = bind({ aria: { expanded: () => expanded.value } }, { target: externalEl });
+        cleanup = bind({ attr: { 'aria-expanded': () => expanded.value } }, { target: externalEl });
 
         return html`
           <div></div>
@@ -539,17 +500,8 @@ describe('core/host.ts', () => {
         expect(KeyA).not.toBe(KeyB);
       });
 
-      it('returns the same key for the same description (Symbol.for — survives duplicated module graphs)', () => {
-        expect(createContext('shared-desc')).toBe(createContext('shared-desc'));
-      });
-
-      it('warns when called without a description (anonymous keys are per-graph)', () => {
-        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-        createContext();
-
-        expect(spy).toHaveBeenCalledWith(expect.stringContaining('without a description'));
-        spy.mockRestore();
+      it('keeps descriptions diagnostic and gives each context its own identity', () => {
+        expect(createContext('shared-desc')).not.toBe(createContext('shared-desc'));
       });
 
       it('enables type-safe context sharing between parent and child components', async () => {

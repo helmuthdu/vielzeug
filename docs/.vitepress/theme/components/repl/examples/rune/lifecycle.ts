@@ -1,13 +1,13 @@
 import type { ReplExample } from '../../types';
 
 export const lifecycleExample: ReplExample = {
-  code: `import { batchTransport, createLogger } from '@vielzeug/rune';
+  code: `import { createLogger } from '@vielzeug/rune';
 
 // Two-arg shorthand: namespace + options
 const log = createLogger('api', { logLevel: 'debug' });
 
 log.info('logger created');
-log.debug({ url: '/health' }, 'request start');
+log.debug('request start', { url: '/health' });
 
 // disposed logger silences all subsequent calls
 log.dispose();
@@ -15,24 +15,19 @@ log.info('this is silenced — no output');
 
 console.log('log.disposed:', log.disposed);
 
-// batchTransport idempotency — double-dispose does not double-flush
-const flushed: string[] = [];
-const batch = batchTransport({
-  interval: 60_000,
-  onFlush: (entries) => {
-    flushed.push(...entries.map((e) => e.message ?? ''));
-  },
+// using-declaration auto-disposes at end of scope
+{
+  using scoped = createLogger('scoped', { logLevel: 'debug' });
+  scoped.info('scoped logger active');
+} // scoped.dispose() called automatically here
+
+// disposalSignal aborts when dispose() is called
+const monitored = createLogger('monitored');
+monitored.disposalSignal.addEventListener('abort', () => {
+  console.log('monitored logger was disposed');
 });
-
-const batchLog = createLogger('batch', { transports: [batch.transport] });
-batchLog.info('entry-1');
-batchLog.warn('entry-2');
-
-await batch.dispose(); // flushes once and waits for delivery
-await batch.dispose(); // same settled promise — no double flush
-
-console.log('flushed messages:', flushed);
+monitored.dispose();
 `,
-  description: 'Two-arg createLogger, disposed logger silencing, and batchTransport idempotency.',
+  description: 'Two-arg createLogger, disposed logger silencing, and using-declaration auto-disposal.',
   name: 'Logger Lifecycle & Disposal',
 };

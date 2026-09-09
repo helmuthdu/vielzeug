@@ -1,6 +1,6 @@
 ---
 title: Tempo — Usage Guide
-description: Parse explicit Temporal values, resolve wall-clock time, compare ranges, and format dates with Tempo.
+description: Parse explicit Temporal values, resolve wall-clock time, perform timezone-aware arithmetic, and format dates with Tempo.
 ---
 
 [[toc]]
@@ -10,13 +10,12 @@ description: Parse explicit Temporal values, resolve wall-clock time, compare ra
 Parse ISO input with a declared target. Convert plain values with `timeZone` before treating them as an instant.
 
 ```ts
-import { format, inTimeZone, parse, shift, toInstant } from '@vielzeug/tempo';
+import { format, parse, shift } from '@vielzeug/tempo';
 
 const local = parse('2026-03-21T10:15:30', { as: 'plainDateTime' });
-const instant = toInstant(local, { timeZone: 'America/New_York' });
-const reminder = shift(instant, { minutes: -15 }, { timeZone: 'America/New_York' });
+const reminder = shift(local, { minutes: -15 }, { timeZone: 'America/New_York' });
 
-format(inTimeZone(reminder, 'America/New_York'), { locale: 'en-US', pattern: 'short' });
+format(reminder, { locale: 'en-US', pattern: 'short' });
 ```
 
 ## Parse ISO Values
@@ -50,10 +49,10 @@ const berlin = inTimeZone(firstOccurrence, 'Europe/Berlin');
 
 ## Calculate and Compare
 
-Use object inputs for operations with multiple time values.
+Use Tempo helpers when an operation must resolve timezones, normalize ranges, or compare calendar units. Use Temporal methods directly when values are already the exact kind and timezone you need.
 
 ```ts
-import { clamp, contains, difference, parse } from '@vielzeug/tempo';
+import { clamp, contains, difference, parse, shift } from '@vielzeug/tempo';
 
 const start = parse('2026-03-21T10:00:00Z', { as: 'instant' });
 const end = parse('2026-03-21T12:00:00Z', { as: 'instant' });
@@ -62,6 +61,9 @@ const value = parse('2026-03-21T13:00:00Z', { as: 'instant' });
 const duration = difference({ end, largestUnit: 'hour', start });
 const isScheduled = contains({ end, start, value });
 const bounded = clamp({ end, start, value });
+
+const local = parse('2026-03-08T01:30:00', { as: 'plainDateTime' });
+const tomorrow = shift(local, { days: 1 }, { timeZone: 'America/New_York' });
 ```
 
 ## Classify Expiry
@@ -99,19 +101,23 @@ formatZoned(instant, { timeZone: 'Europe/Berlin' });
 formatRelative(instant, { base: parse('2026-03-21T09:15:30Z', { as: 'instant' }) });
 ```
 
+`formatRelative()` uses fixed elapsed-time units for short spans and complete calendar months or years for longer spans. Pass `timeZone` when calendar-relative output must use a specific regional calendar boundary.
+
 ## Generate Calendar Sequences
 
-Use zoned inputs for date sequences so the timezone is inferred.
+Use zoned values when the sequence already has a timezone. Plain and instant starts require `timeZone`.
 
 ```ts
 import { dateRange, parse, recurrence } from '@vielzeug/tempo';
 
-const start = parse('2026-03-01T00:00:00[UTC]', { as: 'zonedDateTime' });
-const end = parse('2026-03-31T00:00:00[UTC]', { as: 'zonedDateTime' });
+const start = parse('2026-03-01T09:00:00[America/New_York]', { as: 'zonedDateTime' });
+const end = parse('2026-03-03T09:00:00[America/New_York]', { as: 'zonedDateTime' });
 
 const days = [...dateRange(start, end, { days: 1 })];
-const meetings = [...recurrence(start, { count: 4, frequency: 'weekly' })];
+const meetings = [...recurrence(start, { count: 4, frequency: 'weekly', interval: 2 })];
 ```
+
+Both functions advance with zoned calendar arithmetic. Non-advancing range steps, invalid recurrence intervals, and negative or fractional counts throw `TempoInvalidInputError`.
 
 ## Testing
 
@@ -174,17 +180,18 @@ logger.info({ timestamp: formatInstant(nowInstant()) }, 'server started');
 Calculate an explicit instant before storing an expiring record.
 
 ```ts
-import { now, shift } from '@vielzeug/tempo';
+import { now } from '@vielzeug/tempo';
 
-const expiresAt = shift(now({ timeZone: 'UTC' }), { minutes: 30 }).toInstant();
+const expiresAt = now({ timeZone: 'UTC' }).add({ minutes: 30 }).toInstant();
 ```
 
 ## Best Practices
 
-- Parse each string with its actual temporal meaning.
-- Pass `timeZone` when converting a plain date or plain date-time.
+- Parse strings with their actual temporal meaning and pass `timeZone` when resolving plain values.
 - Use `disambiguation` for DST overlap and gap handling.
-- Pass named fields to `difference()`, `contains()`, `clamp()`, and `classifyExpiry()`.
+- Use Tempo helpers for timezone resolution, normalized ranges, and calendar units; use Temporal directly for already-normalized values.
 - Use fixed duration units for expiry thresholds.
+- Reject non-advancing range and recurrence configuration.
 - Store instants for transport and database values.
 - Use `formatInstant()` for machine output and `format()` for user-facing text.
+- Pass `timeZone` to `formatRelative()` when month and year boundaries must use a specific region.

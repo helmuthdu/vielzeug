@@ -14,9 +14,9 @@ Every log entry produced during an HTTP request should carry the request ID and 
 Use `withBindings({ requestId, ip })` inside the middleware to create a request-scoped logger that pins those fields to every downstream call.
 
 ```ts
-import { defaultLogger } from '@vielzeug/rune';
+import { createLogger } from '@vielzeug/rune';
 
-const httpLog = defaultLogger.child({ namespace: 'http' });
+const httpLog = createLogger({ namespace: 'http' });
 
 export function requestLogger(req, res, next) {
   // pin request-scoped fields to every log call in this handler
@@ -28,7 +28,7 @@ export function requestLogger(req, res, next) {
     const duration = `${Date.now() - start}ms`;
     const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
 
-    reqLog[level]({ status: res.statusCode, duration }, label);
+    reqLog[level](label, { status: res.statusCode, duration });
   });
 
   next();

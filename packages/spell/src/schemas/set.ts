@@ -1,6 +1,7 @@
 import type {
   AnySchema,
   CheckContext,
+  InferInput,
   InferOutput,
   InferSchemaMode,
   Issue,
@@ -19,7 +20,7 @@ import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, Sp
 export class SetSchema<
   T extends AnySchema,
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T>>,
-> extends Schema<Set<InferOutput<T>>, unknown, Mode> {
+> extends Schema<Set<InferOutput<T>>, Set<InferInput<T>>, Mode> {
   readonly itemSchema: T;
 
   protected override get _kind(): string {

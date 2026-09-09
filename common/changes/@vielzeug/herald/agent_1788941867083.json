@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove middleware, payload validation, async streams, and bus pipes while retaining fail-late listener errors and simplifying typed lifecycle trace event names.",
+      "packageName": "@vielzeug/herald",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/herald"
+}

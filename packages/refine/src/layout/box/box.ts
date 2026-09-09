@@ -25,7 +25,7 @@ export type OreBoxProps = {
   /** Border radius size */
   rounded?: RoundedSize;
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'glass' | 'frost';
+  variant?: 'solid' | 'flat' | 'frost';
 };
 
 /**
@@ -33,7 +33,7 @@ export type OreBoxProps = {
  *
  * @element ore-box
  *
- * @attr {string} variant - Style variant: 'solid' | 'flat' | 'glass' | 'frost'
+ * @attr {string} variant - Style variant: 'solid' | 'flat' | 'frost'
  * @attr {string} color - Color theme: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} padding - Padding size: 'none' | 'sm' | 'md' | 'lg' | 'xl'
  * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
@@ -56,7 +56,7 @@ export type OreBoxProps = {
  * @example
  * ```html
  * <ore-box padding="lg" elevation="2">Simple content</ore-box>
- * <ore-box variant="glass" color="primary">Glass effect</ore-box>
+ * <ore-box variant="solid" color="primary">Solid color</ore-box>
  * <ore-box variant="frost" effect="rainbow">Frosted glass</ore-box>
  * ```
  */
@@ -69,7 +69,7 @@ define<OreBoxProps>(BOX_TAG, {
     fullwidth: prop.bool(),
     padding: prop.string<PaddingSize>(),
     rounded: prop.string<RoundedSize>(),
-    variant: prop.string<'flat' | 'solid' | 'frost' | 'glass'>(),
+    variant: prop.string<'flat' | 'solid' | 'frost'>(),
   },
   setup() {
     return html`

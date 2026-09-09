@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: require durable validation, return codec-canonical mutations, and preserve reliable iteration, bulk operations, fluent queries, and atomic document updates",
+      "packageName": "@vielzeug/vault",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

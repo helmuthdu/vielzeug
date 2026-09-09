@@ -1,16 +1,28 @@
 import { warn } from './_dev';
 import { KeymapError } from './errors';
-import type { Shortcut, ShortcutStep } from './parser';
-import { canonicalizeShortcut, detectModKey, matchStep, parseShortcut } from './parser';
-import type { BindingEntry, BindingValue, ChordStateChange, Handler, Keymap, KeymapOptions, When } from './types';
+import type { Shortcut } from './parser';
+import { detectModKey, matchStep, parseShortcut } from './parser';
+import type { Binding, BindingEntry, Handler, Keymap, KeymapEvent, KeymapOptions, When } from './types';
 
 type ParsedBinding = {
+  id: string;
   handler: Handler;
   shortcut: Shortcut;
   trigger: 'keydown' | 'keyup';
   when?: When;
+  preventDefault: boolean;
+  stopPropagation: boolean;
 };
 
+type ChordAdvanceResult =
+  | { type: 'none' }
+  | { bindings: ParsedBinding[]; type: 'pending' }
+  | { binding: ParsedBinding; type: 'match' };
+type ChordTrackerCallbacks = {
+  onCancel: () => void;
+  onProgress: (steps: Shortcut, started: boolean) => void;
+  onTimeout: () => void;
+};
 type ChordTracker = ReturnType<typeof createChordTracker>;
 type MountedTarget = {
   keydown: ChordTracker;
@@ -20,58 +32,35 @@ type MountedTarget = {
   refs: number;
 };
 
-function resolveBinding(value: BindingValue): Omit<ParsedBinding, 'shortcut'> {
-  if (typeof value === 'function') return { handler: value, trigger: 'keydown' };
-
-  return {
-    handler: value.handler,
-    trigger: value.trigger ?? 'keydown',
-    when: value.when,
-  };
-}
-
-type ChordTrackerCallbacks = {
-  onChordStart?: (target: EventTarget, step: ShortcutStep, trigger: 'keydown' | 'keyup') => void;
-  onChordProgress?: (target: EventTarget, steps: readonly ShortcutStep[], trigger: 'keydown' | 'keyup') => void;
-  onChordTimeout?: (target: EventTarget, trigger: 'keydown' | 'keyup') => void;
-};
+const noop = () => {};
 
 function createChordTracker(
   getBindings: () => ParsedBinding[],
   chordTimeout: number,
-  target: EventTarget,
-  trigger: 'keydown' | 'keyup',
-  callbacks?: ChordTrackerCallbacks,
+  callbacks: ChordTrackerCallbacks,
 ) {
   let pendingIndex = 0;
   let candidates: ParsedBinding[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
-  let pendingSteps: ShortcutStep[] = [];
 
-  function reset(emitTimeout = false): void {
+  function reset(notify = true): void {
     if (timer !== undefined) clearTimeout(timer);
 
-    // Emit timeout only if explicitly requested (from timeout event)
-    if (emitTimeout && pendingIndex > 0 && callbacks?.onChordTimeout) {
-      try {
-        callbacks.onChordTimeout(target, trigger);
-      } catch (err) {
-        warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
+    const hadPending = pendingIndex > 0;
 
     timer = undefined;
     pendingIndex = 0;
     candidates = [];
-    pendingSteps = [];
+
+    if (notify && hadPending) callbacks.onCancel();
   }
 
-  function advance(event: KeyboardEvent): ParsedBinding | undefined {
+  function advance(event: KeyboardEvent): ChordAdvanceResult {
     const pool = pendingIndex === 0 ? getBindings() : candidates;
     const matched = pool.filter((binding) => {
       const step = binding.shortcut[pendingIndex];
 
-      return step !== undefined && matchStep(event, step);
+      return step !== undefined && matchStep(event, step) && (!binding.when || binding.when(event));
     });
 
     if (matched.length === 0) {
@@ -79,7 +68,7 @@ function createChordTracker(
 
       reset();
 
-      return retryFromRoot ? advance(event) : undefined;
+      return retryFromRoot ? advance(event) : { type: 'none' };
     }
 
     if (timer !== undefined) clearTimeout(timer);
@@ -89,75 +78,60 @@ function createChordTracker(
     const completed = matched.find((binding) => binding.shortcut.length === pendingIndex + 1);
 
     if (completed) {
-      reset();
+      reset(false);
 
-      return completed;
+      return { binding: completed, type: 'match' };
     }
 
-    // New step in chord progression
-    const currentStep = matched[0]!.shortcut[pendingIndex];
-    pendingSteps = matched[0]!.shortcut.slice(0, pendingIndex + 1);
-
-    // Emit started or progressed
-    if (pendingIndex === 0 && callbacks?.onChordStart) {
-      try {
-        callbacks.onChordStart(target, currentStep, trigger);
-      } catch (err) {
-        warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    } else if (pendingIndex > 0 && callbacks?.onChordProgress) {
-      try {
-        callbacks.onChordProgress(target, pendingSteps, trigger);
-      } catch (err) {
-        warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
+    const started = pendingIndex === 0;
 
     candidates = matched;
     pendingIndex += 1;
-    timer = setTimeout(() => reset(true), chordTimeout);
+    callbacks.onProgress(matched[0]!.shortcut.slice(0, pendingIndex), started);
+    timer = setTimeout(() => {
+      callbacks.onTimeout();
+      reset(false);
+    }, chordTimeout);
 
-    return undefined;
+    return { bindings: matched, type: 'pending' };
   }
 
-  return { advance, reset: () => reset() };
+  return { advance, reset };
 }
 
 /**
  * Creates a headless keyboard shortcut manager with target-local chord state.
  *
- * Pass a bindings map of shortcut strings to handlers or `BindingOptions`, then call
- * `.mount(target)` to attach to any `EventTarget`. Supports chord sequences
- * (e.g. `"ctrl+k ctrl+s"`), per-binding `when` guards, `trigger` (keydown/keyup),
- * and dynamic `bind`/`unbind`.
+ * Pass an ordered array of `Binding` objects (each with an explicit `id`,
+ * `shortcut`, and `handler`), then call `.mount(target)` to attach to any
+ * `EventTarget`. Supports chord sequences (e.g. `"ctrl+k ctrl+s"`), per-binding
+ * `when` guards, `trigger` (keydown/keyup), and per-binding
+ * `preventDefault`/`stopPropagation`. Dynamic `bind`/`unbind` use the binding
+ * `id`, so duplicate shortcuts can coexist with different ids.
  *
  * @example
- * const map = createKeymap({
- *   'mod+k mod+s': () => save(),
- *   'mod+shift+p': () => openPalette(),
- *   'g g': () => goToTop(),
- *   esc: { handler: closePanel, when: (event) => !isEditableTarget(event.target) },
- *   space: { handler: togglePlay, trigger: 'keyup' },
- * }, { modKey: 'ctrl' });
+ * const map = createKeymap([
+ *   { id: 'save', shortcut: 'mod+k mod+s', handler: save },
+ *   { id: 'palette', shortcut: 'mod+shift+p', handler: openPalette },
+ *   { id: 'top', shortcut: 'g g', handler: goToTop },
+ *   { id: 'close', shortcut: 'escape', handler: closePanel, when: (event) => !isEditableTarget(event.target) },
+ *   { id: 'play', shortcut: 'space', handler: togglePlay, trigger: 'keyup' },
+ * ], { modKey: 'ctrl' });
  * const unmount = map.mount(document);
  */
-export function createKeymap(initialBindings: Record<string, BindingValue> = {}, options: KeymapOptions = {}): Keymap {
-  const {
-    chordTimeout: rawChordTimeout = 1000,
-    modKey = detectModKey(),
-    preventDefault = true,
-    stopPropagation = false,
-    when: globalWhen,
-    onChordState: userOnChordState,
-  } = options;
+export function createKeymap(initialBindings: readonly Binding[] = [], options: KeymapOptions = {}): Keymap {
+  const { chordTimeout: rawChordTimeout = 1000, modKey = detectModKey(), when: globalWhen } = options;
   const chordTimeout = Number.isFinite(rawChordTimeout) && rawChordTimeout > 0 ? rawChordTimeout : 1000;
 
   if (chordTimeout !== rawChordTimeout) {
     warn(`chordTimeout must be a positive finite number; received ${rawChordTimeout}. Using default of 1000ms.`);
   }
 
+  // Ordered map keyed by binding id — preserves insertion order and supports
+  // duplicate shortcuts with different ids.
   const bindings = new Map<string, ParsedBinding>();
   const mounted = new Map<EventTarget, MountedTarget>();
+  const tappers = new Set<(event: KeymapEvent) => void>();
   const disposalController = new AbortController();
   let bindingsDown: ParsedBinding[] = [];
   let bindingsUp: ParsedBinding[] = [];
@@ -175,41 +149,59 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
       if (binding.trigger === 'keydown') bindingsDown.push(binding);
       else bindingsUp.push(binding);
     }
+
+    for (const record of mounted.values()) {
+      record.keydown.reset();
+      record.keyup.reset();
+    }
   }
 
-  function bindingKey(shortcut: string): string {
-    return canonicalizeShortcut(parseShortcut(shortcut, modKey));
-  }
+  function addBinding(binding: Binding): ParsedBinding {
+    const parsedBinding: ParsedBinding = {
+      handler: binding.handler,
+      id: binding.id,
+      preventDefault: binding.preventDefault ?? true,
+      shortcut: parseShortcut(binding.shortcut, modKey),
+      stopPropagation: binding.stopPropagation ?? false,
+      trigger: binding.trigger ?? 'keydown',
+      when: binding.when,
+    };
 
-  function addBinding(shortcut: string, value: BindingValue): string {
-    const parsed = parseShortcut(shortcut, modKey);
-    const key = canonicalizeShortcut(parsed);
-
-    bindings.set(key, { shortcut: parsed, ...resolveBinding(value) });
+    bindings.set(parsedBinding.id, parsedBinding);
     rebuildTriggerCaches();
 
-    return key;
+    return parsedBinding;
   }
 
-  function removeByKey(key: string): boolean {
-    const existed = bindings.delete(key);
+  function removeById(id: string): boolean {
+    const existed = bindings.delete(id);
 
     if (existed) rebuildTriggerCaches();
 
     return existed;
   }
 
-  function emitChordState(change: ChordStateChange): void {
-    if (!userOnChordState) return;
+  function toBindingEntry(binding: ParsedBinding): BindingEntry {
+    return {
+      id: binding.id,
+      preventDefault: binding.preventDefault,
+      shortcut: binding.shortcut.map((step) => ({ key: step.key, modifiers: new Set(step.modifiers) })),
+      stopPropagation: binding.stopPropagation,
+      trigger: binding.trigger,
+    };
+  }
 
-    try {
-      userOnChordState(change);
-    } catch (err) {
-      warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
+  function emitTap(event: KeymapEvent): void {
+    if (tappers.size === 0) return;
+
+    for (const tapper of tappers) {
+      try {
+        tapper(event);
+      } catch {}
     }
   }
 
-  function makeHandler(target: EventTarget, chord: ChordTracker): EventListener {
+  function makeHandler(target: EventTarget, trigger: 'keydown' | 'keyup', chord: ChordTracker): EventListener {
     return (event) => {
       const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
       const nearestMountedTarget = path.find((pathTarget) => mounted.has(pathTarget));
@@ -220,32 +212,41 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
 
       if (disposed) return;
 
-      // Track chord progression (independent of guards)
-      const binding = chord.advance(keyboardEvent);
+      if (globalWhen && !globalWhen(keyboardEvent)) {
+        chord.reset();
 
-      // Check guards AFTER tracking chord
-      if (globalWhen && !globalWhen(keyboardEvent)) return;
+        return;
+      }
 
-      if (!binding || (binding.when && !binding.when(keyboardEvent))) return;
+      const result = chord.advance(keyboardEvent);
 
-      if (preventDefault) keyboardEvent.preventDefault();
+      if (result.type === 'none') return;
 
-      if (stopPropagation) keyboardEvent.stopPropagation();
+      const matchedBindings = result.type === 'pending' ? result.bindings : [result.binding];
 
-      binding.handler(keyboardEvent);
+      if (matchedBindings.some((binding) => binding.preventDefault)) keyboardEvent.preventDefault();
+      if (matchedBindings.some((binding) => binding.stopPropagation)) keyboardEvent.stopPropagation();
+
+      if (result.type === 'pending') return;
+
+      if (tappers.size > 0) {
+        emitTap({ binding: toBindingEntry(result.binding), target, trigger, type: 'match' });
+      }
+
+      result.binding.handler(keyboardEvent);
     };
   }
 
-  for (const [shortcut, value] of Object.entries(initialBindings)) addBinding(shortcut, value);
+  for (const binding of initialBindings) addBinding(binding);
 
   return {
-    bind(shortcut: string, value: BindingValue): () => void {
+    bind(binding: Binding): () => void {
       assertActive();
 
-      const key = addBinding(shortcut, value);
+      const parsedBinding = addBinding(binding);
 
       return () => {
-        if (!disposed) removeByKey(key);
+        if (!disposed && bindings.get(parsedBinding.id) === parsedBinding) removeById(parsedBinding.id);
       };
     },
 
@@ -257,7 +258,6 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
       if (disposed) return;
 
       disposed = true;
-      disposalController.abort();
 
       for (const [target, record] of mounted) {
         target.removeEventListener('keydown', record.onKeydown);
@@ -266,10 +266,13 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
         record.keyup.reset();
       }
 
+      emitTap({ type: 'dispose' });
+      disposalController.abort();
       mounted.clear();
       bindings.clear();
       bindingsDown = [];
       bindingsUp = [];
+      tappers.clear();
     },
 
     get disposed(): boolean {
@@ -277,10 +280,7 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
     },
 
     listBindings(): readonly BindingEntry[] {
-      return [...bindings.values()].map((binding) => ({
-        shortcut: binding.shortcut.map((step) => ({ key: step.key, modifiers: new Set(step.modifiers) })),
-        trigger: binding.trigger,
-      }));
+      return [...bindings.values()].map(toBindingEntry);
     },
 
     mount(target: EventTarget): () => void {
@@ -289,18 +289,26 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
       let record = mounted.get(target);
 
       if (!record) {
-        const keydown = createChordTracker(() => bindingsDown, chordTimeout, target, 'keydown', {
-          onChordProgress: (t, steps, trigger) => emitChordState({ steps, target: t, trigger, type: 'progressed' }),
-          onChordStart: (t, step, trigger) => emitChordState({ step, target: t, trigger, type: 'started' }),
-          onChordTimeout: (t, trigger) => emitChordState({ target: t, trigger, type: 'timeout' }),
+        const createCallbacks = (trigger: 'keydown' | 'keyup'): ChordTrackerCallbacks => ({
+          onCancel: () => {
+            if (tappers.size > 0) emitTap({ target, trigger, type: 'chord-cancel' });
+          },
+          onProgress: (steps, started) => {
+            if (tappers.size === 0) return;
+
+            const snapshot = steps.map((step) => ({ key: step.key, modifiers: new Set(step.modifiers) }));
+
+            if (started) emitTap({ step: snapshot[0]!, target, trigger, type: 'chord-start' });
+            else emitTap({ steps: snapshot, target, trigger, type: 'chord-progress' });
+          },
+          onTimeout: () => {
+            if (tappers.size > 0) emitTap({ target, trigger, type: 'chord-timeout' });
+          },
         });
-        const keyup = createChordTracker(() => bindingsUp, chordTimeout, target, 'keyup', {
-          onChordProgress: (t, steps, trigger) => emitChordState({ steps, target: t, trigger, type: 'progressed' }),
-          onChordStart: (t, step, trigger) => emitChordState({ step, target: t, trigger, type: 'started' }),
-          onChordTimeout: (t, trigger) => emitChordState({ target: t, trigger, type: 'timeout' }),
-        });
-        const onKeydown = makeHandler(target, keydown);
-        const onKeyup = makeHandler(target, keyup);
+        const keydown = createChordTracker(() => bindingsDown, chordTimeout, createCallbacks('keydown'));
+        const keyup = createChordTracker(() => bindingsUp, chordTimeout, createCallbacks('keyup'));
+        const onKeydown = makeHandler(target, 'keydown', keydown);
+        const onKeyup = makeHandler(target, 'keyup', keyup);
 
         record = { keydown, keyup, onKeydown, onKeyup, refs: 0 };
         mounted.set(target, record);
@@ -332,11 +340,30 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
       this.dispose();
     },
 
-    unbind(shortcut: string): void {
+    tap(handler: (event: KeymapEvent) => void, options?: { signal?: AbortSignal }): () => void {
+      const signal = options?.signal
+        ? AbortSignal.any([disposalController.signal, options.signal])
+        : disposalController.signal;
+
+      if (signal.aborted) return noop;
+
+      tappers.add(handler);
+
+      const onAbort = () => tappers.delete(handler);
+
+      signal.addEventListener('abort', onAbort, { once: true });
+
+      return () => {
+        tappers.delete(handler);
+        signal.removeEventListener('abort', onAbort);
+      };
+    },
+
+    unbind(id: string): void {
       assertActive();
 
-      if (!removeByKey(bindingKey(shortcut))) {
-        warn(`unbind() called for unknown shortcut: "${shortcut}"`);
+      if (!removeById(id)) {
+        warn(`unbind() called for unknown id: "${id}"`);
       }
     },
   };

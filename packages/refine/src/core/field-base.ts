@@ -1,4 +1,4 @@
-import { createStableId } from '@vielzeug/ore';
+import { createId } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
 
 import { warn } from '../_dev';
@@ -174,8 +174,8 @@ export type AssistiveStateOptions = {
 
 export const createAssistiveState = (options: AssistiveStateOptions): AssistiveStateHandle => {
   const disabled = computed(() => Boolean(options.disabled?.value));
-  const assistiveId = createStableId('helper');
-  const errorId = createStableId('error');
+  const assistiveId = createId('helper');
+  const errorId = createId('error');
   const resolvedAssistive = createErrorHelperState({ error: options.error, helper: options.helper });
 
   const ariaDescribedBy = computed(() =>
@@ -248,7 +248,7 @@ export type LabelStateOptions = {
   hasLabel?: Readable<boolean>;
   /**
    * When provided, used directly as `fieldId` instead of generating one via
-   * `createStableId`. Useful in tests for deterministic ID assertions.
+   * `createId`. Useful in tests for deterministic ID assertions.
    */
   id?: string;
   /**
@@ -270,8 +270,8 @@ export type LabelStateOptions = {
 };
 
 export const createLabelState = (options: LabelStateOptions): LabelStateHandle => {
-  const fieldId = options.id ?? createStableId(options.prefix ?? 'field');
-  const labelId = createStableId('label');
+  const fieldId = options.id ?? createId(options.prefix ?? 'field');
+  const labelId = createId('label');
   const label$ = options.label ?? computed(() => undefined);
 
   // Slot-first composition: if the caller provides `hasLabel`, use it instead

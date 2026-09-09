@@ -1,51 +1,37 @@
 ---
 title: 'Ward Examples — Blog Roles'
-description: 'Build a blog authorization policy for anonymous, viewer, editor, and admin roles.'
+description: 'Build an ordered blog authorization policy.'
 ---
 
 ## Blog Roles
 
 ### Problem
 
-Model read, create, update, and delete permissions for a blog without scattering role checks through handlers.
+Authorization checks are scattered through blog handlers.
 
 ### Solution
 
-Define immutable role rules once, then ask Ward for an explained decision at each authorization boundary.
+Use helper-generated role rules and put exceptional denies first.
 
 ```ts
-import { ANONYMOUS, createWard, predicate } from '@vielzeug/ward';
+import { ANONYMOUS, allow, createWard, deny, predicate, WILDCARD } from '@vielzeug/ward';
 
-const ward = createWard<'read' | 'create' | 'update' | 'delete', { authorId: string }>([
-  { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
-  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
-  { role: 'editor', resource: 'posts', action: 'create', effect: 'allow' },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: predicate.owns('authorId') },
-  { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
+const ward = createWard([
+  deny('blocked', WILDCARD, [WILDCARD]),
+  allow(ANONYMOUS, 'posts', ['read']),
+  allow('viewer', 'posts', ['read']),
+  allow('editor', 'posts', ['create']),
+  allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
+  allow('admin', 'posts', ['delete']),
 ]);
 
-ward.explain({ principal: null, resource: 'posts', action: 'read' }).allowed; // true
-ward.explain({
-  principal: { id: 'u1', roles: ['editor'] },
-  resource: 'posts',
-  action: 'update',
-  data: { authorId: 'u1' },
-}).allowed; // true
-ward.explain({
-  principal: { id: 'u1', roles: ['editor'] },
-  resource: 'posts',
-  action: 'update',
-  data: { authorId: 'u2' },
-}).allowed; // false
+ward.decide({ action: 'update', attributes: { authorId: 'u1' }, principal: { id: 'u1', roles: ['editor'] }, resource: 'posts' }).effect; // allow
 ```
 
 ### Pitfalls
 
-- Pass resource data for ownership predicates; omitted data cannot satisfy `predicate.owns()`.
-- Model default-deny explicitly by adding only allowed rules.
+Pass ownership data through `attributes`. No match means deny.
 
 ### Related
 
-- [Multi-Role Rules](./multi-role-rules.md)
-- [Wildcard Action](./wildcard-action.md)
-- [Trace a Decision](./trace-decision.md)
+- [Multi-role rules](./multi-role-rules.md)

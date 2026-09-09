@@ -31,7 +31,7 @@ describe('createPulse heartbeat', () => {
     await vi.runAllTimersAsync();
 
     expect(socket.readyState).toBe(MockWebSocket.CLOSED);
-    expect(pulse.status.value).toBe('reconnecting');
+    expect(pulse.status.getSnapshot()).toBe('reconnecting');
     expect(MockWebSocket.instances).toHaveLength(2);
 
     pulse.dispose();

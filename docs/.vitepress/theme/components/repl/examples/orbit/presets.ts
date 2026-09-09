@@ -48,7 +48,6 @@ let positioner = null
 trigger.addEventListener('mouseenter', () => {
   tip.style.display = 'block'
   positioner = createPositioner(trigger, tip, tooltip())
-  positioner.start()
 })
 trigger.addEventListener('mouseleave', () => {
   tip.style.display = 'none'

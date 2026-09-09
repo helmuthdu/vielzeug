@@ -47,6 +47,27 @@ describe('animateEach', () => {
     expect(calls).toEqual([]);
   });
 
+  it('does not start animations when a keyframe factory aborts the parent signal', () => {
+    const { calls, restore } = installFakeAnimations();
+
+    restoreWaapi = restore;
+
+    const controller = new AbortController();
+    const reason = new Error('owner ended');
+
+    expect(() =>
+      animateEach(
+        [document.createElement('div')],
+        () => {
+          controller.abort(reason);
+          return [];
+        },
+        { signal: controller.signal },
+      ),
+    ).toThrow(reason);
+    expect(calls).toEqual([]);
+  });
+
   it('provides a keyframe factory with the unique-element index and total', () => {
     const { calls, restore } = installFakeAnimations();
 

@@ -32,9 +32,31 @@ const wizard = defineMachine<Context, Event>()({
 });
 
 const key = 'wizard-snapshot';
-const parsed = JSON.parse(sessionStorage.getItem(key) ?? 'null') as MachineSnapshot<State, Context> | null;
-const snapshot = parsed?.state && parsed.context ? parsed : undefined;
-const actor = wizard.createActor({ snapshot });
+const states = new Set<State>(['info', 'details', 'confirm', 'success']);
+
+function parseSnapshot(raw: string | null): MachineSnapshot<State, Context> | undefined {
+  if (!raw) return undefined;
+
+  try {
+    const value: unknown = JSON.parse(raw);
+    if (typeof value !== 'object' || value === null) return undefined;
+
+    const candidate = value as { context?: unknown; state?: unknown };
+    if (typeof candidate.state !== 'string' || !states.has(candidate.state as State)) return undefined;
+    if (typeof candidate.context !== 'object' || candidate.context === null) return undefined;
+
+    const context = candidate.context as Partial<Context>;
+    if (typeof context.details !== 'string' || typeof context.email !== 'string' || typeof context.name !== 'string') {
+      return undefined;
+    }
+
+    return { context: { details: context.details, email: context.email, name: context.name }, state: candidate.state as State };
+  } catch {
+    return undefined;
+  }
+}
+
+const actor = wizard.createActor({ snapshot: parseSnapshot(sessionStorage.getItem(key)) });
 const stop = actor.subscribe((next) => sessionStorage.setItem(key, JSON.stringify(next)));
 
 actor.send({ email: 'ada@example.com', name: 'Ada', type: 'INFO' });
@@ -45,7 +67,7 @@ actor.dispose();
 
 ### Pitfalls
 
-- Clockwork validates restored state names, not your persisted context fields.
+- Clockwork validates restored state names and plain-record context shape, not application-specific context fields.
 - Store only serializable domain data and version your storage format.
 
 ### Related

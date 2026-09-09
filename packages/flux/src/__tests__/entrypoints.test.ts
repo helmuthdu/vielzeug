@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { toAsyncIterable } from '../async';
-import { fromQuery } from '../courier';
-import { fromBus, toBus } from '../herald';
-import { pipe, stream } from '../index';
-import { fromPulse, fromRoomPresence } from '../pulse';
-import { fromSignal, toSignal } from '../ripple';
+import { fromStore, fromSubscribe, pipe, stream } from '../index';
 import { createChannel } from '../subjects';
 
 describe('public entrypoints', () => {
@@ -16,14 +12,9 @@ describe('public entrypoints', () => {
     expect(typeof toAsyncIterable).toBe('function');
   });
 
-  it('exposes every optional adapter entrypoint', () => {
-    expect(typeof fromQuery).toBe('function');
-    expect(typeof fromBus).toBe('function');
-    expect(typeof toBus).toBe('function');
-    expect(typeof fromRoomPresence).toBe('function');
-    expect(typeof fromPulse).toBe('function');
-    expect(typeof fromSignal).toBe('function');
-    expect(typeof toSignal).toBe('function');
+  it('exposes fromSubscribe bridge and subjects', () => {
+    expect(typeof fromStore).toBe('function');
+    expect(typeof fromSubscribe).toBe('function');
     expect(typeof createChannel).toBe('function');
   });
 });

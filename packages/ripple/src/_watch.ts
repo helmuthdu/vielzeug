@@ -9,6 +9,7 @@ export type WatchOptions<T> = {
 
 type WatchRuntime = {
   effect(callback: () => undefined | (() => void), options?: { name?: string }): EffectHandle;
+  untrack<T>(fn: () => T): T;
 };
 
 export const createWatch =
@@ -36,8 +37,11 @@ export const createWatch =
           previous = value;
 
           if (options?.immediate) {
-            callback(value, undefined);
-            if (options?.once) disposeAfterInit = true;
+            try {
+              runtime.untrack(() => callback(value, undefined));
+            } finally {
+              if (options?.once) disposeAfterInit = true;
+            }
           }
 
           return;
@@ -48,9 +52,11 @@ export const createWatch =
         const oldValue = previous;
 
         previous = value;
-        callback(value, oldValue);
-
-        if (options?.once) handle.dispose();
+        try {
+          runtime.untrack(() => callback(value, oldValue));
+        } finally {
+          if (options?.once) handle.dispose();
+        }
       },
       { name: options?.name },
     );

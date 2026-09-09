@@ -1,6 +1,6 @@
 import type { ChartMargin } from '../types';
 
-const DEFAULT_MARGIN: ChartMargin = { bottom: 40, left: 50, right: 20, top: 20 };
+const DEFAULT_MARGIN: ChartMargin = { bottom: 48, left: 50, right: 20, top: 20 };
 
 export function resolveMargin(margin?: Partial<ChartMargin>): ChartMargin {
   return { ...DEFAULT_MARGIN, ...margin };

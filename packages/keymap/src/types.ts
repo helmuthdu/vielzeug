@@ -1,12 +1,5 @@
 import type { ShortcutStep } from './parser';
 
-export type BindingEntry = {
-  readonly shortcut: readonly ShortcutStep[];
-  readonly trigger: 'keydown' | 'keyup';
-};
-
-export type Handler = (event: KeyboardEvent) => void;
-
 /**
  * Guard function for fine-grained binding context.
  *
@@ -23,53 +16,72 @@ export type Handler = (event: KeyboardEvent) => void;
  * { when: (e) => !isModalOpen() }
  *
  * // Per-binding: only fire when event target is the specific panel
- * { 'escape': { handler: closePanel, when: (e) => e.target === panel } }
+ * { id: 'close-panel', shortcut: 'escape', handler: closePanel, when: (e) => e.target === panel }
  *
  * Both conditions must be met for the handler to execute.
  */
 export type When = (event: KeyboardEvent) => boolean;
 
-export type BindingOptions = {
-  handler: Handler;
-  trigger?: 'keydown' | 'keyup';
-  when?: When;
-};
+export type Handler = (event: KeyboardEvent) => void;
 
-export type BindingValue = Handler | BindingOptions;
+export type KeymapEvent =
+  | { readonly target: EventTarget; readonly trigger: 'keydown' | 'keyup'; readonly type: 'chord-cancel' }
+  | {
+      readonly step: ShortcutStep;
+      readonly target: EventTarget;
+      readonly trigger: 'keydown' | 'keyup';
+      readonly type: 'chord-start';
+    }
+  | {
+      readonly steps: readonly ShortcutStep[];
+      readonly target: EventTarget;
+      readonly trigger: 'keydown' | 'keyup';
+      readonly type: 'chord-progress';
+    }
+  | { readonly target: EventTarget; readonly trigger: 'keydown' | 'keyup'; readonly type: 'chord-timeout' }
+  | {
+      readonly binding: BindingEntry;
+      readonly target: EventTarget;
+      readonly trigger: 'keydown' | 'keyup';
+      readonly type: 'match';
+    }
+  | { readonly type: 'dispose' };
 
 /**
- * Chord state change event emitted when chord progression changes.
+ * A single ordered binding.
  *
- * Use `onChordState` callback in `KeymapOptions` to observe chord state
- * for debugging, UI hints, or chord history. When a chord fully matches,
- * the binding handler fires immediately; no separate 'completed' event.
+ * Each binding has an explicit `id` (string) so duplicate shortcuts can coexist
+ * with different ids — `unbind(id)` removes by id, not by shortcut string.
+ *
+ * @example
+ * const map = createKeymap([
+ *   { id: 'save', shortcut: 'mod+s', handler: save },
+ *   { id: 'palette', shortcut: 'mod+shift+p', handler: openPalette },
+ *   { id: 'top', shortcut: 'g g', handler: goToTop },
+ *   { id: 'close', shortcut: 'escape', handler: closePanel, when: (e) => !isEditableTarget(e.target) },
+ *   { id: 'play', shortcut: 'space', handler: togglePlay, trigger: 'keyup' },
+ * ], { modKey: 'ctrl' });
  */
-export type ChordStateChange =
-  | { type: 'started'; target: EventTarget; step: ShortcutStep; trigger: 'keydown' | 'keyup' }
-  | { type: 'progressed'; target: EventTarget; steps: readonly ShortcutStep[]; trigger: 'keydown' | 'keyup' }
-  | { type: 'timeout'; target: EventTarget; trigger: 'keydown' | 'keyup' };
+export interface Binding {
+  /** Handler invoked when the shortcut matches. */
+  handler: Handler;
+  /** Stable identifier for this binding. Used by `unbind(id)`. */
+  id: string;
+  /** Call `event.preventDefault()` when matched. Defaults to `true`. */
+  preventDefault?: boolean;
+  /** Shortcut string, e.g. `'mod+s'` or `'g g'`. */
+  shortcut: string;
+  /** Call `event.stopPropagation()` when matched. Defaults to `false`. */
+  stopPropagation?: boolean;
+  /** Event phase. Defaults to `'keydown'`. */
+  trigger?: 'keydown' | 'keyup';
+  /** Per-binding guard. Both global and per-binding guards must pass. */
+  when?: When;
+}
 
 export interface KeymapOptions {
   chordTimeout?: number;
   modKey?: 'ctrl' | 'meta';
-
-  /**
-   * Optional callback to observe chord state changes.
-   *
-   * Fires when a chord starts, progresses through steps, completes, or times out.
-   * Useful for debugging, logging, testing, or implementing chord UI hints.
-   *
-   * @example
-   * {
-   *   onChordState: (change) => {
-   *     if (change.type === 'started') console.log('Chord started:', change.step.key);
-   *     if (change.type === 'timeout') console.log('Chord timed out');
-   *   }
-   * }
-   */
-  onChordState?: (change: ChordStateChange) => void;
-  preventDefault?: boolean;
-  stopPropagation?: boolean;
 
   /**
    * Guard function for all bindings in this keymap.
@@ -84,12 +96,23 @@ export interface KeymapOptions {
 }
 
 export interface Keymap {
-  bind(shortcut: string, value: BindingValue): () => void;
+  /** Adds a binding (replacing any existing binding with the same id) and returns an unbind closure. */
+  bind(binding: Binding): () => void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
   listBindings(): readonly BindingEntry[];
   mount(target: EventTarget): () => void;
-  unbind(shortcut: string): void;
+  tap(handler: (event: KeymapEvent) => void, options?: { signal?: AbortSignal }): () => void;
+  /** Removes the binding with the given id. Warns in development when unknown. */
+  unbind(id: string): void;
   [Symbol.dispose](): void;
 }
+
+export type BindingEntry = {
+  readonly id: string;
+  readonly shortcut: readonly ShortcutStep[];
+  readonly trigger: 'keydown' | 'keyup';
+  readonly preventDefault: boolean;
+  readonly stopPropagation: boolean;
+};

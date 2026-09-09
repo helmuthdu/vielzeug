@@ -19,8 +19,9 @@ type WorkerEvents = {
   stop: void;
 };
 
-const bus = createBus<WorkerEvents>();
+using bus = createBus<WorkerEvents>();
 bus.on('message', (payload) => console.log(payload.body));
+bus.emit('message', { body: 'ready', id: 'job-1' });
 ```
 
 ### Pitfalls
@@ -32,5 +33,5 @@ bus.on('message', (payload) => console.log(payload.body));
 ### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
-- [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Observe listener failures](./custom-error-boundary.md)
+- [Basic usage](../usage.md#basic-usage)

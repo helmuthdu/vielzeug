@@ -23,7 +23,7 @@ interface RunResult {
 
 function createScriptSandbox(container: HTMLElement) {
   const sandbox = createSandbox(container, {
-    namedStyles: { base: 'body { margin: 0; display: none; }' }, // no visible output area needed
+    styles: { base: 'body { margin: 0; display: none; }' }, // no visible output area needed
   });
 
   return {

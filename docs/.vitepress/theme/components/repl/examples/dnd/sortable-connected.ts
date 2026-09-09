@@ -1,5 +1,5 @@
 export const sortableConnectedExample = {
-  code: `import { applyReorder, createSortable, createSortableScope } from '@vielzeug/dnd'
+  code: `import { applyReorder, createSortable, createSortableScope } from '@vielzeug/dnd/sortable'
 
 const scope = createSortableScope({
   onMove: ({ source, sourceIds, target, targetIds }) => {

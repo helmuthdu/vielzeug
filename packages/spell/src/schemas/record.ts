@@ -1,6 +1,7 @@
 import type {
   AnySchema,
   CheckContext,
+  InferInput,
   InferOutput,
   InferSchemaMode,
   Issue,
@@ -20,7 +21,7 @@ export class RecordSchema<
   K extends AnySchema,
   V extends AnySchema,
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<K | V>>,
-> extends Schema<Record<InferOutput<K> & string, InferOutput<V>>, unknown, Mode> {
+> extends Schema<Record<InferOutput<K> & string, InferOutput<V>>, Record<InferInput<K> & string, InferInput<V>>, Mode> {
   readonly keySchema: K;
   readonly valueSchema: V;
 

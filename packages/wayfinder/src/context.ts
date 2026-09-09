@@ -7,6 +7,7 @@ import type {
   RouteBranchDef,
   RouteContext,
   RouteLocation,
+  RouteMatch,
   RouteMatchBranch,
   RouteParams,
   RouterErrorContext,
@@ -17,12 +18,12 @@ import type {
 // ─── Route state ──────────────────────────────────────────────────────────────
 
 /** No defensive deep-copy — RouteState is typed readonly; callers always pass fresh objects. */
-export function createRouteState<TMeta = unknown, TComponent = unknown>(input: {
+export function createRouteState(input: {
   error?: unknown;
   location: RouteLocation;
-  matches: RouteMatchBranch<TMeta, TComponent>;
+  matches: RouteMatchBranch;
   status: NavigationStatus;
-}): RouteState<TMeta, TComponent> {
+}): RouteState {
   return {
     error: input.error,
     location: input.location,
@@ -32,25 +33,22 @@ export function createRouteState<TMeta = unknown, TComponent = unknown>(input: {
 }
 
 /**
- * Build a RouteMatchBranch from compiled defs, data results, and optional per-node statuses.
- * Each node carries its own `status` for fine-grained nested layout feedback.
+ * Build a RouteMatchBranch from compiled defs and data results.
  */
-export function buildMatchBranch<TMeta = unknown, TComponent = unknown>(
-  branchDefs: readonly RouteBranchDef<TMeta, TComponent>[],
+export function buildMatchBranch(
+  branchDefs: readonly RouteBranchDef[],
   params: RouteParams,
   pathname: string,
   dataResults: unknown[],
-  statuses?: readonly NavigationStatus[],
-): RouteMatchBranch<TMeta, TComponent> {
-  return branchDefs.map((def, i): RouteMatchBranch<TMeta, TComponent>[number] => ({
-    component: def.component as TComponent,
-    data: dataResults[i],
-    meta: def.meta as TMeta,
-    name: def.name,
-    params: { ...params },
-    pathname,
-    status: statuses?.[i] ?? 'idle',
-  }));
+): RouteMatchBranch {
+  return branchDefs.map(
+    (def, i): RouteMatch => ({
+      data: dataResults[i],
+      name: def.name,
+      params: { ...params },
+      pathname,
+    }),
+  );
 }
 
 // ─── Context factory ──────────────────────────────────────────────────────────
@@ -80,6 +78,7 @@ export async function executeMiddlewarePipeline<TRoutes extends RouteTable>(
   context: RouteContext<RouteParams, TRoutes>,
   middleware: readonly Middleware<TRoutes>[],
   terminal: () => Promise<void>,
+  wrapMiddlewareError?: (error: unknown) => unknown,
 ): Promise<boolean> {
   let terminalRan = false;
 
@@ -87,12 +86,16 @@ export async function executeMiddlewarePipeline<TRoutes extends RouteTable>(
     if (index < middleware.length) {
       let called = false;
 
-      await middleware[index]?.(context, async () => {
-        if (called) throw new WayfinderApiError('next() called multiple times');
+      try {
+        await middleware[index]?.(context, async () => {
+          if (called) throw new WayfinderApiError('next() called multiple times');
 
-        called = true;
-        await dispatch(index + 1);
-      });
+          called = true;
+          await dispatch(index + 1);
+        });
+      } catch (error) {
+        throw wrapMiddlewareError?.(error) ?? error;
+      }
 
       return;
     }

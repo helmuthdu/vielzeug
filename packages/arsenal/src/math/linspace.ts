@@ -16,7 +16,8 @@
  * @returns An array of `steps` numbers from `start` to `end`.
  */
 export function linspace(start: number, end: number, steps = 5): number[] {
-  if (steps <= 0) return [];
+  if (!Number.isFinite(start) || !Number.isFinite(end)) throw new RangeError('linspace: bounds must be finite');
+  if (!Number.isSafeInteger(steps) || steps < 1) throw new RangeError('linspace: steps must be a positive integer');
 
   if (steps === 1) return [start];
 

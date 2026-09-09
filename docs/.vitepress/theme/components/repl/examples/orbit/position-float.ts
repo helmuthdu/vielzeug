@@ -20,8 +20,7 @@ function show() {
     middleware: [offset(8), flip(), shift({ padding: 8 })],
     placement: 'top',
   })
-  positioner.start()
-  console.log('Placement:', positioner.getPosition()?.placement)
+  console.log('Placement:', positioner.getPosition().placement)
 }
 
 function hide() {

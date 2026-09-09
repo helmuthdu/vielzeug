@@ -30,6 +30,5 @@ const [admins, users] = partition([{ role: 'admin' }, { role: 'user' }, { role: 
 
 ### Related
 
-- [filterMap](./select.md)
-- [groupBy](./group.md)
-- [compact](./compact.md)
+- [filterMap](./filterMap.md)
+- [groupBy](./groupBy.md)

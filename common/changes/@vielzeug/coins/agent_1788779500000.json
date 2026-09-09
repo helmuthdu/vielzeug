@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: consolidate strict money decoding and harden exact arithmetic, locale formatting, and canonical currency invariants",
+      "packageName": "@vielzeug/coins",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/coins"
+}

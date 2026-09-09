@@ -11,6 +11,4 @@ description: Practical examples and recipes for courier.
 - [Error Handling Patterns](./examples/error-handling-patterns.md)
 - [File Uploads](./examples/file-uploads.md)
 - [Optimistic Updates](./examples/optimistic-updates.md)
-- [Polling](./examples/polling.md)
-- [Real-time Events](./examples/sse-events.md)
-- [AI Token Stream](./examples/ai-token-stream.md)
+- [SSE Events](./examples/sse-events.md)

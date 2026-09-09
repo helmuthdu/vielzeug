@@ -25,7 +25,7 @@ import type { Primitive } from '../types';
  * @returns A new array with the item toggled.
  */
 export function toggle<T>(
-  array: T[],
+  array: readonly T[],
   item: T,
   selector?: (item: T) => Primitive,
   options: { strategy?: 'prepend' | 'append' } = {},

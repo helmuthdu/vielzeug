@@ -4,8 +4,14 @@ import { NecromancerConfigError } from './errors';
 import type { LayoutAnimationOptions, LayoutCaptureOptions, LayoutTransition } from './types';
 
 type LayoutRect = Readonly<Pick<DOMRectReadOnly, 'height' | 'width' | 'x' | 'y'>>;
-type LayoutEntry = Readonly<{ element: Element; rect: LayoutRect }>;
-type LayoutChange = Readonly<{ element: Element; scaleX: number; scaleY: number; x: number; y: number }>;
+type LayoutEntry<ElementType extends Element> = Readonly<{ element: ElementType; rect: LayoutRect }>;
+type LayoutChange<ElementType extends Element> = Readonly<{
+  element: ElementType;
+  scaleX: number;
+  scaleY: number;
+  x: number;
+  y: number;
+}>;
 
 // Rounds before templating into a keyframe string purely for DevTools readability — a `getBoundingClientRect()`
 // subtraction routinely produces values like `12.340000000000002`, which is noise once rendered as CSS.
@@ -43,7 +49,11 @@ function computeScale(captured: number, next: number): number {
   return next === 0 ? 1 : captured / next;
 }
 
-function readKey(element: Element, getKey: (element: Element) => string, phase: string): string {
+function readKey<ElementType extends Element>(
+  element: ElementType,
+  getKey: (element: ElementType) => string,
+  phase: string,
+): string {
   const key = getKey(element);
 
   if (typeof key !== 'string' || key.length === 0) {
@@ -53,8 +63,12 @@ function readKey(element: Element, getKey: (element: Element) => string, phase: 
   return key;
 }
 
-function createKeyMap(entries: readonly LayoutEntry[], getKey: (element: Element) => string, phase: string) {
-  const keys = new Map<string, LayoutEntry>();
+function createKeyMap<ElementType extends Element>(
+  entries: readonly LayoutEntry<ElementType>[],
+  getKey: (element: ElementType) => string,
+  phase: string,
+) {
+  const keys = new Map<string, LayoutEntry<ElementType>>();
 
   for (const entry of entries) {
     const key = readKey(entry.element, getKey, phase);
@@ -69,7 +83,10 @@ function createKeyMap(entries: readonly LayoutEntry[], getKey: (element: Element
   return keys;
 }
 
-function changedElement(element: Element, rect: LayoutRect): LayoutChange | undefined {
+function changedElement<ElementType extends Element>(
+  element: ElementType,
+  rect: LayoutRect,
+): LayoutChange<ElementType> | undefined {
   if (!element.isConnected) return undefined;
 
   const next = measureLayout(element);
@@ -81,23 +98,26 @@ function changedElement(element: Element, rect: LayoutRect): LayoutChange | unde
   return x === 0 && y === 0 && scaleX === 1 && scaleY === 1 ? undefined : { element, scaleX, scaleY, x, y };
 }
 
-function matchByIdentity(entries: readonly LayoutEntry[], elements: readonly Element[]): LayoutChange[] {
+function matchByIdentity<ElementType extends Element>(
+  entries: readonly LayoutEntry<ElementType>[],
+  elements: readonly ElementType[],
+): LayoutChange<ElementType>[] {
   const captured = new Map(entries.map((entry) => [entry.element, entry]));
 
   return elements.flatMap((element) => {
     const entry = captured.get(element);
 
     return entry
-      ? [changedElement(element, entry.rect)].filter((change): change is LayoutChange => Boolean(change))
+      ? [changedElement(element, entry.rect)].filter((change): change is LayoutChange<ElementType> => Boolean(change))
       : [];
   });
 }
 
-function matchByKey(
-  captured: ReadonlyMap<string, LayoutEntry>,
-  elements: readonly Element[],
-  getKey: (element: Element) => string,
-): LayoutChange[] {
+function matchByKey<ElementType extends Element>(
+  captured: ReadonlyMap<string, LayoutEntry<ElementType>>,
+  elements: readonly ElementType[],
+  getKey: (element: ElementType) => string,
+): LayoutChange<ElementType>[] {
   const committed = new Set<string>();
 
   return elements.flatMap((element) => {
@@ -111,7 +131,7 @@ function matchByKey(
     committed.add(key);
 
     return entry
-      ? [changedElement(element, entry.rect)].filter((change): change is LayoutChange => Boolean(change))
+      ? [changedElement(element, entry.rect)].filter((change): change is LayoutChange<ElementType> => Boolean(change))
       : [];
   });
 }
@@ -125,8 +145,11 @@ function matchByKey(
  * layout — position changes animate via translate, and size changes via scale, both
  * additively composed on top of any authored transform.
  */
-export function captureLayout(elements: Iterable<Element>, options: LayoutCaptureOptions = {}): LayoutTransition {
-  const entries: LayoutEntry[] = uniqueElements(elements).map((element) => ({
+export function captureLayout<ElementType extends Element>(
+  elements: Iterable<ElementType>,
+  options: LayoutCaptureOptions<ElementType> = {},
+): LayoutTransition<ElementType> {
+  const entries: LayoutEntry<ElementType>[] = uniqueElements(elements).map((element) => ({
     element,
     rect: measureLayout(element),
   }));
@@ -136,7 +159,7 @@ export function captureLayout(elements: Iterable<Element>, options: LayoutCaptur
   let consumed = false;
 
   return {
-    animate(options: LayoutAnimationOptions = {}) {
+    animate(options: LayoutAnimationOptions<ElementType> = {}) {
       if (consumed) throw new NecromancerConfigError('This layout transition has already been animated.');
 
       const { elements: committedElements, ...animationOptions } = options;

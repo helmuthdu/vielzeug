@@ -6,7 +6,7 @@
 import { isReactive, type Readable } from '@vielzeug/ripple';
 
 import { getHost, tryRegisterCleanup, watchEffect } from './runtime';
-import { normalizeAriaKey, normalizeHostAttrKey } from './utils/aria';
+import { normalizeHostAttrKey } from './utils/aria';
 import { listen, resolveMaybeReactive, sanitizeCssToken, setAttr, toKebab } from './utils/dom';
 
 /**
@@ -24,20 +24,14 @@ export type HostBindingValue =
 /**
  * Configuration for host attribute bindings.
  */
-export type ReflectConfig = Record<string, HostBindingValue>;
+export type AttributeBindings = Record<string, HostBindingValue>;
 
 type HostClassBindingValue = Readable<boolean> | (() => boolean) | boolean;
 // Bivariant callback allows consumers to use narrower event types.
 type HostEventListener = { bivarianceHack(event: Event): void }['bivarianceHack'];
 
 export type HostBindConfig = {
-  /**
-   * ARIA attributes, keyed by bare property name (`expanded`) or fully-qualified
-   * (`aria-expanded`) — both normalize to the same attribute. A separate key from `attr`
-   * only so bare names can be normalized; the underlying write path is identical.
-   */
-  aria?: ReflectConfig;
-  attr?: ReflectConfig;
+  attr?: AttributeBindings;
   class?: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>;
   on?: Record<string, HostEventListener | undefined>;
   style?: Record<string, HostBindingValue>;
@@ -54,30 +48,19 @@ export type BindOptions = AddEventListenerOptions & {
   target?: Element;
 };
 
-export type HostBindFn = (config: HostBindConfig, options?: BindOptions) => () => void;
-
 /**
  * Apply reactive or static bindings to an element's attributes, classes, styles,
  * and events. Defaults to the current component's host element; pass
  * `options.target` to bind to any other element (e.g. a slotted trigger, an
  * internally-referenced child).
  */
-export const bind: HostBindFn = (config: HostBindConfig, options?: BindOptions): (() => void) => {
+export const bind = (config: HostBindConfig, options?: BindOptions): (() => void) => {
   const el = (options?.target as HTMLElement | undefined) ?? getHost();
   const disposers: Array<() => void> = [];
 
   if (config.attr) {
     for (const [key, value] of Object.entries(config.attr)) {
       const name = toHostAttr(key);
-      const dispose = applyAttribute(el, name, value);
-
-      if (dispose) disposers.push(dispose);
-    }
-  }
-
-  if (config.aria) {
-    for (const [key, value] of Object.entries(config.aria)) {
-      const name = normalizeAriaKey(key);
       const dispose = applyAttribute(el, name, value);
 
       if (dispose) disposers.push(dispose);

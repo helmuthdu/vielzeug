@@ -1,17 +1,17 @@
 ---
 title: 'Sourcerer Examples — Framework Integration'
-description: 'Subscribe to page source snapshots from a React component.'
+description: 'Subscribe to page source state from a React component.'
 ---
 
 ## Framework Integration
 
 ### Problem
 
-You need framework rendering to follow source snapshots without recreating a source during every render.
+You need framework rendering to follow source state without recreating a source during every render.
 
 ### Solution
 
-Create one source per component lifetime and subscribe through the framework’s external-store API.
+Create one source per component lifetime and bridge `subscribe()` to the external-store API.
 
 ```tsx
 import { createPageSource } from '@vielzeug/sourcerer';
@@ -22,28 +22,27 @@ const users: User[] = [{ id: 1, name: 'Ada' }];
 
 export function UserList() {
   const source = useMemo(
-    () =>
-      createPageSource<User>({
-        load: async () => ({ data: users, total: users.length }),
-      }),
+    () => createPageSource<User>({ load: async () => ({ items: users, totalItems: users.length }) }),
     [],
   );
-  const snapshot = useSyncExternalStore(source.subscribe, () => source.snapshot);
+  const state = useSyncExternalStore(source.subscribe, () => source.state);
 
-  useEffect(() => () => source.dispose(), [source]);
+  useEffect(() => {
+    void source.reload().catch(() => undefined);
+    return () => source.dispose();
+  }, [source]);
 
-  if (snapshot.isFetching && snapshot.data.length === 0) return <p>Loading</p>;
-  if (snapshot.error) return <p>{snapshot.error.message}</p>;
-
-  return <ul>{snapshot.data.map((user) => <li key={user.id}>{user.name}</li>)}</ul>;
+  if (state.loading && state.items.length === 0) return <p>Loading</p>;
+  if (state.error) return <p>{state.error.message}</p>;
+  return <ul>{state.items.map((user) => <li key={user.id}>{user.name}</li>)}</ul>;
 }
 ```
 
 ### Pitfalls
 
-- Keep the source stable with `useMemo()` or equivalent lifecycle ownership.
-- Dispose sources when their component unmounts.
-- Render loaded `snapshot.data` while `pendingQuery` indicates newer work.
+- Keep the source stable for the component lifetime.
+- Dispose the source when the component unmounts.
+- Handle command rejection while rendering failures from `state.error`.
 
 ### Related
 

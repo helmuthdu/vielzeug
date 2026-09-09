@@ -1,5 +1,5 @@
 export type QueueItem<TInput, TOutput> = {
-  cancelled?: boolean;
+  aborted?: boolean;
   cleanupAbort?: () => void;
   input: TInput;
   priority: number;
@@ -32,32 +32,26 @@ export class TaskQueue<TInput, TOutput> {
   }
 
   remove(item: QueueItem<TInput, TOutput>): boolean {
-    if (item.cancelled) return false;
+    const index = this.#heap.findIndex((entry) => entry.item === item);
+    if (index === -1) return false;
 
-    for (const entry of this.#heap) {
-      if (entry.item === item) {
-        item.cancelled = true;
-        this.#live -= 1;
+    const last = this.#heap.pop()!;
+    this.#live -= 1;
 
-        return true;
-      }
+    if (index < this.#heap.length) {
+      this.#heap[index] = last;
+      const parent = (index - 1) >> 1;
+      if (index > 0 && this.#before(this.#heap[index]!, this.#heap[parent]!)) this.#siftUp(index);
+      else this.#siftDown(index);
     }
 
-    return false;
+    return true;
   }
 
   shift(): QueueItem<TInput, TOutput> | undefined {
-    while (this.#heap.length > 0) {
-      const item = this.#extract().item;
-
-      if (!item.cancelled) {
-        this.#live -= 1;
-
-        return item;
-      }
-    }
-
-    return undefined;
+    if (this.#heap.length === 0) return undefined;
+    this.#live -= 1;
+    return this.#extract().item;
   }
 
   #extract(): Entry<TInput, TOutput> {

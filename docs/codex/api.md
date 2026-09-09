@@ -10,17 +10,19 @@ description: Snapshot, catalog, MCP server, and local HTTP host APIs.
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `loadSnapshot` | Read validated snapshot metadata | Sync | Content chunks load lazily |
-| `validateSnapshot` | Validate every content chunk | Sync | Throws on mismatch; use in tests, not startup |
 | `SnapshotCatalog` | Query package corpus | Sync | Construct from loaded snapshot |
-| `createMcpServer` | MCP adapter factory | Sync | Requires catalog and version |
+| `createMcpServer` | MCP adapter factory (generic tools) | Sync | Requires catalog and version |
 | `startHttpHost` | Loopback Streamable HTTP host | Async | HTTP remains local-only |
-| `parsePointer` / `parseManifest` / `parseCatalog` / `parseContent` / `parseSearch` | Pure snapshot parsers | Sync | Throw `CodexError` on malformed input |
+| `registerRefineTools` | Opt-in Refine tool registration | Sync | Import from `@vielzeug/codex/refine` |
+| `parsePointer` / `parseManifest` / `parseCatalog` / `parseContent` / `parseSearch` | Pure snapshot parsers | Sync | Import from `@vielzeug/codex/advanced`; throw `CodexError` on malformed input |
 
-## Package Entry Point
+## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/codex` | Snapshot, catalog, MCP, and HTTP APIs |
+| `@vielzeug/codex` | `Catalog`, `SnapshotCatalog`, `loadSnapshot`, MCP server, and HTTP host |
+| `@vielzeug/codex/advanced` | Snapshot parser internals and raw snapshot types |
+| `@vielzeug/codex/refine` | Opt-in Refine component tools (`registerRefineTools`) |
 
 ## Snapshot
 
@@ -30,7 +32,7 @@ description: Snapshot, catalog, MCP server, and local HTTP host APIs.
 loadSnapshot(snapshotRoot?: string, options?: { validateContents?: boolean }): LoadedSnapshot;
 ```
 
-Loads catalog/search metadata only. `snapshotRoot` defaults to the bundled `data/` directory. Pass `validateContents: true` to verify every package content chunk; use `validateSnapshot()` as a shortcut for that. Package chunks stay lazy at runtime.
+Loads catalog/search metadata and Refine metadata. `snapshotRoot` defaults to bundled `data/`. Package content chunks stay lazy unless `validateContents: true`; `validateSnapshot()` from `/advanced` is the full-validation shortcut.
 
 ### `SnapshotCatalog`
 
@@ -38,31 +40,24 @@ Loads catalog/search metadata only. `snapshotRoot` defaults to the bundled `data
 new SnapshotCatalog(snapshot: LoadedSnapshot)
 ```
 
-Provides package lookup, docs/source/example/signature access, deterministic search, and Refine component lookup.
+Provides generic package lookup, docs/source/example/signature access, and deterministic search. Use `SnapshotRefineCatalog` from `/refine` when component methods are needed.
 
 ---
 
-### `validateSnapshot`
+### Snapshot parsers (`@vielzeug/codex/advanced`)
 
 ```ts
 validateSnapshot(snapshotRoot?: string): void;
-```
-
-Loads and validates every package content chunk in the snapshot. Use during generation, integration tests, or explicit artifact verification; throws `CodexError` on any mismatch.
-
----
-
-### Snapshot parsers
-
-```ts
+loadSnapshotDirectory(directory: string, options?: { validateContents?: boolean }): LoadedSnapshot;
 parsePointer(value: unknown): SnapshotPointer;
 parseManifest(value: unknown): SnapshotManifest;
 parseCatalog(value: unknown): CatalogFile;
 parseContent(value: unknown, slug: string): PackageContent;
 parseSearch(value: unknown, catalog: CatalogFile): SearchRecord[];
+parseRefine(value: unknown): CemDeclaration[];
 ```
 
-Pure validation parsers used by `loadSnapshot`. Each throws `CodexError` on malformed input.
+Pure validation parsers used by `loadSnapshot`. Each throws `CodexError` on malformed input. `validateSnapshot` loads and validates every package content chunk — use during generation, integration tests, or explicit artifact verification.
 
 ## MCP
 
@@ -72,7 +67,25 @@ Pure validation parsers used by `loadSnapshot`. Each throws `CodexError` on malf
 createMcpServer(catalog: Catalog, options: { version: string; debug?: boolean }): Server;
 ```
 
-Registers MCP tools as an adapter over `Catalog`.
+Registers generic package tools over `Catalog`. Refine tools are opt-in through `/refine`. The root also re-exports `StdioServerTransport` for connecting the server without a second package import.
+
+## Refine tools (`@vielzeug/codex/refine`)
+
+### `SnapshotRefineCatalog`
+
+```ts
+new SnapshotRefineCatalog(snapshot: LoadedSnapshot)
+```
+
+Extends `SnapshotCatalog` with `getComponent()` and `listComponents()`.
+
+### `registerRefineTools`
+
+```ts
+registerRefineTools(server: Server, catalog: RefineCatalog, debug?: boolean): void;
+```
+
+Upgrades a server created by `createMcpServer()` with the combined generic and `refine-*` tool set. `refineTools` is exported as a readonly registry.
 
 ## HTTP
 
@@ -82,7 +95,7 @@ Registers MCP tools as an adapter over `Catalog`.
 startHttpHost(options: HttpHostOptions): Promise<HttpHost>;
 ```
 
-Starts Streamable HTTP on `127.0.0.1` by default. Host accepts only loopback addresses.
+Starts Streamable HTTP on `127.0.0.1` by default. Runtime validation accepts only `127.0.0.1` or `::1`; every request must also pass localhost Host and Origin checks. `configureServer` runs once for each lazily created MCP request server and is not called during host startup.
 
 ## Types
 
@@ -162,17 +175,20 @@ interface Example {
 
 ```ts
 interface Catalog {
-  getComponent(tagName: string): CemDeclaration;
   getContent(slug: string): PackageContent;
   getDocs(slug: string, page: DocPage): string;
   getExample(slug: string, exampleId: string): Example;
   getPackage(slug: string): PackageMeta;
   getSource(slug: string): string;
   getTypeSignature(slug: string, symbol: string): string;
-  listComponents(): CemDeclaration[];
   listExamples(slug: string): Array<Pick<Example, 'id' | 'name'>>;
   listPackages(): PackageMeta[];
   search(query: string): SearchHit[];
+}
+
+interface RefineCatalog extends Catalog {
+  getComponent(tagName: string): CemDeclaration;
+  listComponents(): CemDeclaration[];
 }
 
 interface SearchHit {
@@ -186,7 +202,9 @@ interface SearchHit {
 
 ```ts
 interface HttpHost {
+  readonly disposalSignal: AbortSignal;
   dispose(): Promise<void>;
+  readonly disposed: boolean;
   readonly host: string;
   readonly port: number;
   [Symbol.asyncDispose](): Promise<void>;
@@ -194,6 +212,7 @@ interface HttpHost {
 
 interface HttpHostOptions {
   catalog: Catalog;
+  configureServer?: (server: Server) => void;
   debug?: boolean;
   host?: '127.0.0.1' | '::1';
   port: number;
@@ -207,6 +226,8 @@ type DocPage = (typeof DOC_PAGES)[number];
 
 const SNAPSHOT_SCHEMA_VERSION = 1 as const;
 ```
+
+`DOC_PAGES`, `SNAPSHOT_SCHEMA_VERSION`, and raw snapshot types are exported from `/advanced`. CEM types and `RefineCatalog` are exported from `/refine`.
 
 ```ts
 interface CemDeclaration {

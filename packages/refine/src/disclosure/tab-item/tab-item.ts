@@ -3,7 +3,7 @@ import { computed } from '@vielzeug/ripple';
 import { setAriaReflection } from '../../core';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
-import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-item.css?inline';
 
@@ -21,7 +21,7 @@ export type OreTabItemProps = {
   /** Unique value identifier — must match a ore-tab-panel value */
   value: string;
   /** Visual variant (inherited from ore-tabs) */
-  variant?: SurfaceVariant;
+  variant?: VisualVariant;
 };
 
 /**
@@ -34,7 +34,7 @@ export type OreTabItemProps = {
  * @attr {boolean} disabled - Prevents selection
  * @attr {string} density - Inherited spatial density: 'default' | 'compact'
  * @attr {string} size - 'sm' | 'md' | 'lg'
- * @attr {string} variant - Inherited from ore-tabs: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost'
+ * @attr {string} variant - Inherited from ore-tabs: 'solid' | 'flat' | 'bordered' | 'ghost' | 'frost'
  * @attr {string} color - Inherited from ore-tabs: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
  * @slot prefix - Icon or content before the label
@@ -66,7 +66,7 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
     density: prop.oneOf(['compact', 'default'] as const, 'default'),
     size: prop.string<ComponentSize>(),
     value: prop.string(''),
-    variant: prop.string<SurfaceVariant>(),
+    variant: prop.string<VisualVariant>(),
   },
   setup(props) {
     const el = getHost();

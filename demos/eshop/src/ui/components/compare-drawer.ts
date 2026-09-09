@@ -126,13 +126,13 @@ define('compare-drawer', {
       sortable = createSortable({
         element: container,
         getKey: (el) => el.dataset.modelId ?? '',
-        onReorder: ({ ids }) => reorderCompare(ids),
+        onReorder: ({ after }) => reorderCompare(after),
         scope,
       });
 
       const stop = effect(() => {
         void compareModels.value;
-        sortable?.sync();
+        sortable?.refresh();
       });
 
       onCleanup(() => {

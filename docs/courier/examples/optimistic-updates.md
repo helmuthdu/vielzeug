@@ -1,56 +1,51 @@
 ---
 title: 'Courier Examples — Optimistic Updates'
-description: 'Update a Courier query cache before a write completes.'
+description: 'Own optimistic state explicitly while Courier performs the HTTP write.'
 ---
 
 ## Optimistic Updates
 
 ### Problem
 
-A todo should disappear immediately, then reconcile with the server whether the delete succeeds or fails.
+A user list should update immediately while an HTTP write is pending, then reconcile success or restore previous state on failure.
 
 ### Solution
 
-Capture the full snapshot, apply an operation-specific optimistic transform, and restore exactly what existed before on failure.
+Keep the optimistic transaction in the application state owner and use Courier only for transport.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
 
-type Todo = { id: number; title: string };
+type User = { id: number; name: string };
+const courier = createCourier({ baseUrl: '/api' });
+let users = await courier.get<User[]>('/users');
 
-const courier = createCourier({ baseUrl: 'https://api.example.com' });
-const key = ['todos'] as const;
-const id = 7;
-const previous = courier.queries.getSnapshot<Todo[]>(key);
+async function renameUser(id: number, name: string): Promise<User> {
+  const previous = users;
+  users = users.map((user) => (user.id === id ? { ...user, name } : user));
 
-courier.queries.set(
-  key,
-  (previous?.status === 'success' ? previous.data : []).filter((todo) => todo.id !== id),
-);
-try {
-  await courier.mutate({
-    invalidateKeys: [key],
-    request: ({ signal }) => courier.delete('/todos/{id}', { params: { id }, signal }),
-  });
-} catch (error) {
-  if (previous?.status === 'success') {
-    courier.queries.set(key, previous.data, { updatedAt: previous.updatedAt });
-  } else {
-    courier.queries.delete(key);
+  try {
+    const saved = await courier.patch<User>('/users/{id}', {
+      body: { name },
+      params: { id },
+    });
+    users = users.map((user) => (user.id === saved.id ? saved : user));
+    return saved;
+  } catch (error) {
+    users = previous;
+    throw error;
   }
-
-  throw error;
 }
 ```
 
 ### Pitfalls
 
-- Roll back from `getSnapshot()` instead of `get()` so status and timestamp metadata are preserved.
-- Use operation-specific rollback (patch/remove one record), not whole-list replacement for concurrent writes.
-- For concurrent writes on one key, serialize mutations or use conflict-aware merge/rebase rules.
-- Keep `invalidateKeys` on the mutation so settled state always reconciles with the server.
+- Serialize or version overlapping writes before using whole-state rollback.
+- Keep rollback and reconciliation in the state owner, not transport middleware.
+- Use Postmaster when writes must survive reloads or offline periods.
+- Use a dedicated server-state cache when keyed invalidation and shared optimistic state are primary requirements.
 
 ### Related
 
-- [Direct Mutations](../usage.md#direct-mutations)
-- [CRUD Operations](./crud-operations.md)
+- [Courier 3.0 Migration](../migration.md)
+- [Sourcerer Page Source](../../sourcerer/usage.md#working-with-other-vielzeug-libraries)

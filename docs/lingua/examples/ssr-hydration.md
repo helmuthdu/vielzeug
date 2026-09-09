@@ -1,22 +1,22 @@
 ---
 title: 'Lingua Examples — SSR Hydration'
-description: Transfer resolved locale catalogs from server store to client store.
+description: Transfer resolved locale catalogs from server instance to client instance.
 ---
 
 ## SSR Hydration
 
 ### Problem
 
-You need server-rendered translation output and matching client state without shipping catalog loaders in page data. Use `serialize()` on server and `hydrateTranslationStore()` on client.
+You need server-rendered translation output and matching client state without shipping catalog loaders in page data. Use `serialize()` on the server and the `state` option on the client.
 
 ### Solution
 
-Create server state from loaded catalogs, then build client store from payload.
+Create server state from loaded catalogs, then build a client instance from the payload.
 
 ```ts
-import { createTranslationStore, hydrateTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
-const serverI18n = createTranslationStore({
+const serverI18n = createI18n({
   catalogs: { en: { title: 'Server title' } },
   locale: 'en',
 });
@@ -24,7 +24,7 @@ const serverI18n = createTranslationStore({
 try {
   const state = serverI18n.serialize();
   const payload = JSON.stringify(state);
-  const clientI18n = hydrateTranslationStore(JSON.parse(payload) as typeof state);
+  const clientI18n = createI18n({ state: JSON.parse(payload) as typeof state });
 
   try {
     console.log(clientI18n.translate('title'));
@@ -38,9 +38,10 @@ try {
 
 ### Pitfalls
 
-- Serialize after needed lazy catalog resolves.
+- Serialize after each needed lazy catalog resolves.
 - Do not expect loader functions in hydrated state; state contains raw catalogs only.
-- Pass fallback and missing-message handlers to `hydrateTranslationStore()` when client behavior differs from defaults.
+- The client restores the serialized locale unless you pass an explicit override.
+- Pass fallback and missing-message options when client behavior differs from defaults.
 
 ### Related
 

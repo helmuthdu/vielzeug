@@ -243,10 +243,10 @@ Definitions are frozen serializable snapshots of declarative schema structure. U
 Spell has no mutable process-wide configuration. Build one parse context per request, locale, or form, then pass it explicitly.
 
 ```ts
-import { diagnostics, s } from '@vielzeug/spell';
+import { createParseContext, s } from '@vielzeug/spell';
 
 const User = s.object({ email: s.string().email() });
-const german = diagnostics.createParseContext({
+const german = createParseContext({
   object: { invalidKeys: () => 'Keine unbekannten Felder erlaubt' },
 });
 
@@ -277,7 +277,7 @@ if (!result.success && result.error instanceof SpellValidationError) {
 }
 ```
 
-Use `bestMatch()` on a union failure when you want the branch that came closest to succeeding. Pass a specific `invalid_union` issue when one validation produced multiple union failures.
+Union failures produce one stable `invalid_union` issue. Use `s.discriminatedUnion()` when a discriminator can identify the intended object branch and provide field-specific errors.
 
 ## Schema Traversal with walk()
 
@@ -359,7 +359,7 @@ Use Spell as the validation layer and let other packages focus on transport, for
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { customValidator } from '@vielzeug/forge/spell';
+import { schemaValidator } from '@vielzeug/forge/schema';
 import { createCourier } from '@vielzeug/courier';
 import { s } from '@vielzeug/spell';
 
@@ -373,7 +373,7 @@ const form = createForm({
     displayName: '',
     newsletter: false,
   },
-  validate: customValidator(Profile),
+  validate: schemaValidator(Profile),
 });
 
 const courier = createCourier({ baseUrl: '/api' });

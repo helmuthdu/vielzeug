@@ -3,12 +3,13 @@
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { table, ttl, VaultError } from '../index';
+import { count, deleteMany, getMany, type KeyValueVaultStore, table, ttl, VaultError, validatorCodec } from '../index';
 import { createSQLite } from '../sqlite';
 
 type User = { id: number | string; name: string; role?: string };
 
 const schema = { users: table<User>('id') };
+const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
 const databases: DatabaseSync[] = [];
 
 function createDatabase(): DatabaseSync {
@@ -20,7 +21,7 @@ function createDatabase(): DatabaseSync {
 }
 
 function createStore(database = createDatabase()) {
-  return createSQLite({ database, name: 'app', schema });
+  return createSQLite({ codecs, database, name: 'app', schema });
 }
 
 afterEach(() => {
@@ -31,7 +32,7 @@ afterEach(() => {
   }
 });
 
-describe('SQLite TransactionalVaultStore', () => {
+describe('SQLite DocumentVaultStore', () => {
   test('persists records with distinct numeric and string keys across stores', async () => {
     const database = createDatabase();
     const writer = createStore(database);
@@ -42,11 +43,11 @@ describe('SQLite TransactionalVaultStore', () => {
       { id: '1', name: 'Grace' },
     ]);
 
-    await expect(reader.getMany('users', ['1', 1])).resolves.toEqual([
+    await expect(getMany(reader as unknown as KeyValueVaultStore<typeof schema>, 'users', ['1', 1])).resolves.toEqual([
       { id: '1', name: 'Grace' },
       { id: 1, name: 'Ada' },
     ]);
-    await expect(reader.count('users')).resolves.toBe(2);
+    await expect(count(reader as unknown as KeyValueVaultStore<typeof schema>, 'users')).resolves.toBe(2);
   });
 
   test('applies TTL expiry and prunes expired records', async () => {
@@ -74,30 +75,6 @@ describe('SQLite TransactionalVaultStore', () => {
     await expect(store.put('users', { id: 3, name: 'Ada', role: new Date() as unknown as string })).rejects.toThrow(
       'plain object',
     );
-  });
-
-  test('queries filter by primary-key equality in memory', async () => {
-    const store = createStore();
-
-    await store.putAll('users', [
-      { id: 1, name: 'one' },
-      { id: 2, name: 'two' },
-      { id: 3, name: 'three' },
-      { id: 'alpine', name: 'Alpine' },
-      { id: 'alpha', name: 'Alpha' },
-      { id: 'beta', name: 'Beta' },
-    ]);
-
-    await expect(store.query('users').equals('id', 2).toArray()).resolves.toEqual([{ id: 2, name: 'two' }]);
-    await expect(
-      store
-        .query('users')
-        .filter((u) => typeof u.id === 'string' && u.id.startsWith('alp'))
-        .toArray(),
-    ).resolves.toEqual([
-      { id: 'alpine', name: 'Alpine' },
-      { id: 'alpha', name: 'Alpha' },
-    ]);
   });
 
   test('commits successful batches and rolls back callback failures', async () => {
@@ -159,7 +136,8 @@ describe('SQLite TransactionalVaultStore', () => {
     const database = createDatabase();
     const store = createStore(database);
 
-    await store.count('users');
+    (await store.count) ? null : null; // touch store to init
+    await store.getAll('users');
     database.exec('BEGIN IMMEDIATE');
 
     await expect(store.batch(['users'], async () => undefined)).rejects.toThrow('cannot start a transaction');
@@ -200,17 +178,38 @@ describe('SQLite TransactionalVaultStore', () => {
     await expect(store.get('users', 200)).resolves.toEqual({ id: 200, name: 'Released' });
   });
 
+  test('allows store operations while an iterator is active', async () => {
+    const store = createStore();
+    await store.putAll('users', [
+      { id: 1, name: 'Ada' },
+      { id: 2, name: 'Grace' },
+    ]);
+    const iterator = store.iterate('users')[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).resolves.toEqual({ done: false, value: { id: 1, name: 'Ada' } });
+    const read = await Promise.race([
+      store.get('users', 2),
+      new Promise<'blocked'>((resolve) => setTimeout(() => resolve('blocked'), 100)),
+    ]);
+    await iterator.return?.();
+
+    expect(read).toEqual({ id: 2, name: 'Grace' });
+  });
+
   test('keeps caller-owned connections open unless closeOnDispose is enabled', async () => {
     const callerOwned = createDatabase();
     const store = createStore(callerOwned);
 
     await store.dispose();
+    expect(store.disposed).toBe(true);
+    await expect(store.batch(['users'], async () => undefined)).rejects.toThrow('disposed');
     expect(callerOwned.prepare('SELECT 1 AS value').get()).toEqual({ value: 1 });
 
     const closable = createDatabase();
     const close = vi.fn(() => closable.close());
     const closingStore = createSQLite({
       closeOnDispose: true,
+      codecs,
       database: { close, exec: closable.exec.bind(closable), prepare: closable.prepare.bind(closable) },
       name: 'closing',
       schema,
@@ -235,7 +234,7 @@ describe('SQLite TransactionalVaultStore', () => {
     const database = createDatabase();
     const store = createStore(database);
 
-    await store.count('users');
+    await store.getAll('users');
     database
       .prepare(
         `INSERT INTO "__vielzeug_vault_records"
@@ -265,7 +264,10 @@ describe('SQLite TransactionalVaultStore', () => {
 
   test('accepts records with shared subtree references (DAG, not circular)', async () => {
     const itemSchema = { items: table<{ id: number; a: { x: number }; b: { x: number } }>('id') };
-    const store = createSQLite({ database: createDatabase(), name: 'dag', schema: itemSchema });
+    const itemCodecs = {
+      items: validatorCodec({ parse: (v) => v as { id: number; a: { x: number }; b: { x: number } } }),
+    };
+    const store = createSQLite({ codecs: itemCodecs, database: createDatabase(), name: 'dag', schema: itemSchema });
     const shared = { x: 1 };
 
     await store.put('items', { a: shared, b: shared, id: 1 });
@@ -274,15 +276,79 @@ describe('SQLite TransactionalVaultStore', () => {
 
   test('deleteMany chunks correctly for >996 keys', async () => {
     const bigSchema = { items: table<{ id: number }>('id') };
-    const store = createSQLite({ database: createDatabase(), name: 'big', schema: bigSchema });
+    const bigCodecs = { items: validatorCodec({ parse: (v) => v as { id: number } }) };
+    const store = createSQLite({ codecs: bigCodecs, database: createDatabase(), name: 'big', schema: bigSchema });
     const items = Array.from({ length: 1000 }, (_, i) => ({ id: i }));
 
     await store.putAll('items', items);
-    const deleted = await store.deleteMany(
+    const deleted = await deleteMany(
+      store as unknown as KeyValueVaultStore<typeof bigSchema>,
       'items',
       items.map((i) => i.id),
     );
 
     expect(deleted).toBe(1000);
+  });
+
+  test('runs bound read-modify-write helpers atomically', async () => {
+    const store = createStore();
+    await store.put('users', { id: 1, name: 'counter', role: '0' });
+
+    await Promise.all([
+      store.upsert('users', 1, (current) => ({ ...current!, role: String(Number(current?.role ?? 0) + 1) })),
+      store.upsert('users', 1, (current) => ({ ...current!, role: String(Number(current?.role ?? 0) + 1) })),
+    ]);
+
+    await expect(store.get('users', 1)).resolves.toMatchObject({ role: '2' });
+  });
+
+  test('provides bound helpers and queries inside transactions', async () => {
+    const store = createStore();
+
+    await store.batch(['users'], async (tx) => {
+      await tx.upsert('users', 1, () => ({ id: 1, name: 'Ada', role: 'admin' }));
+      await tx.upsert('users', 2, () => ({ id: 2, name: 'Grace', role: 'viewer' }));
+      await expect(tx.query('users').equals('role', 'admin').count()).resolves.toBe(1);
+      await expect(tx.query('users').equals('role', 'viewer').delete()).resolves.toBe(1);
+    });
+
+    await expect(store.getAll('users')).resolves.toEqual([{ id: 1, name: 'Ada', role: 'admin' }]);
+  });
+
+  test('rejects transaction context use after batch completion', async () => {
+    const store = createStore();
+    let leaked: Parameters<Parameters<typeof store.batch>[1]>[0] | undefined;
+
+    await store.batch(['users'], async (tx) => {
+      leaked = tx;
+    });
+
+    await expect(leaked?.put('users', { id: 1, name: 'late' })).rejects.toThrow('transaction context');
+    await expect(store.get('users', 1)).resolves.toBeUndefined();
+  });
+
+  test('supports codecs whose encoded representation is a JSON scalar', async () => {
+    type Item = { id: number };
+    const itemSchema = { items: table<Item>('id') };
+    const store = createSQLite({
+      codecs: {
+        items: {
+          decode: (value) => ({ id: Number(value) }),
+          encode: (value) => String(value.id),
+        },
+      },
+      database: createDatabase(),
+      name: 'scalar-codec',
+      schema: itemSchema,
+    });
+
+    await store.put('items', { id: 1 });
+    await expect(store.get('items', 1)).resolves.toEqual({ id: 1 });
+  });
+
+  test('requires codecs for durable persistence', () => {
+    expect(() => createSQLite({ database: createDatabase(), name: 'should-fail', schema } as never)).toThrow(
+      'codecs are required',
+    );
   });
 });

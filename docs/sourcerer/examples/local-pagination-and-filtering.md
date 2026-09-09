@@ -1,47 +1,48 @@
 ---
-title: 'Sourcerer Examples — Local Pagination and Search'
-description: 'Search and paginate a prepared in-memory collection.'
+title: 'Sourcerer Examples — Local Pagination and Filtering'
+description: 'Filter and paginate an in-memory collection with typed params.'
 ---
 
-## Local Pagination and Search
+## Local Pagination and Filtering
 
 ### Problem
 
-You have a prepared local collection and need page controls plus a text search field. Filtering and ranking should remain application-owned logic.
+You have a local collection and need page controls plus application-owned filtering.
 
 ### Solution
 
-Prepare data before creating source. Supply an explicit `match` function for text search.
+Pass a typed params value to the filter and replace it with `setParams()`.
 
 ```ts
 import { createLocalSource } from '@vielzeug/sourcerer';
 
 type Product = { id: number; name: string; price: number };
-
+type Params = { maximumPrice: number; search: string };
 const products: Product[] = [
   { id: 1, name: 'Keyboard', price: 99 },
   { id: 2, name: 'Mouse', price: 49 },
   { id: 3, name: 'Monitor', price: 299 },
 ];
-const prepared = products.filter((product) => product.price < 200).toSorted((left, right) => left.price - right.price);
-const source = createLocalSource(prepared, {
-  initialQuery: { pageSize: 1 },
-  match: (product, search) => product.name.toLowerCase().includes(search.toLowerCase()),
+const source = createLocalSource<Product, Params>(products, {
+  filter: (product, params) =>
+    product.price <= params.maximumPrice && product.name.toLowerCase().includes(params.search.toLowerCase()),
+  pageSize: 1,
+  params: { maximumPrice: 200, search: '' },
 });
 
-source.setQuery({ search: 'key' });
-console.log(source.snapshot.data); // [{ id: 1, name: 'Keyboard', price: 99 }]
+source.setParams({ maximumPrice: 200, search: 'key' });
+console.log(source.state.items); // [{ id: 1, name: 'Keyboard', price: 99 }]
 source.dispose();
 ```
 
 ### Pitfalls
 
-- Keep dynamic filters and sort order outside `LocalQuery`; pass prepared results to `setData()`.
-- Return a new array to `setData()` after changing the collection.
-- Read `snapshot.pagination` after each query change; search resets to page 1.
+- Replace params atomically; Sourcerer does not merge objects.
+- Call `setItems()` when the underlying collection changes.
+- Read `state.pagination` after filtering because the page count can change.
 
 ### Related
 
-- [Usage Guide](../usage#local-collection)
+- [Usage Guide](../usage#filter-local-collections)
 - [Scout integration](../../scout/examples/sourcerer-integration)
-- [Page query with URL state](./remote-search-with-url-state)
+- [Page params with URL state](./remote-search-with-url-state)

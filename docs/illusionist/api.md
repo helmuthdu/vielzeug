@@ -52,7 +52,7 @@ Creates a bound instance. All categories share one seeded random source and one 
 | `seed` | `number \| string` | `undefined` | Seed for deterministic output. Omit for cryptographic randomness. |
 | `locale` | `IllusionistLocale` | Required | Explicit locale object for locale-aware categories. |
 
-**Returns:** `Illusionist` — an object with `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, `system` categories, plus `seed`, `locale`, `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]()`.
+**Returns:** `Illusionist` — an object with `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, and `system` categories, plus readonly `seed` and `locale` values. It owns no external resources and requires no cleanup.
 
 ```ts
 import { createIllusion } from '@vielzeug/illusionist';
@@ -60,7 +60,6 @@ import { en } from '@vielzeug/illusionist/locales';
 
 const illusion = createIllusion({ seed: 12345, locale: en });
 illusion.person.fullName();
-illusion.dispose();
 ```
 
 ---
@@ -738,10 +737,6 @@ type Illusionist = {
   readonly system: typeof system;
   readonly seed: number | string | undefined;
   readonly locale: IllusionistLocale;
-  dispose(): void;
-  readonly disposed: boolean;
-  readonly disposalSignal: AbortSignal;
-  [Symbol.dispose](): void;
 };
 
 type Coordinate = {
@@ -768,9 +763,11 @@ type AmountOptions = {
 
 // Re-exported from @vielzeug/arsenal
 type RandomSource = {
-  next(): number; // float in [0, 1)
+  next(): number; // finite float in [0, 1)
 };
 ```
+
+Category helpers throw `RangeError` when a custom source returns a non-finite value or a value outside `[0, 1)`.
 
 ## Errors
 

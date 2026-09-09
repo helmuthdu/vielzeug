@@ -1,25 +1,16 @@
 # @vielzeug/ledger
 
-Serialized reversible command history with cancellation ownership and atomic reactive state.
+> Serialized reversible command history with atomic framework-neutral state and cancellation ownership
 
-## Features
-
-- **Reversible commands** — every recorded command has `apply()` and `revert()`
-- **Atomic state** — one `Readable<LedgerState>` for queue and history observation
-- **Composition** — `compose()` combines reversible commands into one history entry
-- **Cancellation** — queued cancelled work never starts; active work receives `AbortSignal`
-- **Idle ownership** — `whenIdle()` waits for queued and active work to settle
-- **History cap** — non-negative safe-integer retained depth
-
-## Install
+## Installation
 
 ```sh
 pnpm add @vielzeug/ledger
+npm install @vielzeug/ledger
+yarn add @vielzeug/ledger
 ```
 
 ## Quick Start
-
-Submit reversible state transitions and dispose the owner at teardown.
 
 ```ts
 import { createLedger } from '@vielzeug/ledger';
@@ -38,6 +29,14 @@ console.log(ledger.state.value.undo.length); // 0
 ledger.dispose();
 ```
 
-Keep irreversible side effects outside Ledger commands. Catch operation failures at your application boundary.
+## Documentation
 
-[Full documentation](https://vielzeug.dev/ledger/)
+- [Overview](https://vielzeug.dev/ledger/)
+- [Usage Guide](https://vielzeug.dev/ledger/usage)
+- [API Reference](https://vielzeug.dev/ledger/api)
+- [Examples](https://vielzeug.dev/ledger/examples)
+- [Migration Guide](https://vielzeug.dev/ledger/migration)
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

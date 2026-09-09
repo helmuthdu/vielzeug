@@ -1,5 +1,3 @@
-import { uuid as cryptoUuid } from '@vielzeug/arsenal/random';
-
 import { int } from '../_helpers/int';
 import { alphanumeric, pick } from '../_helpers/string';
 import type { IllusionistContext } from '../types';
@@ -65,7 +63,7 @@ export function semver(ctx: IllusionistContext, options?: { maxMajor?: number; i
  * unpredictability matters more than reproducibility.
  */
 export function uuid(): string {
-  return cryptoUuid();
+  return crypto.randomUUID();
 }
 
 /** Generates a random port number (1-65535, avoiding well-known ports below 1024 by default). */

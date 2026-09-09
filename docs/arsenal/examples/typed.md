@@ -6,8 +6,6 @@ description: Typed predicate examples for Arsenal.
 ## Quick Reference
 
 - [isAbortError](./typed/isAbortError.md)
-- [isArray](./typed/isArray.md)
-- [isBoolean](./typed/isBoolean.md)
 - [isDate](./typed/isDate.md)
 - [isDefined](./typed/isDefined.md)
 - [isEmpty](./typed/isEmpty.md)
@@ -21,5 +19,4 @@ description: Typed predicate examples for Arsenal.
 - [isPrimitive](./typed/isPrimitive.md)
 - [isPromise](./typed/isPromise.md)
 - [isRegex](./typed/isRegex.md)
-- [isString](./typed/isString.md)
 - [shallowEqual](./typed/shallowEqual.md)

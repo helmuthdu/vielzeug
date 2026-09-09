@@ -13,7 +13,7 @@
 
 - **MUST:** Use TypeScript strict mode. No `any` in package source.
 - **MUST:** Route public root exports through `src/index.ts`.
-- **MUST:** Do not add an external runtime dependency without explicit approval.
+- **MUST:** Do not add a third-party runtime dependency without explicit approval. This does not prohibit `@vielzeug/*` workspace dependencies.
 - **MUST:** Treat `package.json` as dependency authority. Use `.ai/data/packages.json` for agent-facing package facts and impact analysis.
 - **MUST:** Keep source, tests, public exports, and user-facing examples consistent.
 
@@ -126,19 +126,19 @@ interface Tappable<Events extends { readonly type: string }> {
 - **SHOULD:** Emit a `{ type: 'dispose' }` event before clearing tappers, so observers can clean up.
 - **SHOULD:** `tap()` after dispose returns a no-op unsubscribe. Packages with an explicit `DisposedError` class may throw instead for consistency with their other methods.
 
-Rune integration (no adapter needed — rune's `LogMethod` overload `(context: Bindings, message?: string)` matches `(event, label)`):
+Rune integration (no adapter needed — rune's context-first `LogMethod` overload matches `(event, label)`):
 
 ```ts
 import { createLogger } from '@vielzeug/rune';
 
-const log = createLogger({ name: 'herald' });
+const log = createLogger({ namespace: 'herald' });
 const bus = createBus<MyEvents>();
 
 bus.tap((event) => log.debug(event, `herald:${event.type}`));
 ```
 
-Packages that implement `tap()`: herald, ward, postmaster, courier, pulse, scout.
-Packages that don't (no runtime observability gap): vault (has `observe()`), spell, arsenal, ore, refine, dnd, orbit (visual overlay only), scroll, keymap, lingua, tempo, flux, focus, gesture, necromancer, sourcerer, coins, assay, illusionist, familiar, conduit, ledger, sentinel, wayfinder (has `subscribe()`), clockwork (has `subscribe()`), prism, ripple.
+Packages that implement `tap()`: herald, keymap, ward, postmaster, courier, pulse, scout.
+Packages that don't (no runtime observability gap): vault (has `observe()`), spell, arsenal, ore, refine, dnd, orbit (visual overlay only), scroll, lingua, tempo, flux, focus, gesture, necromancer, sourcerer, coins, assay, illusionist, familiar, conduit, ledger, sentinel, wayfinder (has `subscribe()`), clockwork (has `subscribe()`), prism, ripple.
 
 ## File layout
 

@@ -1,6 +1,8 @@
 import type {
   AnySchema,
   CheckContext,
+  InferInput,
+  InferOutput,
   InferSchemaMode,
   Issue,
   MergeSchemaModes,
@@ -15,16 +17,18 @@ import type {
 import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
 
 export type TupleSchemas = readonly [AnySchema, ...AnySchema[]];
-export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null> =
-  R extends Schema<infer O>
-    ? readonly [...{ [K in keyof T]: T[K] extends Schema<infer V> ? V : never }, ...O[]]
-    : { readonly [K in keyof T]: T[K] extends Schema<infer V> ? V : never };
+export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null> = R extends AnySchema
+  ? readonly [...{ [K in keyof T]: InferOutput<T[K]> }, ...InferOutput<R>[]]
+  : { readonly [K in keyof T]: InferOutput<T[K]> };
+type InferTupleInput<T extends TupleSchemas, R extends AnySchema | null = null> = R extends AnySchema
+  ? readonly [...{ [K in keyof T]: InferInput<T[K]> }, ...InferInput<R>[]]
+  : { readonly [K in keyof T]: InferInput<T[K]> };
 
 export class TupleSchema<
   T extends TupleSchemas,
   R extends AnySchema | null = null,
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number] | Exclude<R, null>>>,
-> extends Schema<InferTuple<T, R>, unknown, Mode> {
+> extends Schema<InferTuple<T, R>, InferTupleInput<T, R>, Mode> {
   readonly items: T;
   readonly restSchema: R;
 

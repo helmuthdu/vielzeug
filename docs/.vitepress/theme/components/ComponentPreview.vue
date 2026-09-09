@@ -279,11 +279,13 @@ const {
 
 /* Tabs container */
 .preview-tabs {
+  --tabs-tablist-border-color: var(--vp-c-divider);
   display: flex;
   flex: 1;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  border: 1px solid var(--vp-c-divider);
 }
 
 /* Ensure tab panels flow full height */

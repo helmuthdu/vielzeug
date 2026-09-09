@@ -1,15 +1,14 @@
 export const lifetimesExample = {
-  code: `import { createContainer, token } from '@vielzeug/conduit'
+  code: `import { createContainer, factoryProvider, token } from '@vielzeug/conduit'
 
 const Singleton = token('Singleton')
-const Transient = token('Transient')
-const container = createContainer()
 
-container.factory(Singleton, [], () => ({ id: crypto.randomUUID() }))
-container.factory(Transient, [], () => ({ id: crypto.randomUUID() }), { lifetime: 'transient' })
+const container = createContainer([
+  factoryProvider(Singleton, [], () => ({ id: crypto.randomUUID() })),
+])
 
-console.log((await container.resolve(Singleton)) === (await container.resolve(Singleton)))
-console.log((await container.resolve(Transient)) === (await container.resolve(Transient)))
+const services = await container.resolve({ a: Singleton, b: Singleton })
+console.log(services.a === services.b)
 await container.dispose()`,
-  name: 'Singleton and transient lifetimes',
+  name: 'Singleton lifetime caching',
 };

@@ -1,45 +1,47 @@
 ---
-title: 'Flux Examples — Ripple Signal Integration'
-description: 'Bridge Ripple signal updates through Flux operators into a derived signal binding.'
+title: 'Flux Examples — Structural State Integration'
+description: 'Bridge subscribable state through Flux operators without package-specific adapters.'
 ---
 
-## Ripple Signal Integration
+## Structural State Integration
 
 ### Problem
 
-A Ripple signal needs time-based stream operators before UI reads its next value.
+A state source needs time-based stream operators before UI consumes its next value.
 
 ### Solution
 
-Convert source signal to stream, compose operators, then bind output back to Ripple.
+Use `fromStore()` with any `{ getSnapshot, subscribe }` source, then write stream output where the application needs it.
 
 ```ts
-import { debounce, map, pipe } from '@vielzeug/flux';
-import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
-import { effect, signal } from '@vielzeug/ripple';
+import { debounce, fromStore, map, pipe } from '@vielzeug/flux';
+import { signal } from '@vielzeug/ripple';
 
 const query = signal('');
 const normalized = pipe(
-  fromSignal(query),
+  fromStore({ getSnapshot: () => query.peek(), subscribe: (listener) => query.subscribe(listener) }),
   debounce(300),
   map((value) => value.trim().toLowerCase()),
 );
-const result = toSignal(normalized, { initial: '' });
+const result = signal('');
+const subscription = normalized.subscribe({
+  error: reportError,
+  next: (value) => {
+    result.value = value;
+  },
+});
 
-effect(() => console.log(result.value));
 query.value = ' Hello ';
-
-result.dispose();
+subscription.unsubscribe();
 ```
 
 ### Pitfalls
 
-- `fromSignal()` emits current value synchronously on subscription.
-- `toSignal()` preserves final value, then disposes when source completes, errors, or external signal aborts.
-- Bindings from long-lived streams should be disposed by their owner.
+- `fromStore()` emits `getSnapshot()`'s the current value before later notifications.
+- Dispose long-lived stream subscriptions with their owner.
 
 ### Related
 
 - [Combining Streams](./combine-streams.md)
 - [Debounced Search Input](./debounce-search.md)
-- [API: Ripple adapters](../api.md#adapters)
+- [Flux API](../api.md)

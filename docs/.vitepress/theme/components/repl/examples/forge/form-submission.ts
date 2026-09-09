@@ -3,7 +3,7 @@ export const formSubmissionExample = {
 
 const form = createForm({
   initialValues: { email: '' },
-  validate: (value) => ({ fields: { email: value.email.includes('@') ? undefined : 'Invalid email' } }),
+  validate: (value) => (value.email.includes('@') ? undefined : [{ path: ['email'], message: 'Invalid email' }]),
 })
 
 form.field('email').set('ada@example.com')

@@ -1,7 +1,12 @@
 /**
  * Splits an array into values that match and do not match the predicate.
+ *
+ * Allocates two new arrays for the accepted and rejected partitions.
  */
-export function partition<T>(array: T[], predicate: (item: T, index: number, array: T[]) => boolean): [T[], T[]] {
+export function partition<T>(
+  array: readonly T[],
+  predicate: (item: T, index: number, array: readonly T[]) => boolean,
+): [T[], T[]] {
   const accepted: T[] = [];
   const rejected: T[] = [];
 

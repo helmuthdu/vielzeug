@@ -69,6 +69,15 @@ describe('buildCsp', () => {
     expect(buildCsp({ allowedScriptOrigins: [], allowedStyleOrigins: [] })).toContain("script-src 'unsafe-inline'");
   });
 
+  it.each([
+    ['options', null],
+    ['allowedScriptOrigins', { allowedScriptOrigins: 'https://cdn.example.com' }],
+    ['scripts', { scripts: 'https://cdn.example.com/lib.js' }],
+    ['styles', { styles: null }],
+  ])('rejects an invalid %s container', (_field, options) => {
+    expect(() => buildCsp(options as never)).toThrow(SandboxConfigurationError);
+  });
+
   it('includes all required CSP directives', () => {
     const csp = buildCsp();
 
@@ -135,16 +144,16 @@ describe('buildDocument', () => {
     expect(buildDocument('<p>Hi</p>')).toContain("post({ type: 'ready' }");
   });
 
-  it('renders namedStyles as <style id="key"> blocks', () => {
+  it('renders styles as <style id="key"> blocks', () => {
     const doc = buildDocument('<p>Hi</p>', {
-      namedStyles: { 'base-css': 'body { margin: 0; }', 'theme-css': 'body { color: red; }' },
+      styles: { 'base-css': 'body { margin: 0; }', 'theme-css': 'body { color: red; }' },
     });
 
     expect(doc).toContain('<style id="base-css">body { margin: 0; }</style>');
     expect(doc).toContain('<style id="theme-css">body { color: red; }</style>');
   });
 
-  it('renders no <style> block when namedStyles is empty', () => {
+  it('renders no <style> block when styles is empty', () => {
     expect(buildDocument('<p>Hi</p>')).not.toContain('<style');
   });
 
@@ -175,10 +184,15 @@ describe('buildDocument', () => {
     expect(doc).not.toContain('nonce=');
   });
 
-  it('bridge script appears after injected <script src> tags', () => {
-    const doc = buildDocument('<p>hi</p>', { scripts: ['https://cdn.example.com/lib.js'] });
+  it('installs the bridge before injected scripts and user content', () => {
+    const doc = buildDocument('<script>throw new Error("boom")</script>', {
+      scripts: ['https://cdn.example.com/lib.js'],
+    });
+    const bridge = doc.indexOf('window.onerror');
 
-    expect(doc.indexOf('src="https://cdn.example.com/lib.js"')).toBeLessThan(doc.indexOf('parent.postMessage'));
+    expect(bridge).toBeGreaterThan(-1);
+    expect(bridge).toBeLessThan(doc.indexOf('src="https://cdn.example.com/lib.js"'));
+    expect(bridge).toBeLessThan(doc.indexOf('throw new Error'));
   });
 
   it('includes auto-resize ResizeObserver in bridge script', () => {
@@ -195,9 +209,9 @@ describe('buildDocument', () => {
   });
 
   describe('CSS injection safety', () => {
-    it('escapes </style in namedStyles CSS to prevent element breakout', () => {
+    it('escapes </style in styles CSS to prevent element breakout', () => {
       const doc = buildDocument('<p>hi</p>', {
-        namedStyles: { theme: 'body { color: red; } </style><script>evil()</script>' },
+        styles: { theme: 'body { color: red; } </style><script>evil()</script>' },
       });
 
       // The raw </style sequence must not appear in the output
@@ -208,14 +222,14 @@ describe('buildDocument', () => {
 
     it('does not escape CSS that contains no closing style tag', () => {
       const css = 'body { color: red; background: url("data:image/png;base64,abc"); }';
-      const doc = buildDocument('<p>hi</p>', { namedStyles: { theme: css } });
+      const doc = buildDocument('<p>hi</p>', { styles: { theme: css } });
 
       expect(doc).toContain(css);
     });
 
     it('handles case-insensitive </STYLE breakout attempt', () => {
       const doc = buildDocument('<p>hi</p>', {
-        namedStyles: { theme: 'body {} </STYLE><script>evil()</script>' },
+        styles: { theme: 'body {} </STYLE><script>evil()</script>' },
       });
 
       expect(doc).not.toContain('</STYLE><script>evil()');
@@ -332,88 +346,6 @@ describe('createSandbox — disposalSignal', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — ready promise
-// ---------------------------------------------------------------------------
-
-describe('createSandbox — ready promise', () => {
-  let container: HTMLElement;
-  let helpers: ReturnType<typeof makeHelpers>;
-
-  beforeEach(() => {
-    container = makeContainer();
-    helpers = makeHelpers(container);
-  });
-
-  afterEach(() => {
-    container.remove();
-  });
-
-  it('ready resolves when the sandbox sends a ready message', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-    helpers.fireReady();
-    await expect(sandbox.ready).resolves.toBeUndefined();
-    sandbox.dispose();
-  });
-
-  it('ready does not resolve for messages from other sources', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    let resolved = false;
-
-    void sandbox.ready.then(() => {
-      resolved = true;
-    });
-    // Fire ready from wrong source (window itself, not the iframe)
-    window.dispatchEvent(new MessageEvent('message', { data: { type: 'ready' }, source: window }));
-    await new Promise((r) => setTimeout(r, 10));
-    expect(resolved).toBe(false);
-    sandbox.dispose();
-  });
-
-  it('ready resolves when the sandbox is disposed before the first render', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.dispose();
-    await expect(sandbox.ready).resolves.toBeUndefined();
-  });
-
-  it('disposed is true when ready resolves after dispose', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.dispose();
-    await sandbox.ready;
-    expect(sandbox.disposed).toBe(true);
-  });
-
-  it('ready is still pending before any ready signal', async () => {
-    const sandbox = createSandbox(container);
-    const result = await Promise.race([sandbox.ready.then(() => 'resolved'), Promise.resolve('pending')]);
-
-    expect(result).toBe('pending');
-    sandbox.dispose();
-  });
-
-  it('ready resolves only once even with multiple renders', async () => {
-    const sandbox = createSandbox(container);
-    let count = 0;
-
-    void sandbox.ready.then(() => count++);
-    sandbox.render('<p>v1</p>');
-    helpers.fireReady();
-    await sandbox.ready;
-    sandbox.render('<p>v2</p>');
-    helpers.fireReady();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(count).toBe(1);
-    sandbox.dispose();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // createSandbox — render() Promise
 // ---------------------------------------------------------------------------
 
@@ -444,15 +376,6 @@ describe('createSandbox — render() Promise', () => {
 
     sandbox.dispose();
     await expect(sandbox.render('<p>Hello</p>')).resolves.toBeUndefined();
-  });
-
-  it('resolves immediately when signal is already aborted', async () => {
-    const sandbox = createSandbox(container);
-    const ac = new AbortController();
-
-    ac.abort();
-    await expect(sandbox.render('<p>Hello</p>', { signal: ac.signal })).resolves.toBeUndefined();
-    sandbox.dispose();
   });
 
   it('first render Promise resolves immediately when superseded by second render()', async () => {
@@ -530,15 +453,6 @@ describe('createSandbox — render() Promise', () => {
     expect(container.querySelector('iframe')).toBeNull();
     warnSpy.mockRestore();
   });
-
-  it('render() with a non-aborted signal renders normally', () => {
-    const sandbox = createSandbox(container);
-    const ac = new AbortController();
-
-    sandbox.render('<p>Hello</p>', { signal: ac.signal });
-    expect((container.querySelector('iframe') as HTMLIFrameElement).srcdoc).toContain('<p>Hello</p>');
-    sandbox.dispose();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -570,10 +484,10 @@ describe('createSandbox — render() ready-timeout rejection', () => {
     sandbox.dispose();
   });
 
-  it('SandboxTimeoutError message names the timeout and points to buildDocument()', async () => {
+  it('SandboxTimeoutError message names the timeout and likely cause', async () => {
     const sandbox = createSandbox(container);
     const p = sandbox.render('<p>missing bridge</p>');
-    const assertion = expect(p).rejects.toThrow(/5000ms.*buildDocument/s);
+    const assertion = expect(p).rejects.toThrow(/5000ms.*injected script/s);
 
     await vi.advanceTimersByTimeAsync(5000);
     await assertion;
@@ -633,7 +547,7 @@ describe('createSandbox — onMessage', () => {
     container.remove();
   });
 
-  it('onMessage returns an Unsubscribe function', () => {
+  it('onMessage returns an unsubscribe function', () => {
     const sandbox = createSandbox(container);
     const unsub = sandbox.onMessage(() => undefined);
 
@@ -785,6 +699,24 @@ describe('createSandbox — onMessage', () => {
     expect(b).toHaveLength(1);
     sandbox.dispose();
   });
+
+  it('continues broadcasting when a handler throws', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sandbox = createSandbox(container);
+    const received: unknown[] = [];
+
+    sandbox.render('<p>Hello</p>');
+    sandbox.onMessage(() => {
+      throw new Error('consumer failure');
+    });
+    sandbox.onMessage((message) => received.push(message));
+    helpers.fireCustom('ping');
+
+    expect(received).toHaveLength(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('remaining handlers will still run'));
+    warnSpy.mockRestore();
+    sandbox.dispose();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -804,7 +736,7 @@ describe('createSandbox — setState', () => {
     container.remove();
   });
 
-  it('posts a state-update message to iframe.contentWindow', async () => {
+  it('posts a state update to iframe.contentWindow', async () => {
     const sandbox = createSandbox(container);
     const p = sandbox.render('<p>test</p>');
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
@@ -814,9 +746,9 @@ describe('createSandbox — setState', () => {
 
     const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
-    sandbox.setState('theme', 'dark');
+    sandbox.setState({ theme: 'dark' });
     expect(postSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ key: 'theme', type: 'state-update', value: 'dark' }),
+      expect.objectContaining({ record: { theme: 'dark' }, type: 'state-update-all' }),
       '*',
     );
     sandbox.dispose();
@@ -826,7 +758,7 @@ describe('createSandbox — setState', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
 
-    sandbox.setState('theme', 'dark');
+    sandbox.setState({ theme: 'dark' });
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -837,7 +769,7 @@ describe('createSandbox — setState', () => {
     const sandbox = createSandbox(container);
 
     sandbox.render('<p>test</p>');
-    sandbox.setState('theme', 'dark');
+    sandbox.setState({ theme: 'dark' });
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('before ready'));
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -850,7 +782,7 @@ describe('createSandbox — setState', () => {
 
     helpers.fireReady();
     await p;
-    sandbox.setState('theme', 'dark');
+    sandbox.setState({ theme: 'dark' });
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -861,17 +793,17 @@ describe('createSandbox — setState', () => {
     const sandbox = createSandbox(container);
 
     sandbox.dispose();
-    sandbox.setState('theme', 'dark');
+    sandbox.setState({ theme: 'dark' });
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     warnSpy.mockRestore();
   });
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — setStateAll
+// createSandbox — batched setState
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — setStateAll', () => {
+describe('createSandbox — batched setState', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -894,7 +826,7 @@ describe('createSandbox — setStateAll', () => {
 
     const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
-    sandbox.setStateAll({ count: 1, theme: 'dark' });
+    sandbox.setState({ count: 1, theme: 'dark' });
     expect(postSpy).toHaveBeenCalledWith(
       expect.objectContaining({ record: { count: 1, theme: 'dark' }, type: 'state-update-all' }),
       '*',
@@ -906,7 +838,7 @@ describe('createSandbox — setStateAll', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
 
-    sandbox.setStateAll({ key: 'value' });
+    sandbox.setState({ key: 'value' });
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -917,7 +849,7 @@ describe('createSandbox — setStateAll', () => {
     const sandbox = createSandbox(container);
 
     sandbox.render('<p>test</p>');
-    sandbox.setStateAll({ key: 'value' });
+    sandbox.setState({ key: 'value' });
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('before ready'));
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -930,7 +862,7 @@ describe('createSandbox — setStateAll', () => {
 
     helpers.fireReady();
     await p;
-    sandbox.setStateAll({ key: 'value' });
+    sandbox.setState({ key: 'value' });
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -941,7 +873,7 @@ describe('createSandbox — setStateAll', () => {
     const sandbox = createSandbox(container);
 
     sandbox.dispose();
-    sandbox.setStateAll({ key: 'value' });
+    sandbox.setState({ key: 'value' });
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     warnSpy.mockRestore();
   });
@@ -964,9 +896,9 @@ describe('createSandbox — updateStyle', () => {
     container.remove();
   });
 
-  it('injects namedStyles as <style id> blocks', () => {
+  it('injects styles as <style id> blocks', () => {
     const sandbox = createSandbox(container, {
-      namedStyles: { 'base-css': 'body { margin: 0; }', 'theme-css': 'body { color: red; }' },
+      styles: { 'base-css': 'body { margin: 0; }', 'theme-css': 'body { color: red; }' },
     });
 
     sandbox.render('<p>Hello</p>');
@@ -979,7 +911,7 @@ describe('createSandbox — updateStyle', () => {
   });
 
   it('posts style-patch message to iframe when bridge is ready', async () => {
-    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+    const sandbox = createSandbox(container, { styles: { 'theme-css': 'body { color: red; }' } });
     const p = sandbox.render('<p>Hello</p>');
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
@@ -997,7 +929,7 @@ describe('createSandbox — updateStyle', () => {
   });
 
   it('updates baseline so next render() uses new CSS', async () => {
-    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+    const sandbox = createSandbox(container, { styles: { 'theme-css': 'body { color: red; }' } });
     const p = sandbox.render('<p>Hello</p>');
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
@@ -1010,7 +942,7 @@ describe('createSandbox — updateStyle', () => {
   });
 
   it('before first render: updates baseline only, no postMessage', () => {
-    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+    const sandbox = createSandbox(container, { styles: { 'theme-css': 'body { color: red; }' } });
     const postMessageSpy = vi.fn();
 
     sandbox.updateStyle('theme-css', 'body { color: green; }');
@@ -1022,17 +954,20 @@ describe('createSandbox — updateStyle', () => {
     sandbox.dispose();
   });
 
-  it('no-ops after dispose', async () => {
-    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+  it('warns and no-ops after dispose', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sandbox = createSandbox(container, { styles: { 'theme-css': 'body { color: red; }' } });
     const p = sandbox.render('<p>Hello</p>');
 
     helpers.fireReady();
     await p;
     sandbox.dispose();
-    expect(() => sandbox.updateStyle('theme-css', 'body { color: blue; }')).not.toThrow();
+    sandbox.updateStyle('theme-css', 'body { color: blue; }');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('disposed sandbox'));
+    warnSpy.mockRestore();
   });
 
-  it('warns in dev when id is not a known namedStyles key', async () => {
+  it('warns in dev when id is not a known styles key', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
     const p = sandbox.render('<p>Hello</p>');
@@ -1045,9 +980,9 @@ describe('createSandbox — updateStyle', () => {
     sandbox.dispose();
   });
 
-  it('does not warn when id is a known namedStyles key', async () => {
+  it('does not warn when id is a known styles key', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body {}' } });
+    const sandbox = createSandbox(container, { styles: { 'theme-css': 'body {}' } });
     const p = sandbox.render('<p>Hello</p>');
 
     helpers.fireReady();
@@ -1158,7 +1093,7 @@ describe('createSandbox — replaceBody()', () => {
     helpers.fireReady();
     await p;
     sandbox.replaceBody('<p>patched</p>');
-    sandbox.setState('key', 'value');
+    sandbox.setState({ key: 'value' });
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -1355,7 +1290,7 @@ describe('createSandbox — updateStyle before render', () => {
   });
 
   it('render() uses CSS updated via updateStyle() before first render', () => {
-    const sandbox = createSandbox(container, { namedStyles: { theme: 'body { color: red; }' } });
+    const sandbox = createSandbox(container, { styles: { theme: 'body { color: red; }' } });
 
     sandbox.updateStyle('theme', 'body { color: blue; }');
     sandbox.render('<p>hi</p>');
@@ -1472,10 +1407,10 @@ describe('createSandbox — render generation', () => {
 
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
-    expect(iframe.srcdoc).toContain('window.__sandboxGeneration=1;');
+    expect(iframe.srcdoc).toContain('window.__sandboxGeneration = 1;');
 
     sandbox.render('<p>two</p>');
-    expect(iframe.srcdoc).toContain('window.__sandboxGeneration=2;');
+    expect(iframe.srcdoc).toContain('window.__sandboxGeneration = 2;');
     sandbox.dispose();
   });
 
@@ -1546,5 +1481,137 @@ describe('createSandbox — render generation', () => {
     );
     await expect(renderPromise).resolves.toBeUndefined();
     sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSandbox — readyTimeout option
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — readyTimeout option', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    container = makeContainer();
+  });
+
+  afterEach(() => {
+    container.remove();
+    vi.useRealTimers();
+  });
+
+  it('rejects after the configured readyTimeout instead of the default 5000ms', async () => {
+    const sandbox = createSandbox(container, { readyTimeout: 1000 });
+    const p = sandbox.render('<p>missing bridge</p>');
+    const assertion = expect(p).rejects.toThrow(SandboxTimeoutError);
+
+    await vi.advanceTimersByTimeAsync(999);
+    await expect(Promise.race([p.then(() => 'resolved'), Promise.resolve('pending')])).resolves.toBe('pending');
+
+    await vi.advanceTimersByTimeAsync(1);
+    await assertion;
+    sandbox.dispose();
+  });
+
+  it('error message names the configured timeout value', async () => {
+    const sandbox = createSandbox(container, { readyTimeout: 1500 });
+    const p = sandbox.render('<p>missing bridge</p>');
+    const assertion = expect(p).rejects.toThrow(/1500ms/);
+
+    await vi.advanceTimersByTimeAsync(1500);
+    await assertion;
+    sandbox.dispose();
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, 'abc', null])(
+    'rejects invalid readyTimeout %s at createSandbox() time',
+    (readyTimeout) => {
+      expect(() => createSandbox(container, { readyTimeout: readyTimeout as number })).toThrow(
+        SandboxConfigurationError,
+      );
+    },
+  );
+
+  it('defaults to 5000ms when readyTimeout is not provided', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>missing bridge</p>');
+    const assertion = expect(p).rejects.toThrow(/5000ms/);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await assertion;
+    sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSandbox — untrusted custom event details
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — untrusted custom event details', () => {
+  let container: HTMLElement;
+  let helpers: ReturnType<typeof makeHelpers>;
+
+  beforeEach(() => {
+    container = makeContainer();
+    helpers = makeHelpers(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('keeps custom event details untrusted', () => {
+    const sandbox = createSandbox(container);
+    const received: unknown[] = [];
+
+    sandbox.render('<p>test</p>');
+    sandbox.onMessage((msg) => {
+      if (msg.type === 'custom') received.push(msg.detail);
+    });
+    helpers.fireReady();
+    helpers.fireCustom('greet', { name: 'Ada' });
+    expect(received).toEqual([{ name: 'Ada' }]);
+    sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSandbox — unified handle and root exports
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — unified public surface', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = makeContainer();
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('exposes body and style updates without a second factory', () => {
+    const sandbox = createSandbox(container);
+
+    expect(typeof sandbox.replaceBody).toBe('function');
+    expect(typeof sandbox.updateStyle).toBe('function');
+    sandbox.dispose();
+  });
+
+  it('keeps disposed live on the unified handle', () => {
+    const sandbox = createSandbox(container);
+
+    expect(sandbox.disposed).toBe(false);
+    sandbox.dispose();
+    expect(sandbox.disposed).toBe(true);
+  });
+
+  it('keeps document and CSP builders private', async () => {
+    const root = await import('../index.js');
+
+    expect(root).toEqual(expect.objectContaining({ createSandbox }));
+    expect(root).not.toHaveProperty('buildDocument');
+    expect(root).not.toHaveProperty('buildCsp');
   });
 });

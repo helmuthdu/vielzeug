@@ -1,17 +1,13 @@
 ---
 title: Sandbox — Usage Guide
-description: How to render untrusted HTML, pass state, handle errors, configure CSP, and integrate the sandbox with your application.
+description: Render untrusted HTML, push typed state, receive sandbox messages, update live content, and manage iframe lifecycle.
 ---
 
 [[toc]]
 
-::: tip New to Sandbox?
-Start with the [Overview](./index.md) for installation and a quick example, then come back here for in-depth usage patterns.
-:::
-
 ## Basic Usage
 
-Create a sandbox by passing a container element. The returned `SandboxHandle` is your entire interface to the iframe.
+Create a sandbox, subscribe before rendering, await readiness, and dispose it when finished.
 
 ```ts
 import { createSandbox } from '@vielzeug/sandbox';
@@ -19,464 +15,293 @@ import { createSandbox } from '@vielzeug/sandbox';
 const container = document.getElementById('preview')!;
 const sandbox = createSandbox(container);
 
-await sandbox.render('<p>Hello from the sandbox</p>');
+sandbox.onMessage((message) => {
+  if (message.type === 'error') console.error(message.message);
+  if (message.type === 'resize') container.style.height = `${message.height}px`;
+});
+
+try {
+  await sandbox.render('<main><h1>Preview</h1></main>');
+} finally {
+  sandbox.dispose();
+}
 ```
 
-`render()` returns a `Promise<void>` that resolves when the sandbox document signals it is ready. No DOM is created until `render()` is called — `createSandbox()` is a cheap factory.
-
-For reactive frameworks, subscribe via `onMessage` to receive `error`, `custom`, and `resize` events.
+The iframe is created by the first `render()` call. Each render creates a fresh document and resolves after its generated bridge reports ready.
 
 ## Rendering HTML
 
-`render(html)` replaces the entire sandboxed document with a new one containing your HTML in the body.
+Use `render()` when scripts, styles, globals, and DOM state should reset together.
 
 ```ts
 await sandbox.render(`
-  <style>body { font-family: sans-serif; }</style>
-  <h1>Component Preview</h1>
-  <ore-button variant="primary">Click me</ore-button>
-`);
-```
-
-Each call to `render()` is a full page reset — scripts reinitialise, CSS is re-applied, and any DOM state is lost. For incremental updates, push state via `setState()` or patch styles via `updateStyle()` rather than re-rendering.
-
-## Incremental Updates with replaceBody()
-
-`replaceBody(html)` replaces `document.body.innerHTML` in the live document without navigating the iframe. Head scripts, document/window listeners, named styles, and global state survive. Body descendants, their listeners, references, form state, and scripts inside replacement HTML do not survive.
-
-Use it for streaming AI-generated output or live previews when the host owns accumulated markup.
-
-```ts
-// Initial render — sets up the document, scripts, and styles
-await sandbox.render(`
+  <style>body { font-family: system-ui; }</style>
+  <button id="save">Save</button>
   <script>
-    document.addEventListener('sandbox:state-update', (e) => {
-      document.body.dataset.theme = e.detail.value;
+    document.querySelector('#save').addEventListener('click', () => {
+      window.__sandbox__.emit('save');
     });
   </script>
-  <p>Loading…</p>
 `);
-
-// Subsequent updates replace body descendants
-sandbox.replaceBody('<p>First chunk arrived</p>');
-sandbox.replaceBody('<p>First chunk arrived</p><p>Second chunk…</p>');
-sandbox.replaceBody('<p>Complete response</p>');
 ```
 
-**`replaceBody()` vs `render()`:**
+A newer render supersedes a pending one. Messages from the old document are ignored through the per-render generation marker.
 
-| | `render()` | `replaceBody()` |
-|---|---|---|
-| Full page reset | Yes | No |
-| Returns a Promise | Yes | No |
-| Head scripts re-run | Yes | No |
-| `namedStyles` preserved | Re-injected | Yes |
-| Body descendants/listeners | Recreated | Replaced |
-| When to use | Initial load, structural reset | Streaming markup, live preview |
+## Pushing Typed State
 
-**`replaceBody()` must be called after `render()` resolves.** The bridge must be initialized before it can receive the replacement.
-
-## Passing State
-
-`setState(key, value)` pushes data into the sandbox without re-rendering.
-
-Always call `setState()` after `render()` resolves — calling it before the bridge finishes initializing will silently drop the update in a real browser, and a dev warning will fire.
+Pass a state interface to `createSandbox()` and send partial updates with one object.
 
 ```ts
-// Correct: await render() before pushing state
-await sandbox.render('<div id="root"></div>');
-sandbox.setState('theme', 'dark');
-sandbox.setState('user', { name: 'Alice' });
-```
+interface PreviewState {
+  locale: string;
+  theme: 'dark' | 'light';
+  user: { name: string };
+}
 
-Inside the sandbox document, listen for the `sandbox:state-update` custom event on `document`:
+const sandbox = createSandbox<PreviewState>(container);
+await sandbox.render('<main id="app"></main>');
 
-```html
-<script>
-document.addEventListener('sandbox:state-update', (e) => {
-  const { key, value } = e.detail;
-  if (key === 'theme') document.body.dataset.theme = value;
-  if (key === 'user') document.querySelector('#name').textContent = value.name;
-});
-</script>
-```
-
-## Batch State Updates
-
-`setStateAll(record)` pushes multiple state values in a single postMessage — one call instead of one `setState()` per key. Use it for initial state setup where several values become available at the same time.
-
-```ts
-await sandbox.render('<div id="root"></div>');
-
-// One postMessage instead of two setState() calls
-sandbox.setStateAll({
+sandbox.setState({
+  locale: 'en',
   theme: 'dark',
-  user: { name: 'Alice' },
+  user: { name: 'Ada' },
 });
 ```
 
-The sandbox side listens the same way as for `setState()` — each key in the record fires its own `sandbox:state-update` event.
-
-## Handling Errors
-
-Subscribe to `onMessage` before calling `render()` to catch runtime errors in sandbox content.
+Subscribe inside the iframe through the typed bridge.
 
 ```ts
-sandbox.onMessage((msg) => {
-  if (msg.type === 'error') {
-    console.error('[sandbox error]', msg.message);
-    if (msg.stack) console.debug(msg.stack);
+interface PreviewState {
+  locale: string;
+  theme: 'dark' | 'light';
+}
+
+declare interface Window {
+  __sandbox__: import('@vielzeug/sandbox').SandboxBridge<PreviewState>;
+}
+
+window.__sandbox__.onState('theme', (theme) => {
+  document.documentElement.dataset.theme = theme;
+});
+```
+
+Call `setState()` only after `render()` resolves. An early update can arrive before the generated bridge installs its listener and is dropped with a development warning.
+
+## Receiving Sandbox Messages
+
+Subscribe with `onMessage()` before rendering. The unsubscribe function detaches only that handler.
+
+```ts
+const unsubscribe = sandbox.onMessage((message) => {
+  if (message.type === 'custom' && message.event === 'saved') {
+    if (isSavedDetail(message.detail)) persist(message.detail.id);
   }
 });
+
+function isSavedDetail(value: unknown): value is { id: string } {
+  return typeof value === 'object' && value !== null && 'id' in value && typeof value.id === 'string';
+}
 ```
 
-Both synchronous errors (`window.onerror`) and unhandled promise rejections (`unhandledrejection`) are forwarded as `{ type: 'error' }` messages.
+Custom event details remain `unknown` on the host. The iframe is isolated, but its code still controls message payloads.
 
-### `render()` rejection
-
-`render()` rejects with a `SandboxTimeoutError` if the document never signals `'ready'` within 5 seconds — this happens in every build, not just dev. It usually means the document is missing the bridge script (custom `srcdoc` HTML built by hand instead of via `buildDocument()`). Always handle it:
+Use `SandboxBridge<State, Events>` only to check authored sandbox-side calls.
 
 ```ts
-import { SandboxError } from '@vielzeug/sandbox';
+interface Events {
+  saved: { id: string };
+}
+
+declare interface Window {
+  __sandbox__: import('@vielzeug/sandbox').SandboxBridge<Record<string, never>, Events>;
+}
+
+window.__sandbox__.emit('saved', { id: '42' });
+```
+
+## Updating Live Content
+
+### Replace the body
+
+Use `replaceBody()` when streamed HTML should preserve head scripts, styles, and global listeners.
+
+```ts
+await sandbox.render('<main>Waiting…</main>');
+
+let html = '';
+for await (const chunk of stream) {
+  html += chunk;
+  sandbox.replaceBody(html);
+}
+```
+
+Replacement uses `document.body.innerHTML`. Scripts in replacement HTML do not execute, and body descendant state and listeners are discarded.
+
+### Update a named style
+
+Declare styles at construction and patch them without replacing the document.
+
+```ts
+const sandbox = createSandbox(container, {
+  styles: { theme: 'body { color-scheme: light; }' },
+});
+
+await sandbox.render('<main>Preview</main>');
+sandbox.updateStyle('theme', 'body { color-scheme: dark; }');
+```
+
+Calling `updateStyle()` before the first render updates the render baseline. Unknown IDs emit a development warning.
+
+## Injecting Scripts and Configuring CSP
+
+List absolute external scripts in `scripts`. Their origins are added to `script-src` automatically.
+
+```ts
+const sandbox = createSandbox(container, {
+  allowedFontOrigins: ['https://fonts.gstatic.com'],
+  allowedStyleOrigins: ['https://fonts.googleapis.com'],
+  scripts: ['https://cdn.example.com/widget.js'],
+});
+```
+
+Network requests remain blocked by `connect-src 'none'`. The package does not expose arbitrary CSP directives.
+
+A nonce authorizes the generated bridge while preventing un-nonced inline user scripts in CSP Level 3 browsers.
+
+```ts
+const sandbox = createSandbox(container, {
+  nonce: crypto.randomUUID(),
+});
+```
+
+## Handling Errors and Timeouts
+
+`render()` rejects if the document does not become ready before `readyTimeout`.
+
+```ts
+import { SandboxError, SandboxTimeoutError } from '@vielzeug/sandbox';
 
 try {
   await sandbox.render(html);
-} catch (err) {
-  if (err instanceof SandboxError) {
-    console.error('Sandbox failed to load:', err.message);
+} catch (error) {
+  if (error instanceof SandboxTimeoutError) {
+    showError('A script blocked preview initialization.');
+  } else if (error instanceof SandboxError) {
+    showError(error.message);
   }
 }
 ```
 
-A second `render()` call superseding the first does **not** trigger this — the superseded Promise resolves, not rejects.
-
-## Injecting Scripts and Styles
-
-Use `SandboxOptions` to inject external scripts and styles into every rendered document.
-
-```ts
-const sandbox = createSandbox(container, {
-  scripts: [
-    'https://cdn.example.com/ore.js',
-    'https://cdn.example.com/refine.js',
-  ],
-  namedStyles: {
-    base: `
-      :root { --color-primary: #0066cc; }
-      body { margin: 0; font-family: var(--font-sans); }
-    `,
-  },
-});
-```
-
-Script URLs are injected before user content. Their origins are automatically added to `script-src` in the CSP — you do not need to configure `buildCsp` separately.
-
-## Setting Document Language and Title
-
-Use `lang` and `title` to set the generated document's `<html lang="…">` attribute and `<title>`. Both improve screen-reader behaviour for sandboxed content.
-
-```ts
-const sandbox = createSandbox(container, {
-  lang: 'de',
-  title: 'Component Preview',
-});
-```
-
-`lang` defaults to `'en'`; use a 2–3 letter primary language with optional 2–8 character subtags, such as `de` or `zh-Hant`. `title` defaults to `''` and is HTML-escaped before document generation. Invalid language tags throw `SandboxConfigurationError`.
-
-## Hot-patching Named Styles
-
-`namedStyles` injects named `<style id="key">` blocks into the document `<head>`. Named blocks can be updated live without a full re-render using `updateStyle(id, css)`.
-
-```ts
-const sandbox = createSandbox(container, {
-  namedStyles: {
-    theme: ':root { --color-primary: #0066cc; --bg: #fff; }',
-  },
-});
-
-await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
-
-// Switch theme live — no re-render
-sandbox.updateStyle('theme', ':root { --color-primary: #bb33ff; --bg: #111; }');
-```
-
-`updateStyle()` sends a postMessage to the iframe, patching `<style id="theme">` in place. It also updates the baseline so the next `render()` starts with the patched CSS. Safe to call before the first render (baseline only — no postMessage sent to an uninitialized iframe).
-
-## Resize Notifications
-
-The bridge script automatically emits `resize` messages via a `ResizeObserver` on `document.body`. No manual wiring is needed in your sandbox content.
-
-```ts
-sandbox.onMessage((msg) => {
-  if (msg.type === 'resize') {
-    container.style.height = `${msg.height}px`;
-  }
-});
-```
-
-The `resize` message fires whenever the `document.body` height changes — on initial load, after content updates via `setState()`, and after style patches via `updateStyle()`.
-
-## Tying Async Work to Sandbox Lifetime
-
-`disposalSignal` is an `AbortSignal` that is aborted when the sandbox is disposed. Pass it to any async operation that should stop when the sandbox is torn down.
-
-```ts
-const sandbox = createSandbox(container);
-
-// Polling loop tied to sandbox lifetime
-async function poll() {
-  while (!sandbox.disposalSignal.aborted) {
-    const data = await fetch('/api/data', { signal: sandbox.disposalSignal }).then(r => r.json()).catch(() => null);
-    if (data) sandbox.setState('data', data);
-    await new Promise(resolve => setTimeout(resolve, 5000));
-  }
-}
-
-poll();
-```
-
-When `sandbox.dispose()` is called, `disposalSignal` aborts, cancelling in-flight fetches and stopping the loop.
-
-## Configuring CSP
-
-Use `allowedStyleOrigins`, `allowedFontOrigins`, and `allowedImageOrigins` to allow CDN resources.
-
-```ts
-const sandbox = createSandbox(container, {
-  allowedStyleOrigins: ['https://fonts.googleapis.com'],
-  allowedFontOrigins: ['https://fonts.gstatic.com'],
-  allowedImageOrigins: ['https://images.example.com'],
-});
-```
-
-Then render HTML that uses those resources:
-
-```ts
-await sandbox.render(`
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">
-  <p style="font-family: Inter, sans-serif">Hello</p>
-`);
-```
-
-Origins must be absolute `http:` or `https:` origins without paths, query strings, fragments, or credentials. Script URLs must be absolute `http:` or `https:` URLs. Nonces must be non-empty base64/base64url-style tokens. Invalid configuration throws `SandboxConfigurationError`; generated CSP always includes `base-uri 'none'` to block `<base>`-tag injection.
+Uncaught iframe errors and unhandled rejections arrive through `onMessage()` as untrusted `error` messages.
 
 ## Disposal
 
-Dispose the sandbox when it is no longer needed. This removes the iframe from the DOM and clears all message listeners.
+Use `dispose()` or a `using` declaration to remove the iframe and host listeners.
 
 ```ts
-// Explicit
-sandbox.dispose();
-
-// Using explicit resource management (TypeScript 5.2+)
-{
-  using sandbox = createSandbox(container);
-  await sandbox.render('<p>Temporary preview</p>');
-} // sandbox.dispose() called automatically
+using sandbox = createSandbox(container);
+await sandbox.render('<p>Temporary preview</p>');
 ```
 
-## Multiple Listeners
-
-`onMessage` supports multiple independent subscriptions. Each call returns its own unsubscribe function.
+Tie other asynchronous work to `disposalSignal`.
 
 ```ts
-const unsubErrors = sandbox.onMessage((msg) => {
-  if (msg.type === 'error') logError(msg);
+const response = await fetch('/preview-data', {
+  signal: sandbox.disposalSignal,
 });
-
-const unsubEvents = sandbox.onMessage((msg) => {
-  if (msg.type === 'custom') handleCustomEvent(msg);
-});
-
-// Remove a single subscription
-unsubErrors();
-
-// Remove all — dispose() clears all listeners at once
-sandbox.dispose();
-```
-
-## Receiving Events from the Sandbox
-
-Sandbox code calls `window.__sandbox__.emit(event, detail)` to send events to the host. Receive them via `onMessage` with `msg.type === 'custom'`.
-
-```html
-<!-- Inside sandbox content -->
-<button onclick="window.__sandbox__.emit('button:click', { label: 'Save' })">Save</button>
-```
-
-```ts
-// Host
-sandbox.onMessage((msg) => {
-  if (msg.type === 'custom' && msg.event === 'button:click') {
-    console.log('Sandbox button clicked:', msg.detail);
-  }
-});
-```
-
-**TypeScript support for sandbox-side code** — add an ambient declaration referencing `SandboxBridge`:
-
-```ts
-// sandbox-env.d.ts
-declare interface Window {
-  __sandbox__: import('@vielzeug/sandbox').SandboxBridge;
-}
-```
-
-## Awaiting Subsequent Renders
-
-`render()` returns a `Promise<void>` that resolves when the new document signals ready. Await it directly for each render:
-
-```ts
-await sandbox.render(firstHtml);   // first render complete
-await sandbox.render(secondHtml);  // second render complete
-```
-
-If a second `render()` starts before the first resolves, the first Promise resolves immediately (superseded). Multiple concurrent callers can each await their own returned Promise.
-
-## Cancelling Renders with AbortSignal
-
-Pass an `AbortSignal` to `render()` to skip the render if it has already been cancelled. Useful in streaming or queued workflows:
-
-```ts
-let controller = new AbortController();
-
-async function streamRender(html: string) {
-  controller.abort();                            // cancel previous pending render
-  controller = new AbortController();
-  await sandbox.render(html, { signal: controller.signal });
-}
-```
-
-If the signal is already aborted when `render()` is called, the render is skipped with no warning and no DOM change.
-
-## Building Sandbox Documents Directly
-
-Use `buildDocument` when you need static isolated markup outside `createSandbox`, such as server-generated HTML or a Codex template. Use `createSandbox` instead when the host needs state updates, body replacement, style updates, readiness, or disposal.
-
-```ts
-import { buildDocument } from '@vielzeug/sandbox';
-
-const html = buildDocument('<p>Hello</p>', {
-  allowedStyleOrigins: ['https://fonts.googleapis.com'],
-  allowedFontOrigins: ['https://fonts.gstatic.com'],
-  namedStyles: {
-    theme: ':root { --bg: #fff; }',
-  },
-});
-
-// html is a complete <!doctype html> document — assign directly to srcdoc
-iframe.srcdoc = html;
-```
-
-Use `buildCsp` if you only need the CSP string for an existing document template:
-
-```ts
-import { buildCsp } from '@vielzeug/sandbox';
-
-const csp = buildCsp({ allowedFontOrigins: ['https://fonts.gstatic.com'] });
-// → "default-src 'none'; ... font-src https://fonts.gstatic.com; ..."
 ```
 
 ## Testing
 
-Use `createSandboxTestHelpers` from the `/testing` subpath to simulate sandbox→host messages without a real `srcdoc` script execution (jsdom does not execute iframe `srcdoc` scripts).
+Use the testing subpath to complete `render()` and simulate messages in jsdom.
 
 ```ts
 import { createSandbox } from '@vielzeug/sandbox';
 import { createSandboxTestHelpers } from '@vielzeug/sandbox/testing';
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
-describe('preview panel', () => {
-  it('forwards a custom event from the sandbox', async () => {
-    const container = document.createElement('div');
-    const sandbox = createSandbox(container);
-    const helpers = createSandboxTestHelpers(container);
+it('receives resize messages', async () => {
+  const container = document.createElement('div');
+  const sandbox = createSandbox(container);
+  const helpers = createSandboxTestHelpers(container);
+  const heights: number[] = [];
 
-    const received: unknown[] = [];
-
-    sandbox.onMessage((msg) => received.push(msg));
-
-    const renderPromise = sandbox.render('<button>Save</button>');
-
-    helpers.fireReady(); // simulate the bridge script's initial postMessage
-    await renderPromise;
-
-    helpers.fireCustom('button:click', { label: 'Save' });
-    expect(received).toEqual([{ type: 'custom', event: 'button:click', detail: { label: 'Save' } }]);
-
-    sandbox.dispose();
+  sandbox.onMessage((message) => {
+    if (message.type === 'resize') heights.push(message.height);
   });
+
+  const render = sandbox.render('<p>Preview</p>');
+  helpers.fireReady();
+  await render;
+  helpers.fireResize(240);
+
+  expect(heights).toEqual([240]);
+  sandbox.dispose();
 });
 ```
 
-`SandboxTestHelpers` also exposes `fireResize(height)` and `fireError(message, stack?)` for testing resize and error handling without a live browser.
-
 ## Framework Integration
 
-Create the sandbox once per mount and dispose it on unmount — the container element is stable for the component's lifetime.
+Own one sandbox per mounted component and dispose it during unmount.
 
 ::: code-group
 
 ```tsx [React]
+import { createSandbox, type SandboxHandle } from '@vielzeug/sandbox';
 import { useEffect, useRef } from 'react';
-import { createSandbox } from '@vielzeug/sandbox';
 
-function SandboxPreview({ html }: { html: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function Preview({ html }: { html: string }) {
+  const container = useRef<HTMLDivElement>(null);
+  const sandbox = useRef<SandboxHandle>();
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    sandbox.current = createSandbox(container.current!);
+    return () => sandbox.current?.dispose();
+  }, []);
 
-    const sandbox = createSandbox(containerRef.current);
-
-    sandbox.render(html);
-
-    return () => sandbox.dispose();
+  useEffect(() => {
+    void sandbox.current?.render(html).catch(console.error);
   }, [html]);
 
-  return <div ref={containerRef} />;
+  return <div ref={container} />;
 }
 ```
 
-```vue [Vue 3]
+```vue [Vue]
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
 import { createSandbox, type SandboxHandle } from '@vielzeug/sandbox';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps<{ html: string }>();
-const containerRef = ref<HTMLDivElement>();
+const container = ref<HTMLElement>();
 let sandbox: SandboxHandle | undefined;
 
 onMounted(() => {
-  if (!containerRef.value) return;
-  sandbox = createSandbox(containerRef.value);
-  sandbox.render(props.html);
+  sandbox = createSandbox(container.value!);
+  void sandbox.render(props.html).catch(console.error);
 });
-
+watch(() => props.html, (html) => void sandbox?.render(html).catch(console.error));
 onUnmounted(() => sandbox?.dispose());
 </script>
 
-<template>
-  <div ref="containerRef" />
-</template>
+<template><div ref="container" /></template>
 ```
 
 ```svelte [Svelte]
 <script lang="ts">
+  import { createSandbox, type SandboxHandle } from '@vielzeug/sandbox';
   import { onMount } from 'svelte';
-  import { createSandbox } from '@vielzeug/sandbox';
 
   export let html: string;
-  let container: HTMLDivElement;
+  let container: HTMLElement;
+  let sandbox: SandboxHandle | undefined;
 
   onMount(() => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render(html);
-
-    return () => sandbox.dispose();
+    sandbox = createSandbox(container);
+    return () => sandbox?.dispose();
   });
+
+  $: if (sandbox) void sandbox.render(html).catch(console.error);
 </script>
 
 <div bind:this={container}></div>
@@ -486,36 +311,15 @@ onUnmounted(() => sandbox?.dispose());
 
 ## Working with Other Vielzeug Libraries
 
-**With Codex:**
-The `generate-sandbox-document` and `get-state-bridge-spec` MCP tools in `@vielzeug/codex` are designed to work with Sandbox. They generate complete sandbox-ready document templates and document the bridge protocol.
-
-```ts
-// After codex generates an HTML document:
-await sandbox.render(generatedDocument);
-```
-
-**With Refine:**
-Inject the Refine/Ore runtime into the sandbox via `scripts`:
-
-```ts
-const sandbox = createSandbox(container, {
-  scripts: ['https://cdn.example.com/refine.iife.js'],
-  namedStyles: {
-    theme: '/* refine theme tokens */',
-  },
-});
-
-await sandbox.render('<ore-card><ore-button>Save</ore-button></ore-card>');
-```
+Use Sandbox to isolate generated markup that loads browser bundles of DOM-output packages such as Refine or Ore. Use Rune in the host to record validated message details; do not pass untrusted payloads directly to structured logs.
 
 ## Best Practices
 
-- **Await `render()` before calling `setState()`/`setStateAll()`** — both warn in dev if called before the bridge is ready. Use `setStateAll()` to bootstrap several values in one postMessage instead of calling `setState()` repeatedly.
-- **Use `await sandbox.render(html)` for each render** — `render()` returns a `Promise<void>` that resolves when the document is ready. No separate readiness API is needed.
-- **Use `updateStyle()` for theme switching** — updating a named style avoids a full `render()` and preserves current document state.
-- **Check `disposed` before deferred calls** — across async operations, check `sandbox.disposed` before calling any method to avoid spurious dev warnings.
-- **Tie async work to `disposalSignal`** — pass `disposalSignal` to `fetch` and other async operations so they cancel automatically on dispose.
-- **Treat all messages as untrusted** — sandbox code controls `SandboxMessage` payloads. Do not `eval()` or execute any message field.
-- **One sandbox per preview** — `createSandbox()` is a cheap factory; create a new sandbox per user session or component rather than reusing across unrelated renders.
-- **Use `using` in functions** — in TypeScript 5.2+ contexts, `using` guarantees cleanup even on exceptions.
-- **Use `replaceBody()` or `setState()` for incremental updates** — `render()` resets document state. `replaceBody()` replaces body descendants; `setState()` updates live code without replacing DOM.
+- Await `render()` before sending state or replacing body content.
+- Narrow every custom message detail at the host boundary.
+- Prefer `setState()` for data changes and `updateStyle()` for CSS changes.
+- Use `render()` when scripts or global state must reset.
+- Handle `SandboxTimeoutError` at every non-test render boundary.
+- Dispose one sandbox with each owning component.
+- Tie related asynchronous work to `disposalSignal`.
+- Keep network access blocked unless the application requires a different isolation model.

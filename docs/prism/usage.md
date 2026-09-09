@@ -1,6 +1,6 @@
 ---
 title: Prism — Usage Guide
-description: Concepts, patterns, and best practices for @vielzeug/prism — reactive SVG charts.
+description: Concepts, update patterns, and best practices for responsive SVG charts with @vielzeug/prism.
 ---
 
 [[toc]]
@@ -35,56 +35,29 @@ chart.dispose();
 
 Prism observes the container size via `ResizeObserver` and re-renders automatically on resize. If the container has zero dimensions at mount time, a `warn` is emitted in development — ensure the container has layout before calling the chart factory.
 
-## Reactivity with Signals
+## Updating Data
 
-Prism accepts both plain values and `@vielzeug/ripple` signals for any data property. When a signal changes, the chart re-renders automatically in the next animation frame.
-
-### Static Data
+Chart factories render synchronously and return a typed handle. Call `update()` with the same data shape used by the factory when application state changes.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
 
 const chart = createLineChart(container, {
-  series: [
-    {
-      name: 'Static',
-      data: [
-        { key: 1, value: 10 },
-        { key: 2, value: 20 },
-      ],
-    },
-  ],
+  series: [{ data: [{ key: 1, value: 10 }], name: 'Live' }],
 });
-```
 
-### Reactive Data
-
-```ts
-import { createLineChart } from '@vielzeug/prism';
-import { signal } from '@vielzeug/ripple';
-
-const data = signal([
-  { key: 1, value: 10 },
-  { key: 2, value: 20 },
+chart.update([
+  {
+    data: [
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
+    ],
+    name: 'Live',
+  },
 ]);
-
-const chart = createLineChart(container, {
-  series: [{ name: 'Live', data }],
-});
-
-// Later — chart updates automatically
-data.value = [...data.value, { key: 3, value: 30 }];
 ```
 
-### The `MaybeSignal<T>` Pattern
-
-All data-bearing config fields use the `MaybeSignal<T>` type:
-
-```ts
-type MaybeSignal<T> = Readable<T> | T;
-```
-
-Pass a plain value when data is fixed, or a `@vielzeug/ripple` signal when it changes dynamically. The chart handles both identically.
+`update()` is state-library neutral. Call it from a framework effect, store subscription, event handler, or request callback. It throws after the chart is disposed instead of silently retaining detached state.
 
 ## Line Charts
 
@@ -182,8 +155,6 @@ Select the bar layout with `variant`:
 | `'stacked'`            | Vertical stacked           |
 | `'grouped-horizontal'` | Horizontal grouped         |
 | `'stacked-horizontal'` | Horizontal stacked         |
-
-> **Note:** `tooltip` and `legend` are always available on the scaffold — omitting them uses a no-op null-object internally, so no conditional checks are needed in plugins or custom render logic.
 
 ```ts
 const chart = createBarChart(container, {
@@ -301,22 +272,21 @@ Style labels via CSS:
 }
 ```
 
-### Reactive Data
+### Updating Data
 
 ```ts
-import { signal } from '@vielzeug/ripple';
+const chart = createPieChart(container, {
+  data: [
+    { label: 'A', value: 40 },
+    { label: 'B', value: 60 },
+  ],
+  variant: 'donut',
+});
 
-const data = signal([
-  { label: 'A', value: 40 },
-  { label: 'B', value: 60 },
-]);
-
-const chart = createPieChart(container, { data, variant: 'donut' });
-
-data.value = [
+chart.update([
   { label: 'A', value: 55 },
   { label: 'B', value: 45 },
-];
+]);
 ```
 
 ### Event Hooks
@@ -359,16 +329,15 @@ spark.dispose();
 - **`bar`** — vertical bar for each data point
 - **`stack`** — horizontal proportional segments; use `StackSegment[]` for `data` with per-segment colors
 
-### Reactive Data
+### Updating Data
 
 ```ts
-import { signal } from '@vielzeug/ripple';
+const spark = createSparkline(container, {
+  data: [12, 18, 14, 22],
+  variant: 'area',
+});
 
-const data = signal([12, 18, 14, 22]);
-
-const spark = createSparkline(container, { data, variant: 'area' });
-
-data.value = [...data.value, 30]; // re-renders automatically
+spark.update([12, 18, 14, 22, 30]);
 ```
 
 ### Event Hooks
@@ -411,32 +380,22 @@ const spark = createSparkline(container, {
 
 ## Tooltips
 
-Enable with `tooltip: true` for default rendering, or provide a custom `render` function returning an HTML string:
+Enable with `tooltip: true` for default rendering, or provide a custom `render` function. Strings are rendered as text. Return a DOM node for structured content:
 
 ```ts
 {
   tooltip: {
     offset: 12,
-    render: (datum, series) => `
-      <strong>${series.name}</strong><br/>
-      Value: ${datum.value.toLocaleString()}
-    `,
+    render: (datum, series) => {
+      const content = document.createElement('strong');
+      content.textContent = `${series.name}: ${datum.value.toLocaleString()}`;
+      return content;
+    },
   },
 }
 ```
 
-The `render` output is injected via `innerHTML`. If you interpolate user-supplied data, pass a `sanitize` function to guard against XSS:
-
-```ts
-import DOMPurify from 'dompurify';
-
-{
-  tooltip: {
-    render: (datum, series) => `<b>${series.name}</b>: ${datum.value}`,
-    sanitize: (html) => DOMPurify.sanitize(html),
-  },
-}
-```
+Prism never injects tooltip strings as HTML, so custom rendering does not require a sanitizer.
 
 The tooltip element is scoped inside the chart container (not `document.body`) and is removed automatically on `dispose()`.
 
@@ -498,46 +457,6 @@ const chart = createLineChart(container, {
 - `originalEvent` — the raw `MouseEvent`
 
 > **Pie chart events differ** — `onHover` and `onClick` receive `(slice: PieSliceConfig, index: number)` instead of `ChartEvent`. See [`PieChartConfig`](./api.md#piechartconfig) for details.
-
-## Plugins
-
-Extend any chart with custom behavior using the `ChartPlugin` interface. All chart types — including `createPieChart` — support `plugins`.
-
-```ts
-import type { ChartPlugin } from '@vielzeug/prism';
-
-function createClickLogger(): ChartPlugin {
-  const handler = (e: MouseEvent) => console.log('chart clicked', e);
-  // `dispose()` receives no arguments, so capture whatever `install()` needs
-  // to clean up (here, the svg it attached the listener to) in this closure.
-  let svg: SVGSVGElement | undefined;
-
-  return {
-    install(ctx) {
-      svg = ctx.svg;
-      svg.addEventListener('click', handler);
-    },
-    dispose() {
-      svg?.removeEventListener('click', handler);
-    },
-  };
-}
-
-const chart = createLineChart(container, {
-  series: [{ name: 'Revenue', data }],
-  plugins: [createClickLogger()],
-});
-
-// Works for pie charts too:
-const pie = createPieChart(container, {
-  data,
-  plugins: [createClickLogger()],
-});
-```
-
-> **Alternative to `dispose()`:** `install(ctx)` can instead listen for `ctx.disposalSignal`'s `abort` event to run cleanup, without needing to capture anything for a separate `dispose()` implementation: `ctx.disposalSignal.addEventListener('abort', () => svg.removeEventListener('click', handler))`.
->
-> **Error isolation:** if a plugin's `install()` or `dispose()` throws, the error is logged in development and the rest of the chart — plus any other installed plugins — keeps working. A throwing plugin never aborts chart creation or teardown.
 
 ## Animations
 
@@ -665,13 +584,13 @@ chart.dispose();
 
 Calling `dispose()`:
 
-- Cancels all reactive signal effects
+- Cancels in-flight transitions
 - Disconnects the `ResizeObserver`
 - Removes the SVG element, tooltip, and legend from the DOM
-- Calls `dispose()` on all plugins (a plugin that throws is logged and skipped — it never blocks the rest of teardown)
+- Restores container styles changed for tooltip positioning
 - Is idempotent — safe to call multiple times
 
-> **Reactivity is automatic** — charts re-render whenever signal data changes. There is no manual `update()` call needed.
+Call `update()` only while the handle is active. Updating a disposed chart throws `PrismRenderError`.
 
 ## Responsive Behavior
 
@@ -696,88 +615,45 @@ chart.dispose();
 
 ## Framework Integration
 
-Prism renders into a plain DOM element. Attach charts inside mount/unmount lifecycle hooks for any framework.
+Prism has no framework adapter. Connect the same three operations to your framework's lifecycle: create after mount, update when state changes, and dispose before unmount.
 
-::: code-group
+```ts
+import { createLineChart, type ChartHandle, type ContinuousDatum, type LineSeriesConfig } from '@vielzeug/prism';
 
-```tsx [React]
-import { useEffect, useRef } from 'react';
-import { createLineChart, type Datum } from '@vielzeug/prism';
+let chart: ChartHandle<LineSeriesConfig[]> | undefined;
 
-function LineChart({ data }: { data: Datum[] }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function mountChart(container: HTMLElement, data: ContinuousDatum[]): void {
+  chart = createLineChart(container, { series: [{ data, name: 'Series' }] });
+}
 
-  useEffect(() => {
-    const chart = createLineChart(containerRef.current!, {
-      series: [{ data, name: 'Series' }],
-    });
-    return () => chart.dispose();
-  }, [data]);
+export function updateChart(data: ContinuousDatum[]): void {
+  chart?.update([{ data, name: 'Series' }]);
+}
 
-  return <div ref={containerRef} style={{ width: '100%', height: 300 }} />;
+export function unmountChart(): void {
+  chart?.dispose();
+  chart = undefined;
 }
 ```
-
-```ts [Vue 3]
-import { onMounted, onUnmounted, ref } from 'vue';
-import { createLineChart, type ChartHandle, type Datum } from '@vielzeug/prism';
-
-function useLineChart(data: Datum[]) {
-  const containerRef = ref<HTMLElement | null>(null);
-  let chart: ChartHandle | null = null;
-
-  onMounted(() => {
-    chart = createLineChart(containerRef.value!, { series: [{ data, name: 'Series' }] });
-  });
-
-  onUnmounted(() => chart?.dispose());
-  return { containerRef };
-}
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { onMount } from 'svelte';
-  import { createLineChart, type Datum } from '@vielzeug/prism';
-
-  export let data: Datum[] = [];
-  let container: HTMLDivElement;
-
-  onMount(() => {
-    const chart = createLineChart(container, { series: [{ data, name: 'Series' }] });
-    return () => chart.dispose();
-  });
-</script>
-
-<div bind:this={container} style="width:100%;height:300px"></div>
-```
-
-:::
 
 ## Working with Other Vielzeug Libraries
 
 ### With Ripple
 
-Pass Ripple signals as chart data properties. Prism re-renders automatically when a signal changes.
+Keep state ownership in Ripple and connect it to Prism through an explicit subscription.
 
 ```ts
-import { signal } from '@vielzeug/ripple';
 import { createLineChart } from '@vielzeug/prism';
+import { signal } from '@vielzeug/ripple';
 
-const data = signal([
-  { key: 1, value: 10 },
-  { key: 2, value: 20 },
-]);
+const data = signal([{ key: 1, value: 10 }]);
+const toSeries = () => [{ data: data.value, name: 'Series' }];
+const chart = createLineChart(container, { series: toSeries() });
+const unsubscribe = data.subscribe(() => chart.update(toSeries()));
 
-const chart = createLineChart(container, {
-  series: [{ data, name: 'Series' }], // signal passed directly
-});
-
-// Updating the signal triggers an automatic re-render:
-data.value = [
-  { key: 1, value: 15 },
-  { key: 2, value: 25 },
-];
+// Cleanup both owners together.
+unsubscribe();
+chart.dispose();
 ```
 
 ### With Sourcerer
@@ -785,24 +661,29 @@ data.value = [
 Bind chart data to a Sourcerer remote source so charts update whenever the list refreshes.
 
 ```ts
-import { createPageSource } from '@vielzeug/sourcerer';
-import { computed, signal } from '@vielzeug/ripple';
 import { createBarChart } from '@vielzeug/prism';
+import { createPageSource } from '@vielzeug/sourcerer';
 
-const source = createPageSource({ load: ({ query, signal }) => api.stats.list(query, { signal }) });
-const snapshot = signal(source.snapshot);
-source.subscribe((next) => (snapshot.value = next));
-
-const chartData = computed(() => snapshot.value.data.map((item) => ({ key: item.label, value: item.count })));
-
-const chart = createBarChart(container, {
-  series: [{ data: chartData, name: 'Series' }],
+const source = createPageSource({
+  load: async ({ page, pageSize, signal }) => {
+    const result = await api.stats.list({ page, pageSize }, { signal });
+    return { items: result.data, totalItems: result.total };
+  },
 });
+const toSeries = (state) => [
+  {
+    data: state.items.map((item) => ({ key: item.label, value: item.count })),
+    name: 'Series',
+  },
+];
+const chart = createBarChart(container, { series: toSeries(source.state) });
+const unsubscribe = source.subscribe((state) => chart.update(toSeries(state)));
+void source.reload().catch(() => undefined);
 ```
 
 ## Accessibility
 
-Accessibility is a hard requirement for every chart factory. Each chart's root `<svg>` carries `role="img"` and must have either an `aria-label` or `aria-hidden="true"` — set via the `a11y` config field.
+Accessibility is a hard requirement for every chart factory. Label informative charts with `a11y: { ariaLabel }`; charts without `a11y` are decorative and render with `aria-hidden="true"`.
 
 Label a chart that conveys meaningful data:
 
@@ -822,13 +703,13 @@ createSparkline(container, {
 });
 ```
 
-When `a11y` is omitted, scaffolded charts (line/bar/area/pie) render with `role="img"` but no `aria-label`; sparklines default to `aria-hidden="true"`. Always set `a11y: { ariaLabel: '…' }` on charts that users need to understand.
+When `a11y` is omitted, every chart is hidden from assistive technology. Always set `a11y: { ariaLabel: '…' }` on charts that users need to understand.
 
 ## Best Practices
 
 - Ensure the container element has explicit dimensions before calling a chart factory — `ResizeObserver` needs a non-zero layout size to trigger the first render.
-- Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel signal effects and remove DOM nodes.
-- Prefer `signal()` from Ripple for mutable data properties — charts re-render automatically when signals change, with no manual `update()` call.
+- Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel transitions, disconnect resize observation, and remove DOM nodes.
+- Call `chart.update(data)` from your application state boundary; Prism does not require or own a state library.
 - Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data — accessibility is a hard requirement, not an optional add-on.
 - Wrap a chart with `debugChart()` from the `/devtools` subpath only in development code paths; it is tree-shaken in production.
 - For SSR, skip chart creation server-side — Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.

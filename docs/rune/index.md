@@ -8,14 +8,12 @@ related: [courier, herald, familiar]
 exports:
   [
     createLogger,
-    defaultLogger,
     consoleTransport,
-    remoteTransport,
     jsonTransport,
+    remoteTransport,
     batchTransport,
     sampleTransport,
     redactTransport,
-    pipe,
     lazy,
     isLevelEnabled,
     resolveTheme,
@@ -39,23 +37,19 @@ Plain `console.log` lacks structure: no log levels, no namespacing, no remote de
 // Before — manual approach
 const path = '/users';
 console.log(`[api] GET ${path}`);
-fetch('/api/logs', { body: JSON.stringify({ level: 'error', path }), method: 'POST' });
 
 // After — Rune
-import { consoleTransport, createLogger, remoteTransport } from '@vielzeug/rune';
+import { consoleTransport, createLogger, jsonTransport } from '@vielzeug/rune';
 
 const api = createLogger({
   namespace: 'api',
   transports: [
     consoleTransport({ level: 'debug' }),
-    remoteTransport({
-      handler: (_type, data) => console.debug('remote log', data),
-      level: 'error',
-    }),
+    jsonTransport({ level: 'error' }),
   ],
 });
 
-api.info({ method: 'GET', path }, 'request');
+api.info('request', { method: 'GET', path });
 ```
 
 | Feature              | Rune                                                          | Winston                                               | Pino                                               | console                                    |
@@ -98,17 +92,14 @@ yarn add @vielzeug/rune
 ## Quick Start
 
 ```ts
-import { batchTransport, consoleTransport, createLogger, lazy, remoteTransport } from '@vielzeug/rune';
+import { consoleTransport, createLogger, jsonTransport, lazy } from '@vielzeug/rune';
 
 const log = createLogger({
   logLevel: 'debug',
   namespace: 'server',
   transports: [
     consoleTransport({ timestamp: true }),
-    remoteTransport({
-      handler: (_type, data) => console.debug('remote log', data),
-      level: 'error',
-    }),
+    jsonTransport({ level: 'error' }),
   ],
 });
 
@@ -117,15 +108,9 @@ const requestLog = log.withBindings({
   requestId: 'abc-123',
 });
 
-requestLog.info({ method: 'GET', path: '/users' }, 'request');
+requestLog.info('request', { method: 'GET', path: '/users' });
 const users = await requestLog.time('load users', () => Promise.resolve(['user-1']));
 console.log(users);
-
-const batch = batchTransport({ onFlush: (entries) => console.debug('batch', entries) });
-const bufferedLog = createLogger({ transports: [batch.transport] });
-
-bufferedLog.info('queued for delivery');
-await batch.dispose();
 ```
 
 ## Features
@@ -134,14 +119,13 @@ await batch.dispose();
 
 - Level filtering (`debug` to `off`) with `enabled()` checks, including `fatal` above `error`
 - Immutable config after construction — use `child()` or `withBindings()` to scope
-- Three call forms: `log.info('msg')`, `log.error(err, { id }, 'msg')` (Error-first), or `log.info({ key: 'val' }, 'msg')` — Error-first form auto-serializes to `data.err`
-- `Error` values in context fields are also auto-serialized to `{ message, name, stack }` — survives JSON.stringify
+- Message-first, context-first, and Error-first log calls for application code and adapters
+- `Error` values are auto-serialized to `{ message, name, stack }` — survives JSON.stringify
 - Pinned context bindings via `withBindings({ requestId })` — fields on every line
 - Lazy bindings via `lazy(fn)` — expensive computations gated behind the level check
 - Namespaced child loggers via `createLogger('name')` or `logger.child({ namespace })`
-- Middleware pipeline via `use(fn)` — transform or filter entries before transport dispatch
-- Pluggable transport pipeline: `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`
-- Fan-out via `pipe()` — dispatch to multiple transports independently, fault-tolerant
+- Pluggable transport pipeline: console, JSON, remote, batching, sampling, and fail-closed redaction
+- Immutable middleware transforms and filters applied before every transport
 - Structured `time()` wrapper: emits the label as message with `{ duration_ms }` in context
 - `group()` and `groupCollapsed()` wrappers that auto-close on throw/reject
 - `LogEntry.data` — single merged flat object for transports; no manual merging needed

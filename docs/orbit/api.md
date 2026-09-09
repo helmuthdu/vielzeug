@@ -9,7 +9,7 @@ description: API reference for @vielzeug/orbit positioners, computation, updates
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createPositioner()` | Lifecycle-owned floating positioning | Sync | Call `start()` after mount |
+| `createPositioner()` | Lifecycle-owned floating positioning | Sync | Starts immediately; create after mount |
 | `computePosition()` | Low-level geometry computation | Sync | Caller owns CSS application |
 | `autoUpdate()` | Listen for geometry changes | Sync | Call returned cleanup |
 | `createReactivePositioner()` | Optional Ripple position readable | Sync | Requires `@vielzeug/ripple` |
@@ -36,7 +36,7 @@ function createPositioner(
 ): Positioner;
 ```
 
-Creates an unstarted positioner.
+Creates an active positioner and applies its initial position before returning.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
@@ -50,15 +50,13 @@ Creates an unstarted positioner.
 import { createPositioner } from '@vielzeug/orbit';
 
 const positioner = createPositioner(trigger, tooltip);
-positioner.start();
 positioner.dispose();
 ```
 
 | Member | Return | Contract |
 | --- | --- | --- |
-| `start()` | `void` | Starts positioning once. |
 | `update()` | `void` | Recomputes and applies position. |
-| `getPosition()` | `ComputePositionResult \| null` | Latest result; null before first update. |
+| `getPosition()` | `ComputePositionResult` | Latest applied result. |
 | `dispose()` | `void` | Stops updates and aborts disposal signal. |
 
 ### `computePosition()`
@@ -114,7 +112,7 @@ function createReactivePositioner(
 ): ReactivePositioner;
 ```
 
-`ReactivePositioner.position` is `Readable<ComputePositionResult | null>`. Imported from `@vielzeug/orbit/reactive`.
+`ReactivePositioner.position` is `Readable<ComputePositionResult>`. Imported from `@vielzeug/orbit/reactive`.
 
 ## Types
 
@@ -244,8 +242,7 @@ interface Positioner {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  getPosition(): ComputePositionResult | null;
-  start(): void;
+  getPosition(): ComputePositionResult;
   update(): void;
   [Symbol.dispose](): void;
 }
@@ -260,7 +257,7 @@ interface AutoUpdateOptions {
 }
 
 interface ReactivePositioner extends Positioner {
-  readonly position: Readable<ComputePositionResult | null>;
+  readonly position: Readable<ComputePositionResult>;
 }
 
 interface ArrowOptions {

@@ -10,7 +10,7 @@ type Values = {
 describe('immutable form updates', () => {
   const form = createForm<Values>({
     initialValues: { profile: { email: '', name: '' }, tags: [] },
-    validate: (value) => ({ fields: { profile: { email: value.profile.email ? undefined : 'Required' } } }),
+    validate: (value) => (value.profile.email ? undefined : [{ message: 'Required', path: ['profile', 'email'] }]),
   });
 
   test('benchmarks', async ({ bench }) => {

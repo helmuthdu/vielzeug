@@ -1,6 +1,6 @@
 ---
 title: 'Scout Examples — Reactive Combobox'
-description: 'Wire createSearch signals to a combobox input with debounce and isSearching state.'
+description: 'Wire an atomic createSearch store to a combobox input with debounce and isSearching state.'
 ---
 
 ## Reactive Combobox
@@ -11,11 +11,10 @@ A live search input needs to show a loading state while the user types, debounce
 
 ### Solution
 
-`createSearch()` wraps a `ScoutIndex` in `@vielzeug/ripple` signals with debounce built in. Set `search.query.value` and read `search.results` / `search.isSearching` reactively.
+`createSearch()` wraps a `ScoutIndex` in a zero-dependency external store with debounce built in. Call `setQuery()`, then render the complete state returned by `getSnapshot()`.
 
 ```ts
 import { createIndex, createSearch, highlight } from '@vielzeug/scout';
-import { effect } from '@vielzeug/ripple';
 
 type Option = { id: number; label: string; category: string };
 
@@ -35,36 +34,27 @@ const index = createIndex(options, {
 // Create reactive search state — results update 150ms after query changes
 const search = createSearch(index, { debounce: 150, limit: 5 });
 
-// Reactive rendering
-effect(() => {
-  if (search.isSearching.value) {
-    console.log('⏳ Searching…');
-    return;
-  }
-
-  const results = search.results.value;
-
-  if (!results.length) {
-    console.log('No results');
-    return;
-  }
+const render = () => {
+  const { isSearching, results } = search.getSnapshot();
+  if (isSearching) return console.log('⏳ Searching…');
+  if (!results.length) return console.log('No results');
 
   for (const { item, matches } of results) {
     const labelMatch = matches.find(m => m.field === 'label');
     const parts = highlight(item.label, labelMatch?.ranges ?? []);
-    const display = parts.map(p => p.highlighted ? `[${p.text}]` : p.text).join('');
-
-    console.log(`${display} (${item.category})`);
+    console.log(parts.map(p => p.highlighted ? `[${p.text}]` : p.text).join(''), `(${item.category})`);
   }
-});
+};
+
+search.subscribe(render);
 
 // Simulate user typing (in a real app, wire to input.addEventListener('input', ...))
-search.query.value = 'br'; // triggers debounce
+search.setQuery('br'); // triggers debounce
 // …150ms later…
 // [Br]occoli (vegetable)
 // [Br]ussels Sprouts (vegetable)
 
-search.query.value = 'bru'; // cancels previous debounce, starts new one
+search.setQuery('bru'); // cancels previous debounce, starts new one
 // …150ms later…
 // [Bru]ssels Sprouts (vegetable)
 
@@ -77,25 +67,24 @@ search.dispose();
 // Or use the `using` declaration for automatic disposal
 {
   using s = createSearch(index);
-  s.query.value = 'apple';
+  s.setQuery('apple');
   // s.dispose() called automatically at block exit
 }
 ```
 
-#### With signal observation (optional)
+#### With state observation (optional)
 
 ```ts
-const stopQuery = search.query.subscribe(() => console.debug('query ->', search.query.peek()));
-const stopResults = search.results.subscribe(() =>
-  console.debug('results ->', search.results.peek().length, 'item(s)'),
-);
+const stop = search.subscribe(() => {
+  const snapshot = search.getSnapshot();
+  console.debug(snapshot.query, snapshot.isSearching, snapshot.results.length);
+});
 
-search.query.value = 'br';
-// query -> "br"
-// results -> 2 item(s)
+search.setQuery('br');
+// br true 6
+// br false 2
 
-stopQuery();
-stopResults();
+stop();
 ```
 
 ::: warning PII
@@ -104,10 +93,10 @@ stopResults();
 
 ### Pitfalls
 
-- Always call `search.dispose()` (or use `using`) — an undisposed `SearchState` leaks its `ripple` subscriptions and any pending debounce timer.
+- Always call `search.dispose()` (or use `using`) — an undisposed `SearchState` retains its index subscription and any pending debounce timer.
 - `debounce: 0` skips the `isSearching` flash entirely — don't rely on it for a loading indicator when using synchronous updates.
 - `search.clear()` throws `ScoutDisposedError` if called after `dispose()` — don't call lifecycle methods after teardown.
-- `index.add()` / `.remove()` / `.reindex()` / `.setItems()` update `results` even without a query change — no need to also bump `search.query` to force a refresh.
+- `index.add()` / `.remove()` / `.reindex()` / `.setItems()` update the snapshot even without a query change — no need to call `setQuery()` again.
 
 ### Related
 

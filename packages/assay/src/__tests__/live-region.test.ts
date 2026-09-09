@@ -84,6 +84,26 @@ describe('live-region helpers', () => {
       expect(queryLiveRegion({ politeness: 'polite' })).toBe(el);
     });
 
+    it.each([
+      ['log', 'polite'],
+      ['marquee', 'off'],
+      ['timer', 'off'],
+    ] as const)('finds implicit %s live region', (role, politeness) => {
+      const el = document.createElement('div');
+
+      el.setAttribute('role', role);
+      container.appendChild(el);
+
+      expect(queryLiveRegion({ politeness })).toBe(el);
+    });
+
+    it('includes a matching root element', () => {
+      container.setAttribute('role', 'status');
+
+      expect(queryLiveRegion({ root: container })).toBe(container);
+      expect(queryAllLiveRegions({ root: container })).toContain(container);
+    });
+
     it('finds implicit assertive live region via role="alert" (no explicit aria-live)', () => {
       const el = document.createElement('div');
 
@@ -156,6 +176,19 @@ describe('live-region helpers', () => {
       expect(result).toBe(el);
     });
 
+    it('matches text in a later live region', async () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+
+      first.setAttribute('aria-live', 'polite');
+      first.textContent = 'Other';
+      second.setAttribute('aria-live', 'polite');
+      second.textContent = 'Target';
+      container.append(first, second);
+
+      await expect(waitForLiveRegion('Target', { root: container, timeout: 100 })).resolves.toBe(second);
+    });
+
     it('throws on timeout when text never appears', async () => {
       const el = document.createElement('div');
 
@@ -196,6 +229,19 @@ describe('live-region helpers', () => {
       }, 20);
 
       await waitForLiveRegionCleared({ interval: 10, timeout: 200 });
+    });
+
+    it('matches a later cleared live region', async () => {
+      const first = document.createElement('div');
+      const second = document.createElement('div');
+
+      first.setAttribute('aria-live', 'polite');
+      first.textContent = 'persistent';
+      second.setAttribute('aria-live', 'polite');
+      second.textContent = '';
+      container.append(first, second);
+
+      await expect(waitForLiveRegionCleared({ root: container, timeout: 100 })).resolves.toBeUndefined();
     });
 
     it('throws on timeout when region is not cleared', async () => {

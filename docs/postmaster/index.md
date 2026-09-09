@@ -49,7 +49,7 @@ const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
 const postmaster = createPostmaster({ jobs, store });
 
 await postmaster.enqueue('createTodo', { id: crypto.randomUUID(), title: 'Buy milk' });
-await postmaster.start();
+postmaster.start();
 ```
 
 | Feature | Postmaster | Ad hoc outbox | Familiar |
@@ -134,7 +134,7 @@ const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
 const postmaster = createPostmaster({ jobs, store });
 
 await postmaster.enqueue('createTodo', { id: crypto.randomUUID(), title: 'Buy milk' });
-await postmaster.start();
+postmaster.start();
 
 // On page unload:
 await postmaster.dispose();
@@ -163,6 +163,7 @@ await store.dispose();
 - [**Usage Guide**](./usage.md)
 - [**API Reference**](./api.md)
 - [**Examples**](./examples.md)
+- [**3.0 Migration Guide**](./migration.md)
 
 </div>
 
@@ -171,6 +172,7 @@ await store.dispose();
 ## See Also
 
 - [@vielzeug/courier](../courier/) — Perform the HTTP requests Postmaster jobs coordinate.
+- [@vielzeug/sourcerer](../sourcerer/) — Reload paginated collection state after durable jobs complete.
 - [@vielzeug/vault](../vault/) — IndexedDB storage primitive backing the durable store.
 - [@vielzeug/sentinel](../sentinel/) — Flush the outbox when the network returns.
 - [@vielzeug/familiar](../familiar/) — In-memory Web Worker pool for CPU-bound tasks.

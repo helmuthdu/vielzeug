@@ -33,5 +33,4 @@ truncate('The quick brown fox', 15, { ellipsis: '...' });
 
 ### Related
 
-- [pad](./pad.md)
 - [words](./words.md)

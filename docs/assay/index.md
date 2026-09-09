@@ -23,10 +23,14 @@ exports:
     fireKeyUp,
     fireSubmit,
     waitUntil,
-    retry,
+    eventually,
     waitForEvent,
     delay,
     nextTick,
+    queryLiveRegion,
+    queryAllLiveRegions,
+    waitForLiveRegion,
+    waitForLiveRegionCleared,
     AssayError,
     AssayQueryError,
     AssayTimeoutError,
@@ -110,8 +114,9 @@ await waitUntil(() => view.queryByText('Saved') !== null);
 - `within(root)` scopes nullable and required DOM queries.
 - `queryInShadow`, `queryPart`, and `getSlotted` cross custom-element boundaries explicitly.
 - `fireClick`, `fireInput`, `fireKeyDown`, and peers dispatch exact synchronous events.
-- `waitUntil`, `retry`, and `waitForEvent` provide bounded, abortable async waiting.
-- `delay` and `nextTick` model explicit timer and microtask scheduling.
+- `waitUntil`, `eventually`, and `waitForEvent` provide bounded, abortable async waiting.
+- `delay` and `nextTick` model explicit timer and queued-microtask scheduling.
+- Live-region helpers match explicit attributes and implicit ARIA live roles across every candidate.
 - `AssayError`, `AssayQueryError`, and `AssayTimeoutError` provide typed failures.
 
 </div>

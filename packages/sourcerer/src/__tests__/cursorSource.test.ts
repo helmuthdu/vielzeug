@@ -1,67 +1,81 @@
 import { createCursorSource } from '../cursorSource';
 
 describe('createCursorSource', () => {
-  it('uses returned cursors for sequential navigation', async () => {
-    const load = vi.fn(async ({ query }: { query: { after?: string } }) => {
-      if (query.after === 'next') return { data: ['second'], previousCursor: 'previous', total: 2 };
-
-      return { data: ['first'], nextCursor: 'next', total: 2 };
-    });
-    const source = createCursorSource({ autoStart: false, load });
+  it('uses returned cursors for direct navigation', async () => {
+    const load = vi.fn(async ({ after }: { after?: string }) =>
+      after === 'next'
+        ? { items: ['second'], previousCursor: 'previous', totalItems: 2 }
+        : { items: ['first'], nextCursor: 'next', totalItems: 2 },
+    );
+    const source = createCursorSource({ load });
 
     await source.reload();
-    await source.page.next();
-    await source.page.previous();
+    await source.next();
+    await source.previous();
 
-    expect(source.snapshot.data).toEqual(['first']);
-    expect(source.snapshot.pagination).toMatchObject({ hasNext: true, kind: 'cursor' });
+    expect(source.state.items).toEqual(['first']);
+    expect(source.state.pagination).toMatchObject({ nextCursor: 'next', pageSize: 20 });
   });
 
-  it('retains loaded cursors while a search query is pending', async () => {
-    let resolve!: (result: { data: string[]; nextCursor?: string }) => void;
-    const source = createCursorSource({
-      autoStart: false,
-      load: ({ query }) =>
-        query.search
-          ? new Promise<{ data: string[]; nextCursor?: string }>((finish) => {
-              resolve = finish;
-            })
-          : Promise.resolve({ data: ['first'], nextCursor: 'next' }),
-    });
+  it('resets cursors when params or page size changes', async () => {
+    const load = vi.fn(async ({ params }: { params: string }) => ({ items: [params], nextCursor: 'next' }));
+    const source = createCursorSource<string, string>({ load, pageSize: 10, params: '' });
+    await source.reload();
+    await source.next();
 
+    await source.setParams('needle');
+    await source.setPageSize(20);
+
+    expect(load).toHaveBeenLastCalledWith({
+      pageSize: 20,
+      params: 'needle',
+      signal: expect.any(AbortSignal),
+    });
+    expect(source.state.items).toEqual(['needle']);
+  });
+
+  it('retains committed cursors while replacement params are pending', async () => {
+    let resolve!: (result: { items: string[] }) => void;
+    const source = createCursorSource<string, string>({
+      load: ({ params }) =>
+        params
+          ? new Promise<{ items: string[] }>((finish) => (resolve = finish))
+          : Promise.resolve({ items: ['first'], nextCursor: 'next' }),
+      params: '',
+    });
     await source.reload();
 
-    const pending = source.setQuery({ search: 'needle' });
+    const pending = source.setParams('needle');
 
-    expect(source.snapshot).toMatchObject({
-      data: ['first'],
-      pagination: { kind: 'cursor', nextCursor: 'next' },
-      pendingQuery: { pageSize: 20, search: 'needle' },
-      query: { pageSize: 20, search: '' },
+    expect(source.state).toMatchObject({
+      items: ['first'],
+      pagination: { nextCursor: 'next' },
+      params: '',
+      pendingParams: 'needle',
     });
-
-    resolve({ data: ['needle'] });
+    resolve({ items: ['needle'] });
     await pending;
-    expect(source.snapshot.pendingQuery).toBeUndefined();
+    expect(source.state.pendingParams).toBeUndefined();
   });
 
-  it('ignores undefined patch fields', async () => {
-    const load = vi.fn(async () => ({ data: [] }));
-    const source = createCursorSource({ autoStart: false, load });
-
-    await source.reload();
-    await source.setQuery({ pageSize: undefined, search: undefined });
-
-    expect(load).toHaveBeenCalledTimes(1);
-  });
-
-  it('rejects conflicting cursor directions', () => {
+  it('rejects conflicting initial cursor directions', () => {
     expect(() =>
       createCursorSource({
-        autoStart: false,
-        initialQuery: { after: 'after', before: 'before' },
-        load: async () => ({ data: [] }),
+        after: 'after',
+        before: 'before',
+        load: async () => ({ items: [] }),
       }),
-    ).toThrow('Cursor query cannot include both after and before');
+    ).toThrow('cannot start with both after and before');
+  });
+
+  it('is inert and rejects commands after disposal', async () => {
+    const load = vi.fn(async () => ({ items: [] }));
+    const source = createCursorSource({ load });
+
+    expect(load).not.toHaveBeenCalled();
+    source.dispose();
+
+    await expect(source.next()).rejects.toThrow('disposed');
+    await expect(source.reload()).rejects.toThrow('disposed');
   });
 });

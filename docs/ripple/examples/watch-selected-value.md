@@ -31,12 +31,11 @@ ripple.dispose();
 
 ### Pitfalls
 
-- Use `effect()` when every read should become a dependency.
-- Use `once` only when one transition is sufficient.
+- Reactive reads made only inside the callback are untracked; use `effect()` when all callback reads should become dependencies.
+- `once` disposes after the first callback invocation, including a callback that throws.
 - Supply `equals` when selection needs custom equality.
 
 ### Related
 
 - [Batch and Untrack](./batch-and-untrack.md)
-- [Async Resource](./async-resource.md)
 - [Herald](/herald/)

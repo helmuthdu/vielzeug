@@ -1,4 +1,4 @@
-import { createStableId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
+import { createId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { OverlayOpenChangeDetail } from '../../core';
@@ -124,7 +124,7 @@ define<OreNavigationMenuProps>(NAVIGATION_MENU_TAG, {
     const host = getHost();
     const emit = useEmit<OreNavigationMenuEvents>();
     const abortSignal = lifecycleSignal(onCleanup);
-    const panelId = createStableId('navigation-menu');
+    const panelId = createId('navigation-menu');
     const isDisabled = computed(() => props.disabled.value);
     const activeValue = signal<string | null>(null);
     let activeTrigger: HTMLElement | null = null;
@@ -136,7 +136,7 @@ define<OreNavigationMenuProps>(NAVIGATION_MENU_TAG, {
     const panels = () => Array.from(host.querySelectorAll<HTMLElement>(NAVIGATION_MENU_PANEL_TAG));
     const panelFor = (value: string) => panels().find((panel) => panel.getAttribute('for') === value) ?? null;
     const isControlled = () => props.open.value !== undefined;
-    const panelIdFor = (panel: HTMLElement) => (panel.id ||= createStableId('navigation-menu-panel'));
+    const panelIdFor = (panel: HTMLElement) => (panel.id ||= createId('navigation-menu-panel'));
 
     const positioner = createDropdownPositioner({
       getFloating: () => activePanel,
@@ -284,7 +284,7 @@ define<OreNavigationMenuProps>(NAVIGATION_MENU_TAG, {
         if (!value || values.has(value) || !panel) continue;
 
         values.add(value);
-        item.id ||= createStableId('navigation-menu-trigger');
+        item.id ||= createId('navigation-menu-trigger');
 
         const trigger = item.shadowRoot?.querySelector<HTMLButtonElement>('.trigger');
 

@@ -13,7 +13,7 @@ export type NewTask = Omit<Task, 'id'>;
  * `orderedIds` must contain exactly the ids currently in that status — extra/missing ids are
  * silently dropped/skipped, matching how `@vielzeug/dnd`'s own `applyReorder()` treats mismatches.
  */
-function applyReorderWithinStatus(tasks: Task[], status: TaskStatus, orderedIds: string[]): Task[] {
+function applyReorderWithinStatus(tasks: Task[], status: TaskStatus, orderedIds: readonly string[]): Task[] {
   const byId = new Map(tasks.map((t) => [t.id, t] as const));
   const reordered = orderedIds.map((id) => byId.get(id)).filter((t): t is Task => Boolean(t));
   let cursor = 0;
@@ -30,7 +30,7 @@ function applyReorderWithinStatus(tasks: Task[], status: TaskStatus, orderedIds:
 export async function reorderTasks(
   boardSignal: Signal<Board>,
   status: TaskStatus,
-  orderedIds: string[],
+  orderedIds: readonly string[],
 ): Promise<void> {
   const previousOrder = boardSignal.value.tasks.filter((t) => t.status === status).map((t) => t.id);
 

@@ -7,14 +7,15 @@ description: Observe browser and element state within an Ore component lifecycle
 
 ### Problem
 
-Element observation requires mounted DOM nodes, and its browser resources must be released when the component disconnects. Ore provides the lifecycle boundary while Sentinel provides the reactive observation.
+Element observation requires mounted DOM nodes, and its browser resources must be released when the component disconnects. Ore provides the lifecycle boundary while Sentinel provides the external-store observation.
 
 ### Solution
 
-Create Sentinels in `onMounted()`, consume them through `watchEffect()`, and dispose them through `onCleanup()`.
+Create Sentinels in `onMounted()`, bridge them with `fromSubscribable()`, and dispose them through `onCleanup()`.
 
 ```ts
 import { define, html, onCleanup, onMounted, ref, watchEffect } from '@vielzeug/ore';
+import { fromSubscribable } from '@vielzeug/ripple';
 import { createElementSize, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 define('observed-panel', {
@@ -27,9 +28,10 @@ define('observed-panel', {
 
       try {
         const size = createElementSize(element);
+        const sizeState = fromSubscribable(size, { signal: size.disposalSignal });
 
         watchEffect(() => {
-          console.log('panel width', size.value?.width);
+          console.log('panel width', sizeState.value?.width);
         });
 
         onCleanup(() => size.dispose());

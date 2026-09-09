@@ -7,7 +7,7 @@ description: 'Same-URL deduplication example for @vielzeug/wayfinder.'
 
 ### Problem
 
-Calling `navigate()` on a reactive signal or click handler multiple times triggers redundant data loads and scroll-to-top on every call.
+Calling `navigate()` on a reactive signal or click handler multiple times triggers redundant data loads on every call.
 
 ### Solution
 
@@ -23,7 +23,7 @@ const router = createRouter({
       data: async () => refreshFeed(),
     },
   },
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 await router.navigate({ name: 'feed' });

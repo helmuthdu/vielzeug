@@ -1,5 +1,4 @@
 import '../alert/alert';
-import { uuid } from '@vielzeug/arsenal/random';
 import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
@@ -86,9 +85,9 @@ class ToastStore {
   #max = 5;
 
   add(item: ToastItem): string {
-    if (this.#disposed) return item.id ?? uuid();
+    if (this.#disposed) return item.id ?? crypto.randomUUID();
 
-    const id = item.id ?? uuid();
+    const id = item.id ?? crypto.randomUUID();
     const active = this.#entries.value.filter((entry) => entry.phase !== 'exiting');
     const overflow = active.length - (this.#max - 1);
 
@@ -706,7 +705,7 @@ export function createToastService(root: ParentNode = document.body): ToastServi
 
   const service: ToastService = {
     add(item) {
-      if (!ensureHost()) return item.id ?? uuid();
+      if (!ensureHost()) return item.id ?? crypto.randomUUID();
 
       return store.add(item);
     },

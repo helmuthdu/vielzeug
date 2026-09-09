@@ -13,12 +13,13 @@ export type ClockworkErrorCode =
 
 /** A Clockwork failure with a stable machine-readable code and contextual details. */
 export class ClockworkError extends Error {
+  private static readonly errorName = 'ClockworkError';
   readonly code: ClockworkErrorCode;
   readonly details: Readonly<Record<string, unknown>>;
 
   constructor(code: ClockworkErrorCode, message: string, details: Record<string, unknown> = {}, opts?: ErrorOptions) {
     super(message, opts);
-    this.name = new.target.name;
+    this.name = ClockworkError.errorName;
     this.code = code;
     this.details = Object.freeze({ ...details });
     Object.setPrototypeOf(this, new.target.prototype);

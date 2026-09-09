@@ -3,7 +3,6 @@ import * as ore from '../index';
 import { define, html, live, prop, ref, unsafeHtml, useEmit, useField } from '../index';
 
 const inputRef = ref<HTMLInputElement>();
-
 define<{ count: number }>('ore-contracts', {
   formAssociated: true,
   props: { count: prop.number(0) },

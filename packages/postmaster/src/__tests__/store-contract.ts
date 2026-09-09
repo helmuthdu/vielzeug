@@ -1,3 +1,4 @@
+import type { PostmasterStore, StoredJob, StoreTx } from '../store.ts';
 import {
   claimJob,
   completeJob,
@@ -10,7 +11,6 @@ import {
   retryJob,
   toEntry,
 } from '../store-ops.ts';
-import type { PostmasterStore, StoredJob, StoreTx } from '../types.ts';
 
 const entry = (overrides: Partial<StoredJob> & { id: string }): StoredJob => ({
   attempts: 0,
@@ -287,16 +287,30 @@ export function describePostmasterStore(label: string, factory: StoreFactory): v
 
     it('subscribe notifies listeners after writes', async () => {
       const calls: number[] = [];
-      const unsubscribe = store.subscribe(() => calls.push(calls.length));
+      let notified: (() => void) | undefined;
+      const waitForNotification = () =>
+        new Promise<void>((resolve) => {
+          notified = resolve;
+        });
+      const unsubscribe = store.subscribe(() => {
+        calls.push(calls.length);
+        notified?.();
+        notified = undefined;
+      });
 
+      const firstNotification = waitForNotification();
       await tx((t) => enqueueJob(t, entry({ id: 'one' })));
+      await firstNotification;
+      const secondNotification = waitForNotification();
       await tx((t) => enqueueJob(t, entry({ id: 'two' })));
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await secondNotification;
+      const callCount = calls.length;
       unsubscribe();
       await tx((t) => enqueueJob(t, entry({ id: 'three' })));
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(calls.length).toBeGreaterThanOrEqual(2);
+      expect(callCount).toBeGreaterThanOrEqual(2);
+      expect(calls).toHaveLength(callCount);
     });
 
     it('disposal is idempotent and aborts the disposal signal', async () => {

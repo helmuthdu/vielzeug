@@ -1,8 +1,6 @@
 # @vielzeug/arsenal
 
-> Tree-shakeable, zero-dependency TypeScript utilities with focused category entry points.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/arsenal)](https://www.npmjs.com/package/@vielzeug/arsenal) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+> Non-trivial TypeScript utilities — retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections
 
 ## Installation
 
@@ -15,7 +13,7 @@ yarn add @vielzeug/arsenal
 ## Quick Start
 
 ```ts
-import { chunk, groupBy, retry } from '@vielzeug/arsenal';
+import { groupBy, retry } from '@vielzeug/arsenal';
 import { fuzzyFilter } from '@vielzeug/arsenal/array';
 import { taskPool } from '@vielzeug/arsenal/async';
 import { cache } from '@vielzeug/arsenal/cache';
@@ -30,23 +28,11 @@ const data = await pool.run((signal) => retry(() => fetch('/api', { signal }).th
 
 const responses = cache<string, unknown>({ ttlMs: 60_000 });
 const profile = await responses.getOrLoad('/profile', () => fetch('/profile').then((response) => response.json()));
+const cachedResponses = responses.entries();
 
-console.log(chunk([1, 2, 3], 2), groupBy(matches, (user) => user.name), data, profile);
+console.log(groupBy(matches, (user) => user.name), data, profile, cachedResponses);
 pool.dispose();
 ```
-
-## Entry Points
-
-- `@vielzeug/arsenal` — curated common utilities
-- `@vielzeug/arsenal/array` — array transforms and fuzzy search
-- `@vielzeug/arsenal/async` — cancellation, retry, task pools, timing
-- `@vielzeug/arsenal/cache` — in-memory cache and memoization
-- `@vielzeug/arsenal/function` — function composition and timing
-- `@vielzeug/arsenal/guards` — type guards and predicates
-- `@vielzeug/arsenal/math` — numeric and statistical helpers
-- `@vielzeug/arsenal/object` — object transforms, paths, hash, JSON parsing result
-- `@vielzeug/arsenal/random` — cryptographic random helpers
-- `@vielzeug/arsenal/string` — text transforms and similarity
 
 ## Documentation
 
@@ -54,6 +40,7 @@ pool.dispose();
 - [Usage Guide](https://vielzeug.dev/arsenal/usage)
 - [API Reference](https://vielzeug.dev/arsenal/api)
 - [Examples](https://vielzeug.dev/arsenal/examples)
+- [Migration Guide](https://vielzeug.dev/arsenal/migration)
 
 ## License
 

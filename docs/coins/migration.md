@@ -1,8 +1,53 @@
 ---
-title: Coins 2.2 Migration
+title: Coins Migration
 ---
 
-# Coins 2.2 Migration
+# Coins Migration
+
+## Coins 3.0
+
+Coins 3.0 consolidates trust-boundary decoding and hardens runtime exactness, canonical currency invariants, allocation, exchange rates, and locale formatting. `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, and `KWD` remain canonical built-ins. The public `Decimal` type remains available because `ExchangeRate.value` exposes it.
+
+### Use `decodeMoney()` at every trust boundary
+
+`parseMoney()` and `parseMoneyJSON()` are replaced by one strict decoder. The two accepted shapes are disjoint and exact:
+
+```ts
+// Before
+const trustedShape = parseMoney(value);
+const persisted = parseMoneyJSON(payload);
+
+// After
+const trustedShape = decodeMoney({ amount: 100n, currency: USD });
+const persisted = decodeMoney({ amount: '100', currency: 'USD', unit: 'minor' });
+```
+
+Plain bigint data must contain exactly `amount` and `currency`. `MoneyJSON` must contain exactly `amount`, `currency`, and `unit`. Serialized integer input is bounded to 1,000 characters.
+
+Custom JSON currencies require a resolver that returns a canonical definition with the same code:
+
+```ts
+const TOK = currency({ code: 'TOK', minorUnit: 2 });
+const restored = decodeMoney(payload, {
+  currency: (code) => (code === 'TOK' ? TOK : currency(code)),
+});
+```
+
+### Runtime exactness is enforced
+
+Decimal APIs reject runtime numbers instead of relying only on TypeScript. Rounding modes are validated even when an operation divides exactly. Exchange rates must be greater than zero.
+
+### Formatting follows `Intl`
+
+Formatting now delegates exact decimal strings and mapped rounding modes to `Intl.NumberFormat`. This localizes integer and fractional digits, preserves rounded negative signs, selects currency names using the final visible value, and lets either fraction bound be supplied independently.
+
+### Allocation input is bounded
+
+Count and weighted allocation reject sparse arrays and more than 100,000 output parts. Empty sums validate their explicit currency before constructing canonical zero.
+
+---
+
+## Coins 2.2
 
 Coins 2.2 removes the global custom currency registry, consolidates construction, and strengthens canonical identity checks. Breaking changes below.
 
@@ -20,7 +65,7 @@ import { currency } from '@vielzeug/coins';
 const POINTS = currency({ code: 'PTS', minorUnit: 0 });
 ```
 
-`currency(code)` still resolves built-ins. Two calls with the same definition produce distinct but equivalent currencies — no global identity.
+`currency(code)` still resolves built-ins. Two calls with the same definition produce distinct canonical instances that are not interchangeable — no global custom registry exists.
 
 ### Custom currencies must be shared
 
@@ -39,7 +84,7 @@ export const PTS = currency({ code: 'PTS', minorUnit: 0 });
 
 ### Realm boundary limitation
 
-Canonical identity checks (`isMoney`, `isCurrency`, `isExchangeRate`) use an internal `WeakSet` tied to object identity. Values that cross realm boundaries via `structuredClone()`, `postMessage()`, or worker transfer lose canonical status. Re-canonicalize with `parseMoney()` / `parseMoneyJSON()` on the receiving side.
+Canonical identity checks (`isMoney`, `isCurrency`, `isExchangeRate`) use an internal `WeakSet` tied to object identity. Values that cross realm boundaries via `structuredClone()`, `postMessage()`, or worker transfer lose canonical status. In current code, re-canonicalize with `decodeMoney()` on the receiving side.
 
 ## `withMinor` removed — use `money(amount, currency, { unit: 'minor' })`
 
@@ -57,21 +102,21 @@ const price = money(1999n, USD, { unit: 'minor' });
 
 ## `resolveBuiltinCurrency` removed — use `currency`
 
-`parseMoneyJSON` now defaults to `currency` for resolution. Custom currencies still require an explicit resolver.
+In Coins 2.2, `parseMoneyJSON` defaulted to `currency` for resolution. Coins 3.0 replaces it with `decodeMoney()`. Custom currencies still require an explicit resolver.
 
 ```ts
 // Before
 import { resolveBuiltinCurrency } from '@vielzeug/coins';
 parseMoneyJSON(payload, { currency: resolveBuiltinCurrency });
 
-// After — default resolver is `currency`
+// Coins 2.2 — default resolver is `currency`
 parseMoneyJSON(payload);
 parseMoneyJSON(payload, { currency: (code) => (code === 'TOK' ? tokens : currency(code)) });
 ```
 
 ## `isMoney` now identity-based
 
-`isMoney` checks membership in the internal canonical set, not structural shape. Forged frozen objects with `bigint` amount and registered currency no longer pass. Use `parseMoney` to validate and canonicalize untrusted plain data.
+`isMoney` checks membership in the internal canonical set, not structural shape. Forged frozen objects with `bigint` amount and registered currency no longer pass. Use current `decodeMoney()` to validate and canonicalize untrusted plain data.
 
 ```ts
 // Before — structural check accepted forged frozen objects
@@ -116,3 +161,5 @@ Non-canonical exchange rates now throw `INVALID_EXCHANGE_RATE` instead of `INVAL
 ---
 
 Previous: `decimal` internalized, `sum` infers currency, `FORMAT_ERROR` code, `format` rounding option (Coins 2.1).
+
+Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current contracts.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createTestWorker } from '../testing';
-import { FamiliarTaskError, FamiliarTimeoutError } from '../worker';
+import { FamiliarInvalidOptionsError, FamiliarTaskError, FamiliarTimeoutError } from '../worker';
 
 describe('createTestWorker', () => {
   it('matches production task error wrapping', async () => {
@@ -55,5 +55,13 @@ describe('createTestWorker', () => {
     await expect(queued).rejects.toMatchObject({ name: 'AbortError' });
     release();
     await expect(running).resolves.toBe(1);
+  });
+
+  it('enforces production option limits', async () => {
+    expect(() => createTestWorker((value) => value, { concurrency: 513 })).toThrow(FamiliarInvalidOptionsError);
+    expect(() => createTestWorker((value) => value, { onFull: 'other' as never })).toThrow(FamiliarInvalidOptionsError);
+    const worker = createTestWorker((value) => value);
+
+    await expect(worker.run(1, { timeout: 0 })).rejects.toBeInstanceOf(FamiliarInvalidOptionsError);
   });
 });

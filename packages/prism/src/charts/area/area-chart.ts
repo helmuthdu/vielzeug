@@ -1,37 +1,32 @@
-import { warn } from '../../_dev';
-import { renderAxis, resolveTickCount } from '../../axes/axis';
+import { positionAxis, renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
-import { resolveMaybeSignal } from '../../core/resolve';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { seriesColor } from '../../theme';
-import type { AreaChartConfig, ChartHandle } from '../../types';
+import type { AreaChartConfig, AreaSeriesConfig, ChartHandle } from '../../types';
 import { computeAreaPoints, renderArea } from './area-renderer';
 
-export function createAreaChart(container: HTMLElement, config: AreaChartConfig): ChartHandle {
+export function createAreaChart(container: HTMLElement, config: AreaChartConfig): ChartHandle<AreaSeriesConfig[]> {
   let crosshair: ReturnType<typeof createCrosshair> | null = null;
-  const seriesSignal = resolveMaybeSignal(config.series);
+  let seriesList = config.series;
 
-  let scaffold: ChartHandle | undefined;
-
-  try {
-    scaffold = createChartScaffold(container, config, (ctx) => {
+  return createChartScaffold(
+    container,
+    config,
+    (ctx) => {
       const { groups, legend, tooltip } = ctx;
-      const dims = ctx.dimensions.value;
+      const dims = ctx.dimensions;
       const area = chartArea(dims.width, dims.height, dims.margin);
-      const seriesList = seriesSignal.value;
-      const dataSignals = seriesList.map((s) => resolveMaybeSignal(s.data));
-      const allData = dataSignals.map((signal) => signal.value);
-      const allX = allData.flat().map((d) => d.key as Date | number);
+      const allData = seriesList.map((series) => series.data);
+      const allX = allData.flat().map((datum) => datum.key);
       const allY = allData.flat().map((d) => d.value);
 
       if (allX.length === 0) {
-        warn('createAreaChart: no data');
         clearCartesianDom(groups, legend, tooltip, crosshair);
 
         return;
@@ -41,7 +36,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
         crosshair = createCrosshair(ctx.chartArea, config.crosshair);
       }
 
-      const xScale = buildXScale(allX as (Date | number)[], area.width);
+      const xScale = buildXScale(allX, area.width);
       const yScale = buildYScale(allY, area.height);
       const baselineY = yScale.map(0);
 
@@ -68,11 +63,14 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
       }
 
       if (config.xAxis) {
-        groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
+        positionAxis(groups.xAxis, config.xAxis.position ?? 'bottom', area.width, area.height);
         renderAxis(groups.xAxis, xScale, config.xAxis, area.width, 'bottom');
       }
 
-      if (config.yAxis) renderAxis(groups.yAxis, yScale, config.yAxis, area.height, 'left');
+      if (config.yAxis) {
+        positionAxis(groups.yAxis, config.yAxis.position ?? 'left', area.width, area.height);
+        renderAxis(groups.yAxis, yScale, config.yAxis, area.height, 'left');
+      }
 
       while (groups.series.children.length > seriesList.length) {
         groups.series.removeChild(groups.series.lastChild!);
@@ -108,20 +106,18 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
 
       return createSeriesInteraction({
         crosshair,
-        dims: () => ctx.dimensions.value,
+        dims: () => ctx.dimensions,
         getData: () => allData,
         getPoints: () => allPoints,
-        getSeriesList: () => seriesSignal.value,
+        getSeriesList: () => seriesList,
         onClick: config.onClick,
         onHover: config.onHover,
         svg: ctx.svg,
         tooltip,
       });
-    });
-
-    return scaffold;
-  } catch (error) {
-    scaffold?.dispose();
-    throw error;
-  }
+    },
+    (data) => {
+      seriesList = data;
+    },
+  );
 }

@@ -28,9 +28,9 @@ export interface SandboxTestHelpers {
  * const sandbox = createSandbox(container);
  * const helpers = createSandboxTestHelpers(container);
  *
- * sandbox.render('<p>test</p>');
+ * const render = sandbox.render('<p>test</p>');
  * helpers.fireReady();
- * await sandbox.ready;
+ * await render;
  * ```
  */
 export function createSandboxTestHelpers(container: HTMLElement): SandboxTestHelpers {

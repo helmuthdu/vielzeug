@@ -189,6 +189,16 @@ describe('renderAxis — axis title', () => {
 
     expect(title).not.toBeNull();
     expect(title?.textContent).toBe('My Axis');
+    expect(title?.getAttribute('y')).toBe('36');
+  });
+
+  it('positions vertical titles beyond tick labels', () => {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
+    const scale = linearScale({ domain: [0, 100], range: [400, 0] });
+
+    renderAxis(group, scale, { label: 'Value', position: 'left' }, 400);
+
+    expect(group.querySelector('.prism-axis-title')?.getAttribute('transform')).toBe('translate(-42, 200) rotate(-90)');
   });
 
   it('does not render .prism-axis-title when config.label is absent', () => {
@@ -369,7 +379,7 @@ describe('computePoints — string-key warning', () => {
       [
         { key: 'A', value: 10 },
         { key: 'B', value: 20 },
-      ],
+      ] as unknown as Parameters<typeof computePoints>[0],
       xScale as Parameters<typeof computePoints>[1],
       yScale,
     );
@@ -410,7 +420,7 @@ describe('computeAreaPoints — string-key warning', () => {
       [
         { key: 'A', value: 10 },
         { key: 'B', value: 20 },
-      ],
+      ] as unknown as Parameters<typeof computeAreaPoints>[0],
       xScale as Parameters<typeof computeAreaPoints>[1],
       yScale,
     );

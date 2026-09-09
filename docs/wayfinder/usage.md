@@ -44,10 +44,7 @@ Each route can provide these fields:
 | `path`         | Match pattern                                                                                                               |
 | `children`     | Nested child routes                                                                                                         |
 | `index`        | Default child route that inherits the parent path                                                                           |
-| `component`    | Optional view payload exposed on `match.component`                                                                          |
-| `data`         | Abortable route data function. Result available as `match.data`. Supports streaming via `AsyncGenerator`.                   |
-| `lazy`         | Lazy-load the module. Called once; result fills `data`, `component`, and `meta`.                                            |
-| `meta`         | Static metadata exposed on `match.meta`                                                                                     |
+| `data`         | Abortable route data function. Result available as `match.data`.                                                            |
 | `middleware`   | Route-specific middleware                                                                                                   |
 | `onError`      | Per-route error boundary. Called when this route's `data()` throws; its return value becomes `match.data`.                  |
 | `redirect`     | Declarative permanent redirect. Resolved before middleware runs.                                                            |
@@ -67,7 +64,6 @@ For a catch-all not-found page, use the `notFound` option in router options inst
 const router = createRouter({
   routes,
   notFound: {
-    component: NotFoundPage,
     data: async ({ pathname }) => ({ requestedPath: pathname }),
   },
 });
@@ -236,43 +232,6 @@ const routes = {
 
 If `onError` itself throws, the router falls through to `status: 'error'` as usual.
 
-#### Streaming Data Loaders
-
-Return an `AsyncGenerator` from `data()` to stream partial results. Each `yield` updates `match.status` to `'streaming'` and `match.data` to the yielded value. The `return` value is the final settled data.
-
-```ts
-const routes = {
-  feed: {
-    path: '/feed',
-    data: async function* ({ signal }) {
-      const items: FeedItem[] = [];
-      for await (const batch of streamFeedBatches({ signal })) {
-        items.push(...batch);
-        yield items; // stream partial results
-      }
-      return items; // final settled value
-    },
-  },
-};
-```
-
-During streaming, `state.status` is `'streaming'` and each `match.status` reflects the loading state of that individual branch node.
-
-### Lazy Routes
-
-Defer loading a route module until first navigation. The factory is called at most once.
-
-```ts
-const routes = {
-  settings: {
-    path: '/settings',
-    lazy: () => import('./pages/Settings'),
-  },
-};
-```
-
-The resolved object may contain `data`, `component`, and/or `meta`. Any present field overwrites the static definition.
-
 ### Search Param Validation
 
 Validate and coerce `ctx.query` per route. The function receives raw URL strings (`QueryParams`). Throw to leave the parsed query unchanged.
@@ -367,26 +326,6 @@ await router.navigate({ name: 'dashboard' }); // no-op
 await router.navigate({ name: 'dashboard' }, { force: true }); // re-runs
 ```
 
-### Prefetching
-
-Eagerly run data loaders without navigating — useful for hover-prefetch:
-
-```ts
-// Preload a parameterised route
-anchor.addEventListener('mouseenter', () => {
-  router.preload('userDetail', { id: '42' });
-});
-
-// Preload with a query string to avoid a cache miss on navigation
-searchInput.addEventListener('focus', () => {
-  router.preload('search', undefined, { q: searchInput.value });
-});
-```
-
-Concurrent calls for the same `name + params + query` combination are deduplicated. Results are consumed on the next navigation to the same route with the same cache key. Pass the same `query` you intend to navigate with — without it, the preload key is the bare path and any navigation with a query string will re-run the loaders.
-
-In-flight preloads are aborted automatically when `router.dispose()` is called.
-
 ### Leave Guards
 
 Guard navigation until the user confirms — useful for unsaved-changes forms:
@@ -452,14 +391,41 @@ const controller = new AbortController();
 const state = await router.load('/users/42', { signal: controller.signal });
 ```
 
-`load()` follows declarative redirects (up to five hops) and resolves lazy modules as a side effect.
+`load()` follows declarative redirects (up to five hops). Middleware is not executed and its result is not reused by client navigation.
+
+## Preload Client Navigation
+
+Use `preload()` with the same typed named target accepted by `navigate()`. It executes route data loaders without changing router state or history, deduplicates concurrent work, and lets the next matching navigation consume the result.
+
+```ts
+await router.preload({ name: 'userDetail', params: { id: '42' } });
+await router.navigate({ name: 'userDetail', params: { id: '42' } });
+```
+
+Params and query values are part of the cache key. A navigation with different values runs its loaders normally.
+
+## Coordinate Scroll and View Transitions
+
+Keep commit-sensitive browser behavior on the router:
+
+```ts
+const router = createRouter({
+  routes,
+  scroll: (to, from) => (to.location.pathname === from.location.pathname ? 'preserve' : 'top'),
+  viewTransition: true,
+});
+
+await router.navigate({ name: 'settings' }, { viewTransition: false });
+```
+
+`scroll` runs after a successful navigation and can return `'top'`, `'preserve'`, or `{ x, y }`. View transitions fall back to plain navigation when the browser API is unavailable.
 
 ## State and Subscriptions
 
 ```ts
 router.subscribe((state) => {
   const leaf = state.matches.at(-1);
-  document.title = (leaf?.meta as { title?: string } | undefined)?.title ?? 'App';
+  console.log(leaf?.data);
 });
 ```
 
@@ -474,17 +440,9 @@ location.hash;
 location.historyState; // state from the current history entry
 
 matches; // matched branch from root to leaf
-status; // 'idle' | 'loading' | 'streaming' | 'error'
+status; // 'idle' | 'loading' | 'error'
 error; // only set when status === 'error'
 ```
-
-Each match node also carries its own `status`:
-
-```ts
-matches.at(-1)?.status; // 'idle' | 'loading' | 'streaming' | 'error'
-```
-
-This lets nested layouts show per-slot loading indicators without polling the top-level status.
 
 The state object is immutable. A successful navigation replaces it with a new snapshot.
 
@@ -500,37 +458,6 @@ const user = state.matches.at(-1)?.data;
 ```
 
 `waitFor` rejects immediately if the router is already in `status: 'error'`, and also rejects if `router.dispose()` is called while the promise is pending. Resolves immediately if the named route is already active and idle.
-
-## Scroll Restoration
-
-Provide a `scroll` callback to control scroll position after each navigation:
-
-```ts
-const router = createRouter({
-  routes,
-  scroll: (to, from) => {
-    // Return 'top' to scroll to top
-    // Return { x, y } for a specific position
-    // Return 'preserve' to do nothing
-    return 'top';
-  },
-});
-```
-
-The callback receives the incoming state and the previous state, making it possible to implement saved-position restore:
-
-```ts
-const scrollPositions = new Map<string, { x: number; y: number }>();
-
-router.subscribe((state) => {
-  scrollPositions.set(state.location.pathname, { x: window.scrollX, y: window.scrollY });
-});
-
-const router = createRouter({
-  routes,
-  scroll: (to, _from) => scrollPositions.get(to.location.pathname) ?? 'top',
-});
-```
 
 ## Testing
 
@@ -557,6 +484,24 @@ router.dispose();
 
 Remove listeners, clear subscribers, and prevent future router usage.
 
+## Build a Typed View Registry
+
+Keep matching and data concerns in the route table while storing framework components, lazy factories, and static presentation metadata in an exhaustive registry:
+
+```ts
+const views = router.createViewRegistry(
+  {
+    home: { component: HomePage, title: 'Home' },
+    settings: { component: SettingsPage, title: 'Settings' },
+  },
+  { notFound: { component: NotFoundPage, title: 'Not found' } },
+);
+
+const view = views.resolve(router.getSnapshot());
+```
+
+Every renderable route name is required; redirect-only routes are excluded. Unknown keys are rejected, and the fallback is explicit rather than relying on the router's internal not-found match name.
+
 ## Framework Integration
 
 Route exposes `getSnapshot()` and `subscribe()`, which map directly to each framework's external-store primitives. Create the router once at module scope and bind actions outside the component lifecycle so references stay stable.
@@ -569,10 +514,10 @@ import { useSyncExternalStore } from 'react';
 
 const router = createRouter({
   routes: {
-    home: { component: HomePage, path: '/' },
-    settings: { component: SettingsPage, path: '/settings' },
+    home: { path: '/' },
+    settings: { path: '/settings' },
   },
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 // Stable router actions are safe to destructure outside the hook.
@@ -583,10 +528,15 @@ export function useRouter() {
   return { isActive, navigate, state, url };
 }
 
-// RouterView.tsx
+// RouterView.tsx — exhaustive routes and an explicit fallback
+const views = router.createViewRegistry(
+  { home: HomePage, settings: SettingsPage },
+  { notFound: NotFoundPage },
+);
+
 export function RouterView() {
   const { state } = useRouter();
-  const Component = state.matches.at(-1)?.component as React.ComponentType | undefined;
+  const Component = views.resolve(state);
   return Component ? <Component /> : null;
 }
 ```
@@ -597,10 +547,10 @@ import { readonly, shallowRef } from 'vue';
 
 const router = createRouter({
   routes: {
-    home: { component: HomePage, path: '/' },
-    settings: { component: SettingsPage, path: '/settings' },
+    home: { path: '/' },
+    settings: { path: '/settings' },
   },
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 // shallowRef — no need to deep-track immutable route state.
@@ -624,10 +574,10 @@ export function useRouter() {
 
   const router = createRouter({
     routes: {
-      home: { component: HomePage, path: '/' },
-      settings: { component: SettingsPage, path: '/settings' },
+      home: { path: '/' },
+      settings: { path: '/settings' },
     },
-    notFound: { component: NotFoundPage },
+    notFound: { data: () => ({ message: 'Not found' }) },
   });
 
   // readable injects the initial value; subscribe() drives updates.
@@ -642,7 +592,7 @@ For full RouterView and RouterLink patterns, see [React Integration](./examples/
 
 ## Debug Logging
 
-`router.subscribe()` is the reactive subscription API — it receives every state change, including `loading`, `streaming`, and `error` transitions. Attach a listener that logs to `console.debug` to inspect navigation without any dedicated debug tooling.
+`router.subscribe()` is the reactive subscription API — it receives every state change, including `loading` and `error` transitions. Attach a listener that logs to `console.debug` to inspect navigation without any dedicated debug tooling.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
@@ -748,4 +698,3 @@ router.subscribe((state) => {
 - Use `notFound` in router options for the not-found page rather than `path: '*'` in the route table.
 - Call `router.dispose()` when tearing down apps/tests to release listeners.
 - Use `createMemoryHistory()` for tests and non-browser runtimes; avoid touching `window.history` directly.
-- Use `router.preload()` on hover for routes likely to be visited next.

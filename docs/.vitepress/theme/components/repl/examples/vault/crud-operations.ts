@@ -1,12 +1,18 @@
 export const crudOperationsExample = {
-  code: `import { table } from '@vielzeug/vault'
+  code: `import { s } from '@vielzeug/spell'
+import { table } from '@vielzeug/vault'
 import { createLocalStorage } from '@vielzeug/vault/local-storage'
 
+const UserSchema = s.object({ age: s.number(), email: s.string().email(), id: s.number(), name: s.string() })
 const schema = {
   users: table('id'),
 }
 
-const db = createLocalStorage({ name: 'demo', schema })
+const db = createLocalStorage({
+  name: 'demo',
+  schema,
+  codecs: { users: UserSchema },
+})
 
 await db.put('users', { id: 1, name: 'Alice', email: 'alice@example.com', age: 25 })
 await db.put('users', { id: 2, name: 'Bob', email: 'bob@example.com', age: 30 })

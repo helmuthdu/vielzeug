@@ -12,22 +12,23 @@ Create services with explicit typed dependencies.
 ### Solution
 
 ```ts
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, factoryProvider, token, valueProvider } from '@vielzeug/conduit';
 
 const Config = token<{ baseUrl: string }>('Config');
 const Client = token<{ url: string }>('Client');
-const container = createContainer();
 
-container.value(Config, { baseUrl: '/api' });
-container.factory(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` }));
+const container = createContainer([
+  valueProvider(Config, { baseUrl: '/api' }),
+  factoryProvider(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` })),
+]);
 
-const client = await container.resolve(Client);
+const services = await container.resolve({ client: Client });
 await container.dispose();
 ```
 
 ### Pitfalls
 
-Factory tuple must contain every dependency.
+Factory tuple must contain every dependency; construction fails fast otherwise.
 
 ### Related
 

@@ -1,10 +1,10 @@
 ---
-title: Gesture — Pointer pan primitives
-description: Framework-neutral one-axis pointer pan recognition with lifecycle-owned handles.
+title: Gesture — Pointer movement primitives
+description: Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles.
 package: gesture
 category: input
 keywords: [pointer, pan, swipe, gesture, touch, drag]
-exports: [createPanGesture]
+exports: [createDragGesture, createPanGesture]
 related: [refine, dnd, keymap]
 environments: [browser]
 ---
@@ -15,7 +15,7 @@ environments: [browser]
 
 ## Why Gesture?
 
-Pointer-driven interfaces need reliable movement tracking without coupling input recognition to rendering or product-specific thresholds.
+Pointer-driven interfaces need reliable one-pointer movement tracking without coupling recognition to rendering, drag-and-drop semantics, or product-specific completion policy.
 
 ```ts
 // Before
@@ -24,24 +24,27 @@ element.addEventListener('pointermove', (event) => {
 });
 
 // After
+import { createPanGesture } from '@vielzeug/gesture';
+
 const pan = createPanGesture(element, {
   axis: 'x',
-  onMove: ({ distance }) => render(distance),
-  onEnd: ({ distance, reason }) => finish(distance, reason),
+  onMove: ({ distance }) => console.log('distance', distance),
+  onEnd: ({ reason }) => console.log('ended', reason),
 });
 ```
 
-| Feature | Ad-hoc pointer handling | Gesture |
+| Feature | Gesture | Ad-hoc pointer handling |
 | --- | --- | --- |
-| Bundle size | n/a | <PackageInfo package="gesture" type="size" /> |
-| Zero dependencies | n/a | <ore-icon name="check" size="16"></ore-icon> |
-| Axis intent recognition | Manual | Built in |
-| Pointer ownership | Manual | Tracked across the document |
-| Lifecycle cleanup | Manual | `dispose()` + `disposalSignal` |
+| Bundle size | <PackageInfo package="gesture" type="size" /> | n/a |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | n/a |
+| Two-dimensional drag tracking | Built in | Manual |
+| Axis intent recognition | Built in | Manual |
+| Pointer ownership | Tracked across the document | Manual |
+| Lifecycle cleanup | `dispose()` + `disposalSignal` | Manual |
 
 <div class="decision-callout">
 
-**Use Gesture when** several UI surfaces need consistent one-axis pointer tracking while retaining their own completion rules.
+**Use Gesture when** UI surfaces need consistent free drag or axis-locked pan tracking while retaining their own rendering and completion rules.
 
 **Consider direct pointer handling when** the interaction is isolated and does not need reusable lifecycle or direction-lock behavior.
 
@@ -70,6 +73,9 @@ yarn add @vielzeug/gesture
 ```ts
 import { createPanGesture } from '@vielzeug/gesture';
 
+const element = document.querySelector<HTMLElement>('[data-swipe]');
+if (!element) throw new Error('Missing [data-swipe] element');
+
 const pan = createPanGesture(element, {
   axis: 'x',
   onMove: ({ distance }) => {
@@ -77,24 +83,28 @@ const pan = createPanGesture(element, {
   },
   onEnd: ({ distance, reason }) => {
     element.style.transform = '';
-
     if (reason === 'release' && Math.abs(distance) >= 48) {
-      dismiss();
+      pan.dispose();
+      element.remove();
     }
   },
 });
+
+window.addEventListener('pagehide', () => pan.dispose(), { once: true });
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `createPanGesture()` — one-axis pointer movement tracking
+- `createDragGesture()` — unrestricted two-dimensional pointer movement tracking
+- `createPanGesture()` — one-axis pointer movement with direction intent recognition
 - Direction locking — activates only when movement favors the configured axis
 - Configurable pointer capture — own the pointer by default or preserve native targeting
-- Consumer-owned policy — thresholds, snapping, and outcomes stay in application code
+- Configurable `activationDistance` — tune slop for touch density and component needs
+- Consumer-owned policy — completion thresholds, snapping, and outcomes stay in application code
 - Stable completion — one `onEnd` callback for release and cancellation
-- Lifecycle ownership — `dispose()`, `disposed`, and `disposalSignal`
+- Lifecycle ownership — `dispose()`, `disposed`, `disposalSignal`, optional owner `signal`, and `[Symbol.dispose]()`
 
 </div>
 
@@ -105,6 +115,7 @@ const pan = createPanGesture(element, {
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 
@@ -113,7 +124,7 @@ const pan = createPanGesture(element, {
 <div class="see-also">
 
 - [Refine](/refine/) — components that use pan recognition for carousel, drawer, toast, and list interactions.
-- [Dnd](/dnd/) — drag-and-drop behavior with drop targets and reordering.
+- [Dnd](/dnd/) — builds touch sorting on `createDragGesture()` and adds files, previews, drop targets, keyboard reordering, and connected-list transactions.
 - [Keymap](/keymap/) — keyboard interaction primitives for complementary input paths.
 
 </div>

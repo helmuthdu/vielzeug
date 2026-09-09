@@ -17,9 +17,9 @@ function validateStagger(stagger: number): void {
  * Each subsequent element starts after `stagger` milliseconds. A keyframe factory
  * receives the stable unique-element index and total before any animation starts.
  */
-export function animateEach(
-  elements: Iterable<Element>,
-  keyframes: Keyframes | KeyframeFactory,
+export function animateEach<ElementType extends Element>(
+  elements: Iterable<ElementType>,
+  keyframes: Keyframes | KeyframeFactory<ElementType>,
   options: AnimateEachOptions = {},
 ): AnimationGroup {
   const { signal, stagger = 0, ...animationOptions } = options;
@@ -32,6 +32,9 @@ export function animateEach(
   const frames = unique.map((element, index) =>
     typeof keyframes === 'function' ? keyframes(element, index, unique.length) : keyframes,
   );
+
+  if (signal?.aborted) throw signal.reason;
+
   const handles: AnimationHandle[] = [];
 
   try {

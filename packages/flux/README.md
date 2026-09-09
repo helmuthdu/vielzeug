@@ -1,14 +1,16 @@
 # @vielzeug/flux
 
-Minimal push streams for TypeScript. Streams are reusable; subscriptions own cancellation; async buffering is explicit. Provide an `error` observer when caller owns recovery.
+> Minimal push streams with explicit ownership, bounded buffering, and structural bridges
 
-## Install
+## Installation
 
 ```sh
 pnpm add @vielzeug/flux
+npm install @vielzeug/flux
+yarn add @vielzeug/flux
 ```
 
-## Usage
+## Quick Start
 
 ```ts
 import { toArray, interval, map, pipe, take } from '@vielzeug/flux';
@@ -22,26 +24,14 @@ const values = pipe(
 console.log(await toArray(values, { maxItems: 3 })); // [0, 2, 4]
 ```
 
-## Channels
+## Documentation
 
-```ts
-import { createChannel } from '@vielzeug/flux/subjects';
-
-const events = createChannel<string>({ replay: 1 });
-events.stream.subscribe(console.log);
-events.send('connected');
-events.dispose();
-```
-
-## Adapters
-
-```ts
-import { fromQuery } from '@vielzeug/flux/courier';
-import { fromBus } from '@vielzeug/flux/herald';
-import { fromRoomPresence } from '@vielzeug/flux/pulse';
-import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
-```
+- [Overview](https://vielzeug.dev/flux/)
+- [Usage Guide](https://vielzeug.dev/flux/usage)
+- [API Reference](https://vielzeug.dev/flux/api)
+- [Examples](https://vielzeug.dev/flux/examples)
+- [Migration Guide](https://vielzeug.dev/flux/migration)
 
 ## License
 
-MIT
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

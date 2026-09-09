@@ -1,4 +1,10 @@
-import type { Readable, Ripple } from '@vielzeug/ripple';
+export type Unsubscribe = () => void;
+
+export interface LedgerReadable<T> {
+  peek(): T;
+  subscribe(listener: () => void): Unsubscribe;
+  readonly value: T;
+}
 
 export interface CommandContext {
   readonly signal: AbortSignal;
@@ -22,7 +28,6 @@ export interface LedgerCallOptions {
 
 export interface LedgerOptions {
   maxHistory?: number;
-  runtime?: Pick<Ripple, 'signal'>;
 }
 
 export interface LedgerState<TMeta = undefined> {
@@ -40,7 +45,7 @@ export interface Ledger<TMeta = undefined> {
   readonly disposed: boolean;
   do(command: ReversibleCommand<TMeta>, options?: LedgerCallOptions): Promise<void>;
   redo(options?: LedgerCallOptions): Promise<void>;
-  readonly state: Readable<LedgerState<TMeta>>;
+  readonly state: LedgerReadable<LedgerState<TMeta>>;
   undo(options?: LedgerCallOptions): Promise<void>;
   whenIdle(): Promise<void>;
   [Symbol.dispose](): void;

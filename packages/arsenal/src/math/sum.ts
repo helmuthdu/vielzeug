@@ -15,13 +15,13 @@
  *
  * @throws {TypeError} If (after an optional `callback` mapping) any item is not a finite number.
  */
-export function sum<T>(array: T[], callback?: (item: T) => number): number {
+export function sum<T>(array: readonly T[], callback?: (item: T) => number): number {
   if (array.length === 0) return 0;
 
   return array.reduce<number>((acc, item) => {
     const val = callback ? callback(item) : (item as unknown as number);
 
-    if (typeof val !== 'number' || Number.isNaN(val)) {
+    if (!Number.isFinite(val)) {
       throw new TypeError('sum: encountered a non-numeric value; provide a callback to map non-number items');
     }
 

@@ -1,13 +1,13 @@
 ---
 title: Conduit Examples — Lifetimes
-description: Choose singleton or transient ownership.
+description: Choose shared singleton or per-resolution transient factory results.
 ---
 
-## Lifetimes
+## Factory Lifetimes
 
 ### Problem
 
-Control whether a factory result is shared or created for each resolution.
+Control whether a factory result is shared across resolutions.
 
 ### Solution
 
@@ -15,13 +15,20 @@ Control whether a factory result is shared or created for each resolution.
 const Singleton = token<object>('Singleton');
 const Transient = token<object>('Transient');
 
-container.factory(Singleton, [], () => ({}));
-container.factory(Transient, [], () => ({}), { lifetime: 'transient' });
+const container = createContainer([
+  factoryProvider(Singleton, [], () => ({})),
+  factoryProvider(Transient, [], () => ({}), { lifetime: 'transient' }),
+]);
+
+const services = await container.resolve({ a: Singleton, b: Singleton });
+const first = await container.resolve(Transient);
+const second = await container.resolve(Transient);
+// services.a === services.b; first !== second
 ```
 
 ### Pitfalls
 
-A transient remains owned only when its factory declares `dispose`. Non-disposable transient values are released to normal garbage collection after callers release them.
+Singletons cache successful values on the registering container; failed attempts may retry. Transients belong to the requesting container for disposal. A singleton cannot depend on transient or scoped factories.
 
 ### Related
 

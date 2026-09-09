@@ -30,6 +30,10 @@ describe('ore-combobox', () => {
   `;
 
   describe('Core Functionality', () => {
+    it('registers the declarative option element', () => {
+      expect(customElements.get('ore-combobox-option')).toBeDefined();
+    });
+
     it('renders combobox input and listbox', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Country', placeholder: 'Search' },

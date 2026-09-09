@@ -7,24 +7,25 @@ description: Complete API reference for Wayfinder.
 
 ## API Overview
 
-| Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                                   |
-|-----------------------------------------|------------------------------------------------------------|----------------------|-----------------------------------------------------------------------------------------------------------------|
-| `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                                     |
-| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | —                                                                                                               |
-| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                               |
-| `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                        |
-| `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                                  |
-| `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                                     |
-| `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                       |
-| `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                             |
-| `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                                 |
-| `router.match(pathname)`                | Inspect a pathname as a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                              |
-| `router.load(url, options?)`            | Load a URL into a full state including data loaders        | Async                | Middleware is not executed; lazy modules are resolved as a side effect                                          |
-| `router.ready`                          | Await the initial navigation                               | Async                | Rejects when initial loading fails                                                                              |
-| `router.preload(name, params?, query?)` | Eagerly run data loaders without navigating                | Async                | Pass `query` to match the navigation cache key; rejects with `WayfinderDisposedError` if the router is disposed |
-| `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending    |
-| `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                                  |
-| `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                        |
+| Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                                  |
+| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | —                                                                                                            |
+| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                            |
+| `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                     |
+| `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                               |
+| `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                                  |
+| `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                    |
+| `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                          |
+| `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                              |
+| `router.match(pathname)`                | Inspect a pathname as a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                           |
+| `router.load(url, options?)`            | Load a detached URL state for SSR or prerendering          | Async                | Middleware is not executed and results are not cached                                                       |
+| `router.preload(target)`                | Warm loaders for the next matching client navigation       | Async                | Params and query values are part of the cache key                                                           |
+| `router.createViewRegistry(views, options?)` | Create an exhaustive route-to-view resolver             | Sync                 | Pass `options.notFound` to render the configured fallback                                                   |
+| `router.ready`                          | Await the initial navigation                               | Async                | Rejects when initial loading fails                                                                           |
+| `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending |
+| `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                               |
+| `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                     |
 
 ## Package Entry Points
 
@@ -49,21 +50,21 @@ const router = createRouter({
       },
     },
   },
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Page not found' }) },
 });
 ```
 
-| Option           | Type                                                                          | Default                  | Description                                                                                                                                                                        |
-| ---------------- | ----------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `base`           | `string`                                                                      | `'/'`                    | Base path prefix for all routes                                                                                                                                                    |
-| `coerceSearch`   | `CoerceSearchFn`                                                              | —                        | Global search-param coercion applied to every route that does not define its own `coerceSearch`. Throwing falls back to raw strings and is reported via `onError`.                 |
-| `history`        | `HistoryDriver`                                                               | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                                                  |
-| `middleware`     | `Middleware[]`                                                                | `[]`                     | Global middleware prepended to every route                                                                                                                                         |
-| `notFound`       | `{ component?, data?, meta?, middleware? }`                                   | —                        | Synthetic route used when no path matches. Global middleware runs first, then `notFound.middleware` and `notFound.data`. `ctx.pathname` is the unmatched path.                     |
-| `onError`        | `(error, context: RouterErrorContext) => void`                                | —                        | Optional sink for non-awaited/background router errors                                                                                                                             |
-| `routes`         | `RouteTable`                                                                  | required                 | Declarative route table. Object key order defines match precedence.                                                                                                                |
-| `scroll`         | `(to, from) => ScrollDecision`                                                | —                        | Called after each navigation. Return `'top'` to scroll to top, `'preserve'` to keep the current position, or `{ x, y }` for a specific position.                                 |
-| `viewTransition` | `boolean`                                                                     | `false`                  | Wrap navigations in the View Transition API when available                                                                                                                         |
+| Option         | Type                                           | Default                  | Description                                                                                                                                                |
+| -------------- | ---------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base`         | `string`                                       | `'/'`                    | Base path prefix for all routes                                                                                                                            |
+| `coerceSearch` | `CoerceSearchFn`                               | —                        | Global search-param coercion applied to every route that does not define its own `coerceSearch`. Throwing falls back to raw strings and is reported via `onError`. |
+| `history`      | `HistoryDriver`                                | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                          |
+| `middleware`   | `Middleware[]`                                 | `[]`                     | Global middleware prepended to every route                                                                                                                 |
+| `notFound`     | `{ data?, middleware? }`                       | —                        | Synthetic route used when no path matches. Global middleware runs first, then `notFound.middleware` and `notFound.data`. `ctx.pathname` is the unmatched path. |
+| `onError`      | `(error, context: RouterErrorContext) => void` | —                        | Optional sink for non-awaited/background router errors                                                                                                     |
+| `routes`       | `RouteTable`                                   | required                 | Declarative route table. Object key order defines match precedence.                                                                                       |
+| `scroll`       | `(to, from) => ScrollDecision`                 | —                        | Apply scroll behavior after successful navigation                                                                                                          |
+| `viewTransition` | `boolean`                                    | `false`                  | Wrap navigation commits in the browser View Transition API when available                                                                                  |
 
 **Returns:** `Router`
 
@@ -99,7 +100,6 @@ const routes = {
   },
   userDetail: {
     path: '/users/:id',
-    meta: { section: 'users' },
     data: async ({ params }) => fetchUser(params.id),
     onError: (error) => ({ error, user: null }),
   },
@@ -113,10 +113,7 @@ Each route definition supports these fields:
 | `path`         | `string`                                                 | Wayfinder pattern. Supports static paths, `:param`, `:param*`, and `*`. Child paths are relative unless they start with `/`.   |
 | `children`     | `Record<string, RouteDefinition>`                        | Nested child routes. Child names are appended to the parent route name.                                                        |
 | `index`        | `boolean`                                                | Default child route that inherits the parent path.                                                                             |
-| `component`    | `unknown`                                                | Optional framework view payload exposed on the leaf `RouteMatch`.                                                              |
-| `data`         | `DataFn`                                                 | Data loader. Runs after middleware; result available as `match.data`. Supports streaming via `AsyncGenerator`.                 |
-| `lazy`         | `() => Promise<{ data?, component?, meta? }>`            | Lazy-load the route module. Called once on first navigation; result overrides static fields in the hydration cache.            |
-| `meta`         | `unknown`                                                | Static metadata exposed on each `RouteMatch` in the branch.                                                                    |
+| `data`         | `DataFn`                                                 | Data loader. Runs after middleware; result available as `match.data`.                                                          |
 | `middleware`   | `Middleware[]`                                           | Optional route-specific middleware                                                                                             |
 | `onError`      | `(error, context: DataContext) => MaybePromise<unknown>` | Per-route error boundary for data loader failures. Return value becomes `match.data` for degraded rendering.                   |
 | `redirect`     | `NavigationTarget`                                       | Declarative redirect. Resolved before middleware runs; uses `replaceState` so the original URL is never added to history.      |
@@ -192,12 +189,12 @@ await router.navigate({ name: 'userDetail', params: { id: '42' } }, { replace: t
 await router.navigate({ name: 'search', query: { q: 'wayfinder' }, hash: 'results' });
 ```
 
-| Option           | Type      | Default | Description                                             |
-| ---------------- | --------- | ------- | ------------------------------------------------------- |
-| `replace`        | `boolean` | `false` | Use `replaceState` instead of `pushState`               |
-| `state`          | `unknown` | —       | History state payload                                   |
-| `viewTransition` | `boolean` | —       | Override the router-level setting for this navigation   |
-| `force`          | `boolean` | `false` | Re-run even when the destination URL is already current |
+| Option    | Type      | Default | Description                                             |
+| --------- | --------- | ------- | ------------------------------------------------------- |
+| `replace` | `boolean` | `false` | Use `replaceState` instead of `pushState`               |
+| `state`   | `unknown` | —       | History state payload                                   |
+| `force`   | `boolean` | `false` | Re-run even when the destination URL is already current |
+| `viewTransition` | `boolean` | router default | Override view-transition behavior for this navigation |
 
 **Returns:** `Promise<void>`
 
@@ -268,13 +265,46 @@ const controller = new AbortController();
 const state = await router.load('/dashboard', { signal: controller.signal });
 ```
 
-Load a full URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
+Load a full URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops). Returns `null` for unmatched URLs.
 
 Middleware is **not** executed — `load` is a data-only prefetch for SSR and pre-rendering where middleware side effects are not wanted. If your data loaders depend on `ctx.locals` set by middleware, use `navigate()` instead.
 
 When a `data()` function throws, the returned state has `status: 'error'` and `error` set to the thrown value.
 
 **Returns:** `Promise<RouteState | null>`
+
+---
+
+#### `router.preload(target)`
+
+```ts
+const state = await router.preload({
+  name: 'userDetail',
+  params: { id: '42' },
+  query: { tab: 'profile' },
+});
+```
+
+Executes data loaders without changing router state or history. Concurrent calls for the same target are deduplicated. A subsequent navigation with the same route, params, and query consumes the cached data instead of rerunning loaders.
+
+**Returns:** `Promise<RouteState | null>`
+
+---
+
+#### `router.createViewRegistry(views, options?)`
+
+```ts
+const views = router.createViewRegistry(
+  { home: HomePage, userDetail: UserPage },
+  { notFound: NotFoundPage },
+);
+
+const Component = views.resolve(router.getSnapshot());
+```
+
+Requires one value for every renderable route name, excludes redirect-only routes, and rejects unknown keys. Values may be framework components, lazy factories, or richer presentation descriptors. `options.notFound` handles the synthetic fallback without exposing its internal route name.
+
+**Returns:** `RouteViewRegistry`
 
 ---
 
@@ -294,33 +324,7 @@ const state = await router.waitFor('dashboard');
 
 Waits for the router to reach `status: 'idle'` with the named route active in the matched branch. Rejects immediately if `status === 'error'`. Resolves immediately if the router is already idle on the target route. Also rejects if `router.dispose()` is called while the promise is pending.
 
-> **Note:** `waitFor` skips intermediate `'streaming'` states — it only resolves once the status reaches `'idle'`. It does not resolve while the route is still streaming partial data.
-
 **Returns:** `Promise<RouteState>`
-
----
-
-#### `router.preload(name, params?, query?)`
-
-```ts
-// Hover-prefetch without query
-anchor.addEventListener('mouseenter', () => {
-  router.preload('userDetail', { id: '42' });
-});
-
-// Hover-prefetch with matching query to avoid a cache miss
-anchor.addEventListener('mouseenter', () => {
-  router.preload('search', undefined, { q: 'hello' });
-});
-```
-
-Eagerly runs the data loaders for a named route without navigating. Useful for hover-prefetch. Concurrent calls for the same `name + params + query` combination are deduplicated. Results are consumed on the next navigation to the same route with the same cache key.
-
-Pass the same `query` you intend to navigate with to ensure the preloaded result hits the cache. Without `query`, the key is the bare path — a navigation with a query string will produce a cache miss and re-run the loader.
-
-In-flight preloads are aborted automatically via the router's disposal signal when `router.dispose()` is called. Calling `preload()` on an already-disposed router throws `WayfinderDisposedError` immediately, without running the data loader — consistent with `navigate()`, `subscribe()`, `beforeLeave()`, and `waitFor()`.
-
-**Returns:** `Promise<void>`
 
 ---
 
@@ -371,7 +375,7 @@ For permanent declarative redirects (URL aliases), use the `redirect` field on t
 
 #### `router.ready`
 
-A `Promise<void>` for the constructor-triggered navigation. It resolves after initial middleware, redirects, lazy modules, and data loaders settle. It resolves after a blocked or unmatched initial navigation, and rejects if initial navigation fails.
+A `Promise<void>` for the constructor-triggered navigation. It resolves after initial middleware, redirects, and data loaders settle. It resolves after a blocked or unmatched initial navigation, and rejects if initial navigation fails.
 
 ```ts
 const router = createRouter({ routes });
@@ -399,6 +403,7 @@ location.query; // raw parsed query (QueryParams) — always string values
 location.hash;
 location.historyState; // value passed to navigate({ ... }, { state: ... })
 
+
 // When status === 'error':
 console.error(error);
 ```
@@ -412,11 +417,12 @@ console.error(error);
 ```ts
 const unsubscribe = router.subscribe((state) => {
   const leaf = state.matches.at(-1);
-  document.title = (leaf?.meta as { title?: string } | undefined)?.title ?? 'App';
+  // Read data from the leaf match
+  console.log(leaf?.data);
 });
 ```
 
-Register a listener for future state changes, including loading and streaming updates. The listener is **not** called with the current snapshot — call `router.getSnapshot()` when you subscribe if you need it.
+Register a listener for future state changes. The listener is **not** called with the current snapshot — call `router.getSnapshot()` when you subscribe if you need it.
 
 **Returns:** `() => void`
 
@@ -443,8 +449,6 @@ type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends Rout
 };
 ```
 
-Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
-
 `ctx.locals` is mutable and shared across the entire middleware chain for one navigation. Use it to pass values from middleware to data loaders.
 
 `ctx.query` is the coerced query (after `coerceSearch`). `router.getSnapshot().location.query` always contains raw string values from URL parsing.
@@ -454,10 +458,10 @@ Read route metadata from the leaf match: `ctx.matches.at(-1)?.meta`.
 ```ts
 type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
   context: DataContext<Params, TRoutes>,
-) => DataStream | MaybePromise<unknown>;
+) => MaybePromise<unknown>;
 ```
 
-Return an `AsyncGenerator` to stream partial results (see `DataStream`).
+Data loader function. The return value becomes `match.data` on the leaf route match.
 
 ### `DataContext<Params, TRoutes>`
 
@@ -470,24 +474,7 @@ type DataContext<Params extends RouteParams = RouteParams, TRoutes extends Route
 };
 ```
 
-### `DataStream<T>`
-
-```ts
-type DataStream<T = unknown> = AsyncGenerator<T, T>;
-```
-
-Return a `DataStream` from a `data()` function to stream partial results. Each `yield` updates `match.data` immediately with `match.status: 'streaming'`. The `return` value is the final settled data with `match.status: 'idle'`.
-
-```ts
-data: async function* ({ signal }) {
-  const items: Item[] = [];
-  for await (const batch of streamBatches({ signal })) {
-    items.push(...batch);
-    yield items;   // partial — status: 'streaming'
-  }
-  return items;    // final  — status: 'idle'
-},
-```
+The `signal` is aborted when a newer navigation supersedes the current one. Use it to cancel in-flight fetches or other async work.
 
 ### `Middleware<TRoutes>`
 
@@ -533,7 +520,6 @@ type NavigateOptions = {
   force?: boolean;
   replace?: boolean;
   state?: unknown;
-  viewTransition?: boolean;
 };
 ```
 
@@ -564,14 +550,11 @@ type RouteLocation = {
 
 ```ts
 type RouteMatch = {
-  readonly component: unknown;
+  /** Result of the route's `data()` function, or `undefined` if none was defined. */
   readonly data: unknown;
-  readonly meta: unknown;
   readonly name: string;
   readonly params: RouteParams;
   readonly pathname: string;
-  /** Per-node loading status. Reflects individual loader state in nested layouts. */
-  readonly status: NavigationStatus;
 };
 ```
 
@@ -579,6 +562,16 @@ type RouteMatch = {
 
 ```ts
 type RouteMatchBranch = readonly RouteMatch[];
+```
+
+### `RouteViewName`, `RouteViewMap`, and `RouteViewRegistry`
+
+`RouteViewName<TRoutes>` contains renderable route names and excludes redirect-only routes. `RouteViewMap<TRoutes>` requires one value per renderable route. `RouteViewRegistry<TView>` resolves the active view from a `RouteState` without exposing the synthetic not-found name.
+
+### `ScrollDecision`
+
+```ts
+type ScrollDecision = 'preserve' | 'top' | { x: number; y: number };
 ```
 
 ### `PathParams<T>`
@@ -611,12 +604,14 @@ Represents the query object after optional `coerceSearch` normalization.
 ### `NavigationStatus`
 
 ```ts
-type NavigationStatus = 'idle' | 'loading' | 'streaming' | 'error';
+type NavigationStatus = 'idle' | 'loading' | 'error';
 ```
 
-Top-level status of the router. `'streaming'` means at least one active data loader is an async generator and has yielded at least one value but has not yet returned.
+Top-level status of the router.
 
-Each `RouteMatch` also carries a `status: NavigationStatus` for per-node loading state in nested layouts.
+- `idle` — navigation settled successfully.
+- `loading` — data loaders are in-flight.
+- `error` — a data loader threw and no route-level `onError` handled it.
 
 ### `RouteMiddleware<Path, TRoutes>`
 
@@ -686,13 +681,6 @@ type IsActiveOptions = {
 };
 ```
 
-### `ScrollDecision`
-
-```ts
-type ScrollPosition = { x: number; y: number };
-type ScrollDecision = ScrollPosition | 'preserve' | 'top';
-```
-
 ### `RouterErrorContext`
 
 ```ts
@@ -732,7 +720,7 @@ interface HistoryDriver {
 
 ```ts
 type RouteDefinition<Path extends string = string> =
-  | ContentRouteDefinition<Path> // path + data/component/meta/middleware/coerceSearch/lazy/onError
+  | ContentRouteDefinition<Path> // path + data/middleware/coerceSearch/onError
   | RedirectRouteDefinition<Path>; // path + redirect
 ```
 
@@ -786,7 +774,7 @@ try {
 
 ### `WayfinderDisposedError`
 
-Thrown when `navigate()`, `subscribe()`, `beforeLeave()`, `waitFor()`, or `preload()` is called after `dispose()`. Also used as the `AbortSignal.reason` on `disposalSignal`.
+Thrown when `navigate()`, `subscribe()`, `beforeLeave()`, or `waitFor()` is called after `dispose()`. Also used as the `AbortSignal.reason` on `disposalSignal`.
 
 ```ts
 import { WayfinderDisposedError } from '@vielzeug/wayfinder';
@@ -815,13 +803,13 @@ Thrown on middleware misuse — currently only when a middleware function calls 
 ### Runtime error messages
 
 | Message                                                          | Class                        | When                                                                  |
-| ----------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
+| ---------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
 | `Router is disposed`                                             | `WayfinderDisposedError`      | Calling a guarded method (see above) after `dispose()`                |
 | `Unknown route name: X. Available routes: Y`                     | `WayfinderRouteError`         | Navigating to, resolving, or building a URL for an unregistered route  |
 | `Route "X" cannot define both index and path`                    | `WayfinderRouteError`         | A route sets `index: true` and `path` at the same time                |
 | `Route "X" must define path or set index: true`                  | `WayfinderRouteError`         | A route defines neither `index: true` nor `path`                      |
 | `Duplicate route name: "X"`                                      | `WayfinderRouteError`         | Two routes resolve to the same compound name during `createRouter()`  |
-| `Missing path param: X`                                          | `WayfinderRouteError`         | `url()`/`navigate()`/`preload()` omits a param the path pattern requires |
+| `Missing path param: X`                                          | `WayfinderRouteError`         | `url()`/`navigate()` omits a param the path pattern requires          |
 | `Invalid param name ":X" in path "Y"`                            | `WayfinderRouteError`         | A param name contains non-word characters (e.g., `:user-id`)          |
 | `Wildcard "*" must be the final segment in path: X`              | `WayfinderRouteError`         | A `*` segment appears before the last segment                         |
 | `Wildcard param must be final segment in path: X`                | `WayfinderRouteError`         | A `:param*` greedy param appears before the last segment              |
@@ -841,11 +829,11 @@ Thrown on middleware misuse — currently only when a middleware function calls 
 
 ## Design Notes
 
+- Wayfinder is a routing core: route compilation, matching, history, navigation, and cancellation. Data loading is an optional layer via per-route `data()` functions. UI rendering is owned by the framework adapter, not Wayfinder.
 - Wayfinder no longer exposes imperative registration methods like `on()`, `group()`, or `use()`.
 - Wayfinder names come from the route-table object keys.
 - `data()` is the terminal action. Its return value becomes `match.data`. There is no separate `handler` step.
 - For unmatched URLs, use the `notFound` router option rather than `path: '*'` in the route table.
-- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.getSnapshot().error`.
+- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.getSnapshot().error`. The original error object is never mutated — error context is carried in internal wrappers and the original `cause` chain is preserved.
 - Declarative `redirect` on a route definition is for permanent alias redirects. The `redirectTo()` middleware helper is for conditional guards.
-- `lazy` factories are called at most once per `RouteRecord`. The loaded `data`/`component`/`meta` are stored in the router's internal hydration cache. `handler` is not accepted in the lazy-resolved module.
 - `onError` in a route definition is a per-route data-loader boundary. If `onError` itself throws, the router falls through to `status: 'error'` as usual.

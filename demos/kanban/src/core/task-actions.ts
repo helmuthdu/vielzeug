@@ -1,7 +1,7 @@
 /**
  * Ward permission checks + FSM-guarded status transitions, shared between the board's
  * drag-and-drop handler and the task dialog's manual edit form — one place decides whether
- * a move/create/update/delete is allowed, instead of duplicating the same `ward.explain` +
+ * a move/create/update/delete is allowed, instead of duplicating the same `ward.decide` +
  * `createTaskMachine` checks at every call site.
  */
 
@@ -15,20 +15,6 @@ import type { Task, TaskStatus } from './types';
 
 type TaskAction = 'create' | 'delete' | 'move' | 'read' | 'update';
 type FsmEventType = 'APPROVE' | 'REJECT' | 'REOPEN' | 'RESET' | 'START' | 'SUBMIT';
-type ExplainDecision = { allowed: boolean };
-
-type LegacyExplain = (
-  principal: ReturnType<typeof getPrincipal>,
-  resource: 'task',
-  action: TaskAction,
-  data?: Task,
-) => ExplainDecision;
-type ObjectExplain = (input: {
-  action: TaskAction;
-  data?: Task;
-  principal: ReturnType<typeof getPrincipal>;
-  resource: 'task';
-}) => ExplainDecision;
 
 const TRANSITION_EVENT: Partial<Record<`${TaskStatus}->${TaskStatus}`, FsmEventType>> = {
   'done->in-progress': 'REOPEN',
@@ -46,34 +32,32 @@ function notify(message: string, variant: 'success' | 'error' | 'info' = 'error'
   else logger.info(message);
 }
 
-function explainTaskAction(action: TaskAction, task?: Task): ExplainDecision {
-  const principal = getPrincipal(currentUser.value);
-  const explain = ward.explain as unknown as { length: number };
-
-  if (explain.length <= 1) {
-    return (ward.explain as unknown as ObjectExplain)({ action, data: task, principal, resource: 'task' });
-  }
-
-  return (ward.explain as unknown as LegacyExplain)(principal, 'task', action, task);
+function decideTaskAction(action: TaskAction, task?: Task): boolean {
+  return (
+    ward.decide({
+      action,
+      attributes: task ? { assigneeId: task.assigneeId, ownerId: task.ownerId } : undefined,
+      principal: getPrincipal(currentUser.value),
+      resource: 'task',
+    }).effect === 'allow'
+  );
 }
 
 export function canCreateTask(): boolean {
-  return explainTaskAction('create').allowed;
+  return decideTaskAction('create');
 }
 
 export function canUpdateTask(task: Task): boolean {
-  return explainTaskAction('update', task).allowed;
+  return decideTaskAction('update', task);
 }
 
 export function canDeleteTask(task: Task): boolean {
-  return explainTaskAction('delete', task).allowed;
+  return decideTaskAction('delete', task);
 }
 
 /** Validates ward permission + the task FSM, then performs the move. Toasts on rejection. */
 export async function attemptMoveTask(task: Task, to: TaskStatus): Promise<boolean> {
-  const decision = explainTaskAction('move', task);
-
-  if (!decision.allowed) {
+  if (!decideTaskAction('move', task)) {
     notify('You do not have permission to move this task.');
 
     return false;

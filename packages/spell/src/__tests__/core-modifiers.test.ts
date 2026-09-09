@@ -150,7 +150,7 @@ describe('default and catch', () => {
 
   it('default() does not throw for non-cloneable runtime values', () => {
     const fn = () => 1;
-    const schema = s.object({ fn: s.any() }).default({ fn });
+    const schema = s.object({ fn: s.unknown() }).default({ fn });
 
     const parsed = schema.parse(undefined);
 
@@ -159,7 +159,7 @@ describe('default and catch', () => {
 
   it('catch() does not throw for non-cloneable runtime values', () => {
     const fn = () => 1;
-    const schema = s.object({ fn: s.any() }).catch({ fn });
+    const schema = s.object({ fn: s.unknown() }).catch({ fn });
 
     const parsed = schema.parse('bad' as any);
 
@@ -229,7 +229,7 @@ describe('assert()', () => {
 
     schema.assert(value);
 
-    expect(value.toUpperCase()).toBe('HELLO');
+    expect((value as string).toUpperCase()).toBe('HELLO');
   });
 
   it('prepends label to root-level error messages', () => {
@@ -293,8 +293,7 @@ describe('kind getter', () => {
     expect(s.bigint().kind).toBe('bigint');
     expect(s.date().kind).toBe('date');
     expect(s.never().kind).toBe('never');
-    expect(s.unknown().kind).toBe('any');
-    expect(s.any().kind).toBe('any');
+    expect(s.unknown().kind).toBe('unknown');
   });
 
   it('returns correct kind for composite schemas', () => {

@@ -1,25 +1,25 @@
-import { createRipple } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 import { createSentinel } from '../core.ts';
 
 describe('Sentinel lifecycle', () => {
-  it('is directly readable and subscribable', () => {
+  it('exposes callback-safe external-store methods', () => {
     let update: ((value: number) => void) | undefined;
     const sentinel = createSentinel({ initialValue: 1 }, (setValue) => {
       update = setValue;
       return () => {};
     });
     const listener = vi.fn();
-    const unsubscribe = sentinel.subscribe(listener);
+    const { dispose, getSnapshot, subscribe } = sentinel;
+    const unsubscribe = subscribe(listener);
 
     update?.(2);
 
-    expect(sentinel.value).toBe(2);
-    expect(sentinel.peek()).toBe(2);
+    expect(getSnapshot()).toBe(2);
     expect(listener).toHaveBeenCalledOnce();
 
     unsubscribe();
-    sentinel.dispose();
+    dispose();
+    expect(sentinel.disposed).toBe(true);
   });
 
   it('skips setup when the external signal is already aborted', () => {
@@ -66,23 +66,6 @@ describe('Sentinel lifecycle', () => {
     expect(sentinel.disposalSignal.aborted).toBe(true);
   });
 
-  it('supports an isolated Ripple runtime', () => {
-    const ripple = createRipple();
-    let update: ((value: number) => void) | undefined;
-    const sentinel = createSentinel({ initialValue: 2, runtime: ripple }, (setValue) => {
-      update = setValue;
-      return () => {};
-    });
-    const doubled = ripple.computed(() => sentinel.value * 2);
-
-    expect(doubled.value).toBe(4);
-    update?.(3);
-    expect(doubled.value).toBe(6);
-
-    sentinel.dispose();
-    ripple.dispose();
-  });
-
   it('propagates setup failures', () => {
     expect(() =>
       createSentinel({ initialValue: 1 }, () => {
@@ -91,16 +74,94 @@ describe('Sentinel lifecycle', () => {
     ).toThrow('setup failed');
   });
 
-  it('disposes via external signal with an isolated runtime', () => {
-    const ripple = createRipple();
-    const controller = new AbortController();
-    const cleanup = vi.fn();
-    const sentinel = createSentinel({ initialValue: 1, runtime: ripple, signal: controller.signal }, () => cleanup);
+  it('notifies multiple subscribers and stops after unsubscribe', () => {
+    let update: ((value: number) => void) | undefined;
+    const sentinel = createSentinel({ initialValue: 0 }, (setValue) => {
+      update = setValue;
+      return () => {};
+    });
+    const listenerA = vi.fn();
+    const listenerB = vi.fn();
+    const unsubA = sentinel.subscribe(listenerA);
+    sentinel.subscribe(listenerB);
 
-    controller.abort();
+    update?.(1);
+    expect(listenerA).toHaveBeenCalledOnce();
+    expect(listenerB).toHaveBeenCalledOnce();
 
-    expect(cleanup).toHaveBeenCalledOnce();
+    unsubA();
+    update?.(2);
+    expect(listenerA).toHaveBeenCalledOnce();
+    expect(listenerB).toHaveBeenCalledTimes(2);
+
+    sentinel.dispose();
+  });
+
+  it('isolates listener errors without skipping subscribers', () => {
+    let update: ((value: number) => void) | undefined;
+    const queued: VoidFunction[] = [];
+    const queueMicrotaskSpy = vi
+      .spyOn(globalThis, 'queueMicrotask')
+      .mockImplementation((callback) => queued.push(callback));
+    const sentinel = createSentinel({ initialValue: 0 }, (setValue) => {
+      update = setValue;
+      return () => {};
+    });
+    const listener = vi.fn();
+    sentinel.subscribe(() => {
+      throw new Error('listener failed');
+    });
+    sentinel.subscribe(listener);
+
+    update?.(1);
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(queued).toHaveLength(1);
+    expect(() => queued[0]?.()).toThrow('listener failed');
+
+    sentinel.dispose();
+    queueMicrotaskSpy.mockRestore();
+  });
+
+  it('delivers each update to the subscriber snapshot', () => {
+    let update: ((value: number) => void) | undefined;
+    const sentinel = createSentinel({ initialValue: 0 }, (setValue) => {
+      update = setValue;
+      return () => {};
+    });
+    const addedDuringDelivery = vi.fn();
+    const removedDuringDelivery = vi.fn();
+    let unsubscribe = () => {};
+    sentinel.subscribe(() => {
+      unsubscribe();
+      sentinel.subscribe(addedDuringDelivery);
+    });
+    unsubscribe = sentinel.subscribe(removedDuringDelivery);
+
+    update?.(1);
+    expect(removedDuringDelivery).toHaveBeenCalledOnce();
+    expect(addedDuringDelivery).not.toHaveBeenCalled();
+
+    update?.(2);
+    expect(removedDuringDelivery).toHaveBeenCalledOnce();
+    expect(addedDuringDelivery).toHaveBeenCalledOnce();
+
+    sentinel.dispose();
+  });
+
+  it('finishes the current delivery when a listener disposes the Sentinel', () => {
+    let update: ((value: number) => void) | undefined;
+    const sentinel = createSentinel({ initialValue: 0 }, (setValue) => {
+      update = setValue;
+      return () => {};
+    });
+    const listener = vi.fn();
+    sentinel.subscribe(() => sentinel.dispose());
+    sentinel.subscribe(listener);
+
+    update?.(1);
+
+    expect(listener).toHaveBeenCalledOnce();
     expect(sentinel.disposed).toBe(true);
-    ripple.dispose();
   });
 });

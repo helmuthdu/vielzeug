@@ -1,15 +1,18 @@
 export const indexedDbExample = {
-  code: `import { table, ttl } from '@vielzeug/vault'
+  code: `import { s } from '@vielzeug/spell'
+import { table, ttl } from '@vielzeug/vault'
 import { createIndexedDB } from '@vielzeug/vault/indexeddb'
 
+const LogSchema = s.object({ id: s.number(), level: s.string(), message: s.string(), ts: s.number() })
 const schema = {
   logs: table('id'),
 }
 
-// createIndexedDB returns TransactionalVaultStore with transactions and cursor iteration
+// createIndexedDB returns DocumentVaultStore with transactions and cursor iteration
 const db = createIndexedDB({
   name: 'app-logs',
   schema,
+  codecs: { logs: LogSchema },
   version: 1,
 })
 
@@ -23,10 +26,11 @@ await db.putAll('logs', [
 // batch() is atomic on IndexedDB — all writes commit or none do
 await db.batch(['logs'], async (tx) => {
   await tx.put('logs', { id: 5, level: 'info', message: 'Batch committed', ts: Date.now() })
-  await tx.deleteMany('logs', [1, 2]) // remove old entries in the same transaction
+  await tx.delete('logs', 1)
+  await tx.delete('logs', 2)
 })
 
-// iterate() — cursor-based streaming, only on TransactionalVaultStore
+// iterate() — cursor-based streaming, only on DocumentVaultStore
 // the full table is never loaded into memory at once
 const messages = []
 for await (const entry of db.iterate('logs')) {
@@ -36,7 +40,7 @@ console.log('Streamed via iterate():', messages)
 
 const errors = await db.query('logs').equals('level', 'error').toArray()
 console.log('Errors:', errors.map((e) => e.message))
-console.log('Total logs:', await db.query('logs').count())
+console.log('Total logs:', await db.count('logs'))
 
 // pruneExpired() reclaims storage from TTL-expired records that haven't been read
 const pruned = await db.pruneExpired()

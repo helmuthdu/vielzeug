@@ -1,74 +1,55 @@
 ---
-title: 'Herald Examples — Custom Error Boundary'
-description: 'Custom error boundary example for @vielzeug/herald.'
+title: Herald Examples — Observe Listener Failures
+description: Observe isolated synchronous listener failures through Herald runtime tracing.
 ---
 
-## Custom Error Boundary
+## Observe Listener Failures
 
 ### Problem
 
-A listener that throws will silently swallow the error unless you provide a global `onError` handler. Without one, Herald rethrows inside `emit` once every listener has run, which can break the call site.
+One listener can throw while other subscribers still need delivery, and diagnostics must remain separate from bus behavior.
 
 ### Solution
 
-Pass an `onError` handler to `createBus`. The handler receives the thrown error, the event name, and the emitted payload, so you can log, report, or collect errors without interrupting delivery to the remaining listeners.
+Install a `tap()` observer to inspect every `error` event, and catch the first rethrown error at the emission boundary when recovery is required.
 
 ```ts
 import { createBus } from '@vielzeug/herald';
 
 interface AppEvents {
-  'order:placed': { orderId: string; amount: number };
-  'order:failed': { orderId: string; reason: string };
+  'order:placed': { amount: number; orderId: string };
 }
 
-const errors: Array<{ err: unknown; event: string; payload: unknown }> = [];
-
-const bus = createBus<AppEvents>({
-  onError({ err, event, payload, timestamp }) {
-    // Collect instead of rethrowing — other listeners continue
-    errors.push({ err, event, payload });
-    console.error(`[bus] listener error on "${String(event)}" at ${timestamp}`, err);
-  },
+const bus = createBus<AppEvents>();
+const errors: unknown[] = [];
+const stopTrace = bus.tap((event) => {
+  if (event.type === 'error') errors.push(event.error);
 });
 
-// Listener A — well-behaved
-bus.on('order:placed', ({ orderId, amount }) => {
-  console.log(`Order ${orderId} placed for $${amount}`);
-});
-
-// Listener B — buggy: throws on large amounts
 bus.on('order:placed', ({ amount }) => {
   if (amount > 999) throw new Error('Amount exceeds limit');
-  processPayment(amount);
 });
+bus.on('order:placed', ({ orderId }) => sendConfirmation(orderId));
 
-// Listener C — also well-behaved; runs even when B throws
-bus.on('order:placed', ({ orderId }) => {
-  sendConfirmationEmail(orderId);
-});
-
-// Emit: A and C run successfully; B throws, onError is called, delivery continues
-bus.emit('order:placed', { orderId: 'abc-1', amount: 1500 });
-
-// errors[0] === { err: Error('Amount exceeds limit'), event: 'order:placed', payload: { orderId: 'abc-1', amount: 1500 } }
-console.log('Collected errors:', errors.length); // 1
-
-function processPayment(_amount: number) {
-  /* ... */
+try {
+  bus.emit('order:placed', { amount: 1500, orderId: 'order-1' });
+} catch (error) {
+  console.log(error); // first listener failure; confirmation still ran
 }
-function sendConfirmationEmail(_id: string) {
-  /* ... */
-}
+console.log(errors.length); // 1
+
+stopTrace();
+bus.dispose();
 ```
 
 ### Pitfalls
 
-- **Not providing `onError` means errors re-throw from `emit`.** Every listener still runs — a throw never stops the rest of the broadcast — but the first error is rethrown once delivery finishes, which can still cause an unhandled exception in a fire-and-forget context (e.g., a UI event handler).
-- **`onError` does not convert `emit` into a promise.** You cannot `await` listener errors — they are delivered synchronously via the callback. Use a collector array (as shown above) or send errors to a monitoring service.
-- **`onError` applies to synchronous throws only.** If a listener returns a Promise that later rejects, that rejection is not caught by `onError` — handle async listener errors with `.catch()` inside the listener itself.
+- Herald catches synchronous throws only. Handle rejected promises inside asynchronous listener work.
+- Tap events contain the error and event key, not the original payload or a timestamp.
+- Tap-handler errors are swallowed so diagnostics cannot change delivery.
+- `emit()` rethrows only the first synchronous failure; use `tap()` when diagnostics must capture every failing listener.
 
 ### Related
 
-- [Awaiting a one-time event](./awaiting-a-one-time-event.md)
 - [Handling disposal in async code](./handling-disposal-in-async-code.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Usage Guide](../usage.md#handle-listener-failures)

@@ -7,139 +7,182 @@ description: Build local, page, cursor, and infinite collection sources.
 
 ## Basic Usage
 
-Use a local source when data already exists in memory.
-
-```ts
-import { createLocalSource } from '@vielzeug/sourcerer';
-
-const source = createLocalSource(
-  [
-    { id: 1, name: 'Ada' },
-    { id: 2, name: 'Grace' },
-    { id: 3, name: 'Linus' },
-  ],
-  {
-    initialQuery: { pageSize: 2 },
-    match: (user, search) => user.name.toLowerCase().includes(search.toLowerCase()),
-  },
-);
-
-source.setQuery({ search: 'a' });
-console.log(source.snapshot.data);
-source.dispose();
-```
-
-Read `snapshot.query`, `snapshot.data`, and `snapshot.pagination` together. They always describe one loaded result.
-
-## Handle Pending Remote Queries
-
-Use `pendingQuery` to distinguish loaded data from newer work.
+Create a page source and call `reload()` to start the first request. Construction performs no I/O.
 
 ```ts
 import { createPageSource } from '@vielzeug/sourcerer';
 
-const source = createPageSource<string>({
-  autoStart: false,
-  load: async ({ query }) => {
-    const data = ['Ada', 'Grace', 'Linus'];
-    const start = (query.page - 1) * query.pageSize;
-
-    return { data: data.slice(start, start + query.pageSize), total: data.length };
+const names = ['Ada', 'Grace', 'Linus'];
+const source = createPageSource({
+  load: async ({ page, pageSize }) => {
+    const start = (page - 1) * pageSize;
+    return { items: names.slice(start, start + pageSize), totalItems: names.length };
   },
+  pageSize: 2,
 });
 
-source.subscribe((snapshot) => {
-  if (snapshot.pendingQuery) console.log('Loading:', snapshot.pendingQuery);
-  console.log('Loaded:', snapshot.query, snapshot.data);
-});
-
-await source.setQuery({ page: 2 });
+await source.reload();
+console.log(source.state.items);
 source.dispose();
 ```
 
-New `setQuery()` calls abort older requests. A failed current request preserves prior loaded data, records `snapshot.error`, and rejects the returned promise.
+Read one `state` object per render. It contains `items`, `loading`, `error`, `params`, and pagination metadata from one committed result. Commands return `Promise<void>`; read `source.state` after awaiting them.
+
+## Pass Loader Parameters
+
+Use `params` for application-owned filters, search terms, sort state, or request options. `setParams()` replaces the entire value and resets pagination.
+
+```ts
+import { createPageSource } from '@vielzeug/sourcerer';
+
+type UserParams = { role: 'admin' | 'user'; search: string };
+const users = ['Ada', 'Grace', 'Linus'];
+const source = createPageSource<string, UserParams>({
+  load: async ({ page, pageSize, params }) => {
+    const matching = users.filter((name) => name.toLowerCase().includes(params.search.toLowerCase()));
+    const start = (page - 1) * pageSize;
+    return { items: matching.slice(start, start + pageSize), totalItems: matching.length };
+  },
+  params: { role: 'admin', search: '' },
+});
+
+await source.setParams({ role: 'admin', search: 'ada' });
+console.log(source.state.params);
+source.dispose();
+```
+
+A non-optional parameter type requires an initial `params` value. Sourcerer compares parameter values with `Object.is`; reuse a value when setting it again should be a no-op.
+
+While replacement parameters load, `state.params` continues to describe the committed items and `state.pendingParams` contains the requested value. Page-only navigation does not set `pendingParams`.
+
+## Navigate Numbered Pages
+
+Use direct commands for numbered-page navigation. `setPageSize()` resets to page one.
+
+```ts
+await source.reload();
+await source.next();
+await source.goTo(4);
+await source.previous();
+await source.first();
+await source.last();
+await source.setPageSize(50);
+```
+
+After the first successful load, navigation is clamped to the known `pageCount`. Before that load, `goTo()` accepts any positive page because the total is unknown.
+
+## Filter Local Collections
+
+Use a local source when data is already in memory. Its commands are synchronous.
+
+```ts
+import { createLocalSource } from '@vielzeug/sourcerer';
+
+const source = createLocalSource(['Ada', 'Grace', 'Linus'], {
+  filter: (name, search: string) => name.toLowerCase().includes(search.toLowerCase()),
+  pageSize: 2,
+  params: '',
+});
+
+source.setParams('a');
+source.next();
+source.setItems(['Ada', 'Grace']);
+console.log(source.state.items);
+source.dispose();
+```
+
+Use ordinary arrays for one-off transformations. A local source is useful when pagination, subscriptions, and lifecycle ownership are also required.
 
 ## Use Cursor Pagination
 
-Use cursors when an API cannot provide stable page numbers.
+Return opaque cursors from the loader. `next()` and `previous()` use only cursors from the committed state.
 
 ```ts
 import { createCursorSource } from '@vielzeug/sourcerer';
 
 const rows = ['A', 'B', 'C', 'D'];
-const source = createCursorSource<string, number>({
-  autoStart: false,
-  initialQuery: { pageSize: 2 },
-  load: async ({ query }) => {
-    const start = query.after ?? 0;
-    const data = rows.slice(start, start + query.pageSize);
-    const nextCursor = start + data.length;
-
+const source = createCursorSource({
+  load: async ({ after, pageSize }) => {
+    const start = after ? Number(after) : 0;
+    const items = rows.slice(start, start + pageSize);
+    const next = start + items.length;
     return {
-      data,
-      nextCursor: nextCursor < rows.length ? nextCursor : undefined,
-      previousCursor: start > 0 ? Math.max(0, start - query.pageSize) : undefined,
+      items,
+      nextCursor: next < rows.length ? String(next) : undefined,
+      previousCursor: start > 0 ? String(Math.max(0, start - pageSize)) : undefined,
     };
   },
+  pageSize: 2,
 });
 
 await source.reload();
-await source.page.next();
-console.log(source.snapshot.data);
+await source.next();
+console.log(source.state.items);
 source.dispose();
 ```
 
-`after` and `before` cannot coexist. Search or page-size changes reset cursor state.
+Changing params or page size clears current cursor direction. A source cannot start with both `after` and `before`.
 
 ## Build an Infinite Feed
 
-Use an infinite source when each page should append.
+Use an infinite source when later pages should append to committed items.
 
 ```ts
 import { createInfiniteSource } from '@vielzeug/sourcerer';
 
-const source = createInfiniteSource<number>({
-  autoStart: false,
-  initialQuery: { pageSize: 2 },
-  load: async ({ query }) => {
-    const values = [1, 2, 3, 4, 5];
-    const start = (query.page - 1) * query.pageSize;
-
-    return { data: values.slice(start, start + query.pageSize), total: values.length };
+const values = [1, 2, 3, 4, 5];
+const source = createInfiniteSource({
+  load: async ({ page, pageSize }) => {
+    const start = (page - 1) * pageSize;
+    return { items: values.slice(start, start + pageSize), totalItems: values.length };
   },
+  pageSize: 2,
 });
 
+await source.reload();
 await source.loadMore();
-await source.loadMore();
-console.log(source.snapshot.data);
+console.log(source.state.items);
 source.dispose();
 ```
 
-`loadMore()` is a no-op while fetching or after `pagination.hasMore` becomes false.
+`loadMore()` is a no-op while another request is active or after `pagination.hasMore` becomes false. `setParams()` and `setPageSize()` replace the feed from page one.
 
-## Testing and Debugging
+## Handle Requests and Errors
 
-Inject deterministic loaders in unit tests. Await source commands before reading final state.
+A new remote command aborts older work. Superseded or disposed work settles without committing. A current loader failure preserves committed items, writes the error to state, and rejects the command.
+
+```ts
+try {
+  await source.reload();
+} catch (error) {
+  console.error(error);
+  console.log(source.state.error);
+}
+```
+
+Loader result arrays are copied before publication. Commands after disposal throw or reject `SourcererDisposedError`.
+
+## Testing
+
+Inject deterministic loaders and await commands before asserting final state.
 
 ```ts
 import { expect, it } from 'vitest';
 import { createPageSource } from '@vielzeug/sourcerer';
 
-it('loads first page', async () => {
-  const source = createPageSource({
-    autoStart: false,
-    load: async () => ({ data: ['Ada'], total: 1 }),
-  });
+it('loads a page', async () => {
+  const source = createPageSource({ load: async () => ({ items: ['Ada'], totalItems: 1 }) });
 
   await source.reload();
-  expect(source.snapshot.data).toEqual(['Ada']);
+
+  expect(source.state.items).toEqual(['Ada']);
   source.dispose();
 });
 ```
 
 ## Framework Integration
 
-Subscribe through each framework’s lifecycle. Keep source creation stable across renders.
+Create one source per component lifetime and bridge `subscribe()` to the framework lifecycle.
 
 ::: code-group
 
@@ -149,14 +192,17 @@ import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
 export function Users() {
   const source = useMemo(
-    () => createPageSource({ load: async () => ({ data: [{ id: 1, name: 'Ada' }], total: 1 }) }),
+    () => createPageSource({ load: async () => ({ items: [{ id: 1, name: 'Ada' }], totalItems: 1 }) }),
     [],
   );
-  const snapshot = useSyncExternalStore(source.subscribe, () => source.snapshot);
+  const state = useSyncExternalStore(source.subscribe, () => source.state);
 
-  useEffect(() => () => source.dispose(), [source]);
+  useEffect(() => {
+    void source.reload().catch(() => undefined);
+    return () => source.dispose();
+  }, [source]);
 
-  return <p>{snapshot.isFetching ? 'Loading' : snapshot.data.length}</p>;
+  return <p>{state.loading ? 'Loading' : state.items.length}</p>;
 }
 ```
 
@@ -164,9 +210,10 @@ export function Users() {
 import { onUnmounted, shallowRef } from 'vue';
 import { createPageSource } from '@vielzeug/sourcerer';
 
-const source = createPageSource({ load: async () => ({ data: [{ id: 1, name: 'Ada' }], total: 1 }) });
-const snapshot = shallowRef(source.snapshot);
-const stop = source.subscribe((next) => (snapshot.value = next));
+const source = createPageSource({ load: async () => ({ items: [{ id: 1, name: 'Ada' }], totalItems: 1 }) });
+const state = shallowRef(source.state);
+const stop = source.subscribe((next) => (state.value = next));
+void source.reload().catch(() => undefined);
 
 onUnmounted(() => {
   stop();
@@ -179,9 +226,10 @@ onUnmounted(() => {
   import { onDestroy } from 'svelte';
   import { createPageSource } from '@vielzeug/sourcerer';
 
-  const source = createPageSource({ load: async () => ({ data: [{ id: 1, name: 'Ada' }], total: 1 }) });
-  let snapshot = source.snapshot;
-  const stop = source.subscribe((next) => (snapshot = next));
+  const source = createPageSource({ load: async () => ({ items: [{ id: 1, name: 'Ada' }], totalItems: 1 }) });
+  let state = source.state;
+  const stop = source.subscribe((next) => (state = next));
+  void source.reload().catch(() => undefined);
 
   onDestroy(() => {
     stop();
@@ -189,72 +237,41 @@ onUnmounted(() => {
   });
 </script>
 
-{#if snapshot.isFetching}Loading{/if}
-{#each snapshot.data as user}{user.name}{/each}
+{#if state.loading}Loading{/if}
+{#each state.items as user}{user.name}{/each}
 ```
 
 :::
 
 ## Working with Other Vielzeug Libraries
 
-Use Courier for transport policy. Sourcerer owns request succession; Courier owns HTTP behavior.
+Use Courier for transport policy and pass the source-owned cancellation signal through.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
 import { createPageSource } from '@vielzeug/sourcerer';
 
+type User = { id: number; name: string };
+type Response = { data: User[]; total: number };
 const courier = createCourier({ baseUrl: '/api' });
 const source = createPageSource({
-  load: ({ query, signal }) => courier.get('/users', { query, signal }),
+  load: async ({ page, pageSize, params: search, signal }) => {
+    const result = await courier.get<Response>('/users', { query: { page, pageSize, search }, signal });
+    return { items: result.data, totalItems: result.total };
+  },
+  params: '',
 });
 ```
 
-Use Scout’s matcher when local search needs an index.
-
-```ts
-import { createIndex, toSearchMatcher } from '@vielzeug/scout';
-import { createLocalSource } from '@vielzeug/sourcerer';
-
-const users = [{ name: 'Ada' }, { name: 'Grace' }];
-const index = createIndex(users, { fields: ['name'] });
-const source = createLocalSource(users, { match: toSearchMatcher(index) });
-```
-
-## Gotchas
-
-### Navigation methods are no-ops while fetching
-
-`page.go()`, `page.next()`, `page.previous()`, `page.last()` (page and cursor sources) and `loadMore()` (infinite source) return a resolved promise and change nothing while a request is in flight. This prevents queued navigation from racing with abort logic. If a user clicks "next" during a fetch, the click is lost — debounce or disable navigation controls while `snapshot.isFetching` is true.
-
-### `pendingQuery` means a different query is in flight
-
-For page and cursor sources, `pendingQuery` is always set when a new query is loading. For infinite sources, `pendingQuery` is set only when `setQuery()` or `reload()` replaces the query — not during `loadMore()` append fetches. To detect an append in progress on an infinite source, read `snapshot.isFetching` with `pendingQuery` absent.
-
-### `sameQuery` uses reference equality
-
-`setQuery()` compares the new query against the current one using `Object.is` per field. For `filter` and `sort` (opaque `TFilter`/`TSort` types), a new object with the same content triggers a refetch. Memoize filter/sort objects in your application layer if you want to avoid redundant requests.
-
-### Clear optional query fields by passing `undefined` explicitly
-
-In `PageQueryPatch`, omitting `filter` preserves the current value; passing `filter: undefined` clears it. The same applies to `sort`. In `CursorQueryPatch`, omitting `after`/`before` preserves the current cursor; passing `after: undefined` or `before: undefined` clears it. This distinction is runtime-only — TypeScript's optional-field syntax does not distinguish "absent" from "explicitly `undefined`."
-
-```ts
-// Page source: keep current filter, change page:
-source.setQuery({ page: 2 });
-
-// Page source: clear filter, reset to page 1:
-source.setQuery({ filter: undefined });
-
-// Cursor source: clear after cursor:
-source.setQuery({ after: undefined });
-```
+Use Scout to compute indexed local matches, Ripple to project state into reactive computations, and Wayfinder to validate and synchronize params with the URL.
 
 ## Best Practices
 
-- Dispose each source with its owning view, request, or scope.
-- Read one snapshot object per render instead of mixing source fields across updates.
-- Inspect `pendingQuery` before rendering controls for in-flight work.
-- Validate URL query values before passing them to `setQuery()`.
-- Keep caching, retries, polling, and optimistic writes in your transport layer.
-- Use `setData()` with prepared local collections; keep ranking and filtering explicit.
-- Debounce text inputs before updating remote source queries.
+- Dispose each source with its owning view, request, or service scope.
+- Read one `state` object per render.
+- Await direct commands or handle rejected current-request failures.
+- Keep transport, caching, and persistence policy outside Sourcerer.
+- Treat `params` as an immutable value and replace it atomically.
+- Debounce text input before calling `setParams()` on a remote source.
+- Validate route and form values before constructing params or page numbers.
+- Keep rendering committed items while `loading` is true.

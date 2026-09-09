@@ -1,9 +1,10 @@
-import { table, ttl } from '../index';
+import { count, isEmpty, table, ttl, validatorCodec } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
 const userSchema = { users: table<User>('id') };
+const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -63,7 +64,7 @@ describe('ttl helpers', () => {
     test('can be used with put and causes expiration', async () => {
       window.localStorage.clear();
 
-      const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
+      const db = createLocalStorage({ codecs, name: 'TtlHelper', schema: userSchema });
 
       await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1));
       await delay(5);
@@ -75,22 +76,22 @@ describe('ttl helpers', () => {
       window.localStorage.clear();
       vi.useFakeTimers({ toFake: ['Date'] });
 
-      const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
+      const db = createLocalStorage({ codecs, name: 'TtlHelper', schema: userSchema });
 
       await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(100));
-      expect(await db.count('users')).toBe(1);
+      expect(await count(db, 'users')).toBe(1);
 
       vi.advanceTimersByTime(100);
 
-      await expect(db.count('users')).resolves.toBe(0);
-      await expect(db.isEmpty('users')).resolves.toBe(true);
+      await expect(count(db, 'users')).resolves.toBe(0);
+      await expect(isEmpty(db, 'users')).resolves.toBe(true);
       vi.useRealTimers();
     });
 
     test('put rejects invalid ttl values', async () => {
       window.localStorage.clear();
 
-      const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
+      const db = createLocalStorage({ codecs, name: 'TtlHelper', schema: userSchema });
 
       await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN)).rejects.toThrow(
         'expected a finite positive number',

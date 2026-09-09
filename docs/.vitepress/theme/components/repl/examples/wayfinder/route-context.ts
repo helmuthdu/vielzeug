@@ -9,7 +9,6 @@ const router = createRouter({
     home: { path: '/' },
     postDetail: {
       path: '/users/:userId/posts/:postId',
-      meta: { title: 'Post Detail', breadcrumbs: ['Home', 'Users', 'Posts'] },
       middleware: [
         async (ctx, next) => {
           // Middleware can read params, query, hash, historyState, locals, navigate.
@@ -24,7 +23,6 @@ const router = createRouter({
       data: async (ctx) => {
         // data() gets the same context plus an AbortSignal for cancellation.
         console.log('data()     | user from locals:', ctx.locals.user.name)
-        console.log('data()     | leaf meta:', JSON.stringify(ctx.matches.at(-1)?.meta))
         return { postId: ctx.params.postId, author: ctx.locals.user.name }
       },
     },

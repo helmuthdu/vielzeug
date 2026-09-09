@@ -38,7 +38,7 @@ try {
 
 ## Cancellation and Timeouts
 
-Pass one signal to stop capacity waits, queued work, or active work. Cancelling active work terminates and lazily replaces its slot.
+Pass one signal to stop capacity waits, queued work, or active work. Cancelling active work terminates and lazily replaces its slot without incrementing `stats.failed`, regardless of the abort reason. Timeouts must be integer milliseconds from 1 through 2,147,483,647.
 
 ```ts
 const controller = new AbortController();
@@ -50,7 +50,7 @@ await result.catch((error) => console.log(error.name)); // AbortError
 
 ## Queue Policy and Priority
 
-Use `maxQueue` to bound waiting work. Higher priorities dispatch first once a slot opens.
+Use `maxQueue` to bound the admitted queue. Higher priorities dispatch first once a slot opens.
 
 ```ts
 const pool = createWorker<Job, Result>(new URL('./job.worker.ts', import.meta.url), {
@@ -62,22 +62,21 @@ const pool = createWorker<Job, Result>(new URL('./job.worker.ts', import.meta.ur
 await pool.run(criticalJob, { priority: 10 });
 ```
 
-## Batch and Groups
+With `onFull: 'wait'`, overflow calls wait for admission outside the bounded queue. `stats.queued` includes both admitted tasks and capacity waiters, and priority applies to both.
 
-Compose task pools with free helpers instead of carrying unrelated methods on every pool.
+## Batch Composition
+
+Use `runBatch()` for ordered progressive results with one shared cancellation lifetime. It starts pool work concurrently, cancels siblings on the first failure, and cancels unfinished work when iteration stops early.
 
 ```ts
-import { batch, createTaskGroup } from '@vielzeug/familiar';
+import { runBatch } from '@vielzeug/familiar';
 
-for await (const value of batch(pool, inputs)) {
-  console.log(value);
+for await (const result of runBatch(pool, inputs, { signal, timeout: 5_000 })) {
+  consume(result);
 }
-
-const group = createTaskGroup(pool, 'import');
-const tasks = rows.map((row) => group.run(row));
-await group.drain();
-await Promise.all(tasks);
 ```
+
+Use `getTransferables(input, index)` when each task needs its own transfer list. See [Cancellable Batch](./examples/cancellable-batch.md).
 
 ## Streaming
 
@@ -102,6 +101,8 @@ for await (const token of pool.runStream('typed module workers')) {
 pool.dispose();
 ```
 
+Each value returned by `runStream()` is one-shot once an iterator operation begins. Unused iterators can be discarded, and `return()` immediately cancels a pending chunk request. Abort listeners are attached when iteration begins and removed when it settles. Worker messages do not provide backpressure, so keep chunks and production rates bounded when consumers may be slow.
+
 ## Testing
 
 Use `createTestWorker()` when testing consumer code that depends on a task pool. It clones input/output, wraps task failures, and honors cancellation and timeout behavior.
@@ -115,22 +116,32 @@ expect(pool.calls).toEqual([{ input: 21, status: 'fulfilled', value: 42 }]);
 pool.dispose();
 ```
 
-Test worker-module business logic directly when possible. `createTestWorker()` does not run module files or support stream pools.
+Test worker-module business logic directly when possible. `createTestWorker()` does not run module files or support stream pools. Cancellation rejects an active test task but cannot stop side effects in an already-running in-process handler.
 
 ## Framework Integration
 
-Create a pool once per component lifetime. Abort obsolete requests during effect cleanup and dispose the pool on unmount.
+Create a pool at a stable owner boundary. Abort obsolete requests during component cleanup and dispose the pool at the same boundary that created it.
 
 ::: code-group
 
 ```tsx [React]
-import { useEffect, useMemo } from 'react';
-import { createWorker } from '@vielzeug/familiar';
+import { useEffect } from 'react';
+import type { WorkerPool } from '@vielzeug/familiar';
 
-const pool = useMemo(() => createWorker(new URL('./sort.worker.ts', import.meta.url)), []);
+function SortedView({ pool }: { pool: WorkerPool<Input, Output> }) {
+  useEffect(() => {
+    const controller = new AbortController();
+    void pool.run(input, { signal: controller.signal }).then(renderOutput, (error: unknown) => {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) reportError(error);
+    });
+    return () => controller.abort();
+  }, [input, pool]);
 
-useEffect(() => () => pool.dispose(), [pool]);
+  return null;
+}
 ```
+
+Create and dispose the injected React pool at the application boundary, outside Strict Mode effect replay.
 
 ```ts [Vue]
 import { onUnmounted } from 'vue';
@@ -154,7 +165,7 @@ onDestroy(() => pool.dispose());
 
 ## Working with Other Vielzeug Libraries
 
-Use `@vielzeug/arsenal` async helpers in application orchestration. Keep worker module protocol registration in `@vielzeug/familiar/protocol`.
+Keep worker module protocol registration in `@vielzeug/familiar/protocol`.
 
 ## Best Practices
 
@@ -162,6 +173,7 @@ Use `@vielzeug/arsenal` async helpers in application orchestration. Keep worker 
 - Reuse pools for repeated work; dispose owner-scoped pools.
 - Abort work made obsolete by navigation or newer input.
 - Transfer large binary buffers instead of cloning them.
+- Treat submitted inputs as immutable until dispatch; queued inputs are structured-cloned only when a worker slot becomes available.
 - Set explicit timeouts for work with a bounded latency budget.
 - Keep worker handlers deterministic and data-only.
 - Test module logic directly; test pool consumers with `createTestWorker()`.

@@ -7,48 +7,45 @@ description: 'Navigate opaque cursor pages without inventing page numbers.'
 
 ### Problem
 
-Your API returns opaque cursors. A page index cannot safely represent navigation because only server-issued cursors identify adjacent pages.
+Your API returns opaque cursors, so numeric page indexes cannot identify adjacent results.
 
 ### Solution
 
-Return cursors from the loader and navigate through `source.page`.
+Return cursors from the loader and call the source’s direct navigation methods.
 
 ```ts
 import { createCursorSource } from '@vielzeug/sourcerer';
 
 type Order = { id: string };
 const rows: Order[] = [{ id: 'A' }, { id: 'B' }, { id: 'C' }];
-
-const source = createCursorSource<Order, number>({
-  autoStart: false,
-  initialQuery: { pageSize: 2 },
-  load: async ({ query }) => {
-    const start = query.after ?? 0;
-    const data = rows.slice(start, start + query.pageSize);
-    const next = start + data.length;
-
+const source = createCursorSource({
+  load: async ({ after, pageSize }) => {
+    const start = after ?? 0;
+    const items = rows.slice(start, start + pageSize);
+    const next = start + items.length;
     return {
-      data,
+      items,
       nextCursor: next < rows.length ? next : undefined,
-      previousCursor: start > 0 ? Math.max(0, start - query.pageSize) : undefined,
+      previousCursor: start > 0 ? Math.max(0, start - pageSize) : undefined,
     };
   },
+  pageSize: 2,
 });
 
 await source.reload();
-await source.page.next();
-console.log(source.snapshot.data); // [{ id: 'C' }]
+await source.next();
+console.log(source.state.items); // [{ id: 'C' }]
 source.dispose();
 ```
 
 ### Pitfalls
 
-- Do not set both `after` and `before`; source rejects conflicting directions.
-- Do not model cursor navigation as `page.go(n)`.
-- Search and page-size changes intentionally clear cursors.
+- Do not configure both `after` and `before`.
+- Treat cursors as server-owned opaque values in real integrations.
+- Remember that `setParams()` and `setPageSize()` clear cursor direction.
 
 ### Related
 
 - [Usage Guide](../usage#use-cursor-pagination)
 - [Infinite scroll](./infinite-scroll)
-- [Page source](./remote-search-with-url-state)
+- [Page params](./remote-search-with-url-state)

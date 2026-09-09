@@ -5,7 +5,7 @@ package: ore
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, refine, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, unsafeHtml, useField, createId, createStableId, resetStableIdCounter, OreError, OreApiError, OreInternalError, OreLifecycleError, BindOptions]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, unsafeHtml, useField, createId, OreError, OreApiError, OreInternalError, OreLifecycleError, AttributeBindings, BindOptions]
 environments: [browser]
 ---
 
@@ -129,12 +129,11 @@ define('my-counter', {
 - Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect` — plain functions imported from `@vielzeug/ore`, called directly from `setup()` or any composable it calls
 - Directives: `each` (keyed reactive list rendering), `classMap`, `styleMap`, `when`, `live`, `unsafeHtml`
 - Host bindings via `bind({ attr, class, style, on })` — pass `{ target: el }` to bind any off-host element
-- Reactive ARIA sync via `bind({ aria }, { target })` — applies `aria-*` attributes reactively to any element, auto-cleanup on disconnect
+- Reactive ARIA sync via explicit `aria-*` keys in `bind({ attr }, { target })`, with automatic cleanup on disconnect
 - Context via `provide(key, value)` / `inject(key)`; typed emit/slots via `useEmit<Emits>()` / `useSlots<SlotNames>()`
 - Form-associated `useField()` and observer helpers are root exports
 - Testing utilities (`@vielzeug/ore/testing`) — `mount`, `renderHook`, `flush`, `cleanup`
 - Generic testing utilities (scoped queries, named event dispatchers, and async waits) are exported by `@vielzeug/assay`
-- Debug utilities (`@vielzeug/ore/testing`) — `debugFlush()` for diagnosing update timing
 
 </div>
 

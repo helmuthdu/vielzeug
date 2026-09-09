@@ -23,9 +23,6 @@ importers:
       '@vielzeug/familiar':
         specifier: workspace:*
         version: link:../../packages/familiar
-      '@vielzeug/flux':
-        specifier: workspace:*
-        version: link:../../packages/flux
       '@vielzeug/herald':
         specifier: workspace:*
         version: link:../../packages/herald
@@ -62,9 +59,6 @@ importers:
       '@vielzeug/scroll':
         specifier: workspace:*
         version: link:../../packages/scroll
-      '@vielzeug/sourcerer':
-        specifier: workspace:*
-        version: link:../../packages/sourcerer
       '@vielzeug/spell':
         specifier: workspace:*
         version: link:../../packages/spell
@@ -104,6 +98,10 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/assay:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -202,6 +200,10 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/dnd:
+    dependencies:
+      '@vielzeug/gesture':
+        specifier: workspace:*
+        version: link:../gesture
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -236,22 +238,14 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/flux:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
-      '@vielzeug/courier':
-        specifier: workspace:*
-        version: link:../courier
-      '@vielzeug/herald':
-        specifier: workspace:*
-        version: link:../herald
-      '@vielzeug/pulse':
-        specifier: workspace:*
-        version: link:../pulse
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -278,6 +272,10 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/forge:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -300,6 +298,9 @@ importers:
 
   ../../packages/gesture:
     devDependencies:
+      '@playwright/test':
+        specifier: ^1.63.0
+        version: 1.63.0
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
@@ -369,10 +370,6 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/ledger:
-    dependencies:
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -424,6 +421,10 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/orbit:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -501,9 +502,6 @@ importers:
       '@vielzeug/orbit':
         specifier: workspace:*
         version: link:../orbit
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
     devDependencies:
       axe-core:
         specifier: ^4.13.0
@@ -519,10 +517,6 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/pulse:
-    dependencies:
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -542,9 +536,6 @@ importers:
       '@vielzeug/arsenal':
         specifier: workspace:*
         version: link:../arsenal
-      '@vielzeug/assay':
-        specifier: workspace:*
-        version: link:../assay
       '@vielzeug/dnd':
         specifier: workspace:*
         version: link:../dnd
@@ -594,6 +585,9 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
+      '@vielzeug/assay':
+        specifier: workspace:*
+        version: link:../assay
       axe-core:
         specifier: ^4.13.0
         version: 4.13.0
@@ -665,10 +659,6 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/scout:
-    dependencies:
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -684,10 +674,6 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/scroll:
-    dependencies:
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -710,9 +696,6 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -724,6 +707,10 @@ importers:
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
   ../../packages/sourcerer:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^26.4.1
@@ -781,6 +768,9 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
+      '@vielzeug/spell':
+        specifier: workspace:*
+        version: link:../spell
       fake-indexeddb:
         specifier: ^6.2.5
         version: 6.2.5

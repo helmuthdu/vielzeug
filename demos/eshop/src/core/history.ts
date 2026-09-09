@@ -78,10 +78,10 @@ export function toggleCompare(modelId: string): void {
 }
 
 /** Reorders the compare tray after a drag — no-ops if the order didn't actually change. */
-export function reorderCompare(orderedIds: string[]): void {
+export function reorderCompare(orderedIds: readonly string[]): void {
   const previous = compareModelIds.value;
 
   if (previous.length === orderedIds.length && previous.every((id, i) => id === orderedIds[i])) return;
 
-  compareModelIds.value = orderedIds;
+  compareModelIds.value = [...orderedIds];
 }

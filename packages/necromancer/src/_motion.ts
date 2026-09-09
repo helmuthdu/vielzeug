@@ -1,8 +1,6 @@
 import { NecromancerConfigError } from './errors';
 import type { AnimateOptions, MotionMode } from './types';
 
-const DEFAULT_DURATION = 180;
-
 /** Reports whether the requested motion preference reduces visible movement. */
 export function shouldReduceMotion(mode: MotionMode): boolean {
   if (mode === 'full') return false;
@@ -14,11 +12,9 @@ export function shouldReduceMotion(mode: MotionMode): boolean {
 
 /** Converts ownership options to native timing, collapsing reduced motion to an instant transition. */
 export function resolveAnimationOptions(options: AnimateOptions = {}, reduced = false): KeyframeAnimationOptions {
-  const { duration, interrupt: _interrupt, motion: _motion = 'system', signal: _signal, ...nativeOptions } = options;
-  const timing =
-    duration === undefined ? { ...nativeOptions, duration: DEFAULT_DURATION } : { ...nativeOptions, duration };
+  const { motion: _motion, signal: _signal, ...nativeOptions } = options;
 
-  return reduced ? { ...timing, delay: 0, duration: 0, endDelay: 0, iterations: 1 } : timing;
+  return reduced ? { ...nativeOptions, delay: 0, duration: 0, endDelay: 0, iterations: 1 } : nativeOptions;
 }
 
 /** Adds an element's stagger offset without changing native nonnumeric delays when no offset is needed. */

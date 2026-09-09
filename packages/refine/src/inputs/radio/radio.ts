@@ -180,11 +180,11 @@ define<OreRadioProps>(RADIO_TAG, {
 
     bind({
       attr: {
-        ariaChecked: () => (checked.value ? 'true' : 'false'),
-        ariaDescribedby: () => (errorText.value || helperText.value ? assistiveId : null),
-        ariaDisabled: () => (disabled.value ? 'true' : null),
-        ariaInvalid: () => (errorText.value ? 'true' : null),
-        ariaLabelledby: labelId,
+        'aria-checked': () => (checked.value ? 'true' : 'false'),
+        'aria-describedby': () => (errorText.value || helperText.value ? assistiveId : null),
+        'aria-disabled': () => (disabled.value ? 'true' : null),
+        'aria-invalid': () => (errorText.value ? 'true' : null),
+        'aria-labelledby': labelId,
         checked,
         color: effectiveColor,
         disabled: () => (disabled.value ? true : undefined),

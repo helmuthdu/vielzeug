@@ -1,10 +1,10 @@
 ---
-title: Courier — HTTP, queries, and streaming
-description: A framework-neutral fetch client with explicit cache keys, direct mutations, and abortable streams.
+title: Courier — HTTP client
+description: A framework-neutral HTTP client with explicit cached reads, prefetching, immutable middleware, typed paths, and structured errors.
 package: courier
 category: http
-keywords: [http-client, fetch, caching, queries, mutations, sse, streaming, interceptors]
-related: [flux, ripple, spell]
+keywords: [http-client, fetch, cache, prefetch, middleware, interceptors, errors]
+related: [flux, spell, postmaster]
 exports:
   [
     createCourier,
@@ -27,8 +27,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Courier?
 
-Native `fetch` leaves request policy, cached reads, and stream lifecycles to each application. Courier keeps
-those concerns in one client while making cache identity and fetch policy explicit at every cached read.
+Native `fetch` leaves request policy, error classification, middleware composition, and repeated-read coordination to each application. Courier keeps those concerns in one client, including explicit cached GETs and warm-cache prefetching, while observable query and mutation state remain consumer-owned.
 
 ```ts
 // Before
@@ -37,28 +36,23 @@ if (!response.ok) throw new Error(`HTTP ${response.status}`);
 const user = await response.json();
 
 // After
-await courier.queries.fetch({
-  key: ['users', userId],
-  fetch: ({ signal }) => courier.get('/users/{id}', { params: { id: userId }, signal }),
-});
+const user = await courier.get<User>('/users/{id}', { params: { id: userId } });
 ```
 
-| Feature | Courier | TanStack Query | ky |
+| Feature | Courier | ky | ofetch |
 | --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="courier" type="size" /> | Framework adapter required | Separate package |
-| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Native fetch transport | <ore-icon name="check" size="16"></ore-icon> | Bring your own | <ore-icon name="check" size="16"></ore-icon> |
-| Explicit cache keys | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| SSE and NDJSON iteration | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| External runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Bundle size | <PackageInfo package="courier" type="size" /> | Separate package | Separate package |
+| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Native fetch transport | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Explicit parsed-value cache and prefetch | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Immutable middleware at construction | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Structured error taxonomy | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
-**Use Courier when** one application client should own typed HTTP, explicit cached reads, direct writes, and
-abortable response streams.
+**Use Courier when** one client should own typed HTTP, explicit cached GETs and prefetching, immutable middleware, and structured errors — while a separate state layer owns observable queries and mutations.
 
-**Consider TanStack Query when** you need a maintained framework adapter or advanced cache features such as
-infinite queries. **Consider ky when** you only need a compact fetch wrapper without caching or streams.
+**Consider ky when** you only need a compact fetch wrapper. **Consider ofetch when** you want a bundled fetch utility with its own retry and caching conventions.
 
 </div>
 
@@ -82,22 +76,18 @@ yarn add @vielzeug/courier
 
 ## Quick Start
 
-Create one client for an application or request scope, then fetch a cache entry by its explicit key.
+Create one transport client for an application or request scope, then use method conveniences for standard HTTP methods and `request()` for custom methods.
 
 ```ts
 import { CourierHttpError, createCourier } from '@vielzeug/courier';
 
 type User = { id: number; name: string };
 
-const courier = createCourier({ baseUrl: 'https://api.example.com', query: { staleTime: 30_000 } });
-const key = ['users', 42] as const;
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
 try {
-  await courier.queries.fetch({
-    key,
-    fetch: ({ signal }) => courier.get('/users/{id}', { params: { id: 42 }, signal }),
-  });
-  console.log(courier.queries.getSnapshot<User>(key)?.data);
+  const user = await courier.get<User>('/users/{id}', { params: { id: 42 } });
+  console.log(user.name);
 } catch (error) {
   if (CourierHttpError.is(error, 404)) console.log('User not found');
   else throw error;
@@ -110,13 +100,16 @@ try {
 
 <div class="features-grid">
 
-- **`createCourier()`** — one lifecycle, interceptor pipeline, header store, and cancellation boundary.
-- **`get()` / `post()` / `put()` / `patch()` / `delete()`** — typed paths, query strings, request bodies, validation, and structured errors.
-- **`queries.fetch()`** — key-based cached reads, subscriptions, invalidation with refetch, and automatic garbage collection.
-- **`mutate()`** — direct write operation with `invalidateKeys` for one-step cache refetch, without hidden retries or a second state store.
-- **`events()` / `read()`** — abortable SSE, text, and NDJSON iteration with normalized request errors.
-- **`tap()`** — runtime observability for request lifecycle events (start, success, error).
-- **`withBearerAuth()` / `withRequestId()` / `withLogging()`** — composable transport policies.
+- **`createCourier()`** — one lifecycle, immutable middleware pipeline, header defaults, and cancellation boundary.
+- **`request()`** — one contract for every HTTP method; pass `method` in the config.
+- **Cached `get()`** — opt in with a structured key and optional per-read TTL; successful parsed values share bounded storage and in-flight work.
+- **`prefetch()`** — await cache warming while request failures remain observable through `tap()`.
+- **`invalidateCache()` / `clearCache()`** — invalidate structured key prefixes without query state.
+- **`get()` / `post()` / `put()` / `patch()` / `delete()`** — conveniences for standard methods.
+- **`withBearerAuth()` / `withRequestId()` / `withLogging()`** — composable middleware configured at construction.
+- **`tap()`** — signal-owned structured transport observation.
+- **Error taxonomy** — HTTP, network, timeout, abort, parse, and schema failures are distinct, actionable classes.
+- **`cancelAll()` / `dispose()`** — abort active requests and tear down the transport.
 
 </div>
 
@@ -135,9 +128,9 @@ try {
 
 <div class="see-also">
 
-- [Flux](/flux/) — adapts Courier cache entries and event iterators into composable streams.
-- [Ripple](/ripple/) — stores Courier snapshots in fine-grained reactive state.
-- [Spell](/spell/) — validates parsed HTTP payloads through Courier's schema option.
+- [Flux](/flux/) — composes async streams; pair with Courier transport calls in the owning state layer.
+- [Spell](/spell/) — validates parsed HTTP payloads through Courier's `schema` option.
+- [Postmaster](/postmaster/) — coordinates durable delivery of Courier requests through a job outbox.
 
 </div>
 

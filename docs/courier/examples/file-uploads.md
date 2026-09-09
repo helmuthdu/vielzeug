@@ -32,7 +32,6 @@ console.log(result.url);
 
 - Do not manually set `Content-Type` for `FormData`; the required boundary would be missing.
 - Upload progress is not exposed by fetch; use a platform-specific transport when progress is required.
-- Keep files outside query-cache values.
 
 ### Related
 

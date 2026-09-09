@@ -1,87 +1,71 @@
-import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
-import { positiveInteger, sameQuery, totalItems } from './pagination';
-import type {
-  InfinitePagination,
-  InfiniteQuery,
-  InfiniteQueryPatch,
-  InfiniteSource,
-  InfiniteSourceConfig,
-} from './types';
+import { SourcererDisposedError } from './errors';
+import { positiveInteger, totalItems } from './pagination';
+import type { InfinitePagination, InfiniteSource, InfiniteSourceConfig, InfiniteSourceState } from './types';
 
-const createPagination = (loaded: number, total: number): InfinitePagination => ({
-  hasMore: loaded < total,
-  kind: 'infinite',
-  loaded,
-  total,
+type Request<TParams> = Readonly<{ pageSize: number; params: TParams }>;
+
+const createPagination = (loadedItems: number, pageSize: number, total: number): InfinitePagination => ({
+  hasMore: loadedItems < total,
+  loadedItems,
+  pageSize,
+  totalItems: total,
 });
 
-const normalizeQuery = (current: InfiniteQuery, patch: InfiniteQueryPatch = {}): InfiniteQuery => ({
-  pageSize: positiveInteger(patch.pageSize ?? current.pageSize, 'pageSize'),
-  search: patch.search ?? current.search,
-});
-
-/** Infinite sources preserve loaded collection state while a pending query replaces it. */
-export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): InfiniteSource<T> {
-  const initialQuery: InfiniteQuery = { pageSize: 20, search: '' };
-  let requestedQuery = normalizeQuery(initialQuery, config.initialQuery);
+/** Infinite sources retain committed items while replacement work is pending. */
+export function createInfiniteSource<T, TParams = undefined>(
+  config: InfiniteSourceConfig<T, TParams>,
+): InfiniteSource<T, TParams> {
+  let requested: Request<TParams> = {
+    pageSize: positiveInteger(config.pageSize ?? 20, 'pageSize'),
+    params: config.params as TParams,
+  };
   let nextPage = 1;
-  const asyncSource = createAsyncSource<T, InfiniteQuery, InfinitePagination>({
-    data: [],
+  let hasLoaded = false;
+  const asyncSource = createAsyncSource<InfiniteSourceState<T, TParams>>({
     error: null,
-    isFetching: false,
-    pagination: createPagination(0, 0),
-    query: requestedQuery,
+    items: [],
+    loading: false,
+    pagination: createPagination(0, requested.pageSize, 0),
+    params: requested.params,
   });
+  const assertLive = (): void => {
+    if (asyncSource.disposed) throw new SourcererDisposedError();
+  };
 
-  const fetch = (query: InfiniteQuery, page: number, append: boolean): Promise<void> => {
-    const loadedData = asyncSource.snapshot.data;
+  const fetch = (request: Request<TParams>, page: number, append: boolean): Promise<void> => {
+    const loadedItems = asyncSource.state.items;
 
     return asyncSource.fetch({
-      load: (signal) => config.load({ query: { page, pageSize: query.pageSize, search: query.search }, signal }),
+      commit: () => {
+        hasLoaded = true;
+        nextPage = page + 1;
+        requested = request;
+      },
+      failure: (previous, error) => ({ ...previous, error, loading: false, pendingParams: undefined }),
+      load: (signal) => config.load({ page, pageSize: request.pageSize, params: request.params, signal }),
       pending: (previous) => ({
         ...previous,
         error: null,
-        isFetching: true,
-        pagination: createPagination(previous.data.length, previous.pagination.total),
-        ...(append ? {} : { pendingQuery: query }),
+        loading: true,
+        ...(append || Object.is(request.params, previous.params) ? {} : { pendingParams: request.params }),
       }),
-      query,
       success: (result) => {
-        const total = totalItems(result.total);
-        const data = append ? [...loadedData, ...result.data] : result.data;
-
-        nextPage = page + 1;
-
+        const items = append ? [...loadedItems, ...result.items] : [...result.items];
         return {
-          data,
           error: null,
-          isFetching: false,
-          pagination: createPagination(data.length, total),
-          query,
+          items,
+          loading: false,
+          pagination: createPagination(items.length, request.pageSize, totalItems(result.totalItems)),
+          params: request.params,
         };
       },
     });
   };
 
-  const reload = (): Promise<void> => {
-    nextPage = 1;
+  const reload = (): Promise<void> => fetch(requested, 1, false);
 
-    return fetch(requestedQuery, 1, false);
-  };
-
-  const setQuery = async (patch: InfiniteQueryPatch): Promise<void> => {
-    const current = asyncSource.snapshot.pendingQuery ?? asyncSource.snapshot.query;
-    const next = normalizeQuery(current, patch);
-
-    if (sameQuery(next, requestedQuery)) return;
-
-    requestedQuery = next;
-    nextPage = 1;
-    await fetch(next, 1, false);
-  };
-
-  const source: InfiniteSource<T> = {
+  const source: InfiniteSource<T, TParams> = {
     get disposalSignal() {
       return asyncSource.disposalSignal;
     },
@@ -92,19 +76,44 @@ export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): Infini
       return asyncSource.disposed;
     },
 
-    loadMore() {
-      const { isFetching, pagination } = asyncSource.snapshot;
-
-      return isFetching || (asyncSource.snapshot.data.length > 0 && !pagination.hasMore)
-        ? Promise.resolve()
-        : fetch(requestedQuery, nextPage, true);
+    async loadMore() {
+      assertLive();
+      if (asyncSource.state.loading) return;
+      if (!hasLoaded || !Object.is(requested.params, asyncSource.state.params)) {
+        await reload();
+        return;
+      }
+      if (asyncSource.state.pagination.hasMore) await fetch(requested, nextPage, true);
     },
 
     reload,
-    setQuery,
 
-    get snapshot() {
-      return asyncSource.snapshot;
+    async setPageSize(pageSize) {
+      assertLive();
+      const normalized = positiveInteger(pageSize, 'pageSize');
+      if (normalized === requested.pageSize) {
+        if (asyncSource.state.loading || asyncSource.state.pagination.pageSize === normalized) return;
+        await reload();
+        return;
+      }
+      requested = { ...requested, pageSize: normalized };
+      nextPage = 1;
+      await reload();
+    },
+
+    async setParams(params) {
+      assertLive();
+      if (Object.is(params, requested.params)) {
+        if (!asyncSource.state.loading && !Object.is(params, asyncSource.state.params)) await reload();
+        return;
+      }
+      requested = { ...requested, params };
+      nextPage = 1;
+      await reload();
+    },
+
+    get state() {
+      return asyncSource.state;
     },
 
     subscribe: asyncSource.subscribe,
@@ -113,9 +122,6 @@ export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): Infini
       source.dispose();
     },
   };
-
-  if (config.autoStart !== false)
-    void reload().catch(() => warn('Initial load failed. Inspect source.snapshot.error.'));
 
   return source;
 }

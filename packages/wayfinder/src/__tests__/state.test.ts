@@ -153,16 +153,34 @@ describe('onError callback', () => {
     router.dispose();
   });
 
-  it('receives preload errors with the correct source', async () => {
+  it('identifies middleware failures separately from data-loader failures', async () => {
     const onError = vi.fn();
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      middleware: [
+        () => {
+          throw new Error('middleware failure');
+        },
+      ],
+      onError,
+      routes: { home: { path: '/' } },
+    });
+
+    await expect(router.ready).rejects.toThrow('middleware failure');
+    await settle();
+
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { routeName: 'home', source: 'middleware' });
+    router.dispose();
+  });
+
+  it('load() returns an error state when a data function throws', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
-      onError,
       routes: {
         fail: {
           data: async () => {
-            throw new Error('prefetch fail');
+            throw new Error('load fail');
           },
           path: '/fail',
         },
@@ -171,9 +189,11 @@ describe('onError callback', () => {
     });
 
     await settle();
-    await expect(router.preload('fail')).rejects.toThrow('prefetch fail');
 
-    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'preload' });
+    const state = await router.load('/fail');
+
+    expect(state?.status).toBe('error');
+    expect(state?.error).toBeInstanceOf(Error);
     router.dispose();
   });
 });

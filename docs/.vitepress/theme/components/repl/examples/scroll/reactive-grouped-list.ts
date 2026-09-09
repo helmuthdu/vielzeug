@@ -1,10 +1,8 @@
 export const reactiveGroupedListExample = {
-  code: `import { signal } from '@vielzeug/ripple'
+  code: `import { effect, fromSubscribable } from '@vielzeug/ripple'
 import { createGroupedVirtualizer } from '@vielzeug/scroll'
 
-// Reactive grouped virtualizer — state emitted through a Signal
-// from @vielzeug/ripple. Create the signal yourself, pass a factory
-// that returns it, then subscribe in effect().
+// Grouped virtualizers expose the same framework-neutral external-store contract.
 
 type Contact = { id: number; name: string }
 
@@ -32,17 +30,7 @@ const stickyEl = document.createElement('div')
 stickyEl.style.cssText = 'position:sticky;top:0;z-index:1;background:#f9fafb;border-bottom:1px solid #e5e5e5;padding:0 14px;height:32px;line-height:32px;font-size:12px;font-weight:700;color:#374151;display:none;'
 container.appendChild(stickyEl)
 
-const state = signal({ headers: [], items: [], stickyHeader: null, totalSize: 0 })
-
-const virt = createGroupedVirtualizer<Contact>(container, {
-  estimateHeaderSize: 32,
-  estimateItemSize: 44,
-  sections,
-  signal: (init) => state,
-})
-
-function render() {
-  const { headers, items, stickyHeader, totalSize } = state.value
+function render({ headers, items, stickyHeader, totalSize }) {
   spacer.style.height = totalSize + 'px'
   content.replaceChildren()
   headers.forEach(({ start, size, label: text }) => {
@@ -65,8 +53,13 @@ function render() {
   }
 }
 
-render()
-container.addEventListener('scroll', render)
+const virt = createGroupedVirtualizer<Contact>(container, {
+  estimateHeaderSize: 32,
+  estimateItemSize: 44,
+  sections,
+})
+const state = fromSubscribable(virt, { signal: virt.disposalSignal })
+const renderEffect = effect(() => render(state.value))
 
 // --- Live update demo ---
 const btn = document.createElement('button')
@@ -77,13 +70,15 @@ btn.onclick = () => {
     ...sections,
     { label: 'D', items: [{ id: 8, name: 'David' }, { id: 9, name: 'Diana' }] },
   ])
-  render()
   btn.disabled = true
   btn.style.opacity = '0.5'
 }
 app.appendChild(btn)
 
 // Cleanup
-window.addEventListener('beforeunload', () => virt.dispose())`,
+window.addEventListener('beforeunload', () => {
+  renderEffect.dispose()
+  virt.dispose()
+})`,
   name: 'Reactive Grouped Virtualizer',
 };

@@ -1,4 +1,4 @@
-import type { RandomSource } from '@vielzeug/arsenal/random';
+import type { RandomSource } from '../types';
 
 import { nextFloat } from './next-float';
 

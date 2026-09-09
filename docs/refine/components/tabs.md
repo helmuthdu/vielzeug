@@ -1,6 +1,6 @@
 # Tabs
 
-A flexible tabs component for organizing content into switchable panels. Keyboard accessible, animation-ready, and available in six visual styles.
+A flexible tabs component for organizing content into switchable panels. Keyboard accessible, animation-ready, and available in five visual styles.
 
 ## Variants
 
@@ -80,26 +80,18 @@ Open tabs with a filled active pill — no container border, floats freely.
 
 </ComponentPreview>
 
-### Glass & Frost Variants
+### Frost Variant
 
-Translucent tab bars with backdrop blur — best used over rich backgrounds.
+`frost` renders the tablist as a diffuse translucent capsule with adaptive tint and backdrop blur.
 
 ::: tip Best Used With
-Glass and frost variants look best over colorful backgrounds or images to showcase the blur and transparency effects.
+Use frost for floating navigation over content or imagery, and avoid placing it over another translucent control.
 :::
 
 <ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop">
 
 ```html
 <ore-tabs value="tab1" variant="frost">
-  <ore-tab-item slot="tabs" value="tab1">Overview</ore-tab-item>
-  <ore-tab-item slot="tabs" value="tab2">Settings</ore-tab-item>
-  <ore-tab-item slot="tabs" value="tab3">Billing</ore-tab-item>
-  <ore-tab-panel value="tab1"><p>Overview panel content.</p></ore-tab-panel>
-  <ore-tab-panel value="tab2"><p>Settings panel content.</p></ore-tab-panel>
-  <ore-tab-panel value="tab3"><p>Billing panel content.</p></ore-tab-panel>
-</ore-tabs>
-<ore-tabs value="tab1" variant="glass">
   <ore-tab-item slot="tabs" value="tab1">Overview</ore-tab-item>
   <ore-tab-item slot="tabs" value="tab2">Settings</ore-tab-item>
   <ore-tab-item slot="tabs" value="tab3">Billing</ore-tab-item>
@@ -361,7 +353,7 @@ Disabled tabs are skipped during keyboard navigation.
 | Attribute     | Type                                                                      | Default        | Description                                                           |
 | ------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------- |
 | `value`       | `string`                                                                  | —              | Value of the currently selected tab                                   |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                         |
 | `density`     | `'default' \| 'compact'`                                                    | `'default'`    | Spatial density; compact renders a 24px tab control                   |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color propagated to all tab items                               |
@@ -417,7 +409,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the active indicator       |
 | `--tabs-indicator-color`      | Theme color                | Color of the sliding active indicator line                |
 | `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)             |
-| `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/glass/frost variants) |
+| `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/frost variants) |
 | `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                            |
 | `--tab-panel-padding`         | `var(--size-4)`            | Padding inside each tab panel                             |
 | `--tab-item-radius`           | Theme-dependent            | Tab button border radius                                  |

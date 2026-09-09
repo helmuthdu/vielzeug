@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Reactive SVG charting library. Mounts an `<svg>` into a host container; each chart factory (`createLineChart`, `createBarChart`, …) returns a `ChartHandle` with `dispose()`.
+Responsive SVG charting library with explicit data updates. Each chart factory mounts an `<svg>` into a host container and returns a typed `ChartHandle` with `update()` and `dispose()`.
 
 ## Ownership
 
@@ -12,7 +12,7 @@ Reactive SVG charting library. Mounts an `<svg>` into a host container; each cha
 ## Local Contracts
 
 - **DOM-output package** — renders SVG into the host DOM. Excluded from the REPL.
-- Depends on `@vielzeug/orbit` and `@vielzeug/ripple` (`workspace:*`). No other external runtime dependencies.
+- Depends on `@vielzeug/orbit` (`workspace:*`). No other external runtime dependencies.
 - Teardown follows the monorepo convention: `handle.dispose()` + `[Symbol.dispose]`.
 
 ## Accessibility testing

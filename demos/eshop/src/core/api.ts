@@ -20,11 +20,7 @@ async function mockFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   const [rawPath, search] = rawUrl.split('?');
   const params = new URLSearchParams(search);
 
-  // Courier's `buildUrl()` strips leading slashes off the path before joining it with
-  // `baseUrl` (see packages/courier/src/url.ts) — with no `baseUrl` configured here, that
-  // leaves the final request URL as e.g. `api/orders`, not `/api/orders`. Normalizing back to
-  // a leading slash keeps the route table below readable and conventional, and matches
-  // reliably regardless of whether a caller passed a leading slash to a Courier HTTP method.
+  // Normalize relative and root-relative inputs so this in-memory route table mirrors browser paths.
   const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
 
   function json(data: unknown, status = 200): Response {
@@ -72,24 +68,32 @@ async function mockFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
 // Courier instance — single shared transport for every REST call this app makes.
 // ---------------------------------------------------------------------------
 
-export const courier = createCourier({ fetch: mockFetch });
+export const courier = createCourier({ cache: { ttlMs: 30_000 }, fetch: mockFetch });
 
 // ---------------------------------------------------------------------------
 // Convenience request helpers
 // ---------------------------------------------------------------------------
 
-export function fetchModelsRequest(): Promise<typeof catalogModels> {
-  return courier.get('/api/models');
+export function fetchModelsRequest(signal?: AbortSignal): Promise<typeof catalogModels> {
+  return courier.get('/api/models', { cache: { key: ['models'], ttlMs: Infinity }, signal });
 }
 
-export function fetchOrdersRequest(userId?: string): Promise<Order[]> {
-  return courier.get<Order[]>('/api/orders', userId ? { query: { userId } } : undefined);
+export function fetchOrdersRequest(userId?: string, signal?: AbortSignal): Promise<Order[]> {
+  return courier.get<Order[]>('/api/orders', {
+    cache: { key: ['orders', userId ?? null] },
+    query: userId ? { userId } : undefined,
+    signal,
+  });
 }
 
-export function placeOrderRequest(order: Order): Promise<Order> {
-  return courier.post<Order>('/api/orders', { body: order });
+export async function placeOrderRequest(order: Order): Promise<Order> {
+  const created = await courier.post<Order>('/api/orders', { body: order });
+  courier.invalidateCache(['orders']);
+  return created;
 }
 
-export function updateOrderStatusRequest(orderId: string, status: OrderStatus): Promise<Order> {
-  return courier.patch<Order>(`/api/orders/${orderId}/status`, { body: { status } });
+export async function updateOrderStatusRequest(orderId: string, status: OrderStatus): Promise<Order> {
+  const updated = await courier.patch<Order>(`/api/orders/${orderId}/status`, { body: { status } });
+  courier.invalidateCache(['orders']);
+  return updated;
 }

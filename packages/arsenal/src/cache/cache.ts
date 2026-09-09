@@ -12,6 +12,7 @@ type Entry<T> = {
 export interface Cache<K, T> {
   clear(): void;
   delete(key: K): boolean;
+  entries(): ReadonlyArray<readonly [K, T]>;
   get(key: K): T | undefined;
   getOrLoad(key: K, load: () => Promise<T>): Promise<T>;
   set(key: K, value: T, options?: { ttlMs?: number }): void;
@@ -126,6 +127,10 @@ export function cache<K, T>({ capacity = Infinity, now = Date.now, ttlMs }: Cach
       advanceRevision(key);
 
       return entries.delete(key);
+    },
+    entries: () => {
+      trim();
+      return [...entries].map(([key, entry]) => [key, entry.value] as const);
     },
     get: read,
     getOrLoad,

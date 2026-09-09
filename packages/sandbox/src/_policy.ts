@@ -7,11 +7,14 @@ export interface NormalizedSandboxOptions {
   allowedScriptOrigins: string[];
   allowedStyleOrigins: string[];
   lang: string;
-  namedStyles: Record<string, string>;
   nonce: string | undefined;
+  readyTimeout: number;
   scripts: string[];
+  styles: Record<string, string>;
   title: string;
 }
+
+export const DEFAULT_READY_TIMEOUT_MS = 5000;
 
 const ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
 const LANG = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
@@ -21,7 +24,9 @@ function fail(field: string, value: unknown): never {
   throw new SandboxConfigurationError(`${field} is invalid: ${String(value)}`);
 }
 
-function normalizeOrigin(value: string, field: string): string {
+function normalizeOrigin(value: unknown, field: string): string {
+  if (typeof value !== 'string') return fail(field, value);
+
   let url: URL;
 
   try {
@@ -45,10 +50,15 @@ function normalizeOrigin(value: string, field: string): string {
 }
 
 function normalizeOrigins(values: string[] | undefined, field: string): string[] {
-  return (values ?? []).map((value) => normalizeOrigin(value, field));
+  if (values === undefined) return [];
+  if (!Array.isArray(values)) return fail(field, values);
+
+  return values.map((value) => normalizeOrigin(value, field));
 }
 
-function normalizeScript(value: string): string {
+function normalizeScript(value: unknown): string {
+  if (typeof value !== 'string') return fail('scripts', value);
+
   let url: URL;
 
   try {
@@ -63,10 +73,13 @@ function normalizeScript(value: string): string {
 }
 
 function normalizeStyles(styles: Record<string, string> | undefined): Record<string, string> {
+  if (styles === undefined) return {};
+  if (typeof styles !== 'object' || styles === null || Array.isArray(styles)) return fail('styles', styles);
+
   const normalized: Record<string, string> = {};
 
-  for (const [id, css] of Object.entries(styles ?? {})) {
-    if (!ID.test(id) || typeof css !== 'string') fail('namedStyles', id);
+  for (const [id, css] of Object.entries(styles)) {
+    if (!ID.test(id) || typeof css !== 'string') fail('styles', id);
 
     normalized[id] = css;
   }
@@ -75,6 +88,8 @@ function normalizeStyles(styles: Record<string, string> | undefined): Record<str
 }
 
 export function normalizeSandboxOptions(options: SandboxOptions = {}): NormalizedSandboxOptions {
+  if (typeof options !== 'object' || options === null || Array.isArray(options)) fail('options', options);
+
   const lang = options.lang ?? 'en';
 
   if (!LANG.test(lang)) fail('lang', lang);
@@ -85,6 +100,22 @@ export function normalizeSandboxOptions(options: SandboxOptions = {}): Normalize
 
   if (options.title !== undefined && typeof options.title !== 'string') fail('title', options.title);
 
+  const rawReadyTimeout = options.readyTimeout;
+  const readyTimeout = rawReadyTimeout ?? DEFAULT_READY_TIMEOUT_MS;
+
+  if (
+    rawReadyTimeout !== undefined &&
+    (rawReadyTimeout === null ||
+      typeof rawReadyTimeout !== 'number' ||
+      !Number.isFinite(rawReadyTimeout) ||
+      rawReadyTimeout <= 0 ||
+      rawReadyTimeout > 2 ** 31 - 1)
+  ) {
+    fail('readyTimeout', rawReadyTimeout);
+  }
+
+  if (options.scripts !== undefined && !Array.isArray(options.scripts)) fail('scripts', options.scripts);
+
   const scripts = (options.scripts ?? []).map(normalizeScript);
 
   return {
@@ -93,9 +124,10 @@ export function normalizeSandboxOptions(options: SandboxOptions = {}): Normalize
     allowedScriptOrigins: normalizeOrigins(options.allowedScriptOrigins, 'allowedScriptOrigins'),
     allowedStyleOrigins: normalizeOrigins(options.allowedStyleOrigins, 'allowedStyleOrigins'),
     lang,
-    namedStyles: normalizeStyles(options.namedStyles),
     nonce: options.nonce,
+    readyTimeout,
     scripts,
+    styles: normalizeStyles(options.styles),
     title: options.title ?? '',
   };
 }

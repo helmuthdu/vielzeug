@@ -3,7 +3,6 @@ import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import { createRadialScaffold } from '../../core/chart-scaffold';
-import { resolveMaybeSignal } from '../../core/resolve';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { seriesColor } from '../../theme';
 import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
@@ -18,11 +17,11 @@ function semiAngles(variant: PieChartConfig['variant']): { end: number; start: n
   return variant === 'semi' ? { end: SEMI_END, start: SEMI_START } : { end: TWO_PI, start: 0 };
 }
 
-export function createPieChart(container: HTMLElement, config: PieChartConfig): ChartHandle {
+export function createPieChart(container: HTMLElement, config: PieChartConfig): ChartHandle<PieSliceConfig[]> {
   const variant = config.variant ?? 'pie';
   const padPixels = config.padPixels ?? (variant === 'pie' ? 0 : 8);
   const cornerRadius = config.cornerRadius ?? (variant === 'pie' ? 0 : 8);
-  const dataSignal = resolveMaybeSignal(config.data);
+  let data = config.data;
 
   // Pie SVG elements live directly on the SVG (not inside chartArea groups).
   // We create them once and reuse across renders.
@@ -38,7 +37,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
   let activeRaf: number | null = null;
 
   function renderLabels(slices: PieSliceConfig[]): void {
-    while (labelGroup.children.length > currentArcs.length) labelGroup.removeChild(labelGroup.lastChild!);
+    labelGroup.replaceChildren();
 
     for (let i = 0; i < currentArcs.length; i++) {
       const arc = currentArcs[i];
@@ -47,12 +46,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       if (!slice?.label) continue;
 
       const { x, y } = arcCentroid(arc);
-      let text = labelGroup.children[i] as SVGTextElement | undefined;
-
-      if (!text) {
-        text = createSvgElement('text', { class: 'prism-pie-label' });
-        labelGroup.appendChild(text);
-      }
+      const text = createSvgElement('text', { class: 'prism-pie-label' });
 
       setAttributes(text, {
         'dominant-baseline': 'middle',
@@ -65,10 +59,11 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       });
 
       text.textContent = slice.label;
+      labelGroup.appendChild(text);
     }
   }
 
-  let handle: ReturnType<typeof createRadialScaffold> | undefined;
+  let handle: ChartHandle<PieSliceConfig[]> | undefined;
 
   try {
     handle = createRadialScaffold(
@@ -76,7 +71,6 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       {
         a11y: config.a11y,
         legend: config.legend,
-        plugins: config.plugins,
         tooltip: config.tooltip,
       },
       (ctx): ChartEventHandlers => {
@@ -89,7 +83,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
           svg.appendChild(labelGroup);
         }
 
-        const { height: h, width: w } = ctx.dimensions.value;
+        const { height: h, width: w } = ctx.dimensions;
         const isSemi = variant === 'semi';
         const cx = w / 2;
         const cy = isSemi ? h * 0.85 : h / 2;
@@ -99,7 +93,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
         const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
         const outerR = Math.max(inner + 1, outer);
 
-        const slices = dataSignal.value;
+        const slices = data;
         const { end, start } = semiAngles(variant);
 
         currentArcs = computeArcs(
@@ -121,7 +115,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
         while (pieGroup.children.length > currentArcs.length) pieGroup.removeChild(pieGroup.lastChild!);
 
-        while (labelGroup.children.length > currentArcs.length) labelGroup.removeChild(labelGroup.lastChild!);
+        labelGroup.replaceChildren();
 
         const motion = resolveMotion(config.transition, 0);
         const dur = motion.duration;
@@ -237,6 +231,9 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
         return { onClick, onMouseLeave, onMouseMove };
       },
+      (next) => {
+        data = next;
+      },
     );
 
     return {
@@ -258,6 +255,10 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       },
 
       el: handle!.el,
+
+      update(next) {
+        handle!.update(next);
+      },
 
       [Symbol.dispose]() {
         this.dispose();

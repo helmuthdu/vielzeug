@@ -37,7 +37,6 @@ const user = {
   address: illusion.location.streetAddress(),
 };
 
-illusion.dispose();
 ```
 
 | Feature | Illusionist | Faker.js | @faker-js/faker |
@@ -89,7 +88,6 @@ illusion.internet.email();         // 'samantha.sanchez@mail.com'
 illusion.commerce.price();         // Money { amount: 76640n, currency: USD }
 illusion.date.past({ years: 2 });  // Temporal.ZonedDateTime
 
-illusion.dispose();                // release the instance; [Symbol.dispose]() also works
 ```
 
 ## Features
@@ -114,6 +112,7 @@ illusion.dispose();                // release the instance; [Symbol.dispose]() a
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

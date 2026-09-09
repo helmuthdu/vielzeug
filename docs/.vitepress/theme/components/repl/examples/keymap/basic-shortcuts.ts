@@ -1,12 +1,13 @@
 export const basicShortcutsExample = {
   code: `import { createKeymap, formatShortcut } from '@vielzeug/keymap'
 
-// Create a keymap — bindings fire on keydown by default.
-const map = createKeymap({
-  'ctrl+s': () => console.log('save triggered'),
-  escape:   { handler: () => console.log('close panel'), when: () => true },
-  space:    { handler: () => console.log('toggle play'), trigger: 'keyup' },
-}, { modKey: 'ctrl' })
+// Create a keymap — each binding has an explicit id, shortcut, and handler.
+// Bindings fire on keydown by default; preventDefault defaults to true.
+const map = createKeymap([
+  { id: 'save',   shortcut: 'ctrl+s', handler: () => console.log('save triggered') },
+  { id: 'close',  shortcut: 'escape', handler: () => console.log('close panel'), when: () => true },
+  { id: 'play',   shortcut: 'space',  handler: () => console.log('toggle play'), trigger: 'keyup' },
+], { modKey: 'ctrl' })
 
 // Mount to document (required for event listening).
 const unmount = map.mount(document)

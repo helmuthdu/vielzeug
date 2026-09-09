@@ -16,7 +16,7 @@ import { formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
 import { formatOrderStatus, formatShortDate } from '../../core/format';
 import { t } from '../../core/i18n';
-import { createOrdersSource } from '../../core/inventory-source';
+import { matchOrder } from '../../core/inventory-source';
 import { attemptBulkUpdateOrderStatus, attemptUpdateOrderStatus } from '../../core/order-actions';
 import { allOrdersSignal } from '../../core/orders';
 import { router } from '../../core/router';
@@ -46,9 +46,25 @@ define('admin-view', {
     }
 
     const chartRef = ref<HTMLElement>();
-    const source = createOrdersSource(allOrdersSignal.value);
-    const visibleOrders = signal<Order[]>(allOrdersSignal.value);
-    const pageInfo = signal({ page: 1, pageCount: 1 });
+    const PAGE_SIZE = 25;
+    const searchSignal = signal('');
+    const pageSignal = signal(1);
+
+    const filteredOrders = computed(() => {
+      const orders = allOrdersSignal.value;
+      const search = searchSignal.value;
+
+      return search ? orders.filter((order) => matchOrder(order, search)) : orders;
+    });
+    const pageCount = computed(() => Math.max(1, Math.ceil(filteredOrders.value.length / PAGE_SIZE)));
+    const safePage = computed(() => Math.min(pageSignal.value, pageCount.value));
+    const visibleOrders = computed(() => {
+      const start = (safePage.value - 1) * PAGE_SIZE;
+
+      return filteredOrders.value.slice(start, start + PAGE_SIZE);
+    });
+    const pageInfo = computed(() => ({ page: safePage.value, pageCount: pageCount.value }));
+
     const statusOptions = computed(() =>
       STATUS_VALUES.map((status) => ({ label: formatOrderStatus(status), value: status })),
     );
@@ -60,13 +76,6 @@ define('admin-view', {
     const bulkStatus = signal<OrderStatus>('processing');
 
     let chartHandle: ChartHandle | null = null;
-
-    function syncSource(): void {
-      const snapshot = source.snapshot;
-
-      visibleOrders.value = [...snapshot.data];
-      pageInfo.value = { page: snapshot.pagination.index, pageCount: snapshot.pagination.count };
-    }
 
     onMounted(() => {
       const chartContainer = chartRef.value!;
@@ -88,22 +97,17 @@ define('admin-view', {
           chartHandle?.dispose();
           chartHandle = createBarChart(chartContainer, config);
         });
-
-        source.setData(allOrdersSignal.value);
       });
-
-      source.subscribe(syncSource);
-      syncSource();
 
       onCleanup(() => {
         stop.dispose();
         chartHandle?.dispose();
-        source.dispose();
       });
     });
 
     const onSearch = (event: Event): void => {
-      source.setQuery({ search: controlValue(event) ?? '' });
+      searchSignal.value = controlValue(event) ?? '';
+      pageSignal.value = 1;
     };
 
     const onStatusChange = (order: Order, event: Event): void => {
@@ -210,9 +214,13 @@ define('admin-view', {
         () => pageInfo.value.pageCount > 1,
         () => html`
           <div class="admin__pagination">
-            <ore-button rounded size="sm" variant="bordered" @click=${() => source.page.previous()}>← Prev</ore-button>
+            <ore-button rounded size="sm" variant="bordered" @click=${() => {
+              pageSignal.value = safePage.value - 1;
+            }}>← Prev</ore-button>
             <span>${() => `Page ${pageInfo.value.page} / ${pageInfo.value.pageCount}`}</span>
-            <ore-button rounded size="sm" variant="bordered" @click=${() => source.page.next()}>Next →</ore-button>
+            <ore-button rounded size="sm" variant="bordered" @click=${() => {
+              pageSignal.value = safePage.value + 1;
+            }}>Next →</ore-button>
           </div>
         `,
       )}

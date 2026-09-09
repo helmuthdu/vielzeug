@@ -1,6 +1,7 @@
 import type {
   AnySchema,
   CheckContext,
+  InferInput,
   InferOutput,
   InferSchemaMode,
   Issue,
@@ -20,7 +21,7 @@ export class MapSchema<
   K extends AnySchema,
   V extends AnySchema,
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<K | V>>,
-> extends Schema<Map<InferOutput<K>, InferOutput<V>>, unknown, Mode> {
+> extends Schema<Map<InferOutput<K>, InferOutput<V>>, Map<InferInput<K>, InferInput<V>>, Mode> {
   readonly keySchema: K;
   readonly valueSchema: V;
 

@@ -13,12 +13,12 @@ export type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
 /**
  * Native Web Animations timing options with Necromancer's ownership controls.
  *
- * `duration` defaults to `180` milliseconds. `motion` defaults to `'system'`.
- * `signal` disposes the returned handle when aborted.
+ * `motion` defaults to `'system'`. `signal` disposes the returned handle when aborted.
  *
  * Deliberately extends native `KeyframeAnimationOptions` in full rather than a narrower,
  * Necromancer-specific timing type: every native field (`easing`, `fill`, `iterations`, a
- * string `delay`/`duration`, etc.) reaches `element.animate()` unchanged. Callers already
+ * string `delay`/`duration`, etc.) reaches `element.animate()` unchanged unless reduced motion
+ * normalizes timing. Callers already
  * fluent in the Web Animations API bring that knowledge here directly, instead of learning
  * a second, smaller timing vocabulary — the option chain below only ever *adds* ownership
  * fields on top, never narrows what's already native.
@@ -26,20 +26,19 @@ export type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
  * Option chain: `AnimateOptions` -> `AnimateEachOptions` (+`stagger`) -> `LayoutAnimationOptions`
  * (+`elements`). Each layer's implementation module strips only the field it added before
  * forwarding the rest down (see `animate-each.ts`, `layout.ts`, and `_motion.ts`'s
- * `resolveAnimationOptions()`, which is the last stop and strips `interrupt`/`motion`/`signal`).
+ * `resolveAnimationOptions()`, which is the last stop and strips `motion`/`signal`).
  */
 export type AnimateOptions = KeyframeAnimationOptions & {
-  /**
-   * Cancels every active Necromancer-owned animation on the element as this
-   * animation begins. Native animations owned outside Necromancer are untouched.
-   */
-  readonly interrupt?: 'cancel';
   readonly motion?: MotionMode;
   readonly signal?: AbortSignal;
 };
 
 /** Produces keyframes for an element at a stable position in an animation group. */
-export type KeyframeFactory = (element: Element, index: number, total: number) => Keyframes;
+export type KeyframeFactory<ElementType extends Element = Element> = (
+  element: ElementType,
+  index: number,
+  total: number,
+) => Keyframes;
 
 /** Options for animating a group of elements. */
 export type AnimateEachOptions = AnimateOptions & {
@@ -48,18 +47,18 @@ export type AnimateEachOptions = AnimateOptions & {
 };
 
 /** Options for animating positional layout changes captured by {@link captureLayout}. */
-export type LayoutAnimationOptions = AnimateEachOptions & {
+export type LayoutAnimationOptions<ElementType extends Element = Element> = AnimateEachOptions & {
   /**
    * Elements in their committed layout. With {@link LayoutCaptureOptions.getKey},
    * replacement elements match their captured predecessors by key.
    */
-  readonly elements?: Iterable<Element>;
+  readonly elements?: Iterable<ElementType>;
 };
 
 /** Options for capturing positional layout changes. */
-export interface LayoutCaptureOptions {
+export interface LayoutCaptureOptions<ElementType extends Element = Element> {
   /** Maps an element to its stable, non-empty identity across a DOM replacement. */
-  readonly getKey?: (element: Element) => string;
+  readonly getKey?: (element: ElementType) => string;
 }
 
 /** A lifecycle-owned native Web Animation. */
@@ -91,12 +90,12 @@ export interface AnimationGroup {
 }
 
 /** A one-shot positional layout transition returned by {@link captureLayout}. */
-export interface LayoutTransition {
+export interface LayoutTransition<ElementType extends Element = Element> {
   /**
    * Measures the current layout and animates elements from their captured positions.
    *
    * Omit `options.elements` to animate the captured elements, or supply the
    * committed replacements when the transition was captured with `getKey`.
    */
-  animate(options?: LayoutAnimationOptions): AnimationGroup;
+  animate(options?: LayoutAnimationOptions<ElementType>): AnimationGroup;
 }

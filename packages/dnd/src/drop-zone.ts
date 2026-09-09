@@ -1,5 +1,7 @@
-import { createDisposable, resolveDisabled } from './_shared';
-import type { Disposable } from './types';
+import { warn } from './_dev.js';
+import { createDisposable, resolveDisabled } from './_shared.js';
+import { DndError } from './errors.js';
+import type { Disposable } from './types.js';
 
 // ─── Accept matching ─────────────────────────────────────────────────────────
 
@@ -13,17 +15,18 @@ import type { Disposable } from './types';
  *
  * An empty list accepts everything.
  */
-export function matchesAccept(file: File, accept: string[]): boolean {
+export function matchesAccept(file: File, accept: readonly string[]): boolean {
   if (!accept.length) return true;
 
   return accept.some((pattern) => {
-    const p = pattern.trim();
+    const p = pattern.trim().toLowerCase();
+    const type = file.type.toLowerCase();
 
-    if (p.startsWith('.')) return file.name.toLowerCase().endsWith(p.toLowerCase());
+    if (!p) return false;
+    if (p.startsWith('.')) return file.name.toLowerCase().endsWith(p);
+    if (p.endsWith('/*')) return type.startsWith(p.slice(0, -1));
 
-    if (p.endsWith('/*')) return file.type.startsWith(p.slice(0, -1));
-
-    return file.type === p;
+    return type === p;
   });
 }
 
@@ -38,7 +41,7 @@ export interface DropZoneOptions {
    *
    * When empty the zone accepts everything.
    */
-  accept?: string[];
+  accept?: readonly string[];
   /**
    * When `true`, all drag events are ignored and hover state does not change.
    *
@@ -107,7 +110,7 @@ export interface DropZoneOptions {
    */
   onValidatingChange?: (validating: boolean) => void;
   /**
-   * When `true`, a `paste` event listener is added to `window`. Pasted files run
+   * When `true`, a `paste` event listener is added to the drop-zone element. Pasted files run
    * through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.
    * @default false
    */
@@ -176,6 +179,30 @@ function applyFileFilters(
 
 // ─── createDropZone ───────────────────────────────────────────────────────────
 
+function normalizeAccept(patterns: readonly string[]): string[] {
+  return patterns.map((pattern) => {
+    const normalized = pattern.trim().toLowerCase();
+    const extension = /^\.[a-z0-9][a-z0-9._+-]*$/.test(normalized);
+    const mime = /^[a-z0-9!#$&^_.+-]+\/(?:\*|[a-z0-9!#$&^_.+-]+)$/.test(normalized);
+
+    if (!extension && !mime) throw new DndError(`Invalid accept pattern: "${pattern}"`);
+    return normalized;
+  });
+}
+
+function notify<Args extends unknown[]>(
+  name: string,
+  callback: ((...args: Args) => void) | undefined,
+  ...args: Args
+): void {
+  if (!callback) return;
+  try {
+    callback(...args);
+  } catch {
+    warn(`${name} callback failed; Dnd continued without interrupting internal state.`);
+  }
+}
+
 /**
  * Attach drag-and-drop behaviour to a DOM element.
  *
@@ -198,16 +225,12 @@ function applyFileFilters(
  * ```
  */
 export function createDropZone(options: DropZoneOptions): DropZone {
-  const {
-    accept = [],
-    dropEffect = 'copy',
-    element,
-    maxFiles,
-    onDrop,
-    onDropRejected,
-    onHoverChange,
-    onValidatingChange,
-  } = options;
+  const accept = normalizeAccept(options.accept ?? []);
+  if (options.maxFiles !== undefined && (!Number.isSafeInteger(options.maxFiles) || options.maxFiles < 0)) {
+    throw new DndError('maxFiles must be a non-negative safe integer');
+  }
+
+  const { dropEffect = 'copy', element, maxFiles, onDrop, onDropRejected, onHoverChange, onValidatingChange } = options;
 
   let dragCounter = 0;
   // Whether the *current* drag's payload passes the accept filter.
@@ -220,7 +243,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     if (validating === next) return;
 
     validating = next;
-    onValidatingChange?.(next);
+    notify('onValidatingChange', onValidatingChange, next);
   };
 
   const updateCounter = (next: number): void => {
@@ -233,7 +256,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     const hovered = dragCounter > 0 && dragAccepted;
 
-    if (hovered !== wasHovered) onHoverChange?.(hovered);
+    if (hovered !== wasHovered) notify('onHoverChange', onHoverChange, hovered);
   };
 
   const resetCounter = (): void => {
@@ -244,27 +267,27 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     for (const controller of validationControllers) controller.abort();
 
     validationControllers.clear();
+    setValidating(false);
     resetCounter();
   });
 
   // Settle the final accepted/rejected split and fire callbacks.
   const settle = (acceptedFiles: File[], rejectedFiles: File[]): void => {
-    if (acceptedFiles.length > 0) onDrop?.(acceptedFiles);
-
-    if (rejectedFiles.length > 0) onDropRejected?.(rejectedFiles);
+    if (acceptedFiles.length > 0) notify('onDrop', onDrop, [...acceptedFiles]);
+    if (rejectedFiles.length > 0) notify('onDropRejected', onDropRejected, [...rejectedFiles]);
   };
 
   // Settle for paste events (which may use onPaste instead of onDrop).
   const settleForPaste = (acceptedFiles: File[], rejectedFiles: File[]): void => {
     if (acceptedFiles.length > 0) {
       if (options.onPaste) {
-        options.onPaste(acceptedFiles);
+        notify('onPaste', options.onPaste, [...acceptedFiles]);
       } else {
-        onDrop?.(acceptedFiles);
+        notify('onDrop', onDrop, [...acceptedFiles]);
       }
     }
 
-    if (rejectedFiles.length > 0) onDropRejected?.(rejectedFiles);
+    if (rejectedFiles.length > 0) notify('onDropRejected', onDropRejected, [...rejectedFiles]);
   };
 
   // Run accept/maxFiles filter, then async onValidate, then settle.
@@ -290,31 +313,31 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     try {
       validation =
-        validationController && onValidate ? onValidate(accepted, { signal: validationController.signal }) : true;
+        validationController && onValidate ? onValidate([...accepted], { signal: validationController.signal }) : true;
     } catch (error) {
       validation = Promise.reject(error);
     }
 
-    void Promise.resolve(validation)
-      .then((valid) => {
+    void Promise.resolve(validation).then(
+      (valid) => {
         finishValidation();
 
         if (disposable.disposed) return;
 
-        if (valid) {
+        if (valid === true) {
           settleFn(accepted, rej);
         } else {
-          // validation failed — all type-accepted files become rejected
           settleFn([], [...rej, ...accepted]);
         }
-      })
-      .catch(() => {
+      },
+      () => {
         finishValidation();
 
         if (disposable.disposed) return;
 
         settleFn([], [...rej, ...accepted]);
-      });
+      },
+    );
   };
 
   const handleDragEnter = (e: DragEvent): void => {
@@ -384,7 +407,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   element.addEventListener('dragleave', handleDragLeave, { signal: disposable.disposalSignal });
   element.addEventListener('drop', handleDrop, { signal: disposable.disposalSignal });
 
-  if (options.paste) window.addEventListener('paste', handlePaste, { signal: disposable.disposalSignal });
+  if (options.paste) element.addEventListener('paste', handlePaste, { signal: disposable.disposalSignal });
 
   // These global listeners catch drags that end outside the zone.
   // The window 'drop' also fires for in-zone drops, but resetCounter() is idempotent at counter=0.

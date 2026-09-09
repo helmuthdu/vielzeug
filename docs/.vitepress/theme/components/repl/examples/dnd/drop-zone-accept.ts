@@ -1,5 +1,5 @@
 export const dropZoneAcceptExample = {
-  code: `import { createDropZone } from '@vielzeug/dnd'
+  code: `import { createDropZone } from '@vielzeug/dnd/drop'
 
 const app = document.createElement('div')
 app.style.cssText = 'display:flex;flex-direction:column;gap:12px;align-items:flex-start;'

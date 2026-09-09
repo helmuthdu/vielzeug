@@ -2,7 +2,7 @@ import { restoreFocus } from '@vielzeug/focus';
 import type { Placement } from '@vielzeug/orbit';
 import {
   bind,
-  createStableId,
+  createId,
   define,
   getHost,
   html,
@@ -238,7 +238,7 @@ define<OreMenuProps>(MENU_TAG, {
     const slots = useSlots();
     const watch = watchEffect;
 
-    const menuId = createStableId('menu');
+    const menuId = createId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const abortSignal = lifecycleSignal(onCleanup);
     let triggerEl: HTMLElement | null = null;
@@ -471,11 +471,11 @@ define<OreMenuProps>(MENU_TAG, {
       const cleanups: Array<() => void> = [];
       const removeAria = bind(
         {
-          aria: {
-            controls: () => menuId,
-            disabled: () => isDisabled.value,
-            expanded: () => String(isOpenSignal.value),
-            haspopup: 'menu',
+          attr: {
+            'aria-controls': () => menuId,
+            'aria-disabled': () => isDisabled.value,
+            'aria-expanded': () => String(isOpenSignal.value),
+            'aria-haspopup': 'menu',
           },
         },
         { target: triggerEl },

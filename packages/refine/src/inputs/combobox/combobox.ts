@@ -23,13 +23,41 @@ import {
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
-import type { ComboboxOptionInput, ComboboxOptionItem, OreComboboxEvents, OreComboboxProps } from './combobox.types';
+import type {
+  ComboboxOptionInput,
+  ComboboxOptionItem,
+  OreComboboxEvents,
+  OreComboboxOptionProps,
+  OreComboboxProps,
+} from './combobox.types';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
 import '../input/input';
 import componentStyles from './combobox.css?inline';
 
-export type { OreComboboxEvents, OreComboboxProps } from './combobox.types';
+export type {
+  ComboboxOptionInput,
+  OreComboboxEvents,
+  OreComboboxOptionProps,
+  OreComboboxProps,
+} from './combobox.types';
+
+/**
+ * Declarative option data for `ore-combobox`.
+ *
+ * @element ore-combobox-option
+ * @attr {string} value - Submitted option value
+ * @attr {string} label - Label override; defaults to text content
+ * @attr {boolean} disabled - Prevent selection
+ * @attr {string} disabled-reason - Explanation shown for a disabled option
+ * @slot icon - Leading option icon
+ */
+export const COMBOBOX_OPTION_TAG = 'ore-combobox-option' as const;
+define<OreComboboxOptionProps>(COMBOBOX_OPTION_TAG, {
+  setup() {
+    return html``;
+  },
+});
 
 /**
  * A searchable select field with multiple selection, custom option creation, and large-list support.

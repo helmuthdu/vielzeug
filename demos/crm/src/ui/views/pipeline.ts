@@ -8,7 +8,7 @@ import '@vielzeug/refine/progress';
 import '@vielzeug/refine/stats';
 import '@vielzeug/refine/tab-item';
 import '@vielzeug/refine/tabs';
-import { createSortable, createSortableScope } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 import { define, each, html, onCleanup, onMounted, ref, when } from '@vielzeug/ore';
 import { createSparkline } from '@vielzeug/prism';
 import { computed, effect, signal } from '@vielzeug/ripple';
@@ -91,7 +91,7 @@ define('crm-pipeline-view', {
     const stageChangeCount = computed(() => stageChangeTrend.value.reduce((total, count) => total + count, 0));
     const recentChanges = computed(() => stageChanges.value.slice(0, 12));
     onMounted(() => {
-      const handlers = new Map<HTMLElement, (ids: string[]) => void>();
+      const handlers = new Map<HTMLElement, (ids: readonly string[]) => void>();
       const scope = createSortableScope({
         onMove: ({ target, targetIds }) => handlers.get(target)?.(targetIds),
         touch: true,
@@ -100,11 +100,12 @@ define('crm-pipeline-view', {
         a11y: { decorative: true },
         color: 'var(--signal-teal)',
         curve: 'monotone',
-        data: stageChangeTrend,
+        data: stageChangeTrend.value,
         strokeWidth: 2,
         variant: 'area',
       });
-      const handles: Array<{ dispose(): void; sync(): void }> = [];
+      const stopChartUpdates = stageChangeTrend.subscribe(() => stageChangeHandle.update(stageChangeTrend.value));
+      const handles: Array<{ dispose(): void; refresh(): void }> = [];
       const currentIds = new Map<OpportunityStage, Set<string>>();
       const columns = new Map<OpportunityStage, HTMLElement>();
       for (const stage of stages) {
@@ -133,7 +134,7 @@ define('crm-pipeline-view', {
         for (const stage of stages)
           currentIds.set(stage.id, new Set(opportunitiesByStage(stage.id).map((item) => item.id)));
         queueMicrotask(() => {
-          for (const handle of handles) handle.sync();
+          for (const handle of handles) handle.refresh();
         });
       });
       const reconcile = (): void => {
@@ -143,6 +144,7 @@ define('crm-pipeline-view', {
       onCleanup(() => {
         document.removeEventListener('dragend', reconcile);
         stageChangeHandle.dispose();
+        stopChartUpdates();
         stop.dispose();
         scope.dispose();
       });

@@ -9,17 +9,17 @@ export {
   add,
   clamp,
   compare,
+  decodeMoney,
   divide,
   isMoney,
   money,
   multiply,
   negate,
-  parseMoney,
   round,
   subtract,
   toDecimal,
 } from './money';
-export { parseMoneyJSON, toJSON } from './serialization';
+export { toJSON } from './serialization';
 export type {
   Currency,
   CurrencyCode,

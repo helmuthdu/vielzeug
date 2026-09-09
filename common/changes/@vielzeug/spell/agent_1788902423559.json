@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: simplify the public schema API and add Standard Schema v1 interoperability",
+      "packageName": "@vielzeug/spell",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

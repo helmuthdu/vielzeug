@@ -1,7 +1,7 @@
 import {
   bind,
   createContext,
-  createStableId,
+  createId,
   define,
   getHost,
   html,
@@ -268,7 +268,7 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
       },
     });
 
-    const legendId = createStableId('radio-group-legend');
+    const legendId = createId('radio-group-legend');
 
     return html`
       <fieldset

@@ -1,18 +1,19 @@
-import { table, ttl, type VaultStore } from '../index';
+import { deleteMany, type KeyValueVaultStore, table, ttl, validatorCodec } from '../index';
 import { createSessionStorage } from '../session-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
 const userSchema = { users: table<User>('id') };
+const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 describe('SessionStorage adapter', () => {
-  let db: VaultStore<typeof userSchema>;
+  let db: KeyValueVaultStore<typeof userSchema>;
 
   beforeEach(() => {
     sessionStorage.clear();
-    db = createSessionStorage({ name: 'SS', schema: userSchema });
+    db = createSessionStorage({ codecs, name: 'SS', schema: userSchema });
   });
 
   test('put/get and delete roundtrip', async () => {
@@ -35,18 +36,13 @@ describe('SessionStorage adapter', () => {
     expect(sessionStorage.getItem('SS~other~1')).not.toBeNull();
   });
 
-  test('query.delete removes matching records', async () => {
+  test('deleteMany removes matching records (derived helper)', async () => {
     await db.putAll('users', [
       { age: 20, id: 1, name: 'Alice' },
       { age: 30, id: 2, name: 'Bob' },
     ]);
 
-    expect(
-      await db
-        .query('users')
-        .filter((u) => (u.age ?? 0) >= 30)
-        .delete(),
-    ).toBe(1);
+    expect(await deleteMany(db, 'users', [2])).toBe(1);
     expect(await db.getAll('users')).toEqual([{ age: 20, id: 1, name: 'Alice' }]);
   });
 
@@ -55,11 +51,10 @@ describe('SessionStorage adapter', () => {
     await delay(5);
 
     expect(await db.get('users', 1)).toBeUndefined();
-    expect(await db.has('users', 1)).toBe(false);
   });
 
   test('instances sharing the same namespace can read each other writes', async () => {
-    const db2 = createSessionStorage({ name: 'SS', schema: userSchema });
+    const db2 = createSessionStorage({ codecs, name: 'SS', schema: userSchema });
 
     await db.put('users', { id: 1, name: 'Alice' });
 

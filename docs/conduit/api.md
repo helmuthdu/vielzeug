@@ -1,6 +1,6 @@
 ---
 title: Conduit — API Reference
-description: Reference for Conduit tokens, dependency-first factories, scopes, validation, and lifecycle disposal.
+description: Reference for Conduit tokens, immutable provider arrays, dependency-first factories, scopes, composition-root resolution, and lifecycle disposal.
 ---
 
 [[toc]]
@@ -11,12 +11,11 @@ description: Reference for Conduit tokens, dependency-first factories, scopes, v
 | --- | --- | --- | --- |
 | `token` | Create typed dependency identity | Sync | Same description does not mean same token |
 | `scope` | Create named lifecycle identity | Sync | Must match factory lifetime |
-| `createContainer` | Create root registry | Sync | Dispose when application ends |
-| `value` | Register an existing value | Sync | One registration per token/container |
-| `factory` | Register static dependency factory | Sync | Tuple is copied and authoritative |
+| `createContainer` | Build root container from an immutable provider array | Sync | Validates the full graph at construction |
+| `valueProvider` / `factoryProvider` | Build type-safe immutable registrations | Sync | Prefer over unannotated object literals |
+| `Provider` | Value or factory registration type | Sync | One local registration per token |
 | `has` | Check registration visibility | Sync | Walks parent containers |
-| `resolve` | Resolve one dependency | Async | Missing provider throws |
-| `validate` | Validate static graph | Sync | Run after registration |
+| `resolve` | Resolve one token or typed composition-root map | Async | Undeclared map tokens fail at resolution |
 | `createScope` | Create child owner | Sync | Named scope required for scoped factories |
 | `dispose` | Release owned resources | Async | May throw `ConduitDisposeError` after cleanup attempts |
 
@@ -33,21 +32,55 @@ token<T>(description: string): Token<T>
 scope(name: string): ScopeToken
 ```
 
-Tokens and scopes are unique symbols. Descriptions exist only for diagnostics.
+Tokens and scopes are unique symbols. Descriptions exist only for diagnostics. `disposalSignalToken` is a built-in `Token<AbortSignal>` that resolves to the owning root, transient-requesting container, or named scope signal.
 
 ## Container
 
 ```ts
-createContainer(options?: { name?: string }): Container
+createContainer(providers: readonly Provider[], options?: { name?: string }): Container
 ```
 
-### value
+`providers` is an immutable array of value and factory providers. Construction validates the entire graph — duplicate tokens, missing dependencies, circular factory tuples, and singletons depending on scoped factories all fail fast.
+
+### Providers
 
 ```ts
-container.value(token, value, options?)
+type Provider<T, Dependencies> = ValueProvider<T> | FactoryProvider<T, Dependencies>;
+
+valueProvider<T>(token: Token<T>, value: T, options?: ValueOptions<T>): ValueProvider<T>;
+factoryProvider<T, Dependencies>(
+  token: Token<T>,
+  dependencies: Dependencies,
+  factory: (...values: InferTokens<Dependencies>) => Promise<T> | T,
+  options?: FactoryOptions<T>,
+): FactoryProvider<T, Dependencies>;
 ```
 
-`options.dispose` runs during container disposal.
+Use builders for token-driven value and dependency inference:
+
+```ts
+valueProvider(Config, { baseUrl: '/api' }, { dispose: (value) => value.close() });
+factoryProvider(Service, [Api, Logger], (api, logger) => createService(api, logger), {
+  lifetime: 'singleton',
+  dispose: (value) => value.dispose(),
+});
+```
+
+Explicit `ValueProvider<T>` and `FactoryProvider<T, Dependencies>` annotations remain available for reusable provider declarations. Avoid unannotated provider object literals because TypeScript cannot contextually infer one factory parameter from another object property.
+
+`dependencies` is copied at construction and drives creation, validation, cycle detection, and teardown order. Factories may return a value or promise.
+
+`lifetime` accepts `'singleton'` (default), `'transient'`, or a `ScopeToken`. Singletons cannot capture transient or scoped factories. Named-scope factories may depend on singletons, transients, or factories in the same named scope.
+
+```ts
+type FactoryProvider<T, Dependencies> = {
+  token: Token<T>;
+  dependencies: Dependencies;
+  factory: (...values: InferTokens<Dependencies>) => Promise<T> | T;
+  dispose?: (value: T) => void | Promise<void>;
+  lifetime?: 'singleton' | 'transient' | ScopeToken;
+};
+```
 
 ### has
 
@@ -57,50 +90,31 @@ container.has(token): boolean
 
 Checks local and parent registrations without creating a factory result.
 
-### factory
-
-```ts
-container.factory(token, dependencies, create, options?)
-```
-
-```ts
-container.factory(Service, [Api, Logger], (api, logger) => createService(api, logger));
-```
-
-`dependencies` is copied at registration and drives creation, validation, cycle detection, and teardown order. Factories may return a value or promise.
-
-`options.lifetime` accepts `'singleton'`, `'transient'`, or `ScopeToken`. A singleton cannot depend on a scoped resource.
-
-```ts
-type FactoryOptions<T> = {
-  dispose?: (value: T) => void | Promise<void>;
-  lifetime?: 'singleton' | 'transient' | ScopeToken;
-};
-```
-
 ### resolve
 
 ```ts
-container.resolve(token): Promise<T>
+container.resolve(token: Token<T>): Promise<T>
+container.resolve(map: ServiceMap): Promise<InferServices<typeof map>>
 ```
 
-Singleton resolutions deduplicate concurrent callers.
-
-### validate
+Resolves one typed token or a service object at a composition root. Map keys are defined as own properties, including `__proto__`, without changing the result prototype. Missing top-level tokens fail during resolution.
 
 ```ts
-container.validate(): Container
+const services = await container.resolve({ client: Client, config: Config });
 ```
 
-Throws for missing dependencies and circular factory tuples.
+Singleton resolutions deduplicate concurrent callers and cache successful values. A rejected creation attempt is evicted so a later resolution can retry.
 
 ### createScope
 
 ```ts
-container.createScope(scope?: ScopeToken, options?: { name?: string }): Container
+container.createScope(
+  scope?: ScopeToken,
+  options?: { name?: string; providers?: readonly Provider[] },
+): Container
 ```
 
-A matching scope owns resources registered with its `ScopeToken` lifetime. Disposing a parent also disposes its active child scopes.
+A matching scope owns resources registered with its `ScopeToken` lifetime. Immutable local providers may shadow parent registrations for request or test overrides. Disposing a parent also disposes active children.
 
 ### dispose
 
@@ -110,7 +124,7 @@ container.disposalSignal: AbortSignal
 container.disposed: boolean
 ```
 
-Disposal blocks new work, aborts `disposalSignal`, disposes active child scopes, waits for in-flight creation, then disposes owned resources in reverse creation order. Cleanup failures are aggregated in `ConduitDisposeError.errors`.
+Disposal blocks new work, aborts `disposalSignal`, disposes active child scopes, waits for complete in-flight creation and late-result cleanup, then disposes owned resources in reverse creation order. Cleanup failures are aggregated in the readonly `ConduitDisposeError.errors` array.
 
 ## Types
 
@@ -119,35 +133,25 @@ type Token<T = unknown> = symbol;
 type ScopeToken = symbol;
 type Lifetime = 'singleton' | 'transient' | ScopeToken;
 
-type ValueOptions<T> = Readonly<{
-  dispose?: (value: T) => Promise<void> | void;
-}>;
-
-type FactoryOptions<T> = Readonly<{
-  dispose?: (value: T) => Promise<void> | void;
-  lifetime?: Lifetime;
-}>;
-
 type InferTokens<T extends readonly Token<unknown>[]> = {
   [K in keyof T]: T[K] extends Token<infer Value> ? Value : never;
 };
 
+type ServiceMap = { readonly [key: string]: Token<unknown> };
+
+type InferServices<M extends ServiceMap> = {
+  readonly [K in keyof M]: M[K] extends Token<infer Value> ? Value : never;
+};
+
 interface Container {
-  createScope(scope?: ScopeToken, options?: { name?: string }): Container;
+  createScope(scope?: ScopeToken, options?: { name?: string; providers?: readonly Provider[] }): Container;
   readonly disposalSignal: AbortSignal;
   dispose(): Promise<void>;
   readonly disposed: boolean;
-  factory<T, Dependencies extends readonly Token<unknown>[]>(
-    token: Token<T>,
-    dependencies: Dependencies,
-    create: (...values: InferTokens<Dependencies>) => Promise<T> | T,
-    options?: FactoryOptions<T>,
-  ): this;
   has<T>(token: Token<T>): boolean;
   readonly name: string;
   resolve<T>(token: Token<T>): Promise<T>;
-  validate(): this;
-  value<T>(token: Token<T>, value: T, options?: ValueOptions<T>): this;
+  resolve<M extends ServiceMap>(map: M): Promise<InferServices<M>>;
   [Symbol.asyncDispose](): Promise<void>;
 }
 ```
@@ -158,6 +162,6 @@ interface Container {
 - `ConduitProviderNotFoundError` — dependency has no registration.
 - `ConduitCircularDependencyError` — static factory tuple graph contains a cycle.
 - `ConduitDuplicateRegistrationError` — token registered twice in one container.
-- `ConduitScopedResolutionError` — scoped factory resolved without matching scope.
+- `ConduitScopedResolutionError` — scoped factory resolved without matching scope, or a singleton depends on a scoped factory.
 - `ConduitDisposedError` — operation attempted after disposal began.
 - `ConduitDisposeError` — one or more cleanup hooks failed.

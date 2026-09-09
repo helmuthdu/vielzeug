@@ -6,6 +6,6 @@ const email = form.field('account').field('email')
 
 email.set('ada@example.com')
 console.log(form.value)
-console.log(form.state.valid)`,
+console.log(form.state.validity)`,
   name: 'Create Immutable Form',
 };

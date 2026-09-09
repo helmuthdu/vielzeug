@@ -1,20 +1,18 @@
 export const wildcardPermissionsExample = {
-  code: `import { WILDCARD, allow, createWard } from '@vielzeug/ward'
+  code: `import { WILDCARD, createWard } from '@vielzeug/ward'
 
+// Wildcards match any action or resource
 const ward = createWard([
-  allow('admin', WILDCARD, [WILDCARD]),
-  allow('user',  'posts',  ['read']),
+  { action: WILDCARD, resource: WILDCARD, effect: 'allow', condition: ({ principal }) => principal?.roles.includes('admin') ?? false },
+  { action: 'read',   resource: WILDCARD, effect: 'allow' },
+  { action: WILDCARD, resource: WILDCARD, effect: 'deny' },
 ])
 
-const admin = { id: '1', roles: ['admin'] }
-const user  = { id: '2', roles: ['user'] }
+const admin  = { id: 'u1', roles: ['admin'] }
+const viewer = { id: 'u2', roles: ['viewer'] }
 
-const can = (p: typeof admin, resource: string, action: string) =>
-  ward.explain({ action, principal: p, resource }).allowed
-
-console.log('Admin can delete users:', can(admin, 'users', 'delete'))
-console.log('User can read posts:',    can(user,  'posts', 'read'))
-console.log('User can delete posts:',  can(user,  'posts', 'delete'))
-console.log('Known actions for admin:', ward.allowedActions({ knownActions: ['read', 'delete', 'archive'], principal: admin, resource: 'users' }))`,
-  name: 'Wildcard Rules',
+console.log('admin  anything:', ward.decide({ action: 'delete', principal: admin,  resource: 'users' }).effect) // allow
+console.log('viewer read:    ', ward.decide({ action: 'read',   principal: viewer, resource: 'posts' }).effect) // allow
+console.log('viewer delete:  ', ward.decide({ action: 'delete', principal: viewer, resource: 'posts' }).effect) // deny`,
+  name: 'Wildcard Permissions',
 };

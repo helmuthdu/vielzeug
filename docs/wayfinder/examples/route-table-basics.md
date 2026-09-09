@@ -35,19 +35,18 @@ const routes = {
   userDetail: {
     path: '/users/:id',
     data: async ({ params }) => fetchUser(params.id),
-    meta: { title: 'User' },
   },
 };
 
 const router = createRouter({
   routes,
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 // React to navigation:
 router.subscribe((state) => {
   const leaf = state.matches.at(-1);
-  render(leaf?.component, leaf?.data);
+  render(leaf?.name, leaf?.data);
 });
 
 await router.navigate({ name: 'userDetail', params: { id: '42' } });

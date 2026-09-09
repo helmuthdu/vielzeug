@@ -43,7 +43,6 @@ describe('describe() — primitive kinds', () => {
   it('bigint', () => expect(s.bigint().definition()).toMatchObject({ kind: 'bigint' }));
   it('date', () => expect(s.date().definition()).toMatchObject({ kind: 'date' }));
   it('never', () => expect(s.never().definition()).toMatchObject({ kind: 'never' }));
-  it('any', () => expect(s.any().definition()).toMatchObject({ kind: 'any' }));
   it('lazy', () => expect(s.lazy(() => s.string()).definition()).toMatchObject({ kind: 'lazy' }));
   it('instanceof', () => expect(s.instanceof(Date).definition()).toMatchObject({ kind: 'instanceof' }));
   it('literal string', () => expect(s.literal('hi').definition()).toMatchObject({ kind: 'literal', value: 'hi' }));

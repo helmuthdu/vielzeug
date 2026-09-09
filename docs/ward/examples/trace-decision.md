@@ -1,47 +1,32 @@
 ---
-title: 'Ward Examples — Trace a Decision'
-description: 'Inspect competing Ward rules and the winning authorization decision.'
+title: 'Ward Examples — Explain a Decision'
+description: 'Use deterministic decision reasons to diagnose policy order.'
 ---
 
-## Trace a Decision
+## Explain a Decision
 
 ### Problem
 
-Diagnose why a policy allowed or denied a request when several rules appear relevant.
+A denied request needs a deterministic diagnostic explanation.
 
 ### Solution
 
-Use `trace()` to inspect the decision and every candidate rule without firing a decision event.
+`decide()` returns the matched rule and a deterministic reason.
 
 ```ts
-import { createWard } from '@vielzeug/ward';
-
-const ward = createWard([
-  { role: '*', resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
-  { role: 'editor', resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
-  { role: 'blocked', resource: 'posts', action: 'read', effect: 'deny', priority: 5 },
-]);
-
-const { decision, candidates } = ward.trace({
-  principal: { id: 'u1', roles: ['editor', 'blocked'] },
-  resource: 'posts',
+const decision = ward.decide({
   action: 'read',
+  principal: { id: 'u1', roles: ['blocked'] },
+  resource: 'posts',
 });
 
-candidates.forEach((candidate) => {
-  console.log(candidate.index, candidate.rule.effect, candidate.priority, candidate.score, candidate.won);
-});
-
-console.log(decision.allowed ? 'allow' : decision.reason);
+console.log(decision.effect, decision.reason, decision.rule);
 ```
 
 ### Pitfalls
 
-- Candidate order is diagnostic output, not a replacement for understanding precedence.
-- `trace()` does not fire a decision event via `tap()`.
+Reasons are diagnostic strings, not stable user-facing copy.
 
 ### Related
 
-- [Priority and Overrides](./inheritance-and-overrides.md)
-- [Rule Specificity](./disabling-wildcard-fallback.md)
-- [Conflict Detection](./conflict-detection.md)
+- [Review rule order](./conflict-detection.md)

@@ -1,10 +1,12 @@
-import { isRecord, isUnsafeKey } from './core/path';
+import { isRecord, isUnsafeKey } from './core/path.js';
+import { ForgeConfigError } from './errors.js';
 
 function flatten(obj: Record<string, unknown>, prefix: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
     if (isUnsafeKey(key)) continue;
+    if (key.includes('.')) throw new ForgeConfigError(`FormData keys must not contain dots: '${key}'.`);
 
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
@@ -21,8 +23,8 @@ function flatten(obj: Record<string, unknown>, prefix: string): Record<string, u
 /**
  * Converts a form values object into a `FormData` instance.
  * Nested objects are flattened to dot-notation keys (e.g. `user.name`).
- * `File`, `Blob`, and `FileList` values are appended as-is; all others are coerced to strings.
- * `null` and `undefined` values are omitted.
+ * `File`, `Blob`, and `FileList` values are appended as-is; scalar arrays use repeated keys.
+ * `null` and `undefined` values are omitted. Ambiguous dotted keys and nested array containers reject.
  */
 export function toFormData(values: Record<string, unknown>): FormData {
   const fd = new FormData();
@@ -40,7 +42,12 @@ export function toFormData(values: Record<string, unknown>): FormData {
     } else if (isFileList(value)) {
       for (let i = 0; i < value.length; i++) fd.append(name, value[i]);
     } else if (Array.isArray(value)) {
-      for (const item of value) fd.append(name, isFile(item) || isBlob(item) ? item : String(item));
+      for (const item of value) {
+        if (isRecord(item) || Array.isArray(item)) {
+          throw new ForgeConfigError(`FormData array '${name}' must contain only scalar or binary values.`);
+        }
+        fd.append(name, isFile(item) || isBlob(item) ? item : String(item));
+      }
     } else {
       fd.append(name, String(value));
     }

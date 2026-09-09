@@ -32,8 +32,9 @@ describe('sum', () => {
     expect(sum(array, callback)).toBe(1);
   });
 
-  it('should work without a callback for arrays of numbers', () => {
+  it('should work without a callback for arrays of finite numbers', () => {
     expect(sum([10, 20, 30])).toBe(60);
+    expect(() => sum([1, Number.POSITIVE_INFINITY])).toThrow(TypeError);
   });
 
   it('should handle arrays with undefined or null values', () => {

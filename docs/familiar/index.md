@@ -4,8 +4,8 @@ description: Typed ES module Worker pools with cancellation, priority scheduling
 package: familiar
 category: workers
 keywords: [web-workers, module-workers, pool, concurrency, timeout, cancellation, streaming]
-related: [arsenal, ripple, herald]
-exports: [createWorker, createStreamWorker, batch, createTaskGroup, FamiliarError, FamiliarTimeoutError, FamiliarTaskError, FamiliarQueueFullError, FamiliarTerminatedError, FamiliarRuntimeError]
+related: [ripple, herald]
+exports: [createWorker, createStreamWorker, runBatch, FamiliarError, FamiliarInvalidOptionsError, FamiliarTimeoutError, FamiliarTaskError, FamiliarQueueFullError, FamiliarTerminatedError, FamiliarRuntimeError]
 environments: [browser]
 ---
 
@@ -93,12 +93,12 @@ try {
 
 - `createWorker()` — versioned task protocol over ES module workers
 - `createStreamWorker()` — stream-only worker capability
-- `run()` — priority scheduling, transferables, timeout, and cancellation
-- `batch()` — ordered task composition
-- `createTaskGroup()` — shared cancellation and settlement tracking
+- `run()` — validated priority scheduling, transferables, timeout, and cancellation
+- `runBatch()` — ordered progressive results with shared fail-fast cancellation
 - `stats` — active, queued, completed, and failed counters
 - `createTestWorker()` — faithful in-process task-pool testing
 - `dispose()` and `drain()` — immediate or draining teardown, with `using` support
+- Application-owned promise composition — domain task groups without pool-owned orchestration state
 
 </div>
 
@@ -116,7 +116,6 @@ try {
 
 <div class="see-also">
 
-- [Arsenal](/arsenal/) — async helpers for application coordination.
 - [Ripple](/ripple/) — expose worker results through reactive state.
 - [Herald](/herald/) — publish application events after worker jobs settle.
 

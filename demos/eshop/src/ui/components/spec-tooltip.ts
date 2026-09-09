@@ -32,7 +32,6 @@ define<{ text: string }>('spec-tooltip', {
       panel.classList.add('visible');
       positioner?.dispose();
       positioner = createPositioner(host, panel, tooltipPreset({ offset: 8 }));
-      positioner.start();
     }
 
     function hide(): void {

@@ -17,12 +17,10 @@ type TestWindow = Window & {
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rippleBundle = path.resolve(__dirname, '../../../ripple/dist/ripple.iife.js');
 const sentinelBundle = path.resolve(__dirname, '../../dist/sentinel.iife.js');
 
 async function loadSentinel(page: Page): Promise<void> {
   await page.setContent('<!DOCTYPE html><html><body></body></html>');
-  await page.addScriptTag({ path: rippleBundle });
   await page.addScriptTag({ path: sentinelBundle });
 }
 
@@ -50,7 +48,7 @@ test('tracks viewport dimensions in a real browser', async ({ page }) => {
     if (!sentinel) throw new Error('Sentinel IIFE did not load.');
 
     const update = () => {
-      testWindow.sentinelValue = sentinel.value;
+      testWindow.sentinelValue = sentinel.getSnapshot();
     };
 
     update();
@@ -76,7 +74,7 @@ test('reads the browser device pixel ratio', async ({ browser }) => {
     const sentinel = (window as TestWindow).Sentinel?.createViewport();
     if (!sentinel) throw new Error('Sentinel IIFE did not load.');
 
-    const value: ViewportState = sentinel.value;
+    const value: ViewportState = sentinel.getSnapshot();
     sentinel.dispose();
     return value;
   });
@@ -94,7 +92,7 @@ test('tracks media query changes', async ({ page }) => {
     if (!sentinel) throw new Error('Sentinel IIFE did not load.');
 
     const update = () => {
-      testWindow.sentinelValue = sentinel.value.matches;
+      testWindow.sentinelValue = sentinel.getSnapshot().matches;
     };
 
     update();
@@ -123,7 +121,7 @@ test('tracks element size changes', async ({ page }) => {
 
     testWindow.sentinelHandle = sentinel;
     testWindow.sentinelUnsubscribe = sentinel.subscribe(() => {
-      testWindow.sentinelValue = sentinel.value;
+      testWindow.sentinelValue = sentinel.getSnapshot();
     });
   });
 
@@ -158,7 +156,7 @@ test('tracks intersection changes', async ({ page }) => {
 
     testWindow.sentinelHandle = sentinel;
     testWindow.sentinelUnsubscribe = sentinel.subscribe(() => {
-      testWindow.sentinelValue = sentinel.value;
+      testWindow.sentinelValue = sentinel.getSnapshot();
     });
   });
 

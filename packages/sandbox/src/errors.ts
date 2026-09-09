@@ -9,8 +9,7 @@ export class SandboxError extends Error {
 
 /**
  * Thrown when render() does not receive a 'ready' signal from the sandbox document
- * within the timeout window. The document is most likely missing the bridge script —
- * use buildDocument() to generate documents that include it.
+ * within the timeout window. An injected script may have blocked document initialization.
  */
 export class SandboxTimeoutError extends SandboxError {}
 

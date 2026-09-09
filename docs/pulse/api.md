@@ -19,6 +19,7 @@ category: websockets
 | `RoomScope` | Ref-counted room membership with optional presence. | Sync methods, async `joined` | `joined` rejects on transport close or timeout. |
 | `PulseSchema` | Declares server/client events, channels, and rooms. | Type-only | Infer all named scope types from this schema. |
 | `PulseOptions` | Configuration: heartbeat, reconnect, transform. | Type-only | `reconnect` and `heartbeat` default to `false`. |
+| `ExternalStore` | Framework-neutral snapshot and change subscription. | Sync | `subscribe()` does not emit the initial snapshot. |
 | `PulseError` | Base class for all Pulse errors. | Runtime | Check `instanceof` against subclasses. |
 
 ## Package Entry Point
@@ -174,10 +175,10 @@ type Pulse<S extends PulseSchema = PulseSchema> = {
 
   // Rooms
   room<K extends keyof RoomMap<S> & string>(name: K, opts?: RoomOptions): RoomScope<RoomMap<S>[K]>;
-  readonly rooms: Readable<ReadonlySet<string>>;
+  readonly rooms: ExternalStore<ReadonlySet<string>>;
 
   // Status
-  readonly status: Readable<PulseStatus>;
+  readonly status: ExternalStore<PulseStatus>;
 
   // Tap
   tap(handler: (event: PulseEvent) => void, options?: { signal?: AbortSignal }): () => void;
@@ -249,6 +250,19 @@ pulse.tap((event) => {
 
 ---
 
+## `ExternalStore`
+
+```ts
+interface ExternalStore<T> {
+  getSnapshot(): T;
+  subscribe(listener: () => void): Unsubscribe;
+}
+```
+
+A framework-neutral state source used by `pulse.status`, `pulse.rooms`, and room `presence`. `getSnapshot()` returns the current immutable snapshot. `subscribe()` notifies once for each distinct snapshot and returns an unsubscribe function; listener errors are reported through `pulse.tap()` without interrupting Pulse state transitions.
+
+---
+
 ## `PulseEvent`
 
 ```ts
@@ -315,7 +329,7 @@ type RoomScopeBase = {
 
 ```ts
 type PresenceRoomScope<T = unknown> = RoomScopeBase & {
-  readonly presence: Readable<ReadonlyMap<string, T>>;
+  readonly presence: ExternalStore<ReadonlyMap<string, T>>;
   updatePresence(state: T): void;
   onJoin(handler: (memberId: string, state: T) => void): Unsubscribe;
   onLeave(handler: (memberId: string) => void): Unsubscribe;
@@ -324,7 +338,7 @@ type PresenceRoomScope<T = unknown> = RoomScopeBase & {
 
 | Member | Type | Description |
 | --- | --- | --- |
-| `presence` | `Readable<ReadonlyMap<string, T>>` | Reactive map of `memberId → state`. |
+| `presence` | `ExternalStore<ReadonlyMap<string, T>>` | Reactive map of `memberId → state`. |
 | `updatePresence(state)` | `(state: T) => void` | Broadcast this client's presence state. Throws `PulseConnectionError` unless open. |
 | `onJoin(handler)` | `(handler) => Unsubscribe` | Called whenever a new member joins with their initial state. |
 | `onLeave(handler)` | `(handler) => Unsubscribe` | Called whenever a member leaves. |

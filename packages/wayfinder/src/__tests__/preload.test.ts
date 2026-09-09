@@ -1,261 +1,125 @@
-/**
- * preload() — warm data loaders without navigating.
- */
 import { createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
-import { settle } from './test-utils';
+import { createDeferred, settle } from './test-utils';
 
-describe('preload', () => {
-  it('calls data loaders without navigating', async () => {
-    const dataFn = vi.fn(async () => ({ prefetched: true }));
+describe('preload()', () => {
+  it('loads without navigating and reuses the result on navigation', async () => {
+    const data = vi.fn(async () => ({ loaded: true }));
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
         home: { path: '/' },
-        page: { data: dataFn, path: '/page' },
+        user: { data, path: '/users/:id' },
       },
     });
 
-    await settle();
-    await router.preload('page');
+    await router.ready;
+    const state = await router.preload({ name: 'user', params: { id: '42' } });
 
-    expect(dataFn).toHaveBeenCalledTimes(1);
+    expect(state?.matches.at(-1)?.data).toEqual({ loaded: true });
     expect(router.getSnapshot().location.pathname).toBe('/');
-    router.dispose();
-  });
 
-  it('deduplicates concurrent preload calls for the same route', async () => {
-    const dataFn = vi.fn(async () => null);
-    const history = createMemoryHistory('/');
-    const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        page: { data: dataFn, path: '/page' },
-      },
-    });
+    await router.navigate({ name: 'user', params: { id: '42' } });
 
-    await settle();
-    await Promise.all([router.preload('page'), router.preload('page'), router.preload('page')]);
-
-    expect(dataFn).toHaveBeenCalledTimes(1);
-    router.dispose();
-  });
-
-  it('passes route params to the data loader', async () => {
-    const dataFn = vi.fn(async () => null);
-    const history = createMemoryHistory('/');
-    const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        user: { data: dataFn, path: '/users/:id' },
-      },
-    });
-
-    await settle();
-    await router.preload('user', { id: '99' } as never);
-
-    expect(dataFn).toHaveBeenCalledWith(expect.objectContaining({ params: { id: '99' } }));
-    router.dispose();
-  });
-
-  it('is retryable after a failed attempt', async () => {
-    let calls = 0;
-    const history = createMemoryHistory('/');
-    const router = createRouter({
-      history,
-      onError: vi.fn(),
-      routes: {
-        home: { path: '/' },
-        page: {
-          data: async () => {
-            calls++;
-
-            if (calls < 2) throw new Error('temporary failure');
-
-            return { ok: true };
-          },
-          path: '/page',
-        },
-      },
-    });
-
-    await settle();
-
-    await expect(router.preload('page')).rejects.toThrow('temporary failure');
-    // Cache should be cleared after a failure — second call invokes the loader again.
-    await router.preload('page');
-    expect(calls).toBe(2);
-    router.dispose();
-  });
-
-  it('reuses preloaded results during the next navigation to that route', async () => {
-    let callCount = 0;
-    const dataFn = vi.fn(async () => {
-      callCount++;
-
-      return { loaded: true };
-    });
-    const history = createMemoryHistory('/');
-    const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        page: { data: dataFn, path: '/page' },
-      },
-    });
-
-    await settle();
-    await router.preload('page');
-    expect(callCount).toBe(1);
-
-    await router.navigate({ path: '/page' });
-
-    // Data loader must NOT be called again — preloaded result was reused.
-    expect(callCount).toBe(1);
+    expect(data).toHaveBeenCalledTimes(1);
     expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ loaded: true });
     router.dispose();
   });
 
-  it('rejects the caller without a duplicate unhandled throw when no onError is set', async () => {
-    const history = createMemoryHistory('/');
+  it('deduplicates a navigation against an in-flight preload', async () => {
+    const gate = createDeferred<void>();
+    const data = vi.fn(async () => {
+      await gate.promise;
+
+      return 'ready';
+    });
     const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        page: {
-          data: async () => {
-            throw new Error('preload boom');
-          },
-          path: '/page',
-        },
-      },
+      history: createMemoryHistory('/'),
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
+    await router.ready;
+    const preload = router.preload({ name: 'page' });
     await settle();
+    const navigation = router.navigate({ name: 'page' });
 
-    // Without B1 fix, #reportError queued a microtask throw AND the promise rejected —
-    // two error surfaces. Verify the promise rejects with the expected error.
-    await expect(router.preload('page')).rejects.toThrow('preload boom');
+    gate.resolve();
+    await Promise.all([preload, navigation]);
+
+    expect(data).toHaveBeenCalledTimes(1);
+    expect(router.getSnapshot().matches.at(-1)?.data).toBe('ready');
     router.dispose();
   });
 
-  it('abort signal is aborted when the router is disposed mid-preload', async () => {
-    let capturedSignal: AbortSignal | undefined;
-    let release: (() => void) | undefined;
-    const started = new Promise<void>((resolve) => {
-      release = resolve;
+  it('retries navigation when an in-flight preload fails', async () => {
+    const gate = createDeferred<void>();
+    const data = vi.fn(async () => {
+      if (data.mock.calls.length === 1) {
+        await gate.promise;
+        throw new Error('preload failed');
+      }
+
+      return 'navigation result';
     });
-    const history = createMemoryHistory('/');
     const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        page: {
-          data: async ({ signal }: { signal: AbortSignal }) => {
-            capturedSignal = signal;
-            release?.();
-            await new Promise<void>((res) => setTimeout(res, 500));
-
-            return { ok: true };
-          },
-          path: '/page',
-        },
-      },
+      history: createMemoryHistory('/'),
+      onError: vi.fn(),
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
-    await settle();
+    await router.ready;
+    const preload = router.preload({ name: 'page' }).catch((error) => error);
+    const navigation = router.navigate({ name: 'page' });
 
-    const preloadPromise = router.preload('page');
+    gate.resolve();
 
-    await started;
-    expect(capturedSignal).toBeDefined();
-    expect(capturedSignal?.aborted).toBe(false);
+    await expect(preload).resolves.toBeInstanceOf(Error);
+    await navigation;
 
-    router.dispose();
-    await preloadPromise.catch(() => undefined);
-
-    expect(capturedSignal?.aborted).toBe(true);
-  });
-
-  it('caches result under the correct key when query is provided and hits on navigation', async () => {
-    let callCount = 0;
-    const history = createMemoryHistory('/');
-    const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        search: {
-          data: async () => {
-            callCount++;
-
-            return { count: callCount };
-          },
-          path: '/search',
-        },
-      },
-    });
-
-    await settle();
-
-    // Preload with matching query — navigation should hit the cache.
-    await router.preload('search', undefined, { q: 'hello' });
-    expect(callCount).toBe(1);
-
-    await router.navigate({ name: 'search', query: { q: 'hello' } });
-
-    expect(callCount).toBe(1);
-    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ count: 1 });
+    expect(data).toHaveBeenCalledTimes(2);
+    expect(router.getSnapshot().matches.at(-1)?.data).toBe('navigation result');
     router.dispose();
   });
 
-  it('navigation with a different query than the preloaded key re-runs the data loader', async () => {
-    let callCount = 0;
-    const history = createMemoryHistory('/');
+  it('keys cached data by params and query', async () => {
+    const data = vi.fn(async ({ params, query }) => ({ params, query }));
     const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        search: {
-          data: async () => {
-            callCount++;
-
-            return callCount;
-          },
-          path: '/search',
-        },
-      },
+      history: createMemoryHistory('/'),
+      routes: { home: { path: '/' }, search: { data, path: '/search/:scope' } },
     });
 
-    await settle();
-    // Preload with no query; navigate with ?q=hello — different key, loader must run again.
-    await router.preload('search');
-    expect(callCount).toBe(1);
+    await router.ready;
+    await router.preload({ name: 'search', params: { scope: 'all' }, query: { q: 'router' } });
+    await router.navigate({ name: 'search', params: { scope: 'all' }, query: { q: 'other' } });
 
-    await router.navigate({ name: 'search', query: { q: 'hello' } });
-
-    expect(callCount).toBe(2);
+    expect(data).toHaveBeenCalledTimes(2);
     router.dispose();
   });
 
-  it('throws WayfinderDisposedError when called after the router is disposed', async () => {
-    const dataFn = vi.fn(async () => ({ ok: true }));
-    const history = createMemoryHistory('/');
+  it('reports failures and remains retryable', async () => {
+    const onError = vi.fn();
+    const data = vi.fn().mockRejectedValueOnce(new Error('temporary')).mockResolvedValueOnce('ready');
     const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        page: { data: dataFn, path: '/page' },
-      },
+      history: createMemoryHistory('/'),
+      onError,
+      routes: { home: { path: '/' }, page: { data, path: '/page' } },
     });
 
-    await settle();
+    await router.ready;
+    await expect(router.preload({ name: 'page' })).rejects.toThrow('temporary');
+    await expect(router.preload({ name: 'page' })).resolves.not.toBeNull();
+
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'preload' });
+    expect(data).toHaveBeenCalledTimes(2);
+    router.dispose();
+  });
+
+  it('rejects after disposal', async () => {
+    const router = createRouter({ history: createMemoryHistory('/'), routes: { home: { path: '/' } } });
+
+    await router.ready;
     router.dispose();
 
-    await expect(router.preload('page')).rejects.toThrow(WayfinderDisposedError);
-    // The data loader must never run once the router is disposed — consistent with
-    // navigate()/subscribe()/beforeLeave(), all of which reject before doing any work.
-    expect(dataFn).not.toHaveBeenCalled();
+    await expect(router.preload({ name: 'home' })).rejects.toThrow(WayfinderDisposedError);
   });
 });

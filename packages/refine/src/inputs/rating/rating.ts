@@ -1,4 +1,4 @@
-import { bind, createStableId, define, getHost, html, prop, useField } from '@vielzeug/ore';
+import { bind, createId, define, getHost, html, prop, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { createErrorHelperState, createSliderControl } from '../../core';
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -115,7 +115,7 @@ define<OreRatingProps>(RATING_TAG, {
       value: computed(() => String(normalizedValue.value || 0)),
     });
 
-    const assistiveId = createStableId('helper');
+    const assistiveId = createId('helper');
     const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
     const errorText = computed(() => assistive.value.errorText);
     const helperText = computed(() => assistive.value.helperText);

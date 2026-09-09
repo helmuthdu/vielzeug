@@ -7,10 +7,10 @@ description: Use Arsenal root utilities for common work and category entry point
 
 ## Basic Usage
 
-Start at package root for common transforms. Move to a category entry point when code needs specialized behavior. This keeps imports readable and bundles focused.
+Start at package root for common utilities. Move to a category entry point for the broader typed toolkit. Arsenal keeps helpers that improve readability, narrowing, immutable updates, or edge-case consistency; exact platform aliases stay out.
 
 ```ts
-import { chunk, groupBy, retry } from '@vielzeug/arsenal';
+import { groupBy, retry } from '@vielzeug/arsenal';
 
 const users = [
   { id: 'a1', role: 'admin' },
@@ -18,11 +18,10 @@ const users = [
   { id: 'u2', role: 'user' },
 ];
 
-const pages = chunk(users, 2);
 const byRole = groupBy(users, (user) => user.role);
 const health = await retry(() => fetch('/health').then((response) => response.json()));
 
-console.log(pages, byRole, health);
+console.log(byRole, health);
 ```
 
 Use category imports for APIs absent from root:
@@ -132,6 +131,7 @@ type Profile = { id: string; name: string };
 const profiles = cache<string, Profile>({ capacity: 100, ttlMs: 60_000 });
 const profile = await profiles.getOrLoad('me', () => fetch('/profile').then((response) => response.json()));
 
+console.log(profiles.entries());
 profiles.delete('me');
 const freshProfile = await profiles.getOrLoad('me', () => fetch('/profile').then((response) => response.json()));
 
@@ -143,10 +143,11 @@ console.log(profile, freshProfile);
 Random helpers use cryptographic entropy by default. Pass `RandomSource` in tests when output must be deterministic.
 
 ```ts
-import { random, type RandomSource } from '@vielzeug/arsenal/random';
+import { random, randomFloat, type RandomSource } from '@vielzeug/arsenal/random';
 
 const source: RandomSource = { next: () => 0.5 };
 
+randomFloat(source); // 0.5
 random(1, 4, source); // 3
 ```
 
@@ -165,8 +166,10 @@ const settings = parsed.ok ? Settings.parse(parsed.value) : { theme: 'system' };
 
 ## Best Practices
 
-- Import common transforms from package root.
-- Import specialized APIs from category entry points.
+- Import common utilities from package root.
+- Import the broader toolkit from category entry points.
+- Prefer Arsenal when a helper improves typing, intent, immutable updates, or edge-case behavior.
+- Use the platform directly for exact aliases such as `crypto.randomUUID()` and `Array.prototype.flat()`.
 - Pass `select` for every fuzzy search over objects.
 - Validate parsed JSON before using it as application data.
 - Use `parallel` for finite batches and `taskPool` for ongoing work.

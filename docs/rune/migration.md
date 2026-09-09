@@ -1,92 +1,113 @@
 ---
-title: Rune 2 Migration
-description: Migrate batch transport shutdown code and removed transport error imports to Rune 2.
+title: Rune 3 Migration
+description: Migrate from Rune 2 to Rune 3 — explicit logger construction, direct transport arrays, and fail-closed redaction.
 ---
 
 [[toc]]
 
-## Rune 2 Changes
+## Rune 3 Changes
 
-Rune 2 keeps logger call forms, groups, and transport composition unchanged. Batch delivery is now awaitable so graceful shutdown can observe every accepted `onFlush` result.
+Rune 3 removes shared singleton state and the redundant `pipe()` fan-out helper. Production delivery primitives and middleware remain first-class, while log methods now support a preferred message-first form alongside structured and Error-first calls.
 
 Removed APIs:
 
-- `BatchHandle[Symbol.dispose]()`
-- `RuneTransportError`
+- `defaultLogger` — create logger instances explicitly with `createLogger()`
+- `pipe()` and `PipeOptions` — pass multiple transports directly to `createLogger({ transports })`
+- `RuneTransportError` — transport and middleware failures remain isolated rather than escaping to application code
 
-## Await Batch Delivery
+Retained APIs:
 
-`flush()` and `dispose()` now return `Promise<void>`. Await either method when you need delivery completion.
+- `remoteTransport()`, `batchTransport()`, `sampleTransport()`, and `redactTransport()`
+- `LogMiddleware`, `RuneOptions.middleware`, `Logger.use()`, and `Logger.middleware`
+- Context-first and Error-first log calls, plus the preferred message-first form
 
-```ts
-// Rune 1
-batch.flush();
-batch.dispose();
-```
+## Replace defaultLogger
+
+Create logger instances explicitly so ownership, configuration, and disposal are visible.
 
 ```ts
 // Rune 2
-await batch.flush();
-await batch.dispose();
+import { defaultLogger } from '@vielzeug/rune';
+const log = defaultLogger.child({ namespace: 'app' });
 ```
 
-A rejected `onFlush` rejects matching manual `flush()` calls. Failed timer or size-triggered delivery is reported through `onFlushError` and rejects later `dispose()`. Put retry logic inside `onFlush` when successful retry should fulfill the drain promise.
+```ts
+// Rune 3
+import { createLogger } from '@vielzeug/rune';
+const log = createLogger({ namespace: 'app' });
+```
+
+## Replace pipe()
+
+Pass transports directly to the logger. Dispatch already isolates synchronous failures so one transport cannot block its siblings.
 
 ```ts
-const batch = batchTransport({
-  onFlush: async (entries) => {
-    await sendWithRetry(entries);
-  },
+// Rune 2
+const log = createLogger({
+  transports: [pipe(consoleTransport(), jsonTransport())],
 });
 ```
 
-Timer and size-triggered flushes continue asynchronously. They are serialized with manual flushes and disposal, so `onFlush` never overlaps for one batch handle.
-
-## Replace Synchronous Disposal
-
-Replace `using` with `await using` when lexical scope owns a batch handle.
-
 ```ts
-// Rune 1
-using batch = batchTransport({ onFlush });
+// Rune 3
+const log = createLogger({
+  transports: [consoleTransport(), jsonTransport()],
+});
 ```
 
-```ts
-// Rune 2
-await using batch = batchTransport({ onFlush });
-```
+## Prefer Message-First Logging
 
-Use `await batch.dispose()` in application-owned graceful shutdown. Do not call async cleanup from a Node `exit` handler: Node cannot wait for its promise.
+Message-first calls are easiest to scan in application code. Context-first remains available for structured events and callback adapters; Error-first remains available for forwarding failures without manual wrapping.
 
 ```ts
-async function shutdown() {
-  await batch.dispose();
-  server.close();
-}
+log.info('request started', { requestId });
+log.debug({ type: 'dispatch', payload }, 'bus:dispatch');
+log.error(err, { requestId }, 'request failed');
 ```
 
-## Remove RuneTransportError Imports
+## Keep Cross-Transport Middleware
 
-`RuneTransportError` was never thrown to application code. Remove its import; transport failures remain isolated through development warnings and sibling transport dispatch.
+Middleware still transforms or filters an entry once before every transport. `use()` returns a new logger and does not mutate its parent.
 
 ```ts
-// Rune 1
-import { RuneTransportError } from '@vielzeug/rune';
+const log = createLogger({
+  middleware: [(entry) => ({ ...entry, data: { ...entry.data, env: 'production' } })],
+  transports: [consoleTransport(), jsonTransport()],
+});
 
-if (RuneTransportError.is(error)) report(error);
+const errorsOnly = log.use((entry) => (entry.level === 'error' || entry.level === 'fatal' ? entry : null));
 ```
+
+## Update Depth-Limited Redaction
+
+Rune 2 stopped inspecting values beyond `maxDepth` and forwarded those subtrees unchanged. Rune 3 fails closed by replacing the entire deeper subtree.
 
 ```ts
-// Rune 2
-// No replacement import or catch is required.
+const safe = redactTransport({
+  keys: ['password', 'token'],
+  maxDepth: 10,
+  transport: remoteTransport({
+    handler: (_level, data) => fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' }),
+    onError: (error) => console.error('log delivery failed', error),
+  }),
+});
 ```
 
-Use `onFlushError`, plus rejected `flush()` and `dispose()` promises, to observe batch-delivery failures.
+If downstream consumers relied on deeply nested non-sensitive values, raise `maxDepth` deliberately or flatten the logged context. Do not disable the limit for untrusted object graphs.
 
-## Validate Numeric Transport Options
+## Preserve Production Delivery
 
-Rune now rejects invalid numeric options during factory construction:
+Remote delivery, batching, and sampling remain composable transport factories. Observe asynchronous failures and dispose batch handles during shutdown.
 
-- `sampleTransport({ rate })` requires finite `rate` from `0` through `1`.
-- `batchTransport({ interval, maxSize, maxBuffer })` requires positive finite `interval`, positive integer `maxSize`, and non-negative integer `maxBuffer`.
-- `redactTransport({ maxDepth })` requires non-negative integer `maxDepth`.
+```ts
+const remote = remoteTransport({
+  handler: (_level, data) => fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' }),
+  onError: (error) => console.error('log delivery failed', error),
+});
+const batch = batchTransport({
+  onFlush: (entries) => fetch('/api/log-batches', { body: JSON.stringify(entries), method: 'POST' }),
+});
+const log = createLogger({ transports: [sampleTransport({ rate: 0.25, transport: remote }), batch.transport] });
+
+await batch.dispose();
+```

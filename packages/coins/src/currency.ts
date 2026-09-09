@@ -42,6 +42,10 @@ export function currency<C extends string>(input: C | { code: C; minorUnit: numb
     return definition as Currency<C>;
   }
 
+  if (typeof input !== 'object' || input === null) {
+    throw new CoinsError('INVALID_CURRENCY', 'Currency definition must be an object');
+  }
+
   return register(input.code, input.minorUnit);
 }
 

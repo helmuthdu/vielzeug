@@ -11,11 +11,10 @@ A realtime session must recover from network loss without opening duplicate sock
 
 ### Solution
 
-Enable reconnect and heartbeat, create scopes before connecting, and react to the `status` readable.
+Enable reconnect and heartbeat, create scopes before connecting, and subscribe to the `status` external store.
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
-import { effect } from '@vielzeug/ripple';
 
 type Schema = {
   channels: {
@@ -40,8 +39,8 @@ pulse.tap((event) => {
 const chat = pulse.channel('chat');
 const lobby = pulse.room('lobby');
 
-effect(() => {
-  console.log('Pulse status:', pulse.status.value);
+const stopStatus = pulse.status.subscribe(() => {
+  console.log('Pulse status:', pulse.status.getSnapshot());
 });
 
 try {
@@ -51,6 +50,11 @@ try {
   lobby.updatePresence({ name: 'Ada' });
 } catch (error) {
   console.error('Pulse connection failed:', error);
+} finally {
+  stopStatus();
+  lobby.dispose();
+  chat.dispose();
+  pulse.dispose();
 }
 ```
 

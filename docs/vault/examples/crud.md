@@ -11,7 +11,7 @@ You need to create, read, update, and delete typed records in browser storage ac
 
 ### Solution
 
-Use `put`, `get`, `getAll`, `update`, `delete`, `clear`, `has`, `count`, and `isEmpty` for single-record operations. For bulk operations, use `putAll`, `getMany`, and `deleteMany`. These methods are available on every Vault adapter.
+Every Vault store binds core CRUD, bulk helpers, `update`, `upsert`, and `query`; only `table` and the adapter factory need imports.
 
 ```ts
 import { table } from '@vielzeug/vault';
@@ -32,7 +32,7 @@ await db.putAll('users', [
 // read
 const alice = await db.get('users', 1); // User | undefined
 const all = await db.getAll('users'); // User[]
-const count = await db.count('users'); // 3
+const total = await db.count('users'); // 3
 const live = await db.has('users', 1); // true
 const empty = await db.isEmpty('users'); // false — table has records
 
@@ -54,20 +54,22 @@ await db.delete('users', 1); // true if it existed
 await db.deleteMany('users', [2, 3, 99]); // count of deleted records
 await db.clear('users'); // removes all records
 
-(void alice, all, count, live, empty, missing, a, c, updated);
+(void alice, all, total, live, empty, missing, a, c, updated);
 ```
 
 ### Pitfalls
 
+- Bound `update()` and `upsert()` need no schema argument. Their standalone forms accept the schema explicitly.
 - `update()` returns `undefined` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
 - `deleteMany()` returns the count of records that actually existed and were deleted, not the length of the keys array. Keys that are not found are silently skipped.
 - `isEmpty(table)` is a convenience shorthand for `(await count(table)) === 0` — useful for seeding default data on first run.
 - `count()` and `getAll()` both return only live records. Expired records can still occupy storage until you prune them.
+- Bound `update()` and `upsert()` are atomic on IndexedDB and SQLite; key-value-store forms are non-atomic under concurrent writers.
 - `putAll()` is not an atomic unit across adapters. Use `batch()` on an IndexedDB or SQLite store when all writes must commit or roll back together.
 
 ### Related
 
-- [Querying](./querying.md)
+- [Filtering](./querying.md)
 - [TTL and Pruning](./ttl.md)
 - [Batch Writes](./batch.md)
 - [Usage Guide — Read and Change Records](/vault/usage.md#read-and-change-records)

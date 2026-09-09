@@ -1,4 +1,5 @@
 import { define, getHost, html, onCleanup, onMounted, prop, watchEffect } from '@vielzeug/ore';
+import { fromSubscribable } from '@vielzeug/ripple';
 import { createElementSize } from '@vielzeug/sentinel';
 
 import styles from './grid.css?inline';
@@ -260,8 +261,10 @@ define<OreGridProps>(GRID_TAG, {
 
       onCleanup(() => size.dispose());
 
+      const sizeSignal = fromSubscribable(size, { signal: size.disposalSignal });
+
       watch(() => {
-        const dims = size.value;
+        const dims = sizeSignal.value;
         if (dims) {
           updateCols();
           updateAreas();

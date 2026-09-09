@@ -6,16 +6,11 @@ category: app-infrastructure
 keywords: [keyboard, shortcuts, hotkeys, chord, keybinding, headless, accessibility]
 exports:
   [
-    canonicalizeShortcut,
     createKeymap,
-    detectModKey,
     findShortcutConflicts,
     formatShortcut,
     KeymapError,
     KeymapParseError,
-    matchStep,
-    parseShortcut,
-    parseStep,
   ]
 related: [herald, refine, ore]
 environments: [browser, node, ssr, deno]
@@ -38,7 +33,9 @@ window.addEventListener('keydown', (event) => {
 // After
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({ 'mod+s': () => console.log('save') });
+const map = createKeymap([
+  { id: 'save', shortcut: 'mod+s', handler: () => console.log('save') },
+]);
 const unmount = map.mount(document);
 
 unmount();
@@ -53,6 +50,7 @@ map.dispose();
 | Modifier aliases    | <ore-icon name="x" size="16"></ore-icon>     | `cmd`, `win`, `option` → canonical           |
 | Context guards      | Manual `if` in handler                       | Event-aware `when(event)` predicate          |
 | Chord ownership     | Application-managed state                    | Per mounted target                           |
+| Per-binding control | Manual `preventDefault`/`stopPropagation`    | Per-binding `preventDefault`/`stopPropagation` with safe defaults |
 | Disposable          | Manual `removeEventListener`                 | Terminal `dispose()` + `[Symbol.dispose]()`  |
 
 <div class="decision-callout">
@@ -88,12 +86,12 @@ Create, mount, then dispose one map owned by your UI scope.
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({
-  'mod+k mod+s': () => console.log('save'),
-  'mod+shift+p': () => console.log('open palette'),
-  'g g': () => window.scrollTo({ top: 0 }),
-  escape: () => console.log('close panel'),
-});
+const map = createKeymap([
+  { id: 'save', shortcut: 'mod+k mod+s', handler: () => console.log('save') },
+  { id: 'palette', shortcut: 'mod+shift+p', handler: () => console.log('open palette') },
+  { id: 'top', shortcut: 'g g', handler: () => window.scrollTo({ top: 0 }) },
+  { id: 'close', shortcut: 'escape', handler: () => console.log('close panel') },
+]);
 
 const unmount = map.mount(document);
 
@@ -105,16 +103,16 @@ map.dispose();
 
 <div class="features-grid">
 
-- `createKeymap()` — Create a keymap from a bindings record; mount to any `EventTarget`
+- `createKeymap()` — Create a keymap from an ordered binding array; mount to any `EventTarget`
 - Chord sequences — `"g g"`, `"ctrl+k ctrl+s"` with configurable timeout (default 1 s)
 - Modifier aliases — `cmd`/`command`/`win` → `meta`; `opt`/`option` → `alt`; `mod` → platform-aware
-- `BindingOptions` — per-binding `{ handler, when?, trigger? }` object syntax
+- `Binding` objects — each binding has an explicit `id`, `shortcut`, `handler`, and optional `trigger`, `when`, `preventDefault`, `stopPropagation`
+- Per-binding `preventDefault`/`stopPropagation` — safe defaults (`true`/`false`) applied to completed shortcuts and intermediate chord steps
+- `tap()` — observe chord progress, timeout, matches, and disposal without changing behavior
 - `modKey` option — explicit platform override for SSR and cross-platform tests
 - `formatShortcut()` — platform-aware display (`⇧⌘P` on Mac, `Ctrl+Shift+P` elsewhere)
-- `parseShortcut()` / `parseStep()` / `matchStep()` — exposed for building custom matchers or testing
-- `canonicalizeShortcut()` — convert any shortcut alias to a stable key for conflict detection
-- `detectModKey()` — platform modifier detection (`'meta'` on Mac, `'ctrl'` elsewhere)
-- `listBindings()` — snapshot all active bindings (shortcut and trigger) for palette UIs
+- `@vielzeug/keymap/parse` subpath — `parseShortcut()`, `parseStep()`, `matchStep()`, `canonicalizeShortcut()`, `detectModKey()` for custom tooling
+- `listBindings()` — snapshot all active bindings (id, shortcut, trigger, preventDefault, stopPropagation) for palette UIs
 - `findShortcutConflicts()` — detect prefix/duplicate conflicts before binding a user-customized shortcut
 - Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
 
@@ -127,7 +125,7 @@ map.dispose();
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
-- [Migration to 2.0](./migration.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

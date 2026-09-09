@@ -125,18 +125,6 @@
     border-color: color-mix(in oklch, var(--_theme-focus) 55%, transparent);
   }
 
-  :host([variant='glass']) button {
-    color: var(--_theme-content);
-    background: color-mix(in oklch, var(--color-canvas) 70%, transparent);
-    border-color: color-mix(in oklch, var(--_theme-border) 40%, transparent);
-    backdrop-filter: blur(var(--blur-md)) saturate(140%);
-  }
-
-  :host([variant='glass']) button:hover:not(:disabled, [aria-current='page']) {
-    background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
-    border-color: color-mix(in oklch, var(--_theme-border) 45%, transparent);
-  }
-
   button:hover:not(:disabled, [aria-current='page']) {
     background: var(--color-contrast-100);
   }
@@ -195,12 +183,6 @@
   :host([variant='frost']) button[aria-current='page'] {
     color: var(--_theme-contrast);
     background: color-mix(in oklch, var(--_theme-base) 70%, transparent);
-    border-color: var(--_theme-base);
-  }
-
-  :host([variant='glass']) button[aria-current='page'] {
-    color: var(--_theme-contrast);
-    background: color-mix(in oklch, var(--color-canvas) 90%, transparent);
     border-color: var(--_theme-base);
   }
 

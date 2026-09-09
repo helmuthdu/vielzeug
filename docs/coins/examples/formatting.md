@@ -23,8 +23,8 @@ console.log(formatParts(price));
 
 ### Pitfalls
 
-Formatting controls display only. Currency definitions control stored scale.
+Formatting controls display only and never mutates money. Either fraction bound may be set independently; explicit bounds must satisfy `0 ≤ minimum ≤ maximum ≤ 20`. `Intl` localizes all digits and applies the selected rounding mode.
 
 ### Related
 
-- [Usage Guide](../usage.md#basic-usage)
+- [Usage Guide](../usage.md#format-money)

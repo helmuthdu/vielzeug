@@ -163,20 +163,33 @@ define('app-shell', {
       });
     };
 
+    const historyState = signal(ledger.state.value);
+    const unsubscribeHistory = ledger.state.subscribe(() => {
+      historyState.value = ledger.state.value;
+    });
     const keymap = createKeymap(
-      {
-        'mod+shift+z': () => {
-          if (ledger.state.value.redo.length > 0) runHistory(() => ledger.redo());
+      [
+        {
+          handler: () => {
+            if (historyState.value.redo.length > 0) runHistory(() => ledger.redo());
+          },
+          id: 'redo',
+          shortcut: 'mod+shift+z',
         },
-        'mod+z': () => {
-          if (ledger.state.value.undo.length > 0) runHistory(() => ledger.undo());
+        {
+          handler: () => {
+            if (historyState.value.undo.length > 0) runHistory(() => ledger.undo());
+          },
+          id: 'undo',
+          shortcut: 'mod+z',
         },
-      },
+      ],
       { when: (event) => !isTypingInField(event) },
     );
     const unmountKeymap = keymap.mount(document);
 
     onCleanup(() => {
+      unsubscribeHistory();
       unmountKeymap();
       keymap.dispose();
     });
@@ -220,14 +233,14 @@ define('app-shell', {
         )}
         <ore-navbar-item
           slot="mobile-menu"
-          ?disabled=${() => ledger.state.value.undo.length === 0}
+          ?disabled=${() => historyState.value.undo.length === 0}
           @click=${() => runHistory(() => ledger.undo())}>
           <ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           ${() => t('action.undo')}
         </ore-navbar-item>
         <ore-navbar-item
           slot="mobile-menu"
-          ?disabled=${() => ledger.state.value.redo.length === 0}
+          ?disabled=${() => historyState.value.redo.length === 0}
           @click=${() => runHistory(() => ledger.redo())}>
           <ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           ${() => t('action.redo')}
@@ -261,7 +274,7 @@ define('app-shell', {
             size="sm"
             icon-only
             label=${() => t('action.undo')}
-            ?disabled=${() => ledger.state.value.undo.length === 0}
+            ?disabled=${() => historyState.value.undo.length === 0}
             @click=${() => runHistory(() => ledger.undo())}>
             <ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           </ore-button>
@@ -270,7 +283,7 @@ define('app-shell', {
             size="sm"
             icon-only
             label=${() => t('action.redo')}
-            ?disabled=${() => ledger.state.value.redo.length === 0}
+            ?disabled=${() => historyState.value.redo.length === 0}
             @click=${() => runHistory(() => ledger.redo())}>
             <ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           </ore-button>

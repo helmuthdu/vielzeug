@@ -22,7 +22,7 @@ document.body.append(output);
 function observeNetwork(): () => void {
   const network = createNetwork();
   const render = () => {
-    const { connection, online } = network.value;
+    const { connection, online } = network.getSnapshot();
     output.value = online ? `Online${connection?.effectiveType ? ` (${connection.effectiveType})` : ''}` : 'Offline';
   };
 

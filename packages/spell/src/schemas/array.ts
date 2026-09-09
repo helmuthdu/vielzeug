@@ -1,6 +1,7 @@
 import type {
   AnySchema,
   CheckContext,
+  InferInput,
   InferOutput,
   InferSchemaMode,
   Issue,
@@ -26,7 +27,7 @@ interface ArrayAnnotations extends Record<string, unknown> {
 export class ArraySchema<
   T extends AnySchema,
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T>>,
-> extends Schema<InferOutput<T>[], unknown, Mode> {
+> extends Schema<InferOutput<T>[], InferInput<T>[], Mode> {
   readonly itemSchema: T;
 
   protected override get _kind(): string {

@@ -39,10 +39,10 @@ const postmaster = createPostmaster({
 
 const network = createNetwork();
 const unsubscribe = network.subscribe(() => {
-  if (network.value.online) void postmaster.flush();
+  if (network.getSnapshot().online) void postmaster.flush();
 });
 
-await postmaster.start();
+postmaster.start();
 
 // On teardown:
 // unsubscribe();

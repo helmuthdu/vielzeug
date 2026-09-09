@@ -10,26 +10,21 @@ const objectValidator = (value: unknown) => {
 };
 
 describe('Postmaster ecosystem integration', () => {
-  it('delivers a Courier mutation and invalidates the query cache', async () => {
+  it('delivers a Courier request and surfaces the remote call', async () => {
     const fetchMock = vi.fn(
       async (_input: unknown, _init?: RequestInit) =>
         new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' }, status: 200 }),
     );
     const courier = createCourier({ baseUrl: 'https://api.example.com', fetch: fetchMock as unknown as typeof fetch });
 
-    courier.queries.set(['todos'], [{ id: 'old', title: 'Old' }]);
-
     const jobs = defineJobs({
       createTodo: {
         execute: async (payload, { key, signal }) => {
-          await courier.mutate({
-            invalidateKeys: [['todos']],
-            request: () =>
-              courier.post('/todos', {
-                body: payload,
-                headers: { 'Idempotency-Key': key },
-                signal,
-              }),
+          await courier.request('/todos', {
+            body: payload,
+            headers: { 'Idempotency-Key': key },
+            method: 'POST',
+            signal,
           });
         },
         key: (payload: unknown) => (payload as { id: string }).id,
@@ -48,7 +43,6 @@ describe('Postmaster ecosystem integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const init = fetchMock.mock.calls[0]?.[1];
     expect(init?.headers).toMatchObject({ 'idempotency-key': 'todo-1' });
-    expect(courier.queries.getSnapshot(['todos'])?.updatedAt).toBe(0);
 
     await courier.dispose();
     await postmaster.dispose();
@@ -69,14 +63,11 @@ describe('Postmaster ecosystem integration', () => {
     const jobs = defineJobs({
       createTodo: {
         execute: async (payload, { key, signal }) => {
-          await courier.mutate({
-            invalidateKeys: [['todos']],
-            request: () =>
-              courier.post('/todos', {
-                body: payload,
-                headers: { 'Idempotency-Key': key },
-                signal,
-              }),
+          await courier.request('/todos', {
+            body: payload,
+            headers: { 'Idempotency-Key': key },
+            method: 'POST',
+            signal,
           });
         },
         key: (payload: unknown) => (payload as { id: string }).id,

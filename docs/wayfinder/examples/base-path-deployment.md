@@ -23,7 +23,7 @@ const router = createRouter({
     about: { path: '/about' },
     userDetail: { path: '/users/:id', data: async ({ params }) => fetchUser(params.id) },
   },
-  notFound: { component: NotFoundPage },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 await router.navigate({ name: 'about' }); // pushes /my-app/about

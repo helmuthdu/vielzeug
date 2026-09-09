@@ -8,7 +8,7 @@ export class LinguaError extends Error {
 
 export class LinguaDisposedError extends LinguaError {
   constructor() {
-    super('Operation called on a disposed translation store.');
+    super('Operation called on a disposed i18n instance.');
   }
 }
 
@@ -17,3 +17,5 @@ export class LinguaInvalidLocaleError extends LinguaError {}
 export class LinguaInvalidPluralCountError extends LinguaError {}
 export class LinguaInvalidStateError extends LinguaError {}
 export class LinguaMissingCatalogError extends LinguaError {}
+export class LinguaMissingKeyError extends LinguaError {}
+export class LinguaMissingValueError extends LinguaError {}

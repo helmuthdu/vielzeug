@@ -594,62 +594,44 @@ Set `selectedKeys` to programmatically control which rows are selected. Any chan
 
 `ore-datagrid` integrates directly with [`@vielzeug/sourcerer`](/sourcerer/) via the `source` JS property. When a source is provided:
 
-- `rows` is ignored — `source.snapshot.data` drives displayed items.
-- The pagination footer reads `source.snapshot.pagination`.
-- Prev/next buttons call `source.page.previous()` / `source.page.next()`.
-- The inline search input calls `source.setQuery({ search })`.
-- `source.snapshot.isFetching` is reflected in the grid's `aria-busy` state.
-- Client-side sort and filter are bypassed — wire `sort-change` to `source.setQuery()` for server-side sorting.
+- `rows` is ignored — `source.state.items` drives displayed items.
+- The pagination footer reads `source.state.pagination`.
+- Prev/next buttons call `source.previous()` / `source.next()`.
+- The inline search input calls `source.setParams(search)` when available.
+- `source.state.loading` is reflected in the grid's `aria-busy` state.
+- Client-side sort and filter are bypassed — update source params from emitted grid events for server-side behavior.
 
-### Local Source (in-memory)
+### In-memory data (no source)
 
-Use `createLocalSource` when data is already in memory. The source exposes synchronous snapshots and explicit matching.
+For in-memory collections, skip the `source` property and use `rows` directly. The grid handles client-side sorting, filtering, and pagination internally. Use a `ScoutIndex` with `toSearchMatcher()` when you need fuzzy search over local data.
 
 ```js
-import { createLocalSource } from '@vielzeug/sourcerer';
-
-const source = createLocalSource(myRows, {
-  initialQuery: { pageSize: 10 },
-  match: (row, search) => row.name.toLowerCase().includes(search.toLowerCase()),
-});
 const grid = document.querySelector('ore-datagrid');
 grid.columns = [
   { key: 'name', label: 'Name', sortable: true },
   { key: 'role', label: 'Role' },
 ];
-grid.source = source;
-
-// Local sort wiring:
-grid.addEventListener('sort-change', ({ detail: { key, direction } }) => {
-  // Keep local sorting in application-owned data preparation.
-  grid.rows = direction === 'none'
-    ? rows
-    : rows.toSorted((left, right) =>
-        direction === 'asc' ? String(left[key]).localeCompare(String(right[key])) : String(right[key]).localeCompare(String(left[key])),
-      );
-});
-
-// Clean up when done:
-// source.dispose();
+grid.rows = myRows;
 ```
 
 ### Page Source (API-backed)
 
-Use `createPageSource` for server-driven pagination and search. The grid consumes atomic snapshots and calls `source.page.next()` / `source.page.previous()`.
+Use `createPageSource` with string params for server-driven pagination and search. The grid consumes atomic state and calls `source.next()` / `source.previous()`.
 
 ```js
 import { createPageSource } from '@vielzeug/sourcerer';
 
 const source = createPageSource({
-  initialQuery: { pageSize: 20 },
-  load: async ({ query, signal }) => {
+  load: async ({ page, pageSize, params: search, signal }) => {
     const url = new URL('/api/users', location.origin);
-    url.searchParams.set('page', String(query.page));
-    url.searchParams.set('pageSize', String(query.pageSize));
-    url.searchParams.set('search', query.search);
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('pageSize', String(pageSize));
+    url.searchParams.set('search', search);
     const { data, total } = await fetch(url, { signal }).then(r => r.json());
-    return { data, total };
+    return { items: data, totalItems: total };
   },
+  pageSize: 20,
+  params: '',
 });
 
 const grid = document.querySelector('ore-datagrid');
@@ -658,6 +640,7 @@ grid.columns = [
   { key: 'email', label: 'Email' },
 ];
 grid.source = source;
+void source.reload().catch(() => undefined);
 ```
 
 ::: tip DataGridSource interface
@@ -665,13 +648,16 @@ Any object that satisfies the `DataGridSource` structural interface works as a s
 
 ```ts
 type DataGridSource<T> = {
-  readonly current: readonly T[];
-  readonly meta: { isLoading: boolean; pageCount: number; pageNumber: number; pageSize: number; totalItems: number; error: ... | null };
-  subscribe(listener: () => void): () => void;
-  search?(query: string): Promise<void>;
-  next?(): Promise<void>;
-  prev?(): Promise<void>;
-  goTo?(page: number): Promise<void>;
+  next(): Promise<void> | void;
+  previous(): Promise<void> | void;
+  setParams?(search: string): Promise<void> | void;
+  readonly state: {
+    readonly error: { message: string } | null;
+    readonly items: readonly T[];
+    readonly loading: boolean;
+    readonly pagination: { page: number; pageCount: number; pageSize: number; totalItems: number };
+  };
+  subscribe(listener: (state: DataGridSource<T>['state']) => void): () => void;
 };
 ```
 :::
@@ -723,8 +709,8 @@ Provided `filterOptions` define available choices without activating those filte
 | `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                         |
 | `filterOptions`      | `FilterOption[]`                       | —                         | Available choices for column or non-visible metadata filters. Definitions remain inactive until selected in the Filter popover (JS property) |
 | `pageSizeOptions`    | `number[]`                             | —                         | When set, renders a page-size `ore-select` in the footer (JS property)                                                                    |
-| `source`             | `DataGridSource`                       | —                         | A reactive sourcerer source. When set, drives rows, pagination, and search — the `rows` prop is ignored (JS property)                    |
-| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.snapshot.isFetching` when `source` is provided                                   |
+| `source`             | `DataGridSource`                       | —                         | A reactive source. When set, drives rows and pagination; string-param sources also drive search (JS property)                             |
+| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.state.loading` when `source` is provided                                      |
 | `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                  |
 
 ### DataGridView

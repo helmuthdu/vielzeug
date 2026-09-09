@@ -13,7 +13,7 @@ description: API reference for @vielzeug/assay queries, event dispatch, and asyn
 | `queryInShadow` / `queryPart` / `getSlotted` | Crosses custom-element boundaries           | Sync           | Open shadow roots are required                   |
 | `queryLiveRegion` / `waitForLiveRegion`      | ARIA live-region queries and waits          | Sync/Async     | jsdom cannot prove AT speech — manual AT tests still required |
 | `fire*` / `dispatch`                         | Dispatches platform event instances         | Sync           | Does not reproduce browser default behavior      |
-| `waitUntil` / `retry` / `waitForEvent`       | Waits for conditions, assertions, or events | Async          | Use a signal or timeout for bounded waits        |
+| `waitUntil` / `eventually` / `waitForEvent`       | Waits for conditions, assertions, or events | Async          | Use a signal or timeout for bounded waits        |
 | `delay` / `nextTick`                         | Schedules timers or microtasks              | Async          | Prefer `nextTick()` for microtask-scheduled work |
 
 ## Package Entry Point
@@ -96,7 +96,7 @@ provide browser-default or fallback pointer/touch simulation.
 
 ```ts
 await waitUntil(() => ready, { interval: 20, signal, timeout: 1000 });
-await retry(() => expect(spy).toHaveBeenCalled(), { signal, timeout: 1000 });
+await eventually(() => expect(spy).toHaveBeenCalled(), { signal, timeout: 1000 });
 await waitForEvent(target, 'ready', { signal, timeout: 1000 });
 await delay(100, { signal });
 await nextTick();
@@ -105,13 +105,14 @@ await nextTick();
 | Function                               | Success condition        | Options                                    |
 | -------------------------------------- | ------------------------ | ------------------------------------------ |
 | `waitUntil(predicate, options?)`       | Predicate returns `true` | `timeout`, `interval`, `signal`            |
-| `retry(assertion, options?)`           | Assertion stops throwing | `timeout`, `interval`, `signal`, `message` |
+| `eventually(assertion, options?)`       | Assertion stops throwing | `timeout`, `interval`, `signal`, `message`            |
 | `waitForEvent(target, type, options?)` | Target emits `type`      | `timeout`, `signal`                        |
 | `delay(ms?, options?)`                 | Timer elapses            | `signal`                                   |
 | `nextTick()`                           | Next microtask           | none                                       |
 
-`waitUntil`, `retry`, and `waitForEvent` reject with `AssayTimeoutError` when their timeout expires. A supplied abort
-signal rejects with its reason and removes timers and event listeners.
+`waitUntil()`, `eventually()`, and `waitForEvent()` reject with `AssayTimeoutError` when their shared deadline expires. `waitUntil()` and `eventually()` remain bounded while an asynchronous callback is pending. Abort rejects with the signal reason and removes Assay-owned timers and listeners. Callback work itself must cooperate with application cancellation.
+
+`timeout` and delay milliseconds must be finite, non-negative, and no greater than 2,147,483,647 ms; `interval` must be finite, positive, and within the same timer limit. Invalid durations throw `RangeError`. `eventually()` also accepts `message` for diagnostic timeout context. `nextTick()` adds one explicit queued-microtask boundary.
 
 ## Live Regions
 
@@ -130,9 +131,7 @@ sign-off.
 Returns the first live region matching `politeness` (default `'polite'`) and optional
 `role` within `root` (default `document.body`). Returns `null` when none exists.
 
-Matches both explicit `aria-live` attributes and implicit roles per the WAI-ARIA
-spec: `role="status"` → `polite`, `role="alert"` → `assertive`. Explicit `aria-live`
-takes precedence over the implicit value.
+Matches explicit `aria-live` attributes and implicit roles: `alert` is assertive; `log` and `status` are polite; `marquee` and `timer` are off. Explicit `aria-live` takes precedence. A matching `root` element is included before its descendants.
 
 | Option        | Type                    | Default       | Description                          |
 | ------------- | ----------------------- | ------------- | ------------------------------------ |
@@ -148,7 +147,7 @@ regions were created.
 
 ### `waitForLiveRegion(text, options?)`
 
-Retries until a matching live region exists and its `textContent` includes `text`.
+Retries until any matching live region has `textContent` that includes `text`.
 Handles the clear-then-set announce pattern (region briefly empty before the message
 is written). Throws `AssayTimeoutError` on timeout.
 
@@ -161,7 +160,7 @@ await waitForLiveRegion('Session expired', { politeness: 'assertive' });
 
 ### `waitForLiveRegionCleared(options?)`
 
-Retries until a matching live region exists and its `textContent` is empty.
+Retries until any matching live region has empty `textContent`.
 
 ## Types
 
@@ -191,7 +190,7 @@ export interface WaitOptions {
   timeout?: number;
 }
 
-export interface RetryOptions extends WaitOptions {
+export interface EventuallyOptions extends WaitOptions {
   /** Context included in the timeout error. */
   message?: string;
 }
@@ -202,7 +201,7 @@ export interface DelayOptions {
 }
 ```
 
-`WaitOptions` configures `waitUntil`. `RetryOptions` extends it for `retry`. `DelayOptions` configures `delay`.
+`WaitOptions` configures `waitUntil()`. `EventuallyOptions` configures `eventually()`. `DelayOptions` configures `delay()`.
 
 ## Errors
 

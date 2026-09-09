@@ -16,12 +16,18 @@ import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
 import { SpellError } from '../errors';
 import { defineOwnProperty, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
-import type { InferObject, ObjectSchema, ObjectShape } from './object';
+import type { InferObject, InferObjectInput, ObjectSchema, ObjectShape } from './object';
 
 type VariantMap = Record<string, ObjectSchema<any, any>>;
+type Simplify<T> = { [P in keyof T]: T[P] };
 type InferVariantMap<K extends string, M extends VariantMap> = {
   [Tag in keyof M & string]: M[Tag] extends { shape: infer S extends ObjectShape }
     ? InferObject<S> & { [P in K]: Tag }
+    : never;
+}[keyof M & string];
+type InferVariantInputMap<K extends string, M extends VariantMap> = {
+  [Tag in keyof M & string]: M[Tag] extends { shape: infer S extends ObjectShape }
+    ? Simplify<InferObjectInput<S> & { [P in K]: Tag }>
     : never;
 }[keyof M & string];
 
@@ -29,7 +35,7 @@ export class VariantSchema<
   K extends string,
   M extends VariantMap,
   Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<M[keyof M]>>,
-> extends Schema<InferVariantMap<K, M>, unknown, Mode> {
+> extends Schema<InferVariantMap<K, M>, InferVariantInputMap<K, M>, Mode> {
   private readonly _map: Map<string, VariantMap[string]>;
   private readonly _discriminator: K;
 

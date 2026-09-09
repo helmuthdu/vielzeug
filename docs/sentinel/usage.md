@@ -1,6 +1,6 @@
 ---
 title: Sentinel — Usage Guide
-description: Observe browser and DOM state with explicit reactive lifecycles.
+description: Observe browser and DOM state through subscribable snapshots with explicit lifecycles.
 ---
 
 [[toc]]
@@ -16,7 +16,7 @@ function observeViewport(): () => void {
   const viewport = createViewport();
 
   const render = () => {
-    const { dpr, height, width } = viewport.value;
+    const { dpr, height, width } = viewport.getSnapshot();
     console.log(`${width}×${height} at ${dpr}dpr`);
   };
 
@@ -33,7 +33,7 @@ const stopObserving = observeViewport();
 // Call stopObserving() when the owning view unmounts.
 ```
 
-`subscribe()` notifies you that the value changed; read the new snapshot from `.value` inside the listener. Disposing a Sentinel stops its browser observer or event listeners. It does not unsubscribe consumers from the Ripple readable.
+`subscribe()` notifies you that the snapshot changed; call `getSnapshot()` inside the listener to read it. Disposing a Sentinel stops its browser observer, removes its listeners, and aborts `disposalSignal`.
 
 ## Observe Window State
 
@@ -43,9 +43,9 @@ Use `createViewport()` for viewport dimensions and device pixel ratio.
 import { createViewport } from '@vielzeug/sentinel';
 
 const viewport = createViewport();
-console.log(viewport.value.width);
-console.log(viewport.value.height);
-console.log(viewport.value.dpr);
+console.log(viewport.getSnapshot().width);
+console.log(viewport.getSnapshot().height);
+console.log(viewport.getSnapshot().dpr);
 ```
 
 Use `createNetwork()` for online status and the optional Network Information API snapshot.
@@ -54,8 +54,8 @@ Use `createNetwork()` for online status and the optional Network Information API
 import { createNetwork } from '@vielzeug/sentinel';
 
 const network = createNetwork();
-console.log(network.value.online);
-console.log(network.value.connection);
+console.log(network.getSnapshot().online);
+console.log(network.getSnapshot().connection);
 ```
 
 `connection` is `null` when `navigator.connection` is unavailable.
@@ -72,7 +72,7 @@ function observeReducedMotion(): () => void {
     const reducedMotion = createMediaQuery('(prefers-reduced-motion: reduce)');
 
     const applyPreference = () => {
-      document.documentElement.classList.toggle('reduce-motion', reducedMotion.value.matches);
+      document.documentElement.classList.toggle('reduce-motion', reducedMotion.getSnapshot().matches);
     };
 
     applyPreference();
@@ -108,7 +108,7 @@ if (!panel) throw new Error('Panel not found');
 
 const size = createElementSize(panel);
 const unsubscribe = size.subscribe(() => {
-  const current = size.value;
+  const current = size.getSnapshot();
   if (current) panel.dataset.width = String(current.width);
 });
 ```
@@ -131,7 +131,7 @@ const intersection = createIntersection(target, {
 });
 
 const unsubscribe = intersection.subscribe(() => {
-  target.hidden = !intersection.value?.isIntersecting;
+  target.hidden = !intersection.getSnapshot()?.isIntersecting;
 });
 ```
 
@@ -158,18 +158,7 @@ const network = createNetwork({ signal: controller.signal });
 controller.abort();
 ```
 
-An injected Ripple runtime creates the state signal. Runtime disposal and Sentinel disposal remain separate responsibilities.
-
-```ts
-import { createRipple } from '@vielzeug/ripple';
-import { createViewport } from '@vielzeug/sentinel';
-
-const ripple = createRipple();
-const viewport = createViewport({ runtime: ripple });
-
-viewport.dispose();
-ripple.dispose();
-```
+Sentinel follows the standard external-store shape, so reactive libraries can bridge it without a Sentinel-specific adapter.
 
 ## Handle Unavailable APIs
 
@@ -194,31 +183,22 @@ Invoke all factories only in a browser client lifecycle. Package imports are saf
 
 ## Framework Integration
 
-Create the Sentinel after the component mounts, mirror its current value into framework state, and unsubscribe and dispose on unmount.
+Sentinel's callback-safe external-store methods integrate directly with framework subscription APIs. Create browser-bound Sentinels in a client owner and dispose them when that owner ends.
 
 ::: code-group
 
 ```tsx [React]
-import { createViewport, type ViewportState } from '@vielzeug/sentinel';
-import { useEffect, useState } from 'react';
+import { type Sentinel, type ViewportState } from '@vielzeug/sentinel';
+import { useSyncExternalStore } from 'react';
 
-export function ViewportSize() {
-  const [viewportState, setViewportState] = useState<ViewportState | null>(null);
+type ViewportSizeProps = {
+  readonly viewport: Sentinel<ViewportState>;
+};
 
-  useEffect(() => {
-    const viewport = createViewport();
-    const update = () => setViewportState(viewport.value);
+export function ViewportSize({ viewport }: ViewportSizeProps) {
+  const viewportState = useSyncExternalStore(viewport.subscribe, viewport.getSnapshot);
 
-    update();
-    const unsubscribe = viewport.subscribe(update);
-
-    return () => {
-      unsubscribe();
-      viewport.dispose();
-    };
-  }, []);
-
-  return <output>{viewportState ? `${viewportState.width}×${viewportState.height}` : 'Measuring…'}</output>;
+  return <output>{`${viewportState.width}×${viewportState.height}`}</output>;
 }
 ```
 
@@ -234,7 +214,7 @@ let unsubscribe: (() => void) | undefined;
 onMounted(() => {
   viewport = createViewport();
   const update = () => {
-    viewportState.value = viewport?.value ?? null;
+    viewportState.value = viewport?.getSnapshot() ?? null;
   };
 
   update();
@@ -264,7 +244,7 @@ onUnmounted(() => {
   onMount(() => {
     const viewport = createViewport();
     const update = () => {
-      viewportState = viewport.value;
+      viewportState = viewport.getSnapshot();
     };
 
     update();
@@ -288,15 +268,17 @@ onUnmounted(() => {
 
 ### Sentinel + Ripple
 
-Use Ripple to derive values from one or more Sentinel states. Dispose the watcher separately from the Sentinels.
+Bridge Sentinel stores with `fromSubscribable()` before deriving reactive values. Dispose the watcher separately; disposing each Sentinel also disposes its bridge through `disposalSignal`.
 
 ```ts
-import { computed, watch } from '@vielzeug/ripple';
+import { computed, fromSubscribable, watch } from '@vielzeug/ripple';
 import { createMediaQuery, createViewport } from '@vielzeug/sentinel';
 
 const viewport = createViewport();
 const mobileQuery = createMediaQuery('(max-width: 768px)');
-const compact = computed(() => mobileQuery.value.matches || viewport.value.width < 400);
+const viewportState = fromSubscribable(viewport, { signal: viewport.disposalSignal });
+const mobileState = fromSubscribable(mobileQuery, { signal: mobileQuery.disposalSignal });
+const compact = computed(() => mobileState.value.matches || viewportState.value.width < 400);
 const compactWatcher = watch(compact, (value) => console.log('Compact layout:', value), { immediate: true });
 
 compactWatcher.dispose();
@@ -322,7 +304,7 @@ define('measured-panel', {
 
       const size = createElementSize(element);
       const update = () => {
-        element.dataset.width = String(size.value?.width ?? 0);
+        element.dataset.width = String(size.getSnapshot()?.width ?? 0);
       };
       const unsubscribe = size.subscribe(update);
 
@@ -340,7 +322,7 @@ define('measured-panel', {
 ## Best Practices
 
 - **Create** DOM-dependent Sentinels only after their target elements exist.
-- **Read** the latest snapshot from `.value` inside subscription listeners.
+- **Read** the latest snapshot with `getSnapshot()` inside subscription listeners.
 - **Unsubscribe** Ripple listeners when their owner ends.
 - **Dispose** every Sentinel to release browser observers and event listeners.
 - **Share** an `AbortSignal` when multiple Sentinels have the same lifetime.

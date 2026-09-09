@@ -10,14 +10,14 @@ try {
 
   // Wait for server confirmation
   await lobby.joined
-  console.log('joined lobby, rooms:', [...pulse.rooms.value])
+  console.log('joined lobby, rooms:', [...pulse.rooms.getSnapshot()])
 
   // Broadcast our own presence
   lobby.updatePresence({ avatar: '/me.png', name: 'Alice', status: 'online' })
 
   // Reactive presence map: memberId → state
   const printMembers = () => {
-    for (const [id, state] of lobby.presence.value) {
+    for (const [id, state] of lobby.presence.getSnapshot()) {
       console.log('  ' + id + ': ' + state.name + ' (' + state.status + ')')
     }
   }
@@ -31,7 +31,7 @@ try {
 
 // Dispose the room scope — sends leave when last scope is released
 lobby.dispose()
-console.log('rooms after leave:', [...pulse.rooms.value])
+console.log('rooms after leave:', [...pulse.rooms.getSnapshot()])
 
 pulse.dispose()`,
   name: 'Rooms & Presence',

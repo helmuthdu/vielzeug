@@ -3,9 +3,14 @@ import { fromDefinition } from '../json';
 import { isEmail } from '../predicates';
 
 describe('public API surface', () => {
-  it('keeps root focused on schemas, errors, and diagnostics', () => {
+  it('keeps root focused on schema construction and parsing', () => {
     expect(typeof spell.s.string).toBe('function');
-    expect('errorsAt' in spell.diagnostics).toBe(false);
+    expect(typeof spell.createParseContext).toBe('function');
+    expect('any' in spell.s).toBe(false);
+    expect('AnySchema' in spell).toBe(false);
+    expect('diagnostics' in spell).toBe(false);
+    expect('PipeSchema' in spell).toBe(false);
+    expect('schemaMode' in spell).toBe(false);
     expect('json' in spell).toBe(false);
     expect('predicates' in spell).toBe(false);
     expect('setMessages' in spell).toBe(false);

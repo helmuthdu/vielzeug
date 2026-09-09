@@ -3,8 +3,8 @@ export { consoleTransport, DEFAULT_THEME, resolveTheme } from './console';
 export { RuneConfigError, RuneError } from './errors';
 export type { LazyBinding } from './lazy';
 export { lazy } from './lazy';
-export { createLogger, defaultLogger } from './logger';
-export { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from './transports';
+export { createLogger } from './logger';
+export { batchTransport, jsonTransport, redactTransport, remoteTransport, sampleTransport } from './transports';
 export type {
   BatchHandle,
   BatchTransportOptions,
@@ -16,7 +16,6 @@ export type {
   LogMethod,
   LogMiddleware,
   LogType,
-  PipeOptions,
   RedactTransportOptions,
   RemoteLogData,
   RemoteTransportOptions,

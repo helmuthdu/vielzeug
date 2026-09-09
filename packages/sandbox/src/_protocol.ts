@@ -3,7 +3,6 @@ export const MSG_ERROR = 'error';
 export const MSG_HTML_REPLACE = 'html-replace';
 export const MSG_READY = 'ready';
 export const MSG_RESIZE = 'resize';
-export const MSG_STATE_UPDATE = 'state-update';
 export const MSG_STATE_UPDATE_ALL = 'state-update-all';
 export const MSG_STYLE_PATCH = 'style-patch';
 

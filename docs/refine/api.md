@@ -1,30 +1,43 @@
 ---
 title: Refine — API Reference
-description: Published component registration and stylesheet entry points for @vielzeug/refine.
+description: Published component, stylesheet, framework type, and error entry points for @vielzeug/refine.
 ---
-
-# API Reference
 
 [[toc]]
 
-Refine deliberately publishes components, not a second headless framework. Register each element through its component
-subpath and import its types from the same path.
+## API Overview
+
+| Symbol | Purpose | Execution mode | Common gotcha |
+| --- | --- | --- | --- |
+| `@vielzeug/refine/<component>` | Register one custom element and export its public types | Sync | Importing a type alone does not register the element |
+| `@vielzeug/refine/tokens.css` | Load required theme tokens, animations, and cascade layers | CSS | Import once before components render |
+| `@vielzeug/refine/fouc.css` | Hide unregistered `ore-*` elements until upgrade | CSS | Load before first paint |
+| `@vielzeug/refine/styles/preflight.css` | Apply the optional browser reset | CSS | The reset affects global elements |
+| `@vielzeug/refine/frameworks/elements` | Register typed DOM tag mappings | Types only | Import for side effects in TypeScript |
+| `@vielzeug/refine/frameworks/react` | Register typed React JSX elements | Types only | Does not provide runtime wrappers |
+| `@vielzeug/refine/frameworks/vue` | Register typed Vue global components | Types only | Does not install a Vue plugin |
+| `RefineError` | Base class for package-defined public errors | Sync | Component configuration warnings do not throw this error |
+
+## Package Entry Point
+
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/refine` | Export `RefineError` without registering components |
+| `@vielzeug/refine/<component>` | Register one component and export its tag constant, props, events, and related types |
+| `@vielzeug/refine/tokens.css` | Required global design contract |
+| `@vielzeug/refine/fouc.css` | Optional pre-upgrade visibility rule |
+| `@vielzeug/refine/styles/*` | Focused theme, animation, layer, and preflight stylesheets |
+| `@vielzeug/refine/frameworks/*` | TypeScript augmentations for DOM, React, and Vue |
 
 ## Styles
 
 ```ts
-import '@vielzeug/refine/fouc.css';           // Hide unupgraded custom elements until first paint
-import '@vielzeug/refine/tokens.css';          // Required: tokens, animations, cascade layers
-import '@vielzeug/refine/styles/preflight.css'; // Optional: normalizes browser defaults.
+import '@vielzeug/refine/fouc.css';
+import '@vielzeug/refine/tokens.css';
+import '@vielzeug/refine/styles/preflight.css';
 ```
 
-`fouc.css` suppresses flash-of-unstyled-content by hiding custom elements (`:not(:defined)`)
-until their shadow DOM attaches. Import it in your CSS bundle — not via JS injection — so the
-rule is available at first paint. `tokens.css` defines Refine's design tokens, animations, and
-cascade-layer order without modifying global element defaults. `preflight.css` is a separate
-opt-in reset that also imports `fouc.css`.
-
-Direct CSS entry points are also available when needed:
+`tokens.css` is required. It defines tokens, animations, and cascade-layer order without resetting global elements. `preflight.css` is optional and includes FOUC suppression.
 
 | Import path | Purpose |
 | --- | --- |
@@ -33,34 +46,58 @@ Direct CSS entry points are also available when needed:
 | `@vielzeug/refine/styles/theme.css` | Theme token declarations |
 | `@vielzeug/refine/styles/animation.css` | Animation helpers |
 | `@vielzeug/refine/styles/layers.css` | Cascade layer declarations |
-| `@vielzeug/refine/styles/preflight.css` | Optional browser-default reset (includes FOUC suppression) |
+| `@vielzeug/refine/styles/preflight.css` | Optional browser reset and FOUC suppression |
 
 ## Components
 
-Each component has a single registration and type entry point:
+Each component uses one registration and type entry point:
 
 ```ts
 import '@vielzeug/refine/button';
-import type { OreButtonEvents, OreButtonProps } from '@vielzeug/refine/button';
+import type { OreButtonProps } from '@vielzeug/refine/button';
 ```
-
-The package root only exports `RefineError`; it does not register elements. This keeps component ownership and bundle
-contents explicit.
 
 | Area | Components |
 | --- | --- |
-| Content | `accordion`, `accordion-item`, `avatar`, `avatar-group`, `badge`, `breadcrumb`, `card`, `carousel`, `chat-message`, `code-window`, `copy-command`, `icon`, `list`, `list-item`, `marquee`, `pagination`, `separator`, `stats`, `step`, `stepper`, `table`, `text` |
-| Feedback | `alert`, `async`, `chip`, `password-strength`, `progress`, `skeleton`, `toast`, `typing-indicator` |
+| Content | `avatar`, `avatar-group`, `breadcrumb`, `card`, `carousel`, `chat-message`, `code-window`, `copy-command`, `icon`, `list`, `list-item`, `marquee`, `pagination`, `separator`, `stats`, `step`, `stepper`, `table`, `text` |
+| Disclosure | `accordion`, `accordion-item`, `tabs`, `tab-item`, `tab-panel` |
+| Feedback | `alert`, `async`, `badge`, `chip`, `password-strength`, `progress`, `skeleton`, `toast`, `typing-indicator` |
 | Inputs | `button`, `button-group`, `calendar`, `checkbox`, `checkbox-group`, `combobox`, `datagrid`, `date-picker`, `file-input`, `input`, `message-composer`, `number-input`, `otp-input`, `radio`, `radio-group`, `rating`, `select`, `slider`, `switch`, `textarea`, `time-picker` |
 | Layout | `box`, `grid`, `grid-item`, `navbar`, `sidebar` |
-| Overlays | `command-palette`, `dialog`, `drawer`, `menu`, `popover`, `tooltip` |
+| Overlays | `command-palette`, `dialog`, `drawer`, `menu`, `navigation-menu`, `popover`, `tooltip` |
 
-Each component's documentation page describes its attributes, properties, events, slots, parts, and custom properties.
+Each component page lists its attributes, JavaScript properties, events, slots, parts, and CSS custom properties.
+
+## Framework Types
+
+```ts
+import type {} from '@vielzeug/refine/frameworks/elements';
+import type {} from '@vielzeug/refine/frameworks/react';
+import type {} from '@vielzeug/refine/frameworks/vue';
+```
+
+The declarations cover every supported tag and derive component properties from Refine's authoritative `HTMLElementTagNameMap`. They provide types only; component registration still uses component subpaths.
 
 ## Events and Form Controls
 
-Form controls expose their current `.value` or `.checked` property and dispatch standard `input` and `change` events.
-Read the property from `event.currentTarget`; do not rely on framework-specific custom-event casts.
+Form controls expose `.value` or `.checked` and dispatch standard `input` and `change` events. Read the property from `event.currentTarget`.
 
-Stateful overlays expose `open` and `default-open` properties/attributes and dispatch `open-change` with
-`{ open, reason }` detail. The per-component pages describe valid reasons and focus behavior.
+Stateful overlays expose controlled `open`, optional `default-open`, and an `open-change` custom event with `{ open, reason }` detail. Component pages define additional detail fields and reasons.
+
+## Types
+
+Component props follow the `Ore<Component>Props` naming pattern. Event maps follow `Ore<Component>Events`. Import both from the component subpath that owns them.
+
+`RefineElementMap`, `RefineReactIntrinsicElements`, and `RefineVueGlobalComponents` are exported from their respective `frameworks/*` type entry points.
+
+## Errors
+
+### `RefineError`
+
+```ts
+class RefineError extends Error {
+  constructor(message: string, opts?: ErrorOptions);
+}
+```
+
+Base class for public Refine errors. It preserves `cause` through `ErrorOptions`.

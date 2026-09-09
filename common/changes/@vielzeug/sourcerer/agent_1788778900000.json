@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: narrow Sourcerer to typed collection sources with consumer-owned params, direct commands, and simpler request succession",
+      "packageName": "@vielzeug/sourcerer",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sourcerer"
+}

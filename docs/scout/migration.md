@@ -5,6 +5,58 @@ description: Migrate Scout index configuration and corpus updates to Scout.
 
 [[toc]]
 
+## Scout 3 Changes
+
+Scout 3 replaces per-property Ripple signals with one framework-neutral external store. This is a breaking change: use `setQuery()` for writes and read `query`, `isSearching`, and `results` together through `getSnapshot()`.
+
+### Replace signal reads and writes
+
+```ts
+// Before
+search.query.value = 'alice';
+console.log(search.isSearching.value, search.results.value);
+
+// After
+search.setQuery('alice');
+const { isSearching, results } = search.getSnapshot();
+console.log(isSearching, results);
+```
+
+### Replace per-property subscriptions
+
+```ts
+// Before
+const stopResults = search.results.subscribe(render);
+const stopSearching = search.isSearching.subscribe(render);
+
+// After
+const stop = search.subscribe(() => render(search.getSnapshot()));
+```
+
+One subscription now observes an atomic `SearchSnapshot`; subscribers never see `isSearching: false` paired with results from the previous committed query. Subscription errors are reported asynchronously after all subscribers run. Pass `{ signal }` to detach automatically.
+
+### Bridge to Ripple explicitly
+
+```ts
+import { createRipple } from '@vielzeug/ripple';
+
+const ripple = createRipple();
+const state = ripple.fromSubscribable(search, { signal: search.disposalSignal });
+const names = ripple.computed(() => state.value.results.map((result) => result.item.name));
+```
+
+Scout no longer installs Ripple. Add `@vielzeug/ripple` directly only when your application uses this bridge.
+
+### Observe diagnostics with `tap()`
+
+`tap()` emits typed `state-change` and `dispose` events. Tapper errors are swallowed so diagnostics cannot affect search behavior.
+
+```ts
+const stop = search.tap((event) => {
+  if (event.type === 'state-change') console.debug(event.snapshot);
+});
+```
+
 ## Scout 2.4 Changes
 
 Scout 2.4 removes the `tap()` observability layer from `SearchState` — it duplicated `@vielzeug/ripple` signal subscriptions that were already available via `search.query.subscribe()`, `search.isSearching.subscribe()`, and `search.results.subscribe()`.

@@ -3,10 +3,22 @@ import {
   ConduitDisposedError,
   ConduitDisposeError,
   ConduitDuplicateRegistrationError,
+  ConduitError,
   ConduitProviderNotFoundError,
   ConduitScopedResolutionError,
 } from './errors.js';
-import type { Container, FactoryOptions, InferTokens, Lifetime, ScopeToken, Token, ValueOptions } from './types.js';
+import type {
+  Container,
+  FactoryProvider,
+  InferServices,
+  Lifetime,
+  Provider,
+  ScopeToken,
+  ServiceMap,
+  Token,
+  ValueProvider,
+} from './types.js';
+import { disposalSignalToken } from './types.js';
 
 type Disposer = (value: unknown) => Promise<void> | void;
 
@@ -17,7 +29,7 @@ type ValueRegistration<T> = Readonly<{
 }>;
 
 type FactoryRegistration<T = unknown> = Readonly<{
-  create: (...values: unknown[]) => Promise<T> | T;
+  factory: (...values: unknown[]) => Promise<T> | T;
   dependencies: readonly Token<unknown>[];
   dispose?: Disposer;
   kind: 'factory';
@@ -26,7 +38,7 @@ type FactoryRegistration<T = unknown> = Readonly<{
 
 type Registration<T = unknown> = FactoryRegistration<T> | ValueRegistration<T>;
 type OwnedResource = Readonly<{ dispose?: Disposer; value: unknown }>;
-type CacheEntry = { promise?: Promise<unknown>; value?: unknown };
+type CacheEntry = { promise: Promise<unknown>; resolved: boolean; value?: unknown };
 type Lifecycle = 'active' | 'disposed' | 'disposing';
 
 class ContainerImpl implements Container {
@@ -43,13 +55,28 @@ class ContainerImpl implements Container {
   #scope?: ScopeToken;
   readonly name: string;
 
-  constructor(parent?: ContainerImpl, options: { name?: string; scope?: ScopeToken } = {}) {
+  constructor(
+    parent: ContainerImpl | undefined,
+    providers: readonly Provider<any, any>[],
+    options: { name?: string; scope?: ScopeToken },
+  ) {
     this.#parent = parent;
     this.#scope = options.scope;
 
     if (parent) parent.#children.add(this);
 
     this.name = options.name ?? (parent ? `${parent.name}:${options.scope?.description ?? 'child'}` : 'root');
+    this.#registry.set(disposalSignalToken, { kind: 'value', value: this.disposalSignal });
+
+    try {
+      this.#registerProviders(providers);
+      this.#validateGraph();
+      this.#claimValues();
+    } catch (error) {
+      if (parent) parent.#children.delete(this);
+      this.#registry.clear();
+      throw error;
+    }
   }
 
   get disposalSignal(): AbortSignal {
@@ -60,71 +87,45 @@ class ContainerImpl implements Container {
     return this.#lifecycle === 'disposed';
   }
 
-  value<T>(token: Token<T>, value: T, options: ValueOptions<T> = {}): this {
-    this.#assertActive();
-    this.#assertUnregistered(token);
-
-    const registration: ValueRegistration<T> = {
-      dispose: options.dispose as Disposer | undefined,
-      kind: 'value',
-      value,
-    };
-
-    this.#registry.set(token, registration);
-
-    if (options.dispose) this.#owned.push({ dispose: options.dispose as Disposer, value });
-
-    return this;
-  }
-
-  factory<T, Dependencies extends readonly Token<unknown>[]>(
-    token: Token<T>,
-    dependencies: Dependencies,
-    create: (...values: InferTokens<Dependencies>) => Promise<T> | T,
-    options: FactoryOptions<T> = {},
-  ): this {
-    this.#assertActive();
-    this.#assertUnregistered(token);
-
-    const registration: FactoryRegistration<T> = {
-      create: create as (...values: unknown[]) => Promise<T> | T,
-      dependencies: Object.freeze([...dependencies]),
-      dispose: options.dispose as Disposer | undefined,
-      kind: 'factory',
-      lifetime: options.lifetime ?? 'singleton',
-    };
-
-    this.#registry.set(token, registration);
-
-    return this;
-  }
-
   has<T>(token: Token<T>): boolean {
     this.#assertActive();
 
     return this.#lookup(token) !== undefined;
   }
 
-  async resolve<T>(token: Token<T>): Promise<T> {
+  resolve<T>(token: Token<T>): Promise<T>;
+  resolve<M extends ServiceMap>(map: M): Promise<InferServices<M>>;
+  async resolve<T, M extends ServiceMap>(input: Token<T> | M): Promise<InferServices<M> | T> {
     this.#assertActive();
 
-    return this.#resolve(token, []);
-  }
-
-  validate(): this {
-    this.#assertActive();
-
-    for (const { owner, registration, token } of this.#factories()) {
-      owner.#validatePath(token, registration, new Set(), []);
+    if (typeof input === 'symbol') return this.#resolve(input, []);
+    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+      throw new ConduitError('resolve() requires a token or service map');
     }
 
-    return this;
+    const entries = Object.keys(input) as (keyof M & string)[];
+    const values = await Promise.all(entries.map((key) => this.#resolve(input[key] as Token<unknown>, [])));
+    const services = {} as InferServices<M>;
+
+    entries.forEach((key, index) => {
+      Object.defineProperty(services, key, {
+        configurable: true,
+        enumerable: true,
+        value: values[index],
+        writable: true,
+      });
+    });
+
+    return services;
   }
 
-  createScope(scope?: ScopeToken, options?: { name?: string }): Container {
+  createScope(
+    scope?: ScopeToken,
+    options?: { readonly name?: string; readonly providers?: readonly Provider<any, any>[] },
+  ): Container {
     this.#assertActive();
 
-    return new ContainerImpl(this, { name: options?.name, scope });
+    return new ContainerImpl(this, options?.providers ?? [], { name: options?.name, scope });
   }
 
   dispose(): Promise<void> {
@@ -137,6 +138,10 @@ class ContainerImpl implements Container {
     this.#disposePromise = this.#finishDisposal();
 
     return this.#disposePromise;
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.dispose();
   }
 
   async #finishDisposal(): Promise<void> {
@@ -176,16 +181,93 @@ class ContainerImpl implements Container {
     if (failures.length) throw new ConduitDisposeError(failures);
   }
 
-  async [Symbol.asyncDispose](): Promise<void> {
-    await this.dispose();
-  }
-
   #assertActive(): void {
     if (this.#lifecycle !== 'active') throw new ConduitDisposedError(this.name);
   }
 
   #assertUnregistered(token: Token<unknown>): void {
     if (this.#registry.has(token)) throw new ConduitDuplicateRegistrationError(token);
+  }
+
+  #registerProviders(providers: readonly Provider<any, any>[]): void {
+    if (!Array.isArray(providers)) throw new ConduitError('Container providers must be an array');
+
+    for (const input of providers) {
+      if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+        throw new ConduitError('Each provider must be an object');
+      }
+
+      const provider = input as Provider;
+      const hasDependencies = Object.hasOwn(provider, 'dependencies');
+      const hasFactory = Object.hasOwn(provider, 'factory');
+      const hasValue = Object.hasOwn(provider, 'value');
+
+      if (typeof provider.token !== 'symbol') throw new ConduitError('Each provider requires a token');
+      if (provider.dispose !== undefined && typeof provider.dispose !== 'function') {
+        throw new ConduitError(`Provider "${provider.token.description ?? 'anonymous'}" has an invalid disposer`);
+      }
+      if (
+        hasValue === hasFactory ||
+        hasValue === hasDependencies ||
+        (hasValue && Object.hasOwn(provider, 'lifetime'))
+      ) {
+        throw new ConduitError(
+          `Provider "${provider.token.description ?? 'anonymous'}" must define exactly one value or factory`,
+        );
+      }
+
+      this.#assertUnregistered(provider.token);
+
+      if (hasFactory) {
+        const factory = provider as FactoryProvider<unknown>;
+
+        if (
+          !Array.isArray(factory.dependencies) ||
+          factory.dependencies.some((dependency) => typeof dependency !== 'symbol')
+        ) {
+          throw new ConduitError(
+            `Factory provider "${provider.token.description ?? 'anonymous'}" has invalid dependencies`,
+          );
+        }
+        if (typeof factory.factory !== 'function') {
+          throw new ConduitError(`Factory provider "${provider.token.description ?? 'anonymous'}" requires a factory`);
+        }
+        if (
+          factory.lifetime !== undefined &&
+          factory.lifetime !== 'singleton' &&
+          factory.lifetime !== 'transient' &&
+          typeof factory.lifetime !== 'symbol'
+        ) {
+          throw new ConduitError(
+            `Factory provider "${provider.token.description ?? 'anonymous'}" has an invalid lifetime`,
+          );
+        }
+
+        this.#registry.set(provider.token, {
+          dependencies: Object.freeze([...factory.dependencies]),
+          dispose: factory.dispose as Disposer | undefined,
+          factory: factory.factory as (...values: unknown[]) => Promise<unknown> | unknown,
+          kind: 'factory',
+          lifetime: factory.lifetime ?? 'singleton',
+        });
+      } else {
+        const valueProvider = provider as ValueProvider<unknown>;
+
+        this.#registry.set(provider.token, {
+          dispose: valueProvider.dispose as Disposer | undefined,
+          kind: 'value',
+          value: valueProvider.value,
+        });
+      }
+    }
+  }
+
+  #claimValues(): void {
+    for (const registration of this.#registry.values()) {
+      if (registration.kind === 'value' && registration.dispose) {
+        this.#owned.push({ dispose: registration.dispose, value: registration.value });
+      }
+    }
   }
 
   #lookup<T>(token: Token<T>): { owner: ContainerImpl; registration: Registration<T> } | undefined {
@@ -207,6 +289,12 @@ class ContainerImpl implements Container {
     return [...parentFactories, ...localFactories];
   }
 
+  #validateGraph(): void {
+    for (const { owner, registration, token } of this.#factories()) {
+      owner.#validatePath(token, registration, new Set(), []);
+    }
+  }
+
   #validatePath(
     token: Token<unknown>,
     registration: FactoryRegistration,
@@ -223,6 +311,22 @@ class ContainerImpl implements Container {
       if (!found) throw new ConduitProviderNotFoundError(dependency, this.name);
 
       if (found.registration.kind === 'factory') {
+        if (registration.lifetime === 'singleton' && found.registration.lifetime === 'transient') {
+          throw new ConduitError(
+            `Singleton "${token.description ?? 'anonymous'}" cannot depend on a transient factory`,
+          );
+        }
+        if (registration.lifetime === 'singleton' && typeof found.registration.lifetime === 'symbol') {
+          throw new ConduitScopedResolutionError(token, found.registration.lifetime);
+        }
+        if (
+          typeof registration.lifetime === 'symbol' &&
+          typeof found.registration.lifetime === 'symbol' &&
+          registration.lifetime !== found.registration.lifetime
+        ) {
+          throw new ConduitScopedResolutionError(token, found.registration.lifetime);
+        }
+
         found.owner.#validatePath(dependency, found.registration, visiting, [...path, token]);
       }
     }
@@ -237,43 +341,49 @@ class ContainerImpl implements Container {
 
     if (!found) throw new ConduitProviderNotFoundError(token, this.name);
 
-    if (found.registration.kind === 'value') return found.registration.value as T;
+    const registration = found.registration;
 
-    const owner = this.#ownerFor(found.owner, found.registration, token);
+    if (registration.kind === 'value') return registration.value as T;
 
-    if (found.registration.lifetime === 'transient') {
-      return this.#create(found.registration, owner, [...path, token]) as Promise<T>;
+    const owner = this.#ownerFor(found.owner, registration, token);
+
+    if (registration.lifetime === 'transient') {
+      return owner.#track(owner.#create(registration, owner, [...path, token])) as Promise<T>;
     }
 
-    const existing = owner.#cache.get(found.registration);
+    const existing = owner.#cache.get(registration);
 
-    if (existing?.value !== undefined) return existing.value as T;
+    if (existing?.resolved) return existing.value as T;
+    if (existing) return existing.promise as Promise<T>;
 
-    if (existing?.promise) return existing.promise as Promise<T>;
+    const entry = { promise: Promise.resolve(), resolved: false } as CacheEntry;
+    const creation = owner.#create(registration, owner, [...path, token]).then(
+      (value) => {
+        entry.resolved = true;
+        entry.value = value;
+        return value;
+      },
+      (error) => {
+        if (owner.#cache.get(registration) === entry) owner.#cache.delete(registration);
+        throw error;
+      },
+    );
 
-    const entry: CacheEntry = {};
-    const promise = owner.#create(found.registration, owner, [...path, token]).then((value) => {
-      entry.value = value;
+    entry.promise = owner.#track(creation);
+    owner.#cache.set(registration, entry);
 
-      return value;
-    });
-
-    entry.promise = promise;
-    owner.#cache.set(found.registration, entry);
-
-    return promise as Promise<T>;
+    return entry.promise as Promise<T>;
   }
 
   #ownerFor(owner: ContainerImpl, registration: FactoryRegistration, token: Token<unknown>): ContainerImpl {
     if (registration.lifetime === 'singleton') return owner;
-
     if (registration.lifetime === 'transient') return this;
 
-    const scope = this.#scopeOwner(registration.lifetime);
+    const scopeOwner = this.#scopeOwner(registration.lifetime as ScopeToken);
 
-    if (!scope) throw new ConduitScopedResolutionError(token, registration.lifetime);
+    if (!scopeOwner) throw new ConduitScopedResolutionError(token, registration.lifetime as ScopeToken);
 
-    return scope;
+    return scopeOwner;
   }
 
   #scopeOwner(scope: ScopeToken): ContainerImpl | undefined {
@@ -282,37 +392,41 @@ class ContainerImpl implements Container {
     return this.#parent ? this.#parent.#scopeOwner(scope) : undefined;
   }
 
-  async #create(registration: FactoryRegistration, owner: ContainerImpl, path: Token<unknown>[]): Promise<unknown> {
-    const promise = Promise.all(registration.dependencies.map((dependency) => owner.#resolve(dependency, path))).then(
-      (dependencies) => registration.create(...dependencies),
+  #track<T>(promise: Promise<T>): Promise<T> {
+    this.#inFlight.add(promise);
+    void promise.then(
+      () => this.#inFlight.delete(promise),
+      () => this.#inFlight.delete(promise),
     );
+    return promise;
+  }
 
-    owner.#inFlight.add(promise);
+  async #create(registration: FactoryRegistration, owner: ContainerImpl, path: Token<unknown>[]): Promise<unknown> {
+    const value = await Promise.all(
+      registration.dependencies.map((dependency) => owner.#resolve(dependency, path)),
+    ).then((dependencies) => registration.factory(...dependencies));
 
-    try {
-      const value = await promise;
-
-      if (owner.#lifecycle !== 'active') {
-        if (registration.dispose) {
-          try {
-            await registration.dispose(value);
-          } catch (error) {
-            owner.#cleanupFailures.push(error);
-          }
+    if (owner.#lifecycle !== 'active') {
+      if (registration.dispose) {
+        try {
+          await registration.dispose(value);
+        } catch (error) {
+          owner.#cleanupFailures.push(error);
         }
-
-        throw new ConduitDisposedError(owner.name);
       }
 
-      if (registration.dispose) owner.#owned.push({ dispose: registration.dispose, value });
-
-      return value;
-    } finally {
-      owner.#inFlight.delete(promise);
+      throw new ConduitDisposedError(owner.name);
     }
+
+    if (registration.dispose) owner.#owned.push({ dispose: registration.dispose, value });
+
+    return value;
   }
 }
 
-export function createContainer(options?: { name?: string }): Container {
-  return new ContainerImpl(undefined, options);
+export function createContainer(
+  providers: readonly Provider<any, any>[],
+  options?: { readonly name?: string },
+): Container {
+  return new ContainerImpl(undefined, providers, { name: options?.name });
 }

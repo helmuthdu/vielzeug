@@ -189,7 +189,7 @@ export function onEvent(
  */
 export const onElement = <T extends HTMLElement>(
   ref: Readable<T | null>,
-  callback: (el: T) => Cleanup | undefined | undefined,
+  callback: (el: T) => Cleanup | undefined,
 ): (() => void) => {
   return watchEffect(() => {
     const el = ref.value;

@@ -1,6 +1,6 @@
 ---
 title: Tempo — API Reference
-description: Reference for Tempo Temporal parsing, conversion, arithmetic, formatting, and classification APIs.
+description: Reference for Tempo Temporal parsing, conversion, arithmetic, comparison, sequence, formatting, and classification APIs.
 ---
 
 [[toc]]
@@ -13,11 +13,13 @@ description: Reference for Tempo Temporal parsing, conversion, arithmetic, forma
 | `isValid()` | Narrow an unknown runtime value to `TimeInput` | Sync | Does not parse strings |
 | `toInstant()` | Resolve a value as an absolute instant | Sync | Plain values require `timeZone` |
 | `inTimeZone()` | Project a value to a zone | Sync | Preserves instant, changes wall-clock fields |
-| `shift()` / `difference()` | DST-safe arithmetic | Sync | Calendar work needs a timezone |
-| `contains()` / `clamp()` | Named range operations | Sync | Bounds normalize automatically |
-| `classifyExpiry()` | Classify fixed elapsed-time thresholds | Sync | Use milliseconds or larger units; months and years are rejected |
+| `shift()` / `difference()` | Timezone-aware arithmetic | Sync | Calendar operations require a timezone |
+| `isBefore()` / `isAfter()` / `isSame()` | Compare absolute values or calendar units | Sync | Plain values require `timeZone` |
+| `contains()` / `clamp()` | Compare normalized ranges | Sync | Bounds normalize automatically |
+| `startOf()` / `endOf()` | Resolve calendar boundaries | Sync | Weeks default to Monday |
+| `dateRange()` / `recurrence()` | Generate lazy zoned sequences | Sync | Steps and intervals must advance |
+| `classifyExpiry()` | Classify fixed elapsed-time thresholds | Sync | Months and years are rejected |
 | `format()` family | Localized and machine formatting | Sync | Use `timeZone`, not `tz` |
-| `dateRange()` / `recurrence()` | Lazy zoned sequences | Sync | Plain inputs need `timeZone` |
 
 ## Package Entry Point
 
@@ -118,29 +120,18 @@ inTimeZone(instant, 'Europe/Berlin');
 
 ---
 
+## Arithmetic and Comparison
+
 ### `shift(input, duration, options?)`
 
 ```ts
 shift(input: Temporal.ZonedDateTime, duration: Temporal.DurationLike, options?: ShiftOptions): Temporal.ZonedDateTime;
-shift(
-  input: Exclude<TimeInput, Temporal.ZonedDateTime>,
-  duration: Temporal.DurationLike,
-  options: ShiftOptions & { timeZone: string },
-): Temporal.ZonedDateTime;
+shift(input: Exclude<TimeInput, Temporal.ZonedDateTime>, duration: Temporal.DurationLike, options: ShiftOptions & { timeZone: string }): Temporal.ZonedDateTime;
 ```
 
-Adds a duration through Temporal calendar rules and returns a zoned value. Non-`ZonedDateTime` inputs require `options.timeZone`.
+Adds a duration through zoned calendar rules.
 
 **Returns:** `Temporal.ZonedDateTime`.
-
-**Example:**
-
-```ts
-import { parse, shift } from '@vielzeug/tempo';
-
-const before = parse('2026-03-08T01:30:00-05:00[America/New_York]', { as: 'zonedDateTime' });
-shift(before, { hours: 1 });
-```
 
 ---
 
@@ -150,38 +141,13 @@ shift(before, { hours: 1 });
 difference(input: DifferenceInput): Temporal.Duration;
 ```
 
-Returns duration from `start` to `end`.
+Returns the signed duration from `start` to `end` with optional Temporal rounding.
 
-**Example:**
+**Returns:** `Temporal.Duration`.
 
-```ts
-import { difference, parse } from '@vielzeug/tempo';
+---
 
-const start = parse('2026-03-21T10:00:00Z', { as: 'instant' });
-const end = parse('2026-03-21T12:00:00Z', { as: 'instant' });
-difference({ end, largestUnit: 'hour', start });
-```
-
-## Range and Comparison
-
-### `contains({ value, start, end, ...options })`
-
-```ts
-contains(input: ContainsInput): boolean;
-```
-
-Returns whether `value` lies in inclusive normalized bounds.
-
-### `clamp({ value, start, end, ...options })`
-
-```ts
-clamp(input: ClampInput & { value: Temporal.ZonedDateTime }): Temporal.ZonedDateTime;
-clamp(input: ClampInput): Temporal.Instant;
-```
-
-Returns the nearest bound when `value` falls outside the range. Returns a `ZonedDateTime` when `value` is one, otherwise an `Instant`.
-
-### `isBefore(a, b, options?)` / `isAfter(a, b, options?)` / `isSame(a, b, options?)`
+### `isBefore()` / `isAfter()` / `isSame()`
 
 ```ts
 isBefore(a: TimeInput, b: TimeInput, options?: CompareOptions): boolean;
@@ -189,16 +155,60 @@ isAfter(a: TimeInput, b: TimeInput, options?: CompareOptions): boolean;
 isSame(a: TimeInput, b: TimeInput, options?: CompareOptions): boolean;
 ```
 
-Compare absolute values or calendar boundaries when `unit` is supplied.
+Compare absolute instants or their containing calendar units.
 
-### `startOf(input, unit, options?)` / `endOf(input, unit, options?)`
+**Returns:** A boolean comparison result.
+
+---
+
+### `contains({ value, start, end, ...options })` / `clamp({ value, start, end, ...options })`
+
+```ts
+contains(input: ContainsInput): boolean;
+clamp(input: ClampInput & { value: Temporal.ZonedDateTime }): Temporal.ZonedDateTime;
+clamp(input: ClampInput): Temporal.Instant;
+```
+
+Normalizes reversed bounds, then checks or constrains the value.
+
+**Returns:** `contains()` returns `boolean`; `clamp()` returns the normalized value or nearest bound.
+
+---
+
+### `startOf()` / `endOf()`
 
 ```ts
 startOf(input: TimeInput, unit: BoundaryUnit, options?: BoundaryOptions): Temporal.ZonedDateTime;
 endOf(input: TimeInput, unit: BoundaryUnit, options?: BoundaryOptions): Temporal.ZonedDateTime;
 ```
 
-Returns the first or last nanosecond of the requested boundary unit.
+Returns the first or last nanosecond of a timezone-aware calendar unit.
+
+**Returns:** `Temporal.ZonedDateTime`.
+
+## Calendar Sequences
+
+### `dateRange(start, end, step, options?)`
+
+```ts
+dateRange(start: TimeInput, end: TimeInput, step: Temporal.DurationLike, options?: TimeZoneOptions): Generator<Temporal.ZonedDateTime>;
+```
+
+Returns an inclusive lazy zoned range and rejects steps that do not advance time.
+
+**Returns:** `Generator<Temporal.ZonedDateTime>`.
+
+---
+
+### `recurrence(start, rule, options?)`
+
+```ts
+recurrence(start: TimeInput, rule: RecurrenceRule, options?: TimeZoneOptions): Generator<Temporal.ZonedDateTime>;
+```
+
+Returns a count- or date-limited lazy recurrence. Intervals must be positive safe integers; counts must be non-negative safe integers.
+
+**Returns:** `Generator<Temporal.ZonedDateTime>`.
 
 ## Formatting
 
@@ -231,7 +241,7 @@ formatRelative(input: RelativeTimeInput, options?: RelativeFormatOptions): strin
 formatDuration(input: string | Temporal.DurationLike, options?: DurationFormatOptions): string;
 ```
 
-`formatInstant()` produces UTC transport text (`timeZone` needed for wall-time input, ignored for `Instant`). `formatZoned()` produces zoned ISO text (`timeZone` required for non-`ZonedDateTime` input). `formatDuration()` falls back to English when `Intl.DurationFormat` is unavailable.
+`formatInstant()` produces UTC transport text (`timeZone` needed for wall-time input, ignored for `Instant`). `formatZoned()` produces zoned ISO text (`timeZone` required for non-`ZonedDateTime` input). `formatRelative()` uses fixed units for short spans and complete calendar months or years in the requested or inferred timezone. Zoned inputs with different zones require `options.timeZone`. `formatDuration()` falls back to English when `Intl.DurationFormat` is unavailable.
 
 ### `formatParts()` / `formatRange()` / `formatRangeParts()`
 
@@ -256,7 +266,7 @@ humanize(diff: TimeDiffResult, options?: { locale?: Intl.LocalesArgument }): str
 
 `humanize()` localizes numbers only. Unit names remain English.
 
-## Classification and Sequences
+## Classification
 
 ### `classifyExpiry({ value, thresholds, relativeTo?, timeZone? })`
 
@@ -272,16 +282,7 @@ Classifies an expiry against fixed elapsed-time thresholds in milliseconds or la
 timeDiff(a: TimeInput, b?: TimeInput, options?: TimeZoneOptions): TimeDiffResult;
 ```
 
-Returns absolute calendar difference in its largest meaningful unit.
-
-### `dateRange()` / `recurrence()`
-
-```ts
-dateRange(start: TimeInput, end: TimeInput, step: Temporal.DurationLike, options?: TimeZoneOptions): Generator<Temporal.ZonedDateTime>;
-recurrence(start: TimeInput, rule: RecurrenceRule, options?: TimeZoneOptions): Generator<Temporal.ZonedDateTime>;
-```
-
-Returns lazy `ZonedDateTime` sequences.
+Returns absolute calendar difference in its largest meaningful unit. Uses Temporal's calendar-aware `.since()` for correct month and year handling.
 
 ## Types
 
@@ -292,34 +293,35 @@ type TimeInput = AbsoluteTime | WallTime;
 type RelativeTimeInput = AbsoluteTime;
 type ParseAs = 'instant' | 'plainDate' | 'plainDateTime' | 'zonedDateTime';
 type Disambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
+type CalendarUnit = 'day' | 'month' | 'week' | 'year';
+type BoundaryUnit = 'day' | 'hour' | 'minute' | 'month' | 'week' | 'year';
+type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type FormatPattern = 'date-only' | 'long' | 'medium' | 'short' | 'time-only';
 type TempoUnit = 'day' | 'hour' | 'microsecond' | 'millisecond' | 'minute' | 'month' | 'nanosecond' | 'second' | 'week' | 'year';
-type CalendarUnit = Extract<TempoUnit, 'day' | 'month' | 'week' | 'year'>;
-type BoundaryUnit = Exclude<TempoUnit, 'microsecond' | 'millisecond' | 'nanosecond' | 'second'>;
-type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type FixedDuration = Pick<Temporal.DurationLike, 'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'nanoseconds' | 'seconds' | 'weeks'>;
 type ExpiryThresholds<K extends string> = Record<K, FixedDuration>;
 type TimeDiffUnit = Exclude<TempoUnit, 'microsecond' | 'nanosecond'>;
 type TimeDiffResult = { unit: TimeDiffUnit; value: number };
-type RecurrenceRule =
-  | { frequency: 'daily' | 'monthly' | 'weekly' | 'yearly'; interval?: number; count: number; until?: TimeInput }
-  | { frequency: 'daily' | 'monthly' | 'weekly' | 'yearly'; interval?: number; count?: number; until: TimeInput };
 
 interface TimeZoneOptions { timeZone?: string }
 interface DisambiguationOptions { disambiguation?: Disambiguation }
 interface ShiftOptions extends DisambiguationOptions, TimeZoneOptions {}
 interface DifferenceInput extends DisambiguationOptions, TimeZoneOptions {
-  start: TimeInput;
   end: TimeInput;
   largestUnit?: Temporal.DateTimeUnit;
-  smallestUnit?: Temporal.DateTimeUnit;
   roundingIncrement?: number;
   roundingMode?: Temporal.RoundingMode;
+  smallestUnit?: Temporal.DateTimeUnit;
+  start: TimeInput;
 }
+interface BoundaryOptions extends TimeZoneOptions { weekStartsOn?: WeekStartDay }
+interface CompareOptions extends TimeZoneOptions { unit?: BoundaryUnit; weekStartsOn?: WeekStartDay }
+interface ContainsInput extends CompareOptions { end: TimeInput; start: TimeInput; value: TimeInput }
+interface ClampInput extends CompareOptions { end: TimeInput; start: TimeInput; value: TimeInput }
 type FormatOptions =
   | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; pattern?: never; timeZone?: string }
   | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; timeZone?: string };
-interface RelativeFormatOptions {
+interface RelativeFormatOptions extends TimeZoneOptions {
   base?: RelativeTimeInput;
   locale?: Intl.LocalesArgument;
   numeric?: Intl.RelativeTimeFormatNumeric;
@@ -329,15 +331,13 @@ interface DurationFormatOptions {
   locale?: Intl.LocalesArgument;
   style?: 'digital' | 'long' | 'narrow' | 'short';
 }
-interface BoundaryOptions extends TimeZoneOptions { weekStartsOn?: WeekStartDay }
-interface CompareOptions extends TimeZoneOptions { unit?: BoundaryUnit; weekStartsOn?: WeekStartDay }
-interface ContainsInput extends CompareOptions { value: TimeInput; start: TimeInput; end: TimeInput }
-interface ClampInput extends CompareOptions { value: TimeInput; start: TimeInput; end: TimeInput }
 interface ClassifyExpiryInput<K extends string> extends TimeZoneOptions {
   value: TimeInput;
   thresholds: ExpiryThresholds<K>;
   relativeTo?: Temporal.Instant;
 }
+type RecurrenceRule = { frequency: 'daily' | 'monthly' | 'weekly' | 'yearly'; interval?: number } &
+  ({ count: number; until?: TimeInput } | { count?: number; until: TimeInput });
 ```
 
 ## Errors

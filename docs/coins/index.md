@@ -4,7 +4,7 @@ description: Exact bigint monetary arithmetic with explicit currency definitions
 package: coins
 category: finance
 keywords: [money, currency, bigint, decimal, exchange, formatting]
-exports: [money, currency, add, allocate, exchange, format]
+exports: [USD, EUR, GBP, JPY, KRW, BHD, KWD, money, decodeMoney, isMoney, currency, isCurrency, add, subtract, multiply, divide, compare, clamp, abs, negate, round, toDecimal, sum, allocate, exchangeRate, isExchangeRate, exchange, format, formatParts, toJSON]
 related: [vault, courier, spell]
 environments: [browser, node, ssr, deno]
 ---
@@ -77,12 +77,12 @@ console.log(format(total));
 <div class="features-grid">
 
 - **`money`**: one constructor for decimal and explicit minor-unit values
-- **`currency`**: deterministic built-in currency definitions
+- **`currency`**: resolve seven canonical built-ins, or create a local custom definition
 - **`add`**: exact same-currency arithmetic
 - **`allocate`**: split every minor unit without loss
 - **`exchange`**: typed source and target currency conversion
 - **`format`**: locale presentation for bigint values
-- **`parseMoneyJSON`**: validate persisted money values
+- **`decodeMoney`**: validate and re-canonicalize persisted, transported, or cross-realm values
 
 </div>
 

@@ -80,6 +80,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
 
   const isOpen = signal(false);
   const ariaExpanded = computed(() => String(isOpen.value));
+  let disposed = false;
   let stopPositioning: (() => void) | null = null;
 
   const positioner = createDropdownPositioner({
@@ -89,7 +90,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
   });
 
   const scrollFocusedIntoView = (): void => {
-    options.getFocusedOptionElement?.()?.scrollIntoView({ block: 'nearest' });
+    if (!disposed) options.getFocusedOptionElement?.()?.scrollIntoView({ block: 'nearest' });
   };
 
   const list = createListControl<T>({
@@ -118,7 +119,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
   };
 
   const close = (reason: DropdownCloseReason = 'programmatic', shouldRestore = true): void => {
-    if (!isOpen.value) return;
+    if (disposed || !isOpen.value) return;
 
     isOpen.value = false;
     list.reset();
@@ -131,7 +132,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
   };
 
   const open = (reason: OverlayOpenReason = 'programmatic'): void => {
-    if (options.isDisabled?.() || isOpen.value) return;
+    if (disposed || options.isDisabled?.() || isOpen.value) return;
 
     isOpen.value = true;
     positioner.update();
@@ -140,6 +141,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
   };
 
   const toggle = (openReason: OverlayOpenReason = 'click', closeReason: DropdownCloseReason = 'trigger'): void => {
+    if (disposed) return;
     if (isOpen.value) close(closeReason);
     else open(openReason);
   };
@@ -151,12 +153,11 @@ export const createListboxDropdown = <T extends ListboxItem>(
     signal: options.signal,
   });
 
-  let disposed = false;
-
   const dispose = (): void => {
     if (disposed) return;
 
     disposed = true;
+    list.dispose();
 
     if (isOpen.value) {
       isOpen.value = false;
@@ -169,7 +170,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
   options.signal.addEventListener('abort', dispose, { once: true });
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
-    if (!isOpen.value) return false;
+    if (disposed || !isOpen.value) return false;
 
     if (event.key === 'Escape') {
       event.preventDefault();
@@ -199,6 +200,8 @@ export const createListboxDropdown = <T extends ListboxItem>(
     set: list.set,
     [Symbol.dispose]: dispose,
     toggle,
-    updatePosition: positioner.update,
+    updatePosition: () => {
+      if (!disposed) positioner.update();
+    },
   };
 };

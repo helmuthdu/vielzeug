@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove the glass surface variant, align DataGrid sources with Sourcerer's page-source contract, publish complete framework typings, and harden interaction lifecycles",
+      "packageName": "@vielzeug/refine",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

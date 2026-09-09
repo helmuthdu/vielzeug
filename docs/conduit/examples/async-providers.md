@@ -15,10 +15,12 @@ Create a service only after its asynchronous dependency is available.
 const Config = token<{ apiUrl: string }>('Config');
 const Client = token<{ url: string }>('Client');
 
-container.factory(Config, [], async () => ({ apiUrl: await loadApiUrl() }));
-container.factory(Client, [Config], (config) => ({ url: config.apiUrl }));
+const container = createContainer([
+  factoryProvider(Config, [], async () => ({ apiUrl: await loadApiUrl() })),
+  factoryProvider(Client, [Config], (config) => ({ url: config.apiUrl })),
+]);
 
-const client = await container.resolve(Client);
+const services = await container.resolve({ client: Client });
 ```
 
 ### Pitfalls

@@ -16,8 +16,8 @@
  * @throws {RangeError} If the chunk size is not a positive integer.
  */
 export function chunk(input: string, size?: number): string[];
-export function chunk<T>(input: T[], size?: number): T[][];
-export function chunk<T>(input: T[] | string, size = 2): string[] | T[][] {
+export function chunk<T>(input: readonly T[], size?: number): T[][];
+export function chunk<T>(input: readonly T[] | string, size = 2): string[] | T[][] {
   if (!Array.isArray(input) && typeof input !== 'string')
     throw new TypeError('chunk: argument must be an array or string');
 

@@ -1,11 +1,13 @@
 # @vielzeug/pulse
 
-Typed WebSocket sessions with explicit connection ownership, scoped channels, ref-counted rooms with reactive presence, reconnect restoration, and heartbeat support.
+> Typed WebSocket client with channels, rooms, presence, reconnect
 
-## Install
+## Installation
 
 ```sh
-pnpm add @vielzeug/pulse @vielzeug/ripple
+pnpm add @vielzeug/pulse
+npm install @vielzeug/pulse
+yarn add @vielzeug/pulse
 ```
 
 ## Quick Start
@@ -50,24 +52,14 @@ try {
 pulse.dispose();
 ```
 
-## Key Behavior
-
-- Call `connect()` before sending messages or publishing presence. Room scopes can be created before connecting — joins are sent after the connection opens.
-- Define server events, client events, channel schemas, and room schemas at `createPulse()` so named scopes are type-safe.
-- Each `channel()` and `room()` call returns an independent disposable scope. Server subscriptions and room memberships use reference counting.
-- Reconnect restores channels, room memberships, and the last successfully published local presence state.
-- `send()` throws `PulseConnectionError` while disconnected; Pulse never silently drops or buffers application messages.
-- `room()` returns a `RoomScope` with a `joined` promise. When the room definition includes `presence`, the scope also exposes reactive presence state, `updatePresence()`, and `onJoin()`/`onLeave()` handlers.
-- Call `tap()` to observe lifecycle events; Pulse reports transport and protocol errors there rather than throwing asynchronously.
-
-## Migration
-
-See the [Pulse migration guide](https://vielzeug.dev/pulse/migration).
-
 ## Documentation
 
 - [Overview](https://vielzeug.dev/pulse/)
-- [Usage](https://vielzeug.dev/pulse/usage)
-- [API](https://vielzeug.dev/pulse/api)
+- [Usage Guide](https://vielzeug.dev/pulse/usage)
+- [API Reference](https://vielzeug.dev/pulse/api)
 - [Examples](https://vielzeug.dev/pulse/examples)
-- [Pulse Migration](https://vielzeug.dev/pulse/migration)
+- [Migration Guide](https://vielzeug.dev/pulse/migration)
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

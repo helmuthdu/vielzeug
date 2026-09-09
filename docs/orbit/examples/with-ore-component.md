@@ -7,7 +7,7 @@ description: Own an Orbit positioner through an Ore component lifecycle.
 
 ### Problem
 
-A custom element must start positioning only after both trigger and panel mount, then release listeners on disconnect.
+A custom element must create its active positioner only after both trigger and panel mount, then release listeners on disconnect.
 
 ### Solution
 
@@ -27,7 +27,6 @@ define('app-popover', {
         middleware: [offset(8)],
       });
 
-      positioner.start();
       onCleanup(() => positioner.dispose());
     });
 
@@ -38,7 +37,7 @@ define('app-popover', {
 
 ### Pitfalls
 
-- Do not start before refs resolve.
+- Do not create the positioner before refs resolve.
 - Use `strategy: 'absolute'` for panel-relative positioning.
 
 ### Related

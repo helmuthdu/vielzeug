@@ -1,5 +1,5 @@
 import '@vielzeug/refine/button';
-import { createSortable, createSortableScope } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, when } from '@vielzeug/ore';
 import { computed, effect } from '@vielzeug/ripple';
 
@@ -10,7 +10,7 @@ import type { Task, TaskStatus } from '../../core/types';
 import { renderTaskCard } from './task-card';
 import { openTaskDialog } from './task-dialog';
 
-const moveHandlers = new Map<HTMLElement, (ids: string[]) => void>();
+const moveHandlers = new Map<HTMLElement, (ids: readonly string[]) => void>();
 const reconcilers = new Set<() => void>();
 
 function reconcileColumns(): void {
@@ -26,13 +26,13 @@ export const sharedScope = createSortableScope({
 });
 
 interface ColumnOptions {
-  onMove: (ids: string[]) => void;
-  onReorder: (ids: string[]) => void;
+  onMove: (ids: readonly string[]) => void;
+  onReorder: (ids: readonly string[]) => void;
 }
 
 interface ColumnHandle {
   dispose(): void;
-  sync(): void;
+  refresh(): void;
 }
 
 function createColumn(containerEl: HTMLElement, opts: ColumnOptions): ColumnHandle {
@@ -41,7 +41,7 @@ function createColumn(containerEl: HTMLElement, opts: ColumnOptions): ColumnHand
   const sortable = createSortable({
     element: containerEl,
     getKey: (el) => el.dataset.taskId ?? '',
-    onReorder: ({ ids }) => opts.onReorder(ids),
+    onReorder: ({ after }) => opts.onReorder(after),
     scope: sharedScope,
   });
 
@@ -50,8 +50,8 @@ function createColumn(containerEl: HTMLElement, opts: ColumnOptions): ColumnHand
       moveHandlers.delete(containerEl);
       sortable.dispose();
     },
-    sync(): void {
-      sortable.sync();
+    refresh(): void {
+      sortable.refresh();
     },
   };
 }
@@ -103,7 +103,8 @@ define<{ status: TaskStatus }>('board-column', {
     // Always rebuilds every card from the current task data (not just add/remove-by-id): an
     // edited task (title/priority/due date/…) needs its card content to change too, and a card
     // whose position in `tasks` moved (e.g. via undo/redo) needs to move in the DOM to match.
-    // `col.sync()` re-applies the sortable's own DOM bookkeeping afterward — its own docs call
+    // `col.refresh()` re-applies the sortable's own DOM bookkeeping afterward — its own docs call
+    // this `refresh()`.
     // this out as the supported way to refresh a sortable's children.
     function reconcile(tasks: Task[]): void {
       const container = itemsRef.value;
@@ -119,7 +120,7 @@ define<{ status: TaskStatus }>('board-column', {
         ),
       );
 
-      col.sync();
+      col.refresh();
     }
 
     onMounted(() => {

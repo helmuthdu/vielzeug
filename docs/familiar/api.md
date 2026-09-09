@@ -11,8 +11,7 @@ description: API reference for module-worker pools and worker-side protocol regi
 | --- | --- | --- | --- |
 | `createWorker()` | Create single-result module-worker pool | Sync | Worker must call `exposeTask()` |
 | `createStreamWorker()` | Create stream-only module-worker pool | Sync | Worker must call `exposeStream()` |
-| `batch()` | Yield ordered task-pool results | Async iterator | Stops remaining work on first failure |
-| `createTaskGroup()` | Coordinate related task-pool jobs | Sync | Call `abort()` to stop group work |
+| `runBatch()` | Yield ordered results with shared cancellation | Async iterable | Transferables need a per-input selector |
 | `createTestWorker()` | Create an in-process task-pool test double | Sync | Task modules are not executed |
 | `exposeTask()` | Register worker task handler | Sync | Worker-only import |
 | `exposeStream()` | Register worker stream handler | Sync | Worker-only import |
@@ -21,7 +20,7 @@ description: API reference for module-worker pools and worker-side protocol regi
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/familiar` | Pool factories, helpers, types, errors |
+| `@vielzeug/familiar` | Pool factories, types, and errors |
 | `@vielzeug/familiar/protocol` | Versioned worker protocol and registration helpers |
 | `@vielzeug/familiar/testing` | Task-pool testing adapter |
 
@@ -66,37 +65,21 @@ Creates a stream-only pool for a worker module registered with `exposeStream()`.
 
 **Returns:** `StreamWorkerPool<TInput, TChunk>`.
 
----
-
-### `batch()`
+### `runBatch()`
 
 ```ts
-function batch<TInput, TOutput>(
+function runBatch<TInput, TOutput>(
   pool: WorkerPool<TInput, TOutput>,
   inputs: readonly TInput[],
-  options?: RunOptions,
+  options?: BatchOptions<TInput>,
 ): AsyncIterable<TOutput>;
 ```
 
-Yields results in submission order. A failure or cancellation aborts remaining batch work.
+Starts related pool tasks concurrently and yields results in input order. The first failure aborts siblings, early iterator exit cancels unfinished work, and cleanup waits for every task to settle. The iterable is one-shot once consumption begins; an unused iterator may be discarded.
+
+Use `getTransferables(input, index)` to return a fresh transfer list for each task. A shared transfer list is intentionally unsupported because transferred values can be detached only once.
 
 **Returns:** `AsyncIterable<TOutput>`.
-
----
-
-### `createTaskGroup()`
-
-```ts
-function createTaskGroup<TInput, TOutput>(
-  pool: WorkerPool<TInput, TOutput>,
-  name?: string,
-  options?: TaskGroupOptions,
-): TaskGroup<TInput, TOutput>;
-```
-
-Creates group-scoped cancellation and settlement tracking for one task pool.
-
-**Returns:** `TaskGroup<TInput, TOutput>`.
 
 ## Testing
 
@@ -109,7 +92,7 @@ function createTestWorker<TInput, TOutput>(
 ): TestWorkerHandle<TInput, TOutput>;
 ```
 
-Creates an in-process task-pool double. It structured-clones values, records settlement, and matches task-pool timeout and cancellation behavior without loading a worker module.
+Creates an in-process task-pool double. It structured-clones values, records settlement, and matches pool timeout and cancellation results without loading a worker module. Cancellation rejects the test task but cannot stop side effects inside an already-running in-process handler.
 
 **Returns:** `TestWorkerHandle<TInput, TOutput>`.
 
@@ -137,9 +120,17 @@ Registers one chunk-producing handler in a module worker.
 const PROTOCOL_VERSION: 1;
 ```
 
-Version included in every host request and worker response.
+Version included in every host request and worker response. Identifiers must be non-negative safe integers. Task/stream capability mismatches return a protocol-category error that maps to `FamiliarRuntimeError`; malformed host responses reject active work with the same class.
 
 ## Types
+
+### `BatchOptions`
+
+```ts
+type BatchOptions<TInput> = Pick<RunOptions, 'priority' | 'signal' | 'timeout'> & {
+  getTransferables?: (input: TInput, index: number) => readonly Transferable[];
+};
+```
 
 ### `WorkerOptions`
 
@@ -153,6 +144,8 @@ type WorkerOptions = {
 };
 ```
 
+`concurrency` is limited to 512; `"auto"` clamps the reported hardware concurrency to that limit. `maxQueue` must be a positive integer and `onFull` must be `"reject"` or `"wait"`. Timeout values must be integer milliseconds from 1 through 2,147,483,647. `onSlotError` runs after active work settles, and callback failures cannot interrupt slot replacement.
+
 ### `RunOptions`
 
 ```ts
@@ -160,11 +153,11 @@ type RunOptions = {
   priority?: number;
   signal?: AbortSignal;
   timeout?: number;
-  transferables?: Transferable[];
+  transferables?: readonly Transferable[];
 };
 ```
 
-`signal` cancels capacity waits, queued work, and executing work. Executing cancellation terminates and replaces its worker slot.
+`signal` cancels capacity waits, queued work, and executing work. Executing cancellation terminates and replaces its worker slot without incrementing `failed`. `priority` must be finite and timeout values use the same bounds as pool defaults. The transfer list is copied at submission. Queued inputs remain caller-owned until a slot dispatches them, so do not mutate input objects while work is queued.
 
 ### `WorkerPool`
 
@@ -173,7 +166,6 @@ interface WorkerPool<TInput, TOutput> {
   [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
-  prime(): Promise<void>;
   drain(options?: DrainOptions): Promise<void>;
   dispose(): void;
   readonly stats: WorkerStats;
@@ -190,7 +182,6 @@ interface StreamWorkerPool<TInput, TChunk> {
   [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
   runStream(input: TInput, options?: RunOptions): AsyncIterable<TChunk>;
-  prime(): Promise<void>;
   drain(options?: DrainOptions): Promise<void>;
   dispose(): void;
   readonly disposed: boolean;
@@ -199,6 +190,8 @@ interface StreamWorkerPool<TInput, TChunk> {
   readonly status: WorkerStatus;
 }
 ```
+
+`runStream()` returns a one-shot iterable. Consumption begins on the first iterator operation, so an unused iterator can be discarded. A second active iterator rejects with `FamiliarRuntimeError`, and `return()` immediately cancels a pending chunk request. Caller abort listeners are owned by the active iterator rather than an unconsumed iterable. Incoming chunks are buffered without protocol backpressure.
 
 ### `WorkerStats`
 
@@ -210,6 +203,8 @@ type WorkerStats = {
   readonly queued: number;
 };
 ```
+
+`queued` includes admitted queue entries and calls waiting for queue capacity. Cancellation is not counted as failure even when a caller supplies a custom abort reason.
 
 ### `RunningStream`
 
@@ -234,26 +229,7 @@ type DrainOptions = {
 };
 ```
 
-### `TaskGroup`
-
-```ts
-type TaskGroup<TInput, TOutput> = {
-  abort(reason?: unknown): void;
-  drain(): Promise<PromiseSettledResult<TOutput>[]>;
-  readonly name: string | undefined;
-  readonly pending: number;
-  run(input: TInput, options?: Omit<RunOptions, 'signal'>): Promise<TOutput>;
-  readonly size: number;
-};
-```
-
-### `TaskGroupOptions`
-
-```ts
-type TaskGroupOptions = {
-  signal?: AbortSignal;
-};
-```
+`drain()` accepts no argument for an unbounded graceful drain. A supplied timeout must be an integer from 1 through 2,147,483,647; expiry disposes the pool and rejects with `FamiliarTimeoutError`.
 
 ### `TestWorkerOptions`
 
@@ -283,6 +259,7 @@ type TestWorkerHandle<TInput, TOutput> = WorkerPool<TInput, TOutput> & {
 
 ```ts
 type SerializedError = {
+  category?: 'protocol';
   message: string;
   name: string;
   stack?: string;

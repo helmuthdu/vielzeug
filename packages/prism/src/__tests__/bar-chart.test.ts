@@ -1,7 +1,5 @@
-import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBarChart } from '../charts/bar';
-import type { ChartPlugin } from '../types';
 
 describe('createBarChart', () => {
   let container: HTMLElement;
@@ -44,26 +42,23 @@ describe('createBarChart', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 
-  it('clears series, grid, and axis groups when reactive data becomes empty (B6)', async () => {
-    const data = signal([
-      { key: 'A', value: 10 },
-      { key: 'B', value: 20 },
-    ]);
+  it('clears series, grid, and axis groups when updated with empty data (B6)', () => {
     const chart = createBarChart(container, {
-      series: [{ data, name: 'Reactive' }],
+      series: [
+        {
+          data: [
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
+          ],
+          name: 'Test',
+        },
+      ],
       xAxis: { position: 'bottom' },
       yAxis: { grid: true, position: 'left' },
     });
 
-    await new Promise((r) => requestAnimationFrame(r));
     expect(chart.el.querySelector('.prism-bar-series')).not.toBeNull();
-    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
-    expect(chart.el.querySelector('.prism-axis-tick')).not.toBeNull();
-
-    data.value = [];
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
-
+    chart.update([{ data: [], name: 'Test' }]);
     expect(chart.el.querySelector('.prism-bar-series')).toBeNull();
     expect(chart.el.querySelector('.prism-grid-line')).toBeNull();
     expect(chart.el.querySelector('.prism-axis-tick')).toBeNull();
@@ -189,15 +184,6 @@ describe('createBarChart', () => {
     expect(() => chart.dispose()).not.toThrow();
   });
 
-  it('does not expose update() on ChartHandle', () => {
-    const chart = createBarChart(container, {
-      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
-    });
-
-    expect('update' in chart).toBe(false);
-    chart.dispose();
-  });
-
   it('renders tooltip inside container (not body)', () => {
     const chart = createBarChart(container, {
       series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
@@ -207,16 +193,6 @@ describe('createBarChart', () => {
     expect(container.querySelector('.prism-tooltip')).not.toBeNull();
     chart.dispose();
     expect(container.querySelector('.prism-tooltip')).toBeNull();
-  });
-
-  it('accepts reactive data via signals', () => {
-    const data = signal([{ key: 'A', value: 10 }]);
-    const chart = createBarChart(container, {
-      series: [{ data, name: 'Reactive' }],
-    });
-
-    data.value = [...data.value, { key: 'B', value: 20 }];
-    chart.dispose();
   });
 
   it('calls onHover(null) on mouseleave', () => {
@@ -229,21 +205,6 @@ describe('createBarChart', () => {
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     expect(onHover).toHaveBeenCalledWith(null);
     chart.dispose();
-  });
-
-  it('installs and disposes plugins', () => {
-    const install = vi.fn();
-    const dispose = vi.fn();
-    const plugin: ChartPlugin = { dispose, install };
-
-    const chart = createBarChart(container, {
-      plugins: [plugin],
-      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
-    });
-
-    expect(install).toHaveBeenCalledWith(expect.objectContaining({ container, svg: chart.el }));
-    chart.dispose();
-    expect(dispose).toHaveBeenCalledOnce();
   });
 
   it('renders bar elements for each data point', () => {
@@ -390,21 +351,22 @@ describe('createBarChart', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 
-  it('reactive signal update re-renders bars', async () => {
-    const data = signal([{ key: 'A', value: 10 }]);
+  it('updates bar data explicitly', () => {
     const chart = createBarChart(container, {
-      series: [{ data, name: 'Reactive' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
     });
 
-    await new Promise((r) => requestAnimationFrame(r));
-    expect(chart.el.querySelectorAll('.prism-bar').length).toBe(1);
-    data.value = [
-      { key: 'A', value: 10 },
-      { key: 'B', value: 20 },
-    ];
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
-    expect(chart.el.querySelectorAll('.prism-bar').length).toBe(2);
+    expect(chart.el.querySelectorAll('.prism-bar')).toHaveLength(1);
+    chart.update([
+      {
+        data: [
+          { key: 'A', value: 10 },
+          { key: 'B', value: 20 },
+        ],
+        name: 'Test',
+      },
+    ]);
+    expect(chart.el.querySelectorAll('.prism-bar')).toHaveLength(2);
     chart.dispose();
   });
 
@@ -463,14 +425,13 @@ describe('createBarChart', () => {
   });
 
   it('cancels an in-flight bar transition on dispose (B9)', async () => {
-    const data = signal([{ key: 'A', value: 10 }]);
     const chart = createBarChart(container, {
-      series: [{ data, name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
       transition: { duration: 500 },
     });
 
     await new Promise((r) => requestAnimationFrame(r));
-    data.value = [{ key: 'A', value: 90 }];
+    chart.update([{ data: [{ key: 'A', value: 90 }], name: 'Test' }]);
     await new Promise((r) => requestAnimationFrame(r));
 
     const rect = chart.el.querySelector('.prism-bar') as SVGRectElement;

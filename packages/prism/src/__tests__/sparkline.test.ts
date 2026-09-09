@@ -1,6 +1,4 @@
-import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { createSparkline } from '../charts/sparkline';
 
 describe('createSparkline', () => {
@@ -31,6 +29,18 @@ describe('createSparkline', () => {
 
     chart.dispose();
     expect(container.querySelector('svg')).toBeNull();
+  });
+
+  it('rolls back mounted resources when the initial render throws', () => {
+    const data = new Proxy([1, 2, 3], {
+      get(target, property, receiver) {
+        if (property === 'map') throw new Error('data failed');
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(() => createSparkline(container, { data })).toThrow('Failed to render chart.');
+    expect(container.children).toHaveLength(0);
   });
 
   it('double dispose is a no-op', () => {
@@ -84,11 +94,12 @@ describe('createSparkline', () => {
     chart.dispose();
   });
 
-  it('accepts reactive data via signal', () => {
-    const data = signal([1, 2, 3]);
-    const chart = createSparkline(container, { data });
+  it('updates data explicitly', () => {
+    const chart = createSparkline(container, { data: [1, 2, 3], variant: 'bar' });
 
-    data.value = [1, 2, 3, 4];
+    expect(chart.el.querySelectorAll('.prism-spark-bar')).toHaveLength(3);
+    chart.update([1, 2, 3, 4]);
+    expect(chart.el.querySelectorAll('.prism-spark-bar')).toHaveLength(4);
     chart.dispose();
   });
 

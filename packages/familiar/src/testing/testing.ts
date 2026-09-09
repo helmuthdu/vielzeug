@@ -1,11 +1,12 @@
-import { createPool } from '../_pool';
+import { createPool } from '../_pool.js';
+import { MAX_CONCURRENCY, validateTimeout } from '../_pool-core.js';
 import {
   FamiliarInvalidOptionsError,
   FamiliarTaskError,
   FamiliarTerminatedError,
   FamiliarTimeoutError,
-} from '../errors';
-import type { SlotStrategy, WorkerOptions, WorkerPool } from '../types';
+} from '../errors.js';
+import type { SlotStrategy, WorkerOptions, WorkerPool } from '../types.js';
 
 export type TestWorkerOptions = Omit<WorkerOptions, 'concurrency' | 'onSlotError'> & { concurrency?: number };
 
@@ -23,17 +24,19 @@ export function createTestWorker<TInput, TOutput>(
 ): TestWorkerHandle<TInput, TOutput> {
   const { concurrency = 1, maxQueue, onFull = 'reject', timeout } = options;
 
-  if (!Number.isInteger(concurrency) || concurrency < 1) {
-    throw new FamiliarInvalidOptionsError('`concurrency` must be a positive integer');
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > MAX_CONCURRENCY) {
+    throw new FamiliarInvalidOptionsError(`\`concurrency\` must be a positive integer ≤ ${MAX_CONCURRENCY}`);
   }
 
   if (maxQueue !== undefined && (!Number.isInteger(maxQueue) || maxQueue < 1)) {
     throw new FamiliarInvalidOptionsError('`maxQueue` must be a positive integer');
   }
 
-  if (timeout !== undefined && (!Number.isFinite(timeout) || timeout <= 0)) {
-    throw new FamiliarInvalidOptionsError('`timeout` must be a finite number greater than 0');
+  if (onFull !== 'reject' && onFull !== 'wait') {
+    throw new FamiliarInvalidOptionsError('`onFull` must be "reject" or "wait"');
   }
+
+  validateTimeout(timeout);
 
   const calls: TestWorkerCall<TInput, TOutput>[] = [];
 
@@ -46,7 +49,6 @@ export function createTestWorker<TInput, TOutput>(
         current?.reject(reason);
         current = undefined;
       },
-      prime: () => Promise.resolve(),
       run(input, transferables, timeoutMs): Promise<TOutput> {
         if (terminated) return Promise.reject(new FamiliarTerminatedError());
 
@@ -145,5 +147,5 @@ export {
   FamiliarTaskError,
   FamiliarTerminatedError,
   FamiliarTimeoutError,
-} from '../errors';
-export type { WorkerPool } from '../types';
+} from '../errors.js';
+export type { WorkerPool } from '../types.js';

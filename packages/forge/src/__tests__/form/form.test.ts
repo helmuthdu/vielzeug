@@ -48,16 +48,18 @@ describe('form', () => {
     expect(() => createForm({ initialValues: { dueAt: new Map() } })).toThrow(ForgeConfigError);
   });
 
-  test('accepts Date atomic leaves without freezing or rejection', () => {
+  test('clones Date leaves so external mutation cannot change form state', () => {
     const date = new Date('2026-01-01');
     const form = createForm({ initialValues: { dueAt: date } });
 
-    expect(form.value.dueAt).toBe(date);
+    expect(form.value.dueAt).not.toBe(date);
+    expect(form.value.dueAt).toEqual(date);
+    date.setUTCFullYear(2030);
+    expect(form.value.dueAt).toEqual(new Date('2026-01-01'));
 
     const next = new Date('2026-02-01');
-
     form.field('dueAt').set(next);
-    expect(form.value.dueAt).toBe(next);
+    expect(form.value.dueAt).not.toBe(next);
     expect(form.value.dueAt).toEqual(new Date('2026-02-01'));
   });
 
@@ -83,17 +85,21 @@ describe('form', () => {
   test('returns explicit valid and invalid validation results', async () => {
     const form = createForm({
       initialValues: { email: '', profile: { age: 10 } },
-      validate: (value) => ({
-        fields: {
-          email: value.email.includes('@') ? undefined : 'Invalid email',
-          profile: { age: value.profile.age >= 18 ? undefined : 'Must be an adult' },
-        },
-      }),
+      validate: (value) => {
+        const issues: { path: (string | number)[]; message: string }[] = [];
+
+        if (!value.email.includes('@')) issues.push({ message: 'Invalid email', path: ['email'] });
+        if (value.profile.age < 18) issues.push({ message: 'Must be an adult', path: ['profile', 'age'] });
+
+        return issues;
+      },
     });
 
     await expect(form.validate()).resolves.toEqual({
-      errors: { email: 'Invalid email', profile: { age: 'Must be an adult' } },
-      formError: undefined,
+      issues: [
+        { message: 'Invalid email', path: ['email'] },
+        { message: 'Must be an adult', path: ['profile', 'age'] },
+      ],
       status: 'invalid',
     });
 
@@ -102,13 +108,13 @@ describe('form', () => {
     form.field('profile').field('age').set(20);
 
     await expect(form.validate()).resolves.toEqual({ status: 'valid' });
-    expect(form.state.errors).toBeUndefined();
+    expect(form.state.issues).toBeUndefined();
   });
 
   test('tracks validity as unknown after edits and resolved after validation', async () => {
     const form = createForm({
       initialValues: { email: '' },
-      validate: (value) => ({ fields: { email: value.email.includes('@') ? undefined : 'Invalid email' } }),
+      validate: (value) => (value.email.includes('@') ? undefined : [{ message: 'Invalid email', path: ['email'] }]),
     });
 
     expect(form.state.validity).toBe('unknown');
@@ -131,8 +137,8 @@ describe('form', () => {
   });
 
   test('aborts superseded validation without stale writes', async () => {
-    let releaseFirst!: (value: { fields: { name: string } }) => void;
-    const first = new Promise<{ fields: { name: string } }>((resolve) => {
+    let releaseFirst!: (value: readonly { path: ['name']; message: string }[]) => void;
+    const first = new Promise<readonly { path: ['name']; message: string }[]>((resolve) => {
       releaseFirst = resolve;
     });
     let calls = 0;
@@ -143,7 +149,7 @@ describe('form', () => {
 
         if (calls === 1) return first;
 
-        return value.name ? undefined : { fields: { name: 'Required' } };
+        return value.name ? undefined : [{ message: 'Required', path: ['name'] }];
       },
     });
 
@@ -154,7 +160,7 @@ describe('form', () => {
 
     const latest = form.validate();
 
-    releaseFirst({ fields: { name: 'Stale' } });
+    releaseFirst([{ message: 'Stale', path: ['name'] }]);
 
     await expect(pending).resolves.toEqual({ status: 'aborted' });
     await expect(latest).resolves.toEqual({ status: 'valid' });
@@ -172,12 +178,11 @@ describe('form', () => {
   test('submit touches all fields, serializes concurrent calls, and distinguishes aborts', async () => {
     const form = createForm({
       initialValues: { email: '' },
-      validate: (value) => (value.email ? undefined : { fields: { email: 'Required' } }),
+      validate: (value) => (value.email ? undefined : [{ message: 'Required', path: ['email'] }]),
     });
 
     await expect(form.submit(() => undefined)).resolves.toEqual({
-      errors: { email: 'Required' },
-      formError: undefined,
+      issues: [{ message: 'Required', path: ['email'] }],
       status: 'invalid',
     });
     expect(form.field('email').touched).toBe(true);
@@ -199,7 +204,7 @@ describe('form', () => {
   test('submit passes a signal to the handler and returns aborted when cancelled', async () => {
     const form = createForm({
       initialValues: { email: 'a@example.com' },
-      validate: (value) => (value.email ? undefined : { fields: { email: 'Required' } }),
+      validate: (value) => (value.email ? undefined : [{ message: 'Required', path: ['email'] }]),
     });
 
     const controller = new AbortController();
@@ -228,7 +233,7 @@ describe('form', () => {
   test('submit handler receives disposal signal when no external signal is provided', async () => {
     const form = createForm({
       initialValues: { email: 'a@example.com' },
-      validate: (value) => (value.email ? undefined : { fields: { email: 'Required' } }),
+      validate: (value) => (value.email ? undefined : [{ message: 'Required', path: ['email'] }]),
     });
 
     let receivedSignal: AbortSignal | undefined;
@@ -279,6 +284,16 @@ describe('form', () => {
     await expect(form.submit(() => undefined)).resolves.toEqual({ status: 'ok', value: undefined });
     expect(form.state.submitting).toBe(false);
     expect(subscriberErrors).toContain(failure);
+  });
+
+  test('keeps the public state snapshot stable between transitions', () => {
+    const form = createForm({ initialValues: { name: '' } });
+    const state = form.state;
+
+    expect(form.state).toBe(state);
+    form.field('name').touch();
+    expect(form.state).not.toBe(state);
+    expect(form.state).toBe(form.state);
   });
 
   test('field subscriptions ignore unrelated transitions', () => {
@@ -332,7 +347,7 @@ describe('form', () => {
   test('submit handler aborts on disposal even when an external signal is provided', async () => {
     const form = createForm({
       initialValues: { email: 'a@example.com' },
-      validate: (value) => (value.email ? undefined : { fields: { email: 'Required' } }),
+      validate: (value) => (value.email ? undefined : [{ message: 'Required', path: ['email'] }]),
     });
 
     const controller = new AbortController();
@@ -408,14 +423,120 @@ describe('form', () => {
     expect(listener).toHaveBeenCalledTimes(3);
   });
 
+  test('restores parent dirty state after nested values return to baseline', () => {
+    const form = createForm({ initialValues: { profile: { name: 'Ada' } } });
+    const profile = form.field('profile');
+    const name = profile.field('name');
+
+    name.set('Grace');
+    name.set('Ada');
+
+    expect(name.dirty).toBe(false);
+    expect(profile.dirty).toBe(false);
+  });
+
+  test('rejects unsupported, circular, and sparse values', () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    expect(() => createForm({ initialValues: { callback: () => undefined } })).toThrow(ForgeConfigError);
+    expect(() => createForm({ initialValues: { value: Number.NaN } })).toThrow(ForgeConfigError);
+    expect(() => createForm({ initialValues: circular })).toThrow(/circular/);
+    expect(() => createForm({ initialValues: { items: Array(2) } })).toThrow(/empty slots/);
+  });
+
+  test('rejects fractional and negative array indexes', () => {
+    const form = createForm({ initialValues: { items: ['a'] } });
+
+    expect(() => form.field('items').field(0.5)).toThrow(ForgeConfigError);
+    expect(() => form.field('items').field(-1)).toThrow(ForgeConfigError);
+  });
+
+  test('owns immutable validation issues and exposes the first form error', async () => {
+    const issues = [
+      { message: 'Form failed', path: [] as Array<string | number> },
+      { message: 'Required', path: ['name'] as Array<string | number> },
+    ];
+    const form = createForm({ initialValues: { name: '' }, validate: () => issues });
+
+    await form.validate();
+    issues[0].message = 'mutated';
+    issues[1].path[0] = 'other';
+
+    expect(form.state.formError).toBe('Form failed');
+    expect(form.field('name').error).toBe('Required');
+    expect(Object.isFrozen(form.state.issues?.[0])).toBe(true);
+    expect(Object.isFrozen(form.state.issues?.[0]?.path)).toBe(true);
+  });
+
+  test('queues reentrant writes so every subscriber sees transitions in order', () => {
+    const form = createForm({ initialValues: { first: 0, second: 0 } });
+    let nested = false;
+    const seen: number[] = [];
+    form.subscribe(() => {
+      if (!nested) {
+        nested = true;
+        form.field('second').set(1);
+      }
+    });
+    form.subscribe(() => seen.push(form.value.second));
+
+    form.field('first').set(1);
+
+    expect(seen).toEqual([0, 1]);
+  });
+
+  test('does not submit values changed reentrantly after validation', async () => {
+    const handler = vi.fn();
+    const form = createForm({ initialValues: { email: 'valid' }, validate: () => undefined });
+    form.subscribe((state) => {
+      if (state.validity === 'valid') form.field('email').set('');
+    });
+
+    await expect(form.submit(handler)).resolves.toEqual({ status: 'aborted' });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('settles validation promptly when its signal aborts', async () => {
+    const controller = new AbortController();
+    const form = createForm({
+      initialValues: { name: '' },
+      validate: () => new Promise<readonly []>(() => undefined),
+    });
+    const pending = form.validate(controller.signal);
+
+    controller.abort();
+
+    await expect(pending).resolves.toEqual({ status: 'aborted' });
+  });
+
+  test('isolates immediate subscriber failures', () => {
+    const failure = new Error('subscriber failed');
+    const errors: unknown[] = [];
+    const form = createForm({ initialValues: { name: '' }, onSubscriberError: (error) => errors.push(error) });
+
+    expect(() =>
+      form.subscribe(
+        () => {
+          throw failure;
+        },
+        { immediate: true },
+      ),
+    ).not.toThrow();
+    expect(errors).toEqual([failure]);
+  });
+
   test('submit touches array items individually', async () => {
     const form = createForm({
       initialValues: { items: [{ email: '' }, { email: '' }] },
-      validate: (value) => ({
-        fields: {
-          items: [value.items[0].email ? undefined : 'Required', value.items[1].email ? undefined : 'Required'],
-        },
-      }),
+      validate: (value) => {
+        const issues: { path: (string | number)[]; message: string }[] = [];
+
+        if (!value.items[0].email) issues.push({ message: 'Required', path: ['items', 0] });
+        if (!value.items[1].email) issues.push({ message: 'Required', path: ['items', 1] });
+
+        return issues;
+      },
     });
 
     await form.validate();

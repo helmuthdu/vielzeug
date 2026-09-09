@@ -43,7 +43,7 @@ A responsive navigation bar with desktop and mobile layouts, plus sticky and flo
     }
   </style>
 
-  <ore-navbar floating variant="glass" label="Main navigation">
+  <ore-navbar floating label="Main navigation">
     <span slot="logo" style="font-weight: var(--font-semibold);">Brand</span>
     <ore-navbar-item href="#" active>Home</ore-navbar-item>
     <ore-navbar-item href="#">Docs</ore-navbar-item>
@@ -226,7 +226,6 @@ Recommended app-shell pattern:
   <section class="shell-panel">
     <ore-navbar
       floating
-      variant="glass"
       breakpoint="(max-width: 640px)"
       container-breakpoints
       mobile-sidebar="#app-shell-sidebar"
@@ -306,7 +305,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `scroll-threshold`      | `number`                                                             | `80`                   | Scroll px threshold for floating+sticky transition                             |
 | `breakpoint`            | `string`                                                             | `'(max-width: 768px)'` | Media query used for mobile mode                                               |
 | `container-breakpoints` | `boolean`                                                            | `false`                | Evaluates parseable `max-width` breakpoints against the navbar container width |
-| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'glass' \| 'frost'` | —                      | Surface style variant                                                          |
+| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'frost'` | —                      | Surface style variant                                                          |
 | `color`                 | `ThemeColor`                                                         | —                      | Theme color                                                                    |
 | `rounded`               | `RoundedSize`                                                        | —                      | Border radius token                                                            |
 | `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | —                      | Elevation shadow level                                                         |
@@ -352,7 +351,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `--navbar-border-color`      | Navbar border color                               | Theme-dependent |
 | `--navbar-shadow`            | Navbar box shadow                                 | Theme-dependent |
 | `--navbar-radius`            | Border radius (floating/sticky modes)             | Theme-dependent |
-| `--navbar-backdrop-filter`   | Backdrop filter for blur effect                   | Theme-dependent |
+| `--navbar-backdrop-filter`   | Backdrop filter for blur effect            | Theme-dependent |
 | `--navbar-item-color`        | Nav item text color                               | Theme-dependent |
 | `--navbar-item-hover-color`  | Nav item hover text color                         | Theme-dependent |
 | `--navbar-item-hover-bg`     | Nav item hover background                         | Theme-dependent |

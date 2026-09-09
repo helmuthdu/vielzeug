@@ -1,6 +1,6 @@
 import {
   bind,
-  createStableId,
+  createId,
   define,
   getHost,
   html,
@@ -157,7 +157,7 @@ define<OreSliderProps>(SLIDER_TAG, {
     const isDragging = signal(false);
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const labelledById = signal<string | undefined>(undefined);
-    const assistiveId = createStableId('helper');
+    const assistiveId = createId('helper');
     const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
     const errorText = computed(() => assistive.value.errorText);
     const helperText = computed(() => assistive.value.helperText);
@@ -183,13 +183,13 @@ define<OreSliderProps>(SLIDER_TAG, {
       );
       bind({
         attr: {
-          ariaDescribedby: () => ariaDescribedBy.value ?? null,
-          ariaDisabled: () => (isDisabled.value ? 'true' : null),
-          ariaLabelledby: () => labelledById.value ?? null,
-          ariaValuemax: () => sliderControl.max(),
-          ariaValuemin: () => sliderControl.min(),
-          ariaValuenow: () => Number(valueSignal.value || 0),
-          ariaValuetext: () => props['value-text'].value ?? null,
+          'aria-describedby': () => ariaDescribedBy.value ?? null,
+          'aria-disabled': () => (isDisabled.value ? 'true' : null),
+          'aria-labelledby': () => labelledById.value ?? null,
+          'aria-valuemax': () => sliderControl.max(),
+          'aria-valuemin': () => sliderControl.min(),
+          'aria-valuenow': () => Number(valueSignal.value || 0),
+          'aria-valuetext': () => props['value-text'].value ?? null,
           role: () => 'slider',
           tabindex: () => (isDisabled.value ? null : '0'),
         },
@@ -262,8 +262,8 @@ define<OreSliderProps>(SLIDER_TAG, {
     const trackRef = ref<HTMLDivElement>();
     const thumbStartRef = ref<HTMLDivElement>();
     const thumbEndRef = ref<HTMLDivElement>();
-    const startId = createStableId('slider-start');
-    const endId = createStableId('slider-end');
+    const startId = createId('slider-start');
+    const endId = createId('slider-end');
     // ── CSS update helpers ────────────────────────────────────────
     const updateSingleCSS = (value: number) => {
       const pct = sliderControl.toPercent(value);
@@ -382,12 +382,12 @@ define<OreSliderProps>(SLIDER_TAG, {
         onCleanup(
           bind(
             {
-              aria: {
-                label: 'Range start',
-                valuemax: () => endVal.value,
-                valuemin: () => sliderControl.min(),
-                valuenow: () => startVal.value,
-                valuetext: () => props['from-value-text'].value ?? null,
+              attr: {
+                'aria-label': 'Range start',
+                'aria-valuemax': () => endVal.value,
+                'aria-valuemin': () => sliderControl.min(),
+                'aria-valuenow': () => startVal.value,
+                'aria-valuetext': () => props['from-value-text'].value ?? null,
               },
             },
             { target: thumbStartEl },
@@ -409,12 +409,12 @@ define<OreSliderProps>(SLIDER_TAG, {
         onCleanup(
           bind(
             {
-              aria: {
-                label: 'Range end',
-                valuemax: () => sliderControl.max(),
-                valuemin: () => startVal.value,
-                valuenow: () => endVal.value,
-                valuetext: () => props['to-value-text'].value ?? null,
+              attr: {
+                'aria-label': 'Range end',
+                'aria-valuemax': () => sliderControl.max(),
+                'aria-valuemin': () => startVal.value,
+                'aria-valuenow': () => endVal.value,
+                'aria-valuetext': () => props['to-value-text'].value ?? null,
               },
             },
             { target: thumbEndEl },
@@ -512,7 +512,7 @@ define<OreSliderProps>(SLIDER_TAG, {
       if (!container || !track) return;
 
       if (slots.has().value && labelRef.value) {
-        const labelId = createStableId('slider-label');
+        const labelId = createId('slider-label');
 
         labelRef.value.id = labelId;
 

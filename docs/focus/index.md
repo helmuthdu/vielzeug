@@ -24,8 +24,10 @@ list.addEventListener('keydown', (event) => {
 });
 
 // After
-const nav = createListNavigation({ getItems, onNavigate: ({ item }) => item.focus() });
-list.addEventListener('keydown', nav.handleKeydown);
+const nav = createListNavigation({ getItems });
+list.addEventListener('keydown', (event) => {
+  nav.handleKeydown(event)?.change?.item.focus();
+});
 ```
 
 | Feature | Per-component navigation | Focus |
@@ -71,20 +73,20 @@ const restore = captureFocus();
 const nav = createListNavigation({
   getItems: () => items,
   loop: true,
-  onNavigate: ({ item }) => item.focus(),
 });
+const onKeydown = (event: KeyboardEvent) => nav.handleKeydown(event)?.change?.item.focus();
 
-container.addEventListener('keydown', nav.handleKeydown);
+container.addEventListener('keydown', onKeydown);
 
 restore();
-nav.dispose();
+container.removeEventListener('keydown', onKeydown);
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `createListNavigation()` — reusable composite-widget keyboard navigation
+- `createListNavigation()` — pure composite navigation with explicit handled/change results
 - Orientation and direction support — vertical/horizontal/both with LTR/RTL defaults
 - Dynamic item queries — disabled filtering and loop control
 - Optional typeahead — label-based navigation in key-driven lists
@@ -99,6 +101,7 @@ nav.dispose();
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

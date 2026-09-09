@@ -7,4 +7,4 @@ description: Practical examples and recipes for @vielzeug/flux.
 
 - [Debounced Search Input](./examples/debounce-search.md)
 - [Combining Streams with combineLatest](./examples/combine-streams.md)
-- [Ripple Signal Integration](./examples/signal-integration.md)
+- [Structural State Integration](./examples/signal-integration.md)

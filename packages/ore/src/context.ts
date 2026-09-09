@@ -5,9 +5,8 @@
  * resolved by walking up the DOM tree (including through shadow boundaries).
  * Providing is done via `provide(key, value)` inside `setup()`.
  *
- * Keys are `Symbol.for`-based (see `createContext`) so provide/inject still match
- * across a duplicated module graph — the same cross-copy survival rule as the
- * object brands in `utils/brand.ts`.
+ * Each `createContext()` call creates a unique key. Descriptions are diagnostic
+ * labels only and never determine identity.
  */
 
 import { warn } from './_dev';
@@ -136,23 +135,7 @@ export const injectStrict = <T>(key: InjectionKey<T>): T => {
   throw new OreApiError(ORE_ERRORS.injectStrictFailed(String(key), ctx.element.localName));
 };
 
-let anonymousKeyCounter = 0;
-
-/**
- * Create a typed context key. `Symbol.for`-keyed (`ore:context:<description>`) so
- * a provider and an injector loaded from two bundled copies of ore still match
- * (see module header). Two `createContext('theme')` calls intentionally produce
- * the same key — use distinct descriptions for distinct contexts.
- *
- * Always pass a description: anonymous keys are minted from a per-graph counter,
- * so they do NOT survive duplicated module graphs (each copy numbers its own).
- */
-export function createContext<T>(description?: string): InjectionKey<T> {
-  if (description === undefined) {
-    warn(
-      'createContext() called without a description — anonymous context keys do not survive duplicated module graphs.',
-    );
-  }
-
-  return Symbol.for(`ore:context:${description ?? `anonymous-${++anonymousKeyCounter}`}`) as InjectionKey<T>;
+/** Create a unique typed context key with a diagnostic description. */
+export function createContext<T>(description: string): InjectionKey<T> {
+  return Symbol(description) as InjectionKey<T>;
 }

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Refine migrations, isolate store contracts, and make corrupt IndexedDB records non-blocking.",
+      "packageName": "@vielzeug/postmaster",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/postmaster"
+}

@@ -18,13 +18,18 @@ Wrap the router in `readable(router.getSnapshot(), set => router.subscribe(set))
 import { createRouter } from '@vielzeug/wayfinder';
 import { readable } from 'svelte/store';
 
-const router = createRouter({
+export const router = createRouter({
   routes: {
-    home: { component: HomePage, path: '/' },
-    settings: { component: SettingsPage, path: '/settings' },
-    notFound: { component: NotFoundPage, path: '*' },
+    home: { path: '/' },
+    settings: { path: '/settings' },
   },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
+
+export const views = router.createViewRegistry(
+  { home: HomePage, settings: SettingsPage },
+  { notFound: NotFoundPage },
+);
 
 // Wraps the router in a Svelte-compatible readable store.
 // `readable` calls set(initialValue) immediately, then router.subscribe drives updates.
@@ -35,11 +40,11 @@ export const { isActive, navigate, url } = router;
 ```
 
 ```svelte
-<!-- RouterView.svelte -->
+<!-- RouterView.svelte — exhaustive routes and an explicit fallback -->
 <script lang="ts">
-  import { routerState } from './router';
+  import { routerState, views } from './router';
 
-  $: component = $routerState.matches.at(-1)?.component;
+  $: component = views.resolve($routerState);
 </script>
 
 {#if component}
@@ -52,7 +57,7 @@ export const { isActive, navigate, url } = router;
 <script lang="ts">
   import { isActive, navigate, routerState, url } from './router';
 
-  export let name: 'home' | 'settings' | 'notFound';
+  export let name: 'home' | 'settings';
 
   $: void $routerState;
   $: href = url(name);

@@ -1,28 +1,18 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, mergeConfig } from 'vite';
+import { defineConfig } from 'vite';
 
 import { getConfig, readWorkspaceDeps } from '../../vite.config.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
-  mergeConfig(
-    getConfig(__dirname, {
-      entry: {
-        'src/index': resolve(__dirname, 'src/index.ts'),
-      },
-      external: readWorkspaceDeps(__dirname),
-      name: 'courier',
-    }),
-    {
-      build: {
-        rolldownOptions: {
-          output: {
-            minify: true,
-          },
-        },
-      },
+  getConfig(__dirname, {
+    entry: {
+      'src/index': resolve(__dirname, 'src/index.ts'),
     },
-  ),
+    external: readWorkspaceDeps(__dirname),
+    name: 'courier',
+    preserveModules: false,
+  }),
 );

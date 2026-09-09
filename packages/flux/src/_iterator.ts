@@ -1,5 +1,8 @@
-import { assertPositiveInteger } from './_numeric';
-import type { AsyncIterableOptions, Observer, Stream } from './types';
+import { abortError } from '@vielzeug/arsenal';
+import { assertPositiveInteger } from './_numeric.js';
+
+import { FluxCapacityError } from './errors.js';
+import type { AsyncIterableOptions, Observer, Stream } from './types.js';
 
 type Pending<T> = {
   reject(reason: unknown): void;
@@ -14,12 +17,15 @@ type IteratorState<T> =
 /** Async iteration requires explicit queue policy because streams are push based. */
 export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions): AsyncIterableIterator<T> {
   assertPositiveInteger(options.capacity, 'Async iterable capacity');
+  if (options.overflow !== 'drop-newest' && options.overflow !== 'drop-oldest' && options.overflow !== 'error') {
+    throw new RangeError('Async iterable overflow must be "drop-newest", "drop-oldest", or "error"');
+  }
 
   const controller = new AbortController();
   const pending: Pending<T>[] = [];
   let state: IteratorState<T> = { kind: 'open', queue: [] };
 
-  const detach = (): void => options.signal?.removeEventListener('abort', stop);
+  const detach = (): void => options.signal?.removeEventListener('abort', abort);
 
   const resolveDone = (): void => {
     while (pending.length > 0) pending.shift()?.resolve({ done: true, value: undefined as T });
@@ -41,6 +47,10 @@ export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions):
     detach();
 
     while (pending.length > 0) pending.shift()?.reject(reason);
+  };
+
+  const abort = (): void => {
+    fail(abortError(options.signal, 'Async iteration aborted'));
   };
 
   const stop = (): void => {
@@ -74,13 +84,13 @@ export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions):
         state.queue.shift();
         state.queue.push(value);
       } else if (options.overflow === 'error') {
-        fail(new RangeError('Async iterable buffer capacity exceeded'));
+        fail(new FluxCapacityError(options.capacity, 'Async iterable buffer capacity exceeded'));
       }
     },
   };
 
-  if (options.signal?.aborted) stop();
-  else options.signal?.addEventListener('abort', stop, { once: true });
+  if (options.signal?.aborted) abort();
+  else options.signal?.addEventListener('abort', abort, { once: true });
 
   source.subscribe(observer, { signal: controller.signal });
 

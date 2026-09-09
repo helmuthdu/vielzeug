@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove implicit animation replacement and package-owned timing defaults, preserve element subtype inference, and make test animation fixtures disposable.",
+      "packageName": "@vielzeug/necromancer",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/necromancer"
+}

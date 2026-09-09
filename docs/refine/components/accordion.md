@@ -48,7 +48,7 @@ Only one item can be expanded at a time. Use `single` mode for mutually exclusiv
 
 ## Variants
 
-Eight variants applied to all items via the parent accordion — six standard plus glass and frost for translucent effects.
+Seven variants apply to all items through the parent accordion, including frost for translucent surfaces.
 
 <ComponentPreview vertical>
 
@@ -93,37 +93,17 @@ Eight variants applied to all items via the parent accordion — six standard pl
 
 </ComponentPreview>
 
-### Glass & Frost Variants
+### Frost Variant
 
-Modern effects with backdrop blur for elevated UI elements.
+`frost` gives accordion items a diffuse translucent surface with adaptive tint and backdrop blur.
 
 ::: tip Best Used With
-Glass and frost variants work best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
+Avoid nesting the accordion inside another translucent surface because stacked backdrop filters reduce contrast.
 :::
 
 <ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop">
 
 ```html
-<ore-accordion variant="glass">
-  <ore-accordion-item>
-    <ore-icon slot="prefix" name="heart" size="18"></ore-icon>
-    <span slot="title">Item 1</span>
-    <span slot="subtitle">Subitem 1</span>
-    Content
-  </ore-accordion-item>
-  <ore-accordion-item>
-    <ore-icon slot="prefix" name="help-circle" size="18"></ore-icon>
-    <span slot="title">Item 2</span>
-    <span slot="subtitle">Subitem 2</span>
-    Content
-  </ore-accordion-item>
-  <ore-accordion-item>
-    <ore-icon slot="prefix" name="bookmark" size="18"></ore-icon>
-    <span slot="title">Item 3</span>
-    <span slot="subtitle">Subitem 3</span>
-    Content
-  </ore-accordion-item>
-</ore-accordion>
 <ore-accordion variant="frost">
   <ore-accordion-item>
     <ore-icon slot="prefix" name="heart" size="18"></ore-icon>
@@ -240,7 +220,7 @@ Prevent interaction with specific items.
 | Attribute        | Type                                                                                      | Default      | Description                                           |
 | ---------------- | ----------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------- |
 | `selection-mode` | `'single' \| 'multiple'`                                                                  | `'multiple'` | Whether multiple items can be expanded simultaneously |
-| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'`    | Visual variant applied to all items                   |
+| `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`    | Visual variant applied to all items                   |
 | `size`           | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`       | Size applied to all items                             |
 
 **`ore-accordion-item`** Attributes
@@ -249,7 +229,7 @@ Prevent interaction with specific items.
 | ---------- | ----------------------------------------------------------------------------------------- | --------- | --------------------------------------- |
 | `expanded` | `boolean`                                                                                 | `false`   | Whether the item is expanded            |
 | `disabled` | `boolean`                                                                                 | `false`   | Disable the item (prevents toggling)    |
-| `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'` | Visual variant (usually set via parent) |
+| `variant`  | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'` | Visual variant (usually set via parent) |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`    | Size (usually set via parent)           |
 
 ### Slots

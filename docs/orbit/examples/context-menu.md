@@ -11,7 +11,7 @@ A context menu needs positioning from pointer coordinates rather than a DOM trig
 
 ### Solution
 
-Use a virtual reference and start a positioner after rendering the menu.
+Render the menu, then create an active positioner from a virtual reference.
 
 ```ts
 import { createPositioner, flip, offset, shift } from '@vielzeug/orbit';
@@ -27,7 +27,6 @@ document.addEventListener('contextmenu', (event) => {
     placement: 'bottom-start',
   });
 
-  positioner.start();
 });
 ```
 

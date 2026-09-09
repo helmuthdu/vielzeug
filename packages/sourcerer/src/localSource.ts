@@ -1,84 +1,67 @@
-import { createPagePagination, positiveInteger, sameQuery, totalItems } from './pagination';
+import { SourcererDisposedError } from './errors';
+import { createPagePagination, positiveInteger } from './pagination';
 import { createSourceStore } from './sourceStore';
-import type {
-  LocalQuery,
-  LocalQueryPatch,
-  LocalSource,
-  LocalSourceConfig,
-  PagePagination,
-  SourceSnapshot,
-} from './types';
+import type { LocalSource, LocalSourceConfig, LocalSourceState, PagePagination } from './types';
 
-const normalizeQuery = (current: LocalQuery, patch: LocalQueryPatch = {}, maxPage?: number): LocalQuery => {
-  const page = patch.page ?? current.page;
-  const pageSize = patch.pageSize ?? current.pageSize;
-  const search = patch.search ?? current.search;
-  const resetsPage = patch.pageSize !== undefined || patch.search !== undefined;
+/** Local sources filter and paginate an in-memory collection synchronously. */
+export function createLocalSource<T>(items: readonly T[]): LocalSource<T>;
+export function createLocalSource<T, TParams = undefined>(
+  items: readonly T[],
+  config: LocalSourceConfig<T, TParams>,
+): LocalSource<T, TParams>;
+export function createLocalSource<T, TParams = undefined>(
+  items: readonly T[],
+  config: LocalSourceConfig<T, TParams> = {} as LocalSourceConfig<T, TParams>,
+): LocalSource<T, TParams> {
+  let allItems = items;
+  let page = 1;
+  let pageSize = positiveInteger(config.pageSize ?? 20, 'pageSize');
+  let params = config.params as TParams;
 
-  const requestedPage = patch.page ?? (resetsPage ? 1 : page);
-
-  return {
-    page:
-      maxPage === undefined
-        ? positiveInteger(requestedPage, 'page')
-        : Math.min(positiveInteger(requestedPage, 'page'), maxPage),
-    pageSize: positiveInteger(pageSize, 'pageSize'),
-    search,
-  };
-};
-
-/** Local sources own only search and pagination; callers prepare filtering and ranking. */
-export function createLocalSource<T>(data: readonly T[], config: LocalSourceConfig<T> = {}): LocalSource<T> {
-  let allData = data;
-  let query = normalizeQuery({ page: 1, pageSize: 20, search: '' }, config.initialQuery);
-
-  const buildSnapshot = (): SourceSnapshot<T, LocalQuery, PagePagination> => {
-    const matched =
-      query.search.length > 0 && config.match ? allData.filter((item) => config.match?.(item, query.search)) : allData;
-    const total = totalItems(matched.length);
-    const pagination = createPagePagination(query.page, query.pageSize, total);
-    const start = (pagination.index - 1) * pagination.size;
-
-    query = { ...query, page: pagination.index };
+  const buildState = (): LocalSourceState<T, TParams> => {
+    const filtered = config.filter ? allItems.filter((item) => config.filter?.(item, params)) : allItems;
+    const pagination = createPagePagination(page, pageSize, filtered.length);
+    if (page > pagination.pageCount) {
+      page = pagination.pageCount;
+      return buildState();
+    }
+    const start = (page - 1) * pageSize;
 
     return {
-      data: matched.slice(start, start + pagination.size),
       error: null,
-      isFetching: false,
+      items: filtered.slice(start, start + pageSize),
+      loading: false,
       pagination,
-      query,
+      params,
     };
   };
 
-  const store = createSourceStore(buildSnapshot());
-
-  const commit = (): boolean => {
-    const next = buildSnapshot();
-
-    if (
-      sameQuery(next.query, store.value.query) &&
-      next.data === store.value.data &&
-      next.pagination === store.value.pagination
-    ) {
-      return false;
-    }
-
-    store.set(next);
-
-    return true;
+  const store = createSourceStore(buildState());
+  const assertLive = (): void => {
+    if (store.disposed) throw new SourcererDisposedError();
   };
+  const samePagination = (left: PagePagination, right: PagePagination): boolean =>
+    Object.keys(left).every((key) => left[key as keyof PagePagination] === right[key as keyof PagePagination]);
+  const commit = (): void => {
+    const next = buildState();
+    const current = store.value;
+    const sameItems =
+      next.items.length === current.items.length &&
+      next.items.every((item, index) => Object.is(item, current.items[index]));
 
-  const setQuery = (patch: LocalQueryPatch): void => {
-    const next = normalizeQuery(query, patch, store.value.pagination.count);
-
-    if (sameQuery(next, query)) return;
-
-    query = next;
-
+    if (Object.is(next.params, current.params) && sameItems && samePagination(next.pagination, current.pagination))
+      return;
+    store.set(next);
+  };
+  const goTo = (nextPage: number): void => {
+    assertLive();
+    const normalized = Math.min(positiveInteger(nextPage, 'page'), store.value.pagination.pageCount);
+    if (normalized === page) return;
+    page = normalized;
     commit();
   };
 
-  const source: LocalSource<T> = {
+  const source: LocalSource<T, TParams> = {
     get disposalSignal() {
       return store.disposalSignal;
     },
@@ -89,35 +72,51 @@ export function createLocalSource<T>(data: readonly T[], config: LocalSourceConf
       return store.disposed;
     },
 
-    page: {
-      go(index) {
-        setQuery({ page: index });
-      },
-
-      last() {
-        setQuery({ page: store.value.pagination.count });
-      },
-
-      next() {
-        if (store.value.pagination.hasNext) setQuery({ page: store.value.pagination.index + 1 });
-      },
-
-      previous() {
-        if (store.value.pagination.hasPrevious) setQuery({ page: store.value.pagination.index - 1 });
-      },
+    first() {
+      goTo(1);
     },
 
-    setData(nextData) {
-      if (nextData === allData) return;
+    goTo,
 
-      allData = nextData;
+    last() {
+      goTo(store.value.pagination.pageCount);
+    },
 
+    next() {
+      if (store.value.pagination.hasNext) goTo(page + 1);
+      else assertLive();
+    },
+
+    previous() {
+      if (store.value.pagination.hasPrevious) goTo(page - 1);
+      else assertLive();
+    },
+
+    setItems(nextItems) {
+      assertLive();
+      if (nextItems === allItems) return;
+      allItems = nextItems;
       commit();
     },
 
-    setQuery,
+    setPageSize(nextPageSize) {
+      assertLive();
+      const normalized = positiveInteger(nextPageSize, 'pageSize');
+      if (normalized === pageSize) return;
+      page = 1;
+      pageSize = normalized;
+      commit();
+    },
 
-    get snapshot() {
+    setParams(nextParams) {
+      assertLive();
+      if (Object.is(nextParams, params)) return;
+      page = 1;
+      params = nextParams;
+      commit();
+    },
+
+    get state() {
       return store.value;
     },
 

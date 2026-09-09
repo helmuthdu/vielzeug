@@ -9,7 +9,7 @@ type MediaQueryController = {
 
 function createMediaQueryController(initialMatches = false): MediaQueryController {
   let matches = initialMatches;
-  const listeners = new Set<() => void>();
+  const listeners = new Set<(event?: any) => void>();
   const list = {
     addEventListener: (_type: string, listener: EventListenerOrEventListenerObject) => {
       if (typeof listener === 'function') listeners.add(listener);
@@ -63,13 +63,13 @@ describe('window Sentinels', () => {
     const listener = vi.fn();
     const unsubscribe = sentinel.subscribe(listener);
 
-    expect(sentinel.value).toEqual({ dpr: 1, height: 600, width: 800 });
+    expect(sentinel.getSnapshot()).toEqual({ dpr: 1, height: 600, width: 800 });
 
     target.innerWidth = 1024;
     target.innerHeight = 768;
     target.dispatchEvent(new Event('resize'));
 
-    expect(sentinel.value).toEqual({ dpr: 1, height: 768, width: 1024 });
+    expect(sentinel.getSnapshot()).toEqual({ dpr: 1, height: 768, width: 1024 });
     expect(listener).toHaveBeenCalledOnce();
     expect(dprQuery.listenerCount()).toBe(1);
 
@@ -88,7 +88,7 @@ describe('window Sentinels', () => {
     target.devicePixelRatio = 2;
     firstQuery.setMatches(false);
 
-    expect(sentinel.value.dpr).toBe(2);
+    expect(sentinel.getSnapshot().dpr).toBe(2);
     expect(target.matchMedia).toHaveBeenLastCalledWith('(resolution: 2dppx)');
     expect(firstQuery.listenerCount()).toBe(0);
     expect(secondQuery.listenerCount()).toBe(1);
@@ -107,14 +107,14 @@ describe('window Sentinels', () => {
     const target = new TestWindow(navigator);
     const sentinel = createNetwork({ target: target as unknown as Window });
 
-    expect(sentinel.value).toEqual({
+    expect(sentinel.getSnapshot()).toEqual({
       connection: { downlink: 10, effectiveType: '4g', rtt: 20, saveData: false },
       online: true,
     });
 
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
     target.dispatchEvent(new Event('offline'));
-    expect(sentinel.value.online).toBe(false);
+    expect(sentinel.getSnapshot().online).toBe(false);
 
     sentinel.dispose();
   });
@@ -125,10 +125,10 @@ describe('window Sentinels', () => {
     target.matchMedia.mockReturnValue(mediaQuery.list);
     const sentinel = createMediaQuery('(min-width: 40rem)', { target: target as unknown as Window });
 
-    expect(sentinel.value.matches).toBe(false);
+    expect(sentinel.getSnapshot().matches).toBe(false);
 
     mediaQuery.setMatches(true);
-    expect(sentinel.value.matches).toBe(true);
+    expect(sentinel.getSnapshot().matches).toBe(true);
 
     sentinel.dispose();
     expect(mediaQuery.listenerCount()).toBe(0);

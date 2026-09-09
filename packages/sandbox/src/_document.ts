@@ -21,31 +21,29 @@ export function buildDocumentFromOptions(
   bootstrap: BridgeBootstrap,
 ): string {
   const csp = escapeAttr(buildCspFromOptions(options));
-  const styles = Object.entries(options.namedStyles)
+  const styles = Object.entries(options.styles)
     .map(([id, css]) => `<style id="${escapeAttr(id)}">${escapeCss(css)}</style>`)
     .join('\n');
   const scripts = options.scripts
     .map((src) => `<script crossorigin="anonymous" src="${escapeAttr(src)}"></script>`)
     .join('\n');
   const nonce = options.nonce ? ` nonce="${escapeAttr(options.nonce)}"` : '';
-  const bootstrapScript = `<script${nonce}>window.__sandboxChannel=${JSON.stringify(bootstrap.channel)};window.__sandboxGeneration=${bootstrap.generation};</script>`;
 
   return `<!doctype html>
 <html lang="${escapeAttr(options.lang)}">
 <head>
 <meta http-equiv="Content-Security-Policy" content="${csp}">
-${bootstrapScript}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeText(options.title)}</title>
 ${styles}
+<script${nonce}>
+${buildBridgeScript(bootstrap)}
+</script>
 </head>
 <body>
 ${scripts}
 ${html}
-<script${nonce}>
-${buildBridgeScript(bootstrap)}
-</script>
 </body>
 </html>`;
 }

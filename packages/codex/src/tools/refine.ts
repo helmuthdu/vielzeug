@@ -1,13 +1,19 @@
+import type { Server } from '@modelcontextprotocol/server';
+
+import type { RefineCatalog } from '../refine-catalog.js';
 import type { CemAttribute, CemDeclaration } from '../types.js';
+import { packageTools, registerTools } from './index.js';
 import { EMPTY_SCHEMA, parseArgs, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
 
 const tag = {
+  additionalProperties: false,
   properties: { tagName: { description: 'Custom element tag', maxLength: 100, minLength: 1, type: 'string' } },
   required: ['tagName'],
   type: 'object',
 } satisfies ToolSchema;
 const template = {
+  additionalProperties: false,
   properties: {
     scenario: { default: '', description: 'Optional scenario label', maxLength: 200, type: 'string' },
     tagName: tag.properties.tagName,
@@ -16,10 +22,12 @@ const template = {
   type: 'object',
 } satisfies ToolSchema;
 const tokenFilter = {
+  additionalProperties: false,
   properties: { filter: { default: '', description: 'Optional token prefix', maxLength: 100, type: 'string' } },
   type: 'object',
 } satisfies ToolSchema;
 const usage = {
+  additionalProperties: false,
   properties: {
     html: { description: 'Component HTML fragment', maxLength: 5000, minLength: 1, type: 'string' },
     tagName: tag.properties.tagName,
@@ -28,10 +36,18 @@ const usage = {
   type: 'object',
 } satisfies ToolSchema;
 
+function escapeHtml(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function attribute(attr: CemAttribute): string {
   if (attr.type?.text === 'boolean') return attr.name;
 
-  if (attr.default !== undefined) return `${attr.name}="${attr.default}"`;
+  if (attr.default !== undefined) return `${attr.name}="${escapeHtml(attr.default)}"`;
 
   return `${attr.name}=""`;
 }
@@ -41,15 +57,17 @@ function htmlTemplate(component: CemDeclaration, scenario: string): string {
   const attributes = (component.attributes ?? []).filter((item) => item.default === undefined).map(attribute);
   const slots = (component.slots ?? [])
     .filter((slot) => slot.name)
-    .map((slot) => `  <span slot="${slot.name}">${slot.description ?? slot.name}</span>`);
+    .map((slot) => `  <span slot="${escapeHtml(slot.name)}">${escapeHtml(slot.description ?? slot.name)}</span>`);
   const body = slots.length > 0 ? `\n${slots.join('\n')}\n` : '\n  Content\n';
 
-  return `${scenario ? `<!-- ${scenario} -->\n` : ''}<${name}${attributes.length ? `\n  ${attributes.join('\n  ')}` : ''}>${body}</${name}>`;
+  const comment = scenario ? `<!-- ${scenario.replaceAll('--', '—')} -->\n` : '';
+
+  return `${comment}<${name}${attributes.length ? `\n  ${attributes.join('\n  ')}` : ''}>${body}</${name}>`;
 }
 
 function usageIssues(component: CemDeclaration, html: string): Array<{ message: string; type: 'error' }> {
   const name = component.tagName ?? '';
-  const opening = new RegExp(`<${name}\\s*([^>]*)>`, 'i').exec(html);
+  const opening = new RegExp(`<${escapeRegExp(name)}(?=[\\s/>])((?:"[^"]*"|'[^']*'|[^'">])*)>`, 'i').exec(html);
 
   if (!opening) return [{ message: `Could not find opening <${name}> tag.`, type: 'error' }];
 
@@ -73,7 +91,7 @@ function usageIssues(component: CemDeclaration, html: string): Array<{ message: 
   return issues;
 }
 
-export const refineTools: ToolDefinition[] = [
+export const refineTools: readonly ToolDefinition<RefineCatalog>[] = [
   {
     description: 'List bundled Refine web components.',
     execute: (_args, catalog) =>
@@ -141,3 +159,7 @@ export const refineTools: ToolDefinition[] = [
     name: 'refine-validate-usage',
   },
 ];
+
+export function registerRefineTools(server: Server, catalog: RefineCatalog, debug = false): void {
+  registerTools(server, catalog, [...packageTools, ...refineTools], debug);
+}

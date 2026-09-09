@@ -20,7 +20,6 @@
     "@vielzeug/courier": "workspace:*",
     "@vielzeug/dnd": "workspace:*",
     "@vielzeug/familiar": "workspace:*",
-    "@vielzeug/flux": "workspace:*",
     "@vielzeug/forge": "workspace:*",
     "@vielzeug/gesture": "workspace:*",
     "@vielzeug/herald": "workspace:*",

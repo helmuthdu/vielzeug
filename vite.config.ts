@@ -38,7 +38,7 @@ export type BundleOptions = {
   /** Absolute path to the bundle entry point. Defaults to `src/index.ts`. */
   entry?: string;
   /** Modules to mark as external in the bundled output. */
-  external?: string[];
+  external?: Array<RegExp | string>;
   /** Output file base name, without extension (e.g. "refine" → refine.js / refine.cjs / refine.iife.js). */
   fileName: string;
   /** Explicit IIFE globals overrides (merged on top of auto-derived ones). */
@@ -135,7 +135,9 @@ export const getBundleConfig = (__dirname: string, options: BundleOptions) => {
   const { entry, external, fileName, globals: globalsOverride, name } = options;
 
   const globals = {
-    ...Object.fromEntries((external ?? []).map((id) => [id, toGlobalName(id)])),
+    ...Object.fromEntries(
+      (external ?? []).filter((id): id is string => typeof id === 'string').map((id) => [id, toGlobalName(id)]),
+    ),
     ...globalsOverride,
   };
 

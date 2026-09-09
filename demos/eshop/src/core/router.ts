@@ -1,6 +1,4 @@
-import { stream } from '@vielzeug/flux';
-import { toSignal } from '@vielzeug/flux/ripple';
-import { computed } from '@vielzeug/ripple';
+import { computed, fromSubscribable } from '@vielzeug/ripple';
 import type { RouteParams } from '@vielzeug/wayfinder';
 import { createBrowserHistory, createRouter } from '@vielzeug/wayfinder';
 
@@ -35,23 +33,15 @@ export const router = createRouter({
   routes,
 });
 
-// ── Reactive route (bridges wayfinder's subscribe() into a ripple signal via flux — the same
-// fromSubscribe-style producer pattern used by core/i18n.ts) ─────────────────────────────────
+// ── Reactive route (bridges wayfinder's subscribe()/getSnapshot() into a ripple signal via
+// `fromSubscribable` — the same structural adapter pattern used by core/i18n.ts) ───────────────
 // `router.getSnapshot()` alone is NOT ripple-reactive: reading it inside a `computed()` would
 // compute once and never re-run, since it registers no tracked dependency.
 
-function currentSnapshot() {
-  return router.getSnapshot();
-}
-
-const routeBinding = toSignal(
-  stream<ReturnType<typeof currentSnapshot>>((observer) => {
-    observer.next(currentSnapshot());
-
-    return router.subscribe((state) => observer.next(state));
-  }),
-  { initial: currentSnapshot() },
-);
+const routeBinding = fromSubscribable<ReturnType<typeof router.getSnapshot>>({
+  getSnapshot: () => router.getSnapshot(),
+  subscribe: (listener) => router.subscribe(() => listener()),
+});
 
 export const activeRoute = computed(() => routeBinding.value.matches.at(-1)?.name ?? null);
 

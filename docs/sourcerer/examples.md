@@ -5,8 +5,8 @@ description: Recipes for local, page, cursor, infinite, and framework source usa
 
 ## Examples
 
-- [Local Pagination and Search](./examples/local-pagination-and-filtering.md)
-- [Page Query with URL State](./examples/remote-search-with-url-state.md)
+- [Local Pagination and Filtering](./examples/local-pagination-and-filtering.md)
+- [Page Params with URL State](./examples/remote-search-with-url-state.md)
 - [Cursor-Based Pagination](./examples/cursor-based-pagination.md)
 - [Infinite Scroll](./examples/infinite-scroll.md)
 - [Framework Integration](./examples/framework-integration.md)

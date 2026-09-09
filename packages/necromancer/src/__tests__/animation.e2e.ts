@@ -71,38 +71,6 @@ test('reports native completion after finish', async ({ page }) => {
   expect(outcome).toEqual({ status: 'finished' });
 });
 
-test('interrupts prior Necromancer-owned animations without touching native caller animations', async ({ page }) => {
-  const outcome = await page.evaluate(async () => {
-    const necromancer = (window as Window & { Necromancer?: NecromancerRuntime }).Necromancer;
-
-    if (!necromancer) throw new Error('Necromancer IIFE did not load.');
-
-    const element = document.body.appendChild(document.createElement('div'));
-    const external = element.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'both' });
-    const first = necromancer.animate(element, [{ opacity: 0 }, { opacity: 1 }], {
-      duration: 120,
-      fill: 'both',
-      motion: 'full',
-    });
-    const second = necromancer.animate(element, [{ opacity: 1 }, { opacity: 0 }], {
-      duration: 120,
-      fill: 'both',
-      interrupt: 'cancel',
-      motion: 'full',
-    });
-    const result = await first.result;
-
-    second.dispose();
-
-    return {
-      externalState: external.playState,
-      firstDisposed: first.disposed,
-      firstStatus: result.status,
-    };
-  });
-
-  expect(outcome).toEqual({ externalState: 'running', firstDisposed: true, firstStatus: 'cancelled' });
-});
 test('reduces motion while preserving its requested keyframes', async ({ page }) => {
   const outcome = await page.evaluate(async () => {
     const necromancer = (window as Window & { Necromancer?: NecromancerRuntime }).Necromancer;

@@ -10,7 +10,7 @@ description: Drop zones, sortable lists, explicit connected scopes, keyboard sor
 `createDropZone` attaches drag-and-drop behavior to any DOM element and keeps hover state stable with a counter.
 
 ```ts
-import { createDropZone } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
 
 const dropzone = document.getElementById('dropzone')!;
 
@@ -37,7 +37,7 @@ const zone = createDropZone({
 });
 ```
 
-The `accept` list is read at drop-time, so mutating the array dynamically adjusts what is accepted for the next drop.
+The `accept` list is normalized and snapshotted at construction. MIME matching is case-insensitive; invalid patterns throw `DndError`. Recreate the zone to change accepted types.
 
 ### Hover state
 
@@ -103,6 +103,8 @@ zone.dispose();
 using zone = createDropZone({ element: dropEl, onDrop: handleFiles });
 ```
 
+`maxFiles` must be a non-negative safe integer.
+
 ### Async validation
 
 Gate drops behind an async check with `onValidate`. The zone remains `validating: true` until every pending validation settles, and disposal aborts each validation signal.
@@ -135,7 +137,7 @@ const zone = createDropZone({
 
 ### Clipboard paste
 
-Set `paste: true` to accept files pasted from the clipboard. The same `accept`, `maxFiles`, and `onValidate` pipeline applies.
+Set `paste: true` to accept files pasted through the drop-zone element. The focused paste target must be the element or its descendant; the same `accept`, `maxFiles`, and `onValidate` pipeline applies.
 
 ```ts
 const zone = createDropZone({
@@ -172,8 +174,8 @@ const sortable = createSortable({
   element: document.getElementById('task-list')!,
   getKey: (el) => el.dataset.sortId!,
   axis: 'vertical',
-  onReorder: ({ ids }) => {
-    saveTaskOrder(ids);
+  onReorder: ({ after }) => {
+    saveTaskOrder(after);
   },
 });
 ```
@@ -192,7 +194,7 @@ createSortable({
   element: listEl,
   getKey: (el) => el.dataset.sortId!,
   handle: '.drag-handle',
-  onReorder: ({ ids }) => saveOrder(ids),
+  onReorder: ({ after }) => saveOrder(after),
 });
 ```
 
@@ -200,7 +202,7 @@ createSortable({
 
 Focus an item and use arrow keys to move it. `Home` and `End` move to the boundary positions.
 
-When an item is already at the first or last position, the boundary key press is not consumed — the browser handles it normally (for example, scrolling the page). Only keys that actually move an item call `preventDefault`.
+When an item is already at the first or last position, the boundary key press is not consumed — the browser handles it normally (for example, scrolling the page). Only keys that actually move an item call `preventDefault`. Arrow keys from buttons, links, form fields, and editable descendants remain native unless that descendant matches the configured drag handle. Wire `onInteraction` to an application live region for screen-reader announcements.
 
 ### Connected lists
 
@@ -252,7 +254,7 @@ createSortable({
   onDragEnd: (id) => {
     listEl.classList.remove('sorting');
   },
-  onReorder: ({ ids }) => saveOrder(ids),
+  onReorder: ({ after }) => saveOrder(after),
 });
 ```
 
@@ -262,32 +264,32 @@ createSortable({
 createSortable({
   element: listEl,
   getKey: (el) => el.getAttribute('data-id')!,
-  onReorder: ({ ids }) => saveOrder(ids),
+  onReorder: ({ after }) => saveOrder(after),
 });
 ```
 
 ### Dynamic lists
 
-Call `sortable.sync()` after adding, removing, or replacing sortable items.
+Call `sortable.refresh()` after adding, removing, or replacing sortable items. It restores Dnd-managed semantics on elements no longer returned by `items()` before marking the current direct children.
 
 ```ts
 const item = document.createElement('li');
 item.dataset.sortId = 'task-4';
 item.textContent = 'Deploy';
 listEl.appendChild(item);
-sortable.sync();
+sortable.refresh();
 ```
 
 ### Disabled state
 
 ```ts
-import { createSortable, type SortableOptions } from '@vielzeug/dnd';
+import { createSortable, type SortableOptions } from '@vielzeug/dnd/sortable';
 
 const options: SortableOptions = {
   disabled: false,
   element: listEl,
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids }) => saveOrder(ids),
+  onReorder: ({ after }) => saveOrder(after),
 };
 const sortable = createSortable(options);
 
@@ -314,7 +316,7 @@ options.disabled = isLocked;
 ### Mapping DOM order back to data
 
 ```ts
-import { applyReorder, createSortable } from '@vielzeug/dnd';
+import { applyReorder, createSortable } from '@vielzeug/dnd/sortable';
 
 let items = [
   { id: 'task-1', title: 'Design' },
@@ -325,8 +327,8 @@ let items = [
 createSortable({
   element: listEl,
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids }) => {
-    items = applyReorder(items, ids, (item) => item.id);
+  onReorder: ({ after }) => {
+    items = applyReorder(items, after, (item) => item.id);
   },
 });
 ```
@@ -339,7 +341,7 @@ sortable.dispose();
 using sortable = createSortable({
   element: listEl,
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids }) => saveOrder(ids),
+  onReorder: ({ after }) => saveOrder(after),
 });
 ```
 
@@ -350,18 +352,18 @@ using sortable = createSortable({
 ```ts
 import { captureLayout, type LayoutTransition } from '@vielzeug/necromancer';
 
-let layout: LayoutTransition | undefined;
+let layout: LayoutTransition<HTMLElement> | undefined;
 
 const sortable = createSortable({
   element: listEl,
   getKey: (el) => el.dataset.sortId!,
   onBeforeReorder: () => {
-    layout = captureLayout(listEl.querySelectorAll('[data-sort-id]'), {
+    layout = captureLayout(listEl.querySelectorAll<HTMLElement>('[data-sort-id]'), {
       getKey: (el) => el.dataset.sortId!,
     });
   },
-  onReorder: ({ ids }) => {
-    saveOrder(ids); // Commit a framework render here when needed.
+  onReorder: ({ after }) => {
+    saveOrder(after); // Commit a framework render here when needed.
     layout?.animate({
       duration: 200,
       easing: 'ease-out',
@@ -372,20 +374,21 @@ const sortable = createSortable({
 });
 ```
 
-If `saveOrder()` triggers a render that replaces list items, call `layout?.animate({ elements: committedItems })` after that render commits. When DnD's own reordered elements remain in the DOM, call `layout?.animate()` directly. DnD stays dependency-free: the application chooses to install and import Necromancer when it wants this integration.
+If `saveOrder()` triggers a render that replaces list items, call `layout?.animate({ elements: committedItems })` after that render commits. When DnD's own reordered elements remain in the DOM, call `layout?.animate()` directly. Dnd does not depend on Necromancer: the application installs it only when FLIP animation is required. Dnd's sole runtime dependency is Gesture for touch pointer recognition.
 
-### Optimistic updates and revert
+### Optimistic updates and rollback
 
-Call `sortable.revert()` to roll back the most recent reorder. Register a revert function via `setRevert` inside `onReorder`.
+The `onReorder` event carries `before`, `after`, and `item`. Application history owns rollback — use `before` to record an undo entry.
 
 ```ts
+const history: Array<{ before: readonly string[] }> = [];
+
 const sortable = createSortable({
   element: listEl,
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids, setRevert }) => {
-    const prev = currentOrder;
-    setOrder(ids); // optimistic update
-    setRevert(() => setOrder(prev)); // registered for sortable.revert()
+  onReorder: ({ before, after }) => {
+    history.push({ before });
+    setOrder(after); // optimistic update
   },
 });
 
@@ -393,22 +396,23 @@ const sortable = createSortable({
 try {
   await api.saveOrder(currentOrder);
 } catch {
-  sortable.revert();
+  const entry = history.pop();
+  if (entry) setOrder(entry.before);
 }
 ```
 
 ## Touch Support
 
-HTML5 drag-and-drop has no native touch story. Enable touch on a sortable scope; it only recognizes items registered to that scope, never unrelated `draggable` elements.
+The HTML Drag and Drop API has no reliable native touch path. Enable touch on a sortable scope; it only recognizes items registered to that scope, never unrelated `draggable` elements.
 
 ```ts
-import { createSortable, createSortableScope } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 
 using scope = createSortableScope({ touch: true });
 using sortable = createSortable({ element: listEl, getKey: (el) => el.dataset.id!, scope });
 ```
 
-The scope tracks the touch that initiated the drag by its identifier. Additional fingers cannot move, finish, or replace the active drag. If the initiating touch is cancelled, Dnd restores the original item order and removes the transient preview.
+Gesture tracks the primary touch pointer for the active drag. Additional contacts cannot move, finish, or replace it. Pointer cancellation restores the original item order and removes the transient preview.
 
 ### Touch preview
 
@@ -417,17 +421,16 @@ Touch uses an inert outline by default, avoiding cloned application DOM. Provide
 ```ts
 const scope = createSortableScope({
   touch: {
+    activationDistance: 8,
     // The returned element is cloned before Dnd mounts it as a transient preview.
     preview: (item) => item.querySelector<HTMLElement>('.drag-preview'),
   },
 });
 ```
 
-### Why draggable items get `touch-action: none`
+### Why touch-enabled items get `touch-action: none`
 
-`createSortable` sets `touch-action: none` on every element it marks as draggable (the item itself, or the handle when `handle` is set). This prevents a mobile browser from treating the initial movement as page scrolling before the scope controller can start the drag.
-
-This has no effect on mouse/pointer input.
+When a sortable scope enables touch input, `createSortable` sets `touch-action: none` on the managed item or handle. This prevents a mobile browser from claiming the gesture as page scrolling before the scope controller starts the drag. Sortables without touch input preserve native touch scrolling.
 
 ## Testing
 
@@ -435,7 +438,7 @@ Test observable callbacks and controller state with your DOM test runner. Constr
 
 ```ts
 import { afterEach, expect, it, vi } from 'vitest';
-import { createDropZone } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
 
 const zones: Array<{ dispose(): void }> = [];
 
@@ -465,7 +468,7 @@ it('forwards accepted files', async () => {
 
 ```tsx [React]
 import { useEffect, useRef } from 'react';
-import { createSortable, applyReorder } from '@vielzeug/dnd';
+import { createSortable, applyReorder } from '@vielzeug/dnd/sortable';
 
 function SortableList({ initialItems }: { initialItems: { id: string; text: string }[] }) {
   const listRef = useRef<HTMLUListElement>(null);
@@ -475,8 +478,8 @@ function SortableList({ initialItems }: { initialItems: { id: string; text: stri
     const sortable = createSortable({
       element: listRef.current!,
       getKey: (el) => el.dataset.sortId!,
-      onReorder: ({ ids }) => {
-        items.current = applyReorder(items.current, ids, (i) => i.id);
+      onReorder: ({ after }) => {
+        items.current = applyReorder(items.current, after, (i) => i.id);
       },
     });
     return () => sortable.dispose();
@@ -496,7 +499,7 @@ function SortableList({ initialItems }: { initialItems: { id: string; text: stri
 
 ```ts [Vue 3]
 import { ref, onMounted, onUnmounted } from 'vue';
-import { createSortable, applyReorder, type Sortable } from '@vielzeug/dnd';
+import { createSortable, applyReorder, type Sortable } from '@vielzeug/dnd/sortable';
 
 function useSortable(items: { id: string; text: string }[]) {
   const listRef = ref<HTMLElement | null>(null);
@@ -507,8 +510,8 @@ function useSortable(items: { id: string; text: string }[]) {
     sortable = createSortable({
       element: listRef.value!,
       getKey: (el) => el.dataset.sortId!,
-      onReorder: ({ ids }) => {
-        orderedItems.value = applyReorder(orderedItems.value, ids, (i) => i.id);
+      onReorder: ({ after }) => {
+        orderedItems.value = applyReorder(orderedItems.value, after, (i) => i.id);
       },
     });
   });
@@ -521,7 +524,7 @@ function useSortable(items: { id: string; text: string }[]) {
 ```svelte [Svelte]
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { createSortable, applyReorder } from '@vielzeug/dnd';
+  import { createSortable, applyReorder } from '@vielzeug/dnd/sortable';
 
   export let initialItems: { id: string; text: string }[] = [];
   let items = initialItems;
@@ -531,7 +534,7 @@ function useSortable(items: { id: string; text: string }[]) {
     const sortable = createSortable({
       element: listEl,
       getKey: (el) => el.dataset.sortId!,
-      onReorder: ({ ids }) => { items = applyReorder(items, ids, (i) => i.id); },
+      onReorder: ({ after }) => { items = applyReorder(items, after, (i) => i.id); },
     });
     return () => sortable.dispose();
   });
@@ -553,7 +556,7 @@ function useSortable(items: { id: string; text: string }[]) {
 Use Dnd in custom web components by attaching behavior in component lifecycle hooks.
 
 ```ts
-import { createSortable } from '@vielzeug/dnd';
+import { createSortable } from '@vielzeug/dnd/sortable';
 import { define, getHost, html, onMounted } from '@vielzeug/ore';
 
 define('task-list', {
@@ -564,7 +567,7 @@ define('task-list', {
       const sortable = createSortable({
         element: el,
         getKey: (el) => el.dataset.sortId!,
-        onReorder: ({ ids }) => save(ids),
+        onReorder: ({ after }) => save(after),
       });
       return () => sortable.dispose();
     });
@@ -574,12 +577,16 @@ define('task-list', {
 });
 ```
 
+### With Gesture
+
+Keep direct manipulation separate from drag-and-drop semantics. Use Gesture for one-axis surfaces that follow the pointer and let application code decide the outcome; use Dnd when an item enters a drag lifecycle and is dropped into a zone or reordered collection. Dnd touch sorting uses Gesture's two-dimensional pointer recognizer, then adds previews, hit-testing, synthetic drag events, and sortable transactions. Direct-manipulation consumers use Gesture without Dnd.
+
 ## Best Practices
 
 - Attach `createDropZone` and `createSortable` after the container element is in the DOM — use `onMounted` in component frameworks.
 - Call `.dispose()` in the cleanup phase of your framework (useEffect return, onUnmounted, onDestroy) to prevent memory leaks.
 - Use `data-sort-id` attributes that match your data's identity field — do not use DOM index as an identifier.
-- Prefer `applyReorder()` over manual array splicing to keep your data array in sync with DOM order.
+- Prefer `applyReorder()` over manual array splicing, and guarantee unique backing keys; duplicates throw `DndError` rather than dropping data.
 - Use `createSortableScope()` only when items should genuinely move between containers.
 - Use drag handles (`.handle` selector) when the full item surface area conflicts with other interactions such as text selection.
 - Test keyboard reordering explicitly — Dnd sets `tabindex` on items and supports arrow keys by default.

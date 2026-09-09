@@ -20,9 +20,13 @@ description: Complete API reference for Dnd.
 
 ## Package Entry Point
 
-| Import          | Purpose                |
-| --------------- | ---------------------- |
-| `@vielzeug/dnd` | Main exports and types |
+| Import              | Purpose                          |
+| ------------------- | -------------------------------- |
+| `@vielzeug/dnd`     | Backward-compat root barrel      |
+| `@vielzeug/dnd/drop` | Drop-zone APIs plus `DndError` and `Disposable` |
+| `@vielzeug/dnd/sortable` | Sortable APIs plus `DndError`, `DndScopeError`, and `Disposable` |
+
+Dnd has no third-party runtime dependencies. Its sortable touch adapter uses `@vielzeug/gesture` for shared pointer recognition.
 
 ## Types
 
@@ -42,7 +46,7 @@ interface Disposable {
 ```ts
 interface DropZoneOptions {
   element: HTMLElement;
-  accept?: string[];
+  accept?: readonly string[];
   maxFiles?: number;
   onValidate?: (files: File[], context: DropValidationContext) => boolean | Promise<boolean>;
   disabled?: boolean;
@@ -91,8 +95,9 @@ interface SortableOptions {
   onDragStart?: (id: string, event: DragEvent) => void;
   onDragEnd?: (id: string, event: DragEvent) => void;
   onInteraction?: (event: SortableInteractionEvent) => void;
-  onBeforeReorder?: (from: string[], to: string[]) => void;
+  onBeforeReorder?: (from: readonly string[], to: readonly string[]) => void;
   onReorder?: (event: ReorderEvent) => void;
+  items?: () => readonly HTMLElement[];
 }
 ```
 
@@ -111,8 +116,9 @@ interface AutoScrollOptions {
 
 ```ts
 interface ReorderEvent {
-  ids: string[];
-  setRevert(fn: () => void): void;
+  before: readonly string[];
+  after: readonly string[];
+  item: string;
 }
 ```
 
@@ -121,8 +127,7 @@ interface ReorderEvent {
 ```ts
 interface Sortable extends Disposable {
   readonly isDragging: boolean;
-  revert(): void;
-  sync(): void;
+  refresh(): void;
 }
 ```
 
@@ -131,7 +136,6 @@ interface Sortable extends Disposable {
 ```ts
 interface SortableScope extends Disposable {
   readonly isDragging: boolean;
-  revert(): void;
 }
 ```
 
@@ -150,10 +154,11 @@ interface SortableScopeOptions {
 interface SortableMoveEvent {
   readonly itemId: string;
   readonly source: HTMLElement;
-  readonly sourceIds: string[];
+  readonly sourceBeforeIds: readonly string[];
+  readonly sourceIds: readonly string[];
   readonly target: HTMLElement;
-  readonly targetIds: string[];
-  setRevert(fn: () => void): void;
+  readonly targetBeforeIds: readonly string[];
+  readonly targetIds: readonly string[];
 }
 ```
 
@@ -178,7 +183,7 @@ type SortableInteractionEvent =
 Wire a consumer-side announcer to provide screen-reader feedback:
 
 ```ts
-import { createSortable } from '@vielzeug/dnd';
+import { createSortable } from '@vielzeug/dnd/sortable';
 
 createSortable({
   element: listEl,
@@ -205,14 +210,17 @@ createSortable({
 ### `SortableTouchOptions`
 
 ```ts
-interface SortableTouchOptions {
+type SortableTouchOptions = Readonly<{
+  activationDistance?: number;
   preview?: false | ((item: HTMLElement) => HTMLElement | null);
-}
+}>
 ```
+
+`activationDistance` is the non-negative finite movement threshold in pixels before touch sorting starts (default `6`). Invalid values throw `DndError`.
 
 `preview` returns a template that Dnd clones before mounting it as a transient touch preview, so returning an element from the sortable item does not reparent or remove caller-owned DOM. Return `false` to disable the preview.
 
-Touch sorting tracks the initiating touch by identifier. Secondary touches are ignored, and cancellation of the initiating touch restores the pre-drag order without firing `onReorder`.
+Touch sorting delegates one-pointer activation, movement, identity, and cancellation to Gesture's `createDragGesture()` with pointer capture disabled for document hit-testing. Dnd retains preview rendering, hit-testing, synthetic drag events, and sortable transactions. Non-primary pointers are ignored, and cancellation restores the pre-drag order without firing `onReorder`.
 
 ## `createDropZone()`
 
@@ -225,8 +233,8 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 | Option           | Type                                             | Default  | Description                                                                                                                                                                                                                                      |
 | ---------------- | ------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `element`        | `HTMLElement`                                    | —        | **Required.** The element to attach drag listeners to.                                                                                                                                                                                           |
-| `accept`         | `string[]`                                       | `[]`     | Accepted file types. Empty array accepts everything. Each entry is a MIME type (`'image/png'`), MIME wildcard (`'image/*'`), or file extension (`'.pdf'`).                                                                                       |
-| `maxFiles`       | `number`                                         | —        | Maximum files accepted per drop. Files beyond this limit are passed to `onDropRejected`. When omitted there is no limit.                                                                                                                         |
+| `accept`         | `string[]`                                       | `[]`     | Accepted file types, normalized and snapshotted at construction. Empty array accepts everything; invalid MIME, wildcard, or extension patterns throw `DndError`.                                                                                       |
+| `maxFiles`       | `number`                                         | —        | Non-negative safe-integer file limit. Excess files are passed to `onDropRejected`; invalid values throw `DndError` during construction.                                                                                                                         |
 | `onValidate`     | `(files, { signal }) => boolean \| Promise<boolean>` | —     | Optional async gating step. Return or resolve `false` to reject all accepted files. `validating` remains true until every operation settles; `signal` aborts on disposal. |
 | `disabled`       | `boolean`                                        | —        | When `true`, all drag and paste events are ignored. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally.                            |
 | `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`           | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                                                                                                         |
@@ -234,7 +242,7 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 | `onDropRejected` | `(files: File[]) => void`                        | —        | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`.                                                                                                                                            |
 | `onHoverChange`  | `(hovered: boolean) => void`                     | —        | Called when hover state toggles. Use this callback for drag-over styling.                                                                                                                                                                        |
 | `onValidatingChange` | `(validating: boolean) => void`                | —        | Called whenever the aggregate async validation state changes. |
-| `paste`          | `boolean`                                        | `false`  | When `true`, attaches a `paste` listener to `window`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.                                                                                        |
+| `paste`          | `boolean`                                        | `false`  | When `true`, attaches a `paste` listener to `element`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.                                                                                        |
 | `onPaste`        | `(files: File[]) => void`                        | —        | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                                                                                                            |
 
 **Returns:** `DropZone`
@@ -244,6 +252,8 @@ Notes:
 - Extension accept patterns are approximate during pre-check (`DataTransferItem` has no filename); exact filtering is applied at drop time.
 - Hover state (`hovered`) only becomes `true` when the dragged payload passes the `accept` filter. Drags carrying rejected file types enter and leave the zone without triggering `onHoverChange`.
 - Hover state is reset on element drop and also global `window` `drop`/`dragend` to avoid stuck hover state when drags leave the viewport.
+- Disposal aborts validation and transitions `validating` to `false` before teardown completes.
+- Consumer callback failures are reported through Dnd's development warning channel and never reclassify accepted files as rejected.
 
 ```ts
 const zone = createDropZone({
@@ -295,7 +305,7 @@ An `AbortSignal` that fires when `dispose()` is called. Use it to cancel in-flig
 
 `dispose(): void`
 
-Removes all event listeners from the element, resets the drag counter and hover state, and clears the `hovered` flag. Idempotent — safe to call multiple times.
+Removes all event listeners, aborts pending validation, and resets `hovered` and `validating`. Idempotent — safe to call multiple times.
 
 ```ts
 zone.dispose();
@@ -326,10 +336,10 @@ Makes the direct children of a container element reorderable via drag. Returns a
 - `element`: `HTMLElement`, required. The container whose children become sortable.
 - `getKey`: `(element: HTMLElement) => string`, required. Maps each item element to its stable string identity. Children for which `getKey` returns a falsy value are skipped.
 - `scope`: `SortableScope`, default private scope. Connects sortable lists explicitly; containers only exchange items when they share the same scope instance.
-- `handle`: `string`. CSS selector for a drag handle inside each item. When omitted, the whole item is draggable.
-- `keyboard`: `boolean`, default `true`. Enables keyboard reordering with arrow keys plus `Home` and `End`.
+- `handle`: `string`. Valid CSS selector for a drag handle inside each item. Invalid selectors throw `DndError`; an empty selector warns and disables dragging.
+- `keyboard`: `boolean`, default `true`. Enables keyboard reordering with arrow keys plus `Home` and `End`. Events from interactive descendants are ignored unless they match the configured handle.
 - `axis`: `'vertical' | 'horizontal'`, default `'vertical'`. Controls midpoint calculation for placeholder insertion.
-- `autoScroll`: `boolean | AutoScrollOptions`, default `true`. Scrolls the container near its edges; enable viewport scrolling with `autoScroll.viewport`.
+- `autoScroll`: `boolean | AutoScrollOptions`, default `true`. Scrolls near edges; threshold must be finite and non-negative and speed finite and positive.
 - `dragImage`: `HTMLElement | ((id, item, event) => HTMLElement | null | undefined)`. Custom native drag preview passed to `dataTransfer.setDragImage()`. A `null` or `undefined` return skips `setDragImage` entirely.
 - `dragImageOffset`: `[number, number]`, default `[0, 0]`. The `[x, y]` hotspot offset passed to `setDragImage`. Controls which point of the preview image follows the cursor.
 - `placeholderClass`: `string`, default `'dnd-placeholder'`. CSS class applied to the generated placeholder element.
@@ -337,8 +347,11 @@ Makes the direct children of a container element reorderable via drag. Returns a
 - `onDragStart`: `(id: string, event: DragEvent) => void`. Called when a drag starts.
 - `onDragEnd`: `(id: string, event: DragEvent) => void`. Called when a drag ends, whether completed or cancelled.
 - `onInteraction`: `(event: SortableInteractionEvent) => void`. Structured accessibility event for pickup/move/drop/cancel — wire to a consumer-side announcer for screen-reader feedback. See [`SortableInteractionEvent`](#sortableinteractionevent).
-- `onBeforeReorder`: `(from: string[], to: string[]) => void`. Called with the before/after order snapshots just before a successful reorder commits — for both drag and keyboard. Items are still in their pre-commit positions at the time of the call, making it ideal for [`captureLayout()`](/necromancer/api.md#capturelayout) setup.
-- `onReorder`: `(event: ReorderEvent) => void`. Called after a successful reorder (drag or keyboard), only when the order changed. Use `event.setRevert(fn)` to register a revert function that `sortable.revert()` will invoke.
+- `onBeforeReorder`: `(from: readonly string[], to: readonly string[]) => void`. Called with the before/after order snapshots just before a successful reorder commits — for both drag and keyboard. Items are still in their pre-commit positions at the time of the call, making it ideal for [`captureLayout()`](/necromancer/api.md#capturelayout) setup.
+- `items`: `() => readonly HTMLElement[]`. Returns direct children owned by this sortable. `refresh()` restores elements no longer returned before marking the current set.
+- `onReorder`: `(event: ReorderEvent) => void`. Called after a successful reorder (drag or keyboard), only when the order changed. The event carries `before`, `after`, and `item` so application history can own rollback.
+
+Order arrays and interaction events are frozen snapshots. Callback failures are reported through Dnd's development warning channel and cannot interrupt session completion or corrupt later events. Native touch scrolling is preserved unless the shared scope enables touch input.
 
 **Returns:** `Sortable`
 
@@ -358,10 +371,9 @@ const sortable = createSortable({
   onDragEnd: (id) => {
     listEl.classList.remove('sorting');
   },
-  onReorder: ({ ids, setRevert }) => {
-    const prev = currentOrder;
-    saveOrder(ids);
-    setRevert(() => saveOrder(prev));
+  onReorder: ({ before, after }) => {
+    history.push({ revert: () => saveOrder(before) });
+    saveOrder(after);
   },
   scope: boardScope,
 });
@@ -382,7 +394,7 @@ Use one scope per connected set of containers. `onMove` fires once for cross-lis
 **Returns:** `SortableScope`.
 
 ```ts
-import { createSortableScope } from '@vielzeug/dnd';
+import { createSortableScope } from '@vielzeug/dnd/sortable';
 
 const scope = createSortableScope({
   onMove: ({ itemId, sourceIds, targetIds }) => {
@@ -400,38 +412,11 @@ const scope = createSortableScope({
 
 `true` while an item drag is in progress.
 
-### `sortable.revert()`
+### `sortable.refresh()`
 
-`revert(): void`
+`refresh(): void`
 
-Calls the revert function registered via `setRevert` in the last `onReorder` invocation (if any) and clears it. A no-op when no revert function was registered or it has already been consumed. Works for both drag-based and keyboard-based reorders.
-
-Only the most recent reorder can be reverted — a new reorder overwrites the stored function.
-
-```ts
-const sortable = createSortable({
-  element: listEl,
-  getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids, setRevert }) => {
-    const prev = currentOrder;
-    setOrder(ids);
-    setRevert(() => setOrder(prev)); // ← enable revert
-  },
-});
-
-// On server error:
-try {
-  await api.saveOrder(ids);
-} catch {
-  sortable.revert();
-}
-```
-
-### `sortable.sync()`
-
-`sync(): void`
-
-Re-applies `draggable`, `role`, and handle attributes after DOM mutations. Call it after adding, removing, or replacing sortable children.
+Re-reads items from the `items` provider (or the container's direct children) and reapplies `draggable`, `role`, and handle attributes. Call it after adding, removing, or replacing sortable children.
 
 ### `sortable.disposed`
 
@@ -465,17 +450,11 @@ Alias for `dispose()`.
 
 `true` while any sortable registered to the scope is dragging.
 
-### `scope.revert()`
-
-`revert(): void`
-
-Calls and clears the rollback registered with `SortableMoveEvent.setRevert()` for the latest cross-list move. It is a no-op when no rollback is registered.
-
 ### `scope.dispose()`
 
 `dispose(): void`
 
-Disposes scope-owned touch input and prevents registered lists from participating in future connected moves.
+Disposes scope-owned touch input and all registered sortables. Registering a new sortable with a disposed scope throws `DndScopeError`.
 
 ## DOM Attributes
 
@@ -484,9 +463,9 @@ Dnd reads and writes the following DOM attributes:
 - `data-dnd-item`: internal marker applied by `createSortable` to children that return a truthy key from `getKey`. Restored on `dispose()`.
 - `draggable`, roles, tabindex, and `touchAction`: managed only as needed and restored to their exact prior values on `dispose()`.
 - `data-dragging`: set during drag, removed on `dragend` or `dispose()`. Use it as your styling hook for drag state.
-- `data-dnd-handle`: internal marker set by `createSortable` and `sortable.sync()`, removed by `dispose()`. Lets Dnd clean up only the handle attributes it applied.
+- `data-dnd-handle`: internal marker set by `createSortable` and `sortable.refresh()`, removed by `dispose()`. Lets Dnd clean up only the handle attributes it applied.
 - `aria-hidden="true"`: set on placeholder creation and removed with the placeholder. Applied to the `.dnd-placeholder` element.
-- `style.touchAction = 'none'` (inline style): set by `createSortable` and `sortable.sync()` on the item (or the handle, when `handle` is set), then restored on `dispose()`.
+- `style.touchAction = 'none'` (inline style): set by `createSortable` and `sortable.refresh()` on the item (or the handle, when `handle` is set), then restored on `dispose()`.
 
 ## CSS Classes
 
@@ -497,7 +476,7 @@ Dnd reads and writes the following DOM attributes:
 ## `matchesAccept()`
 
 ```ts
-declare function matchesAccept(file: File, accept: string[]): boolean;
+declare function matchesAccept(file: File, accept: readonly string[]): boolean;
 ```
 
 Tests whether a `File` matches an accept pattern list. Each pattern can be:
@@ -511,7 +490,7 @@ An empty list accepts everything. Extension matching is case-insensitive.
 **Returns:** `true` when the file matches at least one pattern, or when `accept` is empty.
 
 ```ts
-import { matchesAccept } from '@vielzeug/dnd';
+import { matchesAccept } from '@vielzeug/dnd/drop';
 
 matchesAccept(file, ['image/*', '.pdf']); // true or false
 ```
@@ -519,7 +498,7 @@ matchesAccept(file, ['image/*', '.pdf']); // true or false
 ## `applyReorder()`
 
 ```ts
-declare function applyReorder<T>(items: T[], ids: string[], getKey: (item: T) => string): T[];
+declare function applyReorder<T>(items: readonly T[], ids: readonly string[], getKey: (item: T) => string): T[];
 ```
 
 Applies a DOM reorder result (`orderedIds`) to your backing array.
@@ -527,6 +506,7 @@ Applies a DOM reorder result (`orderedIds`) to your backing array.
 - IDs missing from `items` are ignored.
 - Items not listed in `ids` are appended in original order.
 - Duplicate IDs in `ids` — first occurrence wins, later occurrences are ignored.
+- Duplicate keys in `items` throw `DndError`; data is never silently discarded.
 
 **Returns:** A new array ordered by `ids`, with omitted items appended in their original order.
 
@@ -538,5 +518,5 @@ const next = applyReorder(items, orderedIds, (item) => item.id);
 
 | Error | Trigger | Notable property |
 | --- | --- | --- |
-| `DndError` | Base class for package errors | Use `instanceof DndError` to narrow |
-| `DndScopeError` | A sortable receives a scope not created by `createSortableScope()` | — |
+| `DndError` | Invalid configuration, duplicate item data, or duplicate sortable registration in one scope | Base class for package errors |
+| `DndScopeError` | A sortable receives an invalid or disposed scope | Extends `DndError` |

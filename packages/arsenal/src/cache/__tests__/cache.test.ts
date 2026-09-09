@@ -70,4 +70,23 @@ describe('cache', () => {
 
     expect(() => values.set('key', 'value', { ttlMs: -1 })).toThrow(RangeError);
   });
+
+  it('returns a live-entry snapshot without exposing internal storage', () => {
+    let time = 0;
+    const values = cache<string, number | undefined>({ now: () => time, ttlMs: 100 });
+
+    values.set('first', 1);
+    values.set('empty', undefined);
+    const snapshot = values.entries();
+    values.set('third', 3);
+
+    expect(snapshot).toEqual([
+      ['first', 1],
+      ['empty', undefined],
+    ]);
+    expect(values.entries()).toEqual([...snapshot, ['third', 3]]);
+
+    time = 100;
+    expect(values.entries()).toEqual([]);
+  });
 });

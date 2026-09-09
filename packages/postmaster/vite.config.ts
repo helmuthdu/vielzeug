@@ -11,6 +11,7 @@ export default defineConfig(
     entry: {
       index: resolve(__dirname, 'src/index.ts'),
       indexeddb: resolve(__dirname, 'src/indexeddb.ts'),
+      store: resolve(__dirname, 'src/store.ts'),
       testing: resolve(__dirname, 'src/testing.ts'),
     },
     external: readWorkspaceDeps(__dirname),

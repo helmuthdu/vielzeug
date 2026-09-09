@@ -1,5 +1,5 @@
-import { signal } from '@vielzeug/ripple';
 import { createConnection } from './_connection';
+import { createStore } from './_store';
 import { createWaitPromise } from './_wait';
 import { createChannel } from './channel';
 import { PulseConnectionError, PulseDisposedError, PulseError, PulseProtocolError } from './errors';
@@ -64,7 +64,6 @@ class ListenerMap {
  */
 export function createPulse<S extends PulseSchema = PulseSchema>(url: string, options: PulseOptions = {}): Pulse<S> {
   const disposalCtrl = new AbortController();
-  const status = signal<PulseStatus>('closed');
   const listeners = new ListenerMap();
   const channelReferences = new Map<string, number>();
   const tappers = new Set<(event: PulseEvent) => void>();
@@ -88,6 +87,10 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
     emitTap({ error, type: 'error' });
   }
 
+  const reportStoreError = (cause: unknown): void =>
+    report(new PulseError('External store subscriber threw', { cause }));
+  const status = createStore<PulseStatus>('closed', reportStoreError);
+
   function sendInternal(frame: string): void {
     connection.send(frame);
   }
@@ -95,6 +98,7 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
   const rooms: RoomRegistry = createRoomRegistry({
     disposalSignal: disposalCtrl.signal,
     isOpen: () => connection.open,
+    onStoreError: reportStoreError,
     send: sendInternal,
   });
 
@@ -155,7 +159,7 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
       }
     },
     onStatus(nextStatus) {
-      status.value = nextStatus;
+      status.set(nextStatus);
       if (nextStatus !== lastStatus) {
         lastStatus = nextStatus;
         emitTap({ status: nextStatus, type: 'status-change' });

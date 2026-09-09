@@ -1,6 +1,6 @@
 import { effect } from '@vielzeug/ripple';
-import type { VaultStore } from '@vielzeug/vault';
-import { table } from '@vielzeug/vault';
+import type { KeyValueVaultStore } from '@vielzeug/vault';
+import { table, validatorCodec } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 import { setLocale } from './i18n';
 import { seedData } from './seed-data';
@@ -20,7 +20,14 @@ type LegacyCrmData = Omit<CrmData, 'activities' | 'companies'> & {
 type DataRow = { data: CrmData | LegacyCrmData; id: 'current'; version?: number };
 type PreferencesRow = { id: 'preferences'; locale: 'de' | 'en'; theme: ThemePreference; userId: string };
 const schema = { data: table<DataRow, 'id'>('id'), preferences: table<PreferencesRow, 'id'>('id') };
-const vault: VaultStore<typeof schema> = createLocalStorage({ name: 'vielzeug-crm', schema });
+const vault: KeyValueVaultStore<typeof schema> = createLocalStorage({
+  codecs: {
+    data: validatorCodec({ parse: (v) => v as DataRow }),
+    preferences: validatorCodec({ parse: (v) => v as PreferencesRow }),
+  },
+  name: 'vielzeug-crm',
+  schema,
+});
 const activityCategories: ActivityCategory[] = ['call', 'email', 'meeting', 'note', 'task', 'system'];
 
 function websiteFor(name: string): string {
@@ -70,7 +77,7 @@ export async function setupPersistence(): Promise<void> {
   } else await vault.put('data', { data: crmData.value, id: 'current', version: CRM_DATA_VERSION });
   if (preferences) {
     setThemePreference(preferences.theme);
-    setLocale(preferences.locale);
+    await setLocale(preferences.locale);
     const user = ['alex', 'sarah', 'guest'].includes(preferences.userId) ? preferences.userId : 'alex';
     currentUser.value = {
       alex: { id: 'alex', name: 'Alex Morgan', role: 'manager', title: 'Sales Manager' },

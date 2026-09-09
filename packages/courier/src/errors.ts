@@ -4,18 +4,21 @@
  * Use `CourierHttpError.is(e, status?)` to check for a specific HTTP status code.
  */
 export class CourierError extends Error {
+  protected static readonly errorName: string = 'CourierError';
+
   constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
-    this.name = new.target.name;
+    this.name = (new.target as typeof CourierError).errorName;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 /**
  * Thrown when the server responds with a non-2xx HTTP status code.
- * Use `HttpError.is(e, status?)` to narrow to a specific status.
+ * Use `CourierHttpError.is(e, status?)` to narrow to a specific status.
  */
 export class CourierHttpError extends CourierError {
+  protected static override readonly errorName = 'CourierHttpError';
   readonly url: string;
   readonly method: string;
   readonly status: number;
@@ -53,6 +56,7 @@ export class CourierHttpError extends CourierError {
  * for a missing `status` field.
  */
 export class CourierNetworkError extends CourierError {
+  protected static override readonly errorName = 'CourierNetworkError';
   readonly url: string;
   readonly method: string;
 
@@ -69,6 +73,7 @@ export class CourierNetworkError extends CourierError {
  * without checking any `kind` discriminant.
  */
 export class CourierTimeoutError extends CourierError {
+  protected static override readonly errorName = 'CourierTimeoutError';
   readonly url: string;
   readonly method: string;
 
@@ -84,6 +89,7 @@ export class CourierTimeoutError extends CourierError {
  * `cancelAll()` / `dispose()`. Safe to ignore in most UI handlers.
  */
 export class CourierAbortError extends CourierError {
+  protected static override readonly errorName = 'CourierAbortError';
   readonly url: string;
   readonly method: string;
 
@@ -100,6 +106,7 @@ export class CourierAbortError extends CourierError {
  * vs. data contract violations without inspecting the error shape.
  */
 export class CourierSchemaValidationError extends CourierError {
+  protected static override readonly errorName = 'CourierSchemaValidationError';
   /** The raw (pre-validation) response body that failed parsing. */
   readonly data: unknown;
 
@@ -111,13 +118,17 @@ export class CourierSchemaValidationError extends CourierError {
 
 /** Thrown when a method is called on a disposed client instance. */
 export class CourierDisposedError extends CourierError {
+  protected static override readonly errorName = 'CourierDisposedError';
+
   constructor(clientName: string) {
     super(`${clientName} disposed`);
   }
 }
 
 /** Thrown when a response body cannot be read or parsed. */
-export class CourierParseError extends CourierError {}
+export class CourierParseError extends CourierError {
+  protected static override readonly errorName = 'CourierParseError';
+}
 
 /**
  * Classify an error thrown by `fetch` or an abort signal into the appropriate
@@ -128,29 +139,44 @@ export class CourierParseError extends CourierError {}
  * sets reason to the *native* Node.js DOMException which may differ from the environment's
  * global DOMException (e.g. jsdom), causing `instanceof` checks to fail cross-realm.
  */
+function errorName(value: unknown): string | undefined {
+  try {
+    return typeof value === 'object' && value !== null && typeof (value as { name?: unknown }).name === 'string'
+      ? (value as { name: string }).name
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function errorMessage(value: unknown): string {
+  try {
+    return typeof value === 'object' && value !== null && typeof (value as { message?: unknown }).message === 'string'
+      ? (value as { message: string }).message
+      : String(value);
+  } catch {
+    return 'Request failed';
+  }
+}
+
 export function classifyRequestError(
   cause: unknown,
   method: string,
   url: string,
   signal?: AbortSignal,
 ): CourierNetworkError | CourierTimeoutError | CourierAbortError {
-  const message = cause instanceof Error ? cause.message : String(cause);
+  const message = errorMessage(cause);
 
   // Signal reason is authoritative — a timed-out signal carries a TimeoutError reason
   // regardless of what error `fetch` actually threw.
-  const reason = signal?.reason;
+  const reasonName = errorName(signal?.reason);
+  const causeName = errorName(cause);
 
-  if (reason instanceof Error && reason.name === 'TimeoutError') {
+  if (reasonName === 'TimeoutError' || causeName === 'TimeoutError') {
     return new CourierTimeoutError({ cause, message, method, url });
   }
 
-  if (cause instanceof DOMException) {
-    if (cause.name === 'TimeoutError') return new CourierTimeoutError({ cause, message, method, url });
-
-    return new CourierAbortError({ cause, message, method, url });
-  }
-
-  if ((cause instanceof Error && cause.name === 'AbortError') || signal?.aborted) {
+  if (reasonName === 'AbortError' || causeName === 'AbortError' || signal?.aborted) {
     return new CourierAbortError({ cause, message, method, url });
   }
 

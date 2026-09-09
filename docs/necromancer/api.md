@@ -9,7 +9,7 @@ description: API reference for @vielzeug/necromancer animation ownership, groups
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `animate()` | Animate one element | Sync | Defaults to a visible `180ms` duration |
+| `animate()` | Animate one element | Sync | Omitted timing fields use native WAAPI behavior |
 | `animateEach()` | Animate a unique element group | Sync | Non-zero `stagger` needs numeric `delay` |
 | `captureLayout()` | Capture positions and create a one-shot FLIP transition | Sync | Capture before changing layout |
 | `NecromancerError` | Base package error | Sync | Use `instanceof NecromancerError` to narrow unknown errors |
@@ -29,38 +29,86 @@ description: API reference for @vielzeug/necromancer animation ownership, groups
 function animate(element: Element, keyframes: Keyframes, options?: AnimateOptions): AnimationHandle;
 ```
 
-Starts a lifecycle-owned native Web Animation. Omitted `duration` defaults to `180` milliseconds; explicit native timing values, including `0`, are preserved. Playback remains native:
+Starts a lifecycle-owned native Web Animation. Native timing options, including an omitted or zero `duration`, are preserved.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `element` | `Element` | Element animated through its native `animate()` method. |
+| `keyframes` | `Keyframes` | Native keyframe array or property-indexed keyframes. |
+| `options` | `AnimateOptions` | Native timing plus motion and cancellation ownership. |
+
+**Returns:** An `AnimationHandle` with native playback access and explicit disposal.
+
+**Example:**
 
 ```ts
+import { animate } from '@vielzeug/necromancer';
+
 const handle = animate(element, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
 handle.animation.pause();
 const result = await handle.result;
 handle.dispose();
 ```
 
+---
+
 ### `animateEach()`
 
 ```ts
-function animateEach(
-  elements: Iterable<Element>,
-  keyframes: Keyframes | KeyframeFactory,
+function animateEach<ElementType extends Element>(
+  elements: Iterable<ElementType>,
+  keyframes: Keyframes | KeyframeFactory<ElementType>,
   options?: AnimateEachOptions,
 ): AnimationGroup;
 ```
 
-Starts animations for unique elements in first-seen order. Necromancer resolves every keyframe factory before starting the first native animation. Use each child handle's `animation` property for native playback control.
+Starts animations for unique elements in first-seen order. Necromancer resolves every keyframe factory before starting the first native animation.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `elements` | `Iterable<ElementType>` | Elements animated once in first-seen order. |
+| `keyframes` | `Keyframes \| KeyframeFactory<ElementType>` | Shared keyframes or a subtype-preserving factory. |
+| `options` | `AnimateEachOptions` | Animation options plus a stagger interval. |
+
+**Returns:** An `AnimationGroup` containing child handles and ordered results.
+
+**Example:**
+
+```ts
+import { animateEach } from '@vielzeug/necromancer';
+
+const group = animateEach(document.querySelectorAll<HTMLElement>('.item'), [{ opacity: 0 }, { opacity: 1 }], {
+  duration: 180,
+  stagger: 30,
+});
+await group.results;
+```
 
 ## Layout Functions
 
 ### `captureLayout()`
 
 ```ts
-function captureLayout(elements: Iterable<Element>, options?: LayoutCaptureOptions): LayoutTransition;
+function captureLayout<ElementType extends Element>(
+  elements: Iterable<ElementType>,
+  options?: LayoutCaptureOptions<ElementType>,
+): LayoutTransition<ElementType>;
 ```
 
-Captures unique elements' positions and sizes and returns a one-shot transition. Rotation and other transforms are not captured or compensated. After changing layout, call `transition.animate(options)` to measure current positions and sizes and animate changed, connected elements with additive CSS `translate` (position) and `scale` (size). Pass `getKey` when a framework replaces the captured elements during its render.
+Captures unique elements' positions and sizes and returns a one-shot transition. Rotation and other transforms are not captured or compensated.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `elements` | `Iterable<ElementType>` | Elements measured before a layout change. |
+| `options` | `LayoutCaptureOptions<ElementType>` | Optional stable key mapping for replacement nodes. |
+
+**Returns:** A `LayoutTransition<ElementType>` that measures committed layout once and creates an `AnimationGroup`.
+
+**Example:**
 
 ```ts
+import { captureLayout } from '@vielzeug/necromancer';
+
 const transition = captureLayout(beforeItems, {
   getKey: (element) => element.getAttribute('data-id')!,
 });
@@ -101,13 +149,12 @@ type AnimationResult =
 
 ```ts
 type AnimateOptions = KeyframeAnimationOptions & {
-  readonly interrupt?: 'cancel';
   readonly motion?: MotionMode;
   readonly signal?: AbortSignal;
 };
 ```
 
-Set `interrupt: 'cancel'` for rapid state changes that should replace every still-active Necromancer-owned animation on the same element. It does not cancel animations created directly with `Element.animate()`.
+Native timing fields pass through unchanged unless reduced motion normalizes timing. `signal` disposes the returned handle when aborted.
 
 ### `AnimateEachOptions`
 
@@ -122,8 +169,8 @@ type AnimateEachOptions = AnimateOptions & {
 ### `LayoutCaptureOptions`
 
 ```ts
-interface LayoutCaptureOptions {
-  readonly getKey?: (element: Element) => string;
+interface LayoutCaptureOptions<ElementType extends Element = Element> {
+  readonly getKey?: (element: ElementType) => string;
 }
 ```
 
@@ -132,8 +179,8 @@ interface LayoutCaptureOptions {
 ### `LayoutAnimationOptions`
 
 ```ts
-type LayoutAnimationOptions = AnimateEachOptions & {
-  readonly elements?: Iterable<Element>;
+type LayoutAnimationOptions<ElementType extends Element = Element> = AnimateEachOptions & {
+  readonly elements?: Iterable<ElementType>;
 };
 ```
 
@@ -143,7 +190,11 @@ type LayoutAnimationOptions = AnimateEachOptions & {
 
 ```ts
 type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
-type KeyframeFactory = (element: Element, index: number, total: number) => Keyframes;
+type KeyframeFactory<ElementType extends Element = Element> = (
+  element: ElementType,
+  index: number,
+  total: number,
+) => Keyframes;
 ```
 
 Accepts a `readonly` array so a reusable `as const` keyframe list can be passed without a cast.
@@ -160,6 +211,14 @@ interface AnimationHandle {
 }
 ```
 
+| Member | Description |
+| --- | --- |
+| `animation` | Owned native animation used for playback control. |
+| `result` | Resolves with the first terminal outcome. |
+| `disposed` | Reports explicit owner disposal. |
+| `dispose(reason?)` | Cancels the animation and releases its abort listener. |
+| `[Symbol.dispose]()` | Delegates to `dispose()`. |
+
 ### `AnimationGroup`
 
 ```ts
@@ -172,15 +231,25 @@ interface AnimationGroup {
 }
 ```
 
-`results` preserves the terminal result of every child in handle order. Use `handles` for native playback control.
+| Member | Description |
+| --- | --- |
+| `handles` | Child handles in input order. |
+| `results` | Resolves with every child outcome in handle order. |
+| `disposed` | Reports explicit group disposal. |
+| `dispose(reason?)` | Disposes every child. |
+| `[Symbol.dispose]()` | Delegates to `dispose()`. |
 
 ### `LayoutTransition`
 
 ```ts
-interface LayoutTransition {
-  animate(options?: LayoutAnimationOptions): AnimationGroup;
+interface LayoutTransition<ElementType extends Element = Element> {
+  animate(options?: LayoutAnimationOptions<ElementType>): AnimationGroup;
 }
 ```
+
+| Method | Description |
+| --- | --- |
+| `animate(options?)` | Measures committed elements and creates the one allowed layout animation group. |
 
 ## Errors
 
@@ -209,20 +278,23 @@ One recorded invocation of `Element.prototype.animate` from `installFakeAnimatio
 ### `installFakeAnimations()`
 
 ```ts
-function installFakeAnimations(): { calls: AnimationCall[]; restore: () => void };
+function installFakeAnimations(): {
+  readonly calls: readonly AnimationCall[];
+  restore(): void;
+  [Symbol.dispose](): void;
+};
 ```
 
-Replaces `Element.prototype.animate` with a deterministic fake for the duration of a test. `calls` records every invocation in order; call `restore()` (for example in `afterEach`) to put the original implementation back.
+Replaces `Element.prototype.animate` with a deterministic lifecycle fake for the duration of a test. `calls` records every invocation in order. Call `restore()` or use an explicit resource-management `using` declaration to put the original implementation back. The fake does not implement native playback controls such as `pause()` or `reverse()`.
 
 ```ts
 import { installFakeAnimations } from '@vielzeug/necromancer/testing';
 
-const { calls, restore } = installFakeAnimations();
+using animations = installFakeAnimations();
 const handle = animate(element, [{ opacity: 0 }, { opacity: 1 }]);
 
-calls[0]?.animation.finish();
+animations.calls[0]?.animation.finish();
 await handle.result; // { status: 'finished' }
-restore();
 ```
 
 ### `FakeAnimation`

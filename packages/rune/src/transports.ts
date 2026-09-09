@@ -7,7 +7,6 @@ import type {
   Bindings,
   JsonTransportOptions,
   LogEntry,
-  PipeOptions,
   RedactTransportOptions,
   RemoteLogData,
   RemoteTransportOptions,
@@ -16,50 +15,28 @@ import type {
 } from './types';
 import { isLevelEnabled } from './types';
 
-/* ─── Environment detection ─── */
-
-function detectEnv(): 'development' | 'production' {
-  if (typeof window === 'undefined') {
-    return (globalThis as Record<string, unknown> & { process?: { env?: { NODE_ENV?: string } } }).process?.env
-      ?.NODE_ENV === 'production'
-      ? 'production'
-      : 'development';
-  }
-
-  return 'development';
-}
-
 /* ─── remoteTransport ─── */
 
-/**
- * Forwards log entries asynchronously to a remote handler.
- * The handler is fire-and-forget. Use onError to observe delivery failures.
- * Console and remote thresholds are fully independent.
- *
- * **Security note:** serialized `Error` objects include the full `stack` trace,
- * which may expose internal file paths. Use `redactTransport` or a middleware
- * to strip `err.stack` before forwarding in production if this is a concern.
- *
- * @example
- * remoteTransport({
- *   handler: async (type, data) => {
- *     await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
- *   },
- *   level: 'error',
- * })
- */
+function detectEnv(): 'development' | 'production' {
+  if (typeof window !== 'undefined') return 'development';
+
+  return (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV === 'production'
+    ? 'production'
+    : 'development';
+}
+
+/** Forward entries asynchronously to a remote delivery handler. */
 export function remoteTransport(options: RemoteTransportOptions): Transport {
   const { handler } = options;
   const level = options.level ?? 'debug';
   const env = options.env ?? detectEnv();
-  const onError = options.onError ?? ((err: unknown) => warn(`remote transport error: ${String(err)}`));
+  const onError = options.onError ?? ((error: unknown) => warn(`remote transport error: ${String(error)}`));
 
-  return (entry: LogEntry): void => {
+  return (entry): void => {
     if (!isLevelEnabled(level, entry.level)) return;
 
-    const hasData = Object.keys(entry.data).length > 0;
     const payload: RemoteLogData = {
-      data: hasData ? entry.data : undefined,
+      data: Object.keys(entry.data).length > 0 ? entry.data : undefined,
       env,
       level: entry.level,
       message: entry.message,
@@ -69,7 +46,13 @@ export function remoteTransport(options: RemoteTransportOptions): Transport {
 
     Promise.resolve()
       .then(() => handler(entry.level, payload))
-      .catch((err: unknown) => onError(err, payload));
+      .catch((error: unknown) => {
+        try {
+          onError(error, payload);
+        } catch (observerError) {
+          warn(`remote transport error observer threw: ${String(observerError)}`);
+        }
+      });
   };
 }
 
@@ -129,47 +112,23 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
   };
 }
 
-/* ─── Transport option validation ─── */
-
 function assertFiniteNumber(value: number, name: string): void {
   if (!Number.isFinite(value)) throw new RuneConfigError(`${name} must be a finite number`);
 }
 
 function assertNonNegativeInteger(value: number, name: string): void {
   assertFiniteNumber(value, name);
-
   if (!Number.isInteger(value) || value < 0) throw new RuneConfigError(`${name} must be a non-negative integer`);
 }
 
 function assertPositiveInteger(value: number, name: string): void {
   assertFiniteNumber(value, name);
-
   if (!Number.isInteger(value) || value <= 0) throw new RuneConfigError(`${name} must be a positive integer`);
 }
 
 /* ─── batchTransport ─── */
 
-/**
- * Buffers log entries and flushes them in batches, reducing I/O overhead.
- * Flushes when the buffer reaches maxSize or after the interval elapses.
- *
- * Returns a `BatchHandle` with `.transport`, `.flush()`, and `.dispose()` methods:
- * - `.transport` — pass to `createLogger({ transports: [handle.transport] })`
- * - `.flush()` — immediately send buffered entries and wait for delivery without stopping the timer
- * - `.dispose()` — stop the interval, flush remaining entries, and wait for delivery
- *
- * Use `onFlushError` to observe failed flushes (e.g. dead-letter queue).
- *
- * @example
- * const batch = batchTransport({
- *   onFlush: (entries) => sendToCollector(entries),
- *   onFlushError: (entries, err) => deadLetter.push(entries),
- *   interval: 10_000,
- *   maxSize: 100,
- * });
- * createLogger({ transports: [batch.transport] });
- * await batch.dispose(); // call during graceful shutdown
- */
+/** Buffer entries and deliver accepted batches serially. */
 export function batchTransport(options: BatchTransportOptions): BatchHandle {
   const level = options.level ?? 'debug';
   const maxSize = options.maxSize ?? 50;
@@ -177,39 +136,33 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
   const interval = options.interval ?? 5000;
 
   assertFiniteNumber(interval, 'batchTransport interval');
-
   if (interval <= 0) throw new RuneConfigError('batchTransport interval must be greater than zero');
-
   assertPositiveInteger(maxSize, 'batchTransport maxSize');
-
   if (maxBuffer !== undefined) assertNonNegativeInteger(maxBuffer, 'batchTransport maxBuffer');
 
   let buffer: LogEntry[] = [];
   let timer: ReturnType<typeof setInterval> | undefined;
   let automaticFailure: { error: unknown } | undefined;
-  let batchDisposed = false;
+  let disposed = false;
   let deliveryTail: Promise<void> = Promise.resolve();
   let disposePromise: Promise<void> | undefined;
 
   const deliver = async (entries: LogEntry[]): Promise<void> => {
     try {
       await options.onFlush(entries);
-    } catch (err) {
+    } catch (error) {
       try {
-        options.onFlushError?.(entries, err);
-      } catch (observerErr) {
-        warn(`batch transport error observer threw: ${String(observerErr)}`);
+        options.onFlushError?.(entries, error);
+      } catch (observerError) {
+        warn(`batch transport error observer threw: ${String(observerError)}`);
       }
-
-      throw err;
+      throw error;
     }
   };
 
   const enqueue = (entries: LogEntry[]): Promise<void> => {
     const delivery = deliveryTail.then(() => deliver(entries));
-
     deliveryTail = delivery.catch(() => undefined);
-
     return delivery;
   };
 
@@ -217,9 +170,7 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
     if (buffer.length === 0) return deliveryTail;
 
     const entries = buffer;
-
     buffer = [];
-
     return enqueue(entries);
   };
 
@@ -229,19 +180,13 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
     });
   };
 
-  const transportFn: Transport = (entry: LogEntry): void => {
-    if (batchDisposed) return;
-
-    if (!isLevelEnabled(level, entry.level)) return;
+  const transport: Transport = (entry): void => {
+    if (disposed || !isLevelEnabled(level, entry.level)) return;
 
     if (!timer) timer = setInterval(flushAutomatically, interval);
-
     buffer.push(entry);
 
-    if (maxBuffer !== undefined && buffer.length > maxBuffer) {
-      buffer = buffer.slice(buffer.length - maxBuffer);
-    }
-
+    if (maxBuffer !== undefined && buffer.length > maxBuffer) buffer = buffer.slice(buffer.length - maxBuffer);
     if (buffer.length >= maxSize) flushAutomatically();
   };
 
@@ -249,27 +194,22 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
     dispose(): Promise<void> {
       if (disposePromise) return disposePromise;
 
-      batchDisposed = true;
-
-      if (timer) {
-        clearInterval(timer);
-        timer = undefined;
-      }
-
+      disposed = true;
+      if (timer) clearInterval(timer);
+      timer = undefined;
       disposePromise = flush().then(() => {
         if (automaticFailure) throw automaticFailure.error;
       });
-
       return disposePromise;
     },
     get disposed(): boolean {
-      return batchDisposed;
+      return disposed;
     },
     flush,
     [Symbol.asyncDispose](): Promise<void> {
       return handle.dispose();
     },
-    transport: transportFn,
+    transport,
   };
 
   return handle;
@@ -277,41 +217,21 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
 
 /* ─── sampleTransport ─── */
 
-/**
- * Probabilistically forwards entries to a downstream transport.
- * Useful for reducing volume of high-frequency debug logs in production.
- *
- * @example
- * sampleTransport({ rate: 0.1, transport: remoteTransport({ handler }) })
- */
+/** Forward a random fraction of entries to a downstream transport. */
 export function sampleTransport(options: SampleTransportOptions): Transport {
   const { rate, transport } = options;
   const level = options.level ?? 'debug';
 
   assertFiniteNumber(rate, 'sampleTransport rate');
-
   if (rate < 0 || rate > 1) throw new RuneConfigError('sampleTransport rate must be between zero and one');
 
-  return (entry: LogEntry): void => {
-    if (!isLevelEnabled(level, entry.level)) return;
-
-    if (Math.random() < rate) transport(entry);
+  return (entry): void => {
+    if (isLevelEnabled(level, entry.level) && Math.random() < rate) transport(entry);
   };
 }
 
 /* ─── redactTransport ─── */
 
-/**
- * Strips sensitive fields from `data` before forwarding to a downstream transport.
- * Redaction is applied recursively at any depth, including inside arrays.
- *
- * @example
- * redactTransport({
- *   keys: ['password', 'token', 'ssn'],
- *   replacement: '[REDACTED]',
- *   transport: remoteTransport({ handler }),
- * })
- */
 export function redactTransport(options: RedactTransportOptions): Transport {
   const { keys, maxDepth = 20, replacement = '[REDACTED]', transport } = options;
 
@@ -319,85 +239,33 @@ export function redactTransport(options: RedactTransportOptions): Transport {
 
   for (const key of keys) {
     if (key.includes('.')) {
-      warn(
-        `redactTransport: key "${key}" contains a dot. Dot-path notation is not supported — use the plain field name (e.g. 'password') to redact at any depth.`,
-      );
+      warn(`redactTransport: key "${key}" contains a dot; keys match exact field names, not paths`);
     }
   }
 
   const keySet = new Set(keys);
+  let warnedAboutDepth = false;
 
-  function redactValue(v: unknown, depth = 0): unknown {
+  const redact = (value: unknown, depth: number): unknown => {
+    if (typeof value !== 'object' || value === null) return value;
+
     if (depth > maxDepth) {
-      warn(
-        `redactTransport: object nesting depth exceeded ${maxDepth} — redaction truncated at this level. Sensitive fields below depth ${maxDepth} may not be redacted.`,
-      );
-
-      return v;
-    }
-
-    if (Array.isArray(v)) return v.map((item) => redactValue(item, depth + 1));
-
-    if (typeof v === 'object' && v !== null) return redactObject(v as Bindings, depth + 1);
-
-    return v;
-  }
-
-  function redactObject(obj: Bindings, depth = 0): Bindings {
-    const result: Bindings = {};
-
-    for (const [k, v] of Object.entries(obj)) {
-      // Guard against a `__proto__`/`constructor`/`prototype` field name hijacking result's own
-      // prototype via the bracket-assignment accessor — see _prototype.ts.
-      if (isUnsafeObjectKey(k)) continue;
-
-      result[k] = keySet.has(k) ? replacement : redactValue(v, depth);
-    }
-
-    return result;
-  }
-
-  return (entry: LogEntry): void => {
-    transport({ ...entry, data: redactObject(entry.data as Bindings) });
-  };
-}
-
-/* ─── pipe — fault-tolerant fan-out ─── */
-
-/**
- * Fan-out: dispatches each entry to all provided transports independently.
- * A throw in one transport does not prevent others from receiving the entry.
- * Pass `onError` to observe individual transport failures; without it, errors are silently swallowed.
- *
- * @example
- * createLogger({
- *   transports: [pipe(consoleTransport(), remoteTransport({ handler }))],
- * })
- *
- * // With error observer:
- * pipe({ onError: (err) => console.error('[pipe]', err) }, consoleTransport(), remoteTransport({ handler }))
- */
-export function pipe(...transports: Transport[]): Transport;
-export function pipe(options: PipeOptions, ...transports: Transport[]): Transport;
-export function pipe(optionsOrTransport: PipeOptions | Transport, ...rest: Transport[]): Transport {
-  let opts: PipeOptions;
-  let transports: Transport[];
-
-  if (typeof optionsOrTransport === 'function') {
-    opts = {};
-    transports = [optionsOrTransport, ...rest];
-  } else {
-    opts = optionsOrTransport;
-    transports = rest;
-  }
-
-  return (entry: LogEntry): void => {
-    for (const t of transports) {
-      try {
-        t(entry);
-      } catch (err) {
-        opts.onError?.(err, entry);
+      if (!warnedAboutDepth) {
+        warn(`redactTransport: object nesting depth exceeded ${maxDepth}; deeper subtrees were redacted entirely`);
+        warnedAboutDepth = true;
       }
+      return replacement;
     }
+
+    if (Array.isArray(value)) return value.map((item) => redact(item, depth + 1));
+
+    const result: Bindings = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (isUnsafeObjectKey(key)) continue;
+      result[key] = keySet.has(key) ? replacement : redact(item, depth + 1);
+    }
+    return result;
   };
+
+  return (entry) => transport({ ...entry, data: redact(entry.data, 0) as Bindings });
 }

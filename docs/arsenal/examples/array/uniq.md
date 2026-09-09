@@ -36,4 +36,4 @@ uniq(users, (u) => u.id);
 ### Related
 
 - [union](./union.md)
-- [compact](./compact.md)
+- [difference](./difference.md)

@@ -24,7 +24,14 @@ export type CompiledMachine<
   readonly states: ReadonlyMap<State, CompiledState<State, Context, Event>>;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+const MAX_TIMER_MS = 2_147_483_647;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
 
 const fail = (code: ClockworkError['code'], message: string, details: Record<string, unknown>): never => {
   throw new ClockworkError(code, message, details);
@@ -116,8 +123,8 @@ const compileAfter = <State extends string, Context extends Record<string, unkno
     : fail('INVALID_TRANSITION', `state "${state}" after entries must be objects`, { index, state });
   const delay = after.delay;
 
-  if (typeof delay !== 'number' || !Number.isFinite(delay) || delay < 0) {
-    fail('INVALID_AFTER_DELAY', `state "${state}" after delay must be a finite number greater than or equal to 0`, {
+  if (typeof delay !== 'number' || !Number.isFinite(delay) || delay < 0 || delay > MAX_TIMER_MS) {
+    fail('INVALID_AFTER_DELAY', `state "${state}" after delay must be between 0 and ${MAX_TIMER_MS}`, {
       delay,
       index,
       state,
@@ -167,7 +174,11 @@ const compileInvokes = <Context extends Record<string, unknown>, Event extends M
       fail('INVALID_INVOKE', 'invoke onError must be a function', { index, phase: 'onError', state });
     }
 
-    return candidate as unknown as Invoke<Context, Event>;
+    return {
+      onDone: candidate.onDone as Invoke<Context, Event>['onDone'],
+      onError: candidate.onError as Invoke<Context, Event>['onError'],
+      src: candidate.src as Invoke<Context, Event>['src'],
+    };
   });
 
 /** Validates and structurally compiles a flat machine definition once. */

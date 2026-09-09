@@ -27,5 +27,4 @@ allocate(10, [1, 2, 7]); // [1, 2, 7]
 
 ### Related
 
-- [percent](./percent.md)
-- [sum](./sum.md)
+- [mod](./mod.md)

@@ -1,4 +1,5 @@
-export * from './drop-zone';
-export { DndError, DndScopeError } from './errors';
-export * from './sortable';
-export * from './types';
+// Backward-compat root barrel — prefer the `./drop` and `./sortable` subpaths.
+export * from './drop-zone.js';
+export { DndError, DndScopeError } from './errors.js';
+export * from './sortable.js';
+export * from './types.js';

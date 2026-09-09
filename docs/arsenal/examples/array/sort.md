@@ -46,5 +46,5 @@ sort([{ n: 3 }, { n: 1 }], { n: 'asc' }); // [{ n: 1 }, { n: 3 }]
 
 ### Related
 
-- [search](./search.md)
-- [groupBy](./group.md)
+- [search](./fuzzyFilter.md)
+- [groupBy](./groupBy.md)

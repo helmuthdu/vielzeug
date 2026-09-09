@@ -1,37 +1,32 @@
 ---
 title: 'Scroll Examples — Reactive Virtualizer'
-description: 'Use createVirtualizer with the toSignal option to integrate scroll state with @vielzeug/ripple signals.'
+description: 'Bridge Scroll external-store state into a @vielzeug/ripple reactive graph.'
 ---
 
 ## Reactive Virtualizer
 
 ### Problem
 
-You are building a component with `@vielzeug/ripple` or `@vielzeug/ore` and want scroll state to flow through the reactive graph — no manual `onChange` wiring.
+You use `@vielzeug/ripple` or `@vielzeug/ore` and want virtualizer state to participate in the reactive graph without coupling Scroll to a reactive runtime.
 
 ### Solution
 
-Pass a `toSignal` to `createVirtualizer`. The virtualizer calls it with the initial state and then updates the returned `Signal<VirtualizerState>` on every visible-window change. Use `effect` to re-render whenever the signal updates.
+Pass the virtualizer directly to Ripple's `fromSubscribable()`. Every Scroll controller implements the framework-neutral `getSnapshot()` and `subscribe()` contract.
 
 ```ts
-import { signal, effect } from '@vielzeug/ripple';
+import { effect, fromSubscribable } from '@vielzeug/ripple';
 import { createVirtualizer } from '@vielzeug/scroll';
 
 const rows = Array.from({ length: 50_000 }, (_, i) => ({ id: i, label: `Row ${i}` }));
-
-const scrollEl = document.getElementById('scroll')!;
-const listEl = document.getElementById('list')!;
-
-const state = signal({ items: [], stickyItems: [], totalSize: 0 });
+const scrollEl = document.querySelector<HTMLElement>('#scroll')!;
+const listEl = document.querySelector<HTMLElement>('#list')!;
 
 const virt = createVirtualizer(scrollEl, {
   count: rows.length,
   estimateSize: 36,
-  toSignal: (init) => state,
 });
-
-// Re-render whenever the visible window changes
-effect(() => {
+const state = fromSubscribable(virt, { signal: virt.disposalSignal });
+const renderEffect = effect(() => {
   const { items, totalSize } = state.value;
 
   listEl.style.height = `${totalSize}px`;
@@ -40,47 +35,30 @@ effect(() => {
   for (const item of items) {
     const el = document.createElement('div');
     el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;line-height:36px;padding:0 12px;`;
-    el.textContent = rows[item.index].label;
+    el.textContent = rows[item.index]!.label;
     listEl.appendChild(el);
   }
 });
 
-// Standard virtualizer methods are available directly
 virt.scrollToIndex(rows.length - 1, { align: 'end', behavior: 'smooth' });
-virt.update({ count: rows.length });
 
-// Cleanup
+renderEffect.dispose();
 virt.dispose();
 ```
 
-### Reading state outside an effect
-
-`state` is a standard `Signal<VirtualizerState>`. Read `.value` anywhere:
+Read state without a reactive bridge through `getSnapshot()`:
 
 ```ts
-const { items, totalSize } = state.value;
+const { items, totalSize } = virt.getSnapshot();
 console.log(`${items.length} items visible, total ${totalSize}px`);
 ```
 
-### Combining with a computed signal
-
-```ts
-import { computed } from '@vielzeug/ripple';
-
-const visibleCount = computed(() => state.value.items.length);
-
-effect(() => {
-  statusEl.textContent = `Showing ${visibleCount.value} of ${virt.count} rows`;
-});
-```
-
----
-
 ### Pitfalls
 
-- The `toSignal` is called once on construction with the initial state. The virtualizer then updates the signal's `.value` on every scroll cycle — do not replace the signal object after construction.
-- The signal updates synchronously within the scroll handler. Avoid heavy DOM operations directly inside `effect` — batch DOM writes with `requestAnimationFrame` if needed.
-- All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current on the returned virtualizer through copied property descriptors rather than snapshotting.
+- Install `@vielzeug/ripple` in your application when using `fromSubscribable()`; Scroll does not install it.
+- Pass `virt.disposalSignal` to dispose the bridge with the virtualizer.
+- Dispose effects created by your application before disposing the virtualizer.
+- Avoid heavy synchronous work in reactive effects triggered during scrolling.
 
 ### Related
 

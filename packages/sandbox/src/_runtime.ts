@@ -11,19 +11,19 @@ import {
   MSG_HTML_REPLACE,
   MSG_READY,
   MSG_RESIZE,
-  MSG_STATE_UPDATE,
   MSG_STATE_UPDATE_ALL,
   MSG_STYLE_PATCH,
 } from './_protocol.js';
 import { SandboxTimeoutError } from './errors.js';
-import type { SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
+import type { SandboxHandle, SandboxMessage, SandboxOptions } from './types.js';
 
-const READY_TIMEOUT_MS = 5000;
-
-export function createSandbox(container: HTMLElement, options: SandboxOptions = {}): SandboxHandle {
+export function createSandbox<State extends object = Record<string, unknown>>(
+  container: HTMLElement,
+  options: SandboxOptions = {},
+): SandboxHandle<State> {
   const normalized = normalizeSandboxOptions(options);
   const channel = createChannel();
-  const namedStyles: Record<string, string> = { ...normalized.namedStyles };
+  const styles: Record<string, string> = { ...normalized.styles };
   const listeners = new Set<(message: SandboxMessage) => void>();
   const controller = new AbortController();
   let iframe: HTMLIFrameElement | null = null;
@@ -32,11 +32,6 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
   let generation = 0;
   let readyTimeout: ReturnType<typeof setTimeout> | null = null;
   let currentRender: { reject: (error: unknown) => void; resolve: () => void } | null = null;
-
-  let resolveReady!: () => void;
-  const ready = new Promise<void>((resolve) => {
-    resolveReady = resolve;
-  });
 
   function currentBootstrap(): BridgeBootstrap {
     return { channel, generation };
@@ -57,7 +52,13 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
   }
 
   function broadcast(message: SandboxMessage): void {
-    for (const listener of listeners) listener(message);
+    for (const listener of listeners) {
+      try {
+        listener(message);
+      } catch {
+        warn('onMessage() handler threw — remaining handlers will still run.');
+      }
+    }
   }
 
   function handleMessage(event: MessageEvent): void {
@@ -86,7 +87,6 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
         break;
       case MSG_READY:
         supersedePendingRender();
-        resolveReady();
         bridgeReady = true;
         break;
       case MSG_RESIZE:
@@ -117,7 +117,6 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     disposed = true;
     supersedePendingRender();
     controller.abort();
-    resolveReady();
 
     if (iframe) {
       window.removeEventListener('message', handleMessage);
@@ -128,7 +127,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     listeners.clear();
   }
 
-  function onMessage(handler: (message: SandboxMessage) => void): Unsubscribe {
+  function onMessage(handler: (message: SandboxMessage) => void): () => void {
     if (disposed) {
       warn('onMessage() called on a disposed sandbox — handler will never fire.');
 
@@ -140,14 +139,12 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     return () => listeners.delete(handler);
   }
 
-  function render(html: string, renderOptions?: { signal?: AbortSignal }): Promise<void> {
+  function render(html: string): Promise<void> {
     if (disposed) {
       warn('render() called on a disposed sandbox.');
 
       return Promise.resolve();
     }
-
-    if (renderOptions?.signal?.aborted) return Promise.resolve();
 
     if (!html.trim()) warn('render() called with empty HTML.');
 
@@ -156,7 +153,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
 
     const current = ensureIframe();
     const bootstrap = currentBootstrap();
-    const documentOptions = { ...normalized, namedStyles: { ...namedStyles } };
+    const documentOptions = { ...normalized, styles: { ...styles } };
 
     current.dataset.sandboxGeneration = String(generation);
     current.srcdoc = buildDocumentFromOptions(html, documentOptions, bootstrap);
@@ -170,19 +167,37 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
 
       currentRender.reject(
         new SandboxTimeoutError(
-          `render() did not receive a 'ready' signal from the sandbox document within ${READY_TIMEOUT_MS}ms. ` +
-            'The document is likely missing the bridge script — use buildDocument() to generate documents that include it.',
+          `render() did not receive a 'ready' signal within ${normalized.readyTimeout}ms. ` +
+            'An injected script may have blocked document initialization.',
         ),
       );
       currentRender = null;
       readyTimeout = null;
-    }, READY_TIMEOUT_MS);
+    }, normalized.readyTimeout);
 
     return promise;
   }
 
   function send(message: Record<string, unknown>): void {
     iframe?.contentWindow?.postMessage(envelope(currentBootstrap(), message), '*');
+  }
+
+  function setState(update: Partial<State>): void {
+    if (disposed) {
+      warn('setState() called on a disposed sandbox.');
+
+      return;
+    }
+
+    if (!iframe?.contentWindow) {
+      warn('setState() called before render() — sandbox has no document yet.');
+
+      return;
+    }
+
+    if (!bridgeReady) warn('setState() called before ready — state updates may be lost. Await render() first.');
+
+    if (Object.keys(update).length > 0) send({ record: update, type: MSG_STATE_UPDATE_ALL });
   }
 
   function replaceBody(html: string): void {
@@ -201,56 +216,20 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     send({ html, type: MSG_HTML_REPLACE });
   }
 
-  function setState(key: string, value: unknown): void {
-    if (disposed) {
-      warn('setState() called on a disposed sandbox.');
-
-      return;
-    }
-
-    if (!iframe?.contentWindow) {
-      warn('setState() called before render() — sandbox has no document yet.');
-
-      return;
-    }
-
-    if (!bridgeReady) {
-      warn('setState() called before ready — state update may be lost. Await render() first.');
-    }
-
-    send({ key, type: MSG_STATE_UPDATE, value });
-  }
-
-  function setStateAll(record: Record<string, unknown>): void {
-    if (disposed) {
-      warn('setStateAll() called on a disposed sandbox.');
-
-      return;
-    }
-
-    if (!iframe?.contentWindow) {
-      warn('setStateAll() called before render() — sandbox has no document yet.');
-
-      return;
-    }
-
-    if (!bridgeReady) {
-      warn('setStateAll() called before ready — state updates may be lost. Await render() first.');
-    }
-
-    send({ record, type: MSG_STATE_UPDATE_ALL });
-  }
-
   function updateStyle(id: string, css: string): void {
-    if (disposed) return;
+    if (disposed) {
+      warn('updateStyle() called on a disposed sandbox.');
+
+      return;
+    }
 
     devOnly(() => {
-      if (!(id in namedStyles)) {
-        warn(`updateStyle('${id}', …) — '${id}' is not a known namedStyles key.`);
+      if (!(id in styles)) {
+        warn(`updateStyle('${id}', …) — '${id}' is not a known styles key.`);
       }
     });
 
-    namedStyles[id] = css;
+    styles[id] = css;
 
     if (bridgeReady && iframe?.contentWindow) send({ css, id, type: MSG_STYLE_PATCH });
   }
@@ -264,11 +243,9 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
       return disposed;
     },
     onMessage,
-    ready,
     render,
     replaceBody,
     setState,
-    setStateAll,
     [Symbol.dispose]() {
       dispose();
     },

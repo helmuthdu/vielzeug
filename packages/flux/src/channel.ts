@@ -1,6 +1,6 @@
-import { assertNonNegativeInteger } from './_numeric';
-import { stream } from './core';
-import type { Sink, Stream } from './types';
+import { assertNonNegativeInteger } from './_numeric.js';
+import { stream } from './core.js';
+import type { Sink, Stream } from './types.js';
 
 export type ChannelOptions<T> = {
   initial?: T;
@@ -64,6 +64,8 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
     for (const listener of [...listeners]) listener.complete();
 
     listeners.clear();
+    replay.length = 0;
+    pending.length = 0;
   };
 
   let dispatching = false;

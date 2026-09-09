@@ -14,10 +14,6 @@ export type Catalog = {
 };
 
 export type Catalogs<C extends Catalog = Catalog> = Record<Locale, C>;
-export type CatalogLoader<C extends Catalog = Catalog> = () => Promise<C>;
-export type CatalogSource<C extends Catalog = Catalog> = C | CatalogLoader<C>;
-/** Locale declarations may contain static catalogs or lazy loaders. */
-export type CatalogSources<C extends Catalog = Catalog> = Record<Locale, CatalogSource<C>>;
 
 /** Traverses a catalog type and collects dotted paths to nodes matching `Leaf`. */
 type CatalogPaths<
@@ -50,27 +46,67 @@ export type PluralOptions = TranslateOptions & {
   ordinal?: boolean;
 };
 
-export type TranslatorOptions = {
-  fallback?: Locale | readonly Locale[];
-  locale?: Locale;
-  onMissingKey?: (key: string, locale: Locale) => string;
-  onMissingValue?: (name: string, key: string, locale: Locale) => string;
+// ─── Rich parts (discriminated union) ─────────────────────────────────────────
+
+export type TextPart = { readonly type: 'text'; readonly value: string };
+
+export type ValuePart<V> = { readonly type: 'value'; readonly value: V };
+
+export type Part<V> = TextPart | ValuePart<V>;
+
+// ─── Missing strategy ─────────────────────────────────────────────────────────
+
+export type MissingInfo = {
+  readonly key: string;
+  readonly locale: Locale;
+  readonly name?: string;
 };
 
-/** Options for a translator built from one immutable locale catalog. */
-export type CatalogTranslatorOptions = Omit<TranslatorOptions, 'fallback'>;
+export type MissingHandler = (info: MissingInfo) => string;
+
+export type MissingStrategy = 'throw' | 'key' | MissingHandler;
+
+// ─── Options ──────────────────────────────────────────────────────────────────
+
+export type TranslatorOptions = {
+  readonly locale?: Locale;
+  readonly missing?: MissingStrategy;
+};
+
+type I18nCommonOptions = {
+  readonly fallback?: Locale | readonly Locale[];
+  readonly locale?: Locale;
+  readonly missing?: MissingStrategy;
+};
+
+type CatalogLoader<C extends Catalog> = (locale: Locale) => Promise<C> | C;
+
+export type I18nOptions<C extends Catalog = Catalog> = I18nCommonOptions &
+  (
+    | {
+        readonly catalogs: Catalogs<C>;
+        readonly loadCatalog?: CatalogLoader<C>;
+        readonly state?: never;
+      }
+    | {
+        readonly catalogs?: never;
+        readonly loadCatalog?: CatalogLoader<C>;
+        readonly state: TranslationState<C>;
+      }
+    | {
+        readonly catalogs?: never;
+        readonly loadCatalog: CatalogLoader<C>;
+        readonly state?: never;
+      }
+  );
 
 export type SubscribeOptions = {
   immediate?: boolean;
   signal?: AbortSignal;
 };
 
-export type TranslationStoreOptions<C extends Catalog = Catalog> = TranslatorOptions & {
-  catalogs: CatalogSources<C>;
-};
-
 export type TranslationState<C extends Catalog = Catalog> = {
   readonly catalogs: Catalogs<C>;
   readonly locale: Locale;
-  readonly version: 3;
+  readonly version: 4;
 };

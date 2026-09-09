@@ -1,47 +1,46 @@
 ---
-title: 'Ward Examples — Bound Guard in UI Layer'
-description: 'Create a principal-bound Ward view for repeated UI permission checks.'
+title: 'Ward Examples — Bound UI Permissions'
+description: 'Bind an immutable principal for repeated UI permission checks.'
 ---
 
-## Bound Guard in UI Layer
+## Bound UI Permissions
 
 ### Problem
 
-A UI often needs several permission checks for one signed-in user without repeating that principal in every call.
+A UI repeats the same principal in several permission checks.
 
 ### Solution
 
-Bind the current user once with `forUser()` and expose the resulting action checks to the UI.
+Bind a principal snapshot, then use the bound decision helpers.
 
 ```ts
-import { createWard } from '@vielzeug/ward';
+import { allow, createWard } from '@vielzeug/ward';
 
-const ward = createWard([
-  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
+const ward = createWard<'read' | 'update' | 'delete', 'posts'>([
+  allow('viewer', 'posts', ['read']),
+  allow('editor', 'posts', ['read', 'update']),
 ]);
 
-const KNOWN_ACTIONS = ['read', 'update', 'delete'] as const;
-
-export function usePostActions(user: { id: string; roles: string[] }) {
-  const bound = ward.forUser(user);
+export function postActions(principal) {
+  const permissions = ward.forPrincipal(principal);
+  const actions = permissions.allowedActions({
+    knownActions: ['read', 'update', 'delete'],
+    resource: 'posts',
+  });
 
   return {
-    actions: bound.allowedActions({ resource: 'posts', knownActions: KNOWN_ACTIONS }),
-    canRead: bound.explain({ resource: 'posts', action: 'read' }).allowed,
-    canUpdate: bound.explain({ resource: 'posts', action: 'update' }).allowed,
-    canDelete: bound.explain({ resource: 'posts', action: 'delete' }).allowed,
+    canDelete: actions.includes('delete'),
+    canRead: actions.includes('read'),
+    canUpdate: actions.includes('update'),
   };
 }
 ```
 
 ### Pitfalls
 
-- `forUser()` snapshots user roles; bind again when identity or roles change.
-- Keep authorization at mutation and request boundaries; hidden UI controls are not an authorization check.
+Always repeat authorization at the mutation or request boundary; hidden controls are not security enforcement.
 
 ### Related
 
-- [Blog Roles](./blog-roles.md)
-- [Multi-Role Rules](./multi-role-rules.md)
-- [Ward Usage Guide](../usage.md)
+- [Blog roles](./blog-roles.md)
+- [Auditing decisions](./logger-for-auditing.md)

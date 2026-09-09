@@ -1,4 +1,4 @@
-import { ErrorCode, type Issue, type MessageFn } from './types';
+import type { ErrorCode, Issue, MessageFn } from './types';
 
 /* -------------------- Helpers -------------------- */
 
@@ -61,34 +61,6 @@ export class SpellValidationError extends SpellError {
   constructor(issues: Issue[], cause?: unknown) {
     super(formatIssues(issues), { cause });
     this.issues = issues;
-  }
-
-  /**
-   * Returns the most-specific branch errors for `issue`, or the first union issue when omitted.
-   * Surfaces the branch with the fewest issues at the deepest path — the one that "came closest" to matching.
-   */
-  bestMatch(issue?: Extract<Issue, { code: 'invalid_union' }>): Issue[] | null {
-    const unionIssue =
-      issue ??
-      this.issues.find(
-        (entry): entry is Extract<Issue, { code: 'invalid_union' }> => entry.code === ErrorCode.invalid_union,
-      );
-
-    if (!unionIssue) return null;
-
-    const branches = unionIssue.params.errors;
-
-    if (branches.length === 0) return null;
-
-    const scored = branches.map((branchIssues) => {
-      const maxDepth = branchIssues.reduce((d, i) => Math.max(d, i.path.length), 0);
-
-      return { issues: branchIssues, score: maxDepth * 1000 - branchIssues.length };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-
-    return scored[0]?.issues;
   }
 
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] } {

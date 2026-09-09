@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, test } from 'vitest';
 
-import { catalogKeys, createTranslationStore, LinguaInvalidCatalogError, type TextKey } from '../';
+import { catalogKeys, createI18n, LinguaInvalidCatalogError, type MessageKey } from '../';
 
 const flatCatalog = {
   FAREWELL: 'Goodbye',
@@ -18,7 +18,7 @@ describe('catalogKeys', () => {
     const keys = catalogKeys(flatCatalog);
 
     expect(keys).toEqual(['FAREWELL', 'GREETING']);
-    expectTypeOf(keys).toEqualTypeOf<ReadonlyArray<TextKey<typeof flatCatalog>>>();
+    expectTypeOf(keys).toEqualTypeOf<ReadonlyArray<MessageKey<typeof flatCatalog>>>();
   });
 
   test('enumerates nested catalog keys as dotted paths', () => {
@@ -31,20 +31,21 @@ describe('catalogKeys', () => {
       'streak.FIVE_STREAK',
       'streak.THREE_IN_A_ROW',
     ]);
-    expectTypeOf(keys).toEqualTypeOf<ReadonlyArray<TextKey<typeof nestedCatalog>>>();
+    expectTypeOf(keys).toEqualTypeOf<ReadonlyArray<MessageKey<typeof nestedCatalog>>>();
   });
 
   test('enumerates a nested subtree without parent prefix', () => {
     const streakKeys = catalogKeys(nestedCatalog.streak);
 
     expect(streakKeys).toEqual(['FIVE_STREAK', 'THREE_IN_A_ROW']);
-    expectTypeOf(streakKeys).toEqualTypeOf<ReadonlyArray<TextKey<typeof nestedCatalog.streak>>>();
+    expectTypeOf(streakKeys).toEqualTypeOf<ReadonlyArray<MessageKey<typeof nestedCatalog.streak>>>();
   });
 
   test('treats plural messages as leaf keys, not groups', () => {
     const rareKeys = catalogKeys(nestedCatalog.rare);
 
     expect(rareKeys).toEqual(['PERFECT_CLEAR']);
+    expectTypeOf(rareKeys).toEqualTypeOf<ReadonlyArray<MessageKey<typeof nestedCatalog.rare>>>();
   });
 
   test('returns empty array for empty catalog', () => {
@@ -55,14 +56,18 @@ describe('catalogKeys', () => {
     expect(() => catalogKeys({ bad: [1, 2] as unknown as string })).toThrow(LinguaInvalidCatalogError);
   });
 
-  test('enumerates keys from a translation store using its current locale', async () => {
-    const i18n = createTranslationStore({
-      catalogs: {
-        de: { abschied: 'Tschüss', begrüßung: 'Hallo' },
-        en: { farewell: 'Goodbye', greeting: 'Hello' },
-      },
+  test('enumerates keys from an i18n instance using its current locale', async () => {
+    const catalogs = {
+      de: { abschied: 'Tschüss', begrüßung: 'Hallo' },
+      en: { farewell: 'Goodbye', greeting: 'Hello' },
+    };
+
+    const i18n = createI18n({
+      loadCatalog: (locale) => catalogs[locale as 'de' | 'en'],
       locale: 'en',
     });
+
+    await i18n.load();
 
     const keys = catalogKeys(i18n);
     expect(keys).toEqual(['farewell', 'greeting']);
