@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/arsenal
 
-This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- refactor!: consolidate reusable random primitives, narrow obsolete utility exports, and expose live cache entry snapshots
 
 ## 2.1.0
 Sun, 16 Aug 2026 09:15:39 GMT

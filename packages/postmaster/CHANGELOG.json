@@ -4,6 +4,31 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `3.0.0`"
+          }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Refine migrations, isolate store contracts, and make corrupt IndexedDB records non-blocking.",
+            "commit": "7542e1bc50426b2fbf0b1c4d12f14b97047a39b7"
+          }
+        ]
+      },
+      "date": "Wed, 09 Sep 2026 22:15:14 GMT",
+      "tag": "@vielzeug/postmaster_v3.0.0",
+      "version": "3.0.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/vault\" to `2.5.0`"
           },
           {

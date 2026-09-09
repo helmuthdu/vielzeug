@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- refactor!: split generic, advanced, and Refine MCP contracts with typed exports and secured loopback HTTP hosting
 
 ## 2.3.2
 Sun, 30 Aug 2026 13:16:08 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/keymap
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- Replace record bindings with ordered IDs and per-binding event control, add parser subpath and tap-based chord observability, and harden guarded chord lifecycle behavior.
 
 ## 2.2.0
 Wed, 26 Aug 2026 17:29:55 GMT

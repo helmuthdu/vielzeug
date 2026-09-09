@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/conduit",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "description": "Typed dependency injection with immutable providers, singleton, transient, and named-scope lifetimes, overrides, and deterministic disposal",
   "repository": {
     "type": "git",

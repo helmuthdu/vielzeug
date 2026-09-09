@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/assay",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Framework-agnostic DOM testing primitives — scoped queries, event dispatch, and async waiting",
   "repository": {
     "type": "git",

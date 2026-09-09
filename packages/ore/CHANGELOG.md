@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- Simplify component authoring, IDs, host binding types, context identity, and testing APIs while preserving valid keyed-list DOM on duplicate-key updates.
 
 ## 2.2.0
 Sun, 30 Aug 2026 13:16:08 GMT

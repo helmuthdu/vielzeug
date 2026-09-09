@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ward",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "description": "Ordered authorization rules with immutable policies, typed decisions, and composable conditions",
   "repository": {
     "type": "git",

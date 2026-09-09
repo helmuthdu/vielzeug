@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 06 Sep 2026 04:50:16 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- Remove the glass surface variant, align DataGrid sources with Sourcerer's page-source contract, publish complete framework typings, and harden interaction lifecycles
 
 ## 2.4.0
 Sun, 06 Sep 2026 04:50:16 GMT

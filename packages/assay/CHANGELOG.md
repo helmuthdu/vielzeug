@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/assay
 
-This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- refactor!: rename retry to eventually and enforce bounded, cancellable DOM-test waits
 
 ## 2.2.0
 Fri, 28 Aug 2026 07:44:01 GMT

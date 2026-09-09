@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ledger",
-  "version": "2.3.0",
+  "version": "3.0.0",
   "description": "Serialized reversible command history with atomic state and cancellation ownership",
   "repository": {
     "type": "git",

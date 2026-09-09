@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/necromancer
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- Remove implicit animation replacement and package-owned timing defaults, preserve element subtype inference, and make test animation fixtures disposable.
 
 ## 2.1.0
 Wed, 26 Aug 2026 17:29:55 GMT

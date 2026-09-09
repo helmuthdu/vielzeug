@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/codex",
-  "version": "2.3.2",
+  "version": "3.0.0",
   "description": "MCP server exposing Vielzeug documentation to AI assistants over local stdio or loopback HTTP",
   "repository": {
     "type": "git",

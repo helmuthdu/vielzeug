@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/wayfinder
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- Narrow route definitions while retaining typed view mapping, cached preloading, scroll coordination, and view transitions.
 
 ## 2.2.0
 Wed, 26 Aug 2026 17:29:55 GMT

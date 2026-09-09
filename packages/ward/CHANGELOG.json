@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Redesign Ward around immutable ordered policies, typed attributes, bound checks, and decision observability.",
+            "commit": "7542e1bc50426b2fbf0b1c4d12f14b97047a39b7"
+          }
+        ]
+      },
+      "date": "Wed, 09 Sep 2026 22:15:14 GMT",
+      "tag": "@vielzeug/ward_v3.0.0",
+      "version": "3.0.0"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

@@ -4,6 +4,31 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `3.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `^3.0.0`"
+          }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: make positioners active on construction and remove the redundant start lifecycle",
+            "commit": "7542e1bc50426b2fbf0b1c4d12f14b97047a39b7"
+          }
+        ]
+      },
+      "date": "Wed, 09 Sep 2026 22:15:14 GMT",
+      "tag": "@vielzeug/orbit_v3.0.0",
+      "version": "3.0.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.3.0`"
           },
           {

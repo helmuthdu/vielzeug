@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/orbit
 
-This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- refactor!: make positioners active on construction and remove the redundant start lifecycle
 
 ## 2.1.4
 Sun, 30 Aug 2026 13:16:08 GMT

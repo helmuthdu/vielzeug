@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/conduit
 
-This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- refactor!: adopt immutable provider graphs with typed builders while preserving direct, transient, scoped, and deterministic lifecycle workflows
 
 ## 2.1.1
 Sun, 30 Aug 2026 13:16:08 GMT

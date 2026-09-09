@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/dnd
 
-This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+
+## 3.0.0
+Wed, 09 Sep 2026 22:15:14 GMT
+
+### Breaking changes
+
+- refactor!: split focused entry points, move rollback to application history, and rebuild touch sorting on Gesture pointer recognition while hardening sortable, keyboard, validation, and lifecycle behavior
 
 ## 2.2.0
 Fri, 28 Aug 2026 07:44:01 GMT
