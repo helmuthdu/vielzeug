@@ -46,15 +46,6 @@ export class DateSchema<Input = Date, Mode extends SchemaMode = 'sync'> extends 
     });
   }
 
-  /**
-   * Returns a new schema that coerces string or number input to a `Date` before validation.
-   *
-   * Equivalent to `s.coerce.date()`.
-   */
-  coerce(): DateSchema<unknown> {
-    return DateSchema.coerce();
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'date' };
   }

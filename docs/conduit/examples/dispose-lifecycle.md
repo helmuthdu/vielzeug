@@ -12,12 +12,14 @@ Release services without disposing a dependency before its dependent.
 ### Solution
 
 ```ts
-container.factory(Database, [], createDatabase, { dispose: (database) => database.close() });
-container.factory(Service, [Database], (database) => createService(database), {
-  dispose: (service) => service.stop(),
-});
+const container = createContainer([
+  factoryProvider(Database, [], createDatabase, { dispose: (database) => database.close() }),
+  factoryProvider(Service, [Database], (database) => createService(database), {
+    dispose: (service) => service.stop(),
+  }),
+]);
 
-await container.resolve(Service);
+await container.resolve({ service: Service });
 await container.dispose();
 ```
 

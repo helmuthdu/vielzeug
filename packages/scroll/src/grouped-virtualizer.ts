@@ -1,6 +1,4 @@
-import type { Signal } from '@vielzeug/ripple';
-
-import { resolveEstimateFn } from './_utils';
+import { createSnapshotStore, resolveEstimateFn } from './_utils';
 import { requireNonNegativeNumber, requirePositiveNumber, validateOverscan } from './_validation';
 import {
   createVirtualizer,
@@ -8,6 +6,7 @@ import {
   DEFAULT_OVERSCAN,
   type MeasurementCache,
   type Overscan,
+  type ScrollStore,
   type ScrollTarget,
   type ScrollToIndexOptions,
   type VirtualItem,
@@ -81,11 +80,9 @@ export interface GroupVirtualizerOptions<T> {
    */
   scrollEndDelay?: number;
   sections: Array<GroupSection<T>>;
-  /** Optional signal factory for reactive state. */
-  toSignal?: (init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>;
 }
 
-export interface GroupVirtualizer<T> {
+export interface GroupVirtualizer<T> extends ScrollStore<GroupVirtualizerState<T>> {
   readonly count: number;
   readonly disposalSignal: AbortSignal;
   dispose: () => void;
@@ -206,20 +203,19 @@ export function createGroupedVirtualizer<T>(
 
   let disposed = false;
   let lastItems: Array<GroupVirtualItem<T>> = [];
+  const stateStore = createSnapshotStore<GroupVirtualizerState<T>>({
+    headers: [],
+    items: [],
+    stickyHeader: null,
+    totalSize: 0,
+  });
   let onChange = options.onChange;
   let onScrollEnd = options.onScrollEnd;
   let onScrollingChange = options.onScrollingChange;
 
-  // Optional signal for reactive state
-  let stateSignal: Signal<GroupVirtualizerState<T>> | null = null;
-  if (options.toSignal) {
-    const initialState: GroupVirtualizerState<T> = { headers: [], items: [], stickyHeader: null, totalSize: 0 };
-    stateSignal = options.toSignal(initialState);
-  }
-
-  // Helper to emit state to both callback and signal
+  // Publish state before invoking the render callback.
   function emitState(state: GroupVirtualizerState<T>): void {
-    if (stateSignal) stateSignal.value = state;
+    stateStore.publish(state);
     onChange?.(state);
   }
 
@@ -278,6 +274,7 @@ export function createGroupedVirtualizer<T>(
     if (disposed) return;
 
     disposed = true;
+    stateStore.dispose();
     ac.abort();
     virtualizer.dispose();
   }
@@ -313,6 +310,7 @@ export function createGroupedVirtualizer<T>(
     get disposed() {
       return disposed;
     },
+    getSnapshot: stateStore.getSnapshot,
     invalidate() {
       if (disposed) return;
 
@@ -388,6 +386,7 @@ export function createGroupedVirtualizer<T>(
     get stickyItems() {
       return virtualizer.stickyItems;
     },
+    subscribe: stateStore.subscribe,
     [Symbol.dispose]: _dispose,
     get totalSize() {
       return virtualizer.totalSize;

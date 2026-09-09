@@ -7,9 +7,9 @@ A foundational layout primitive with theming support. Box provides a simple, sem
 Four variants cover the full range from solid to translucent.
 
 - **Default** (no `variant`) — Canvas background with border and subtle shadow. Picks up `color` as a tinted backdrop.
+- **`solid`** — Filled with the selected theme color.
 - **`flat`** — Same as default but with no shadow; low visual weight.
-- **`glass`** — Glassmorphism with backdrop blur, saturated colors, and brightness boost.
-- **`frost`** — Frosted glass with stronger blur and color-tinted transparency.
+- **`frost`** — Translucent, color-tinted surface with a strong backdrop blur.
 
 <ComponentPreview>
 
@@ -25,21 +25,17 @@ Four variants cover the full range from solid to translucent.
 
 </ComponentPreview>
 
-### Glass & Frost
+### Frost
 
-Translucent effects with backdrop blur — best used over rich backgrounds.
+`frost` creates a diffuse translucent surface with adaptive tint, saturation, and backdrop blur.
 
 ::: tip Best Used With
-Glass and frost look best over colorful backgrounds or images to make the blur and transparency visible.
+Use frost over colorful backgrounds or imagery, but avoid nesting multiple translucent surfaces because contrast becomes unpredictable.
 :::
 
 <ComponentPreview center background="https://plus.unsplash.com/premium_photo-1685082778336-282f52a3a923?q=80&w=2532&auto=format&fit=crop">
 
 ```html
-<ore-box variant="glass" fullwidth>
-  <ore-text variant="heading" size="md">Glass Effect</ore-text>
-  <ore-text>Vibrant glass with saturated colors and brightness boost</ore-text>
-</ore-box>
 <ore-box variant="frost" fullwidth>
   <ore-text variant="heading" size="md">Frost Effect</ore-text>
   <ore-text>Frosted glass with muted tones and stronger blur</ore-text>
@@ -152,7 +148,7 @@ Animated rainbow border effect — works on any variant.
 
 | Attribute   | Type                                                                      | Default | Description            |
 | ----------- | ------------------------------------------------------------------------- | ------- | ---------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'glass' \| 'frost'`                                 | -       | Style variant          |
+| `variant`   | `'solid' \| 'flat' \| 'frost'`                                 | -       | Style variant          |
 | `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -       | Color theme            |
 | `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Internal padding       |
 | `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow depth (0–5)     |
@@ -188,4 +184,4 @@ CSS custom properties work regardless of whether a `color` attribute is set. Use
 
 ## Accessibility
 
-`ore-box` follows WAI-ARIA best practices. It supports all standard ARIA attributes (`aria-label`, `aria-describedby`, `role`, etc.), making it straightforward to integrate into accessible layouts. Wrap `ore-box` in a semantic HTML element (`<section>`, `<article>`, etc.) when the content warrants it. Glass and frost variants maintain readable contrast ratios against their typical backgrounds.
+`ore-box` follows WAI-ARIA best practices. It supports all standard ARIA attributes (`aria-label`, `aria-describedby`, `role`, etc.), making it straightforward to integrate into accessible layouts. Wrap `ore-box` in a semantic HTML element (`<section>`, `<article>`, etc.) when the content warrants it. Because frost contrast depends on the backdrop, test the final composition with production imagery and content.

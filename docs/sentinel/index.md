@@ -1,9 +1,9 @@
 ---
-title: Sentinel — Reactive environment state
-description: Reactive browser and DOM observations for viewport, network, media query, element size, and intersection state.
+title: Sentinel — Subscribable environment snapshots
+description: Subscribable browser and DOM snapshots for viewport, network, media query, element size, and intersection state.
 package: sentinel
 category: Environment
-keywords: [reactive, browser, viewport, network, media-query, resize-observer, intersection-observer]
+keywords: [subscribable, browser, viewport, network, media-query, resize-observer, intersection-observer]
 related: [ripple, ore, focus, gesture]
 exports: [createViewport, createNetwork, createMediaQuery, createElementSize, createIntersection, SentinelError, SentinelUnavailableError, Sentinel]
 environments: [browser]
@@ -15,7 +15,7 @@ environments: [browser]
 
 ## Why Sentinel?
 
-Browser environment APIs use different events, observer callbacks, initial states, and cleanup methods. Sentinel gives them one explicit handle shape and exposes current values as Ripple `Readable<T>` signals.
+Browser environment APIs use different events, observer callbacks, initial states, and cleanup methods. Sentinel gives them one explicit external-store shape with snapshot reads, subscriptions, and disposal.
 
 ```ts
 // Before
@@ -41,7 +41,7 @@ import { createElementSize } from '@vielzeug/sentinel';
 
   const size = createElementSize(panel);
   const unsubscribe = size.subscribe(() => {
-    console.log(size.value?.width);
+    console.log(size.getSnapshot()?.width);
   });
 
   // Later
@@ -53,17 +53,17 @@ import { createElementSize } from '@vielzeug/sentinel';
 | Feature | Sentinel | Native observer APIs | Ad hoc event listeners |
 | --- | --- | --- | --- |
 | Bundle size | <PackageInfo package="sentinel" type="size" /> | Built in | Application-defined |
-| Zero dependencies | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Reactive current state | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Subscribable current snapshot | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 | Consistent disposable handle | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 | Shared abort ownership | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
 | Ripple composition | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
-**Use Sentinel when** browser or DOM observations need reactive state, consistent ownership, and composition with Ripple.
+**Use Sentinel when** browser or DOM observations need consistent snapshot reads, subscriptions, and ownership.
 
-**Consider native APIs when** one isolated observer is sufficient and adding Ripple as a peer dependency is not justified.
+**Consider native APIs when** one isolated observer is sufficient and a shared lifecycle abstraction adds no value.
 
 </div>
 
@@ -72,15 +72,15 @@ import { createElementSize } from '@vielzeug/sentinel';
 ::: code-group
 
 ```sh [pnpm]
-pnpm add @vielzeug/sentinel @vielzeug/ripple
+pnpm add @vielzeug/sentinel
 ```
 
 ```sh [npm]
-npm install @vielzeug/sentinel @vielzeug/ripple
+npm install @vielzeug/sentinel
 ```
 
 ```sh [yarn]
-yarn add @vielzeug/sentinel @vielzeug/ripple
+yarn add @vielzeug/sentinel
 ```
 
 :::
@@ -95,7 +95,7 @@ import { createViewport } from '@vielzeug/sentinel';
 function observeViewport(): () => void {
   const viewport = createViewport();
   const render = () => {
-    const { dpr, height, width } = viewport.value;
+    const { dpr, height, width } = viewport.getSnapshot();
     console.log(`${width}×${height} at ${dpr}dpr`);
   };
 
@@ -133,6 +133,7 @@ const stopObserving = observeViewport();
 - [**Usage Guide**](./usage.md)
 - [**API Reference**](./api.md)
 - [**Examples**](./examples.md)
+- [**3.0 Migration Guide**](./migration.md)
 
 </div>
 

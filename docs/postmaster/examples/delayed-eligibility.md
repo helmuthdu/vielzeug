@@ -38,7 +38,7 @@ const postmaster = createPostmaster({ jobs, store });
 
 // Persist now; claimable in one minute.
 await postmaster.enqueue('sendDigest', { userId: 'u_123' }, { availableAt: Date.now() + 60_000 });
-await postmaster.start();
+postmaster.start();
 
 // On page unload:
 // await postmaster.dispose();

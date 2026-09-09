@@ -35,7 +35,7 @@ export interface ScoutIndex<T> {
    * Returns an unsubscribe function.
    *
    * Framework-agnostic extension point: `createSearch()` uses this internally to keep
-   * reactive `results` in sync with index mutations. Most callers won't need this directly.
+   * its snapshot in sync with index mutations. Most callers won't need this directly.
    */
   onMutate(listener: () => void): () => void;
   /**

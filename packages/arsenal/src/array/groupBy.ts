@@ -5,7 +5,7 @@ import type { Primitive } from '../types';
  * Groups elements by a selector function. Dangerous keys (`__proto__`, `constructor`,
  * `prototype`) are skipped.
  */
-export function groupBy<T>(array: T[], selector: (item: T) => Primitive): Record<string, T[]> {
+export function groupBy<T>(array: readonly T[], selector: (item: T) => Primitive): Record<string, T[]> {
   const result: Record<string, T[]> = {};
 
   for (const item of array) {

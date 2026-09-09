@@ -2,6 +2,7 @@
 export const PROTOCOL_VERSION = 1 as const;
 
 export type SerializedError = {
+  category?: 'protocol';
   message: string;
   name: string;
   stack?: string;
@@ -31,21 +32,37 @@ function isRequest(value: unknown): value is WorkerRequest<unknown> {
 
   const request = value as Partial<WorkerRequest<unknown>>;
 
-  return typeof request.id === 'number' && (request.kind === 'run' || request.kind === 'stream') && 'input' in request;
+  return (
+    request.version === PROTOCOL_VERSION &&
+    typeof request.id === 'number' &&
+    Number.isSafeInteger(request.id) &&
+    request.id >= 0 &&
+    (request.kind === 'run' || request.kind === 'stream') &&
+    'input' in request
+  );
 }
 
 function post<TOutput>(message: WorkerResponse<TOutput>): void {
   (self as unknown as { postMessage(data: WorkerResponse<TOutput>): void }).postMessage(message);
 }
 
-function postError(id: number, error: unknown): void {
-  post({ error: serializeError(error), id, kind: 'error', version: PROTOCOL_VERSION });
+function postError(id: number, error: unknown, category?: SerializedError['category']): void {
+  post({
+    error: { ...serializeError(error), ...(category && { category }) },
+    id,
+    kind: 'error',
+    version: PROTOCOL_VERSION,
+  });
 }
 
 /** Register a module worker that handles one request and returns one result. */
 export function exposeTask<TInput, TOutput>(handler: TaskHandler<TInput, TOutput>): void {
   (self as unknown as { onmessage: (event: MessageEvent<unknown>) => void }).onmessage = async (event) => {
-    if (!isRequest(event.data) || event.data.version !== PROTOCOL_VERSION || event.data.kind !== 'run') return;
+    if (!isRequest(event.data)) return;
+    if (event.data.kind !== 'run') {
+      postError(event.data.id, new Error('Worker is registered for tasks, not streams'), 'protocol');
+      return;
+    }
 
     const { id, input } = event.data;
 
@@ -62,7 +79,11 @@ export function exposeTask<TInput, TOutput>(handler: TaskHandler<TInput, TOutput
 /** Register a module worker that yields chunks for each request. */
 export function exposeStream<TInput, TChunk>(handler: StreamHandler<TInput, TChunk>): void {
   (self as unknown as { onmessage: (event: MessageEvent<unknown>) => void }).onmessage = async (event) => {
-    if (!isRequest(event.data) || event.data.version !== PROTOCOL_VERSION || event.data.kind !== 'stream') return;
+    if (!isRequest(event.data)) return;
+    if (event.data.kind !== 'stream') {
+      postError(event.data.id, new Error('Worker is registered for streams, not tasks'), 'protocol');
+      return;
+    }
 
     const { id, input } = event.data;
 

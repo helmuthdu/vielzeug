@@ -7,47 +7,44 @@ description: 'Use Courier for HTTP transport while Sourcerer owns page state.'
 
 ### Problem
 
-You need HTTP headers, retries, and caching policy from Courier while keeping page query state and cancellation in Sourcerer.
+You need Courier middleware and transport errors while Sourcerer owns collection state and request succession.
 
 ### Solution
 
-Pass Courier calls through a page source loader. Forward Sourcerer’s signal into Courier.
+Map the Courier response into `PageResult` and forward Sourcerer’s signal.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
 import { createPageSource } from '@vielzeug/sourcerer';
 
 type Issue = { id: number; title: string };
-const originalFetch = globalThis.fetch;
-globalThis.fetch = async () =>
-  new Response(JSON.stringify({ data: [{ id: 1, title: 'Document source state' }], total: 1 }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-
+type IssueResponse = { data: Issue[]; total: number };
 const courier = createCourier({ baseUrl: 'https://api.example.test' });
-const source = createPageSource<Issue>({
-  autoStart: false,
-  load: ({ query, signal }) => courier.get('/issues', { query, signal }),
+const source = createPageSource({
+  load: async ({ page, pageSize, params: search, signal }) => {
+    const result = await courier.get<IssueResponse>('/issues', { query: { page, pageSize, search }, signal });
+    return { items: result.data, totalItems: result.total };
+  },
+  params: '',
 });
 
 try {
   await source.reload();
-  console.log(source.snapshot.data);
+  console.log(source.state.items);
 } finally {
   source.dispose();
   courier.dispose();
-  globalThis.fetch = originalFetch;
 }
 ```
 
 ### Pitfalls
 
-- Keep Courier retry, cache, authentication, and telemetry configuration on Courier.
-- Pass loader `signal` to Courier so superseded requests cancel at transport level.
-- Do not add cache policy back into Sourcerer configuration.
+- Keep authentication, middleware, timeouts, and transport errors on Courier.
+- Pass the loader signal to Courier.
+- Use a dedicated query cache when reads must be shared by key.
 
 ### Related
 
 - [Usage Guide](../usage#working-with-other-vielzeug-libraries)
 - [Courier](/courier/)
-- [Page query with URL state](./remote-search-with-url-state)
+- [Page params with URL state](./remote-search-with-url-state)

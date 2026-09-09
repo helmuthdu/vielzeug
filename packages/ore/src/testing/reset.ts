@@ -9,7 +9,7 @@ import { _resetIdCounter } from '../utils/id';
 
 /**
  * Reset every piece of global ore state a test can touch: the stylesheet cache
- * and both ID counters. Called by `cleanup()` — call it directly only if you
+ * and the ID counter. Called by `cleanup()` — call it directly only if you
  * manage mounted elements yourself.
  */
 export const resetOreForTests = (): void => {

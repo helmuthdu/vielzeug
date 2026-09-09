@@ -1,10 +1,10 @@
 ---
 title: Dnd — Drag-and-drop primitives for the DOM
-description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
+description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero third-party dependencies.
 package: dnd
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
-related: [ore, scroll, refine]
+related: [gesture, ore, scroll, refine]
 exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
 environments: [browser]
 ---
@@ -37,7 +37,7 @@ dropzone.addEventListener('drop', (e) => {
 });
 
 // After — Dnd
-import { createDropZone } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
 const zone = createDropZone({
   element: dropzone,
   accept: ['image/*'],
@@ -57,11 +57,13 @@ const zone = createDropZone({
 | Drag handles        | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | `using` support     | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 | Touch support        | <ore-icon name="check" size="16"></ore-icon> Scoped opt-in | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Zero dependencies   | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
+| Zero third-party dependencies | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 
-**Use Dnd when** you need reliable file drop zones with MIME filtering or sortable lists in a framework-agnostic environment.
+**Use Dnd when** an item is picked up and dropped: file drop zones, sortable collections, keyboard reordering, or connected lists.
+
+**Use Gesture instead** when a surface follows free or axis-locked pointer movement and application code owns rendering and completion, such as direct manipulation, swipe reveal, carousel navigation, or drawer dismissal.
 
 **Consider dnd-kit** if you are building a React app and need complex multi-container drag interactions or accessibility-first sortable trees.
 
@@ -88,7 +90,8 @@ yarn add @vielzeug/dnd
 ## Quick Start
 
 ```ts
-import { createDropZone, createSortable } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
+import { createSortable } from '@vielzeug/dnd/sortable';
 
 // File drop zone — with async validation and paste support
 const dropzone = document.getElementById('dropzone')!;
@@ -107,8 +110,9 @@ using zone = createDropZone({
   },
 });
 
-// Sortable list — with revert support for optimistic updates
+// Sortable list — with application-owned rollback for optimistic updates
 let currentOrder = ['a', 'b', 'c'];
+const history: Array<{ before: readonly string[] }> = [];
 
 using sortable = createSortable({
   element: document.getElementById('list')!,
@@ -117,12 +121,9 @@ using sortable = createSortable({
     // record positions here before the DOM commits (for FLIP animations)
   },
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids, setRevert }) => {
-    const prev = currentOrder;
-    currentOrder = ids;
-    setRevert(() => {
-      currentOrder = prev;
-    });
+  onReorder: ({ before, after }) => {
+    history.push({ before });
+    currentOrder = after;
   },
 });
 ```
@@ -137,19 +138,19 @@ using sortable = createSortable({
 - **`maxFiles` limit** — cap the number of accepted files per drop; excess files are forwarded to `onDropRejected`
 - **`onValidate` async gating** — optional cancellable async step after type filtering; `zone.validating` remains `true` until every pending validation settles
 - **Clipboard paste support** — `paste: true` routes pasted files through the same `accept`, `maxFiles`, and `onValidate` pipeline; `onPaste` provides a separate callback; paste rejections are forwarded to `onDropRejected` with the same `(files: File[]) => void` signature as drop rejections
-- **`onDropRejected`** — separate callback for files that didn't match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`; event type reflects whether the rejection came from a drop or a paste
+- **`onDropRejected`** — separate callback for files that didn't match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
 - **Custom drag preview** — pass an element or a `(id, item, event) => element | null` factory; control hotspot with `dragImageOffset`
 - **`onBeforeReorder` FLIP hook** — fires before commit for both drag and keyboard moves; pair it with [`captureLayout()`](/necromancer/api.md#capturelayout) for lifecycle-owned FLIP animation
-- **`sortable.revert()`** — register a revert function via `event.setRevert(fn)` inside `onReorder`; `sortable.revert()` invokes it and clears it for rolling back optimistic updates on server failure
+- **Application-owned rollback** — `onReorder` emits `{ before, after, item }` so application history can own undo/rollback instead of the drag controller
 - **Boundary-safe keyboard reordering** — arrow keys at the first/last item no longer suppress `preventDefault`, so the browser can scroll the page normally
 - **Transactional connected scopes** — one `onMove` callback receives each cross-list transfer with both final orders
 - **Scoped touch support** — `createSortableScope({ touch: true })` handles only items registered to that scope and uses an inert outline preview
-- **Explicit DOM sync** — call `sortable.sync()` after DOM mutations instead of relying on hidden observers
+- **Explicit DOM refresh** — call `sortable.refresh()` after DOM mutations, or provide an `items()` provider for explicit item ownership
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup
-- **Reactive-friendly options** — `disabled` is re-read on each event (reassign `options.disabled = true` to toggle); `accept` captures the array reference, so push/splice mutations are reflected without recreating the zone
-- **Zero dependencies** — <PackageInfo package="dnd" type="size" /> gzipped, <PackageInfo package="dnd" type="dependencies" /> dependencies
+- **Reactive-friendly options** — `disabled` is re-read on each event (reassign `options.disabled = true` to toggle); `accept` is normalized and snapshotted at construction; recreate the zone to change accepted types
+- **Shared pointer recognition** — touch sorting uses `@vielzeug/gesture`; Dnd retains previews, hit-testing, drag events, and sortable transactions
 
 </div>
 
@@ -169,8 +170,9 @@ using sortable = createSortable({
 <div class="see-also">
 
 - [Orbit](/orbit/) — floating element positioning; use alongside Dnd to anchor drag previews and drop-zone indicators to precise positions
-- [Ore](/ore/) — web-component authoring framework; build draggable custom elements with Dnd's pointer event primitives
-- [Refine](/refine/) — accessible web components; Dnd powers the drag-and-drop inside Refine's sortable list and kanban components
+- [Gesture](/gesture/) — pointer recognition used by Dnd touch sorting and directly by swipe, reveal, carousel, and drawer interactions
+- [Ore](/ore/) — web-component authoring framework for application-owned draggable and sortable surfaces
+- [Refine](/refine/) — accessible web components; Dnd powers Refine's file-drop input behavior
 
 </div>
 

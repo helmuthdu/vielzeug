@@ -1,6 +1,3 @@
-import type { Readable } from '@vielzeug/ripple';
-
-import { signal } from '@vielzeug/ripple';
 import { warn } from '../_dev';
 import { PrismRenderError } from '../errors';
 import { createSvgElement, setAttributes } from '../svg/element';
@@ -10,14 +7,15 @@ import { observeResize } from './responsive';
 
 export interface ChartBase {
   chartArea: SVGGElement;
-  dimensions: Readable<ChartDimensions>;
+  dimensions: ChartDimensions;
   dispose(): void;
   svg: SVGSVGElement;
 }
 
 export function createChartBase(
   container: HTMLElement,
-  options: { a11y?: ChartA11y; ariaHidden?: boolean; margin?: Partial<ChartMargin> },
+  options: { a11y?: ChartA11y; margin?: Partial<ChartMargin> },
+  onResize?: () => void,
 ): ChartBase {
   // Duck-typed rather than `instanceof Element` — an `instanceof` check would reject a
   // structurally valid Element from a different realm (e.g. an Element created via
@@ -46,12 +44,9 @@ export function createChartBase(
   const margin = resolveMargin(options.margin);
   const a11y = options.a11y;
   const svg = createSvgElement('svg', {
-    ...(options.ariaHidden || a11y?.decorative
+    ...(!a11y || a11y.decorative
       ? { 'aria-hidden': 'true' }
-      : {
-          ...(a11y ? { 'aria-label': a11y.ariaLabel, tabindex: '0' } : {}),
-          role: 'img',
-        }),
+      : { 'aria-label': a11y.ariaLabel, role: 'img', tabindex: '0' }),
     class: 'prism-chart',
     style: 'display:block;width:100%;height:100%',
   });
@@ -71,23 +66,17 @@ export function createChartBase(
     );
   }
 
-  const computedStyle = typeof getComputedStyle !== 'undefined' ? getComputedStyle(container) : null;
-
-  if (computedStyle && computedStyle.position === 'static') {
-    warn(
-      'Chart container has position:static. Set position:relative (or absolute/fixed) on the container so tooltip and overlay elements are positioned correctly.',
-    );
-  }
-
-  const dimensions = signal<ChartDimensions>({
+  const dimensions: ChartDimensions = {
     height: rect.height || 300,
     margin,
     width: rect.width || 600,
-  });
+  };
 
   const stopObserving = observeResize(container, (width, height) => {
-    dimensions.value = { height, margin, width };
+    dimensions.height = height;
+    dimensions.width = width;
     setAttributes(svg, { height, viewBox: `0 0 ${width} ${height}`, width });
+    onResize?.();
   });
 
   const initialWidth = rect.width || 600;

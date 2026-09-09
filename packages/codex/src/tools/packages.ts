@@ -3,11 +3,13 @@ import { EMPTY_SCHEMA, PACKAGE_SLUG_PROPERTY, parseArgs, type ToolSchema } from 
 import type { ToolDefinition } from './shared.js';
 
 const slug = {
+  additionalProperties: false,
   properties: { packageSlug: PACKAGE_SLUG_PROPERTY },
   required: ['packageSlug'],
   type: 'object',
 } satisfies ToolSchema;
 const docs = {
+  additionalProperties: false,
   properties: {
     packageSlug: PACKAGE_SLUG_PROPERTY,
     page: { default: 'index', description: 'Documentation page', enum: DOC_PAGES, type: 'string' },
@@ -16,6 +18,7 @@ const docs = {
   type: 'object',
 } satisfies ToolSchema;
 const example = {
+  additionalProperties: false,
   properties: {
     exampleId: { description: 'Example identifier', maxLength: 100, minLength: 1, type: 'string' },
     packageSlug: PACKAGE_SLUG_PROPERTY,
@@ -24,11 +27,13 @@ const example = {
   type: 'object',
 } satisfies ToolSchema;
 const query = {
+  additionalProperties: false,
   properties: { query: { description: 'Non-empty search query', maxLength: 500, minLength: 1, type: 'string' } },
   required: ['query'],
   type: 'object',
 } satisfies ToolSchema;
 const signature = {
+  additionalProperties: false,
   properties: {
     slug: PACKAGE_SLUG_PROPERTY,
     symbol: { description: 'Exported symbol name', maxLength: 200, minLength: 1, type: 'string' },
@@ -37,7 +42,7 @@ const signature = {
   type: 'object',
 } satisfies ToolSchema;
 
-export const packageTools: ToolDefinition[] = [
+export const packageTools: readonly ToolDefinition[] = [
   {
     description: 'List every Vielzeug package. Start here for package discovery.',
     execute: (_args, catalog) => catalog.listPackages(),
@@ -83,7 +88,8 @@ export const packageTools: ToolDefinition[] = [
     name: 'get-example',
   },
   {
-    description: 'Search package metadata, docs, examples, and source. Results use deterministic slug order.',
+    description:
+      'Search package metadata, docs, examples, and source. Results are relevance-tiered, then ordered by slug.',
     execute: (args, catalog) => catalog.search(parseArgs(query, args).query),
     inputSchema: query,
     name: 'search-packages',

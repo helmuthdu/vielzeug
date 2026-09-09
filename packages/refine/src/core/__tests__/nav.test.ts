@@ -41,6 +41,14 @@ describe('createListControl', () => {
     expect(nav.navigate('prev')).toBe(0);
   });
 
+  it('reports recognized boundary keys as handled without changing focus', () => {
+    const nav = createListControl({ getItems: () => [{ disabled: false }] });
+    nav.set(0);
+
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }))).toBe(true);
+    expect(nav.focusedIndex.value).toBe(0);
+  });
+
   it('returns -1 when list has no enabled entries', () => {
     const items = [{ disabled: true }, { disabled: true }];
     const nav = createListControl({ getItems: () => items, isItemDisabled: (item) => item.disabled });
@@ -152,9 +160,15 @@ describe('createListControl', () => {
     const items = [{ disabled: false }, { disabled: false }];
     const nav = createListControl({ getItems: () => items });
 
+    nav.set(0);
     expect(nav.disposed).toBe(false);
     nav.dispose();
     expect(nav.disposed).toBe(true);
+    expect(nav.disposalSignal.aborted).toBe(true);
+    expect(nav.focusedIndex.value).toBe(-1);
+    expect(nav.getActiveItem()).toBeUndefined();
+    expect(nav.set(1)).toBe(-1);
+    expect(nav.navigate('next')).toBe(-1);
 
     // Idempotent — calling again does not throw.
     nav.dispose();
@@ -173,7 +187,7 @@ describe('createListControl', () => {
 describe('createListControl direction (RTL mirroring)', () => {
   it('horizontal orientation: RTL swaps ArrowLeft/ArrowRight meaning', () => {
     const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
-    const nav = createListControl({ direction: 'rtl', getItems: () => items, orientation: 'horizontal' });
+    const nav = createListControl({ direction: () => 'rtl', getItems: () => items, orientation: () => 'horizontal' });
 
     nav.set(0);
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
@@ -185,7 +199,7 @@ describe('createListControl direction (RTL mirroring)', () => {
 
   it("'both' orientation: RTL mirrors only the horizontal arrows, not vertical", () => {
     const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
-    const nav = createListControl({ direction: 'rtl', getItems: () => items, orientation: 'both' });
+    const nav = createListControl({ direction: () => 'rtl', getItems: () => items, orientation: () => 'both' });
 
     nav.set(0);
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
@@ -197,7 +211,7 @@ describe('createListControl direction (RTL mirroring)', () => {
 
   it('LTR (default) keeps the standard ArrowRight=next / ArrowLeft=prev mapping', () => {
     const items = [{ disabled: false }, { disabled: false }];
-    const nav = createListControl({ getItems: () => items, orientation: 'horizontal' });
+    const nav = createListControl({ getItems: () => items, orientation: () => 'horizontal' });
 
     nav.set(0);
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -207,7 +221,7 @@ describe('createListControl direction (RTL mirroring)', () => {
   it('a getter direction is re-resolved on every keydown', () => {
     const items = [{ disabled: false }, { disabled: false }];
     let dir: 'ltr' | 'rtl' = 'ltr';
-    const nav = createListControl({ direction: () => dir, getItems: () => items, orientation: 'horizontal' });
+    const nav = createListControl({ direction: () => dir, getItems: () => items, orientation: () => 'horizontal' });
 
     nav.set(0);
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
@@ -221,10 +235,10 @@ describe('createListControl direction (RTL mirroring)', () => {
   it('an explicit keys override takes precedence over direction mirroring', () => {
     const items = [{ disabled: false }, { disabled: false }];
     const nav = createListControl({
-      direction: 'rtl',
+      direction: () => 'rtl',
       getItems: () => items,
       keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
-      orientation: 'horizontal',
+      orientation: () => 'horizontal',
     });
 
     nav.set(0);

@@ -27,7 +27,7 @@ for (const timeZone of ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo']) {
 ### Pitfalls
 
 - `inTimeZone()` projects the same instant; it does not add elapsed time.
-- Use `shift()` with a `timeZone` option for calendar-aware arithmetic.
+- Use `shift()` when arithmetic must resolve plain or instant inputs in a specific timezone.
 
 ### Related
 

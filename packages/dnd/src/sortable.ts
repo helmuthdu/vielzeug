@@ -1,8 +1,8 @@
-import { warn } from './_dev';
-import { createDisposable, resolveDisabled } from './_shared';
-import { createScopeTouchController, type ScopeTouchController, type TouchInputOptions } from './_touch';
-import { DndScopeError } from './errors';
-import type { Disposable } from './types';
+import { warn } from './_dev.js';
+import { createDisposable, resolveDisabled } from './_shared.js';
+import { createScopeTouchController, type ScopeTouchController, type TouchInputOptions } from './_touch.js';
+import { DndError, DndScopeError } from './errors.js';
+import type { Disposable } from './types.js';
 
 // ─── Branded scope ────────────────────────────────────────────────────────────
 
@@ -11,11 +11,6 @@ const SCOPE_BRAND = Symbol('SortableScope');
 export interface SortableScope extends Disposable {
   /** `true` while any sortable in this scope is actively dragging. */
   readonly isDragging: boolean;
-  /**
-   * Calls the revert function registered for the most recent cross-container move.
-   * A no-op when no move registered a revert function.
-   */
-  revert(): void;
   readonly [SCOPE_BRAND]: true;
 }
 
@@ -34,41 +29,34 @@ export interface AutoScrollOptions {
 
 /**
  * Passed to `onReorder` after every successful reorder (drag or keyboard).
+ * Application history owns rollback — use `before`/`after`/`item` to record
+ * an undo entry.
  */
 export interface ReorderEvent {
-  /** The new ordered list of item keys after the reorder. */
-  ids: string[];
-  /**
-   * Register a revert function that will be called when `sortable.revert()` is invoked.
-   * Useful for rolling back optimistic UI updates on server error.
-   * Only the most recent `setRevert` registration is retained — a new reorder overwrites it.
-   *
-   * @example
-   * ```ts
-   * onReorder: ({ ids, setRevert }) => {
-   *   const prev = order;
-   *   setOrder(ids);
-   *   setRevert(() => setOrder(prev));
-   * },
-   * ```
-   */
-  setRevert(fn: () => void): void;
+  /** Item keys after the reorder. */
+  after: readonly string[];
+  /** Item keys before the reorder. */
+  before: readonly string[];
+  /** Stable identity of the moved item. */
+  item: string;
 }
 
 /** A single committed move between two containers in the same sortable scope. */
 export interface SortableMoveEvent {
   /** Stable identity of the moved item. */
   readonly itemId: string;
-  /** Registers a rollback for the most recent scope move. */
-  setRevert(fn: () => void): void;
   /** Source container before the move. */
   readonly source: HTMLElement;
+  /** Ordered source item IDs before the move. */
+  readonly sourceBeforeIds: readonly string[];
   /** Ordered source item IDs after the move. */
-  readonly sourceIds: string[];
+  readonly sourceIds: readonly string[];
   /** Target container after the move. */
   readonly target: HTMLElement;
+  /** Ordered target item IDs before the move. */
+  readonly targetBeforeIds: readonly string[];
   /** Ordered target item IDs after the move. */
-  readonly targetIds: string[];
+  readonly targetIds: readonly string[];
 }
 
 /**
@@ -153,6 +141,12 @@ export interface SortableOptions {
    */
   handle?: string;
   /**
+   * Returns the current sortable item elements. When omitted the sortable
+   * scans the container's direct children. Provide this for explicit item
+   * ownership — e.g. when items are managed by a framework render loop.
+   */
+  items?: () => readonly HTMLElement[];
+  /**
    * Enables keyboard-based reordering using arrow keys plus Home/End.
    * @default true
    */
@@ -169,7 +163,7 @@ export interface SortableOptions {
    * }
    * ```
    */
-  onBeforeReorder?: (from: string[], to: string[]) => void;
+  onBeforeReorder?: (from: readonly string[], to: readonly string[]) => void;
   /** Called when a drag ends (whether dropped or cancelled). */
   onDragEnd?: (id: string, event: DragEvent) => void;
   /** Called when the user starts dragging an item. */
@@ -181,13 +175,13 @@ export interface SortableOptions {
   onInteraction?: (event: SortableInteractionEvent) => void;
   /**
    * Called with a {@link ReorderEvent} after a successful reorder, only when the order changed.
+   * The event carries `before`, `after`, and `item` so application history can own rollback.
    *
    * @example
    * ```ts
-   * onReorder: ({ ids, setRevert }) => {
-   *   const prev = order;
-   *   setOrder(ids);
-   *   setRevert(() => setOrder(prev));
+   * onReorder: ({ before, after, item }) => {
+   *   history.push({ revert: () => setOrder(before) });
+   *   setOrder(after);
    * },
    * ```
    */
@@ -201,32 +195,14 @@ export interface SortableOptions {
 export interface Sortable extends Disposable {
   readonly isDragging: boolean;
   /**
-   * Calls the revert function registered via `setRevert` in the last `onReorder` invocation (if any) and clears it.
-   * A no-op when no revert function was registered or has already been consumed.
-   *
-   * Works for both drag-based and keyboard-based reorders.
-   * Note: only the most recent reorder can be reverted; a new reorder overwrites the stored function.
-   *
-   * @example
-   * ```ts
-   * onReorder: ({ ids, setRevert }) => {
-   *   const prev = order;
-   *   setOrder(ids);
-   *   setRevert(() => setOrder(prev));
-   * },
-   * // later, on server error:
-   * sortable.revert();
-   * ```
-   */
-  revert(): void;
-  /**
-   * Re-reads the container's children and reapplies `draggable`, ARIA roles,
-   * and handle attributes. Call this after programmatically adding, removing,
-   * or replacing items — e.g. after a framework render that replaces DOM nodes.
+   * Re-reads items from the `items` provider (or the container's direct children)
+   * and reapplies `draggable`, ARIA roles, and handle attributes. Call this after
+   * programmatically adding, removing, or replacing items — e.g. after a framework
+   * render that replaces DOM nodes.
    *
    * Not needed when items are only reordered via drag or keyboard.
    */
-  sync(): void;
+  refresh(): void;
 }
 
 // ─── Internal types ───────────────────────────────────────────────────────────
@@ -240,11 +216,12 @@ interface ResolvedAutoScrollOptions {
 
 /** Per-container closure passed into shared session functions. */
 interface ContainerHandle {
-  commitReorder: (orderedIds: string[]) => void;
+  commitReorder: (event: { after: readonly string[]; before: readonly string[]; item: string }) => void;
   readonly element: HTMLElement;
   getOrderedIds: () => string[];
+  getOrderedItems: () => HTMLElement[];
   isDisabled: () => boolean;
-  notifyBeforeReorder: (from: string[], to: string[]) => void;
+  notifyBeforeReorder: (from: readonly string[], to: readonly string[]) => void;
   notifyDragEnd: (id: string, event: DragEvent) => void;
   notifyDragStart: (id: string, event: DragEvent) => void;
   notifyInteraction: (event: SortableInteractionEvent) => void;
@@ -275,11 +252,10 @@ interface DragSession {
 
 interface SortableScopeState {
   active: DragSession | null;
-  commitMove: (event: Omit<SortableMoveEvent, 'setRevert'>) => void;
+  commitMove: (event: SortableMoveEvent) => void;
   /** All sortables registered in this scope, kept for scope.dispose(). */
   disposables: Set<() => void>;
   handles: Set<ContainerHandle>;
-  lastRevert: (() => void) | null;
   touch: ScopeTouchController | null;
 }
 
@@ -315,6 +291,7 @@ function getSortableScopeState(scope: SortableScope): SortableScopeState {
   const state = sortableScopeStates.get(scope);
 
   if (!state) throw new DndScopeError();
+  if (scope.disposed) throw new DndScopeError('Cannot register a sortable with a disposed scope.');
 
   return state;
 }
@@ -327,6 +304,14 @@ function resolveAutoScrollOptions(
   if (autoScroll === false) return null;
 
   if (autoScroll === true || autoScroll === undefined) return DEFAULT_AUTO_SCROLL;
+  if (
+    !Number.isFinite(autoScroll.edgeThreshold ?? 32) ||
+    (autoScroll.edgeThreshold ?? 32) < 0 ||
+    !Number.isFinite(autoScroll.speed ?? 18) ||
+    (autoScroll.speed ?? 18) <= 0
+  ) {
+    throw new DndError('Auto-scroll edgeThreshold must be non-negative and speed must be positive');
+  }
 
   return {
     container: autoScroll.container ?? true,
@@ -344,6 +329,23 @@ function hasOrderChanged(before: string[], after: string[]): boolean {
 
 function isTouchDragEvent(event: DragEvent): event is TouchDragEvent {
   return (event as TouchDragEvent).__dndTouch === true;
+}
+
+function immutableIds(ids: readonly string[]): readonly string[] {
+  return Object.freeze([...ids]);
+}
+
+function notify<Args extends unknown[]>(
+  name: string,
+  callback: ((...args: Args) => void) | undefined,
+  ...args: Args
+): void {
+  if (!callback) return;
+  try {
+    callback(...args);
+  } catch {
+    warn(`${name} callback failed; Dnd continued without interrupting internal state.`);
+  }
 }
 
 // ─── Drag session helpers ─────────────────────────────────────────────────────
@@ -381,6 +383,25 @@ function snapshotOrder(session: DragSession, handle: ContainerHandle): void {
   }
 }
 
+function projectedChanges(session: DragSession): Array<{ after: string[]; before: string[]; handle: ContainerHandle }> {
+  const target = session.target;
+
+  return [...session.initialOrders].flatMap(([handle, before]) => {
+    const after = before.filter((id) => id !== session.draggedId);
+
+    if (handle === target && session.placeholder.parentElement === handle.element) {
+      const children = [...handle.element.children];
+      const placeholderIndex = children.indexOf(session.placeholder);
+      const insertionIndex = handle
+        .getOrderedItems()
+        .filter((item) => item !== session.draggedEl && children.indexOf(item) < placeholderIndex).length;
+      after.splice(insertionIndex, 0, session.draggedId);
+    }
+
+    return hasOrderChanged(before, after) ? [{ after, before, handle }] : [];
+  });
+}
+
 // ─── Session commit / cancel ──────────────────────────────────────────────────
 
 function cancelSession(scopeState: SortableScopeState, event: DragEvent): void {
@@ -389,7 +410,10 @@ function cancelSession(scopeState: SortableScopeState, event: DragEvent): void {
   if (!session) return;
 
   restoreSessionElement(session);
-  session.originalParent.insertBefore(session.draggedEl, session.originalNextSibling);
+  session.originalParent.insertBefore(
+    session.draggedEl,
+    session.originalNextSibling?.parentNode === session.originalParent ? session.originalNextSibling : null,
+  );
   session.placeholder.remove();
   scopeState.active = null;
 
@@ -409,13 +433,21 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
 
   const targetHandle = session.target;
   const targetElement = session.placeholder.parentElement;
+  const projected = projectedChanges(session);
+
+  for (const { after, before, handle } of projected) {
+    handle.notifyBeforeReorder(immutableIds(before), immutableIds(after));
+  }
 
   restoreSessionElement(session);
 
   if (targetHandle && scopeState.handles.has(targetHandle) && targetElement) {
     targetElement.insertBefore(session.draggedEl, session.placeholder);
   } else {
-    session.originalParent.insertBefore(session.draggedEl, session.originalNextSibling);
+    session.originalParent.insertBefore(
+      session.draggedEl,
+      session.originalNextSibling?.parentNode === session.originalParent ? session.originalNextSibling : null,
+    );
   }
 
   session.placeholder.remove();
@@ -423,7 +455,7 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
 
   session.source.notifyDragEnd(session.draggedId, event);
 
-  const changes: Array<{ after: string[]; before: string[]; handle: ContainerHandle }> = [];
+  const changes: Array<{ after: readonly string[]; before: readonly string[]; handle: ContainerHandle }> = [];
 
   for (const [handle, before] of session.initialOrders) {
     if (!scopeState.handles.has(handle)) continue;
@@ -435,10 +467,6 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
     }
   }
 
-  for (const { after, before, handle } of changes) {
-    handle.notifyBeforeReorder(before, after);
-  }
-
   if (targetHandle && targetHandle !== session.source) {
     const sourceChange = changes.find((change) => change.handle === session.source);
     const targetChange = changes.find((change) => change.handle === targetHandle);
@@ -447,8 +475,10 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
       scopeState.commitMove({
         itemId: session.draggedId,
         source: session.source.element,
+        sourceBeforeIds: sourceChange.before,
         sourceIds: sourceChange.after,
         target: targetHandle.element,
+        targetBeforeIds: targetChange.before,
         targetIds: targetChange.after,
       });
 
@@ -464,8 +494,8 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
     return;
   }
 
-  for (const { after, handle } of changes) {
-    handle.commitReorder(after);
+  for (const { after, before, handle } of changes) {
+    handle.commitReorder({ after, before, item: session.draggedId });
   }
 
   // Same-container — emit drop even when the order didn't change (user picked up
@@ -546,15 +576,12 @@ function maybeAutoScroll(
 
 // ─── Keyboard reorder ─────────────────────────────────────────────────────────
 
-function applyKeyboardReorder(
+function keyboardTargetIndex(
+  items: HTMLElement[],
   item: HTMLElement,
-  element: HTMLElement,
-  getItems: () => HTMLElement[],
-  getOrderedIds: () => string[],
   key: string,
   axis: 'vertical' | 'horizontal',
-): string[] | null {
-  const items = getItems();
+): number | null {
   const currentIndex = items.indexOf(item);
 
   if (currentIndex < 0) return null;
@@ -563,30 +590,15 @@ function applyKeyboardReorder(
   const isBackward = axis === 'vertical' ? key === 'ArrowUp' : key === 'ArrowLeft';
   let targetIndex: number;
 
-  if (isForward) {
-    targetIndex = Math.min(items.length - 1, currentIndex + 1);
-  } else if (isBackward) {
-    targetIndex = Math.max(0, currentIndex - 1);
-  } else if (key === 'Home') {
-    targetIndex = 0;
-  } else if (key === 'End') {
-    targetIndex = items.length - 1;
-  } else {
-    return null;
-  }
+  if (isForward) targetIndex = Math.min(items.length - 1, currentIndex + 1);
+  else if (isBackward) targetIndex = Math.max(0, currentIndex - 1);
+  else if (key === 'Home') targetIndex = 0;
+  else if (key === 'End') targetIndex = items.length - 1;
+  else return null;
 
   // Already at the boundary — return null so the caller does not call preventDefault
   // and the browser can handle the key (e.g. scrolling the page).
-  if (targetIndex === currentIndex) return null;
-
-  const targetItem = items[targetIndex];
-
-  if (!targetItem) return null;
-
-  element.insertBefore(item, targetIndex > currentIndex ? targetItem.nextSibling : targetItem);
-  item.focus();
-
-  return getOrderedIds();
+  return targetIndex === currentIndex ? null : targetIndex;
 }
 
 // ─── createSortableScope ──────────────────────────────────────────────────────
@@ -595,8 +607,6 @@ function applyKeyboardReorder(
  * Create a shared scope for connected sortable containers.
  *
  * Items can be dragged between all sortables that share the same scope.
- * The scope exposes `isDragging` and `dispose()` — calling `dispose()` tears down
- * all member sortables at once.
  *
  * @example
  * ```ts
@@ -612,25 +622,31 @@ export function createSortableScope(options: SortableScopeOptions = {}): Sortabl
   const state: SortableScopeState = {
     active: null,
     commitMove(event): void {
-      options.onMove?.({
-        ...event,
-        setRevert(fn): void {
-          state.lastRevert = fn;
-        },
-      });
+      notify(
+        'onMove',
+        options.onMove,
+        Object.freeze({
+          ...event,
+          sourceBeforeIds: immutableIds(event.sourceBeforeIds),
+          sourceIds: immutableIds(event.sourceIds),
+          targetBeforeIds: immutableIds(event.targetBeforeIds),
+          targetIds: immutableIds(event.targetIds),
+        }),
+      );
     },
     disposables: new Set(),
     handles: new Set(),
-    lastRevert: null,
     touch: null,
   };
   const disposable = createDisposable(() => {
     state.touch?.dispose();
 
     // Dispose all registered sortables (each dispose() call is idempotent)
-    for (const disposeFn of state.disposables) {
+    for (const disposeFn of [...state.disposables]) {
       disposeFn();
     }
+    state.disposables.clear();
+    state.handles.clear();
   });
 
   const scope = {
@@ -644,10 +660,6 @@ export function createSortableScope(options: SortableScopeOptions = {}): Sortabl
     get isDragging() {
       return state.active !== null;
     },
-    revert() {
-      state.lastRevert?.();
-      state.lastRevert = null;
-    },
     [SCOPE_BRAND]: true as const,
     [Symbol.dispose]: disposable[Symbol.dispose],
   } as SortableScope;
@@ -656,6 +668,7 @@ export function createSortableScope(options: SortableScopeOptions = {}): Sortabl
 
   if (options.touch) {
     state.touch = createScopeTouchController(options.touch === true ? {} : options.touch, (target) => {
+      if (state.active) return null;
       for (const handle of state.handles) {
         const dragTarget = handle.resolveTouchTarget(target);
 
@@ -683,15 +696,14 @@ export function createSortableScope(options: SortableScopeOptions = {}): Sortabl
  *
  * @example
  * ```ts
- * import { createSortable } from '@vielzeug/dnd';
+ * import { createSortable } from '@vielzeug/dnd/sortable';
  *
  * using sortable = createSortable({
  *   element: listEl,
  *   getKey: (el) => el.dataset.id!,
- *   onReorder: ({ ids, setRevert }) => {
- *     const prev = order;
- *     setOrder(ids);
- *     setRevert(() => setOrder(prev));
+ *   onReorder: ({ before, after }) => {
+ *     history.push({ revert: () => setOrder(before) });
+ *     setOrder(after);
  *   },
  * });
  * ```
@@ -707,17 +719,30 @@ export function createSortable(options: SortableOptions): Sortable {
     placeholderClass = 'dnd-placeholder',
     scope = createSortableScope(),
   } = options;
-  const autoScrollOptions = resolveAutoScrollOptions(autoScroll);
-  const scopeState = getSortableScopeState(scope);
+  if (axis !== 'vertical' && axis !== 'horizontal') throw new DndError('axis must be "vertical" or "horizontal"');
+  const handleSelector = handle?.trim() || null;
 
-  if (handle !== undefined && handle.trim() === '') {
+  if (handle !== undefined && !handleSelector) {
     warn(
       'handle option is an empty string — no handle elements will be found. Provide a valid CSS selector or omit the option.',
     );
+  } else if (handleSelector) {
+    try {
+      element.querySelector(handleSelector);
+    } catch (error) {
+      throw new DndError(`Invalid handle selector: "${handle}"`, { cause: error });
+    }
   }
 
+  const autoScrollOptions = resolveAutoScrollOptions(autoScroll);
+  const scopeState = getSortableScopeState(scope);
+  if ([...scopeState.handles].some((registered) => registered.element === element)) {
+    throw new DndError('A sortable is already registered for this element in the selected scope.');
+  }
   const getItems = (): HTMLElement[] =>
-    Array.from(element.children).filter((c) => (c as HTMLElement).hasAttribute(ITEM_ATTR)) as HTMLElement[];
+    (options.items ? options.items() : (Array.from(element.children) as HTMLElement[])).filter(
+      (item) => item.parentElement === element && item.hasAttribute(ITEM_ATTR),
+    );
 
   const getOrderedIds = (): string[] => getItems().map((el) => getKey(el));
   const managedElements = new Map<HTMLElement, ManagedElementState>();
@@ -750,33 +775,34 @@ export function createSortable(options: SortableOptions): Sortable {
     }
   };
 
-  const syncItems = (): void => {
-    getItems().forEach((el) => {
+  const syncItems = (items = getItems()): void => {
+    items.forEach((el) => {
       const itemState = rememberElement(el);
 
       if (itemState.role === null) el.setAttribute('role', 'listitem');
 
       if (itemState.tabIndex === null) el.tabIndex = 0;
 
-      if (handle) {
-        el.querySelectorAll<HTMLElement>(handle).forEach((handleEl) => {
-          rememberElement(handleEl);
-          handleEl.setAttribute(HANDLE_ATTR, '');
-          handleEl.setAttribute('draggable', 'true');
-          handleEl.style.touchAction = 'none';
-        });
+      if (handle !== undefined) {
+        handleSelector &&
+          el.querySelectorAll<HTMLElement>(handleSelector).forEach((handleEl) => {
+            rememberElement(handleEl);
+            handleEl.setAttribute(HANDLE_ATTR, '');
+            handleEl.setAttribute('draggable', 'true');
+            if (scopeState.touch) handleEl.style.touchAction = 'none';
+          });
       } else {
         el.setAttribute('draggable', 'true');
         // A native mouse drag has no competing gesture to arbitrate; touch does. Without this,
         // a mobile browser can decide the very first bit of finger movement is a page
         // scroll/pan — a decision it makes independently of, and before, this library's own
-        // touch-shim threshold/`preventDefault()` logic ever runs — and hand the rest of the
+        // Gesture activation-distance/`preventDefault()` logic ever runs — and hand the rest of the
         // gesture to native scrolling. Once that happens the item never receives the
         // `dragover` sequence needed to update the drop target, so the session ends up
         // committing back to wherever it started: indistinguishable from the drop "reverting".
         // `touch-action: none` opts the element out of every default touch gesture from
-        // `touchstart` onward, leaving the whole interaction to this library's own JS.
-        el.style.touchAction = 'none';
+        // `pointerdown` onward, leaving the whole interaction to this library's own JS.
+        if (scopeState.touch) el.style.touchAction = 'none';
       }
     });
   };
@@ -784,34 +810,44 @@ export function createSortable(options: SortableOptions): Sortable {
   const markItems = (): void => {
     const seenKeys = new Set<string>();
 
-    // Mark all children that have a key as sortable items
-    Array.from(element.children).forEach((child) => {
-      const el = child as HTMLElement;
+    // When an explicit items provider is given, use it directly; otherwise scan
+    // the container's direct children for elements that have a key.
+    const provided = options.items ? options.items() : (Array.from(element.children) as HTMLElement[]);
+    const candidates = provided.filter((item) => item instanceof HTMLElement && item.parentElement === element);
+    const keyed: HTMLElement[] = [];
 
+    if (candidates.length !== provided.length) {
+      warn('items returned an element that is not a direct child of the sortable container; it was ignored.');
+    }
+
+    for (const el of candidates) {
       try {
         const key = getKey(el);
 
         if (key) {
-          rememberElement(el);
-
           if (seenKeys.has(key)) {
             warn(
-              `getKey returned the duplicate key "${key}" for two sibling items — onReorder's ids and applyReorder may become inconsistent. Ensure getKey returns a unique value per item.`,
+              `getKey returned the duplicate key "${key}" for two sibling items — the duplicate item was excluded. Ensure getKey returns a unique value per item.`,
             );
-          } else {
-            seenKeys.add(key);
+            continue;
           }
 
-          el.setAttribute(ITEM_ATTR, '');
+          seenKeys.add(key);
+          keyed.push(el);
         }
       } catch (err) {
         warn(
           `getKey threw for a child element — the item will not be sortable. Check your getKey implementation. ${String(err)}`,
         );
       }
-    });
+    }
 
-    syncItems();
+    cleanupItems();
+    for (const el of keyed) {
+      rememberElement(el);
+      el.setAttribute(ITEM_ATTR, '');
+    }
+    syncItems(keyed);
   };
 
   const cleanupItems = (): void => {
@@ -842,44 +878,36 @@ export function createSortable(options: SortableOptions): Sortable {
     return p;
   };
 
-  let lastRevert: (() => void) | null = null;
-
   const handle_: ContainerHandle = {
-    commitReorder: (orderedIds) => {
-      if (!options.onReorder) return;
-
-      const event: ReorderEvent = {
-        ids: orderedIds,
-        setRevert(fn) {
-          lastRevert = fn;
-        },
-      };
-
-      options.onReorder(event);
-    },
+    commitReorder: (event) =>
+      notify(
+        'onReorder',
+        options.onReorder,
+        Object.freeze({ after: immutableIds(event.after), before: immutableIds(event.before), item: event.item }),
+      ),
     element,
     getOrderedIds,
+    getOrderedItems: getItems,
     isDisabled: () => resolveDisabled(options.disabled),
-    notifyBeforeReorder: (from, to) => options.onBeforeReorder?.(from, to),
-    notifyDragEnd: (id, event) => options.onDragEnd?.(id, event),
-    notifyDragStart: (id, event) => options.onDragStart?.(id, event),
-    notifyInteraction: (event) => options.onInteraction?.(event),
+    notifyBeforeReorder: (from, to) => notify('onBeforeReorder', options.onBeforeReorder, from, to),
+    notifyDragEnd: (id, event) => notify('onDragEnd', options.onDragEnd, id, event),
+    notifyDragStart: (id, event) => notify('onDragStart', options.onDragStart, id, event),
+    notifyInteraction: (event) => notify('onInteraction', options.onInteraction, Object.freeze(event)),
     resolveTouchTarget: (target) => {
       if (resolveDisabled(options.disabled) || !element.contains(target)) return null;
 
       const item = target.closest<HTMLElement>(`[${ITEM_ATTR}]`);
 
-      if (!item || !element.contains(item)) return null;
+      if (!item || !getItems().includes(item)) return null;
 
-      if (!handle) return item;
+      if (handle === undefined) return item;
+      if (!handleSelector) return null;
 
-      const handleTarget = target.closest<HTMLElement>(handle);
+      const handleTarget = target.closest<HTMLElement>(handleSelector);
 
       return handleTarget && item.contains(handleTarget) ? handleTarget : null;
     },
   };
-
-  scopeState.handles.add(handle_);
 
   const handleDragStart = (e: DragEvent): void => {
     if (scopeState.active) return;
@@ -889,9 +917,12 @@ export function createSortable(options: SortableOptions): Sortable {
     const target = e.target as HTMLElement;
     const item = target.closest<HTMLElement>(`[${ITEM_ATTR}]`);
 
-    if (!item) return;
+    if (!item || !getItems().includes(item)) return;
 
-    if (handle && !target.closest(handle)) return;
+    if (handle !== undefined) {
+      const handleTarget = handleSelector ? target.closest(handleSelector) : null;
+      if (!handleTarget || !item.contains(handleTarget)) return;
+    }
 
     const originalParent = item.parentElement;
 
@@ -926,15 +957,19 @@ export function createSortable(options: SortableOptions): Sortable {
     scopeState.active = session;
 
     if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', activeId);
+      try {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', activeId);
 
-      if (options.dragImage) {
-        const preview =
-          typeof options.dragImage === 'function' ? options.dragImage(activeId, item, e) : options.dragImage;
-        const [offsetX, offsetY] = options.dragImageOffset ?? [0, 0];
+        if (options.dragImage) {
+          const preview =
+            typeof options.dragImage === 'function' ? options.dragImage(activeId, item, e) : options.dragImage;
+          const [offsetX, offsetY] = options.dragImageOffset ?? [0, 0];
 
-        if (preview) e.dataTransfer.setDragImage(preview, offsetX, offsetY);
+          if (preview) e.dataTransfer.setDragImage(preview, offsetX, offsetY);
+        }
+      } catch (error) {
+        warn(`drag preview setup failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -962,6 +997,8 @@ export function createSortable(options: SortableOptions): Sortable {
 
     const { draggedEl, placeholder } = session;
     const target = (e.target as HTMLElement).closest<HTMLElement>(`[${ITEM_ATTR}]`);
+
+    if (target && !getItems().includes(target)) return;
 
     if (!target) {
       // Only append placeholder when it isn't already inside this container.
@@ -1008,27 +1045,42 @@ export function createSortable(options: SortableOptions): Sortable {
   const handleKeydown = (e: KeyboardEvent): void => {
     if (!keyboard || handle_.isDisabled()) return;
 
-    const tagName = (e.target as HTMLElement | null)?.tagName;
+    const eventTarget = e.target as HTMLElement | null;
+    const item = eventTarget?.closest<HTMLElement>(`[${ITEM_ATTR}]`);
 
-    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return;
+    if (!eventTarget || !item || !getItems().includes(item)) return;
 
-    const item = (e.target as HTMLElement).closest<HTMLElement>(`[${ITEM_ATTR}]`);
+    const interactive = eventTarget.closest<HTMLElement>(
+      'input, textarea, select, button, a[href], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"]',
+    );
+    const keyboardHandle = handleSelector ? eventTarget.closest<HTMLElement>(handleSelector) : null;
 
-    if (!item || !element.contains(item)) return;
+    if (interactive && (!keyboardHandle || !item.contains(keyboardHandle))) return;
 
-    const prevOrder = getOrderedIds();
-    const activeId = getKey(item);
-    const prevIndex = prevOrder.indexOf(activeId);
-    const newOrder = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis);
+    const items = getItems();
+    const prevIndex = items.indexOf(item);
+    const targetIndex = keyboardTargetIndex(items, item, e.key, axis);
 
     // null means unrecognized key or boundary — let the browser handle it (e.g. page scroll)
-    if (newOrder === null) return;
+    if (targetIndex === null) return;
+
+    const targetItem = items[targetIndex];
+    if (!targetItem) return;
+
+    const prevOrder = items.map(getKey);
+    const reorderedItems = [...items];
+    reorderedItems.splice(prevIndex, 1);
+    reorderedItems.splice(targetIndex, 0, item);
+    const newOrder = reorderedItems.map(getKey);
+    const activeId = getKey(item);
 
     e.preventDefault();
-    handle_.notifyBeforeReorder(prevOrder, newOrder);
-    handle_.commitReorder(newOrder);
+    handle_.notifyBeforeReorder(immutableIds(prevOrder), immutableIds(newOrder));
+    element.insertBefore(item, targetIndex > prevIndex ? targetItem.nextSibling : targetItem);
+    item.focus();
+    handle_.commitReorder({ after: newOrder, before: prevOrder, item: activeId });
     handle_.notifyInteraction({
-      index: newOrder.indexOf(activeId),
+      index: targetIndex,
       itemId: activeId,
       previousIndex: prevIndex,
       total: newOrder.length,
@@ -1038,17 +1090,26 @@ export function createSortable(options: SortableOptions): Sortable {
 
   markItems();
 
+  let stopTouch: (() => void) | undefined;
   const disposable = createDisposable(() => {
     scopeState.disposables.delete(disposable.dispose);
 
-    if (scopeState.active && (scopeState.active.source === handle_ || scopeState.active.target === handle_)) {
+    if (
+      scopeState.active &&
+      (scopeState.active.source === handle_ || scopeState.active.target === handle_) &&
+      !scopeState.touch?.cancel()
+    ) {
       finishSession(scopeState, new Event('dragend') as DragEvent, true);
     }
 
+    stopTouch?.();
     scopeState.handles.delete(handle_);
     restoreAttribute(element, 'role', originalContainerRole);
     cleanupItems();
   });
+
+  scopeState.handles.add(handle_);
+  stopTouch = scopeState.touch?.register(element);
 
   if (originalContainerRole === null) element.setAttribute('role', 'list');
 
@@ -1072,12 +1133,8 @@ export function createSortable(options: SortableOptions): Sortable {
     get isDragging() {
       return scopeState.active?.source === handle_;
     },
-    revert: () => {
-      lastRevert?.();
-      lastRevert = null;
-    },
     [Symbol.dispose]: disposable[Symbol.dispose],
-    sync: () => {
+    refresh: () => {
       markItems();
     },
   };
@@ -1087,10 +1144,16 @@ export function createSortable(options: SortableOptions): Sortable {
 
 /**
  * Applies a sorted key array to a backing data array.
- * Unknown keys are ignored; items not present in `ids` are appended in original order.
+ * Unknown keys are ignored; omitted items are appended and duplicate backing keys throw `DndError`.
  */
-export function applyReorder<T>(items: T[], ids: string[], getKey: (item: T) => string): T[] {
-  const byId = new Map(items.map((item) => [getKey(item), item] as const));
+export function applyReorder<T>(items: readonly T[], ids: readonly string[], getKey: (item: T) => string): T[] {
+  const byId = new Map<string, T>();
+
+  for (const item of items) {
+    const id = getKey(item);
+    if (byId.has(id)) throw new DndError(`Duplicate item key: "${id}"`);
+    byId.set(id, item);
+  }
   const ordered: T[] = [];
 
   for (const id of ids) {
@@ -1106,3 +1169,6 @@ export function applyReorder<T>(items: T[], ids: string[], getKey: (item: T) => 
 
   return ordered;
 }
+
+export { DndError, DndScopeError } from './errors.js';
+export type { Disposable } from './types.js';

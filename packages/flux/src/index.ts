@@ -1,15 +1,15 @@
-export { toAsyncIterable } from './async';
-export { stream } from './core';
-export { FluxCapacityError, FluxEmptyError, FluxError, FluxTimeoutError } from './errors';
-export { combineLatest, concat, merge } from './operators/combination';
-export type { TimerOptions } from './operators/creation';
-export { from, fromEvent, interval, of, timer } from './operators/creation';
-export { debounce, take, takeUntil, timeout } from './operators/filtering';
-export type { FlattenOptions } from './operators/transformation';
-export { concatMap, filter, map, mergeMap, scan, switchMap } from './operators/transformation';
-export type { RetryOptions, ToArrayOptions, ValueOptions } from './operators/utility';
-export { first, last, retry, toArray } from './operators/utility';
-export { pipe } from './pipe';
+export { toAsyncIterable } from './async.js';
+export { fromStore, fromSubscribe, stream } from './core.js';
+export { FluxCapacityError, FluxEmptyError, FluxError, FluxTimeoutError } from './errors.js';
+export { combineLatest, concat, merge } from './operators/combination.js';
+export type { TimerOptions } from './operators/creation.js';
+export { from, fromEvent, interval, of, timer } from './operators/creation.js';
+export { debounce, take, takeUntil, timeout } from './operators/filtering.js';
+export type { FlattenOptions } from './operators/transformation.js';
+export { concatMap, filter, map, mergeMap, scan, switchMap } from './operators/transformation.js';
+export type { RetryOptions, ToArrayOptions, ValueOptions } from './operators/utility.js';
+export { first, last, retry, toArray } from './operators/utility.js';
+export { pipe } from './pipe.js';
 export type {
   AsyncIterableOptions,
   Observer,
@@ -21,4 +21,4 @@ export type {
   SubscribeOptions,
   Subscription,
   Teardown,
-} from './types';
+} from './types.js';

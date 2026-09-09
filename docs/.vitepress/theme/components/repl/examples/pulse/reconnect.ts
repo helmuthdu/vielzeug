@@ -17,7 +17,7 @@ chat.on('message', ({ from, text }) => console.log(from + ': ' + text))
 // Connect explicitly to observe the status
 try {
   await pulse.connect()
-  console.log('connected, status:', pulse.status.value)
+  console.log('connected, status:', pulse.status.getSnapshot())
 } catch (err) {
   if (err instanceof PulseConnectionError) {
     console.log('connection failed:', err.message)

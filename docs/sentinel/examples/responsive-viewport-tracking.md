@@ -22,7 +22,7 @@ document.body.append(output);
 function observeBreakpoint(): () => void {
   const viewport = createViewport();
   const render = () => {
-    const width = viewport.value.width;
+    const width = viewport.getSnapshot().width;
     output.value = width < 640 ? 'mobile' : width < 1024 ? 'tablet' : 'desktop';
   };
 
@@ -42,7 +42,7 @@ const stopObserving = observeBreakpoint();
 ### Pitfalls
 
 - Use CSS media queries when only presentation changes.
-- Read the new snapshot from `viewport.value` inside the listener.
+- Read the new snapshot from `viewport.getSnapshot()` inside the listener.
 - Dispose the Sentinel and unsubscribe the listener when their owner ends.
 
 ### Related

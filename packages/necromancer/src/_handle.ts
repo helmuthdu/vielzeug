@@ -9,6 +9,12 @@ function attachAbortSignalListener(signal: AbortSignal, dispose: (reason?: unkno
 
   signal.addEventListener('abort', abort, { once: true });
 
+  if (signal.aborted) {
+    signal.removeEventListener('abort', abort);
+    dispose(signal.reason);
+    return () => undefined;
+  }
+
   return () => signal.removeEventListener('abort', abort);
 }
 

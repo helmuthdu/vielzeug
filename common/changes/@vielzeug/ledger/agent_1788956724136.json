@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove the Ripple runtime dependency and injection option, expose framework-neutral LedgerReadable state, and isolate state subscribers from operation bookkeeping.",
+      "packageName": "@vielzeug/ledger",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ledger"
+}

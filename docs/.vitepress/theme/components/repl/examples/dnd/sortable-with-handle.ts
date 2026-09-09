@@ -1,5 +1,5 @@
 export const sortableWithHandleExample = {
-  code: `import { createSortable } from '@vielzeug/dnd'
+  code: `import { createSortable } from '@vielzeug/dnd/sortable'
 
 const listEl = document.createElement('ul')
 listEl.style.cssText = 'list-style:none;padding:0;width:250px;'
@@ -33,7 +33,7 @@ const sortable = createSortable({
   element: listEl,
   getKey: (el) => el.dataset.id ?? '',
   handle: '.drag-handle',
-  onReorder: ({ ids }) => console.log('Reordered:', ids),
+  onReorder: ({ after }) => console.log('Reordered:', after),
 })
 
 console.log('Handle-based sortable created. isDragging:', sortable.isDragging)`,

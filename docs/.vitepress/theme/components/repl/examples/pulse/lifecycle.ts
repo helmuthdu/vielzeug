@@ -13,7 +13,7 @@ pulse.tap((event) => {
 })
 
 // Construction is closed. connect() makes the transport available.
-console.log('initial status:', pulse.status.value)
+console.log('initial status:', pulse.status.getSnapshot())
 
 // disposalSignal aborts when dispose() is called
 pulse.disposalSignal.addEventListener('abort', () => {
@@ -22,7 +22,7 @@ pulse.disposalSignal.addEventListener('abort', () => {
 
 try {
   await pulse.connect()
-  console.log('connected:', pulse.status.value)
+  console.log('connected:', pulse.status.getSnapshot())
 } catch (err) {
   console.log('connect failed:', err.message)
 }

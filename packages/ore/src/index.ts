@@ -16,12 +16,11 @@ export { when } from './directives/when';
 export { OreApiError, OreError, type OreErrorPhase, OreInternalError, OreLifecycleError } from './errors';
 export { type FormFieldHandle, type FormFieldOptions, useField } from './forms/field';
 export {
+  type AttributeBindings,
   type BindOptions,
   bind,
   type HostBindConfig,
-  type HostBindFn,
   type HostBindingValue,
-  type ReflectConfig,
 } from './host-bind';
 export type { InferProps, PropDef, PropInputDefs, PropsDef } from './props';
 export { prop } from './props';
@@ -43,4 +42,4 @@ export { type HTMLResult, type Ref, type RefCallback, ref } from './template/res
 export { type CSSResult, css } from './utils/css';
 export { type EmitFn, useEmit } from './utils/emit';
 
-export { createId, createStableId, resetStableIdCounter } from './utils/id';
+export { createId } from './utils/id';

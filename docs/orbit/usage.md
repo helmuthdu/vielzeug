@@ -17,11 +17,10 @@ const positioner = createPositioner(trigger, tooltip, {
   placement: 'top',
 });
 
-positioner.start();
 positioner.dispose();
 ```
 
-`createPositioner()` owns clipping-boundary resolution, updates, CSS strategy, and cleanup.
+`createPositioner()` applies the initial position before returning and owns clipping-boundary resolution, updates, CSS strategy, and cleanup.
 
 ## Coordinate Strategy
 
@@ -33,7 +32,6 @@ const positioner = createPositioner(trigger, dropdown, {
   strategy: 'absolute',
 });
 
-positioner.start();
 ```
 
 Orbit resolves clipping ancestors by default. Pass an explicit `boundary` when your application owns a different visible region.
@@ -66,7 +64,6 @@ const reference = {
 };
 
 const positioner = createPositioner(reference, menu, { placement: 'bottom-start' });
-positioner.start();
 ```
 
 ## Manual Positioning
@@ -93,7 +90,6 @@ const positioner = createReactivePositioner(trigger, tooltip);
 
 effect(() => {
   const position = positioner.position.value;
-  if (!position) return;
 
   tooltip.style.left = `${position.x}px`;
   tooltip.style.top = `${position.y}px`;
@@ -107,7 +103,6 @@ Orbit root imports are server-safe. Invoke geometry APIs only from a client moun
 ```ts
 onMounted(() => {
   const positioner = createPositioner(trigger, panel);
-  positioner.start();
   onCleanup(() => positioner.dispose());
 });
 ```
@@ -121,7 +116,6 @@ Create and dispose positioners with component lifecycle.
 ```tsx [React]
 useEffect(() => {
   const positioner = createPositioner(trigger, panel);
-  positioner.start();
 
   return () => positioner.dispose();
 }, [trigger, panel]);
@@ -131,7 +125,6 @@ useEffect(() => {
 <script setup lang="ts">
 onMounted(() => {
   const positioner = createPositioner(trigger.value!, panel.value!);
-  positioner.start();
   onUnmounted(() => positioner.dispose());
 });
 </script>
@@ -140,7 +133,6 @@ onMounted(() => {
 ```ts [Svelte]
 onMount(() => {
   const positioner = createPositioner(trigger, panel);
-  positioner.start();
 
   return () => positioner.dispose();
 });
@@ -160,13 +152,12 @@ const positioner = createPositioner(cursorReference, tooltip, {
   strategy: 'absolute',
 });
 
-positioner.start();
 positioner.dispose();
 ```
 
 ## Best Practices
 
-- **Start** a positioner after both DOM elements mount.
+- **Create** a positioner after both DOM elements mount; it starts immediately.
 - **Dispose** it with its UI owner.
 - **Choose** `fixed` or `absolute` intentionally.
 - **Keep** middleware order explicit.

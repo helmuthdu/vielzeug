@@ -28,4 +28,3 @@ isPlainObject(null); // false
 ### Related
 
 - [isArray](./isArray.md)
-- [isNil](./isNil.md)

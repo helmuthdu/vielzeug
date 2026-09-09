@@ -1,14 +1,14 @@
 import { bind, createContext, define, getHost, html, onCleanup, prop, provide, useEmit } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
 import { createListControl, lifecycleSignal } from '../../core';
-import type { ComponentSize, SurfaceVariant } from '../../types';
+import type { ComponentSize, VisualVariant } from '../../types';
 import styles from './accordion.css?inline';
 
 /** Context provided by ore-accordion to its ore-accordion-item children. */
 export type AccordionContext = {
   selectionMode: Readable<'single' | 'multiple' | undefined>;
   size: Readable<ComponentSize | undefined>;
-  variant: Readable<SurfaceVariant | undefined>;
+  variant: Readable<VisualVariant | undefined>;
 };
 /** Injection key for the accordion context. */
 export const ACCORDION_CTX = createContext<AccordionContext>('AccordionContext');
@@ -25,7 +25,7 @@ export type OreAccordionProps = {
   /** Size for all items (propagated via context) */
   size?: ComponentSize;
   /** Visual variant for all items (propagated via context) */
-  variant?: SurfaceVariant;
+  variant?: VisualVariant;
 };
 
 /**
@@ -36,14 +36,14 @@ export type OreAccordionProps = {
  *
  * @attr {string} selection-mode - Selection mode: 'single' | 'multiple'
  * @attr {string} size - Size for all items: 'sm' | 'md' | 'lg' (propagated to children)
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'text' | 'glass' | 'frost' (propagated to children)
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'text' | 'frost' (propagated to children)
  *
  * @fires expand - Emitted when an item expands. detail: { expanded: boolean; item: HTMLElement }
  * @fires change - Emitted when selection changes (single mode). detail: { expandedItem: HTMLElement }
  *
  * @slot - `ore-accordion-item` elements
  *
- * @cssprop --accordion-bg - Container background color (solid/flat/glass/frost variants)
+ * @cssprop --accordion-bg - Container background color (solid/flat/frost variants)
  * @cssprop --accordion-border-color - Container border color (solid/flat variants)
  * @cssprop --accordion-divider-color - Divider color between items (text variant)
  * @cssprop --accordion-shadow - Container box shadow
@@ -70,7 +70,7 @@ define<OreAccordionProps>(ACCORDION_TAG, {
   props: {
     selectionMode: prop.string<'single' | 'multiple'>(),
     size: prop.string<ComponentSize>(),
-    variant: prop.string<SurfaceVariant>(),
+    variant: prop.string<VisualVariant>(),
   },
 
   setup(props) {

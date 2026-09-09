@@ -30,7 +30,6 @@ export interface PresetOptions {
  * ```ts
  * import { tooltip } from '@vielzeug/orbit/presets';
  * const positioner = createPositioner(trigger, tooltipEl, tooltip());
- * positioner.start();
  * ```
  */
 export function tooltip(options: PresetOptions = {}): PositioningPreset {
@@ -50,7 +49,6 @@ export function tooltip(options: PresetOptions = {}): PositioningPreset {
  * ```ts
  * import { dropdown } from '@vielzeug/orbit/presets';
  * const positioner = createPositioner(trigger, panel, dropdown());
- * positioner.start();
  * ```
  */
 export function dropdown(options: PresetOptions = {}): PositioningPreset {
@@ -70,7 +68,6 @@ export function dropdown(options: PresetOptions = {}): PositioningPreset {
  * ```ts
  * import { popover } from '@vielzeug/orbit/presets';
  * const positioner = createPositioner(trigger, panel, popover());
- * positioner.start();
  * ```
  */
 export function popover(options: PresetOptions = {}): PositioningPreset {
@@ -92,7 +89,6 @@ export function popover(options: PresetOptions = {}): PositioningPreset {
  * document.addEventListener('contextmenu', (e) => {
  *   const vref = { getBoundingClientRect: () => ({ x: e.clientX, y: e.clientY, width: 0, height: 0, ... }) };
  *   const positioner = createPositioner(vref, menu, contextMenu());
- *   positioner.start();
  * });
  * ```
  */

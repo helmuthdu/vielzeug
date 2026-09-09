@@ -17,8 +17,9 @@
  * ```
  *
  * @param signal - The aborted signal to extract the error from.
- * @returns The abort reason, or a new `DOMException('Aborted', 'AbortError')`.
+ * @param message - Fallback AbortError message when the signal has no reason.
+ * @returns The abort reason, or a new `DOMException(message, 'AbortError')`.
  */
-export function abortError(signal?: AbortSignal): unknown {
-  return signal?.reason ?? new DOMException('Aborted', 'AbortError');
+export function abortError(signal?: AbortSignal, message = 'Aborted'): unknown {
+  return signal?.reason ?? new DOMException(message, 'AbortError');
 }

@@ -1,25 +1,20 @@
 export const basicRulesExample = {
-  code: `import { ANONYMOUS, WILDCARD, allow, createWard, deny } from '@vielzeug/ward'
+  code: `import { WILDCARD, createWard } from '@vielzeug/ward'
 
-// Role-based access control with wildcard and anonymous support
+// Ordered first-match rules — the first matching rule wins; default deny if none match
 const ward = createWard([
-  allow(WILDCARD,  'posts', ['read']),
-  allow('editor',  'posts', ['update']),
-  deny('blocked',  WILDCARD, [WILDCARD]),
-  allow(ANONYMOUS, 'posts', ['read']),
+  { action: WILDCARD, resource: WILDCARD, effect: 'deny', condition: ({ principal }) => principal?.roles.includes('blocked') ?? false },
+  { action: 'read',   resource: 'posts', effect: 'allow' },
+  { action: 'update', resource: 'posts', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('editor') ?? false },
 ])
 
-const viewer   = { id: 'u1', roles: ['viewer'] }
-const editor   = { id: 'u2', roles: ['editor'] }
-const blocked  = { id: 'u3', roles: ['blocked'] }
+const viewer  = { id: 'u1', roles: ['viewer'] }
+const editor  = { id: 'u2', roles: ['editor'] }
+const blocked = { id: 'u3', roles: ['blocked'] }
 
-const explain = (p: typeof viewer | null, action: string) =>
-  ward.explain({ action, principal: p, resource: 'posts' }).allowed
-
-console.log('viewer  read:  ', explain(viewer,  'read'))    // true
-console.log('viewer  update:', explain(viewer,  'update'))  // false
-console.log('editor  update:', explain(editor,  'update'))  // true
-console.log('blocked read:  ', explain(blocked, 'read'))    // false
-console.log('anon    read:  ', explain(null,    'read'))    // true`,
+console.log('viewer  read:  ', ward.decide({ action: 'read',   principal: viewer,  resource: 'posts' }).effect)  // allow
+console.log('viewer  update:', ward.decide({ action: 'update', principal: viewer,  resource: 'posts' }).effect)  // deny
+console.log('editor  update:', ward.decide({ action: 'update', principal: editor,  resource: 'posts' }).effect)  // allow
+console.log('blocked read:  ', ward.decide({ action: 'read',   principal: blocked, resource: 'posts' }).effect)  // deny`,
   name: 'Basic Rules',
 };

@@ -1,5 +1,5 @@
 export const dropZoneDisposalExample = {
-  code: `import { createDropZone } from '@vielzeug/dnd'
+  code: `import { createDropZone } from '@vielzeug/dnd/drop'
 
 const dropEl = document.createElement('div')
 dropEl.style.cssText = 'width:300px;height:150px;border:2px dashed #ccc;display:flex;align-items:center;justify-content:center;'

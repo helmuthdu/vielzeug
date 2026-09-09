@@ -19,21 +19,18 @@ Pass chord sequences as space-separated shortcut strings and mount to target ele
 import { createKeymap } from '@vielzeug/keymap';
 
 const map = createKeymap(
-  {
-    'g g': () => scrollToTop(),
-    'shift+g': () => scrollToBottom(), // Vim's `G` — a single keystroke, not a `g`-prefixed chord
-    'g h': () => navigateHome(),
-    'g e': () => navigateEnd(),
-    'z z': () => centerCurrentLine(),
-    'ctrl+w ctrl+h': () => focusLeftPane(),
-    'ctrl+w ctrl+l': () => focusRightPane(),
-    'ctrl+w ctrl+j': () => focusBottomPane(),
-    'ctrl+w ctrl+k': () => focusTopPane(),
-  },
-  {
-    chordTimeout: 800,
-    preventDefault: true,
-  },
+  [
+    { id: 'top', shortcut: 'g g', handler: () => scrollToTop() },
+    { id: 'bottom', shortcut: 'shift+g', handler: () => scrollToBottom() }, // Vim's `G` — a single keystroke, not a `g`-prefixed chord
+    { id: 'home', shortcut: 'g h', handler: () => navigateHome() },
+    { id: 'end', shortcut: 'g e', handler: () => navigateEnd() },
+    { id: 'center', shortcut: 'z z', handler: () => centerCurrentLine() },
+    { id: 'left', shortcut: 'ctrl+w ctrl+h', handler: () => focusLeftPane() },
+    { id: 'right', shortcut: 'ctrl+w ctrl+l', handler: () => focusRightPane() },
+    { id: 'down', shortcut: 'ctrl+w ctrl+j', handler: () => focusBottomPane() },
+    { id: 'up', shortcut: 'ctrl+w ctrl+k', handler: () => focusTopPane() },
+  ],
+  { chordTimeout: 800 },
 );
 
 map.mount(document.getElementById('editor')!);
@@ -46,7 +43,7 @@ without eating `x`.
 
 ### Pitfalls
 
-- Shortcut strings are lowercased before matching, so a chord like `'g g'` and a *different* string that happens to canonicalize to the same steps (e.g. differing only by letter case) collide — the second one silently overwrites the first at construction time. Use a distinct key (like `shift+g` above, matching Vim's actual `G` binding) instead of relying on case to distinguish two chords.
+- Shortcut strings are lowercased before matching. Canonically equivalent shortcuts with different IDs coexist, but only the first binding whose guard passes fires. Use a distinct key such as `shift+g` when case represents different behavior.
 - A single-key binding sharing the first step of a longer chord (e.g. binding `'g'` alongside `'g g'`) always wins immediately — the longer chord becomes unreachable. Use [`findShortcutConflicts()`](/keymap/api.md#findshortcutconflicts) to catch this before it ships.
 - A short `chordTimeout` (under ~300 ms) can make two-step chords feel unreliable for anyone typing at a normal pace; 800 ms–1000 ms is a safer default for navigation chords.
 

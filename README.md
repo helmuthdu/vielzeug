@@ -146,7 +146,7 @@ pnpm add @vielzeug/forge
 
 ### [@vielzeug/spell](packages/spell) – Schema Validation
 
-Lightweight, type-safe schema validation with async support and zero dependencies.
+Zero-dependency schema validation with explicit async checks and Standard Schema interoperability.
 
 ```bash
 pnpm add @vielzeug/spell
@@ -379,7 +379,7 @@ pnpm add @vielzeug/keymap
 
 ### [@vielzeug/lingua](packages/lingua) – Internationalization
 
-Lightweight, type-safe i18n with pluralization, interpolation, and async loading.
+Lightweight, type-safe i18n with pluralization, interpolation, and lazy locale loading.
 
 ```bash
 pnpm add @vielzeug/lingua
@@ -389,8 +389,9 @@ pnpm add @vielzeug/lingua
 
 - Type-safe translation keys with autocomplete
 - Pluralization rules and interpolation
-- Async translation loading and lazy namespaces
-- Framework agnostic (7.4 KB min / 1.6 KB gz)
+- Lazy locale catalog loading via `loadCatalog`
+- Typed discriminated parts for framework content
+- Framework agnostic
 
 [📖 Documentation](https://vielzeug.dev/lingua/) • [Examples](https://vielzeug.dev/lingua/examples)
 
@@ -398,7 +399,7 @@ pnpm add @vielzeug/lingua
 
 ### [@vielzeug/herald](packages/herald) – Typed Event Bus
 
-Lightweight typed event bus with `on`, `once`, `emit`, `wait`, `waitAny`, and async streams.
+Lightweight typed synchronous event bus with wildcard subscriptions, one-shot waits, lifecycle signals, and runtime tracing.
 
 ```bash
 pnpm add @vielzeug/herald
@@ -459,7 +460,7 @@ pnpm add @vielzeug/dnd
 
 ### [@vielzeug/ledger](packages/ledger) – Undo/Redo History
 
-Async undo/redo command history with reactive `canUndo` / `canRedo` signals.
+Serialized reversible command history with framework-neutral atomic state and cancellation ownership.
 
 ```bash
 pnpm add @vielzeug/ledger
@@ -467,10 +468,10 @@ pnpm add @vielzeug/ledger
 
 **Key Features:**
 
-- `createLedger()` — execute, undo, and redo typed `Command` objects
-- `compose()` to group multiple commands into a single undoable unit
-- Reactive `canUndo` and `canRedo` signals via `@vielzeug/ripple`
-- Configurable history limit and async execute/rollback support
+- `createLedger()` — apply, undo, and redo typed `ReversibleCommand` objects
+- `compose()` groups multiple commands into one undoable unit
+- Exported `LedgerReadable` state contract for framework adapters
+- Configurable history limit and abort-aware asynchronous operations
 - Typed error hierarchy: `LedgerExecutionError`, `LedgerRollbackError`
 
 [📖 Documentation](https://vielzeug.dev/ledger/) • [Examples](https://vielzeug.dev/ledger/examples)
@@ -517,9 +518,9 @@ pnpm add @vielzeug/necromancer
 
 ---
 
-### [@vielzeug/prism](packages/prism) – Reactive SVG Charts
+### [@vielzeug/prism](packages/prism) – Responsive SVG Charts
 
-Reactive SVG charting library with signal-driven updates — line, bar, area, pie, and sparkline charts.
+Responsive SVG charts with explicit typed updates — line, bar, area, pie, and sparkline charts.
 
 ```bash
 pnpm add @vielzeug/prism
@@ -560,7 +561,7 @@ pnpm add @vielzeug/sandbox
 
 ### [@vielzeug/scout](packages/scout) – Fuzzy Search
 
-Fast fuzzy search with a trigram index, per-field weighting, match highlighting, and an optional reactive layer.
+Fast fuzzy search with a trigram index, per-field weighting, match highlighting, and an atomic framework-neutral search store.
 
 ```bash
 pnpm add @vielzeug/scout
@@ -569,7 +570,7 @@ pnpm add @vielzeug/scout
 **Key Features:**
 
 - `createIndex()` — build a trigram-indexed search index from any array of objects
-- `createSearch()` for single-shot queries and `createReactiveSearch()` for signal-driven live filtering
+- `createSearch()` and `createReactiveSearch()` for debounced live filtering through atomic external-store snapshots
 - Per-field boost weights and configurable score threshold
 - `highlight()` and `highlightField()` for match range extraction and rendering helpers
 - `toSearchMatcher()` and `toFilterPredicate()` adapters for integration with existing pipelines
@@ -580,7 +581,7 @@ pnpm add @vielzeug/scout
 
 ### [@vielzeug/sourcerer](packages/sourcerer) – Reactive Data Sources
 
-Reactive local and remote data sources with pagination, filtering, sorting, and search.
+Reactive local and remote collection sources with numbered-page, cursor, and infinite pagination.
 
 ```bash
 pnpm add @vielzeug/sourcerer
@@ -588,10 +589,10 @@ pnpm add @vielzeug/sourcerer
 
 **Key Features:**
 
-- `createLocalSource()` and `createPageSource()` with atomic source snapshots
-- Reactive `items`, `total`, `loading`, and `error` signals
-- Built-in fuzzy search, multi-field sorting, and pagination
-- Zero dependencies
+- `createLocalSource()`, `createPageSource()`, `createCursorSource()`, and `createInfiniteSource()`
+- Atomic collection state with items, loading, errors, params, and pagination
+- Consumer-owned typed loader params and explicit request succession
+- One tree-shakeable workspace dependency
 
 [📖 Documentation](https://vielzeug.dev/sourcerer/) • [Examples](https://vielzeug.dev/sourcerer/examples)
 
@@ -617,9 +618,9 @@ pnpm add @vielzeug/scroll
 
 ---
 
-### [@vielzeug/sentinel](packages/sentinel) – Reactive Environment State
+### [@vielzeug/sentinel](packages/sentinel) – Browser Environment Snapshots
 
-Observe external browser environment state through Ripple reactive signals.
+Observe browser and DOM state through framework-neutral subscribable snapshots.
 
 ```bash
 pnpm add @vielzeug/sentinel
@@ -627,11 +628,11 @@ pnpm add @vielzeug/sentinel
 
 **Key Features:**
 
-- Reactive viewport dimensions and DPR tracking
+- Viewport dimensions and DPR tracking
 - Network status and connection monitoring
 - Media query observation
 - Element resize and intersection tracking
-- Idempotent disposal with Ripple signal integration
+- Callback-safe external-store subscriptions with explicit disposal
 
 [📖 Documentation](https://vielzeug.dev/sentinel/) • [Examples](https://vielzeug.dev/sentinel/examples)
 
@@ -750,7 +751,7 @@ pnpm add @vielzeug/illusionist
 - Eight categories: `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, `system`
 - Locale-aware (`en`, `de`) with custom locale support via `IllusionistLocale` type
 - Returns `Money` (coins) and `Temporal.ZonedDateTime` (tempo) for cross-package compatibility
-- `dispose()` / `using` cleanup; `system.uuid()` uses crypto (non-deterministic by design)
+- No cleanup lifecycle; `system.uuid()` uses crypto and is non-deterministic by design
 
 [📖 Documentation](https://vielzeug.dev/illusionist/) • [Examples](https://vielzeug.dev/illusionist/examples)
 
@@ -775,7 +776,7 @@ yarn add @vielzeug/forge @vielzeug/courier
 
 ```typescript
 import { createForm } from '@vielzeug/forge';
-import { customValidator } from '@vielzeug/forge/spell';
+import { schemaValidator } from '@vielzeug/forge/schema';
 import { s, type Infer } from '@vielzeug/spell';
 import { createCourier } from '@vielzeug/courier';
 import { createLogger } from '@vielzeug/rune';
@@ -795,7 +796,7 @@ const courier = createCourier({ baseUrl: 'https://api.example.com' });
 // Form wired to the schema
 const form = createForm<LoginInput>({
   initialValues: { email: '', password: '' },
-  validate: customValidator(LoginSchema),
+  validate: schemaValidator(LoginSchema),
 });
 
 form.submit(async (values) => {
@@ -865,7 +866,7 @@ vielzeug/
 │   ├── lingua/        # Internationalization
 │   ├── orbit/         # Floating element positioning
 │   ├── ore/           # Web component primitives
-│   ├── prism/         # Reactive SVG charts
+│   ├── prism/         # Responsive SVG charts
 │   ├── pulse/         # WebSocket client
 │   ├── refine/        # Accessible web components (built on ore)
 │   ├── ripple/        # Reactive signals and state
@@ -919,7 +920,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/gesture`      | —                            | —              | 0            |
 | `@vielzeug/herald`       | **6.0 KB**                   | **2.4 KB**     | 0            |
 | `@vielzeug/keymap`       | —                            | —              | 0            |
-| `@vielzeug/ledger`       | —                            | —              | 1\*          |
+| `@vielzeug/ledger`       | —                            | —              | 0            |
 | `@vielzeug/lingua`       | **9.1 KB**                   | **3.7 KB**     | 0            |
 | `@vielzeug/necromancer`        | **3.2 KB**                   | **1.5 KB**     | 0            |
 | `@vielzeug/orbit`        | **12.7 KB**                  | **4.8 KB**     | 0            |
@@ -928,10 +929,10 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/ripple`       | **16.3 KB**                  | **5.4 KB**     | 0            |
 | `@vielzeug/rune`         | **7.8 KB**                   | **3.4 KB**     | 0            |
 | `@vielzeug/sandbox`      | —                            | —              | 0            |
-| `@vielzeug/scout`        | —                            | —              | 1\*          |
+| `@vielzeug/scout`        | —                            | —              | 0            |
 | `@vielzeug/scroll`       | **18.3 KB**                  | **6.2 KB**     | 0            |
 | `@vielzeug/refine`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
-| `@vielzeug/sourcerer`    | **17.2 KB**                  | **5.2 KB**     | 1\*          |
+| `@vielzeug/sourcerer`    | **8.5 KB**                   | **2.6 KB**     | 1\*          |
 | `@vielzeug/spell`        | **49.1 KB**                  | **11.9 KB**    | 0            |
 | `@vielzeug/tempo`        | **12.5 KB**                  | **4.0 KB**     | 0            |
 | `@vielzeug/vault`        | **26.9 KB**                  | **8.7 KB**     | 0            |
@@ -972,14 +973,6 @@ Please ensure:
 - All tests pass (`pnpm test`)
 - Code follows the style guide (`pnpm lint`)
 - Documentation is updated if needed
-
----
-
-## 📄 License
-
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
-
-Each package is individually licensed under the MIT License. See the `LICENSE` file in each package directory for details.
 
 ---
 
@@ -1032,10 +1025,8 @@ Packages follow semantic versioning independently. Each package has its own chan
 
 ---
 
-<div align="center">
+## 📄 License
 
-**Made with ❤️ by [Helmuth Saatkamp](https://github.com/helmuthdu)**
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu)
 
-[⬆ Back to Top](#vielzeug)
-
-</div>
+Each package is individually licensed under the MIT License.

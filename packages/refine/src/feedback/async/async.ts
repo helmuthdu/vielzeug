@@ -80,9 +80,9 @@ define<OreAsyncProps>(ASYNC_TAG, {
     // ARIA attributes are driven reactively by bind().
     bind({
       attr: {
-        ariaBusy: () => (props.status.value === 'loading' ? 'true' : 'false'),
-        ariaLabel: () => (props.status.value === 'loading' ? 'Loading…' : null),
-        ariaLive: () => (props.status.value === 'error' ? 'assertive' : 'polite'),
+        'aria-busy': () => (props.status.value === 'loading' ? 'true' : 'false'),
+        'aria-label': () => (props.status.value === 'loading' ? 'Loading…' : null),
+        'aria-live': () => (props.status.value === 'error' ? 'assertive' : 'polite'),
         status: props.status,
       },
     });

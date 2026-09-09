@@ -1,5 +1,3 @@
-import { buildCspExample } from './build-csp';
-import { buildDocumentExample } from './build-document';
 import { errorNormalizeExample } from './error-normalize';
 import { renderBasicExample } from './render-basic';
 import { renderStateExample } from './render-state';
@@ -11,8 +9,6 @@ import { renderStateExample } from './render-state';
 const browserOnly = true;
 
 export const sandboxExamples = {
-  'build-csp': buildCspExample,
-  'build-document': buildDocumentExample,
   'error-normalize': errorNormalizeExample,
   'render-basic': { ...renderBasicExample, browserOnly },
   'render-state': { ...renderStateExample, browserOnly },

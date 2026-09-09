@@ -20,7 +20,6 @@ export type SizeOptions = DetectOverflowOptions;
  *     el.style.maxHeight = `${(result.middlewareData.size as SizeData).availableHeight}px`;
  *   },
  * });
- * positioner.start();
  * ```
  */
 export function size(options: SizeOptions = {}): Middleware {

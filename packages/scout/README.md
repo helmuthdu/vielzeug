@@ -1,25 +1,16 @@
 # @vielzeug/scout
 
-Fast fuzzy-search. Builds a trigram inverted index at construction — O(candidates) per query instead of O(corpus × field_length).
+> Trigram fuzzy-search index with highlighting and reactive layer
 
-## Features
-
-- **Trigram index** — fast candidate lookup; overlap-coefficient scoring
-- **Multi-field weighted ranking** — per-field weights, custom stringifiers
-- **Match highlighting** — character-range offsets for UI rendering
-- **Reactive layer** — `createSearch()` wraps any index in `ripple` signals with debounce
-- **Framework adapters** — `toSearchMatcher()` for sourcerer, `toFilterPredicate()` for filter pipelines
-- **Corpus reconciliation** — `setItems()` reconciles reference-based additions, removals, reindexes, and order in one notification
-- **Unsegmented-script helper** — `segmentWords()` pre-splits CJK/Thai text into words via `Intl.Segmenter`
-- **Event subscription** — `search.tap()` observes `query`/`isSearching`/`results`/`dispose` transitions
-
-## Install
+## Installation
 
 ```sh
 pnpm add @vielzeug/scout
+npm install @vielzeug/scout
+yarn add @vielzeug/scout
 ```
 
-## Quick start
+## Quick Start
 
 ```ts
 import { createIndex } from '@vielzeug/scout';
@@ -39,39 +30,14 @@ const index = createIndex(users, {
 console.log(index.search('ada')[0]?.item.name); // Ada Lovelace
 ```
 
-## Reactive search
+## Documentation
 
-```ts
-import { createIndex, createSearch } from '@vielzeug/scout';
-import { effect } from '@vielzeug/ripple';
+- [Overview](https://vielzeug.dev/scout/)
+- [Usage Guide](https://vielzeug.dev/scout/usage)
+- [API Reference](https://vielzeug.dev/scout/api)
+- [Examples](https://vielzeug.dev/scout/examples)
+- [Migration Guide](https://vielzeug.dev/scout/migration)
 
-const users = [{ name: 'Ada Lovelace' }, { name: 'Grace Hopper' }];
-const index = createIndex(users, { fields: ['name'] });
-const search = createSearch(index, { debounce: 150 });
+## License
 
-effect(() => {
-  console.log(search.results.value);
-});
-
-search.query.value = 'alice';
-```
-
-## Sourcerer integration
-
-```ts
-import { createIndex, toSearchMatcher } from '@vielzeug/scout';
-import { createLocalSource } from '@vielzeug/sourcerer';
-
-const users = [{ email: 'ada@example.com', name: 'Ada Lovelace' }];
-const index = createIndex(users, { fields: ['name', 'email'] });
-const source = createLocalSource(users, { match: toSearchMatcher(index) });
-```
-
-## Highlighting
-
-```ts
-import { highlight } from '@vielzeug/scout';
-
-const parts = highlight('Hello World', [[0, 5]]);
-// [{ text: 'Hello', highlighted: true }, { text: ' World', highlighted: false }]
-```
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

@@ -38,7 +38,7 @@ await db.put('sessions', { id: 's4', userId: 4 }, ttl.seconds(30));
 await db.put('sessions', { id: 's5', userId: 5 }, ttl.days(7));
 
 // Expired records are excluded from reads automatically:
-// db.get(), db.getAll(), db.getMany(), db.count(), db.query() all skip expired records.
+// db.get(), db.getAll(), db.count(), and queries skip expired records.
 
 // Explicit pruning — sweeps all tables, returns count per table
 const pruned = await db.pruneExpired();
@@ -61,6 +61,6 @@ await db.dispose();
 ### Related
 
 - [CRUD](./crud.md)
-- [Plugins — validators](./plugins.md)
+- [Validators and Error Handling](./plugins.md)
 - [Usage Guide — Use TTL and Pruning](/vault/usage.md#use-ttl-and-pruning)
-- [API Reference — `pruneExpired`](/vault/api.md#vaultstore)
+- [API Reference — `pruneExpired`](/vault/api.md#keyvaluevaultstore)

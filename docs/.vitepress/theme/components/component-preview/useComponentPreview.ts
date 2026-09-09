@@ -118,7 +118,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   function ensureSandbox(container: HTMLDivElement): SandboxHandle {
     if (sandbox) return sandbox;
 
-    sandbox = createSandbox(container, { namedStyles: { [REFINE_CSS_ID]: refineCss } });
+    sandbox = createSandbox(container, { styles: { [REFINE_CSS_ID]: refineCss } });
 
     sandbox.onMessage((msg: SandboxMessage) => {
       if (msg.type === 'resize') {
@@ -135,7 +135,9 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   function render(fragment: string): void {
     if (!sandboxContainerRef.value) return;
 
-    ensureSandbox(sandboxContainerRef.value).render(fragment);
+    void ensureSandbox(sandboxContainerRef.value)
+      .render(fragment)
+      .catch((error) => console.warn('[ComponentPreview] Sandbox render failed:', error));
   }
 
   function patchCss(css: string): void {

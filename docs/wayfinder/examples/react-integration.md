@@ -18,12 +18,12 @@ Use `useSyncExternalStore(subscribe, getSnapshot)` for tear-safe, concurrent-mod
 import { createRouter } from '@vielzeug/wayfinder';
 import { useSyncExternalStore } from 'react';
 
-const router = createRouter({
+export const router = createRouter({
   routes: {
-    home: { component: HomePage, path: '/' },
-    settings: { component: SettingsPage, path: '/settings' },
-    notFound: { component: NotFoundPage, path: '*' },
+    home: { path: '/' },
+    settings: { path: '/settings' },
   },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 // Stable router actions are safe to destructure and return from the hook.
@@ -37,14 +37,17 @@ export function useRouter() {
 ```
 
 ```tsx
-// RouterView.tsx
-import { useRouter } from './router';
+// RouterView.tsx — exhaustive routes and an explicit fallback
+import { router, useRouter } from './router';
 
-type RouteComponent = React.ComponentType | undefined;
+const views = router.createViewRegistry(
+  { home: HomePage, settings: SettingsPage },
+  { notFound: NotFoundPage },
+);
 
 export function RouterView() {
   const { state } = useRouter();
-  const Component = state.matches.at(-1)?.component as RouteComponent;
+  const Component = views.resolve(state);
 
   return Component ? <Component /> : null;
 }
@@ -54,7 +57,7 @@ export function RouterView() {
 // RouterLink.tsx
 import { useRouter } from './router';
 
-type LinkName = 'home' | 'settings' | 'notFound';
+type LinkName = 'home' | 'settings';
 
 type Props = {
   children: React.ReactNode;

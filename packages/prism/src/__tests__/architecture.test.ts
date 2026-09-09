@@ -1,4 +1,3 @@
-import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { error, warn } from '../_dev';
 import { animate } from '../animation/transition';
@@ -318,6 +317,17 @@ describe('tooltip — ARIA live region (B14)', () => {
     chart.dispose();
   });
 
+  it('restores the container position on dispose', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
+      tooltip: true,
+    });
+
+    expect(container.style.position).toBe('relative');
+    chart.dispose();
+    expect(container.style.position).toBe('');
+  });
+
   it('reveals the tooltip on the next animation frame', async () => {
     const tooltip = createTooltip(container, true);
 
@@ -489,99 +499,15 @@ describe('createPieChart — scaffold lifecycle', () => {
     expect(container.querySelector('.prism-tooltip')).toBeNull();
   });
 
-  it('installs and disposes plugins', () => {
-    const install = vi.fn();
-    const dispose = vi.fn();
+  it('updates pie data explicitly', () => {
     const chart = createPieChart(container, {
-      data: [{ value: 100 }],
-      plugins: [{ dispose, install }],
+      data: [{ value: 50 }, { value: 50 }],
       transition: { duration: 0 },
     });
 
-    expect(install).toHaveBeenCalledWith(expect.objectContaining({ container, svg: chart.el }));
-    chart.dispose();
-    expect(dispose).toHaveBeenCalledOnce();
-  });
-
-  it('passes disposalSignal to plugins (D4)', () => {
-    const install = vi.fn();
-    const chart = createPieChart(container, {
-      data: [{ value: 100 }],
-      plugins: [{ dispose: vi.fn(), install }],
-      transition: { duration: 0 },
-    });
-
-    expect(install).toHaveBeenCalledWith(expect.objectContaining({ disposalSignal: chart.disposalSignal }));
-    chart.dispose();
-  });
-
-  it('isolates a throwing plugin instead of aborting chart creation (D4)', () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const goodInstall = vi.fn();
-    const goodDispose = vi.fn();
-    const badDispose = vi.fn();
-
-    const chart = createPieChart(container, {
-      data: [{ value: 100 }],
-      plugins: [
-        {
-          dispose: badDispose,
-          install: () => {
-            throw new Error('boom');
-          },
-        },
-        { dispose: goodDispose, install: goodInstall },
-      ],
-      transition: { duration: 0 },
-    });
-
-    expect(goodInstall).toHaveBeenCalledOnce();
-    expect(errorSpy).toHaveBeenCalled();
-    chart.dispose();
-    expect(goodDispose).toHaveBeenCalledOnce();
-    expect(badDispose).not.toHaveBeenCalled();
-    errorSpy.mockRestore();
-  });
-
-  it('isolates a throwing plugin dispose() so the rest of teardown still completes (Lens A fix)', () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const goodDispose = vi.fn();
-
-    const chart = createPieChart(container, {
-      data: [{ value: 100 }],
-      plugins: [
-        {
-          dispose: () => {
-            throw new Error('boom on dispose');
-          },
-          install: vi.fn(),
-        },
-        { dispose: goodDispose, install: vi.fn() },
-      ],
-      tooltip: true,
-      transition: { duration: 0 },
-    });
-
-    expect(() => chart.dispose()).not.toThrow();
-    expect(errorSpy).toHaveBeenCalled();
-    // Teardown continues past the throwing plugin: sibling plugin disposed, tooltip DOM removed.
-    expect(goodDispose).toHaveBeenCalledOnce();
-    expect(container.querySelector('.prism-tooltip')).toBeNull();
-    expect(container.querySelector('svg')).toBeNull();
-    errorSpy.mockRestore();
-  });
-
-  it('reactive signal re-renders slices', async () => {
-    const data = signal([{ value: 50 }, { value: 50 }]);
-    const chart = createPieChart(container, { data, transition: { duration: 0 } });
-
-    await new Promise((r) => requestAnimationFrame(r));
-    expect(chart.el.querySelectorAll('.prism-pie-slice').length).toBe(2);
-
-    data.value = [{ value: 33 }, { value: 33 }, { value: 34 }];
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
-    expect(chart.el.querySelectorAll('.prism-pie-slice').length).toBe(3);
+    expect(chart.el.querySelectorAll('.prism-pie-slice')).toHaveLength(2);
+    chart.update([{ value: 33 }, { value: 33 }, { value: 34 }]);
+    expect(chart.el.querySelectorAll('.prism-pie-slice')).toHaveLength(3);
     chart.dispose();
   });
 
@@ -600,7 +526,7 @@ describe('createPieChart — scaffold lifecycle', () => {
 
 // ─── crosshair DOM leak regression ───────────────────────────────────────────
 
-describe('crosshair — no DOM leak on reactive update', () => {
+describe('crosshair — no DOM leak on update', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -615,39 +541,43 @@ describe('crosshair — no DOM leak on reactive update', () => {
     container.remove();
   });
 
-  it('line chart: only one .prism-crosshair group after signal update', async () => {
-    const data = signal([{ key: 1, value: 10 }]);
+  it('line chart: only one .prism-crosshair group after update', () => {
     const chart = createLineChart(container, {
       crosshair: true,
-      series: [{ data, name: 'S' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
     });
 
-    data.value = [
-      { key: 1, value: 10 },
-      { key: 2, value: 20 },
-    ];
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
+    chart.update([
+      {
+        data: [
+          { key: 1, value: 10 },
+          { key: 2, value: 20 },
+        ],
+        name: 'S',
+      },
+    ]);
 
-    expect(chart.el.querySelectorAll('.prism-crosshair').length).toBe(1);
+    expect(chart.el.querySelectorAll('.prism-crosshair')).toHaveLength(1);
     chart.dispose();
   });
 
-  it('area chart: only one .prism-crosshair group after signal update', async () => {
-    const data = signal([{ key: 1, value: 10 }]);
+  it('area chart: only one .prism-crosshair group after update', () => {
     const chart = createAreaChart(container, {
       crosshair: true,
-      series: [{ data, name: 'S' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
     });
 
-    data.value = [
-      { key: 1, value: 10 },
-      { key: 2, value: 20 },
-    ];
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
+    chart.update([
+      {
+        data: [
+          { key: 1, value: 10 },
+          { key: 2, value: 20 },
+        ],
+        name: 'S',
+      },
+    ]);
 
-    expect(chart.el.querySelectorAll('.prism-crosshair').length).toBe(1);
+    expect(chart.el.querySelectorAll('.prism-crosshair')).toHaveLength(1);
     chart.dispose();
   });
 });
@@ -750,7 +680,7 @@ describe('axis — right and top positions', () => {
       xAxis: { position: 'top' },
     });
 
-    expect(chart.el.querySelector('.prism-axis-line')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-x-axis')?.hasAttribute('transform')).toBe(false);
     chart.dispose();
   });
 
@@ -768,7 +698,7 @@ describe('axis — right and top positions', () => {
       yAxis: { position: 'right' },
     });
 
-    expect(chart.el.querySelector('.prism-axis-line')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-y-axis')?.getAttribute('transform')).toBe('translate(530,0)');
     chart.dispose();
   });
 });
@@ -800,15 +730,11 @@ describe('createSparkline — interaction cleanup', () => {
     expect(onHover).not.toHaveBeenCalled();
   });
 
-  it('reactive signal re-attach interaction correctly', async () => {
-    const data = signal([1, 2, 3]);
+  it('re-attaches interaction after update', () => {
     const onHover = vi.fn();
-    const chart = createSparkline(container, { data, onHover });
+    const chart = createSparkline(container, { data: [1, 2, 3], onHover });
 
-    data.value = [1, 2, 3, 4];
-    await new Promise((r) => requestAnimationFrame(r));
-    await new Promise((r) => requestAnimationFrame(r));
-
+    chart.update([1, 2, 3, 4]);
     chart.el.dispatchEvent(new MouseEvent('mouseleave'));
     expect(onHover).toHaveBeenCalledWith(null, null);
     chart.dispose();
@@ -847,9 +773,7 @@ describe('animate', () => {
   });
 });
 
-// ─── TooltipConfig.sanitize ───────────────────────────────────────────────────
-
-describe('TooltipConfig.sanitize', () => {
+describe('TooltipConfig.render', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -864,55 +788,43 @@ describe('TooltipConfig.sanitize', () => {
     container.remove();
   });
 
-  it('applies sanitize fn before setting innerHTML', () => {
-    const sanitize = vi.fn((html: string) => html.replace(/<script.*?<\/script>/gi, ''));
-    const render = (_pt: Datum, s: Series) => `<b>${s.name}</b><script>alert(1)</script>`;
+  it('mounts returned nodes', () => {
     const chart = createLineChart(container, {
-      series: [
-        {
-          data: [
-            { key: 1, value: 42 },
-            { key: 2, value: 55 },
-          ],
-          name: 'Rev',
+      series: [{ data: [{ key: 1, value: 42 }], name: 'Revenue' }],
+      tooltip: {
+        render: (_datum, series) => {
+          const content = document.createElement('strong');
+
+          content.textContent = series.name;
+          return content;
         },
-      ],
-      tooltip: { render, sanitize },
+      },
     });
 
     Object.defineProperty(chart.el, 'getBoundingClientRect', {
       value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
     });
-
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 150 }));
 
-    expect(sanitize).toHaveBeenCalled();
-
-    const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
-
-    expect(tooltip.innerHTML).not.toContain('<script>');
-    expect(tooltip.innerHTML).toContain('Rev');
-
+    expect(container.querySelector('.prism-tooltip strong')?.textContent).toBe('Revenue');
     chart.dispose();
   });
 
-  it('SECURITY: falls back to plain text (not innerHTML) when render is set without sanitize (B10)', () => {
-    const render = (_pt: Datum, s: Series) => `<img src=x onerror="window.__pwned=true">${s.name}`;
+  it('renders strings as text', () => {
     const chart = createLineChart(container, {
-      series: [{ data: [{ key: 1, value: 42 }], name: 'Rev' }],
-      tooltip: { render },
+      series: [{ data: [{ key: 1, value: 42 }], name: 'Revenue' }],
+      tooltip: { render: (_datum, series) => `<img src=x>${series.name}` },
     });
 
     Object.defineProperty(chart.el, 'getBoundingClientRect', {
       value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
     });
-
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 150 }));
 
     const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
 
     expect(tooltip.querySelector('img')).toBeNull();
-    expect(tooltip.textContent).toContain('Rev');
+    expect(tooltip.textContent).toContain('Revenue');
     chart.dispose();
   });
 });
@@ -1045,34 +957,5 @@ describe('createTooltip — isConnected guard', () => {
 
     expect(() => tooltip.show(10, 10, datum, series)).not.toThrow();
     tooltip.dispose();
-  });
-});
-
-// ─── tooltip — render without sanitize warn ───────────────────────────────
-
-describe('createTooltip — XSS warning', () => {
-  it('emits warn when render is provided without sanitize', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const container = document.createElement('div');
-
-    document.body.appendChild(container);
-    createTooltip(container, { render: (_datum, s) => `<b>${s.name}</b>` });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('sanitize'));
-    warnSpy.mockRestore();
-    container.remove();
-  });
-
-  it('does NOT warn when render is provided with sanitize', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const container = document.createElement('div');
-
-    document.body.appendChild(container);
-    createTooltip(container, {
-      render: (_datum, s) => `<b>${s.name}</b>`,
-      sanitize: (html) => html,
-    });
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
-    container.remove();
   });
 });

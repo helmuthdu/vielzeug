@@ -1,49 +1,45 @@
 ---
-title: 'Wayfinder Examples — Page Titles from Meta'
-description: 'Page titles from meta example for @vielzeug/wayfinder.'
+title: 'Wayfinder Examples — Page Titles from View Metadata'
+description: 'Typed page-title metadata example for @vielzeug/wayfinder.'
 ---
 
-## Page Titles from Meta
+## Page Titles from View Metadata
 
 ### Problem
 
-Setting `document.title` inside individual handlers is repetitive and misses back/forward navigation driven by the browser's own history buttons.
+Setting `document.title` inside individual loaders is repetitive, couples static presentation to data fetching, and misses browser-driven navigation.
 
 ### Solution
 
-Store title hints in route `meta` and update `document.title` in a single `subscribe()` callback.
+Store titles in the typed view registry and update the document from one subscription.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
 
-type Meta = { title?: string };
-
 const router = createRouter({
   routes: {
-    home: {
-      path: '/',
-      meta: { title: 'Home' } satisfies Meta,
-    },
-    users: {
-      path: '/users',
-      meta: { title: 'Users' } satisfies Meta,
-    },
+    home: { path: '/' },
+    users: { path: '/users' },
     userDetail: {
       path: '/users/:id',
-      meta: { title: 'User Detail' } satisfies Meta,
       data: async ({ params }) => fetchUser(params.id),
     },
   },
-  notFound: {
-    meta: { title: 'Not Found' } satisfies Meta,
-    component: NotFoundPage,
-  },
+  notFound: {},
 });
 
-// Wait for initial routing before reading the first snapshot, then update on later state changes.
+const views = router.createViewRegistry(
+  {
+    home: { component: HomePage, title: 'Home' },
+    users: { component: UsersPage, title: 'Users' },
+    userDetail: { component: UserPage, title: 'User detail' },
+  },
+  { notFound: { component: NotFoundPage, title: 'Not found' } },
+);
+
 const applyTitle = (state: ReturnType<typeof router.getSnapshot>) => {
-  const m = state.matches.at(-1)?.meta as Meta | undefined;
-  document.title = m?.title ? `${m.title} — My App` : 'My App';
+  const view = views.resolve(state);
+  document.title = view ? `${view.title} — My App` : 'My App';
 };
 
 await router.ready;
@@ -53,8 +49,8 @@ router.subscribe(applyTitle);
 
 ### Pitfalls
 
-- `router.subscribe()` does not synchronously emit the current snapshot. Await `router.ready`, then apply the current snapshot before subscribing.
-- For nested routes, use all entries in `state.matches` (not just the leaf) to build breadcrumb-style titles from root to leaf.
+- `router.subscribe()` does not synchronously emit the current snapshot. Await `router.ready`, apply it once, then subscribe.
+- Registry keys are exhaustive. Add title metadata when adding a route rather than falling back silently.
 
 ### Related
 

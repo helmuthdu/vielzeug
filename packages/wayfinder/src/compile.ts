@@ -3,22 +3,20 @@ import { WayfinderRouteError } from './errors';
 import { compilePathMatcher, joinPaths, normalizePath } from './path';
 import type { Middleware, RouteBranchDef, RouteDefinition, RouteRecord, RouterOptions, RouteTable } from './types';
 
-export type CompiledRoutes<TMeta = unknown, TComponent = unknown> = {
-  records: readonly RouteRecord<TMeta, TComponent>[];
-  routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>;
+export type CompiledRoutes = {
+  records: readonly RouteRecord[];
+  routesByName: ReadonlyMap<string, RouteRecord>;
 };
 
-export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
-  options: RouterOptions<TRoutes, TMeta, TComponent>,
-): CompiledRoutes<TMeta, TComponent> {
-  const records: RouteRecord<TMeta, TComponent>[] = [];
+export function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): CompiledRoutes {
+  const records: RouteRecord[] = [];
 
   const compile = (
     name: string,
     route: RouteDefinition,
     ancestorPath: string,
-    ancestorBranchDefs: RouteBranchDef<TMeta, TComponent>[],
-    ancestorMiddleware: RouteRecord<TMeta, TComponent>['ownMiddleware'],
+    ancestorBranchDefs: RouteBranchDef[],
+    ancestorMiddleware: RouteRecord['ownMiddleware'],
   ): void => {
     if (route.index && route.path !== undefined) {
       throw new WayfinderRouteError(`Route "${name}" cannot define both index and path`);
@@ -32,15 +30,12 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
       ? ancestorPath
       : normalizePath(route.path ? joinPaths(ancestorPath, route.path) : ancestorPath);
 
-    const branchDefs: RouteBranchDef<TMeta, TComponent>[] = [
+    const branchDefs: RouteBranchDef[] = [
       ...ancestorBranchDefs,
       {
-        component: route.component as TComponent | undefined,
         dataFn: route.data,
-        lazy: route.lazy as RouteBranchDef<TMeta, TComponent>['lazy'],
-        meta: route.meta as TMeta | undefined,
         name,
-        onError: route.onError as RouteBranchDef<TMeta, TComponent>['onError'],
+        onError: route.onError as RouteBranchDef['onError'],
       },
     ];
 
@@ -55,9 +50,9 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
       }
     }
 
-    // Emit a record for leaf routes (no children), redirects, lazy routes, and routes with data.
-    // A bare parent-only route (children but no data/lazy/redirect) is not emitted as a leaf.
-    if (route.lazy !== undefined || route.redirect !== undefined || !route.children || route.data !== undefined) {
+    // Emit a record for leaf routes (no children) and routes with data or redirect.
+    // A bare parent-only route (children but no data/redirect) is not emitted as a leaf.
+    if (route.redirect !== undefined || !route.children || route.data !== undefined) {
       const leaf = branchDefs[branchDefs.length - 1]!;
 
       records.push({

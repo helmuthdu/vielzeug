@@ -12,11 +12,11 @@ Mount one keymap, then release its target listener and dispose its owner during 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({
-  'ctrl+s': () => console.log('save'),
-  'ctrl+z': () => console.log('undo'),
-  escape: () => console.log('close'),
-});
+const map = createKeymap([
+  { id: 'save', shortcut: 'ctrl+s', handler: () => console.log('save') },
+  { id: 'undo', shortcut: 'ctrl+z', handler: () => console.log('undo') },
+  { id: 'close', shortcut: 'escape', handler: () => console.log('close') },
+]);
 
 const unmount = map.mount(document);
 
@@ -44,7 +44,7 @@ Pass `modKey` when rendering or testing a specific platform.
 import { createKeymap } from '@vielzeug/keymap';
 
 const map = createKeymap(
-  { 'mod+k': () => console.log('open palette') },
+  [{ id: 'palette', shortcut: 'mod+k', handler: () => console.log('open palette') }],
   { modKey: 'ctrl' },
 );
 
@@ -57,11 +57,11 @@ Separate chord steps with spaces. Keymap resets an incomplete sequence after `ch
 
 ```ts
 const map = createKeymap(
-  {
-    'ctrl+k ctrl+s': () => console.log('save'),
-    'g g': () => window.scrollTo({ top: 0 }),
-    'g e': () => window.scrollTo({ top: document.body.scrollHeight }),
-  },
+  [
+    { id: 'save', shortcut: 'ctrl+k ctrl+s', handler: () => console.log('save') },
+    { id: 'top', shortcut: 'g g', handler: () => window.scrollTo({ top: 0 }) },
+    { id: 'end', shortcut: 'g e', handler: () => window.scrollTo({ top: document.body.scrollHeight }) },
+  ],
   { chordTimeout: 800 },
 );
 ```
@@ -70,17 +70,25 @@ Do not bind a complete shortcut and a longer chord beginning with that shortcut.
 
 ## Binding Options
 
-Add a guard or choose `keyup` with `BindingOptions`.
+Each binding is an object with an explicit `id`, `shortcut`, and `handler`. Add a guard, choose `keyup`, or control event behavior with optional fields.
 
 ```ts
-const map = createKeymap({
-  'ctrl+s': () => saveDocument(),
-  escape: { handler: closePanel, when: (event) => event.target === panel },
-  space: { handler: togglePlayback, trigger: 'keyup' },
-});
+const map = createKeymap([
+  { id: 'save', shortcut: 'ctrl+s', handler: () => saveDocument() },
+  { id: 'close', shortcut: 'escape', handler: closePanel, when: (event) => event.target === panel },
+  { id: 'play', shortcut: 'space', handler: togglePlayback, trigger: 'keyup' },
+  { id: 'inspect', shortcut: 'f12', handler: inspectElement, preventDefault: false },
+]);
 ```
 
-A matching binding calls `preventDefault()` by default. Set `preventDefault: false` for shortcuts that must retain browser behavior.
+### Per-Binding preventDefault and stopPropagation
+
+Each binding controls `preventDefault` and `stopPropagation` independently:
+
+- `preventDefault` defaults to `true` — completed shortcuts and matched chord prefixes suppress browser defaults.
+- `stopPropagation` defaults to `false` — events continue bubbling unless explicitly stopped.
+
+Set `preventDefault: false` for shortcuts that must coexist with native controls (e.g. developer tools, accessibility features).
 
 ## Context Guards
 
@@ -88,15 +96,15 @@ Use global `when(event)` for policy shared by every binding. Use per-binding `wh
 
 ```ts
 const map = createKeymap(
-  {
-    escape: { handler: closePanel, when: (event) => event.target === panel },
-    'ctrl+s': () => saveDocument(),
-  },
+  [
+    { id: 'close', shortcut: 'escape', handler: closePanel, when: (event) => event.target === panel },
+    { id: 'save', shortcut: 'ctrl+s', handler: () => saveDocument() },
+  ],
   { when: (event) => !modalIsOpen() && event.isTrusted },
 );
 ```
 
-Zero-argument callbacks continue to work. Accept `KeyboardEvent` when guard logic needs target, modifier, composition, or shadow-DOM context.
+Accept `KeyboardEvent` when guard logic needs target, modifier, composition, or shadow-DOM context.
 
 ### Guard Composition: Global + Per-Binding
 
@@ -104,26 +112,25 @@ When you provide both a global `when` (in `KeymapOptions`) and per-binding `when
 
 **Guard evaluation and chord tracking order:**
 
-1. **Chord state is tracked independently of guards.** The chord tracker progresses through steps before any guard is checked.
-2. **Global guard checked first.** If it returns `false`, all bindings are skipped and the handler does not fire — but chord state events still emit.
-3. **Per-binding guard checked only after global passes.** Enables mixing global policy (e.g., "skip when modal open") with binding-specific checks (e.g., "only in this panel").
+1. **Global guard runs first.** If it returns `false`, the target's pending chord state resets.
+2. **Per-binding guards select candidates.** A binding participates in each chord step only while its guard passes.
+3. **Chord state advances for eligible candidates.** The first completed candidate in binding order runs.
 
-Think of it as: chord tracking (independent observation) → global gate (app-level policy) AND per-binding gate (binding-level context).
+A chord cannot begin while its map is disabled and finish after the global guard becomes active.
 
 ```ts
 const map = createKeymap(
-  {
-    'escape': { handler: closePanel, when: (event) => event.target === panel },
-    'ctrl+s': () => saveDocument(),
-  },
+  [
+    { id: 'close', shortcut: 'escape', handler: closePanel, when: (event) => event.target === panel },
+    { id: 'save', shortcut: 'ctrl+s', handler: () => saveDocument() },
+  ],
   { when: (event) => !isModalOpen() && event.isTrusted },
 );
 
 // Global guard runs first; if false, both bindings are skipped (handler doesn't fire).
 // If global passes:
-//   - 'ctrl+s' handler fires immediately.
-//   - 'escape' handler fires only if event.target is the panel.
-// But chord state events emit regardless of guards.
+//   - 'save' handler fires immediately.
+//   - 'close' handler fires only if event.target is the panel.
 ```
 
 ### Preserve Native Text Editing
@@ -139,10 +146,10 @@ const isTypingInField = (event: KeyboardEvent): boolean =>
   );
 
 const map = createKeymap(
-  {
-    'mod+z': () => undo(),
-    'mod+shift+z': () => redo(),
-  },
+  [
+    { id: 'undo', shortcut: 'mod+z', handler: () => undo() },
+    { id: 'redo', shortcut: 'mod+shift+z', handler: () => redo() },
+  ],
   { when: (event) => !isTypingInField(event) },
 );
 ```
@@ -154,26 +161,39 @@ Do not make editable-field suppression a hidden package default. Applications ma
 Bind on `keyup` when an action must run after key release.
 
 ```ts
-const map = createKeymap({
-  space: { handler: confirmAction, trigger: 'keyup' },
-});
+const map = createKeymap([
+  { id: 'confirm', shortcut: 'space', handler: confirmAction, trigger: 'keyup' },
+]);
 ```
 
 `keydown` and `keyup` maintain independent chord state.
 
 ## Replace Bindings at Runtime
 
-Bind replaces an existing binding with same canonical shortcut and returns a targeted removal callback.
+`bind(binding)` adds or replaces a binding with the same `id` and returns a targeted removal callback.
 
 ```ts
-const map = createKeymap({ 'ctrl+k': defaultAction });
-const removePluginBinding = map.bind('ctrl+k', pluginAction);
+const map = createKeymap([{ id: 'palette', shortcut: 'ctrl+k', handler: defaultAction }]);
+const removePluginBinding = map.bind({ id: 'palette', shortcut: 'ctrl+k', handler: pluginAction });
 
 removePluginBinding();
-map.bind('ctrl+k', defaultAction);
+map.bind({ id: 'palette', shortcut: 'ctrl+k', handler: defaultAction });
 ```
 
-`unbind(shortcut)` removes canonicalized aliases and warns in development when no binding exists.
+`unbind(id)` removes the binding with that id and warns in development when no binding exists.
+
+### Duplicate Shortcuts with Different IDs
+
+Each binding has an explicit `id`, so duplicate shortcuts can coexist. Keymap evaluates them in insertion order and fires the first binding whose guard passes.
+
+```ts
+const map = createKeymap([
+  { id: 'primary', shortcut: 'ctrl+k', handler: primaryAction },
+  { id: 'fallback', shortcut: 'ctrl+k', handler: fallbackAction },
+]);
+
+// 'primary' fires while eligible; use mutually exclusive guards for contextual fallback.
+```
 
 ## Format Shortcut Labels
 
@@ -195,59 +215,34 @@ Check a custom shortcut before binding it to prevent duplicate or unreachable ch
 ```ts
 import { createKeymap, findShortcutConflicts } from '@vielzeug/keymap';
 
-const map = createKeymap({ g: () => scrollToTop() });
+const map = createKeymap([{ id: 'top', shortcut: 'g', handler: () => scrollToTop() }]);
 const conflicts = findShortcutConflicts('g g', map.listBindings());
 
-if (conflicts.length === 0) map.bind('g g', () => scrollToBottom());
+if (conflicts.length === 0) map.bind({ id: 'bottom', shortcut: 'g g', handler: () => scrollToBottom() });
 ```
 
 Conflict detection compares only bindings with same trigger. An empty proposal returns no conflicts; other invalid proposals throw `KeymapParseError`.
 
-## Observe Chord State
+## Parser Subpath
 
-Track chord progression for debugging, logging, testing, or implementing chord UI hints (e.g., "you pressed 'g', press again to scroll").
-
-**Chord state tracking is independent of guards.** Events emit even if the global or per-binding guard would prevent the handler from firing. This allows you to show UI hints regardless of whether the binding is allowed to execute.
+For custom tooling, validators, or framework integrations that need direct access to the shortcut parser, import from `@vielzeug/keymap/parse`:
 
 ```ts
-import { createKeymap } from '@vielzeug/keymap';
+import { parseShortcut, parseStep, matchStep, canonicalizeShortcut, detectModKey } from '@vielzeug/keymap/parse';
 
-const map = createKeymap(
-  {
-    'g g': () => window.scrollTo({ top: 0 }),
-    'ctrl+k ctrl+s': () => save(),
-  },
-  {
-    onChordState: (change) => {
-      switch (change.type) {
-        case 'started':
-          console.log(`Chord started: ${change.step.key} (${change.trigger})`);
-          showHint(`Press '${change.step.key}' again...`);
-          break;
-        case 'progressed':
-          console.log(`Waiting for: ${change.steps.map((s) => s.key).join(' → ?')}`);
-          updateHint(`${change.steps.map((s) => s.key).join(' → ?')}`);
-          break;
-        case 'timeout':
-          console.log('Chord timed out; resetting');
-          hideHint();
-          break;
-      }
-    },
-  },
-);
+const steps = parseShortcut('ctrl+k ctrl+s', 'ctrl');
+const step = parseStep('ctrl+k', 'ctrl');
+const isMatch = matchStep(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }), steps[0]);
 ```
 
-**Error handling:** Callback errors are caught and logged in development mode; they don't break binding execution. Use error handling in your callback to prevent typos from blocking shortcuts.
-
-**Per-target isolation:** Each mounted target maintains independent chord state. Use `change.target` when mounting the same keymap on multiple targets to distinguish progress per target.
+These functions are not exported from the root entry point to keep the common API surface small.
 
 ## Mount Targets
 
 Mount one keymap on multiple independent targets when each target should own its own chord progression.
 
 ```ts
-const map = createKeymap({ 'g g': () => console.log('go to top') });
+const map = createKeymap([{ id: 'top', shortcut: 'g g', handler: () => console.log('go to top') }]);
 const unmountEditor = map.mount(editor);
 const unmountPreview = map.mount(preview);
 ```
@@ -260,18 +255,32 @@ Create separate keymaps for separate UI owners. If maps share a target and short
 
 ```ts
 const baseMap = createKeymap(
-  { escape: () => closeSidebar() },
+  [{ id: 'close-sidebar', shortcut: 'escape', handler: () => closeSidebar() }],
   { when: () => !modalIsOpen() },
 );
 
 const modalMap = createKeymap(
-  { escape: () => closeModal() },
+  [{ id: 'close-modal', shortcut: 'escape', handler: () => closeModal() }],
   { when: () => modalIsOpen() },
 );
 
 const unmountBase = baseMap.mount(document);
 const unmountModal = modalMap.mount(document);
 ```
+
+## Observe Chord Activity
+
+Use `tap()` for chord hints, diagnostics, and matched-binding telemetry. Observers cannot alter shortcut behavior.
+
+```ts
+const stopTrace = map.tap((event) => {
+  if (event.type === 'chord-start') showChordHint(event.step);
+  if (event.type === 'chord-progress') updateChordHint(event.steps);
+  if (event.type === 'chord-cancel' || event.type === 'chord-timeout' || event.type === 'match') hideChordHint();
+}, { signal: owner.signal });
+```
+
+Tap handlers receive detached shortcut and binding snapshots. Handler errors are swallowed, and disposal emits a final `dispose` event before observers are cleared.
 
 ## Testing
 
@@ -285,7 +294,7 @@ import { createKeymap } from '@vielzeug/keymap';
 it('handles save', () => {
   const save = vi.fn();
   const target = document.createElement('button');
-  const map = createKeymap({ 'ctrl+s': save });
+  const map = createKeymap([{ id: 'save', shortcut: 'ctrl+s', handler: save }]);
   const unmount = map.mount(target);
 
   target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ctrlKey: true, key: 's' }));
@@ -311,7 +320,7 @@ import { createKeymap } from '@vielzeug/keymap';
 
 export function App() {
   useEffect(() => {
-    const map = createKeymap({ 'ctrl+k': () => console.log('open palette') });
+    const map = createKeymap([{ id: 'palette', shortcut: 'ctrl+k', handler: () => console.log('open palette') }]);
     const unmount = map.mount(document);
 
     return () => {
@@ -330,7 +339,7 @@ import { onMounted, onUnmounted } from 'vue';
 
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({ escape: () => console.log('close palette') });
+const map = createKeymap([{ id: 'close', shortcut: 'escape', handler: () => console.log('close palette') }]);
 let unmount: (() => void) | undefined;
 
 onMounted(() => {
@@ -349,7 +358,7 @@ import { onMount } from 'svelte';
 
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({ escape: () => console.log('close palette') });
+const map = createKeymap([{ id: 'close', shortcut: 'escape', handler: () => console.log('close palette') }]);
 
 onMount(() => {
   const unmount = map.mount(document);
@@ -375,10 +384,10 @@ import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
 const reportHistoryError = (error: unknown): void => console.error(error);
-const map = createKeymap({
-  'mod+z': () => void ledger.undo().catch(reportHistoryError),
-  'mod+shift+z': () => void ledger.redo().catch(reportHistoryError),
-});
+const map = createKeymap([
+  { id: 'undo', shortcut: 'mod+z', handler: () => void ledger.undo().catch(reportHistoryError) },
+  { id: 'redo', shortcut: 'mod+shift+z', handler: () => void ledger.redo().catch(reportHistoryError) },
+]);
 
 map.mount(document);
 ```
@@ -392,9 +401,9 @@ import { createBus } from '@vielzeug/herald';
 import { createKeymap } from '@vielzeug/keymap';
 
 const bus = createBus<{ 'shortcut:save': void }>();
-const map = createKeymap({
-  'ctrl+s': () => bus.emit('shortcut:save'),
-});
+const map = createKeymap([
+  { id: 'save', shortcut: 'ctrl+s', handler: () => bus.emit('shortcut:save') },
+]);
 
 map.mount(document);
 ```
@@ -408,3 +417,4 @@ map.mount(document);
 - **Keep** shared-target guards mutually exclusive.
 - **Use** `mod` for primary cross-platform shortcuts.
 - **Avoid** prefix pairs such as `g` and `g g`.
+- **Use** unique `id`s for each binding and mutually exclusive guards for intentional duplicate shortcuts.

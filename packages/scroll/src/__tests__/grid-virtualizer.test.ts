@@ -151,6 +151,37 @@ describe('createGridVirtualizer – onChange', () => {
   });
 });
 
+describe('createGridVirtualizer – external store', () => {
+  it('publishes coherent snapshots to subscribers', () => {
+    const el = makeGrid(100, 120);
+    const listener = vi.fn();
+    const v = createGridVirtualizer(el, {
+      colCount: 5,
+      estimateColSize: 40,
+      estimateRowSize: 30,
+      rowCount: 5,
+    });
+    const unsubscribe = v.subscribe(listener);
+
+    v.refresh();
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(v.getSnapshot()).toEqual({
+      cols: v.cols,
+      rows: v.rows,
+      totalHeight: v.totalHeight,
+      totalWidth: v.totalWidth,
+    });
+
+    unsubscribe();
+    v.subscribe(listener);
+    v.dispose();
+    expect(v.subscribe(listener)).toBeTypeOf('function');
+    expect(() => v.refresh()).not.toThrow();
+    expect(listener).toHaveBeenCalledOnce();
+  });
+});
+
 // ─── onRangeChange ────────────────────────────────────────────────────────────
 
 describe('createGridVirtualizer – onRangeChange', () => {

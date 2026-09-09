@@ -1,12 +1,14 @@
 import { type CompiledCatalog, type CompiledMessage, compileCatalog } from './_catalog';
+import { warn } from './_dev';
 import { canonicalLocale, localeChain, pluralCategory } from './_locale';
-import { renderSegments, renderText, type Template } from './_template';
-import { LinguaInvalidPluralCountError } from './errors';
+import { renderParts, renderText, type Template } from './_template';
+import { LinguaInvalidPluralCountError, LinguaMissingKeyError, LinguaMissingValueError } from './errors';
 import type {
   Catalog,
-  Catalogs,
-  CatalogTranslatorOptions,
   Locale,
+  MissingInfo,
+  MissingStrategy,
+  Part,
   PluralKey,
   PluralOptions,
   TextKey,
@@ -16,30 +18,63 @@ import type {
 
 export type Translator<C extends Catalog = Catalog> = {
   readonly locale: Locale;
-  segments<V>(key: TextKey<C>, options: TranslateOptions & { values: Record<string, V> }): Array<string | V>;
-  segments<V>(key: PluralKey<C>, options: PluralOptions & { values?: Record<string, V> }): Array<string | number | V>;
-  segmentsDynamic<V>(
+  parts<V>(key: TextKey<C>, options: TranslateOptions & { values: Record<string, V> }): Array<Part<V>>;
+  parts<V>(key: PluralKey<C>, options: PluralOptions & { values?: Record<string, V> }): Array<Part<number | V>>;
+  partsDynamic<V>(
     key: string,
     options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> },
-  ): Array<string | number | V>;
+  ): Array<Part<number | V>>;
   translate(key: TextKey<C>, options?: TranslateOptions): string;
   translate(key: PluralKey<C>, options: PluralOptions): string;
   translateDynamic(key: string, options?: TranslateOptions | PluralOptions): string;
 };
 
+type InternalOptions = {
+  readonly fallback?: Locale | readonly Locale[];
+  readonly locale?: Locale;
+  readonly missing?: MissingStrategy;
+};
+
+const isDev = !(globalThis as { __LINGUA_PROD__?: boolean }).__LINGUA_PROD__;
+
+function resolveMissing(strategy: MissingStrategy | undefined, info: MissingInfo): string {
+  if (strategy === 'throw') {
+    throw info.name
+      ? new LinguaMissingValueError(
+          `Missing interpolation value "${info.name}" for key "${info.key}" in locale "${info.locale}".`,
+        )
+      : new LinguaMissingKeyError(`Missing translation key "${info.key}" in locale "${info.locale}".`);
+  }
+
+  if (typeof strategy === 'function') return strategy(info);
+
+  // 'key' or undefined (default)
+  if (strategy === undefined && isDev) {
+    warn(
+      info.name
+        ? `Missing interpolation value "${info.name}" for key "${info.key}" in locale "${info.locale}".`
+        : `Missing translation key "${info.key}" in locale "${info.locale}".`,
+    );
+  }
+
+  return info.name ? `{${info.name}}` : info.key;
+}
+
 type ResolvedMessage = { readonly locale: Locale; readonly message: CompiledMessage };
 
 export function createTranslatorFromCompiled<C extends Catalog>(
   catalogs: ReadonlyMap<Locale, CompiledCatalog>,
-  options: TranslatorOptions = {},
+  options: InternalOptions = {},
 ): Translator<C> {
   const locale = canonicalLocale(options.locale ?? 'en');
   const fallback = (
     Array.isArray(options.fallback) ? options.fallback : options.fallback ? [options.fallback] : []
   ).map(canonicalLocale);
   const chain = localeChain(locale, fallback);
-  const missingKey = options.onMissingKey ?? ((key: string) => key);
-  const missingValue = options.onMissingValue ?? ((name: string) => `{${name}}`);
+  const missing = options.missing;
+
+  const missingKey = (key: string): string => resolveMissing(missing, { key, locale });
+  const missingValue = (name: string, key: string): string => resolveMissing(missing, { key, locale, name });
 
   const resolve = (key: string): ResolvedMessage | undefined => {
     for (const candidate of chain) {
@@ -83,33 +118,33 @@ export function createTranslatorFromCompiled<C extends Catalog>(
   const valuesFor = (options: TranslateOptions | PluralOptions): Record<string, unknown> =>
     'count' in options ? { count: options.count, ...options.values } : (options.values ?? {});
 
-  const segmentsDynamic = <V>(
+  const partsDynamic = <V>(
     key: string,
     options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> },
-  ): Array<string | number | V> => {
+  ): Array<Part<number | V>> => {
     const found = templateFor(key, options);
 
-    if (!found) return [missingKey(key, locale)];
+    if (!found) return [{ type: 'text', value: missingKey(key) }];
 
-    return renderSegments(found.template, valuesFor(options) as Record<string, V | number>, (name) =>
-      missingValue(name, found.key, locale),
+    return renderParts(found.template, valuesFor(options) as Record<string, V | number>, (name) =>
+      missingValue(name, found.key),
     );
   };
 
   const translateDynamic = (key: string, options: TranslateOptions | PluralOptions = {}): string => {
     const found = templateFor(key, options);
 
-    if (!found) return missingKey(key, locale);
+    if (!found) return missingKey(key);
 
-    return renderText(found.template, valuesFor(options), (name) => missingValue(name, found.key, locale));
+    return renderText(found.template, valuesFor(options), (name) => missingValue(name, found.key));
   };
 
   return {
     locale,
-    segments(key: string, options: (TranslateOptions | PluralOptions) & { values?: Record<string, unknown> }) {
-      return segmentsDynamic(key, options);
+    parts(key: string, options: (TranslateOptions | PluralOptions) & { values?: Record<string, unknown> }) {
+      return partsDynamic(key, options);
     },
-    segmentsDynamic,
+    partsDynamic,
     translate(key: string, options: TranslateOptions | PluralOptions = {}) {
       return translateDynamic(key, options);
     },
@@ -118,22 +153,9 @@ export function createTranslatorFromCompiled<C extends Catalog>(
 }
 
 /** Creates a fixed-locale translator from one catalog. Lingua snapshots catalog messages during construction. */
-export function createCatalogTranslator<C extends Catalog>(
-  catalog: C,
-  options: CatalogTranslatorOptions = {},
-): Translator<C> {
-  const locale = canonicalLocale(options.locale ?? 'en');
+export function createTranslator<C extends Catalog>(catalog: C, options?: TranslatorOptions): Translator<C> {
+  const locale = canonicalLocale(options?.locale ?? 'en');
   const compiled = new Map<Locale, CompiledCatalog>([[locale, compileCatalog(catalog)]]);
 
   return createTranslatorFromCompiled<C>(compiled, { ...options, locale });
-}
-
-export function createTranslator<C extends Catalog>(catalogs: Catalogs<C>, options?: TranslatorOptions): Translator<C> {
-  const compiled = new Map<Locale, CompiledCatalog>();
-
-  for (const [locale, catalog] of Object.entries(catalogs)) {
-    compiled.set(canonicalLocale(locale), compileCatalog(catalog));
-  }
-
-  return createTranslatorFromCompiled<C>(compiled, options);
 }

@@ -1,15 +1,23 @@
 export const dynamicPermissionsExample = {
-  code: `import { allow, createWard, predicate } from '@vielzeug/ward'
+  code: `import { createWard } from '@vielzeug/ward'
 
+// Use condition callbacks for dynamic checks (e.g. ownership)
 const ward = createWard([
-  allow('user', 'posts', ['update'], { when: predicate.owns('authorId') }),
+  {
+    action: 'update',
+    resource: 'posts',
+    effect: 'allow',
+    condition: ({ principal, attributes }) => attributes?.authorId === principal?.id,
+  },
+  { action: 'update', resource: 'posts', effect: 'deny' },
 ])
 
-const user1 = { id: 'user1', roles: ['user'] }
-const user2 = { id: 'user2', roles: ['user'] }
-const post  = { id: 'post1', authorId: 'user1', title: 'My Post' }
+const author = { id: 'u1', roles: ['user'] }
+const other  = { id: 'u2', roles: ['user'] }
 
-console.log('Author can update:     ', ward.explain({ action: 'update', data: post, principal: user1, resource: 'posts' }).allowed)
-console.log('Non-author can update: ', ward.explain({ action: 'update', data: post, principal: user2, resource: 'posts' }).allowed)`,
-  name: 'Dynamic Permissions — Ownership Rules',
+console.log('author edits own post:',
+  ward.decide({ action: 'update', principal: author, resource: 'posts', attributes: { authorId: 'u1' } }).effect) // allow
+console.log('other edits author post:',
+  ward.decide({ action: 'update', principal: other,  resource: 'posts', attributes: { authorId: 'u1' } }).effect) // deny`,
+  name: 'Dynamic Permissions',
 };

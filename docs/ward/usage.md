@@ -1,6 +1,6 @@
 ---
 title: Ward — Usage Guide
-description: Build deterministic authorization policies with immutable rule sets, wildcard support, and runtime predicates.
+description: Define ordered role, wildcard, attribute, and ownership authorization rules.
 ---
 
 [[toc]]
@@ -8,212 +8,108 @@ description: Build deterministic authorization policies with immutable rule sets
 ## Basic Usage
 
 ```ts
-import { WILDCARD, allow, createWard, deny } from '@vielzeug/ward';
+import { allow, createWard, deny, WILDCARD } from '@vielzeug/ward';
 
-const ward = createWard([
+const ward = createWard<'read' | 'update', 'posts'>([
+  deny('blocked', WILDCARD, [WILDCARD]),
+  allow('editor', 'posts', ['read', 'update']),
   allow('viewer', 'posts', ['read']),
-  allow('editor', 'posts', ['update']),
-  deny('blocked', 'posts', [WILDCARD], { priority: 100 }),
 ]);
-```
 
-`allow()` and `deny()` return `WardRule[]` (one rule per action). Pass them directly to `createWard` — no spread needed. Rules are immutable after creation. Create a new ward to update policy.
-
-## Explain a Decision
-
-```ts
-const decision = ward.explain({
-  principal: { id: 'u1', roles: ['editor'] },
-  resource: 'posts',
+const decision = ward.decide({
   action: 'update',
-  data: { authorId: 'u1' },
-});
-
-if (decision.allowed) {
-  console.log(decision.rule);
-} else {
-  console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
-}
-```
-
-## Batch Decisions
-
-```ts
-const results = ward.checkAll({ id: 'u1', roles: ['editor'] }, [
-  { resource: 'posts', action: 'read' },
-  { resource: 'posts', action: 'update', data: { authorId: 'u1' } },
-]);
-```
-
-## Bound Ward (`forUser`)
-
-```ts
-const bound = ward.forUser({ id: 'u1', roles: ['editor'] });
-
-bound.explain({ resource: 'posts', action: 'read' });
-bound.trace({ resource: 'posts', action: 'update', data: { authorId: 'u1' } });
-bound.rulesInScope({ resource: 'posts' });
-bound.allowedActions({ resource: 'posts', knownActions: ['read', 'update', 'delete'] as const });
-```
-
-`forUser()` snapshots the principal. Re-bind when roles/identity change.
-
-## Allowed Actions
-
-`allowedActions()` evaluates a provided action set:
-
-```ts
-const actions = ward.allowedActions({
-  principal: { id: 'u1', roles: ['admin'] },
-  resource: 'posts',
-  knownActions: ['read', 'update', 'delete'] as const,
-});
-```
-
-It does not fire a `decision` event.
-
-## Rule Introspection
-
-```ts
-const scoped = ward.rulesInScope({
   principal: { id: 'u1', roles: ['editor'] },
   resource: 'posts',
 });
 ```
 
-Use optional `data` to filter predicate-gated matches.
+Order is policy. Put exceptions and explicit denies before broad allows. No match returns a default-deny decision with `matched: false`.
 
-## Trace Candidates
+## Check ownership with typed attributes
 
 ```ts
-const trace = ward.trace({
-  principal: { id: 'u1', roles: ['editor', 'blocked'] },
+import { allow, createWard, predicate } from '@vielzeug/ward';
+
+type Attributes = { authorId: string; status: 'draft' | 'published' };
+
+const ward = createWard<'update', 'posts', Attributes>([
+  allow<'update', 'posts', Attributes>('editor', 'posts', ['update'], {
+    when: predicate.owns<Attributes>('authorId'),
+  }),
+]);
+
+ward.decide({
+  action: 'update',
+  attributes: { authorId: post.authorId, status: post.status },
+  principal,
   resource: 'posts',
-  action: 'read',
-});
-
-trace.candidates.forEach((c) => {
-  console.log(c.index, c.priority, c.score, c.won);
 });
 ```
 
-`trace()` does not fire a `decision` event.
+Attribute values support finite numbers, strings, booleans, `null`, arrays, and plain objects. Ward rejects class instances, dates, maps, sets, functions, `undefined`, non-finite numbers, and circular values.
 
-## Observing Decisions
-
-`tap()` subscribes a handler to ward events. Each `explain()` and `checkAll()` decision fires a `decision` event; `trace()` and `allowedActions()` do not.
+## Combine conditions
 
 ```ts
-const ward = createWard(rules);
-ward.tap((event) => console.debug('ward:decision', event.decision));
+const canPublishOwnPost = predicate.and<Attributes>(
+  predicate.hasRole<Attributes>('editor'),
+  predicate.owns<Attributes>('authorId'),
+  ({ attributes }) => attributes?.status === 'draft',
+);
 ```
 
-Pass an `AbortSignal` to unsubscribe automatically, or call the returned function to unsubscribe manually:
+Conditions are synchronous. A thrown error, Promise, or non-boolean result becomes a `WardConditionError` with the original value in `cause`.
+
+## Bind a principal
+
+```ts
+const permissions = ward.forPrincipal(principal);
+
+permissions.decide({ action: 'update', attributes, resource: 'posts' });
+permissions.checkAll([
+  { action: 'read', attributes, resource: 'posts' },
+  { action: 'update', attributes, resource: 'posts' },
+]);
+permissions.allowedActions({ attributes, knownActions: ['read', 'update'], resource: 'posts' });
+```
+
+`forPrincipal()` snapshots the principal, roles, and principal attributes. Later caller mutations cannot alter bound decisions.
+
+## Observe decisions
 
 ```ts
 const controller = new AbortController();
-const unsubscribe = ward.tap((event) => console.debug(event), { signal: controller.signal });
 
-// later
-unsubscribe(); // or controller.abort();
+ward.tap((event) => audit.write(event), { signal: controller.signal });
+controller.abort();
 ```
 
-For structured logging, forward events to a `@vielzeug/rune` logger:
+`tap()` observes `decide()` and `checkAll()`. It does not observe the hypothetical checks performed by `allowedActions()`. Handler failures are swallowed.
 
-```ts
-import { createLogger } from '@vielzeug/rune';
-const log = createLogger({ name: 'ward' });
-ward.tap((event) => log.debug(event, 'ward:decision'));
-```
+## Anonymous and wildcard roles
 
-## Predicate Helpers
-
-```ts
-import { predicate } from '@vielzeug/ward';
-
-const isOwner = predicate.owns('authorId');
-const canEdit = predicate.and(isOwner, ({ principal }) => principal.id !== '');
-```
-
-Async predicates are rejected at runtime with `WardPredicateError`.
-
-## Request Guards
-
-Use `explain()` directly at request boundaries. Extract the principal from your framework's request object and pass it to Ward:
-
-```ts
-const principal = await extractPrincipal(req);
-const decision = ward.explain({ principal, resource: 'posts', action: 'read' });
-
-if (!decision.allowed) {
-  return res.status(403).json({ error: decision.reason });
-}
-```
+- `ANONYMOUS` matches `null` and an omitted principal.
+- `WILDCARD` as a role matches any authenticated principal.
+- `WILDCARD` as an action or resource matches every value.
 
 ## Testing
 
-Test policy outcomes through `explain()` so each test captures an allowed, explicit-deny, or no-match result.
-
-```ts
-import { expect, it } from 'vitest';
-
-it('denies an action with no matching rule', () => {
-  expect(
-    ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', action: 'delete' }).allowed,
-  ).toBe(false);
-});
-```
+Construct a fresh Ward for each policy test. Assert decisions and ordering through the public API; rules are immutable snapshots.
 
 ## Framework Integration
 
-Keep Ward independent from rendering frameworks. Obtain a current principal from framework state, bind it with `forUser()`, and rebind whenever identity or roles change.
-
-::: code-group
-
-```tsx [React]
-const actions = ward.forUser(user).allowedActions({ resource: 'posts', knownActions: ['read', 'update'] as const });
-```
-
-```vue [Vue 3]
-<script setup lang="ts">
-const actions = ward
-  .forUser(user.value)
-  .allowedActions({ resource: 'posts', knownActions: ['read', 'update'] as const });
-</script>
-```
-
-```ts [Svelte]
-const actions = ward.forUser(user).allowedActions({ resource: 'posts', knownActions: ['read', 'update'] as const });
-```
-
-:::
+Keep one Ward instance near the application boundary. Bind the current principal when rendering several related controls, and repeat authorization at the mutation boundary.
 
 ## Working with Other Vielzeug Libraries
 
-### With Wayfinder
-
-Enforce Ward decisions in Wayfinder route guards by calling `explain()` inside the guard callback:
-
-```ts
-const decision = ward.explain({ principal, resource: route.meta.resource, action: 'read' });
-
-if (!decision.allowed) return '/forbidden';
-```
-
-### With Conduit
-
-Inject a Ward instance into Conduit-managed services so authorization checks share a single compiled policy:
-
-```ts
-const ward = createWard(rules);
-container.register('ward', ward);
-```
+Send `WardEvent` values to a Rune logger or Herald bus when an application needs centralized diagnostics. Keep durable audit persistence in the application.
 
 ## Best Practices
 
-- Model default-deny by adding only explicit allow rules.
-- Keep predicates synchronous and provide required resource data.
-- Assign priority deliberately before relying on specificity.
-- Rebind `forUser()` when identity or roles change.
-- Use `trace()` and `detectConflicts()` to diagnose policy behavior.
-- Enforce authorization again at request and mutation boundaries.
+- Put narrow exceptions before broad rules.
+- Keep default deny.
+- Prefer `allow()` and `deny()` for role policies.
+- Prefer declarative attributes before custom conditions.
+- Type action, resource, and attribute generics at shared policy boundaries.
+- Pass only authorization-relevant attributes.
+- Treat `reason` as diagnostics, not user-facing prose.

@@ -19,7 +19,6 @@ export function descriptorToJsonSchema(d: SchemaDescriptor): JsonSchema {
 
 function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
   switch (d.kind) {
-    case 'any':
     case 'unknown':
       return {};
 

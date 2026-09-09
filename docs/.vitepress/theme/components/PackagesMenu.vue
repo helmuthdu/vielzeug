@@ -1,9 +1,9 @@
-<script lang="ts" setup >
+<script lang="ts" setup>
 import { useRoute, withBase } from 'vitepress';
 
 import { NAVBAR_COLUMNS, PACKAGE_GROUPS } from './packageGroups';
 
-defineProps<{ screenMenu?: boolean }>();
+defineProps<{ menu?: boolean; screenMenu?: boolean }>();
 
 const route = useRoute();
 const isCurrentPackage = (packageId: string): boolean =>
@@ -12,9 +12,13 @@ const MENU_COLUMNS = NAVBAR_COLUMNS;
 </script>
 
 <template>
-  <details class="screen-menu" v-if="screenMenu" >
+  <li class="menu-package-link" v-if="menu">
+    <a href="/#packages">Packages</a>
+  </li>
+
+  <details class="screen-menu" v-else-if="screenMenu">
     <summary>Packages</summary>
-    <div class="screen-group" v-for="group in PACKAGE_GROUPS" :key="group.id" >
+    <div class="screen-group" v-for="group in PACKAGE_GROUPS" :key="group.id">
       <p>{{ group.name }}</p>
       <a
         v-for="pkg in group.packages"
@@ -28,10 +32,10 @@ const MENU_COLUMNS = NAVBAR_COLUMNS;
     <a class="screen-all-packages" href="/#packages">Browse all packages</a>
   </details>
 
-  <ore-navigation-menu class="packages-menu" placement="bottom-start" v-else >
+  <ore-navigation-menu class="packages-menu" placement="bottom-start" v-else>
     <ore-navigation-menu-item value="packages">
       <span>Packages</span>
-      <ore-icon aria-hidden="true" name="chevron-down" size="14" stroke-width="2" ></ore-icon>
+      <ore-icon aria-hidden="true" name="chevron-down" size="14" stroke-width="2"></ore-icon>
     </ore-navigation-menu-item>
 
     <ore-navigation-menu-panel for="packages">
@@ -40,7 +44,7 @@ const MENU_COLUMNS = NAVBAR_COLUMNS;
         v-for="(column, index) in MENU_COLUMNS"
         :key="index"
         :class="{ 'menu-column--separated': index > 0 }">
-        <section class="group" v-for="group in column" :key="group.id" >
+        <section class="group" v-for="group in column" :key="group.id">
           <p class="group-title">{{ group.name }}</p>
           <a
             class="package-link"
@@ -57,9 +61,9 @@ const MENU_COLUMNS = NAVBAR_COLUMNS;
           </a>
         </section>
       </div>
-      <a class="all-packages" href="/#packages" slot="footer" >
+      <a class="all-packages" href="/#packages" slot="footer">
         Browse all packages
-        <ore-icon aria-hidden="true" name="arrow-right" size="16" stroke-width="2" ></ore-icon>
+        <ore-icon aria-hidden="true" name="arrow-right" size="16" stroke-width="2"></ore-icon>
       </a>
     </ore-navigation-menu-panel>
   </ore-navigation-menu>
@@ -70,8 +74,15 @@ const MENU_COLUMNS = NAVBAR_COLUMNS;
   --navigation-menu-panel-columns: 4;
   --navigation-menu-panel-max-height: calc(100dvh - var(--size-16));
   --navigation-menu-panel-width: 72rem;
+  --navbar-item-color: var(--vp-c-text-1);
   display: inline-flex;
   height: 100%;
+}
+
+ore-navigation-menu-panel {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: var(--rounded-xl);
+  box-shadow: var(--vp-shadow-3);
 }
 
 ore-navigation-menu-panel::part(content) {
@@ -79,6 +90,10 @@ ore-navigation-menu-panel::part(content) {
   align-content: start;
   align-items: start;
   padding: var(--size-6);
+}
+
+ore-navigation-menu-panel::part(footer) {
+  border-top: 1px solid var(--vp-c-divider);
 }
 
 .group {
@@ -156,6 +171,41 @@ ore-navigation-menu-panel::part(content) {
 .package-tagline {
   font-size: var(--text-xs);
   color: var(--color-contrast-500);
+}
+
+.all-packages {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-3) var(--size-5);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+  border-top: 0;
+}
+
+.all-packages:hover,
+.all-packages:focus-visible {
+  background: var(--vp-c-default-soft);
+}
+
+.menu-package-link a {
+  display: block;
+  padding: 0 var(--size-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  line-height: 2.2857143;
+  color: var(--vp-c-text-1);
+  white-space: nowrap;
+  text-decoration: none;
+  border-radius: var(--rounded-md);
+}
+
+.menu-package-link a:hover,
+.menu-package-link a:focus-visible {
+  color: var(--vp-c-brand-1);
 }
 
 .screen-menu {

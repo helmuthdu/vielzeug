@@ -1,4 +1,4 @@
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
@@ -6,4 +6,12 @@ import { getConfig } from '../../vite.config.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(getConfig(__dirname, { name: 'keymap' }));
+export default defineConfig(
+  getConfig(__dirname, {
+    entry: {
+      index: resolve(__dirname, 'src/index.ts'),
+      parse: resolve(__dirname, 'src/parse.ts'),
+    },
+    name: 'keymap',
+  }),
+);

@@ -11,7 +11,6 @@ import type {
   MachineConfig,
   MachineEvent,
   MachineSnapshot,
-  Transition,
   TransitionResult,
 } from './types.js';
 
@@ -24,39 +23,73 @@ type RuntimeEvent<State extends string, Context extends Record<string, unknown>,
   | { readonly event: Event; readonly kind: 'event' }
   | InternalEvent<State, Context, Event>;
 
+type ExecutableTransition<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly effects?: readonly Effect<Context, Event>[];
+  readonly reduce?: (args: { readonly context: Readonly<Context>; readonly event: Event | undefined }) => Context;
+  readonly target: State;
+};
+
 type SelectedTransition<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly event: Event | undefined;
-  readonly transition: Transition<State, Context, Event>;
+  readonly transition: ExecutableTransition<State, Context, Event>;
 };
 
 type TransitionOutcome<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly event: Event | undefined;
   readonly result: TransitionResult<State, Context>;
-  readonly transition?: Transition<State, Context, Event>;
+  readonly transition?: ExecutableTransition<State, Context, Event>;
 };
 
 const createSnapshot = <State extends string, Context extends Record<string, unknown>>(
   state: State,
   context: Context,
-): MachineSnapshot<State, Context> => ({ context, state });
+): MachineSnapshot<State, Context> => {
+  const cloned = Object.assign(Object.create(Object.getPrototypeOf(context)) as Context, context);
+
+  return Object.freeze({ context: Object.freeze(cloned), state });
+};
+
+const normalizeSnapshot = <State extends string, Context extends Record<string, unknown>>(
+  snapshot: MachineSnapshot<State, Context>,
+): MachineSnapshot<State, Context> =>
+  Object.isFrozen(snapshot) && Object.isFrozen(snapshot.context)
+    ? snapshot
+    : createSnapshot(snapshot.state, snapshot.context as Context);
 
 const invalidSnapshot = (state: unknown): never => {
   throw new ClockworkError('INVALID_SNAPSHOT_STATE', `snapshot state "${String(state)}" is not declared`, { state });
 };
 
-const isMachineEvent = (event: unknown): event is MachineEvent =>
-  typeof event === 'object' && event !== null && typeof (event as { type?: unknown }).type === 'string';
+const isMachineEvent = (event: unknown): event is MachineEvent => {
+  try {
+    return typeof event === 'object' && event !== null && typeof (event as { type?: unknown }).type === 'string';
+  } catch {
+    return false;
+  }
+};
 
 const stateNode = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
   machine: CompiledMachine<State, Context, Event>,
   state: State,
 ): CompiledState<State, Context, Event> => machine.states.get(state) ?? invalidSnapshot(state);
 
+const assertSnapshot = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
+  machine: CompiledMachine<State, Context, Event>,
+  snapshot: MachineSnapshot<State, Context>,
+): void => {
+  if (!isContextRecord(snapshot.context)) {
+    throw new ClockworkError('INVALID_CONTEXT', 'snapshot context must be a non-array object record', {});
+  }
+
+  stateNode(machine, snapshot.state);
+};
+
 const selectTransition = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
   machine: CompiledMachine<State, Context, Event>,
   snapshot: MachineSnapshot<State, Context>,
   runtimeEvent: RuntimeEvent<State, Context, Event>,
 ): SelectedTransition<State, Context, Event> | undefined => {
+  assertSnapshot(machine, snapshot);
   const state = stateNode(machine, snapshot.state);
 
   if (runtimeEvent.kind === 'after') {
@@ -65,7 +98,7 @@ const selectTransition = <State extends string, Context extends Record<string, u
     const { definition } = runtimeEvent.after;
 
     if (!definition.guard || definition.guard({ context: snapshot.context, event: undefined })) {
-      return { event: undefined, transition: definition };
+      return { event: undefined, transition: definition as ExecutableTransition<State, Context, Event> };
     }
 
     return undefined;
@@ -81,7 +114,10 @@ const selectTransition = <State extends string, Context extends Record<string, u
       | undefined;
 
     if (!guard || guard({ context: snapshot.context, event: runtimeEvent.event })) {
-      return { event: runtimeEvent.event, transition: candidate };
+      return {
+        event: runtimeEvent.event,
+        transition: candidate as unknown as ExecutableTransition<State, Context, Event>,
+      };
     }
   }
 
@@ -98,7 +134,7 @@ const transition = <State extends string, Context extends Record<string, unknown
   if (!selected) {
     return {
       event: runtimeEvent.kind === 'event' ? runtimeEvent.event : undefined,
-      result: { snapshot, type: 'ignored' },
+      result: { snapshot: normalizeSnapshot(snapshot), type: 'ignored' },
     };
   }
 
@@ -140,13 +176,10 @@ const createActor = <State extends string, Context extends Record<string, unknow
     });
   }
 
-  let current = options.snapshot ?? initialSnapshot;
+  const restored = options.snapshot ?? initialSnapshot;
 
-  if (!isContextRecord(current.context)) {
-    throw new ClockworkError('INVALID_CONTEXT', 'snapshot context must be a non-array object record', {});
-  }
-
-  if (!machine.states.has(current.state)) invalidSnapshot(current.state);
+  assertSnapshot(machine, restored);
+  let current = createSnapshot(restored.state, restored.context as Context);
 
   const listeners = new Set<(snapshot: MachineSnapshot<State, Context>) => void>();
   const disposal = new AbortController();
@@ -175,19 +208,15 @@ const createActor = <State extends string, Context extends Record<string, unknow
     disposal.abort();
   };
 
-  const report = (error: unknown, context: ActorErrorContext<State, Event>): void => {
-    let disposition: unknown = 'dispose';
+  const observeError = (error: unknown, context: ActorErrorContext<State, Event>): void => {
+    try {
+      options.onError?.(error, context);
+    } catch {}
+  };
 
-    if (options.onError) {
-      try {
-        disposition = options.onError(error, context);
-      } catch (handlerError) {
-        dispose();
-        throw handlerError;
-      }
-    }
-
-    if (disposition !== 'continue') dispose();
+  const fail = (error: unknown, context: ActorErrorContext<State, Event>): void => {
+    observeError(error, context);
+    dispose();
   };
 
   const run = (runtimeEvent: RuntimeEvent<State, Context, Event>): void => {
@@ -228,7 +257,7 @@ const createActor = <State extends string, Context extends Record<string, unknow
       try {
         effect({ context: current.context, event, send, signal: disposal.signal });
       } catch (error) {
-        report(error, { event, phase: 'effect', state });
+        fail(error, { event, phase: 'effect', state });
       }
     }
   };
@@ -264,7 +293,7 @@ const createActor = <State extends string, Context extends Record<string, unknow
             try {
               send(invoke.onDone({ context: capturedContext, result }));
             } catch (error) {
-              report(error, { event: capturedEvent, phase: 'invoke', state });
+              fail(error, { event: capturedEvent, phase: 'invoke', state });
             }
           },
           (error: unknown) => {
@@ -276,10 +305,10 @@ const createActor = <State extends string, Context extends Record<string, unknow
               if (invoke.onError) {
                 send(invoke.onError({ context: capturedContext, error }));
               } else {
-                report(error, { event: capturedEvent, phase: 'invoke', state });
+                fail(error, { event: capturedEvent, phase: 'invoke', state });
               }
             } catch (callbackError) {
-              report(callbackError, { event: capturedEvent, phase: 'invoke', state });
+              fail(callbackError, { event: capturedEvent, phase: 'invoke', state });
             }
           },
         );
@@ -287,13 +316,13 @@ const createActor = <State extends string, Context extends Record<string, unknow
   };
 
   const notify = (event: Event | undefined): void => {
-    for (const listener of listeners) {
+    for (const listener of [...listeners]) {
       if (disposed) return;
 
       try {
         listener(current);
       } catch (error) {
-        report(error, { event, phase: 'subscriber', state: current.state });
+        observeError(error, { event, phase: 'subscriber', state: current.state });
       }
     }
   };
@@ -305,7 +334,7 @@ const createActor = <State extends string, Context extends Record<string, unknow
     try {
       outcome = transition(machine, current, runtimeEvent);
     } catch (error) {
-      report(error, {
+      fail(error, {
         event: runtimeEvent.kind === 'event' ? runtimeEvent.event : undefined,
         phase: 'transition',
         state: current.state,
@@ -334,7 +363,7 @@ const createActor = <State extends string, Context extends Record<string, unknow
       transitions += 1;
 
       if (transitions > maxTransitions) {
-        report(
+        fail(
           new ClockworkError('INVALID_TRANSITION_LIMIT', 'maximum queued transitions exceeded', { maxTransitions }),
           { phase: 'transition', state: current.state },
         );
@@ -355,7 +384,21 @@ const createActor = <State extends string, Context extends Record<string, unknow
   }
 
   return {
-    can: (event) => !disposed && canTransition(machine, current, event),
+    can: (event) => {
+      if (disposed) return false;
+
+      try {
+        if (!isMachineEvent(event)) {
+          warn('ignored malformed event; expected an object with a string `type`');
+          return false;
+        }
+
+        return canTransition(machine, current, event);
+      } catch (error) {
+        fail(error, { event, phase: 'transition', state: current.state });
+        return false;
+      }
+    },
     get disposalSignal() {
       return disposal.signal;
     },

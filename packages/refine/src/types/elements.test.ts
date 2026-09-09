@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
 import type { FormValidityMethods } from '../shared';
+import type { RefineElementMap } from './elements';
 
 // `elements.d.ts` augments `HTMLElementTagNameMap` under `skipLibCheck: true` (the root
 // tsconfig), which exempts `.d.ts` files from having their own contents verified — a typo, a
@@ -24,6 +25,18 @@ describe('HTMLElementTagNameMap — form-associated element type coverage', () =
     expectTypeOf<HTMLElementTagNameMap['ore-slider']>().toMatchTypeOf<FormValidityMethods>();
     expectTypeOf<HTMLElementTagNameMap['ore-switch']>().toMatchTypeOf<FormValidityMethods>();
     expectTypeOf<HTMLElementTagNameMap['ore-textarea']>().toMatchTypeOf<FormValidityMethods>();
+  });
+
+  it('covers composed and recently added component tags with their public props', () => {
+    expectTypeOf<RefineElementMap['ore-chat-message']['sender']>().toEqualTypeOf<
+      'assistant' | 'system' | 'user' | undefined
+    >();
+    expectTypeOf<RefineElementMap['ore-command-palette']['open']>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<RefineElementMap['ore-list']['selectable']>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<RefineElementMap['ore-navigation-menu']['open']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-stats']['value']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-stepper']['value']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-typing-indicator']['label']>().toEqualTypeOf<string | undefined>();
   });
 
   it('a made-up method fails the same assertion (proves the check above is not vacuously true)', () => {

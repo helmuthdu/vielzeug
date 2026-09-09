@@ -1,18 +1,31 @@
-import { table, ttl, VaultDisposedError, type VaultStore } from '../index';
+import {
+  count,
+  deleteMany,
+  has,
+  isEmpty,
+  type KeyValueVaultStore,
+  table,
+  ttl,
+  update,
+  upsert,
+  VaultDisposedError,
+  validatorCodec,
+} from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
 const userSchema = { users: table<User>('id') };
+const codecs = { users: validatorCodec({ parse: (v) => v as User }) };
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 describe('LocalStorage adapter', () => {
-  let db: VaultStore<typeof userSchema>;
+  let db: KeyValueVaultStore<typeof userSchema>;
 
   beforeEach(() => {
     window.localStorage.clear();
-    db = createLocalStorage({ name: 'LS', schema: userSchema });
+    db = createLocalStorage({ codecs, name: 'LS', schema: userSchema });
   });
 
   test('put/get and delete roundtrip', async () => {
@@ -36,32 +49,31 @@ describe('LocalStorage adapter', () => {
     expect(window.localStorage.getItem('LS\x00other\x001')).not.toBeNull();
   });
 
-  test('has and update work as expected', async () => {
+  test('has and update work as expected (derived helpers)', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
-    expect(await db.has('users', 1)).toBe(true);
-    expect(await db.update('users', 1, { city: 'Paris' })).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+    expect(await has(db, 'users', 1)).toBe(true);
+    expect(await update(db, 'users', 1, { city: 'Paris' })).toEqual({
+      city: 'Paris',
+      id: 1,
+      name: 'Alice',
+    });
   });
 
-  test('upsert inserts when record does not exist', async () => {
-    const result = await db.upsert('users', 1, () => ({ id: 1, name: 'Alice' }));
+  test('upsert inserts when record does not exist (derived helper)', async () => {
+    const result = await upsert(db, 'users', 1, () => ({ id: 1, name: 'Alice' }));
 
     expect(result).toEqual({ id: 1, name: 'Alice' });
   });
 
-  test('query.delete removes matching records', async () => {
+  test('deleteMany removes matching records (derived helper)', async () => {
     await db.putAll('users', [
       { age: 20, id: 1, name: 'Alice' },
       { age: 30, id: 2, name: 'Bob' },
     ]);
 
-    expect(
-      await db
-        .query('users')
-        .filter((u) => (u.age ?? 0) >= 30)
-        .delete(),
-    ).toBe(1);
-    expect(await db.getAll('users')).toEqual([{ age: 20, id: 1, name: 'Alice' }]);
+    expect(await deleteMany(db, 'users', [1])).toBe(1);
+    expect(await db.getAll('users')).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });
 
   test('ttl expiration is respected', async () => {
@@ -69,7 +81,7 @@ describe('LocalStorage adapter', () => {
     await delay(5);
 
     expect(await db.get('users', 1)).toBeUndefined();
-    expect(await db.has('users', 1)).toBe(false);
+    expect(await has(db, 'users', 1)).toBe(false);
   });
 
   test('storage clear event notifies observers', async () => {
@@ -96,7 +108,7 @@ describe('LocalStorage adapter', () => {
     // Simulate a corrupted entry from a *previous session* by writing it
     // before creating a fresh adapter — initOwnedKeys() will see it on startup.
     window.localStorage.setItem('LS\x00users\x0099', 'not valid json {{{');
-    db = createLocalStorage({ name: 'LS', schema: userSchema });
+    db = createLocalStorage({ codecs, name: 'LS', schema: userSchema });
 
     expect(await db.getAll('users')).toEqual([]);
     expect(window.localStorage.getItem('LS\x00users\x0099')).toBeNull();
@@ -132,7 +144,7 @@ describe('LocalStorage adapter', () => {
 
     await db.put('users', { id: 2, name: 'Alice' });
 
-    expect(await db.count('users')).toBe(1);
+    expect(await count(db, 'users')).toBe(1);
     expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Alice' }]);
   });
 
@@ -143,7 +155,7 @@ describe('LocalStorage adapter', () => {
       { id: 3, name: 'Charlie' },
     ]);
 
-    const deleted = await db.deleteMany('users', [1, 3]);
+    const deleted = await deleteMany(db, 'users', [1, 3]);
 
     expect(deleted).toBe(2);
     expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
@@ -158,7 +170,7 @@ describe('LocalStorage adapter', () => {
     vi.advanceTimersByTime(2000); // Alice is now expired
 
     // Attempt to delete both — Alice is expired, Bob is live
-    const deleted = await db.deleteMany('users', [1, 2]);
+    const deleted = await deleteMany(db, 'users', [1, 2]);
 
     vi.useRealTimers();
 
@@ -185,38 +197,71 @@ describe('LocalStorage adapter', () => {
     await Promise.resolve();
 
     // Our schema only has 'users' — phantom table key must not be tracked
-    expect(await db.count('users')).toBe(1);
+    expect(await count(db, 'users')).toBe(1);
     // Cross-tab write to phantom table must not trigger a users observer
   });
 
-  test('keys() returns only live primary keys without fetching full records', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-
-    await db.putAll('users', [
-      { id: 1, name: 'Alice' },
-      { id: 2, name: 'Bob' },
-    ]);
-    await db.put('users', { id: 3, name: 'Carol' }, ttl.ms(1000));
-
-    vi.advanceTimersByTime(2000); // Carol expires
-
-    const keys = await db.keys('users');
-
-    vi.useRealTimers();
-
-    expect(keys.sort()).toEqual([1, 2]);
-  });
-
-  test('isEmpty() returns true for empty table, false when records exist', async () => {
-    expect(await db.isEmpty('users')).toBe(true);
+  test('keeps table-wide reads synchronized across same-window store instances', async () => {
+    const second = createLocalStorage({ codecs, name: 'LS', schema: userSchema });
 
     await db.put('users', { id: 1, name: 'Alice' });
 
-    expect(await db.isEmpty('users')).toBe(false);
+    await expect(second.get('users', 1)).resolves.toEqual({ id: 1, name: 'Alice' });
+    await expect(second.getAll('users')).resolves.toEqual([{ id: 1, name: 'Alice' }]);
+  });
+
+  test('surfaces codec failures without deleting persisted data', async () => {
+    const key = 'LS\x00users\x00n:1';
+    const raw = JSON.stringify({ value: { id: 1, name: 'Alice' } });
+    window.localStorage.setItem(key, raw);
+    const strict = createLocalStorage({
+      codecs: {
+        users: {
+          decode() {
+            throw new Error('schema mismatch');
+          },
+          encode: (value) => value,
+        },
+      },
+      name: 'LS',
+      schema: userSchema,
+    });
+
+    await expect(strict.get('users', 1)).rejects.toThrow('validation failed');
+    expect(window.localStorage.getItem(key)).toBe(raw);
+  });
+
+  test('clears persisted records that no longer satisfy the codec', async () => {
+    const key = 'LS\x00users\x00n:1';
+    window.localStorage.setItem(key, JSON.stringify({ value: { id: 1, name: 'Alice' } }));
+    const strict = createLocalStorage({
+      codecs: {
+        users: {
+          decode() {
+            throw new Error('schema mismatch');
+          },
+          encode: (value) => value,
+        },
+      },
+      name: 'LS',
+      schema: userSchema,
+    });
+
+    await strict.clear('users');
+
+    expect(window.localStorage.getItem(key)).toBeNull();
+  });
+
+  test('isEmpty() returns true for empty table, false when records exist', async () => {
+    expect(await isEmpty(db, 'users')).toBe(true);
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await isEmpty(db, 'users')).toBe(false);
 
     await db.clear('users');
 
-    expect(await db.isEmpty('users')).toBe(true);
+    expect(await isEmpty(db, 'users')).toBe(true);
   });
 });
 

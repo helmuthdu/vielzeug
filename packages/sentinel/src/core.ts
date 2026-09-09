@@ -1,6 +1,4 @@
-import type { Signal, Unsubscribe } from '@vielzeug/ripple';
-import { signal as createSignal } from '@vielzeug/ripple';
-import type { Sentinel, SentinelOptions } from './types.ts';
+import type { Sentinel, SentinelOptions, Unsubscribe } from './types.ts';
 
 export interface CreateSentinelOptions<T> extends SentinelOptions {
   readonly initialValue: T;
@@ -16,15 +14,15 @@ export function createSentinel<T>(
 class SentinelHandle<T> implements Sentinel<T> {
   readonly disposalSignal: AbortSignal;
   private readonly abortController = new AbortController();
-  private readonly state: Signal<T>;
+  private currentValue: T;
+  private readonly listeners = new Set<() => void>();
   private cleanup: (() => void) | undefined;
   private disposedValue = false;
   private externalSignal: AbortSignal | undefined;
   private externalAbortListener: (() => void) | undefined;
 
   constructor(options: CreateSentinelOptions<T>, setup: (update: (value: T) => void) => () => void) {
-    const toSignal = options.runtime?.signal ?? createSignal;
-    this.state = toSignal(options.initialValue);
+    this.currentValue = options.initialValue;
     this.disposalSignal = this.abortController.signal;
 
     if (options.signal?.aborted) {
@@ -35,7 +33,10 @@ class SentinelHandle<T> implements Sentinel<T> {
 
     try {
       this.cleanup = setup((value) => {
-        if (!this.disposedValue) this.state.value = value;
+        if (!this.disposedValue) {
+          this.currentValue = value;
+          this.notify();
+        }
       });
     } catch (error) {
       this.disposedValue = true;
@@ -54,19 +55,15 @@ class SentinelHandle<T> implements Sentinel<T> {
     return this.disposedValue;
   }
 
-  get value(): T {
-    return this.state.value;
-  }
+  readonly getSnapshot = (): T => this.currentValue;
 
-  peek(): T {
-    return this.state.peek();
-  }
+  readonly subscribe = (listener: () => void): Unsubscribe => {
+    if (this.disposedValue) return () => {};
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
 
-  subscribe(listener: () => void): Unsubscribe {
-    return this.state.subscribe(listener);
-  }
-
-  dispose(): void {
+  readonly dispose = (): void => {
     if (this.disposedValue) return;
     this.disposedValue = true;
 
@@ -78,11 +75,24 @@ class SentinelHandle<T> implements Sentinel<T> {
     this.cleanup = undefined;
     this.externalSignal = undefined;
     this.externalAbortListener = undefined;
+    this.listeners.clear();
 
     try {
       cleanup?.();
     } finally {
       this.abortController.abort();
+    }
+  };
+
+  private notify(): void {
+    for (const listener of [...this.listeners]) {
+      try {
+        listener();
+      } catch (error) {
+        queueMicrotask(() => {
+          throw error;
+        });
+      }
     }
   }
 

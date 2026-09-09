@@ -1,84 +1,92 @@
 ---
 title: Conduit — Usage Guide
-description: Register static dependency tuples, resolve services asynchronously, create scopes, validate startup wiring, and dispose owned resources.
+description: Register an immutable provider array, resolve a typed service object at composition roots, create scopes, and dispose owned resources.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create tokens once, register values and factories, then resolve through one async API.
+Create tokens once, build a container from an immutable provider array, then resolve a typed service object at your composition root.
 
 ```ts
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, factoryProvider, token, valueProvider } from '@vielzeug/conduit';
 
 const Config = token<{ baseUrl: string }>('Config');
 const Client = token<{ url: string }>('Client');
 
-const container = createContainer();
-container.value(Config, { baseUrl: '/api' });
-container.factory(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` }));
+const container = createContainer([
+  valueProvider(Config, { baseUrl: '/api' }),
+  factoryProvider(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` })),
+]);
 
-console.log(await container.resolve(Client));
+const services = await container.resolve({ config: Config, client: Client });
+console.log(services.client);
 await container.dispose();
 ```
 
 ## Define Dependencies
 
-Factory token tuples are authoritative. Conduit resolves tuple values in order, validates every edge, and disposes created services in reverse dependency order.
+Factory `dependencies` tuples are authoritative. Conduit resolves tuple values in order, validates every edge at construction, and disposes created services in reverse dependency order.
 
 ```ts
 const Logger = token<{ info(message: string): void }>('Logger');
 const Api = token<{ get(path: string): Promise<unknown> }>('Api');
 const Service = token<{ load(): Promise<unknown> }>('Service');
 
-container.factory(Service, [Api, Logger], (api, logger) => ({
-  async load() {
-    logger.info('Loading data');
-    return api.get('/data');
-  },
-}));
+const container = createContainer([
+  valueProvider(Logger, { info: (message) => console.log(message) }),
+  factoryProvider(Api, [], () => ({ get: async (path: string) => fetch(path) })),
+  factoryProvider(Service, [Api, Logger], (api, logger) => ({
+    async load() {
+      logger.info('Loading data');
+      return api.get('/data');
+    },
+  })),
+]);
 ```
 
 ## Choose Lifetimes
 
-Factories are singletons by default. Use transient lifetime for a new value on every resolution. Conduit retains a transient only when its factory has a `dispose` hook.
+Factories are singletons by default and cached on the registering container. Concurrent singleton resolutions share one in-flight attempt; a rejected attempt is evicted for retry. Use `'transient'` for one value per resolution or a `ScopeToken` for request, job, or test ownership. Singletons cannot depend on transient or scoped factories, and one named scope cannot depend on another.
 
 ```ts
-const RequestId = token<{ id: string }>('RequestId');
-
-container.factory(RequestId, [], () => ({ id: crypto.randomUUID() }), {
-  lifetime: 'transient',
-});
-```
-
-Concurrent singleton resolutions share one in-flight factory result. A singleton cannot depend on a scoped resource; give dependent factory equal-or-shorter lifetime instead. Factory dependency tuples are copied at registration, so later caller mutation cannot change Conduit's graph.
-
-## Create Named Scopes
-
-Use a scope token when a resource belongs to a request, job, or test lifecycle.
-
-```ts
-import { createContainer, scope, token } from '@vielzeug/conduit';
+import { createContainer, factoryProvider, scope, token } from '@vielzeug/conduit';
 
 const Request = scope('request');
 const Session = token<{ id: string }>('Session');
-const root = createContainer();
 
-root.factory(Session, [], () => ({ id: crypto.randomUUID() }), { lifetime: Request });
+const root = createContainer([
+  factoryProvider(Session, [], () => ({ id: crypto.randomUUID() }), { lifetime: Request }),
+]);
+```
 
-const request = root.createScope(Request);
-const session = await request.resolve(Session);
+Factory dependency tuples are copied at construction, so later caller mutation cannot change Conduit's graph. Add `disposalSignalToken` to a factory tuple when work must observe its owning container or scope cancellation.
+
+## Create Named Scopes
+
+Use a scope token when a resource belongs to a request, job, or test lifecycle. Pass immutable local providers through `createScope()` options to override parent registrations.
+
+```ts
+const TraceId = token<string>('TraceId');
+const request = root.createScope(Request, {
+  providers: [valueProvider(TraceId, 'request-trace')],
+});
+const services = await request.resolve({ session: Session });
 await request.dispose();
 await root.dispose();
 ```
 
-## Validate Startup Wiring
+Resolving `Session` from `root` throws `ConduitScopedResolutionError` because no matching scope owns it.
 
-Call `validate()` after registration. It detects missing dependencies and cycles before service resolution. Parent singleton factories validate dependencies from their registration owner; child overrides do not satisfy them.
+## Resolve at Composition Roots
+
+Resolve a map at composition roots to receive an explicitly typed service object. Direct `resolve(token)` remains available for one root service and focused tests; avoid scattering service-locator calls through application code.
 
 ```ts
-container.validate();
+const client = await container.resolve(Client);
+const services = await container.resolve({ client: Client, config: Config });
+// Both results are fully typed.
 ```
 
 ## Dispose Resources
@@ -93,27 +101,30 @@ await container.dispose();
 
 ## Testing
 
-Create a container per test and register explicit values for external dependencies.
+Build a container per test with explicit values for external dependencies. Because the provider array is immutable and validated at construction, a misconfigured test container fails immediately.
 
 ```ts
 const Clock = token<{ now(): number }>('Clock');
 const Service = token<{ timestamp: number }>('Service');
-const container = createContainer();
 
-container.value(Clock, { now: () => 123 });
-container.factory(Service, [Clock], (clock) => ({ timestamp: clock.now() }));
+const container = createContainer([
+  valueProvider(Clock, { now: () => 123 }),
+  factoryProvider(Service, [Clock], (clock) => ({ timestamp: clock.now() })),
+]);
 
-expect(await container.resolve(Service)).toEqual({ timestamp: 123 });
+const services = await container.resolve({ service: Service });
+expect(services.service).toEqual({ timestamp: 123 });
 await container.dispose();
 ```
 
 ## Best Practices
 
 - Create tokens at module scope.
+- Use `valueProvider()` and `factoryProvider()` so tokens, values, dependencies, and disposers remain type-safe.
 - Declare every factory dependency in its tuple.
 - Keep factories focused on one service.
 - Use scopes for request/job-owned resources.
-- Call `validate()` during startup.
+- Resolve once at a composition root; pass the typed service object downstream.
 - Dispose every scope and root container.
 - Keep optional application fallback policy outside Conduit.
-- Use `await using container = createContainer()` when lexical async disposal fits application lifetime.
+- Use `await using container = createContainer([...])` when lexical async disposal fits application lifetime.

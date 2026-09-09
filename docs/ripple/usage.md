@@ -27,10 +27,10 @@ Use `createRipple()` for tests, SSR requests, embedded applications, or independ
 ```ts
 import { createRipple } from '@vielzeug/ripple';
 
-const ripple = createRipple({
-  onError(error, context) {
-    console.log(context.kind, error);
-  },
+const ripple = createRipple({ errorPolicy: 'swallow' });
+
+ripple.tap((event) => {
+  if (event.type === 'error') console.log(event.context.kind, event.error);
 });
 
 const count = ripple.signal(0);
@@ -98,9 +98,13 @@ count.value = 1;
 scope.dispose();
 ```
 
+Effects and computeds created directly during an effect run belong to that run and are disposed before rerun. Explicit scopes intentionally attach to the enclosing scope and survive effect reruns; create them outside rerunning effects or retain and dispose each scope yourself.
+
+Disposed owned nodes detach from their parent immediately, so long-lived graphs do not retain released effects or scopes.
+
 ## Watch Selected Values
 
-Use `watch()` for one selected output. Use `effect()` when every reactive read in the callback should be a dependency.
+Use `watch()` for one selected output. Reactive reads made only inside its callback are untracked. `{ once: true }` disposes after the first callback invocation even when that callback throws. Use `effect()` when every callback read should be a dependency.
 
 ```ts
 const stopWatch = ripple.watch(
@@ -112,26 +116,70 @@ const stopWatch = ripple.watch(
 stopWatch.dispose();
 ```
 
-## Async Data
+## Observability
 
-`resource()` captures source dependencies synchronously and passes a cancellation signal to the loader.
+`tap()` receives writes, computes, effects, disposals, and reported errors. Computed refresh failures are isolated and reported without interrupting sibling propagation. During runtime disposal, owned cleanup errors and node disposal events are emitted before the final graph disposal event; handlers remain active until that sequence completes. Tap-handler errors are swallowed.
+
+```ts
+const ripple = createRipple({ errorPolicy: 'swallow' });
+
+ripple.tap((event) => {
+  switch (event.type) {
+    case 'write':
+      console.log(`${event.name}: ${event.previous} → ${event.next}`);
+      break;
+    case 'error':
+      console.error(`${event.context.kind}:`, event.error);
+      break;
+  }
+});
+```
+
+`errorPolicy` controls whether computed refresh, effect, cleanup, and listener failures rethrow (`'throw'`, default) or are silenced (`'swallow'`). Error events are emitted through `tap()` regardless of policy.
+
+## Bridging External Sources
+
+`fromSubscribable()` bridges external `{ getSnapshot, subscribe }` sources into a disposable reactive readable. Use `ripple.fromSubscribable()` inside isolated graphs; the root helper uses the process-lifetime default graph. The bridge rereads after subscription to close registration races, and disposal invokes the external unsubscribe function.
+
+```ts
+import { fromSubscribable, effect } from '@vielzeug/ripple';
+
+const routerState = fromSubscribable({
+  getSnapshot: () => router.getSnapshot(),
+  subscribe: (cb) => router.subscribe(cb),
+});
+
+const stop = effect(() => {
+  console.log('Current route:', routerState.value);
+});
+
+stop.dispose();
+routerState.dispose();
+```
+
+## Load Async Resources
+
+`resource()` starts immediately, tracks its source reads, and aborts the previous loader whenever the source changes or `reload()` is called. It preserves the last successful value—including `undefined`—as `previous` while newer work is pending or fails.
 
 ```ts
 const userId = ripple.signal('42');
 const user = ripple.resource(
   () => userId.value,
-  async (id, { signal }) => {
-    const response = await fetch(`/users/${id}`, { signal });
-    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-
-    return response.json() as Promise<{ id: string; name: string }>;
-  },
+  (id, { signal }) => fetch(`/users/${id}`, { signal }).then((response) => response.json()),
+  { name: 'user' },
 );
 
-if (user.value.status === 'success') console.log(user.value.value.name);
-if (user.value.status === 'error') console.error(user.value.error);
+const stop = ripple.effect(() => {
+  const state = user.value;
+  if (state.status === 'success') renderUser(state.value);
+  if (state.status === 'error') renderError(state.error);
+});
+
+stop.dispose();
 user.dispose();
 ```
+
+Disposed resources retain readable state but reject `reload()` and new subscriptions with `RippleDisposedResourceError`. Use Sourcerer for paginated collection state and a dedicated server-state cache for shared keyed reads, retries, and invalidation.
 
 ## Object State
 
@@ -149,7 +197,7 @@ console.log(items.value);
 
 ## Testing
 
-Create an isolated graph per test. Disposal prevents effects and resource work from leaking into later tests.
+Create an isolated graph per test. Disposal prevents effects from leaking into later tests.
 
 ```ts
 import { expect, test } from 'vitest';
@@ -262,15 +310,16 @@ ripple.dispose();
 
 ### Computed first-run failure is recoverable
 
-If a computed's `derive` throws on its first run (e.g., a source is `null`), the computed commits the partial dependencies it tracked before the throw. When a dependency changes and the derivation can succeed, the computed refreshes and notifies its dependents. Effects that read a failing computed report the error through `onError` and re-run when the computed recovers.
+If a computed's `derive` throws on its first run (e.g., a source is `null`), the computed commits the partial dependencies it tracked before the throw. When a dependency changes and the derivation can succeed, the computed refreshes and notifies its dependents. Effects that read a failing computed report the error through `tap()` and re-run when the computed recovers.
 
 ## Best Practices
 
 - Create one graph per ownership boundary.
 - Keep computed callbacks pure.
 - Return cleanup from effects.
-- Dispose request, test, and feature graphs.
+- Dispose test and feature graphs.
 - Batch related synchronous writes.
-- Use `watch()` only for selected source transitions.
-- Read dependencies in a resource source, not its loader.
-- Use `onError` for runtime callback, cleanup, listener, and observer failures; handle resource source and loader failures through `resource.value.status === 'error'`.
+- Use `watch()` only for selected source transitions; callback-only reads are untracked.
+- Dispose external-source bridges when their owner ends.
+- Use `tap()` for runtime observability; set `errorPolicy: 'swallow'` to silence rethrow.
+- Use `resource()` for focused async state and Sourcerer for paginated collection workflows.

@@ -1,10 +1,10 @@
-import { abortError } from '@vielzeug/arsenal/async';
-import { createPoolCore, type PoolCore, type PoolOptions } from './_pool-core';
-import { type QueueItem, TaskQueue } from './_queue';
-import { FamiliarQueueFullError, FamiliarTerminatedError } from './errors';
-import type { RunOptions, SlotStrategy, TaskGroup, TaskGroupOptions, WorkerPool } from './types';
+import { abortError } from '@vielzeug/arsenal';
+import { createPoolCore, type PoolCore, type PoolOptions, validatePriority, validateTimeout } from './_pool-core.js';
+import { type QueueItem, TaskQueue } from './_queue.js';
+import { FamiliarQueueFullError, FamiliarRuntimeError, FamiliarTerminatedError } from './errors.js';
+import type { RunOptions, SlotStrategy, WorkerPool } from './types.js';
 
-export type { PoolOptions } from './_pool-core';
+export type { PoolOptions } from './_pool-core.js';
 
 export function createPool<TInput, TOutput>(
   slots: SlotStrategy<TInput, TOutput>[],
@@ -74,7 +74,10 @@ export function createPool<TInput, TOutput>(
       core.trackActive(1);
       core.releaseCapacity();
 
-      const onAbort = () => slot.cancel(abortError(item.signal!));
+      const onAbort = () => {
+        item.aborted = true;
+        slot.cancel(abortError(item.signal!));
+      };
 
       item.cleanupAbort = () => {
         item.signal?.removeEventListener('abort', onAbort);
@@ -102,8 +105,7 @@ export function createPool<TInput, TOutput>(
         freeSlots.push(slot);
         core.trackActive(-1);
 
-        if (!(error instanceof FamiliarTerminatedError) && error instanceof Error && error.name !== 'AbortError')
-          core.trackFailed();
+        if (!item.aborted && !(error instanceof FamiliarTerminatedError)) core.trackFailed();
 
         item.reject(error);
         drainQueue();
@@ -115,7 +117,10 @@ export function createPool<TInput, TOutput>(
   }
 
   async function run(input: TInput, runOptions: RunOptions = {}): Promise<TOutput> {
-    const { priority = 0, signal, timeout, transferables = [] } = runOptions;
+    const { signal } = runOptions;
+    const priority = validatePriority(runOptions.priority ?? 0);
+    const timeout = validateTimeout(runOptions.timeout);
+    const transferables = [...(runOptions.transferables ?? [])];
 
     if (core.disposed) throw new FamiliarTerminatedError();
 
@@ -124,13 +129,16 @@ export function createPool<TInput, TOutput>(
     if (signal?.aborted) throw abortError(signal);
 
     while (options.onFull === 'wait' && options.maxQueue !== undefined && queue.size >= options.maxQueue) {
-      await core.waitForCapacity(signal);
+      await core.waitForCapacity(signal, priority);
 
       if (core.disposed) throw new FamiliarTerminatedError();
 
       if (core.drainPromise) throw new FamiliarTerminatedError('Worker is draining');
 
-      if (signal?.aborted) throw abortError(signal);
+      if (signal?.aborted) {
+        core.releaseCapacity();
+        throw abortError(signal);
+      }
     }
 
     let resolve!: (value: TOutput) => void;
@@ -176,9 +184,6 @@ export function createPool<TInput, TOutput>(
       return core.disposed;
     },
     drain: core.drain,
-    async prime(): Promise<void> {
-      await core.prime(slots);
-    },
     run,
     get stats() {
       return core.stats(queue.size);
@@ -191,67 +196,87 @@ export function createPool<TInput, TOutput>(
   };
 }
 
-export async function* batch<TInput, TOutput>(
+export type BatchOptions<TInput> = Pick<RunOptions, 'priority' | 'signal' | 'timeout'> & {
+  getTransferables?: (input: TInput, index: number) => readonly Transferable[];
+};
+
+/** Run related tasks concurrently and yield their results in input order. */
+export function runBatch<TInput, TOutput>(
   pool: WorkerPool<TInput, TOutput>,
   inputs: readonly TInput[],
-  options: RunOptions = {},
+  options: BatchOptions<TInput> = {},
 ): AsyncIterable<TOutput> {
-  const controller = new AbortController();
-  const onAbort = () => controller.abort(options.signal?.reason);
+  let owner: object | undefined;
 
-  options.signal?.addEventListener('abort', onAbort, { once: true });
+  const iterate = async function* (controller: AbortController): AsyncGenerator<TOutput> {
+    const tasks: Promise<TOutput>[] = [];
+    const onAbort = () => controller.abort(options.signal?.reason);
 
-  const tasks = inputs.map((input) => pool.run(input, { ...options, signal: controller.signal }));
+    if (options.signal?.aborted) controller.abort(options.signal.reason);
+    else options.signal?.addEventListener('abort', onAbort, { once: true });
 
-  try {
-    for (const task of tasks) yield await task;
-  } catch (error) {
-    controller.abort(error);
-    await Promise.allSettled(tasks);
-    throw error;
-  } finally {
-    options.signal?.removeEventListener('abort', onAbort);
-    controller.abort();
-    await Promise.allSettled(tasks);
-  }
-}
+    try {
+      for (const [index, input] of inputs.entries()) {
+        const task = pool
+          .run(input, {
+            priority: options.priority,
+            signal: controller.signal,
+            timeout: options.timeout,
+            transferables: options.getTransferables?.(input, index),
+          })
+          .catch((error: unknown) => {
+            controller.abort(error);
+            throw error;
+          });
 
-export function createTaskGroup<TInput, TOutput>(
-  pool: WorkerPool<TInput, TOutput>,
-  name: string | undefined = undefined,
-  options: TaskGroupOptions = {},
-): TaskGroup<TInput, TOutput> {
-  const controller = new AbortController();
-  const tasks = new Set<Promise<TOutput>>();
-  let size = 0;
-  const onAbort = () => controller.abort(options.signal?.reason);
+        void task.catch(() => undefined);
+        tasks.push(task);
+      }
 
-  options.signal?.addEventListener('abort', onAbort, { once: true });
+      if (tasks.length === 0 && controller.signal.aborted) throw abortError(controller.signal);
+      for (const task of tasks) {
+        if (controller.signal.aborted) throw abortError(controller.signal);
+        const value = await task;
+        if (controller.signal.aborted) throw abortError(controller.signal);
+        yield value;
+      }
+    } catch (error) {
+      controller.abort(error);
+      throw error;
+    } finally {
+      options.signal?.removeEventListener('abort', onAbort);
+      controller.abort(new DOMException('Batch consumer stopped', 'AbortError'));
+      await Promise.allSettled(tasks);
+    }
+  };
 
   return {
-    abort(reason?: unknown): void {
-      controller.abort(reason);
-    },
-    async drain(): Promise<PromiseSettledResult<TOutput>[]> {
-      return Promise.allSettled([...tasks]);
-    },
-    get name() {
-      return name;
-    },
-    get pending() {
-      return tasks.size;
-    },
-    run(input, runOptions = {}): Promise<TOutput> {
-      const task = pool.run(input, { ...runOptions, signal: controller.signal });
+    [Symbol.asyncIterator]() {
+      const token = {};
+      const controller = new AbortController();
+      let iterator: AsyncGenerator<TOutput> | undefined;
+      const start = (): AsyncGenerator<TOutput> | undefined => {
+        owner ??= token;
+        if (owner !== token) return undefined;
+        iterator ??= iterate(controller);
+        return iterator;
+      };
 
-      size += 1;
-      tasks.add(task);
-      void task.finally(() => tasks.delete(task));
-
-      return task;
-    },
-    get size() {
-      return size;
+      return {
+        next: () =>
+          start()?.next() ?? Promise.reject(new FamiliarRuntimeError('Worker batches can only be consumed once')),
+        return: async (value?: unknown) => {
+          if (!owner || owner !== token) return { done: true, value: value as TOutput };
+          controller.abort(new FamiliarTerminatedError('Batch consumer stopped'));
+          return iterator?.return(value as TOutput) ?? { done: true, value: value as TOutput };
+        },
+        throw: async (error?: unknown) => {
+          const active = start();
+          if (!active) throw new FamiliarRuntimeError('Worker batches can only be consumed once');
+          controller.abort(error);
+          return active.throw(error);
+        },
+      };
     },
   };
 }

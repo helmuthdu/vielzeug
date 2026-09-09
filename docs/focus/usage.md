@@ -1,52 +1,76 @@
 ---
 title: Focus — Usage Guide
-description: Build keyboard-focus navigation and restoration into composite widgets.
+description: Build keyboard navigation and restore focus across transient browser interfaces.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create one navigation handle for a composite widget and forward `keydown` events to it.
+Create one navigation model for the items in a composite widget. Focus remains an application side effect: apply the returned change after each key operation.
 
 ```ts
 import { createListNavigation } from '@vielzeug/focus';
 
 const nav = createListNavigation({
   getItems: () => items,
+  isItemDisabled: (item) => item.matches('[aria-disabled="true"]'),
   loop: true,
-  onNavigate: ({ item }) => item.focus(),
 });
 
-list.addEventListener('keydown', nav.handleKeydown);
+const onKeydown = (event: KeyboardEvent) => {
+  const result = nav.handleKeydown(event);
+  result?.change?.item.focus();
+};
+
+list.addEventListener('keydown', onKeydown);
 ```
 
-## Orientation and Direction
+`createListNavigation()` owns only index and typeahead state. The layer that attaches the event listener owns its cleanup.
 
-Use orientation and direction to derive default key bindings.
+## Inspect Keyboard Results
+
+`handleKeydown()` returns `null` when Focus did not handle the event. Recognized keys return explicit handling state:
+
+```ts
+const result = nav.handleKeydown(event);
+
+if (result?.handled && result.change) {
+  console.log(result.change.action, result.change.index, result.change.item);
+}
+```
+
+A boundary arrow may return `{ handled: true, change: null }`: the composite consumed the key but its active item did not move. Events that are already prevented, disabled, or part of IME composition return `null`.
+
+Programmatic navigation returns only committed changes:
+
+```ts
+nav.navigate('first')?.item.focus();
+nav.navigate('next')?.item.focus();
+nav.navigate('prev')?.item.focus();
+nav.navigate('last')?.item.focus();
+```
+
+`set(index)` accepts integer indexes. Invalid or disabled targets reset navigation to `-1`.
+
+## Configure Orientation and Direction
+
+Direction, orientation, and disabled state may be live getters:
 
 ```ts
 const nav = createListNavigation({
-  direction: () => (document.dir === 'rtl' ? 'rtl' : 'ltr'),
-  getItems: () => tabs,
-  orientation: 'horizontal',
+  direction: () => document.documentElement.dir === 'rtl' ? 'rtl' : 'ltr',
+  disabled: () => panel.hidden,
+  getItems: () => items,
+  orientation: () => 'horizontal',
 });
 ```
 
-## Disabled and Dynamic Items
+Horizontal arrows mirror in RTL. Vertical arrows do not. Custom key tables override defaults; assigning one key to multiple actions throws `RangeError`.
 
-Provide `isItemDisabled` when disabled state is data-driven.
+## Add Typeahead
 
-```ts
-const nav = createListNavigation({
-  getItems: () => rows,
-  isItemDisabled: (item) => item.hasAttribute('aria-disabled'),
-});
-```
-
-## Typeahead
-
-Enable character-based navigation with the `typeahead` option.
+Provide stable labels for menu, listbox, or command navigation:
 
 ```ts
 const nav = createListNavigation({
@@ -54,29 +78,44 @@ const nav = createListNavigation({
   typeahead: {
     delayMs: 300,
     getLabel: (item) => item.textContent ?? '',
+    preventDefault: true,
   },
 });
 ```
 
-`typeahead.delayMs` defaults to `500`. Repeated characters cycle matching items without waiting for the timeout.
+`delayMs` defaults to `500` and must be positive and finite. Repeated characters cycle matching items. Set `preventDefault: true` for menu-style typeahead; leave it false when an editable combobox input must receive the printable key.
 
-## Focus Restoration
+## Restore Focus
 
-Capture focus before opening a floating surface and restore it after closing.
+Capture focus before opening a transient surface, then invoke the one-shot restorer when it closes:
 
 ```ts
 import { captureFocus } from '@vielzeug/focus';
 
-const restore = captureFocus();
+const restore = captureFocus({
+  fallback: () => document.querySelector<HTMLElement>('#main'),
+  preventScroll: true,
+});
 
-openDialog();
-closeDialog();
-restore();
+dialog.showModal();
+dialog.addEventListener('close', restore, { once: true });
 ```
+
+A supplied signal can cancel pending restoration:
+
+```ts
+const controller = new AbortController();
+const restore = captureFocus({ signal: controller.signal });
+
+controller.abort();
+restore(); // false
+```
+
+Use `restoreFocus()` directly when the target is already known. Disconnected, disabled, inert, throwing, or non-focusable targets fall through to the lazy fallback.
 
 ## Framework Integration
 
-Create the navigation handle once per component instance and dispose it on unmount. The handle is framework-neutral — wire `keydown` from whatever element owns the composite widget's keyboard surface.
+Create navigation once per mounted widget. Framework cleanup removes only the event listener because the navigation model owns no external resources.
 
 ::: code-group
 
@@ -84,7 +123,7 @@ Create the navigation handle once per component instance and dispose it on unmou
 import { useEffect, useRef } from 'react';
 import { createListNavigation } from '@vielzeug/focus';
 
-function Tabs({ tabs }: { tabs: Array<{ id: string; label: string }> }) {
+function Tabs({ tabs }: { tabs: string[] }) {
   const listRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -93,159 +132,84 @@ function Tabs({ tabs }: { tabs: Array<{ id: string; label: string }> }) {
     if (!list) return;
 
     const nav = createListNavigation({
-      getItems: () => tabRefs.current.filter((el): el is HTMLButtonElement => el !== null),
+      getItems: () => tabRefs.current.filter((item): item is HTMLButtonElement => item !== null),
       loop: true,
-      onNavigate: ({ item }) => item.focus(),
       orientation: 'horizontal',
     });
+    const onKeydown = (event: KeyboardEvent) => nav.handleKeydown(event)?.change?.item.focus();
 
-    list.addEventListener('keydown', nav.handleKeydown);
-    return () => {
-      list.removeEventListener('keydown', nav.handleKeydown);
-      nav.dispose();
-    };
+    list.addEventListener('keydown', onKeydown);
+    return () => list.removeEventListener('keydown', onKeydown);
   }, []);
 
   return (
     <div ref={listRef} role="tablist">
-      {tabs.map((tab, i) => (
-        <button
-          key={tab.id}
-          ref={(el) => { tabRefs.current[i] = el; }}
-          role="tab"
-        >
-          {tab.label}
-        </button>
+      {tabs.map((tab, index) => (
+        <button key={tab} ref={(element) => { tabRefs.current[index] = element; }}>{tab}</button>
       ))}
     </div>
   );
 }
 ```
 
-```vue [Vue 3]
-<script setup lang="ts">
+```ts [Vue]
 import { onMounted, onUnmounted, ref } from 'vue';
 import { createListNavigation } from '@vielzeug/focus';
 
-const props = defineProps<{ tabs: Array<{ id: string; label: string }> }>();
-
-const listEl = ref<HTMLDivElement | null>(null);
-const tabEls = ref<Array<HTMLButtonElement | null>>([]);
-
-let nav: ReturnType<typeof createListNavigation> | undefined;
+const list = ref<HTMLElement>();
+let onKeydown: ((event: KeyboardEvent) => void) | undefined;
 
 onMounted(() => {
-  if (!listEl.value) return;
-
-  nav = createListNavigation({
-    getItems: () => tabEls.value.filter((el): el is HTMLButtonElement => el !== null),
-    loop: true,
-    onNavigate: ({ item }) => item.focus(),
-    orientation: 'horizontal',
-  });
-
-  listEl.value.addEventListener('keydown', nav.handleKeydown);
+  const nav = createListNavigation({ getItems: () => items, orientation: 'horizontal' });
+  onKeydown = (event) => nav.handleKeydown(event)?.change?.item.focus();
+  list.value?.addEventListener('keydown', onKeydown);
 });
 
 onUnmounted(() => {
-  if (nav) listEl.value?.removeEventListener('keydown', nav.handleKeydown);
-  nav?.dispose();
+  if (onKeydown) list.value?.removeEventListener('keydown', onKeydown);
 });
-</script>
-
-<template>
-  <div ref="listEl" role="tablist">
-    <button
-      v-for="(tab, i) in tabs"
-      :key="tab.id"
-      :ref="(el) => { tabEls[i] = el as HTMLButtonElement | null; }"
-      role="tab"
-    >
-      {{ tab.label }}
-    </button>
-  </div>
-</template>
 ```
 
-```svelte [Svelte]
-<script lang="ts">
-  import { onMount } from 'svelte';
-  import { createListNavigation } from '@vielzeug/focus';
+```ts [Svelte]
+import { onMount } from 'svelte';
+import { createListNavigation } from '@vielzeug/focus';
 
-  let { tabs }: { tabs: Array<{ id: string; label: string }> } = $props();
-
-  let listEl: HTMLDivElement;
-  let tabEls: HTMLButtonElement[] = [];
-
-  onMount(() => {
-    const nav = createListNavigation({
-      getItems: () => tabEls,
-      loop: true,
-      onNavigate: ({ item }) => item.focus(),
-      orientation: 'horizontal',
-    });
-
-    listEl.addEventListener('keydown', nav.handleKeydown);
-    return () => {
-      listEl.removeEventListener('keydown', nav.handleKeydown);
-      nav.dispose();
-    };
-  });
-</script>
-
-<div bind:this={listEl} role="tablist">
-  {#each tabs as tab, i}
-    <button bind:this={tabEls[i]} role="tab">{tab.label}</button>
-  {/each}
-</div>
+onMount(() => {
+  const nav = createListNavigation({ getItems: () => items, orientation: 'horizontal' });
+  const onKeydown = (event: KeyboardEvent) => nav.handleKeydown(event)?.change?.item.focus();
+  list.addEventListener('keydown', onKeydown);
+  return () => list.removeEventListener('keydown', onKeydown);
+});
 ```
 
 :::
 
-## Working with Other Vielzeug Libraries
+## Integrate with Keymap
 
-### Focus + Refine
-
-Refine's `ore-menu`, `ore-dialog`, and `ore-list` use Focus internally for keyboard navigation and focus restoration. When building custom composite widgets on top of Refine components, use `createListNavigation` for the keyboard layer and let Refine handle rendering.
+Use Focus for local composite navigation and Keymap for application shortcuts:
 
 ```ts
 import { createListNavigation } from '@vielzeug/focus';
-
-// Custom tab bar built alongside ore-tab panels
-const tabNav = createListNavigation({
-  getItems: () => Array.from(host.querySelectorAll('[role="tab"]')),
-  loop: true,
-  onNavigate: ({ item }) => item.focus(),
-  orientation: 'horizontal',
-});
-
-host.addEventListener('keydown', tabNav.handleKeydown);
-```
-
-### Focus + Keymap
-
-Use Keymap for global shortcuts and Focus for composite-widget navigation. They operate on different event layers without conflict.
-
-```ts
 import { createKeymap } from '@vielzeug/keymap';
-import { createListNavigation } from '@vielzeug/focus';
 
-const nav = createListNavigation({ getItems: () => items, onNavigate: ({ item }) => item.focus() });
+const nav = createListNavigation({ getItems: () => items });
+const onKeydown = (event: KeyboardEvent) => nav.handleKeydown(event)?.change?.item.focus();
+const map = createKeymap([
+  { id: 'palette', shortcut: 'mod+k', handler: () => openPalette() },
+  { id: 'reset', shortcut: 'escape', handler: () => nav.reset() },
+]);
 
-const map = createKeymap({
-  'mod+k': () => openPalette(),
-  escape: () => nav.reset(),
-});
-
-list.addEventListener('keydown', nav.handleKeydown);
+list.addEventListener('keydown', onKeydown);
 map.mount(document);
 ```
 
 ## Best Practices
 
-- **Keep** item discovery in one function.
-- **Drive** focus side effects from `onNavigate`.
-- **Reset** navigation on overlay close when focus context changes.
-- **Use** typeahead only when labels are stable and meaningful.
-- **Capture** return focus before opening transient surfaces.
-- **Dispose** handles when owners unmount.
+- Keep item discovery in one live `getItems()` function.
+- Apply focus from returned changes rather than hiding effects in navigation state.
+- Treat `{ handled: true, change: null }` as a consumed boundary key.
+- Ignore events before Focus when an inner widget already called `preventDefault()`.
+- Reset navigation when an overlay closes or its item context changes.
+- Use typeahead only with stable labels, and set `preventDefault` according to whether the keyboard surface is editable.
+- Capture return focus before opening transient surfaces.
+- Remove the owning event listener when a widget unmounts.

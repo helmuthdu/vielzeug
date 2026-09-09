@@ -9,12 +9,10 @@ description: Complete API reference for @vielzeug/lingua.
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createCatalogTranslator()` | Compile one immutable locale catalog | Sync | No fallback locales |
-| `createTranslator()` | Compile immutable locale catalogs | Sync | Locale is fixed for translator lifetime |
-| `createTranslationStore()` | Create mutable locale and catalog store | Sync | Load lazy locale explicitly |
-| `hydrateTranslationStore()` | Create store from serialized loaded catalogs | Sync | Serialized state never includes loaders |
-| `catalogKeys()` | Enumerate message keys as dotted paths | Sync | Accepts store (current locale) or raw catalog; traverse subtrees for group-scoped keys |
-| `createFormatter()` | Format Intl values from `/format` | Sync | Import from subpath |
+| `createTranslator()` | Compile one immutable locale catalog | Sync | No fallback locales |
+| `createI18n()` | Create mutable locale and catalog store | Sync | Provide catalogs, serialized state, or a loader |
+| `createFormatter()` | Create a cached Intl facade from `/format` | Sync | Pass a locale getter for dynamic locale changes |
+| `catalogKeys()` | Enumerate message keys as dotted paths | Sync | Accepts i18n instance (current locale) or raw catalog; traverse subtrees for group-scoped keys |
 | `validateCatalog()` | Check explicit plural forms from `/validate` | Sync | Import from subpath |
 | `compareCatalogs()` | Compare key parity across locales from `/validate` | Sync | First locale is the base; import from subpath |
 | `LinguaError` | Base class for Lingua errors | Sync | Use `instanceof LinguaError` for broad narrowing |
@@ -24,18 +22,15 @@ description: Complete API reference for @vielzeug/lingua.
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/lingua` | Translation factories, state types, and Lingua errors |
-| `@vielzeug/lingua/format` | `createFormatter()` and formatter types |
+| `@vielzeug/lingua/format` | Standalone cached Intl formatter factory |
 | `@vielzeug/lingua/validate` | `validateCatalog()`, `compareCatalogs()`, and `ValidationIssue` |
 
 ## Translation Factories
 
-### createCatalogTranslator
+### createTranslator
 
 ```ts
-function createCatalogTranslator<C extends Catalog>(
-  catalog: C,
-  options?: CatalogTranslatorOptions,
-): Translator<C>;
+function createTranslator<C extends Catalog>(catalog: C, options?: TranslatorOptions): Translator<C>;
 ```
 
 Compiles one catalog and returns an immutable fixed-locale translator. Locale defaults to `en` and controls plural selection and diagnostics.
@@ -43,37 +38,7 @@ Compiles one catalog and returns an immutable fixed-locale translator. Locale de
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `catalog` | `C` | One catalog containing only messages and grouping objects |
-| `options` | `CatalogTranslatorOptions` | Locale and missing-message handlers; fallback is unavailable |
-
-**Returns:** `Translator<C>`.
-
-**Example:**
-
-```ts
-import { createCatalogTranslator } from '@vielzeug/lingua';
-
-const translator = createCatalogTranslator(
-  { save: 'Enregistrer' },
-  { locale: 'fr' },
-);
-
-translator.translate('save');
-```
-
----
-
-### createTranslator
-
-```ts
-function createTranslator<C extends Catalog>(catalogs: Catalogs<C>, options?: TranslatorOptions): Translator<C>;
-```
-
-Compiles locale catalogs and returns immutable translator.
-
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `catalogs` | `Catalogs<C>` | Locale-keyed catalog objects |
-| `options` | `TranslatorOptions` | Locale, fallback chain, and missing-message handlers |
+| `options` | `TranslatorOptions` | Locale and missing-message strategy |
 
 **Returns:** `Translator<C>`.
 
@@ -83,7 +48,7 @@ Compiles locale catalogs and returns immutable translator.
 import { createTranslator } from '@vielzeug/lingua';
 
 const translator = createTranslator(
-  { en: { save: 'Save' }, fr: { save: 'Enregistrer' } },
+  { save: 'Enregistrer' },
   { locale: 'fr' },
 );
 
@@ -94,52 +59,53 @@ translator.translate('save');
 | --- | --- | --- |
 | `translate` | `(textKey, options?)` or `(pluralKey, { count, ordinal?, values? })` | Rendered string |
 | `translateDynamic` | `(key, options?)` | Rendered string for runtime key |
-| `segments` | `(textKey, { values })` or `(pluralKey, { count, ordinal?, values? })` | String and typed-value segments |
-| `segmentsDynamic` | `(key, options)` | Segments for runtime key |
+| `parts` | `(textKey, { values })` or `(pluralKey, { count, ordinal?, values? })` | Typed discriminated parts |
+| `partsDynamic` | `(key, options)` | Parts for runtime key |
 | `locale` | `Locale` | Resolved active locale |
 
 ---
 
-### createTranslationStore
+### createI18n
 
 ```ts
-function createTranslationStore<C extends Catalog>(options: TranslationStoreOptions<C>): TranslationStore<C>;
+function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C>;
 ```
 
 Creates catalog store, current locale state, and immutable translator snapshots.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `options.catalogs` | `CatalogSources<C>` | Static catalogs or lazy locale loaders |
-| `options.locale` | `Locale` | Initial locale; defaults to `en` |
-| `options.fallback` | `Locale \| readonly Locale[]` | Fallback locale chain |
-| `options.onMissingKey` | `(key, locale) => string` | Missing-message handler |
-| `options.onMissingValue` | `(name, key, locale) => string` | Missing-interpolation handler |
+| `options.catalogs` | `Catalogs<C>` | Eager locale catalogs; mutually exclusive with `state` |
+| `options.locale` | `Locale` | Initial locale; defaults to serialized locale, then `en` |
+| `options.loadCatalog` | `(locale) => Promise<C> \| C` | Optional loader for catalogs not supplied eagerly |
+| `options.fallback` | `Locale \| readonly Locale[]` | Fallback locales loaded with the selected locale |
+| `options.missing` | `MissingStrategy` | Missing-key/value strategy |
+| `options.state` | `TranslationState<C>` | Eager serialized state; mutually exclusive with `catalogs` |
 
-**Returns:** `TranslationStore<C>`, with every `Translator<C>` method plus lifecycle methods.
+Provide `catalogs`, `state`, or `loadCatalog`. You may combine eager `catalogs` or hydrated `state` with `loadCatalog` for later locales.
+
+**Returns:** `I18n<C>`, with every `Translator<C>` method plus lifecycle methods.
 
 **Example:**
 
 ```ts
-import { createTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
-const translations = createTranslationStore({
-  catalogs: { en: { title: 'Home' }, fr: { title: 'Accueil' } },
+const i18n = createI18n({
+  catalogs: { en: { title: 'Home' } },
   locale: 'en',
 });
-
-await translations.setLocale('fr');
-translations.translate('title');
+i18n.translate('title');
 ```
 
 | Method or property | Signature | Returns |
 | --- | --- | --- |
 | `translate` | Translator method | Rendered string |
-| `segments` | Translator method | String and typed-value segments |
-| `load` | `({ locale? })` | `Promise<void>` after catalog resolution |
-| `setLocale` | `(locale)` | `Promise<void>` after locale commit; never loads implicitly |
+| `parts` | Translator method | Typed discriminated parts |
+| `load` | `({ locale? })` | `Promise<void>` after the locale and configured fallbacks load |
+| `setLocale` | `(locale)` | `Promise<void>` after an atomic loaded-locale commit |
 | `isLoaded` | `({ locale? })` | `boolean` |
-| `getSnapshot` | `()` | `TranslationSnapshot<C>` |
+| `getSnapshot` | `()` | `I18nSnapshot<C>` |
 | `subscribe` | `(listener, { immediate?, signal? })` | Unsubscribe function |
 | `serialize` | `()` | Loader-free `TranslationState<C>` |
 | `dispose` | `()` | `void` |
@@ -150,57 +116,26 @@ translations.translate('title');
 
 ---
 
-### hydrateTranslationStore
-
-```ts
-function hydrateTranslationStore<C extends Catalog>(
-  state: TranslationState<C>,
-  options?: Omit<TranslationStoreOptions<C>, 'locale' | 'catalogs'>,
-): TranslationStore<C>;
-```
-
-Creates translation store from SSR state payload containing resolved raw catalogs.
-
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `state` | `TranslationState<C>` | Version `3`, active locale, and loader-free catalogs |
-| `options` | `Omit<TranslationStoreOptions<C>, 'locale' \| 'catalogs'>` | Fallback and missing-message handlers |
-
-**Returns:** `TranslationStore<C>`.
-
-**Example:**
-
-```ts
-import { createTranslationStore, hydrateTranslationStore } from '@vielzeug/lingua';
-
-const server = createTranslationStore({ catalogs: { en: { title: 'Home' } }, locale: 'en' });
-const client = hydrateTranslationStore(server.serialize());
-
-client.translate('title');
-```
-
----
-
 ## Catalog Utilities
 
 ### catalogKeys
 
 ```ts
-function catalogKeys<C extends Catalog>(source: TranslationStore<C> | C): ReadonlyArray<TextKey<C>>;
+function catalogKeys<C extends Catalog>(source: I18n<C> | C): ReadonlyArray<MessageKey<C>>;
 ```
 
-Enumerates every message key as a dotted path. Traverses nested grouping objects and explicit `{ plural: ... }` messages, producing the same paths that `TextKey<C>` represents at the type level. Pass a `TranslationStore` to read from its current locale catalog; pass a raw catalog object to enumerate directly.
+Enumerates every message key as a dotted path. Traverses nested grouping objects and explicit `{ plural: ... }` messages, producing the same paths that `TextKey<C>` represents at the type level. Pass an `I18n` instance to read from its current locale catalog; pass a raw catalog object to enumerate directly.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `source` | `TranslationStore<C> \| C` | Store (uses current locale) or raw catalog object |
+| `source` | `I18n<C> \| C` | I18n instance (uses current locale) or raw catalog object |
 
-**Returns:** `ReadonlyArray<TextKey<C>>` — dotted paths to every text and plural message.
+**Returns:** `ReadonlyArray<MessageKey<C>>` — dotted paths to every text and plural message.
 
 ```ts
-import { catalogKeys, createTranslationStore } from '@vielzeug/lingua';
+import { catalogKeys, createI18n } from '@vielzeug/lingua';
 
-const i18n = createTranslationStore({
+const i18n = createI18n({
   catalogs: { en: { nav: { home: 'Home', settings: 'Settings' } } },
   locale: 'en',
 });
@@ -211,39 +146,22 @@ const navKeys = catalogKeys(i18n.serialize().catalogs.en.nav); // ['home', 'sett
 
 ---
 
-## Formatting and Validation
+## Intl formatting
 
 ### createFormatter
 
 ```ts
-function createFormatter(source: string | (() => string)): Formatter;
-```
-
-Creates cached Intl formatters using static locale or locale getter.
-
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `source` | `string \| (() => string)` | Static locale or locale getter |
-
-**Returns:** `Formatter`.
-
-**Example:**
-
-```ts
 import { createFormatter } from '@vielzeug/lingua/format';
 
-const formatter = createFormatter('en-US');
-formatter.currency(19.99, 'USD');
+const format = createFormatter(() => i18n.locale);
+format.number(1_234.5);
+format.currency(19.99, 'USD');
+format.date(new Date(), { dateStyle: 'medium' });
 ```
 
-| Method | Signature | Returns |
-| --- | --- | --- |
-| `number` | `(value, options?)` | `string` |
-| `currency` | `(value, currency, options?)` | `string` |
-| `date` | `(value, options?)` | `string` |
-| `relative` | `(value, unit, options?)` | `string` |
-| `list` | `(value, options?)` | `string` |
-| `duration` | `(value, options?)` | `string` |
+The formatter caches bounded `Intl` instances and resolves a locale getter for every call.
+
+## Validation
 
 ### validateCatalog
 
@@ -301,48 +219,62 @@ type PluralMessage = { readonly plural: Partial<Record<PluralCategory, string>> 
 type CatalogNode = Catalog | PluralMessage | string;
 type Catalog = { readonly [key: string]: CatalogNode };
 type Catalogs<C extends Catalog = Catalog> = Record<Locale, C>;
-type CatalogTranslatorOptions = Omit<TranslatorOptions, 'fallback'>;
-type CatalogLoader<C extends Catalog = Catalog> = () => Promise<C>;
-type CatalogSource<C extends Catalog = Catalog> = C | CatalogLoader<C>;
-type CatalogSources<C extends Catalog = Catalog> = Record<Locale, CatalogSource<C>>;
 
-type TranslationStoreOptions<C extends Catalog = Catalog> = TranslatorOptions & {
-  catalogs: CatalogSources<C>;
-};
+type TextPart = { readonly type: 'text'; readonly value: string };
+type ValuePart<V> = { readonly type: 'value'; readonly value: V };
+type Part<V> = TextPart | ValuePart<V>;
+
+type MissingInfo = { readonly key: string; readonly locale: Locale; readonly name?: string };
+type MissingHandler = (info: MissingInfo) => string;
+type MissingStrategy = 'throw' | 'key' | MissingHandler;
+
+type TranslatorOptions = { readonly locale?: Locale; readonly missing?: MissingStrategy };
+
+type I18nOptions<C extends Catalog = Catalog> = {
+  readonly fallback?: Locale | readonly Locale[];
+  readonly locale?: Locale;
+  readonly missing?: MissingStrategy;
+} & (
+  | { readonly catalogs: Catalogs<C>; readonly loadCatalog?: CatalogLoader<C>; readonly state?: never }
+  | { readonly catalogs?: never; readonly loadCatalog?: CatalogLoader<C>; readonly state: TranslationState<C> }
+  | { readonly catalogs?: never; readonly loadCatalog: CatalogLoader<C>; readonly state?: never }
+);
+
+type CatalogLoader<C extends Catalog> = (locale: Locale) => Promise<C> | C;
 
 type TranslationState<C extends Catalog = Catalog> = {
   readonly catalogs: Catalogs<C>;
   readonly locale: Locale;
-  readonly version: 3;
+  readonly version: 4;
 };
 
-type TranslationSnapshot<C extends Catalog = Catalog> = {
+type I18nSnapshot<C extends Catalog = Catalog> = {
   readonly locale: Locale;
   readonly revision: number;
   readonly translator: Translator<C>;
 };
 
-type TranslationStore<C extends Catalog = Catalog> = Translator<C> & {
+type I18n<C extends Catalog = Catalog> = Translator<C> & {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  getSnapshot(): TranslationSnapshot<C>;
+  getSnapshot(): I18nSnapshot<C>;
   isLoaded(options?: { locale?: Locale }): boolean;
   load(options?: { locale?: Locale }): Promise<void>;
   serialize(): TranslationState<C>;
   setLocale(locale: Locale): Promise<void>;
-  subscribe(listener: (snapshot: TranslationSnapshot<C>) => void, options?: SubscribeOptions): () => void;
+  subscribe(listener: (snapshot: I18nSnapshot<C>) => void, options?: SubscribeOptions): () => void;
   [Symbol.dispose](): void;
 };
 
 type Translator<C extends Catalog = Catalog> = {
   readonly locale: Locale;
-  segments<V>(key: TextKey<C>, options: TranslateOptions & { values: Record<string, V> }): Array<string | V>;
-  segments<V>(key: PluralKey<C>, options: PluralOptions & { values?: Record<string, V> }): Array<string | number | V>;
-  segmentsDynamic<V>(
+  parts<V>(key: TextKey<C>, options: TranslateOptions & { values: Record<string, V> }): Array<Part<V>>;
+  parts<V>(key: PluralKey<C>, options: PluralOptions & { values?: Record<string, V> }): Array<Part<number | V>>;
+  partsDynamic<V>(
     key: string,
     options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> },
-  ): Array<string | number | V>;
+  ): Array<Part<number | V>>;
   translate(key: TextKey<C>, options?: TranslateOptions): string;
   translate(key: PluralKey<C>, options: PluralOptions): string;
   translateDynamic(key: string, options?: TranslateOptions | PluralOptions): string;
@@ -353,12 +285,6 @@ type Translator<C extends Catalog = Catalog> = {
 type Values = Record<string, unknown>;
 type TranslateOptions = { values?: Values };
 type PluralOptions = TranslateOptions & { count: number; ordinal?: boolean };
-type TranslatorOptions = {
-  fallback?: Locale | readonly Locale[];
-  locale?: Locale;
-  onMissingKey?: (key: string, locale: Locale) => string;
-  onMissingValue?: (name: string, key: string, locale: Locale) => string;
-};
 type SubscribeOptions = { immediate?: boolean; signal?: AbortSignal };
 
 type MessageKey<
@@ -403,32 +329,6 @@ type PluralKey<
       : never
   : never;
 
-type DurationValue = Partial<Record<
-  'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'months' | 'nanoseconds' | 'seconds' | 'weeks' | 'years',
-  number
->>;
-
-type DurationFormatOptions = {
-  hours?: '2-digit' | 'numeric';
-  microseconds?: 'numeric';
-  milliseconds?: 'numeric';
-  minutes?: '2-digit' | 'numeric';
-  nanoseconds?: 'numeric';
-  seconds?: '2-digit' | 'numeric';
-  style?: 'digital' | 'long' | 'narrow' | 'short';
-};
-
-type ListFormatOptions = { style?: 'long' | 'narrow' | 'short'; type?: 'and' | 'or' };
-
-type Formatter = {
-  currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
-  date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
-  duration(value: DurationValue, options?: DurationFormatOptions): string;
-  list(value: Array<string | number>, options?: ListFormatOptions): string;
-  number(value: number, options?: Intl.NumberFormatOptions): string;
-  relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
-};
-
 type ValidationIssue = { key: string; locale: Locale; missing: Intl.LDMLPluralRule };
 type CatalogComparison = {
   readonly missing: ReadonlyArray<{ key: string; locale: Locale }>;
@@ -445,4 +345,6 @@ type CatalogComparison = {
 | `LinguaInvalidLocaleError` | Invalid BCP 47 locale tag |
 | `LinguaInvalidPluralCountError` | Non-finite plural count |
 | `LinguaInvalidStateError` | Unsupported serialized state version |
-| `LinguaMissingCatalogError` | Catalog has no source for requested locale |
+| `LinguaMissingCatalogError` | No `loadCatalog` function or catalog source unavailable |
+| `LinguaMissingKeyError` | Missing translation key when `missing: 'throw'` |
+| `LinguaMissingValueError` | Missing interpolation value when `missing: 'throw'` |

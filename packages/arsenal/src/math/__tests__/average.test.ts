@@ -16,8 +16,8 @@ describe('average', () => {
     expect(average(arr, (x) => x.v)).toBe(4);
   });
 
-  it('returns undefined for unsupported types', () => {
-    expect(average(['a', 'b', 'c'] as any)).toBeUndefined();
+  it('rejects unsupported types', () => {
+    expect(() => average(['a', 'b', 'c'])).toThrow(TypeError);
   });
 
   it('works with booleans and a callback', () => {

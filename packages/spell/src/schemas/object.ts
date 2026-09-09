@@ -1,4 +1,5 @@
 import type {
+  AcceptsMissing,
   AnySchema,
   CheckContext,
   InferInput,
@@ -21,7 +22,15 @@ import { UnionSchema } from './union';
 
 export type ObjectShape = Record<string, AnySchema>;
 export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
-export type InferObjectInput<T extends ObjectShape> = { [K in keyof T]: InferInput<T[K]> };
+type OptionalInputKeys<T extends ObjectShape> = {
+  [K in keyof T]: T[K] extends AcceptsMissing ? K : never;
+}[keyof T];
+type Simplify<T> = { [K in keyof T]: T[K] };
+export type InferObjectInput<T extends ObjectShape> = Simplify<
+  { [K in Exclude<keyof T, OptionalInputKeys<T>>]: InferInput<T[K]> } & {
+    [K in OptionalInputKeys<T>]?: InferInput<T[K]>;
+  }
+>;
 
 export class ObjectSchema<
   T extends ObjectShape,
@@ -181,13 +190,15 @@ export class ObjectSchema<
   }
 
   partial(): ObjectSchema<
-    { [K in keyof T]: Schema<InferOutput<T[K]> | undefined, InferOutput<T[K]> | undefined, Mode> },
+    { [K in keyof T]: Schema<InferOutput<T[K]> | undefined, InferInput<T[K]> | undefined, Mode> & AcceptsMissing },
     Mode
   >;
   partial<K extends keyof T>(
     ...keys: K[]
   ): ObjectSchema<
-    Omit<T, K> & { [P in K]: Schema<InferOutput<T[P]> | undefined, InferOutput<T[P]> | undefined, Mode> },
+    Omit<T, K> & {
+      [P in K]: Schema<InferOutput<T[P]> | undefined, InferInput<T[P]> | undefined, Mode> & AcceptsMissing;
+    },
     Mode
   >;
   partial<K extends keyof T>(...keys: K[]): ObjectSchema<any, Mode> {
@@ -202,9 +213,11 @@ export class ObjectSchema<
   }
 
   override optional(): ObjectSchema<T, Mode> &
-    Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode> {
+    Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode> &
+    AcceptsMissing {
     return super.optional() as ObjectSchema<T, Mode> &
-      Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode>;
+      Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode> &
+      AcceptsMissing;
   }
 
   override nullable(): ObjectSchema<T, Mode> & Schema<InferObject<T> | null, InferObjectInput<T> | null, Mode> {
@@ -212,9 +225,11 @@ export class ObjectSchema<
   }
 
   override nullish(): ObjectSchema<T, Mode> &
-    Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode> {
+    Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode> &
+    AcceptsMissing {
     return super.nullish() as ObjectSchema<T, Mode> &
-      Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode>;
+      Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode> &
+      AcceptsMissing;
   }
 
   override required(): ObjectSchema<T, Mode> &

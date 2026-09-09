@@ -121,36 +121,35 @@ const results = index.search('alice', { minQueryLength: 8 });
 
 ### `createReactiveSearch()` — recommended
 
-For most use cases, `createReactiveSearch` builds the index and reactive state together in one call. It returns a `ReactiveSearch<T>` — a `SearchState<T>` with an extra `.index` property for incremental mutations:
+For most use cases, `createReactiveSearch` builds the index and state together. It returns one external store whose snapshot contains `query`, `isSearching`, and `results`, plus `.index` for incremental mutations:
 
 ```ts
 import { createReactiveSearch } from '@vielzeug/scout';
-import { effect } from '@vielzeug/ripple';
 
 const search = createReactiveSearch(users, {
   fields: [{ field: 'name', weight: 2 }, 'email'],
   debounce: 150,
 });
 
-effect(() => {
-  if (search.isSearching.value) showLoadingSpinner();
-  else renderResults(search.results.value.map(r => r.item));
+search.subscribe(() => {
+  const { isSearching, results } = search.getSnapshot();
+  if (isSearching) showLoadingSpinner();
+  else renderResults(results.map((result) => result.item));
 });
 
-input.addEventListener('input', e => {
-  search.query.value = e.currentTarget.value;
+input.addEventListener('input', (event) => {
+  search.setQuery((event.currentTarget as HTMLInputElement).value);
 });
 
-// Add items at runtime via the exposed index
 search.index.add(newUser);
-
-// Dispose when this owner is no longer needed
 search.dispose();
 ```
 
+Each notification observes a complete committed snapshot. During a debounce window, `query` contains the latest input, `isSearching` is `true`, and `results` remain the last committed results.
+
 ### `createSearch()` — separate index and state
 
-Use `createSearch` when you need to create the index independently — for example when sharing it across multiple reactive states:
+Use `createSearch` when sharing one index across multiple search stores:
 
 ```ts
 import { createIndex, createSearch } from '@vielzeug/scout';
@@ -170,29 +169,31 @@ const search = createSearch(index, { debounce: 150 });
 
 ### Zero debounce for synchronous updates
 
-Pass `debounce: 0` if you want results updated synchronously (no `isSearching` flash). Other debounce values must be finite non-negative integers; invalid values throw `ScoutConfigurationError`.
+Pass `debounce: 0` for synchronous commits with no searching transition:
 
 ```ts
 const search = createReactiveSearch(users, { fields: ['name'], debounce: 0 });
 
-search.query.value = 'alice';
-console.log(search.results.value); // Already updated
+search.setQuery('alice');
+console.log(search.getSnapshot().results); // Already updated
 ```
 
 ### Resetting search
 
 ```ts
-search.clear(); // Resets query + results + isSearching synchronously
+search.clear(); // Resets query, results, and isSearching atomically
 ```
 
-### Composing with ripple signals
+### Composing with Ripple
 
-`search.results` is a `Readable` signal — compose it into other computed values:
+A complete `SearchState` implements Ripple's structural subscribable contract:
 
 ```ts
-import { computed } from '@vielzeug/ripple';
+import { createRipple } from '@vielzeug/ripple';
 
-const topResult = computed(() => search.results.value[0]?.item ?? null);
+const ripple = createRipple();
+const state = ripple.fromSubscribable(search, { signal: search.disposalSignal });
+const topResult = ripple.computed(() => state.value.results[0]?.item ?? null);
 ```
 
 ## Incremental Updates
@@ -319,29 +320,25 @@ const parts = highlight(result.item.name, nameMatch?.ranges ?? []);
 
 ## Debug Logging
 
-Subscribe to the reactive signals directly via `@vielzeug/ripple` for observability:
+Use `tap()` for typed runtime observation without affecting search behavior:
 
 ```ts
 import { createIndex, createSearch } from '@vielzeug/scout';
 
 const search = createSearch(index, { debounce: 150 });
+const stop = search.tap((event) => {
+  if (event.type === 'state-change') {
+    console.debug(event.snapshot.query, event.snapshot.isSearching, event.snapshot.results.length);
+  } else {
+    console.debug('disposed');
+  }
+});
 
-const stopQuery = search.query.subscribe(() => console.debug('query:', search.query.peek()));
-const stopResults = search.results.subscribe(() => console.debug('results:', search.results.peek().length));
-
-search.query.value = 'alice';
-// query: alice
-// results: 1
-
-stopQuery();
-stopResults();
+search.setQuery('alice');
+stop();
 ```
 
-For dispose notifications, subscribe to `search.disposalSignal`:
-
-```ts
-search.disposalSignal.addEventListener('abort', () => console.debug('disposed'));
-```
+Tapper errors are swallowed. Use `subscribe()` instead when application state must update after each snapshot commit.
 
 ::: warning Development logging
 `query` carries the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.
@@ -353,34 +350,29 @@ search.disposalSignal.addEventListener('abort', () => console.debug('disposed'))
 
 ```tsx [React]
 import { createReactiveSearch } from '@vielzeug/scout';
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
 type User = { id: number; name: string; email: string };
 
 function useScoutSearch(items: User[]) {
-  const ref = useRef(
-    createReactiveSearch(items, {
+  const search = useMemo(
+    () => createReactiveSearch(items, {
       fields: [{ field: 'name', weight: 2 }, 'email'],
       debounce: 150,
     }),
+    [items],
   );
-
-  const search = ref.current;
-
-  const results = useSyncExternalStore(
-    (cb) => search.results.subscribe(cb),
-    () => search.results.value,
-  );
+  const snapshot = useSyncExternalStore(search.subscribe, search.getSnapshot, search.getSnapshot);
 
   useEffect(() => () => search.dispose(), [search]);
 
-  return { query: search.query, results };
+  return { ...snapshot, setQuery: search.setQuery };
 }
 ```
 
 ```ts [Vue 3]
 import { createReactiveSearch } from '@vielzeug/scout';
-import { onScopeDispose, ref, watch } from 'vue';
+import { onScopeDispose, shallowRef } from 'vue';
 
 type User = { id: number; name: string; email: string };
 
@@ -389,19 +381,12 @@ function useScoutSearch(items: User[]) {
     fields: [{ field: 'name', weight: 2 }, 'email'],
     debounce: 150,
   });
+  const snapshot = shallowRef(search.getSnapshot());
+  const stop = search.subscribe(() => { snapshot.value = search.getSnapshot(); });
 
-  const query = ref('');
-  const results = ref(search.results.value);
+  onScopeDispose(() => { stop(); search.dispose(); });
 
-  const unsub = search.results.subscribe(() => {
-    results.value = search.results.value;
-  });
-
-  watch(query, (q) => { search.query.value = q; });
-
-  onScopeDispose(() => { unsub(); search.dispose(); });
-
-  return { query, results };
+  return { search, snapshot };
 }
 ```
 
@@ -418,21 +403,14 @@ function useScoutSearch(items: User[]) {
     fields: [{ field: 'name', weight: 2 }, 'email'],
     debounce: 150,
   });
+  let snapshot = search.getSnapshot();
+  const stop = search.subscribe(() => { snapshot = search.getSnapshot(); });
 
-  let query = '';
-  let results = search.results.value;
-
-  const unsub = search.results.subscribe(() => {
-    results = search.results.value;
-  });
-
-  $: search.query.value = query;
-
-  onDestroy(() => { unsub(); search.dispose(); });
+  onDestroy(() => { stop(); search.dispose(); });
 </script>
 
-<input bind:value={query} placeholder="Search…" />
-{#each results as { item }}
+<input value={snapshot.query} on:input={(event) => search.setQuery(event.currentTarget.value)} placeholder="Search…" />
+{#each snapshot.results as { item }}
   <p>{item.name}</p>
 {/each}
 ```
@@ -443,7 +421,7 @@ function useScoutSearch(items: User[]) {
 
 ### With Sourcerer
 
-`toSearchMatcher()` adapts a `ScoutIndex` to `createLocalSource`'s explicit `match` callback. Scout decides which items match; Sourcerer keeps source query and pagination.
+`toSearchMatcher()` adapts a `ScoutIndex` into Sourcerer's local-source filter.
 
 ```ts
 import { createIndex, toSearchMatcher } from '@vielzeug/scout';
@@ -452,15 +430,13 @@ import { createLocalSource } from '@vielzeug/sourcerer';
 const index = createIndex(users, {
   fields: [{ field: 'name', weight: 2 }, 'email'],
 });
+const source = createLocalSource(users, { filter: toSearchMatcher(index), params: '' });
 
-const source = createLocalSource(users, {
-  match: toSearchMatcher(index),
-});
-
-source.setQuery({ search: 'alice' });
+source.setParams('alice');
+console.log(source.state.items);
 ```
 
-> Keep the index in sync using `index.add()` / `index.remove()` / `index.reindex()`.
+> Update the index and source from the same collection change. Use `index.setItems(items)` with `source.setItems(items)` for replacement collections.
 
 ### With Vault
 

@@ -14,7 +14,7 @@ description: Factory signatures, options, state types, lifecycle handles, and er
 | `createMediaQuery()` | Observe one media query | Sync | Throws when `matchMedia` is unavailable |
 | `createElementSize()` | Observe element content-box dimensions | Sync | Value is `null` before the first delivery |
 | `createIntersection()` | Observe element intersection state | Sync | Value is `null` before the first delivery |
-| `Sentinel<T>` | Combine a Ripple readable with explicit browser-resource ownership | Sync | Subscriptions and the Sentinel have separate cleanup |
+| `Sentinel<T>` | Expose an external-store snapshot with explicit browser-resource ownership | Sync | Call `getSnapshot()` inside subscription listeners |
 | `SentinelError` | Base class for package-defined errors | Sync | Catch a subtype when recovery is specific |
 | `SentinelUnavailableError` | Report an unavailable browser API | Sync | Invalid observer inputs retain their native errors |
 
@@ -37,7 +37,6 @@ Returns a Sentinel initialized from the layout viewport's `innerWidth`, `innerHe
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `options.target` | `Window` | Window to observe instead of the global browser window |
-| `options.runtime` | `Pick<Ripple, 'signal'>` | Ripple runtime that owns the internal signal |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<ViewportState>`.
@@ -48,7 +47,7 @@ Returns a Sentinel initialized from the layout viewport's `innerWidth`, `innerHe
 import { createViewport } from '@vielzeug/sentinel';
 
 const viewport = createViewport();
-console.log(viewport.value.width);
+console.log(viewport.getSnapshot().width);
 viewport.dispose();
 ```
 
@@ -65,7 +64,6 @@ Returns a Sentinel initialized from `navigator.onLine` and the optional Network 
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `options.target` | `Window` | Window whose navigator and events are observed |
-| `options.runtime` | `Pick<Ripple, 'signal'>` | Ripple runtime that owns the internal signal |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<NetworkState>`.
@@ -76,7 +74,7 @@ Returns a Sentinel initialized from `navigator.onLine` and the optional Network 
 import { createNetwork } from '@vielzeug/sentinel';
 
 const network = createNetwork();
-console.log(network.value.online);
+console.log(network.getSnapshot().online);
 network.dispose();
 ```
 
@@ -94,7 +92,6 @@ Returns a Sentinel initialized from `matchMedia(query).matches`.
 | --- | --- | --- |
 | `query` | `string` | CSS media query to observe |
 | `options.target` | `Window` | Window whose `matchMedia` method is used |
-| `options.runtime` | `Pick<Ripple, 'signal'>` | Ripple runtime that owns the internal signal |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<MediaQueryState>`.
@@ -105,7 +102,7 @@ Returns a Sentinel initialized from `matchMedia(query).matches`.
 import { createMediaQuery } from '@vielzeug/sentinel';
 
 const darkMode = createMediaQuery('(prefers-color-scheme: dark)');
-console.log(darkMode.value.matches);
+console.log(darkMode.getSnapshot().matches);
 darkMode.dispose();
 ```
 
@@ -122,7 +119,6 @@ Returns a Sentinel containing the latest `ResizeObserverEntry.contentRect` dimen
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `element` | `Element` | Element to observe |
-| `options.runtime` | `Pick<Ripple, 'signal'>` | Ripple runtime that owns the internal signal |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<ElementSizeState | null>`. The initial value is `null`.
@@ -134,7 +130,7 @@ import { createElementSize } from '@vielzeug/sentinel';
 
 const size = createElementSize(document.body);
 const unsubscribe = size.subscribe(() => {
-  console.log(size.value?.width);
+  console.log(size.getSnapshot()?.width);
 });
 
 unsubscribe();
@@ -161,7 +157,6 @@ Returns a Sentinel containing normalized fields from the latest IntersectionObse
 | `options.rootMargin` | `string` | Margin applied to the root |
 | `options.scrollMargin` | `string` | Margin applied to nested scroll containers |
 | `options.threshold` | `number \| number[]` | Intersection ratio threshold or thresholds |
-| `options.runtime` | `Pick<Ripple, 'signal'>` | Ripple runtime that owns the internal signal |
 | `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
 
 **Returns:** `Sentinel<IntersectionState | null>`. The initial value is `null`.
@@ -173,7 +168,7 @@ import { createIntersection } from '@vielzeug/sentinel';
 
 const intersection = createIntersection(document.body, { threshold: 0.5 });
 const unsubscribe = intersection.subscribe(() => {
-  console.log(intersection.value?.isIntersecting);
+  console.log(intersection.getSnapshot()?.isIntersecting);
 });
 
 unsubscribe();
@@ -186,15 +181,19 @@ intersection.dispose();
 
 ```ts
 interface Sentinel<T> extends Readable<T>, Disposable {}
+
+interface Readable<T> {
+  getSnapshot(): T;
+  subscribe(listener: () => void): () => void;
+}
 ```
 
-`value`, `peek()`, and `subscribe()` follow Ripple's `Readable<T>` contract. `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]()` follow Ripple's `Disposable` contract. `dispose()` stops the underlying browser observation. A subscription's returned function remains independently owned by the subscriber.
+`Sentinel<T>` follows the standard external-store snapshot/subscription contract and owns the underlying browser resource. `getSnapshot()`, `subscribe()`, and `dispose()` are stable callback-safe functions. `dispose()` stops observation, clears listeners, and aborts `disposalSignal`.
 
 | Member | Type | Description |
 | --- | --- | --- |
-| `value` | `T` | Current reactive snapshot |
-| `peek()` | `() => T` | Read the snapshot without reactive tracking |
-| `subscribe(listener)` | `(listener: () => void) => () => void` | Subscribe to invalidations and return an independent unsubscribe function |
+| `getSnapshot()` | `() => T` | Return the current immutable snapshot |
+| `subscribe(listener)` | `(listener: () => void) => () => void` | Subscribe to snapshot changes and return an unsubscribe function |
 | `disposed` | `boolean` | Whether observation has ended |
 | `disposalSignal` | `AbortSignal` | Aborts when observation ends |
 | `dispose()` | `() => void` | Stop observation and release owned browser resources |
@@ -206,7 +205,6 @@ interface Sentinel<T> extends Readable<T>, Disposable {}
 
 ```ts
 interface SentinelOptions {
-  readonly runtime?: Pick<Ripple, 'signal'>;
   readonly signal?: AbortSignal;
 }
 ```

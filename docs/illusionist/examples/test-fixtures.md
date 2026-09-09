@@ -31,7 +31,6 @@ function makeUser(seed: number) {
     zip: illusion.location.zipCode(),
   };
 
-  illusion.dispose();
   return user;
 }
 
@@ -60,7 +59,7 @@ describe('user profile', () => {
 
 #### With per-test isolation
 
-Give each test a distinct seed so failures point to a specific case. Use `using` to release the instance automatically.
+Give each test a distinct seed so failures point to a specific case. Instances own no external resources, so ordinary block scope provides isolation.
 
 ```ts
 import { createIllusion } from '@vielzeug/illusionist';
@@ -69,7 +68,7 @@ import { describe, expect, test } from 'vitest';
 
 describe('orders', () => {
   test.each([1, 2, 3])('order #%s', (seed) => {
-    using illusion = createIllusion({ seed, locale: en });
+    const illusion = createIllusion({ seed, locale: en });
 
     const order = {
       customer: illusion.person.fullName(),
@@ -85,8 +84,8 @@ describe('orders', () => {
 ### Pitfalls
 
 - Do not share a single instance across tests that run concurrently — each call advances the shared random source and causes cross-test drift.
-- Do not reuse an instance after `dispose()`; create a fresh one per test instead.
-- String seeds are hashed, so two different strings never collide, but the same string always produces the same sequence.
+- Create a fresh instance per test when each test must begin from the start of its seed sequence.
+- The same string seed always produces the same sequence. Different strings can theoretically collide because seeds are folded to 32 bits.
 - `system.uuid()` uses `crypto.randomUUID()`, not the seeded source. Do not use it in deterministic fixtures or snapshot tests.
 
 ### Related

@@ -1,39 +1,6 @@
 # @vielzeug/wayfinder
 
-> Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/wayfinder)](https://www.npmjs.com/package/@vielzeug/wayfinder) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/wayfinder` &nbsp;&nbsp; **Category:** Routing
-
-**Key exports:** `createRouter`, `createBrowserHistory`, `createMemoryHistory`, `redirectTo`
-
-**When to use:** Framework-agnostic client-side router with typed params, async data loading, middleware, leave guards, and View Transitions support.
-
-**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/ward](https://vielzeug.dev/ward/) · [@vielzeug/herald](https://vielzeug.dev/herald/)
-
-</details>
-
-`@vielzeug/wayfinder` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
-
-## What You Get
-
-- Declarative route tables with nested names (`dashboard.settings`)
-- Named and raw-path navigation through one `navigate()` API
-- Route middleware, data loaders, and lazy route modules
-- Global `beforeLeave` leave guards with optional route scoping
-- `component` + `meta` + `data` payloads on matched branch state
-- Per-match `status` for granular loading/streaming feedback in nested layouts
-- Streaming data loaders via async generators
-- Declarative `notFound` fallback route
-- Browser and memory history drivers
-- `redirectTo()` middleware helper
-- SSR-compatible `load()` for data prefetching without side effects
-- `match()` for synchronous route inspection
-- `ready` and `waitFor(name)` for lifecycle coordination
+> Client-side router with middleware and guards
 
 ## Installation
 
@@ -44,8 +11,6 @@ yarn add @vielzeug/wayfinder
 ```
 
 ## Quick Start
-
-Create a memory-backed router, await initial routing, then navigate by route name.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
@@ -65,7 +30,7 @@ const router = createRouter({
     },
   },
   notFound: {
-    component: NotFoundPage,
+    data: () => ({ message: 'Not found' }),
   },
 });
 
@@ -74,7 +39,7 @@ await router.ready;
 // React to state changes:
 router.subscribe((state) => {
   const leaf = state.matches.at(-1);
-  render(leaf?.component, leaf?.data);
+  render(leaf?.name, leaf?.data);
 });
 
 await router.navigate({ name: 'dashboard.settings' });
@@ -87,9 +52,6 @@ await router.navigate({ name: 'dashboard.settings' });
 - [API Reference](https://vielzeug.dev/wayfinder/api)
 - [Examples](https://vielzeug.dev/wayfinder/examples)
 - [Migration Guide](https://vielzeug.dev/wayfinder/migration)
-- [React Integration Example](https://vielzeug.dev/wayfinder/examples/react-integration)
-- [Vue Integration Example](https://vielzeug.dev/wayfinder/examples/vue-integration)
-- [Svelte Integration Example](https://vielzeug.dev/wayfinder/examples/svelte-integration)
 
 ## License
 

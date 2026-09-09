@@ -166,7 +166,6 @@ export function generateDemoData(seed: string | number = 'vielzeug-crm-2026'): C
       opportunityId: kind === 'opportunity.stageChanged' ? opportunity.id : undefined,
     };
   });
-  illusion.dispose();
   return { activities, companies, contacts, leads, opportunities };
 }
 

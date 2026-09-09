@@ -39,9 +39,6 @@
     "preview": "vite preview",
     "test": "vitest"
   },
-  "dependencies": {
-    "@vielzeug/ripple": "workspace:*"
-  },
   "devDependencies": {
     "@types/node": "^26.4.1",
     "typescript": "^6.0.3",

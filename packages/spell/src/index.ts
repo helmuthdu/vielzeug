@@ -1,6 +1,3 @@
-import { fail, prependIssuePath } from './errors';
-import { createParseContext } from './messages';
-
 export type {
   AnySchema,
   CheckContext,
@@ -9,35 +6,17 @@ export type {
   Infer,
   InferInput,
   InferOutput,
-  InferSchemaMode,
   Issue,
   JsonSchema,
-  MergeSchemaModes,
   MessageFn,
   Messages,
   ParseContext,
   ParseResult,
   SchemaDescriptor,
-  SchemaMode,
   SchemaWalker,
-  ValidateFn,
+  StandardSchemaV1,
   ValidateResult,
 } from './core';
-export {
-  ErrorCode,
-  PipeSchema,
-  Schema,
-  SpellDefinitionError,
-  SpellError,
-  SpellValidationError,
-  schemaMode,
-} from './core';
-export type { DeepPartial } from './messages';
+export { ErrorCode, Schema, SpellDefinitionError, SpellError, SpellValidationError } from './core';
+export { createParseContext, type DeepPartial } from './messages';
 export { s } from './s';
-
-/** Error helpers and immutable parse-context creation are secondary operations. */
-export const diagnostics = {
-  createParseContext,
-  fail,
-  prependIssuePath,
-};

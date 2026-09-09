@@ -1,4 +1,10 @@
-import { PulseAbortError, PulseConnectionError, PulseDisposedError, PulseRoomTimeoutError } from '../errors';
+import {
+  PulseAbortError,
+  PulseConnectionError,
+  PulseDisposedError,
+  type PulseError,
+  PulseRoomTimeoutError,
+} from '../errors';
 import { frames, MockWebSocket, openPulse } from './_fixtures';
 
 describe('createPulse room scopes', () => {
@@ -36,8 +42,32 @@ describe('createPulse room scopes', () => {
 
     socket.receive({ room: 'lobby', type: 'joined' });
     await expect(lobby.joined).resolves.toBeUndefined();
-    expect(pulse.rooms.value).toEqual(new Set(['lobby']));
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set(['lobby']));
 
+    lobby.dispose();
+    pulse.dispose();
+  });
+
+  it('completes room joins when a store subscriber throws', async () => {
+    const { pulse, socket } = await openPulse();
+    const errors: PulseError[] = [];
+    const lobby = pulse.room('lobby');
+    const unsubscribe = pulse.rooms.subscribe(() => {
+      throw new Error('consumer failure');
+    });
+
+    pulse.tap((event) => {
+      if (event.type === 'error') errors.push(event.error);
+    });
+    socket.receive({ room: 'lobby', type: 'joined' });
+
+    await expect(lobby.joined).resolves.toBeUndefined();
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set(['lobby']));
+    expect(errors).toEqual([
+      expect.objectContaining({ cause: expect.objectContaining({ message: 'consumer failure' }) }),
+    ]);
+
+    unsubscribe();
     lobby.dispose();
     pulse.dispose();
   });
@@ -53,8 +83,8 @@ describe('createPulse room scopes', () => {
 
     socket.drop();
 
-    expect(pulse.rooms.value).toEqual(new Set());
-    expect(lobby.presence.value).toEqual(new Map());
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set());
+    expect(lobby.presence.getSnapshot()).toEqual(new Map());
 
     await vi.advanceTimersByTimeAsync(0);
 
@@ -70,7 +100,7 @@ describe('createPulse room scopes', () => {
     ]);
 
     replacement.receive({ room: 'lobby', type: 'joined' });
-    expect(pulse.rooms.value).toEqual(new Set(['lobby']));
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set(['lobby']));
 
     chat.dispose();
     lobby.dispose();
@@ -112,7 +142,7 @@ describe('createPulse room scopes', () => {
     socket.receive({ room: 'lobby', type: 'joined' });
 
     expect(frames(socket).filter((f) => f.type === 'leave' && f.room === 'lobby')).toHaveLength(1);
-    expect(pulse.rooms.value).toEqual(new Set());
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set());
 
     pulse.dispose();
   });
@@ -139,7 +169,7 @@ describe('createPulse room scopes', () => {
     // Advance past the timeout — scope must not be auto-released
     await vi.advanceTimersByTimeAsync(100);
 
-    expect(pulse.rooms.value).toEqual(new Set(['lobby']));
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set(['lobby']));
     expect(frames(socket).filter((f) => f.type === 'leave' && f.room === 'lobby')).toHaveLength(0);
 
     lobby.dispose();
@@ -180,14 +210,14 @@ describe('createPulse room scopes', () => {
     await lobby.joined;
 
     socket.receive({ id: 'a', room: 'lobby', state: { name: 'Ada' }, type: 'presence_join' });
-    expect(lobby.presence.value.get('a')).toEqual({ name: 'Ada' });
+    expect(lobby.presence.getSnapshot().get('a')).toEqual({ name: 'Ada' });
 
     socket.receive({ id: 'b', room: 'lobby', state: { name: 'Bea' }, type: 'presence_join' });
-    expect(lobby.presence.value.size).toBe(2);
+    expect(lobby.presence.getSnapshot().size).toBe(2);
 
     socket.receive({ id: 'a', room: 'lobby', type: 'presence_leave' });
-    expect(lobby.presence.value.has('a')).toBe(false);
-    expect(lobby.presence.value.size).toBe(1);
+    expect(lobby.presence.getSnapshot().has('a')).toBe(false);
+    expect(lobby.presence.getSnapshot().size).toBe(1);
 
     lobby.dispose();
     pulse.dispose();
@@ -221,7 +251,7 @@ describe('createPulse room scopes', () => {
 
     socket.receive({ room: 'announcements', type: 'joined' });
     await expect(announcements.joined).resolves.toBeUndefined();
-    expect(pulse.rooms.value).toEqual(new Set(['announcements']));
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set(['announcements']));
 
     announcements.dispose();
     expect(frames(socket).filter((f) => f.type === 'leave' && f.room === 'announcements')).toHaveLength(1);

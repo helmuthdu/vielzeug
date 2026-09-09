@@ -4,7 +4,7 @@
 //
 // Returns the user-facing fragment (override styles + scripts + user HTML) to
 // pass to sandbox.render(). Refine CSS is injected via createSandbox()
-// namedStyles so sandbox.updateStyle() can hot-patch it without a full
+// styles so sandbox.updateStyle() can hot-patch it without a full
 // re-render. Resize reporting is handled by the sandbox bridge automatically.
 //
 // Kept as a plain .ts file (not inside <script setup>) to avoid Vue's parser
@@ -14,11 +14,11 @@ import refineCss from 'refine-preview:css';
 import refineDeps from 'refine-preview:deps';
 import refineJs from 'refine-preview:js';
 
-// Exported so callers can pass this as a namedStyles key and reference it for
+// Exported so callers can pass this as a styles key and reference it for
 // updateStyle() calls without a magic string.
 export const REFINE_CSS_ID = 'refine-css';
 
-// Exported so createSandbox() can receive the initial refine CSS in namedStyles.
+// Exported so createSandbox() can receive the initial refine CSS in styles.
 export { refineCss };
 
 const previewRuntime = `
@@ -93,7 +93,7 @@ export interface SandboxDocOptions {
 }
 
 export interface SandboxDocResult {
-  /** Fragment to pass to sandbox.render(). Does not include refine CSS — pass that via namedStyles. */
+  /** Fragment to pass to sandbox.render(). Does not include refine CSS — pass that via styles. */
   fragment: string;
 }
 
@@ -120,7 +120,7 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
     `body { display: flex; flex-direction: ${flexDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: ${align}; justify-content: ${justify}; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
   ].join(' ');
 
-  // `buildDocument()` (from @vielzeug/sandbox) only supports `<html lang="...">` — it has no
+  // The generated sandbox document only supports `<html lang="...">` — it has no
   // `dir` option, and the sandbox is created once (see useComponentPreview.ts) while `dir` can
   // toggle per render, so it can't be threaded through as a fixed sandbox-creation option
   // anyway. Applying it here via a `display: contents` wrapper instead: it establishes `dir`

@@ -22,13 +22,18 @@ exports:
     ore-calendar,
     ore-card,
     ore-carousel,
+    ore-carousel-slide,
     ore-chat-message,
     ore-checkbox,
     ore-checkbox-group,
     ore-chip,
+    ore-code-window,
+    ore-column,
     ore-combobox,
+    ore-combobox-option,
     ore-command-palette,
     ore-command-palette-item,
+    ore-copy-command,
     ore-datagrid,
     ore-date-picker,
     ore-dialog,
@@ -40,12 +45,16 @@ exports:
     ore-input,
     ore-list,
     ore-list-item,
+    ore-marquee,
     ore-menu,
     ore-menu-item,
     ore-menu-separator,
     ore-message-composer,
     ore-navbar,
     ore-navbar-item,
+    ore-navigation-menu,
+    ore-navigation-menu-item,
+    ore-navigation-menu-panel,
     ore-number-input,
     ore-otp-input,
     ore-pagination,
@@ -62,6 +71,7 @@ exports:
     ore-sidebar-item,
     ore-skeleton,
     ore-slider,
+    ore-stats,
     ore-step,
     ore-stepper,
     ore-switch,
@@ -69,7 +79,10 @@ exports:
     ore-tab-panel,
     ore-table,
     ore-tabs,
+    ore-td,
     ore-text,
+    ore-th,
+    ore-tr,
     ore-textarea,
     ore-time-picker,
     ore-toast,
@@ -95,13 +108,14 @@ Every project needs UI primitives. Refine provides accessible web components tha
 </button>
 
 <!-- After — Refine -->
-<ore-button variant="primary" loading>Save</ore-button>
+<ore-button variant="solid" color="primary" loading>Save</ore-button>
 ```
 
 | Feature            | Refine                                       | Shoelace                                   | Material Web                               |
 | ------------------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size        | <PackageInfo package="refine" type="size" /> | ~145 kB                                    | ~200 kB                                    |
 | Built with         | Ore                                       | Lit                                        | Lit                                        |
+| Runtime dependencies | Vielzeug UI primitives + Lucide           | Lit + utilities                            | Lit + Material foundations                 |
 | Accessible         | WCAG AA                                     | WCAG AA                                    | WCAG AA                                    |
 | Framework agnostic | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
@@ -212,6 +226,16 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 **Overlay:** `ore-command-palette`, `ore-command-palette-item`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-tooltip`
 
+## Component portfolio
+
+Refine keeps one public package and classifies components by composition level rather than stability. All listed components remain supported and tested.
+
+- **Foundations** — buttons, inputs, selection controls, disclosure, dialogs, menus, tooltips, layout primitives, and feedback indicators. Start here when building an application-specific interface.
+- **Composed patterns** — data grids, command palettes, navigation menus, steppers, calendars, date/time pickers, file inputs, and message composers. These package recurring accessibility and interaction behavior that is costly to rebuild correctly.
+- **Presentation patterns** — cards, chat messages, code windows, stats, marquees, avatars, badges, and skeletons. Use these when their product vocabulary matches the application; prefer foundations when it does not.
+
+Classification guides discovery and bundle selection. It is not a reason to remove working components or move them into unstable packages; per-component subpath imports remain the tree-shaking boundary.
+
 ## Features
 
 <div class="features-grid">
@@ -221,7 +245,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 - **Framework agnostic** — works anywhere HTML can be rendered
 - **Tree-shakeable** — import only the component entry points you register
 - **Comprehensive surface** — inputs, content, disclosure, feedback, layout, and overlay primitives
-- **Zero runtime deps** — <PackageInfo package="refine" type="size" /> gzipped
+- **Typed framework declarations** — DOM, React, and Vue tags derive from the component property contracts
 
 </div>
 

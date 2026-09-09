@@ -7,38 +7,35 @@ description: 'Append remote pages from an intersection observer.'
 
 ### Problem
 
-A feed should append later pages without replacing loaded rows. It must avoid duplicate loads while a request is active.
+A feed should append later pages without replacing loaded items or starting duplicate requests.
 
 ### Solution
 
-Use `createInfiniteSource()` and call `loadMore()` from an observer. Source ignores calls while fetching or exhausted.
+Call `loadMore()` when the observer reaches the end marker.
 
 ```ts
 import { createInfiniteSource } from '@vielzeug/sourcerer';
 
 const posts = Array.from({ length: 5 }, (_, index) => `Post ${index + 1}`);
-const source = createInfiniteSource<string>({
-  autoStart: false,
-  initialQuery: { pageSize: 2 },
-  load: async ({ query }) => {
-    const start = (query.page - 1) * query.pageSize;
-
-    return { data: posts.slice(start, start + query.pageSize), total: posts.length };
+const source = createInfiniteSource({
+  load: async ({ page, pageSize }) => {
+    const start = (page - 1) * pageSize;
+    return { items: posts.slice(start, start + pageSize), totalItems: posts.length };
   },
+  pageSize: 2,
 });
 
+await source.reload();
 await source.loadMore();
-await source.loadMore();
-console.log(source.snapshot.data); // ['Post 1', 'Post 2', 'Post 3', 'Post 4']
+console.log(source.state.items); // ['Post 1', 'Post 2', 'Post 3', 'Post 4']
 source.dispose();
 ```
 
 ### Pitfalls
 
-- Call `setQuery()` to replace the feed for a new search; it starts again at page 1.
-- `pendingQuery` is set only on `setQuery()`/`reload()` (query replace), not on `loadMore()` (append). Use `snapshot.isFetching` to detect an append in progress.
-- Keep rendering loaded `snapshot.data` while `pendingQuery` exists.
-- Use `snapshot.pagination.hasMore` only with an infinite source.
+- Call `setParams()` to replace the feed from page one.
+- Check `state.loading` for active work; `pendingParams` is absent during append requests.
+- Stop observing when `state.pagination.hasMore` is false.
 
 ### Related
 

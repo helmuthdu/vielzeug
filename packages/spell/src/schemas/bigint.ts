@@ -118,16 +118,6 @@ export class BigIntSchema<Input = bigint, Mode extends SchemaMode = 'sync'> exte
     return super._walk(visitor);
   }
 
-  /**
-   * Returns a new schema that coerces the input to a bigint before validation.
-   * Handles number, string (up to 1000 digits), and bigint inputs.
-   *
-   * Equivalent to `s.coerce.bigint()`.
-   */
-  coerce(): BigIntSchema<unknown> {
-    return BigIntSchema.coerce();
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     if (this.state.validators.length > 0) {
       warn(

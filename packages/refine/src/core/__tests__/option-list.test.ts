@@ -585,6 +585,26 @@ describe('createListboxDropdown()', () => {
     });
   });
 
+  describe('explicit disposal', () => {
+    it('makes list navigation terminal', async () => {
+      const { get, setup } = makeHandle();
+      await mount(() => {
+        setup();
+        return html`<div></div>`;
+      }, {});
+      const handle = get();
+      handle.set(0);
+
+      handle.dispose();
+      handle.open();
+
+      expect(handle.disposed).toBe(true);
+      expect(handle.isOpen.value).toBe(false);
+      expect(handle.navigate('next')).toBe(-1);
+      expect(handle.getActiveItem()).toBeUndefined();
+    });
+  });
+
   describe('signal lifecycle teardown', () => {
     it('AbortSignal abort() closes the list and disposes effects', async () => {
       const controller = new AbortController();

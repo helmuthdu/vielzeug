@@ -1,4 +1,3 @@
-import { signal as defaultSignal } from '@vielzeug/ripple';
 import {
   LedgerCancelledError,
   LedgerConfigurationError,
@@ -13,8 +12,10 @@ import type {
   Ledger,
   LedgerCallOptions,
   LedgerOptions,
+  LedgerReadable,
   LedgerState,
   ReversibleCommand,
+  Unsubscribe,
 } from './types';
 
 type StoredCommand<TMeta> = {
@@ -31,6 +32,42 @@ type Operation = {
   start: () => Promise<void>;
   started: boolean;
 };
+
+class StateStore<T> implements LedgerReadable<T> {
+  private currentValue: T;
+  private readonly listeners = new Set<() => void>();
+
+  constructor(initial: T) {
+    this.currentValue = initial;
+  }
+
+  get value(): T {
+    return this.currentValue;
+  }
+
+  peek(): T {
+    return this.currentValue;
+  }
+
+  set(next: T): void {
+    this.currentValue = next;
+
+    for (const listener of [...this.listeners]) {
+      try {
+        listener();
+      } catch (error) {
+        queueMicrotask(() => {
+          throw error;
+        });
+      }
+    }
+  }
+
+  subscribe(listener: () => void): Unsubscribe {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+}
 
 function toMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -73,16 +110,14 @@ function operationError(method: string, disposed: boolean): LedgerCancelledError
  * using ledger = createLedger();
  */
 export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Ledger<TMeta> {
-  const { maxHistory = 100, runtime } = options;
-  const signal = runtime?.signal ?? defaultSignal;
+  const { maxHistory = 100 } = options;
 
   if (!Number.isSafeInteger(maxHistory) || maxHistory < 0) {
     throw new LedgerConfigurationError('maxHistory must be a non-negative safe integer');
   }
 
-  const state = signal<LedgerState<TMeta>>(
+  const state = new StateStore<LedgerState<TMeta>>(
     snapshotState({ accepting: true, queued: 0, redo: [], running: 0, undo: [] }),
-    { name: 'ledger:state' },
   );
   const commandStore = new WeakMap<HistoryEntry<TMeta>, StoredCommand<TMeta>>();
   const disposalController = new AbortController();
@@ -92,7 +127,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
   let queue = Promise.resolve();
 
   function updateState(update: (current: LedgerState<TMeta>) => LedgerState<TMeta>): void {
-    state.value = snapshotState(update(state.value));
+    state.set(snapshotState(update(state.value)));
 
     if (state.value.queued === 0 && state.value.running === 0) {
       for (const resolve of idleWaiters) resolve();

@@ -1,13 +1,14 @@
 import { describe, expect, test } from 'vitest';
 
 import { table, ttl, VaultError } from '../index';
+import { createObserverHub } from '../internal';
 import { createMemory } from '../memory';
 
 type Entry = { id: number | string; name: string };
 
 const schema = { entries: table<Entry>('id') };
 
-describe('portable VaultStore features', () => {
+describe('portable KeyValueVaultStore features', () => {
   test('keeps numeric and string primary keys distinct', async () => {
     const store = createMemory({ schema });
 
@@ -18,6 +19,41 @@ describe('portable VaultStore features', () => {
 
     await expect(store.get('entries', 1)).resolves.toEqual({ id: 1, name: 'number' });
     await expect(store.get('entries', '1')).resolves.toEqual({ id: '1', name: 'string' });
+  });
+
+  test('discards observer reads superseded by newer notifications', async () => {
+    const pending: Array<(records: Entry[]) => void> = [];
+    const hub = createObserverHub<typeof schema>(
+      () => new Promise((resolve) => pending.push(resolve as (records: Entry[]) => void)),
+    );
+    const snapshots: Entry[][] = [];
+    hub.observe('entries', (entries) => snapshots.push(entries), { immediate: false });
+
+    hub.notify('entries');
+    hub.notify('entries');
+    pending[1]?.([{ id: 2, name: 'new' }]);
+    await Promise.resolve();
+    pending[0]?.([{ id: 1, name: 'old' }]);
+    await Promise.resolve();
+
+    expect(snapshots).toEqual([[{ id: 2, name: 'new' }]]);
+  });
+
+  test('notifies observers after explicit TTL pruning', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const store = createMemory({ schema });
+    const snapshots: Entry[][] = [];
+    store.observe('entries', (entries) => snapshots.push(entries));
+    await Promise.resolve();
+
+    await store.put('entries', { id: 1, name: 'temporary' }, ttl.ms(10));
+    await Promise.resolve();
+    vi.advanceTimersByTime(10);
+    await store.pruneExpired();
+    await Promise.resolve();
+
+    expect(snapshots.at(-1)).toEqual([]);
+    vi.useRealTimers();
   });
 
   test('observes an initial and changed snapshot', async () => {

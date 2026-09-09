@@ -20,7 +20,7 @@ export function exchangeRate<From extends Currency, To extends Currency>({
 
   const parsed = decimal(value);
 
-  if (parsed.numerator < 0n) throw new CoinsError('INVALID_DECIMAL', 'Exchange rates cannot be negative');
+  if (parsed.numerator <= 0n) throw new CoinsError('INVALID_DECIMAL', 'Exchange rates must be positive');
 
   const rate = Object.freeze({ from, to, value: parsed }) as ExchangeRate<From, To>;
 

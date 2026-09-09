@@ -1,11 +1,13 @@
 # @vielzeug/ward
 
-Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
+> Ordered authorization rules with immutable policies and typed decisions
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/ward
+npm install @vielzeug/ward
+yarn add @vielzeug/ward
 ```
 
 ## Quick Start
@@ -13,47 +15,40 @@ pnpm add @vielzeug/ward
 ```ts
 import { ANONYMOUS, WILDCARD, allow, createWard, deny, predicate } from '@vielzeug/ward';
 
-const ward = createWard<'read' | 'update', { authorId: string }>([
-  allow([ANONYMOUS, 'viewer'], 'posts', ['read']),
-  allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
-  deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
+type Action = 'read' | 'update';
+type Resource = 'posts';
+type Attributes = { authorId: string };
+
+const ward = createWard<Action, Resource, Attributes>([
+  deny('blocked', WILDCARD, [WILDCARD]),
+  allow(ANONYMOUS, 'posts', ['read']),
+  allow('viewer', 'posts', ['read']),
+  allow<Action, Resource, Attributes>('editor', 'posts', ['update'], {
+    when: predicate.owns<Attributes>('authorId'),
+  }),
 ]);
 
 const principal = { id: 'u1', roles: ['editor'] };
-
-const decision = ward.explain({
+const decision = ward.decide({
+  action: 'update',
+  attributes: { authorId: 'u1' },
   principal,
   resource: 'posts',
-  action: 'update',
-  data: { authorId: 'u2' },
 });
 
-const batch = ward.checkAll(principal, [
-  { resource: 'posts', action: 'read' },
-  { resource: 'posts', action: 'update', data: { authorId: 'u1' } },
-]);
-
-const trace = ward.trace({
-  principal,
-  resource: 'posts',
-  action: 'update',
-  data: { authorId: 'u2' },
-});
-
-const bound = ward.forUser(principal);
-bound.allowedActions({ resource: 'posts', knownActions: ['read', 'update', 'delete'] as const });
-bound.explain({ resource: 'posts', action: 'update', data: { authorId: 'u2' } });
+if (decision.effect === 'allow') {
+  console.log('update permitted');
+}
 ```
 
-## API Notes
+## Documentation
 
-1. `explain()` and `trace()` take object inputs: `{ principal, resource, action, data? }`.
-2. `allowedActions()` takes `{ principal, resource, knownActions, data? }`.
-3. `rulesInScope()` takes `{ principal, resource, data? }`.
-4. `BoundWard` methods use object inputs without `principal`.
-5. `trace()` does not fire a `decision` event; `explain()` and `checkAll()` do.
-6. Use `explain()` directly at request boundaries instead of middleware wrappers.
-7. Subscribe to decision events with `tap()` for logging and diagnostics:
-   ```ts
-   ward.tap((event) => console.debug('ward:decision', event.decision));
-   ```
+- [Overview](https://vielzeug.dev/ward/)
+- [Usage Guide](https://vielzeug.dev/ward/usage)
+- [API Reference](https://vielzeug.dev/ward/api)
+- [Examples](https://vielzeug.dev/ward/examples)
+- [Migration Guide](https://vielzeug.dev/ward/migration)
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

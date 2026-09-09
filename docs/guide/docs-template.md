@@ -281,11 +281,11 @@ Show the integration as a realistic code block, not a reference to "see the X do
 
 \```ts
 import { createForm } from '@vielzeug/forge';
-import { customValidator } from '@vielzeug/forge/spell';
+import { schemaValidator } from '@vielzeug/forge/schema';
 import { s } from '@vielzeug/spell';
 
 const schema = s.object({ email: s.string().email() });
-const form = createForm({ initialValues: { email: '' }, validate: customValidator(schema) });
+const form = createForm({ initialValues: { email: '' }, validate: schemaValidator(schema) });
 \```
 ````
 

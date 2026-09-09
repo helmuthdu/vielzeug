@@ -8,3 +8,4 @@ description: Practical examples and recipes for @vielzeug/coins.
 - [Formatting](./examples/formatting.md)
 - [Exchange Rate Conversion](./examples/exchange.md)
 - [Allocation](./examples/allocation.md)
+- [Serialization](./examples/serialization.md)

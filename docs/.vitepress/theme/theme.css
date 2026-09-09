@@ -69,38 +69,15 @@
 
   /* ── Navbar ── */
   --vp-custom-navbar-color: oklch(99% 0 0deg / 97%);
+  --vp-nav-bg-color: var(--vp-custom-navbar-color);
+  --vp-nav-home-bg-color: var(--vp-custom-navbar-color);
+  --vp-nav-backdrop-filter: saturate(50%) blur(24px);
+  --vp-nav-divider-color: var(--vp-c-divider);
+  --vp-local-nav-divider-color: var(--vp-c-divider);
 }
 
 .dark {
   --vp-custom-navbar-color: oklch(15% 0 0deg / 97%);
-}
-
-.VPNavBar,
-.VPNavBar.fill {
-  background: var(--vp-custom-navbar-color);
-  border-bottom: 1px solid var(--vp-c-divider);
-  backdrop-filter: saturate(50%) blur(24px);
-}
-
-.VPNavBar.has-sidebar .divider:before {
-  display: none;
-}
-
-.VPNavBar.fill .content-body,
-.VPNavBar.has-sidebar .content-body {
-  background: none;
-}
-
-.VPNavBar:not(.top) .content-body {
-  background-color: inherit;
-}
-
-.VPNavBar.has-sidebar .curtain {
-  display: none;
-}
-
-.VPNavBarTitle.has-sidebar .title {
-  border: none;
 }
 
 .grid-links ul {
@@ -269,7 +246,7 @@ body:has(#repl-container) {
 /* Features list → 2-col grid on wider screens */
 .features-grid ul {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
   gap: 0.4rem 1.5rem;
   padding: 0;
   list-style: none;

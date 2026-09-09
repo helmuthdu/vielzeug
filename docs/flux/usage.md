@@ -83,7 +83,7 @@ try {
 }
 ```
 
-Use `first()` for first emission and `last()` for last value before completion. Both reject with `FluxEmptyError` when the source completes without emitting; pass `{ defaultValue }` to resolve instead. Pass `{ signal }` to cancel waiting; cancellation rejects with `AbortError`.
+Use `first()` for first emission and `last()` for last value before completion. Both reject with `FluxEmptyError` when the source completes without emitting; pass `{ defaultValue }` to resolve instead. Pass `{ signal }` to cancel waiting; cancellation rejects with `signal.reason` (the default reason is `AbortError`).
 
 ## Channels
 
@@ -118,7 +118,7 @@ for await (const value of values) {
 }
 ```
 
-`return()` from loop permanently completes iterator. Use `drop-oldest` or `drop-newest` only when loss is acceptable.
+`return()` from a loop permanently completes its iterator; external signal cancellation rejects with `signal.reason`. Use `drop-oldest` or `drop-newest` only when loss is acceptable.
 
 ## Testing
 
@@ -191,16 +191,18 @@ export function streamStore<T>(source: Stream<T>, initial: T) {
 
 ## Working with Other Vielzeug Libraries
 
-Import adapters from dedicated subpaths. Core Flux does not require adapter peers.
+Use `fromStore()` for snapshot state and `fromSubscribe()` for callback-delivered event values. Write stream output into the owning state or event layer explicitly.
 
 ```ts
-import { fromQuery } from '@vielzeug/flux/courier';
-import { fromBus } from '@vielzeug/flux/herald';
-import { fromRoomPresence } from '@vielzeug/flux/pulse';
-import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
-```
+import { fromStore, fromSubscribe } from '@vielzeug/flux';
 
-`toSignal()` preserves final source value, then disposes binding when source completes, errors, or external signal aborts.
+const state = fromStore({
+  getSnapshot: () => store.value,
+  subscribe: (listener) => store.subscribe(listener),
+});
+
+const events = fromSubscribe<Message>((listener) => bus.on('message', listener));
+```
 
 ## Best Practices
 
@@ -212,4 +214,5 @@ import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
 - Bound `concatMap()` queue capacity.
 - Bound `toArray()` with realistic `maxItems`.
 - Choose async iterator overflow policy deliberately.
+- Keep timer-backed durations between 0 and 2,147,483,647 milliseconds.
 - Keep `Channel.send()` at integration boundaries.

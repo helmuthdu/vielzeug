@@ -117,6 +117,36 @@ describe('createVirtualizer – rendering', () => {
   });
 });
 
+describe('createVirtualizer – external store', () => {
+  it('exposes the current snapshot', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 10, estimateSize: 20 });
+
+    expect(v.getSnapshot()).toEqual({ items: v.items, stickyItems: v.stickyItems, totalSize: v.totalSize });
+    v.dispose();
+  });
+
+  it('notifies active subscribers and clears them on dispose', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const listener = vi.fn();
+    const v = createVirtualizer(el, { count: 10, estimateSize: 20 });
+    const unsubscribe = v.subscribe(listener);
+
+    v.refresh();
+    expect(listener).toHaveBeenCalledOnce();
+
+    unsubscribe();
+    v.refresh();
+    expect(listener).toHaveBeenCalledOnce();
+
+    v.subscribe(listener);
+    v.dispose();
+    expect(v.subscribe(listener)).toBeTypeOf('function');
+    expect(() => v.refresh()).not.toThrow();
+    expect(listener).toHaveBeenCalledOnce();
+  });
+});
+
 // ─── Horizontal ───────────────────────────────────────────────────────────────
 
 describe('createVirtualizer – horizontal', () => {

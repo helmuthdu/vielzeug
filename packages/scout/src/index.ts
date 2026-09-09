@@ -11,8 +11,11 @@ export type {
   FieldDef,
   FieldMatch,
   HighlightPart,
+  ScoutEvent,
   ScoutIndexOptions,
   SearchConstraints,
   SearchResult,
+  SearchSnapshot,
   SearchState,
+  SearchSubscribeOptions,
 } from './types';

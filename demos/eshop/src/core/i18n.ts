@@ -1,7 +1,5 @@
-import { stream } from '@vielzeug/flux';
-import { toSignal } from '@vielzeug/flux/ripple';
-import { createTranslationStore } from '@vielzeug/lingua';
-import { computed } from '@vielzeug/ripple';
+import { createI18n } from '@vielzeug/lingua';
+import { computed, fromSubscribable } from '@vielzeug/ripple';
 
 // ── Message catalog ──────────────────────────────────────────────────────────
 
@@ -629,29 +627,25 @@ const messages = {
 
 // ── Instance ─────────────────────────────────────────────────────────────────
 
-export const i18n = createTranslationStore({
+export const i18n = createI18n({
   catalogs: messages,
   locale: 'en',
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-export function setLocale(locale: 'de' | 'en'): void {
-  void i18n.setLocale(locale);
+export function setLocale(locale: 'de' | 'en'): Promise<void> {
+  return i18n.setLocale(locale);
 }
 
 // ── Reactive locale (bridges lingua's subscribe() into a ripple signal via flux — the same
 // fromSubscribe-style producer pattern used by core/router.ts and
 // core/catalog.ts / core/orders.ts's query bindings) ─────────────────────────
 
-const localeBinding = toSignal(
-  stream<'de' | 'en'>((observer) => {
-    observer.next(i18n.locale as 'de' | 'en');
-
-    return i18n.subscribe(() => observer.next(i18n.locale as 'de' | 'en'));
-  }),
-  { initial: i18n.locale as 'de' | 'en' },
-);
+const localeBinding = fromSubscribable<'de' | 'en'>({
+  getSnapshot: () => i18n.locale as 'de' | 'en',
+  subscribe: (listener) => i18n.subscribe(() => listener()),
+});
 
 export const currentLocale = computed(() => localeBinding.value);
 

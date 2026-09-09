@@ -18,21 +18,21 @@ describe('createSearch — initial state', () => {
   test('query starts as empty string', () => {
     const search = makeSearch();
 
-    expect(search.query.value).toBe('');
+    expect(search.getSnapshot().query).toBe('');
     search.dispose();
   });
 
   test('results start as all items (empty query)', () => {
     const search = makeSearch(0);
 
-    expect(search.results.value).toHaveLength(3);
+    expect(search.getSnapshot().results).toHaveLength(3);
     search.dispose();
   });
 
   test('isSearching starts false', () => {
     const search = makeSearch();
 
-    expect(search.isSearching.value).toBe(false);
+    expect(search.getSnapshot().isSearching).toBe(false);
     search.dispose();
   });
 });
@@ -41,29 +41,29 @@ describe('createSearch — debounce=0 (synchronous)', () => {
   test('results update synchronously when debounce is 0', () => {
     const search = makeSearch(0);
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
 
-    expect(search.results.value.length).toBeGreaterThan(0);
-    expect(search.results.value[0].item.name).toBe('Alice');
+    expect(search.getSnapshot().results.length).toBeGreaterThan(0);
+    expect(search.getSnapshot().results[0].item.name).toBe('Alice');
     search.dispose();
   });
 
   test('isSearching stays false when debounce is 0', () => {
     const search = makeSearch(0);
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
 
-    expect(search.isSearching.value).toBe(false);
+    expect(search.getSnapshot().isSearching).toBe(false);
     search.dispose();
   });
 
   test('empty query returns all items', () => {
     const search = makeSearch(0);
 
-    search.query.value = 'alice';
-    search.query.value = '';
+    search.setQuery('alice');
+    search.setQuery('');
 
-    expect(search.results.value).toHaveLength(3);
+    expect(search.getSnapshot().results).toHaveLength(3);
     search.dispose();
   });
 });
@@ -80,46 +80,46 @@ describe('createSearch — debounce (timer-based)', () => {
   test('isSearching becomes true immediately after query change', () => {
     const search = makeSearch(100);
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
 
-    expect(search.isSearching.value).toBe(true);
+    expect(search.getSnapshot().isSearching).toBe(true);
     search.dispose();
   });
 
   test('results do not update before debounce fires', () => {
     const search = makeSearch(100);
-    const initialCount = search.results.value.length;
+    const initialCount = search.getSnapshot().results.length;
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
     vi.advanceTimersByTime(50);
 
-    expect(search.results.value.length).toBe(initialCount);
+    expect(search.getSnapshot().results.length).toBe(initialCount);
     search.dispose();
   });
 
   test('results update and isSearching clears after debounce fires', () => {
     const search = makeSearch(100);
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
     vi.advanceTimersByTime(100);
 
-    expect(search.isSearching.value).toBe(false);
-    expect(search.results.value.length).toBeGreaterThan(0);
-    expect(search.results.value[0].item.name).toBe('Alice');
+    expect(search.getSnapshot().isSearching).toBe(false);
+    expect(search.getSnapshot().results.length).toBeGreaterThan(0);
+    expect(search.getSnapshot().results[0].item.name).toBe('Alice');
     search.dispose();
   });
 
   test('rapid query changes debounce correctly — only last fires', () => {
     const search = makeSearch(100);
 
-    search.query.value = 'al';
+    search.setQuery('al');
     vi.advanceTimersByTime(50);
-    search.query.value = 'ali';
+    search.setQuery('ali');
     vi.advanceTimersByTime(50);
-    search.query.value = 'alice';
+    search.setQuery('alice');
     vi.advanceTimersByTime(100);
 
-    expect(search.results.value[0].item.name).toBe('Alice');
+    expect(search.getSnapshot().results[0].item.name).toBe('Alice');
     search.dispose();
   });
 });
@@ -128,20 +128,20 @@ describe('createSearch — clear()', () => {
   test('clear() resets query to empty string', () => {
     const search = makeSearch(0);
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
     search.clear();
 
-    expect(search.query.value).toBe('');
+    expect(search.getSnapshot().query).toBe('');
     search.dispose();
   });
 
   test('clear() resets results to all items', () => {
     const search = makeSearch(0);
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
     search.clear();
 
-    expect(search.results.value).toHaveLength(3);
+    expect(search.getSnapshot().results).toHaveLength(3);
     search.dispose();
   });
 
@@ -150,13 +150,13 @@ describe('createSearch — clear()', () => {
 
     const search = makeSearch(200);
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
 
-    expect(search.isSearching.value).toBe(true);
+    expect(search.getSnapshot().isSearching).toBe(true);
 
     search.clear();
 
-    expect(search.isSearching.value).toBe(false);
+    expect(search.getSnapshot().isSearching).toBe(false);
 
     vi.useRealTimers();
     search.dispose();
@@ -211,6 +211,13 @@ describe('createSearch — dispose', () => {
 
     expect(search.disposalSignal.aborted).toBe(true);
   });
+
+  test('setQuery() after dispose() throws ScoutDisposedError', () => {
+    const search = makeSearch(0);
+    search.dispose();
+
+    expect(() => search.setQuery('alice')).toThrow(ScoutDisposedError);
+  });
 });
 
 describe('createSearch — reactivity to index mutations', () => {
@@ -218,11 +225,11 @@ describe('createSearch — reactivity to index mutations', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const search = createSearch(index, { debounce: 0 });
 
-    expect(search.results.value).toHaveLength(3);
+    expect(search.getSnapshot().results).toHaveLength(3);
 
     index.add({ name: 'Diana' });
 
-    expect(search.results.value).toHaveLength(4);
+    expect(search.getSnapshot().results).toHaveLength(4);
     search.dispose();
   });
 
@@ -232,7 +239,7 @@ describe('createSearch — reactivity to index mutations', () => {
 
     index.remove(USERS[0]);
 
-    expect(search.results.value).toHaveLength(2);
+    expect(search.getSnapshot().results).toHaveLength(2);
     search.dispose();
   });
 
@@ -241,13 +248,13 @@ describe('createSearch — reactivity to index mutations', () => {
     const index = createIndex([item], { fields: ['name'] });
     const search = createSearch(index, { debounce: 0, threshold: 0.5 });
 
-    search.query.value = 'alice';
-    expect(search.results.value).toHaveLength(1);
+    search.setQuery('alice');
+    expect(search.getSnapshot().results).toHaveLength(1);
 
     item.name = 'Zebra';
     index.reindex(item);
 
-    expect(search.results.value).toHaveLength(0);
+    expect(search.getSnapshot().results).toHaveLength(0);
     search.dispose();
   });
 
@@ -258,7 +265,7 @@ describe('createSearch — reactivity to index mutations', () => {
 
     index.setItems([{ name: 'Bob' }, retained]);
 
-    expect(search.results.value.map((result) => result.item.name)).toEqual(['Bob', 'Alice']);
+    expect(search.getSnapshot().results.map((result) => result.item.name)).toEqual(['Bob', 'Alice']);
     search.dispose();
   });
 
@@ -269,14 +276,104 @@ describe('createSearch — reactivity to index mutations', () => {
 
     index.add({ name: 'Diana' });
 
-    expect(searchA.results.value).toHaveLength(4);
-    expect(searchB.results.value).toHaveLength(4);
+    expect(searchA.getSnapshot().results).toHaveLength(4);
+    expect(searchB.getSnapshot().results).toHaveLength(4);
 
     searchA.dispose();
     index.add({ name: 'Eve' });
 
-    expect(searchB.results.value).toHaveLength(5);
+    expect(searchB.getSnapshot().results).toHaveLength(5);
     searchB.dispose();
+  });
+});
+
+describe('createSearch — subscriptions', () => {
+  test('publishes one consistent snapshot per state transition', () => {
+    vi.useFakeTimers();
+    const search = makeSearch(100);
+    const snapshots: Array<{ isSearching: boolean; names: string[]; query: string }> = [];
+    search.subscribe(() => {
+      const snapshot = search.getSnapshot();
+      snapshots.push({
+        isSearching: snapshot.isSearching,
+        names: snapshot.results.map((result) => result.item.name),
+        query: snapshot.query,
+      });
+    });
+
+    search.setQuery('alice');
+    vi.advanceTimersByTime(100);
+
+    expect(snapshots).toEqual([
+      { isSearching: true, names: ['Alice', 'Bob', 'Charlie'], query: 'alice' },
+      { isSearching: false, names: ['Alice'], query: 'alice' },
+    ]);
+    vi.useRealTimers();
+    search.dispose();
+  });
+
+  test('keeps snapshot identity stable and exposes runtime-read-only state', () => {
+    const search = makeSearch(0);
+    const snapshot = search.getSnapshot();
+
+    expect(snapshot).toBe(search.getSnapshot());
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(Object.isFrozen(snapshot.results)).toBe(true);
+    search.dispose();
+  });
+
+  test('reports listener failures asynchronously after notifying later listeners', () => {
+    const search = makeSearch(0);
+    const report = vi.spyOn(globalThis, 'queueMicrotask').mockImplementation(() => undefined);
+    const listener = vi.fn();
+    search.subscribe(() => {
+      throw new Error('consumer failure');
+    });
+    search.subscribe(listener);
+
+    expect(() => search.setQuery('alice')).not.toThrow();
+    expect(listener).toHaveBeenCalledOnce();
+    expect(report).toHaveBeenCalledOnce();
+    report.mockRestore();
+    search.dispose();
+  });
+
+  test('defers listeners added during notification until the next transition', () => {
+    const search = makeSearch(0);
+    const lateListener = vi.fn();
+    search.subscribe(() => search.subscribe(lateListener));
+
+    search.setQuery('alice');
+    expect(lateListener).not.toHaveBeenCalled();
+    search.clear();
+    expect(lateListener).toHaveBeenCalledOnce();
+    search.dispose();
+  });
+
+  test('supports abortable subscriptions', () => {
+    const search = makeSearch(0);
+    const controller = new AbortController();
+    const listener = vi.fn();
+    search.subscribe(listener, { signal: controller.signal });
+
+    controller.abort();
+    search.setQuery('alice');
+
+    expect(listener).not.toHaveBeenCalled();
+    search.dispose();
+  });
+
+  test('emits typed state and dispose events without exposing control flow to tapper errors', () => {
+    const search = makeSearch(0);
+    const events: string[] = [];
+    search.tap((event) => events.push(event.type));
+    search.tap(() => {
+      throw new Error('observer failure');
+    });
+
+    expect(() => search.setQuery('alice')).not.toThrow();
+    expect(() => search.dispose()).not.toThrow();
+    expect(events).toEqual(['state-change', 'dispose']);
   });
 });
 
@@ -285,7 +382,7 @@ describe('createSearch — options', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const search = createSearch(index, { debounce: 0, limit: 1 });
 
-    expect(search.results.value).toHaveLength(1);
+    expect(search.getSnapshot().results).toHaveLength(1);
     search.dispose();
   });
 
@@ -293,9 +390,9 @@ describe('createSearch — options', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const search = createSearch(index, { debounce: 0, threshold: 0.99 });
 
-    search.query.value = 'alic';
+    search.setQuery('alic');
 
-    expect(search.results.value).toHaveLength(0);
+    expect(search.getSnapshot().results).toHaveLength(0);
     search.dispose();
   });
 });
@@ -312,8 +409,8 @@ describe('createReactiveSearch', () => {
   test('creates index + search state in one call', () => {
     const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'] });
 
-    expect(search.query.value).toBe('');
-    expect(search.results.value).toHaveLength(3);
+    expect(search.getSnapshot().query).toBe('');
+    expect(search.getSnapshot().results).toHaveLength(3);
     search.dispose();
   });
 
@@ -332,9 +429,9 @@ describe('createReactiveSearch', () => {
     search.index.add(newUser);
     expect(search.index.size).toBe(4);
 
-    search.query.value = 'diana';
-    expect(search.results.value.length).toBeGreaterThan(0);
-    expect(search.results.value[0].item).toBe(newUser);
+    search.setQuery('diana');
+    expect(search.getSnapshot().results.length).toBeGreaterThan(0);
+    expect(search.getSnapshot().results[0].item).toBe(newUser);
     search.dispose();
   });
 
@@ -349,26 +446,26 @@ describe('createReactiveSearch', () => {
   test('respects limit option', () => {
     const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'], limit: 1 });
 
-    expect(search.results.value).toHaveLength(1);
+    expect(search.getSnapshot().results).toHaveLength(1);
     search.dispose();
   });
 
   test('respects threshold option', () => {
     const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'], threshold: 0.99 });
 
-    search.query.value = 'alic';
+    search.setQuery('alic');
 
-    expect(search.results.value).toHaveLength(0);
+    expect(search.getSnapshot().results).toHaveLength(0);
     search.dispose();
   });
 
   test('respects minQueryLength option', () => {
     const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'], minQueryLength: 10 });
 
-    search.query.value = 'alice';
+    search.setQuery('alice');
 
     // Below minQueryLength(10) forces the containment path — always score 1.0
-    expect(search.results.value.every((r) => r.score === 1)).toBe(true);
+    expect(search.getSnapshot().results.every((r) => r.score === 1)).toBe(true);
     search.dispose();
   });
 
@@ -377,12 +474,12 @@ describe('createReactiveSearch', () => {
 
     const search = createReactiveSearch(USERS, { debounce: 100, fields: ['name'] });
 
-    search.query.value = 'alice';
-    expect(search.isSearching.value).toBe(true);
+    search.setQuery('alice');
+    expect(search.getSnapshot().isSearching).toBe(true);
 
     vi.advanceTimersByTime(100);
-    expect(search.isSearching.value).toBe(false);
-    expect(search.results.value[0].item.name).toBe('Alice');
+    expect(search.getSnapshot().isSearching).toBe(false);
+    expect(search.getSnapshot().results[0].item.name).toBe('Alice');
 
     vi.useRealTimers();
     search.dispose();

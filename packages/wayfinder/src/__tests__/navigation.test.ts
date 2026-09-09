@@ -6,7 +6,7 @@ const routes = {
   about: { path: '/about' },
   home: { path: '/' },
   search: { path: '/search' },
-  userDetail: { meta: { section: 'users' }, path: '/users/:id' },
+  userDetail: { path: '/users/:id' },
   users: { path: '/users' },
 };
 
@@ -211,6 +211,35 @@ describe('Navigation', () => {
       expect(target).toHaveBeenCalledTimes(2);
     });
 
+    it('keeps history and router state aligned for unmatched navigation', async () => {
+      const history = createMemoryHistory('/');
+      const router = createRouter({ history, routes: { home: { path: '/' } } });
+
+      await router.ready;
+      await router.navigate('/missing');
+
+      expect(history.location.pathname).toBe('/missing');
+      expect(router.getSnapshot().location.pathname).toBe('/missing');
+      router.dispose();
+    });
+
+    it('wraps navigation in a requested view transition', async () => {
+      const startViewTransition = vi.fn((run: () => Promise<void>) => {
+        const finished = run();
+
+        return { finished };
+      });
+      Object.assign(document, { startViewTransition });
+      const router = createRouter({ history: createMemoryHistory('/'), routes });
+
+      await router.ready;
+      await router.navigate({ name: 'about' }, { viewTransition: true });
+
+      expect(startViewTransition).toHaveBeenCalledTimes(1);
+      Reflect.deleteProperty(document, 'startViewTransition');
+      router.dispose();
+    });
+
     it('does not duplicate the base segment when navigating with a base-prefixed raw path', async () => {
       const data = vi.fn();
       const router = createRouter({
@@ -348,7 +377,7 @@ describe('Navigation', () => {
     it('stores route state snapshots', async () => {
       const router = createRouter({
         routes: {
-          userDetail: { meta: { foo: 'bar' }, path: '/items/:id' },
+          userDetail: { path: '/items/:id' },
         },
       });
 
@@ -369,7 +398,6 @@ describe('Navigation', () => {
       );
       expect(router.getSnapshot().matches.at(-1)).toEqual(
         expect.objectContaining({
-          meta: { foo: 'bar' },
           name: 'userDetail',
           params: { id: '42' },
           pathname: '/items/42',
@@ -441,7 +469,7 @@ describe('Navigation', () => {
         routes: {
           dashboard: {
             children: {
-              settings: { meta: { section: 'settings' }, path: 'settings' },
+              settings: { path: 'settings' },
             },
             path: '/dashboard',
           },
@@ -450,22 +478,16 @@ describe('Navigation', () => {
 
       expect(router.match('/app/dashboard/settings')).toEqual([
         {
-          component: undefined,
           data: undefined,
-          meta: undefined,
           name: 'dashboard',
           params: {},
           pathname: '/dashboard/settings',
-          status: 'idle',
         },
         {
-          component: undefined,
           data: undefined,
-          meta: { section: 'settings' },
           name: 'dashboard.settings',
           params: {},
           pathname: '/dashboard/settings',
-          status: 'idle',
         },
       ]);
       expect(router.match('/app/missing')).toBeNull();
@@ -482,13 +504,10 @@ describe('Navigation', () => {
       expect(router.match('/legacy')).toBeNull();
       expect(router.match('/current')).toEqual([
         {
-          component: undefined,
           data: undefined,
-          meta: undefined,
           name: 'current',
           params: {},
           pathname: '/current',
-          status: 'idle',
         },
       ]);
     });

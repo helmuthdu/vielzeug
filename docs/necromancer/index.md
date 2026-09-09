@@ -15,7 +15,7 @@ environments: [browser]
 
 ## Why Necromancer?
 
-Native Web Animations API calls do not provide lifecycle ownership, reduced-motion policy, grouped playback, or layout transitions. Necromancer retains native keyframes and timing options while making ownership explicit for a component or DOM feature. Its default `180ms` duration makes the smallest call visible without hiding native timing control.
+Native Web Animations API calls do not provide lifecycle ownership, reduced-motion policy, grouped playback, or layout transitions. Necromancer retains native keyframes and timing semantics while making ownership explicit for a component or DOM feature.
 
 ```ts
 // Before
@@ -90,7 +90,7 @@ animation.dispose();
 - `animateEach()` — Group ownership with stable keyframe factories and `stagger`
 - `captureLayout()` — One-shot FLIP transition with additive `translate` (position) and `scale` (size)
 - `motion` — `'system'` reduced-motion support with explicit reduced outcomes
-- `interrupt: 'cancel'` — Replace active Necromancer-owned animation on an element
+- Native timing — Omitted timing fields retain Web Animations API behavior
 - `signal` — Abort a handle from its parent lifecycle
 - `dispose()` — Idempotent cleanup with `[Symbol.dispose]()`
 
@@ -107,6 +107,7 @@ Necromancer owns explicit WAAPI keyframes. It does not generate CSS keyframes, o
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [3.0 Migration](./migration.md)
 
 </div>
 

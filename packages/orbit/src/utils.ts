@@ -1,9 +1,5 @@
 import type { Alignment, Padding, Placement, Rect, Side, SideObject } from './types';
 
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
 export const OPPOSITE: Record<Side, Side> = { bottom: 'top', left: 'right', right: 'left', top: 'bottom' };
 
 /** Returns the primary side of a placement (`'top' | 'bottom' | 'left' | 'right'`). */

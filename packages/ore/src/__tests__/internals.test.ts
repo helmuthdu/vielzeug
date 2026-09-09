@@ -2,7 +2,7 @@ import { invariant, OreError, OreInternalError, OreLifecycleError, reportRuntime
 import { html } from '../index';
 import { beginPendingWork, hasPendingWork } from '../runtime';
 import { createHtmlResult, isHtmlResult } from '../template/result';
-import { debugFlush, flush, OreTimeoutError } from '../testing';
+import { flush, OreTimeoutError } from '../testing';
 
 describe('OreLifecycleError', () => {
   it('is an instance of Error', () => {
@@ -87,17 +87,6 @@ describe('HTML result branding', () => {
 
     expect(isHtmlResult(result)).toBe(true);
     expect(result.fragment).toBe(fragment);
-  });
-});
-
-describe('debugFlush()', () => {
-  it('resolves and logs diagnostics', async () => {
-    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-
-    await expect(debugFlush()).resolves.toBeUndefined();
-    expect(spy).toHaveBeenCalled();
-
-    spy.mockRestore();
   });
 });
 

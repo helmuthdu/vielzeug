@@ -7,7 +7,7 @@ description: 'Touch-enabled sortable list example for @vielzeug/dnd.'
 
 ### Problem
 
-Your sortable list works with mouse drag but does nothing on touch devices — HTML5 drag-and-drop has no native touch equivalent, so `touchstart`/`touchmove`/`touchend` never produce `dragstart`/`dragover`/`drop`.
+Your sortable list works with mouse drag but does nothing on touch devices — HTML drag-and-drop has no reliable native touch equivalent, so Dnd uses Gesture's Pointer Event recognizer to drive the drag lifecycle on touch input.
 
 ### Solution
 
@@ -22,15 +22,15 @@ Enable touch input on the scope that owns the list. The scope only handles its r
 ```
 
 ```ts
-import { createSortable, createSortableScope } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 
 using scope = createSortableScope({ touch: true });
 
 using sortable = createSortable({
   element: document.getElementById('list')!,
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids }) => {
-    console.log('New order:', ids);
+  onReorder: ({ after }) => {
+    console.log('New order:', after);
   },
   scope,
 });
@@ -38,10 +38,10 @@ using sortable = createSortable({
 
 ### Pitfalls
 
-- `createSortable` applies `touch-action: none` to sortable items or handles automatically.
+- A touch-enabled scope applies `touch-action: none` to its sortable items or handles; non-touch sortables preserve native scrolling.
 - One touch-enabled scope can coordinate every connected list it owns.
-- The initiating finger owns the drag; secondary touches are ignored.
-- Cancelling the initiating touch restores the original order.
+- Gesture tracks one primary touch pointer; additional contacts are ignored.
+- Cancelling the active pointer restores the original order.
 - The default preview is an inert outline. Configure `touch.preview` when a custom preview is necessary.
 
 ### Related

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/ledger",
   "version": "2.3.0",
-  "description": "Serialized reversible command history with atomic Ripple state and cancellation ownership",
+  "description": "Serialized reversible command history with atomic state and cancellation ownership",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -37,9 +37,6 @@
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "test": "vitest"
-  },
-  "dependencies": {
-    "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",

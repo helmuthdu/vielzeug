@@ -107,8 +107,8 @@ define<OreStatsProps>(STATS_TAG, {
 
     bind({
       attr: {
-        ariaBusy: () => String(Boolean(props.loading.value)),
-        ariaDisabled: () => String(Boolean(props.disabled.value)),
+        'aria-busy': () => String(Boolean(props.loading.value)),
+        'aria-disabled': () => String(Boolean(props.disabled.value)),
       },
     });
 

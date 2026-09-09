@@ -1,14 +1,11 @@
-import type { Readable } from '@vielzeug/ripple';
-
-import { createScope, effect } from '@vielzeug/ripple';
-import { error } from '../_dev';
+import { PrismRenderError } from '../errors';
 import type { CrosshairState } from '../interaction/crosshair';
 import type { LegendState } from '../interaction/legend';
 import { createLegend } from '../interaction/legend';
 import type { TooltipState } from '../interaction/tooltip';
 import { createTooltip } from '../interaction/tooltip';
 import { createSvgElement, removeChildren } from '../svg/element';
-import type { BaseChartConfig, ChartDimensions, ChartHandle, ChartPlugin, ChartPluginContext } from '../types';
+import type { BaseChartConfig, ChartDimensions, ChartHandle } from '../types';
 import { createChartBase } from './chart-base';
 
 export interface ScaffoldGroups {
@@ -20,8 +17,8 @@ export interface ScaffoldGroups {
 
 /**
  * Clears a cartesian chart's series/grid/axis groups and hides its legend/tooltip/crosshair —
- * shared by every cartesian chart factory's "no data" early-return so a reactive series
- * transitioning to empty leaves a fully blank chart, not a half-cleared one.
+ * shared by every cartesian chart factory's "no data" early-return so an update
+ * to empty data leaves a fully blank chart, not a half-cleared one.
  */
 export function clearCartesianDom(
   groups: ScaffoldGroups,
@@ -41,7 +38,7 @@ export function clearCartesianDom(
 export interface ScaffoldContext {
   chartArea: SVGGElement;
   container: HTMLElement;
-  dimensions: Readable<ChartDimensions>;
+  dimensions: ChartDimensions;
   /** Aborted when the chart is disposed — renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
   disposalSignal: AbortSignal;
   groups: ScaffoldGroups;
@@ -52,7 +49,7 @@ export interface ScaffoldContext {
 
 export interface RadialScaffoldContext {
   container: HTMLElement;
-  dimensions: Readable<ChartDimensions>;
+  dimensions: ChartDimensions;
   /** Aborted when the chart is disposed — renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
   disposalSignal: AbortSignal;
   legend: LegendState | null;
@@ -67,13 +64,13 @@ export interface ChartEventHandlers {
   onMouseMove?: (event: MouseEvent) => void;
 }
 
-function runScaffold<TCtx>(
+function runScaffold<TCtx, TData>(
   container: HTMLElement,
   config: BaseChartConfig,
   buildCtx: (
     base: {
       chartArea: SVGGElement;
-      dimensions: Readable<ChartDimensions>;
+      dimensions: ChartDimensions;
       svg: SVGSVGElement;
     },
     tooltip: TooltipState | null,
@@ -81,8 +78,10 @@ function runScaffold<TCtx>(
     disposalSignal: AbortSignal,
   ) => TCtx,
   renderFn: (ctx: TCtx) => ChartEventHandlers | undefined,
-): ChartHandle {
-  const base = createChartBase(container, { a11y: config.a11y, margin: config.margin });
+  updateData: (data: TData) => void,
+): ChartHandle<TData> {
+  let render = () => {};
+  const base = createChartBase(container, { a11y: config.a11y, margin: config.margin }, () => render());
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
   const legend = config.legend ? createLegend(container, config.legend) : null;
   const ac = new AbortController();
@@ -91,37 +90,21 @@ function runScaffold<TCtx>(
   let disposed = false;
   const events = makeEventManager(base.svg);
 
-  const scope = createScope();
+  render = () => {
+    if (disposed) return;
+    events.attach(renderFn(ctx));
+  };
 
-  scope.run(() => {
-    effect(
-      () => {
-        if (disposed) return;
-
-        events.attach(renderFn(ctx));
-      },
-      { scheduler: 'microtask' },
-    );
-  });
-
-  const installedPlugins: ChartPlugin[] = [];
-
-  if (config.plugins) {
-    const pluginCtx: ChartPluginContext = {
-      container,
-      dimensions: base.dimensions,
-      disposalSignal: ac.signal,
-      svg: base.svg,
-    };
-
-    for (const plugin of config.plugins) {
-      try {
-        plugin.install(pluginCtx);
-        installedPlugins.push(plugin);
-      } catch (err) {
-        error('A chart plugin threw during install() — skipping it; the rest of the chart still renders.', err);
-      }
-    }
+  try {
+    render();
+  } catch (error) {
+    disposed = true;
+    ac.abort();
+    events.detach();
+    tooltip?.dispose();
+    legend?.dispose();
+    base.dispose();
+    throw error instanceof PrismRenderError ? error : new PrismRenderError('Failed to render chart.', { cause: error });
   }
 
   return {
@@ -135,18 +118,8 @@ function runScaffold<TCtx>(
       disposed = true;
       ac.abort();
       events.detach();
-
-      for (const p of installedPlugins) {
-        try {
-          p.dispose();
-        } catch (err) {
-          error('A chart plugin threw during dispose() — continuing to tear down the rest of the chart.', err);
-        }
-      }
-
       tooltip?.dispose();
       legend?.dispose();
-      scope.dispose();
       base.dispose();
     },
 
@@ -155,6 +128,12 @@ function runScaffold<TCtx>(
     },
 
     el: base.svg,
+
+    update(data) {
+      if (disposed) throw new PrismRenderError('Cannot update a disposed chart.');
+      updateData(data);
+      render();
+    },
 
     [Symbol.dispose]() {
       this.dispose();
@@ -201,15 +180,16 @@ function makeEventManager(svg: SVGSVGElement): {
 }
 
 /**
- * Cartesian scaffold: provides grid/axis/series SVG groups and a reactive
- * render loop. `renderFn` is called inside a reactive effect; it returns
- * optional `ChartEventHandlers` that are attached/replaced on every render.
+ * Cartesian scaffold: provides grid/axis/series SVG groups and a render loop.
+ * `renderFn` returns optional `ChartEventHandlers` that are attached/replaced
+ * after every data update or resize.
  */
-export function createChartScaffold(
+export function createChartScaffold<TData>(
   container: HTMLElement,
   config: BaseChartConfig,
   renderFn: (ctx: ScaffoldContext) => ChartEventHandlers | undefined,
-): ChartHandle {
+  updateData: (data: TData) => void,
+): ChartHandle<TData> {
   return runScaffold(
     container,
     config,
@@ -241,6 +221,7 @@ export function createChartScaffold(
       } satisfies ScaffoldContext;
     },
     renderFn,
+    updateData,
   );
 }
 
@@ -248,11 +229,12 @@ export function createChartScaffold(
  * Radial scaffold: for charts that do not use cartesian axis groups
  * (pie, donut, semi). Provides only tooltip, legend, and the SVG root.
  */
-export function createRadialScaffold(
+export function createRadialScaffold<TData>(
   container: HTMLElement,
   config: BaseChartConfig,
   renderFn: (ctx: RadialScaffoldContext) => ChartEventHandlers | undefined,
-): ChartHandle {
+  updateData: (data: TData) => void,
+): ChartHandle<TData> {
   return runScaffold(
     container,
     config,
@@ -266,5 +248,6 @@ export function createRadialScaffold(
         tooltip,
       }) satisfies RadialScaffoldContext,
     renderFn,
+    updateData,
   );
 }

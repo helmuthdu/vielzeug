@@ -1,13 +1,11 @@
-import { abortError } from '@vielzeug/arsenal/async';
-
-import { createPoolCore, type PoolCore, type PoolOptions } from './_pool-core';
-import { FamiliarQueueFullError, FamiliarTerminatedError } from './errors';
-import type { RunOptions, StreamWorkerPool } from './types';
-import type { RunningStream } from './worker';
+import { abortError } from '@vielzeug/arsenal';
+import { createPoolCore, type PoolCore, type PoolOptions, validatePriority, validateTimeout } from './_pool-core.js';
+import { FamiliarQueueFullError, FamiliarRuntimeError, FamiliarTerminatedError } from './errors.js';
+import type { RunOptions, StreamWorkerPool } from './types.js';
+import type { RunningStream } from './worker.js';
 
 export type StreamSlot<TInput, TChunk> = {
   cancel(reason: unknown): void;
-  prime(): Promise<void>;
   stream(input: TInput, options: RunOptions): RunningStream<TChunk>;
   terminate(): void;
 };
@@ -63,13 +61,16 @@ export function createStreamPool<TInput, TChunk>(
     while (options.maxQueue !== undefined && waiters.length >= options.maxQueue) {
       if (options.onFull === 'reject') throw new FamiliarQueueFullError(options.maxQueue);
 
-      await core.waitForCapacity(runOptions.signal);
+      await core.waitForCapacity(runOptions.signal, runOptions.priority ?? 0);
 
       if (core.disposed) throw new FamiliarTerminatedError();
 
       if (core.drainPromise) throw new FamiliarTerminatedError('Worker is draining');
 
-      if (runOptions.signal?.aborted) throw abortError(runOptions.signal);
+      if (runOptions.signal?.aborted) {
+        core.releaseCapacity();
+        throw abortError(runOptions.signal);
+      }
     }
 
     const free = freeSlots.pop();
@@ -119,51 +120,75 @@ export function createStreamPool<TInput, TChunk>(
       return core.disposed;
     },
     drain: core.drain,
-    async prime(): Promise<void> {
-      await core.prime(slots);
-    },
     runStream(input, runOptions = {}): AsyncIterable<TChunk> {
-      const controller = new AbortController();
-      const onAbort = () => controller.abort(runOptions.signal?.reason);
+      const priority = validatePriority(runOptions.priority ?? 0);
+      const timeout = validateTimeout(runOptions.timeout) ?? options.defaultTimeout;
+      const transferables = [...(runOptions.transferables ?? [])];
+      let owner: object | undefined;
 
-      runOptions.signal?.addEventListener('abort', onAbort, { once: true });
+      const iterate = async function* (controller: AbortController): AsyncGenerator<TChunk> {
+        const onAbort = () => controller.abort(runOptions.signal?.reason);
+        let slot: StreamSlot<TInput, TChunk> | undefined;
+        let onCancel: (() => void) | undefined;
+
+        if (runOptions.signal?.aborted) controller.abort(runOptions.signal.reason);
+        else runOptions.signal?.addEventListener('abort', onAbort, { once: true });
+
+        try {
+          slot = await acquire({ priority, signal: controller.signal, timeout, transferables });
+          core.trackActive(1);
+          onCancel = () => slot?.cancel(abortError(controller.signal));
+          controller.signal.addEventListener('abort', onCancel, { once: true });
+
+          const running = slot.stream(input, { priority, signal: controller.signal, timeout, transferables });
+
+          for await (const value of running.iterable) yield value;
+          await running.done;
+          core.trackCompleted();
+        } catch (error) {
+          if (slot && !controller.signal.aborted && !(error instanceof FamiliarTerminatedError)) core.trackFailed();
+          throw error;
+        } finally {
+          runOptions.signal?.removeEventListener('abort', onAbort);
+
+          if (slot) {
+            if (onCancel) controller.signal.removeEventListener('abort', onCancel);
+
+            core.trackActive(-1);
+            release(slot);
+            core.settleIdle();
+          }
+        }
+      };
 
       return {
-        [Symbol.asyncIterator]: async function* () {
-          let slot: StreamSlot<TInput, TChunk> | undefined;
-          let onCancel: (() => void) | undefined;
+        [Symbol.asyncIterator]() {
+          const token = {};
+          const controller = new AbortController();
+          let iterator: AsyncGenerator<TChunk> | undefined;
+          const start = (): AsyncGenerator<TChunk> | undefined => {
+            owner ??= token;
+            if (owner !== token) return undefined;
+            iterator ??= iterate(controller);
+            return iterator;
+          };
 
-          try {
-            slot = await acquire({ ...runOptions, signal: controller.signal });
-            core.trackActive(1);
-            onCancel = () => slot?.cancel(abortError(controller.signal));
-            controller.signal.addEventListener('abort', onCancel, { once: true });
-
-            const running = slot.stream(input, {
-              ...runOptions,
-              signal: controller.signal,
-              timeout: runOptions.timeout ?? options.defaultTimeout,
-            });
-
-            for await (const value of running.iterable) yield value;
-            await running.done;
-            core.trackCompleted();
-          } catch (error) {
-            if (error instanceof Error && error.name !== 'AbortError' && !(error instanceof FamiliarTerminatedError))
-              core.trackFailed();
-
-            throw error;
-          } finally {
-            runOptions.signal?.removeEventListener('abort', onAbort);
-
-            if (slot) {
-              if (onCancel) controller.signal.removeEventListener('abort', onCancel);
-
-              core.trackActive(-1);
-              release(slot);
-              core.settleIdle();
-            }
-          }
+          return {
+            next: () =>
+              start()?.next() ?? Promise.reject(new FamiliarRuntimeError('Worker streams can only be consumed once')),
+            return: async (value?: unknown) => {
+              if (!owner) return { done: true, value: value as TChunk };
+              if (owner !== token) return { done: true, value: value as TChunk };
+              controller.abort(new FamiliarTerminatedError('Stream consumer stopped'));
+              return iterator?.return(value as TChunk) ?? { done: true, value: value as TChunk };
+            },
+            throw: async (error?: unknown) => {
+              const active = start();
+              if (!active) throw new FamiliarRuntimeError('Worker streams can only be consumed once');
+              controller.abort(error);
+              return active.throw(error);
+            },
+          };
         },
       };
     },

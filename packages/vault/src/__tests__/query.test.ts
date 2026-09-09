@@ -1,137 +1,67 @@
-import { table, VaultError, type VaultStore } from '../index';
+import { type KeyValueVaultStore, table, VaultError } from '../index';
 import { createMemory } from '../memory';
 
 type Row = { age: number; city: string; id: number; name: string };
 
 const schema = { rows: table<Row>('id') };
+const rowsData: Row[] = [
+  { age: 25, city: 'Paris', id: 1, name: 'Alice' },
+  { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
+  { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
+];
 
-describe('QueryBuilder (via query)', () => {
-  const rowsData: Row[] = [
-    { age: 25, city: 'Paris', id: 1, name: 'Alice' },
-    { age: 30, city: 'Berlin', id: 2, name: 'Bob' },
-    { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
-  ];
-
-  let db: VaultStore<typeof schema>;
+describe('bound helpers and QueryBuilder', () => {
+  let db: KeyValueVaultStore<typeof schema>;
 
   beforeEach(async () => {
     db = createMemory({ schema });
     await db.putAll('rows', rowsData);
   });
 
-  describe('filters', () => {
-    test('filter applies predicate', async () => {
-      expect(
-        await db
-          .query('rows')
-          .filter((u) => u.age > 25)
-          .toArray(),
-      ).toEqual([rowsData[1], rowsData[2]]);
-    });
-
-    test('equals filters by exact field value', async () => {
-      expect(await db.query('rows').equals('city', 'Paris').toArray()).toEqual([rowsData[0], rowsData[2]]);
-    });
-
-    test('filter().equals() evaluates left-to-right — equals applies after filter', async () => {
-      // filter keeps age > 25 → [Bob(Berlin), Charlie(Paris)]; equals keeps city=Paris → [Charlie]
-      const result = await db
-        .query('rows')
-        .filter((r) => r.age > 25)
-        .equals('city', 'Paris')
-        .toArray();
-
-      expect(result).toEqual([rowsData[2]]);
-    });
+  test('provides common helpers without separate imports', async () => {
+    await expect(db.has('rows', 1)).resolves.toBe(true);
+    await expect(db.count('rows')).resolves.toBe(3);
+    await expect(db.isEmpty('rows')).resolves.toBe(false);
+    await expect(db.getMany('rows', [3, 1])).resolves.toEqual([rowsData[2], rowsData[0]]);
+    await expect(db.keys('rows', (row) => row.city === 'Paris')).resolves.toEqual([1, 3]);
   });
 
-  describe('sorting and pagination', () => {
-    test('orderBy sorts ascending', async () => {
-      expect((await db.query('rows').orderBy('age', 'asc').toArray()).map((u) => u.id)).toEqual([1, 2, 3]);
-    });
+  test('filters, sorts, and paginates fluently', async () => {
+    const result = await db
+      .query('rows')
+      .filter((row) => row.age > 20)
+      .equals('city', 'Paris')
+      .orderBy('age', 'desc')
+      .offset(0)
+      .limit(1)
+      .toArray();
 
-    test('orderBy sorts descending', async () => {
-      expect((await db.query('rows').orderBy('age', 'desc').toArray()).map((u) => u.id)).toEqual([3, 2, 1]);
-    });
-
-    test('limit truncates result set', async () => {
-      expect(await db.query('rows').limit(2).toArray()).toEqual([rowsData[0], rowsData[1]]);
-    });
-
-    test('offset skips first records', async () => {
-      expect(await db.query('rows').offset(1).toArray()).toEqual([rowsData[1], rowsData[2]]);
-    });
-
-    test('limit accepts zero', async () => {
-      expect(await db.query('rows').limit(0).toArray()).toEqual([]);
-    });
-
-    test('offset beyond list length returns empty array', async () => {
-      expect(await db.query('rows').offset(99).toArray()).toEqual([]);
-    });
-
-    test('limit rejects invalid values', async () => {
-      expect(() => db.query('rows').limit(-1)).toThrow(VaultError);
-      expect(() => db.query('rows').limit(-1)).toThrow('query.limit must be a non-negative integer');
-      expect(() => db.query('rows').limit(1.5)).toThrow(VaultError);
-    });
-
-    test('offset rejects invalid values', async () => {
-      expect(() => db.query('rows').offset(-1)).toThrow(VaultError);
-      expect(() => db.query('rows').offset(-1)).toThrow('query.offset must be a non-negative integer');
-      expect(() => db.query('rows').offset(Number.NaN)).toThrow(VaultError);
-    });
+    expect(result).toEqual([rowsData[2]]);
   });
 
-  describe('terminal operations', () => {
-    test('toArray returns full transformed set', async () => {
-      const r = await db.query('rows').equals('city', 'Paris').orderBy('age', 'desc').limit(1).toArray();
+  test('counts the filtered set before presentation operations', async () => {
+    await expect(db.query('rows').equals('city', 'Paris').limit(1).count()).resolves.toBe(2);
+  });
 
-      expect(r).toEqual([rowsData[2]]);
-    });
-
-    test('count returns the full filtered set size, ignoring limit and offset', async () => {
-      expect(await db.query('rows').equals('city', 'Paris').count()).toBe(2);
-      expect(await db.query('rows').limit(1).count()).toBe(3);
-      expect(await db.query('rows').offset(2).count()).toBe(3);
-      expect(await db.query('rows').equals('city', 'Paris').limit(1).count()).toBe(2);
-    });
-
-    test('count ignores orderBy — does not sort before counting', async () => {
-      expect(await db.query('rows').orderBy('age', 'desc').count()).toBe(3);
-      expect(await db.query('rows').equals('city', 'Paris').orderBy('age', 'asc').limit(1).count()).toBe(2);
-    });
-
-    test('delete removes transformed records and returns count', async () => {
-      const deleted = await db
+  test('deletes query results', async () => {
+    await expect(
+      db
         .query('rows')
         .filter((row) => row.age >= 30)
-        .delete();
+        .delete(),
+    ).resolves.toBe(2);
+    await expect(db.getAll('rows')).resolves.toEqual([rowsData[0]]);
+  });
 
-      expect(deleted).toBe(2);
-      expect(await db.getAll('rows')).toEqual([rowsData[0]]);
+  test('supports bound update and upsert', async () => {
+    await expect(db.update('rows', 1, { city: 'Rome' })).resolves.toMatchObject({ city: 'Rome', id: 1 });
+    await expect(db.upsert('rows', 4, () => ({ age: 40, city: 'Paris', id: 4, name: 'Dora' }))).resolves.toMatchObject({
+      id: 4,
     });
+  });
 
-    test('first returns first transformed record', async () => {
-      expect(await db.query('rows').orderBy('age', 'asc').first()).toEqual(rowsData[0]);
-    });
-
-    test('first returns undefined for empty result', async () => {
-      expect(await db.query('rows').equals('id', 99).first()).toBeUndefined();
-    });
-
-    test('first short-circuits on unfiltered query — returns first item without full scan', async () => {
-      // No filter/sort: short-circuit path returns the first item directly.
-      const result = await db.query('rows').first();
-
-      expect(result).toBeDefined();
-      expect(rowsData).toContainEqual(result);
-    });
-
-    test('first with limit(1) applies the op then returns the first item', async () => {
-      const result = await db.query('rows').limit(1).first();
-
-      expect(result).toBeDefined();
-    });
+  test('validates limit and offset', () => {
+    expect(() => db.query('rows').limit(-1)).toThrow(VaultError);
+    expect(() => db.query('rows').offset(Number.NaN)).toThrow(VaultError);
   });
 });

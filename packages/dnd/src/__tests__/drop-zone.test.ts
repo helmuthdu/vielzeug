@@ -468,7 +468,7 @@ describe('createDropZone', () => {
       const file = new File(['data'], 'a.png', { type: 'image/png' });
       const zone = createDropZone({ accept: ['image/*'], element, onPaste, paste: true });
 
-      window.dispatchEvent(makeClipboardEvent([file]));
+      element.dispatchEvent(makeClipboardEvent([file]));
       await Promise.resolve();
 
       expect(onPaste).toHaveBeenCalledWith([file]);
@@ -482,7 +482,7 @@ describe('createDropZone', () => {
       const file = new File(['data'], 'a.txt', { type: 'text/plain' });
       const zone = createDropZone({ element, onDrop, paste: true });
 
-      window.dispatchEvent(makeClipboardEvent([file]));
+      element.dispatchEvent(makeClipboardEvent([file]));
       await Promise.resolve();
 
       expect(onDrop).toHaveBeenCalledWith([file]);
@@ -498,7 +498,7 @@ describe('createDropZone', () => {
       const txt = new File(['txt'], 'b.txt', { type: 'text/plain' });
       const zone = createDropZone({ accept: ['image/*'], element, onDropRejected, onPaste, paste: true });
 
-      window.dispatchEvent(makeClipboardEvent([img, txt]));
+      element.dispatchEvent(makeClipboardEvent([img, txt]));
       await Promise.resolve();
 
       expect(onPaste).toHaveBeenCalledWith([img]);
@@ -512,7 +512,7 @@ describe('createDropZone', () => {
       const onDrop = vi.fn();
       const zone = createDropZone({ element, onDrop });
 
-      window.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
+      element.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
       await Promise.resolve();
 
       expect(onDrop).not.toHaveBeenCalled();
@@ -525,7 +525,7 @@ describe('createDropZone', () => {
       const onPaste = vi.fn();
       const zone = createDropZone({ disabled: true, element, onPaste, paste: true });
 
-      window.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
+      element.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
       await Promise.resolve();
 
       expect(onPaste).not.toHaveBeenCalled();
@@ -539,7 +539,7 @@ describe('createDropZone', () => {
       const zone = createDropZone({ element, onPaste, paste: true });
 
       zone.dispose();
-      window.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
+      element.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
       await Promise.resolve();
 
       expect(onPaste).not.toHaveBeenCalled();
@@ -551,7 +551,7 @@ describe('createDropZone', () => {
       const file = new File(['data'], 'a.txt', { type: 'text/plain' });
       const zone = createDropZone({ element, onDrop, paste: true });
 
-      window.dispatchEvent(makeClipboardEvent([file]));
+      element.dispatchEvent(makeClipboardEvent([file]));
       await Promise.resolve();
 
       expect(onDrop).toHaveBeenCalledWith([file]);
@@ -777,7 +777,7 @@ describe('createDropZone', () => {
       const zone = createDropZone({ element, onPaste, onValidate, paste: true });
       const file = new File(['a'], 'a.txt', { type: 'text/plain' });
 
-      window.dispatchEvent(makeClipboardEvent([file]));
+      element.dispatchEvent(makeClipboardEvent([file]));
 
       expect(zone.validating).toBe(true);
 
@@ -921,6 +921,72 @@ describe('createDropZone', () => {
       await Promise.resolve();
 
       expect(onDropRejected).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('hardening regressions', () => {
+    it.each([-1, 1.5, Number.NaN])('rejects invalid maxFiles %s', (maxFiles) => {
+      const element = document.createElement('div');
+
+      expect(() => createDropZone({ element, maxFiles })).toThrow(/maxFiles/);
+    });
+
+    it.each(['', 'image', 'image/**'])('rejects invalid accept pattern %s', (pattern) => {
+      const element = document.createElement('div');
+
+      expect(() => createDropZone({ accept: [pattern], element })).toThrow(/accept pattern/);
+    });
+
+    it('settles validation state when disposed', () => {
+      const element = document.createElement('div');
+      const changes: boolean[] = [];
+      const zone = createDropZone({
+        element,
+        onValidate: () => new Promise<boolean>(() => undefined),
+        onValidatingChange: (value) => changes.push(value),
+      });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [new File([''], 'a.txt')] }));
+      zone.dispose();
+
+      expect(zone.validating).toBe(false);
+      expect(changes).toEqual([true, false]);
+    });
+
+    it('does not reinterpret delivery callback failures as rejected files', async () => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const element = document.createElement('div');
+      const onDropRejected = vi.fn();
+      const zone = createDropZone({
+        element,
+        onDrop: () => {
+          throw new Error('consumer failure');
+        },
+        onDropRejected,
+        onValidate: () => true,
+      });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [new File([''], 'a.txt')] }));
+      await Promise.resolve();
+
+      expect(onDropRejected).not.toHaveBeenCalled();
+      expect(warning).toHaveBeenCalledOnce();
+      warning.mockRestore();
+      zone.dispose();
+    });
+
+    it('scopes paste handling to the configured element', async () => {
+      const element = document.createElement('div');
+      const onPaste = vi.fn();
+      const zone = createDropZone({ element, onPaste, paste: true });
+      const files = [new File([''], 'a.txt')];
+
+      window.dispatchEvent(makeClipboardEvent(files));
+      element.dispatchEvent(makeClipboardEvent(files));
+      await Promise.resolve();
+
+      expect(onPaste).toHaveBeenCalledOnce();
+      zone.dispose();
     });
   });
 });

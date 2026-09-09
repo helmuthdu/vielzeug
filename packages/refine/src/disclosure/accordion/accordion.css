@@ -37,7 +37,6 @@
   /* Contained variants - grouped appearance */
   :host([variant='solid']),
   :host([variant='flat']),
-  :host([variant='glass']),
   :host([variant='frost']) {
     gap: 0;
     padding: var(--size-2);
@@ -62,16 +61,10 @@
     box-shadow: var(--accordion-shadow, var(--inset-shadow-xs));
   }
 
-  /* Glass & Frost - Shared styles */
-  :host([variant='glass']),
+  /* Frost variant - translucent with blur */
   :host([variant='frost']) {
     box-shadow: var(--accordion-shadow, var(--shadow-md), var(--inset-shadow-xs));
     backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-  }
-
-  /* Glass variant - translucent with blur */
-  :host([variant='glass']) {
-    --_bg: var(--accordion-bg, color-mix(in oklch, var(--color-secondary) 30%, var(--color-contrast) 10%));
   }
 
   /* Frost variant - canvas-based transparency */
@@ -79,20 +72,20 @@
     --_bg: var(--accordion-bg, color-mix(in oklch, var(--color-canvas) 55%, transparent));
   }
 
-  /* Nested item border radius for glass and frost variants */
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(ore-accordion-item) {
+  /* Nested item border radius for the frost variant */
+  :host([variant='frost']) ::slotted(ore-accordion-item) {
     border-radius: 0;
   }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(ore-accordion-item:first-child) {
+  :host([variant='frost']) ::slotted(ore-accordion-item:first-child) {
     border-radius: var(--rounded-lg) var(--rounded-lg) 0 0;
   }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(ore-accordion-item:last-child) {
+  :host([variant='frost']) ::slotted(ore-accordion-item:last-child) {
     border-radius: 0 0 var(--rounded-lg) var(--rounded-lg);
   }
 
-  :host(:is([variant='glass'], [variant='frost'])) ::slotted(ore-accordion-item:only-child) {
+  :host([variant='frost']) ::slotted(ore-accordion-item:only-child) {
     border-radius: var(--rounded-lg);
   }
 }

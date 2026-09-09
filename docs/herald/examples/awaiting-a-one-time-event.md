@@ -35,6 +35,6 @@ function onAuthSuccess(user: User) {
 
 ### Related
 
-- [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Observe listener failures](./custom-error-boundary.md)
+- [Await one event](../usage.md#await-one-event)
 - [Handling disposal in async code](./handling-disposal-in-async-code.md)

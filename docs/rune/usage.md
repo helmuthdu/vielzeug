@@ -11,12 +11,12 @@ Start with the [Overview](./index.md), then use this page for detailed usage pat
 
 ## Basic Usage
 
-`defaultLogger` is the default singleton logger instance. Use `createLogger()` for isolated config.
+Use `createLogger()` to create an isolated logger instance.
 
 ```ts
-import { createLogger, defaultLogger } from '@vielzeug/rune';
+import { createLogger } from '@vielzeug/rune';
 
-const appLog = defaultLogger;
+const appLog = createLogger();
 const apiLog = createLogger({ namespace: 'api' });
 const authLog = createLogger('auth'); // shorthand namespace
 ```
@@ -34,16 +34,13 @@ const log = createLogger('api', { logLevel: 'warn', transports: [transport] });
 Transports are the delivery layer. Every `LogEntry` that passes the logger's level threshold is dispatched to each transport in order. Transports handle their own formatting, level filtering, and delivery.
 
 ```ts
-import { consoleTransport, createLogger, remoteTransport } from '@vielzeug/rune';
+import { consoleTransport, createLogger, jsonTransport } from '@vielzeug/rune';
 
 const log = createLogger({
   logLevel: 'debug',
   transports: [
     consoleTransport({ timestamp: true }),
-    remoteTransport({
-      handler: (_type, data) => console.debug('remote log', data),
-      level: 'error',
-    }),
+    jsonTransport({ level: 'error' }),
   ],
 });
 ```
@@ -52,97 +49,14 @@ When `transports` is omitted, `consoleTransport()` is used automatically.
 
 ### Built-in Transport Factories
 
-| Factory              | Use case                                    |
-| -------------------- | ------------------------------------------- |
-| `consoleTransport()` | Styled console output (default)             |
-| `remoteTransport()`  | HTTP/webhook delivery                       |
-| `jsonTransport()`    | NDJSON for server-side log aggregation      |
-| `batchTransport()`   | Buffered delivery to reduce I/O overhead    |
-| `sampleTransport()`  | Probabilistic volume reduction              |
-| `redactTransport()`  | Sensitive field stripping before forwarding |
-| `pipe()`             | Fan-out dispatcher to multiple transports   |
-
-### Composing Transports
-
-Transport factories are composable wrappers. Chain them to build a pipeline.
-
-Wrap a downstream transport to redact fields, sample volume, and batch delivery:
-
-```ts
-import { batchTransport, consoleTransport, createLogger, redactTransport, sampleTransport } from '@vielzeug/rune';
-
-const batch = batchTransport({
-  interval: 30_000,
-  onFlush: (entries) => console.debug('batch', entries),
-});
-
-const log = createLogger({
-  transports: [
-    consoleTransport({ level: 'debug' }),
-    redactTransport({
-      keys: ['password', 'token'],
-      transport: sampleTransport({
-        rate: 0.1,
-        transport: batch.transport,
-      }),
-    }),
-  ],
-});
-
-await batch.dispose();
-```
-
-Use `pipe()` when every downstream transport must receive an entry despite sibling transport failures:
-
-```ts
-import { consoleTransport, createLogger, pipe, remoteTransport } from '@vielzeug/rune';
-
-const fanout = pipe(
-  { onError: (error) => console.warn('transport error', error) },
-  consoleTransport(),
-  remoteTransport({
-    handler: (_type, data) => console.debug('remote log', data),
-    level: 'error',
-  }),
-);
-
-const log = createLogger({ transports: [fanout] });
-```
-
-### Batch Transport Lifecycle
-
-`batchTransport` starts an interval timer on first use. Await `.dispose()` during graceful application shutdown to stop the timer and finish delivery for every accepted batch:
-
-```ts
-import { batchTransport, createLogger } from '@vielzeug/rune';
-
-const batch = batchTransport({
-  interval: 10_000,
-  maxSize: 100,
-  onFlush: (entries) => console.debug('batch', entries),
-});
-
-const log = createLogger({ transports: [batch.transport] });
-
-async function shutdown() {
-  try {
-    await batch.dispose();
-  } catch (error) {
-    console.error('log delivery failed during shutdown', error);
-    throw error;
-  }
-}
-```
-
-`batchTransport.dispose()` is idempotent — repeated calls return the same drain promise and never double-flush. It rejects when an accepted batch cannot deliver. `[Symbol.asyncDispose]` is available for `await using` declarations. Do not use a Node `exit` handler: Node cannot await asynchronous cleanup there.
-
-::: warning
-`log.dispose()` silences the logger but does not flush or stop batch transports. Keep a direct batch reference and `await batch.dispose()` during shutdown.
-:::
-
-::: warning
-After `log.dispose()`, the logger is silenced — all log calls (`debug`, `info`, `warn`, `error`, `fatal`, `time`, `group`) become no-ops. The `fn` callback in `group()` still executes, but no group header is rendered. This is intentional to prevent logging after application teardown.
-:::
+| Factory              | Use case                                      |
+| -------------------- | --------------------------------------------- |
+| `consoleTransport()` | Styled console output (default)               |
+| `jsonTransport()`    | NDJSON for server-side log aggregation        |
+| `remoteTransport()`  | Asynchronous browser or server delivery       |
+| `batchTransport()`   | Serialized buffered delivery with flush       |
+| `sampleTransport()`  | Probabilistic volume reduction                |
+| `redactTransport()`  | Recursive sensitive-field and subtree masking |
 
 ### Node.js: Structured JSON Logging
 
@@ -156,19 +70,55 @@ const log = createLogger({
   transports: [jsonTransport({ level: 'info' })],
 });
 
-log.info({ path: '/users', status: 200 }, 'request');
+log.info('request', { path: '/users', status: 200 });
 // Outputs: {"level":"info","time":"2026-05-30T...","ns":"api","path":"/users","status":200,"msg":"request"}
 ```
+
+### Remote Delivery, Batching, and Redaction
+
+Compose transport wrappers around the delivery boundary. Handle remote failures explicitly in production and dispose the batch during shutdown.
+
+```ts
+import { batchTransport, createLogger, redactTransport, remoteTransport } from '@vielzeug/rune';
+
+const remote = remoteTransport({
+  handler: (_level, payload) =>
+    fetch('/api/logs', { body: JSON.stringify(payload), method: 'POST' }).then((response) => {
+      if (!response.ok) throw new Error(`log delivery failed: ${response.status}`);
+    }),
+  level: 'warn',
+  onError: (error) => console.error('log delivery failed', error),
+});
+const batch = batchTransport({
+  onFlush: async (entries) => {
+    const response = await fetch('/api/log-batches', { body: JSON.stringify(entries), method: 'POST' });
+    if (!response.ok) throw new Error(`batch delivery failed: ${response.status}`);
+  },
+});
+const log = createLogger({
+  transports: [redactTransport({ keys: ['password', 'token'], transport: remote })],
+});
+const batchedLog = createLogger({
+  transports: [redactTransport({ keys: ['password', 'token'], transport: batch.transport })],
+});
+
+log.error('direct delivery');
+batchedLog.error('buffered delivery');
+await batch.dispose();
+```
+
+`redactTransport()` fails closed: when `maxDepth` is exceeded, the entire deeper subtree is replaced rather than forwarded uninspected.
 
 ## Configuration
 
 Use `child()` to derive immutable logger variants.
 
 ```ts
-const AppLog = defaultLogger.child({
+const log = createLogger({ namespace: 'app' });
+const AppLog = log.child({
   logLevel: 'warn',
   namespace: 'App',
-  // transports inherited from defaultLogger by default
+  // transports inherited from parent by default
   // pass transports: [] to disable all, or transports: [...] to replace
 });
 
@@ -180,46 +130,59 @@ console.log(AppLog.transports); // [...]
 
 Level threshold order: `debug` < `info` < `warn` < `error` < `fatal` < `off`
 
-## Call Signature
+## Middleware
 
-All log methods share a consistent three-form signature:
+Use middleware for transformations or filters that must apply once before every transport. Middleware runs in order; returning `null` drops the entry.
 
 ```ts
-log.info('message'); // string only
-log.error(err, 'request failed'); // Error first — auto-serialized to data.err
-log.error(err, { requestId }, 'request failed'); // Error + context + message
-log.info({ key: 'value' }, 'message'); // context object first, message second
-log.error({ err: new Error('boom') }, 'request failed'); // Error nested in context — also auto-serialized
+const log = createLogger({
+  middleware: [(entry) => ({ ...entry, data: { ...entry.data, environment: 'production' } })],
+  transports: [consoleTransport(), jsonTransport()],
+});
+
+const errorsOnly = log.use((entry) => (entry.level === 'error' || entry.level === 'fatal' ? entry : null));
 ```
 
-- **Error-first form:** pass an `Error` as the first argument. It is automatically serialized to `{ message, name, stack }` under the `err` key in `data`. Optionally follow with a `Bindings` object and/or a message string. This is the idiomatic form when the Error is the primary subject of the call.
-- **Context-first form:** pass a plain object as the first argument. `Error` values nested inside are also auto-serialized. Optionally follow with a message string.
-- **String-only form:** a single string message, no structured context.
+`use()` returns a new logger and leaves its parent unchanged. A throwing middleware is isolated and drops only the affected entry.
 
-The per-call context is shallow-merged with `withBindings()` bindings into `entry.data`.
+## Call Signature
+
+All log methods support message-first, context-first, and error-first calls:
+
+```ts
+log.info('message');
+log.info('message', { key: 'value' });
+log.debug({ type: 'dispatch', id: 42 }, 'bus:dispatch');
+log.error(new Error('boom'), { requestId: 'abc' }, 'request failed');
+```
+
+Use message-first for ordinary application logs. Context-first avoids synthetic messages for structured events and matches observation callbacks such as `tap((event) => log.debug(event))`. Error-first automatically stores the serialized error under `err`.
+
+Per-call context is shallow-merged with `withBindings()` bindings into `entry.data`. `Error` values are serialized to `{ message, name, stack }`.
 
 ## Logging Methods
 
 ```ts
-defaultLogger.debug('debug details');
-defaultLogger.info({ port: 3000 }, 'server started');
-defaultLogger.warn('cache stale');
-defaultLogger.error({ err: new Error('timeout') }, 'request failed'); // Error auto-serialized in context
-defaultLogger.fatal({ service: 'db' }, 'terminating'); // above error, use for unrecoverable state
+const log = createLogger();
+log.debug('debug details');
+log.info('server started', { port: 3000 });
+log.warn('cache stale');
+log.error('request failed', { err: new Error('timeout') }); // Error auto-serialized in context
+log.fatal('terminating', { service: 'db' }); // above error, use for unrecoverable state
 ```
 
 Use `enabled()` to avoid expensive payload construction before the level check:
 
 ```ts
-if (defaultLogger.enabled('debug')) {
-  defaultLogger.debug({ diagnostics: buildLargePayload() }, 'diagnostics');
+if (log.enabled('debug')) {
+  log.debug('diagnostics', { diagnostics: buildLargePayload() });
 }
 ```
 
 Or use `lazy()` to let Rune gate it automatically:
 
 ```ts
-const reqLog = defaultLogger.withBindings({ diagnostics: lazy(() => buildLargePayload()) });
+const reqLog = log.withBindings({ diagnostics: lazy(() => buildLargePayload()) });
 reqLog.debug('diagnostics'); // buildLargePayload() only called when debug is enabled
 ```
 
@@ -228,17 +191,17 @@ reqLog.debug('diagnostics'); // buildLargePayload() only called when debug is en
 `withBindings(fields)` returns a child logger where the given fields are merged into every log call. This is the idiomatic way to attach per-request or per-user context.
 
 ```ts
-const api = defaultLogger.child({ namespace: 'api' });
+const api = createLogger({ namespace: 'api' });
 
 const reqLog = api.withBindings({ requestId: 'abc-123', userId: 42 });
 reqLog.info('GET /users'); // always includes requestId and userId
-reqLog.warn({ slow: true }, 'query took 2s'); // call-site fields merged in
+reqLog.warn('query took 2s', { slow: true }); // call-site fields merged in
 ```
 
 The parent logger is not affected. Bindings stack additively through chained `withBindings()` calls:
 
 ```ts
-const base = defaultLogger.withBindings({ service: 'api' });
+const base = log.withBindings({ service: 'api' });
 const req = base.withBindings({ requestId: 'xyz' });
 // req emits both service and requestId on every call
 ```
@@ -256,7 +219,7 @@ console.log(reqLog.bindings); // { requestId: 'abc-123', userId: 42 }
 ```ts
 import { lazy } from '@vielzeug/rune';
 
-const log = defaultLogger.withBindings({
+const log = createLogger().withBindings({
   // Only called when debug entries are emitted
   snapshot: lazy(() => JSON.stringify(getFullAppState())),
   // Regular values are always included as-is
@@ -271,7 +234,7 @@ Lazy bindings are resolved on every emitted call, not cached:
 
 ```ts
 const counter = { n: 0 };
-const log = defaultLogger.withBindings({ tick: lazy(() => ++counter.n) });
+const log = createLogger().withBindings({ tick: lazy(() => ++counter.n) });
 
 log.info('a'); // tick: 1
 log.info('b'); // tick: 2
@@ -282,7 +245,7 @@ log.info('b'); // tick: 2
 `child(overrides?)` creates a new logger scoped to a namespace, level, or transport set. Use it to create module-level or service-level loggers.
 
 ```ts
-const api = defaultLogger.child({ namespace: 'api' });
+const api = createLogger({ namespace: 'api' });
 const auth = api.child({ namespace: 'auth' }); // → 'api.auth' (dot-joined automatically)
 
 api.info('GET /users');
@@ -323,8 +286,6 @@ log.time('health-check', () => ping(), 'info');
 // Skipped when logLevel is 'off', but fn still executes
 ```
 
-To forward timing data to a remote endpoint, include `remoteTransport` in the pipeline — `debug`-level entries will be forwarded at its threshold.
-
 ## Groups
 
 `group(label, fn, level?)` and `groupCollapsed(label, fn, level?)` wrap a callback in a console group, ensuring `groupEnd` is called even when the callback throws or rejects.
@@ -339,7 +300,7 @@ await log.groupCollapsed('Job', async () => {
 log.group(
   'verbose trace',
   () => {
-    log.debug('internal state', state);
+    log.debug('internal state', { state });
   },
   'debug',
 );
@@ -489,8 +450,10 @@ import { createCourier, withLogging } from '@vielzeug/courier';
 import { createLogger } from '@vielzeug/rune';
 
 const log = createLogger({ namespace: 'courier' });
-const courier = createCourier({ baseUrl: 'https://api.example.com' });
-courier.use(withLogging({ logger: (message, meta) => log.debug(meta, message) }));
+const courier = createCourier({
+  baseUrl: 'https://api.example.com',
+  middleware: [withLogging({ logger: (message, meta) => log.debug(message, meta) })],
+});
 ```
 
 ### With Herald
@@ -501,21 +464,18 @@ import { createLogger } from '@vielzeug/rune';
 
 const log = createLogger({ namespace: 'bus' });
 const bus = createBus<AppEvents>({
-  onDispatch: (event, payload) => log.debug({ event, payload }, 'dispatched'),
-  onError: (err, event) => log.error(err, `handler error in "${event}"`),
+  onDispatch: (event, payload) => log.debug('dispatched', { event, payload }),
+  onError: (err, event) => log.error(`handler error in "${event}"`, { err }),
 });
 ```
 
 ## Best Practices
 
-- Create one child logger per module boundary using `defaultLogger.child({ namespace: 'module.name' })` or `createLogger('module.name')`.
+- Create one child logger per module boundary using `createLogger('module.name')` or `log.child({ namespace: 'module.name' })`.
 - Use `withBindings()` to pin request/session context instead of repeating fields on each call.
 - Use `lazy()` for expensive diagnostics bindings only needed at `debug` level.
 - Set `logLevel` from environment (`'debug'` in dev, `'warn'` or `'error'` in prod).
 - Use `enabled()` before expensive payload construction that `lazy()` cannot defer.
 - Configure transports at the application root; pass scoped loggers via DI or context.
-- Keep remote handlers resilient — network failures should not block app flow.
-- Await `batchTransport.dispose()` during graceful shutdown to drain remaining accepted entries.
-- Use `redactTransport` closest to any remote/persistent transport — never strip before console.
 - To style console output, pass `consoleTransport({ theme })` explicitly in `transports`.
 - Use `fatal()` only for genuinely unrecoverable states.

@@ -1,5 +1,4 @@
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
-import { warn } from '../_dev';
 import type { Datum, Series, TooltipConfig } from '../types';
 
 export interface TooltipState {
@@ -11,9 +10,10 @@ export interface TooltipState {
 }
 
 export function createTooltip(container: HTMLElement, config?: TooltipConfig | true): TooltipState {
-  if (getComputedStyle(container).position === 'static') {
-    container.style.position = 'relative';
-  }
+  const previousPosition = container.style.position;
+  const changedPosition = getComputedStyle(container).position === 'static';
+
+  if (changedPosition) container.style.position = 'relative';
 
   const el = container.ownerDocument.createElement('div');
 
@@ -29,13 +29,6 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
 
   const tooltipOffset: number = (config !== true && config?.offset) || 8;
   const render = config !== true ? config?.render : undefined;
-  const sanitize = config !== true ? config?.sanitize : undefined;
-
-  if (render && !sanitize) {
-    warn(
-      'createTooltip: `render` is set without `sanitize` — falling back to plain-text rendering of the returned string to avoid an XSS risk. Pass `sanitize` to render HTML.',
-    );
-  }
 
   let revealFrame: number | null = null;
   let clearTimer: ReturnType<typeof setTimeout> | null = null;
@@ -59,6 +52,7 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
     cancelReveal();
     cancelClear();
     el.remove();
+    if (changedPosition && container.style.position === 'relative') container.style.position = previousPosition;
   };
 
   return {
@@ -81,14 +75,10 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
       cancelClear();
 
       if (render) {
-        const html = render(datum, series);
+        const content = render(datum, series);
 
-        if (sanitize) {
-          el.innerHTML = sanitize(html);
-        } else {
-          // No sanitizer provided — never inject the raw string as HTML. Render it as text instead.
-          el.textContent = html;
-        }
+        if (typeof content === 'string') el.textContent = content;
+        else el.replaceChildren(content);
       } else {
         el.textContent = `${series.name}: ${datum.value}`;
       }

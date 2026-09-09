@@ -4,7 +4,7 @@ description: Serialized reversible command history with cancellation ownership a
 package: ledger
 category: utilities
 keywords: [undo, redo, history, commands, async, reactive, ripple]
-exports: [compose, createLedger]
+exports: [compose, createLedger, LedgerError, LedgerCancelledError, LedgerConfigurationError, LedgerDisposedError, LedgerExecutionError, LedgerRollbackError]
 related: [ripple, keymap, forge, vault]
 environments: [browser, node, ssr, deno]
 ---
@@ -15,7 +15,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Ledger?
 
-Undo and redo require more than array manipulation when operations are asynchronous, cancellable, and visible in a UI. Ledger serializes only reversible commands, owns queue lifecycle, and publishes one atomic state snapshot.
+Undo and redo require more than array manipulation when operations are asynchronous, cancellable, and visible in a UI. Ledger serializes only reversible commands, owns queue lifecycle, and publishes one atomic framework-neutral state snapshot without a reactive runtime dependency.
 
 ```ts
 // Before
@@ -35,7 +35,7 @@ await ledger.undo();
 | Reversible history | Manual arrays | <ore-icon name="check" size="16"></ore-icon> |
 | Serialized async work | Manual queue | <ore-icon name="check" size="16"></ore-icon> |
 | Queue cancellation | Manual ownership | Abort-aware lifecycle |
-| Reactive state | Manual events | `Readable<LedgerState>` |
+| Framework-neutral state | Manual events | Structural `LedgerReadable<LedgerState>` |
 | Composition | Custom transaction code | `compose()` |
 
 <div class="decision-callout">
@@ -114,7 +114,7 @@ ledger.dispose();
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — Consume Ledger `state` through effects or framework bindings.
+- [Ripple](/ripple/) — Project Ledger's structural state readable into a signal when reactive derivations are needed.
 - [Keymap](/keymap/) — Route undo and redo shortcuts to a Ledger error boundary.
 - [Forge](/forge/) — Record reversible form transitions.
 - [Vault](/vault/) — Persist application snapshots outside transient undo history.

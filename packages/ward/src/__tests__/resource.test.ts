@@ -44,58 +44,30 @@ describe('ward: matchesPattern', () => {
 
 describe('ward: hierarchical resource patterns in rules', () => {
   it('a namespace-wildcard rule matches concrete resource IDs', () => {
-    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts:*', role: 'viewer' }]);
+    const ward = createWard([{ action: 'read', effect: 'allow', resource: 'posts:*' }]);
 
-    expect(
-      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' }).allowed,
-    ).toBe(true);
-    expect(
-      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:draft:1' }).allowed,
-    ).toBe(true);
-    expect(
-      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'comments:1' }).allowed,
-    ).toBe(false);
+    expect(ward.decide({ action: 'read', resource: 'posts:123' }).effect).toBe('allow');
+    expect(ward.decide({ action: 'read', resource: 'posts:draft:1' }).effect).toBe('allow');
+    expect(ward.decide({ action: 'read', resource: 'comments:1' }).effect).toBe('deny');
   });
 
   it('exact resource rule does not match namespace-wildcard resource', () => {
-    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
+    const ward = createWard([{ action: 'read', effect: 'allow', resource: 'posts' }]);
 
-    expect(
-      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
-    ).toBe(true);
-    expect(
-      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' }).allowed,
-    ).toBe(false);
+    expect(ward.decide({ action: 'read', resource: 'posts' }).effect).toBe('allow');
+    expect(ward.decide({ action: 'read', resource: 'posts:123' }).effect).toBe('deny');
   });
 
-  it('namespace wildcard and global wildcard interact with specificity', () => {
-    // posts:* is more specific than * — it should win when principal matches both
-    const permit = createWard([
-      { action: 'read', effect: 'allow', resource: WILDCARD, role: 'viewer' },
-      { action: 'read', effect: 'deny', resource: 'posts:*', role: 'viewer' },
+  it('ordered first-match with namespace and global wildcards', () => {
+    const ward = createWard([
+      { action: 'read', effect: 'deny', resource: 'posts:*' },
+      { action: 'read', effect: 'allow', resource: WILDCARD },
     ]);
 
-    // posts:123 matches both rules; posts:* is more specific, deny wins
-    expect(
-      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' }).allowed,
-    ).toBe(false);
-    // other resources only match the wildcard rule — allow
-    expect(
-      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'comments:1' }).allowed,
-    ).toBe(true);
-  });
-
-  it('rulesInScope returns namespace-wildcard rules for matching resources', () => {
-    const permit = createWard<'read'>([
-      { action: 'read', effect: 'allow', resource: 'posts:*', role: 'viewer' },
-      { action: 'read', effect: 'allow', resource: 'comments', role: 'viewer' },
-    ]);
-
-    expect(permit.rulesInScope({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' })).toHaveLength(1);
-    expect(permit.rulesInScope({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' })[0].resource).toBe(
-      'posts:*',
-    );
-    expect(permit.rulesInScope({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'comments' })).toHaveLength(1);
+    // posts:123 matches the deny rule first
+    expect(ward.decide({ action: 'read', resource: 'posts:123' }).effect).toBe('deny');
+    // other resources fall through to the allow rule
+    expect(ward.decide({ action: 'read', resource: 'comments:1' }).effect).toBe('allow');
   });
 });
 

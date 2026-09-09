@@ -1,6 +1,6 @@
 ---
 title: Ward — API Reference
-description: Complete API reference for @vielzeug/ward.
+description: Ordered authorization rules, typed decisions, immutable policies, and observability.
 ---
 
 [[toc]]
@@ -9,510 +9,177 @@ description: Complete API reference for @vielzeug/ward.
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createWard` | Creates immutable policy | Sync | Rules cannot be mutated after creation |
-| `allow` / `deny` | Builds policy rules | Sync | Priority wins before specificity |
-| `Ward.explain` | Returns one decision | Sync | Pass resource data for predicate rules |
-| `Ward.trace` | Inspects decision candidates | Sync | Does not fire a `decision` event |
-| `Ward.forUser` | Binds a principal | Sync | Rebind when identity or roles change |
-| `Ward.checkAll` | Batch permission checks | Sync | Pass resource data for predicate rules |
-| `Ward.allowedActions` | Filters known actions to allowed set | Sync | Does not fire a `decision` event |
-| `Ward.rulesInScope` | Lists rules matching a principal/resource | Sync | Pass data to evaluate predicates |
-| `Ward.detectConflicts` | Detects duplicate/shadowed rules | Sync | O(n²) — use `maxConflicts` for large policies |
-| `predicate.owns` | Ownership predicate on resource data | Sync | Skipped for anonymous principals |
-| `predicate.and` / `or` / `not` | Combine predicates | Sync | All inputs must be synchronous |
-| `matchesPattern` / `patternCovers` | Test resource pattern coverage | Sync | `'*'` is the only wildcard |
+| `createWard()` | Compile immutable ordered rules | Sync | First match wins |
+| `allow()` / `deny()` | Create role-conditioned rules | Sync | One rule is produced per action |
+| `predicate` | Compose typed synchronous conditions | Sync | Async results throw |
+| `matchesPattern()` | Match exact and wildcard values | Sync | `posts:*` does not match `posts` |
+| `patternCovers()` | Compare pattern coverage | Sync | It does not inspect conditions |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/ward` | Rules, factory, predicates, pattern helpers, errors, and public types |
+| `@vielzeug/ward` | All runtime APIs, errors, constants, and public types |
 
-## Core Factory
+## Core API
 
-### `createWard(rules, options?)`
+### `createWard()`
 
 ```ts
-createWard<TAction extends string = string, TData = unknown>(
-  rules: readonly (WardRule<TAction, TData> | readonly WardRule<TAction, TData>[])[] = [],
-  options?: WardOptions<TAction, TData>,
-): Ward<TAction, TData>;
+function createWard<Action extends string, Resource extends string, Attributes extends WardAttributes>(
+  rules?: readonly (WardRule<Action, Resource, Attributes> | readonly WardRule<Action, Resource, Attributes>[])[],
+): Ward<Action, Resource, Attributes>
 ```
 
-Creates an immutable ward instance. `rules` accepts a flat mix of single rules and rule arrays — `allow()`/`deny()` results can be passed directly without spread. Validates `onConflict` and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
+Returns an immutable ordered policy. Nested rule arrays are flattened once. Rules, declarative attributes, and bound principals are snapshotted.
 
-**Parameters:**
-
-| Name | Type | Description |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `rules` | `readonly (WardRule \| readonly WardRule[])[]` | Rule list. Single rules and rule arrays can be mixed. |
-| `options.onConflict` | `(conflict: WardConflict) => void` | Called synchronously per conflict at creation time. |
-| `options.strict` | `boolean` | Throws `WardConfigError` on the first conflict. |
-| `options.maxConflicts` | `number` | Caps the number of conflicts returned by `detectConflicts()`. |
+| `rules` | `readonly (WardRule \| readonly WardRule[])[]` | Rules in first-match order |
 
-**Returns:** `Ward<TAction, TData>` — an immutable policy instance.
-
-**Example:**
+**Returns:** `Ward<Action, Resource, Attributes>`.
 
 ```ts
-import { allow, createWard, deny, WILDCARD } from '@vielzeug/ward';
+import { allow, createWard } from '@vielzeug/ward';
 
-const ward = createWard([
-  allow('viewer', 'posts', ['read']),
-  allow('editor', 'posts', ['update']),
-  deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
-]);
+const ward = createWard<'read', 'posts'>([allow('viewer', 'posts', ['read'])]);
+```
+
+| Method | Returns | Behavior |
+| --- | --- | --- |
+| `decide(input)` | `WardDecision` | Evaluates and emits one decision event |
+| `checkAll(inputs)` | `WardDecision[]` | Evaluates each input in order |
+| `allowedActions(input)` | `Action[]` | Deduplicates and filters known actions without emitting events |
+| `forPrincipal(principal?)` | `BoundWard` | Binds an immutable principal snapshot |
+| `tap(handler, options?)` | `() => void` | Observes decisions; supports `AbortSignal` |
+| `rules` | `readonly WardRule[]` | Immutable compiled rules |
+
+---
+
+### `allow()` and `deny()`
+
+```ts
+allow<Action, Resource, Attributes>(role, resource, actions, options?): WardRule[]
+deny<Action, Resource, Attributes>(role, resource, actions, options?): WardRule[]
+```
+
+Return one role-conditioned rule per action.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `role` | `string \| readonly string[]` | Role, role alternatives, `ANONYMOUS`, or `WILDCARD` |
+| `resource` | `WardPattern<Resource>` | Exact or wildcard resource |
+| `actions` | `readonly WardPattern<Action>[]` | Exact or wildcard actions |
+| `options.when` | `WardCondition<Attributes>` | Additional synchronous condition |
+
+**Returns:** `WardRule<Action, Resource, Attributes>[]`.
+
+```ts
+import { allow, deny, WILDCARD } from '@vielzeug/ward';
+
+const rules = [deny('blocked', WILDCARD, [WILDCARD]), allow(['editor', 'admin'], 'posts', ['read'])];
 ```
 
 ---
 
-## Rule Builders
-
-### `allow(role, resource, actions, options?)`
+### `predicate`
 
 ```ts
-allow<TAction extends string = string, TData = unknown>(
-  role: string | readonly string[],
-  resource: string | typeof WILDCARD,
-  actions: readonly (TAction | typeof WILDCARD)[],
-  options?: { priority?: number; when?: WardPredicate<TData> },
-): WardRule<TAction, TData>[];
+predicate.hasRole<Attributes>(role)
+predicate.owns<Attributes>(attribute)
+predicate.and<Attributes>(...conditions)
+predicate.or<Attributes>(...conditions)
+predicate.not<Attributes>(condition)
 ```
 
-Creates one `WardRule` per action with `effect: 'allow'`. Reads naturally: "allow editor to read/update posts".
-
-**Returns:** `WardRule[]` — one rule per action.
+Returns typed `WardCondition` functions. `owns()` accepts only a string key from the selected attribute type.
 
 ---
 
-### `deny(role, resource, actions, options?)`
+### Pattern helpers
 
 ```ts
-deny<TAction extends string = string, TData = unknown>(
-  role: string | readonly string[],
-  resource: string | typeof WILDCARD,
-  actions: readonly (TAction | typeof WILDCARD)[],
-  options?: { priority?: number; when?: WardPredicate<TData> },
-): WardRule<TAction, TData>[];
+matchesPattern(pattern: string, value: string): boolean
+patternCovers(broad: string, narrow: string): boolean
 ```
 
-Creates one `WardRule` per action with `effect: 'deny'`. Reads naturally: "deny blocked from reading posts".
-
-**Returns:** `WardRule[]` — one rule per action.
-
----
-
-## Ward Methods
-
-### `checkAll(principal, checks)`
-
-```ts
-checkAll(
-  principal: Principal,
-  checks: readonly WardCheck<TAction, TData>[],
-): WardDecisionResult<TAction, TData>[];
-```
-
-Evaluates multiple resource/action pairs for one principal. Fires a `decision` event for each result via `tap()`.
-
-**Returns:** `WardDecisionResult[]` — each entry carries `action`, `resource`, and the decision.
-
----
-
-### `explain(input)`
-
-```ts
-explain(input: WardDecisionInput<TAction, TData>): WardDecision<TAction, TData>;
-```
-
-`WardDecisionInput`:
-
-```ts
-{
-  principal: Principal;
-  resource: string;
-  action: TAction;
-  data?: TData;
-}
-```
-
-Returns one decision. Fires a `decision` event via `tap()`.
-
-**Returns:** `WardDecision` — `{ allowed: true; rule }` or `{ allowed: false; reason: 'explicit-deny'; rule }` or `{ allowed: false; reason: 'no-matching-rule' }`.
-
----
-
-### `trace(input)`
-
-```ts
-trace(input: WardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
-```
-
-Same request shape as `explain()`. Returns winner + candidate list. Does not fire a `decision` event.
-
-**Returns:** `WardTrace` — `{ candidates: WardTraceCandidate[]; decision: WardDecision }`.
-
----
-
-### `allowedActions(input)`
-
-```ts
-allowedActions(input: WardAllowedActionsInput<TAction, TData>): TAction[];
-```
-
-Input shape:
-
-```ts
-{
-  principal: Principal;
-  resource: string;
-  knownActions: readonly TAction[];
-  data?: TData;
-}
-```
-
-Filters the provided `knownActions` list to those the principal may perform. Does not fire a `decision` event.
-
-**Returns:** `TAction[]` — the subset of `knownActions` that `explain()` would allow.
-
----
-
-### `rulesInScope(input)`
-
-```ts
-rulesInScope(input: WardRulesInScopeInput<TData>): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>>;
-```
-
-Input shape:
-
-```ts
-{
-  principal: Principal;
-  resource: string;
-  data?: TData;
-}
-```
-
-Lists rules matching the principal/resource pair. Pass `data` to evaluate predicate-gated matches; without it, predicate rules are skipped.
-
-**Returns:** `ReadonlyArray<Readonly<NormalizedWardRule>>` — rules in their normalized form (`role` always array, `priority` always number).
-
----
-
-### `detectConflicts()`
-
-```ts
-detectConflicts(): readonly WardConflict<TAction, TData>[];
-```
-
-Lazily computes and caches duplicate/shadowed rule conflicts. O(n²) — use `maxConflicts` for large policies.
-
-**Returns:** `readonly WardConflict[]` — `{ kind: 'duplicate'; indexA; indexB; ruleA; ruleB }` or `{ kind: 'shadowed'; shadowedIndex; shadowedRule; shadowingIndex; shadowingRule }`.
-
----
-
-### `forUser(principal)`
-
-```ts
-forUser(principal: UserPrincipal): BoundWard<TAction, TData>;
-```
-
-Returns a principal-bound view. `UserPrincipal` (not nullable — use `null` directly with `explain()` for anonymous).
-
-**Returns:** `BoundWard` — same methods without the `principal` argument.
-
----
-
-## `BoundWard` Methods
-
-```ts
-type BoundWard<TAction extends string = string, TData = unknown> = {
-  allowedActions(input: BoundWardAllowedActionsInput<TAction, TData>): TAction[];
-  checkAll(checks: readonly WardCheck<TAction, TData>[]): WardDecisionResult<TAction, TData>[];
-  explain(input: BoundWardDecisionInput<TAction, TData>): WardDecision<TAction, TData>;
-  rulesInScope(input: BoundWardRulesInScopeInput<TData>): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>>;
-  trace(input: BoundWardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
-};
-```
-
-Bound input shapes remove `principal`:
-
-```ts
-{ resource: string; action: TAction; data?: TData }                // explain/trace
-{ resource: string; knownActions: readonly TAction[]; data?: TData } // allowedActions
-{ resource: string; data?: TData }                                 // rulesInScope
-```
-
----
-
-## Predicate Helpers
-
-### `predicate.owns(attributeKey)`
-
-```ts
-predicate.owns<TData = unknown>(
-  attributeKey: [keyof TData] extends [never] ? string : keyof TData & string,
-): WardPredicate<TData>;
-```
-
-Returns a `WardPredicate` that checks whether `data[attributeKey]` matches `principal.id`. Skipped for anonymous principals — pairing `owns` with an `ANONYMOUS`-role rule produces a rule that can never match.
-
-**Returns:** `WardPredicate<TData>`.
-
----
-
-### `predicate.and(...predicates)`
-
-```ts
-predicate.and<TData = unknown>(...preds: WardPredicate<TData>[]): WardPredicate<TData>;
-```
-
-All predicates must return `true`.
-
----
-
-### `predicate.or(...predicates)`
-
-```ts
-predicate.or<TData = unknown>(...preds: WardPredicate<TData>[]): WardPredicate<TData>;
-```
-
-At least one predicate must return `true`.
-
----
-
-### `predicate.not(predicate)`
-
-```ts
-predicate.not<TData = unknown>(pred: WardPredicate<TData>): WardPredicate<TData>;
-```
-
-Inverts the given predicate.
-
----
-
-Predicates run synchronously. Returning a Promise throws `WardPredicateError`.
-
----
-
-## Pattern Helpers
-
-### `matchesPattern(pattern, value): boolean`
-
-```ts
-matchesPattern(pattern: string, value: string): boolean;
-```
-
-Tests whether `value` matches a `'*'`-wildcard `pattern`. `'*'` matches any value; an exact string matches only itself.
-
----
-
-### `patternCovers(broad, narrow): boolean`
-
-```ts
-patternCovers(broad: string, narrow: string): boolean;
-```
-
-Tests whether the `broad` pattern covers the `narrow` pattern. `'*'` covers everything; an exact string covers only itself.
-
----
-
-## Observability
-
-### `tap(handler, options?)`
-
-```ts
-tap(
-  handler: (event: WardEvent<TAction, TData>) => void,
-  options?: { signal?: AbortSignal },
-): () => void;
-```
-
-Subscribes a handler to ward events. Each `explain()` and `checkAll()` decision fires a `decision` event. `trace()` and `allowedActions()` do not fire events.
-
-Pass an `AbortSignal` to unsubscribe automatically; the returned function unsubscribes manually.
-
-**Returns:** `() => void` — call to unsubscribe the handler.
-
-**Example:**
-
-```ts
-const ward = createWard(rules);
-ward.tap((event) => console.debug('ward:decision', event.decision));
-```
-
-With a logger from `@vielzeug/rune`:
-
-```ts
-import { createLogger } from '@vielzeug/rune';
-const log = createLogger({ name: 'ward' });
-ward.tap((event) => log.debug(event, 'ward:decision'));
-```
-
----
+`matchesPattern()` supports exact values, `*`, and namespace wildcards such as `posts:*`. `patternCovers()` compares those pattern sets.
 
 ## Types
 
 ```ts
-export type UserPrincipal = {
-  attributes?: Record<string, unknown>;
-  id: string;
-  roles: readonly string[];
-};
+type WardAttributeValue =
+  | boolean
+  | number
+  | string
+  | null
+  | readonly WardAttributeValue[]
+  | { readonly [key: string]: WardAttributeValue };
 
-export type Principal = UserPrincipal | null;
-
-export type RuleContext<TData = unknown> = {
-  data?: TData;
-  principal: UserPrincipal;
-};
-
-export type WardPredicate<TData = unknown> = (ctx: RuleContext<TData>) => boolean;
-
-export type WardRule<TAction extends string = string, TData = unknown> = {
-  action: TAction | typeof WILDCARD;
-  effect: 'allow' | 'deny';
-  priority?: number;
-  resource: string | typeof WILDCARD;
-  role: string | readonly string[];
-  when?: WardPredicate<TData>;
-};
-
-export type NormalizedWardRule<TAction extends string = string, TData = unknown> = Readonly<{
-  action: TAction | typeof WILDCARD;
-  effect: 'allow' | 'deny';
-  priority: number;
-  resource: string | typeof WILDCARD;
-  role: readonly string[];
-  when?: WardPredicate<TData>;
-}>;
-
-export type WardDecision<TAction extends string = string, TData = unknown> =
-  | { allowed: true; rule: Readonly<NormalizedWardRule<TAction, TData>> }
-  | { allowed: false; reason: 'explicit-deny'; rule: Readonly<NormalizedWardRule<TAction, TData>> }
-  | { allowed: false; reason: 'no-matching-rule' };
-
-export type WardCheck<TAction extends string = string, TData = unknown> = {
-  action: TAction;
-  data?: TData;
-  resource: string;
-};
-
-export type WardDecisionResult<TAction extends string = string, TData = unknown> = WardDecision<TAction, TData> & {
-  action: TAction;
-  resource: string;
-};
-
-export type WardDecisionInput<TAction extends string = string, TData = unknown> = {
-  action: TAction;
-  data?: TData;
-  principal: Principal;
-  resource: string;
-};
-
-export type WardAllowedActionsInput<TAction extends string = string, TData = unknown> = {
-  data?: TData;
-  knownActions: readonly TAction[];
-  principal: Principal;
-  resource: string;
-};
-
-export type WardRulesInScopeInput<TData = unknown> = {
-  data?: TData;
-  principal: Principal;
-  resource: string;
-};
-
-export type BoundWardDecisionInput<TAction extends string = string, TData = unknown> = {
-  action: TAction;
-  data?: TData;
-  resource: string;
-};
-
-export type BoundWardAllowedActionsInput<TAction extends string = string, TData = unknown> = {
-  data?: TData;
-  knownActions: readonly TAction[];
-  resource: string;
-};
-
-export type BoundWardRulesInScopeInput<TData = unknown> = {
-  data?: TData;
-  resource: string;
-};
-
-export type ConflictKind = 'duplicate' | 'shadowed';
-
-export type WardConflict<TAction extends string = string, TData = unknown> =
-  | {
-      indexA: number;
-      indexB: number;
-      kind: 'duplicate';
-      ruleA: Readonly<NormalizedWardRule<TAction, TData>>;
-      ruleB: Readonly<NormalizedWardRule<TAction, TData>>;
-    }
-  | {
-      kind: 'shadowed';
-      shadowedIndex: number;
-      shadowedRule: Readonly<NormalizedWardRule<TAction, TData>>;
-      shadowingIndex: number;
-      shadowingRule: Readonly<NormalizedWardRule<TAction, TData>>;
-    };
-
-export type WardTraceCandidate<TAction extends string = string, TData = unknown> = {
-  index: number;
-  priority: number;
-  rule: Readonly<NormalizedWardRule<TAction, TData>>;
-  score: number;
-  won: boolean;
-};
-
-export type WardTrace<TAction extends string = string, TData = unknown> = {
-  candidates: WardTraceCandidate<TAction, TData>[];
-  decision: WardDecision<TAction, TData>;
-};
-
-export type Ward<TAction extends string = string, TData = unknown> = {
-  allowedActions(input: WardAllowedActionsInput<TAction, TData>): TAction[];
-  checkAll(principal: Principal, checks: readonly WardCheck<TAction, TData>[]): WardDecisionResult<TAction, TData>[];
-  detectConflicts(): readonly WardConflict<TAction, TData>[];
-  explain(input: WardDecisionInput<TAction, TData>): WardDecision<TAction, TData>;
-  forUser(principal: UserPrincipal): BoundWard<TAction, TData>;
-  rulesInScope(input: WardRulesInScopeInput<TData>): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>>;
-  tap(handler: (event: WardEvent<TAction, TData>) => void, options?: { signal?: AbortSignal }): () => void;
-  trace(input: WardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
-};
-
-export type BoundWard<TAction extends string = string, TData = unknown> = {
-  allowedActions(input: BoundWardAllowedActionsInput<TAction, TData>): TAction[];
-  checkAll(checks: readonly WardCheck<TAction, TData>[]): WardDecisionResult<TAction, TData>[];
-  explain(input: BoundWardDecisionInput<TAction, TData>): WardDecision<TAction, TData>;
-  rulesInScope(input: BoundWardRulesInScopeInput<TData>): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>>;
-  trace(input: BoundWardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
-};
-
-export type WardEvent<TAction extends string = string, TData = unknown> = {
-  decision: WardDecision<TAction, TData>;
-  action: TAction;
-  data?: TData;
-  principal: Principal;
-  resource: string;
-};
-
-export type WardOptions<TAction extends string = string, TData = unknown> = {
-  maxConflicts?: number;
-  onConflict?: (conflict: WardConflict<TAction, TData>) => void;
-  strict?: boolean;
-};
+type WardAttributes = Readonly<Record<string, WardAttributeValue>>;
+type WardPattern<Value extends string> = Value | typeof WILDCARD | `${string}:*`;
 ```
 
-`WardDecision`, `WardDecisionResult`, `WardTrace`, `WardTraceCandidate`, and `WardConflict` reference `NormalizedWardRule` (always-array `role`, always-number `priority`).
+```ts
+type UserPrincipal = Readonly<{
+  attributes?: WardAttributes;
+  id: string;
+  roles: readonly string[];
+}>;
 
-`Ward`, `BoundWard`, `WardDecision`, `WardDecisionResult`, `WardTrace`, `WardTraceCandidate`, `WardConflict`,
-`NormalizedWardRule`, `WardOptions`, `WardCheck`, `WardAllowedActionsInput`, `WardRulesInScopeInput`, `RuleContext`,
-`WardEvent`, `WardPredicate`, and `ConflictKind` are exported from the root entry point.
+type Principal = UserPrincipal | null;
+```
+
+```ts
+type WardConditionInput<Attributes extends WardAttributes> = Readonly<{
+  attributes?: Attributes;
+  principal: Principal;
+}>;
+
+type WardCondition<Attributes extends WardAttributes> = (
+  input: WardConditionInput<Attributes>,
+) => boolean;
+```
+
+```ts
+type WardRule<Action extends string, Resource extends string, Attributes extends WardAttributes> = Readonly<{
+  action: WardPattern<Action>;
+  attributes?: Attributes;
+  condition?: WardCondition<Attributes>;
+  effect: 'allow' | 'deny';
+  resource: WardPattern<Resource>;
+}>;
+```
+
+```ts
+type WardDecisionInput<Action extends string, Resource extends string, Attributes extends WardAttributes> = Readonly<{
+  action: Action;
+  attributes?: Attributes;
+  principal?: Principal;
+  resource: Resource;
+}>;
+```
+
+```ts
+type WardDecision<Action extends string, Resource extends string, Attributes extends WardAttributes> =
+  | { effect: 'allow' | 'deny'; matched: true; reason: string; rule: WardRule<Action, Resource, Attributes> }
+  | { effect: 'deny'; matched: false; reason: string; rule?: never };
+```
+
+```ts
+type WardEvent<Action extends string, Resource extends string, Attributes extends WardAttributes> = Readonly<{
+  decision: WardDecision<Action, Resource, Attributes>;
+  input: WardDecisionInput<Action, Resource, Attributes> & { principal: Principal };
+  type: 'decision';
+}>;
+```
+
+`BoundWard`, `WardAllowedActionsInput`, `BoundWardAllowedActionsInput`, and `BoundWardDecisionInput` expose the corresponding principal-bound method contracts.
 
 ## Errors
 
-- `WardError` is the base error class; use `instanceof WardError` for narrowing.
-- `WardConfigError` reports malformed rules, invalid `createWard` options (`onConflict`, `maxConflicts`), invalid principals, and strict conflict initialization.
-- `WardPredicateError` reports a throwing synchronous predicate and includes its `ruleIndex` and cause.
+| Error | Trigger | Notable properties |
+| --- | --- | --- |
+| `WardError` | Base for Ward-originated errors | Standard `cause` support |
+| `WardConfigError` | Invalid rules, principals, inputs, or attribute values | Configuration message with field path |
+| `WardConditionError` | Thrown, async, or non-boolean condition result | `ruleIndex`, `cause` |

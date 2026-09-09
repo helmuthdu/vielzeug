@@ -19,13 +19,13 @@ import { createKeymap } from '@vielzeug/keymap';
 let modalOpen = false;
 
 const map = createKeymap(
-  {
-    'ctrl+k': () => openCommandPalette(),
-    'ctrl+s': () => saveDocument(),
-    'ctrl+z': () => undo(),
-    'ctrl+shift+z': () => redo(),
-    'ctrl+/': () => toggleSidebar(),
-  },
+  [
+    { id: 'palette', shortcut: 'ctrl+k', handler: () => openCommandPalette() },
+    { id: 'save', shortcut: 'ctrl+s', handler: () => saveDocument() },
+    { id: 'undo', shortcut: 'ctrl+z', handler: () => undo() },
+    { id: 'redo', shortcut: 'ctrl+shift+z', handler: () => redo() },
+    { id: 'sidebar', shortcut: 'ctrl+/', handler: () => toggleSidebar() },
+  ],
   { when: () => !modalOpen },
 );
 
@@ -60,10 +60,10 @@ const isTypingInField = (event: KeyboardEvent): boolean =>
   );
 
 const editingMap = createKeymap(
-  {
-    'mod+z': () => undo(),
-    'mod+shift+z': () => redo(),
-  },
+  [
+    { id: 'undo', shortcut: 'mod+z', handler: () => undo() },
+    { id: 'redo', shortcut: 'mod+shift+z', handler: () => redo() },
+  ],
   { when: (event) => !isTypingInField(event) },
 );
 ```

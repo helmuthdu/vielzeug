@@ -42,7 +42,7 @@ A drop zone with hover feedback, type filtering, async quota validation, and cli
 ```
 
 ```ts
-import { createDropZone } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
 
 const el = document.getElementById('dropzone')!;
 const checkServerQuota = async (_files: File[], _options: { signal: AbortSignal }) => true;
@@ -94,7 +94,7 @@ using zone = createDropZone({
 - `zone.hovered` is only `true` when the drag payload matches the `accept` filter. Drags carrying rejected types do not trigger `onHoverChange`.
 - `onValidate` only receives type-accepted files. Files already rejected by the `accept` filter are forwarded to `onDropRejected` regardless of what `onValidate` returns.
 - `zone.validating` remains `true` until every pending `onValidate` operation settles. Its `signal` aborts when the zone is disposed.
-- The `paste` listener is attached to `window`, not the element. Any file paste anywhere on the page triggers it while the zone is active.
+- The `paste` listener is attached to the drop-zone element. The element must contain the focused paste target for the event to bubble into the zone.
 
 ### Related
 

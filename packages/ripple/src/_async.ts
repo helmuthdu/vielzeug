@@ -1,3 +1,4 @@
+import { RippleDisposedResourceError } from './errors';
 import { REACTIVE } from './runtime';
 import type { Disposable, EffectHandle, Readable, Signal } from './types';
 
@@ -30,20 +31,21 @@ export const createResource =
     const state = runtime.signal<AsyncState<Value>>({ status: 'pending' }, { name: options?.name });
     const reloadEpoch = runtime.signal(0);
     let active: AbortController | undefined;
+    let hasPrevious = false;
+    let previousValue: Value | undefined;
 
     const run = (): void => {
       void reloadEpoch.value;
       active?.abort();
 
-      const current = state.peek();
-      const previous =
-        current.status === 'success' ? current.value : 'previous' in current ? current.previous : undefined;
       let input: Source;
 
       try {
         input = source();
       } catch (error) {
-        state.value = previous === undefined ? { error, status: 'error' } : { error, previous, status: 'error' };
+        state.value = hasPrevious
+          ? { error, previous: previousValue as Value, status: 'error' }
+          : { error, status: 'error' };
 
         return;
       }
@@ -51,7 +53,7 @@ export const createResource =
       const next = new AbortController();
 
       active = next;
-      state.value = previous === undefined ? { status: 'pending' } : { previous, status: 'pending' };
+      state.value = hasPrevious ? { previous: previousValue as Value, status: 'pending' } : { status: 'pending' };
 
       let request: Promise<Value>;
 
@@ -63,11 +65,17 @@ export const createResource =
 
       void request.then(
         (value) => {
-          if (!stop.disposed && !next.signal.aborted) state.value = { status: 'success', value };
+          if (!stop.disposed && !next.signal.aborted) {
+            hasPrevious = true;
+            previousValue = value;
+            state.value = { status: 'success', value };
+          }
         },
         (error: unknown) => {
           if (!stop.disposed && !next.signal.aborted) {
-            state.value = previous === undefined ? { error, status: 'error' } : { error, previous, status: 'error' };
+            state.value = hasPrevious
+              ? { error, previous: previousValue as Value, status: 'error' }
+              : { error, status: 'error' };
           }
         },
       );
@@ -82,6 +90,9 @@ export const createResource =
       { name: options?.name },
     );
 
+    const assertActive = (): void => {
+      if (stop.disposed) throw new RippleDisposedResourceError('Cannot use a disposed resource.');
+    };
     const resource: Resource<Value> = {
       get disposalSignal() {
         return stop.disposalSignal;
@@ -95,11 +106,13 @@ export const createResource =
       },
       peek: () => state.peek(),
       reload: () => {
-        if (stop.disposed) return;
-
+        assertActive();
         reloadEpoch.value = reloadEpoch.peek() + 1;
       },
-      subscribe: (listener) => state.subscribe(listener),
+      subscribe: (listener) => {
+        assertActive();
+        return state.subscribe(listener);
+      },
       [Symbol.dispose]() {
         this.dispose();
       },

@@ -1,19 +1,25 @@
 # @vielzeug/gesture
 
-Framework-neutral one-axis pointer pan recognition.
+> Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles
 
-## Install
+## Installation
 
 ```sh
 pnpm add @vielzeug/gesture
+npm install @vielzeug/gesture
+yarn add @vielzeug/gesture
 ```
 
 ## Quick Start
 
 ```ts
-import { createPanGesture } from '@vielzeug/gesture';
+import { createDragGesture, createPanGesture } from '@vielzeug/gesture';
+
+const element = document.querySelector<HTMLElement>('[data-swipe]');
+if (!element) throw new Error('Missing [data-swipe] element');
 
 const pan = createPanGesture(element, {
+  activationDistance: 6,
   axis: 'x',
   onMove: ({ distance }) => {
     element.style.transform = `translateX(${distance}px)`;
@@ -22,15 +28,23 @@ const pan = createPanGesture(element, {
     element.style.transform = '';
 
     if (reason === 'release' && Math.abs(distance) >= 48) {
-      dismiss();
+      pan.dispose();
+      element.remove();
     }
   },
 });
 
-pan.dispose();
+window.addEventListener('pagehide', () => pan.dispose(), { once: true });
 ```
 
-Pointer capture is enabled by default. Set `pointerCapture: false` for surfaces whose nested or
-newly revealed controls must retain native pointer-up targeting.
+## Documentation
 
-[Full documentation](https://vielzeug.dev/gesture/)
+- [Overview](https://vielzeug.dev/gesture/)
+- [Usage Guide](https://vielzeug.dev/gesture/usage)
+- [API Reference](https://vielzeug.dev/gesture/api)
+- [Examples](https://vielzeug.dev/gesture/examples)
+- [Migration Guide](https://vielzeug.dev/gesture/migration)
+
+## License
+
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

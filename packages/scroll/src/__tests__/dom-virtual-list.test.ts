@@ -159,6 +159,32 @@ describe('createDomVirtualList – rendering', () => {
   });
 });
 
+describe('createDomVirtualList – external store', () => {
+  it('supports subscribing before the lazy virtualizer is created', () => {
+    const { listEl, scrollEl } = makeList(120);
+    const listener = vi.fn();
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: 30,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+    });
+    const unsubscribe = ctrl.subscribe(listener);
+
+    ctrl.setItems(makeRows(10));
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(ctrl.getSnapshot()).toEqual({ items: ctrl.items, stickyItems: ctrl.stickyItems, totalSize: ctrl.totalSize });
+
+    ctrl.setItems([]);
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(ctrl.getSnapshot()).toEqual({ items: [], stickyItems: [], totalSize: 0 });
+
+    unsubscribe();
+    ctrl.dispose();
+  });
+});
+
 // ─── Measurement API ──────────────────────────────────────────────────────────
 
 describe('createDomVirtualList – measurement', () => {

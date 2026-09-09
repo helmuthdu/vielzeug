@@ -12,8 +12,8 @@ const pruneInterval = setInterval(() => db.pruneExpired(), ttl.minutes(15))
 db.disposalSignal.addEventListener('abort', () => clearInterval(pruneInterval))
 
 // Write a session that expires in 1 ms
-await db.put('sessions', { token: 'abc', user: 1 }, ttl.ms(1))
-await db.put('sessions', { token: 'def', user: 2 }) // no TTL — permanent
+await db.put('sessions', { token: 'FAKE-TOKEN-ONE', user: 1 }, ttl.ms(1))
+await db.put('sessions', { token: 'FAKE-TOKEN-TWO', user: 2 }) // no TTL — permanent
 
 console.log('before prune:', await db.count('sessions')) // 2 (lazy eviction: both exist physically)
 

@@ -1,8 +1,10 @@
 export type { AsyncState, Resource, ResourceOptions } from './_async';
 export { createRipple, type Ripple } from './_default';
+export type { BridgedReadable, FromSubscribableOptions } from './_subscribable';
 export type { WatchOptions } from './_watch';
 export {
   RippleComputedCycleError,
+  RippleDisposedResourceError,
   RippleDisposedRuntimeError,
   RippleDisposedScopeError,
   RippleError,
@@ -16,14 +18,15 @@ export type {
   EffectHandle,
   EffectOptions,
   Equality,
-  ReactiveErrorContext,
-  ReactiveEvent,
-  ReactiveObserver,
   Readable,
+  RippleErrorContext,
+  RippleErrorPolicy,
+  RippleEvent,
   RippleOptions,
   Scope,
   Signal,
   SignalOptions,
+  Subscribable,
   Unsubscribe,
 } from './types';
 
@@ -37,3 +40,4 @@ export const createScope = defaultRipple.createScope;
 export const untrack = defaultRipple.untrack;
 export const watch = defaultRipple.watch;
 export const resource = defaultRipple.resource;
+export const fromSubscribable = defaultRipple.fromSubscribable;

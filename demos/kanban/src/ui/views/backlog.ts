@@ -4,10 +4,9 @@ import '@vielzeug/refine/button';
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/avatar';
 import { define, html, onCleanup, onMounted, ref } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
+import { computed, effect, signal } from '@vielzeug/ripple';
 import { toSearchMatcher } from '@vielzeug/scout';
 import { createVirtualScroller } from '@vielzeug/scroll';
-import { createLocalSource } from '@vielzeug/sourcerer';
 import { boardSignal } from '../../core/board-store';
 import { controlValue } from '../../core/control-value';
 import { formatDueDate } from '../../core/format';
@@ -123,27 +122,39 @@ function renderTaskRow(task: Task, el: HTMLElement, onOpen: (taskId: string) => 
  */
 define('backlog-view', {
   setup() {
-    // Split into raw page-state signals + a derived `t()` string, rather than one settable
-    // string signal — a plain string set once inside `syncView()` (below) would go stale in
-    // whatever language it was built in until the next page change; deriving it lets it
-    // re-translate immediately when the locale changes too.
-    const pageNumber = signal(1);
-    const pageCount = signal(1);
-    const totalItems = signal(0);
+    // Derived arrays replace the former local source: filter + paginate are ordinary
+    // computed values over board + search + status signals, keeping ranking and
+    // filtering explicit in the application layer.
+    const searchSignal = signal('');
+    const pageSignal = signal(1);
+    const statusFilterSignal = signal<TaskStatus | ''>('');
+
+    const matcher = toSearchMatcher(taskIndex);
+
+    const filteredTasks = computed(() => {
+      const tasks = boardSignal.value.tasks;
+      const status = statusFilterSignal.value;
+      const statusFiltered = status ? tasks.filter((task) => task.status === status) : tasks;
+      const search = searchSignal.value;
+
+      return search ? statusFiltered.filter((task) => matcher(task, search)) : statusFiltered;
+    });
+
+    const pageCount = computed(() => Math.max(1, Math.ceil(filteredTasks.value.length / PAGE_SIZE)));
+    const safePage = computed(() => Math.min(pageSignal.value, pageCount.value));
+    const pagedTasks = computed(() => {
+      const start = (safePage.value - 1) * PAGE_SIZE;
+
+      return filteredTasks.value.slice(start, start + PAGE_SIZE);
+    });
+
     const pageInfoText = computed(() =>
-      t('backlog.pageInfo', { page: pageNumber.value, pageCount: pageCount.value, total: totalItems.value }),
+      t('backlog.pageInfo', { page: safePage.value, pageCount: pageCount.value, total: filteredTasks.value.length }),
     );
-    const canGoPrev = signal(false);
-    const canGoNext = signal(false);
+    const canGoPrev = computed(() => safePage.value > 1);
+    const canGoNext = computed(() => safePage.value < pageCount.value);
 
     const listAreaRef = ref<HTMLElement>();
-
-    let statusFilter: TaskStatus | '' = '';
-
-    const source = createLocalSource<Task>(boardSignal.value.tasks, {
-      initialQuery: { pageSize: PAGE_SIZE },
-      match: toSearchMatcher(taskIndex),
-    });
 
     const openTask = (taskId: string): void => openTaskDialog({ kind: 'edit', taskId });
 
@@ -165,63 +176,29 @@ define('backlog-view', {
         },
       });
 
-      function syncView(): void {
-        const snapshot = source.snapshot;
-
-        scroller.setItems([...snapshot.data]);
-
-        pageNumber.value = snapshot.pagination.index;
-        pageCount.value = snapshot.pagination.count;
-        totalItems.value = snapshot.pagination.total;
-        canGoPrev.value = snapshot.pagination.hasPrevious;
-        canGoNext.value = snapshot.pagination.hasNext;
-      }
-
-      source.subscribe(syncView);
-      syncView();
-
-      let _prevTasks = boardSignal.value.tasks;
-
-      function refreshSourceData(): void {
-        const tasks = boardSignal.value.tasks;
-
-        if (tasks === _prevTasks) return;
-
-        _prevTasks = tasks;
-
-        const filtered = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
-
-        source.setData(filtered);
-      }
-
-      const boardSub = boardSignal.subscribe(refreshSourceData);
+      const syncEffect = effect(() => {
+        scroller.setItems([...pagedTasks.value]);
+      });
 
       onCleanup(() => {
-        boardSub();
+        syncEffect.dispose();
         scroller.dispose();
-        source.dispose();
       });
     });
 
     const onSearchInput = (e: Event): void => {
-      const query = controlValue(e) ?? '';
-
-      source.setQuery({ search: query });
+      searchSignal.value = controlValue(e) ?? '';
+      pageSignal.value = 1;
     };
 
     const onSearchChange = (e: Event): void => {
-      const query = controlValue(e) ?? '';
-
-      source.setQuery({ search: query });
+      searchSignal.value = controlValue(e) ?? '';
+      pageSignal.value = 1;
     };
 
     const onFilterChange = (e: Event): void => {
-      statusFilter = (controlValue(e) ?? '') as TaskStatus | '';
-
-      const tasks = boardSignal.value.tasks;
-      const filtered = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
-
-      source.setData(filtered);
+      statusFilterSignal.value = (controlValue(e) ?? '') as TaskStatus | '';
+      pageSignal.value = 1;
     };
 
     return html`
@@ -244,11 +221,19 @@ define('backlog-view', {
           variant="bordered"
           size="sm"
           ?disabled=${() => !canGoPrev.value}
-          @click=${() => source.page.previous()}>
+          @click=${() => {
+            pageSignal.value = safePage.value - 1;
+          }}>
           ${() => t('backlog.prev')}
         </ore-button>
         <span class="backlog__pagination-info">${pageInfoText}</span>
-        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoNext.value} @click=${() => source.page.next()}>
+        <ore-button
+          variant="bordered"
+          size="sm"
+          ?disabled=${() => !canGoNext.value}
+          @click=${() => {
+            pageSignal.value = safePage.value + 1;
+          }}>
           ${() => t('backlog.next')}
         </ore-button>
       </div>

@@ -1,7 +1,22 @@
-import { abortError } from '@vielzeug/arsenal/async';
-import { unrefTimer } from './_timers';
-import { FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
-import type { DrainOptions, WorkerStats, WorkerStatus } from './types';
+import { abortError } from '@vielzeug/arsenal';
+import { unrefTimer } from './_timers.js';
+import { FamiliarInvalidOptionsError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors.js';
+import type { DrainOptions, WorkerStats, WorkerStatus } from './types.js';
+
+export const MAX_CONCURRENCY = 512;
+export const MAX_TIMEOUT = 2_147_483_647;
+
+export function validatePriority(priority: number): number {
+  if (!Number.isFinite(priority)) throw new FamiliarInvalidOptionsError('`priority` must be a finite number');
+  return priority;
+}
+
+export function validateTimeout(timeout: number | undefined, name = 'timeout'): number | undefined {
+  if (timeout !== undefined && (!Number.isInteger(timeout) || timeout < 1 || timeout > MAX_TIMEOUT)) {
+    throw new FamiliarInvalidOptionsError(`\`${name}\` must be an integer from 1 through ${MAX_TIMEOUT}`);
+  }
+  return timeout;
+}
 
 export type PoolOptions = {
   concurrency: number;
@@ -18,18 +33,19 @@ type IdleWaiter = {
 
 type CapacityWaiter = {
   cleanup(): void;
+  priority: number;
   reject(reason: unknown): void;
   resolve(): void;
+  sequence: number;
 };
 
 export interface PoolCore {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  drain(options: DrainOptions): Promise<void>;
+  drain(options?: DrainOptions): Promise<void>;
   readonly drainPromise: Promise<void> | undefined;
   isIdle(): boolean;
-  prime(slots: readonly { prime(): Promise<void> }[]): Promise<void>;
   rejectCapacity(reason: unknown): void;
   releaseCapacity(): void;
   settleIdle(): void;
@@ -38,7 +54,7 @@ export interface PoolCore {
   trackActive(delta: number): void;
   trackCompleted(): void;
   trackFailed(): void;
-  waitForCapacity(signal: AbortSignal | undefined): Promise<void>;
+  waitForCapacity(signal: AbortSignal | undefined, priority: number): Promise<void>;
   waitForIdle(options: DrainOptions): Promise<void>;
 }
 
@@ -57,6 +73,7 @@ export function createPoolCore(options: {
   const idleWaiters: IdleWaiter[] = [];
   const capacityWaiters: CapacityWaiter[] = [];
   let active = 0;
+  let capacitySequence = 0;
   let completed = 0;
   let failed = 0;
   let drainPromise: Promise<void> | undefined;
@@ -84,7 +101,7 @@ export function createPoolCore(options: {
 
           if (index !== -1) idleWaiters.splice(index, 1);
 
-          reject(new FamiliarTimeoutError(drainOptions.timeout!));
+          reject(new FamiliarTimeoutError(drainOptions.timeout!, 'Drain'));
         }, drainOptions.timeout);
         unrefTimer(waiter.timer);
       }
@@ -101,7 +118,7 @@ export function createPoolCore(options: {
     for (const waiter of capacityWaiters.splice(0)) waiter.reject(reason);
   }
 
-  function waitForCapacity(signal: AbortSignal | undefined): Promise<void> {
+  function waitForCapacity(signal: AbortSignal | undefined, priority: number): Promise<void> {
     if (signal?.aborted) return Promise.reject(abortError(signal));
 
     return new Promise<void>((resolve, reject) => {
@@ -110,6 +127,7 @@ export function createPoolCore(options: {
         cleanup() {
           signal?.removeEventListener('abort', onAbort);
         },
+        priority,
         reject(reason) {
           if (settled) return;
 
@@ -129,11 +147,13 @@ export function createPoolCore(options: {
           waiter.cleanup();
           resolve();
         },
+        sequence: capacitySequence++,
       };
       const onAbort = () => waiter.reject(abortError(signal!));
 
       signal?.addEventListener('abort', onAbort, { once: true });
       capacityWaiters.push(waiter);
+      capacityWaiters.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
     });
   }
 
@@ -147,8 +167,13 @@ export function createPoolCore(options: {
     settleIdle();
   }
 
-  function drain(drainOptions: DrainOptions): Promise<void> {
+  function drain(drainOptions: DrainOptions = {}): Promise<void> {
     if (terminated) return Promise.resolve();
+    try {
+      validateTimeout(drainOptions.timeout, 'drain.timeout');
+    } catch (error) {
+      return Promise.reject(error);
+    }
 
     if (drainPromise) return drainPromise;
 
@@ -165,10 +190,6 @@ export function createPoolCore(options: {
     return drainPromise;
   }
 
-  function prime(slots: readonly { prime(): Promise<void> }[]): Promise<void> {
-    return Promise.all(slots.map((slot) => slot.prime())).then(() => undefined);
-  }
-
   function trackActive(delta: number): void {
     active += delta;
   }
@@ -182,7 +203,7 @@ export function createPoolCore(options: {
   }
 
   function stats(queued: number): WorkerStats {
-    return { active, completed, failed, queued };
+    return { active, completed, failed, queued: queued + capacityWaiters.length };
   }
 
   function status(): WorkerStatus {
@@ -202,7 +223,6 @@ export function createPoolCore(options: {
       return drainPromise;
     },
     isIdle: options.isIdle,
-    prime,
     rejectCapacity,
     releaseCapacity,
     settleIdle,

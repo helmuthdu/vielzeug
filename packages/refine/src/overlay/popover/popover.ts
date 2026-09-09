@@ -1,16 +1,5 @@
 import type { Placement } from '@vielzeug/orbit';
-import {
-  bind,
-  createStableId,
-  define,
-  getHost,
-  html,
-  onCleanup,
-  onMounted,
-  prop,
-  useEmit,
-  useSlots,
-} from '@vielzeug/ore';
+import { bind, createId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import { type OverlayOpenChangeDetail, parseStringTriggers } from '../../core';
@@ -114,7 +103,7 @@ define<OrePopoverProps>(POPOVER_TAG, {
 
     const shadowRoot = el.shadowRoot;
     const isDisabled = computed(() => Boolean(props.disabled.value));
-    const panelId = createStableId('popover');
+    const panelId = createId('popover');
     const triggers = computed<PopoverTrigger[]>(() => normalizeTriggers(props.trigger.value));
     let panelEl: HTMLElement | null = null;
 
@@ -122,11 +111,11 @@ define<OrePopoverProps>(POPOVER_TAG, {
       bindTriggerAria: (triggerEl) =>
         bind(
           {
-            aria: {
-              controls: () => panelId,
-              disabled: () => String(isDisabled.value),
-              expanded: () => String(floating.visible.value),
-              haspopup: 'dialog',
+            attr: {
+              'aria-controls': () => panelId,
+              'aria-disabled': () => String(isDisabled.value),
+              'aria-expanded': () => String(floating.visible.value),
+              'aria-haspopup': 'dialog',
             },
           },
           { target: triggerEl },

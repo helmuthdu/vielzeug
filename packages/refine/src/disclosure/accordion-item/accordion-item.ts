@@ -1,6 +1,6 @@
 import { define, getHost, html, inject, onMounted, prop, ref, useEmit, watchEffect } from '@vielzeug/ore';
 
-import type { ComponentSize, SurfaceVariant } from '../../types';
+import type { ComponentSize, VisualVariant } from '../../types';
 
 import '../../content/icon/icon';
 import { elementDirection } from '../../core/direction';
@@ -24,7 +24,7 @@ export type OreAccordionItemProps = {
   /** Item size */
   size?: ComponentSize;
   /** Visual style variant */
-  variant?: SurfaceVariant;
+  variant?: VisualVariant;
 };
 
 /**
@@ -35,7 +35,7 @@ export type OreAccordionItemProps = {
  * @attr {boolean} expanded - Whether the item is expanded/open
  * @attr {boolean} disabled - Disable accordion item interaction
  * @attr {string} size - Item size: 'sm' | 'md' | 'lg'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'glass' | 'frost'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost'
  *
  * @fires expand - Emitted when item expands. detail: { expanded: boolean; item: HTMLElement }
  * @fires collapse - Emitted when item collapses. detail: { expanded: boolean; item: HTMLElement }
@@ -79,7 +79,7 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
     ...disablableBundle,
     expanded: prop.bool(false),
     size: prop.string<ComponentSize>(),
-    variant: prop.string<SurfaceVariant>(),
+    variant: prop.string<VisualVariant>(),
   },
 
   setup(props) {

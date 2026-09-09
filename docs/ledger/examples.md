@@ -1,6 +1,6 @@
 ---
 title: Ledger — Examples
-description: Worked examples for @vielzeug/ledger.
+description: Recipes for reversible editor and form history with Ledger.
 ---
 
 ## Examples

@@ -11,14 +11,15 @@ description: Complete API reference for @vielzeug/keymap bindings, chords, parsi
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createKeymap()` | Create shortcut manager | Sync | `dispose()` is terminal |
+| `createKeymap()` | Create shortcut manager from an ordered binding array | Sync | `dispose()` is terminal |
 | `findShortcutConflicts()` | Find duplicate and prefix paths | Sync | Invalid non-empty input throws |
 | `formatShortcut()` | Format shortcut labels | Sync | Invalid input returns `''` |
-| `ChordStateChange` | Type for chord state callback events | — | No 'completed' event; handler fires immediately when matched |
+| `tap()` | Observe chord lifecycle, matches, and disposal | Sync | Observer failures are swallowed |
+| `Binding` | Per-binding config type (id, shortcut, handler, trigger, when, preventDefault, stopPropagation) | — | Reusing an `id` replaces its binding |
 
-### Power-User API (Custom Tooling)
+### Parser Subpath (`@vielzeug/keymap/parse`)
 
-Use the power-user API if you're building keyboard-aware config validators, custom UI, or framework integrations.
+Use the parser subpath if you're building keyboard-aware config validators, custom UI, or framework integrations.
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
@@ -35,11 +36,12 @@ Use the power-user API if you're building keyboard-aware config validators, cust
 | `KeymapError` | Base Keymap error | Sync | Includes parse and lifecycle errors |
 | `KeymapParseError` | Strict parser error | Sync | `parseStep()` never throws it |
 
-## Package Entry Point
+## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/keymap` | Root entry point for every runtime function, error class, and public type listed here. |
+| `@vielzeug/keymap` | Root entry point for `createKeymap`, `formatShortcut`, `findShortcutConflicts`, errors, and public types. |
+| `@vielzeug/keymap/parse` | Parser internals subpath for custom tooling: `parseShortcut`, `parseStep`, `matchStep`, `canonicalizeShortcut`, `detectModKey`. |
 
 ## Core Manager
 
@@ -47,7 +49,7 @@ Use the power-user API if you're building keyboard-aware config validators, cust
 
 ```ts
 function createKeymap(
-  bindings?: Record<string, BindingValue>,
+  bindings?: readonly Binding[],
   options?: KeymapOptions,
 ): Keymap;
 ```
@@ -56,15 +58,17 @@ Creates shortcut manager with independent chord state for each mounted target.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `bindings` | `Record<string, BindingValue>` | Initial bindings. Keys must be non-empty valid shortcut strings. |
-| `options` | `KeymapOptions` | Chord, modifier, event, and global-guard configuration. |
+| `bindings` | `readonly Binding[]` | Ordered array of bindings. Each binding has an explicit `id`, `shortcut`, and `handler`. |
+| `options` | `KeymapOptions` | Chord, modifier, and global-guard configuration. |
 
 **Returns:** `Keymap`.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({ 'ctrl+s': () => console.log('save') });
+const map = createKeymap([
+  { id: 'save', shortcut: 'ctrl+s', handler: () => console.log('save') },
+]);
 const unmount = map.mount(document);
 
 unmount();
@@ -73,16 +77,44 @@ map.dispose();
 
 | `Keymap` member | Return | Contract |
 | --- | --- | --- |
-| `bind(shortcut, value)` | `() => void` | Adds or replaces canonical shortcut. Returned callback removes that binding while active. |
+| `bind(binding)` | `() => void` | Adds or replaces a binding with the same `id`. Returned callback removes that binding while active. |
 | `mount(target)` | `() => void` | Adds target listener. Repeat mounts of same target are reference-counted. |
-| `unbind(shortcut)` | `void` | Removes canonical shortcut. Warns in development when unknown. |
+| `unbind(id)` | `void` | Removes binding by id. Warns in development when unknown. |
 | `listBindings()` | `readonly BindingEntry[]` | Returns a detached binding snapshot. |
+| `tap(handler, options?)` | `() => void` | Observes chord lifecycle, matches, and disposal. Supports signal-owned teardown. |
 | `dispose()` | `void` | Removes all listeners, aborts signal, and permanently disposes map. Idempotent. |
 | `disposed` | `boolean` | `true` after first `dispose()`. |
 | `disposalSignal` | `AbortSignal` | Aborts when map is disposed. |
 | `[Symbol.dispose]()` | `void` | Calls `dispose()`. |
 
 After disposal, `bind()`, `unbind()`, and `mount()` throw `KeymapError`.
+
+## Runtime Observation
+
+### `tap()`
+
+```ts
+function tap(
+  handler: (event: KeymapEvent) => void,
+  options?: { signal?: AbortSignal },
+): () => void;
+```
+
+Observes chord progress, cancellation, completed matches, timeouts, and disposal without affecting shortcut behavior.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `handler` | `(event: KeymapEvent) => void` | Receives each runtime event synchronously. Errors are swallowed. |
+| `options.signal` | `AbortSignal` | Detaches the handler when aborted. |
+
+**Returns:** An idempotent detach function.
+
+```ts
+const stop = map.tap((event) => {
+  if (event.type === 'chord-start') showChordHint(event.step);
+  if (event.type === 'chord-cancel' || event.type === 'chord-timeout' || event.type === 'match') hideChordHint();
+});
+```
 
 ## Conflict Analysis
 
@@ -109,7 +141,7 @@ Returns entries with same-trigger exact or prefix-conflicting shortcut paths.
 ```ts
 import { createKeymap, findShortcutConflicts } from '@vielzeug/keymap';
 
-const map = createKeymap({ g: () => console.log('top') });
+const map = createKeymap([{ id: 'top', shortcut: 'g', handler: () => console.log('top') }]);
 const conflicts = findShortcutConflicts('g g', map.listBindings());
 
 console.log(conflicts.length); // 1
@@ -139,7 +171,7 @@ formatShortcut('mod+shift+p', 'meta'); // ⇧⌘P
 formatShortcut('mod+shift+p', 'ctrl'); // Ctrl+Shift+P
 ```
 
-## Parsing and Matching
+## Parser Subpath (`@vielzeug/keymap/parse`)
 
 ### `parseShortcut()`
 
@@ -157,7 +189,7 @@ Strictly parses one or more space-separated shortcut steps.
 **Returns:** Parsed `Shortcut`.
 
 ```ts
-import { parseShortcut } from '@vielzeug/keymap';
+import { parseShortcut } from '@vielzeug/keymap/parse';
 
 const shortcut = parseShortcut('ctrl+k ctrl+s', 'ctrl');
 console.log(shortcut.length); // 2
@@ -183,7 +215,7 @@ Parses one shortcut step without throwing.
 **Returns:** Parsed `ShortcutStep`, or `null` for empty, modifier-only, or ambiguous input.
 
 ```ts
-import { parseStep } from '@vielzeug/keymap';
+import { parseStep } from '@vielzeug/keymap/parse';
 
 parseStep('ctrl+k', 'ctrl'); // { key: 'k', modifiers: Set(['ctrl']) }
 parseStep('ctrl+k+j', 'ctrl'); // null
@@ -206,7 +238,7 @@ Converts parsed steps into stable canonical string with sorted modifier order.
 **Returns:** Canonical shortcut string.
 
 ```ts
-import { canonicalizeShortcut, parseShortcut } from '@vielzeug/keymap';
+import { canonicalizeShortcut, parseShortcut } from '@vielzeug/keymap/parse';
 
 canonicalizeShortcut(parseShortcut('shift+ctrl+k', 'ctrl')); // ctrl+shift+k
 ```
@@ -229,7 +261,7 @@ Tests exact key and modifier equality for one parsed step.
 **Returns:** `true` only when key and all modifier states match.
 
 ```ts
-import { matchStep, parseStep } from '@vielzeug/keymap';
+import { matchStep, parseStep } from '@vielzeug/keymap/parse';
 
 const step = parseStep('ctrl+k', 'ctrl')!;
 matchStep(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }), step); // true
@@ -248,7 +280,7 @@ Detects Mac platform from `navigator` and otherwise returns `ctrl`.
 **Returns:** `'meta'` on Mac platforms; `'ctrl'` elsewhere or without `navigator`.
 
 ```ts
-import { detectModKey } from '@vielzeug/keymap';
+import { detectModKey } from '@vielzeug/keymap/parse';
 
 const modKey = detectModKey();
 ```
@@ -262,13 +294,14 @@ Stateful shortcut manager returned by `createKeymap()`.
 ```ts
 interface Keymap {
   [Symbol.dispose](): void;
-  bind(shortcut: string, value: BindingValue): () => void;
+  bind(binding: Binding): () => void;
   dispose(): void;
   readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   listBindings(): readonly BindingEntry[];
   mount(target: EventTarget): () => void;
-  unbind(shortcut: string): void;
+  tap(handler: (event: KeymapEvent) => void, options?: { signal?: AbortSignal }): () => void;
+  unbind(id: string): void;
 }
 ```
 
@@ -280,36 +313,53 @@ Options applied to every binding owned by one manager.
 interface KeymapOptions {
   chordTimeout?: number;
   modKey?: 'ctrl' | 'meta';
-  preventDefault?: boolean;
-  stopPropagation?: boolean;
   when?: When;
-  onChordState?: (change: ChordStateChange) => void;
 }
 ```
 
 - `when`: Guard function called for all bindings. When combined with per-binding `when` guards, both must return `true` for the handler to fire (AND composition). Global guard is checked first.
-- `onChordState`: Optional callback to observe chord state changes (started, progressed, or timeout). Useful for debugging, testing, logging, or implementing chord UI hints. Callback errors are caught and logged in development. Note: when a chord completes, the binding handler fires immediately; no separate 'completed' event is emitted.
 
-### `BindingOptions`
+### `KeymapEvent`
 
-Per-binding handler configuration.
+Runtime event observed through `tap()`.
 
 ```ts
-type BindingOptions = {
+type KeymapEvent =
+  | { type: 'chord-cancel'; target: EventTarget; trigger: 'keydown' | 'keyup' }
+  | { type: 'chord-start'; step: ShortcutStep; target: EventTarget; trigger: 'keydown' | 'keyup' }
+  | { type: 'chord-progress'; steps: readonly ShortcutStep[]; target: EventTarget; trigger: 'keydown' | 'keyup' }
+  | { type: 'chord-timeout'; target: EventTarget; trigger: 'keydown' | 'keyup' }
+  | { type: 'match'; binding: BindingEntry; target: EventTarget; trigger: 'keydown' | 'keyup' }
+  | { type: 'dispose' };
+```
+
+`step`, `steps`, and `binding` are detached snapshots. Mutating them does not affect matching.
+
+### `Binding`
+
+Per-binding configuration. Each binding has an explicit `id` so duplicate shortcuts can coexist. Reusing an ID replaces its binding; among duplicate shortcuts, the first binding whose guard passes wins.
+
+```ts
+interface Binding {
+  id: string;
+  shortcut: string;
   handler: Handler;
   trigger?: 'keydown' | 'keyup';
   when?: When;
-};
+  preventDefault?: boolean;
+  stopPropagation?: boolean;
+}
 ```
 
-### `BindingValue`, `Handler`, and `When`
+- `trigger`: Defaults to `'keydown'`.
+- `preventDefault`: Defaults to `true`. Set to `false` for shortcuts that must retain browser behavior.
+- `stopPropagation`: Defaults to `false`.
 
-Accepted values when registering a shortcut.
+### `Handler` and `When`
 
 ```ts
 type Handler = (event: KeyboardEvent) => void;
 type When = (event: KeyboardEvent) => boolean;
-type BindingValue = Handler | BindingOptions;
 ```
 
 ### `BindingEntry`
@@ -318,14 +368,17 @@ Detached binding metadata returned by `listBindings()`.
 
 ```ts
 type BindingEntry = {
+  readonly id: string;
   readonly shortcut: readonly ShortcutStep[];
   readonly trigger: 'keydown' | 'keyup';
+  readonly preventDefault: boolean;
+  readonly stopPropagation: boolean;
 };
 ```
 
 ### `ModifierKey`, `Shortcut`, and `ShortcutStep`
 
-Parser types used by `parseShortcut()`, `parseStep()`, `matchStep()`, and `canonicalizeShortcut()`.
+Parser types used by `parseShortcut()`, `parseStep()`, `matchStep()`, and `canonicalizeShortcut()`. Available from `@vielzeug/keymap/parse`.
 
 ```ts
 type ModifierKey = 'alt' | 'ctrl' | 'meta' | 'shift';
@@ -347,44 +400,6 @@ interface ConflictOptions {
   modKey?: 'ctrl' | 'meta';
   trigger?: 'keydown' | 'keyup';
 }
-```
-
-### `ChordStateChange`
-
-Discriminated union type for chord state events emitted by `onChordState` callback. When a chord fully matches, the binding handler fires immediately; no separate 'completed' event is emitted.
-
-```ts
-type ChordStateChange =
-  | { type: 'started'; target: EventTarget; step: ShortcutStep; trigger: 'keydown' | 'keyup' }
-  | { type: 'progressed'; target: EventTarget; steps: readonly ShortcutStep[]; trigger: 'keydown' | 'keyup' }
-  | { type: 'timeout'; target: EventTarget; trigger: 'keydown' | 'keyup' };
-```
-
-| Event | Fields | When | Use case |
-| --- | --- | --- | --- |
-| `started` | `target`, `step`, `trigger` | First key of a chord is pressed. | Show "waiting for next key" UI hint. |
-| `progressed` | `target`, `steps`, `trigger` | Additional step(s) added to pending chord. | Update chord hint with current progress. |
-| `timeout` | `target`, `trigger` | Chord was pending but timed out without completing. | Clear "waiting" UI state; log timeout for debugging. |
-
-```ts
-import { createKeymap } from '@vielzeug/keymap';
-
-const map = createKeymap(
-  { 'g g': () => scrollToTop() },
-  {
-    onChordState: (change) => {
-      if (change.type === 'started') {
-        console.log(`Chord started: ${change.step.key}`);
-      }
-      if (change.type === 'progressed') {
-        console.log(`Chord progress: ${change.steps.map((s) => s.key).join(' ')}`);
-      }
-      if (change.type === 'timeout') {
-        console.log('Chord timed out');
-      }
-    },
-  },
-);
 ```
 
 ## Errors

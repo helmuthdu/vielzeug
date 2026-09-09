@@ -24,7 +24,7 @@ interface PreviewOptions {
 
 function createPreview({ container, onError, onReady }: PreviewOptions) {
   const sandbox = createSandbox(container, {
-    namedStyles: {
+    styles: {
       base: `
         :root { box-sizing: border-box; }
         *, *::before, *::after { box-sizing: inherit; }
@@ -52,7 +52,7 @@ function createPreview({ container, onError, onReady }: PreviewOptions) {
       sandbox.replaceBody(html);
     },
     setTheme(theme: 'light' | 'dark') {
-      sandbox.setState('theme', theme);
+      sandbox.setState({ theme });
     },
     [Symbol.dispose]() {
       sandbox.dispose();
@@ -82,7 +82,7 @@ preview.setTheme('dark');
 
 ### How streaming works
 
-1. `initialize()` calls `render('')` once — this sets up the bridge, `namedStyles`, and any injected scripts.
+1. `initialize()` calls `render('')` once — this sets up the bridge, `styles`, and any injected scripts.
 2. Each `replaceBody(html)` call sends `document.body.innerHTML = html` via postMessage. The iframe never navigates; head scripts and styles remain, while body descendants are replaced.
 3. The bridge's built-in `ResizeObserver` fires automatically as content grows, so the container can auto-size without additional wiring.
 

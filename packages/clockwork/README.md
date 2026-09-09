@@ -1,8 +1,14 @@
 # @vielzeug/clockwork
 
-> Framework-neutral typed finite state machines for TypeScript.
+> Framework-neutral finite state machines with pure transitions and actors
 
-Clockwork separates pure transition decisions from actor-owned runtime work. Define a machine once, then create independent actors for effects, timers, invokes, subscriptions, and disposal.
+## Installation
+
+```sh
+pnpm add @vielzeug/clockwork
+npm install @vielzeug/clockwork
+yarn add @vielzeug/clockwork
+```
 
 ## Quick Start
 
@@ -33,88 +39,14 @@ console.log(actor.snapshot);
 actor.dispose();
 ```
 
-## Design
-
-- **Pure machine** — `transition(snapshot, event)` returns only the next snapshot and result type; it never starts runtime work.
-- **Independent actors** — `createActor()` owns an event queue, invokes, timers, subscriptions, and cancellation.
-- **Typed definitions** — `defineMachine<Context, Event>()(definition)` accepts a non-array record context and narrows events in guards and reducers.
-- **Post-commit effects** — actors notify subscribers, then run exit, transition, and entry effects.
-- **Flat states** — one explicit state map; compose machines instead of nesting state trees.
-- **No runtime dependencies** — works in browser, Node, workers, SSR, and any framework.
-
-## Core API
-
-| Export | Purpose |
-| --- | --- |
-| `defineMachine<Context, Event>()(definition)` | Compile and validate a machine definition |
-| `machine.transition(snapshot, event)` | Run pure transition logic |
-| `machine.createActor(options?)` | Create an owned runtime actor |
-| `Actor` | Runtime resource with a readonly snapshot, subscriptions, and disposal |
-| `ClockworkError` | Validation error with stable `code` |
-
-## Async invokes and timers
-
-State nodes may declare `invoke` tasks and `after` timers. Both begin when an actor enters a state and are cancelled when it exits or disposes. Fresh actors run entry effects and resources; restored actors start only the restored state's invokes and timers. Invokes convert completion or failure into regular machine events.
-
-```ts
-import { defineMachine } from '@vielzeug/clockwork';
-
-type Event = { type: 'LOAD' } | { result: string; type: 'DONE' } | { message: string; type: 'FAIL' };
-
-const loader = defineMachine<{ data: string }, Event>()({
-  context: { data: '' },
-  initial: 'idle',
-  states: {
-    idle: { on: { LOAD: { target: 'loading' } } },
-    loading: {
-      invoke: [{
-        src: async ({ signal }) => fetch('/api/data', { signal }).then((response) => response.text()),
-        onDone: ({ result }) => ({ result, type: 'DONE' }),
-        onError: ({ error }) => ({ message: String(error), type: 'FAIL' }),
-      }],
-      on: {
-        DONE: { reduce: ({ event }) => ({ data: event.result }), target: 'ready' },
-        FAIL: { target: 'error' },
-      },
-    },
-    ready: {},
-    error: {},
-  },
-});
-```
-
-## Observability
-
-`actor.subscribe(listener)` observes committed snapshots. It does not modify actor behavior or trace dispatches and runtime errors.
-
-```ts
-import { defineMachine } from '@vielzeug/clockwork';
-
-const machine = defineMachine<Record<string, never>, { type: 'NEXT' }>()({
-  initial: 'idle',
-  states: { idle: { on: { NEXT: { target: 'idle' } } } },
-});
-const actor = machine.createActor();
-const stop = actor.subscribe((snapshot) => console.debug(snapshot.state));
-
-actor.send({ type: 'NEXT' });
-stop();
-actor.dispose();
-```
-
-## Installation
-
-```sh
-pnpm add @vielzeug/clockwork
-```
-
 ## Documentation
 
-- [Full Guide](https://vielzeug.dev/clockwork/)
-- [Usage Guide](https://vielzeug.dev/clockwork/usage/)
-- [API Reference](https://vielzeug.dev/clockwork/api/)
-- [Examples](https://vielzeug.dev/clockwork/examples/)
+- [Overview](https://vielzeug.dev/clockwork/)
+- [Usage Guide](https://vielzeug.dev/clockwork/usage)
+- [API Reference](https://vielzeug.dev/clockwork/api)
+- [Examples](https://vielzeug.dev/clockwork/examples)
+- [Migration Guide](https://vielzeug.dev/clockwork/migration)
 
 ## License
 
-MIT
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

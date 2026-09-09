@@ -1,5 +1,5 @@
 export const sortableRevertExample = {
-  code: `import { applyReorder, createSortable } from '@vielzeug/dnd'
+  code: `import { applyReorder, createSortable } from '@vielzeug/dnd/sortable'
 
 const app = document.createElement('div')
 app.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:220px;'
@@ -22,6 +22,9 @@ let items = [
   { id: 'd', label: 'Delta' },
 ]
 
+// Application-owned rollback stack — the sortable no longer holds revert state.
+const history: Array<{ before: typeof items }> = []
+
 function render() {
   listEl.innerHTML = ''
   items.forEach(item => {
@@ -31,26 +34,27 @@ function render() {
     li.textContent = item.label
     listEl.appendChild(li)
   })
-  sortable?.sync()
+  sortable?.refresh()
 }
 
 const sortable = createSortable({
   element: listEl,
   getKey: (el) => el.dataset.id ?? '',
-  onReorder: ({ ids, setRevert }) => {
-    const prev = items
-    items = applyReorder(items, ids, i => i.id)
+  onReorder: ({ before, after }) => {
+    history.push({ before })
+    items = applyReorder(items, after, i => i.id)
     render()
     console.log('Reordered:', items.map(i => i.label).join(' → '))
-    setRevert(() => {
-      items = prev
-      render()
-      console.log('Reverted to:', items.map(i => i.label).join(' → '))
-    })
   },
 })
 
-revertBtn.addEventListener('click', () => sortable.revert())
+revertBtn.addEventListener('click', () => {
+  const entry = history.pop()
+  if (!entry) return
+  items = entry.before
+  render()
+  console.log('Reverted to:', items.map(i => i.label).join(' → '))
+})
 
 render()
 console.log('Drag to reorder, then click Revert to undo the last move')`,

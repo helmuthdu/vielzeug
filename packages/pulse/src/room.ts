@@ -1,4 +1,4 @@
-import { type Signal, signal } from '@vielzeug/ripple';
+import { createStore, type MutableStore } from './_store';
 import { deriveAbortController } from './_utils';
 import { PulseAbortError, PulseConnectionError, PulseDisposedError, PulseError, PulseRoomTimeoutError } from './errors';
 import { encode } from './protocol';
@@ -31,12 +31,13 @@ type ScopeInternal = {
 
 type RegistryOptions = {
   isOpen: () => boolean;
+  onStoreError: (error: unknown) => void;
   send: (frame: string) => void;
   disposalSignal: AbortSignal;
 };
 
 export type RoomRegistry = {
-  readonly rooms: Signal<ReadonlySet<string>>;
+  readonly rooms: MutableStore<ReadonlySet<string>>;
   createScope(name: string, hasPresence: boolean, opts: RoomOptions | undefined): RoomScopeBase | PresenceRoomScope;
   handleJoined(room: string): void;
   handleLeft(room: string): void;
@@ -54,7 +55,7 @@ export type RoomRegistry = {
  * @internal
  */
 export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
-  const rooms = signal<ReadonlySet<string>>(new Set());
+  const rooms = createStore<ReadonlySet<string>>(new Set(), opts.onStoreError);
   const states = new Map<string, RoomState>();
 
   function getOrCreate(name: string): RoomState {
@@ -76,10 +77,10 @@ export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
   }
 
   function setRoom(name: string, joined: boolean): void {
-    const next = new Set(rooms.value);
+    const next = new Set(rooms.getSnapshot());
     if (joined) next.add(name);
     else next.delete(name);
-    rooms.value = next;
+    rooms.set(next);
   }
 
   function sendJoin(name: string): void {
@@ -168,33 +169,33 @@ export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
       const combined = AbortSignal.any(signals);
 
       // Presence state
-      let presenceSignal: Signal<Map<string, unknown>> | undefined;
+      let presenceSignal: MutableStore<Map<string, unknown>> | undefined;
       let presenceHandlers: PresenceHandlers | undefined;
       const joinHandlers = new Set<(memberId: string, state: unknown) => void>();
       const leaveHandlers = new Set<(memberId: string) => void>();
 
       if (hasPresence) {
-        presenceSignal = signal(new Map<string, unknown>());
+        presenceSignal = createStore(new Map<string, unknown>(), opts.onStoreError);
         presenceHandlers = {
           onJoin(id, memberState) {
-            const next = new Map(presenceSignal!.value);
+            const next = new Map(presenceSignal!.getSnapshot());
             next.set(id, memberState);
-            presenceSignal!.value = next;
+            presenceSignal!.set(next);
             for (const handler of joinHandlers) handler(id, memberState);
           },
           onLeave(id) {
-            const next = new Map(presenceSignal!.value);
+            const next = new Map(presenceSignal!.getSnapshot());
             next.delete(id);
-            presenceSignal!.value = next;
+            presenceSignal!.set(next);
             for (const handler of leaveHandlers) handler(id);
           },
           onState(members) {
             const next = new Map<string, unknown>();
             for (const [id, memberState] of Object.entries(members)) next.set(id, memberState);
-            presenceSignal!.value = next;
+            presenceSignal!.set(next);
           },
           reset() {
-            presenceSignal!.value = new Map();
+            presenceSignal!.set(new Map());
           },
         };
       }
@@ -267,7 +268,7 @@ export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
     },
 
     dispose() {
-      rooms.value = new Set();
+      rooms.set(new Set());
       states.clear();
     },
 
@@ -329,7 +330,7 @@ export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
     },
 
     reset() {
-      rooms.value = new Set();
+      rooms.set(new Set());
       for (const [name, state] of states) {
         if (state.refs === 0) {
           states.delete(name);
@@ -370,7 +371,7 @@ export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
 function buildPublicScope(
   scope: ScopeInternal,
   disposalSignal: AbortSignal,
-  presenceSignal: Signal<Map<string, unknown>> | undefined,
+  presenceSignal: MutableStore<Map<string, unknown>> | undefined,
   joinHandlers: Set<(memberId: string, state: unknown) => void>,
   leaveHandlers: Set<(memberId: string) => void>,
   name: string,
@@ -454,7 +455,7 @@ function createDeadScope(name: string, hasPresence: boolean): RoomScopeBase | Pr
       onLeave() {
         throw new PulseDisposedError(`Room "${name}"`);
       },
-      presence: signal(new Map()),
+      presence: createStore(new Map(), () => {}),
       updatePresence() {
         throw new PulseDisposedError(`Room "${name}"`);
       },

@@ -1,4 +1,4 @@
-import type { Operator, PipedStream, Stream, ValidPipe } from './types';
+import type { Operator, PipedStream, Stream, ValidPipe } from './types.js';
 
 /** Standalone composition preserves contextual types for inline generic operators. */
 export function pipe<Input>(source: Stream<Input>): Stream<Input>;

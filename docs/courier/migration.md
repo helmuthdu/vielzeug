@@ -4,6 +4,132 @@ title: Courier Migration
 
 # Courier Migration
 
+## Courier 3.0
+
+Courier 3.0 owns HTTP transport, explicit parsed GET caching, prefetching, immutable middleware, and structured errors. Observable query state, mutations, SSE helpers, streams, and mutable headers moved to their owning layers.
+
+### Replace `queries` / `mutate()` with cached GETs or consumer-owned state
+
+`queries`, query snapshots, subscriptions, `mutate()`, and `invalidateKeys` are removed. Use a structured `cache` descriptor when only bounded TTL caching, prefix invalidation, and in-flight deduplication are needed. Compose Courier into a dedicated state layer when the application needs observable query or mutation state.
+
+```ts
+// Before
+await courier.queries.fetch({
+  key: ['users', 1],
+  fetch: ({ signal }) => courier.get('/users/{id}', { params: { id: 1 }, signal }),
+});
+await courier.mutate({
+  request: ({ signal }) => courier.post('/users', { body: { name: 'Ada' }, signal }),
+  invalidateKeys: [['users']],
+});
+
+// After — use explicit cached reads without observable query state.
+const user = await courier.get('/users/{id}', {
+  cache: { key: ['users', 1], ttlMs: 30_000 },
+  params: { id: 1 },
+});
+await courier.post('/users', { body: { name: 'Ada' } });
+courier.invalidateCache(['users']);
+```
+
+For loading/error snapshots, automatic refetch, optimistic mutations, or framework bindings, use a dedicated server-state cache or explicit application state. Sourcerer is limited to paginated collection state and does not own cache keys, invalidation, or mutations. See [Optimistic Updates](./examples/optimistic-updates.md) for an explicit state-owner pattern.
+
+For remote collections, compose Courier into a focused Sourcerer collection source:
+
+```ts
+import { createPageSource } from '@vielzeug/sourcerer';
+
+const users = createPageSource<User>({
+  load: async ({ page, pageSize, signal }) => {
+    const result = await courier.get<{ data: User[]; total: number }>('/users', {
+      query: { page, pageSize },
+      signal,
+    });
+    return { items: result.data, totalItems: result.total };
+  },
+});
+
+await users.reload();
+```
+
+### `request()` and method conveniences
+
+`request(path, { method, ... })` supports custom and dynamically selected methods. `get()`, `post()`, `put()`, `patch()`, and `delete()` remain available for common methods.
+
+```ts
+await courier.post('/users', { body: { name: 'Ada' } });
+await courier.patch('/users/1', { body: { name: 'Ada' } });
+await courier.request('/documents/1', { method: 'LOCK' });
+```
+
+### Replace mutable `use()` with immutable `middleware` at construction
+
+The onion middleware plus mutable `use()` is replaced by an immutable `middleware` array configured at construction. There is no runtime mutation of the middleware chain.
+
+```ts
+// Before
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+courier.use(withBearerAuth('token'));
+courier.use(withRequestId());
+
+// After
+const courier = createCourier({
+  baseUrl: 'https://api.example.com',
+  middleware: [withBearerAuth('token'), withRequestId()],
+});
+```
+
+### Replace `setHeaders()` / `getHeaders()` with construction-time `headers`
+
+The mutable header store is removed. Set default headers at construction; use middleware for dynamic headers.
+
+```ts
+// Before
+const courier = createCourier();
+courier.setHeaders({ authorization: 'Bearer token' });
+
+// After
+const courier = createCourier({ headers: { authorization: 'Bearer token' } });
+```
+
+### `events()` / `read()` removed
+
+SSE and streaming iterators moved to the owning state layer. Prefer native `EventSource` for standard cookie-authenticated SSE. When custom headers or request bodies require `fetch`, request a raw response with an explicit caller signal and `timeout: Infinity`; Courier keeps the body attached to `cancelAll()` and `dispose()` until it completes or is cancelled.
+
+```ts
+const controller = new AbortController();
+const response = await courier.get<Response>('/events', {
+  responseType: 'raw',
+  signal: controller.signal,
+  timeout: Infinity,
+});
+
+try {
+  for await (const chunk of response.body ?? []) consume(chunk);
+} finally {
+  controller.abort();
+}
+```
+
+See [SSE Events](./examples/sse-events.md) for framing and reconnection ownership.
+
+### Keep transport observation with `tap()`
+
+`tap()` remains a transport-level, observation-only API for structured request start, success, failure, and disposal events. Observer failures never affect requests, and an optional signal owns subscription lifetime. Use `withLogging()` when one logger is sufficient.
+
+### `cancelAll()` no longer owns mutation state
+
+`cancelAll()` aborts active HTTP requests, including shared cached loads, and prevents those pending results from entering the cache. It retains settled cached values. Mutation cancellation belongs to the state layer that owns it.
+
+### Recheck request boundaries
+
+- Timeouts must be integer milliseconds from 1 through 2,147,483,647, or `Infinity`.
+- GET and HEAD requests reject bodies before dispatch.
+- Raw responses cannot use a schema; consume or cancel every raw body.
+- ReadableStream uploads set Node's required `duplex: 'half'` transport option.
+- Query values are inserted before URL fragments.
+- NodeNext declarations now use explicit `.js` specifiers.
+
 ## Courier 2.0
 
 Courier 2.0 simplifies the public API surface: removes redundant methods, merges invalidation and refetch into
@@ -125,4 +251,4 @@ Replace prior query and mutation integration points with the 2.0 query-handle an
 
 Update streaming consumers to iterate over the 2.0 stream API with `for await...of`. Ensure application cleanup still handles abort and disposal.
 
-Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current client, query, mutation, and stream contracts.
+The sections above describe the historical 1.x → 2.x transition. For the current HTTP and explicit-cache contract, follow the Courier 3.0 section and the [API Reference](./api.md).

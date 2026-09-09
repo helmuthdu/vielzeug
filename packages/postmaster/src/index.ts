@@ -17,12 +17,10 @@ export type {
   PostmasterEntry,
   PostmasterEvent,
   PostmasterStats,
-  PostmasterStore,
   RemoveResult,
   RetryPolicy,
   RetryResult,
   StoredFailure,
-  StoredJob,
-  StoreTx,
   Validate,
+  VersionMigrations,
 } from './types.ts';

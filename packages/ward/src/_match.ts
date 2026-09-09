@@ -1,12 +1,14 @@
-import type { CompiledEntry } from './_compile';
-import { ANONYMOUS, WILDCARD } from './constants';
-import { WardConfigError, WardPredicateError } from './errors';
+import { snapshotAttributes } from './_compile';
+import { WardConditionError, WardConfigError } from './errors';
 import { matchesPattern } from './resource';
-import type { Principal, UserPrincipal, WardDecision } from './types';
-
-// ---------------------------------------------------------------------------
-// Principal validation
-// ---------------------------------------------------------------------------
+import type {
+  Principal,
+  UserPrincipal,
+  WardAttributes,
+  WardAttributeValue,
+  WardDecisionInput,
+  WardRule,
+} from './types';
 
 /** Asserts that `input` is a valid `UserPrincipal`. Throws with a clear message otherwise. */
 export function assertUserPrincipal(input: unknown): asserts input is UserPrincipal {
@@ -14,136 +16,116 @@ export function assertUserPrincipal(input: unknown): asserts input is UserPrinci
     throw new WardConfigError('Invalid principal: expected { id: string, roles: string[] }');
   }
 
-  const p = input as Record<string, unknown>;
+  const principal = input as Record<string, unknown>;
 
-  if (typeof p.id !== 'string' || !p.id.trim()) {
+  if (typeof principal.id !== 'string' || !principal.id.trim()) {
     throw new WardConfigError('Invalid principal: id must be a non-empty string');
   }
 
-  if (!Array.isArray(p.roles) || p.roles.some((r) => typeof r !== 'string' || !(r as string).trim())) {
+  if (!Array.isArray(principal.roles) || principal.roles.some((role) => typeof role !== 'string' || !role.trim())) {
     throw new WardConfigError('Invalid principal: roles must be an array of non-empty strings');
   }
 }
 
-export function validatePrincipal(principal: Principal): void {
-  if (principal !== null) {
-    assertUserPrincipal(principal);
-  }
+export function snapshotPrincipal(principal: Principal | undefined): Principal {
+  if (principal === undefined || principal === null) return null;
+
+  assertUserPrincipal(principal);
+
+  return Object.freeze({
+    ...(principal.attributes === undefined
+      ? {}
+      : { attributes: snapshotAttributes(principal.attributes, 'Principal.attributes') }),
+    id: principal.id,
+    roles: Object.freeze([...principal.roles]),
+  });
 }
 
-// ---------------------------------------------------------------------------
-// Role matching
-// ---------------------------------------------------------------------------
-
-/** Returns true if the principal's role set intersects with the rule's roles. */
-export function principalMatchesRoles(roles: readonly string[], principal: Principal): boolean {
-  if (principal === null) {
-    return roles.includes(ANONYMOUS);
+export function snapshotDecisionInput<
+  TAction extends string,
+  TResource extends string,
+  TAttributes extends WardAttributes,
+>(
+  input: WardDecisionInput<TAction, TResource, TAttributes>,
+): WardDecisionInput<TAction, TResource, TAttributes> & {
+  principal: Principal;
+} {
+  if (typeof input.action !== 'string' || !input.action.trim()) {
+    throw new WardConfigError('Decision.action must be a non-empty string');
+  }
+  if (typeof input.resource !== 'string' || !input.resource.trim()) {
+    throw new WardConfigError('Decision.resource must be a non-empty string');
   }
 
-  if (roles.every((r) => r === ANONYMOUS)) return false;
-
-  if (roles.includes(WILDCARD)) return true;
-
-  return roles.some((role) => principal.roles.includes(role));
+  return Object.freeze({
+    action: input.action,
+    ...(input.attributes === undefined
+      ? {}
+      : { attributes: snapshotAttributes(input.attributes, 'Decision.attributes') as TAttributes }),
+    principal: snapshotPrincipal(input.principal),
+    resource: input.resource,
+  });
 }
 
-// ---------------------------------------------------------------------------
-// Rule matching
-// ---------------------------------------------------------------------------
-
-/**
- * Check whether a rule applies to a given request.
- *
- * @param action        - Pass `undefined` to skip the action check (used by `rulesInScope`).
- * @param data          - Data payload; passed to `when` predicates.
- * @param skipPredicate - When true, omit the `when` evaluation even when data is present.
- */
-export function matchesRule<TAction extends string, TData>(
-  entry: CompiledEntry<TAction, TData>,
-  principal: Principal,
-  resource: string,
-  action: TAction | undefined,
-  data: TData | undefined,
-  skipPredicate = false,
-): boolean {
-  if (!principalMatchesRoles(entry.roles, principal)) return false;
-
-  if (!matchesPattern(entry.rule.resource as string, resource)) return false;
-
-  if (action !== undefined && !matchesPattern(entry.rule.action as string, action)) return false;
-
-  if (skipPredicate || !entry.rule.when) return true;
-
-  if (principal === null) return false;
-
-  try {
-    const result: unknown = entry.rule.when({ data, principal });
-
-    if (result instanceof Promise) {
-      throw new TypeError(
-        `Rule[${entry.index}] when() returned a Promise. Async predicates are not supported — use a synchronous predicate.`,
-      );
-    }
-
-    return result as boolean;
-  } catch (err) {
-    throw new WardPredicateError(entry.index, err);
+function deepEqual(left: WardAttributeValue, right: WardAttributeValue): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== 'object' || typeof right !== 'object' || left === null || right === null) return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => deepEqual(value, right[index]))
+    );
   }
-}
 
-// ---------------------------------------------------------------------------
-// Winner selection
-// ---------------------------------------------------------------------------
+  const leftRecord = left as Record<string, WardAttributeValue>;
+  const rightRecord = right as Record<string, WardAttributeValue>;
+  const leftKeys = Object.keys(leftRecord);
+  const rightKeys = Object.keys(rightRecord);
 
-/**
- * Returns true if `challenger` would displace `current` as the pickWinner result.
- */
-export function isOverriddenBy<TAction extends string, TData>(
-  current: CompiledEntry<TAction, TData>,
-  challenger: CompiledEntry<TAction, TData>,
-): boolean {
   return (
-    challenger.priority > current.priority ||
-    (challenger.priority === current.priority && challenger.score > current.score) ||
-    (challenger.priority === current.priority &&
-      challenger.score === current.score &&
-      challenger.denyBonus > current.denyBonus)
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) => Object.hasOwn(rightRecord, key) && deepEqual(leftRecord[key], rightRecord[key]))
   );
 }
 
-export function pickWinner<TAction extends string, TData>(
-  entries: CompiledEntry<TAction, TData>[],
-  principal: Principal,
-  resource: string,
-  action: TAction,
-  data: TData | undefined,
-): CompiledEntry<TAction, TData> | undefined {
-  let winner: CompiledEntry<TAction, TData> | undefined;
+export function attributesMatch(expected: WardAttributes | undefined, actual: WardAttributes | undefined): boolean {
+  if (!expected) return true;
+  if (!actual) return false;
 
-  for (const entry of entries) {
-    if (!matchesRule(entry, principal, resource, action, data)) continue;
-
-    if (!winner || isOverriddenBy(winner, entry)) {
-      winner = entry;
-    }
-  }
-
-  return winner;
+  return Object.keys(expected).every((key) => Object.hasOwn(actual, key) && deepEqual(expected[key], actual[key]));
 }
 
-export function toDecision<TAction extends string, TData>(
-  winner: CompiledEntry<TAction, TData> | undefined,
-): WardDecision<TAction, TData> {
-  if (!winner) return { allowed: false, reason: 'no-matching-rule' };
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function') ||
+    (typeof value === 'function' && 'then' in value && typeof value.then === 'function')
+  );
+}
 
-  if (winner.rule.effect === 'deny') {
-    return {
-      allowed: false,
-      reason: 'explicit-deny',
-      rule: winner.rule,
-    };
+export function ruleMatches<TAction extends string, TResource extends string, TAttributes extends WardAttributes>(
+  rule: WardRule<TAction, TResource, TAttributes>,
+  index: number,
+  input: WardDecisionInput<TAction, TResource, TAttributes> & { principal: Principal },
+): boolean {
+  if (!matchesPattern(rule.action, input.action)) return false;
+  if (!matchesPattern(rule.resource, input.resource)) return false;
+  if (!attributesMatch(rule.attributes, input.attributes)) return false;
+  if (!rule.condition) return true;
+
+  try {
+    const result: unknown = rule.condition({ attributes: input.attributes, principal: input.principal });
+
+    if (isThenable(result)) {
+      throw new TypeError('Async conditions are not supported; return a boolean');
+    }
+    if (typeof result !== 'boolean') {
+      throw new TypeError('Conditions must return a boolean');
+    }
+
+    return result;
+  } catch (error) {
+    throw new WardConditionError(index, error);
   }
-
-  return { allowed: true, rule: winner.rule };
 }

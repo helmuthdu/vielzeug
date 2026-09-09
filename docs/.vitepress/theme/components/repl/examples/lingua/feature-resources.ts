@@ -1,17 +1,17 @@
 export const featureResourcesExample = {
-  code: `import { createTranslationStore } from '@vielzeug/lingua'
+  code: `import { createI18n } from '@vielzeug/lingua'
 
-const i18n = createTranslationStore({
-  catalogs: {
-    en: { home: 'Home' },
-    fr: async () => ({ home: 'Accueil' }),
-  },
+const frCatalog = { home: 'Accueil' }
+
+const i18n = createI18n({
+  catalogs: { en: { home: 'Home' } },
   locale: 'en',
+  loadCatalog: () => frCatalog,
 })
 
 console.log(i18n.translate('home'))
+
 await i18n.setLocale('fr')
-await i18n.load()
 console.log(i18n.translate('home'))`,
   name: 'Lazy Locale Catalog',
 };

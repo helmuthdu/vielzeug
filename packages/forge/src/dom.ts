@@ -1,50 +1,46 @@
-import type { Field, ReadonlyDeep } from './types';
+import type { Field, FieldState } from './types.js';
 
-export type FieldBindingOptions<Element extends HTMLElement, V> = Readonly<{
+export type FieldBindingOptions<Element extends HTMLElement, Value> = Readonly<{
   event?: keyof HTMLElementEventMap;
-  read(element: Element): V;
-  write?: (element: Element, value: ReadonlyDeep<V>) => void;
+  read(element: Element): Value;
+  write?: (element: Element, value: FieldState<Value>['value']) => void;
 }>;
 
-/** Binds one field to one element without imposing parsing, debounce, or validation policy. */
-export function bindField<Element extends HTMLElement, V>(
+export function bindField<Element extends HTMLElement, Value>(
   element: Element,
-  field: Field<V>,
-  options: FieldBindingOptions<Element, V>,
+  field: Field<Value>,
+  options: FieldBindingOptions<Element, Value>,
 ): () => void {
   const event = options.event ?? 'input';
   let updatingFromElement = false;
-  const onInput = () => {
-    updatingFromElement = true;
+  let hasRendered = false;
+  let rendered = field.value;
 
+  const onInput = (): void => {
+    updatingFromElement = true;
     try {
       field.set(options.read(element));
     } finally {
       updatingFromElement = false;
     }
   };
-  const onBlur = () => field.touch();
-  let hasRendered = false;
-  let rendered = field.value;
+  const onBlur = (): void => field.touch();
   const unsubscribe = options.write
     ? field.subscribe(
         ({ value }) => {
           if (updatingFromElement) {
             hasRendered = true;
             rendered = value;
-
             return;
           }
-
-          if (hasRendered && value === rendered) return;
-
+          if (hasRendered && Object.is(value, rendered)) return;
           hasRendered = true;
           rendered = value;
           options.write?.(element, value);
         },
         { immediate: true },
       )
-    : () => {};
+    : () => undefined;
 
   element.addEventListener(event, onInput);
   element.addEventListener('blur', onBlur);

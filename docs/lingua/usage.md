@@ -7,12 +7,12 @@ description: Translate explicit catalogs, load lazy locales, and connect locale 
 
 ## Basic Usage
 
-Create i18n store from locale-keyed catalogs. Strings are text messages; plural messages use `{ plural: ... }`.
+Create an i18n instance with eager locale catalogs. Strings are text messages; plural messages use `{ plural: ... }`.
 
 ```ts
-import { createTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
-const i18n = createTranslationStore({
+const i18n = createI18n({
   catalogs: {
     en: {
       greeting: 'Hello, {name}!',
@@ -26,7 +26,7 @@ console.log(i18n.translate('greeting', { values: { name: 'Ada' } }));
 console.log(i18n.translate('inbox', { count: 3 }));
 ```
 
-Call `dispose()` when store belongs to temporary request, test, or route owner.
+Call `dispose()` when the instance belongs to a temporary request, test, or route owner.
 
 ## Define Explicit Catalogs
 
@@ -41,12 +41,12 @@ const catalog = {
 };
 ```
 
-Use `{ values }` for text replacements. Pass `count` at top level for plural selection; Lingua injects it into selected template. Absent replacements render as `{name}` by default. `segments()` preserves an own `undefined` or `null` value; omit property to receive `{name}`.
+Use `{ values }` for text replacements. Pass `count` at top level for plural selection; Lingua injects it into selected template.
 
 Catalogs contain strings, grouping objects, and explicit `{ plural: ... }` messages only. Keep application data outside catalog, then translate display labels while constructing it.
 
 ```ts
-import { createCatalogTranslator } from '@vielzeug/lingua';
+import { createTranslator } from '@vielzeug/lingua';
 
 const messages = {
   status: { blocked: 'Blocked', done: 'Done', inProgress: 'In progress' },
@@ -56,20 +56,35 @@ const statusDefinitions = [
   { labelKey: 'status.blocked', value: 'blocked' },
   { labelKey: 'status.done', value: 'done' },
 ] as const;
-const translator = createCatalogTranslator(messages);
+const translator = createTranslator(messages, { locale: 'en' });
 const statusOptions = statusDefinitions.map(({ labelKey, value }) => ({ label: translator.translate(labelKey), value }));
+```
+
+## Missing Keys and Values
+
+Missing keys and values do not silently echo placeholders by default — Lingua warns in development and returns the key or `{name}`. Control failure behaviour with the `missing` option:
+
+| `missing` | Behaviour |
+| --- | --- |
+| `undefined` (default) | Warn in development; return key / `{name}` |
+| `'key'` | Return key / `{name}` silently |
+| `'throw'` | Throw `LinguaMissingKeyError` / `LinguaMissingValueError` |
+| `handler` | Call `({ key, locale, name? }) => string` |
+
+```ts
+const translator = createTranslator(messages, { locale: 'en', missing: 'throw' });
 ```
 
 ## Enumerate Catalog Keys
 
-Use `catalogKeys()` to derive key arrays from the catalog itself instead of maintaining a parallel list that can go stale. It traverses nested grouping objects and explicit `{ plural: ... }` messages, returning the same dotted paths that `TextKey<C>` represents at the type level.
+Use `catalogKeys()` to derive key arrays from the catalog itself instead of maintaining a parallel list that can go stale. It traverses nested grouping objects and explicit `{ plural: ... }` messages, returning the same dotted paths that `MessageKey<C>` represents at the type level.
 
-Pass a `TranslationStore` to enumerate keys from its current locale catalog without specifying a locale explicitly.
+Pass an `I18n` instance to enumerate keys from its current locale catalog without specifying a locale explicitly.
 
 ```ts
-import { catalogKeys, createTranslationStore } from '@vielzeug/lingua';
+import { catalogKeys, createI18n } from '@vielzeug/lingua';
 
-const i18n = createTranslationStore({
+const i18n = createI18n({
   catalogs: {
     en: {
       greeting: 'Hello, {name}!',
@@ -100,47 +115,39 @@ const navKeys = catalogKeys(messages.nav);
 // ['home', 'settings']
 ```
 
-Use this for random message selection, cycling, or validation without a stale parallel array.
-
 ## Render Framework Content
 
-Use `segments()` when replacements are framework nodes, links, or other values that must not be stringified.
+Use `parts()` when replacements are framework nodes, links, or other values that must not be stringified. `parts()` returns a discriminated union: `{ type: 'text', value: string }` for literal text and `{ type: 'value', value: V }` for interpolated values.
 
 ```ts
-import { createCatalogTranslator } from '@vielzeug/lingua';
+import { createTranslator } from '@vielzeug/lingua';
 
-const translator = createCatalogTranslator({ error: 'Try {retry} or {support}.' });
+const translator = createTranslator({ error: 'Try {retry} or {support}.' }, { locale: 'en' });
 
 const retry = { href: '/retry', label: 'retry' };
 const support = { href: '/support', label: 'support' };
 
-console.log(translator.segments('error', { values: { retry, support } }));
+const result = translator.parts('error', { values: { retry, support } });
+// [
+//   { type: 'text', value: 'Try ' },
+//   { type: 'value', value: { href: '/retry', label: 'retry' } },
+//   { type: 'text', value: ' or ' },
+//   { type: 'value', value: { href: '/support', label: 'support' } },
+//   { type: 'text', value: '.' },
+// ]
 ```
 
-Render returned array with framework fragment or list primitive. Give UI values consumer-owned keys before passing them to `segments()`; Lingua preserves value identity and never clones or mutates them.
+Render returned array with framework fragment or list primitive. Give UI values consumer-owned keys before passing them to `parts()`; Lingua preserves value identity and never clones or mutates them.
 
-## Use Static Catalogs
+## Use a Fixed-Locale Translator
 
-Use `createCatalogTranslator()` when one catalog and locale stay fixed for translator lifetime. It defaults locale to `en`; pass `locale` when plural rules or diagnostics need another locale. Lingua snapshots catalog messages during construction. Do not mutate source catalog objects afterward.
-
-```ts
-import { createCatalogTranslator } from '@vielzeug/lingua';
-
-const translator = createCatalogTranslator(
-  { save: 'Enregistrer' },
-  { locale: 'fr' },
-);
-
-console.log(translator.translate('save'));
-```
-
-Use `createTranslator()` when fixed translation requires locale-keyed catalogs and fallback resolution.
+Use `createTranslator()` when one catalog and locale stay fixed for the translator's lifetime. It defaults locale to `en`; pass `locale` when plural rules or diagnostics need another locale. Lingua snapshots catalog messages during construction. Do not mutate source catalog objects afterward.
 
 ```ts
 import { createTranslator } from '@vielzeug/lingua';
 
 const translator = createTranslator(
-  { en: { save: 'Save' }, fr: { save: 'Enregistrer' } },
+  { save: 'Enregistrer' },
   { locale: 'fr' },
 );
 
@@ -149,29 +156,27 @@ console.log(translator.translate('save'));
 
 ## Load Catalogs and Switch Locales
 
-Declare one static catalog or lazy loader per locale. Switch locale, then load it explicitly when source is lazy.
+Provide eager catalogs for translations needed immediately and a `loadCatalog` function for other locales. `setLocale()` loads the selected locale and configured fallbacks before it commits the change.
 
 ```ts
-import { createTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
-const i18n = createTranslationStore({
-  catalogs: {
-    en: { navigation: { settings: 'Settings' } },
-    fr: async () => ({ navigation: { settings: 'Réglages' } }),
-  },
+const i18n = createI18n({
+  catalogs: { en: { navigation: { settings: 'Settings' } } },
+  fallback: 'en',
   locale: 'en',
+  loadCatalog: (locale) => import(`./locales/${locale}.ts`).then((m) => m.default),
 });
 
 await i18n.setLocale('fr');
-await i18n.load();
 console.log(i18n.translate('navigation.settings'));
 ```
 
-Concurrent loads for same locale share work. `setLocale()` never triggers hidden loads.
+Use loader-only configuration when every locale is lazy, and call `load()` before the first translation. Concurrent loads for the same locale share work. A failed or superseded locale selection never changes the current snapshot.
 
 ## Subscribe to Immutable Snapshots
 
-Subscribe when UI state must change with locale or loaded active/fallback catalog. Every callback receives snapshot containing translator for that revision.
+Subscribe when UI state must change with locale or loaded active/fallback catalog. Every callback receives a snapshot containing the translator for that revision.
 
 ```ts
 const unsubscribe = i18n.subscribe(
@@ -188,38 +193,35 @@ Pass `{ signal }` when an `AbortController` owns subscription lifetime.
 
 ## SSR State
 
-Serialize resolved catalogs on server, then hydrate client store from same payload. `getSnapshot()` stays referentially stable until store revision changes, so use same hydrated store throughout initial client render.
+Serialize resolved catalogs on the server, then hydrate a client instance from the same payload via the `state` option. `getSnapshot()` stays referentially stable until the store revision changes, so use the same hydrated instance throughout initial client render.
 
 ```ts
-import { createTranslationStore, hydrateTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
-const serverTranslationStore = createTranslationStore({
+const serverI18n = createI18n({
   catalogs: { en: { title: 'Server title' } },
   locale: 'en',
 });
 
-const state = serverTranslationStore.serialize();
-const clientTranslationStore = hydrateTranslationStore(state, { fallback: 'en' });
+const state = serverI18n.serialize();
+const clientI18n = createI18n({ state });
 
-console.log(clientTranslationStore.translate('title'));
-serverTranslationStore.dispose();
-clientTranslationStore.dispose();
+console.log(clientI18n.translate('title'));
+serverI18n.dispose();
+clientI18n.dispose();
 ```
 
-State contains raw loaded catalogs. It never contains loader functions.
+State contains raw loaded catalogs and the active locale. It never contains loader functions. Pass an explicit `locale` only when the client should override the serialized locale.
 
-## Formatting and Validation
+## Validation
 
-Import formatting and catalog validation from dedicated subpaths to keep translation state focused.
+Import catalog validation from the dedicated subpath to keep translation state focused.
 
 ```ts
-import { createFormatter } from '@vielzeug/lingua/format';
 import { compareCatalogs, validateCatalog } from '@vielzeug/lingua/validate';
 
-const formatter = createFormatter('en-US');
 const catalog = { inbox: { plural: { one: 'One message', other: '{count} messages' } } };
 
-console.log(formatter.currency(19.99, 'USD'));
 console.log(validateCatalog(catalog, 'en'));
 ```
 
@@ -237,16 +239,16 @@ const result = compareCatalogs({
 
 ## Framework Integration
 
-Pass stable `getSnapshot()` and `subscribe()` methods to framework state primitives. For SSR, create client store from same serialized state used by server before calling `useSyncExternalStore`.
+Pass stable `getSnapshot()` and `subscribe()` methods to framework state primitives. For SSR, create client instance from the same serialized state used by the server before calling `useSyncExternalStore`.
 
 ::: code-group
 
 ```ts [React]
 import { useSyncExternalStore } from 'react';
 
-import type { TranslationStore } from '@vielzeug/lingua';
+import type { I18n } from '@vielzeug/lingua';
 
-export function useTranslator(i18n: TranslationStore) {
+export function useTranslator(i18n: I18n) {
   const snapshot = useSyncExternalStore(i18n.subscribe, i18n.getSnapshot, i18n.getSnapshot);
 
   return snapshot.translator;
@@ -256,9 +258,9 @@ export function useTranslator(i18n: TranslationStore) {
 ```ts [Vue 3]
 import { onUnmounted, shallowRef } from 'vue';
 
-import type { TranslationStore } from '@vielzeug/lingua';
+import type { I18n } from '@vielzeug/lingua';
 
-export function useTranslator(i18n: TranslationStore) {
+export function useTranslator(i18n: I18n) {
   const snapshot = shallowRef(i18n.getSnapshot());
   const unsubscribe = i18n.subscribe((next) => {
     snapshot.value = next;
@@ -272,9 +274,9 @@ export function useTranslator(i18n: TranslationStore) {
 ```ts [Svelte]
 import { readable } from 'svelte/store';
 
-import type { TranslationStore } from '@vielzeug/lingua';
+import type { I18n } from '@vielzeug/lingua';
 
-export function translatorStore(i18n: TranslationStore) {
+export function translatorStore(i18n: I18n) {
   return readable(i18n.getSnapshot().translator, (set) => i18n.subscribe(({ translator }) => set(translator)));
 }
 ```
@@ -283,25 +285,19 @@ export function translatorStore(i18n: TranslationStore) {
 
 ## Working with Other Vielzeug Libraries
 
-Bridge Lingua subscriptions into Ripple through Flux when templates need reactive locale reads.
+Bridge Lingua's structural snapshot directly when templates need reactive locale reads.
 
 ```ts
-import { stream } from '@vielzeug/flux';
-import { toSignal } from '@vielzeug/flux/ripple';
-import { computed } from '@vielzeug/ripple';
+import { createRipple } from '@vielzeug/ripple';
 
-const localeBinding = toSignal(
-  stream<string>((observer) => {
-    observer.next(i18n.locale);
-    return i18n.subscribe(({ locale }) => observer.next(locale));
-  }),
-  { initial: i18n.locale },
-);
+const ripple = createRipple();
+const i18nState = ripple.fromSubscribable(i18n);
+export const locale = ripple.computed(() => i18nState.value.locale);
 
-export const locale = computed(() => localeBinding.value);
+export const disposeLocaleBridge = () => ripple.dispose();
 ```
 
-Use Courier loaders when locale catalogs come from HTTP rather than bundled modules; pass each loader to `catalogs`.
+Use Courier loaders when locale catalogs come from HTTP rather than bundled modules; pass each loader to `loadCatalog`.
 
 ## Best Practices
 
@@ -309,7 +305,8 @@ Use Courier loaders when locale catalogs come from HTTP rather than bundled modu
 - Keep arrays and application metadata outside catalogs.
 - Treat source catalog objects as immutable after construction.
 - Use `translateDynamic()` only for runtime-generated keys.
-- Load a lazy catalog before rendering it.
-- Give UI values keys before passing them to `segments()`.
+- Provide eager catalogs for translations required during initial render.
+- Give UI values keys before passing them to `parts()`.
 - Keep loader functions out of SSR payloads.
-- Dispose temporary stores after requests, tests, and route lifetimes.
+- Dispose temporary instances after requests, tests, and route lifetimes.
+- Use `missing: 'throw'` in development to catch missing keys and values early.

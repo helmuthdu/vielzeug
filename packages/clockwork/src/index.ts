@@ -1,10 +1,8 @@
-export type { ClockworkErrorCode } from './errors.js';
-export { ClockworkError } from './errors.js';
+export { ClockworkError, type ClockworkErrorCode } from './errors.js';
 export { defineMachine } from './interpret.js';
 export type {
   Actor,
   ActorErrorContext,
-  ActorErrorDisposition,
   ActorOptions,
   After,
   Effect,

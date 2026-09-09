@@ -9,9 +9,9 @@ const log = createLogger({
   transports: [(entry) => entries.push(entry)],
 })
 
-log.info({ path: '/users', method: 'GET' }, 'request')
+log.info('request', { path: '/users', method: 'GET' })
 log.warn('cache miss')
-log.error({ err: new Error('timeout') }, 'request failed')
+log.error('request failed', { err: new Error('timeout') })
 
 // Inspect the structured LogEntry objects captured by the transport
 entries.forEach((e, i) => {

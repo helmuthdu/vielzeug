@@ -28,5 +28,5 @@ countBy(users, (u) => u.role);
 
 ### Related
 
-- [groupBy](./group.md)
-- [indexBy](./keyBy.md)
+- [groupBy](./groupBy.md)
+- [indexBy](./indexBy.md)

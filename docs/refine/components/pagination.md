@@ -39,7 +39,7 @@ Listen for page changes:
 
 ## Variants
 
-The `variant` prop controls the visual style of the previous, next, first, and last navigation buttons. Page number buttons are unaffected.
+The `variant` prop controls the visual style of every navigation and page button.
 
 <ComponentPreview vertical>
 
@@ -136,7 +136,7 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 | `show-first-last` | `boolean`                                                                                 | `false`        | Show first and last page buttons                      |
 | `show-prev-next`  | `boolean`                                                                                 | `false`        | Show previous and next page buttons                   |
 | `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`                 | —              | Active page color                                     |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost' \| 'glass'` | `'ghost'`      | Visual style of nav buttons                           |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'ghost'`      | Visual style of nav buttons                           |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`         | Component size                                        |
 | `label`           | `string`                                                                                  | `'Pagination'` | `aria-label` for the nav landmark                     |
 

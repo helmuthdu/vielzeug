@@ -1,6 +1,6 @@
 ---
 title: Orbit — Floating UI positioning
-description: Dependency-free floating positioning with lifecycle-owned geometry and middleware.
+description: Floating positioning with lifecycle-owned geometry and middleware.
 package: orbit
 category: ui
 keywords: [positioning, tooltip, popover, dropdown, middleware, floating-ui]
@@ -25,13 +25,12 @@ panel.style.top = `${y}px`;
 
 // After
 const positioner = createPositioner(trigger, panel);
-positioner.start();
 ```
 
 | Feature | Manual DOM positioning | Orbit |
 | --- | --- | --- |
 | Bundle size | 0 B | <PackageInfo package="orbit" type="size" /> |
-| Root dependencies | Application-defined | <ore-icon name="check" size="16"></ore-icon> |
+| Root dependencies | Application-defined | `@vielzeug/arsenal` |
 | Clipping boundary | Manual geometry | `clippingAncestors` default |
 | Coordinate strategy | Consumer logic | `fixed` / `absolute` |
 | Cleanup | Manual listeners | `dispose()` |
@@ -64,7 +63,7 @@ yarn add @vielzeug/orbit
 
 ## Quick Start
 
-Start a positioner only after its reference and floating elements mount.
+Create a positioner only after its reference and floating elements mount; positioning starts immediately.
 
 ```ts
 import { createPositioner, flip, offset, shift } from '@vielzeug/orbit';
@@ -74,7 +73,6 @@ const positioner = createPositioner(trigger, tooltip, {
   placement: 'top',
 });
 
-positioner.start();
 positioner.dispose();
 ```
 

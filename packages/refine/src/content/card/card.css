@@ -131,23 +131,6 @@
   :host([variant='flat']) .card {
     border: var(--_border) solid var(--_border-color);
   }
-
-  /* Glass — frosted blur panel */
-  :host([variant='glass']) .card {
-    text-shadow: var(--text-shadow-xs);
-    border: var(--_border) solid var(--_border-color);
-    box-shadow: var(--card-shadow, var(--shadow-md)), var(--inset-shadow-xs);
-    backdrop-filter: blur(var(--blur-lg)) saturate(180%) brightness(1.05);
-  }
-
-  :host([variant='glass']:hover) .card {
-    box-shadow: var(--card-hover-shadow, var(--shadow-xl)), var(--inset-shadow-sm);
-    backdrop-filter: blur(var(--blur-xl)) saturate(200%) brightness(1.1);
-  }
-
-  :host([variant='glass'][interactive]:hover) .card {
-    box-shadow: var(--card-hover-shadow, var(--shadow-2xl)), var(--inset-shadow-sm);
-  }
 }
 
 @layer refine.overrides {

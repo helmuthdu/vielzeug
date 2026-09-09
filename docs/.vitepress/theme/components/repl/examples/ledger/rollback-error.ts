@@ -5,8 +5,8 @@ const ledger = createLedger()
 
 await ledger.do({
   apply: () => console.log('applied'),
-  label: 'Save to server',
-  revert: () => { throw new Error('server unreachable') },
+  label: 'Update draft',
+  revert: () => { throw new Error('draft is locked') },
 })
 
 try {

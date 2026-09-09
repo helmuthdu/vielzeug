@@ -31,12 +31,47 @@ describe('watch', () => {
     ripple.dispose();
   });
 
+  it('does not track reactive reads made only by the callback', () => {
+    const ripple = createRipple();
+    const source = ripple.signal(0);
+    const unrelated = ripple.signal(0);
+    let sourceReads = 0;
+    const stop = ripple.watch(
+      () => {
+        sourceReads += 1;
+        return source.value;
+      },
+      () => void unrelated.value,
+      { immediate: true },
+    );
+
+    unrelated.value = 1;
+
+    expect(sourceReads).toBe(1);
+    stop.dispose();
+    ripple.dispose();
+  });
+
+  it('disposes a once watcher even when its callback fails', () => {
+    const ripple = createRipple({ errorPolicy: 'swallow' });
+    const count = ripple.signal(1);
+    const callback = vi.fn(() => {
+      throw new Error('failed callback');
+    });
+    const stop = ripple.watch(count, callback, { immediate: true, once: true });
+
+    count.value = 2;
+
+    expect(callback).toHaveBeenCalledOnce();
+    expect(stop.disposed).toBe(true);
+    ripple.dispose();
+  });
+
   it('retries watcher after immediate callback fails', () => {
     const errors: string[] = [];
-    const ripple = createRipple({
-      onError(error, context) {
-        errors.push(`${context.kind}:${(error as Error).message}`);
-      },
+    const ripple = createRipple({ errorPolicy: 'swallow' });
+    ripple.tap((event) => {
+      if (event.type === 'error') errors.push(`${event.context.kind}:${(event.error as Error).message}`);
     });
     const count = ripple.signal(1);
     const values: number[] = [];

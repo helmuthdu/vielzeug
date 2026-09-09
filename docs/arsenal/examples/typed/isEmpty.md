@@ -28,6 +28,3 @@ isEmpty({ a: 1 }); // false
 ```
 
 ### Related
-
-- [isDefined](./isDefined.md)
-- [compact](../array/compact.md)

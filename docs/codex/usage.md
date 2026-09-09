@@ -24,7 +24,7 @@ npx -y @vielzeug/codex --port=3100
 curl http://127.0.0.1:3100/health
 ```
 
-Response includes snapshot version. No legacy SSE endpoint, CORS wildcard, or remote host mode exists.
+Response includes snapshot version. Runtime bind validation and Host/Origin allowlists restrict access to localhost; no remote host mode exists. Programmatic `configureServer` hooks run once per MCP request server, not at host startup. Dispose the host asynchronously and observe `disposed` or `disposalSignal` when coordinating shutdown.
 
 ## Local Development
 
@@ -55,12 +55,24 @@ curl http://127.0.0.1:3100/health
 ## Programmatic Usage
 
 ```ts
-import { SnapshotCatalog, createMcpServer, loadSnapshot } from '@vielzeug/codex';
-import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+import { SnapshotCatalog, StdioServerTransport, createMcpServer, loadSnapshot } from '@vielzeug/codex';
 
 const snapshot = loadSnapshot();
 const catalog = new SnapshotCatalog(snapshot);
 await createMcpServer(catalog, { version: snapshot.manifest.version }).connect(new StdioServerTransport());
+```
+
+To include Refine component tools, upgrade the server with the `@vielzeug/codex/refine` subpath:
+
+```ts
+import { StdioServerTransport, createMcpServer, loadSnapshot } from '@vielzeug/codex';
+import { SnapshotRefineCatalog, registerRefineTools } from '@vielzeug/codex/refine';
+
+const snapshot = loadSnapshot();
+const catalog = new SnapshotRefineCatalog(snapshot);
+const server = createMcpServer(catalog, { version: snapshot.manifest.version });
+registerRefineTools(server, catalog);
+await server.connect(new StdioServerTransport());
 ```
 
 ## Best Practices
@@ -68,6 +80,7 @@ await createMcpServer(catalog, { version: snapshot.manifest.version }).connect(n
 - Use `search-packages` for capability discovery before loading broad source.
 - Use `get-type-signature` before loading full source.
 - Published package snapshots are static directories; local dev snapshots are immutable generations selected by `.dev/current.json`.
-- Run `validateSnapshot()` in artifact verification paths, not normal server startup.
+- Import `validateSnapshot()` from `/advanced` for artifact verification; normal startup keeps package chunks lazy.
+- Treat `configureServer` as a per-request factory hook and avoid process-global side effects.
 - Keep HTTP local. Use stdio for normal client integration.
 - Run `pnpm test:unit` before `pnpm test:integration`.

@@ -1,6 +1,6 @@
 import { createPanGesture, type PanAxis, type PanGesture, type PanGestureEndDetail } from '@vielzeug/gesture';
 import {
-  createStableId,
+  createId,
   define,
   getHost,
   html,
@@ -181,7 +181,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     const emit = useEmit<OreDrawerEvents>();
     const slots = useSlots();
 
-    const drawerLabelId = createStableId('drawer-label');
+    const drawerLabelId = createId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
 

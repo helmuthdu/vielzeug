@@ -29,7 +29,7 @@ try {
 // Disposing the channel removes all its listeners
 // but the underlying pulse connection stays open
 chat.dispose()
-console.log('channel disposed, pulse still open:', pulse.status.value)
+console.log('channel disposed, pulse still open:', pulse.status.getSnapshot())
 
 pulse.dispose()`,
   name: 'Typed Channels',

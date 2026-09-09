@@ -1,8 +1,8 @@
 export const staticTranslatorExample = {
-  code: `import { createCatalogTranslator } from '@vielzeug/lingua'
+  code: `import { createTranslator } from '@vielzeug/lingua'
 
 // Immutable translator: explicit text and plural catalog nodes.
-const translator = createCatalogTranslator({
+const translator = createTranslator({
   greeting: 'Bonjour, {name} !',
   inbox: { plural: { one: 'Un message', other: '{count} messages' } },
 }, { locale: 'fr' })

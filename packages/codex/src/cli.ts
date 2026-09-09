@@ -3,14 +3,16 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import type { Server } from '@modelcontextprotocol/server';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import { log } from './_log.js';
-import { SnapshotCatalog } from './catalog.js';
 import { startHttpHost } from './http.js';
 import { resolvePort } from './port.js';
+import { SnapshotRefineCatalog } from './refine-catalog.js';
 import { createMcpServer } from './server.js';
 import { loadSnapshot } from './snapshot.js';
+import { registerRefineTools } from './tools/refine.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -54,22 +56,36 @@ export async function main(argv: readonly string[] = process.argv.slice(2)): Pro
     }));
 
     const snapshot = loadSnapshot(values.snapshot);
-    const catalog = new SnapshotCatalog(snapshot);
+    const catalog = new SnapshotRefineCatalog(snapshot);
     const port = resolvePort(values.port);
+    const configure = (server: Server): void => registerRefineTools(server, catalog, values.debug);
 
     if (port === null) {
-      await createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version }).connect(
-        new StdioServerTransport(),
-      );
+      const server = createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version });
+
+      configure(server);
+      await server.connect(new StdioServerTransport());
 
       return 0;
     }
 
-    const host = await startHttpHost({ catalog, debug: values.debug, port, version: snapshot.manifest.version });
+    const host = await startHttpHost({
+      catalog,
+      configureServer: configure,
+      debug: values.debug,
+      port,
+      version: snapshot.manifest.version,
+    });
     const shutdown = (): void => {
-      void host.dispose().then(() => {
-        process.exitCode = 0;
-      });
+      void host.dispose().then(
+        () => {
+          process.exitCode = 0;
+        },
+        (error: unknown) => {
+          log(`error: failed to shut down HTTP host: ${error instanceof Error ? error.message : String(error)}`);
+          process.exitCode = 1;
+        },
+      );
     };
 
     process.once('SIGINT', shutdown);

@@ -4,7 +4,6 @@ import { difference } from '../difference';
 import { drop } from '../drop';
 import { dropLast } from '../dropLast';
 import { first } from '../first';
-import { flatten } from '../flatten';
 import { intersection } from '../intersection';
 import { last } from '../last';
 import { partition } from '../partition';
@@ -61,9 +60,7 @@ describe('array extras', () => {
     expect(dropLast([1, 2, 3, 4], 2)).toEqual([1, 2]);
   });
 
-  it('flattens and partitions arrays', () => {
-    expect(flatten([1, [2, [3]]], 1)).toEqual([1, 2, [3]]);
-    expect(flatten([1, [2, [3]]], 2)).toEqual([1, 2, 3]);
+  it('partitions arrays', () => {
     expect(partition([1, 2, 3, 4], (item) => item % 2 === 0)).toEqual([
       [2, 4],
       [1, 3],

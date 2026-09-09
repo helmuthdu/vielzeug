@@ -103,4 +103,27 @@ describe('data() loader', () => {
     expect(statuses.at(-1)).toBe('idle');
     router.dispose();
   });
+
+  it('routes synchronous loader failures through onError', async () => {
+    const boundary = vi.fn(() => 'fallback');
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: {
+        home: {
+          data: () => {
+            throw new Error('sync failure');
+          },
+          onError: boundary,
+          path: '/',
+        },
+      },
+    });
+
+    await router.ready;
+
+    expect(boundary).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ pathname: '/' }));
+    expect(router.getSnapshot().status).toBe('idle');
+    expect(router.getSnapshot().matches.at(-1)?.data).toBe('fallback');
+    router.dispose();
+  });
 });

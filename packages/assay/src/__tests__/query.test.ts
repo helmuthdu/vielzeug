@@ -12,13 +12,12 @@ describe('within()', () => {
     expect(view.queryAll('.a')).toHaveLength(2);
   });
 
-  it('supports nullable and required text/test-id queries', () => {
+  it('supports nullable and required test-id queries', () => {
     const root = document.createElement('div');
 
     root.innerHTML = `
       <span data-testid="label">Hello</span>
       <span data-testid="other">World</span>
-      <p>Hello</p>
     `;
 
     const view = within(root);
@@ -26,9 +25,16 @@ describe('within()', () => {
     expect(view.queryByTestId('label')?.textContent).toBe('Hello');
     expect(view.getByTestId('label').textContent).toBe('Hello');
     expect(view.queryAllByTestId('label')).toHaveLength(1);
-    expect(view.queryByText('Hello')?.tagName).toBe('SPAN');
-    expect(view.getByText('Hello').tagName).toBe('SPAN');
-    expect(view.queryAllByText('Hello')).toHaveLength(2);
+  });
+
+  it('supports exact trimmed-text queries with an optional selector', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<button> Save </button><span>Save</span><span>Other</span>';
+    const view = within(root);
+
+    expect(view.getByText('Save', 'button')).toBeInstanceOf(HTMLButtonElement);
+    expect(view.queryByText('Missing')).toBeNull();
+    expect(view.queryAllByText('Save')).toHaveLength(2);
   });
 
   it('scopes queries to a ShadowRoot', () => {

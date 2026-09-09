@@ -36,7 +36,7 @@ const result = await form.submit((value) =>
   fetch('/api/contact', { body: toFormData(value), method: 'POST' }).then((response) => response.ok),
 );
 
-if (result.status === 'invalid') console.log(result.errors);
+if (result.status === 'invalid') console.log(result.issues);
 ```
 
 ### Pitfalls

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/scout",
   "version": "2.4.0",
-  "description": "Fast fuzzy-search with a trigram index, per-field weighting, match highlighting, and an optional reactive layer",
+  "description": "Fast fuzzy-search with a trigram index, per-field weighting, match highlighting, and framework-neutral reactive state",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -37,9 +37,6 @@
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "test": "vitest"
-  },
-  "dependencies": {
-    "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",

@@ -16,10 +16,19 @@ export interface JobContext {
 
 export type Validate<T> = ((value: unknown) => T) | { parse(value: unknown): T };
 
+/**
+ * Contiguous version-step migrations keyed by the source version.
+ *
+ * Key `n` transforms a payload from version `n` to version `n + 1`.
+ * The lowest key declares the earliest supported stored version, and
+ * the highest key must lead into the job's current version.
+ */
+export type VersionMigrations = { readonly [fromVersion: number]: (payload: unknown) => unknown };
+
 export interface JobDefinition<T> {
   readonly execute: (payload: T, context: JobContext) => Promise<void>;
   readonly key: (payload: T) => string;
-  readonly migrate?: (payload: unknown, fromVersion: number) => unknown;
+  readonly migrate?: VersionMigrations;
   readonly retry?: RetryPolicy;
   readonly validate?: Validate<T>;
   readonly version: number;
@@ -150,7 +159,7 @@ export interface Postmaster<J extends JobDefinitions> {
   list(filter?: EntryFilter): Promise<PostmasterEntry[]>;
   remove(id: string): Promise<RemoveResult>;
   retry(id: string): Promise<RetryResult>;
-  start(): Promise<void>;
+  start(): void;
   stats(): Promise<PostmasterStats>;
   tap(handler: (event: PostmasterEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   [Symbol.asyncDispose](): Promise<void>;

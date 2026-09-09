@@ -1,7 +1,8 @@
-import { assertDuration } from '../_numeric';
-import { defaultScheduler } from '../_scheduler';
-import { stream } from '../core';
-import type { Stream } from '../types';
+import { assertDuration } from '../_numeric.js';
+import { defaultScheduler } from '../_scheduler.js';
+import { reportUnhandledError } from '../_subscription.js';
+import { stream } from '../core.js';
+import type { Stream } from '../types.js';
 
 export type TimerOptions = {
   delay: number;
@@ -39,7 +40,12 @@ export function from<T>(source: AsyncIterable<T> | Iterable<T> | Promise<T>): St
       })();
 
       return () => {
-        void iterator.return?.();
+        try {
+          const returned = iterator.return?.();
+          if (returned) void returned.catch(reportUnhandledError);
+        } catch (reason) {
+          reportUnhandledError(reason);
+        }
       };
     });
   }

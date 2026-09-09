@@ -5,7 +5,7 @@ package: codex
 category: AI
 keywords: [mcp, docs, ai]
 related: [refine]
-exports: [loadSnapshot, SnapshotCatalog, createMcpServer, startHttpHost]
+exports: [loadSnapshot, SnapshotCatalog, createMcpServer, startHttpHost, StdioServerTransport, CatalogError, CodexError]
 environments: [node]
 ---
 
@@ -31,7 +31,9 @@ npx -y @vielzeug/codex
 
 - `loadSnapshot` validates chunked snapshot metadata.
 - `SnapshotCatalog` loads package content only when requested.
-- `createMcpServer` adapts catalog operations to MCP.
+- `createMcpServer` registers generic package tools; `/refine` adds component tools explicitly.
+- Root, `/advanced`, and `/refine` entry points publish TypeScript declarations.
+- `startHttpHost` enforces loopback binding plus localhost Host and Origin validation.
 
 ## Documentation
 

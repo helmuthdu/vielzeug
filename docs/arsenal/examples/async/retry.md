@@ -61,5 +61,4 @@ controller.abort(); // cancels retries mid-flight
 ### Related
 
 - [attempt](./attempt.md)
-- [backoff](../math/backoff.md)
 - [abortable](./abortable.md)

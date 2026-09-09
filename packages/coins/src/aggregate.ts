@@ -1,11 +1,18 @@
 import { decimal, lcm } from './_decimal';
+import { isCurrency } from './currency';
 import { CoinsError, CurrencyMismatchError } from './errors';
 import { assertMoney, createMoney } from './money';
 import type { Currency, Money } from './types';
 
+const MAX_ALLOCATION_PARTS = 100_000;
+
 export function sum<C extends Currency>(values: readonly Money<C>[]): Money<C>;
 export function sum<C extends Currency>(values: Iterable<Money<C>>, options: { currency: C }): Money<C>;
 export function sum<C extends Currency>(values: Iterable<Money<C>>, options?: { currency: C }): Money<C> {
+  if (options && !isCurrency(options.currency)) {
+    throw new CoinsError('INVALID_CURRENCY', 'sum() requires a canonical currency');
+  }
+
   let amount = 0n;
   let currency: C | undefined = options?.currency;
 
@@ -33,7 +40,18 @@ export function allocate<C extends Currency>(value: Money<C>, weightsOrCount: nu
 
   if (typeof weightsOrCount === 'number') return allocateEvenly(value, weightsOrCount);
 
+  if (!Array.isArray(weightsOrCount)) {
+    throw new CoinsError('INVALID_ALLOCATION', 'Allocation weights must be an array');
+  }
   if (weightsOrCount.length === 0) throw new CoinsError('INVALID_ALLOCATION', 'Allocation weights cannot be empty');
+  if (weightsOrCount.length > MAX_ALLOCATION_PARTS) {
+    throw new CoinsError('INVALID_ALLOCATION', `Allocation cannot exceed ${MAX_ALLOCATION_PARTS} parts`);
+  }
+  for (let index = 0; index < weightsOrCount.length; index++) {
+    if (!Object.hasOwn(weightsOrCount, index)) {
+      throw new CoinsError('INVALID_ALLOCATION', 'Allocation weights cannot contain empty slots');
+    }
+  }
 
   const weights = weightsOrCount.map(decimal);
 
@@ -69,8 +87,11 @@ export function allocate<C extends Currency>(value: Money<C>, weightsOrCount: nu
 }
 
 function allocateEvenly<C extends Currency>(value: Money<C>, countValue: number): Money<C>[] {
-  if (!Number.isInteger(countValue) || countValue < 1) {
-    throw new CoinsError('INVALID_ALLOCATION', 'Allocation count must be a positive integer');
+  if (!Number.isSafeInteger(countValue) || countValue < 1 || countValue > MAX_ALLOCATION_PARTS) {
+    throw new CoinsError(
+      'INVALID_ALLOCATION',
+      `Allocation count must be a positive safe integer no greater than ${MAX_ALLOCATION_PARTS}`,
+    );
   }
 
   const count = BigInt(countValue);

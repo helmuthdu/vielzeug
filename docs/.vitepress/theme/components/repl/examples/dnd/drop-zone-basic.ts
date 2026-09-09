@@ -1,5 +1,5 @@
 export const dropZoneBasicExample = {
-  code: `import { createDropZone } from '@vielzeug/dnd'
+  code: `import { createDropZone } from '@vielzeug/dnd/drop'
 
 const dropEl = document.createElement('div')
 dropEl.id = 'drop-zone'

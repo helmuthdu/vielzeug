@@ -14,6 +14,8 @@ export type {
   Ledger,
   LedgerCallOptions,
   LedgerOptions,
+  LedgerReadable,
   LedgerState,
   ReversibleCommand,
+  Unsubscribe,
 } from './types';

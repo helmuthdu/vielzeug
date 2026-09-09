@@ -1,6 +1,6 @@
 ---
 title: Scroll — Virtual list engine for TypeScript
-description: Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and reactive integration.
+description: Lightweight, dependency-free virtual list engine with variable heights, sticky headers, grids, and external-store integration.
 package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
@@ -64,7 +64,7 @@ const virtualizer = createVirtualizer(scrollEl, {
 | Variable heights   | <ore-icon name="check" size="16"></ore-icon> Measured | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> Static |
 | O(log n) lookup    | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                 |
 | `using` support    | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>                     |
-| Zero dependencies | <ore-icon name="x" size="16"></ore-icon> `@vielzeug/ripple` | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -137,7 +137,7 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Sticky headers** — mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
 - **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
 - **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
-- **Reactive state** — provide a `signal` factory to expose current state as a Ripple `Signal`
+- **External-store state** — use `getSnapshot()` and `subscribe()` directly or bridge into Ripple and framework stores
 - **Keyboard navigation** — enable `keyboardScroll` for Arrow/Page/Home/End key support
 - **Auto-measurement** — enable `autoMeasure` to automatically measure visible items via `ResizeObserver`
 - **DOM adapter** — `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling

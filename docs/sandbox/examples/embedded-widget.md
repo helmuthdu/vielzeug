@@ -30,7 +30,7 @@ function mountWidget({ container, widgetScriptUrl, theme, onEvent }: WidgetConfi
     // Inject the widget's script before user content
     scripts: [widgetScriptUrl],
     // Scoped reset so widget styles don't clash with host
-    namedStyles: {
+    styles: {
       base: `
         *, *::before, *::after { box-sizing: border-box; }
         html, body { margin: 0; padding: 0; height: 100%; }
@@ -54,10 +54,10 @@ function mountWidget({ container, widgetScriptUrl, theme, onEvent }: WidgetConfi
   return {
     // Push config changes without re-rendering — widget receives sandbox:state-update
     setTheme(tokens: Record<string, string>) {
-      sandbox.setState('theme', tokens);
+      sandbox.setState({ theme: tokens });
     },
     setLocale(locale: string) {
-      sandbox.setState('locale', locale);
+      sandbox.setState({ locale });
     },
     [Symbol.dispose]() {
       sandbox.dispose();
@@ -94,7 +94,7 @@ document.getElementById('submit-btn').addEventListener('click', () => {
 });
 ```
 
-#### With setStateAll (optional)
+#### With setState (optional)
 
 Bootstrap theme and locale together in one postMessage instead of two separate `setState()` calls:
 
@@ -102,7 +102,7 @@ Bootstrap theme and locale together in one postMessage instead of two separate `
 sandbox.render('<div id="widget-root"></div>');
 
 // One postMessage for both initial values
-sandbox.setStateAll({
+sandbox.setState({
   theme: { primary: '#0066cc', radius: '6px' },
   locale: 'en',
 });

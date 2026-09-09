@@ -1,85 +1,63 @@
 ---
 title: Ledger — API Reference
-description: API reference for @vielzeug/ledger reversible commands, queue ownership, cancellation, and state snapshots.
+description: Reference for serialized reversible commands, history state, composition, cancellation, disposal, and errors.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
+| Symbol | Purpose | Execution | Common gotcha |
 | --- | --- | --- | --- |
-| `createLedger()` | Create reversible async history | Sync | `dispose()` seals the owner |
-| `compose()` | Combine reversible commands | Sync | Every child must revert |
-| `Ledger` | History handle | Async methods | Catch operation failures |
-| `ReversibleCommand` | Apply/revert state transition | Sync or async | Irreversible work is outside Ledger |
-| `LedgerCancelledError` | Cancellation result | Sync | Different from execution failure |
+| `createLedger()` | Create serialized reversible history | Sync construction | Every operation method is queued |
+| `compose()` | Combine commands into one history entry | Sync construction | Child metadata is not aggregated |
+| `ledger.do()` | Apply and record a command | Async | Failed or cancelled apply is not recorded |
+| `ledger.undo()` / `redo()` | Move the latest history entry | Async | Failures leave history on its original side |
+| `ledger.clear()` | Remove history without reverting | Async | Serialized behind earlier work |
+| `ledger.whenIdle()` | Await an empty operation queue | Async | Cannot force non-cooperative work to settle |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/ledger` | Root entry for Ledger functions, errors, and public types. |
+| `@vielzeug/ledger` | Complete Ledger runtime, error hierarchy, state-readable contract, unsubscribe type, and command/history types |
 
-## Core Functions
-
-### `createLedger()`
+## `createLedger()`
 
 ```ts
-function createLedger<TMeta = undefined>(options?: LedgerOptions): Ledger<TMeta>;
+function createLedger<TMeta = undefined>(options?: LedgerOptions): Ledger<TMeta>
 ```
 
-Creates a serialized owner for reversible commands.
-
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options` | `LedgerOptions` | History-cap configuration. |
-
-**Returns:** `Ledger<TMeta>`.
+Creates a ledger with one submission-order operation queue and one atomic state readable.
 
 ```ts
 import { createLedger } from '@vielzeug/ledger';
 
-let value = 'before';
-const ledger = createLedger();
-
-await ledger.do({
-  apply: () => { value = 'after'; },
-  revert: () => { value = 'before'; },
-});
-
-await ledger.undo();
-ledger.dispose();
+const ledger = createLedger<{ field: string }>({ maxHistory: 50 });
 ```
 
-### `compose()`
+### `LedgerOptions`
+
+```ts
+interface LedgerOptions {
+  maxHistory?: number;
+}
+```
+
+`maxHistory` defaults to `100`. It must be a non-negative safe integer. `0` executes commands without retaining history.
+
+## `compose()`
 
 ```ts
 function compose<TMeta = undefined>(
   commands: readonly ReversibleCommand<TMeta>[],
   label?: string,
-): ReversibleCommand<TMeta>;
+): ReversibleCommand<TMeta>
 ```
 
-Snapshots reversible children and returns one reversible command.
+Snapshots child command callbacks, applies children in order, and reverts them in reverse order. The result creates one history entry with the supplied label and `meta: undefined`.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `commands` | `readonly ReversibleCommand<TMeta>[]` | Commands to apply in order and revert in reverse order. |
-| `label` | `string` | Optional history label. |
-
-**Returns:** `ReversibleCommand<TMeta>`.
-
-```ts
-import { compose } from '@vielzeug/ledger';
-
-const move = compose([
-  { apply: moveX, revert: restoreX },
-  { apply: moveY, revert: restoreY },
-], 'Move node');
-```
-
-If apply and compensation both fail, the resulting `LedgerExecutionError.cause` is an `AggregateError` containing every failure.
+If child application fails, completed children are compensated in reverse order. Compensation attempts continue after failures. Combined apply and compensation failures are preserved in an `AggregateError`, which Ledger exposes as `LedgerExecutionError.cause`. Normal composed reversion also attempts every child and reports failures through `LedgerRollbackError.cause` as an `AggregateError`.
 
 ## `Ledger`
 
@@ -91,34 +69,40 @@ interface Ledger<TMeta = undefined> {
   readonly disposed: boolean;
   do(command: ReversibleCommand<TMeta>, options?: LedgerCallOptions): Promise<void>;
   redo(options?: LedgerCallOptions): Promise<void>;
-  readonly state: Readable<LedgerState<TMeta>>;
+  readonly state: LedgerReadable<LedgerState<TMeta>>;
   undo(options?: LedgerCallOptions): Promise<void>;
   whenIdle(): Promise<void>;
   [Symbol.dispose](): void;
 }
 ```
 
-| Member | Return | Contract |
-| --- | --- | --- |
-| `do()` | `Promise<void>` | Applies and records a command. |
-| `undo()` | `Promise<void>` | Reverts latest undo entry. |
-| `redo()` | `Promise<void>` | Reapplies latest redo entry. |
-| `clear()` | `Promise<void>` | Clears retained undo and redo history. |
-| `whenIdle()` | `Promise<void>` | Resolves when queued and running counts are zero. |
-| `dispose()` | `void` | Seals owner, aborts active contexts, rejects unstarted work. |
-| `state` | `Readable<LedgerState<TMeta>>` | Atomic lifecycle and history snapshot. |
+All operation methods are serialized in call order.
 
-## Types
+### `do()`
 
-### `CommandContext`
+Snapshots the command's `apply`, `revert`, `label`, and metadata reference when submitted. On successful apply it appends one undo entry, evicts the oldest entry beyond `maxHistory`, and clears redo history. Apply failure rejects with `LedgerExecutionError` and records nothing. Ledger does not automatically revert a failed individual command.
 
-```ts
-interface CommandContext {
-  readonly signal: AbortSignal;
-}
-```
+### `undo()`
 
-Context passed to apply and revert. Active work must observe `signal` cooperatively.
+Reverts the final undo entry. Success moves it to the end of redo history. If no undo entry exists, the queued operation resolves without changing history. Revert failure rejects with `LedgerRollbackError` and leaves the entry in undo history.
+
+### `redo()`
+
+Applies the final redo entry. Success moves it to the end of undo history. If no redo entry exists, it resolves without changing history. Apply failure rejects with `LedgerExecutionError` and leaves the entry in redo history.
+
+### `clear()`
+
+Queues removal of all undo and redo entries. It does not call command revert functions and does not cancel earlier work.
+
+### `whenIdle()`
+
+Resolves immediately when `queued` and `running` are zero, otherwise resolves after both reach zero. Multiple waiters are supported. It does not reject on disposal or cancel operations.
+
+### Disposal
+
+`dispose()` is permanent and idempotent. It sets `accepting: false`, clears undo and redo history, aborts active command contexts, and rejects queued operations that have not started with `LedgerDisposedError`. Active commands must observe their signal and settle before `running` reaches zero. `[Symbol.dispose]()` delegates to `dispose()`.
+
+## Command Types
 
 ### `ReversibleCommand`
 
@@ -131,14 +115,29 @@ interface ReversibleCommand<TMeta = undefined> {
 }
 ```
 
-### `HistoryEntry`
+`apply` and `revert` may be synchronous or asynchronous. Metadata is retained by reference; Ledger does not deep-clone or deep-freeze it.
+
+### `CommandContext`
 
 ```ts
-interface HistoryEntry<TMeta = undefined> {
-  readonly label: string | undefined;
-  readonly meta: TMeta | undefined;
+interface CommandContext {
+  readonly signal: AbortSignal;
 }
 ```
+
+The signal combines ledger disposal with the operation signal. Queued cancellation prevents user code from running. Active cancellation is cooperative. If user code ignores abort and completes, the operation still rejects with `LedgerCancelledError` and its history transition is not committed.
+
+### `LedgerCallOptions`
+
+```ts
+interface LedgerCallOptions {
+  signal?: AbortSignal;
+}
+```
+
+Supported by `do()`, `undo()`, and `redo()`. `clear()` has no call options.
+
+## State Types
 
 ### `LedgerState`
 
@@ -152,36 +151,52 @@ interface LedgerState<TMeta = undefined> {
 }
 ```
 
-### `LedgerOptions`
+| Field | Meaning |
+| --- | --- |
+| `accepting` | `true` until permanent disposal |
+| `queued` | Submitted operations that have not started |
+| `running` | Currently executing operation; serialization keeps this at 0 or 1 |
+| `undo` | Chronological successfully applied history; final entry is next to undo |
+| `redo` | Chronological reverted history; final entry is next to redo |
+
+State objects and history arrays are frozen replacements.
+
+### `HistoryEntry`
 
 ```ts
-interface LedgerOptions {
-  maxHistory?: number;
-  runtime?: Pick<Ripple, 'signal'>;
+interface HistoryEntry<TMeta = undefined> {
+  readonly label: string | undefined;
+  readonly meta: TMeta | undefined;
 }
 ```
 
-`maxHistory` defaults to `100`, accepts non-negative safe integers, and uses `0` for no retained history.
+History entries are frozen and intentionally omit command callbacks.
 
-`runtime` accepts a `Pick<Ripple, 'signal'>` so the ledger can source its reactive state signal from an external `Ripple` runtime. When omitted, the ledger uses an internal default signal factory.
+### `LedgerReadable` and `Unsubscribe`
 
-### `LedgerCallOptions`
+`Ledger.state` implements this framework-neutral structural contract. Both names are root type exports.
 
 ```ts
-interface LedgerCallOptions {
-  signal?: AbortSignal;
+type Unsubscribe = () => void;
+
+interface LedgerReadable<T> {
+  peek(): T;
+  subscribe(listener: () => void): Unsubscribe;
+  readonly value: T;
 }
 ```
 
-An already-aborted signal rejects before user code starts. Active commands receive a merged signal.
+Subscriptions are not immediate and receive no value argument. Listeners run synchronously from a snapshot after state replacement. A listener failure does not interrupt Ledger bookkeeping or later listeners; it is rethrown in a microtask.
 
 ## Errors
 
-| Error | Trigger | Notable properties |
+| Error | Trigger | History result |
 | --- | --- | --- |
-| `LedgerCancelledError` | Operation cancels before start or cooperatively stops | May carry original abort cause |
-| `LedgerDisposedError` | Operation submitted to sealed ledger | Queued work rejects without starting |
-| `LedgerExecutionError` | `apply()` fails | Original failure in `.cause` |
-| `LedgerRollbackError` | `revert()` fails | Entry remains in undo history |
-| `LedgerConfigurationError` | Ledger constructed with invalid options (e.g. negative `maxHistory`) | — |
-| `LedgerError` | Base class | `instanceof LedgerError` narrows all Ledger errors |
+| `LedgerCancelledError` | Queued signal cancellation or active cooperative cancellation | No transition committed |
+| `LedgerDisposedError` | Submission after disposal or queued work rejected by disposal | History already cleared by disposal |
+| `LedgerExecutionError` | `apply()` fails during `do()` or `redo()` | New command absent, or redo entry retained |
+| `LedgerRollbackError` | `revert()` fails during `undo()` | Undo entry retained |
+| `LedgerConfigurationError` | Invalid `maxHistory` | Construction fails |
+| `LedgerError` | Base class and internal history corruption | Depends on operation |
+
+Wrapped operation failures preserve the original value in `.cause`. Use `instanceof LedgerError` to catch the hierarchy, then narrow to a specific subtype.

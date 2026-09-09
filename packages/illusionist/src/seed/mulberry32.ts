@@ -1,4 +1,4 @@
-import type { RandomSource } from '@vielzeug/arsenal/random';
+import type { RandomSource } from '../types';
 
 /**
  * Mulberry32 — a fast, deterministic 32-bit PRNG.

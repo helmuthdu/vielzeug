@@ -1,6 +1,10 @@
-import type { Signal } from '@vielzeug/ripple';
-
-import { DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN, type MeasurementCache, type Overscan } from './_utils';
+import {
+  createSnapshotStore,
+  DEFAULT_ESTIMATE_SIZE,
+  DEFAULT_OVERSCAN,
+  type MeasurementCache,
+  type Overscan,
+} from './_utils';
 import {
   requireNonNegativeInteger,
   requireNonNegativeNumber,
@@ -82,8 +86,6 @@ export type DomVirtualListOptions<T> = {
   stickToBottom?: boolean | StickToBottomOptions;
   /** Mark items as sticky headers. Receives the item index and the item data. */
   sticky?: (index: number, item: T) => boolean;
-  /** Optional signal factory for reactive state. */
-  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
 };
 
 /**
@@ -184,17 +186,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   let disposed = false;
   const ac = new AbortController();
   const listEl = options.listElement;
+  const stateStore = createSnapshotStore<VirtualizerState>({ items: [], stickyItems: [], totalSize: 0 });
 
-  // Optional signal for reactive state
-  let stateSignal: Signal<VirtualizerState> | null = null;
-  if (options.toSignal) {
-    const initialState: VirtualizerState = { items: [], stickyItems: [], totalSize: 0 };
-    stateSignal = options.toSignal(initialState);
-  }
-
-  // Helper to emit state to both callback and signal
+  // Publish state before invoking the render callback.
   function emitState(state: VirtualizerState): void {
-    if (stateSignal) stateSignal.value = state;
+    stateStore.publish(state);
     handleChange(state);
   }
 
@@ -327,6 +323,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     if (disposed) return;
 
     disposed = true;
+    stateStore.dispose();
     ac.abort();
     virtualizer?.dispose();
     virtualizer = null;
@@ -348,6 +345,8 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     get disposed() {
       return disposed;
     },
+
+    getSnapshot: stateStore.getSnapshot,
 
     invalidate() {
       if (disposed) return;
@@ -433,6 +432,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       if (items.length === 0) {
         virtualizer?.dispose();
         virtualizer = null;
+        stateStore.publish({ items: [], stickyItems: [], totalSize: 0 });
         clearAndReset();
 
         return;
@@ -474,6 +474,8 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     get stickyItems() {
       return virtualizer?.stickyItems ?? [];
     },
+
+    subscribe: stateStore.subscribe,
 
     [Symbol.dispose]: _dispose,
 

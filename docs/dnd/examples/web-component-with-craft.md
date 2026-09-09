@@ -13,7 +13,7 @@ You are building a Ore web component that contains a sortable list. The drag-and
 
 ```ts
 import { define, html, onCleanup, ref, signal } from '@vielzeug/ore';
-import { createDropZone } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
 
 define('my-dropzone', (props) => {
   const isDragging = signal(false);

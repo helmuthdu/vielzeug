@@ -2,29 +2,33 @@ export type Unsubscribe = () => void;
 
 export type MaybePromise<T> = T | PromiseLike<T>;
 
-export type ReadonlyDeep<T> = T extends (...args: never[]) => unknown
-  ? T
-  : T extends readonly (infer Item)[]
-    ? readonly ReadonlyDeep<Item>[]
-    : T extends Record<string, unknown>
-      ? { readonly [K in keyof T]: ReadonlyDeep<T[K]> }
-      : T;
+/**
+ * `Date`, `File`, and `Blob` are built-in atomic leaves. Dates are cloned and exposed
+ * without mutator methods; browser binary values preserve identity. Other values must be
+ * finite JSON primitives, plain objects, or dense arrays.
+ */
+export type Atomic = Date | File | Blob;
 
-export type FormErrors<T> = T extends readonly (infer Item)[]
-  ? string | readonly (FormErrors<Item> | undefined)[]
-  : T extends Record<string, unknown>
-    ? string | { readonly [K in keyof T]?: FormErrors<T[K]> }
-    : string;
+type DateMutator = Extract<keyof Date, `set${string}`>;
+export type ReadonlyDate = Omit<Date, DateMutator>;
 
-export type ValidationErrors<TValues extends Record<string, unknown>> = Readonly<{
-  fields?: FormErrors<TValues>;
-  formError?: string;
-}>;
+export type ReadonlyDeep<T> = T extends Date
+  ? ReadonlyDate
+  : T extends File | Blob
+    ? T
+    : T extends readonly (infer Item)[]
+      ? readonly ReadonlyDeep<Item>[]
+      : T extends Record<string, unknown>
+        ? { readonly [K in keyof T]: ReadonlyDeep<T[K]> }
+        : T;
+
+/** A single flat validation issue. `path: []` denotes a form-level error. */
+export type ValidationIssue = Readonly<{ path: readonly (string | number)[]; message: string }>;
 
 export type FormValidator<TValues extends Record<string, unknown>> = (
   values: ReadonlyDeep<TValues>,
   signal: AbortSignal,
-) => MaybePromise<ValidationErrors<TValues> | undefined>;
+) => MaybePromise<readonly ValidationIssue[] | undefined>;
 
 export type FormOptions<TValues extends Record<string, unknown>> = Readonly<{
   initialValues: TValues;
@@ -32,9 +36,7 @@ export type FormOptions<TValues extends Record<string, unknown>> = Readonly<{
   validate?: FormValidator<NoInfer<TValues>>;
 }>;
 
-export type SubscribeOptions = Readonly<{
-  immediate?: boolean;
-}>;
+export type SubscribeOptions = Readonly<{ immediate?: boolean }>;
 
 export type FieldState<V> = Readonly<{
   dirty: boolean;
@@ -43,10 +45,10 @@ export type FieldState<V> = Readonly<{
   value: ReadonlyDeep<V>;
 }>;
 
-export type FormState<TValues extends Record<string, unknown>> = Readonly<{
-  errors: FormErrors<TValues> | undefined;
+export type FormState = Readonly<{
   formError: string | undefined;
   hasErrors: boolean;
+  issues: readonly ValidationIssue[] | undefined;
   submitCount: number;
   submitting: boolean;
   touched: boolean;
@@ -54,14 +56,14 @@ export type FormState<TValues extends Record<string, unknown>> = Readonly<{
   validating: boolean;
 }>;
 
-export type ValidationResult<TValues extends Record<string, unknown>> =
+export type ValidationResult =
   | Readonly<{ status: 'aborted' }>
   | Readonly<{ status: 'valid' }>
-  | Readonly<{ errors: FormErrors<TValues> | undefined; formError: string | undefined; status: 'invalid' }>;
+  | Readonly<{ issues: readonly ValidationIssue[]; status: 'invalid' }>;
 
-export type SubmitResult<TResult = void, TValues extends Record<string, unknown> = Record<string, unknown>> =
+export type SubmitResult<TResult = void> =
   | Readonly<{ status: 'aborted' }>
-  | Readonly<{ status: 'invalid'; errors: FormErrors<TValues> | undefined; formError: string | undefined }>
+  | Readonly<{ issues: readonly ValidationIssue[]; status: 'invalid' }>
   | Readonly<{ status: 'ok'; value: TResult }>;
 
 type ChildField<V> =
@@ -91,12 +93,12 @@ export type Form<TValues extends Record<string, unknown>> = {
   field<K extends keyof TValues & string>(key: K): Field<TValues[K]>;
   reset(next?: TValues): void;
   set(next: TValues | ((previous: ReadonlyDeep<TValues>) => TValues)): void;
-  readonly state: FormState<TValues>;
+  readonly state: FormState;
   submit<TResult = void>(
     handler: (values: ReadonlyDeep<TValues>, signal: AbortSignal) => MaybePromise<TResult>,
     signal?: AbortSignal,
-  ): Promise<SubmitResult<TResult, TValues>>;
-  subscribe(listener: (state: FormState<TValues>) => void, options?: SubscribeOptions): Unsubscribe;
-  validate(signal?: AbortSignal): Promise<ValidationResult<TValues>>;
+  ): Promise<SubmitResult<TResult>>;
+  subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
+  validate(signal?: AbortSignal): Promise<ValidationResult>;
   readonly value: ReadonlyDeep<TValues>;
 };

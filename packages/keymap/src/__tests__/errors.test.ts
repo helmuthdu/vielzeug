@@ -35,7 +35,7 @@ describe('KeymapError', () => {
     });
 
     it('createKeymap() propagates KeymapParseError from an invalid initial binding', () => {
-      expect(() => createKeymap({ ctrl: () => {} })).toThrow(KeymapParseError);
+      expect(() => createKeymap([{ handler: () => {}, id: 'bad', shortcut: 'ctrl' }])).toThrow(KeymapParseError);
     });
   });
 });

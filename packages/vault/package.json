@@ -74,7 +74,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types",
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
@@ -82,11 +82,13 @@
     "prepublishOnly": "pnpm --silent run build",
     "preview": "vite preview",
     "test": "vitest",
-    "test:sqlite:bun": "bun test runtime-smoke/bun-sqlite.ts",
-    "test:sqlite:deno": "deno test --allow-read --allow-env --allow-ffi runtime-smoke/deno-sqlite.ts"
+    "test:sqlite:bun": "bun test ./runtime-smoke/bun-sqlite.ts",
+    "test:sqlite:deno": "deno test --allow-read --allow-env --allow-ffi runtime-smoke/deno-sqlite.ts",
+    "verify:exports": "node verify-exports.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "@vielzeug/spell": "workspace:*",
     "fake-indexeddb": "^6.2.5",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",

@@ -1,98 +1,101 @@
 import { createInfiniteSource } from '../infiniteSource';
 
 describe('createInfiniteSource', () => {
-  it('loads first page then appends through loadMore', async () => {
-    const load = vi.fn(async ({ query }: { query: { page: number } }) => ({
-      data: query.page === 1 ? ['a', 'b'] : ['c'],
-      total: 3,
+  it('loads the first page then appends more items', async () => {
+    const load = vi.fn(async ({ page }: { page: number }) => ({
+      items: page === 1 ? ['a', 'b'] : ['c'],
+      totalItems: 3,
     }));
-    const source = createInfiniteSource({ autoStart: false, initialQuery: { pageSize: 2 }, load });
+    const source = createInfiniteSource({ load, pageSize: 2 });
 
     await source.reload();
     await source.loadMore();
 
-    expect(source.snapshot).toMatchObject({
-      data: ['a', 'b', 'c'],
-      isFetching: false,
-      pagination: { hasMore: false, kind: 'infinite', loaded: 3, total: 3 },
+    expect(source.state).toMatchObject({
+      items: ['a', 'b', 'c'],
+      loading: false,
+      pagination: { hasMore: false, loadedItems: 3, pageSize: 2, totalItems: 3 },
     });
   });
 
-  it('does not set pendingQuery during append fetches', async () => {
-    let resolveLoad!: (result: { data: string[]; total: number }) => void;
+  it('does not expose pending params while appending', async () => {
+    let resolve!: (result: { items: string[]; totalItems: number }) => void;
     const source = createInfiniteSource({
-      autoStart: false,
-      initialQuery: { pageSize: 1 },
-      load: () =>
-        new Promise<{ data: string[]; total: number }>((finish) => {
-          resolveLoad = finish;
-        }),
+      load: () => new Promise((finish) => (resolve = finish)),
+      pageSize: 1,
     });
+    const first = source.reload();
+    resolve({ items: ['first'], totalItems: 2 });
+    await first;
 
-    const reloadPending = source.reload();
-    resolveLoad({ data: ['first'], total: 2 });
-    await reloadPending;
+    const more = source.loadMore();
 
-    const appendPending = source.loadMore();
-
-    expect(source.snapshot.isFetching).toBe(true);
-    expect(source.snapshot.pendingQuery).toBeUndefined();
-    expect(source.snapshot.pagination).toMatchObject({ kind: 'infinite', loaded: 1 });
-
-    resolveLoad({ data: ['next'], total: 2 });
-    await appendPending;
-
-    expect(source.snapshot.data).toEqual(['first', 'next']);
+    expect(source.state.loading).toBe(true);
+    expect(source.state.pendingParams).toBeUndefined();
+    resolve({ items: ['second'], totalItems: 2 });
+    await more;
+    expect(source.state.items).toEqual(['first', 'second']);
   });
 
-  it('sets pendingQuery only when replacing the query', async () => {
-    let resolve!: (result: { data: string[]; total: number }) => void;
-    const source = createInfiniteSource({
-      autoStart: false,
-      load: ({ query }) =>
-        query.search
-          ? new Promise<{ data: string[]; total: number }>((finish) => {
-              resolve = finish;
-            })
-          : Promise.resolve({ data: ['first'], total: 1 }),
-    });
-
-    await source.reload();
-
-    const pending = source.setQuery({ search: 'new' });
-
-    expect(source.snapshot).toMatchObject({
-      data: ['first'],
-      isFetching: true,
-      pendingQuery: { pageSize: 20, search: 'new' },
-      query: { pageSize: 20, search: '' },
-    });
-
-    resolve({ data: ['new'], total: 1 });
-    await pending;
-
-    expect(source.snapshot.pendingQuery).toBeUndefined();
-    expect(source.snapshot.data).toEqual(['new']);
-  });
-
-  it('restarts accumulation when query changes', async () => {
-    const source = createInfiniteSource({
-      autoStart: false,
-      load: async ({ query }) => ({ data: [`${query.search}:${query.page}`], total: 2 }),
+  it('restarts accumulation when params change', async () => {
+    const source = createInfiniteSource<string, string>({
+      load: async ({ page, params }: { page: number; params: string }) => ({
+        items: [`${params}:${page}`],
+        totalItems: 2,
+      }),
+      params: '',
     });
 
     await source.reload();
     await source.loadMore();
-    await source.setQuery({ search: 'new' });
+    await source.setParams('new');
 
-    expect(source.snapshot.data).toEqual(['new:1']);
-    expect(source.snapshot.pagination.loaded).toBe(1);
+    expect(source.state.items).toEqual(['new:1']);
+    expect(source.state.params).toBe('new');
+    expect(source.state.pagination.loadedItems).toBe(1);
   });
 
-  it('exposes invalid loader totals as command failures', async () => {
-    const source = createInfiniteSource({ autoStart: false, load: async () => ({ data: [], total: -1 }) });
+  it('does not load more after the collection is exhausted', async () => {
+    const load = vi.fn(async () => ({ items: [], totalItems: 0 }));
+    const source = createInfiniteSource({ load });
 
-    await expect(source.reload()).rejects.toThrow('Source loader total must be a non-negative integer');
-    expect(source.snapshot.error?.message).toBe('Source loader total must be a non-negative integer');
+    await source.reload();
+    await source.loadMore();
+
+    expect(load).toHaveBeenCalledOnce();
+  });
+
+  it('does not let a stale append advance replacement pagination', async () => {
+    const pending: Array<{
+      page: number;
+      params: string;
+      resolve: (result: { items: string[]; totalItems: number }) => void;
+    }> = [];
+    const source = createInfiniteSource<string, string>({
+      load: ({ page, params }) => new Promise((resolve) => pending.push({ page, params, resolve })),
+      params: 'old',
+    });
+    const initial = source.reload();
+    pending.shift()?.resolve({ items: ['old-1'], totalItems: 10 });
+    await initial;
+
+    const staleAppend = source.loadMore();
+    const replacement = source.setParams('new');
+    await staleAppend;
+    pending.find(({ params }) => params === 'new')?.resolve({ items: ['new-1'], totalItems: 10 });
+    await replacement;
+
+    const next = source.loadMore();
+    expect(pending.at(-1)).toMatchObject({ page: 2, params: 'new' });
+    pending.at(-1)?.resolve({ items: ['new-2'], totalItems: 10 });
+    await next;
+  });
+
+  it('rejects invalid totals and commands after disposal', async () => {
+    const source = createInfiniteSource({ load: async () => ({ items: [], totalItems: -1 }) });
+
+    await expect(source.reload()).rejects.toThrow('totalItems must be a non-negative integer');
+    source.dispose();
+    await expect(source.loadMore()).rejects.toThrow('disposed');
   });
 });

@@ -6,7 +6,7 @@ import type { Primitive } from '../types';
  * bucketed under the key `'_'`, matching `groupBy`'s convention. Dangerous keys (`__proto__`,
  * `constructor`, `prototype`) are skipped.
  */
-export function countBy<T>(array: T[], selector: (item: T) => Primitive): Record<string, number> {
+export function countBy<T>(array: readonly T[], selector: (item: T) => Primitive): Record<string, number> {
   const out: Record<string, number> = {};
 
   for (let index = 0; index < array.length; index++) {

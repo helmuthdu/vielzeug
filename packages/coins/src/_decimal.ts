@@ -4,8 +4,23 @@ import type { Decimal, RoundingMode } from './types';
 const DECIMAL = /^(-?)(\d+)(?:\.(\d+))?$/;
 const MAX_DECIMAL_DIGITS = 1000;
 const MAX_DECIMAL_PLACES = 100;
+const ROUNDING_MODES = new Set<RoundingMode>([
+  'awayFromZero',
+  'ceil',
+  'floor',
+  'halfAwayFromZero',
+  'halfEven',
+  'towardZero',
+]);
+
+export function assertRoundingMode(value: unknown): asserts value is RoundingMode {
+  if (!ROUNDING_MODES.has(value as RoundingMode)) {
+    throw new CoinsError('INVALID_ROUNDING', `Unknown rounding mode: ${String(value)}`);
+  }
+}
 
 export function decimal(value: string): Decimal {
+  if (typeof value !== 'string') throw new CoinsError('INVALID_DECIMAL', 'Decimal input must be a string');
   if (value.length > MAX_DECIMAL_DIGITS) throw new CoinsError('INVALID_DECIMAL', 'Decimal input is too long');
 
   const match = DECIMAL.exec(value);
@@ -27,6 +42,7 @@ export function decimal(value: string): Decimal {
 }
 
 export function roundDivision(numerator: bigint, denominator: bigint, mode: RoundingMode): bigint {
+  assertRoundingMode(mode);
   if (denominator <= 0n) throw new CoinsError('INVALID_DECIMAL', 'Decimal denominator must be positive');
 
   const negative = numerator < 0n;

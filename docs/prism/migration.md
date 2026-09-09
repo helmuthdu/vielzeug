@@ -1,49 +1,92 @@
 ---
-title: Prism Migration
+title: Prism 3 Migration
 ---
 
-# Prism 2.0 Migration
+# Prism 3 Migration
 
-Prism 2.0 removes the speculative `PrismDisposedError` class, the `PrismError.is()` type guard, and the deprecated `ariaLabel` config field.
+Prism 3 replaces implicit reactive inputs with explicit chart updates, removes the plugin API, narrows invalid axis and line-data types, and makes tooltip rendering safe by construction.
 
-## Replace `PrismError.is()` with `instanceof`
+## Replace signals with `ChartHandle.update()`
 
-The static `PrismError.is()` type guard is removed. Use `instanceof PrismError` to narrow unknown values to the prism error hierarchy.
-
-```ts
-// Prism 1
-if (PrismError.is(err)) { ... }
-
-// Prism 2
-if (err instanceof PrismError) { ... }
-```
-
-## Remove `PrismDisposedError`
-
-`PrismDisposedError` was a reserved-for-future class with no code path throwing it. It is removed from exports. `dispose()` remains an idempotent no-op — no error is thrown on repeated calls. If you imported the class for `instanceof` checks, remove the import; no runtime behavior changes.
-
-## Replace `ariaLabel` with `a11y: { ariaLabel }`
-
-The deprecated `ariaLabel` field on `BaseChartConfig` and `SparklineConfig` is removed. Use the `a11y` field instead.
+Chart configuration accepts plain arrays. Keep state in your application and pass the next complete data value to `update()`.
 
 ```ts
-// Prism 1
-createLineChart(container, { ariaLabel: 'Revenue', series: [...] });
-createSparkline(container, { ariaLabel: 'Trend', data: [1, 2, 3] });
-
 // Prism 2
-createLineChart(container, { a11y: { ariaLabel: 'Revenue' }, series: [...] });
-createSparkline(container, { a11y: { ariaLabel: 'Trend' }, data: [1, 2, 3] });
+const data = signal([{ key: 1, value: 10 }]);
+const chart = createLineChart(container, {
+  series: [{ data, name: 'Revenue' }],
+});
+data.value = [{ key: 2, value: 20 }];
+
+// Prism 3
+const chart = createLineChart(container, {
+  series: [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }],
+});
+chart.update([{ data: [{ key: 2, value: 20 }], name: 'Revenue' }]);
 ```
 
-For decorative sparklines (the previous default when `ariaLabel` was omitted), omit `a11y` entirely — the SVG is marked `aria-hidden="true"` automatically.
+`signal`, `MaybeSignal`, `Readable`, `Signal`, `SignalOptions`, and `Equality` are no longer exported by Prism. If your application uses Ripple, subscribe at the ownership boundary and call `chart.update()` from that subscription.
 
-## Give chart effects a scope
+## Remove chart plugins
 
-Update chart integrations so reactive effects created for a chart belong to a Ripple scope. Dispose that scope with the chart lifetime to prevent effects surviving an unmounted chart.
+`ChartPlugin`, `ChartPluginContext`, and the `plugins` config field are removed. Compose application behavior around the returned handle instead. Use `handle.el` for DOM listeners and `handle.disposalSignal` for cleanup.
 
-## Retain chart-handle disposal
+```ts
+const chart = createLineChart(container, config);
+const onClick = () => recordChartClick();
 
-Continue to dispose the `ChartHandle` returned by chart factories. Review plugin and lifecycle integrations for ownership assumptions that changed with scoped effects.
+chart.el.addEventListener('click', onClick);
+chart.disposalSignal.addEventListener(
+  'abort',
+  () => chart.el.removeEventListener('click', onClick),
+  { once: true },
+);
+```
 
-Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current chart factory, handle, plugin, and Ripple integration contracts.
+The plugin-only `LegendState`, `TooltipState`, and `Point` exports are also removed. `animate()` and `AnimationTarget` are no longer part of the package root.
+
+## Replace HTML tooltip rendering
+
+`TooltipConfig.sanitize` is removed. Tooltip strings are rendered as text. Return a DOM node when you need structured content.
+
+```ts
+// Prism 2
+{
+  render: (datum) => `<strong>${datum.value}</strong>`,
+  sanitize: (html) => DOMPurify.sanitize(html),
+}
+
+// Prism 3
+{
+  render: (datum) => {
+    const content = document.createElement('strong');
+    content.textContent = String(datum.value);
+    return content;
+  },
+}
+```
+
+## Use valid continuous keys and axis positions
+
+Line and area data now use `ContinuousDatum`, whose key is `number | Date`. String keys remain valid for bar charts. `xAxis.position` accepts only `'top' | 'bottom'`; `yAxis.position` accepts only `'left' | 'right'`.
+
+## Label informative charts
+
+Charts without `a11y` are decorative and receive `aria-hidden="true"`. Set an accessible label for every chart that conveys information.
+
+```ts
+createBarChart(container, {
+  a11y: { ariaLabel: 'Orders by status' },
+  series,
+});
+```
+
+## Update handle annotations
+
+`ChartHandle` now accepts the value consumed by `update()`.
+
+```ts
+let chart: ChartHandle<LineSeriesConfig[]>;
+```
+
+Repeated `dispose()` calls remain safe. Calling `update()` after disposal throws `PrismRenderError`.

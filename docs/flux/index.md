@@ -1,11 +1,11 @@
 ---
 title: Flux — Explicit push streams for TypeScript
-description: Reusable push streams with subscription-owned cancellation, bounded buffering, and optional ecosystem adapters.
+description: Reusable push streams with subscription-owned cancellation, bounded buffering, channels, and dependency-free structural bridges.
 package: flux
 category: reactive
 keywords: [streams, reactive, operators, cancellation, buffering, channels]
-related: [ripple, herald, pulse, courier]
-exports: [stream, pipe, of, from, fromEvent, interval, timer, map, filter, scan, switchMap, mergeMap, concatMap, take, takeUntil, debounce, timeout, merge, concat, combineLatest, retry, toArray, first, last, toAsyncIterable]
+related: [ripple, herald, pulse, sourcerer, courier]
+exports: [stream, fromStore, fromSubscribe, pipe, of, from, fromEvent, interval, timer, map, filter, scan, switchMap, mergeMap, concatMap, take, takeUntil, debounce, timeout, merge, concat, combineLatest, retry, toArray, first, last, toAsyncIterable]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -99,8 +99,8 @@ try {
 - `createChannel()` — mutable multicast state with bounded replay
 - `toAsyncIterable()` — explicit capacity and overflow policy for pull consumers
 - `retry()` — retry failures with optional backoff
-- `fromSignal()` / `toSignal()` — bridge Ripple signals
-- `fromQuery()` — adapt Courier query state
+- `fromStore()` — bridge snapshot-based state such as Ripple signals or Sourcerer queries
+- `fromSubscribe()` — bridge callback-delivered Herald or Pulse events
 
 </div>
 
@@ -119,10 +119,10 @@ try {
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — adapt reactive signal state through `@vielzeug/flux/ripple`.
-- [Courier](/courier/) — adapt query snapshots and SSE events through `@vielzeug/flux/courier`.
-- [Herald](/herald/) — adapt typed bus events through `@vielzeug/flux/herald`.
-- [Pulse](/pulse/) — adapt connection and presence events through `@vielzeug/flux/pulse`.
+- [Ripple](/ripple/) — bridge snapshot state with `fromStore()`.
+- [Courier](/courier/) — compose transport promises with `from()` or custom producers.
+- [Herald](/herald/) — bridge explicit subscriptions with `stream()`.
+- [Pulse](/pulse/) — bridge events with `fromSubscribe()` and presence snapshots with `fromStore()`.
 
 </div>
 

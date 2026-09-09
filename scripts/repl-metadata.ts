@@ -38,7 +38,7 @@ export interface ReplCategory {
 
 export const ARSENAL_CATEGORIES: readonly ReplCategory[] = [
   {
-    functions: ['chunk', 'compact', 'compare', 'compareBy', 'contains', 'countBy', 'difference', 'drop', 'dropLast', 'filterMap', 'first', 'flatten', 'fuzzyFilter', 'fuzzyScore', 'groupBy', 'indexBy', 'intersection', 'last', 'partition', 'replace', 'rotate', 'sort', 'take', 'takeLast', 'toggle', 'union', 'uniq', 'unzip', 'zip'],
+    functions: ['compare', 'compareBy', 'contains', 'countBy', 'difference', 'filterMap', 'fuzzyFilter', 'fuzzyScore', 'groupBy', 'indexBy', 'intersection', 'partition', 'sort', 'toggle', 'union', 'uniq'],
     name: 'Array',
   },
   {
@@ -47,24 +47,24 @@ export const ARSENAL_CATEGORIES: readonly ReplCategory[] = [
   },
   { functions: ['cache', 'memo'], name: 'Cache' },
   {
-    functions: ['assert', 'debounce', 'once', 'pipe', 'runAll', 'tap', 'throttle'],
+    functions: ['debounce', 'once', 'pipe', 'runAll', 'throttle'],
     name: 'Function',
   },
   {
-    functions: ['allOf', 'anyOf', 'isAbortError', 'isDate', 'isDefined', 'isEmpty', 'isEqual', 'isError', 'isFunction', 'isMatch', 'isNil', 'isNumber', 'isPlainObject', 'isPrimitive', 'isPromise', 'isRegex', 'noneOf', 'shallowEqual'],
+    functions: ['allOf', 'anyOf', 'isAbortError', 'isEmpty', 'isEqual', 'isMatch', 'isPlainObject', 'noneOf', 'shallowEqual'],
     name: 'Guards',
   },
   {
-    functions: ['allocate', 'average', 'clamp', 'gcd', 'lcm', 'lerp', 'linspace', 'median', 'mod', 'normalize', 'percent', 'range', 'round', 'standardDeviation', 'sum', 'variance'],
+    functions: ['allocate', 'mod'],
     name: 'Math',
   },
   {
     functions: ['deepMerge', 'defaults', 'diff', 'filterValues', 'flattenPaths', 'getPath', 'getPathOr', 'hash', 'invert', 'mapKeys', 'mapValues', 'omit', 'pick', 'prune', 'requirePath', 'shallowMerge', 'tryParseJson'],
     name: 'Object',
   },
-  { functions: ['draw', 'drawMany', 'random', 'shuffle', 'uuid'], name: 'Random' },
+  { functions: ['draw', 'drawMany', 'random', 'shuffle'], name: 'Random' },
   {
-    functions: ['camelCase', 'escape', 'kebabCase', 'pad', 'pascalCase', 'similarity', 'snakeCase', 'titleCase', 'truncate', 'unescape', 'words'],
+    functions: ['camelCase', 'escape', 'kebabCase', 'pascalCase', 'similarity', 'snakeCase', 'titleCase', 'truncate', 'unescape', 'words'],
     name: 'String',
   },
 ];

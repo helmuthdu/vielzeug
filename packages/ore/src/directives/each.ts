@@ -17,13 +17,12 @@ import { removeNodes, runAll } from '../utils/dom';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MaybeReactiveArray<T> = Readable<T[]> | (() => T[]) | T[];
+type ItemKey = number | string;
 
 type ItemEntry<T> = {
   cleanups: (() => void)[];
   data: Signal<T>;
   index: Signal<number>;
-  /** The key used to identify this entry. */
-  key: string;
   nodes: Node[];
   scope: Scope;
 };
@@ -49,7 +48,7 @@ const createItem = <T>(
     nodes = result.mount(parent, insertBefore, (fn) => cleanups.push(fn));
   });
 
-  return { cleanups, data: dataSignal, index: indexSignal, key: '', nodes, scope };
+  return { cleanups, data: dataSignal, index: indexSignal, nodes, scope };
 };
 
 const removeItem = <T>(entry: ItemEntry<T>): void => {
@@ -67,24 +66,14 @@ const removeItem = <T>(entry: ItemEntry<T>): void => {
  * Returns the ordered list of entries matching nextList.
  */
 const reconcileItems = <T>(
-  itemsMap: Map<string, ItemEntry<T>>,
+  itemsMap: Map<ItemKey, ItemEntry<T>>,
   next: T[],
-  keyFn: (item: T, index: number) => string | number,
+  nextKeys: ItemKey[],
   render: (item: Readable<T>, index: Readable<number>) => HTMLResult,
   parent: ParentNode,
   endMarker: Node,
 ): ItemEntry<T>[] => {
-  const nextKeys: string[] = [];
-  const nextKeySet = new Set<string>();
-
-  for (let i = 0; i < next.length; i++) {
-    const key = String(keyFn(next[i], i));
-
-    if (nextKeySet.has(key)) throw new OreApiError(ORE_ERRORS.eachDuplicateKey(key, i));
-
-    nextKeySet.add(key);
-    nextKeys.push(key);
-  }
+  const nextKeySet = new Set(nextKeys);
 
   // Remove stale entries from the map
   for (const [key, entry] of itemsMap) {
@@ -110,7 +99,6 @@ const reconcileItems = <T>(
     } else {
       const entry = untrack(() => createItem(next[i], i, render, parent, endMarker));
 
-      entry.key = key;
       itemsMap.set(key, entry);
       nextOrdered.push(entry);
     }
@@ -133,6 +121,35 @@ const reconcileItems = <T>(
   }
 
   return nextOrdered;
+};
+
+const collectKeys = <T>(next: T[], keyFn: (item: T, index: number) => ItemKey): ItemKey[] => {
+  const keys: ItemKey[] = [];
+  const seen = new Set<ItemKey>();
+
+  for (let i = 0; i < next.length; i++) {
+    const key = keyFn(next[i], i);
+
+    if (seen.has(key)) throw new OreApiError(ORE_ERRORS.eachDuplicateKey(String(key), i));
+
+    seen.add(key);
+    keys.push(key);
+  }
+
+  return keys;
+};
+
+const reportEachError = (error: unknown, anchor: Comment): void => {
+  const cause = error instanceof Error ? error : new Error(String(error));
+
+  reportRuntimeError(
+    new OreLifecycleError(`each() failed to reconcile a list update: ${cause.message}`, {
+      cause,
+      component: 'each()',
+      phase: 'each-reconcile',
+    }),
+    anchor,
+  );
 };
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -165,8 +182,8 @@ const reconcileItems = <T>(
  * **Duplicate keys:** a reconciliation failure (e.g. duplicate keys, see `eachDuplicateKey`)
  * does not throw past this function — an uncaught exception inside the reactive effect that
  * drives `each()` would risk corrupting unrelated effects scheduled in the same update batch.
- * Instead the list is cleared and the failure is reported via the `ore:error` DOM event (see
- * `OreLifecycleError`, phase `'each-reconcile'`) plus a dev-only console log — listen for
+ * Instead the last valid list is preserved and the failure is reported via the `ore:error` DOM event
+ * (see `OreLifecycleError`, phase `'each-reconcile'`) plus a dev-only console log — listen for
  * `ore:error` on `document`/`window` to observe this in every build, including production.
  */
 export function each<T>(
@@ -190,7 +207,7 @@ export function each<T>(
 
     parent.insertBefore(endMarker, anchor.nextSibling);
 
-    let itemsMap = new Map<string, ItemEntry<T>>();
+    let itemsMap = new Map<ItemKey, ItemEntry<T>>();
     let itemsOrdered: ItemEntry<T>[] = [];
     let fallbackNodes: Node[] | null = null;
     let fallbackCleanups: (() => void)[] = [];
@@ -225,25 +242,22 @@ export function each<T>(
         return;
       }
 
+      let nextKeys: ItemKey[];
+
+      try {
+        nextKeys = untrack(() => collectKeys(nextList, keyFn));
+      } catch (error) {
+        reportEachError(error, anchor);
+        return;
+      }
+
       clearFallback();
 
       try {
-        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, render, parent, endMarker));
-      } catch (err) {
-        const cause = err instanceof Error ? err : new Error(String(err));
-
-        // Dispatched on the anchor comment (always a live DOM node) rather than the enclosing
-        // component's host element, which each() has no direct reference to — the event still
-        // bubbles/composes up to any ancestor listener, including a global one on document.
-        reportRuntimeError(
-          new OreLifecycleError(`each() failed to reconcile a list update: ${cause.message}`, {
-            cause,
-            component: 'each()',
-            phase: 'each-reconcile',
-          }),
-          anchor,
-        );
-
+        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, nextKeys, render, parent, endMarker));
+      } catch (error) {
+        // Rendering may already have changed the live map, so clear it to avoid retaining partial DOM.
+        reportEachError(error, anchor);
         for (const entry of itemsMap.values()) removeItem(entry);
         itemsMap = new Map();
         itemsOrdered = [];

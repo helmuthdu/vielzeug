@@ -1,205 +1,179 @@
 ---
 title: Forge — Usage Guide
-description: Build immutable forms, validate whole values, and use optional adapters.
+description: Build, validate, submit, bind, and persist typed forms with Forge.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create one form value and update object branches through stable typed operations. Form values support primitives, plain objects, arrays, `Date`, `File`, and `Blob`; mutable class instances such as `Map` and `Set` are rejected.
-
 ```ts
 import { createForm } from '@vielzeug/forge';
 
 const form = createForm({
-  initialValues: { profile: { email: '', name: '' }, tags: [] as string[] },
-  validate: (value) => ({
-    fields: { profile: { email: value.profile.email.includes('@') ? undefined : 'Invalid email' } },
-  }),
+  initialValues: {
+    email: '',
+    profile: { name: '' },
+  },
 });
-
-const email = form.field('profile').field('email');
-email.set('ada@example.com');
-form.field('tags').set((tags) => [...tags, 'typescript']);
-
-console.log(form.value.profile.email);
 ```
 
-## Reset Values and Branches
-
-Reset a field when one branch should return to its exact baseline. Reset the form with a value when newly loaded data should become the clean baseline.
+Read `form.value` for the current deeply readonly snapshot. Use `set()` for whole-form replacement and field handles for focused updates.
 
 ```ts
-const name = form.field('profile').field('name');
-
-name.set('Ada');
-name.touch();
-name.reset();
-
-form.reset({ profile: { email: 'ada@example.com', name: 'Ada' }, tags: [] });
+form.field('email').set('ada@example.com');
+form.field('profile').field('name').set('Ada');
 ```
 
-An absent optional parent remains absent after a child reset. Array items support per-index field handles for reads, updates, and resets.
+## Validate explicitly
 
-## Validate and Submit
-
-Return `fields` and an optional `formError` from one validator. `validate()` replaces the complete validation snapshot and returns an explicit status.
+Validators return a flat issue list. Forge does not choose blur/change/submit policy for the application.
 
 ```ts
-const passwordForm = createForm({
-  initialValues: { password: '', passwordConfirmation: '' },
-  validate: (value) => ({
-    fields: {
-      password: value.password.length >= 8 ? undefined : 'Use at least eight characters',
-      passwordConfirmation: value.password === value.passwordConfirmation ? undefined : 'Passwords must match',
-    },
-  }),
+const form = createForm({
+  initialValues: { email: '', password: '' },
+  validate: (values) => {
+    const issues = [];
+    if (!values.email.includes('@')) issues.push({ path: ['email'], message: 'Invalid email' });
+    if (values.password.length < 12) issues.push({ path: ['password'], message: 'Use at least 12 characters' });
+    return issues.length ? issues : undefined;
+  },
 });
 
-const validation = await passwordForm.validate();
+const result = await form.validate();
+if (result.status === 'invalid') console.log(result.issues);
+```
 
-if (validation.status === 'invalid') console.log(validation.errors);
-if (validation.status === 'aborted') console.log('Validation cancelled');
+A field's `error` is derived from the first issue whose path equals that field path. Use `path: []` for form-level failures.
 
-const result = await passwordForm.submit((value) => Promise.resolve(value.password.length));
+## Submit
+
+```ts
+const result = await form.submit(async (values, signal) => {
+  const response = await fetch('/profile', {
+    body: JSON.stringify(values),
+    method: 'POST',
+    signal,
+  });
+  return response.json();
+});
 
 if (result.status === 'ok') console.log(result.value);
 ```
 
-Starting another validation aborts the previous run. Field edits preserve existing errors until the next validation replaces them. Unexpected validator failures reject as `ForgeValidationError` with the original error as `cause`.
+`submit()` validates first, passes the exact validated snapshot to the handler, prevents duplicate active submissions, and reports aborts explicitly.
 
-## Observe State
-
-Use form subscriptions for aggregate metadata and field subscriptions for one branch. Subscribing after disposal throws `ForgeDisposedError`.
+## Bind an element
 
 ```ts
-const errors: unknown[] = [];
-const observedForm = createForm({
+import { bindField } from '@vielzeug/forge/dom';
+
+const stop = bindField(input, form.field('email'), {
+  read: (element) => element.value,
+  write: (element, value) => { element.value = value; },
+});
+```
+
+Call `stop()` when the element owner unmounts.
+
+## Use a Standard Schema validator
+
+```ts
+import { schemaValidator } from '@vielzeug/forge/schema';
+
+const form = createForm({
   initialValues: { email: '' },
-  onSubscriberError: (error) => errors.push(error),
+  validate: schemaValidator(UserSchema),
 });
-
-const stopForm = observedForm.subscribe((state) => {
-  console.log(state.validity, state.submitting);
-}, { immediate: true });
-const stopField = observedForm.field('email').subscribe((state) => {
-  console.log(state.value, state.error);
-}, { immediate: true });
-
-stopField();
-stopForm();
 ```
 
-Without `onSubscriberError`, Forge rethrows subscriber failures asynchronously after completing its state transition.
+Spell schemas implement Standard Schema directly. Forge uses the schema result only for success and issues; transformations do not replace form values. Cancellation settles Forge promptly even when underlying validator work cannot be stopped.
 
-## Testing
-
-Test the form without a DOM. Read its immutable value, invoke a method, then assert the resulting state or validation result.
+## Persist a draft
 
 ```ts
-import { expect, test } from 'vitest';
-import { createForm } from '@vielzeug/forge';
+import { loadForm, saveForm } from '@vielzeug/forge/persist';
 
-test('requires an email address', async () => {
-  const form = createForm({
-    initialValues: { email: '' },
-    validate: (value) => ({ fields: { email: value.email.includes('@') ? undefined : 'Invalid email' } }),
-  });
+const codec = {
+  fromRecord: (record) => record.value,
+  toRecord: (values) => ({ id: 'profile', value: values }),
+};
 
-  await expect(form.validate()).resolves.toEqual({
-    errors: { email: 'Invalid email' },
-    formError: undefined,
-    status: 'invalid',
-  });
-});
+await saveForm(form, store, 'drafts', codec);
+await loadForm(form, store, 'drafts', 'profile', codec, { signal });
 ```
+
+Persistence remains explicit. The store owns durability and validation; the codec owns record shape. Loading returns `false` rather than overwriting edits made while storage was pending.
+
+## Serialize FormData
+
+```ts
+import { toFormData } from '@vielzeug/forge/form-data';
+
+await fetch('/profile', { body: toFormData(form.value), method: 'POST' });
+```
+
+Object keys containing dots and arrays containing nested objects reject instead of producing ambiguous or lossy entries.
+
+## Dispose
+
+```ts
+form.dispose();
+```
+
+Disposal settles active Forge validation and signals active submission/persistence work and clears subscribers. It does not dispose borrowed validators, stores, or DOM elements.
 
 ## Framework Integration
 
-Use `form.value` and subscriptions with any renderer. Bind one DOM input through `/dom`; validation scheduling remains application policy.
+Inject an owner-scoped form and subscribe to its stable `FormState` snapshot.
 
 ::: code-group
 
-```ts [React]
-import { useEffect, useState } from 'react';
-import { createForm } from '@vielzeug/forge';
+```tsx [React]
+import { useSyncExternalStore } from 'react';
+import type { Form } from '@vielzeug/forge';
 
-const form = createForm({ initialValues: { email: '' } });
-
-export function EmailForm() {
-  const [, rerender] = useState(0);
-
-  useEffect(() => {
-    const stop = form.subscribe(() => rerender((revision) => revision + 1));
-
-    return () => stop();
-  }, []);
-
-  return <input value={form.field('email').value} onChange={(event) => form.field('email').set(event.target.value)} />;
+export function useFormState<T extends Record<string, unknown>>(form: Form<T>) {
+  return useSyncExternalStore(form.subscribe, () => form.state, () => form.state);
 }
 ```
 
-```ts [Vue 3]
-import { onUnmounted, ref } from 'vue';
-import { createForm } from '@vielzeug/forge';
+```ts [Vue]
+import { onUnmounted, shallowRef } from 'vue';
+import type { Form } from '@vielzeug/forge';
 
-const form = createForm({ initialValues: { email: '' } });
-const revision = ref(0);
-const stop = form.subscribe(() => revision.value++);
-
-onUnmounted(stop);
+export function useFormState<T extends Record<string, unknown>>(form: Form<T>) {
+  const state = shallowRef(form.state);
+  const stop = form.subscribe((next) => { state.value = next; }, { immediate: true });
+  onUnmounted(stop);
+  return state;
+}
 ```
 
 ```ts [Svelte]
-<script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { createForm } from '@vielzeug/forge';
+import type { Form } from '@vielzeug/forge';
 
-  const form = createForm({ initialValues: { email: '' } });
-  let revision = 0;
-  const stop = form.subscribe(() => revision++);
-
-  onDestroy(stop);
-</script>
-
-<input value={form.field('email').value} on:input={(event) => form.field('email').set(event.currentTarget.value)} />
+export const formState = <T extends Record<string, unknown>>(form: Form<T>) => ({
+  subscribe(run: (state: Form<T>['state']) => void) {
+    return form.subscribe(run, { immediate: true });
+  },
+});
 ```
 
 :::
 
+The owner that creates the form disposes it. Framework subscriptions own only their unsubscribe callbacks.
+
 ## Working with Other Vielzeug Libraries
 
-Use Spell when one schema owns validation and Vault when an explicit record codec owns persistence.
-
-```ts
-import { createForm } from '@vielzeug/forge';
-import { customValidator } from '@vielzeug/forge/spell';
-import { s } from '@vielzeug/spell';
-
-const Profile = s.object({ email: s.string().email() });
-const form = createForm({ initialValues: { email: '' }, validate: customValidator(Profile) });
-```
-
-`customValidator()` preserves unrelated Spell errors, maps each union to its closest branch, and maps array-item failures to per-item array fields. Parse again at the submit boundary when a Spell transform must produce the outgoing payload.
-
-```ts
-import { loadForm, saveForm } from '@vielzeug/forge/vault';
-
-await saveForm(form, db, 'drafts', codec);
-const restored = await loadForm(form, db, 'drafts', 'profile', codec);
-console.log(restored);
-```
-
-`loadForm()` uses `form.reset()`, so a restored value is clean. Store a selected `File`, not `FileList`, in form state; `FileList` is transport-only for `toFormData()`.
+- Pass Spell schemas to `schemaValidator()` through Standard Schema.
+- Pass Vault stores directly to `loadForm()` and `saveForm()`.
+- Bind Ore or native controls with `bindField()` and owner cleanup.
 
 ## Best Practices
 
-- Keep form values to primitives, plain objects, arrays, `Date`, `File`, and `Blob`.
-- Update array fields through immutable replacement functions.
-- Validate complete values instead of rebuilding field-validator graphs.
-- Handle `aborted` validation results before rendering errors.
-- Preserve errors through field edits until a deliberate validation refresh.
-- Return subscription cleanup from framework lifecycle hooks.
-- Provide `onSubscriberError` when application subscribers can throw.
-- Decode Vault records before passing them to `loadForm()`.
+- Keep validation timing in the UI layer.
+- Return flat issues rather than shape-coupled error trees.
+- Use field handles instead of string paths.
+- Decode persisted/network data at its boundary.
+- Dispose forms with their owner.

@@ -1,6 +1,6 @@
 import type { LogEntry, Transport } from '@vielzeug/rune';
 
-import { consoleTransport, createLogger, pipe } from '@vielzeug/rune';
+import { consoleTransport, createLogger } from '@vielzeug/rune';
 
 const MAX_RING_BUFFER_SIZE = 200;
 
@@ -16,5 +16,5 @@ const ringBufferTransport: Transport = (entry: LogEntry): void => {
 
 export const logger = createLogger({
   namespace: 'vielzeug-motors',
-  transports: [pipe(consoleTransport(), ringBufferTransport)],
+  transports: [consoleTransport(), ringBufferTransport],
 });

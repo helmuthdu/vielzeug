@@ -70,35 +70,6 @@ function SearchBox() {
 
 Native browser events (`click`, `focus`, `blur`) work through JSX props as normal in both React versions.
 
-### TypeScript
-
-Create a global declaration file so TypeScript recognises `ore-*` tags in JSX:
-
-```typescript
-// src/custom-elements.d.ts
-declare namespace React {
-  namespace JSX {
-    interface IntrinsicElements {
-      'ore-button': React.HTMLAttributes<HTMLElement> & {
-        variant?: 'solid' | 'outline' | 'ghost';
-        color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
-        size?: 'sm' | 'md' | 'lg';
-        loading?: boolean;
-        disabled?: boolean;
-      };
-      'ore-input': React.HTMLAttributes<HTMLElement> & {
-        label?: string;
-        type?: string;
-        value?: string;
-        required?: boolean;
-        disabled?: boolean;
-      };
-      // extend for each component you use
-    }
-  }
-}
-```
-
 ### Vite Setup
 
 Tell the React plugin to treat `ore-*` tags as custom elements so it doesn't warn about unknown JSX elements:
@@ -119,7 +90,7 @@ export default defineConfig({
 
 ### Generated JSX Types
 
-Import the generated declaration once in your application entry point. It is derived from Refine's Custom Elements Manifest, so every published `ore-*` tag is available without a hand-maintained JSX declaration:
+Import the generated declaration once in your application entry point. It registers every supported `ore-*` tag and derives JSX properties from Refine's typed DOM element map:
 
 ```ts
 import type {} from '@vielzeug/refine/frameworks/react';
@@ -193,7 +164,7 @@ export default defineConfig({
 
 ### Generated Template Types
 
-Import the generated declaration once to register every published `ore-*` tag with Vue's template type checker:
+Import the generated declaration once to register every supported `ore-*` tag and its component properties with Vue's template type checker:
 
 ```ts
 import type {} from '@vielzeug/refine/frameworks/vue';

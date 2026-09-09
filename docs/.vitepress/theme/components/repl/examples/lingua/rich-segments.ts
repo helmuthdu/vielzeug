@@ -1,16 +1,17 @@
 export const richSegmentsExample = {
-  code: `import { createCatalogTranslator } from '@vielzeug/lingua'
+  code: `import { createTranslator } from '@vielzeug/lingua'
 
-// segments() preserves components, nodes, or other non-string replacements.
-const translator = createCatalogTranslator({
+// parts() preserves components, nodes, or other non-string replacements
+// as a typed discriminated union: { type: 'text', value } | { type: 'value', value }.
+const translator = createTranslator({
   error: 'Try {retry} or {support}.',
 })
 
 const retry = { label: 'retry', href: '/retry' }
 const support = { label: 'support', href: '/support' }
-const result = translator.segments('error', { values: { retry, support } })
+const result = translator.parts('error', { values: { retry, support } })
 
 console.log(result)
-console.log(result.map((part) => typeof part === 'string' ? part : part.label).join(''))`,
-  name: 'Rich Segments',
+console.log(result.map((part) => part.type === 'text' ? part.value : part.value.label).join(''))`,
+  name: 'Rich Parts',
 };

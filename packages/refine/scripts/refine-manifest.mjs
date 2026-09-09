@@ -84,13 +84,24 @@ function discoverComponentManifest() {
     if (importerSet.size === 1 && dirname([...importerSet][0]) === dirname(candidate)) absorbed.add(candidate);
   }
 
-  return candidates
+  const components = candidates
     .filter((file) => !absorbed.has(file))
     .map((file) => ({
       name: basename(file, '.ts'),
       source: `./${relative(packageRoot, file).replace(/\\/g, '/').replace(/\.ts$/, '')}`,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+  const tags = [
+    ...new Set(
+      allFiles.flatMap((file) =>
+        [...readFileSync(file, 'utf8').matchAll(/(?:export\s+const\s+\w+_TAG\s*=\s*|customElements\.define\(\s*)['"](ore-[^'"]+)['"]/g)].map(
+          (match) => match[1],
+        ),
+      ),
+    ),
+  ].sort();
+
+  return { components, tags };
 }
 
 /**
@@ -98,11 +109,13 @@ function discoverComponentManifest() {
  * `exports` map (`check:manifest`/`sync:exports`) and the Vite multi-entry build list
  * (`getRefineLibraryEntries`). See `discoverComponentManifest`'s doc comment.
  */
-export const componentManifest = discoverComponentManifest();
-
+const discovery = discoverComponentManifest();
+export const componentManifest = discovery.components;
+export const componentTags = discovery.tags;
 export const componentNames = componentManifest.map(({ name }) => name);
 
 const packageJsonUrl = new URL('../package.json', import.meta.url);
+const elementMapUrl = new URL('../src/types/elements.d.ts', import.meta.url);
 const processRef = globalThis.process;
 
 const staticExportKeys = new Set([
@@ -285,6 +298,15 @@ export function verifyComponentExports() {
         );
       }
     }
+  }
+
+  const elementMapTags = [
+    ...readFileSync(elementMapUrl, 'utf8').matchAll(/^\s*'(ore-[^']+)':/gm),
+  ].map((match) => match[1]);
+  const missingElementTypes = componentTags.filter((tag) => !elementMapTags.includes(tag));
+
+  if (missingElementTypes.length) {
+    throw new Error(`Missing HTMLElementTagNameMap entries: ${missingElementTypes.join(', ')}`);
   }
 
   return { count: componentNames.length };

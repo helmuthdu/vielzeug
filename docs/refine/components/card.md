@@ -4,12 +4,11 @@ A versatile and feature-rich card container component with purposeful variants, 
 
 ## Variants
 
-Four named variants cover the full range from solid to translucent:
+Four surface treatments cover the range from solid to translucent:
 
 - **Default** (no `variant`) - Canvas background with gentle border. Picks up `color` as a tinted backdrop.
 - **`solid`** - Filled with the theme color; best for prominent cards with a `color` attribute.
 - **`flat`** - Subtle backdrop tint with a semi-transparent border; low visual weight.
-- **`glass`** - Glassmorphism with backdrop blur and inset shadow; great for overlays.
 - **`frost`** - Frosted glass with stronger blur and color-tinted transparency.
 
 ::: tip Elevation Control
@@ -444,7 +443,7 @@ Perfect for compact layouts and list views:
 
 | Attribute     | Type                                                                      | Default | Description                                |
 | ------------- | ------------------------------------------------------------------------- | ------- | ------------------------------------------ |
-| `variant`     | `'solid' \| 'flat' \| 'glass' \| 'frost'`                                 | —       | Visual style variant                       |
+| `variant`     | `'solid' \| 'flat' \| 'frost'`                                 | —       | Visual style variant                       |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Color theme for the card                   |
 | `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | —       | Internal padding size                      |
 | `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | —       | Shadow elevation level (0=none, 5=maximum) |

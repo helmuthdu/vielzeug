@@ -41,6 +41,7 @@ import {
   type Overscan,
   type VirtualKey,
   type MeasurementCache,
+  type ScrollStore,
   type ScrollTarget,
   type DomVirtualListOptions,
   type DomVirtualListController,
@@ -123,7 +124,6 @@ const virt = createVirtualizer(scrollEl, {
 | `onScrollingChange` | `(isScrolling: boolean) => void`             | —                | Called when scroll activity starts or stops; replace through `update()`. |
 | `overscan`          | `number \| { start?: number; end?: number }` | `3`              | Extra items outside the viewport; number = symmetric on both sides                         |
 | `scrollEndDelay`    | `number`                                     | `150`            | Debounce delay (ms) used to detect scroll end when native `scrollend` is unavailable       |
-| `toSignal`     | `(init: VirtualizerState) => Signal<VirtualizerState>` | —        | Optional signal factory to expose state as a reactive Signal                              |
 | `sticky`            | `(index: number) => boolean`                 | —                | Mark an item as a sticky header (pinned at viewport top)                                   |
 
 Callbacks and `scrollEndDelay` can be replaced through `update()`; `horizontal` and `initialOffset` remain construction-only.
@@ -159,6 +159,8 @@ interface VirtualizerState {
 
 | Method             | Signature                                                           | Description                                                          |
 | ------------------ | ------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `getSnapshot`      | `() => VirtualizerState`                                            | Return the current coherent state snapshot                           |
+| `subscribe`        | `(listener: () => void) => () => void`                              | Observe state changes; returns an unsubscribe function               |
 | `update`           | `(next: VirtualizerUpdateOptions) => void`                          | Atomically update live options                                       |
 | `measure`          | `(index: number, size: number) => void`                             | Record one measured size; rebuild batched in microtask               |
 | `measureBatch`     | `(entries: Array<{ index: number; size: number }>) => void`         | Record many sizes; single rebuild                                    |
@@ -303,7 +305,6 @@ ctrl.dispose();
 | `keyboardScroll`   | `boolean`                                     | `false`  | Enable keyboard navigation (Arrow/Page/Home/End keys)      |
 | `measurementCache` | `MeasurementCache`                            | —        | External measurement cache                                 |
 | `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric       |
-| `toSignal`    | `(init: VirtualizerState) => Signal<VirtualizerState>` | — | Optional signal factory to expose state as a reactive Signal |
 | `sticky`           | `(index: number, item: T) => boolean`         | —        | Mark items as sticky headers                               |
 | `clear`            | `(listEl: HTMLElement) => void`               | —        | Custom teardown for listEl; defaults to `textContent = ''` |
 | `stickToBottom`    | `boolean \| StickToBottomOptions`                       | —        | Auto-scroll to the end after `setItems()` whenever the list was already at (or near) the end — the chat "stick to bottom on new message" pattern |
@@ -356,6 +357,8 @@ Extends `Virtualizer` (minus `prepend` and `update`) with `setItems()`. All virt
 
 | Member             | Description                                                                                 |
 | ------------------ | ------------------------------------------------------------------------------------------- |
+| `getSnapshot()`    | Return the current `VirtualizerState` snapshot                                            |
+| `subscribe(fn)`    | Observe state changes; works before the lazy virtualizer is created                       |
 | `setItems(items)`  | Set the current item array. Spawns virtualizer on first non-empty call; destroys it on `[]` |
 | `count`            | Current item count (live getter)                                                            |
 | `disposalSignal`   | `AbortSignal` aborted on `dispose()`                                                        |
@@ -478,7 +481,6 @@ virt.dispose();
 | `measurementCache`   | `MeasurementCache`                                                 | —        | External measurement cache                                              |
 | `overscan`           | `number \| { start?: number; end?: number }`                       | `3`      | Overscan on each side (number = symmetric)                              |
 | `scrollEndDelay`     | `number`                                                           | `150`    | Debounce delay (ms) for scroll-end detection                            |
-| `toSignal`      | `(init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>` | —   | Optional signal factory to expose state as a reactive Signal            |
 
 ### `GroupSection<T>`
 
@@ -523,6 +525,8 @@ interface GroupVirtualHeader extends VirtualItem {
 
 | Method / Property                  | Description                                                              |
 | ---------------------------------- | ------------------------------------------------------------------------ |
+| `getSnapshot()`                    | Return the current `GroupVirtualizerState<T>` snapshot                         |
+| `subscribe(listener)`              | Observe grouped state changes; returns an unsubscribe function                 |
 | `update(sections, opts?)`           | Replace all sections with optional config overrides; see `GroupVirtualizerUpdateOptions<T>` |
 | `scrollToSection(i, options?)`     | Scroll to section header at index `i`. Out-of-range is a no-op           |
 | `scrollToItem(s, i, options?)`     | Scroll to item `i` in section `s`. Out-of-range is a no-op               |
@@ -620,7 +624,6 @@ grid.dispose();
 | `onRangeChange`       | `(range: GridRangeChangeEvent) => void` | —                      | Zero-allocation range callback         |
 | `rowMeasurementCache` | `Map<number, number>`                   | —                      | External row measurement cache         |
 | `colMeasurementCache` | `Map<number, number>`                   | —                      | External column measurement cache      |
-| `toSignal`       | `(init: GridVirtualizerState) => Signal<GridVirtualizerState>` | —    | Optional signal factory to expose state as a reactive Signal |
 
 ### `GridVirtualizerState`
 
@@ -639,6 +642,8 @@ interface GridVirtualizerState {
 
 | Method                             | Description                                                                       |
 | ---------------------------------- | --------------------------------------------------------------------------------- |
+| `getSnapshot()`                    | Return the current `GridVirtualizerState` snapshot                                |
+| `subscribe(listener)`              | Observe grid state changes; returns an unsubscribe function                       |
 | `update(next)`                     | Atomically update row/col counts, estimates, gaps, and overscan                   |
 | `measureRow(row, size)`            | Record a row height                                                               |
 | `measureColumn(col, size)`         | Record a column width                                                             |
@@ -668,6 +673,17 @@ interface ScrollToCellOptions {
 ```
 
 ## Types
+
+### `ScrollStore<State>`
+
+```ts
+interface ScrollStore<State> {
+  getSnapshot: () => State;
+  subscribe: (listener: () => void) => () => void;
+}
+```
+
+Framework-neutral external-store contract implemented by every Scroll controller. `getSnapshot()` returns the current state. `subscribe()` observes later state changes and returns an unsubscribe function.
 
 ### `VirtualItem`
 
@@ -830,7 +846,6 @@ interface VirtualizerOptions {
   onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
   scrollEndDelay?: number;
-  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
   sticky?: (index: number) => boolean;
 }
 ```
@@ -838,7 +853,7 @@ interface VirtualizerOptions {
 ### `Virtualizer`
 
 ```ts
-interface Virtualizer {
+interface Virtualizer extends ScrollStore<VirtualizerState> {
   readonly count: number;
   readonly disposalSignal: AbortSignal;
   dispose: () => void;
@@ -890,7 +905,6 @@ type DomVirtualListOptions<T> = {
   scrollElement: HTMLElement | Window;
   stickToBottom?: boolean | StickToBottomOptions;
   sticky?: (index: number, item: T) => boolean;
-  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
 };
 ```
 
@@ -970,7 +984,6 @@ interface GroupVirtualizerOptions<T> {
   overscan?: Overscan;
   scrollEndDelay?: number;
   sections: Array<GroupSection<T>>;
-  toSignal?: (init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>;
 }
 ```
 
@@ -993,7 +1006,7 @@ interface GroupVirtualizerUpdateOptions<T> {
 ### `GroupVirtualizer<T>`
 
 ```ts
-interface GroupVirtualizer<T> {
+interface GroupVirtualizer<T> extends ScrollStore<GroupVirtualizerState<T>> {
   readonly count: number;
   readonly disposalSignal: AbortSignal;
   dispose: () => void;
@@ -1059,14 +1072,13 @@ interface GridVirtualizerOptions {
   rowCount: number;
   rowGap?: number;
   rowMeasurementCache?: Map<number, number>;
-  toSignal?: (init: GridVirtualizerState) => Signal<GridVirtualizerState>;
 }
 ```
 
 ### `GridVirtualizer`
 
 ```ts
-interface GridVirtualizer {
+interface GridVirtualizer extends ScrollStore<GridVirtualizerState> {
   readonly cols: VirtualItem[];
   readonly disposalSignal: AbortSignal;
   dispose: () => void;

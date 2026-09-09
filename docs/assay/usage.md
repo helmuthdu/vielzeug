@@ -61,13 +61,13 @@ event instance is the clearest expression of the test.
 Choose the waiting primitive by the test's assertion shape:
 
 ```ts
-import { delay, retry, waitForEvent, waitUntil } from '@vielzeug/assay';
+import { delay, eventually, waitForEvent, waitUntil } from '@vielzeug/assay';
 
 await waitUntil(() => panel.querySelector('.status')?.textContent === 'Ready');
 
-await retry(() => {
+await eventually(() => {
   expect(onSave).toHaveBeenCalledOnce();
-});
+}, { message: 'save callback did not run' });
 
 const completed = waitForEvent<CustomEvent<{ id: string }>>(panel, 'save-complete', {
   signal: AbortSignal.timeout(1000),
@@ -78,11 +78,23 @@ expect((await completed).detail.id).toBeDefined();
 await delay(100); // real timer dependency, such as a debounce
 ```
 
-`waitUntil()` retries only a boolean predicate. `retry()` retries only a callback that throws until it succeeds.
-Both, and `waitForEvent()`, accept `timeout` and `signal`; `waitUntil()` and `retry()` also accept `interval`.
-Timeouts reject with `AssayTimeoutError`; aborts reject with the signal's reason.
+`waitUntil()` polls a boolean predicate. `eventually()` retries a throwing assertion and can include a diagnostic `message`. Both enforce one hard deadline while asynchronous callbacks are pending. Abort rejects immediately with the signal reason, but cannot stop callback-owned work; forward an application signal into that work when needed.
 
-`nextTick()` resolves after one microtask. Prefer it for microtask-scheduled reactive work over a timer delay.
+Timeouts reject with `AssayTimeoutError`. Timeout and delay values must be finite and non-negative; polling intervals must be finite and positive. All durations must fit the platform timer limit of 2,147,483,647 ms. `nextTick()` crosses one explicitly queued microtask boundary. Prefer it for microtask-scheduled reactive work over a timer delay.
+
+## Test Live Regions
+
+Query or wait for DOM live-region state. Assay recognizes explicit `aria-live` and implicit `alert`, `log`, `marquee`, `status`, and `timer` roles. Waits inspect every matching region.
+
+```ts
+import { queryAllLiveRegions, waitForLiveRegion, waitForLiveRegionCleared } from '@vielzeug/assay';
+
+await waitForLiveRegion('3 results found', { politeness: 'polite', root: panel });
+expect(queryAllLiveRegions({ root: panel })).toHaveLength(1);
+await waitForLiveRegionCleared({ root: panel });
+```
+
+These helpers assert DOM attributes and text only. Use browser and assistive-technology testing to verify actual announcement behavior.
 
 ## Testing custom elements
 
@@ -114,4 +126,5 @@ directly instead of routing generic DOM operations through another package.
 - Prefer `get*` for required controls and `query*` for intentional absence checks.
 - Make form state and event boundaries explicit: assign `.value`, then call `fireInput()` or `fireChange()`.
 - Use browser integration tests for focus, disabled activation, pointer capture, and other browser-default behavior.
-- Use `waitForEvent()` for an emitted event, `waitUntil()` for a condition, and `retry()` for assertions.
+- Use `waitForEvent()` for an emitted event, `waitUntil()` for a condition, and `eventually()` for assertions.
+- Add a diagnostic `message` to waits whose final assertion does not identify the tested workflow.

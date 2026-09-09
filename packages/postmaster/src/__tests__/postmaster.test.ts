@@ -438,7 +438,7 @@ describe('delayed enqueue', () => {
       });
 
       await postmaster.enqueue('send', 'hello', { availableAt: 500 });
-      await postmaster.start();
+      postmaster.start();
 
       // Let the pump settle: processNext finds nothing claimable, then schedule() arms the wake timer.
       for (let i = 0; i < 10; i++) {
@@ -456,5 +456,216 @@ describe('delayed enqueue', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('version migrations', () => {
+  it('applies ordered step migrations from stored version to registered version', async () => {
+    const execute = vi.fn(async (payload: unknown) => {
+      expect(payload).toEqual({ id: '1', priority: 5, title: 'Buy milk' });
+    });
+    const store = createMemoryPostmasterStore();
+
+    // Seed a v1 record directly into the store.
+    await store.transact(async (tx) => {
+      await tx.put({
+        attempts: 0,
+        availableAt: 0,
+        createdAt: 0,
+        id: 'job-1',
+        key: '1',
+        name: 'createTodo',
+        payload: { id: '1', title: 'Buy milk' },
+        status: 'queued',
+        updatedAt: 0,
+        version: 1,
+      });
+    });
+
+    const jobs = defineJobs({
+      createTodo: {
+        execute: execute as (payload: unknown, context: JobContext) => Promise<void>,
+        key: (p: unknown) => (p as { id: string }).id,
+        migrate: {
+          1: (payload) => ({ ...(payload as { id: string; title: string }), priority: 0 }),
+          2: (payload) => ({ ...(payload as { id: string; title: string; priority: number }), priority: 5 }),
+        },
+        validate: (v: unknown) => v as { id: string; title: string; priority: number },
+        version: 3,
+      },
+    });
+
+    const postmaster = createPostmaster({ clock: () => 0, jobs, store });
+    await postmaster.flush();
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    await postmaster.dispose();
+  });
+
+  it('accepts a contiguous migration range that starts after version 1', () => {
+    expect(() =>
+      defineJobs({
+        send: {
+          execute: async () => {},
+          key: (p: unknown) => String(p),
+          migrate: {
+            2: (payload) => payload,
+          },
+          version: 3,
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  it('accepts a current-version-only definition without migrations', () => {
+    expect(() =>
+      defineJobs({
+        send: {
+          execute: async () => {},
+          key: (p: unknown) => String(p),
+          version: 3,
+        },
+      }),
+    ).not.toThrow();
+  });
+
+  it('dead-letters stored versions older than the supported migration range', async () => {
+    const execute = vi.fn(async () => {});
+    const store = createMemoryPostmasterStore([
+      {
+        attempts: 0,
+        availableAt: 0,
+        createdAt: 0,
+        id: 'job-1',
+        key: 'job-1',
+        name: 'send',
+        payload: 'hello',
+        status: 'queued',
+        updatedAt: 0,
+        version: 1,
+      },
+    ]);
+    const jobs = defineJobs({
+      send: {
+        execute,
+        key: (payload: unknown) => String(payload),
+        migrate: { 2: (payload) => payload },
+        version: 3,
+      },
+    });
+    const postmaster = createPostmaster({ clock: () => 0, jobs, store });
+
+    await expect(postmaster.flush()).resolves.toMatchObject({ deadLettered: 1, processed: 1 });
+    expect(execute).not.toHaveBeenCalled();
+    await expect(postmaster.list()).resolves.toMatchObject([
+      { failure: { message: 'job "send" does not support stored version 1' }, status: 'dead-letter' },
+    ]);
+    await postmaster.dispose();
+  });
+
+  it('rejects migration ranges with gaps', () => {
+    expect(() =>
+      defineJobs({
+        send: {
+          execute: async () => {},
+          key: (p: unknown) => String(p),
+          migrate: {
+            1: (payload) => payload,
+            3: (payload) => payload,
+          },
+          version: 4,
+        },
+      }),
+    ).toThrow(PostmasterError);
+  });
+
+  it('rejects defineJobs when version 1 has migrations', () => {
+    expect(() =>
+      defineJobs({
+        send: {
+          execute: async () => {},
+          key: (p: unknown) => String(p),
+          migrate: { 1: (payload) => payload },
+          version: 1,
+        },
+      }),
+    ).toThrow(PostmasterError);
+  });
+
+  it('rejects defineJobs with out-of-range migration keys', () => {
+    expect(() =>
+      defineJobs({
+        send: {
+          execute: async () => {},
+          key: (p: unknown) => String(p),
+          migrate: {
+            1: (payload) => payload,
+            2: (payload) => payload,
+          },
+          version: 2,
+        },
+      }),
+    ).toThrow(PostmasterError);
+  });
+
+  it('dead-letters undefined migration output without executing the job', async () => {
+    const execute = vi.fn(async () => {});
+    const store = createMemoryPostmasterStore([
+      {
+        attempts: 0,
+        availableAt: 0,
+        createdAt: 0,
+        id: 'job-1',
+        key: 'job-1',
+        name: 'send',
+        payload: 'hello',
+        status: 'queued',
+        updatedAt: 0,
+        version: 1,
+      },
+    ]);
+    const jobs = defineJobs({
+      send: {
+        execute,
+        key: (payload: unknown) => String(payload),
+        migrate: { 1: () => undefined },
+        version: 2,
+      },
+    });
+    const postmaster = createPostmaster({ clock: () => 0, jobs, store });
+
+    await expect(postmaster.flush()).resolves.toMatchObject({ deadLettered: 1, processed: 1 });
+    expect(execute).not.toHaveBeenCalled();
+    await expect(postmaster.list()).resolves.toMatchObject([
+      { failure: { message: 'job "send" migration from version 1 returned undefined' }, status: 'dead-letter' },
+    ]);
+    await postmaster.dispose();
+  });
+
+  it('dead-letters a job whose stored version is newer than the registered version', async () => {
+    const execute = vi.fn(async () => {});
+    const store = createMemoryPostmasterStore();
+
+    await store.transact(async (tx) => {
+      await tx.put({
+        attempts: 0,
+        availableAt: 0,
+        createdAt: 0,
+        id: 'job-future',
+        key: 'future',
+        name: 'send',
+        payload: 'hello',
+        status: 'queued',
+        updatedAt: 0,
+        version: 5,
+      });
+    });
+
+    const postmaster = createPostmaster({ clock: () => 0, jobs: createJobs(execute), store });
+    await postmaster.flush();
+
+    expect(execute).not.toHaveBeenCalled();
+    await expect(postmaster.list()).resolves.toMatchObject([{ status: 'dead-letter' }]);
+    await postmaster.dispose();
   });
 });

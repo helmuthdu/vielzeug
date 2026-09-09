@@ -1,11 +1,14 @@
 import { decimal, roundDivision, toDecimalString } from './_decimal';
-import { isCurrency } from './currency';
+import { currency, isCurrency } from './currency';
 import { CoinsError, CurrencyMismatchError } from './errors';
 import type { Currency, Money, RoundingMode } from './types';
 
 const canonicalMoney = new WeakSet<object>();
 
 const defaultRounding: RoundingMode = 'halfAwayFromZero';
+
+const INTEGER = /^(?:0|-[1-9]\d*|[1-9]\d*)$/;
+const MAX_INTEGER_DIGITS = 1000;
 
 export function money<C extends Currency>(amount: string, currency: C, options?: { rounding?: RoundingMode }): Money<C>;
 export function money<C extends Currency>(amount: bigint, currency: C, options: { unit: 'minor' }): Money<C>;
@@ -38,8 +41,13 @@ export function money<C extends Currency>(
   return createMoney(roundDivision(scaled, value.denominator, options?.rounding ?? defaultRounding), currency);
 }
 
-/** Validates a plain data object and returns canonical money. Use for untrusted input; use `isMoney()` for trusted values. */
-export function parseMoney(value: unknown): Money {
+/**
+ * Decodes untrusted/persisted data into canonical `Money`.
+ * Accepts either a plain `Money`-shaped object (`{ amount: bigint, currency: Currency }`)
+ * or a `MoneyJSON`-shaped object (`{ amount: string, currency: string, unit: 'minor' }`).
+ * Use `money()` for trusted construction; use `decodeMoney()` for network/storage data.
+ */
+export function decodeMoney(value: unknown, options?: { currency?: (code: string) => Currency }): Money {
   if (!isPlainDataObject(value)) throw new CoinsError('INVALID_MONEY', 'Money must be a plain data object');
 
   const descriptors = Object.getOwnPropertyDescriptors(value);
@@ -50,11 +58,57 @@ export function parseMoney(value: unknown): Money {
     throw new CoinsError('INVALID_MONEY', 'Money properties must be plain data values');
   }
 
-  if (typeof amountDescriptor.value !== 'bigint' || !isCurrency(currencyDescriptor.value)) {
-    throw new CoinsError('INVALID_MONEY', 'Money must contain bigint amount and a registered currency');
+  const ownKeys = Reflect.ownKeys(value);
+
+  // Plain Money: bigint amount + registered currency
+  if (typeof amountDescriptor.value === 'bigint' && isCurrency(currencyDescriptor.value)) {
+    if (ownKeys.length !== 2) {
+      throw new CoinsError('INVALID_MONEY', 'Plain money must have exactly the keys amount and currency');
+    }
+
+    return createMoney(amountDescriptor.value, currencyDescriptor.value);
   }
 
-  return createMoney(amountDescriptor.value, currencyDescriptor.value);
+  // MoneyJSON: string amount + string currency code + unit: 'minor'
+  const unitDescriptor = descriptors.unit;
+  if (
+    typeof amountDescriptor.value === 'string' &&
+    typeof currencyDescriptor.value === 'string' &&
+    isDataProperty(unitDescriptor) &&
+    unitDescriptor.value === 'minor'
+  ) {
+    if (ownKeys.length !== 3) {
+      throw new CoinsError('INVALID_MONEY', 'MoneyJSON must have exactly the keys amount, currency, unit');
+    }
+    if (amountDescriptor.value.length > MAX_INTEGER_DIGITS) {
+      throw new CoinsError('INVALID_MONEY', `Money JSON amount is too long; maximum ${MAX_INTEGER_DIGITS} characters`);
+    }
+    if (!INTEGER.test(amountDescriptor.value)) {
+      throw new CoinsError('INVALID_MONEY', `Invalid Money JSON amount "${amountDescriptor.value}"`);
+    }
+    const resolveCurrency = options?.currency ?? currency;
+    try {
+      const resolvedCurrency = resolveCurrency(currencyDescriptor.value);
+
+      if (!isCurrency(resolvedCurrency) || resolvedCurrency.code !== currencyDescriptor.value) {
+        throw new CoinsError(
+          'INVALID_CURRENCY',
+          `Currency resolver must return the canonical "${currencyDescriptor.value}" definition`,
+        );
+      }
+
+      return money(BigInt(amountDescriptor.value), resolvedCurrency, { unit: 'minor' });
+    } catch (error) {
+      throw new CoinsError('INVALID_MONEY', `Invalid Money JSON for currency "${currencyDescriptor.value}"`, {
+        cause: error,
+      });
+    }
+  }
+
+  throw new CoinsError(
+    'INVALID_MONEY',
+    'Money must contain bigint amount and a registered currency, or a valid MoneyJSON shape',
+  );
 }
 
 export function isMoney(value: unknown): value is Money {

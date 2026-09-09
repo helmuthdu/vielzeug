@@ -1,7 +1,6 @@
-import { fromRoomPresence } from '@vielzeug/flux/pulse';
-import { toSignal } from '@vielzeug/flux/ripple';
 import { createPulse } from '@vielzeug/pulse';
-import { computed } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
+import { computed, fromSubscribable } from '@vielzeug/ripple';
 
 export interface PresenceShopper {
   name: string;
@@ -94,7 +93,7 @@ class MockWebSocket {
 
 const EMPTY_MAP: ReadonlyMap<string, PresenceShopper> = new Map();
 
-let _presenceBinding: ReturnType<typeof toSignal<ReadonlyMap<string, PresenceShopper>>> | null = null;
+let _presenceBinding: Readable<ReadonlyMap<string, PresenceShopper>> | null = null;
 
 /** `memberId → PresenceShopper` for the global 'showroom' room; empty until `setupRealtime()` runs. */
 export const presenceSignal = {
@@ -114,7 +113,7 @@ export function setupRealtime(): void {
   void pulse.connect().catch(console.error);
 
   const showroom = pulse.room('showroom');
-  const presence$ = fromRoomPresence(showroom);
 
-  _presenceBinding = toSignal(presence$, { initial: new Map<string, PresenceShopper>() });
+  // Bridge Pulse's framework-neutral presence store into the Ripple graph.
+  _presenceBinding = fromSubscribable(showroom.presence);
 }

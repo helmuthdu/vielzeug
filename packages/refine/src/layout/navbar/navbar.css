@@ -381,11 +381,6 @@
     --_navbar-border-color: color-mix(in oklch, var(--color-contrast-500) 40%, transparent);
   }
 
-  :host([variant='glass']) {
-    --_navbar-bg: color-mix(in oklch, var(--color-canvas) 70%, transparent);
-    --navbar-backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-  }
-
   :host([color]) {
     --_navbar-border-color: color-mix(in oklch, var(--_theme-border) 30%, transparent);
   }

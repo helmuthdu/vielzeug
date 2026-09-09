@@ -5,7 +5,7 @@ package: tempo
 category: time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl]
 related: [rune, vault]
-exports: [Temporal, parse, now, nowInstant, isValid, toInstant, inTimeZone, shift, difference, contains, clamp, isBefore, isAfter, isSame, startOf, endOf, format, formatParts, formatRange, formatRangeParts, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, classifyExpiry, timeDiff, humanize, dateRange, recurrence, TempoError, TempoInvalidInputError, TempoInvalidTzError, TempoMissingTzError, TempoUnsupportedInputError]
+exports: [Temporal, parse, now, nowInstant, isValid, toInstant, inTimeZone, shift, difference, isBefore, isAfter, isSame, contains, clamp, startOf, endOf, dateRange, recurrence, format, formatParts, formatRange, formatRangeParts, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, classifyExpiry, timeDiff, humanize, TempoError, TempoInvalidInputError, TempoInvalidTzError, TempoMissingTzError, TempoUnsupportedInputError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -22,11 +22,10 @@ Date/time bugs come from treating an instant and a wall-clock value as interchan
 const reminder = new Date(meeting.getTime() - 15 * 60_000);
 
 // After
-import { parse, shift, toInstant } from '@vielzeug/tempo';
+import { parse, shift } from '@vielzeug/tempo';
 
 const localMeeting = parse('2026-03-21T10:30:00', { as: 'plainDateTime' });
-const meeting = toInstant(localMeeting, { timeZone: 'America/New_York' });
-const reminder = shift(meeting, { minutes: -15 }, { timeZone: 'America/New_York' });
+const reminder = shift(localMeeting, { minutes: -15 }, { timeZone: 'America/New_York' });
 ```
 
 | Feature | Tempo | date-fns | Native Date |
@@ -68,12 +67,11 @@ yarn add @vielzeug/tempo
 Parse a wall-clock input explicitly, attach its timezone, then format it for a user.
 
 ```ts
-import { format, inTimeZone, parse, shift, toInstant } from '@vielzeug/tempo';
+import { format, parse, shift } from '@vielzeug/tempo';
 
 const localMeeting = parse('2026-03-21T10:30:00', { as: 'plainDateTime' });
-const meeting = toInstant(localMeeting, { timeZone: 'America/New_York' });
-const reminder = shift(meeting, { minutes: -15 }, { timeZone: 'America/New_York' });
-const text = format(inTimeZone(reminder, 'America/New_York'), {
+const reminder = shift(localMeeting, { minutes: -15 }, { timeZone: 'America/New_York' });
+const text = format(reminder, {
   locale: 'en-US',
   pattern: 'short',
 });
@@ -85,11 +83,12 @@ const text = format(inTimeZone(reminder, 'America/New_York'), {
 
 - `parse()` — Requires an explicit ISO target: instant, zoned date-time, plain date-time, or plain date.
 - `toInstant()` / `inTimeZone()` — Convert wall-clock and absolute values with explicit timezone semantics.
-- `shift()` / `difference()` — Perform DST-safe arithmetic and duration calculation.
-- `contains()` / `clamp()` — Use named range fields instead of ambiguous positional inputs.
-- `classifyExpiry()` — Classify fixed elapsed-time thresholds in milliseconds or larger units without month or year approximation.
-- `format()` / `formatRelative()` / `formatDuration()` — Render UI, relative, and duration values through `Intl`.
-- `dateRange()` / `recurrence()` — Lazily generate zoned calendar sequences.
+- `shift()` / `difference()` — Apply DST-safe arithmetic across instant, zoned, and wall-clock inputs.
+- `contains()` / `clamp()` — Compare normalized ranges with optional calendar-unit precision.
+- `startOf()` / `endOf()` — Resolve timezone-aware calendar boundaries, including configurable week starts.
+- `dateRange()` / `recurrence()` — Generate validated, lazy zoned calendar sequences.
+- `format()` / `formatRelative()` / `formatDuration()` — Render localized values through `Intl`, including calendar-aware relative months and years.
+- `classifyExpiry()` — Classify fixed elapsed-time thresholds without month or year approximation.
 
 </div>
 

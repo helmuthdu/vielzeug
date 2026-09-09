@@ -26,5 +26,3 @@ mod(10, 5); // 0
 - `%` in JavaScript is the remainder operator, not true modulo. For negative `a`, `a % b` is negative; `mod(a, b)` is always `[0, b)`.
 
 ### Related
-
-- [abs](./abs.md)

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/spell",
   "version": "2.3.0",
-  "description": "Schema-first validation and parsing — runtime type checking, coercion, and custom refinements",
+  "description": "Zero-dependency schema validation with coercion, async checks, and Standard Schema interoperability",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

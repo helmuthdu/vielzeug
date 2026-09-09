@@ -12,7 +12,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, type Readable, signal, untrack, watch } from '@vielzeug/ripple';
+import { computed, fromSubscribable, type Readable, signal, untrack, watch } from '@vielzeug/ripple';
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
@@ -194,7 +194,7 @@ export type OreNavbarItemProps = {
  * @attr {number} scroll-threshold - Scroll threshold for floating+sticky transition
  * @attr {string} breakpoint - CSS media query used for mobile mode
  * @attr {boolean} container-breakpoints - Evaluates parseable max-width breakpoints against container width
- * @attr {string} variant - Visual variant: 'flat' | 'solid' | 'bordered' | 'outline' | 'frost' | 'glass'
+ * @attr {string} variant - Visual variant: 'flat' | 'solid' | 'bordered' | 'outline' | 'frost'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
@@ -258,7 +258,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     rounded: prop.string<RoundedSize>(),
     'scroll-threshold': prop.number(80),
     sticky: prop.bool(false),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'frost'>(),
+    variant: prop.string<Exclude<VisualVariant, 'ghost' | 'text'>>(),
   },
   setup(props) {
     const el = getHost();
@@ -632,16 +632,19 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 
             try {
               const mediaHandle = createMediaQuery(mediaQuery);
-              const syncMedia = (state: typeof mediaHandle.value) => {
+              const syncMedia = (state: ReturnType<typeof mediaHandle.getSnapshot>) => {
                 if (state) {
                   mediaMatches.value = state.matches;
                   syncMobileMode();
                 }
               };
 
-              syncMedia(mediaHandle.value);
+              syncMedia(mediaHandle.getSnapshot());
 
-              const mediaCleanupFn = watch(mediaHandle, syncMedia);
+              const mediaCleanupFn = watch(
+                fromSubscribable(mediaHandle, { signal: mediaHandle.disposalSignal }),
+                syncMedia,
+              );
               mediaCleanup = () => {
                 mediaCleanupFn.dispose();
                 mediaHandle.dispose();
@@ -659,6 +662,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
           ? (() => {
               const hostSize = createElementSize(el);
               onCleanup(() => hostSize.dispose());
+              const hostSizeSignal = fromSubscribable(hostSize, { signal: hostSize.disposalSignal });
 
               const wrapperEl = el.parentElement;
               const containerEl = resolveContainerElement(el);
@@ -672,14 +676,21 @@ define<OreNavbarProps>(NAVBAR_TAG, {
                 onCleanup(() => parentSize.dispose());
               }
 
+              const wrapperSizeSignal = wrapperSize
+                ? fromSubscribable(wrapperSize, { signal: wrapperSize.disposalSignal })
+                : undefined;
+              const parentSizeSignal = parentSize
+                ? fromSubscribable(parentSize, { signal: parentSize.disposalSignal })
+                : undefined;
+
               return watch(
                 computed(() => [
-                  hostSize.value?.width,
-                  hostSize.value?.height,
-                  wrapperSize?.value?.width,
-                  wrapperSize?.value?.height,
-                  parentSize?.value?.width,
-                  parentSize?.value?.height,
+                  hostSizeSignal.value?.width,
+                  hostSizeSignal.value?.height,
+                  wrapperSizeSignal?.value?.width,
+                  wrapperSizeSignal?.value?.height,
+                  parentSizeSignal?.value?.width,
+                  parentSizeSignal?.value?.height,
                 ]),
                 () => {
                   const width = readContainerWidth(el);

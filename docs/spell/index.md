@@ -1,12 +1,12 @@
 ---
 title: Spell — Schema validation for TypeScript
-description: Schema validation with explicit sync/async checks, portable definitions, JSON Schema export, and tree-shakeable entry points.
+description: Zero-dependency schema validation with explicit async checks, Standard Schema interoperability, and JSON Schema export.
 package: spell
 category: validation
-keywords: [schema, validation, parsing, json-schema, locale, typescript, descriptors]
+keywords: [schema, validation, parsing, standard-schema, json-schema, locale, typescript, descriptors]
 related: [forge, courier, vault]
 exports:
-  [s, Schema, PipeSchema, SpellValidationError, SpellDefinitionError, ErrorCode, diagnostics, './json', './predicates']
+  [s, createParseContext, SpellValidationError, SpellDefinitionError, StandardSchemaV1, ErrorCode, './json', './predicates']
 environments: [browser, node, ssr, deno]
 ---
 
@@ -125,12 +125,13 @@ const user = result.data;
 
 - Namespace and tree-shakeable schema builders.
 - Sync and async parsing with `parse()`, `safeParse()`, `parseAsync()`, and `safeParseAsync()`.
+- Dependency-free Standard Schema v1 interoperability through `schema['~standard']`.
 - Explicit `check()` and `checkAsync()` rules; sync parsing never skips an async check.
 - Wrapper modes for `optional`, `nullable`, `nullish`, `default`, `catch`, and `required`.
 - Frozen declarative definitions through `definition()` and JSON Schema export via `fromDefinition()` from `@vielzeug/spell/json`.
-- Grouped `diagnostics` and `predicates` utilities keep schema construction focused.
+- Request-local message customization through `createParseContext()`.
 - Ordered union parsing produces the same selected branch in sync and async modes.
-- Structured errors with direct path lookup, flattened views, and best-match union diagnostics.
+- Structured errors with direct path lookup and flattened views.
 - Object parsing is hardened against prototype-pollution-style keys.
 
 </div>

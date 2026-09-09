@@ -1,16 +1,16 @@
 # @vielzeug/sentinel
 
-Reactive browser and DOM observations with explicit ownership.
+> Subscribable snapshots for external browser environment state
 
-Sentinel exposes viewport, network, media query, element size, and intersection state as disposable Ripple readables.
-
-## Install
+## Installation
 
 ```sh
-pnpm add @vielzeug/sentinel @vielzeug/ripple
+pnpm add @vielzeug/sentinel
+npm install @vielzeug/sentinel
+yarn add @vielzeug/sentinel
 ```
 
-## Usage
+## Quick Start
 
 ```ts
 import { createViewport } from '@vielzeug/sentinel';
@@ -18,7 +18,8 @@ import { createViewport } from '@vielzeug/sentinel';
 function observeViewport(): () => void {
   const viewport = createViewport();
   const render = () => {
-    console.log(`${viewport.value.width}×${viewport.value.height} at ${viewport.value.dpr}dpr`);
+    const { dpr, height, width } = viewport.getSnapshot();
+    console.log(`${width}×${height} at ${dpr}dpr`);
   };
 
   render();
@@ -34,79 +35,14 @@ const stopObserving = observeViewport();
 // Call stopObserving() when the owning view unmounts.
 ```
 
-A Sentinel implements Ripple's `Readable<T>` contract:
+## Documentation
 
-```ts
-import { computed, watch } from '@vielzeug/ripple';
-import { createMediaQuery, createViewport } from '@vielzeug/sentinel';
+- [Overview](https://vielzeug.dev/sentinel/)
+- [Usage Guide](https://vielzeug.dev/sentinel/usage)
+- [API Reference](https://vielzeug.dev/sentinel/api)
+- [Examples](https://vielzeug.dev/sentinel/examples)
+- [Migration Guide](https://vielzeug.dev/sentinel/migration)
 
-const viewport = createViewport();
-const mobileQuery = createMediaQuery('(max-width: 768px)');
-const compact = computed(() => mobileQuery.value.matches || viewport.value.width < 400);
-const watcher = watch(compact, console.log, { immediate: true });
+## License
 
-watcher.dispose();
-mobileQuery.dispose();
-viewport.dispose();
-```
-
-Element observations start at `null` until the browser reports the first entry:
-
-```ts
-import { createElementSize } from '@vielzeug/sentinel';
-
-const element = document.getElementById('panel');
-if (!element) throw new Error('Panel not found');
-
-const size = createElementSize(element);
-const unsubscribe = size.subscribe(() => {
-  console.log(size.value?.width);
-});
-
-unsubscribe();
-size.dispose();
-```
-
-## Lifecycle
-
-Every Sentinel provides `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]()`. Pass an external signal when several observers share one lifetime:
-
-```ts
-const controller = new AbortController();
-const viewport = createViewport({ signal: controller.signal });
-const network = createNetwork({ signal: controller.signal });
-
-controller.abort();
-```
-
-## Isolated Ripple Runtime
-
-Pass an isolated Ripple runtime when Sentinel state must participate in that graph:
-
-```ts
-import { createRipple } from '@vielzeug/ripple';
-import { createViewport } from '@vielzeug/sentinel';
-
-const ripple = createRipple();
-const viewport = createViewport({ runtime: ripple });
-
-viewport.dispose();
-ripple.dispose();
-```
-
-Dispose Sentinels before disposing their injected Ripple runtime.
-
-## Unavailable APIs
-
-`createMediaQuery()`, `createElementSize()`, and `createIntersection()` throw `SentinelUnavailableError` when the required browser API is absent. Window-based factories throw the same error when no browser window is available.
-
-```ts
-import { createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
-
-try {
-  const media = createMediaQuery('(prefers-reduced-motion: reduce)');
-  media.dispose();
-} catch (error) {
-  if (!(error instanceof SentinelUnavailableError)) throw error;
-}
-```
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

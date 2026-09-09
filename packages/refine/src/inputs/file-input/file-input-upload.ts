@@ -1,4 +1,4 @@
-import { matchesAccept } from '@vielzeug/dnd';
+import { matchesAccept } from '@vielzeug/dnd/drop';
 import { type Readable, signal, watch } from '@vielzeug/ripple';
 
 import { announce } from '../../core';

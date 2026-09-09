@@ -15,36 +15,6 @@ export type SubscribeOptions = {
 };
 
 /**
- * Context object passed to `BusOptions.onError` when a listener throws.
- * Provides structured access to the error, the triggering event, and a timestamp.
- */
-export type EmissionErrorContext<T extends EventMap = EventMap> = {
-  /** The thrown error value. */
-  err: unknown;
-  /** The event key that triggered the failing listener. */
-  event: EventKey<T>;
-  /** The payload that was passed to the failing listener. */
-  payload: unknown;
-  /** Timestamp (ms since epoch) captured at the moment `emit()` was called. */
-  timestamp: number;
-};
-
-/**
- * A middleware function called in sequence during `emit()`, before any listeners run.
- * Call `next()` to continue the chain. Omitting `next()` prevents all listeners from running.
- *
- * @example
- * const rateLimit: Middleware<Events> = (event, payload, next) => {
- *   if (shouldAllow(event)) next();
- * };
- */
-export type Middleware<T extends EventMap = EventMap> = (
-  event: EventKey<T>,
-  payload: unknown,
-  next: () => void,
-) => void;
-
-/**
  * Runtime events emitted by {@link Bus.tap}.
  * Subscribe via `bus.tap(handler)` — handler errors are swallowed.
  */
@@ -54,7 +24,7 @@ export type HeraldEvent<T extends EventMap = EventMap> =
   | { readonly event: EventKey<T>; readonly type: 'unsubscribe' }
   | { readonly type: 'subscribe-any' }
   | { readonly type: 'unsubscribe-any' }
-  | { readonly error: unknown; readonly event: EventKey<T>; readonly type: 'listener-error' }
+  | { readonly error: unknown; readonly event: EventKey<T>; readonly type: 'error' }
   | { readonly type: 'dispose' };
 
 export type BusOptions<T extends EventMap = EventMap> = {
@@ -64,35 +34,11 @@ export type BusOptions<T extends EventMap = EventMap> = {
    */
   maxListeners?: number;
   /**
-   * Middleware functions run in order on every `emit()`, before listeners run.
-   * Each receives `(event, payload, next)` — call `next()` to proceed, or omit to block dispatch.
-   */
-  middleware?: readonly Middleware<T>[];
-  /**
    * Optional display name for this bus instance.
    * Appears in `BusDisposedError` messages.
-   * Useful when running multiple buses concurrently to identify which bus produced an error.
-   *
-   * **Note:** The name is embedded in `BusDisposedError` messages — avoid using
-   * sensitive or user-derived values that could leak via error trackers.
    */
   name?: string;
-  /**
-   * If provided, listener errors are forwarded here instead of re-thrown.
-   * Receives a structured `EmissionErrorContext` with the error, event key, payload, and timestamp.
-   *
-   * **Note:** every registered listener (specific and wildcard) for an emission always runs,
-   * regardless of `onError` — a throwing listener never prevents the rest from being called.
-   */
-  onError?: (context: EmissionErrorContext<T>) => void;
-  /**
-   * Called on every emit before middleware and listeners. Throw to reject the payload.
-   * On throw with `onError` configured, the error is forwarded and `emit()` returns 0.
-   * On throw without `onError`, the error propagates to the `emit()` caller.
-   * Receives the typed payload — use it to perform runtime validation with full type information.
-   */
-  validatePayload?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
-  /** @internal Called after middleware passes, before listeners run. Used by TestBus. */
+  /** @internal Called before listeners run. Used by TestBus. */
   _onDispatch?: (event: EventKey<T>, payload: unknown) => void;
 };
 
@@ -101,50 +47,12 @@ export type WaitAnyResult<T extends EventMap, K extends readonly EventKey<T>[]> 
   [I in keyof K]: K[I] extends EventKey<T> ? { event: K[I]; payload: T[K[I]] } : never;
 }[number];
 
-/**
- * Keys present in both `S` and `T` where `S[K]` is assignable to `T[K]`.
- * These keys can be forwarded from a source bus to a target bus without a type cast.
- */
-export type PipeableKey<S extends EventMap, T extends EventMap> = {
-  [K in EventKey<S> & EventKey<T>]: S[K] extends T[K] ? K : never;
-}[EventKey<S> & EventKey<T>];
-
-/**
- * A single pipe entry passed to `pipeEvents`:
- * - A `PipeableKey` string — forward the event under the same name.
- * - A `{ from, to }` object — forward the event under a different name on the target bus.
- */
-export type RenamedPipeEntry<S extends EventMap, T extends EventMap> = {
-  [From in EventKey<S>]: {
-    [To in EventKey<T>]: S[From] extends T[To] ? { from: From; to: To } : never;
-  }[EventKey<T>];
-}[EventKey<S>];
-
-export type PipeEntry<S extends EventMap, T extends EventMap> = PipeableKey<S, T> | RenamedPipeEntry<S, T>;
-
-/**
- * An `AsyncGenerator` extended with `AsyncDisposable`. Returned by `bus.events()`.
- *
- * Use `await using` for guaranteed cleanup, or call `[Symbol.asyncDispose]()` explicitly.
- * Compose with standard async-generator utilities (e.g. `for await` + `break`) or
- * user-space operators as needed.
- *
- * @example
- * await using stream = bus.events('count');
- * for await (const n of stream) { ... } // subscription cleaned up automatically
- */
-export type EventStream<T> = AsyncGenerator<T> & AsyncDisposable;
-
 export type Bus<T extends EventMap> = {
   /** Alias for dispose() — enables the `using` keyword for automatic cleanup. */
   [Symbol.dispose](): void;
   /**
    * Signal that fires when the bus is disposed.
    * Use to tie other lifecycles (subscriptions, pipes, timers) to this bus's lifetime.
-   *
-   * @example
-   * // Stop piping when the target bus is disposed
-   * source.on('event', handler, { signal: target.disposalSignal });
    */
   readonly disposalSignal: AbortSignal;
   /** Permanently dispose the bus — clears all listeners; pending waits are rejected. Idempotent. */
@@ -153,34 +61,12 @@ export type Bus<T extends EventMap> = {
   readonly disposed: boolean;
   /**
    * Emit an event, calling all registered listeners synchronously.
-   * Returns the total number of listeners that were invoked (specific + wildcard).
-   * Returns `0` if the bus is disposed, if a middleware blocked dispatch, or if `validatePayload` rejected.
-   *
-   * @remarks **Listener throws:** every listener still runs even if an earlier one throws. Without
-   * `onError` configured, the first thrown error is rethrown once every listener has been called —
-   * it never short-circuits the rest of the broadcast. With `onError` configured, errors are
-   * forwarded per-listener and `emit()` never throws for a listener failure.
+   * Returns `void`. Every listener runs even if an earlier one throws; listener errors are reported
+   * through `tap` as `error` events, then the first error is rethrown after dispatch.
    */
-  emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): number;
+  emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
   /** Returns the list of event names that currently have at least one active listener. */
   eventNames(): EventKey<T>[];
-  /**
-   * Async-iterate over all future emits of an event. Terminates when the bus is disposed or signal aborts.
-   *
-   * @remarks **Eager subscription:** The subscription starts when `events()` is called, not when the
-   * first iteration begins. Events emitted before the first `await` are buffered and will be yielded.
-   *
-   * @remarks **Buffer:** Internal buffer is unbounded by default. Pass `maxBuffer` to cap it — oldest
-   * values are dropped when the buffer is full. Validation is synchronous: `maxBuffer ≤ 0` throws
-   * `HeraldConfigError` at call time, before any iteration.
-   *
-   * @remarks **Cleanup:** Returns an `EventStream` — use `await using` for guaranteed cleanup:
-   * ```ts
-   * await using stream = bus.events('event');
-   * for await (const val of stream) { ... }
-   * ```
-   */
-  events<K extends EventKey<T>>(event: K, options?: { maxBuffer?: number; signal?: AbortSignal }): EventStream<T[K]>;
   /**
    * Number of active specific-event listeners for a given event key.
    * Does not include wildcard (`onAny`) listeners — use `wildcardCount()` for those.
@@ -192,27 +78,15 @@ export type Bus<T extends EventMap> = {
    *
    * - `opts.signal` — auto-unsubscribe when the signal aborts.
    * - `opts.once` — auto-unsubscribe after the first invocation (equivalent to `bus.once()`).
-   *
-   * The same listener function can be registered multiple times — each registration is independent
-   * and receives its own unsubscribe handle.
    */
   on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
   /**
    * Subscribe to **all** events. The listener is called after event-specific listeners on every emit,
    * receiving the event name and payload. Returns an unsubscribe function.
-   *
-   * - `opts.signal` — auto-unsubscribe when the signal aborts.
-   * - `opts.once` — auto-unsubscribe after the first invocation.
-   *
-   * Useful for cross-cutting concerns like logging, analytics, and tracing.
-   *
-   * @example
-   * bus.onAny((event, payload) => logger.debug('dispatched', { event, payload }));
    */
   onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe;
   /**
    * Subscribe once — auto-unsubscribes after the first emit. Stops early when the signal aborts.
-   * Convenience wrapper around `bus.on(event, listener, { once: true, signal: opts?.signal })`.
    */
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
   /**
@@ -223,7 +97,7 @@ export type Bus<T extends EventMap> = {
   wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
   /**
    * Resolve when any of the listed events (minimum 2) fires first.
-   * Returns a typed `{ event, payload }` discriminated union — the winning event name is narrowed to a literal.
+   * Returns a typed `{ event, payload }` discriminated union.
    * Rejects with `BusDisposedError` if the bus is disposed, or with the signal's reason if the signal aborts.
    */
   waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
@@ -232,15 +106,11 @@ export type Bus<T extends EventMap> = {
   ): Promise<WaitAnyResult<T, K>>;
   /**
    * Number of active wildcard (`onAny`) listeners.
-   * These fire on every emission regardless of event key.
    */
   wildcardCount(): number;
   /**
-   * Observe runtime events (emit, subscribe, unsubscribe, listener-error, dispose) without
+   * Observe runtime events (emit, subscribe, unsubscribe, error, dispose) without
    * affecting bus behavior. Handler errors are swallowed. Returns an unsubscribe function.
-   *
-   * @example
-   * bus.tap((event) => console.debug(`herald:${event.type}`, event));
    */
   tap(handler: (event: HeraldEvent<T>) => void, options?: { signal?: AbortSignal }): Unsubscribe;
 };

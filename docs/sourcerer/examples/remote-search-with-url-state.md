@@ -1,9 +1,9 @@
 ---
-title: 'Sourcerer Examples — Page Query with URL State'
-description: 'Validate URL values and synchronize loaded page queries.'
+title: 'Sourcerer Examples — Page Params with URL State'
+description: 'Validate URL values and load a page source with typed params.'
 ---
 
-## Page Query with URL State
+## Page Params with URL State
 
 ### Problem
 
@@ -11,40 +11,40 @@ You need bookmarkable search and page state without coupling Sourcerer to one ro
 
 ### Solution
 
-Parse URL values at your boundary, apply them through `setQuery()`, then serialize only loaded queries.
+Validate URL values, set params, and navigate with direct page commands.
 
 ```ts
 import { createPageSource } from '@vielzeug/sourcerer';
 
 type Item = { id: number; name: string };
 const items: Item[] = [{ id: 1, name: 'Ada' }, { id: 2, name: 'Grace' }];
-const source = createPageSource<Item>({
-  autoStart: false,
-  load: async ({ query }) => {
-    const matching = items.filter((item) => item.name.toLowerCase().includes(query.search.toLowerCase()));
-    const start = (query.page - 1) * query.pageSize;
-
-    return { data: matching.slice(start, start + query.pageSize), total: matching.length };
+const source = createPageSource({
+  load: async ({ page, pageSize, params: search }) => {
+    const matching = items.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()));
+    const start = (page - 1) * pageSize;
+    return { items: matching.slice(start, start + pageSize), totalItems: matching.length };
   },
+  params: '',
 });
 
-const params = new URLSearchParams('?page=1&search=ada');
-const page = Number.parseInt(params.get('page') ?? '1', 10);
-await source.setQuery({ page: Number.isInteger(page) && page > 0 ? page : 1, search: params.get('search') ?? '' });
+const url = new URL('https://example.test/users?page=1&search=ada');
+const parsedPage = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
+const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+await source.setParams(url.searchParams.get('search') ?? '');
+await source.goTo(page);
 
-const loaded = source.snapshot.query;
-history.replaceState(null, '', `?page=${loaded.page}&search=${encodeURIComponent(loaded.search)}`);
+history.replaceState(null, '', `?page=${source.state.pagination.page}&search=${encodeURIComponent(source.state.params)}`);
 source.dispose();
 ```
 
 ### Pitfalls
 
-- Validate page numbers before calling `setQuery()`.
-- Serialize `snapshot.query`, not `snapshot.pendingQuery`.
-- Keep filter and sort decoding in application-owned schema validation.
+- Validate page numbers before calling `goTo()`.
+- Serialize committed `state.params`, not `state.pendingParams`.
+- Keep route decoding at the application boundary.
 
 ### Related
 
-- [Usage Guide](../usage#handle-pending-remote-queries)
+- [Usage Guide](../usage#pass-loader-parameters)
 - [Wayfinder integration](./sourcerer-with-wayfinder)
 - [Page source API](../api#createpagesource)

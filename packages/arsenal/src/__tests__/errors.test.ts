@@ -1,4 +1,3 @@
-import { chunk } from '../array/chunk';
 import { memo } from '../cache/memo';
 import { ArsenalError, ArsenalSerializationError } from '../errors';
 
@@ -13,7 +12,7 @@ describe('ArsenalError', () => {
   });
 
   it('uses standard errors for invalid input and ArsenalSerializationError for serialization failures', () => {
-    expect(() => chunk([1, 2, 3], 0)).toThrow(RangeError);
+    expect(() => memo((n: number) => n, { maxSize: 0 })).toThrow(RangeError);
 
     const circular: { self?: unknown } = {};
 

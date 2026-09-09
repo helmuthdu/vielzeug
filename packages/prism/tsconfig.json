@@ -2,8 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@vielzeug/orbit": ["../orbit/src/index.ts"],
-      "@vielzeug/ripple": ["../ripple/src/index.ts"]
+      "@vielzeug/orbit": ["../orbit/src/index.ts"]
     }
   },
   "exclude": ["node_modules"],

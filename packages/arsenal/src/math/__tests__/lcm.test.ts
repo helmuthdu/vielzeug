@@ -27,4 +27,8 @@ describe('lcm', () => {
   it('returns the number itself when equal', () => {
     expect(lcm(5, 5)).toBe(5);
   });
+
+  it('rejects unsafe results', () => {
+    expect(() => lcm(Number.MAX_SAFE_INTEGER, 2)).toThrow(RangeError);
+  });
 });

@@ -8,6 +8,10 @@ describe('abortError', () => {
     expect((err as DOMException).name).toBe('AbortError');
   });
 
+  it('uses a custom fallback message', () => {
+    expect((abortError(undefined, 'Request cancelled') as DOMException).message).toBe('Request cancelled');
+  });
+
   it('returns an AbortError DOMException when signal is aborted without a custom reason', () => {
     const ac = new AbortController();
 

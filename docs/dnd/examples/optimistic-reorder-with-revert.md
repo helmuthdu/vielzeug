@@ -1,9 +1,9 @@
 ---
-title: 'Dnd Examples — Optimistic reorder with revert and FLIP animation'
-description: 'Optimistic reorder, server rollback with revert(), and FLIP animation using onBeforeReorder in @vielzeug/dnd.'
+title: 'Dnd Examples — Optimistic reorder with rollback and FLIP animation'
+description: 'Optimistic reorder, application-owned server rollback, and FLIP animation using onBeforeReorder in @vielzeug/dnd.'
 ---
 
-## Optimistic reorder with revert and FLIP animation
+## Optimistic reorder with rollback and FLIP animation
 
 ### Problem
 
@@ -11,7 +11,7 @@ You want drag-and-drop reordering to feel instant: the UI updates immediately wi
 
 ### Solution
 
-Use `onBeforeReorder` with Necromancer's `captureLayout()` for a FLIP animation and call `event.setRevert(fn)` inside `onReorder` so `sortable.revert()` can roll back on failure:
+Use `onBeforeReorder` with Necromancer's `captureLayout()` for a FLIP animation. The `onReorder` event carries `{ before, after, item }` — push `before` onto an application-owned history stack so you can roll back on failure:
 
 ```html
 <ul id="task-list">
@@ -23,7 +23,7 @@ Use `onBeforeReorder` with Necromancer's `captureLayout()` for a FLIP animation 
 ```
 
 ```ts
-import { applyReorder, createSortable } from '@vielzeug/dnd';
+import { applyReorder, createSortable } from '@vielzeug/dnd/sortable';
 import { captureLayout, type LayoutTransition } from '@vielzeug/necromancer';
 
 interface Task {
@@ -40,22 +40,25 @@ let tasks: Task[] = [
 
 const listEl = document.getElementById('task-list') as HTMLUListElement;
 const saveTasks = async (_orderedIds: string[]) => undefined;
-let layout: LayoutTransition | undefined;
+let layout: LayoutTransition<HTMLElement> | undefined;
+
+// Application-owned rollback stack — the sortable no longer holds revert state.
+const history: Array<{ before: Task[] }> = [];
 
 const sortable = createSortable({
   element: listEl,
   keyboard: true,
 
   onBeforeReorder: () => {
-    layout = captureLayout(listEl.querySelectorAll('[data-sort-id]'), {
+    layout = captureLayout(listEl.querySelectorAll<HTMLElement>('[data-sort-id]'), {
       getKey: (item) => item.dataset.sortId!,
     });
   },
 
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids, setRevert }) => {
-    const previous = tasks;
-    tasks = applyReorder(tasks, ids, (t) => t.id);
+  onReorder: ({ before, after }) => {
+    history.push({ before: tasks });
+    tasks = applyReorder(tasks, after, (t) => t.id);
 
     // DnD has committed the reorder. Passing items also supports renderers
     // that replaced the original nodes while applying the new task order.
@@ -66,13 +69,12 @@ const sortable = createSortable({
     });
     layout = undefined;
 
-    // Register a revert function — sortable.revert() will call this on failure.
-    setRevert(() => {
-      tasks = previous;
+    void saveTasks(after).catch(() => {
+      const entry = history.pop();
+      if (!entry) return;
+      tasks = entry.before;
       renderList(tasks);
     });
-
-    void saveTasks(ids).catch(() => sortable.revert());
   },
 });
 
@@ -87,7 +89,7 @@ function renderList(next: Task[]) {
       return item;
     }),
   );
-  sortable.sync();
+  sortable.refresh();
 }
 ```
 
@@ -95,17 +97,15 @@ function renderList(next: Task[]) {
 
 1. `onBeforeReorder(from, to)` fires before the DOM reorders. `captureLayout()` records the item positions by stable key.
 2. The DOM commits (or your renderer replaces the items).
-3. `onReorder({ ids, setRevert })` updates the data array, then `layout.animate()` targets the committed items.
-4. If the server call fails, call `sortable.revert()`. It invokes the stored revert function and clears it so subsequent failures are no-ops.
-
-Only the **most recent** reorder can be reverted — a new reorder overwrites the stored revert function.
+3. `onReorder({ before, after, item })` updates the data array, then `layout.animate()` targets the committed items.
+4. If the server call fails, pop the history entry and restore `before`.
 
 `onBeforeReorder` fires for both drag and keyboard moves.
 
 ### Pitfalls
 
-- Do not call `sortable.revert()` after a successful save — it is a destructive operation.
-- If items are removed from the DOM between `onReorder` and the server response, `renderList` must reconcile the current DOM state before syncing, then call `sortable.sync()`.
+- Do not roll back after a successful save — only pop the history entry on failure.
+- If items are removed from the DOM between `onReorder` and the server response, `renderList` must reconcile the current DOM state before refreshing, then call `sortable.refresh()`.
 - Call `layout.animate()` only after the renderer has committed the new elements. Its keys must be unique and non-empty in both the captured and committed collections.
 
 ### Related
@@ -114,4 +114,4 @@ Only the **most recent** reorder can be reverted — a new reorder overwrites th
 - [Connected kanban with keyboard sorting](./connected-kanban-keyboard-sorting.md)
 - [File upload drop zone](./file-upload-drop-zone.md)
 - [Usage: FLIP animation hook](../usage.md#flip-animation-hook)
-- [Usage: Optimistic updates and revert](../usage.md#optimistic-updates-and-revert)
+- [Usage: Optimistic updates and rollback](../usage.md#optimistic-updates-and-rollback)

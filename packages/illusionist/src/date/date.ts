@@ -1,4 +1,4 @@
-import { shift, Temporal } from '@vielzeug/tempo';
+import { Temporal } from '@vielzeug/tempo';
 
 import { int } from '../_helpers/int';
 import type { IllusionistContext } from '../types';
@@ -21,7 +21,7 @@ export function past(ctx: IllusionistContext, options?: DateOptions): Temporal.Z
   const maxSeconds = years * 365 * 24 * 60 * 60;
   const minSeconds = 1;
 
-  return shift(ref, { seconds: -int(minSeconds, maxSeconds, ctx.source) });
+  return ref.add({ seconds: -int(minSeconds, maxSeconds, ctx.source) });
 }
 
 /**
@@ -32,7 +32,7 @@ export function future(ctx: IllusionistContext, options?: DateOptions): Temporal
   const years = options?.years ?? 1;
   const maxSeconds = years * 365 * 24 * 60 * 60;
 
-  return shift(ref, { seconds: int(1, maxSeconds, ctx.source) });
+  return ref.add({ seconds: int(1, maxSeconds, ctx.source) });
 }
 
 /**
@@ -46,7 +46,7 @@ export function recent(
   const days = options?.days ?? 1;
   const maxSeconds = days * 24 * 60 * 60;
 
-  return shift(ref, { seconds: -int(1, maxSeconds, ctx.source) });
+  return ref.add({ seconds: -int(1, maxSeconds, ctx.source) });
 }
 
 /**

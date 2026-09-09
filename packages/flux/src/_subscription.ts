@@ -1,4 +1,4 @@
-import type { Observer, Sink, Subscription, Teardown } from './types';
+import type { Observer, Sink, Subscription, Teardown } from './types.js';
 
 /** @internal Reports an unhandled stream error through the platform's error reporting channel. */
 export function reportUnhandledError(reason: unknown): void {

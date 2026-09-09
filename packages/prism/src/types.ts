@@ -1,9 +1,3 @@
-import type { Readable } from '@vielzeug/ripple';
-
-// ─── Reactive Utility ────────────────────────────────────────────────────────
-
-export type MaybeSignal<T> = Readable<T> | T;
-
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
 export interface PrismTheme {
@@ -28,11 +22,12 @@ export interface ChartDimensions {
   width: number;
 }
 
-export interface ChartHandle {
+export interface ChartHandle<TData = unknown> {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
   readonly el: SVGSVGElement;
+  update(data: TData): void;
   [Symbol.dispose](): void;
 }
 
@@ -43,15 +38,17 @@ export interface ChartHandle {
  * `key` is the x-axis identity (number, Date, or string category).
  * `value` is the measured quantity on the y-axis.
  */
-export interface Datum {
-  key: Date | number | string;
+export interface Datum<TKey extends Date | number | string = Date | number | string> {
+  key: TKey;
   meta?: Record<string, unknown>;
   value: number;
 }
 
-export interface Series {
+export type ContinuousDatum = Datum<Date | number>;
+
+export interface Series<TDatum extends Datum = Datum> {
   color?: string;
-  data: MaybeSignal<Datum[]>;
+  data: TDatum[];
   name: string;
 }
 
@@ -76,41 +73,31 @@ export interface BandScale {
 
 // ─── Axis Types ──────────────────────────────────────────────────────────────
 
-export type AxisPosition = 'bottom' | 'left' | 'right' | 'top';
+export type HorizontalAxisPosition = 'bottom' | 'top';
+export type VerticalAxisPosition = 'left' | 'right';
+export type AxisPosition = HorizontalAxisPosition | VerticalAxisPosition;
 
 export interface GridConfig {
   color?: string;
   dash?: string;
 }
 
-export interface AxisConfig {
+export interface AxisConfig<TPosition extends AxisPosition = AxisPosition> {
   grid?: GridConfig | boolean;
   label?: string;
-  /**
-   * Axis position. Defaults to `'bottom'` for `xAxis` and `'left'` for `yAxis`
-   * when not specified.
-   */
-  position?: AxisPosition;
+  position?: TPosition;
   tickCount?: number;
   tickFormat?: (value: Date | number | string) => string;
 }
+
+export type XAxisConfig = AxisConfig<HorizontalAxisPosition>;
+export type YAxisConfig = AxisConfig<VerticalAxisPosition>;
 
 // ─── Interaction Types ───────────────────────────────────────────────────────
 
 export interface TooltipConfig {
   offset?: number;
-  /**
-   * Custom HTML renderer for the tooltip. The returned string is set via `innerHTML` —
-   * ensure any user-supplied data (series names, data point values) is sanitized before
-   * interpolation to prevent XSS.
-   */
-  render?: (datum: Datum, series: Series) => string;
-  /**
-   * Optional sanitizer applied to the `render` output before DOM injection.
-   * Use this to plug in DOMPurify or a similar HTML sanitizer.
-   * @example sanitize: (html) => DOMPurify.sanitize(html)
-   */
-  sanitize?: (html: string) => string;
+  render?: (datum: Datum, series: Series) => Node | string;
 }
 
 export interface CrosshairConfig {
@@ -150,21 +137,6 @@ export interface TransitionConfig {
   stagger?: number;
 }
 
-// ─── Plugin Types ────────────────────────────────────────────────────────────
-
-export interface ChartPluginContext {
-  container: HTMLElement;
-  dimensions: Readable<ChartDimensions>;
-  /** Aborted when the chart is disposed — plugins can tie their own cleanup to this instead of relying solely on `dispose()`. */
-  disposalSignal: AbortSignal;
-  svg: SVGSVGElement;
-}
-
-export interface ChartPlugin {
-  dispose(): void;
-  install(ctx: ChartPluginContext): void;
-}
-
 // ─── Chart Config Types ──────────────────────────────────────────────────────
 
 export type ChartA11y =
@@ -172,7 +144,6 @@ export type ChartA11y =
   | {
       readonly ariaLabel: string;
       readonly decorative?: false;
-      readonly description?: string;
     };
 
 export interface BaseChartConfig {
@@ -182,14 +153,13 @@ export interface BaseChartConfig {
   margin?: Partial<ChartMargin>;
   onClick?: (event: ChartEvent) => void;
   onHover?: (event: ChartEvent | null) => void;
-  plugins?: ChartPlugin[];
   tooltip?: TooltipConfig | boolean;
   transition?: TransitionConfig;
-  xAxis?: AxisConfig;
-  yAxis?: AxisConfig;
+  xAxis?: XAxisConfig;
+  yAxis?: YAxisConfig;
 }
 
-export interface LineSeriesConfig extends Series {
+export interface LineSeriesConfig extends Series<ContinuousDatum> {
   curve?: 'linear' | 'monotone' | 'step';
   pointRadius?: number;
   showPoints?: boolean;
@@ -198,7 +168,7 @@ export interface LineSeriesConfig extends Series {
 
 export interface LineChartConfig extends BaseChartConfig {
   crosshair?: CrosshairConfig | boolean;
-  series: MaybeSignal<LineSeriesConfig[]>;
+  series: LineSeriesConfig[];
 }
 
 export interface BarSeriesConfig extends Series {
@@ -214,11 +184,11 @@ export interface BarSeriesConfig extends Series {
 export type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked-horizontal';
 
 export interface BarChartConfig extends BaseChartConfig {
-  series: MaybeSignal<BarSeriesConfig[]>;
+  series: BarSeriesConfig[];
   variant?: BarVariant;
 }
 
-export interface AreaSeriesConfig extends Series {
+export interface AreaSeriesConfig extends Series<ContinuousDatum> {
   curve?: 'linear' | 'monotone' | 'step';
   fillOpacity?: number;
   showLine?: boolean;
@@ -226,7 +196,7 @@ export interface AreaSeriesConfig extends Series {
 
 export interface AreaChartConfig extends BaseChartConfig {
   crosshair?: CrosshairConfig | boolean;
-  series: MaybeSignal<AreaSeriesConfig[]>;
+  series: AreaSeriesConfig[];
 }
 
 // ─── Pie / Donut Types ───────────────────────────────────────────────────────
@@ -241,7 +211,7 @@ export interface PieSliceConfig {
 
 export interface PieChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
   cornerRadius?: number;
-  data: MaybeSignal<PieSliceConfig[]>;
+  data: PieSliceConfig[];
   innerRadius?: number;
   onClick?: (slice: PieSliceConfig, index: number) => void;
   onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
@@ -264,7 +234,7 @@ export interface SparklineConfig {
   color?: string;
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
-  data: MaybeSignal<number[] | StackSegment[]>;
+  data: number[] | StackSegment[];
   fillOpacity?: number;
   onClick?: (index: number, value: number) => void;
   onHover?: (index: number | null, value: number | null) => void;

@@ -28,6 +28,11 @@
       "require": "./dist/indexeddb.cjs",
       "types": "./dist/indexeddb.d.ts"
     },
+    "./store": {
+      "import": "./dist/store.js",
+      "require": "./dist/store.cjs",
+      "types": "./dist/store.d.ts"
+    },
     "./testing": {
       "import": "./dist/testing.js",
       "require": "./dist/testing.cjs",
@@ -38,6 +43,9 @@
     "*": {
       "indexeddb": [
         "dist/indexeddb.d.ts"
+      ],
+      "store": [
+        "dist/store.d.ts"
       ],
       "testing": [
         "dist/testing.d.ts"

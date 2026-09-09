@@ -1,13 +1,13 @@
 # @vielzeug/familiar
 
-> Typed module-worker pools with cancellation, priority scheduling, streaming, and test utilities.
-
-`@vielzeug/familiar` runs typed work in ES module workers. Worker modules keep imports, source maps, and normal file boundaries intact.
+> Web Worker pool with tasks, timeouts, cancellation
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/familiar
+npm install @vielzeug/familiar
+yarn add @vielzeug/familiar
 ```
 
 ## Quick Start
@@ -35,20 +35,13 @@ try {
 }
 ```
 
-## Exports
-
-- `createWorker()` creates a task pool backed by modules registered with `exposeTask()`.
-- `createStreamWorker()` creates a stream-only pool backed by modules registered with `exposeStream()`.
-- `batch()` and `createTaskGroup()` compose task-pool work without widening every pool handle.
-- `createTestWorker()` provides structured-clone, timeout, cancellation, and error-wrapping parity for task-pool tests.
-- `dispose()` stops work immediately; `drain()` waits for active work before teardown.
-
 ## Documentation
 
 - [Overview](https://vielzeug.dev/familiar/)
 - [Usage Guide](https://vielzeug.dev/familiar/usage)
 - [API Reference](https://vielzeug.dev/familiar/api)
 - [Examples](https://vielzeug.dev/familiar/examples)
+- [Migration Guide](https://vielzeug.dev/familiar/migration)
 
 ## License
 

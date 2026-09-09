@@ -1,6 +1,8 @@
+import { clamp } from '@vielzeug/arsenal';
+
 import type { Middleware, Padding } from '../types';
 
-import { clamp, getSide, toRect, toSideObject } from '../utils';
+import { getSide, toRect, toSideObject } from '../utils';
 
 export interface ArrowOptions {
   /** The arrow DOM element. Must be a child of the floating element. */

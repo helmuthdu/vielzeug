@@ -1,42 +1,42 @@
-export type MaybeGetter<T> = T | (() => T);
-
 export type ListNavigationAction = 'first' | 'last' | 'next' | 'prev';
 export type ListKeyAction = ListNavigationAction | 'typeahead';
 
 export type ListNavigationChange<T> = {
-  action: ListKeyAction;
-  event?: KeyboardEvent;
-  index: number;
-  item: T;
+  readonly action: ListKeyAction;
+  readonly event?: KeyboardEvent;
+  readonly index: number;
+  readonly item: T;
+};
+
+export type ListKeyResult<T> = {
+  readonly change: ListNavigationChange<T> | null;
+  readonly handled: true;
 };
 
 export type ListNavigationTypeaheadOptions<T> = {
   delayMs?: number;
   getLabel: (item: T, index: number) => string;
+  preventDefault?: boolean;
 };
+
+export type MaybeGetter<T> = T | (() => T);
 
 export type ListNavigationOptions<T> = {
   direction?: MaybeGetter<'ltr' | 'rtl'>;
-  disabled?: MaybeGetter<boolean | undefined>;
+  disabled?: MaybeGetter<boolean>;
   getItems: () => readonly T[];
   isItemDisabled?: (item: T, index: number) => boolean;
   keys?: Partial<Record<ListNavigationAction, readonly string[]>>;
   loop?: boolean;
-  onNavigate?: (change: ListNavigationChange<T>) => void;
   orientation?: MaybeGetter<'both' | 'horizontal' | 'vertical'>;
-  signal?: AbortSignal;
   typeahead?: ListNavigationTypeaheadOptions<T>;
 };
 
 export type ListNavigation<T> = {
-  [Symbol.dispose](): void;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
   getActiveItem(): T | undefined;
   getIndex(): number;
-  handleKeydown(event: KeyboardEvent): boolean;
-  navigate(action: ListNavigationAction): number;
+  handleKeydown(event: KeyboardEvent): ListKeyResult<T> | null;
+  navigate(action: ListNavigationAction): ListNavigationChange<T> | null;
   reset(): void;
   set(index: number): number;
 };
@@ -54,9 +54,6 @@ const DEFAULT_KEYS_RTL: typeof DEFAULT_KEYS = {
 };
 
 const DEFAULT_TYPEAHEAD_DELAY_MS = 500;
-
-const read = <T>(value: MaybeGetter<T> | undefined, fallback: T): T =>
-  typeof value === 'function' ? (value as () => T)() : (value ?? fallback);
 
 const findForward = <T>(items: readonly T[], start: number, predicate: (item: T, index: number) => boolean): number => {
   for (let index = start; index < items.length; index++) {
@@ -78,16 +75,27 @@ const findBackward = <T>(
   return -1;
 };
 
-const resolveTypeaheadDelay = (delay: number | undefined): number =>
-  typeof delay === 'number' && Number.isFinite(delay) && delay > 0 ? delay : DEFAULT_TYPEAHEAD_DELAY_MS;
+const resolveTypeaheadDelay = (delay: number | undefined): number => {
+  if (delay === undefined) return DEFAULT_TYPEAHEAD_DELAY_MS;
+  if (!Number.isFinite(delay) || delay <= 0) throw new RangeError('Typeahead delay must be a positive finite number');
+  return delay;
+};
 
 export const createListNavigation = <T>(options: ListNavigationOptions<T>): ListNavigation<T> => {
-  const disposalController = new AbortController();
+  const typeaheadDelay = resolveTypeaheadDelay(options.typeahead?.delayMs);
+  const owners = new Map<string, ListNavigationAction>();
+
+  for (const action of ['next', 'prev', 'first', 'last'] as const) {
+    for (const key of options.keys?.[action] ?? []) {
+      const owner = owners.get(key);
+      if (owner && owner !== action) throw new RangeError(`Key "${key}" is assigned to both ${owner} and ${action}`);
+      owners.set(key, action);
+    }
+  }
+
   let index = -1;
-  let disposed = false;
   let typeaheadBuffer = '';
   let lastTypeaheadAt = 0;
-  let removeExternalAbortListener: (() => void) | undefined;
 
   const isItemDisabled = (item: T, itemIndex: number): boolean => options.isItemDisabled?.(item, itemIndex) ?? false;
 
@@ -110,17 +118,16 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
     nextIndex: number,
     action: ListKeyAction,
     event?: KeyboardEvent,
-  ): number => {
+  ): ListNavigationChange<T> | null => {
     if (!isUsableIndex(items, nextIndex)) {
       index = -1;
 
-      return index;
+      return null;
     }
 
     index = nextIndex;
-    options.onNavigate?.({ action, event, index: nextIndex, item: items[nextIndex] });
 
-    return index;
+    return Object.freeze({ action, event, index: nextIndex, item: items[nextIndex] });
   };
 
   const findEnabledIndex = (items: readonly T[], start: number, direction: 'forward' | 'backward'): number => {
@@ -130,13 +137,17 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
     return findBackward(items, start, (item, itemIndex) => !isItemDisabled(item, itemIndex));
   };
 
-  const move = (items: readonly T[], direction: 'forward' | 'backward', event?: KeyboardEvent): number => {
+  const move = (
+    items: readonly T[],
+    direction: 'forward' | 'backward',
+    event?: KeyboardEvent,
+  ): ListNavigationChange<T> | null => {
     const current = normalizeIndex(items);
 
     if (!items.length) {
       index = -1;
 
-      return index;
+      return null;
     }
 
     const start =
@@ -160,17 +171,21 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
       if (wrapped >= 0) return commitIndex(items, wrapped, action, event);
     }
 
-    return index;
+    return null;
   };
 
-  const navigateWithItems = (items: readonly T[], action: ListNavigationAction, event?: KeyboardEvent): number => {
+  const navigateWithItems = (
+    items: readonly T[],
+    action: ListNavigationAction,
+    event?: KeyboardEvent,
+  ): ListNavigationChange<T> | null => {
     resetTypeahead();
     normalizeIndex(items);
 
     if (!items.length) {
       index = -1;
 
-      return index;
+      return null;
     }
 
     if (action === 'first') {
@@ -202,14 +217,13 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
     return -1;
   };
 
-  const handleTypeahead = (event: KeyboardEvent, items: readonly T[]): boolean => {
-    if (!options.typeahead || event.key.length !== 1 || event.ctrlKey || event.altKey || event.metaKey) return false;
+  const handleTypeahead = (event: KeyboardEvent, items: readonly T[]): ListNavigationChange<T> | null => {
+    if (!options.typeahead || event.key.length !== 1 || event.ctrlKey || event.altKey || event.metaKey) return null;
 
-    const now = Date.now();
+    const now = performance.now();
     const key = event.key.toLocaleLowerCase();
-    const delay = resolveTypeaheadDelay(options.typeahead.delayMs);
 
-    if (now - lastTypeaheadAt >= delay) typeaheadBuffer = '';
+    if (now - lastTypeaheadAt >= typeaheadDelay) typeaheadBuffer = '';
 
     lastTypeaheadAt = now;
 
@@ -224,21 +238,17 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
       nextIndex = findTypeaheadMatch(items, typeaheadBuffer, false);
     }
 
-    if (nextIndex < 0) return false;
+    if (nextIndex < 0) return null;
 
-    commitIndex(items, nextIndex, 'typeahead', event);
-
-    return true;
+    return commitIndex(items, nextIndex, 'typeahead', event);
   };
 
   const set = (nextIndex: number): number => {
-    if (disposed) return -1;
-
     const items = options.getItems();
     normalizeIndex(items);
     resetTypeahead();
 
-    if (nextIndex < 0 || !items.length) {
+    if (!Number.isInteger(nextIndex) || nextIndex < 0 || !items.length) {
       index = -1;
 
       return index;
@@ -257,15 +267,11 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
     return index;
   };
 
-  const navigate = (action: ListNavigationAction): number => {
-    if (disposed) return -1;
-
+  const navigate = (action: ListNavigationAction): ListNavigationChange<T> | null => {
     return navigateWithItems(options.getItems(), action);
   };
 
   const getActiveItem = (): T | undefined => {
-    if (disposed) return undefined;
-
     const items = options.getItems();
     const current = normalizeIndex(items);
 
@@ -273,22 +279,21 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
   };
 
   const reset = (): void => {
-    if (disposed) return;
-
     index = -1;
     resetTypeahead();
   };
 
   const getIndex = (): number => {
-    if (disposed) return -1;
-
     return normalizeIndex(options.getItems());
   };
 
+  const resolve = <V>(value: MaybeGetter<V> | undefined, fallback: V): V =>
+    typeof value === 'function' ? (value as () => V)() : (value ?? fallback);
+
   const resolveKeyAction = (eventKey: string): ListNavigationAction | undefined => {
     const keys = options.keys;
-    const keyTable = read(options.direction, 'ltr') === 'rtl' ? DEFAULT_KEYS_RTL : DEFAULT_KEYS;
-    const defaults = keyTable[read(options.orientation, 'vertical')];
+    const keyTable = resolve(options.direction, 'ltr') === 'rtl' ? DEFAULT_KEYS_RTL : DEFAULT_KEYS;
+    const defaults = keyTable[resolve(options.orientation, 'vertical')];
 
     for (const action of ['next', 'prev', 'first', 'last'] as const) {
       if ((keys?.[action] ?? defaults[action]).includes(eventKey)) return action;
@@ -297,8 +302,8 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
     return undefined;
   };
 
-  const handleKeydown = (event: KeyboardEvent): boolean => {
-    if (disposed || read(options.disabled, false)) return false;
+  const handleKeydown = (event: KeyboardEvent): ListKeyResult<T> | null => {
+    if (event.defaultPrevented || event.isComposing || resolve(options.disabled, false)) return null;
 
     const items = options.getItems();
     normalizeIndex(items);
@@ -306,47 +311,23 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
     const action = resolveKeyAction(event.key);
 
     if (action) {
+      const change = navigateWithItems(items, action, event);
       event.preventDefault();
-      navigateWithItems(items, action, event);
-
-      return true;
+      return Object.freeze({ change, handled: true });
     }
 
-    return handleTypeahead(event, items);
+    const change = handleTypeahead(event, items);
+    if (!change) return null;
+    if (options.typeahead?.preventDefault) event.preventDefault();
+    return Object.freeze({ change, handled: true });
   };
-
-  const dispose = (): void => {
-    if (disposed) return;
-
-    disposed = true;
-    index = -1;
-    resetTypeahead();
-    removeExternalAbortListener?.();
-    removeExternalAbortListener = undefined;
-    disposalController.abort();
-  };
-
-  if (options.signal?.aborted) {
-    dispose();
-  } else if (options.signal) {
-    options.signal.addEventListener('abort', dispose, { once: true });
-    removeExternalAbortListener = () => options.signal?.removeEventListener('abort', dispose);
-  }
 
   return {
-    get disposalSignal() {
-      return disposalController.signal;
-    },
-    dispose,
-    get disposed() {
-      return disposed;
-    },
     getActiveItem,
     getIndex,
     handleKeydown,
     navigate,
     reset,
     set,
-    [Symbol.dispose]: dispose,
   };
 };

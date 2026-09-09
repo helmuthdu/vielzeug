@@ -94,17 +94,14 @@ export function compilePathMatcher(path: string): RouteMatcher {
   };
 }
 
-export function matchRecord<TMeta = unknown, TComponent = unknown>(
-  pathname: string,
-  record: RouteRecord<TMeta, TComponent>,
-): RouteParams | null {
+export function matchRecord(pathname: string, record: RouteRecord): RouteParams | null {
   const match = record.matcher.pattern.exec(pathname);
 
   if (!match) return null;
 
   const params: RouteParams = {};
 
-  record.matcher.paramNames.forEach((name, index) => {
+  record.matcher.paramNames.forEach((name: string, index: number) => {
     const value = match[index + 1] ?? '';
 
     try {
@@ -117,10 +114,10 @@ export function matchRecord<TMeta = unknown, TComponent = unknown>(
   return params;
 }
 
-export function matchRouteFor<TMeta = unknown, TComponent = unknown>(
+export function matchRouteFor(
   pathname: string,
-  records: readonly RouteRecord<TMeta, TComponent>[],
-): { params: RouteParams; record?: RouteRecord<TMeta, TComponent> } {
+  records: readonly RouteRecord[],
+): { params: RouteParams; record?: RouteRecord } {
   for (const record of records) {
     const params = matchRecord(pathname, record);
 
@@ -130,10 +127,7 @@ export function matchRouteFor<TMeta = unknown, TComponent = unknown>(
   return { params: {} };
 }
 
-export function matchesPrefix<TMeta = unknown, TComponent = unknown>(
-  pathname: string,
-  record: RouteRecord<TMeta, TComponent>,
-): boolean {
+export function matchesPrefix(pathname: string, record: RouteRecord): boolean {
   return record.matcher.prefixPattern.test(pathname);
 }
 
@@ -234,24 +228,4 @@ export function readLocation(
     pathname: stripBase(history.location.pathname || '/', base),
     query: parseQuery(history.location.search || ''),
   };
-}
-
-export function buildPreloadKey(base: string, path: string, params: RouteParams, query?: QueryParams): string {
-  const url = buildUrl(base, path, params);
-
-  if (!query || Object.keys(query).length === 0) return url;
-
-  const search = new URLSearchParams();
-
-  for (const [key, value] of Object.entries(query)) {
-    if (Array.isArray(value)) {
-      value.forEach((v) => {
-        search.append(key, v);
-      });
-    } else {
-      search.set(key, value);
-    }
-  }
-
-  return `${url}?${search.toString()}`;
 }

@@ -4,11 +4,15 @@ import {
   ConduitCircularDependencyError,
   ConduitDisposedError,
   ConduitDisposeError,
+  ConduitDuplicateRegistrationError,
   ConduitProviderNotFoundError,
   ConduitScopedResolutionError,
   createContainer,
+  disposalSignalToken,
+  factoryProvider,
   scope,
   token,
+  valueProvider,
 } from '../index';
 
 describe('Conduit', () => {
@@ -16,166 +20,147 @@ describe('Conduit', () => {
     expect(token<string>('Service')).not.toBe(token<string>('Service'));
   });
 
-  it('resolves values and dependency-first factories', async () => {
+  it('resolves a typed service object from a composition root', async () => {
     const Config = token<{ url: string }>('Config');
     const Client = token<{ url: string }>('Client');
-    const container = createContainer();
 
-    container.value(Config, { url: '/api' });
-    container.factory(Client, [Config], (config) => ({ url: config.url }));
+    const container = createContainer([
+      { token: Config, value: { url: '/api' } },
+      { dependencies: [Config], factory: (config) => ({ url: (config as { url: string }).url }), token: Client },
+    ]);
 
-    await expect(container.resolve(Client)).resolves.toEqual({ url: '/api' });
+    const services = await container.resolve({ client: Client, config: Config });
+
+    expect(services.config).toEqual({ url: '/api' });
+    expect(services.client).toEqual({ url: '/api' });
+
     await container.dispose();
   });
 
   it('deduplicates concurrent singleton resolution', async () => {
     const Service = token<object>('Service');
     const create = vi.fn(async () => ({}));
-    const container = createContainer();
 
-    container.factory(Service, [], create);
+    const container = createContainer([{ dependencies: [], factory: create, token: Service }]);
 
-    const [first, second] = await Promise.all([container.resolve(Service), container.resolve(Service)]);
+    const services = await Promise.all([container.resolve({ a: Service }), container.resolve({ b: Service })]);
 
     expect(create).toHaveBeenCalledOnce();
-    expect(first).toBe(second);
-    await container.dispose();
-  });
-
-  it('creates and disposes transient values for each requesting container', async () => {
-    const Service = token<{ id: number }>('Service');
-    const dispose = vi.fn();
-    const container = createContainer();
-
-    container.factory(Service, [], () => ({ id: Math.random() }), { dispose, lifetime: 'transient' });
-
-    expect(await container.resolve(Service)).not.toBe(await container.resolve(Service));
+    expect(services[0].a).toBe(services[1].b);
 
     await container.dispose();
-    expect(dispose).toHaveBeenCalledTimes(2);
   });
 
   it('creates one named-scope value per matching scope', async () => {
     const Request = scope('request');
     const Session = token<object>('Session');
-    const root = createContainer();
 
-    root.factory(Session, [], () => ({}), { lifetime: Request });
+    const root = createContainer([{ dependencies: [], factory: () => ({}), lifetime: Request, token: Session }]);
 
-    await expect(root.resolve(Session)).rejects.toBeInstanceOf(ConduitScopedResolutionError);
+    await expect(root.resolve({ session: Session })).rejects.toBeInstanceOf(ConduitScopedResolutionError);
 
     const firstScope = root.createScope(Request);
     const secondScope = root.createScope(Request);
 
-    expect(await firstScope.resolve(Session)).toBe(await firstScope.resolve(Session));
-    expect(await firstScope.resolve(Session)).not.toBe(await secondScope.resolve(Session));
+    const first = await firstScope.resolve({ a: Session });
+    const firstAgain = await firstScope.resolve({ b: Session });
+    const second = await secondScope.resolve({ a: Session });
+
+    expect(first.a).toBe(firstAgain.b);
+    expect(first.a).not.toBe(second.a);
 
     await firstScope.dispose();
     await secondScope.dispose();
     await root.dispose();
   });
 
-  it('validates missing and circular static dependencies', () => {
+  it('fails fast at construction for missing dependencies', () => {
     const A = token<object>('A');
-    const B = token<object>('B');
     const missing = token<object>('Missing');
-    const container = createContainer();
 
-    container.factory(A, [missing], () => ({}));
-    expect(() => container.validate()).toThrow(ConduitProviderNotFoundError);
-
-    const circular = createContainer();
-
-    circular.factory(A, [B], () => ({}));
-    circular.factory(B, [A], () => ({}));
-
-    expect(() => circular.validate()).toThrow(ConduitCircularDependencyError);
+    expect(() => createContainer([{ dependencies: [missing], factory: () => ({}), token: A }])).toThrow(
+      ConduitProviderNotFoundError,
+    );
   });
 
-  it('rejects direct runtime cycles', async () => {
+  it('fails fast at construction for circular factory tuples', () => {
     const A = token<object>('A');
     const B = token<object>('B');
-    const container = createContainer();
 
-    container.factory(A, [B], () => ({}));
-    container.factory(B, [A], () => ({}));
-
-    await expect(container.resolve(A)).rejects.toBeInstanceOf(ConduitCircularDependencyError);
+    expect(() =>
+      createContainer([
+        { dependencies: [B], factory: () => ({}), token: A },
+        { dependencies: [A], factory: () => ({}), token: B },
+      ]),
+    ).toThrow(ConduitCircularDependencyError);
   });
 
-  it('rejects singleton dependencies requiring a child scope', async () => {
+  it('fails fast when a singleton depends on a scoped factory', () => {
     const Request = scope('request');
     const Session = token<object>('Session');
     const Service = token<{ session: object }>('Service');
-    const root = createContainer();
-    const request = root.createScope(Request);
 
-    root.factory(Session, [], () => ({}), { lifetime: Request });
-    root.factory(Service, [Session], (session) => ({ session }));
-
-    await expect(request.resolve(Service)).rejects.toBeInstanceOf(ConduitScopedResolutionError);
-    await request.dispose();
-    await root.dispose();
+    expect(() =>
+      createContainer([
+        { dependencies: [], factory: () => ({}), lifetime: Request, token: Session },
+        { dependencies: [Session], factory: (session) => ({ session }), token: Service },
+      ]),
+    ).toThrow(ConduitScopedResolutionError);
   });
 
-  it('validates parent singleton dependencies from their registration owner', () => {
+  it('fails fast at construction for duplicate tokens', () => {
     const Config = token<object>('Config');
-    const Service = token<object>('Service');
-    const root = createContainer();
-    const child = root.createScope();
 
-    root.factory(Service, [Config], () => ({}));
-    child.value(Config, {});
-
-    expect(() => child.validate()).toThrow(ConduitProviderNotFoundError);
+    expect(() =>
+      createContainer([
+        { token: Config, value: {} },
+        { token: Config, value: {} },
+      ]),
+    ).toThrow(ConduitDuplicateRegistrationError);
   });
 
-  it('snapshots factory dependencies at registration', async () => {
+  it('snapshots factory dependencies at construction', async () => {
     const Config = token<object>('Config');
-    const Missing = token<object>('Missing');
     const Service = token<object>('Service');
     const dependencies = [Config];
-    const container = createContainer();
 
-    container.value(Config, {});
-    container.factory(Service, dependencies, () => ({}));
-    container.validate();
-    dependencies.push(Missing);
+    const container = createContainer([
+      { token: Config, value: {} },
+      { dependencies, factory: () => ({}), token: Service },
+    ]);
 
-    await expect(container.resolve(Service)).resolves.toEqual({});
+    dependencies.push(token<object>('Missing'));
+
+    await expect(container.resolve({ service: Service })).resolves.toEqual({ service: {} });
+
     await container.dispose();
-  });
-
-  it('does not retain non-disposable transient values', async () => {
-    const Service = token<object>('Service');
-    const container = createContainer();
-
-    container.factory(Service, [], () => ({}), { lifetime: 'transient' });
-
-    await container.resolve(Service);
-    await container.dispose();
-
-    expect(container.disposed).toBe(true);
   });
 
   it('disposes dependents before dependencies in reverse creation order', async () => {
     const Database = token<{ name: string }>('Database');
     const Service = token<{ database: { name: string } }>('Service');
     const order: string[] = [];
-    const container = createContainer();
 
-    container.factory(Database, [], () => ({ name: 'db' }), {
-      dispose: () => {
-        order.push('database');
+    const container = createContainer([
+      {
+        dependencies: [],
+        dispose: () => {
+          order.push('database');
+        },
+        factory: () => ({ name: 'db' }),
+        token: Database,
       },
-    });
-    container.factory(Service, [Database], (database) => ({ database }), {
-      dispose: () => {
-        order.push('service');
+      {
+        dependencies: [Database],
+        dispose: () => {
+          order.push('service');
+        },
+        factory: (database) => ({ database }),
+        token: Service,
       },
-    });
+    ]);
 
-    await container.resolve(Service);
+    await container.resolve({ service: Service });
     await container.dispose();
 
     expect(order).toEqual(['service', 'database']);
@@ -185,11 +170,13 @@ describe('Conduit', () => {
     const Request = scope('request');
     const Session = token<object>('Session');
     const dispose = vi.fn();
-    const root = createContainer();
-    const request = root.createScope(Request);
 
-    root.factory(Session, [], () => ({}), { dispose, lifetime: Request });
-    await request.resolve(Session);
+    const root = createContainer([
+      { dependencies: [], dispose, factory: () => ({}), lifetime: Request, token: Session },
+    ]);
+
+    const request = root.createScope(Request);
+    await request.resolve({ session: Session });
 
     await root.dispose();
 
@@ -202,11 +189,10 @@ describe('Conduit', () => {
     let release!: (value: object) => void;
     const pending = new Promise<object>((resolve) => (release = resolve));
     const dispose = vi.fn();
-    const container = createContainer();
 
-    container.factory(Service, [], () => pending, { dispose });
+    const container = createContainer([{ dependencies: [], dispose, factory: () => pending, token: Service }]);
 
-    const resolution = container.resolve(Service);
+    const resolution = container.resolve({ service: Service });
     const disposal = container.dispose();
 
     release({});
@@ -221,15 +207,19 @@ describe('Conduit', () => {
     const cleanupFailure = new Error('cleanup failed');
     let release!: (value: object) => void;
     const pending = new Promise<object>((resolve) => (release = resolve));
-    const container = createContainer();
 
-    container.factory(Service, [], () => pending, {
-      dispose: () => {
-        throw cleanupFailure;
+    const container = createContainer([
+      {
+        dependencies: [],
+        dispose: () => {
+          throw cleanupFailure;
+        },
+        factory: () => pending,
+        token: Service,
       },
-    });
+    ]);
 
-    const resolution = container.resolve(Service);
+    const resolution = container.resolve({ service: Service });
     const disposal = container.dispose();
 
     release({});
@@ -247,10 +237,11 @@ describe('Conduit', () => {
     const secondDispose = vi.fn(() => {
       throw new Error('second');
     });
-    const container = createContainer();
 
-    container.value(First, {}, { dispose: firstDispose });
-    container.value(Second, {}, { dispose: secondDispose });
+    const container = createContainer([
+      { dispose: firstDispose, token: First, value: {} },
+      { dispose: secondDispose, token: Second, value: {} },
+    ]);
 
     const error = await container.dispose().catch((reason) => reason);
 
@@ -262,11 +253,145 @@ describe('Conduit', () => {
 
   it('rejects work after disposal and supports await using', async () => {
     const Value = token<string>('Value');
-    const container = createContainer();
 
-    container.value(Value, 'value');
+    const container = createContainer([{ token: Value, value: 'value' }]);
     await container.dispose();
 
-    await expect(container.resolve(Value)).rejects.toBeInstanceOf(ConduitDisposedError);
+    await expect(container.resolve({ value: Value })).rejects.toBeInstanceOf(ConduitDisposedError);
+  });
+
+  it('checks registration visibility across parent scopes', async () => {
+    const Request = scope('request');
+    const Session = token<object>('Session');
+
+    const root = createContainer([{ dependencies: [], factory: () => ({}), lifetime: Request, token: Session }]);
+
+    const request = root.createScope(Request);
+
+    expect(root.has(Session)).toBe(true);
+    expect(request.has(Session)).toBe(true);
+
+    await request.dispose();
+    await root.dispose();
+  });
+
+  it('provides typed builders and direct token resolution', async () => {
+    const Config = token<{ url: string }>('Config');
+    const Client = token<{ url: string }>('Client');
+    const container = createContainer([
+      valueProvider(Config, { url: '/api' }),
+      factoryProvider(Client, [Config], (config) => ({ url: config.url })),
+    ]);
+
+    await expect(container.resolve(Client)).resolves.toEqual({ url: '/api' });
+    await container.dispose();
+  });
+
+  it('supports transient factories and immutable scope-local overrides', async () => {
+    const Request = scope('request');
+    const Config = token<string>('Config');
+    const Transient = token<object>('Transient');
+    const root = createContainer([
+      valueProvider(Config, 'root'),
+      factoryProvider(Transient, [], () => ({}), { lifetime: 'transient' }),
+    ]);
+    const request = root.createScope(Request, { providers: [valueProvider(Config, 'request')] });
+
+    await expect(request.resolve(Config)).resolves.toBe('request');
+    expect(await request.resolve(Transient)).not.toBe(await request.resolve(Transient));
+
+    await root.dispose();
+  });
+
+  it('injects the owning container disposal signal', async () => {
+    const Request = scope('request');
+    const Signal = token<AbortSignal>('Signal');
+    const root = createContainer([
+      factoryProvider(Signal, [disposalSignalToken], (signal) => signal, { lifetime: Request }),
+    ]);
+    const request = root.createScope(Request);
+    const signal = await request.resolve(Signal);
+
+    expect(signal).toBe(request.disposalSignal);
+    await request.dispose();
+    expect(signal.aborted).toBe(true);
+    await root.dispose();
+  });
+
+  it('defines composition-map properties without prototype mutation', async () => {
+    const Service = token<object>('Service');
+    const map = Object.create(null) as { __proto__: typeof Service };
+
+    Object.defineProperty(map, '__proto__', { enumerable: true, value: Service });
+
+    const container = createContainer([valueProvider(Service, { safe: true })]);
+    const services = await container.resolve(map);
+
+    expect(Object.hasOwn(services, '__proto__')).toBe(true);
+    expect(Object.getPrototypeOf(services)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(services, '__proto__')?.value).toEqual({ safe: true });
+
+    await container.dispose();
+  });
+
+  it('waits for late asynchronous cleanup and reports its failure', async () => {
+    const Service = token<object>('Service');
+    const cleanupFailure = new Error('late cleanup');
+    let releaseFactory!: (value: object) => void;
+    let releaseCleanup!: () => void;
+    const factory = new Promise<object>((resolve) => (releaseFactory = resolve));
+    const cleanup = new Promise<void>((resolve) => (releaseCleanup = resolve));
+    const container = createContainer([
+      factoryProvider(Service, [], () => factory, {
+        dispose: async () => {
+          await cleanup;
+          throw cleanupFailure;
+        },
+      }),
+    ]);
+
+    const resolution = container.resolve(Service);
+    const disposal = container.dispose();
+
+    releaseFactory({});
+    await Promise.resolve();
+    expect(container.disposed).toBe(false);
+    releaseCleanup();
+
+    await expect(resolution).rejects.toBeInstanceOf(ConduitDisposedError);
+    await expect(disposal).rejects.toMatchObject({ errors: [cleanupFailure] });
+  });
+
+  it('retries singleton creation after rejection', async () => {
+    const Service = token<object>('Service');
+    let attempts = 0;
+    const container = createContainer([
+      factoryProvider(Service, [], () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error('retry');
+        return {};
+      }),
+    ]);
+
+    await expect(container.resolve(Service)).rejects.toThrow('retry');
+    await expect(container.resolve(Service)).resolves.toEqual({});
+    expect(attempts).toBe(2);
+
+    await container.dispose();
+  });
+
+  it('rejects malformed providers and incompatible scope dependencies at construction', () => {
+    const Request = scope('request');
+    const Transaction = scope('transaction');
+    const Dependency = token<object>('Dependency');
+    const Service = token<object>('Service');
+
+    expect(() => createContainer([{ dependencies: [], token: Service, value: {} } as never])).toThrow(/provider/i);
+    expect(() =>
+      createContainer([
+        factoryProvider(Dependency, [], () => ({}), { lifetime: Transaction }),
+        factoryProvider(Service, [Dependency], (dependency) => ({ dependency }), { lifetime: Request }),
+      ]),
+    ).toThrow(ConduitScopedResolutionError);
   });
 });

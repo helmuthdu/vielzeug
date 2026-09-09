@@ -1,54 +1,41 @@
 ---
-title: 'Ward Examples — Fresh Ward Per Test'
-description: 'Create a fresh immutable Ward policy for each Vitest test.'
+title: 'Ward Examples — Immutable Test Policies'
+description: 'Verify isolated authorization behavior with immutable policy snapshots.'
 ---
 
-## Fresh Ward Per Test
+## Immutable Test Policies
 
 ### Problem
 
-Keep authorization tests isolated without relying on a mutable policy reset or a nonexistent snapshot API.
+Authorization tests must not change when shared setup objects mutate.
 
 ### Solution
 
-Create the immutable Ward policy in a small factory and call it before each test.
+Create a Ward from authored rules; Ward snapshots and freezes its policy.
 
 ```ts
-import { beforeEach, describe, expect, it } from 'vitest';
-import { createWard } from '@vielzeug/ward';
+import { allow, createWard } from '@vielzeug/ward';
 
-function createTestWard() {
-  return createWard([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }]);
-}
+const roles = ['viewer'];
+const ward = createWard([allow(roles, 'posts', ['read'])]);
 
-describe('post permissions', () => {
-  let ward = createTestWard();
+roles[0] = 'editor';
 
-  beforeEach(() => {
-    ward = createTestWard();
-  });
-
-  it('allows viewers to read posts', () => {
-    expect(
-      ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', action: 'read' }).allowed,
-    ).toBe(true);
-  });
-
-  it('denies viewer delete', () => {
-    expect(
-      ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', action: 'delete' }).allowed,
-    ).toBe(false);
-  });
+const decision = ward.decide({
+  action: 'read',
+  principal: { id: 'u1', roles: ['viewer'] },
+  resource: 'posts',
 });
+
+expect(decision.effect).toBe('allow');
+expect(Object.isFrozen(ward.rules[0])).toBe(true);
 ```
 
 ### Pitfalls
 
-- Ward rules are immutable; create a new Ward instead of treating it as mutable policy state.
-- Keep test fixtures local so changing one test's input does not affect another.
+Condition functions can still close over application-owned mutable state. Keep conditions pure when policy stability matters.
 
 ### Related
 
-- [Blog Roles](./blog-roles.md)
-- [Conflict Detection](./conflict-detection.md)
-- [Ward Usage Guide](../usage.md)
+- [Blog roles](./blog-roles.md)
+- [Review rule order](./conflict-detection.md)

@@ -1,8 +1,7 @@
-import { fromRoomPresence } from '@vielzeug/flux/pulse';
-import { toSignal } from '@vielzeug/flux/ripple';
 import { animate } from '@vielzeug/necromancer';
 import { createPulse } from '@vielzeug/pulse';
-import { computed } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
+import { computed, fromSubscribable } from '@vielzeug/ripple';
 import { bus } from './events';
 import { crmData, prependActivity } from './store';
 
@@ -36,7 +35,7 @@ class MockWebSocket {
   }
 }
 
-let presenceBinding: ReturnType<typeof toSignal<ReadonlyMap<string, PresenceUser>>> | null = null;
+let presenceBinding: Readable<ReadonlyMap<string, PresenceUser>> | null = null;
 const emptyPresence: ReadonlyMap<string, PresenceUser> = new Map();
 export const presence = {
   get value(): ReadonlyMap<string, PresenceUser> {
@@ -49,7 +48,8 @@ export function setupRealtime(): void {
   (globalThis as Record<string, unknown>).WebSocket = MockWebSocket;
   const pulse = createPulse<Schema>('wss://vielzeug-crm.invalid/ws');
   void pulse.connect();
-  presenceBinding = toSignal(fromRoomPresence(pulse.room('crm')), { initial: new Map<string, PresenceUser>() });
+  const room = pulse.room('crm');
+  presenceBinding = fromSubscribable(room.presence);
 }
 
 export function simulateLiveActivity(): void {

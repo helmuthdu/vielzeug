@@ -1,11 +1,13 @@
 export const storeExample = {
-  code: `import { createTranslationStore } from '@vielzeug/lingua'
+  code: `import { createI18n } from '@vielzeug/lingua'
 
-const i18n = createTranslationStore({
-  catalogs: {
-    en: { save: 'Save' },
-    fr: { save: 'Enregistrer' },
-  },
+const catalogs: Record<string, Record<string, string>> = {
+  en: { save: 'Save' },
+  fr: { save: 'Enregistrer' },
+}
+
+const i18n = createI18n({
+  catalogs,
   locale: 'en',
 })
 

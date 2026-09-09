@@ -1,25 +1,17 @@
 export const basicSetupExample = {
-  code: `import { ANONYMOUS, allow, createWard } from '@vielzeug/ward'
+  code: `import { createWard } from '@vielzeug/ward'
 
-// role accepts a string or an array of strings (OR semantics)
+// Simple allow/deny rules evaluated in order — first match wins
 const ward = createWard([
-  allow(['viewer', 'editor', 'admin'], 'posts', ['read']),
-  allow(['editor', 'admin'],           'posts', ['update']),
-  allow('admin',                       'posts', ['delete']),
-  allow(ANONYMOUS,                     'posts', ['read']),
+  { action: 'read', resource: 'posts', effect: 'allow' },
+  { action: 'write', resource: 'posts', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('writer') ?? false },
+  { action: 'delete', resource: 'posts', effect: 'deny' },
 ])
 
-const viewer = { id: '1', roles: ['viewer'] }
-const editor = { id: '2', roles: ['editor'] }
-const admin  = { id: '3', roles: ['admin'] }
+const user = { id: 'u1', roles: ['writer'] }
 
-const can = (p: typeof viewer | null, action: string) =>
-  ward.explain({ action, principal: p, resource: 'posts' }).allowed
-
-console.log('Viewer can read:',    can(viewer, 'read'))   // true
-console.log('Viewer can update:',  can(viewer, 'update')) // false
-console.log('Editor can update:',  can(editor, 'update')) // true
-console.log('Admin can delete:',   can(admin,  'delete')) // true
-console.log('Anonymous can read:', can(null,   'read'))   // true`,
-  name: 'Basic Setup — Multi-Role Rules',
+console.log('read:  ', ward.decide({ action: 'read',   principal: user, resource: 'posts' }).effect)  // allow
+console.log('write: ', ward.decide({ action: 'write',  principal: user, resource: 'posts' }).effect)  // allow
+console.log('delete:', ward.decide({ action: 'delete', principal: user, resource: 'posts' }).effect)  // deny`,
+  name: 'Basic Setup',
 };

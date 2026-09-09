@@ -2,14 +2,14 @@ export const chordSequencesExample = {
   code: `import { createKeymap, findShortcutConflicts } from '@vielzeug/keymap'
 
 // Chord sequences fire only after all steps are pressed in order within the timeout.
-// Shortcut strings are lowercased before matching, so 'g g' and 'g G' are the SAME
-// binding — writing both would silently overwrite one. Vim's actual 'G' is shift+g,
-// a single keystroke, not a 'g'-prefixed chord.
-const map = createKeymap({
-  'ctrl+k ctrl+s': () => console.log('save all (VS Code-style)'),
-  'g g':           () => console.log('go to top (Vim-style)'),
-  'shift+g':       () => console.log('go to bottom'),
-}, { chordTimeout: 800, modKey: 'ctrl' })
+// Shortcut strings are lowercased before matching, so 'g g' and 'g G' are equivalent.
+// Different ids let both coexist, but the first eligible binding wins. Vim's actual 'G'
+// is shift+g, a single keystroke rather than a 'g'-prefixed chord.
+const map = createKeymap([
+  { id: 'save-all', shortcut: 'ctrl+k ctrl+s', handler: () => console.log('save all (VS Code-style)') },
+  { id: 'top',      shortcut: 'g g',           handler: () => console.log('go to top (Vim-style)') },
+  { id: 'bottom',   shortcut: 'shift+g',       handler: () => console.log('go to bottom') },
+], { chordTimeout: 800, modKey: 'ctrl' })
 
 const unmount = map.mount(document)
 

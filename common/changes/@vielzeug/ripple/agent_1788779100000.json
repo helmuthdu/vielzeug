@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: add disposable structural bridges and runtime tracing while preserving isolated graph correctness and ownership",
+      "packageName": "@vielzeug/ripple",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

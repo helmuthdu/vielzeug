@@ -1,7 +1,92 @@
 ---
 title: Vault Migration
-description: Move Vault adapter imports to focused entry points and update capability-specific storage code.
+description: Move Vault adapter imports to focused entry points, adopt required codecs, and use bound helpers or fluent queries.
 ---
+
+# Vault 3.0 Migration
+
+Vault 3.0 splits key-value stores from transactional document stores and requires durable codecs. Bound convenience methods and the fluent query API remain available; standalone helpers are retained for functional composition. Stored data formats are unchanged from 2.x.
+
+## `VaultStore` split into `KeyValueVaultStore` and `DocumentVaultStore`
+
+The unified `VaultStore` interface was split. Memory, LocalStorage, and SessionStorage return `KeyValueVaultStore` (core CRUD, observe, TTL, prune). IndexedDB and SQLite return `DocumentVaultStore`, which extends `KeyValueVaultStore` with `batch()` and `iterate()`.
+
+```ts
+// Before
+import type { VaultStore } from '@vielzeug/vault';
+
+// After — key-value stores
+import type { KeyValueVaultStore } from '@vielzeug/vault';
+// After — document stores (IndexedDB, SQLite)
+import type { DocumentVaultStore } from '@vielzeug/vault';
+```
+
+`TransactionalVaultStore` was renamed to `DocumentVaultStore`. The old alias is removed. `createIndexedDB()` returns the specialized `IndexedDbVaultStore`, which extends `DocumentVaultStore` with `getAllByIndex()` for declared indexes.
+
+```ts
+// Before
+import type { TransactionalVaultStore } from '@vielzeug/vault';
+
+// After
+import type { DocumentVaultStore } from '@vielzeug/vault';
+```
+
+## Durable codecs are now required
+
+LocalStorage, SessionStorage, IndexedDB, and SQLite now require `codecs` at construction time. Memory may omit them. A parser schema such as a Spell schema can be passed directly; `validatorCodec()` remains available when an explicit identity-encoding codec is preferred. Custom codecs validate writes by round-tripping `decode(encode(value))` and validate persisted data on decode.
+
+```ts
+// Before — codecs optional
+const store = createLocalStorage({ name: 'app', schema });
+
+// After — codecs required
+import { s } from '@vielzeug/spell';
+
+const UserSchema = s.object({ id: s.number(), name: s.string() });
+const store = createLocalStorage({
+  name: 'app',
+  schema,
+  codecs: { users: UserSchema },
+});
+```
+
+IndexedDB codecs must preserve declared index field names and values in their encoded object. SQLite codecs may emit any JSON-compatible value.
+
+## Fluent queries remain available
+
+`store.query(table)` retains typed `equals`, `filter`, `orderBy`, `offset`, `limit`, `count`, `first`, `delete`, and `toArray` operations. Queries are in-memory composition over `getAll()`; use `iterate()` for lazy document-store scans and IndexedDB's `getAllByIndex()` for declared equality indexes.
+
+```ts
+const adults = await db.query('users').filter((user) => user.age >= 18).toArray();
+const activeCount = await db.query('users').equals('status', 'active').count();
+const removed = await db.query('users').equals('status', 'expired').delete();
+```
+
+`count()` ignores presentation-only `orderBy`, `offset`, and `limit`, preserving the full filtered-set count for pagination.
+
+## Convenience methods are bound and standalone
+
+`has`, `count`, `isEmpty`, `getMany`, `keys`, `deleteMany`, `update`, and `upsert` remain available on store instances, so existing call sites need no extra imports. Standalone forms are also exported for functional composition and mirror bound argument order without a separate schema parameter. `put()`, `update()`, and `upsert()` return the canonical value produced by codec validation.
+
+```ts
+// Bound API
+await store.has('users', 1);
+await store.count('users');
+await store.getMany('users', [1, 2]);
+await store.deleteMany('users', [1, 2]);
+await store.update('users', 1, { name: 'Alice' });
+await store.upsert('users', 1, (existing) => ({ id: 1, name: existing?.name ?? 'Guest' }));
+
+// Standalone alternative
+import { count } from '@vielzeug/vault';
+await count(store, 'users');
+```
+
+Bound `update()` and `upsert()` are atomic on `DocumentVaultStore`; key-value stores provide non-atomic read-modify-write convenience. Use IndexedDB or SQLite when concurrent writers require atomicity.
+
+## Transaction contexts retain the ergonomic API
+
+`TransactionContext` includes core CRUD, `iterate()`, bound convenience methods, and `query()`. Its `update()`, `upsert()`, query deletion, and `deleteMany()` operations remain inside the enclosing transaction. A captured context becomes invalid as soon as the batch callback settles.
 
 # Vault 2.5 Migration
 

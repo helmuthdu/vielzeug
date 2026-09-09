@@ -26,7 +26,7 @@ verbose.debug('debug details for one path');
 // context binding — pin fields to every call
 const reqLog = base.withBindings({ requestId: 'abc-123', userId: 42 });
 reqLog.info('processing'); // emits requestId + userId on every line
-reqLog.warn({ slow: true }, 'query took 2s');
+reqLog.warn('query took 2s', { slow: true });
 ```
 
 ### Pitfalls

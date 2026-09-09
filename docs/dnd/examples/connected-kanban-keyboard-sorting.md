@@ -84,11 +84,11 @@ Two connected lists using the same `createSortableScope()` instance plus keyboar
 ```
 
 ```ts
-import { createSortable, createSortableScope } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 
 const todoEl = document.getElementById('todo-list')!;
 const doneEl = document.getElementById('done-list')!;
-const persistMove = (itemId: string, sourceIds: string[], targetIds: string[]) => {
+const persistMove = (itemId: string, sourceIds: readonly string[], targetIds: readonly string[]) => {
   console.log({ itemId, sourceIds, targetIds });
 };
 const boardScope = createSortableScope({

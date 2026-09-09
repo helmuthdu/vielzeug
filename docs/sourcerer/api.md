@@ -7,311 +7,390 @@ description: Public API for @vielzeug/sourcerer.
 
 ## API Overview
 
-| Symbol | Purpose | Execution | Common gotcha |
+| Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createLocalSource()` | In-memory search and pagination | Sync | Prepare filtering and ranking before `setData()` |
-| `createPageSource()` | Numbered async pages | Async | `query` remains loaded state while `pendingQuery` is active |
-| `createCursorSource()` | Cursor-based async pages | Async | `after` and `before` cannot coexist |
-| `createInfiniteSource()` | Appended async pages | Async | `loadMore()` does nothing while fetching or exhausted; `pendingQuery` set only on query replace, not append |
-| `SourceSnapshot` | Atomic loaded state plus pending request | Type | Read `pendingQuery` for newer in-flight state |
+| `createLocalSource()` | Filter and paginate in-memory items | Sync | `params` replacement uses `Object.is` |
+| `createPageSource()` | Load numbered pages | Async | Construction is inert |
+| `createCursorSource()` | Load server-issued cursor pages | Async | `after` and `before` cannot coexist initially |
+| `createInfiniteSource()` | Append numbered pages | Async | `loadMore()` is a no-op while loading or exhausted |
+| `SourcererError` | Base package error | Sync | Loader errors retain their original type |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/sourcerer` | Factories and public types |
+| `@vielzeug/sourcerer` | All factories, states, pagination types, loader contexts, and errors |
 
-## Factories
+## Source Factories
 
 ### `createLocalSource()`
 
 ```ts
-function createLocalSource<T>(data: readonly T[], config?: LocalSourceConfig<T>): LocalSource<T>
+function createLocalSource<T>(items: readonly T[]): LocalSource<T>
+function createLocalSource<T, TParams = undefined>(
+  items: readonly T[],
+  config: LocalSourceConfig<T, TParams>,
+): LocalSource<T, TParams>
 ```
 
-Creates a synchronous source over an in-memory collection.
+Returns a synchronous in-memory source.
 
-| Option | Type | Description |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `initialQuery` | `LocalQueryPatch` | Initial page, page size, or search value |
-| `match` | `(item, search) => boolean` | Explicit search predicate |
+| `items` | `readonly T[]` | Initial collection |
+| `config.filter` | `(item: T, params: TParams) => boolean` | Optional inclusion predicate |
+| `config.pageSize` | `number` | Positive page size; defaults to `20` |
+| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
 
-**Returns:** `LocalSource<T>`.
+**Returns:** `LocalSource<T, TParams>`.
 
 ```ts
 import { createLocalSource } from '@vielzeug/sourcerer';
 
-const users = createLocalSource(
-  [{ id: 1, name: 'Ada' }],
-  {
-    initialQuery: { pageSize: 20 },
-    match: (user, search) => user.name.toLowerCase().includes(search.toLowerCase()),
-  },
-);
-
-users.setQuery({ search: 'ada' });
+const source = createLocalSource(['Ada', 'Grace'], {
+  filter: (name, search: string) => name.includes(search),
+  params: '',
+});
+source.setParams('Ada');
 ```
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `first()` | `void` | Move to page one |
+| `goTo(page)` | `void` | Move to a positive page, clamped to the known range |
+| `last()` | `void` | Move to the final page |
+| `next()` | `void` | Move forward when available |
+| `previous()` | `void` | Move backward when available |
+| `setItems(items)` | `void` | Replace the collection and recompute state |
+| `setPageSize(pageSize)` | `void` | Replace page size and reset to page one |
+| `setParams(params)` | `void` | Replace params and reset to page one |
+| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
+| `dispose()` | `void` | Stop notifications and reject later mutations |
 
 ---
 
 ### `createPageSource()`
 
 ```ts
-function createPageSource<T, TFilter = unknown, TSort = unknown>(
-  config: PageSourceConfig<T, TFilter, TSort>,
-): PageSource<T, TFilter, TSort>
+function createPageSource<T, TParams = undefined>(
+  config: PageSourceConfig<T, TParams>,
+): PageSource<T, TParams>
 ```
 
-Creates a numbered source. New queries abort older work. Loaded state stays in `snapshot`; newer work appears in `snapshot.pendingQuery`.
+Returns an inert numbered-page source.
 
-| Option | Type | Description |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `autoStart` | `boolean` | Start initial request; default `true` |
-| `initialQuery` | `PageQueryPatch<TFilter, TSort>` | Initial query values |
-| `load` | `(context) => Promise<PageResult<T>>` | Transport callback |
+| `config.load` | `(context: PageLoadContext<TParams>) => Promise<PageResult<T>>` | Page loader |
+| `config.pageSize` | `number` | Positive page size; defaults to `20` |
+| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
 
-**Returns:** `PageSource<T, TFilter, TSort>`.
+**Returns:** `PageSource<T, TParams>`.
 
 ```ts
 import { createPageSource } from '@vielzeug/sourcerer';
 
-const users = createPageSource({
-  autoStart: false,
-  load: async () => ({ data: [{ id: 1, name: 'Ada' }], total: 1 }),
+const source = createPageSource({
+  load: async ({ page }) => ({ items: [page], totalItems: 10 }),
 });
-
-await users.setQuery({ page: 1 });
-users.dispose();
+await source.reload();
 ```
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `first()` | `Promise<void>` | Load page one |
+| `goTo(page)` | `Promise<void>` | Load a positive page |
+| `last()` | `Promise<void>` | Load the last known page |
+| `next()` | `Promise<void>` | Load the next known page |
+| `previous()` | `Promise<void>` | Load the previous page |
+| `reload()` | `Promise<void>` | Reload the requested page and params |
+| `setPageSize(pageSize)` | `Promise<void>` | Reset to page one and load with a new size |
+| `setParams(params)` | `Promise<void>` | Reset to page one and load replacement params |
+| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
+| `dispose()` | `void` | Abort work and stop notifications |
 
 ---
 
 ### `createCursorSource()`
 
 ```ts
-function createCursorSource<T, TCursor = string>(
-  config: CursorSourceConfig<T, TCursor>,
-): CursorSource<T, TCursor>
+function createCursorSource<T, TParams = undefined, TCursor = string>(
+  config: CursorSourceConfig<T, TParams, TCursor>,
+): CursorSource<T, TParams, TCursor>
 ```
 
-Creates a sequential cursor source. Search and page-size changes reset cursors.
+Returns an inert cursor source.
 
-**Returns:** `CursorSource<T, TCursor>`.
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `config.after` | `TCursor` | Optional initial forward cursor |
+| `config.before` | `TCursor` | Optional initial backward cursor |
+| `config.load` | `(context: CursorLoadContext<TParams, TCursor>) => Promise<CursorResult<T, TCursor>>` | Cursor loader |
+| `config.pageSize` | `number` | Positive page size; defaults to `20` |
+| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
+
+**Returns:** `CursorSource<T, TParams, TCursor>`.
 
 ```ts
 import { createCursorSource } from '@vielzeug/sourcerer';
 
-const orders = createCursorSource({
-  autoStart: false,
-  load: async () => ({ data: ['order-1'] }),
-});
-
-await orders.reload();
-await orders.page.next();
-orders.dispose();
+const source = createCursorSource({ load: async () => ({ items: ['first'], nextCursor: 'next' }) });
+await source.reload();
+await source.next();
 ```
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `next()` | `Promise<void>` | Load `state.pagination.nextCursor` when available |
+| `previous()` | `Promise<void>` | Load `state.pagination.previousCursor` when available |
+| `reload()` | `Promise<void>` | Reload the requested cursor and params |
+| `setPageSize(pageSize)` | `Promise<void>` | Clear cursors and reload with a new size |
+| `setParams(params)` | `Promise<void>` | Clear cursors and load replacement params |
+| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
+| `dispose()` | `void` | Abort work and stop notifications |
 
 ---
 
 ### `createInfiniteSource()`
 
 ```ts
-function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): InfiniteSource<T>
+function createInfiniteSource<T, TParams = undefined>(
+  config: InfiniteSourceConfig<T, TParams>,
+): InfiniteSource<T, TParams>
 ```
 
-Creates an append-only source. Query changes replace loaded collection after successful first-page load.
+Returns an inert source that appends numbered pages.
 
-**Returns:** `InfiniteSource<T>`.
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `config.load` | `(context: InfiniteLoadContext<TParams>) => Promise<PageResult<T>>` | Page loader |
+| `config.pageSize` | `number` | Positive page size; defaults to `20` |
+| `config.params` | `TParams` | Initial params; required when `TParams` excludes `undefined` |
+
+**Returns:** `InfiniteSource<T, TParams>`.
 
 ```ts
 import { createInfiniteSource } from '@vielzeug/sourcerer';
 
-const feed = createInfiniteSource({
-  autoStart: false,
-  load: async () => ({ data: ['post-1'], total: 1 }),
-});
-
-await feed.loadMore();
-feed.dispose();
+const source = createInfiniteSource({ load: async () => ({ items: ['post'], totalItems: 1 }) });
+await source.reload();
+await source.loadMore();
 ```
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `loadMore()` | `Promise<void>` | Append the next page when available |
+| `reload()` | `Promise<void>` | Replace items from page one |
+| `setPageSize(pageSize)` | `Promise<void>` | Replace items from page one with a new size |
+| `setParams(params)` | `Promise<void>` | Replace items from page one with new params |
+| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
+| `dispose()` | `void` | Abort work and stop notifications |
 
 ## Types
 
-### Source primitives
+### Page source types
 
 ```ts
-type Disposable = {
+type PagePagination = Readonly<{
+  hasNext: boolean;
+  hasPrevious: boolean;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+  totalItems: number;
+}>;
+
+type PageSourceState<T, TParams = undefined> = Readonly<{
+  error: Error | null;
+  items: readonly T[];
+  loading: boolean;
+  pagination: PagePagination;
+  params: TParams;
+  pendingParams?: TParams;
+}>;
+
+type PageLoadContext<TParams = undefined> = Readonly<{
+  page: number;
+  pageSize: number;
+  params: TParams;
+  signal: AbortSignal;
+}>;
+
+type PageResult<T> = Readonly<{
+  items: readonly T[];
+  totalItems: number;
+}>;
+
+type PageSourceConfig<T, TParams = undefined> = Readonly<{
+  load(context: PageLoadContext<TParams>): Promise<PageResult<T>>;
+  pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;
+
+type PageSource<T, TParams = undefined> = {
   [Symbol.dispose](): void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-};
-
-type SourceSnapshot<T, TQuery, TPagination extends AnyPagination = AnyPagination> = Readonly<{
-  data: readonly T[];
-  error: Error | null;
-  isFetching: boolean;
-  pagination: TPagination;
-  pendingQuery?: TQuery;
-  query: TQuery;
-}>;
-
-type Source<T, TQuery, TPagination extends AnyPagination = AnyPagination> = Disposable & {
-  readonly snapshot: SourceSnapshot<T, TQuery, TPagination>;
-  subscribe(listener: (snapshot: SourceSnapshot<T, TQuery, TPagination>) => void): () => void;
-};
-```
-
-### Numbered pages
-
-```ts
-type PagePagination = Readonly<{
-  count: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-  index: number;
-  kind: 'page';
-  size: number;
-  total: number;
-}>;
-
-type PageQuery<TFilter = unknown, TSort = unknown> = Readonly<{
-  filter?: TFilter;
-  page: number;
-  pageSize: number;
-  search: string;
-  sort?: TSort;
-}>;
-
-type PageQueryPatch<TFilter = unknown, TSort = unknown> = Readonly<{
-  filter?: TFilter | undefined;
-  page?: number;
-  pageSize?: number;
-  search?: string;
-  sort?: TSort | undefined;
-}>;
-
-type PageResult<T> = Readonly<{ data: readonly T[]; total: number }>;
-type LoadContext<TQuery> = Readonly<{ query: TQuery; signal: AbortSignal }>;
-
-type PageSourceConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
-  autoStart?: boolean;
-  initialQuery?: PageQueryPatch<TFilter, TSort>;
-  load(context: LoadContext<PageQuery<TFilter, TSort>>): Promise<PageResult<T>>;
-}>;
-
-type PageSource<T, TFilter = unknown, TSort = unknown> = Source<T, PageQuery<TFilter, TSort>, PagePagination> & {
-  readonly page: Readonly<{
-    go(index: number): Promise<void>;
-    last(): Promise<void>;
-    next(): Promise<void>;
-    previous(): Promise<void>;
-  }>;
+  first(): Promise<void>;
+  goTo(page: number): Promise<void>;
+  last(): Promise<void>;
+  next(): Promise<void>;
+  previous(): Promise<void>;
   reload(): Promise<void>;
-  setQuery(changes: PageQueryPatch<TFilter, TSort>): Promise<void>;
+  setPageSize(pageSize: number): Promise<void>;
+  setParams(params: TParams): Promise<void>;
+  readonly state: PageSourceState<T, TParams>;
+  subscribe(listener: (state: PageSourceState<T, TParams>) => void): () => void;
 };
 ```
 
-### Local sources
+The conditional config field makes `params` optional only when `TParams` includes `undefined`.
+
+### Local source types
 
 ```ts
-type LocalQuery = Readonly<{ page: number; pageSize: number; search: string }>;
-type LocalQueryPatch = Readonly<{ page?: number; pageSize?: number; search?: string }>;
-type LocalSourceConfig<T> = Readonly<{
-  initialQuery?: LocalQueryPatch;
-  match?: (item: T, search: string) => boolean;
+type LocalSourceState<T, TParams = undefined> = Readonly<{
+  error: null;
+  items: readonly T[];
+  loading: false;
+  pagination: PagePagination;
+  params: TParams;
 }>;
 
-type LocalSource<T> = Source<T, LocalQuery, PagePagination> & {
-  readonly page: Readonly<{
-    go(index: number): void;
-    last(): void;
-    next(): void;
-    previous(): void;
-  }>;
-  setData(data: readonly T[]): void;
-  setQuery(changes: LocalQueryPatch): void;
+type LocalSourceConfig<T, TParams = undefined> = Readonly<{
+  filter?: (item: T, params: TParams) => boolean;
+  pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;
+
+type LocalSource<T, TParams = undefined> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  first(): void;
+  goTo(page: number): void;
+  last(): void;
+  next(): void;
+  previous(): void;
+  setItems(items: readonly T[]): void;
+  setPageSize(pageSize: number): void;
+  setParams(params: TParams): void;
+  readonly state: LocalSourceState<T, TParams>;
+  subscribe(listener: (state: LocalSourceState<T, TParams>) => void): () => void;
 };
 ```
 
-### Cursor and infinite sources
+### Cursor source types
 
 ```ts
 type CursorPagination<TCursor = string> = Readonly<{
-  hasNext: boolean;
-  hasPrevious: boolean;
-  kind: 'cursor';
   nextCursor?: TCursor;
+  pageSize: number;
   previousCursor?: TCursor;
-  total?: number;
+  totalItems?: number;
 }>;
 
-type CursorQuery<TCursor = string> = Readonly<{
+type CursorLoadContext<TParams = undefined, TCursor = string> = Readonly<{
   after?: TCursor;
   before?: TCursor;
   pageSize: number;
-  search: string;
-}>;
-
-type CursorQueryPatch<TCursor = string> = Readonly<{
-  after?: TCursor | undefined;
-  before?: TCursor | undefined;
-  pageSize?: number;
-  search?: string;
+  params: TParams;
+  signal: AbortSignal;
 }>;
 
 type CursorResult<T, TCursor = string> = Readonly<{
-  data: readonly T[];
+  items: readonly T[];
   nextCursor?: TCursor;
   previousCursor?: TCursor;
-  total?: number;
+  totalItems?: number;
 }>;
 
-type CursorSourceConfig<T, TCursor = string> = Readonly<{
-  autoStart?: boolean;
-  initialQuery?: CursorQueryPatch<TCursor>;
-  load(context: LoadContext<CursorQuery<TCursor>>): Promise<CursorResult<T, TCursor>>;
+type CursorSourceState<T, TParams = undefined, TCursor = string> = Readonly<{
+  error: Error | null;
+  items: readonly T[];
+  loading: boolean;
+  pagination: CursorPagination<TCursor>;
+  params: TParams;
+  pendingParams?: TParams;
 }>;
 
-type CursorSource<T, TCursor = string> = Source<T, CursorQuery<TCursor>, CursorPagination<TCursor>> & {
-  readonly page: Readonly<{ next(): Promise<void>; previous(): Promise<void> }>;
+type CursorSourceConfig<T, TParams = undefined, TCursor = string> = Readonly<{
+  after?: TCursor;
+  before?: TCursor;
+  load(context: CursorLoadContext<TParams, TCursor>): Promise<CursorResult<T, TCursor>>;
+  pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;
+
+type CursorSource<T, TParams = undefined, TCursor = string> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  next(): Promise<void>;
+  previous(): Promise<void>;
   reload(): Promise<void>;
-  setQuery(changes: CursorQueryPatch<TCursor>): Promise<void>;
-};
-
-type InfinitePagination = Readonly<{
-  hasMore: boolean;
-  kind: 'infinite';
-  loaded: number;
-  total: number;
-}>;
-
-type InfiniteQuery = Readonly<{ pageSize: number; search: string }>;
-type InfiniteQueryPatch = Readonly<{ pageSize?: number; search?: string }>;
-type InfiniteLoadQuery = Readonly<{ page: number; pageSize: number; search: string }>;
-
-type InfiniteSourceConfig<T> = Readonly<{
-  autoStart?: boolean;
-  initialQuery?: InfiniteQueryPatch;
-  load(context: LoadContext<InfiniteLoadQuery>): Promise<PageResult<T>>;
-}>;
-
-type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
-  loadMore(): Promise<void>;
-  reload(): Promise<void>;
-  setQuery(changes: InfiniteQueryPatch): Promise<void>;
+  setPageSize(pageSize: number): Promise<void>;
+  setParams(params: TParams): Promise<void>;
+  readonly state: CursorSourceState<T, TParams, TCursor>;
+  subscribe(listener: (state: CursorSourceState<T, TParams, TCursor>) => void): () => void;
 };
 ```
 
-### Shared helpers
+### Infinite source types
 
 ```ts
-type AnyPagination = CursorPagination<unknown> | InfinitePagination | PagePagination;
+type InfinitePagination = Readonly<{
+  hasMore: boolean;
+  loadedItems: number;
+  pageSize: number;
+  totalItems: number;
+}>;
+
+type InfiniteLoadContext<TParams = undefined> = Readonly<{
+  page: number;
+  pageSize: number;
+  params: TParams;
+  signal: AbortSignal;
+}>;
+
+type InfiniteSourceState<T, TParams = undefined> = Readonly<{
+  error: Error | null;
+  items: readonly T[];
+  loading: boolean;
+  pagination: InfinitePagination;
+  params: TParams;
+  pendingParams?: TParams;
+}>;
+
+type InfiniteSourceConfig<T, TParams = undefined> = Readonly<{
+  load(context: InfiniteLoadContext<TParams>): Promise<PageResult<T>>;
+  pageSize?: number;
+  } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
+>;
+
+type InfiniteSource<T, TParams = undefined> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  loadMore(): Promise<void>;
+  reload(): Promise<void>;
+  setPageSize(pageSize: number): Promise<void>;
+  setParams(params: TParams): Promise<void>;
+  readonly state: InfiniteSourceState<T, TParams>;
+  subscribe(listener: (state: InfiniteSourceState<T, TParams>) => void): () => void;
+};
 ```
 
 ## Errors
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `SourcererError` | Base class for all sourcerer-originated errors | `instanceof SourcererError` narrows all Sourcerer errors |
-| `SourcererConfigurationError` | A source is configured or queried with invalid arguments | — |
+| `SourcererError` | Base class for package-originated configuration and lifecycle errors | `instanceof SourcererError` narrows the hierarchy |
+| `SourcererConfigurationError` | Invalid page, page size, total, or initial cursor direction | Extends `SourcererError` |
+| `SourcererDisposedError` | A source command runs after disposal | Extends `SourcererError` |
+
+Loader failures are preserved when they are `Error` instances. Non-Error rejections become `Error` objects whose `cause` contains the original value.

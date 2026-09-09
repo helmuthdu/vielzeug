@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { toAsyncIterable } from '../async';
 import { stream } from '../core';
+import { FluxCapacityError } from '../errors';
 import { combineLatest, concat, merge } from '../operators/combination';
 import { from, interval, of, timer } from '../operators/creation';
 import { debounce, take, takeUntil, timeout } from '../operators/filtering';
@@ -256,7 +257,7 @@ describe('core operators', () => {
 
     controller.abort();
 
-    await expect(pending).rejects.toThrow('Stream consumption aborted');
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   it('uses fake timers for timed operators', async () => {
@@ -284,5 +285,85 @@ describe('core operators', () => {
     await vi.advanceTimersByTimeAsync(100);
     expect(await debounced).toEqual([1]);
     expect(() => interval(-1)).toThrow(RangeError);
+    expect(() => timer({ delay: 2_147_483_648 })).toThrow(RangeError);
+  });
+
+  it('uses FluxCapacityError and validates async overflow policy', async () => {
+    const source = createChannel<number>();
+    const iterator = toAsyncIterable(source.stream, { capacity: 1, overflow: 'error' })[Symbol.asyncIterator]();
+    source.send(1);
+    source.send(2);
+    await iterator.next();
+
+    await expect(iterator.next()).rejects.toBeInstanceOf(FluxCapacityError);
+    expect(() =>
+      toAsyncIterable(source.stream, { capacity: 1, overflow: 'invalid' as never })[Symbol.asyncIterator](),
+    ).toThrow(RangeError);
+  });
+
+  it('preserves async iterator abort reasons', async () => {
+    const source = createChannel<number>();
+    const controller = new AbortController();
+    const reason = new Error('iterator obsolete');
+    const iterator = toAsyncIterable(source.stream, {
+      capacity: 1,
+      overflow: 'drop-newest',
+      signal: controller.signal,
+    })[Symbol.asyncIterator]();
+    const pending = iterator.next();
+
+    controller.abort(reason);
+
+    await expect(pending).rejects.toBe(reason);
+  });
+
+  it('preserves terminal consumer abort reasons', async () => {
+    const controller = new AbortController();
+    const reason = new Error('obsolete');
+    const pending = first(
+      stream(() => undefined),
+      { signal: controller.signal },
+    );
+
+    controller.abort(reason);
+
+    await expect(pending).rejects.toBe(reason);
+  });
+
+  it('accepts structurally compatible cross-realm AbortSignals in takeUntil', async () => {
+    const signal = {
+      aborted: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as AbortSignal;
+
+    await expect(toArray(pipe(of(1), takeUntil(signal)), { maxItems: 1 })).resolves.toEqual([]);
+  });
+
+  it('concatenates large synchronous source lists without recursion overflow', async () => {
+    const sources = Array.from({ length: 20_000 }, () => of(1));
+
+    await expect(toArray(concat(...sources), { maxItems: sources.length })).resolves.toHaveLength(sources.length);
+  });
+
+  it('reports rejecting async iterator teardown', async () => {
+    const original = (globalThis as { reportError?: (reason: unknown) => void }).reportError;
+    const reportError = vi.fn();
+    Object.defineProperty(globalThis, 'reportError', { configurable: true, value: reportError });
+    const source = from({
+      [Symbol.asyncIterator]() {
+        return {
+          next: () => new Promise<IteratorResult<number>>(() => undefined),
+          return: () => Promise.reject(new Error('teardown failed')),
+        };
+      },
+    });
+
+    source.subscribe(() => undefined).unsubscribe();
+    await Promise.resolve();
+
+    expect(reportError).toHaveBeenCalledWith(expect.objectContaining({ message: 'teardown failed' }));
+    if (original) Object.defineProperty(globalThis, 'reportError', { configurable: true, value: original });
+    else Reflect.deleteProperty(globalThis, 'reportError');
   });
 });

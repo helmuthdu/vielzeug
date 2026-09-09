@@ -110,7 +110,7 @@ lobby.onLeave((memberId) => console.log(`${memberId} left`));
 lobby.updatePresence({ name: 'Ada', color: 'blue' });
 
 // Read current presence
-for (const [memberId, state] of lobby.presence.value) {
+for (const [memberId, state] of lobby.presence.getSnapshot()) {
   console.log(`${memberId}: ${state.name}`);
 }
 
@@ -143,16 +143,17 @@ const lobby = pulse.room('lobby', { signal: ctrl.signal });
 ctrl.abort(); // joined rejects with PulseAbortError, scope auto-disposes
 ```
 
-### Reactive rooms set
+### Observe the rooms set
 
-`pulse.rooms` is a ripple readable that tracks confirmed room memberships:
+`pulse.rooms` is an external store that tracks confirmed room memberships:
 
 ```ts
-import { effect } from '@vielzeug/ripple';
+const printRooms = () => console.log('Joined rooms:', [...pulse.rooms.getSnapshot()]);
+const unsubscribe = pulse.rooms.subscribe(printRooms);
 
-effect(() => {
-  console.log('Joined rooms:', [...pulse.rooms.value]);
-});
+printRooms();
+// Later
+unsubscribe();
 ```
 
 ## Reconnect
@@ -244,6 +245,24 @@ pulse.tap((event) => {
 | `PulseRoomTimeoutError` | Room scope `joined` times out. |
 | `PulseAbortError` | `wait()` or room `joined` aborted via AbortSignal. |
 | `PulseDisposedError` | Operation attempted after disposal. |
+
+## Working with Other Vielzeug Libraries
+
+Pulse external stores plug directly into Flux and Ripple bridges:
+
+```ts
+import { fromStore } from '@vielzeug/flux';
+import { effect, fromSubscribable } from '@vielzeug/ripple';
+
+const statusStream = fromStore(pulse.status);
+const presence = fromSubscribable(lobby.presence, { signal: lobby.disposalSignal });
+const presenceEffect = effect(() => console.log([...presence.value]));
+
+const statusSubscription = statusStream.subscribe((status) => console.log(status));
+// Later
+statusSubscription.unsubscribe();
+presenceEffect.dispose();
+```
 
 ## Best Practices
 

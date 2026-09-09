@@ -1,6 +1,6 @@
-import { link } from '../_link';
-import { stream } from '../core';
-import type { Stream, Subscription } from '../types';
+import { link } from '../_link.js';
+import { stream } from '../core.js';
+import type { Stream, Subscription } from '../types.js';
 
 type StreamValue<T> = T extends Stream<infer Value> ? Value : never;
 type StreamValues<T extends readonly Stream<unknown>[]> = { [Key in keyof T]: StreamValue<T[Key]> };
@@ -45,31 +45,47 @@ export function merge<T>(...sources: Stream<T>[]): Stream<T> {
 
 export function concat<T>(...sources: Stream<T>[]): Stream<T> {
   return stream((sink, signal) => {
-    let index = 0;
+    let advancing = false;
     let current: Subscription | undefined;
+    let index = 0;
+    let requested = false;
 
     const subscribeNext = (): void => {
       if (signal.aborted) return;
-
-      const source = sources[index++];
-
-      if (!source) {
-        sink.complete();
-
+      if (advancing) {
+        requested = true;
         return;
       }
 
-      const subscription = link(
-        source,
-        {
-          complete: subscribeNext,
-          error: sink.error,
-          next: sink.next,
-        },
-        signal,
-      );
+      advancing = true;
+      try {
+        do {
+          requested = false;
+          const source = sources[index++];
 
-      current = subscription.closed ? undefined : subscription;
+          if (!source) {
+            sink.complete();
+            return;
+          }
+
+          const subscription = link(
+            source,
+            {
+              complete() {
+                current = undefined;
+                subscribeNext();
+              },
+              error: sink.error,
+              next: sink.next,
+            },
+            signal,
+          );
+
+          current = subscription.closed ? undefined : subscription;
+        } while (requested && !signal.aborted);
+      } finally {
+        advancing = false;
+      }
     };
 
     subscribeNext();

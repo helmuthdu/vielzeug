@@ -1,9 +1,9 @@
 ---
-title: Sourcerer — Reactive Query Sources
-description: Framework-agnostic collection sources for local, page, cursor, and infinite pagination.
+title: Sourcerer — Reactive collection sources
+description: Framework-agnostic local and remote collection state with page, cursor, and infinite pagination.
 package: sourcerer
 category: data
-keywords: [pagination, data-source, cursor, infinite-scroll, search]
+keywords: [pagination, data-source, cursor, infinite-scroll, collection]
 related: [courier, ripple, scout, wayfinder]
 exports:
   [
@@ -11,34 +11,29 @@ exports:
     createInfiniteSource,
     createLocalSource,
     createPageSource,
-    AnyPagination,
+    CursorLoadContext,
     CursorPagination,
-    CursorQuery,
-    CursorQueryPatch,
     CursorResult,
     CursorSource,
     CursorSourceConfig,
+    CursorSourceState,
+    InfiniteLoadContext,
     InfinitePagination,
-    InfiniteLoadQuery,
-    InfiniteQuery,
-    InfiniteQueryPatch,
     InfiniteSource,
     InfiniteSourceConfig,
-    LocalQuery,
-    LocalQueryPatch,
+    InfiniteSourceState,
     LocalSource,
     LocalSourceConfig,
-    LoadContext,
+    LocalSourceState,
+    PageLoadContext,
     PagePagination,
-    PageQuery,
-    PageQueryPatch,
     PageResult,
     PageSource,
     PageSourceConfig,
-    Source,
-    SourceSnapshot,
+    PageSourceState,
     SourcererError,
     SourcererConfigurationError,
+    SourcererDisposedError,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -49,40 +44,34 @@ environments: [browser, node, ssr, deno]
 
 ## Why Sourcerer?
 
-Lists often combine pagination, search, request cancellation, and render state. Sourcerer gives local arrays and remote loaders one snapshot contract while leaving caching, retries, and transport policy to your application.
+Paginated views need collection data, loading state, errors, parameters, and navigation to change coherently. Sourcerer owns that state and request succession without coupling it to a framework or transport client.
 
 ```ts
-import { createPageSource } from '@vielzeug/sourcerer';
-
-type User = { id: number; name: string };
-
-// Before: query changes can mix old items with new loading and page state.
-let items: User[] = [];
+// Before
+let items = [];
+let loading = false;
 let page = 1;
-let isLoading = false;
 
-// After: one source publishes internally consistent loaded state.
-const source = createPageSource<User>({
-  autoStart: false,
-  load: async () => ({ data: [{ id: 1, name: 'Ada' }], total: 1 }),
+// After
+const source = createPageSource({
+  load: async ({ page, pageSize }) => ({ items: await loadUsers(page, pageSize), totalItems: 100 }),
 });
-source.subscribe((snapshot) => console.log(snapshot.data));
-source.dispose();
+source.subscribe((state) => render(state));
 ```
 
-| Feature | Sourcerer | Manual list state | Courier query cache |
+| Feature | Sourcerer | Manual store | General query cache |
 | --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="sourcerer" type="size" /> | Application-defined | <PackageInfo package="courier" type="size" /> |
-| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Local and remote collections | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Cursor and infinite pagination | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="triangle-alert" size="16"></ore-icon> |
-| Latest-request cancellation | <ore-icon name="check" size="16"></ore-icon> | Application-defined | Transport-level |
+| Bundle size | <PackageInfo package="sourcerer" type="size" /> | Application-defined | Package-defined |
+| Zero runtime dependencies | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Page, cursor, and infinite navigation | <ore-icon name="check" size="16"></ore-icon> | Application-defined | Application-defined |
+| Framework-neutral subscriptions | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| HTTP transport policy | Loader-defined | Application-defined | Loader-defined |
 
 <div class="decision-callout">
 
-**Use Sourcerer when** one UI collection needs local or remote pagination with an explicit, framework-independent snapshot contract.
+**Use Sourcerer when** a collection view needs explicit pagination, observable state, cancellation, and lifecycle ownership.
 
-**Consider Courier alone when** you only need cached HTTP queries and pagination state belongs elsewhere.
+**Consider a general query cache when** your primary requirement is shared keyed caching, invalidation, mutations, or server-state normalization rather than collection navigation.
 
 </div>
 
@@ -106,30 +95,27 @@ yarn add @vielzeug/sourcerer
 
 ## Quick Start
 
-Create a page source, load it, then dispose it with its owner.
+Create a page source, load it, read its state, and dispose it with its owner.
 
 ```ts
 import { createPageSource } from '@vielzeug/sourcerer';
 
 type User = { id: number; name: string };
-
-const source = createPageSource<User>({
-  autoStart: false,
-  load: async ({ query }) => {
-    const users = [
-      { id: 1, name: 'Ada' },
-      { id: 2, name: 'Grace' },
-      { id: 3, name: 'Linus' },
-    ];
-    const start = (query.page - 1) * query.pageSize;
-
-    return { data: users.slice(start, start + query.pageSize), total: users.length };
+const users: User[] = [
+  { id: 1, name: 'Ada' },
+  { id: 2, name: 'Grace' },
+];
+const source = createPageSource({
+  load: async ({ page, pageSize }) => {
+    const start = (page - 1) * pageSize;
+    return { items: users.slice(start, start + pageSize), totalItems: users.length };
   },
+  pageSize: 1,
 });
 
 try {
   await source.reload();
-  console.log(source.snapshot.data);
+  console.log(source.state.items);
 } catch (error) {
   console.error(error);
 } finally {
@@ -141,11 +127,12 @@ try {
 
 <div class="features-grid">
 
-- `createLocalSource()` — synchronous search and numbered pagination over an array
-- `createPageSource()` — numbered remote pages with latest-request cancellation
-- `createCursorSource()` — sequential opaque-cursor navigation
-- `createInfiniteSource()` — append-only page loading
-- `SourceSnapshot` — loaded `query`, `data`, and `pagination` plus optional `pendingQuery`
+- `createLocalSource()` — filters and paginates an in-memory collection synchronously
+- `createPageSource()` — loads numbered pages and exposes direct navigation commands
+- `createCursorSource()` — follows opaque cursors returned by the loader
+- `createInfiniteSource()` — appends pages while preserving loaded items
+- `setParams()` — replaces consumer-owned loader parameters and resets pagination
+- `subscribe()` — publishes complete immutable state replacements
 
 </div>
 
@@ -164,10 +151,10 @@ try {
 
 <div class="see-also">
 
-- [Courier](/courier/) — use as transport, caching, and retry policy inside a page loader
-- [Scout](/scout/) — adapt an indexed search matcher for local sources
-- [Ripple](/ripple/) — project source snapshots into reactive application state
-- [Wayfinder](/wayfinder/) — validate and synchronize page query fields with route state
+- [Courier](/courier/) — provide HTTP transport, middleware, and structured transport errors inside loaders
+- [Scout](/scout/) — index larger in-memory collections before passing matches to a local source
+- [Ripple](/ripple/) — project source state into reactive computations
+- [Wayfinder](/wayfinder/) — validate and synchronize source parameters with route state
 
 </div>
 

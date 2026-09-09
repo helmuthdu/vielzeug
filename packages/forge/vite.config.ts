@@ -11,9 +11,9 @@ export default defineConfig(
     entry: {
       dom: resolve(__dirname, 'src/dom.ts'),
       'form-data': resolve(__dirname, 'src/form-data.ts'),
-      spell: resolve(__dirname, 'src/spell.ts'),
+      persist: resolve(__dirname, 'src/persist.ts'),
+      schema: resolve(__dirname, 'src/schema.ts'),
       'src/index': resolve(__dirname, 'src/index.ts'),
-      vault: resolve(__dirname, 'src/vault.ts'),
     },
     external: readWorkspaceDeps(__dirname),
     name: 'forge',

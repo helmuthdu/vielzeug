@@ -13,7 +13,7 @@ export const PRIORITY: Record<LogLevel, number> = {
   warn: 2,
 };
 
-/** Returns true if `level` passes the `threshold`. Returns false when `level` is 'off'. Exported for transport/middleware authors. */
+/** Returns true if `level` passes the `threshold`. Returns false when `level` is 'off'. Exported for transport authors. */
 export function isLevelEnabled(threshold: LogLevel, level: LogLevel): boolean {
   if (level === 'off') return false;
 
@@ -58,17 +58,13 @@ export type LogEntry = {
  */
 export type Transport = (entry: LogEntry) => void;
 
-/**
- * Middleware function that transforms or filters log entries before dispatch. Return null to drop the entry.
- * If middleware throws, the logger catches it, reports it via a dev-only warning, and drops the entry
- * (no transports run for it) rather than crashing the caller.
- */
+/** Transform or filter entries before dispatch. Return `null` to drop an entry. */
 export type LogMiddleware = (entry: LogEntry) => LogEntry | null;
 
 /* ─── Transport option types ─── */
 
 export type RemoteLogData = {
-  data?: Bindings;
+  data?: Readonly<Bindings>;
   env: 'development' | 'production';
   level: LogType;
   message?: string;
@@ -79,17 +75,11 @@ export type RemoteLogData = {
 export type RemoteTransportOptions = {
   /** Override the detected runtime environment. Default: auto-detected. */
   env?: 'development' | 'production';
-  /** Remote delivery handler — receives the log type and structured payload. */
-  handler: (type: LogType, data: RemoteLogData) => void;
+  /** Remote delivery handler. */
+  handler: (type: LogType, data: RemoteLogData) => void | Promise<unknown>;
   /** Minimum level to forward. Default: 'debug'. */
   level?: LogLevel;
-  /**
-   * Called when the handler throws or rejects.
-   * The async error path is separate from any synchronous errors in the emit call stack.
-   * Default: a dev-only `console.warn` (gated by `__RUNE_PROD__`). In production builds,
-   * unhandled remote transport errors are silently swallowed — pass an explicit `onError`
-   * if you need delivery-failure observability in production.
-   */
+  /** Observe synchronous throws and asynchronous rejections from `handler`. */
   onError?: (error: unknown, data: RemoteLogData) => void;
 };
 
@@ -119,81 +109,45 @@ export type JsonTransportOptions = {
   safe?: boolean;
 };
 
-/** Handle returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`. */
+/** Handle returned by `batchTransport()`. */
 export type BatchHandle = {
-  /** Delegates to `dispose()`. Enables `await using` declarations. */
   [Symbol.asyncDispose]: () => Promise<void>;
-  /** Stop the interval timer, flush remaining entries, and wait for all accepted batches. Idempotent. */
   dispose: () => Promise<void>;
-  /** `true` after `dispose()` has been called. */
   readonly disposed: boolean;
-  /** Immediately flush buffered entries and wait for their downstream delivery without stopping the timer. */
   flush: () => Promise<void>;
-  /** The transport function to pass to `createLogger({ transports: [handle.transport] })`. */
   transport: Transport;
 };
 
 export type BatchTransportOptions = {
-  /** Flush interval in milliseconds. Must be finite and greater than zero. Default: 5000. */
+  /** Flush interval in milliseconds. Default: 5000. */
   interval?: number;
   /** Minimum level to buffer. Default: 'debug'. */
   level?: LogLevel;
-  /**
-   * Hard limit on the in-memory buffer size. Must be a finite non-negative integer.
-   * When the buffer exceeds this value, the oldest entries are dropped to prevent
-   * unbounded memory growth. Unlike `maxSize`, this does NOT trigger a flush.
-   * Default: unbounded.
-   */
+  /** Hard limit on buffered entries. Oldest entries are dropped first. Default: unbounded. */
   maxBuffer?: number;
-  /** Maximum buffer size before an early flush. Must be a finite positive integer. Default: 50. */
+  /** Flush once this many entries are buffered. Default: 50. */
   maxSize?: number;
-  /** Callback to receive flushed batches. May return a Promise. */
+  /** Deliver one accepted batch. Batches are delivered serially. */
   onFlush: (entries: LogEntry[]) => void | Promise<void>;
-  /**
-   * Called when onFlush throws synchronously or rejects asynchronously. Observes the
-   * failure; the corresponding `flush()` or `dispose()` promise still rejects.
-   */
+  /** Observe delivery failures. Manual failures reject `flush()`; automatic failures reject `dispose()`. */
   onFlushError?: (entries: LogEntry[], error: unknown) => void;
-};
-
-export type PipeOptions = {
-  /**
-   * Called when one of the piped transports throws.
-   * Receives the thrown error and the log entry that triggered it.
-   * Default: silent (errors are swallowed to protect remaining transports).
-   */
-  onError?: (error: unknown, entry: LogEntry) => void;
 };
 
 export type SampleTransportOptions = {
   /** Minimum level to sample. Default: 'debug'. */
   level?: LogLevel;
-  /** Finite fraction of entries to forward (0–1). */
+  /** Finite fraction of entries to forward, from 0 to 1. */
   rate: number;
-  /** Downstream transport to receive sampled entries. */
   transport: Transport;
 };
 
 export type RedactTransportOptions = {
-  /**
-   * Field names to replace at any depth in `data`.
-   * Matched by exact field name — dot-path notation (e.g. `'user.password'`) is NOT supported.
-   * A key like `'password'` will redact every field named `'password'` at any nesting level.
-   */
-  keys: string[];
-  /**
-   * Finite non-negative integer maximum object nesting depth to traverse during redaction.
-   * Objects deeper than this limit are returned as-is (not redacted).
-   * A dev-only warning is emitted when the cap is hit.
-   * Default: 20.
-   * @security In production builds, the depth warning is suppressed — deeply-nested sensitive
-   * fields beyond `maxDepth` will pass through unredacted without any indication. Ensure that
-   * sensitive payloads are not nested beyond this limit, or lower `maxDepth` as needed.
-   */
+  /** Exact field names to replace at any depth. */
+  keys: readonly string[];
+  /** Maximum nested object depth to inspect. Deeper subtrees are replaced entirely. Default: 20. */
   maxDepth?: number;
-  /** Replacement value for redacted fields. Default: '[REDACTED]'. */
+  /** Replacement used for matching fields and depth-limited subtrees. Default: '[REDACTED]'. */
   replacement?: string;
-  /** Downstream transport to receive the redacted entry. */
   transport: Transport;
 };
 
@@ -204,7 +158,7 @@ export type RuneOptions = {
   bindings?: Bindings;
   /** Minimum log level for this logger instance. Default: 'debug'. */
   logLevel?: LogLevel;
-  /** Middleware pipeline applied to every entry before dispatch to transports. */
+  /** Middleware applied once, in order, before dispatch to every transport. */
   middleware?: LogMiddleware[];
   /**
    * Namespace for this logger. When passed to `child()`, it is automatically
@@ -223,20 +177,17 @@ export type RuneOptions = {
 /**
  * Signature shared by all five log-level methods.
  *
- * - `log.info('message')` — string-only, most common.
- * - `log.info({ ...fields }, 'message')` — structured context + optional message.
- *   `Error` values in `fields` are automatically serialized to `{ message, name, stack }`.
- *   Serialization is shallow only — an `Error` nested inside a nested object is left as-is.
- * - `log.error(err, { ...fields }, 'message')` — Error first, then optional context + message.
- *   Shorthand for the pattern where an Error is the primary subject of the log call.
- *   The context object may be omitted entirely: `log.error(err, 'message')`.
+ * Message-first calls are preferred for ordinary application logging. Context-first and error-first
+ * calls support structured events, adapters, and error forwarding without synthetic messages.
+ * `Error` values in context are serialized shallowly to `{ message, name, stack }`.
  *
  * @example
- * log.error({ err: new Error('timeout'), requestId }, 'request failed')
- * log.error(new Error('timeout'), { requestId }, 'request failed')
+ * log.info('request started', { requestId: 'abc' })
+ * log.debug(event, `bus:${event.type}`)
+ * log.error(new Error('timeout'), { requestId: 'abc' }, 'request failed')
  */
 export type LogMethod = {
-  (message: string): void;
+  (message: string, context?: Bindings): void;
   (error: Error, message?: string): void;
   (error: Error, context: Bindings, message?: string): void;
   (context: Bindings, message?: string): void;
@@ -256,9 +207,7 @@ export type Logger = {
   readonly disposalSignal: AbortSignal;
   /**
    * Marks the logger as disposed — all subsequent log calls become no-ops.
-   * Aborts `disposalSignal`. Does NOT auto-discover or dispose batch transports;
-   * hold a direct reference to `batchTransport` and call its `dispose()` on shutdown.
-   * Idempotent — safe to call multiple times.
+   * Aborts `disposalSignal`. Idempotent — safe to call multiple times.
    */
   dispose: () => void;
   /** `true` after `dispose()` has been called. */
@@ -282,7 +231,7 @@ export type Logger = {
   info: LogMethod;
   /** Active log level for this logger instance. */
   readonly logLevel: LogLevel;
-  /** Middleware pipeline applied before dispatch. */
+  /** Middleware pipeline snapshot. */
   readonly middleware: readonly LogMiddleware[];
   /** Namespace string for this logger instance. */
   readonly namespace: string;
@@ -297,12 +246,7 @@ export type Logger = {
   time: <T>(label: string, fn: () => T, level?: LogType) => T;
   /** Transport pipeline for this logger instance. */
   readonly transports: readonly Transport[];
-  /**
-   * Add a middleware function to the pipeline. Returns a **new** logger — the original is unchanged.
-   * Discarding the return value is a common mistake: always assign the result.
-   * @example
-   * const log = baseLog.use(tracingMiddleware); // ✓ keep the result
-   */
+  /** Return a new logger with one additional middleware function. */
   use: (middleware: LogMiddleware) => Logger;
   warn: LogMethod;
   /**

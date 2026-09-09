@@ -1,9 +1,9 @@
-import { link } from '../_link';
-import { assertDuration, assertNonNegativeInteger } from '../_numeric';
-import { defaultScheduler } from '../_scheduler';
-import { stream } from '../core';
-import { FluxTimeoutError } from '../errors';
-import type { Operator, Stream, Subscription } from '../types';
+import { link } from '../_link.js';
+import { assertDuration, assertNonNegativeInteger } from '../_numeric.js';
+import { defaultScheduler } from '../_scheduler.js';
+import { stream } from '../core.js';
+import { FluxTimeoutError } from '../errors.js';
+import type { Operator, Stream, Subscription } from '../types.js';
 
 export function take<T>(count: number): Operator<T, T> {
   assertNonNegativeInteger(count, 'take count');
@@ -41,6 +41,14 @@ export function take<T>(count: number): Operator<T, T> {
     });
 }
 
+function isAbortSignal(value: AbortSignal | Stream<unknown>): value is AbortSignal {
+  return (
+    typeof (value as AbortSignal).aborted === 'boolean' &&
+    typeof (value as AbortSignal).addEventListener === 'function' &&
+    typeof (value as AbortSignal).removeEventListener === 'function'
+  );
+}
+
 export function takeUntil<T>(notifier: AbortSignal | Stream<unknown>): Operator<T, T> {
   return (source) =>
     stream((sink, signal) => {
@@ -54,7 +62,7 @@ export function takeUntil<T>(notifier: AbortSignal | Stream<unknown>): Operator<
         sink.complete();
       };
 
-      if (notifier instanceof AbortSignal) {
+      if (isAbortSignal(notifier)) {
         if (notifier.aborted) {
           sink.complete();
 

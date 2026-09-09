@@ -1,4 +1,5 @@
-export { batch, createTaskGroup } from './_pool';
+export type { BatchOptions } from './_pool.js';
+export { runBatch } from './_pool.js';
 export {
   FamiliarError,
   FamiliarInvalidOptionsError,
@@ -7,35 +8,33 @@ export {
   FamiliarTaskError,
   FamiliarTerminatedError,
   FamiliarTimeoutError,
-} from './errors';
+} from './errors.js';
 export type {
   DrainOptions,
   PoolBase,
   RunOptions,
   StreamWorkerPool,
-  TaskGroup,
-  TaskGroupOptions,
   WorkerOptions,
   WorkerPool,
   WorkerStats,
   WorkerStatus,
-} from './types';
+} from './types.js';
 
-import { createPool } from './_pool';
-import { createStreamPool, type StreamSlot } from './_stream-pool';
-import { unrefTimer } from './_timers';
+import { warn } from './_dev.js';
+import { createPool } from './_pool.js';
+import { MAX_CONCURRENCY, validateTimeout } from './_pool-core.js';
+import { createStreamPool, type StreamSlot } from './_stream-pool.js';
+import { unrefTimer } from './_timers.js';
 import {
   FamiliarInvalidOptionsError,
   FamiliarRuntimeError,
   FamiliarTaskError,
   FamiliarTerminatedError,
   FamiliarTimeoutError,
-} from './errors';
-import type { SerializedError, WorkerResponse } from './protocol';
-import { PROTOCOL_VERSION } from './protocol';
-import type { RunOptions, SlotStrategy, StreamWorkerPool, WorkerOptions, WorkerPool } from './types';
-
-const MAX_CONCURRENCY = 512;
+} from './errors.js';
+import type { SerializedError, WorkerResponse } from './protocol.js';
+import { PROTOCOL_VERSION } from './protocol.js';
+import type { RunOptions, SlotStrategy, StreamWorkerPool, WorkerOptions, WorkerPool } from './types.js';
 
 type ResolvedOptions = {
   concurrency: number;
@@ -48,6 +47,7 @@ type ResolvedOptions = {
 type Pending<TOutput> = {
   emit?: (value: TOutput) => void;
   id: number;
+  kind: 'run' | 'stream';
   reject: (reason: unknown) => void;
   resolve: (value: TOutput) => void;
   timer?: ReturnType<typeof setTimeout>;
@@ -61,7 +61,9 @@ export type RunningStream<TChunk> = {
 function resolveOptions(options: WorkerOptions = {}): ResolvedOptions {
   const { concurrency = 1, maxQueue, onFull = 'reject', onSlotError, timeout } = options;
   const resolvedConcurrency =
-    concurrency === 'auto' ? Math.max(1, globalThis.navigator?.hardwareConcurrency ?? 1) : concurrency;
+    concurrency === 'auto'
+      ? Math.min(MAX_CONCURRENCY, Math.max(1, globalThis.navigator?.hardwareConcurrency ?? 1))
+      : concurrency;
 
   if (!Number.isInteger(resolvedConcurrency) || resolvedConcurrency < 1 || resolvedConcurrency > MAX_CONCURRENCY) {
     throw new FamiliarInvalidOptionsError(`\`concurrency\` must be a positive integer ≤ ${MAX_CONCURRENCY} or "auto"`);
@@ -71,9 +73,11 @@ function resolveOptions(options: WorkerOptions = {}): ResolvedOptions {
     throw new FamiliarInvalidOptionsError('`maxQueue` must be a positive integer');
   }
 
-  if (timeout !== undefined && (!Number.isFinite(timeout) || timeout <= 0)) {
-    throw new FamiliarInvalidOptionsError('`timeout` must be a finite number greater than 0');
+  if (onFull !== 'reject' && onFull !== 'wait') {
+    throw new FamiliarInvalidOptionsError('`onFull` must be "reject" or "wait"');
   }
+
+  validateTimeout(timeout);
 
   return { concurrency: resolvedConcurrency, maxQueue, onFull, onSlotError, timeout };
 }
@@ -82,21 +86,34 @@ function isWorkerResponse<TOutput>(value: unknown): value is WorkerResponse<TOut
   if (typeof value !== 'object' || value === null) return false;
 
   const response = value as Partial<WorkerResponse<TOutput>>;
+  if (
+    response.version !== PROTOCOL_VERSION ||
+    typeof response.id !== 'number' ||
+    !Number.isSafeInteger(response.id) ||
+    response.id < 0
+  )
+    return false;
+
+  if (response.kind === 'chunk' || response.kind === 'result') return 'value' in response;
+  if (response.kind !== 'error' || typeof response.error !== 'object' || response.error === null) return false;
 
   return (
-    response.version === PROTOCOL_VERSION &&
-    typeof response.id === 'number' &&
-    (response.kind === 'chunk' || response.kind === 'error' || response.kind === 'result')
+    (response.error.category === undefined || response.error.category === 'protocol') &&
+    typeof response.error.message === 'string' &&
+    typeof response.error.name === 'string' &&
+    (response.error.stack === undefined || typeof response.error.stack === 'string')
   );
 }
 
-function taskError(error: SerializedError): FamiliarTaskError {
+function responseError(error: SerializedError): FamiliarRuntimeError | FamiliarTaskError {
   const cause = new Error(error.message);
 
   cause.name = error.name;
   cause.stack = error.stack;
 
-  return new FamiliarTaskError(error.message, { cause });
+  return error.category === 'protocol'
+    ? new FamiliarRuntimeError(error.message, { cause })
+    : new FamiliarTaskError(error.message, { cause });
 }
 
 class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot<TInput, TOutput> {
@@ -113,15 +130,9 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
   }
 
   cancel(reason: unknown): void {
-    this.#worker?.terminate();
-    this.#worker = undefined;
+    if (!this.#pending) return;
+    this.#stopWorker();
     this.#settlePending('reject', reason);
-  }
-
-  prime(): Promise<void> {
-    if (!this.#disposed) this.#ensureWorker();
-
-    return Promise.resolve();
   }
 
   run(input: TInput, transferables: Transferable[], timeout: number | undefined): Promise<TOutput> {
@@ -151,7 +162,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
         else waiter({ done: true, value: undefined as never });
       }
     };
-    const donePromise = this.#dispatch(input, options.transferables ?? [], options.timeout, 'stream', emit).then(
+    const donePromise = this.#dispatch(input, [...(options.transferables ?? [])], options.timeout, 'stream', emit).then(
       () => finish(),
       (reason: unknown) => finish(reason),
     );
@@ -186,7 +197,8 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
 
   terminate(): void {
     this.#disposed = true;
-    this.cancel(new FamiliarTerminatedError());
+    this.#stopWorker();
+    this.#settlePending('reject', new FamiliarTerminatedError());
   }
 
   #dispatch(
@@ -202,10 +214,11 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
 
     try {
       const worker = this.#ensureWorker();
-      const id = this.#taskId++;
+      const id = this.#taskId;
+      this.#taskId = id === Number.MAX_SAFE_INTEGER ? 0 : id + 1;
 
       return new Promise<TOutput>((resolve, reject) => {
-        const pending: Pending<TOutput> = { emit, id, reject, resolve };
+        const pending: Pending<TOutput> = { emit, id, kind, reject, resolve };
 
         this.#pending = pending;
 
@@ -233,14 +246,12 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
     try {
       const worker = new Worker(this.#url, { type: 'module' });
 
-      worker.onmessage = (event: MessageEvent<unknown>) => this.#onMessage(event.data);
-      worker.onerror = (event) => {
-        const error = new FamiliarRuntimeError(event.message || 'Worker failed');
-
-        this.#worker = undefined;
-        this.#onSlotError?.(error);
-        this.#settlePending('reject', error);
+      worker.onmessage = (event: MessageEvent<unknown>) => {
+        if (this.#worker === worker) this.#onMessage(event.data);
       };
+      worker.onerror = (event) => this.#failWorker(worker, new FamiliarRuntimeError(event.message || 'Worker failed'));
+      worker.onmessageerror = () =>
+        this.#failWorker(worker, new FamiliarRuntimeError('Worker response could not be deserialized'));
       this.#worker = worker;
 
       return worker;
@@ -249,10 +260,38 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
     }
   }
 
+  #stopWorker(): void {
+    const worker = this.#worker;
+    this.#worker = undefined;
+    if (!worker) return;
+
+    worker.onmessage = null;
+    worker.onerror = null;
+    worker.onmessageerror = null;
+    worker.terminate();
+  }
+
+  #failWorker(worker: Worker, error: FamiliarRuntimeError): void {
+    if (this.#worker !== worker) return;
+
+    this.#stopWorker();
+    this.#settlePending('reject', error);
+
+    try {
+      this.#onSlotError?.(error);
+    } catch {
+      warn('onSlotError callback failed; Familiar continued replacing the failed worker slot.');
+    }
+  }
+
   #onMessage(message: unknown): void {
     if (!this.#pending) return;
 
-    if (!isWorkerResponse<TOutput>(message) || message.id !== this.#pending.id) {
+    if (
+      !isWorkerResponse<TOutput>(message) ||
+      message.id !== this.#pending.id ||
+      (this.#pending.kind === 'run' && message.kind === 'chunk')
+    ) {
       this.cancel(new FamiliarRuntimeError('Worker returned an incompatible protocol response'));
 
       return;
@@ -265,7 +304,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
     }
 
     if (message.kind === 'error') {
-      this.#settlePending('reject', taskError(message.error));
+      this.#settlePending('reject', responseError(message.error));
 
       return;
     }
@@ -288,7 +327,8 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
 }
 
 function slots<TInput, TOutput>(url: URL | string, options: ResolvedOptions): Slot<TInput, TOutput>[] {
-  return Array.from({ length: options.concurrency }, () => new Slot<TInput, TOutput>(url, options.onSlotError));
+  const resolvedUrl = typeof url === 'string' ? url : url.href;
+  return Array.from({ length: options.concurrency }, () => new Slot<TInput, TOutput>(resolvedUrl, options.onSlotError));
 }
 
 /** Create a pool backed by an ES module worker registered with exposeTask(). */

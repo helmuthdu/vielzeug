@@ -38,4 +38,4 @@ candidates.filter((c) => similarity(c.toLowerCase(), 'typescript') >= 0.5);
 
 ### Related
 
-- [search](../array/search.md)
+- [search](../array/fuzzyFilter.md)

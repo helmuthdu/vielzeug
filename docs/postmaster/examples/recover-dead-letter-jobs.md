@@ -38,7 +38,7 @@ const postmaster = createPostmaster({
   store,
 });
 
-await postmaster.start();
+postmaster.start();
 
 // Later, inspect dead-letter jobs:
 const deadLettered = await postmaster.list({ status: 'dead-letter' });

@@ -25,9 +25,9 @@ export { getSlotted, type QueryScope, queryAllInShadow, queryInShadow, queryPart
 export {
   type DelayOptions,
   delay,
+  type EventuallyOptions,
+  eventually,
   nextTick,
-  type RetryOptions,
-  retry,
   type WaitOptions,
   waitForEvent,
   waitUntil,

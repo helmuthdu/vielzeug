@@ -1,4 +1,4 @@
-import { clamp } from '@vielzeug/arsenal/math';
+import { clamp } from '@vielzeug/arsenal';
 import { bind, define, getHost, html, onElement, prop, ref, watchEffect } from '@vielzeug/ore';
 import { computed, watch as rippleWatch, signal } from '@vielzeug/ripple';
 import { createSpinnerControl } from '../../core';

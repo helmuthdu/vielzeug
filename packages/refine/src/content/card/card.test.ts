@@ -171,13 +171,13 @@ describe('ore-card', () => {
         interactive: '',
         orientation: 'horizontal',
         padding: 'lg',
-        variant: 'glass',
+        variant: 'frost',
       },
     });
 
     expect(fixture.element.getAttribute('color')).toBe('primary');
     expect(fixture.element.getAttribute('padding')).toBe('lg');
-    expect(fixture.element.getAttribute('variant')).toBe('glass');
+    expect(fixture.element.getAttribute('variant')).toBe('frost');
     expect(fixture.element.getAttribute('orientation')).toBe('horizontal');
   });
 

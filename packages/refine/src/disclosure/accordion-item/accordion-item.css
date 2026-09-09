@@ -169,40 +169,18 @@
     background: var(--accordion-item-hover-bg);
   }
 
-  /* Glass & Frost - Shared Styles */
-  :host([variant='glass']) details,
   :host([variant='frost']) details {
     border-radius: inherit;
   }
 
-  :host([variant='glass']) summary,
   :host([variant='frost']) summary {
     border-radius: inherit;
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
   }
 
-  :host([variant='glass']) .content-wrapper,
   :host([variant='frost']) .content-wrapper {
     border-radius: 0;
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
-  }
-
-  /* Glass */
-  :host([variant='glass']) {
-    --accordion-item-bg: color-mix(in oklch, var(--color-secondary) 30%, var(--color-contrast) 10%);
-    --accordion-item-border-color: transparent;
-    --accordion-item-hover-bg: color-mix(in oklch, var(--color-secondary) 20%, transparent);
-    --accordion-item-title-color: color-mix(in oklch, var(--color-secondary-contrast) 100%, transparent);
-    --accordion-item-subtitle-color: color-mix(in oklch, var(--color-secondary-contrast) 60%, transparent);
-    --accordion-item-body-color: color-mix(in oklch, var(--color-secondary-contrast) 80%, transparent);
-  }
-
-  :host([variant='glass']) summary {
-    text-shadow: var(--text-shadow-xs);
-  }
-
-  :host([variant='glass']) .content-wrapper {
-    filter: brightness(1.05);
   }
 
   /* Frost */

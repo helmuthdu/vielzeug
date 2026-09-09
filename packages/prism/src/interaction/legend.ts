@@ -34,7 +34,7 @@ export function createLegend(container: HTMLElement, config: LegendConfig | true
     el,
     [Symbol.dispose]: disposeHandle,
     update(series) {
-      el.innerHTML = '';
+      el.replaceChildren();
       for (const s of series) {
         const item = document.createElement('div');
 

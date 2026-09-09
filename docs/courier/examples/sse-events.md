@@ -1,44 +1,45 @@
 ---
-title: 'Courier Examples — Real-time Events'
-description: 'Consume and cancel server-sent events with Courier.'
+title: 'Courier Examples — SSE Events'
+description: 'Consume standard server-sent events alongside Courier.'
 ---
 
-## Real-time Events
+## SSE Events
 
 ### Problem
 
-You need to consume notifications from an SSE endpoint and stop the connection when the view no longer
-needs updates.
+An application needs a long-lived server event stream without losing cancellation ownership.
 
 ### Solution
 
-Iterate `events()` and use `break` when the current consumer is finished; Courier aborts the connection
-immediately.
+Use native `EventSource` for standard cookie-authenticated SSE. It owns frame parsing, reconnects, and `Last-Event-ID`; Courier remains responsible for ordinary HTTP requests.
 
 ```ts
-import { createCourier } from '@vielzeug/courier';
+const events = new EventSource('/events', { withCredentials: true });
 
-type Notification = { roomId: string; text: string; userId: string };
+events.addEventListener('message', (event) => {
+  const notification = JSON.parse(event.data) as { text: string };
+  console.log(notification.text);
+});
 
-const courier = createCourier({ baseUrl: 'https://api.example.com' });
+events.addEventListener('error', () => {
+  console.log('Event stream disconnected');
+});
 
-for await (const event of courier.events<Notification>('/events', {
-  query: { roomId: 'general' },
-})) {
-  if (event.event !== 'message') continue;
-  console.log(`[${event.data.roomId}] ${event.data.userId}: ${event.data.text}`);
-  break; // Closes the active SSE request immediately.
+function leaveView(): void {
+  events.close();
 }
 ```
 
+When an endpoint requires custom headers or request bodies, request a raw response with `timeout: Infinity` and use a dedicated SSE parser that supports incremental UTF-8 decoding, multiline data fields, comments, event IDs, and reconnect policy.
+
 ### Pitfalls
 
-- Courier does not reconnect automatically. Recreate the iterator only when reconnecting is safe.
-- A stream started after `courier.dispose()` rejects with `CourierDisposedError`.
-- Handle `CourierAbortError` separately when cancellation is normal application control flow.
+- Do not parse SSE independently per network chunk; frames and UTF-8 code points may span chunks.
+- Native `EventSource` cannot attach arbitrary request headers.
+- Always close `EventSource` when its owner ends.
+- Always consume or cancel a raw Courier response body so Courier can release request ownership.
 
 ### Related
 
-- [HTTP Streaming](./ai-token-stream.md)
-- [Disposal](./disposal.md)
-- [Usage Guide](../usage.md#server-sent-events)
+- [Cancellation and Disposal](../usage.md#cancellation-and-disposal)
+- [Response Parsing](../usage.md#response-parsing)

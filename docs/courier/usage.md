@@ -1,35 +1,27 @@
 ---
 title: Courier — Usage Guide
-description: Use one Courier client for HTTP, explicit cached reads, direct mutations, and abortable streams.
+description: Use one Courier client for typed HTTP, explicit cached reads, prefetching, immutable middleware, and structured errors.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create one Courier client for an application or request scope. Its transport policy and disposal lifecycle apply
-to every request, cache entry, mutation, and stream.
+Create one Courier client for an application or request scope. Its transport policy, middleware, and disposal lifecycle apply to every request.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
 
 type User = { id: number; name: string };
 
-const courier = createCourier({ baseUrl: 'https://api.example.com', query: { staleTime: 30_000 } });
-const key = ['users', 1] as const;
-
-await courier.queries.fetch({
-  key,
-  fetch: ({ signal }) => courier.get<User>('/users/{id}', { params: { id: 1 }, signal }),
-});
-console.log(courier.queries.get<User>(key)?.name);
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+const user = await courier.get<User>('/users/{id}', { params: { id: 1 } });
+console.log(user.name);
 ```
 
 ## HTTP Requests
 
-Use root methods for REST requests. Courier encodes path parameters, serializes plain-object bodies, and parses
-successful response bodies. Each direct HTTP call is independent; use a query key when concurrent cached reads
-should share work.
+Use `get()`, `post()`, `put()`, `patch()`, and `delete()` for standard methods. Use `request()` when the method is custom or selected dynamically. Courier preserves root-relative paths, encodes path parameters, serializes JSON-compatible bodies, and parses successful responses.
 
 ```ts
 const posts = await courier.get<{ id: number; title: string }[]>('/users/{id}/posts', {
@@ -43,265 +35,262 @@ await courier.patch('/posts/{id}', {
 });
 ```
 
-Call `courier.setHeaders({ authorization: 'Bearer token' })` to update subsequent calls.
+`get()`, `post()`, `put()`, `patch()`, and `delete()` cover common methods. Use `request()` for custom verbs or when a method is selected dynamically.
 
-## Interceptors
+## Default Headers
 
-Interceptors apply to HTTP and streaming requests. Register a policy once, then remove it when its containing
-scope ends.
-
-```ts
-import { withBearerAuth, withRequestId } from '@vielzeug/courier';
-
-const removeAuth = courier.use(withBearerAuth(async () => sessionStorage.getItem('access-token') ?? ''));
-const removeRequestId = courier.use(withRequestId());
-
-removeRequestId();
-removeAuth();
-```
-
-Use `withLogging()` with an explicit `logger` function to log requests during local development. `withLogging()`
-includes full URLs, so sanitize query values before persistent logging.
+Set default headers at construction. They are merged (lowercased) into every request and cannot be mutated at runtime — middleware handles dynamic headers.
 
 ```ts
-import { withLogging } from '@vielzeug/courier';
-
-courier.use(withLogging({ logger: (msg) => console.log(msg) }));
-```
-
-## Cached Queries
-
-Pass a stable key and fetch definition to `queries.fetch()`. The cache owns data, snapshots, subscriptions, and
-in-flight deduplication for that key. Entries with no subscribers are garbage-collected after `gcTime` (default
-5 min; `Infinity` disables).
-
-```ts
-const key = ['profile', 1] as const;
-const definition = {
-  key,
-  fetch: ({ signal }) => courier.get<{ id: number; name: string }>('/profile/{id}', { params: { id: 1 }, signal }),
-  staleTime: 60_000,
-};
-
-const stop = courier.queries.subscribe(key, () => {
-  const state = courier.queries.getSnapshot<{ id: number; name: string }>(key);
-  if (state?.status === 'success') console.log(state.data.name);
-  if (state?.status === 'error') console.error(state.error);
+const courier = createCourier({
+  baseUrl: 'https://api.example.com',
+  headers: { 'x-client': 'web' },
 });
-
-await courier.queries.fetch(definition);
-stop();
 ```
 
-`queries.fetch(definition)` reuses fresh data. Pass `{ force: true }` to fetch regardless of freshness.
-`invalidate(prefix, { refetch: true })` marks matching key prefixes stale and refetches them in the background
-in a single call.
+## Middleware
 
-## Direct Mutations
-
-Use `mutate()` for a write operation. Pass `invalidateKeys` to invalidate and refetch cache entries after a
-successful write — no manual `invalidate()` + refetch boilerplate. Use `onSuccess` for custom cache writes
-(e.g. seeding a created entity). Courier never retries writes: retry only operations your application can prove
-idempotent.
+Middleware is an immutable chain configured once at construction. Each middleware receives an immutable `FetchContext` and a `next` function. Use `ctx.withHeaders()` or `ctx.withInit()` to derive a new context — never mutate `ctx` directly.
 
 ```ts
-type User = { id: number; name: string };
+import { withBearerAuth, withRequestId, createCourier } from '@vielzeug/courier';
 
-const created = await courier.mutate<User>({
-  request: ({ signal }) => courier.post<User>('/users', { body: { name: 'Ada' }, signal }),
-  onSuccess: (user, queries) => queries.set(['users', user.id], user),
-  invalidateKeys: [['users']],
+const courier = createCourier({
+  baseUrl: 'https://api.example.com',
+  middleware: [
+    withBearerAuth(() => sessionStorage.getItem('access-token') ?? ''),
+    withRequestId(),
+  ],
 });
-
-console.log(created.id);
 ```
 
-Pass an external `signal` when caller owns cancellation. Keep pending and error UI state in framework that owns
-that UI.
-
-## Server-Sent Events
-
-`events()` returns an abortable `AsyncIterableIterator`. Breaking loop, calling `return()`, aborting a provided
-signal, or disposing client stops its request immediately. Courier sends `Accept: text/event-stream` and
-`Cache-Control: no-cache` by default; pass headers to override either value.
+A bearer token provider may return `null`, `undefined`, or an empty string to omit a stale authorization header. Use `withLogging()` with an explicit `logger` function to log requests during local development. `withLogging()` includes full URLs, so sanitize query values before persistent logging.
 
 ```ts
-type Notification = { text: string };
+import { withLogging, createCourier } from '@vielzeug/courier';
 
-for await (const event of courier.events<Notification>('/events')) {
-  if (event.event !== 'message') continue;
-  console.log(event.data.text);
-  break;
+const courier = createCourier({
+  baseUrl: 'https://api.example.com',
+  middleware: [withLogging({ logger: (msg) => console.log(msg) })],
+});
+```
+
+Use `tap()` for multiple structured transport observers. It emits request-start, request-success, request-error, and dispose events; observer failures cannot alter requests. Pass `{ signal }` to own listener lifetime.
+
+```ts
+const stop = courier.tap((event) => metrics.record(event), { signal: routeSignal });
+```
+
+Because middleware is immutable, a client's behavior is locally understandable from its construction call. To change policy, create a new client.
+
+## Cached Reads and Prefetching
+
+Opt parsed GETs into caching with a structured key. Courier uses a finite capacity of 100 entries and a 30-second TTL by default; client options change those defaults, and each read may override TTL. Successful parsed and schema-validated values are cached, while errors are not.
+
+```ts
+const courier = createCourier({
+  baseUrl: 'https://api.example.com',
+  cache: { capacity: 200, ttlMs: 60_000 },
+});
+const cache = { key: ['accounts', accountId, 'users', userId] as const, ttlMs: 10_000 };
+
+await courier.prefetch<User>('/users/{id}', { cache, params: { id: userId } });
+const user = await courier.get<User>('/users/{id}', { cache, params: { id: userId } });
+```
+
+`prefetch()` returns a promise that settles when warming finishes. Request failures are not cached or rejected from that promise; the physical request emits `request-error` through `tap()`. Cache, key, and URL configuration errors still throw before prefetch starts.
+
+Invalidate a structured prefix after writes. Every matching settled or pending key becomes ineligible for caching, while unrelated entries remain available.
+
+```ts
+await courier.patch('/users/{id}', { body: update, params: { id: userId } });
+courier.invalidateCache(['accounts', accountId, 'users']);
+```
+
+A cache key must identify one response representation, including a stable non-secret principal or tenant identifier, schema, and relevant request variants. Never place credentials in a key; call `clearCache()` when identity changes. Cached objects are shared by reference.
+
+Concurrent callers share physical work but own their own signal and timeout. One cancelled caller does not affect the others. When every caller cancels and no prefetch owns the load, Courier aborts the physical request. `cancelAll()` always aborts physical work; `dispose()` also clears settled cache data.
+
+## Response Parsing
+
+Courier parses successful 2xx response bodies automatically based on `content-type`, unless you set `responseType` explicitly (`'json'`, `'text'`, `'blob'`, `'arrayBuffer'`, or `'raw'` for the `Response` itself). Empty JSON bodies return `undefined` instead of throwing. Raw response bodies remain owned by Courier until consumed or cancelled, so `cancelAll()` and `dispose()` still abort them. Raw responses cannot be combined with `schema`. Always consume or cancel the body to release request ownership, and set `timeout: Infinity` for intentionally long-lived streams. Courier preserves URL, redirect, and type metadata on tracked responses and their clones.
+
+```ts
+const buffer = await courier.request('/files/{id}', {
+  method: 'GET',
+  params: { id: 1 },
+  responseType: 'arrayBuffer',
+});
+```
+
+## Schema Validation
+
+Pass a `schema` with a `parse(data)` method to validate the parsed body. Any validator works — a `@vielzeug/spell` schema or a plain function wrapper. A failed parse throws `CourierSchemaValidationError`.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const user = await courier.get('/users/1', {
+  schema: s.object({ id: s.number(), name: s.string() }),
+});
+```
+
+## Cancellation and Disposal
+
+Pass a `signal` to cancel one request. `cancelAll()` aborts every active request without disposing the client. `dispose()` aborts active work and marks the client unusable — call it only at the final application or request boundary.
+
+```ts
+const controller = new AbortController();
+void courier.get('/slow', { signal: controller.signal });
+controller.abort(); // cancels that request only
+
+courier.cancelAll(); // cancels all active requests
+courier.dispose(); // final teardown
+```
+
+## Timeouts
+
+Set a client-wide `timeout` (default 30,000 ms) or a per-request timeout. Finite values must be integer milliseconds from 1 through 2,147,483,647. A timed-out request rejects with `CourierTimeoutError`; use `Infinity` for intentionally long-lived work.
+
+```ts
+const courier = createCourier({ timeout: 10_000 });
+await courier.get('/health', { timeout: 2_000 });
+```
+
+## Error Handling
+
+Courier classifies URL, request-construction, fetch, cancellation, HTTP, response-parsing, and schema failures into distinct error classes. Errors thrown directly by custom middleware are preserved.
+
+```ts
+import {
+  CourierAbortError,
+  CourierHttpError,
+  CourierNetworkError,
+  CourierParseError,
+  CourierTimeoutError,
+  createCourier,
+} from '@vielzeug/courier';
+
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+
+async function loadUser(): Promise<string> {
+  try {
+    return (await courier.get<{ name: string }>('/users/1', { timeout: 2_000 })).name;
+  } catch (error) {
+    if (error instanceof CourierAbortError) return 'Cancelled';
+    if (error instanceof CourierTimeoutError) return 'Timed out; retry.';
+    if (CourierHttpError.is(error, 404)) return 'User not found.';
+    if (error instanceof CourierNetworkError) return 'Check your connection.';
+    if (error instanceof CourierParseError) return 'The server returned an unreadable response.';
+    throw error;
+  }
 }
 ```
 
-Courier parses valid JSON event data and otherwise returns text. It does not reconnect automatically or retain
-SSE event IDs; application owns reconnect policy.
+- A `CourierHttpError` has a response (`status`, `data`, `headers`); a `CourierNetworkError` does not.
+- Do not display cancellation as an application error during navigation.
+- `CourierSchemaValidationError` carries the raw pre-validation `data`.
 
-## HTTP Streaming
+## Composing with a State Layer
 
-Use `read()` for text chunks or NDJSON records.
+Courier owns HTTP transport and optional parsed GET caching. Observable query state, optimistic mutations, collection navigation, and stream state belong to the owning state layer (e.g. Sourcerer, TanStack Query, or consumer code). Compose Courier calls into that layer instead of nesting state machines.
 
 ```ts
-type ChatChunk = { done: boolean; delta: string };
+import { createPageSource } from '@vielzeug/sourcerer';
 
-for await (const chunk of courier.read<ChatChunk>('/chat', {
-  body: { prompt: 'Explain cached queries.' },
-  method: 'POST',
-  parse: 'ndjson',
-})) {
-  console.log(chunk.delta);
-  if (chunk.done) break;
-}
+const users = createPageSource<User>({
+  load: async ({ page, pageSize, signal }) => {
+    const result = await courier.get<{ data: User[]; total: number }>('/users', {
+      query: { page, pageSize },
+      signal,
+    });
+    return { items: result.data, totalItems: result.total };
+  },
+});
+
+await users.reload();
 ```
-
-Streams have no timeout unless `timeout` is supplied. HTTP, network, timeout, and cancellation failures use
-Courier error classes; starting a stream after disposal throws `CourierDisposedError`.
 
 ## Framework Integration
 
-Create Courier at application or route boundary. Views read a key snapshot synchronously, subscribe during
-their lifecycle, and let framework own rendering state.
+Create Courier at an application or route boundary. Inject the client where requests are issued; let the framework own rendering and cache state.
 
 ::: code-group
 
 ```tsx [React]
-import { useEffect, useSyncExternalStore } from 'react';
+import { createContext, useContext } from 'react';
 import { createCourier } from '@vielzeug/courier';
-import type { AsyncState, QueryDefinition } from '@vielzeug/courier';
 
 type User = { id: number; name: string };
 
-export function Profile({ courier, definition }: { courier: ReturnType<typeof createCourier>; definition: QueryDefinition<User> }) {
-  const state = useSyncExternalStore(
-    (listener) => courier.queries.subscribe(definition.key, listener),
-    () => courier.queries.getSnapshot<User>(definition.key),
-    () => courier.queries.getSnapshot<User>(definition.key),
-  ) as AsyncState<User> | null;
+type CourierClient = ReturnType<typeof createCourier>;
+const CourierContext = createContext<CourierClient | null>(null);
 
-  useEffect(() => void courier.queries.fetch(definition), [courier, definition]);
-
-  if (!state || state.status === 'loading') return <p>Loading...</p>;
-  if (state.status === 'error') return <p role="alert">{state.error.message}</p>;
-  return <p>{state.data.name}</p>;
+export function CourierProvider({ children, courier }: { children: React.ReactNode; courier: CourierClient }) {
+  return <CourierContext.Provider value={courier}>{children}</CourierContext.Provider>;
 }
+
+export function useCourier() {
+  const courier = useContext(CourierContext);
+  if (!courier) throw new Error('CourierProvider missing');
+  return courier;
+}
+
+// In a component:
+// const user = await useCourier().get<User>('/users/1');
 ```
 
 ```ts [Vue 3]
-import { onMounted, onUnmounted, ref } from 'vue';
 import { createCourier } from '@vielzeug/courier';
-import type { AsyncState, QueryDefinition } from '@vielzeug/courier';
 
-type User = { id: number; name: string };
-
-export function useProfile(courier: ReturnType<typeof createCourier>, definition: QueryDefinition<User>) {
-  const state = ref<AsyncState<User> | null>(courier.queries.getSnapshot(definition.key));
-  const unsubscribe = courier.queries.subscribe(definition.key, () => {
-    state.value = courier.queries.getSnapshot(definition.key);
-  });
-
-  onMounted(() => void courier.queries.fetch(definition));
-  onUnmounted(unsubscribe);
-
-  return { state };
-}
+const courier = createCourier({ baseUrl: '/api' });
+// Provide via app.provide('courier', courier) and inject in setup().
 ```
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { createCourier } from '@vielzeug/courier';
-  import type { AsyncState, QueryDefinition } from '@vielzeug/courier';
-
-  type User = { id: number; name: string };
-
   export let courier: ReturnType<typeof createCourier>;
-  export let definition: QueryDefinition<User>;
-  let state: AsyncState<User> | null = courier.queries.getSnapshot(definition.key);
-
-  onMount(() => {
-    const unsubscribe = courier.queries.subscribe(definition.key, () => (state = courier.queries.getSnapshot(definition.key)));
-    void courier.queries.fetch(definition);
-    return unsubscribe;
-  });
 </script>
-
-{#if state?.status === 'success'}
-  <p>{state.data.name}</p>
-{/if}
 ```
 
 :::
 
-Courier exposes no framework-specific loading or error store. Render `AsyncState` in framework that owns view.
-
-## Working with Other Vielzeug Libraries
-
-### Flux
-
-Use Flux when cache snapshots or SSE events need filtering, composition, or subscription lifecycle separate from
-UI framework. Pass cache and query definition to `fromQuery()`.
-
-```ts
-import { fromQuery } from '@vielzeug/flux/courier';
-
-const profile = {
-  key: ['profile'] as const,
-  fetch: ({ signal }: { signal: AbortSignal }) => courier.get<{ id: number; name: string }>('/profile', { signal }),
-};
-const profile$ = fromQuery(courier.queries, profile);
-
-void courier.queries.fetch(profile);
-
-const profileSubscription = profile$.subscribe((state) => console.log(state?.status));
-
-profileSubscription.unsubscribe();
-```
-
-### Ripple
-
-Use a Ripple signal when Courier data must participate in fine-grained reactive state outside a component. Mirror
-only cache snapshot into signal.
-
-```ts
-import { signal } from '@vielzeug/ripple';
-
-const key = ['profile', 1] as const;
-const profileState = signal(courier.queries.getSnapshot<{ id: number; name: string }>(key));
-const unsubscribe = courier.queries.subscribe(key, () => (profileState.value = courier.queries.getSnapshot(key)));
-
-await courier.queries.fetch({
-  key,
-  fetch: ({ signal }) => courier.get('/profile/{id}', { params: { id: 1 }, signal }),
-});
-
-unsubscribe();
-```
+Courier exposes no loading, error, or cache store. Construct the client at the application or SSR-request boundary, pass it into framework providers, and dispose it at that same boundary. Render state in the framework that owns the view.
 
 ## Gotchas
 
-### `mutate()` runs `onSuccess` before `invalidateKeys`
+### Root-relative paths stay root-relative
 
-`mutate()` executes in order: `request` → `onSuccess` → `invalidateKeys`. If `onSuccess` calls `queries.set()` for a key also in `invalidateKeys`, the seeded data is overwritten by the background refetch. This is correct — `invalidateKeys` means "refetch to confirm" — but the order matters when `onSuccess` seeds optimistic data that `invalidateKeys` then replaces.
-
-### Optimistic rollback should use `getSnapshot()`, not `get()`
-
-`queries.get()` only returns successful data and drops snapshot metadata (`status`, `error`, `updatedAt`). It also cannot distinguish a missing entry from a successful cached value of `undefined`. For optimistic rollback, capture `getSnapshot()` first so you can restore prior success data with `updatedAt`, or `delete(key)` when no previous success snapshot existed.
+With no `baseUrl`, `'/api/users'` is passed to fetch unchanged while `'api/users'` remains document-relative. With a `baseUrl`, Courier appends either spelling to that base.
 
 ### `baseUrl` should not include query parameters
 
 `buildUrl` joins `baseUrl` and path with `/`. A base URL like `https://api.example.com?token=abc` produces broken URLs (`https://api.example.com?token=abc/users`). Pass query parameters per-request via `config.query` instead.
 
-### Background refetch after error transitions through `loading`
+### Query parameters precede fragments
 
-When `invalidate({ refetch: true })` triggers a background refetch on an error-state entry, the snapshot transitions to `loading` (losing the previous error). Consumers building "error + retrying" UI should track retry state separately — `AsyncState` has no `error` with `isFetching: true` variant.
+When a path already contains `#fragment`, Courier inserts `config.query` before the fragment so values remain part of the HTTP query.
+
+### GET and HEAD bodies are rejected
+
+Fetch does not support bodies for GET or HEAD. Courier rejects them as request parse errors before dispatch.
+
+### Middleware is immutable
+
+There is no `use()` method. To change middleware, create a new client. This keeps each client's behavior locally understandable and avoids runtime mutation of the request chain.
+
+### Keep credentials out of URLs when using logging middleware
+
+`withLogging()` logs the full URL, including query parameters. If URLs may contain sensitive data, provide a custom `logger` that sanitizes the URL first.
 
 ## Best Practices
 
 - Create one Courier client per application or SSR request scope.
-- Use stable, complete cache keys for every cached response identity.
-- Fetch through `queries.fetch()` when work should deduplicate and cache.
-- Use `invalidateKeys` on mutations to refetch affected cache entries in one step.
-- Keep retries outside mutations until operation idempotency is proven.
-- Dispose only at final application or request boundary.
-- Keep credentials out of URLs when using logging interceptors.
+- Configure middleware once at construction; never mutate it at runtime.
+- Use method conveniences for GET/POST/PUT/PATCH/DELETE and `request()` for custom verbs.
+- Use explicit cache keys only for parsed GETs that should share data and in-flight work.
+- Clear cached data when the authenticated principal or tenant changes.
+- Let the owning state layer own observable queries and mutations.
+- Dispose only at the final application or request boundary.
+- Keep credentials out of URLs when using logging middleware.

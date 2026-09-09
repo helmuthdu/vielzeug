@@ -7,7 +7,7 @@ describe('createReactivePositioner', () => {
   beforeEach(() => setViewport());
   afterEach(() => vi.restoreAllMocks());
 
-  it('publishes positions after start and cleans up', () => {
+  it('publishes its initial position and cleans up', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const positioner = createReactivePositioner(reference, floating, { autoUpdate: false, placement: 'bottom' });
 

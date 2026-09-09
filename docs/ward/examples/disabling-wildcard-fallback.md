@@ -1,37 +1,35 @@
 ---
-title: 'Ward Examples — Rule Specificity'
-description: 'Use an exact resource rule to override an equally prioritized wildcard rule.'
+title: 'Ward Examples — Wildcard Exceptions'
+description: 'Override a broad wildcard policy through rule order.'
 ---
 
-## Rule Specificity
+## Wildcard Exceptions
 
 ### Problem
 
-Allow a broad action across resources while denying the same action for one sensitive resource.
+One sensitive resource must override a broad permission.
 
 ### Solution
 
-Give the broad wildcard and exact rule the same priority; Ward selects the more specific resource rule.
+Put the exact exception before the broad wildcard allow.
 
 ```ts
-import { WILDCARD, createWard } from '@vielzeug/ward';
+import { allow, createWard, deny, WILDCARD } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'editor', resource: WILDCARD, action: 'read', effect: 'allow', priority: 10 },
-  { role: 'editor', resource: 'posts', action: 'read', effect: 'deny', priority: 10 },
+  deny('editor', 'secrets', ['read']),
+  allow('editor', WILDCARD, ['read']),
 ]);
 
-ward.explain({ principal: { id: 'u1', roles: ['editor'] }, resource: 'posts', action: 'read' }).allowed; // false
-ward.explain({ principal: { id: 'u1', roles: ['editor'] }, resource: 'comments', action: 'read' }).allowed; // true
+const editor = { id: 'u1', roles: ['editor'] };
+ward.decide({ action: 'read', principal: editor, resource: 'secrets' }).effect; // deny
+ward.decide({ action: 'read', principal: editor, resource: 'posts' }).effect; // allow
 ```
 
 ### Pitfalls
 
-- Priority is considered before specificity; a higher-priority wildcard still wins.
-- This is not a configurable wildcard fallback switch; it follows Ward's normal precedence rules.
+A broad rule placed first makes later exceptions unreachable.
 
 ### Related
 
-- [Wildcard Action](./wildcard-action.md)
-- [Priority and Overrides](./inheritance-and-overrides.md)
-- [Trace a Decision](./trace-decision.md)
+- [Wildcard action](./wildcard-action.md)

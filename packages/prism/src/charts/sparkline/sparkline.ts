@@ -1,9 +1,8 @@
-import { createScope, effect } from '@vielzeug/ripple';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createChartBase } from '../../core/chart-base';
-import { resolveMaybeSignal } from '../../core/resolve';
+import { PrismRenderError } from '../../errors';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
@@ -153,18 +152,25 @@ function defaultStackColor(i: number): string {
   return `var(--prism-color-${(i % 8) + 1})`;
 }
 
-export function createSparkline(container: HTMLElement, config: SparklineConfig): ChartHandle {
+export function createSparkline(
+  container: HTMLElement,
+  config: SparklineConfig,
+): ChartHandle<number[] | StackSegment[]> {
   const variant = config.variant ?? 'line';
   const color = config.color ?? 'var(--prism-color-1)';
   const curve = config.curve ?? 'linear';
   const strokeWidth = config.strokeWidth ?? 1.5;
   const fillOpacity = config.fillOpacity ?? 0.2;
-  const dataSignal = resolveMaybeSignal(config.data);
+  let data = config.data;
 
-  const base = createChartBase(container, {
-    ...(config.a11y ? { a11y: config.a11y } : { ariaHidden: true }),
-    margin: { bottom: 0, left: 0, right: 0, top: 0 },
-  });
+  const base = createChartBase(
+    container,
+    {
+      a11y: config.a11y,
+      margin: { bottom: 0, left: 0, right: 0, top: 0 },
+    },
+    renderAll,
+  );
 
   const { svg } = base;
 
@@ -177,8 +183,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
   let cleanupInteraction: (() => void) | undefined;
 
   function renderAll(): void {
-    const { height: h, width: w } = base.dimensions.value;
-    const data = dataSignal.value;
+    const { height: h, width: w } = base.dimensions;
 
     while (innerGroup.firstChild) innerGroup.removeChild(innerGroup.firstChild);
 
@@ -246,7 +251,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
     if (data.length <= 1) return;
 
-    const { width: w } = base.dimensions.value;
+    const { width: w } = base.dimensions;
 
     svg.style.cursor = 'crosshair';
 
@@ -284,20 +289,10 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
   }
 
   const ac = new AbortController();
-
-  const scope = createScope();
-
   let isDisposed = false;
 
   try {
-    scope.run(() => {
-      effect(
-        () => {
-          renderAll();
-        },
-        { scheduler: 'microtask' },
-      );
-    });
+    renderAll();
 
     return {
       get disposalSignal(): AbortSignal {
@@ -310,7 +305,6 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
         isDisposed = true;
         ac.abort();
         cleanupInteraction?.();
-        scope.dispose();
         base.dispose();
       },
 
@@ -320,14 +314,20 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
       el: svg,
 
+      update(next) {
+        if (isDisposed) throw new PrismRenderError('Cannot update a disposed chart.');
+        data = next;
+        renderAll();
+      },
+
       [Symbol.dispose]() {
         this.dispose();
       },
     };
   } catch (error) {
     ac.abort();
-    scope.dispose();
+    cleanupInteraction?.();
     base.dispose();
-    throw error;
+    throw error instanceof PrismRenderError ? error : new PrismRenderError('Failed to render chart.', { cause: error });
   }
 }

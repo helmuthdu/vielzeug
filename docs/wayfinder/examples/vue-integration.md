@@ -18,12 +18,12 @@ Use `shallowRef(router.getSnapshot())` initialized at module scope and update vi
 import { createRouter } from '@vielzeug/wayfinder';
 import { readonly, shallowRef } from 'vue';
 
-const router = createRouter({
+export const router = createRouter({
   routes: {
-    home: { component: HomePage, path: '/' },
-    settings: { component: SettingsPage, path: '/settings' },
-    notFound: { component: NotFoundPage, path: '*' },
+    home: { path: '/' },
+    settings: { path: '/settings' },
   },
+  notFound: { data: () => ({ message: 'Not found' }) },
 });
 
 const state = shallowRef(router.getSnapshot());
@@ -40,14 +40,19 @@ export function useRouter() {
 ```
 
 ```vue
-<!-- RouterView.vue -->
+<!-- RouterView.vue — map route names to components in your adapter layer -->
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import { useRouter } from './router';
+import { router, useRouter } from './router';
+
+const views = router.createViewRegistry(
+  { home: HomePage, settings: SettingsPage },
+  { notFound: NotFoundPage },
+);
 
 const { state } = useRouter();
-const component = computed(() => state.value.matches.at(-1)?.component);
+const component = computed(() => views.resolve(state.value));
 </script>
 
 <template>
@@ -63,7 +68,7 @@ import { computed } from 'vue';
 import { useRouter } from './router';
 
 const props = defineProps<{
-  name: 'home' | 'settings' | 'notFound';
+  name: 'home' | 'settings';
 }>();
 
 const { isActive, navigate, state, url } = useRouter();

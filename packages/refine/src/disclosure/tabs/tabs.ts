@@ -15,7 +15,7 @@ import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin } from '../../styles';
-import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import styles from './tabs.css?inline';
 
 /** Context provided by ore-tabs to its ore-tab-item and ore-tab-panel children. */
@@ -25,7 +25,7 @@ export type TabsContext = {
   orientation: Readable<'horizontal' | 'vertical'>;
   size: Readable<ComponentSize | undefined>;
   value: Readable<string | undefined>;
-  variant: Readable<SurfaceVariant | undefined>;
+  variant: Readable<VisualVariant | undefined>;
 };
 /** Injection key for the tabs context. */
 export const TABS_CTX = createContext<TabsContext>('TabsContext');
@@ -54,7 +54,7 @@ export type OreTabsProps = {
   /** Currently selected tab value */
   value?: string;
   /** Visual style variant */
-  variant?: SurfaceVariant;
+  variant?: VisualVariant;
 };
 
 /**
@@ -65,7 +65,7 @@ export type OreTabsProps = {
  * @element ore-tab-panel - Child element for tab content (auto-discovered)
  *
  * @attr {string} value - The value of the currently selected tab
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'ghost' | 'frost'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  * @attr {string} density - Spatial density: 'default' | 'compact'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -79,7 +79,7 @@ export type OreTabsProps = {
  * @cssprop --tabs-transition - Transition duration/easing for the active indicator
  * @cssprop --tabs-indicator-color - Color of the sliding active indicator line
  * @cssprop --tabs-bg - Background of the host element (flat variant)
- * @cssprop --tabs-tablist-bg - Tablist container background (solid/glass/frost variants)
+ * @cssprop --tabs-tablist-bg - Tablist container background (solid/frost variants)
  * @cssprop --tabs-tablist-border-color - Tablist container border color
  * @part tablist - Container that holds the slotted tab items
  * @part indicator - Active tab indicator element
@@ -104,7 +104,7 @@ define<OreTabsProps>(TABS_TAG, {
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
     value: prop.string(),
-    variant: prop.string<SurfaceVariant>(),
+    variant: prop.string<VisualVariant>(),
   },
   setup(props) {
     const el = getHost();

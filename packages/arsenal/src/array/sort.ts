@@ -25,10 +25,10 @@ export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
  *
  * @throws {TypeError} If the first argument is not an array.
  */
-export function sort<T>(array: T[], selector: (item: T) => unknown, direction?: SortDirection): T[];
-export function sort<T>(array: T[], selectors: SortSelectors<T>): T[];
+export function sort<T>(array: readonly T[], selector: (item: T) => unknown, direction?: SortDirection): T[];
+export function sort<T>(array: readonly T[], selectors: SortSelectors<T>): T[];
 export function sort<T>(
-  array: T[],
+  array: readonly T[],
   selectorOrSelectors: ((item: T) => unknown) | SortSelectors<T>,
   direction: SortDirection = 'asc',
 ): T[] {

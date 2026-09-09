@@ -1,22 +1,40 @@
-import { CourierDisposedError, CourierHttpError, CourierSchemaValidationError, classifyRequestError } from './errors';
-import { createQueryCache } from './query';
-import { parseResponse } from './response';
-import { buildRequestInit } from './serialize';
-import { createStreams } from './stream';
+import { createReadCache } from './_cache.js';
+import {
+  CourierAbortError,
+  CourierDisposedError,
+  CourierError,
+  CourierHttpError,
+  CourierNetworkError,
+  CourierParseError,
+  CourierSchemaValidationError,
+  CourierTimeoutError,
+  classifyRequestError,
+} from './errors.js';
+import { parseResponse, trackRawResponse } from './response.js';
+import { buildRequestInit } from './serialize.js';
 import {
   anySignal,
   buildTimeoutSignal,
   createTransportCore,
   type TransportOptions,
   validateTimeout,
-} from './transport';
-import type { MutationOptions } from './types';
-import type { HttpRequestConfig, Params } from './url';
-import { buildUrl } from './url';
+} from './transport.js';
+import type {
+  CourierCacheKey,
+  CourierCacheOptions,
+  GetRequestConfig,
+  HttpRequestConfig,
+  Params,
+  PrefetchConfig,
+  RequestConfig,
+} from './url.js';
+import { buildUrl } from './url.js';
 
 export type CourierOptions = TransportOptions & {
-  query?: { gcTime?: number; staleTime?: number };
+  cache?: CourierCacheOptions;
 };
+
+export type Courier = ReturnType<typeof createCourier>;
 
 export type CourierEvent =
   | { readonly method: string; readonly type: 'request-start'; readonly url: string }
@@ -30,47 +48,51 @@ export type CourierEvent =
   | { readonly error: unknown; readonly method: string; readonly type: 'request-error'; readonly url: string }
   | { readonly type: 'dispose' };
 
-export type Courier = ReturnType<typeof createCourier>;
+export {
+  CourierAbortError,
+  CourierDisposedError,
+  CourierError,
+  CourierHttpError,
+  CourierNetworkError,
+  CourierParseError,
+  CourierSchemaValidationError,
+  CourierTimeoutError,
+};
 
-/** One application client owns transport, queries, mutations, and streams. */
+/** One client owns HTTP transport, explicit cached reads, middleware, and cancellation. */
 export function createCourier(options: CourierOptions = {}) {
-  const { query: queryOptions, ...transportOptions } = options;
+  const { cache: cacheOptions, ...transportOptions } = options;
   const transport = createTransportCore(transportOptions);
-  const queryCache = createQueryCache({ ...queryOptions, signal: transport.disposalSignal });
-  const streams = createStreams(transport);
-  const mutations = new Set<AbortController>();
+  const readCache = createReadCache(cacheOptions);
+  const tapCleanups = new Set<() => void>();
   const tappers = new Set<(event: CourierEvent) => void>();
 
-  function emitTap(event: CourierEvent): void {
+  function emit(event: CourierEvent): void {
     if (tappers.size === 0) return;
-    for (const tapper of tappers) {
+    const snapshot = Object.freeze(event);
+
+    for (const tapper of [...tappers]) {
       try {
-        tapper(event);
-      } catch {
-        // Observability must not affect courier behavior.
-      }
+        tapper(snapshot);
+      } catch {}
     }
   }
 
-  function tap(handler: (event: CourierEvent) => void, opts?: { signal?: AbortSignal }): () => void {
-    if (transport.disposed) return () => {};
+  function tap(handler: (event: CourierEvent) => void, options?: { signal?: AbortSignal }): () => void {
+    if (transport.disposed || options?.signal?.aborted) return () => {};
 
     tappers.add(handler);
+    const remove = (): void => {
+      tappers.delete(handler);
+      tapCleanups.delete(remove);
+      options?.signal?.removeEventListener('abort', remove);
+    };
 
-    if (opts?.signal) {
-      if (opts.signal.aborted) {
-        tappers.delete(handler);
-        return () => {};
-      }
-      const onAbort = () => tappers.delete(handler);
-      opts.signal.addEventListener('abort', onAbort, { once: true });
-      return () => {
-        tappers.delete(handler);
-        opts.signal?.removeEventListener('abort', onAbort);
-      };
+    if (options?.signal) {
+      tapCleanups.add(remove);
+      options.signal.addEventListener('abort', remove, { once: true });
     }
-
-    return () => tappers.delete(handler);
+    return remove;
   }
 
   async function execute<T>(
@@ -82,13 +104,7 @@ export function createCourier(options: CourierOptions = {}) {
     schema?: { parse(data: unknown): T },
   ): Promise<{ result: T; status: number }> {
     const signal = init.signal as AbortSignal | undefined;
-    let res: Response;
-
-    try {
-      res = await transport.dispatch({ headers, init, url: full });
-    } catch (err) {
-      throw classifyRequestError(err, m, full, signal);
-    }
+    const res = await transport.dispatch({ headers, init, url: full });
 
     if (!res.ok) {
       // Error bodies are read once as text, then JSON-parsed if the content-type
@@ -96,7 +112,15 @@ export function createCourier(options: CourierOptions = {}) {
       // the server's error message in an unreadable wrapper, and a failed
       // parseResponse-then-fallback double-read loses the body entirely.
       const isJson = res.headers.get('content-type')?.includes('json') ?? false;
-      const text = await res.text().catch(() => '');
+      let text: string;
+
+      try {
+        text = await res.text();
+      } catch (error) {
+        if (signal?.aborted) throw classifyRequestError(error, m, full, signal);
+        throw new CourierParseError(error instanceof Error ? error.message : String(error), { cause: error });
+      }
+
       let body: unknown = text;
 
       if (text && isJson) {
@@ -114,8 +138,10 @@ export function createCourier(options: CourierOptions = {}) {
 
     try {
       raw = await parseResponse(res, responseType ?? 'auto');
-    } catch (err) {
-      throw classifyRequestError(err, m, full, signal);
+    } catch (error) {
+      if (signal?.aborted) throw classifyRequestError(error, m, full, signal);
+      if (error instanceof CourierError) throw error;
+      throw new CourierParseError(error instanceof Error ? error.message : String(error), { cause: error });
     }
 
     if (schema) {
@@ -129,49 +155,51 @@ export function createCourier(options: CourierOptions = {}) {
     return { result: raw as T, status: res.status };
   }
 
+  function resolveUrl<T, P extends string>(path: P, config: RequestConfig<P, T> | GetRequestConfig<P, T>): string {
+    try {
+      return buildUrl(transport.baseUrl, path, config.params as Params | undefined, config.query);
+    } catch (error) {
+      if (error instanceof CourierError) throw error;
+      throw new CourierParseError(error instanceof Error ? error.message : String(error), { cause: error });
+    }
+  }
+
   async function request<T, P extends string = string>(
-    method: string,
-    url: P,
-    config: HttpRequestConfig<P> = {} as HttpRequestConfig<P>,
-  ) {
+    path: P,
+    config: RequestConfig<P, T> = {} as RequestConfig<P, T>,
+  ): Promise<T> {
     if (transport.disposed) throw new CourierDisposedError('Courier');
 
-    const m = method.toUpperCase();
+    const m = (config.method ?? 'GET').toUpperCase();
+    const full = resolveUrl(path, config);
+    const { body, fetchInit, headers, responseType, schema, signal: extSignal, timeout: cfgTimeout } = config;
 
-    let full: string;
-
-    try {
-      full = buildUrl(transport.baseUrl, url, config.params as Params | undefined, config.query);
-    } catch (err) {
-      throw classifyRequestError(err, m, url);
+    if ((m === 'GET' || m === 'HEAD') && body !== undefined) {
+      throw new CourierParseError(`${m} requests cannot include a body`);
     }
-
-    const {
-      body,
-      fetchInit,
-      headers,
-      responseType,
-      schema,
-      signal: extSignal,
-      timeout: cfgTimeout,
-    } = config as HttpRequestConfig;
-
+    if (responseType === 'raw' && schema !== undefined) {
+      throw new CourierParseError('Raw responses cannot use a schema');
+    }
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
     const requestAc = new AbortController();
     const untrack = transport.track(requestAc);
     const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, anySignal(extSignal, requestAc.signal));
-    const { headers: initHeaders, ...restInit } = buildRequestInit(
-      m,
-      transport.mergeHeaders(headers),
-      body,
-      signal,
-      fetchInit ?? {},
-    );
+    const started = performance.now();
+    let rawResponseOwned = false;
+
+    emit({ method: m, type: 'request-start', url: full });
 
     try {
-      emitTap({ method: m, type: 'request-start', url: full });
-      const start = performance.now();
+      let requestInit: RequestInit;
+
+      try {
+        requestInit = buildRequestInit(m, transport.mergeHeaders(headers), body, signal, fetchInit ?? {});
+      } catch (error) {
+        throw new CourierParseError(error instanceof Error ? error.message : String(error), { cause: error });
+      }
+
+      const { headers: initHeaders, ...restInit } = requestInit;
       const { result, status } = await execute<T>(
         initHeaders as Record<string, string>,
         restInit,
@@ -180,74 +208,114 @@ export function createCourier(options: CourierOptions = {}) {
         responseType,
         schema as { parse(data: unknown): T } | undefined,
       );
-      emitTap({ duration: performance.now() - start, method: m, status, type: 'request-success', url: full });
+
+      if (responseType === 'raw' && result instanceof Response) {
+        const tracked = trackRawResponse(result, signal, untrack);
+        rawResponseOwned = true;
+        emit({ duration: performance.now() - started, method: m, status, type: 'request-success', url: full });
+        return tracked as T;
+      }
+
+      emit({ duration: performance.now() - started, method: m, status, type: 'request-success', url: full });
       return result;
-    } catch (err) {
-      emitTap({ error: err, method: m, type: 'request-error', url: full });
-      throw err;
+    } catch (error) {
+      emit({ error, method: m, type: 'request-error', url: full });
+      throw error;
     } finally {
-      untrack();
+      if (!rawResponseOwned) untrack();
     }
   }
 
-  const mutate = async <T>(options: MutationOptions<T>): Promise<T> => {
-    if (transport.disposed) throw new CourierDisposedError('Courier');
+  const requestWithMethod = <T, P extends string>(method: string, path: P, config?: HttpRequestConfig<P, T>) =>
+    request<T, P>(path, { ...config, method } as RequestConfig<P, T>);
 
-    const controller = new AbortController();
-
-    mutations.add(controller);
-
-    const signal = anySignal(options.signal, controller.signal, transport.disposalSignal) ?? controller.signal;
-
+  function get<T, P extends string = string>(path: P, config?: GetRequestConfig<P, T>): Promise<T> {
     try {
-      const data = await options.request({ signal });
-
-      await options.onSuccess?.(data, queryCache);
-
-      for (const key of options.invalidateKeys ?? []) {
-        queryCache.invalidate(key, { refetch: true });
+      const resolved = config ?? ({} as GetRequestConfig<P, T>);
+      const { cache, signal, timeout, ...sharedConfig } = resolved;
+      if (!cache) {
+        return requestWithMethod<T, P>('GET', path, {
+          ...sharedConfig,
+          signal,
+          timeout,
+        } as HttpRequestConfig<P, T>);
       }
 
-      return data;
-    } finally {
-      mutations.delete(controller);
+      const url = resolveUrl(path, resolved);
+      return readCache.read({
+        cache,
+        load: (internalSignal) =>
+          requestWithMethod<T, P>('GET', path, {
+            ...sharedConfig,
+            signal: internalSignal,
+          } as HttpRequestConfig<P, T>),
+        signal,
+        timeout: timeout ?? transport.timeout,
+        url,
+      });
+    } catch (error) {
+      return Promise.reject(error);
     }
-  };
+  }
+
+  function prefetch<T, P extends string = string>(path: P, config: PrefetchConfig<P, T>): Promise<void> {
+    if (transport.disposed) throw new CourierDisposedError('Courier');
+    const { cache, ...sharedConfig } = config;
+    resolveUrl(path, config);
+    return readCache.prefetch({
+      cache,
+      load: (internalSignal) =>
+        requestWithMethod<T, P>('GET', path, {
+          ...sharedConfig,
+          signal: internalSignal,
+        } as HttpRequestConfig<P, T>),
+    });
+  }
 
   return {
     cancelAll() {
+      readCache.cancelAll();
       transport.cancelAll();
-      queryCache.cancelAll();
-      for (const controller of mutations) controller.abort();
     },
-    delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
+    clearCache() {
+      readCache.clear();
+    },
+    /** Convenience for `request(path, { ...config, method: 'DELETE' })`. */
+    delete: <T, P extends string = string>(path: P, config?: HttpRequestConfig<P, T>) =>
+      requestWithMethod<T, P>('DELETE', path, config),
     get disposalSignal() {
       return transport.disposalSignal;
     },
     dispose() {
-      emitTap({ type: 'dispose' });
+      if (transport.disposed) return;
+      emit({ type: 'dispose' });
+      for (const cleanup of [...tapCleanups]) cleanup();
       tappers.clear();
-      for (const controller of mutations) controller.abort();
-      mutations.clear();
+      readCache.dispose();
       transport.dispose();
     },
     get disposed() {
       return transport.disposed;
     },
-    events: streams.events,
-    get: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('GET', url, cfg),
-    getHeaders: transport.getHeaders,
-    mutate,
-    patch: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PATCH', url, cfg),
-    post: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('POST', url, cfg),
-    put: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PUT', url, cfg),
-    queries: queryCache,
-    read: streams.read,
-    setHeaders: transport.setHeaders,
+    /** Convenience for `request(path, { ...config, method: 'GET' })`, with explicit opt-in caching. */
+    get,
+    invalidateCache(prefix: CourierCacheKey) {
+      readCache.invalidate(prefix);
+    },
+    /** Convenience for `request(path, { ...config, method: 'PATCH' })`. */
+    patch: <T, P extends string = string>(path: P, config?: HttpRequestConfig<P, T>) =>
+      requestWithMethod<T, P>('PATCH', path, config),
+    /** Convenience for `request(path, { ...config, method: 'POST' })`. */
+    post: <T, P extends string = string>(path: P, config?: HttpRequestConfig<P, T>) =>
+      requestWithMethod<T, P>('POST', path, config),
+    prefetch,
+    /** Convenience for `request(path, { ...config, method: 'PUT' })`. */
+    put: <T, P extends string = string>(path: P, config?: HttpRequestConfig<P, T>) =>
+      requestWithMethod<T, P>('PUT', path, config),
+    request,
     tap,
     [Symbol.dispose]() {
       this.dispose();
     },
-    use: transport.use,
   };
 }

@@ -33,33 +33,26 @@ function prepareBindings(bindings: Bindings): Bindings {
 
 type ParsedArgs = { context: Bindings | undefined; message: string | undefined };
 
-function parseArgs(msgOrCtx: unknown, second: unknown, third?: unknown): ParsedArgs {
-  if (typeof msgOrCtx === 'string') {
-    return { context: undefined, message: msgOrCtx };
-  }
-
-  if (msgOrCtx instanceof Error) {
-    const ctx: Bindings = second !== null && typeof second === 'object' ? (second as Bindings) : {};
-
+function parseArgs(first: unknown, second?: unknown, third?: unknown): ParsedArgs {
+  if (typeof first === 'string') {
     return {
-      context: { err: serializeError(msgOrCtx), ...ctx },
-      message:
-        third !== undefined
-          ? String(third)
-          : second !== undefined && typeof second !== 'object'
-            ? String(second)
-            : undefined,
+      context: second !== null && typeof second === 'object' ? (second as Bindings) : undefined,
+      message: first,
     };
   }
 
-  if (typeof msgOrCtx === 'object' && msgOrCtx !== null) {
-    return {
-      context: msgOrCtx as Bindings,
-      message: second !== undefined ? String(second) : undefined,
-    };
+  if (first instanceof Error) {
+    const context = second !== null && typeof second === 'object' ? (second as Bindings) : {};
+    const message = third !== undefined ? String(third) : typeof second === 'string' ? second : undefined;
+
+    return { context: { err: serializeError(first), ...context }, message };
   }
 
-  return { context: undefined, message: msgOrCtx !== undefined ? String(msgOrCtx) : undefined };
+  if (first !== null && typeof first === 'object') {
+    return { context: first as Bindings, message: second !== undefined ? String(second) : undefined };
+  }
+
+  return { context: undefined, message: first === undefined ? undefined : String(first) };
 }
 
 /* --- Namespace joining --- */
@@ -97,9 +90,9 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
   const initialOpts: RuneOptions = typeof initial === 'string' ? { namespace: initial, ...extra } : initial;
 
   const logLevel: LogLevel = initialOpts.logLevel ?? 'debug';
-  const middleware: LogMiddleware[] = initialOpts.middleware ?? [];
+  const middleware: LogMiddleware[] = [...(initialOpts.middleware ?? [])];
   const namespace: string = initialOpts.namespace ?? '';
-  const transports = initialOpts.transports ?? [consoleTransport()];
+  const transports = [...(initialOpts.transports ?? [consoleTransport()])];
   const ownBindings: Bindings = { ...(initialOpts.bindings ?? {}) };
 
   const disposeController = new AbortController();
@@ -109,43 +102,36 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
   const namespaceSuffix = (): string => (namespace ? ` (namespace: "${namespace}")` : '');
 
   const dispatch = (entry: LogEntry): void => {
-    let current: LogEntry = entry;
+    let current = entry;
 
-    if (middleware.length > 0) {
-      let c: LogEntry = entry;
+    for (const transform of middleware) {
+      try {
+        const next = transform(current);
 
-      for (const mw of middleware) {
-        try {
-          const next = mw(c);
+        if (next === null || next === undefined) return;
 
-          if (next == null) return;
-
-          c = next;
-        } catch (err) {
-          warn(`middleware threw and dropped this entry${namespaceSuffix()}: ${String(err)}`);
-
-          return;
-        }
+        current = next;
+      } catch (err) {
+        warn(`Middleware threw and dropped this entry${namespaceSuffix()}: ${String(err)}`);
+        return;
       }
-
-      current = c;
     }
 
-    for (const t of transports) {
+    for (const transport of transports) {
       try {
-        t(current);
+        transport(current);
       } catch (err) {
         warn(`Transport threw an unhandled error${namespaceSuffix()}: ${String(err)}`);
       }
     }
   };
 
-  const emit = (type: LogType, msgOrCtx: unknown, second?: unknown, third?: unknown): void => {
+  const emit = (type: LogType, first: unknown, second?: unknown, third?: unknown): void => {
     if (isDisposed) return;
 
     if (!passes(type)) return;
 
-    const { context, message } = parseArgs(msgOrCtx, second, third);
+    const { context, message } = parseArgs(first, second, third);
     // prepareBindings() always allocates a fresh object, so `data` is never an alias of `ownBindings`.
     const data: Bindings = context
       ? { ...prepareBindings(ownBindings), ...prepareBindings(context) }
@@ -239,7 +225,7 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
 
     child: childLogger,
 
-    debug: (m: unknown, s?: unknown, t?: unknown) => emit('debug', m, s, t),
+    debug: (first: unknown, second?: unknown, third?: unknown) => emit('debug', first, second, third),
 
     get disposalSignal(): AbortSignal {
       return disposeController.signal;
@@ -258,15 +244,15 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
 
     enabled: (type: LogLevel): boolean => isLevelEnabled(logLevel, type),
 
-    error: (m: unknown, s?: unknown, t?: unknown) => emit('error', m, s, t),
+    error: (first: unknown, second?: unknown, third?: unknown) => emit('error', first, second, third),
 
-    fatal: (m: unknown, s?: unknown, t?: unknown) => emit('fatal', m, s, t),
+    fatal: (first: unknown, second?: unknown, third?: unknown) => emit('fatal', first, second, third),
 
     group: (label, fn, level) => wrapGroup(false, label, fn, level),
 
     groupCollapsed: (label, fn, level) => wrapGroup(true, label, fn, level),
 
-    info: (m: unknown, s?: unknown, t?: unknown) => emit('info', m, s, t),
+    info: (first: unknown, second?: unknown, third?: unknown) => emit('info', first, second, third),
 
     get logLevel(): LogLevel {
       return logLevel;
@@ -290,14 +276,12 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
       return [...transports];
     },
 
-    use: (mw: LogMiddleware): Logger => childLogger({ middleware: [...middleware, mw] }),
+    use: (transform: LogMiddleware): Logger => childLogger({ middleware: [...middleware, transform] }),
 
-    warn: (m: unknown, s?: unknown, t?: unknown) => emit('warn', m, s, t),
+    warn: (first: unknown, second?: unknown, third?: unknown) => emit('warn', first, second, third),
 
     withBindings: (bindings: Bindings): Logger => childLogger({ bindings }),
   };
 
   return logger;
 }
-
-export const defaultLogger = createLogger();

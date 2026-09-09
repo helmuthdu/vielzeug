@@ -1,4 +1,4 @@
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, factoryProvider, token, valueProvider } from '@vielzeug/conduit';
 import { Temporal } from '@vielzeug/tempo';
 import { courier } from './api';
 import { logger } from './logger';
@@ -83,11 +83,13 @@ function createReportService(api: typeof courier, log: typeof logger): ReportSer
 // Container
 // ---------------------------------------------------------------------------
 
-export const container = createContainer({ name: 'vielzeug-motors' });
+const reportProvider = factoryProvider(ReportServiceToken, [ApiToken, LoggerToken], createReportService);
 
-container.value(LoggerToken, logger);
-container.value(ApiToken, courier);
-container.factory(ReportServiceToken, [ApiToken, LoggerToken] as const, createReportService);
+export const container = createContainer([
+  valueProvider(LoggerToken, logger),
+  valueProvider(ApiToken, courier),
+  reportProvider,
+]);
 
 let reportServicePromise: Promise<ReportService> | null = null;
 

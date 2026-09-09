@@ -4,7 +4,7 @@ import { applyReorder, createSortable, createSortableScope } from '../sortable';
 import { endDrag, makeDragEvent, makeKeyEvent, makeList, startDrag } from './helpers';
 
 // Default getKey for tests — items are built with data-sort-id by makeList
-const getKey = (el: HTMLElement): string => el.getAttribute('data-sort-id') ?? '';
+const getKey = (el: Element): string => el.getAttribute('data-sort-id') ?? '';
 
 // makeList attaches elements to document.body; clean up after every test.
 afterEach(() => {
@@ -193,19 +193,19 @@ describe('createSortable', () => {
     // `preventDefault()` calls ever run, silently handing the whole gesture to native scrolling.
     // The item then never receives the `dragover` sequence needed to update the drop target, so
     // the drop commits back to wherever it started — indistinguishable from "reverting".
-    it('sets touch-action:none on items when no handle option', () => {
+    it('preserves touch action when touch input is disabled', () => {
       const {
         element,
         items: [first],
       } = makeList('a', 'b');
       const sortable = createSortable({ element, getKey });
 
-      expect(first.style.touchAction).toBe('none');
+      expect(first.style.touchAction).toBe('');
 
       sortable.dispose();
     });
 
-    it('sets touch-action:none on the handle (not the item) when handle option is set', () => {
+    it('preserves handle touch action when touch input is disabled', () => {
       const element = document.createElement('ul');
       const li = document.createElement('li');
       const handle = document.createElement('span');
@@ -219,7 +219,7 @@ describe('createSortable', () => {
       const sortable = createSortable({ element, getKey, handle: '.handle' });
 
       expect(li.style.touchAction).toBe('');
-      expect(handle.style.touchAction).toBe('none');
+      expect(handle.style.touchAction).toBe('');
 
       sortable.dispose();
     });
@@ -286,7 +286,7 @@ describe('createSortable', () => {
       second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
       endDrag(first);
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a'] }));
 
       sortable.dispose();
     });
@@ -308,7 +308,7 @@ describe('createSortable', () => {
       second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
       endDrag(first);
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a'] }));
 
       sortable.dispose();
     });
@@ -335,14 +335,14 @@ describe('createSortable', () => {
       second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
       endDrag(first);
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a'] }));
 
       sortable.dispose();
     });
   });
 
-  describe('sync', () => {
-    it('applies dnd attributes to newly added items after sync', () => {
+  describe('refresh', () => {
+    it('applies dnd attributes to newly added items after refresh', () => {
       const { element } = makeList('a');
       const sortable = createSortable({ element, getKey });
       const li = document.createElement('li');
@@ -352,14 +352,14 @@ describe('createSortable', () => {
 
       expect(li.getAttribute('draggable')).toBeNull();
 
-      sortable.sync();
+      sortable.refresh();
 
       expect(li.getAttribute('draggable')).toBe('true');
 
       sortable.dispose();
     });
 
-    it('re-applies handle attrs on existing items after sync', () => {
+    it('re-applies handle attrs on existing items after refresh', () => {
       const element = document.createElement('ul');
       const li1 = document.createElement('li');
       const handle1 = document.createElement('span');
@@ -380,9 +380,9 @@ describe('createSortable', () => {
       // Replace the handle element inside the item
       handle1.remove();
       li1.append(handle2);
-      sortable.sync();
+      sortable.refresh();
 
-      // New handle gets attrs after sync
+      // New handle gets attrs after refresh
       expect(handle2.getAttribute('draggable')).toBe('true');
       expect(handle2.getAttribute('data-dnd-handle')).toBe('');
 
@@ -450,17 +450,17 @@ describe('createSortable', () => {
       second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
       endDrag(first);
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a'] }));
 
       sortable.dispose();
     });
 
-    it('ReorderEvent has ids and setRevert function', () => {
+    it('ReorderEvent has before, after, and item', () => {
       const {
         element,
         items: [first, second],
       } = makeList('a', 'b');
-      let capturedEvent: { ids: string[]; setRevert: unknown } | undefined;
+      let capturedEvent: { after: readonly string[]; before: readonly string[]; item: string } | undefined;
       const onReorder = vi.fn((e) => {
         capturedEvent = e;
       });
@@ -476,8 +476,9 @@ describe('createSortable', () => {
       second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
       endDrag(first);
 
-      expect(capturedEvent?.ids).toEqual(['b', 'a']);
-      expect(typeof capturedEvent?.setRevert).toBe('function');
+      expect(capturedEvent?.before).toEqual(['a', 'b']);
+      expect(capturedEvent?.after).toEqual(['b', 'a']);
+      expect(capturedEvent?.item).toBe('a');
 
       sortable.dispose();
     });
@@ -748,7 +749,7 @@ describe('createSortable', () => {
 
       second.dispatchEvent(makeKeyEvent('ArrowDown'));
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['a', 'c', 'b'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['a', 'c', 'b'] }));
 
       sortable.dispose();
     });
@@ -763,7 +764,7 @@ describe('createSortable', () => {
 
       second.dispatchEvent(makeKeyEvent('ArrowUp'));
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a', 'c'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a', 'c'] }));
 
       sortable.dispose();
     });
@@ -778,7 +779,7 @@ describe('createSortable', () => {
 
       third.dispatchEvent(makeKeyEvent('Home'));
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['c', 'a', 'b'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['c', 'a', 'b'] }));
 
       sortable.dispose();
     });
@@ -793,7 +794,7 @@ describe('createSortable', () => {
 
       first.dispatchEvent(makeKeyEvent('End'));
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'c', 'a'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'c', 'a'] }));
 
       sortable.dispose();
     });
@@ -808,7 +809,7 @@ describe('createSortable', () => {
 
       first.dispatchEvent(makeKeyEvent('ArrowRight'));
 
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a', 'c'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a', 'c'] }));
 
       sortable.dispose();
     });
@@ -864,55 +865,8 @@ describe('createSortable', () => {
     });
   });
 
-  describe('revert', () => {
-    it('calls the revert function registered via setRevert after a drag', () => {
-      const {
-        element,
-        items: [first, second],
-      } = makeList('a', 'b');
-      const onRevert = vi.fn();
-      const onReorder = vi.fn(({ setRevert }: { setRevert: (fn: () => void) => void }) => {
-        setRevert(onRevert);
-      });
-
-      Object.defineProperty(second, 'getBoundingClientRect', {
-        configurable: true,
-        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
-      });
-
-      const sortable = createSortable({ element, getKey, onReorder });
-
-      startDrag(first);
-      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
-      endDrag(first);
-
-      sortable.revert();
-
-      expect(onRevert).toHaveBeenCalledTimes(1);
-
-      sortable.dispose();
-    });
-
-    it('calls the revert function registered via setRevert after a keyboard move', () => {
-      const {
-        element,
-        items: [, second],
-      } = makeList('a', 'b', 'c');
-      const onRevert = vi.fn();
-      const onReorder = vi.fn(({ setRevert }: { setRevert: (fn: () => void) => void }) => {
-        setRevert(onRevert);
-      });
-      const sortable = createSortable({ element, getKey, onReorder });
-
-      second.dispatchEvent(makeKeyEvent('ArrowDown'));
-      sortable.revert();
-
-      expect(onRevert).toHaveBeenCalledTimes(1);
-
-      sortable.dispose();
-    });
-
-    it('is a no-op when setRevert was never called', () => {
+  describe('ReorderEvent shape', () => {
+    it('emits before/after/item after a drag', () => {
       const {
         element,
         items: [first, second],
@@ -930,36 +884,26 @@ describe('createSortable', () => {
       second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
       endDrag(first);
 
-      expect(() => sortable.revert()).not.toThrow();
+      expect(onReorder).toHaveBeenCalledWith(
+        expect.objectContaining({ after: ['b', 'a'], before: ['a', 'b'], item: 'a' }),
+      );
 
       sortable.dispose();
     });
 
-    it('clears the revert function after first call', () => {
+    it('emits before/after/item after a keyboard move', () => {
       const {
         element,
-        items: [first, second],
-      } = makeList('a', 'b');
-      const onRevert = vi.fn();
-      const onReorder = vi.fn(({ setRevert }: { setRevert: (fn: () => void) => void }) => {
-        setRevert(onRevert);
-      });
-
-      Object.defineProperty(second, 'getBoundingClientRect', {
-        configurable: true,
-        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
-      });
-
+        items: [, second],
+      } = makeList('a', 'b', 'c');
+      const onReorder = vi.fn();
       const sortable = createSortable({ element, getKey, onReorder });
 
-      startDrag(first);
-      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
-      endDrag(first);
+      second.dispatchEvent(makeKeyEvent('ArrowDown'));
 
-      sortable.revert();
-      sortable.revert(); // second call is a no-op
-
-      expect(onRevert).toHaveBeenCalledTimes(1);
+      expect(onReorder).toHaveBeenCalledWith(
+        expect.objectContaining({ after: ['a', 'c', 'b'], before: ['a', 'b', 'c'], item: 'b' }),
+      );
 
       sortable.dispose();
     });
@@ -1054,7 +998,7 @@ describe('createSortable', () => {
       first.dispatchEvent(makeKeyEvent('ArrowRight'));
 
       expect(onBeforeReorder).toHaveBeenCalledWith(['a', 'b', 'c'], ['b', 'a', 'c']);
-      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a', 'c'] }));
+      expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a', 'c'] }));
 
       sortable.dispose();
     });
@@ -1114,24 +1058,31 @@ describe('createSortable', () => {
       rightSortable.dispose();
     });
 
-    it('reverts the most recent cross-list move through the scope', () => {
+    it('emits before/after ids for cross-list move through the scope', () => {
       const {
         element: left,
         items: [l1],
       } = makeList('l1', 'l2');
       const { element: right } = makeList('r1');
-      const onRevert = vi.fn();
-      const scope = createSortableScope({ onMove: ({ setRevert }) => setRevert(onRevert) });
+      const onMove = vi.fn();
+      const scope = createSortableScope({ onMove });
       const leftSortable = createSortable({ element: left, getKey, scope });
       const rightSortable = createSortable({ element: right, getKey, scope });
 
       startDrag(l1);
       right.dispatchEvent(makeDragEvent('dragover', { dropEffect: 'move' }));
       endDrag(l1);
-      scope.revert();
-      scope.revert();
 
-      expect(onRevert).toHaveBeenCalledTimes(1);
+      expect(onMove).toHaveBeenCalledTimes(1);
+      expect(onMove).toHaveBeenCalledWith(
+        expect.objectContaining({
+          itemId: 'l1',
+          sourceBeforeIds: ['l1', 'l2'],
+          sourceIds: ['l2'],
+          targetBeforeIds: ['r1'],
+          targetIds: ['r1', 'l1'],
+        }),
+      );
 
       leftSortable.dispose();
       rightSortable.dispose();
@@ -1510,7 +1461,7 @@ describe('dragover position resolution', () => {
 
     endDrag(first);
 
-    expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['b', 'a'] }));
+    expect(onReorder).toHaveBeenCalledWith(expect.objectContaining({ after: ['b', 'a'] }));
 
     sortable.dispose();
   });
@@ -1705,4 +1656,165 @@ describe('onInteraction', () => {
 
     sortable.dispose();
   });
+});
+
+describe('hardening regressions', () => {
+  it('rejects new sortables in a disposed scope', () => {
+    const scope = createSortableScope();
+    const { element } = makeList('a');
+    scope.dispose();
+
+    expect(() => createSortable({ element, getKey, scope })).toThrow('disposed');
+    expect(element.getAttribute('role')).toBeNull();
+  });
+
+  it('rejects duplicate sortable registration in one scope', () => {
+    const scope = createSortableScope({ touch: true });
+    const { element } = makeList('a');
+    const sortable = createSortable({ element, getKey, scope });
+
+    expect(() => createSortable({ element, getKey, scope })).toThrow('already registered');
+
+    sortable.dispose();
+    scope.dispose();
+  });
+
+  it('preserves touch scrolling unless scope touch input is enabled', () => {
+    const plain = makeList('plain');
+    const touch = makeList('touch');
+    const plainSortable = createSortable({ element: plain.element, getKey });
+    const touchScope = createSortableScope({ touch: true });
+    const touchSortable = createSortable({ element: touch.element, getKey, scope: touchScope });
+
+    expect(plain.items[0].style.touchAction).toBe('');
+    expect(touch.items[0].style.touchAction).toBe('none');
+
+    plainSortable.dispose();
+    touchScope.dispose();
+    touchSortable.dispose();
+  });
+
+  it('removes sortable semantics from items excluded before refresh', () => {
+    const { element, items } = makeList('a', 'b');
+    const owned = [...items];
+    const sortable = createSortable({ element, getKey, items: () => owned });
+
+    owned.shift();
+    sortable.refresh();
+
+    expect(items[0].hasAttribute('data-dnd-item')).toBe(false);
+    expect(items[0].getAttribute('draggable')).toBeNull();
+    sortable.dispose();
+  });
+
+  it('does not reorder from interactive descendants', () => {
+    const { element, items } = makeList('a', 'b');
+    const button = document.createElement('button');
+    items[0].append(button);
+    const onReorder = vi.fn();
+    const sortable = createSortable({ element, getKey, onReorder });
+
+    button.dispatchEvent(makeKeyEvent('ArrowDown'));
+
+    expect(onReorder).not.toHaveBeenCalled();
+    expect([...element.children]).toEqual(items);
+    sortable.dispose();
+  });
+
+  it('calls onBeforeReorder before DOM mutation and protects event snapshots', () => {
+    const { element, items } = makeList('a', 'b');
+    const observed: string[][] = [];
+    const interactions = vi.fn();
+    const reorder = vi.fn();
+    const sortable = createSortable({
+      element,
+      getKey,
+      onBeforeReorder: (_before, after) => {
+        observed.push([...element.children].map(getKey));
+        expect(() => (after as string[]).splice(0)).toThrow();
+      },
+      onInteraction: interactions,
+      onReorder: reorder,
+    });
+
+    items[0].dispatchEvent(makeKeyEvent('ArrowDown'));
+
+    expect(observed).toEqual([['a', 'b']]);
+    expect(reorder).toHaveBeenCalledWith({ after: ['b', 'a'], before: ['a', 'b'], item: 'a' });
+    expect(interactions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ index: 1, itemId: 'a', total: 2, type: 'move' }),
+    );
+    sortable.dispose();
+  });
+
+  it('rejects duplicate backing keys instead of dropping data', () => {
+    const items = [
+      { id: 'a', value: 1 },
+      { id: 'a', value: 2 },
+    ];
+
+    expect(() => applyReorder(items, ['a'], (item) => item.id)).toThrow(/duplicate/i);
+  });
+
+  it('rolls back construction when the handle selector is invalid', () => {
+    const { element, items } = makeList('a');
+    const scope = createSortableScope();
+
+    expect(() => createSortable({ element, getKey, handle: '[', scope })).toThrow();
+    expect(items[0].hasAttribute('data-dnd-item')).toBe(false);
+    scope.dispose();
+  });
+
+  it('calls onBeforeReorder before drag DOM mutation', () => {
+    const { element, items } = makeList('a', 'b');
+    const observed: string[][] = [];
+    const sortable = createSortable({
+      element,
+      getKey,
+      onBeforeReorder: () =>
+        observed.push([...element.children].filter((item) => item instanceof HTMLElement).map(getKey)),
+    });
+
+    startDrag(items[0]);
+    items[1].dispatchEvent(makeDragEvent('dragover', { clientY: 10, dropEffect: 'move' }));
+    endDrag(items[0]);
+
+    expect(observed).toEqual([['a', 'b', '']]);
+    sortable.dispose();
+  });
+
+  it('isolates lifecycle callback failures from reorder completion', () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { element, items } = makeList('a', 'b');
+    const onInteraction = vi.fn();
+    const onReorder = vi.fn();
+    const sortable = createSortable({
+      element,
+      getKey,
+      onDragEnd: () => {
+        throw new Error('consumer failure');
+      },
+      onInteraction,
+      onReorder,
+    });
+
+    startDrag(items[0]);
+    items[1].dispatchEvent(makeDragEvent('dragover', { clientY: 10, dropEffect: 'move' }));
+    endDrag(items[0]);
+
+    expect(onReorder).toHaveBeenCalledOnce();
+    expect(onInteraction).toHaveBeenCalledWith(expect.objectContaining({ type: 'drop' }));
+    expect(warning).toHaveBeenCalledOnce();
+    warning.mockRestore();
+    sortable.dispose();
+  });
+
+  it.each([{ edgeThreshold: -1 }, { speed: 0 }, { speed: Number.NaN }])(
+    'rejects invalid auto-scroll options $edgeThreshold $speed',
+    (autoScroll) => {
+      const { element } = makeList('a');
+
+      expect(() => createSortable({ autoScroll, element, getKey })).toThrow(/Auto-scroll/);
+    },
+  );
 });

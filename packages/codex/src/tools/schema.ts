@@ -1,17 +1,5 @@
 import { CatalogError } from '../catalog.js';
 
-/**
- * Every tool's `inputSchema` used to be pure documentation — validated for real by a
- * parallel, hand-written `requireStr`/`optionalEnum` call per argument, so client-facing
- * constraints (`minLength`) and enforced constraints (a hardcoded 500-char cap) silently
- * drifted from each other. `parseArgs` reads directly off the same `ToolSchema` object a
- * tool declares as `inputSchema` — one declaration, always in sync with what's enforced.
- *
- * Tool files declare schemas with `satisfies ToolSchema` (not `: ToolSchema`) so the literal
- * property keys survive into the type — `InferArgs` then reads those keys straight off the
- * schema, so `parseArgs(schema, args)` returns an exact, always-in-sync result type with no
- * manually-written (and driftable) type argument at the call site.
- */
 export interface ToolProperty {
   default?: string;
   description: string;
@@ -22,15 +10,14 @@ export interface ToolProperty {
 }
 
 export interface ToolSchema {
+  additionalProperties: false;
   properties: Record<string, ToolProperty>;
   required?: string[];
   type: 'object';
 }
 
-/** Schema for tools that take no arguments. */
-export const EMPTY_SCHEMA: ToolSchema = { properties: {}, type: 'object' };
+export const EMPTY_SCHEMA: ToolSchema = { additionalProperties: false, properties: {}, type: 'object' };
 
-/** A property shared by every tool that takes a package slug — one definition, reused everywhere. */
 export const PACKAGE_SLUG_PROPERTY: ToolProperty = {
   description: 'Package folder name, e.g. "ripple"',
   maxLength: 100,
@@ -38,28 +25,24 @@ export const PACKAGE_SLUG_PROPERTY: ToolProperty = {
   type: 'string',
 };
 
-/**
- * A property with a literal `enum` tuple (e.g. `enum: DOC_PAGES`) infers a union of that tuple's
- * members instead of plain `string` — `parseArgs` already validates the value is one of `enum` at
- * runtime, so callers get that guarantee reflected in the type without a manual cast.
- */
 export type InferArgs<S extends ToolSchema> = {
   [K in keyof S['properties']]: S['properties'][K] extends { enum: readonly (infer E)[] } ? E : string;
 };
 
-/** Validates + trims raw MCP tool arguments against a `ToolSchema`. Throws `CatalogError('INVALID_ARG', ...)` on the first violation. */
 export function parseArgs<S extends ToolSchema>(schema: S, raw: Record<string, unknown>): InferArgs<S> {
   const result: Record<string, string> = {};
 
-  for (const [key, prop] of Object.entries(schema.properties)) {
+  for (const key of Object.keys(raw)) {
+    if (!Object.hasOwn(schema.properties, key)) throw new CatalogError('INVALID_ARG', `${key}: unknown argument.`);
+  }
+
+  for (const [key, property] of Object.entries(schema.properties)) {
     const required = schema.required?.includes(key) ?? false;
     const value = raw[key];
 
     if (value === undefined || value === '') {
       if (required) throw new CatalogError('INVALID_ARG', `${key}: required non-empty string.`);
-
-      if (prop.default !== undefined) result[key] = prop.default;
-
+      if (property.default !== undefined) result[key] = property.default;
       continue;
     }
 
@@ -68,15 +51,15 @@ export function parseArgs<S extends ToolSchema>(schema: S, raw: Record<string, u
     const trimmed = value.trim();
 
     if (required && trimmed.length === 0) throw new CatalogError('INVALID_ARG', `${key}: required non-empty string.`);
-
-    if (prop.minLength !== undefined && trimmed.length < prop.minLength)
-      throw new CatalogError('INVALID_ARG', `${key}: must be at least ${prop.minLength} characters.`);
-
-    if (prop.maxLength !== undefined && trimmed.length > prop.maxLength)
-      throw new CatalogError('INVALID_ARG', `${key}: exceeds ${prop.maxLength} character limit. Shorten the value.`);
-
-    if (prop.enum && !prop.enum.includes(trimmed))
-      throw new CatalogError('INVALID_ARG', `${key}: must be one of ${prop.enum.join(', ')}.`);
+    if (property.minLength !== undefined && trimmed.length < property.minLength)
+      throw new CatalogError('INVALID_ARG', `${key}: must be at least ${property.minLength} characters.`);
+    if (property.maxLength !== undefined && trimmed.length > property.maxLength)
+      throw new CatalogError(
+        'INVALID_ARG',
+        `${key}: exceeds ${property.maxLength} character limit. Shorten the value.`,
+      );
+    if (property.enum && !property.enum.includes(trimmed))
+      throw new CatalogError('INVALID_ARG', `${key}: must be one of ${property.enum.join(', ')}.`);
 
     result[key] = trimmed;
   }

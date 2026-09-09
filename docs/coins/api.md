@@ -18,7 +18,7 @@ description: Exact money, currency definitions, exchange, formatting, serializat
 | `clamp` | Bound to min/max range | Sync | Min must not exceed max |
 | `exchange` | Convert through an exact rate | Sync | Rate source must match value currency |
 | `format` | Present money with `Intl` | Sync | Formatting does not define currency scale |
-| `toJSON` / `parseMoneyJSON` | Cross JSON boundary | Sync | Persisted amount uses minor units |
+| `toJSON` / `decodeMoney` | Cross serialization or realm boundary | Sync | Persisted amount uses minor units |
 
 ## Package Entry Point
 
@@ -35,7 +35,7 @@ function currency<C extends string>(code: C): Currency<C>;
 function currency<C extends string>(definition: { code: C; minorUnit: number }): Currency<C>;
 ```
 
-Resolves a built-in currency by ISO code, or constructs an immutable custom currency from a definition. Built-in definitions: `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, `KWD`. Custom currencies are local values — no global registry. Code must be three uppercase letters; `minorUnit` must be an integer from 0 to 6.
+Resolves one of the seven built-ins—`USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, or `KWD`—or constructs an immutable custom currency. Custom currencies are local values with no global registry. Code must be exactly three uppercase letters; `minorUnit` must be an integer from 0 to 6. Arithmetic compares currency definitions by reference.
 
 ```ts
 currency('USD');
@@ -62,15 +62,15 @@ money('19.99', USD);
 money(1999n, USD, { unit: 'minor' });
 ```
 
-Decimal strings that exceed the currency's precision require a `rounding` mode. Bigint amounts require `{ unit: 'minor' }`.
+Decimal strings that exceed the currency's precision require a `rounding` mode. Inputs use plain base-10 syntax without exponent, leading plus, or whitespace; input length is capped at 1,000 characters and normalized fractional precision at 100 places. Bigint amounts require `{ unit: 'minor' }`.
 
-### `parseMoney(value)`
+### `decodeMoney(value, options?)`
 
 ```ts
-function parseMoney(value: unknown): Money;
+function decodeMoney(value: unknown, options?: { currency?: (code: string) => Currency }): Money;
 ```
 
-Validates a plain data object and returns canonical money. Requires a bigint `amount` and a canonical currency. Use for untrusted input; use `isMoney()` for trusted values.
+Validates untrusted or cross-realm data and returns canonical money. Plain bigint input must have exactly `amount` and canonical `currency`; JSON must have exactly `amount`, currency code, and `unit: 'minor'`. Serialized amounts are bounded to 1,000 characters. A custom resolver must return a canonical currency whose code matches the envelope.
 
 ### `isMoney(value)`
 
@@ -101,7 +101,7 @@ function round<C extends Currency>(
 function toDecimal(value: Money): string;
 ```
 
-`factor` and `divisor` are decimal strings. Matching currency is required for binary money operations. `round`'s `fractionDigits` must be an integer from 0 to the currency's `minorUnit`.
+`factor` and `divisor` are plain decimal strings; exponent notation, whitespace, and a leading plus are invalid. Matching currency identity is required for binary operations. `round()` requires integer `fractionDigits` from 0 through the currency's `minorUnit`. Scaling and rounding default to `halfAwayFromZero`.
 
 ## Aggregation
 
@@ -112,7 +112,7 @@ function allocate<C extends Currency>(value: Money<C>, count: number): Money<C>[
 function allocate<C extends Currency>(value: Money<C>, weights: readonly string[]): Money<C>[];
 ```
 
-`sum` infers currency from non-empty values. `sum([], { currency: USD })` returns zero USD. `allocate` returns values whose minor-unit total exactly equals input.
+`sum()` infers currency from non-empty values. An empty iterable requires a canonical `{ currency }` and returns canonical zero. `allocate()` accepts a positive integer count or dense, non-empty, non-negative decimal-string weights with a positive total. Either form is limited to 100,000 output parts. It distributes remainders by largest fractional share, breaks ties by input order, and preserves the exact signed minor-unit total.
 
 ## Exchange
 
@@ -139,6 +139,8 @@ const rate = exchangeRate({ from: USD, to: EUR, value: '0.9234' });
 exchange(money('100.00', USD), rate);
 ```
 
+Rates are exact positive decimal strings. The money currency must be the same canonical instance as `rate.from`. Conversion defaults to `halfAwayFromZero` rounding.
+
 ### `isExchangeRate(value)`
 
 ```ts
@@ -154,16 +156,16 @@ function format(value: Money, options?: FormatOptions): string;
 function formatParts(value: Money, options?: FormatOptions): MoneyFormatPart[];
 ```
 
-`FormatOptions` uses `locale`, `style`, `rounding`, `minimumFractionDigits`, and `maximumFractionDigits`.
+Defaults are locale `en-US`, style `symbol`, and the currency's minor-unit digits. Either fraction bound may be supplied independently; the omitted bound adjusts to remain compatible. Explicit bounds must satisfy `0 ≤ minimum ≤ maximum ≤ 20`. Exact decimal strings and mapped rounding modes are passed to `Intl.NumberFormat`, preserving locale digits, currency-name pluralization, and rounded negative signs. `formatParts()` keeps locale grouping inside its `integer` part.
 
 ## Serialization
 
 ```ts
 function toJSON(value: Money): MoneyJSON;
-function parseMoneyJSON(value: unknown, options?: { currency?: (code: string) => Currency }): Money;
+function decodeMoney(value: unknown, options?: { currency?: (code: string) => Currency }): Money;
 ```
 
-`toJSON` produces a `{ amount, currency, unit: 'minor' }` shape. `parseMoneyJSON` validates the shape, unit, and currency code; custom currencies require an explicit `currency` resolver.
+`toJSON()` produces exactly `{ amount, currency, unit: 'minor' }`. `amount` is a canonical integer string of at most 1,000 characters: no decimal point, exponent, leading plus, leading zero, whitespace, or negative zero. `decodeMoney()` resolves built-ins with `currency()` by default; custom codes require a resolver returning the same encoded code.
 
 ## Types
 
@@ -215,7 +217,16 @@ type MoneyJSON = Readonly<{
 type RoundingMode = 'awayFromZero' | 'ceil' | 'floor' | 'halfAwayFromZero' | 'halfEven' | 'towardZero';
 ```
 
-`CurrencyCode`, `Decimal`, and `Money` carry phantom brand symbols that prevent unbranded values from being assigned where a canonical value is required.
+`CurrencyCode`, `Decimal`, and `Money` carry phantom brand symbols that prevent unbranded values from being assigned where canonical values are required. `ExchangeRate.value` exposes a normalized exact `Decimal` numerator and denominator.
+
+| Rounding mode | Behavior |
+| --- | --- |
+| `awayFromZero` | Always increase a non-exact magnitude |
+| `ceil` | Toward positive infinity |
+| `floor` | Toward negative infinity |
+| `halfAwayFromZero` | Nearest; midpoint away from zero |
+| `halfEven` | Nearest; midpoint to an even retained unit |
+| `towardZero` | Truncate toward zero |
 
 ## Errors
 

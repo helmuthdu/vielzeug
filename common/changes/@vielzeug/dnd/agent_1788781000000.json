@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: split focused entry points, move rollback to application history, and rebuild touch sorting on Gesture pointer recognition while hardening sortable, keyboard, validation, and lifecycle behavior",
+      "packageName": "@vielzeug/dnd",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/dnd"
+}

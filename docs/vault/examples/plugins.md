@@ -1,6 +1,6 @@
 ---
 title: 'Vault Examples — Validators and Error Handling'
-description: 'Validators, migration, and error handling patterns for @vielzeug/vault.'
+description: 'Codecs, migration, and error handling patterns for @vielzeug/vault.'
 ---
 
 ## Validators and Error Handling
@@ -11,11 +11,11 @@ You need to validate records before they reach storage and handle quota, disposa
 
 ### Solution
 
-All Vault factories accept `validators` at construction time. The Web Storage factories also accept `onQuotaExceeded`. Each plugin uses a structural interface, so you can pass the real library object directly.
+Durable Vault factories require one codec or parser schema per table. Memory may omit them. Spell schemas work directly; `validatorCodec()` remains available for explicit identity encoding. Web Storage factories also accept `onQuotaExceeded`.
 
-#### Validators
+#### Codecs
 
-Pass any object with a `parse(value): T` method. Validators run before every `put`, `putAll`, `update`, and `upsert`. A `@vielzeug/spell` schema satisfies the interface directly.
+Pass any object with a `parse(value): T` method directly in `codecs`. Custom codecs validate writes through `decode(encode(value))` and validate persisted values on reads.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -27,7 +27,7 @@ const schema = { users: table<User>('id') };
 
 const db = createMemory({
   schema,
-  validators: {
+  codecs: {
     users: s.object({
       id: s.number(),
       name: s.string(),
@@ -36,22 +36,25 @@ const db = createMemory({
   },
 });
 
-// throws a spell validation error — nothing is written to storage
+// rejects with a VaultError whose cause is the Spell validation error
 await db.put('users', { id: 1, name: 'Alice', age: -5 });
 ```
 
 #### Quota exceeded hook (LocalStorage / SessionStorage)
 
 ```ts
+import { s } from '@vielzeug/spell';
 import { table, type VaultQuotaError } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 type CacheEntry = { id: string; payload: string };
 const schema = { cache: table<CacheEntry>('id') };
+const CacheSchema = s.object({ id: s.string(), payload: s.string() });
 
 const db = createLocalStorage({
   name: 'app',
   schema,
+  codecs: { cache: CacheSchema },
   onQuotaExceeded: (tableName, error: VaultQuotaError) => {
     console.warn(`[${String(tableName)}] quota exceeded — dropping write`, error.message);
     return 'ignore'; // silently drop the write; use 'throw' to rethrow (default)
@@ -62,11 +65,13 @@ const db = createLocalStorage({
 #### IndexedDB migration hook
 
 ```ts
+import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createIndexedDB, type MigrationFn } from '@vielzeug/vault/indexeddb';
 
 type User = { id: number; name: string };
 const schema = { users: table<User>('id', { indexes: ['name'] }) };
+const UserSchema = s.object({ id: s.number(), name: s.string() });
 
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
@@ -74,7 +79,13 @@ const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   }
 };
 
-const db = createIndexedDB({ name: 'app', migrate, schema, version: 2 });
+const db = createIndexedDB({
+  name: 'app',
+  migrate,
+  schema,
+  version: 2,
+  codecs: { users: UserSchema },
+});
 void db;
 ```
 
@@ -116,7 +127,8 @@ try {
 
 ### Pitfalls
 
-- Validators receive the raw value passed to `put` — they run before TTL wrapping and before any storage write. A thrown parse error leaves storage unchanged.
+- Parser schemas validate writes and persisted reads. Transforming codecs validate writes with `decode(encode(value))` and decode persisted values before they enter typed code.
+- IndexedDB codecs must preserve declared index field names and values in encoded objects.
 - The `migrate` callback on IndexedDB runs synchronously inside `onupgradeneeded`. Do not call `await` or open a second transaction inside it — IDB will throw. Errors thrown from `migrate` surface as `VaultMigrationError` on the first operation.
 - `onQuotaExceeded` returning `'ignore'` silently drops the write without throwing. The adapter continues operating normally. Returning `'throw'` (or not providing the hook) rethrows the original `VaultQuotaError`.
 
@@ -124,4 +136,4 @@ try {
 
 - [Reactive Tables](./reactive.md)
 - [Spell](/spell/)
-- [API Reference — Plugin Types](/vault/api.md#types)
+- [API Reference — Types](/vault/api.md#types)

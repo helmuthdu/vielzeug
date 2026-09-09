@@ -31,18 +31,23 @@ const router = createRouter({
   routes: {
     home: {
       path: '/',
-      component: HomePage,
     },
     error: {
       path: '/error',
-      component: ErrorPage,
     },
   },
   notFound: {
-    component: NotFoundPage,
+    data: () => ({ message: 'Page not found' }),
   },
 });
+
+const views = router.createViewRegistry(
+  { error: ErrorPage, home: HomePage },
+  { notFound: NotFoundPage },
+);
 ```
+
+The fallback view is explicit and does not depend on Wayfinder's internal synthetic match name.
 
 For per-route data errors that should render a degraded state instead of redirecting, use `onError` on the route definition:
 

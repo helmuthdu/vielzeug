@@ -231,7 +231,7 @@ describe('bandScale', () => {
   });
 });
 
-// ─── linearScale — reactive domain ────────────────────────────────────────────
+// ─── linearScale — explicit domain ────────────────────────────────────────────
 
 describe('linearScale — plain-value domain', () => {
   it('maps correctly with explicit plain-value domain', () => {
@@ -242,7 +242,7 @@ describe('linearScale — plain-value domain', () => {
   });
 });
 
-// ─── timeScale — reactive domain ──────────────────────────────────────────────
+// ─── timeScale — explicit domain ──────────────────────────────────────────────
 
 describe('timeScale — plain-value domain', () => {
   it('maps correctly with explicit plain-value domain', () => {

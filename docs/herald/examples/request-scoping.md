@@ -33,8 +33,8 @@ async function handleRequest(req: Request): Promise<Response> {
 
 ### Related
 
-- [Request Middleware (Rune)](@vielzeug/rune/examples/request-middleware)
+- [Request Middleware (Rune)](/rune/examples/request-middleware)
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
-- [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Observe listener failures](./custom-error-boundary.md)
+- [Own subscription lifetimes](../usage.md#own-subscription-lifetimes)

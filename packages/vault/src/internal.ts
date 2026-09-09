@@ -55,18 +55,21 @@ export function createObserverHub<S extends AnySchema>(
   getAll: <K extends keyof S & string>(table: K) => Promise<RecordOf<S, K>[]>,
 ) {
   const observers = new Map<string, Set<ObserverListener<unknown>>>();
+  const revisions = new Map<string, number>();
   let disposed = false;
 
   const notify = <K extends keyof S & string>(table: K): void => {
     if (disposed) return;
 
+    const revision = (revisions.get(table) ?? 0) + 1;
+    revisions.set(table, revision);
     const listeners = observers.get(table);
 
     if (!listeners || listeners.size === 0) return;
 
     void getAll(table)
       .then((records) => {
-        if (disposed) return;
+        if (disposed || revisions.get(table) !== revision) return;
 
         const current = observers.get(table);
 
@@ -103,6 +106,7 @@ export function createObserverHub<S extends AnySchema>(
     if (immediate) notify(table);
 
     const stop = (): void => {
+      signal?.removeEventListener('abort', stop);
       const current = observers.get(table);
 
       if (!current) return;
@@ -121,6 +125,7 @@ export function createObserverHub<S extends AnySchema>(
     dispose: () => {
       disposed = true;
       observers.clear();
+      revisions.clear();
     },
     notify,
     observe,

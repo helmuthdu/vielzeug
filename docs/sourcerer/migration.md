@@ -1,52 +1,113 @@
 ---
-title: Sourcerer Migration
+title: Sourcerer 3.0 Migration
 ---
 
-# Sourcerer Migration
+# Sourcerer 3.0 Migration
 
-## 2.2
+Sourcerer 3.0 narrows the package to reactive collection sources. It replaces package-defined query fields with consumer-owned params, standardizes source state and commands, and removes the query-cache subpath.
 
-Sourcerer 2.2 simplifies the infinite source contract and tightens `pendingQuery` semantics.
+## Replace snapshots with state
 
-### `InfinitePagination.isLoadingMore` removed
+Read `state.items` and `state.loading`. Async commands now return `Promise<void>` instead of returning a snapshot.
 
-The `isLoadingMore` field is gone. Derive append state from `snapshot.isFetching` with `pendingQuery` absent: `isFetching && !pendingQuery` means an append is in progress; `isFetching && pendingQuery` means a query replace is in progress.
+```ts
+// Before
+const snapshot = await source.load();
+console.log(snapshot.data, snapshot.isFetching);
 
-```diff
-- if (snapshot.pagination.isLoadingMore) { /* append loading */ }
-+ if (snapshot.isFetching && !snapshot.pendingQuery) { /* append loading */ }
+// After
+await source.reload();
+console.log(source.state.items, source.state.loading);
 ```
 
-### `InfiniteSourceConfig.load` context typed as `InfiniteLoadQuery`
+Subscriptions receive the same state object exposed by `source.state`.
 
-The load context for infinite sources no longer exposes phantom `filter` and `sort` fields from `PageQuery`. The context query is now `InfiniteLoadQuery` — `{ page, pageSize, search }`. If your loader referenced `query.filter` or `query.sort`, remove those reads; they were always `undefined`.
+## Replace query patches with params
 
-```diff
-  const source = createInfiniteSource({
-    load: async ({ query }) => {
--     const filter = query.filter;
-      const start = (query.page - 1) * query.pageSize;
-      return { data: items.slice(start, start + query.pageSize), total: items.length };
-    },
-  });
+Move search, filters, sort values, and other loader inputs into one application-owned value. `setParams()` replaces that value and resets pagination.
+
+```ts
+// Before
+const source = createPageSource<User, RoleFilter, UserSort>({
+  initialQuery: { filter: { role: 'admin' }, search: 'ada', sort: { field: 'name' } },
+  load: async ({ query, signal }) => loadUsers(query, signal),
+});
+await source.updateQuery({ search: 'grace' });
+
+// After
+type Params = { filter: { role: string }; search: string; sort: { field: string } };
+const source = createPageSource<User, Params>({
+  load: async ({ page, pageSize, params, signal }) => loadUsers({ page, pageSize, ...params }, signal),
+  params: { filter: { role: 'admin' }, search: 'ada', sort: { field: 'name' } },
+});
+await source.setParams({ ...source.state.params, search: 'grace' });
 ```
 
-### `pendingQuery` no longer set during infinite append fetches
+When `TParams` excludes `undefined`, `params` is required at construction. While replacement params load, committed items remain paired with `state.params`; the requested value appears in `state.pendingParams`.
 
-`pendingQuery` now consistently means "a different query is in flight" across all source types. `loadMore()` no longer sets it. If you rendered a "loading new results" indicator by checking `pendingQuery` on an infinite source, switch to `snapshot.isFetching`.
+## Flatten navigation commands
 
-Review the [Usage Guide](./usage.md#gotchas) for the full `pendingQuery` contract.
+Navigation methods now live directly on each source.
 
-## 2.0
+```ts
+// Before
+await source.page.goTo(2);
+await source.page.next();
 
-Sourcerer 2.0 replaces source APIs with atomic snapshots.
+// After
+await source.goTo(2);
+await source.next();
+```
 
-### Read one snapshot at a time
+Use `first()`, `goTo()`, `last()`, `next()`, and `previous()` on page sources. Cursor sources expose `next()` and `previous()`.
 
-Update consumers to derive UI and application state from `SourceSnapshot` values. Treat each snapshot as one atomic view of source state instead of reading and combining mutable source fields independently.
+## Rename configuration and result fields
 
-### Update source integrations
+```ts
+// Before
+const source = createInfiniteSource({
+  initialQuery: { pageSize: 20 },
+  load: async ({ query }) => ({ data: await loadPage(query.page), total: 100 }),
+});
 
-Migrate local, page, cursor, and infinite source integrations to their 2.0 source and query contracts. Recheck pagination, query patches, loading state, and disposal behavior.
+// After
+const source = createInfiniteSource({
+  load: async ({ page }) => ({ items: await loadPage(page), totalItems: 100 }),
+  pageSize: 20,
+});
+```
 
-Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current source, snapshot, query, and pagination contracts.
+| Before | After |
+| --- | --- |
+| `initialQuery.page` | Call `goTo(page)` after construction |
+| `initialQuery.pageSize` | `pageSize` |
+| `initialQuery.search/filter/sort` | `params` |
+| loader `query.page` | loader `page` |
+| loader `query.pageSize` | loader `pageSize` |
+| loader result `data` | loader result `items` |
+| loader result `total` | loader result `totalItems` |
+| `snapshot.pendingQuery` | `state.pendingParams` |
+| `setData()` | `setItems()` |
+
+Pagination no longer includes a `kind` discriminant. Each factory returns one concrete pagination type.
+
+## Handle superseded commands
+
+Superseded and disposed in-flight work now settles without committing. It no longer waits for a newer command and returns that newer command’s snapshot. Current loader failures still reject and update `state.error`.
+
+```ts
+const first = source.setParams({ search: 'a' });
+const second = source.setParams({ search: 'ada' });
+await Promise.all([first, second]);
+console.log(source.state.params); // { search: 'ada' }
+```
+
+## Remove the query-cache subpath
+
+`@vielzeug/sourcerer/query`, `createQuerySource()`, query handles, keyed invalidation, retries, optimistic mutations, and cache garbage collection are removed. No replacement lives in Sourcerer 3.0.
+
+Use a dedicated server-state cache when shared keyed caching is required. Keep simple uncached reads in Sourcerer loaders and keep HTTP behavior in Courier.
+
+## Remove generic base exports
+
+`Disposable`, `Source`, `SourceSnapshot`, `AnyPagination`, query types, and the old query patch/result types are no longer public. Import concrete source, state, context, result, and pagination types instead.

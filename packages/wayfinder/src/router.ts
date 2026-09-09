@@ -10,9 +10,7 @@ import {
 import { WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError } from './errors';
 import { type RegisteredBlocker, runLeaveBlockers } from './guards';
 import { createBrowserHistory } from './history';
-import { createHydrationManager } from './hydration';
 import {
-  buildPreloadKey,
   buildUrl,
   joinPaths,
   matchesPrefix,
@@ -22,7 +20,6 @@ import {
   readLocation,
   stripBase,
 } from './path';
-import { createPreloadManager } from './preload';
 import type {
   BeforeLeaveBlocker,
   BeforeLeaveOptions,
@@ -35,9 +32,7 @@ import type {
   NamedNavigationTarget,
   NavigateOptions,
   NavigationDestination,
-  NavigationStatus,
   PathParams,
-  QueryParams,
   RawNavigationTarget,
   ResolvedQueryParams,
   RouteBranchDef,
@@ -52,15 +47,15 @@ import type {
   RouterOptions,
   RouteState,
   RouteTable,
+  RouteViewMap,
+  RouteViewName,
+  RouteViewRegistry,
   Unsubscribe,
 } from './types';
 
-// ─── Module-level helpers (formerly in resolve.ts) ────────────────────────────
+// ─── Module-level helpers ────────────────────────────────────────────────────
 
-function getRouteByName<TMeta, TComponent>(
-  name: string,
-  routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>,
-): RouteRecord<TMeta, TComponent> {
+function getRouteByName(name: string, routesByName: ReadonlyMap<string, RouteRecord>): RouteRecord {
   const route = routesByName.get(name);
 
   if (route) return route;
@@ -72,9 +67,9 @@ function getRouteByName<TMeta, TComponent>(
   );
 }
 
-function resolveTarget<TMeta, TComponent>(
+function resolveTarget(
   target: { path: string } | { hash?: string; name: string; params?: RouteParams; query?: ResolvedQueryParams },
-  routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>,
+  routesByName: ReadonlyMap<string, RouteRecord>,
   base = '/',
 ): string {
   if ('path' in target) return target.path;
@@ -85,110 +80,102 @@ function resolveTarget<TMeta, TComponent>(
   return target.hash ? `${path}#${target.hash}` : path;
 }
 
-// ─── Internal helper ─────────────────────────────────────────────────────────
+// ─── Internal error carrier ──────────────────────────────────────────────────
+//
+// Carries error context alongside the original error without mutating the thrown
+// object. The carrier is unwrapped before reaching external callers so error
+// identity and `cause` chains are preserved.
 
-const ERROR_CONTEXT = Symbol('wayfinder.errorContext');
+const ROUTER_ERROR = Symbol('wayfinder.routerError');
 
-function attachErrorContext(error: unknown, context: RouterErrorContext): void {
-  if (error !== null && typeof error === 'object') {
-    (error as Record<symbol, RouterErrorContext>)[ERROR_CONTEXT] = context;
-  }
+type RouterErrorCarrier = {
+  [ROUTER_ERROR]: true;
+  readonly error: unknown;
+  readonly context: RouterErrorContext;
+};
+
+function carryError(error: unknown, context: RouterErrorContext): RouterErrorCarrier {
+  return { [ROUTER_ERROR]: true, context, error };
 }
 
-function getErrorContext(error: unknown): RouterErrorContext | undefined {
-  if (error !== null && typeof error === 'object') {
-    return (error as Record<symbol, RouterErrorContext | undefined>)[ERROR_CONTEXT];
-  }
+function isRouterErrorCarrier(value: unknown): value is RouterErrorCarrier {
+  return value !== null && typeof value === 'object' && ROUTER_ERROR in (value as Record<symbol, unknown>);
+}
 
-  return undefined;
+function unwrapCarrier(value: unknown): never {
+  if (isRouterErrorCarrier(value)) throw value.error;
+
+  throw value;
 }
 
 // ─── Internal types ───────────────────────────────────────────────────────────
 
-type NavigationDecision<TMeta, TComponent> =
+type NavigationDecision =
   | {
-      branch: RouteMatchBranch<TMeta, TComponent>;
+      branch: RouteMatchBranch;
       location: RouteLocation;
       params: RouteParams;
-      record: RouteRecord<TMeta, TComponent>;
+      record: RouteRecord;
       resolvedQuery: ResolvedQueryParams;
       type: 'matched';
     }
   | { location: RouteLocation; params: RouteParams; type: 'unmatched' }
   | { location: RouteLocation; params: RouteParams; redirectTo: string; type: 'redirect' };
 
-// ─── Streaming helper ─────────────────────────────────────────────────────────
-
-function isAsyncGenerator(value: unknown): value is AsyncGenerator<unknown, unknown> {
-  return (
-    value !== null &&
-    typeof value === 'object' &&
-    typeof (value as AsyncGenerator)[Symbol.asyncIterator] === 'function' &&
-    typeof (value as AsyncGenerator).next === 'function' &&
-    typeof (value as AsyncGenerator).return === 'function'
-  );
-}
-
 // ─── Router class ─────────────────────────────────────────────────────────────
 
-class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> {
+class Router<TRoutes extends RouteTable> {
   readonly #base: string;
   readonly #globalMiddleware: readonly Middleware[];
   readonly #globalCoerceSearch?: CoerceSearchFn;
   readonly #history: HistoryDriver;
-  readonly #records: readonly RouteRecord<TMeta, TComponent>[];
-  readonly #routesByName: ReadonlyMap<string, RouteRecord<TMeta, TComponent>>;
-  readonly #scroll?: RouterOptions<TRoutes, TMeta, TComponent>['scroll'];
+  readonly #records: readonly RouteRecord[];
+  readonly #routesByName: ReadonlyMap<string, RouteRecord>;
+  readonly #onError?: RouterOptions<TRoutes>['onError'];
+  readonly #scroll?: RouterOptions<TRoutes>['scroll'];
   readonly #useViewTransition: boolean;
-  readonly #onError?: RouterOptions<TRoutes, TMeta, TComponent>['onError'];
 
   // Mutable navigation state
   readonly #beforeLeaveBlockers = new Set<RegisteredBlocker>();
   readonly #navigation = createNavigationCoordinator();
-  #currentState: RouteState<TMeta, TComponent>;
+  #currentState: RouteState;
   #disposed = false;
   readonly #disposeController = new AbortController();
   #lastHref = '/';
-  readonly #listeners = new Set<(state: RouteState<TMeta, TComponent>) => void>();
+  readonly #listeners = new Set<(state: RouteState) => void>();
+  readonly #preloaded = new Map<string, unknown[]>();
+  readonly #preloads = new Map<string, Promise<RouteState | null>>();
   // Compiled notFound fallback record
-  readonly #notFoundRecord: RouteRecord<TMeta, TComponent> | null;
-
-  // Sub-managers
-  readonly #hydration: ReturnType<typeof createHydrationManager<TMeta, TComponent>>;
-  readonly #preload: ReturnType<typeof createPreloadManager>;
+  readonly #notFoundRecord: RouteRecord | null;
 
   readonly #unlistenHistory: () => void;
 
   /** Resolves when the constructor-triggered navigation has settled; rejects if it fails. */
   readonly ready: Promise<void>;
 
-  constructor(options: RouterOptions<TRoutes, TMeta, TComponent>) {
+  constructor(options: RouterOptions<TRoutes>) {
     const compiled = compileRoutes(options);
 
     this.#base = normalizePath(options.base ?? '/');
     this.#globalMiddleware = (options.middleware ?? []) as unknown as Middleware[];
     this.#globalCoerceSearch = options.coerceSearch;
     this.#history = options.history ?? createBrowserHistory();
-    this.#useViewTransition = options.viewTransition ?? false;
-    this.#scroll = options.scroll;
     this.#onError = options.onError;
-    this.#records = compiled.records as unknown as readonly RouteRecord<TMeta, TComponent>[];
-    this.#routesByName = compiled.routesByName as unknown as ReadonlyMap<string, RouteRecord<TMeta, TComponent>>;
-    this.#hydration = createHydrationManager<TMeta, TComponent>();
-    this.#preload = createPreloadManager();
-    this.#currentState = createRouteState<TMeta, TComponent>({
+    this.#scroll = options.scroll;
+    this.#useViewTransition = options.viewTransition ?? false;
+    this.#records = compiled.records as unknown as readonly RouteRecord[];
+    this.#routesByName = compiled.routesByName as unknown as ReadonlyMap<string, RouteRecord>;
+    this.#currentState = createRouteState({
       location: { hash: '', historyState: null, pathname: '/', query: {} },
-      matches: [] as RouteMatchBranch<TMeta, TComponent>,
+      matches: [] as RouteMatchBranch,
       status: 'idle',
     });
 
     // Build a synthetic RouteRecord for the notFound fallback.
     if (options.notFound) {
       const nf = options.notFound;
-      const leafDef: RouteBranchDef<TMeta, TComponent> = {
-        component: nf.component as TComponent | undefined,
+      const leafDef: RouteBranchDef = {
         dataFn: nf.data,
-        meta: nf.meta as TMeta | undefined,
         name: '__notFound__',
       };
 
@@ -211,7 +198,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
     const attempt = this.#navigation.begin();
 
-    this.ready = this.#handleRoute(
+    const navigationPromise = this.#handleRoute(
       attempt,
       readLocation(this.#base, this.#history),
       (location, replace) => {
@@ -227,10 +214,19 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       0,
       false,
     ).then(() => undefined);
-    this.#runInBackground(this.ready, { source: 'initial-navigation' });
+
+    // ready rejects with the original error (carrier unwrapped) for external consumers.
+    this.ready = navigationPromise.catch(unwrapCarrier);
+    // Attach a silent handler so an unawaited ready promise doesn't trigger
+    // an unhandled-rejection warning. External consumers can still await ready
+    // and receive the rejection — each .catch() subscriber fires independently.
+    this.ready.catch(() => {});
+    // #runInBackground receives the raw promise so it can extract carrier context for onError.
+    this.#runInBackground(navigationPromise, { source: 'initial-navigation' });
 
     // Router actions are intentionally bound once so they remain safe when destructured.
     this.beforeLeave = this.beforeLeave.bind(this);
+    this.createViewRegistry = this.createViewRegistry.bind(this);
     this.dispose = this.dispose.bind(this);
     this.getSnapshot = this.getSnapshot.bind(this);
     this.isActive = this.isActive.bind(this);
@@ -256,8 +252,23 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * );
    * ```
    */
-  getSnapshot(): RouteState<TMeta, TComponent> {
+  getSnapshot(): RouteState {
     return this.#currentState;
+  }
+
+  createViewRegistry<const TViews extends RouteViewMap<TRoutes>, TNotFound = never>(
+    views: TViews & Record<Exclude<keyof TViews, RouteViewName<TRoutes>>, never>,
+    options?: { notFound?: TNotFound },
+  ): RouteViewRegistry<TViews[keyof TViews] | TNotFound> {
+    return {
+      resolve: (state) => {
+        const name = state.matches.at(-1)?.name;
+
+        if (name === '__notFound__') return options?.notFound;
+
+        return name ? (views[name as keyof TViews] as TViews[keyof TViews]) : undefined;
+      },
+    };
   }
 
   // ─── Subscription ─────────────────────────────────────────────────────────
@@ -266,7 +277,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * Subscribe to state changes. The listener is called on each subsequent state change;
    * use `getSnapshot()` to read the current value immediately.
    */
-  subscribe(listener: (state: RouteState<TMeta, TComponent>) => void): Unsubscribe {
+  subscribe(listener: (state: RouteState) => void): Unsubscribe {
     this.#assertNotDisposed();
     this.#listeners.add(listener);
 
@@ -316,18 +327,17 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   }
 
   /** Match a pathname to a route branch without running middleware or data loaders. Returns null for redirects or no match. */
-  match(pathname: string): RouteMatchBranch<TMeta, TComponent> | null {
+  match(pathname: string): RouteMatchBranch | null {
     const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
     const { params, record } = matchRouteFor(normalizedPathname, this.#records);
 
     if (!record || record.redirect) return null;
 
-    const defs = this.#hydration.effectiveDefs(record);
     const branch = buildMatchBranch(
-      defs,
+      record.branchDefs,
       params,
       normalizedPathname,
-      defs.map(() => undefined),
+      record.branchDefs.map(() => undefined),
     );
 
     return branch.length ? branch : null;
@@ -335,16 +345,16 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
   /**
    * Load a URL into a route state including data loader results, without modifying
-   * router state or history. Follows declarative redirects and may resolve lazy modules.
+   * router state or history. Follows declarative redirects but does not cache results.
    * Middleware is not executed — use `navigate()` when middleware side effects are needed.
    */
-  async load(url: string, options?: { signal?: AbortSignal }): Promise<RouteState<TMeta, TComponent> | null> {
+  async load(url: string, options?: { signal?: AbortSignal }): Promise<RouteState | null> {
     const prepared = await this.#resolveUrl(url);
 
     if (prepared.type !== 'matched') return null;
 
     const { location, params, record, resolvedQuery } = prepared;
-    const defs = this.#hydration.effectiveDefs(record);
+    const defs = record.branchDefs;
     const hasData = defs.some((d) => d.dataFn != null);
     let dataResults: unknown[] = defs.map(() => undefined);
     let error: unknown;
@@ -356,19 +366,60 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
 
       try {
-        dataResults = await this.#loadDataDrain(defs, context, effectiveSignal);
+        dataResults = await this.#loadData(defs, context, effectiveSignal);
       } catch (e) {
         error = e;
         status = 'error';
       }
     }
 
-    return createRouteState<TMeta, TComponent>({
+    return createRouteState({
       error,
       location,
       matches: buildMatchBranch(defs, params, location.pathname, dataResults),
       status,
     });
+  }
+
+  async preload(target: NamedNavigationTarget<TRoutes>): Promise<RouteState | null> {
+    this.#assertNotDisposed();
+
+    const destination = this.#resolveDestination(resolveTarget(target, this.#routesByName, this.#base));
+    const existing = this.#preloads.get(destination);
+
+    if (existing) return existing;
+
+    const work = this.load(destination, { signal: this.#disposeController.signal })
+      .then((state) => {
+        if (this.#disposed) throw this.#disposeController.signal.reason;
+
+        if (state?.status === 'error') throw state.error;
+
+        if (state) {
+          const key = this.#hrefForLocation(state.location);
+
+          if (this.#preloaded.size >= 20) this.#preloaded.delete(this.#preloaded.keys().next().value!);
+
+          this.#preloaded.set(
+            key,
+            state.matches.map((match) => match.data),
+          );
+        }
+
+        return state;
+      })
+      .catch((error) => {
+        if (this.#onError) this.#reportError(error, { source: 'preload' });
+
+        throw error;
+      })
+      .finally(() => {
+        this.#preloads.delete(destination);
+      });
+
+    this.#preloads.set(destination, work);
+
+    return work;
   }
 
   /**
@@ -384,11 +435,11 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * @throws {WayfinderDisposedError} if the router is disposed while the promise is pending,
    *   or if called after the router has already been disposed.
    */
-  waitFor(name: RouteName<TRoutes>): Promise<RouteState<TMeta, TComponent>> {
+  waitFor(name: RouteName<TRoutes>): Promise<RouteState> {
     this.#assertNotDisposed();
 
     return new Promise((resolve, reject) => {
-      const matchesName = (state: RouteState<TMeta, TComponent>): boolean =>
+      const matchesName = (state: RouteState): boolean =>
         state.status === 'idle' && state.matches.some((m) => m.name === name);
 
       if (this.#currentState.status === 'error') {
@@ -422,48 +473,6 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         { once: true },
       );
     });
-  }
-
-  // ─── Preload ──────────────────────────────────────────────────────────────
-
-  /**
-   * Eagerly execute the data loaders for a named route without navigating.
-   * Results are cached and reused during the next navigation to the same route.
-   * Concurrent calls for the same route are deduplicated.
-   *
-   * Pass the same `query` you intend to navigate with to ensure the cached result
-   * matches the navigation's cache key. Without `query`, the preload key is the
-   * bare path — any navigation with a query string will produce a cache miss.
-   *
-   * @throws {WayfinderDisposedError} if the router has already been disposed.
-   */
-  async preload<Name extends RouteName<TRoutes>>(
-    name: Name,
-    params?: PathParams<RoutePathByName<TRoutes, Name>>,
-    query?: QueryParams,
-  ): Promise<void> {
-    this.#assertNotDisposed();
-
-    const route = getRouteByName(name, this.#routesByName);
-    const cacheKey = buildPreloadKey(this.#base, route.path, params as RouteParams, query);
-
-    const inflight = this.#preload.getInflight(cacheKey);
-
-    if (inflight) return inflight;
-
-    const work = this.#doPreload(cacheKey, this.#disposeController.signal, query).finally(() => {
-      this.#preload.untrack(cacheKey);
-    });
-
-    this.#preload.track(cacheKey, work);
-
-    try {
-      return await work;
-    } catch (error) {
-      if (this.#onError) this.#reportError(error, { source: 'preload' });
-
-      throw error;
-    }
   }
 
   // ─── Navigation guards ────────────────────────────────────────────────────
@@ -508,6 +517,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.#disposed = true;
     this.#beforeLeaveBlockers.clear();
     this.#listeners.clear();
+    this.#preloaded.clear();
+    this.#preloads.clear();
     this.#navigation.invalidate(new WayfinderDisposedError());
     this.#unlistenHistory();
     // Abort the disposal signal last — waitFor() listeners clean themselves up via this signal.
@@ -581,8 +592,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   }
 
   #runInBackground(promise: Promise<void>, context: RouterErrorContext): void {
-    void promise.catch((error) => {
-      this.#reportError(error, getErrorContext(error) ?? context);
+    void promise.catch((value) => {
+      if (isRouterErrorCarrier(value)) {
+        this.#reportError(value.error, value.context);
+      } else {
+        this.#reportError(value, context);
+      }
     });
   }
 
@@ -597,33 +612,10 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   // ─── Private: data loaders ────────────────────────────────────────────────
 
   /**
-   * R10: Drain an async generator to completion. Private class method replaces
-   * the module-level `drainGenerator` helper.
+   * Run all data loaders and return their results. Per-def `onError` boundaries are applied.
    */
-  async #drainGenerator(gen: AsyncGenerator<unknown, unknown>, signal: AbortSignal): Promise<unknown> {
-    let lastYield: unknown;
-
-    while (true) {
-      if (signal.aborted) {
-        await gen.return(undefined as unknown).catch(() => undefined);
-
-        return lastYield;
-      }
-
-      const { done, value } = await gen.next();
-
-      if (done) return value ?? lastYield;
-
-      lastYield = value;
-    }
-  }
-
-  /**
-   * Drain all data loaders to completion. Async generators are consumed entirely.
-   * Used in `load()` and `preload()`. Per-def `onError` boundaries are applied.
-   */
-  async #loadDataDrain(
-    defs: readonly RouteBranchDef<TMeta, TComponent>[],
+  async #loadData(
+    defs: readonly RouteBranchDef[],
     context: RouteContext<RouteParams, TRoutes>,
     signal: AbortSignal,
   ): Promise<unknown[]> {
@@ -632,10 +624,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         if (!def.dataFn) return undefined;
 
         const dataFn = def.dataFn as unknown as DataFn<RouteParams, TRoutes>;
-        const raw = dataFn({ ...context, signal } as DataContext<RouteParams, TRoutes>);
 
         try {
-          return isAsyncGenerator(raw) ? await this.#drainGenerator(raw, signal) : await (raw as Promise<unknown>);
+          return await dataFn({ ...context, signal } as DataContext<RouteParams, TRoutes>);
         } catch (err) {
           if (def.onError) return def.onError(err, { ...context, signal } as unknown as DataContext);
 
@@ -643,99 +634,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         }
       }),
     );
-  }
-
-  /**
-   * Run all data loaders in streaming mode. Generators yield partial states via `onPartial`.
-   * Non-generator loaders are awaited normally. Per-def `onError` boundaries are applied.
-   * Used during live navigation in `#runTerminal`.
-   */
-  async #loadDataStream(
-    defs: readonly RouteBranchDef<TMeta, TComponent>[],
-    context: RouteContext<RouteParams, TRoutes>,
-    signal: AbortSignal,
-    isCurrent: () => boolean,
-    location: RouteLocation,
-    params: RouteParams,
-  ): Promise<unknown[]> {
-    const rawResults: Array<AsyncGenerator<unknown, unknown> | unknown> = defs.map((def) => {
-      if (!def.dataFn) return undefined;
-
-      const dataFn = def.dataFn as unknown as DataFn<RouteParams, TRoutes>;
-
-      return dataFn({ ...context, signal } as DataContext<RouteParams, TRoutes>);
-    });
-
-    const streamingIndices: number[] = [];
-
-    const settled: unknown[] = await Promise.all(
-      rawResults.map(async (raw, i) => {
-        if (isAsyncGenerator(raw)) {
-          streamingIndices.push(i);
-
-          return undefined;
-        }
-
-        if (raw === undefined) return undefined;
-
-        try {
-          return await (raw as Promise<unknown>);
-        } catch (err) {
-          const def = defs[i]!;
-
-          if (def.onError) return def.onError(err, { ...context, signal } as unknown as DataContext);
-
-          throw err;
-        }
-      }),
-    );
-
-    if (streamingIndices.length === 0) return settled;
-
-    const streamingData: unknown[] = [...settled];
-
-    const onPartial = (value: unknown, idx: number): void => {
-      if (!isCurrent()) return;
-
-      streamingData[idx] = value;
-
-      const nodeStatuses: NavigationStatus[] = defs.map((_, i) =>
-        streamingIndices.includes(i) ? 'streaming' : 'idle',
-      );
-
-      this.#currentState = createRouteState<TMeta, TComponent>({
-        location,
-        matches: buildMatchBranch(defs, params, location.pathname, streamingData, nodeStatuses),
-        status: 'streaming',
-      });
-      this.#notifyListeners();
-    };
-
-    await Promise.all(
-      streamingIndices.map(async (idx) => {
-        const gen = rawResults[idx] as AsyncGenerator<unknown, unknown>;
-
-        try {
-          streamingData[idx] = await this.#runStreamingLoader(gen, idx, signal, isCurrent, onPartial);
-        } catch (err) {
-          const def = defs[idx]!;
-
-          if (def.onError) {
-            streamingData[idx] = await def.onError(err, { ...context, signal } as unknown as DataContext);
-          } else {
-            throw err;
-          }
-        }
-      }),
-    );
-
-    return streamingData;
   }
 
   // ─── Private: URL resolution ──────────────────────────────────────────────
 
   /** Parse a URL, call #prepareRoute, and follow declarative redirects up to 5 hops. */
-  async #resolveUrl(url: string): Promise<NavigationDecision<TMeta, TComponent>> {
+  async #resolveUrl(url: string): Promise<NavigationDecision> {
     let destination = url;
 
     for (let i = 0; i < 5; i += 1) {
@@ -757,34 +661,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     throw new WayfinderRedirectLoopError();
   }
 
-  // ─── Private: preload ─────────────────────────────────────────────────────
-
-  async #doPreload(startUrl: string, signal: AbortSignal, query?: QueryParams): Promise<void> {
-    const prepared = await this.#resolveUrl(startUrl);
-
-    if (prepared.type !== 'matched') return;
-
-    const { location, params, record, resolvedQuery } = prepared;
-    const defs = this.#hydration.effectiveDefs(record);
-    const hasData = defs.some((d) => d.dataFn != null);
-
-    if (!hasData) return;
-
-    const branch = buildMatchBranch(
-      defs,
-      params,
-      location.pathname,
-      defs.map(() => undefined),
-    );
-    const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
-    const results = await this.#loadDataDrain(defs, context, signal);
-
-    this.#preload.set(buildPreloadKey(this.#base, record.path, params, query ?? location.query), results);
-  }
-
   // ─── Private: route preparation ───────────────────────────────────────────
 
-  async #prepareRoute(location: RouteLocation): Promise<NavigationDecision<TMeta, TComponent>> {
+  async #prepareRoute(location: RouteLocation): Promise<NavigationDecision> {
     const { params, record } = matchRouteFor(location.pathname, this.#records);
 
     if (!record) {
@@ -813,16 +692,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       }
     }
 
-    await this.#hydration.hydrate(record);
-
-    const defs = this.#hydration.effectiveDefs(record);
-
     return {
       branch: buildMatchBranch(
-        defs,
+        record.branchDefs,
         params,
         location.pathname,
-        defs.map(() => undefined),
+        record.branchDefs.map(() => undefined),
       ),
       location,
       params,
@@ -832,90 +707,58 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     };
   }
 
-  // ─── Private: streaming data loader ──────────────────────────────────────
-
-  /**
-   * Drain an AsyncGenerator data loader, emitting `status: 'streaming'` for every yielded
-   * partial value and returning the generator's return value as the final settled data.
-   * Aborts cleanly when the signal fires or the navigation is superseded.
-   */
-  async #runStreamingLoader(
-    generator: AsyncGenerator<unknown, unknown>,
-    defIndex: number,
-    signal: AbortSignal,
-    isCurrent: () => boolean,
-    onPartial: (data: unknown, defIndex: number) => void,
-  ): Promise<unknown> {
-    let lastValue: unknown;
-
-    try {
-      while (true) {
-        if (signal.aborted || !isCurrent()) {
-          await generator.return(undefined as unknown);
-
-          return lastValue;
-        }
-
-        const { done, value } = await generator.next();
-
-        if (done) return value ?? lastValue;
-
-        lastValue = value;
-        onPartial(value, defIndex);
-      }
-    } catch (err) {
-      await generator.return(undefined as unknown).catch(() => undefined);
-      throw err;
-    }
-  }
-
   // ─── Private: terminal (data only) ────────────────────────────────────────
 
   async #runTerminal(
-    record: RouteRecord<TMeta, TComponent>,
+    record: RouteRecord,
     context: RouteContext<RouteParams, TRoutes>,
     location: RouteLocation,
     params: RouteParams,
     signal: AbortSignal,
     isCurrent: () => boolean,
+    onDataError?: (error: unknown) => void,
   ): Promise<void> {
     if (!isCurrent()) return;
 
-    const defs = this.#hydration.effectiveDefs(record);
+    const defs = record.branchDefs;
     const hasData = defs.some((d) => d.dataFn != null);
     let dataResults: unknown[] = defs.map(() => undefined);
 
     if (hasData) {
-      const preloadKey = buildPreloadKey(this.#base, record.path, params, location.query);
-      const cached = this.#preload.consume(preloadKey);
+      const preloadKey = this.#hrefForLocation(location);
+      const preloading = this.#preloads.get(preloadKey);
+
+      if (preloading) {
+        await preloading.catch(() => undefined);
+
+        if (!isCurrent()) return;
+      }
+
+      const cached = this.#preloaded.get(preloadKey);
 
       if (cached) {
+        this.#preloaded.delete(preloadKey);
         dataResults = cached;
       } else {
-        // Emit per-node loading state while data is in-flight.
-        const loadingStatuses: NavigationStatus[] = defs.map((d) => (d.dataFn ? 'loading' : 'idle'));
-
-        this.#currentState = createRouteState<TMeta, TComponent>({
+        this.#currentState = createRouteState({
           location,
-          matches: buildMatchBranch(defs, params, location.pathname, dataResults, loadingStatuses),
+          matches: buildMatchBranch(defs, params, location.pathname, dataResults),
           status: 'loading',
         });
         this.#notifyListeners();
 
         try {
-          dataResults = await this.#loadDataStream(defs, context, signal, isCurrent, location, params);
+          dataResults = await this.#loadData(defs, context, signal);
         } catch (error) {
           if (!isCurrent()) return;
 
-          this.#currentState = createRouteState<TMeta, TComponent>({
+          this.#currentState = createRouteState({
             error,
             location,
             matches: buildMatchBranch(defs, params, location.pathname, dataResults),
             status: 'error',
           });
-          // Attach enriched context so the eventual reporter uses it.
-          attachErrorContext(error, { routeName: record.leaf.name, source: 'data-loader' });
-          // Do not call #notifyListeners here — the finally block in #handleRoute does it once.
+          onDataError?.(error);
           throw error;
         }
       }
@@ -923,33 +766,11 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
     if (!isCurrent()) return;
 
-    this.#currentState = createRouteState<TMeta, TComponent>({
+    this.#currentState = createRouteState({
       location,
       matches: buildMatchBranch(defs, params, location.pathname, dataResults),
       status: 'idle',
     });
-  }
-
-  // ─── Private: view transitions ────────────────────────────────────────────
-
-  async #runWithTransition(run: () => Promise<void>, useTransition?: boolean): Promise<void> {
-    const shouldUseTransition = useTransition ?? this.#useViewTransition;
-
-    if (shouldUseTransition && typeof document !== 'undefined') {
-      type ViewTransitionDocument = Document & {
-        startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
-      };
-
-      const doc = document as ViewTransitionDocument;
-
-      if (doc.startViewTransition) {
-        await doc.startViewTransition(run).finished;
-
-        return;
-      }
-    }
-
-    await run();
   }
 
   // ─── Private: main navigation orchestrator ────────────────────────────────
@@ -966,7 +787,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     depth = 0,
     replace = false,
   ): Promise<boolean> {
-    const prevState = this.#currentState;
+    const previousState = this.#currentState;
     const isCurrent = (): boolean => attempt.isCurrent() && !this.#disposed;
     const prepared = await this.#prepareRoute(currentLocation);
 
@@ -991,6 +812,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         const nfDefs = [this.#notFoundRecord.leaf];
         const nfBranch = buildMatchBranch(nfDefs, {}, currentLocation.pathname, [undefined]);
         let committed = false;
+        let dataError: unknown;
+        let hasDataError = false;
         let terminalRan = false;
 
         // Apply global coerceSearch to the unmatched location so notFound handlers
@@ -1027,17 +850,38 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
               if (!isCurrent()) return;
 
-              await this.#runTerminal(this.#notFoundRecord!, context, currentLocation, {}, attempt.signal, isCurrent);
+              await this.#runTerminal(
+                this.#notFoundRecord!,
+                context,
+                currentLocation,
+                {},
+                attempt.signal,
+                isCurrent,
+                (error) => {
+                  dataError = error;
+                  hasDataError = true;
+                },
+              );
             },
+            (error) =>
+              isRouterErrorCarrier(error) || (hasDataError && error === dataError)
+                ? error
+                : carryError(error, { routeName: '__notFound__', source: 'middleware' }),
           );
         };
 
         try {
           await this.#runWithTransition(run, useTransition);
+        } catch (error) {
+          if (hasDataError && error === dataError) {
+            throw carryError(error, { routeName: '__notFound__', source: 'data-loader' });
+          }
+
+          throw error;
         } finally {
           if (isCurrent() && committed) {
             this.#notifyListeners();
-            this.#applyScroll(this.#currentState, prevState);
+            this.#applyScroll(this.#currentState, previousState);
           }
         }
 
@@ -1050,19 +894,21 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
       if (!isCurrent()) return false;
 
-      this.#currentState = createRouteState<TMeta, TComponent>({
+      this.#currentState = createRouteState({
         location: prepared.location,
-        matches: [] as RouteMatchBranch<TMeta, TComponent>,
+        matches: [] as RouteMatchBranch,
         status: 'idle',
       });
       this.#notifyListeners();
-      this.#applyScroll(this.#currentState, prevState);
+      this.#applyScroll(this.#currentState, previousState);
 
       return true;
     }
 
     const { branch, location, params, record, resolvedQuery } = prepared;
     let committed = false;
+    let dataError: unknown;
+    let hasDataError = false;
     let terminalRan = false;
 
     const run = async (): Promise<void> => {
@@ -1083,26 +929,55 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
           if (!isCurrent()) return;
 
-          await this.#runTerminal(record, context, location, params, attempt.signal, isCurrent);
+          await this.#runTerminal(record, context, location, params, attempt.signal, isCurrent, (error) => {
+            dataError = error;
+            hasDataError = true;
+          });
         },
+        (error) =>
+          isRouterErrorCarrier(error) || (hasDataError && error === dataError)
+            ? error
+            : carryError(error, { routeName: record.leaf.name, source: 'middleware' }),
       );
     };
 
     try {
       await this.#runWithTransition(run, useTransition);
+    } catch (error) {
+      if (hasDataError && error === dataError) {
+        throw carryError(error, { routeName: record.leaf.name, source: 'data-loader' });
+      }
+
+      throw error;
     } finally {
       if (isCurrent() && committed) {
         this.#notifyListeners();
-        this.#applyScroll(this.#currentState, prevState);
+        this.#applyScroll(this.#currentState, previousState);
       }
     }
 
     return terminalRan && committed;
   }
 
-  // ─── Private: scroll ─────────────────────────────────────────────────────
+  async #runWithTransition(run: () => Promise<void>, useTransition?: boolean): Promise<void> {
+    if ((useTransition ?? this.#useViewTransition) && typeof document !== 'undefined') {
+      const startViewTransition = (
+        document as Document & {
+          startViewTransition?: (callback: () => void | Promise<void>) => { finished: Promise<void> };
+        }
+      ).startViewTransition;
 
-  #applyScroll(to: RouteState<TMeta, TComponent>, from: RouteState<TMeta, TComponent>): void {
+      if (startViewTransition) {
+        await startViewTransition.call(document, run).finished;
+
+        return;
+      }
+    }
+
+    await run();
+  }
+
+  #applyScroll(to: RouteState, from: RouteState): void {
     if (!this.#scroll || typeof window === 'undefined') return;
 
     const decision = this.#scroll(to, from);
@@ -1186,23 +1061,27 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
     if (!attempt.isCurrent() || !allowed) return;
 
-    await this.#handleRoute(
-      attempt,
-      this.#locationFromPath(destination, options.state),
-      (location, replace) => {
-        if (!attempt.isCurrent()) return;
+    try {
+      await this.#handleRoute(
+        attempt,
+        this.#locationFromPath(destination, options.state),
+        (location, replace) => {
+          if (!attempt.isCurrent()) return;
 
-        const href = this.#hrefForLocation(location);
+          const href = this.#hrefForLocation(location);
 
-        if (replace) this.#history.replace(href, location.historyState);
-        else this.#history.push(href, location.historyState);
+          if (replace) this.#history.replace(href, location.historyState);
+          else this.#history.push(href, location.historyState);
 
-        this.#lastHref = href;
-      },
-      options.viewTransition,
-      0,
-      options.replace ?? false,
-    );
+          this.#lastHref = href;
+        },
+        options.viewTransition,
+        0,
+        options.replace ?? false,
+      );
+    } catch (value) {
+      throw isRouterErrorCarrier(value) ? value.error : value;
+    }
   }
 }
 
@@ -1219,9 +1098,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
  *   },
  * });
  */
-export function createRouter<const TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown>(
-  options: RouterOptions<TRoutes, TMeta, TComponent>,
-): Router<TRoutes, TMeta, TComponent> {
+export function createRouter<const TRoutes extends RouteTable>(options: RouterOptions<TRoutes>): Router<TRoutes> {
   return new Router(options);
 }
 

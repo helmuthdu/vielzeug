@@ -42,22 +42,22 @@ A basic reorderable list with a visible drag handle and placeholder styling:
 ```
 
 ```ts
-import { createSortable } from '@vielzeug/dnd';
+import { createSortable } from '@vielzeug/dnd/sortable';
 
 using sortable = createSortable({
   element: document.getElementById('list')!,
   getKey: (el) => el.dataset.sortId!,
   handle: '.handle',
-  onReorder: ({ ids }) => {
-    console.log('New order:', ids); // ['b', 'a', 'c']
+  onReorder: ({ after }) => {
+    console.log('New order:', after); // ['b', 'a', 'c']
   },
 });
 ```
 
 ### Pitfalls
 
-- Dnd applies `touch-action: none` to managed items or handles. It restores the previous inline value on disposal.
-- Do not call `sortable.sync()` while a drag is in progress. If your list re-renders, wait for `onDragEnd` before mutating the DOM and syncing.
+- Dnd applies `touch-action: none` only when the sortable scope enables touch input. It restores the previous inline value on disposal.
+- Do not call `sortable.refresh()` while a drag is in progress. If your list re-renders, wait for `onDragEnd` before mutating the DOM and refreshing.
 - `onReorder` fires only when the order actually changes. Do not assume it fires on every drop.
 
 ### Related

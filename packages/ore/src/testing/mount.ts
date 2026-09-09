@@ -237,47 +237,6 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 }
 
 /**
- * Register and mount a component definition in a single call.
- *
- * Combines `define(tag, definition)` + `mount(tag, options)` — the standard
- * pattern for testing full custom-element lifecycle (props, reconnect, etc.).
- *
- * @example
- * const { query } = await mountComponent('my-counter', {
- *   props: { count: prop.number(0) },
- *   setup: (props) => html`<div>${props.count}</div>`,
- * });
- */
-export async function mountComponent<Props extends Record<string, unknown>, T extends HTMLElement = HTMLElement>(
-  tag: string,
-  definition: ComponentDefinition<Props>,
-  options?: MountOptions,
-): Promise<Fixture<T>> {
-  define(tag, definition);
-
-  return mount<T>(tag, options);
-}
-
-/**
- * Register a stub custom element (no-op if already defined).
- *
- * @example
- * mock('child-button', '<slot></slot>');
- */
-export function mock(tagName: string, template = ''): void {
-  if (!customElements.get(tagName)) {
-    customElements.define(
-      tagName,
-      class extends HTMLElement {
-        connectedCallback() {
-          this.innerHTML = template;
-        }
-      },
-    );
-  }
-}
-
-/**
  * Remove all elements mounted via `mount()`.
  * Call in `afterEach` to keep tests isolated.
  *

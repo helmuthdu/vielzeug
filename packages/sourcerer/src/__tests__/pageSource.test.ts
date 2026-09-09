@@ -1,147 +1,155 @@
 import { createPageSource } from '../pageSource';
 
 describe('createPageSource', () => {
-  it('loads numbered pages through atomic snapshots', async () => {
-    const load = vi.fn(async ({ query }: { query: { page: number; pageSize: number; search: string } }) => ({
-      data: [`${query.search}:${query.page}`],
-      total: 5,
-    }));
-    const source = createPageSource({ autoStart: false, initialQuery: { pageSize: 2 }, load });
+  it('is inert until a load command runs', async () => {
+    const load = vi.fn(async () => ({ items: ['one'], totalItems: 1 }));
+    const source = createPageSource({ load });
 
-    await source.setQuery({ search: 'users' });
-    await source.page.next();
+    expect(load).not.toHaveBeenCalled();
+    expect(source.state).toMatchObject({ items: [], loading: false, params: undefined });
+
+    await source.first();
+    expect(load).toHaveBeenCalledOnce();
+  });
+
+  it('loads pages with consumer-owned params', async () => {
+    const load = vi.fn(async ({ page, params }: { page: number; params: { search: string } }) => ({
+      items: [`${params.search}:${page}`],
+      totalItems: 5,
+    }));
+    const source = createPageSource<string, { search: string }>({ load, pageSize: 2, params: { search: '' } });
+
+    await source.reload();
+    await source.setParams({ search: 'users' });
+    await source.next();
 
     expect(load).toHaveBeenLastCalledWith({
-      query: { page: 2, pageSize: 2, search: 'users' },
+      page: 2,
+      pageSize: 2,
+      params: { search: 'users' },
       signal: expect.any(AbortSignal),
     });
-    expect(source.snapshot).toMatchObject({
-      data: ['users:2'],
-      isFetching: false,
-      pagination: { count: 3, hasPrevious: true, index: 2, kind: 'page', total: 5 },
+    expect(source.state).toMatchObject({
+      items: ['users:2'],
+      loading: false,
+      pagination: { hasPrevious: true, page: 2, pageCount: 3, totalItems: 5 },
+      params: { search: 'users' },
     });
   });
 
-  it('preserves successful data and rejects current request failures', async () => {
-    const load = vi
-      .fn()
-      .mockResolvedValueOnce({ data: ['cached'], total: 1 })
-      .mockRejectedValueOnce(new Error('network down'));
-    const source = createPageSource({ autoStart: false, load });
-
+  it('retains committed state and exposes pending params during replacement', async () => {
+    let resolve!: (result: { items: string[]; totalItems: number }) => void;
+    const source = createPageSource<string, string>({
+      load: ({ params }) =>
+        params
+          ? new Promise<{ items: string[]; totalItems: number }>((finish) => (resolve = finish))
+          : Promise.resolve({ items: ['loaded'], totalItems: 1 }),
+      params: '',
+    });
     await source.reload();
-    await expect(source.reload()).rejects.toThrow('network down');
 
-    expect(source.snapshot).toMatchObject({
-      data: ['cached'],
-      error: expect.objectContaining({ message: 'network down' }),
-      isFetching: false,
+    const pending = source.setParams('next');
+
+    expect(source.state).toMatchObject({
+      items: ['loaded'],
+      loading: true,
+      params: '',
+      pendingParams: 'next',
     });
-  });
-
-  it('retains loaded state and exposes pending query during newer work', async () => {
-    let resolve!: (result: { data: string[]; total: number }) => void;
-    const source = createPageSource({
-      autoStart: false,
-      initialQuery: { pageSize: 1 },
-      load: ({ query }) =>
-        query.search
-          ? new Promise<{ data: string[]; total: number }>((finish) => {
-              resolve = finish;
-            })
-          : Promise.resolve({ data: ['loaded'], total: 3 }),
-    });
-
-    await source.page.go(2);
-
-    const pending = source.setQuery({ search: 'next' });
-
-    expect(source.snapshot).toMatchObject({
-      data: ['loaded'],
-      isFetching: true,
-      pagination: { index: 2, kind: 'page' },
-      pendingQuery: { page: 1, pageSize: 1, search: 'next' },
-      query: { page: 2, pageSize: 1, search: '' },
-    });
-
-    resolve({ data: ['next'], total: 1 });
+    resolve({ items: ['next'], totalItems: 1 });
     await pending;
 
-    expect(source.snapshot).toMatchObject({
-      data: ['next'],
-      query: { page: 1, search: 'next' },
-    });
-    expect(source.snapshot.pendingQuery).toBeUndefined();
+    expect(source.state).toMatchObject({ items: ['next'], loading: false, params: 'next' });
+    expect(source.state.pendingParams).toBeUndefined();
   });
 
-  it('settles superseded commands without applying stale results', async () => {
-    let resolveFirst!: (result: { data: string[]; total: number }) => void;
-    const load = vi.fn(({ query }: { query: { search: string } }) => {
-      if (query.search === 'first') {
-        return new Promise<{ data: string[]; total: number }>((resolve) => {
-          resolveFirst = resolve;
-        });
-      }
-
-      return Promise.resolve({ data: ['second'], total: 1 });
+  it('settles superseded work without committing stale results', async () => {
+    const pending = new Map<string, (result: { items: string[]; totalItems: number }) => void>();
+    const source = createPageSource<string, string>({
+      load: ({ params }) => new Promise((resolve) => pending.set(params, resolve)),
+      params: 'initial',
     });
-    const source = createPageSource({ autoStart: false, load });
 
-    const first = source.setQuery({ search: 'first' });
+    const first = source.setParams('first');
+    const second = source.setParams('second');
+    await first;
+    pending.get('first')?.({ items: ['stale'], totalItems: 1 });
+    pending.get('second')?.({ items: ['current'], totalItems: 1 });
+    await second;
 
-    await source.setQuery({ search: 'second' });
-    resolveFirst({ data: ['first'], total: 1 });
-
-    await expect(first).resolves.toBeUndefined();
-    expect(source.snapshot.data).toEqual(['second']);
+    expect(source.state.items).toEqual(['current']);
+    expect(source.state.params).toBe('second');
   });
 
-  it('does not fetch for normalized no-op navigation', async () => {
-    const load = vi.fn(async () => ({ data: ['one'], total: 1 }));
-    const source = createPageSource({ autoStart: false, load });
+  it('preserves committed items when the current request fails', async () => {
+    const load = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['cached'], totalItems: 1 })
+      .mockRejectedValueOnce('offline');
+    const source = createPageSource({ load });
+    await source.reload();
+
+    await expect(source.reload()).rejects.toThrow('offline');
+
+    expect(source.state.items).toEqual(['cached']);
+    expect(source.state.error).toMatchObject({ cause: 'offline', message: 'offline' });
+    expect(source.state.loading).toBe(false);
+  });
+
+  it('supports direct page navigation and clamps known bounds', async () => {
+    const load = vi.fn(async ({ page }: { page: number }) => ({ items: [page], totalItems: 5 }));
+    const source = createPageSource({ load, pageSize: 2 });
+
+    await source.goTo(3);
+    await source.next();
+    expect(load).toHaveBeenCalledOnce();
+    await source.previous();
+    await source.first();
+    await source.last();
+
+    expect(source.state.pagination.page).toBe(3);
+  });
+
+  it('resets to page one when page size changes', async () => {
+    const source = createPageSource({
+      load: async ({ page }) => ({ items: [page], totalItems: 10 }),
+      pageSize: 2,
+    });
+    await source.goTo(3);
+
+    await source.setPageSize(5);
+
+    expect(source.state.pagination).toMatchObject({ page: 1, pageCount: 2, pageSize: 5 });
+  });
+
+  it('copies loader items before publishing state', async () => {
+    const items = ['one'];
+    const source = createPageSource({ load: async () => ({ items, totalItems: 1 }) });
 
     await source.reload();
-    await source.page.go(99);
+    items.push('two');
 
-    expect(load).toHaveBeenCalledTimes(1);
+    expect(source.state.items).toEqual(['one']);
   });
 
-  it('records and reports auto-start failures', async () => {
-    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const source = createPageSource({ load: async () => Promise.reject(new Error('unavailable')) });
-
-    await vi.waitFor(() => expect(source.snapshot.error?.message).toBe('unavailable'));
-
-    expect(warning).toHaveBeenCalledWith('[@vielzeug/sourcerer] Initial load failed. Inspect source.snapshot.error.');
-    warning.mockRestore();
-  });
-
-  it('settles a disposed request without surfacing its loader rejection', async () => {
-    let reject!: (reason: unknown) => void;
-    const source = createPageSource({
-      autoStart: false,
-      load: () =>
-        new Promise((_, rejectLoad: (reason: unknown) => void) => {
-          reject = rejectLoad;
-        }),
-    });
-
+  it('settles active work on disposal and rejects later commands', async () => {
+    const source = createPageSource({ load: () => new Promise(() => undefined) });
     const pending = source.reload();
 
     source.dispose();
-    reject(new Error('aborted transport'));
 
     await expect(pending).resolves.toBeUndefined();
+    await expect(source.reload()).rejects.toThrow('disposed');
+    await expect(source.next()).rejects.toThrow('disposed');
   });
 
-  it('preserves non-Error rejection cause on snapshot.error', async () => {
-    const source = createPageSource({
-      autoStart: false,
-      load: async () => Promise.reject('network down'),
-    });
+  it('rejects invalid pagination and loader totals', async () => {
+    expect(() => createPageSource({ load: async () => ({ items: [], totalItems: 0 }), pageSize: 0 })).toThrow(
+      'pageSize must be a positive integer',
+    );
+    const source = createPageSource({ load: async () => ({ items: [], totalItems: -1 }) });
 
-    await expect(source.reload()).rejects.toThrow('network down');
-    expect(source.snapshot.error?.message).toBe('network down');
-    expect(source.snapshot.error?.cause).toBe('network down');
+    await expect(source.reload()).rejects.toThrow('totalItems must be a non-negative integer');
+    expect(source.state.error?.message).toBe('totalItems must be a non-negative integer');
   });
 });

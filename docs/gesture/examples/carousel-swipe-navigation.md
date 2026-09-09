@@ -11,7 +11,7 @@ You need horizontal pan navigation in a carousel without coupling input recognit
 
 ### Solution
 
-Attach `createPanGesture` to the carousel track. Use `onMove` for the live transform and `onEnd` for the slide change or snap-back. `axis: 'x'` ensures vertical pointer movement ends the pending interaction without invoking callbacks. The threshold lives in your `onEnd` logic, not in the gesture handle.
+Attach `createPanGesture` to the carousel track. Use `onMove` for the live transform and `onEnd` for the slide change or snap-back. `axis: 'x'` ensures vertical pointer movement ends the pending interaction without invoking callbacks. The completion threshold lives in `onEnd`; `activationDistance` only controls direction-recognition slop.
 
 ```html
 <div class="carousel" aria-roledescription="carousel" aria-label="Featured images">
@@ -100,7 +100,7 @@ document.getElementById('next')!.addEventListener('click', () => goTo(current + 
 - **Set `touch-action: pan-y` on the surface.** Without it, the browser may interpret the horizontal pointer movement as a native swipe and steal the gesture. `pan-y` lets vertical scrolls pass through while you own horizontal pans.
 - **Toggle a `panning` class to kill CSS transitions during `onMove`.** A 300ms ease transform fights the per-frame `translateX` updates from `onMove` and produces visible lag.
 - **Handle `reason: 'cancel'` in `onEnd`.** A cancel path (disabled flip mid-pan, `pointercancel`, `lostpointercapture`) emits `onEnd` with `reason: 'cancel'`; treat it as a reset, never a commit.
-- **Own the threshold in `onEnd`.** Gesture reports distance and reason but does not decide what counts as a swipe. A fixed 48px threshold feels different on a 1200px desktop carousel vs a 360px phone. 15–20% of slide width is a sane default.
+- **Own the completion threshold in `onEnd`.** Gesture reports distance and reason but does not decide what counts as a swipe. A fixed 48px threshold feels different on a 1200px desktop carousel vs a 360px phone. 15–20% of slide width is a sane default.
 - **Keep `onMove` cheap.** It fires per animation frame during the pan — avoid layout reads (`getBoundingClientRect`) inside it; cache `slideWidth()` outside or read it on pointerdown.
 
 ### Related

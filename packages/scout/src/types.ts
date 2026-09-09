@@ -1,5 +1,3 @@
-import type { Readable, Signal } from '@vielzeug/ripple';
-
 /**
  * A single field to include in the index.
  * Pass a string key for default options, or an object to set weight and stringify.
@@ -27,8 +25,7 @@ export type FieldDef<T> =
     };
 
 /**
- * Shared search-tuning knobs used by `createIndex()`, `search()`, `createSearch()`,
- * and `createReactiveSearch()`.
+ * Shared search-tuning knobs used by `createIndex()` and `search()`.
  */
 export type SearchConstraints = {
   /** Finite non-negative integer maximum results returned. Default: `50`. Invalid values throw `ScoutConfigurationError`. */
@@ -53,14 +50,30 @@ export type ScoutIndexOptions<T> = SearchConstraints & {
   fields: ReadonlyArray<FieldDef<T>>;
 };
 
-/** Options accepted by `createSearch()` and `createReactiveSearch()`. */
-export type CreateSearchOptions = SearchConstraints & {
-  /**
-   * Finite non-negative integer milliseconds to wait after a `query` change before updating `results`.
-   * Default: `200`. Pass `0` for immediate synchronous updates (no `isSearching` flash).
-   * Invalid values throw `ScoutConfigurationError`.
-   */
-  debounce?: number;
+export type CreateSearchOptions = SearchConstraints & { debounce?: number };
+
+export type SearchSnapshot<T> = Readonly<{
+  isSearching: boolean;
+  query: string;
+  results: ReadonlyArray<SearchResult<T>>;
+}>;
+
+export type SearchSubscribeOptions = { readonly signal?: AbortSignal };
+
+export type ScoutEvent<T> =
+  | { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' }
+  | { readonly type: 'dispose' };
+
+export type SearchState<T> = {
+  [Symbol.dispose](): void;
+  clear(): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  getSnapshot(): SearchSnapshot<T>;
+  setQuery(query: string): void;
+  subscribe(listener: () => void, options?: SearchSubscribeOptions): () => void;
+  tap(handler: (event: ScoutEvent<T>) => void, options?: SearchSubscribeOptions): () => void;
 };
 
 /**
@@ -105,39 +118,4 @@ export type HighlightPart = {
   highlighted: boolean;
   /** Original text of this fragment. */
   text: string;
-};
-
-/**
- * Reactive search state returned by `createSearch()`.
- * Dispose when done to release all reactive subscriptions.
- */
-export type SearchState<T> = {
-  [Symbol.dispose](): void;
-  /**
-   * Resets `query` to `''` and cancels any pending debounce.
-   * `results` and `isSearching` are updated synchronously.
-   * @throws {ScoutDisposedError} If called after `dispose()`.
-   */
-  clear(): void;
-  /** `AbortSignal` aborted when `dispose()` is called. Use to tie other lifecycles to this search. */
-  readonly disposalSignal: AbortSignal;
-  /** Releases all reactive subscriptions created by this search state. */
-  dispose(): void;
-  /** `true` after `dispose()` has been called. */
-  readonly disposed: boolean;
-  /**
-   * `true` during the debounce window — between when `query` changes and when `results` updates.
-   * Always `false` when `debounce` is `0`.
-   */
-  readonly isSearching: Readable<boolean>;
-  /**
-   * Writable signal holding the current search query.
-   * Set `.value` to trigger a (debounced) search.
-   */
-  readonly query: Signal<string>;
-  /**
-   * Read-only computed that holds the latest search results.
-   * Updated after the debounce delay whenever `query` changes.
-   */
-  readonly results: Readable<SearchResult<T>[]>;
 };

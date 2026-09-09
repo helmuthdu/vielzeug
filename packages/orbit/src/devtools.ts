@@ -138,8 +138,6 @@ export function debugPositioner(
   const positioner = createPositioner(reference, floating, { ...options, apply: wrappedApply });
   const dispose = positioner.dispose.bind(positioner);
 
-  positioner.start();
-
   return Object.assign(positioner, {
     dispose(): void {
       dispose();

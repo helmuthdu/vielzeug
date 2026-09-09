@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { decimal } from '../_decimal';
+import { decimal, roundDivision } from '../_decimal';
 
 describe('decimal', () => {
   it('normalizes and bounds exact decimals', () => {
@@ -9,5 +9,17 @@ describe('decimal', () => {
     expect(() => decimal('1e3')).toThrow(/Invalid decimal/);
     expect(() => decimal(`0.${'1'.repeat(101)}`)).toThrow(/precision/);
     expect(() => decimal('1'.repeat(1001))).toThrow(/too long/);
+  });
+
+  it.each([
+    ['awayFromZero', 3n, -3n],
+    ['ceil', 3n, -2n],
+    ['floor', 2n, -3n],
+    ['halfAwayFromZero', 3n, -3n],
+    ['halfEven', 2n, -2n],
+    ['towardZero', 2n, -2n],
+  ] as const)('rounds positive and negative values with %s', (mode, positive, negative) => {
+    expect(roundDivision(5n, 2n, mode)).toBe(positive);
+    expect(roundDivision(-5n, 2n, mode)).toBe(negative);
   });
 });

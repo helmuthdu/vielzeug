@@ -47,13 +47,21 @@ const canRestoreTo = (target: FocusableElement): boolean => {
 };
 
 const focusAndVerify = (target: FocusableElement, preventScroll: boolean | undefined): boolean => {
-  target.focus({ preventScroll });
-
-  return getDeepActiveElement(target.ownerDocument) === target;
+  try {
+    target.focus({ preventScroll });
+    return getDeepActiveElement(target.ownerDocument) === target;
+  } catch {
+    return false;
+  }
 };
 
 export const restoreFocus = (target: FocusTarget, options: RestoreFocusOptions = {}): boolean => {
-  const next = resolveTarget(target);
+  let next: FocusableElement | null | undefined;
+  try {
+    next = resolveTarget(target);
+  } catch {
+    next = null;
+  }
 
   if (next && canRestoreTo(next) && focusAndVerify(next, options.preventScroll)) {
     return true;
@@ -61,7 +69,12 @@ export const restoreFocus = (target: FocusTarget, options: RestoreFocusOptions =
 
   if (!options.fallback) return false;
 
-  const fallback = resolveTarget(options.fallback);
+  let fallback: FocusableElement | null | undefined;
+  try {
+    fallback = resolveTarget(options.fallback);
+  } catch {
+    return false;
+  }
 
   if (!fallback || !canRestoreTo(fallback)) return false;
 

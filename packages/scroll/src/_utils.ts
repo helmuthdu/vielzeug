@@ -18,6 +18,46 @@ export type Overscan = number | { end?: number; start?: number };
 export const DEFAULT_ESTIMATE_SIZE = 36;
 export const DEFAULT_OVERSCAN = 3;
 
+export function createSnapshotStore<T>(initialSnapshot: T): {
+  dispose: () => void;
+  getSnapshot: () => T;
+  publish: (snapshot: T) => void;
+  subscribe: (listener: () => void) => () => void;
+} {
+  const listeners = new Set<() => void>();
+  let snapshot = initialSnapshot;
+  let disposed = false;
+
+  return {
+    dispose() {
+      disposed = true;
+      listeners.clear();
+    },
+    getSnapshot() {
+      return snapshot;
+    },
+    publish(nextSnapshot) {
+      if (disposed) return;
+      snapshot = nextSnapshot;
+
+      for (const listener of [...listeners]) {
+        try {
+          listener();
+        } catch (error) {
+          queueMicrotask(() => {
+            throw error;
+          });
+        }
+      }
+    },
+    subscribe(listener) {
+      if (disposed) return () => {};
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
 // ─── Numeric helpers ───────────────────────────────────────────────────────────
 
 export function toNonNegativeInt(value: number, fallback = 0): number {

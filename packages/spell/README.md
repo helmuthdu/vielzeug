@@ -1,23 +1,6 @@
 # @vielzeug/spell
 
-> Schema validation with strict-by-default objects, explicit sync/async checks, coercion, composition, and TypeScript inference.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/spell)](https://www.npmjs.com/package/@vielzeug/spell) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
-
-**Key exports:** `s`, `SpellValidationError`, `SpellDefinitionError`, `diagnostics`, `ErrorCode`; tooling subpaths: `@vielzeug/spell/json`, `@vielzeug/spell/predicates`
-
-**When to use:** Schema validation with strict-by-default objects, explicit async checks, coercion, composition, and TypeScript inference.
-
-**Related:** [@vielzeug/forge](https://vielzeug.dev/forge/) · [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/vault](https://vielzeug.dev/vault/)
-
-</details>
-
-`@vielzeug/spell` is part of Vielzeug and ships as a TypeScript package with ESM+CJS output.
+> Zero-dependency schema validation with Standard Schema interoperability
 
 ## Installation
 
@@ -62,6 +45,7 @@ if (result.success) {
 - [Usage Guide](https://vielzeug.dev/spell/usage)
 - [API Reference](https://vielzeug.dev/spell/api)
 - [Examples](https://vielzeug.dev/spell/examples)
+- [Migration Guide](https://vielzeug.dev/spell/migration)
 
 ## License
 

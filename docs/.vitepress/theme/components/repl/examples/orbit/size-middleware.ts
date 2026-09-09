@@ -33,7 +33,6 @@ const positioner = createPositioner(button, dropdown, {
     console.log('Resolved placement:', result.placement)
   },
 })
-positioner.start()
 
 console.log('size() constrains dropdown height to available space')`,
   name: 'size() - Constrain Height',

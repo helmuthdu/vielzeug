@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/conduit",
   "version": "2.1.1",
-  "description": "Lightweight dependency injection container — singletons, transient instances, factories, and named scopes",
+  "description": "Typed dependency injection with immutable providers, singleton, transient, and named-scope lifetimes, overrides, and deterministic disposal",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -30,14 +30,16 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types",
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run test:types && pnpm --silent run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "test:types": "tsc -p tsconfig.type-tests.json",
+    "verify:exports": "node verify-exports.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",

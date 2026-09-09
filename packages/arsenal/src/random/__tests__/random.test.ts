@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import { random } from '../random';
+import { randomFloat } from '../source';
 
 describe('random', () => {
   it('should return a number within the specified range', () => {
@@ -26,6 +27,12 @@ describe('random', () => {
 
   it('rejects an invalid random source result', () => {
     expect(() => random(1, 4, { next: () => 1 })).toThrow(RangeError);
+  });
+
+  it('returns and validates supplied random floats', () => {
+    expect(randomFloat({ next: () => 0.25 })).toBe(0.25);
+    expect(() => randomFloat({ next: () => Number.NaN })).toThrow(RangeError);
+    expect(() => randomFloat({ next: () => 1 })).toThrow(RangeError);
   });
 
   it('should handle edge case where min equals max', () => {

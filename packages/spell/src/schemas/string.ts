@@ -514,16 +514,6 @@ export class StringSchema<Input = string, Mode extends SchemaMode = 'sync'> exte
   }
 
   /**
-   * Returns a new schema that coerces the input to a string via `String(value)` before validation.
-   * `null` and `undefined` are passed through unchanged.
-   *
-   * Equivalent to `s.coerce.string()`.
-   */
-  coerce(): StringSchema<unknown> {
-    return StringSchema.coerce();
-  }
-
-  /**
    * **Note:** `trim()` adds a preprocessor. Preprocessors are not serializable —
    * `definition()` throws because preprocessors are not serializable.
    */

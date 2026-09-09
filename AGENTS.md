@@ -43,6 +43,7 @@ Defer to `.ai/core/conventions.md` for engineering conventions, `.ai/data/packag
 - Lint: `pnpm --filter @vielzeug/<name> lint`
 - Build: `pnpm --filter @vielzeug/<name> build`
 - Docs structure: `pnpm validate:docs -- --package=<name>`
+- README structure: `pnpm validate:readme -- --package=<name>`
 - Docs: `pnpm --filter @vielzeug/codex build && pnpm docs:build`
 - Demos: affected demo test/build; `pnpm validate:demos` for shared or broad demo impact
 - REPL examples: `pnpm validate:repl` (`-- --package=<name>` for a focused package run)

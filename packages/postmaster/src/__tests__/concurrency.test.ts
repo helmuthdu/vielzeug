@@ -1,7 +1,7 @@
 import { createPostmaster, defineJobs, type JobContext } from '../index.ts';
+import type { StoredJob } from '../store.ts';
 import { claimJob } from '../store-ops.ts';
 import { createMemoryPostmasterStore } from '../testing.ts';
-import type { StoredJob } from '../types.ts';
 
 const textValidator = (value: unknown) => String(value);
 
@@ -95,7 +95,7 @@ describe('Postmaster concurrency and crash recovery', () => {
     await postmaster.dispose();
 
     const postmaster2 = createPostmaster({ clock: () => 0, jobs: createJobs(execute), store });
-    await postmaster2.start();
+    postmaster2.start();
     await new Promise((resolve) => setTimeout(resolve, 5));
     await expect(postmaster2.list()).resolves.toEqual([]);
     await postmaster2.dispose();

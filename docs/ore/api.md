@@ -13,12 +13,12 @@ All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/c
 
 | Symbol                | Purpose                                              | Execution mode | Common gotcha                                                             |
 | ---------------------- | ----------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
-| `define()`             | Register a custom element with reactive setup         | Sync           | Tag must contain a hyphen; call before first use                          |
+| `define()`             | Create and register a custom element                   | Sync           | Tag must contain a hyphen; call before first use                          |
 | `html`                 | Tagged template literal returning HTMLResult          | Sync           | Expressions must be signals, functions, or primitives                     |
 | `prop.*`               | Typed prop helpers (string, bool, number, …)          | Sync           | Prop values are signals — read `.value`                                   |
 | `provide()`/`inject()` | Context API for parent-to-descendant sharing          | Setup only     | Must be called synchronously during `setup()`                             |
 | `ref()`                | Reactive reference to a DOM element                   | Sync           | Value is null until after first mount                                     |
-| `createContext()`      | Create a typed injection key                          | Sync           | Context is scoped to the component tree                                   |
+| `createContext()`      | Create a unique typed injection key                   | Sync           | Context is scoped to the component tree                                   |
 | `each()`               | Keyed list rendering with DOM diffing                 | Sync           | Duplicate keys report `ore:error`; plain `T[]` is a one-time static render  |
 | `when()`               | Conditional branch rendering                          | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription    |
 | `live(signal)`         | One-way binding that skips stale writes during input  | Sync           | Use for controlled inputs alongside a manual `@input` handler             |
@@ -189,6 +189,8 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 | `live(signal)`                         | One-way binding that skips stale writes during active user input; use with `@input` handler           |
 | `unsafeHtml(value)`                    | HTML rendering sink; sanitize untrusted values before calling                                           |
 
+`each()` treats number and string keys as distinct. A duplicate-key update reports `ore:error` and preserves the last valid list.
+
 ### `unsafeHtml`
 
 `unsafeHtml()` is an explicit HTML injection sink. It has no global sanitizer: sanitize untrusted
@@ -232,27 +234,22 @@ Event listener options (`once`, `capture`, `passive`) are also accepted in the s
 
 ### Reactive ARIA attributes
 
-For reactive ARIA attribute syncing, use `bind({ aria: config }, { target })`. Shorthand keys are normalised to `aria-*` automatically (`expanded` → `aria-expanded`; `role` is passed verbatim):
+Use explicit `aria-*` keys in `bind({ attr }, { target })`:
 
 ```ts
-// Inside setup — cleanup auto-registered
-bind(
+const stopAria = bind(
   {
-    aria: {
-      expanded: () => isOpen.value,
-      controls: panelId,
-      haspopup: 'listbox',
+    attr: {
+      'aria-controls': panelId,
+      'aria-expanded': () => isOpen.value,
+      'aria-haspopup': 'listbox',
     },
   },
   { target: triggerEl },
 );
-
-// Manage cleanup manually — bind() always returns a cleanup fn
-const stopAria = bind({ aria: { expanded: () => isOpen.value } }, { target: triggerEl });
-// Call stopAria() when the trigger is swapped out
 ```
 
-Static values (strings, numbers, booleans) are applied once. Getter functions and signals create reactive effects. Setting a value to `null`, `undefined`, or `false` removes the attribute.
+Static values are applied once. Getters and signals create reactive effects. Calling `stopAria()` stops updates. Values of `null`, `undefined`, or `false` remove the attribute.
 
 ## Slots
 
@@ -263,7 +260,7 @@ Slot signals update reactively when assigned content changes, including when slo
 
 ## Context API
 
-- `createContext<T>(description?)` — Create a typed injection key
+- `createContext<T>(description)` — Create a unique typed injection key; the description is diagnostic only
 - `provide(key, value)` — Provide a value to descendants
 - `inject(key)` — Resolve from nearest ancestor; returns `undefined` if not found
 - `inject(key, fallback)` — Resolve with a fallback value
@@ -281,9 +278,7 @@ warnings or stale keys leaking to descendants.
 ## Utilities
 
 - `ref<T>()` — Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
-- `createId(prefix = 'id')` — Generate a unique incremental string ID (e.g. `'id-1'`, `'id-2'`). Each call returns a new ID — it does not deduplicate by prefix.
-- `createStableId(prefix = 'id')` — Generate a unique ID that also embeds a short random tag shared across all IDs generated in the session (e.g. `'field-a3k21'`), reducing collision risk when multiple app instances run on the same page. Like `createId()`, every call returns a new ID.
-- `resetStableIdCounter()` — Reset the `createStableId()` counter to 0. Call in test `beforeEach` for deterministic IDs. Scoped to `createStableId()` only — `createId()` has no public reset (it's for uniqueness, not cross-test determinism).
+- `createId(prefix = 'id')` — Generate a collision-resistant ID with a semantic prefix, a per-runtime tag, and a monotonic counter (for example, `'field-a3k21'`).
 
 ## Form-Associated API
 
@@ -296,8 +291,6 @@ Wire a form-associated element to `ElementInternals`. Requires `formAssociated: 
 ```ts
 type FormFieldOptions<T> = {
   disabled?: Readable<boolean>;
-  /** Defaults to the host element active during setup. */
-  el?: HTMLElement;
   /**
    * When true, a null/undefined value is submitted as '' instead of null,
    * keeping the field's key present in FormData even when the value is absent.
@@ -346,15 +339,11 @@ Import from `@vielzeug/ore/testing`.
 | `cleanup()`              | Remove all mounted elements and reset test state                                           |
 | `install(afterEach, options?)` | Register auto-cleanup; pass `{ formInternals: true }` to also install the `ElementInternals`/`FormData`/`<form>.reset()` jsdom polyfill (see below) |
 | `installFormInternalsPolyfill()` | Installs the form-internals polyfill directly (returns an `uninstall()` that restores every patched global). Usually called via `install(afterEach, { formInternals: true })` |
-| `walkFlatTree(root, visit)` | Walks the flat tree (expanding `<slot>` via `assignedElements()`) — for finding slotted content across a shadow boundary that `querySelectorAll()` can't cross |
 | `flush(options?)`        | Drain reactive updates and animation frames                                                |
-| `debugFlush()`           | Run `flush()` with `console.debug` diagnostics                                             |
-| `mock(tag, template?)`   | Register a no-op stub custom element                                                       |
 | `renderHook(setup)`      | Run lifecycle hooks in isolation; overload accepts `propDefs` as first arg for typed props |
-| `resetOreForTests()`     | Reset styles and ID counters when mounting is managed manually                            |
 | `OreTimeoutError`        | Error thrown when `flush()` cannot settle tracked Ore work                                 |
 
-> **Test isolation:** `cleanup()` removes mounted elements and resets all cross-test Ore state (the stylesheet cache and ID counters) via `resetOreForTests()`. Call it in `afterEach` (or use `install()`) to prevent state leaking between tests.
+> **Test isolation:** `cleanup()` removes mounted elements and resets Ore's cross-test caches and counters. Call it in `afterEach`, or use `install(afterEach)`.
 
 Import `within`, named dispatchers such as `fireClick`, and waits such as `waitUntil` or `waitForEvent` from
 `@vielzeug/assay`.
@@ -496,11 +485,10 @@ type HostBindingValue =
   | null
   | undefined;
 
-type ReflectConfig = Record<string, HostBindingValue>;
+type AttributeBindings = Record<string, HostBindingValue>;
 
 type HostBindConfig = {
-  aria?: ReflectConfig;
-  attr?: ReflectConfig;
+  attr?: AttributeBindings;
   class?: (() => Record<string, boolean>) | Record<string, Readable<boolean> | (() => boolean) | boolean>;
   on?: Record<string, ((event: Event) => void) | undefined>;
   style?: Record<string, HostBindingValue>;
@@ -509,8 +497,6 @@ type HostBindConfig = {
 type BindOptions = AddEventListenerOptions & {
   target?: Element;
 };
-
-type HostBindFn = (config: HostBindConfig, options?: BindOptions) => () => void;
 
 type ComponentSlots<S extends string = string> = {
   elements(name?: S): Readable<Element[]>;
@@ -546,7 +532,6 @@ type EmitFn<T extends Record<string, unknown>> = {
 
 type FormFieldOptions<T = unknown> = {
   disabled?: Readable<boolean>;
-  el?: HTMLElement;
   emptyStringForNull?: boolean;
   onReset?: () => void;
   toFormValue?: (value: T) => File | FormData | string | null;
@@ -560,11 +545,6 @@ type FormFieldHandle = {
   readonly internals: ElementInternals;
   reportValidity: () => boolean;
   setCustomValidity: (message: string) => void;
-};
-
-type MutationObserverValue = {
-  entries: MutationRecord[];
-  latest: MutationRecord | null;
 };
 
 /** Phase in which a OreError occurred. */

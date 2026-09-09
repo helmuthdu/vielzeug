@@ -1,310 +1,144 @@
-import type { CompiledEntry } from './_compile';
-import { compileEntry } from './_compile';
-import { computeConflicts } from './_conflict';
-import { warnAnonymousPredicates } from './_dev';
-import { assertUserPrincipal, isOverriddenBy, matchesRule, pickWinner, toDecision, validatePrincipal } from './_match';
+import { compileRule } from './_compile';
+import { ruleMatches, snapshotDecisionInput, snapshotPrincipal } from './_match';
 import { WardConfigError } from './errors';
 import type {
   BoundWard,
-  BoundWardAllowedActionsInput,
-  BoundWardDecisionInput,
-  BoundWardRulesInScopeInput,
-  NormalizedWardRule,
   Principal,
-  UserPrincipal,
   Ward,
-  WardAllowedActionsInput,
-  WardCheck,
-  WardConflict,
+  WardAttributes,
   WardDecision,
   WardDecisionInput,
-  WardDecisionResult,
   WardEvent,
-  WardOptions,
   WardRule,
-  WardRulesInScopeInput,
-  WardTrace,
-  WardTraceCandidate,
 } from './types';
 
-const warn = warnAnonymousPredicates;
-
-// ---------------------------------------------------------------------------
-// Shared loop cores (validation-free; used by both public API and forUser)
-// ---------------------------------------------------------------------------
-
-function coreAllowedActions<TAction extends string, TData>(
-  entries: CompiledEntry<TAction, TData>[],
-  principal: Principal,
-  resource: string,
-  knownActions: readonly TAction[],
-  data: TData | undefined,
-): TAction[] {
-  const seen = new Set<TAction>();
-  const result: TAction[] = [];
-
-  for (const action of knownActions) {
-    if (seen.has(action)) continue;
-
-    seen.add(action);
-
-    const winner = pickWinner(entries, principal, resource, action, data);
-
-    if (winner?.rule.effect === 'allow') result.push(action);
-  }
-
-  return result;
-}
-
-function coreRulesInScope<TAction extends string, TData>(
-  entries: CompiledEntry<TAction, TData>[],
-  principal: Principal,
-  resource: string,
-  data: TData | undefined,
-): NormalizedWardRule<TAction, TData>[] {
-  const skipPredicate = data === undefined;
-  const result: NormalizedWardRule<TAction, TData>[] = [];
-
-  for (const entry of entries) {
-    if (!matchesRule(entry, principal, resource, undefined, data, skipPredicate)) continue;
-
-    result.push(entry.rule as NormalizedWardRule<TAction, TData>);
-  }
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
-
 /**
- * Creates an authorization ward from a set of rules.
+ * Creates an authorization ward from an ordered list of rules.
  *
- * **Winner selection** when multiple rules match a request:
- * 1. Higher `priority` wins.
- * 2. On priority tie, higher specificity score wins (exact > namespace-wildcard > global-wildcard,
- *    applied independently to role, resource, and action).
- * 3. On specificity tie, `deny` beats `allow` (denyBonus tiebreaker).
- * 4. On absolute tie (identical priority, specificity, and effect), the rule declared
- *    **first in the input array** wins.
+ * **Decision model**: rules are evaluated in declaration order; the first rule
+ * that matches the request wins. If no rule matches, the decision is **deny**
+ * (default deny). There is no priority, specificity scoring, or conflict
+ * detection — order is the only tiebreaker.
+ *
+ * A rule matches when:
+ * 1. Its `action` pattern matches the requested action (`*` or `ns:*` or exact).
+ * 2. Its `resource` pattern matches the requested resource.
+ * 3. Every key in its declarative `attributes` is present and equal in the
+ *    request's `attributes` (deep equality).
+ * 4. Its `condition` escape-hatch callback (if any) returns `true`.
  */
-export function createWard<TAction extends string = string, TData = unknown>(
-  rules: readonly (WardRule<TAction, TData> | readonly WardRule<TAction, TData>[])[] = [],
-  options: WardOptions<TAction, TData> = {},
-): Ward<TAction, TData> {
-  if (options.maxConflicts !== undefined) {
-    if (!Number.isFinite(options.maxConflicts) || options.maxConflicts < 0) {
-      throw new WardConfigError('maxConflicts must be a finite non-negative number.');
-    }
-  }
+export function createWard<
+  TAction extends string = string,
+  TResource extends string = string,
+  TAttributes extends WardAttributes = WardAttributes,
+>(
+  rules: readonly (
+    | WardRule<NoInfer<TAction>, NoInfer<TResource>, NoInfer<TAttributes>>
+    | readonly WardRule<NoInfer<TAction>, NoInfer<TResource>, NoInfer<TAttributes>>[]
+  )[] = [],
+): Ward<TAction, TResource, TAttributes> {
+  const compiled = Object.freeze(rules.flat().map((rule, index) => compileRule(rule, index)));
+  const tappers = new Set<(event: WardEvent<TAction, TResource, TAttributes>) => void>();
 
-  if (options.onConflict !== undefined && typeof options.onConflict !== 'function') {
-    throw new WardConfigError('onConflict must be a function.');
-  }
+  function evaluate(
+    input: WardDecisionInput<TAction, TResource, TAttributes>,
+    emit: boolean,
+  ): WardDecision<TAction, TResource, TAttributes> {
+    const normalized = snapshotDecisionInput(input);
 
-  const { maxConflicts = Infinity } = options;
-  const tappers = new Set<(event: WardEvent<TAction, TData>) => void>();
-  const flat: WardRule<TAction, TData>[] = [];
+    for (let index = 0; index < compiled.length; index++) {
+      const rule = compiled[index];
 
-  for (const entry of rules) {
-    if (Array.isArray(entry)) {
-      for (const rule of entry) flat.push(rule);
-    } else {
-      flat.push(entry as WardRule<TAction, TData>);
-    }
-  }
+      if (ruleMatches(rule, index, normalized)) {
+        const decision = Object.freeze({
+          effect: rule.effect,
+          matched: true,
+          reason: `rule[${index}] ${rule.effect === 'allow' ? 'allows' : 'denies'} '${normalized.action}' on '${normalized.resource}'`,
+          rule,
+        }) as WardDecision<TAction, TResource, TAttributes>;
 
-  const entries = flat.map((rule, i) => compileEntry(rule, i));
-
-  // Warn in development when an ANONYMOUS-role rule has a predicate.
-  warn(entries);
-
-  // -------------------------------------------------------------------------
-  // Core decision + logging
-  // -------------------------------------------------------------------------
-
-  function emitTap(event: WardEvent<TAction, TData>): void {
-    if (tappers.size === 0) return;
-    for (const tapper of tappers) {
-      try {
-        tapper(event);
-      } catch {
-        // Observability must not affect ward behavior.
+        if (emit) emitDecision(normalized, decision);
+        return decision;
       }
     }
-  }
 
-  function evaluateAndLog(
-    principal: Principal,
-    resource: string,
-    action: TAction,
-    data: TData | undefined,
-  ): WardDecision<TAction, TData> {
-    const winner = pickWinner(entries, principal, resource, action, data);
-    const decision = toDecision(winner);
+    const decision = Object.freeze({
+      effect: 'deny',
+      matched: false,
+      reason: `no matching rule for '${normalized.action}' on '${normalized.resource}' (default deny)`,
+    }) as WardDecision<TAction, TResource, TAttributes>;
 
-    emitTap({ action, data, decision, principal, resource });
-
+    if (emit) emitDecision(normalized, decision);
     return decision;
   }
 
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
-  // Request objects avoid call-site ambiguity between resource/action/data and
-  // make later API growth additive instead of positional-breaking.
+  function emitDecision(
+    input: WardDecisionInput<TAction, TResource, TAttributes> & { principal: Principal },
+    decision: WardDecision<TAction, TResource, TAttributes>,
+  ): void {
+    if (tappers.size === 0) return;
 
-  function explain(input: WardDecisionInput<TAction, TData>): WardDecision<TAction, TData> {
-    const { action, data, principal, resource } = input;
-
-    validatePrincipal(principal);
-
-    return evaluateAndLog(principal, resource, action, data);
+    const event = Object.freeze({ decision, input, type: 'decision' as const });
+    for (const tapper of tappers) {
+      try {
+        tapper(event);
+      } catch {}
+    }
   }
 
-  function runCheckAll(
-    principal: Principal,
-    checks: readonly WardCheck<TAction, TData>[],
-  ): WardDecisionResult<TAction, TData>[] {
-    return checks.map((check) => ({
-      ...evaluateAndLog(principal, check.resource, check.action, check.data),
-      action: check.action,
-      resource: check.resource,
-    }));
+  function decide(
+    input: WardDecisionInput<TAction, TResource, TAttributes>,
+  ): WardDecision<TAction, TResource, TAttributes> {
+    return evaluate(input, true);
   }
 
   function checkAll(
-    principal: Principal,
-    checks: readonly WardCheck<TAction, TData>[],
-  ): WardDecisionResult<TAction, TData>[] {
-    if (checks.length === 0) return [];
-
-    validatePrincipal(principal);
-
-    return runCheckAll(principal, checks);
+    inputs: readonly WardDecisionInput<TAction, TResource, TAttributes>[],
+  ): WardDecision<TAction, TResource, TAttributes>[] {
+    return inputs.map(decide);
   }
 
-  function allowedActions(input: WardAllowedActionsInput<TAction, TData>): TAction[] {
-    const { data, knownActions, principal, resource } = input;
+  function allowedActions(input: {
+    attributes?: TAttributes;
+    knownActions: readonly TAction[];
+    principal?: Principal;
+    resource: TResource;
+  }): TAction[] {
+    const seen = new Set<TAction>();
 
-    validatePrincipal(principal);
-
-    return coreAllowedActions(entries, principal, resource, knownActions, data);
+    return input.knownActions.filter((action) => {
+      if (seen.has(action)) return false;
+      seen.add(action);
+      return evaluate({ ...input, action }, false).effect === 'allow';
+    });
   }
 
-  function rulesInScope(
-    input: WardRulesInScopeInput<TData>,
-  ): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>> {
-    const { data, principal, resource } = input;
-
-    validatePrincipal(principal);
-
-    return coreRulesInScope(entries, principal, resource, data);
-  }
-
-  function trace(input: WardDecisionInput<TAction, TData>): WardTrace<TAction, TData> {
-    const { action, data, principal, resource } = input;
-
-    validatePrincipal(principal);
-
-    const matching: CompiledEntry<TAction, TData>[] = [];
-
-    for (const entry of entries) {
-      if (matchesRule(entry, principal, resource, action, data)) {
-        matching.push(entry);
-      }
-    }
-
-    let winner: CompiledEntry<TAction, TData> | undefined;
-
-    for (const entry of matching) {
-      if (!winner || isOverriddenBy(winner, entry)) winner = entry;
-    }
-
-    const decision = toDecision(winner);
-
-    const candidates: WardTraceCandidate<TAction, TData>[] = matching.map((entry) => ({
-      index: entry.index,
-      priority: entry.priority,
-      rule: entry.rule,
-      score: entry.score,
-      won: entry === winner,
-    }));
-
-    return { candidates, decision };
-  }
-
-  function forUser(principal: UserPrincipal): BoundWard<TAction, TData> {
-    assertUserPrincipal(principal);
-
-    const snap: UserPrincipal = {
-      attributes: principal.attributes ? structuredClone(principal.attributes) : undefined,
-      id: principal.id,
-      roles: [...principal.roles],
-    };
+  function forPrincipal(principal?: Principal): BoundWard<TAction, TResource, TAttributes> {
+    const snapshot = snapshotPrincipal(principal);
 
     return {
-      allowedActions: (input: BoundWardAllowedActionsInput<TAction, TData>) =>
-        coreAllowedActions(entries, snap, input.resource, input.knownActions, input.data),
-      checkAll: (checks) => (checks.length === 0 ? [] : runCheckAll(snap, checks)),
-      explain: (input: BoundWardDecisionInput<TAction, TData>) =>
-        evaluateAndLog(snap, input.resource, input.action, input.data),
-      rulesInScope: (input: BoundWardRulesInScopeInput<TData>) =>
-        coreRulesInScope(entries, snap, input.resource, input.data),
-      trace: (input: BoundWardDecisionInput<TAction, TData>) =>
-        trace({ action: input.action, data: input.data, principal: snap, resource: input.resource }),
+      allowedActions: (input) => allowedActions({ ...input, principal: snapshot }),
+      checkAll: (inputs) => checkAll(inputs.map((input) => ({ ...input, principal: snapshot }))),
+      decide: (input) => decide({ ...input, principal: snapshot }),
     };
   }
 
-  // -------------------------------------------------------------------------
-  // Conflict detection (lazy, cached)
-  // -------------------------------------------------------------------------
+  function tap(
+    handler: (event: WardEvent<TAction, TResource, TAttributes>) => void,
+    options?: { readonly signal?: AbortSignal },
+  ): () => void {
+    if (typeof handler !== 'function') throw new WardConfigError('tap handler must be a function');
+    if (options?.signal?.aborted) return () => {};
 
-  let conflictsCache: readonly WardConflict<TAction, TData>[] | undefined;
-
-  function detectConflicts(): readonly WardConflict<TAction, TData>[] {
-    return (conflictsCache ??= Object.freeze(computeConflicts(entries, maxConflicts)));
-  }
-
-  if (options.strict || options.onConflict) {
-    const conflicts = detectConflicts();
-
-    if (conflicts.length > 0) {
-      if (options.onConflict) conflicts.forEach(options.onConflict);
-
-      if (options.strict) {
-        const details = conflicts
-          .map((c) =>
-            c.kind === 'duplicate'
-              ? `Rule[${c.indexB}] ${c.kind} of Rule[${c.indexA}]`
-              : `Rule[${c.shadowedIndex}] ${c.kind} by Rule[${c.shadowingIndex}]`,
-          )
-          .join('; ');
-
-        throw new WardConfigError(`${conflicts.length} rule conflict(s) detected: ${details}`);
-      }
-    }
-  }
-
-  function tap(handler: (event: WardEvent<TAction, TData>) => void, opts?: { signal?: AbortSignal }): () => void {
     tappers.add(handler);
-
     const onAbort = () => tappers.delete(handler);
-
-    if (opts?.signal) {
-      if (opts.signal.aborted) {
-        tappers.delete(handler);
-        return () => {};
-      }
-      opts.signal.addEventListener('abort', onAbort, { once: true });
-    }
+    options?.signal?.addEventListener('abort', onAbort, { once: true });
 
     return () => {
       tappers.delete(handler);
-      opts?.signal?.removeEventListener('abort', onAbort);
+      options?.signal?.removeEventListener('abort', onAbort);
     };
   }
 
-  return { allowedActions, checkAll, detectConflicts, explain, forUser, rulesInScope, tap, trace };
+  return { allowedActions, checkAll, decide, forPrincipal, rules: compiled, tap };
 }

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Simplify component authoring, IDs, host binding types, context identity, and testing APIs while preserving valid keyed-list DOM on duplicate-key updates.",
+      "packageName": "@vielzeug/ore",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

@@ -1,6 +1,8 @@
-import type { Disposable } from './types';
-
-type SourceStore<T> = Disposable & {
+type SourceStore<T> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
   set(value: T): void;
   subscribe(listener: (value: T) => void): () => void;
   readonly value: T;

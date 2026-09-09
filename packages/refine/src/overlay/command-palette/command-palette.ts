@@ -207,8 +207,12 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
         if (!trimmed) return;
 
         try {
-          unbindShortcut = globalKeymap.bind(trimmed, () => {
-            overlay.toggle('keyboard', 'trigger');
+          unbindShortcut = globalKeymap.bind({
+            handler: () => {
+              overlay.toggle('keyboard', 'trigger');
+            },
+            id: 'command-palette-toggle',
+            shortcut: trimmed,
           });
         } catch (error) {
           warn(`invalid "shortcut" value "${trimmed}" — ${error instanceof Error ? error.message : String(error)}`);

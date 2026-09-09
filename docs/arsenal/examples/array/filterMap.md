@@ -42,5 +42,4 @@ const strings: string[] = filterMap(rows, (r) => r.value ?? undefined);
 
 ### Related
 
-- [compact](./compact.md)
 - [partition](./partition.md)

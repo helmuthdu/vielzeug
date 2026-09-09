@@ -1,22 +1,20 @@
 ---
-title: 'Ripple Examples — Async Resource'
-description: 'Load cancellation-aware async data from reactive input.'
+title: Ripple Examples — Async Resource
+description: Load reactive async state with stale-request cancellation and explicit ownership.
 ---
 
-## Async Resource
+## Load Reactive Async State
 
 ### Problem
 
-Data loading must follow selected input and ignore stale responses.
+A value must reload when reactive input changes, abort stale work, retain the previous success while pending, and expose failures as state.
 
 ### Solution
 
-Keep source capture and loader work separate on same graph.
+Create a resource inside an isolated graph and forward its loader signal.
 
 ```ts
 import { createRipple } from '@vielzeug/ripple';
-
-type User = { id: string; name: string };
 
 const ripple = createRipple();
 const userId = ripple.signal('42');
@@ -24,24 +22,37 @@ const user = ripple.resource(
   () => userId.value,
   async (id, { signal }) => {
     const response = await fetch(`/users/${id}`, { signal });
-    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-    return (await response.json()) as User;
+    return response.json() as Promise<{ id: string; name: string }>;
   },
+  { name: 'user' },
 );
 
-if (user.value.status === 'success') console.log(user.value.value.name);
-if (user.value.status === 'error') console.error(user.value.error);
+const stop = ripple.effect(() => {
+  const state = user.value;
+
+  if (state.status === 'pending') renderPending(state.previous);
+  if (state.status === 'success') renderUser(state.value);
+  if (state.status === 'error') renderError(state.error, state.previous);
+});
+
+userId.value = '43';
+user.reload();
+
+stop.dispose();
 user.dispose();
 ripple.dispose();
 ```
 
 ### Pitfalls
 
-- Read dependencies in source, never after loader starts.
-- Pass loader signal to abortable APIs.
-- Handle `pending` and `error` states before success.
+- Construction starts loading immediately.
+- The loader must forward or observe its signal for transport-level cancellation.
+- `reload()` returns `void`; observe completion through resource state.
+- Disposed state remains readable, but `reload()` and new subscriptions throw `RippleDisposedResourceError`.
+- Use Sourcerer for paginated collections or shared keyed server-query caching.
 
 ### Related
 
-- [Usage Guide](../usage#async-data)
-- [API Reference](../api)
+- [Usage Guide](../usage.md#load-async-resources)
+- [API Reference](../api.md#resource-source-loader-options)
+- [Sourcerer](/sourcerer/)

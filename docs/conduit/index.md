@@ -4,7 +4,7 @@ description: Dependency-first asynchronous dependency injection with typed token
 package: conduit
 category: infrastructure
 keywords: [dependency injection, container, token, lifecycle, scope]
-exports: [createContainer, token, scope]
+exports: [createContainer, valueProvider, factoryProvider, disposalSignalToken, token, scope]
 related: [courier, vault, rune]
 environments: [browser, node, ssr, deno]
 ---
@@ -15,14 +15,19 @@ environments: [browser, node, ssr, deno]
 
 ## Why Conduit?
 
-Conduit makes service wiring explicit. Factory dependency tuples are source of truth for creation, startup validation, and disposal order.
+Conduit makes service wiring explicit. Typed builders create immutable providers, static graphs are validated at construction, and dependency tuples drive creation and disposal. Resolve one root token or a typed composition map.
 
 ```ts
 // Before
 const service = createService(createApi(config), logger);
 
 // After
-container.factory(Service, [Api, Logger], (api, logger) => createService(api, logger));
+const container = createContainer([
+  valueProvider(Config, config),
+  factoryProvider(Api, [Config], (config) => createApi(config)),
+  factoryProvider(Service, [Api, Logger], (api, logger) => createService(api, logger)),
+]);
+const services = await container.resolve({ service: Service });
 ```
 
 | Feature | Conduit | Inversify | tsyringe |
@@ -61,16 +66,18 @@ yarn add @vielzeug/conduit
 ## Quick Start
 
 ```ts
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, factoryProvider, token, valueProvider } from '@vielzeug/conduit';
 
 const Config = token<{ baseUrl: string }>('Config');
 const Client = token<{ url: string }>('Client');
-const container = createContainer();
 
-container.value(Config, { baseUrl: '/api' });
-container.factory(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` }));
+const container = createContainer([
+  valueProvider(Config, { baseUrl: '/api' }),
+  factoryProvider(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` })),
+]);
 
-console.log(await container.resolve(Client));
+const services = await container.resolve({ client: Client });
+console.log(services.client);
 await container.dispose();
 ```
 
@@ -79,8 +86,9 @@ await container.dispose();
 <div class="features-grid">
 
 - **`token`**: typed dependency identity
-- **`factory`**: static dependency-first creation
-- **`validate`**: startup graph validation
+- **`valueProvider` / `factoryProvider`**: token-safe immutable registrations
+- **`createContainer`**: validated provider graph
+- **`resolve`**: direct service or typed composition map
 - **`scope`**: explicit request and job ownership
 - **`dispose`**: in-flight-safe resource cleanup
 

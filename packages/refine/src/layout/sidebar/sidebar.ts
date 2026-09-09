@@ -12,7 +12,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
+import { computed, fromSubscribable, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 import '../../content/icon/icon';
@@ -455,16 +455,19 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
           try {
             const mediaHandle = createMediaQuery(mediaQuery);
-            const syncMedia = (state: typeof mediaHandle.value) => {
+            const syncMedia = (state: ReturnType<typeof mediaHandle.getSnapshot>) => {
               if (state) {
                 responsiveMediaMatches.value = state.matches;
                 applyResponsiveState();
               }
             };
 
-            syncMedia(mediaHandle.value);
+            syncMedia(mediaHandle.getSnapshot());
 
-            const mediaCleanupFn = watch(mediaHandle, syncMedia);
+            const mediaCleanupFn = watch(
+              fromSubscribable(mediaHandle, { signal: mediaHandle.disposalSignal }),
+              syncMedia,
+            );
             mediaCleanup = () => {
               mediaCleanupFn.dispose();
               mediaHandle.dispose();
@@ -505,16 +508,19 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
           try {
             const mediaHandle = createMediaQuery(mediaQuery);
-            const syncMedia = (state: typeof mediaHandle.value) => {
+            const syncMedia = (state: ReturnType<typeof mediaHandle.getSnapshot>) => {
               if (state) {
                 bottomNavMediaMatches.value = state.matches;
                 applyResponsiveState();
               }
             };
 
-            syncMedia(mediaHandle.value);
+            syncMedia(mediaHandle.getSnapshot());
 
-            const mediaCleanupFn = watch(mediaHandle, syncMedia);
+            const mediaCleanupFn = watch(
+              fromSubscribable(mediaHandle, { signal: mediaHandle.disposalSignal }),
+              syncMedia,
+            );
             bottomNavCleanup = () => {
               mediaCleanupFn.dispose();
               mediaHandle.dispose();
@@ -531,6 +537,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
           ? (() => {
               const hostSize = createElementSize(el);
               onCleanup(() => hostSize.dispose());
+              const hostSizeSignal = fromSubscribable(hostSize, { signal: hostSize.disposalSignal });
 
               const wrapperEl = el.parentElement;
               const containerEl = resolveContainerElement(el);
@@ -543,6 +550,13 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
               if (parentSize) {
                 onCleanup(() => parentSize.dispose());
               }
+
+              const wrapperSizeSignal = wrapperSize
+                ? fromSubscribable(wrapperSize, { signal: wrapperSize.disposalSignal })
+                : undefined;
+              const parentSizeSignal = parentSize
+                ? fromSubscribable(parentSize, { signal: parentSize.disposalSignal })
+                : undefined;
 
               let rafId: number | undefined;
 
@@ -576,12 +590,12 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
               return watch(
                 computed(() => [
-                  hostSize.value?.width,
-                  hostSize.value?.height,
-                  wrapperSize?.value?.width,
-                  wrapperSize?.value?.height,
-                  parentSize?.value?.width,
-                  parentSize?.value?.height,
+                  hostSizeSignal.value?.width,
+                  hostSizeSignal.value?.height,
+                  wrapperSizeSignal?.value?.width,
+                  wrapperSizeSignal?.value?.height,
+                  parentSizeSignal?.value?.width,
+                  parentSizeSignal?.value?.height,
                 ]),
                 onResize,
               );

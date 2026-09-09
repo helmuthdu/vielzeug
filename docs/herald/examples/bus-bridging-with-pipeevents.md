@@ -1,86 +1,61 @@
 ---
-title: 'Herald Examples — Bus bridging with `pipeEvents()`'
-description: 'Bus bridging with `pipeEvents()` example for @vielzeug/herald.'
+title: Herald Examples — Bridge Buses Explicitly
+description: Forward selected events between typed buses with ordinary subscriptions.
 ---
 
-## Bus bridging with `pipeEvents()`
+## Bridge Buses Explicitly
 
 ### Problem
 
-You have two buses — for example an application bus and an audit bus — and you want selected events from the source to appear on the target automatically, without manually re-emitting them in every subscriber.
+Selected events from one bus must be forwarded to another with visible transformation and lifecycle ownership.
 
 ### Solution
 
-Use `pipeEvents()` to forward a named subset of events. The pipe tears down automatically when the target bus is disposed.
+Register an ordinary source listener and emit on the target. Its unsubscribe function is the bridge teardown.
 
 ```ts
-import { createBus, pipeEvents } from '@vielzeug/herald';
+import { createBus } from '@vielzeug/herald';
 
 type AppEvents = {
-  'user:login': { userId: string; email: string };
-  'user:logout': void;
-  'cart:updated': { items: CartItem[]; total: number };
+  'user:login': { userId: string };
+};
+
+type AuditEvents = {
+  'audit:login': { subject: string };
 };
 
 const appBus = createBus<AppEvents>();
-const auditBus = createBus<AppEvents>();
-
-// Forward only auth events — cart events stay local to appBus
-const unpipe = pipeEvents(appBus, auditBus, ['user:login', 'user:logout']);
-
-appBus.emit('user:login', { email: 'alice@example.com', userId: '42' });
-// auditBus listeners for 'user:login' also fire
-
-// Stop forwarding manually
-unpipe();
-```
-
-### Scoping a pipe to a signal
-
-Pass an `AbortSignal` to stop forwarding after a condition:
-
-```ts
+const auditBus = createBus<AuditEvents>();
 const controller = new AbortController();
-pipeEvents(appBus, auditBus, ['user:login'], { signal: controller.signal });
 
-// Stop forwarding after 60 seconds
-setTimeout(() => controller.abort(), 60_000);
+const bridgeSignal = AbortSignal.any([auditBus.disposalSignal, controller.signal]);
+const stopBridge = appBus.on(
+  'user:login',
+  ({ userId }) => auditBus.emit('audit:login', { subject: userId }),
+  { signal: bridgeSignal },
+);
+
+appBus.emit('user:login', { userId: '42' });
+stopBridge();
+appBus.dispose();
+auditBus.dispose();
 ```
 
-### Automatic teardown on target disposal
-
-The pipe unsubscribes from the source automatically when the target bus is disposed. No cleanup code needed on the calling side:
+For identical event maps, forwarding remains explicit:
 
 ```ts
-using auditBus = createBus<AppEvents>(); // disposed at end of block
-
-pipeEvents(appBus, auditBus, ['user:login', 'user:logout']);
-
-// ... do work ...
-// When auditBus disposes, forwarding stops automatically
-```
-
-### Tying child bus lifetime to a parent
-
-Use `bus.disposalSignal` to scope a child bus's lifetime to its parent:
-
-```ts
-const parentBus = createBus<AppEvents>();
-const childBus = createBus<AppEvents>();
-
-// Forward events; stop when parent disposes
-pipeEvents(parentBus, childBus, ['user:login'], { signal: parentBus.disposalSignal });
+const stop = source.on('user:login', (payload) => target.emit('user:login', payload));
 ```
 
 ### Pitfalls
 
-- Source and target buses may have **different event map types** — TypeScript enforces that the listed keys exist in both with compatible payload types, but the buses themselves do not need to share the same type.
-- `pipeEvents` only forwards events listed in the third argument. Events not listed on the source are not forwarded, even if the target has listeners for them.
-- The returned `unpipe()` function is idempotent — calling it after the target has already disposed is safe and does nothing.
-- A pipe does not buffer events. If the target bus processes events slower than the source emits, consider using `bus.events()` with a `maxBuffer` option instead.
+- Forwarding is synchronous and unbuffered.
+- Bind the bridge to the target's `disposalSignal`; combine it with any external owner signal using `AbortSignal.any()`.
+- A forwarding listener can create cycles. Keep the event graph directed.
+- Transform payloads explicitly when source and target event types differ.
 
 ### Related
 
 - [Module-level bus](./module-level-bus.md)
-- [Handling disposal in async code](./handling-disposal-in-async-code.md)
-- [Disposal Signal — Usage Guide](../usage.md#dispose--cleanup)
+- [Request scoping](./request-scoping.md)
+- [Usage Guide](../usage.md#own-subscription-lifetimes)

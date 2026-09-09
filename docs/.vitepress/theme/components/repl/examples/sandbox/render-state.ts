@@ -6,7 +6,7 @@ const container = document.createElement('div')
 document.body.appendChild(container)
 
 const sandbox = createSandbox(container, {
-  namedStyles: { theme: ':root { --accent: royalblue; }' },
+  styles: { theme: ':root { --accent: royalblue; }' },
 })
 
 const receivedUpdates = []
@@ -23,8 +23,8 @@ await sandbox.render(\`
   <div id="root">Loading…</div>
 \`)
 
-sandbox.setStateAll({ user: { name: 'Ada' }, theme: 'dark' }) // one postMessage for several values
-sandbox.setState('locale', 'en-GB') // single value
+sandbox.setState({ user: { name: 'Ada' }, theme: 'dark' })
+sandbox.setState({ locale: 'en-GB' })
 sandbox.replaceBody('<div id="root">Ready ✓</div>') // replaces body descendants
 sandbox.updateStyle('theme', ':root { --accent: seagreen; }') // hot-patch CSS, no re-render
 

@@ -12,13 +12,6 @@ const activeFieldRegistry = new WeakSet<HTMLElement>();
 export type FormFieldOptions<T = unknown> = {
   disabled?: Readable<boolean>;
   /**
-   * The host element to attach `ElementInternals` to.
-   * Defaults to the element currently being set up via `getHost()`.
-   * Pass this explicitly when calling `useField` from a composable that is
-   * not called directly during `setup()` (e.g. a helper factory function).
-   */
-  el?: HTMLElement;
-  /**
    * When `true`, a `null` or `undefined` value is submitted as an empty string
    * (`''`) instead of `null`. This keeps the field's key present in `FormData`
    * even when the value is absent — useful when the server expects the field to
@@ -61,7 +54,7 @@ export type FormFieldHandle = {
 };
 
 export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandle => {
-  const host = options.el ?? getHost();
+  const host = getHost();
   const ctor = host.constructor as typeof HTMLElement & { formAssociated?: boolean };
 
   if (!ctor.formAssociated) {

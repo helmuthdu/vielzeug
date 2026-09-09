@@ -1,111 +1,133 @@
 ---
-title: Sandbox Migration
-description: Migrate incremental body updates, configuration handling, and error type guard changes across Sandbox releases.
+title: Migrate Sandbox to Version 3
+description: Migrate from Sandbox 2 to the smaller Version 3 runtime API and explicit message trust boundary.
 ---
 
 [[toc]]
 
-## Sandbox 2 Changes
+## Sandbox 3 Changes
 
-Sandbox 2 keeps `createSandbox()`, `render()`, `ready`, state updates, style updates, and message subscriptions. It renames destructive body updates, rejects malformed document/CSP configuration instead of rewriting it, and removes the unused `SandboxError.is()` type guard and sorts `SandboxMessage` union members alphabetically to remove `eslint-disable` suppressions.
+Sandbox 3 removes APIs that duplicated `render()` or represented internal document machinery. It also stops typing untrusted iframe messages as application payloads.
 
-### Replace `SandboxError.is()` with `instanceof`
-
-The static `SandboxError.is()` type guard is removed. Use `instanceof SandboxError` to narrow unknown values to the Sandbox error hierarchy.
-
-```ts
-// Sandbox 1
-if (SandboxError.is(err)) { ... }
-
-// Sandbox 2
-if (err instanceof SandboxError) { ... }
-```
-
-### `SandboxMessage` field order
-
-`SandboxMessage` union members are now sorted alphabetically by field name. The runtime shape is unchanged — only the documented type definition order moved. Code that destructures by field name (the overwhelmingly common case) is unaffected. Position-sensitive tooling that keyed off field order in the type definition needs to re-read the [API Reference](./api.md).
-
-Removed API:
-
-- `sandbox.patch(html)`
-
-Added error:
-
-- `SandboxConfigurationError`
-
-## Replace `patch()`
-
-Use `replaceBody()` for streamed markup.
-
-```ts
-// Sandbox 1
-sandbox.patch(html);
-```
+## Rename `namedStyles` to `styles`
 
 ```ts
 // Sandbox 2
-sandbox.replaceBody(html);
-```
-
-`replaceBody()` does not navigate the iframe. Head scripts, named styles, document listeners, and window listeners remain. Body descendants, their listeners, references, form state, and scripts inside replacement HTML are replaced.
-
-Accumulate streaming HTML on the host before replacement:
-
-```ts
-let html = '';
-
-for await (const chunk of stream) {
-  html += chunk;
-  sandbox.replaceBody(html);
-}
-```
-
-## Fix Invalid Configuration
-
-Sandbox now validates configuration before creating a CSP or document.
-
-```ts
-// Sandbox 1: malformed value was modified internally
 createSandbox(container, {
-  allowedScriptOrigins: ['cdn.example.com/widgets'],
+  namedStyles: { theme: 'body { color-scheme: dark; }' },
+});
+
+// Sandbox 3
+createSandbox(container, {
+  styles: { theme: 'body { color-scheme: dark; }' },
 });
 ```
 
+`updateStyle(id, css)` keeps the same behavior.
+
+## Merge `setState()` and `setStateAll()`
+
+Sandbox 3 accepts one partial state object. A single-key update and a batch use the same method.
+
 ```ts
-// Sandbox 2: use an absolute origin
-createSandbox(container, {
-  allowedScriptOrigins: ['https://cdn.example.com'],
-  scripts: ['https://cdn.example.com/widgets.js'],
+// Sandbox 2
+sandbox.setState('theme', 'dark');
+sandbox.setStateAll({ locale: 'en', theme: 'dark' });
+
+// Sandbox 3
+sandbox.setState({ theme: 'dark' });
+sandbox.setState({ locale: 'en', theme: 'dark' });
+```
+
+## Remove typed host events and validation hooks
+
+Sandbox 2 allowed an `Events` generic and boolean validation callbacks. The generic asserted a payload type before runtime validation, while a boolean callback could not establish that TypeScript type.
+
+```ts
+// Sandbox 2
+const sandbox = createSandbox<State, Events>(container, {
+  validateEvent,
+  validateState,
+});
+
+sandbox.onMessage((message) => {
+  if (message.type === 'custom' && message.event === 'saved') {
+    useId(message.detail.id);
+  }
 });
 ```
 
-These values now throw `SandboxConfigurationError` when invalid:
-
-- allowed origins with paths, credentials, query strings, fragments, unsupported schemes, or CSP syntax
-- script URLs without absolute `http:` or `https:` URLs
-- nonces outside base64/base64url token syntax
-- language tags outside the supported basic form, such as `en`, `de`, or `zh-Hant`
-- named style IDs that do not start with a letter or contain characters outside letters, digits, `_`, and `-`
+Narrow custom details where they cross into the host instead.
 
 ```ts
-import { SandboxConfigurationError } from '@vielzeug/sandbox';
+// Sandbox 3
+const sandbox = createSandbox<State>(container);
 
-try {
-  createSandbox(container, { nonce: 'invalid nonce' });
-} catch (error) {
-  if (error instanceof SandboxConfigurationError) console.error(error.message);
-}
+sandbox.onMessage((message) => {
+  if (message.type === 'custom' && message.event === 'saved' && isSavedDetail(message.detail)) {
+    useId(message.detail.id);
+  }
+});
 ```
 
-## Testing Helpers
+`SandboxBridge<State, Events>` still checks authored sandbox-side calls. It does not change the host trust boundary.
 
-`createSandboxTestHelpers(container)` keeps its public methods. Create the helper after `render()` starts so it can bind to the live iframe protocol metadata. Direct `buildDocument()` output remains static markup; use `createSandbox()` when a host must manage state or lifecycle.
+## Remove `SandboxHandle.ready`
+
+`render()` already returns the Promise for the document being rendered. Await that Promise directly.
 
 ```ts
-const sandbox = createSandbox(container);
-const render = sandbox.render('<p>test</p>');
-const helpers = createSandboxTestHelpers(container);
+// Sandbox 2
+sandbox.render(html);
+await sandbox.ready;
 
-helpers.fireReady();
-await render;
+// Sandbox 3
+await sandbox.render(html);
 ```
+
+## Remove render cancellation options
+
+The previous `{ signal }` parameter only skipped calls when the signal was already aborted; it did not cancel an in-flight render. Sandbox 3 removes that misleading option.
+
+```ts
+// Sandbox 2
+await sandbox.render(html, { signal });
+
+// Sandbox 3
+if (!signal.aborted) await sandbox.render(html);
+```
+
+Use `sandbox.disposalSignal` to tie external asynchronous work to the sandbox lifetime.
+
+## Remove public document builders
+
+`buildCsp()` and `buildDocument()` exposed internal document-generation details. `buildDocument()` also generated a placeholder channel rather than a managed runtime document.
+
+```ts
+// Sandbox 2
+const html = buildDocument(fragment, options);
+iframe.srcdoc = html;
+
+// Sandbox 3
+const sandbox = createSandbox(container, options);
+await sandbox.render(fragment);
+```
+
+Use a separate document templating boundary when you need static HTML without a managed iframe.
+
+## Removed Types
+
+Remove imports of:
+
+- `EventMap`
+- `StateMap`
+- `SandboxStateUpdateDetail`
+- `Unsubscribe`
+- `ValidateEvent`
+- `ValidateState`
+
+Use ordinary application interfaces, `SandboxMessage`, and `() => void` directly.
+
+## Bridge Initialization
+
+The generated bridge now installs in `<head>` before injected and user scripts. Error forwarding therefore captures failures during document initialization. The ready message is emitted on `DOMContentLoaded`.

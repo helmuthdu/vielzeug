@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "exclude": ["src/__tests__/**"],
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.ts", "type-tests/**/*.ts"]
+}

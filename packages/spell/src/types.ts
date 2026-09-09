@@ -39,6 +39,42 @@ export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unkno
 /** Plain JSON Schema object (targeting JSON Schema 2020-12). */
 export type JsonSchema = Record<string, unknown>;
 
+export interface StandardSchemaV1<Input = unknown, Output = Input> {
+  readonly '~standard': StandardSchemaV1.Props<Input, Output>;
+}
+
+export declare namespace StandardSchemaV1 {
+  interface Props<Input = unknown, Output = Input> {
+    readonly types?: Types<Input, Output> | undefined;
+    readonly validate: (value: unknown, options?: Options | undefined) => Result<Output> | Promise<Result<Output>>;
+    readonly vendor: string;
+    readonly version: 1;
+  }
+
+  type Result<Output> = { readonly issues: readonly Issue[] } | { readonly issues?: undefined; readonly value: Output };
+
+  interface Options {
+    readonly libraryOptions?: Record<string, unknown> | undefined;
+  }
+
+  interface Issue {
+    readonly message: string;
+    readonly path?: readonly (PropertyKey | PathSegment)[] | undefined;
+  }
+
+  interface PathSegment {
+    readonly key: PropertyKey;
+  }
+
+  interface Types<Input = unknown, Output = Input> {
+    readonly input: Input;
+    readonly output: Output;
+  }
+
+  type InferInput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['input'];
+  type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['output'];
+}
+
 /* -------------------- Issues -------------------- */
 
 /**
@@ -213,7 +249,7 @@ type BaseDescriptor = {
 
 export type SchemaDescriptor = BaseDescriptor &
   (
-    | { kind: 'any' | 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' }
+    | { kind: 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' }
     | { className: string; kind: 'instanceof' }
     | {
         contentEncoding?: string;
@@ -261,6 +297,8 @@ export const schemaInput = Symbol('spell.schemaInput');
 export const schemaMode = Symbol('spell.schemaMode');
 /** @internal */
 export const schemaOutput = Symbol('spell.schemaOutput');
+export declare const schemaAcceptsMissing: unique symbol;
+export type AcceptsMissing = { readonly [schemaAcceptsMissing]: true };
 
 /** Whether a schema can be parsed synchronously or requires asynchronous parsing. */
 export type SchemaMode = 'async' | 'sync';
@@ -300,7 +338,8 @@ export type InferOutput<T> =
     : T extends { readonly [schemaOutput]: infer Output }
       ? Output
       : never;
-export type InferInput<T> = T extends { readonly [schemaInput]: infer Input } ? Input : unknown;
+type RawInferInput<T> = T extends { readonly [schemaInput]: infer Input } ? Input : unknown;
+export type InferInput<T> = T extends AcceptsMissing ? RawInferInput<T> | undefined : RawInferInput<T>;
 export type Infer<T> = InferOutput<T>;
 
 /** Re-exported for convenience — defined in messages.ts. */

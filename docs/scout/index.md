@@ -47,17 +47,17 @@ const matches = index.search(query);
 | Feature                  | Arsenal `fuzzy*`                               | Scout `createIndex`                                                                       | Fuse.js                                        |
 | ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | Bundle size              | ~3 KB                                          | <PackageInfo package="scout" type="size" />                                               | ~23 KB                                         |
-| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon> `@vielzeug/ripple` runtime dependency | <ore-icon name="check" size="16"></ore-icon>     |
+| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>     |
 | Algorithm                | Levenshtein                                    | Trigram + overlap coefficient                                                             | Bitap                                          |
 | Query time               | O(n·m)                                         | O(candidates)                                                                             | O(n·m)                                         |
 | Stateful index           | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | <ore-icon name="check" size="16"></ore-icon>     |
 | Match highlighting       | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | <ore-icon name="check" size="16"></ore-icon>     |
-| Reactive layer           | <ore-icon name="x" size="16"></ore-icon>         | ripple signals + debounce                                                                 | <ore-icon name="x" size="16"></ore-icon>         |
+| Reactive layer           | <ore-icon name="x" size="16"></ore-icon>         | Atomic external-store snapshots + debounce                                                | <ore-icon name="x" size="16"></ore-icon>         |
 | Incremental updates      | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | Partial                                        |
 
 <div class="decision-callout">
 
-**Use Scout when** you need search over 500+ items, real-time UI search boxes (combobox, command palette), or reactive query state with ripple signals.
+**Use Scout when** you need search over 500+ items, real-time UI search boxes (combobox, command palette), or framework-neutral subscribable search state.
 
 **Consider `arsenal.fuzzyFilter` when** you have fewer than 200 items and don't need a persistent index.
 
@@ -112,7 +112,7 @@ console.log(results[0]?.item.name); // Ada Lovelace
 - `createSearch()` — Reactive search state backed by an existing `ScoutIndex`; share one index across many states
 - `highlight()` / `highlightField()` — Split field text into `HighlightPart[]` fragments for styled rendering
 - `findMatchRanges()` — Compute match ranges for custom display strings (truncated previews, formatted values)
-- `toSearchMatcher()` — Matcher adapter for sourcerer's `LocalSource`
+- `toSearchMatcher()` — Matcher adapter for filtering in-memory collections with a `ScoutIndex`
 - `toFilterPredicate()` — Snapshot `(item: T) => boolean` predicate for `Array.filter` or vault queries
 - `setItems()` — Reconcile a refreshed corpus by reference, preserve incoming order, and notify once
 - Incremental updates — `add()` / `remove()` / `reindex()` patch individual items in O(field_length)
@@ -137,8 +137,8 @@ console.log(results[0]?.item.name); // Ada Lovelace
 <div class="see-also">
 
 - [Arsenal](/arsenal/) — Use `fuzzyFilter` for ad-hoc filtering of small lists (< 200 items) without building an index
-- [Ripple](/ripple/) — `createReactiveSearch()` and `createSearch()` use Ripple signals for reactive query state and debounce
-- [Sourcerer](/sourcerer/) — use a `ScoutIndex` inside `createLocalSource`'s explicit `match` callback
+- [Ripple](/ripple/) — bridge a complete Scout `SearchState` with `fromSubscribable()` when composing a larger reactive graph
+- [Sourcerer](/sourcerer/) — use a `ScoutIndex` matcher to filter in-memory collections alongside remote sources
 - [Vault](/vault/) — `toFilterPredicate()` wraps a one-time Scout query as a vault-compatible `filter()` predicate
 
 </div>

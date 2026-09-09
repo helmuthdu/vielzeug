@@ -21,7 +21,6 @@ illusion.commerce.productName();   // 'Intelligent Granite Table'
 illusion.date.recent({ days: 7 }); // Temporal.ZonedDateTime within the last week
 illusion.lorem.sentence();         // 'Enim ex non ea minim amet sint laborum proident nisi anim officia.'
 
-illusion.dispose();
 ```
 
 ## Seeded Determinism
@@ -161,7 +160,7 @@ console.log(formatZonedDateTimeISO(orderDate));
 
 - Pass a seed in tests and CI; omit it only for one-off non-reproducible mocks.
 - Create one instance per test case so each test starts from a known random state.
-- Call `dispose()` (or use `using`) when an instance is no longer needed, especially in long-running processes.
+- Treat instances as ordinary stateful values; they own no resources and require no cleanup.
 - Fix the locale at creation time; create a new instance to switch locales rather than mixing.
 - Use string seeds for named test suites — they are self-documenting and hash to a stable number.
 - Combine `person`, `internet`, and `location` to build internally consistent mock entities.

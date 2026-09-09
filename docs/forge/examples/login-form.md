@@ -39,7 +39,7 @@ const result = await form.submit(async (value) => {
   return response.ok;
 });
 
-if (result.status === 'invalid') console.log(result.errors);
+if (result.status === 'invalid') console.log(result.issues);
 ```
 
 ### Pitfalls

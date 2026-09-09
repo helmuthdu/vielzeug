@@ -107,27 +107,32 @@ describe('arithmetic and comparisons', () => {
   const middle = parse('2026-03-21T11:00:00Z', { as: 'instant' });
   const end = parse('2026-03-21T12:00:00Z', { as: 'instant' });
 
-  it('uses object input for differences', () => {
+  it('calculates differences with named inputs', () => {
     expect(difference({ end, largestUnit: 'hour', start }).toString()).toBe('PT2H');
   });
 
-  it('uses object input for containment and clamping', () => {
-    expect(contains({ end, start, value: middle })).toBe(true);
-    expect(clamp({ end, start, value: parse('2026-03-21T13:00:00Z', { as: 'instant' }) }).toString()).toBe(
+  it('normalizes reversed containment and clamp bounds', () => {
+    expect(contains({ end: start, start: end, value: middle })).toBe(true);
+    expect(clamp({ end: start, start: end, value: parse('2026-03-21T13:00:00Z', { as: 'instant' }) }).toString()).toBe(
       '2026-03-21T12:00:00Z',
     );
   });
 
-  it('keeps simple pair comparisons positional', () => {
+  it('compares wall times in an explicit timezone and unit', () => {
+    const morning = parse('2026-03-21T10:00:00', { as: 'plainDateTime' });
+    const evening = parse('2026-03-21T20:00:00', { as: 'plainDateTime' });
+
+    expect(isSame(morning, evening, { timeZone: 'Europe/Berlin', unit: 'day' })).toBe(true);
     expect(isBefore(start, middle)).toBe(true);
     expect(isAfter(end, middle)).toBe(true);
-    expect(isSame(start, start)).toBe(true);
   });
 
-  it('preserves DST-safe shifting', () => {
-    const before = parse('2026-03-08T01:30:00-05:00[America/New_York]', { as: 'zonedDateTime' });
+  it('shifts Instant input through calendar rules in an explicit timezone', () => {
+    const before = parse('2026-03-08T06:30:00Z', { as: 'instant' });
 
-    expect(shift(before, { hours: 1 }).toString()).toBe('2026-03-08T03:30:00-04:00[America/New_York]');
+    expect(shift(before, { days: 1 }, { timeZone: 'America/New_York' }).toString()).toBe(
+      '2026-03-09T01:30:00-04:00[America/New_York]',
+    );
   });
 });
 
@@ -156,23 +161,31 @@ describe('expiry classification', () => {
 });
 
 describe('calendar sequences', () => {
+  const start = parse('2026-03-01T00:00:00[UTC]', { as: 'zonedDateTime' });
+
   it('yields an inclusive zoned date range', () => {
-    const start = parse('2026-03-01T00:00:00[UTC]', { as: 'zonedDateTime' });
     const end = parse('2026-03-03T00:00:00[UTC]', { as: 'zonedDateTime' });
 
     expect([...dateRange(start, end, { days: 1 })].map((value) => value.day)).toEqual([1, 2, 3]);
   });
 
-  it('requires an advancing date range step', () => {
-    const start = parse('2026-03-01T00:00:00[UTC]', { as: 'zonedDateTime' });
-
+  it('rejects non-advancing sequence steps and intervals', () => {
     expect(() => dateRange(start, start, { days: 0 })).toThrow(TempoInvalidInputError);
+    expect(() => recurrence(start, { count: 3, frequency: 'weekly', interval: 0 })).toThrow(TempoInvalidInputError);
+    expect(() => recurrence(start, { count: 3, frequency: 'weekly', interval: 1.5 })).toThrow(TempoInvalidInputError);
+    expect(() => recurrence(start, { count: 1.5, frequency: 'weekly' })).toThrow(TempoInvalidInputError);
   });
 
-  it('limits recurrence by count', () => {
-    const start = parse('2026-03-01T00:00:00[UTC]', { as: 'zonedDateTime' });
-
-    expect([...recurrence(start, { count: 3, frequency: 'weekly' })]).toHaveLength(3);
+  it('supports count, interval, and until recurrence limits', () => {
+    expect([...recurrence(start, { count: 3, frequency: 'weekly', interval: 2 })].map((value) => value.day)).toEqual([
+      1, 15, 29,
+    ]);
+    expect([
+      ...recurrence(start, {
+        frequency: 'daily',
+        until: parse('2026-03-03T00:00:00[UTC]', { as: 'zonedDateTime' }),
+      }),
+    ]).toHaveLength(3);
   });
 });
 
@@ -208,27 +221,21 @@ describe('isValid', () => {
 describe('startOf / endOf', () => {
   const zoned = parse('2026-03-21T10:15:30.500[UTC]', { as: 'zonedDateTime' });
 
-  it('floors to the start of a day', () => {
-    expect(startOf(zoned, 'day').toString()).toBe('2026-03-21T00:00:00+00:00[UTC]');
+  it.each([
+    ['minute', '2026-03-21T10:15:00+00:00[UTC]'],
+    ['hour', '2026-03-21T10:00:00+00:00[UTC]'],
+    ['day', '2026-03-21T00:00:00+00:00[UTC]'],
+    ['month', '2026-03-01T00:00:00+00:00[UTC]'],
+    ['year', '2026-01-01T00:00:00+00:00[UTC]'],
+  ] as const)('floors to the start of a %s', (unit, expected) => {
+    expect(startOf(zoned, unit).toString()).toBe(expected);
   });
 
-  it('floors to the start of an hour', () => {
-    expect(startOf(zoned, 'hour').toString()).toBe('2026-03-21T10:00:00+00:00[UTC]');
-  });
-
-  it('floors to the start of a month', () => {
-    expect(startOf(zoned, 'month').toString()).toBe('2026-03-01T00:00:00+00:00[UTC]');
-  });
-
-  it('floors to the start of a year', () => {
-    expect(startOf(zoned, 'year').toString()).toBe('2026-01-01T00:00:00+00:00[UTC]');
-  });
-
-  it('returns the last nanosecond of the unit for endOf', () => {
+  it('returns the last nanosecond of a unit', () => {
     expect(endOf(zoned, 'day').toString()).toBe('2026-03-21T23:59:59.999999999+00:00[UTC]');
   });
 
-  it('respects weekStartsOn for week boundary', () => {
+  it('respects configurable week starts', () => {
     // 2026-03-21 is a Saturday (dayOfWeek = 6). Week starting Monday (1) → 2026-03-16.
     expect(startOf(zoned, 'week', { weekStartsOn: 1 }).toString()).toBe('2026-03-16T00:00:00+00:00[UTC]');
     // Week starting Sunday (7) → 2026-03-15.
@@ -306,6 +313,37 @@ describe('formatRelative', () => {
     const target = parse('2026-03-21T10:30:00[UTC]', { as: 'zonedDateTime' });
 
     expect(formatRelative(target, { base, locale: 'en-US' })).toBe('in 30 minutes');
+  });
+
+  it('uses weeks for differences beyond a day', () => {
+    const base = parse('2026-03-21T10:00:00Z', { as: 'instant' });
+    const target = parse('2026-03-28T10:00:00Z', { as: 'instant' });
+
+    // numeric: 'auto' renders 1 as "next" rather than "in 1"
+    expect(formatRelative(target, { base, locale: 'en-US' })).toBe('next week');
+  });
+
+  it('formats complete calendar months and years without elapsed-time approximation', () => {
+    const base = parse('2026-03-21T10:00:00Z', { as: 'instant' });
+    const nextMonth = parse('2026-04-21T10:00:00Z', { as: 'instant' });
+    const nextDecade = parse('2036-03-21T10:00:00Z', { as: 'instant' });
+    const previousDecade = parse('2016-03-21T10:00:00Z', { as: 'instant' });
+
+    expect(formatRelative(nextMonth, { base, locale: 'en-US', numeric: 'always', timeZone: 'UTC' })).toBe('in 1 month');
+    expect(formatRelative(nextDecade, { base, locale: 'en-US', numeric: 'always', timeZone: 'UTC' })).toBe(
+      'in 10 years',
+    );
+    expect(formatRelative(previousDecade, { base, locale: 'en-US', numeric: 'always', timeZone: 'UTC' })).toBe(
+      '10 years ago',
+    );
+  });
+
+  it('requires an explicit timezone for ZonedDateTime inputs in different zones', () => {
+    const base = parse('2026-03-21T10:00:00[UTC]', { as: 'zonedDateTime' });
+    const target = parse('2026-04-21T12:00:00[Europe/Berlin]', { as: 'zonedDateTime' });
+
+    expect(() => formatRelative(target, { base })).toThrow(TempoInvalidInputError);
+    expect(formatRelative(target, { base, locale: 'en-US', numeric: 'always', timeZone: 'UTC' })).toBe('in 1 month');
   });
 });
 

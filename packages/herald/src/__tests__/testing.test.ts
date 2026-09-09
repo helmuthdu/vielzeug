@@ -1,4 +1,3 @@
-import { pipeEvents } from '..';
 import { createTestBus } from '../testing';
 
 type TestEvents = {
@@ -145,13 +144,13 @@ describe('createTestBus - emit() passthrough', () => {
     bus.dispose();
   });
 
-  it('returns the listener count from the underlying bus', () => {
+  it('emit returns void', () => {
     const bus = createTestBus<TestEvents>();
 
     bus.on('count', vi.fn());
     bus.on('count', vi.fn());
 
-    expect(bus.emit('count', 1)).toBe(2);
+    expect(bus.emit('count', 1)).toBeUndefined();
 
     bus.dispose();
   });
@@ -201,52 +200,6 @@ describe('createTestBus - dispose()', () => {
     bus.emit('count', 1);
 
     expect(bus.emitted('count')).toEqual([]);
-  });
-});
-
-describe('createTestBus - validatePayload interaction', () => {
-  it('does not record payload when validatePayload throws without onError', () => {
-    const bus = createTestBus<TestEvents>({
-      validatePayload: () => {
-        throw new TypeError('rejected');
-      },
-    });
-
-    expect(() => bus.emit('count', 1)).toThrow(TypeError);
-    expect(bus.emitted('count')).toEqual([]);
-
-    bus.dispose();
-  });
-
-  it('does not record payload when validatePayload rejects, even when onError swallows the error', () => {
-    const onError = vi.fn();
-    const bus = createTestBus<TestEvents>({
-      onError,
-      validatePayload: () => {
-        throw new TypeError('rejected');
-      },
-    });
-
-    bus.emit('count', 1);
-
-    expect(onError).toHaveBeenCalledOnce();
-    expect(bus.emitted('count')).toEqual([]);
-
-    bus.dispose();
-  });
-
-  it('records payload normally when validatePayload passes', () => {
-    const bus = createTestBus<TestEvents>({
-      validatePayload: (event, payload) => {
-        if (event === 'count' && typeof payload !== 'number') throw new TypeError('bad');
-      },
-    });
-
-    bus.emit('count', 42);
-
-    expect(bus.emitted('count')).toEqual([42]);
-
-    bus.dispose();
   });
 });
 
@@ -382,44 +335,6 @@ describe('createTestBus - Bus API passthrough', () => {
     bus.dispose();
   });
 
-  it('supports BusOptions pass-through (e.g. onError)', () => {
-    const onError = vi.fn();
-    const bus = createTestBus<TestEvents>({ onError });
-    const listener = vi.fn(() => {
-      throw new Error('boom');
-    });
-
-    bus.on('count', listener);
-    bus.emit('count', 1);
-
-    expect(onError).toHaveBeenCalledOnce();
-
-    bus.dispose();
-  });
-
-  it('supports BusOptions middleware pass-through, running before recording', () => {
-    const onDispatch = vi.fn();
-    const bus = createTestBus<TestEvents>({
-      middleware: [
-        (event, payload, next) => {
-          onDispatch(event, payload);
-          next();
-        },
-      ],
-    });
-
-    bus.emit('count', 42);
-    bus.emit('toggle');
-
-    expect(onDispatch.mock.calls).toEqual([
-      ['count', 42],
-      ['toggle', undefined],
-    ]);
-    expect(bus.emitted('count')).toEqual([42]);
-
-    bus.dispose();
-  });
-
   it('supports waitAny(), preserving the recording for the winning event', async () => {
     const bus = createTestBus<TestEvents>();
     const pending = bus.waitAny(['count', 'greet']);
@@ -460,23 +375,5 @@ describe('createTestBus - Bus API passthrough', () => {
     expect(bus.emitted('count')).toEqual([7]);
 
     bus.dispose();
-  });
-
-  it('pipeEvents() forwards events between two test buses, recording on both sides', () => {
-    const source = createTestBus<TestEvents>();
-    const target = createTestBus<TestEvents>();
-    const listener = vi.fn();
-
-    target.on('count', listener);
-    pipeEvents(source, target, ['count']);
-
-    source.emit('count', 42);
-
-    expect(listener).toHaveBeenCalledWith(42);
-    expect(source.emitted('count')).toEqual([42]);
-    expect(target.emitted('count')).toEqual([42]);
-
-    source.dispose();
-    target.dispose();
   });
 });

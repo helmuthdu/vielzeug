@@ -1,5 +1,33 @@
 ---
-title: Arsenal 2.0 Migration
+title: Arsenal Migration
+---
+
+# Arsenal 3.0 Migration
+
+Arsenal 3 keeps the typed utility toolkit while removing only exact platform aliases.
+
+## Use platform APIs for removed aliases
+
+```ts
+// flatten(values, depth)
+values.flat(depth);
+
+// uuid()
+crypto.randomUUID();
+```
+
+`percent()` was removed because its scale and zero-total policy were ambiguous. Write the intended policy at the call site.
+
+`pad()` is renamed to `padCenter()` so its two-sided behavior is explicit:
+
+```ts
+import { padCenter } from '@vielzeug/arsenal/string';
+
+padCenter('5', 3); // ' 5 '
+```
+
+Collection, guard, and numeric helpers remain available from category entry points. Their parameters now accept readonly arrays where they do not mutate input. `sum()` and `average()` reject non-finite values; `gcd()` and `lcm()` require safe integers; `linspace()` requires finite bounds and a positive integer point count.
+
 ---
 
 # Arsenal 2.0 Migration

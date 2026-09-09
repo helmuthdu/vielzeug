@@ -1,23 +1,23 @@
-import { computed, signal } from '@vielzeug/ripple';
-import { courier, fetchModelsRequest } from './api';
+import { computed, resource } from '@vielzeug/ripple';
+import { fetchModelsRequest } from './api';
 import { models as seedModels } from './seed-data';
 import type { Model } from './types';
 
-const modelsKey = ['models'] as const;
-const modelsDefinition = {
-  fetch: () => fetchModelsRequest(),
-  key: modelsKey,
-  staleTime: 60_000,
-};
+// The catalog is immutable, so a single resource load (cached forever by Courier)
+// is enough. `resource()` exposes an `AsyncState` we derive a plain `Readable` from,
+// keeping seed data as the fallback while the fetch is pending or has errored — the
+// same resilience the old one-shot load had, but with a reactive `AsyncState` core.
+const modelsResource = resource(
+  () => null,
+  (_source, context) => fetchModelsRequest(context.signal),
+  { name: 'models' },
+);
 
-courier.queries.set(modelsKey, seedModels);
+export const modelsSignal = computed<Model[]>(() => {
+  const state = modelsResource.value;
 
-export const modelsSignal = signal<Model[]>(seedModels);
-
-courier.queries.subscribe(modelsKey, () => {
-  modelsSignal.value = courier.queries.getSnapshot<Model[]>(modelsKey)?.data ?? seedModels;
+  return state.status === 'success' ? state.value : seedModels;
 });
-void courier.queries.fetch(modelsDefinition);
 
 export const modelMap = computed(() => new Map(modelsSignal.value.map((model) => [model.id, model])));
 

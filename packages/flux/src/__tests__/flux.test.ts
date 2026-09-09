@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { map, pipe, stream } from '../index';
+import { fromStore, fromSubscribe, map, pipe, stream } from '../index';
 
 describe('stream()', () => {
   it('runs producer for each independent subscription', () => {
@@ -118,6 +118,58 @@ describe('stream()', () => {
       if (original) Object.defineProperty(globalThis, 'reportError', { configurable: true, value: original });
       else Reflect.deleteProperty(globalThis, 'reportError');
     }
+  });
+
+  it('bridges callback values and owns their teardown', () => {
+    let notify!: (value: number) => void;
+    const teardown = vi.fn();
+    const values: number[] = [];
+    const subscription = fromSubscribe<number>((listener) => {
+      notify = listener;
+      return teardown;
+    }).subscribe((value) => values.push(value));
+
+    notify(1);
+    subscription.unsubscribe();
+    notify(2);
+
+    expect(values).toEqual([1]);
+    expect(teardown).toHaveBeenCalledOnce();
+  });
+
+  it('bridges state snapshots without missing a subscription-time change', () => {
+    let value = 1;
+    let notify!: () => void;
+    const values: number[] = [];
+    const source = fromStore({
+      getSnapshot: () => value,
+      subscribe(listener: () => void) {
+        notify = listener;
+        value = 2;
+        return () => undefined;
+      },
+    });
+
+    source.subscribe((next) => values.push(next));
+    value = 3;
+    notify();
+
+    expect(values).toEqual([1, 2, 3]);
+  });
+
+  it('does not subscribe when the initial store snapshot fails', () => {
+    const subscribe = vi.fn(() => () => undefined);
+    const error = vi.fn();
+
+    fromStore({
+      getSnapshot(): number {
+        throw new Error('snapshot failed');
+      },
+      subscribe,
+    }).subscribe({ error, next: () => undefined });
+
+    expect(error).toHaveBeenCalledWith(expect.objectContaining({ message: 'snapshot failed' }));
+    expect(subscribe).not.toHaveBeenCalled();
   });
 
   it('keeps exact output type through variadic pipe()', () => {

@@ -1,17 +1,53 @@
 ---
 title: Pulse Migration
-description: Breaking changes and migration guide.
+description: Migrate Pulse readables to framework-neutral external stores.
 package: pulse
 category: websockets
 ---
 
 <!-- markdownlint-disable MD025 -->
 
-## Overview
+# Migration
 
-Pulse 2.0 simplifies the room/presence API, consolidates the schema generic, and removes the separate `join`/`leave`/`presence` methods. The result is fewer concepts, fewer moving parts, and a single typed entry point.
+## Pulse 3.0
 
-## Breaking changes
+Pulse 3.0 removes the Ripple runtime dependency and exposes state through framework-neutral external stores. Pulse 2.0 previously simplified the room/presence API and consolidated its schema generic.
+
+### Replace `Readable` access
+
+`status`, `rooms`, and room `presence` now expose `ExternalStore<T>`. Replace `.value` and `.peek()` reads with `getSnapshot()`.
+
+```ts
+// Before
+console.log(pulse.status.value);
+console.log([...room.presence.value]);
+
+// After
+console.log(pulse.status.getSnapshot());
+console.log([...room.presence.getSnapshot()]);
+```
+
+Subscribe to changes with `subscribe()` and read the current snapshot inside the listener.
+
+```ts
+const unsubscribe = pulse.status.subscribe(() => {
+  console.log(pulse.status.getSnapshot());
+});
+```
+
+### Ripple and Flux integration
+
+Pass Pulse stores directly to structural adapters.
+
+```ts
+import { fromStore } from '@vielzeug/flux';
+import { fromSubscribable } from '@vielzeug/ripple';
+
+const statusStream = fromStore(pulse.status);
+const presence = fromSubscribable(room.presence, { signal: room.disposalSignal });
+```
+
+## Pulse 2.0
 
 ### 1. Unified schema generic
 
@@ -79,17 +115,15 @@ Room join failures now use standard error types:
 - `PulseAbortError` — join aborted via AbortSignal.
 - `PulseDisposedError` — instance disposed before confirmation.
 
-### 6. `pulse.rooms` is now a reactive `Readable<ReadonlySet<string>>`
+### 6. `pulse.rooms` tracks confirmed memberships
 
 **Before:** `pulse.rooms` was a signal of room names with presence.
 
-**After:** `pulse.rooms` is a `Readable<ReadonlySet<string>>` tracking confirmed room memberships (with or without presence).
+**After:** `pulse.rooms` is an `ExternalStore<ReadonlySet<string>>` tracking confirmed room memberships with or without presence.
 
 ```ts
-import { effect } from '@vielzeug/ripple';
-
-effect(() => {
-  console.log('Joined rooms:', [...pulse.rooms.value]);
+const unsubscribe = pulse.rooms.subscribe(() => {
+  console.log('Joined rooms:', [...pulse.rooms.getSnapshot()]);
 });
 ```
 
@@ -128,19 +162,5 @@ const announcements = pulse.room('announcements');
 2. Replace `pulse.join(name)` / `pulse.leave(name)` with `pulse.room(name)` / `scope.dispose()`.
 3. Replace `channel.presence` with `pulse.room(name).presence`.
 4. Replace `PulsePresenceError` handling with the appropriate new error type.
-5. Update `pulse.rooms` consumers to read from the `Readable<ReadonlySet<string>>`.
+5. Update `pulse.rooms` consumers to read from the `ExternalStore<ReadonlySet<string>>`.
 6. Add `timeout` and `signal` options to room scopes where appropriate.
-
-## Flux adapter changes
-
-The `@vielzeug/flux` adapter `fromPresence` is renamed to `fromRoomPresence` and now accepts a `PresenceRoomScope` instead of a presence channel.
-
-```ts
-// Before
-import { fromPresence } from '@vielzeug/flux/pulse';
-fromPresence(channel.presence).subscribe(...);
-
-// After
-import { fromRoomPresence } from '@vielzeug/flux/pulse';
-fromRoomPresence(room).subscribe(...);
-```

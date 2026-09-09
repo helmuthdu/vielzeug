@@ -6,7 +6,9 @@ description: Async utility examples for Arsenal.
 ## Quick Reference
 
 - [abortError](./async/abortError.md)
+- [abortable](./async/abortable.md)
 - [attempt](./async/attempt.md)
+- [backoff](./async/parallel.md)
 - [parallel](./async/parallel.md)
 - [taskPool](./async/queue.md)
 - [retry](./async/retry.md)

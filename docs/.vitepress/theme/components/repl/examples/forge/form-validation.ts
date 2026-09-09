@@ -3,12 +3,16 @@ export const formValidationExample = {
 
 const form = createForm({
   initialValues: { password: '', passwordConfirmation: '' },
-  validate: (value) => ({
-    fields: {
-      password: value.password.length >= 8 ? undefined : 'Use at least eight characters',
-      passwordConfirmation: value.password === value.passwordConfirmation ? undefined : 'Passwords must match',
-    },
-  }),
+  validate: (value) => {
+    const issues: { path: (string | number)[]; message: string }[] = []
+
+    if (value.password.length < 8) issues.push({ path: ['password'], message: 'Use at least eight characters' })
+    if (value.password !== value.passwordConfirmation) {
+      issues.push({ path: ['passwordConfirmation'], message: 'Passwords must match' })
+    }
+
+    return issues
+  },
 })
 
 form.field('password').set('short')

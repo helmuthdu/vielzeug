@@ -24,6 +24,7 @@
     "test": "vitest",
     "validate:demos": "pnpm --dir demos/eshop build && pnpm --dir demos/eshop test && pnpm --dir demos/kanban build && pnpm --dir demos/crm build && pnpm --dir demos/crm test",
     "validate:docs": "node --import jiti/register scripts/validate-docs.ts",
+    "validate:readme": "node --import jiti/register scripts/validate-readme.ts",
     "validate:repl": "node --import jiti/register scripts/validate-repl.ts",
     "verify:packed": "node scripts/verify-packed-packages.mjs",
     "verify:prod-gate": "node scripts/verify-prod-gate.mjs",

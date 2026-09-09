@@ -54,8 +54,8 @@ export type TransitionInput<
 export type After<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly delay: number;
   readonly effects?: readonly Effect<Context, Event>[];
-  readonly guard?: Guard<Context, Event | undefined>;
-  readonly reduce?: Reducer<Context, Event | undefined>;
+  readonly guard?: Guard<Context, undefined>;
+  readonly reduce?: Reducer<Context, undefined>;
   readonly target: State;
 };
 
@@ -104,11 +104,9 @@ export type ActorErrorContext<State extends string, Event extends MachineEvent> 
   readonly state: State;
 };
 
-export type ActorErrorDisposition = 'continue' | 'dispose';
-
 export type ActorOptions<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly maxTransitions?: number;
-  readonly onError?: (error: unknown, context: ActorErrorContext<State, Event>) => ActorErrorDisposition;
+  readonly onError?: (error: unknown, context: ActorErrorContext<State, Event>) => void;
   readonly snapshot?: MachineSnapshot<State, Context>;
 };
 

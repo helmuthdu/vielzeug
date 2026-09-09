@@ -1,21 +1,16 @@
 import {
   assertBatchTables,
   type BatchImpl,
-  buildAdapterOps,
+  buildDocumentStore,
   buildTxContext,
   type StorageBackend,
+  withBatch,
 } from '../adapter-core';
+import { decodeRecord, encodeRecord } from '../codec';
 import { VaultDisposedError, VaultError } from '../errors';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import { isExpired } from '../ttl';
-import type {
-  AnySchema,
-  BaseAdapterOptions,
-  KeyOf,
-  RecordOf,
-  TransactionalVaultStore,
-  TransactionContext,
-} from '../types';
+import type { AnySchema, DocumentVaultStore, DurableStoreOptions, KeyOf, RecordOf, TransactionContext } from '../types';
 
 export type { TransactionContext };
 
@@ -31,7 +26,7 @@ type SQLiteRow = Record<string, unknown>;
 export interface SQLiteStatement {
   all(...parameters: SQLiteParameter[]): readonly SQLiteRow[];
   finalize?(): void;
-  get(...parameters: SQLiteParameter[]): SQLiteRow | undefined;
+  get(...parameters: SQLiteParameter[]): SQLiteRow | null | undefined;
   run(...parameters: SQLiteParameter[]): unknown;
 }
 
@@ -47,7 +42,7 @@ export interface SQLiteDatabase {
   prepare(sql: string): SQLiteStatement;
 }
 
-export type SQLiteVaultOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
+export type SQLiteVaultOptions<S extends AnySchema> = DurableStoreOptions<S> & {
   /** Closes the caller-provided connection during store disposal when true. */
   closeOnDispose?: boolean;
   database: SQLiteDatabase;
@@ -208,21 +203,15 @@ function assertJsonValue(value: unknown, seen: Set<object>, path: string): void 
   seen.delete(value);
 }
 
-function encodeJson(value: object): string {
+function encodeJson(value: unknown): string {
   assertJsonValue(value, new Set(), 'record');
 
   return JSON.stringify(value);
 }
 
-function decodeJson(json: string): object {
+function decodeJson(json: string): unknown {
   try {
-    const value: unknown = JSON.parse(json);
-
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new VaultError('stored record is not a JSON object');
-    }
-
-    return value;
+    return JSON.parse(json) as unknown;
   } catch (error) {
     if (error instanceof VaultError) throw error;
 
@@ -271,7 +260,7 @@ function run(database: SQLiteDatabase, sql: string, parameters: SQLiteParameter[
 }
 
 function get(database: SQLiteDatabase, sql: string, parameters: SQLiteParameter[] = []): SQLiteRow | undefined {
-  return withStatement(database, sql, (statement) => statement.get(...parameters));
+  return withStatement(database, sql, (statement) => statement.get(...parameters) ?? undefined);
 }
 
 function all(database: SQLiteDatabase, sql: string, parameters: SQLiteParameter[] = []): readonly SQLiteRow[] {
@@ -287,47 +276,11 @@ function deleteExpired(database: SQLiteDatabase, name: string, table: string): v
   );
 }
 
-function decodeLiveRecord<T extends object>(database: SQLiteDatabase, row: SQLiteRow): T | undefined {
-  const stored = getStoredRow(row);
-
-  if (isExpired(stored.expiresAt)) {
-    run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
-
-    return undefined;
-  }
-
-  return decodeJson(stored.json) as T;
-}
-
-function getAllLive<T extends object>(
-  database: SQLiteDatabase,
-  name: string,
-  table: string,
-  filterSql = '',
-  filterParameters: SQLiteParameter[] = [],
-): T[] {
-  deleteExpired(database, name, table);
-
-  const records = all(
-    database,
-    `SELECT rowid AS row_id, expires_at, value_json
-     FROM ${RECORDS_TABLE}
-     WHERE namespace = ? AND table_name = ?${filterSql}
-     ORDER BY rowid`,
-    [name, table, ...filterParameters],
-  );
-
-  return records.flatMap((row) => {
-    const record = decodeLiveRecord<T>(database, row);
-
-    return record === undefined ? [] : [record];
-  });
-}
-
 function createDirectCore<S extends AnySchema, K extends keyof S & string>(
   database: SQLiteDatabase,
   name: string,
   schema: S,
+  codecs: NonNullable<DurableStoreOptions<S>['codecs']>,
   inTransaction = false,
 ): StorageBackend<S, K> {
   const getRecord = <T extends K>(table: T, key: KeyOf<S, T>): RecordOf<S, T> | undefined => {
@@ -340,26 +293,30 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       [name, table, columns.encoded],
     );
 
-    return row === undefined ? undefined : decodeLiveRecord<RecordOf<S, T>>(database, row);
+    if (row === undefined) return undefined;
+
+    const stored = getStoredRow(row);
+
+    if (isExpired(stored.expiresAt)) {
+      run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
+
+      return undefined;
+    }
+
+    try {
+      const decoded = decodeJson(stored.json);
+
+      return decodeRecord(codecs[table], decoded) as RecordOf<S, T>;
+    } catch (err) {
+      if (err instanceof VaultError) throw err;
+
+      throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
+    }
   };
 
   const core: StorageBackend<S, K> = {
     async clear(table) {
       run(database, `DELETE FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`, [name, table]);
-    },
-    async count(table) {
-      deleteExpired(database, name, table);
-
-      const row = get(
-        database,
-        `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
-        [name, table],
-      );
-      const count = row?.count;
-
-      if (typeof count !== 'number') throw new VaultError('SQLite storage returned an invalid count');
-
-      return count;
     },
     async delete(table, key) {
       const columns = toKeyColumns(key);
@@ -374,16 +331,12 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       return (result?.changes ?? 0) > 0;
     },
     async deleteMany(table, keys) {
-      if (keys.length === 0) return 0;
-
       let deleted = 0;
-      // 3 fixed params: namespace, table_name, expires_at check.
-      const SQLITE_PARAM_LIMIT = 999;
-      const MAX_KEYS_PER_CHUNK = SQLITE_PARAM_LIMIT - 3;
-      const encodedKeys = keys.map((k) => toKeyColumns(k).encoded);
+      const maxKeysPerChunk = 996;
+      const encodedKeys = keys.map((key) => toKeyColumns(key).encoded);
 
-      for (let i = 0; i < encodedKeys.length; i += MAX_KEYS_PER_CHUNK) {
-        const chunk = encodedKeys.slice(i, i + MAX_KEYS_PER_CHUNK);
+      for (let index = 0; index < encodedKeys.length; index += maxKeysPerChunk) {
+        const chunk = encodedKeys.slice(index, index + maxKeysPerChunk);
         const placeholders = chunk.map(() => '?').join(', ');
         const result = run(
           database,
@@ -392,7 +345,6 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
              AND (expires_at IS NULL OR expires_at > ?)`,
           [name, table, ...chunk, Date.now()],
         ) as { changes?: number } | undefined;
-
         deleted += result?.changes ?? 0;
       }
 
@@ -402,16 +354,39 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       return getRecord(table, key);
     },
     async getAll(table) {
-      return getAllLive<RecordOf<S, typeof table>>(database, name, table);
-    },
-    async getAllKeys(table) {
-      return (await core.getAll(table)).map((record) => getRecordKey(schema, table, record));
+      deleteExpired(database, name, table);
+
+      const records = all(
+        database,
+        `SELECT rowid AS row_id, expires_at, value_json
+         FROM ${RECORDS_TABLE}
+         WHERE namespace = ? AND table_name = ?
+         ORDER BY rowid`,
+        [name, table],
+      );
+
+      return records.flatMap((row) => {
+        const stored = getStoredRow(row);
+
+        if (isExpired(stored.expiresAt)) {
+          run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
+
+          return [];
+        }
+
+        try {
+          const decoded = decodeJson(stored.json);
+
+          return [decodeRecord(codecs[table], decoded) as RecordOf<S, typeof table>];
+        } catch (err) {
+          if (err instanceof VaultError) throw err;
+
+          throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
+        }
+      });
     },
     async getMany(table, keys) {
       return keys.map((key) => getRecord(table, key));
-    },
-    async has(table, key) {
-      return getRecord(table, key) !== undefined;
     },
     async pruneAllExpired() {
       const results: Record<string, number> = {};
@@ -449,6 +424,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       const key = getRecordKey(schema, table, value);
       const columns = toKeyColumns(key);
       const expiresAt = ttl === undefined ? null : Date.now() + ttl;
+      const encoded = encodeRecord(codecs[table], value as RecordOf<S, typeof table>);
 
       run(
         database,
@@ -461,14 +437,16 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
            key_string = excluded.key_string,
            value_json = excluded.value_json,
            expires_at = excluded.expires_at`,
-        [name, table, columns.encoded, columns.kind, columns.number, columns.string, encodeJson(value), expiresAt],
+        [name, table, columns.encoded, columns.kind, columns.number, columns.string, encodeJson(encoded), expiresAt],
       );
     },
     async putAll(table, values, ttl) {
       if (values.length === 0) return;
 
       const expiresAt = ttl === undefined ? null : Date.now() + ttl;
-      const encodedJsonValues = values.map((v) => encodeJson(v));
+      const encodedJsonValues = values.map((v) =>
+        encodeJson(encodeRecord(codecs[table], v as RecordOf<S, typeof table>)),
+      );
       const columnsList = values.map((v) => toKeyColumns(getRecordKey(schema, table, v)));
 
       const writeAll = () => {
@@ -526,10 +504,14 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
  * Creates a SQLite-backed Vault store. The connection is caller-owned unless
  * `closeOnDispose` is explicitly enabled.
  */
-export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): TransactionalVaultStore<S> {
-  const { closeOnDispose = false, database, name, schema, validators } = options;
+export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): DocumentVaultStore<S> {
+  const { closeOnDispose = false, database, name, schema, codecs } = options;
 
   assertName(name);
+
+  if (!codecs) {
+    throw new VaultError('createSQLite: codecs are required for durable persistence');
+  }
 
   const state = getConnectionState(database);
   const namespaceReady = state.executor.run(async () => {
@@ -538,7 +520,7 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
   });
   let ownListener: ConnectionListener | undefined;
 
-  const directCore = createDirectCore(database, name, schema);
+  const directCore = createDirectCore(database, name, schema, codecs);
   const withConnection = <T>(work: () => Promise<T>): Promise<T> =>
     state.executor.run(async () => {
       await state.initialized;
@@ -559,10 +541,11 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
         return withConnection(() => (implementation as (...args: unknown[]) => Promise<unknown>)(...arguments_));
       },
     ]),
-  ) as StorageBackend<S>;
+  ) as unknown as StorageBackend<S>;
 
   let batch: BatchImpl<S> | undefined;
-  const adapter = buildAdapterOps(schema, guardedCore, {
+  const adapter = buildDocumentStore(schema, guardedCore, {
+    codecs,
     onCrossTabMessage(notify) {
       const listener: ConnectionListener = (eventName, table) => {
         if (eventName === name && Object.hasOwn(schema, table)) notify(table as keyof S & string);
@@ -597,13 +580,15 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
           await namespaceReady;
 
           const dirtyTables = new Set<keyof S & string>();
-          const txCore = createDirectCore<S, keyof S & string>(database, name, schema, true);
+          const txCore = createDirectCore<S, keyof S & string>(database, name, schema, codecs, true);
+          let contextActive = true;
           const tx = buildTxContext(
             schema,
             txCore,
             (table) => dirtyTables.add(table),
             deps.validate,
             new Set<string>(tables),
+            () => contextActive,
           );
           let transactionStarted = false;
           let committed = false;
@@ -635,20 +620,19 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
 
             throw error;
           } finally {
+            contextActive = false;
             state.batchActive = false;
           }
         });
       };
     },
     schema,
-    validators,
   });
 
   if (!batch) throw new VaultError('SQLite transaction capability was not initialized');
 
-  const store: TransactionalVaultStore<S> = {
-    ...adapter,
-    batch,
+  const batched = withBatch(adapter, batch, schema);
+  const store = Object.assign(batched, {
     iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>> {
       if (adapter.disposed) throw new VaultDisposedError(`"${name}" is disposed`);
 
@@ -656,30 +640,53 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
         [Symbol.asyncIterator](): AsyncIterator<RecordOf<S, K>> {
           let completed = false;
           let lastRowId = 0;
-          let lease: (() => void) | undefined;
-          let rows: readonly SQLiteRow[] = [];
+          let rows: RecordOf<S, K>[] = [];
           let index = 0;
 
-          const release = (): void => {
-            lease?.();
-            lease = undefined;
-          };
-          const loadNextPage = (): void => {
-            rows = all(
-              database,
-              `SELECT rowid AS row_id, expires_at, value_json
-               FROM ${RECORDS_TABLE}
-               WHERE namespace = ? AND table_name = ? AND rowid > ?
-               ORDER BY rowid
-               LIMIT ?`,
-              [name, table, lastRowId, ITERATION_PAGE_SIZE],
-            );
+          const loadNextPage = async (): Promise<boolean> => {
+            const page = await state.executor.run(async () => {
+              await state.initialized;
+              await namespaceReady;
+              const storedRows = all(
+                database,
+                `SELECT rowid AS row_id, expires_at, value_json
+                 FROM ${RECORDS_TABLE}
+                 WHERE namespace = ? AND table_name = ? AND rowid > ?
+                 ORDER BY rowid
+                 LIMIT ?`,
+                [name, table, lastRowId, ITERATION_PAGE_SIZE],
+              );
+              const values: RecordOf<S, K>[] = [];
+
+              for (const row of storedRows) {
+                const stored = getStoredRow(row);
+                lastRowId = stored.rowId;
+
+                if (isExpired(stored.expiresAt)) {
+                  run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
+                  continue;
+                }
+
+                try {
+                  values.push(decodeRecord(codecs[table], decodeJson(stored.json)) as RecordOf<S, K>);
+                } catch (err) {
+                  if (err instanceof VaultError) throw err;
+                  throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
+                }
+              }
+
+              return { done: storedRows.length === 0, values };
+            });
+
+            rows = page.values;
             index = 0;
+            return page.done;
           };
 
           return {
             async next(): Promise<IteratorResult<RecordOf<S, K>>> {
               if (completed) return { done: true, value: undefined };
+              if (adapter.disposed) throw new VaultDisposedError(`"${name}" is disposed`);
 
               if (state.batchActive) {
                 throw new VaultError(
@@ -688,57 +695,32 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
               }
 
               try {
-                if (!lease) {
-                  lease = await state.executor.acquire();
-                  await state.initialized;
-                  await namespaceReady;
-                }
-
-                while (true) {
-                  if (index >= rows.length) {
-                    loadNextPage();
-
-                    if (rows.length === 0) {
-                      completed = true;
-                      release();
-
-                      return { done: true, value: undefined };
-                    }
+                while (index >= rows.length) {
+                  if (await loadNextPage()) {
+                    completed = true;
+                    return { done: true, value: undefined };
                   }
-
-                  const row = rows[index++];
-                  const stored = getStoredRow(row);
-
-                  lastRowId = stored.rowId;
-
-                  const value = decodeLiveRecord<RecordOf<S, K>>(database, row);
-
-                  if (value !== undefined) return { done: false, value };
                 }
+
+                return { done: false, value: rows[index++] };
               } catch (error) {
                 completed = true;
-                release();
-
                 throw error;
               }
             },
             async return(value?: unknown): Promise<IteratorResult<RecordOf<S, K>>> {
               completed = true;
-              release();
-
               return { done: true, value: value as RecordOf<S, K> };
             },
             async throw(error?: unknown): Promise<IteratorResult<RecordOf<S, K>>> {
               completed = true;
-              release();
-
               throw error;
             },
           };
         },
       };
     },
-  };
+  });
 
   if (closeOnDispose) {
     const dispose = store.dispose.bind(store);

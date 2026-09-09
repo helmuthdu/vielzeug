@@ -1,4 +1,6 @@
-import type { RandomSource } from '@vielzeug/arsenal/random';
+import type { RandomSource } from '@vielzeug/arsenal';
+
+export type { RandomSource };
 
 /** Locale-specific data used by the person category. */
 export type PersonLocaleData = {
@@ -41,6 +43,3 @@ export type IllusionistContext = {
   readonly source: RandomSource;
   readonly locale: IllusionistLocale;
 };
-
-/** Re-exported from arsenal for consumer convenience. */
-export type { RandomSource } from '@vielzeug/arsenal/random';

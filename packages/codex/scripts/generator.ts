@@ -47,10 +47,18 @@ function readRefineComponents(repoRoot: string): CemDeclaration[] {
   if (!existsSync(file)) return [];
   const manifest = readJson(file);
   const modules = Array.isArray(manifest.modules) ? manifest.modules : [];
-  return modules.flatMap((module) => {
+  const declarations = modules.flatMap((module) => {
     if (typeof module !== 'object' || module === null) return [];
-    const declarations = (module as Record<string, unknown>).declarations;
-    return Array.isArray(declarations) ? (declarations as CemDeclaration[]) : [];
+    const entries = (module as Record<string, unknown>).declarations;
+    return Array.isArray(entries) ? (entries as CemDeclaration[]) : [];
+  });
+  const tags = new Set<string>();
+
+  return declarations.filter((declaration) => {
+    if (!declaration.tagName) return true;
+    if (tags.has(declaration.tagName)) return false;
+    tags.add(declaration.tagName);
+    return true;
   });
 }
 

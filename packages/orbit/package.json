@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/orbit",
   "version": "2.1.4",
-  "description": "Dependency-free floating UI positioning with lifecycle-owned geometry and middleware",
+  "description": "Floating UI positioning with lifecycle-owned geometry and middleware",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -65,6 +65,9 @@
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "test": "vitest"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
   },
   "peerDependencies": {
     "@vielzeug/ripple": "workspace:^"

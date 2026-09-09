@@ -3,22 +3,16 @@
 import {
   assertBatchTables,
   type BatchImpl,
-  buildAdapterOps,
+  buildDocumentStore,
   buildTxContext,
   type StorageBackend,
-  withIndexedDbTransactions,
+  withBatch,
 } from '../adapter-core';
+import { decodeRecord, encodeRecord } from '../codec';
 import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import { isExpired, parseStored, type StoredRecord } from '../ttl';
-import type {
-  AnySchema,
-  BaseAdapterOptions,
-  KeyOf,
-  RecordOf,
-  TransactionalVaultStore,
-  TransactionContext,
-} from '../types';
+import type { AnySchema, DocumentVaultStore, DurableStoreOptions, RecordOf, TransactionContext } from '../types';
 
 /** IndexedDB-only migration context supplied to `MigrationFn` during `onupgradeneeded`. */
 export type MigrationContext = {
@@ -53,7 +47,7 @@ export type MigrationStep =
  *   { type: 'removeTable', name: 'legacyTokens' },
  * ]);
  *
- * const db = createIndexedDB({ name: 'app', version: 2, schema, migrate });
+ * const db = createIndexedDB({ name: 'app', version: 2, schema, codecs, migrate });
  * ```
  */
 export function defineMigration(steps: MigrationStep[]): MigrationFn {
@@ -152,10 +146,11 @@ function runIdbTx<T>(tx: IDBTransaction, scope: string, work: () => Promise<T>):
 }
 
 async function getAllFromStore<T extends object>(
-  store: IDBObjectStore,
+  store: IDBIndex | IDBObjectStore,
   decode: (raw: unknown) => T | undefined,
+  query?: IDBValidKey | IDBKeyRange,
 ): Promise<T[]> {
-  const rawRecords = await idbReq<unknown[]>(store.getAll());
+  const rawRecords = await idbReq<unknown[]>(store.getAll(query));
   const records: T[] = [];
 
   for (const raw of rawRecords) {
@@ -179,20 +174,12 @@ async function storeGet<T extends object>(
   return decode(raw);
 }
 
-async function storeHas<T extends object>(
-  store: IDBObjectStore,
-  key: IDBValidKey,
-  decode: (raw: unknown) => T | undefined,
-): Promise<boolean> {
-  return (await storeGet<T>(store, key, decode)) !== undefined;
-}
-
 async function storeDelete<T extends object>(
   store: IDBObjectStore,
   key: IDBValidKey,
   decode: (raw: unknown) => T | undefined,
 ): Promise<boolean> {
-  const live = await storeHas<T>(store, key, decode);
+  const live = (await storeGet<T>(store, key, decode)) !== undefined;
 
   await idbReq(store.delete(key));
 
@@ -201,24 +188,11 @@ async function storeDelete<T extends object>(
 
 async function storeDeleteMany<T extends object>(
   store: IDBObjectStore,
-  keys: IDBValidKey[],
+  keys: readonly IDBValidKey[],
   decode: (raw: unknown) => T | undefined,
 ): Promise<number> {
-  if (keys.length === 0) return 0;
-
-  const results = await Promise.all(keys.map((k) => storeDelete<T>(store, k, decode)));
-
+  const results = await Promise.all(keys.map((key) => storeDelete(store, key, decode)));
   return results.filter(Boolean).length;
-}
-
-async function storePutAt<T>(
-  store: IDBObjectStore,
-  key: IDBValidKey,
-  value: T,
-  encode: (v: T, ttl?: number) => unknown,
-  ttl?: number,
-): Promise<void> {
-  await idbReq(store.put(encode(value, ttl), key));
 }
 
 function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
@@ -255,7 +229,7 @@ function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
 type CursorState<T> =
   | { type: 'idle' }
   | { reject: (e: unknown) => void; resolve: (r: IteratorResult<T>) => void; type: 'waiting' }
-  | { result: IteratorResult<T>; type: 'buffered' }
+  | { results: IteratorResult<T>[]; type: 'buffered' }
   | { error: unknown; type: 'error' }
   | { type: 'done' };
 
@@ -284,8 +258,10 @@ function iterateStoreWithCursor<T extends object>(
 
           state = result.done ? { type: 'done' } : { type: 'idle' };
           resolve(result);
+        } else if (state.type === 'buffered') {
+          state.results.push(result);
         } else {
-          state = { result, type: 'buffered' };
+          state = { results: [result], type: 'buffered' };
         }
       };
 
@@ -303,6 +279,7 @@ function iterateStoreWithCursor<T extends object>(
       };
 
       cursorRequest.onsuccess = () => {
+        if (state.type === 'done') return;
         const cursor = cursorRequest.result;
 
         if (!cursor) {
@@ -311,7 +288,19 @@ function iterateStoreWithCursor<T extends object>(
           return;
         }
 
-        const value = decode(cursor.value as unknown);
+        let value: T | undefined;
+        try {
+          value = decode(cursor.value as unknown);
+        } catch (error) {
+          if (state.type === 'waiting') {
+            const { reject } = state;
+            state = { type: 'done' };
+            reject(error);
+          } else {
+            state = { error, type: 'error' };
+          }
+          return;
+        }
 
         // Advance eagerly BEFORE yielding to keep the IDB transaction alive.
         cursor.continue();
@@ -330,9 +319,13 @@ function iterateStoreWithCursor<T extends object>(
           }
 
           if (state.type === 'buffered') {
-            const { result } = state;
+            const [result, ...results] = state.results;
 
-            state = result.done ? { type: 'done' } : { type: 'idle' };
+            state = result.done
+              ? { type: 'done' }
+              : results.length > 0
+                ? { results, type: 'buffered' }
+                : { type: 'idle' };
 
             return Promise.resolve(result);
           }
@@ -364,75 +357,34 @@ function iterateStoreWithCursor<T extends object>(
   };
 }
 
-/**
- * R3: Extracted IDB batch core — builds a StorageBackend that operates within
- * an existing IDBTransaction, shared by all tables in the batch.
- * Eliminates the duplicated `txCore` block that was previously inlined in `idbBatch`.
- */
-function buildIdbBatchCore<S extends AnySchema, K extends keyof S & string>(
-  schema: S,
-  idbTx: IDBTransaction,
-  decode: <T extends object>(raw: unknown) => T | undefined,
-  encode: <T>(value: T, ttl?: number) => unknown,
-): StorageBackend<S, K> {
-  const storeOf = (table: K): IDBObjectStore => idbTx.objectStore(table);
-
-  return {
-    clear: async (table) => {
-      await idbReq(storeOf(table).clear());
-    },
-    count: async (table) => {
-      // Must inspect each stored record to exclude TTL-expired entries.
-      // Individual put() calls can attach a TTL even when the schema has no defaultTtl,
-      // so schema[table].defaultTtl being absent does not guarantee a clean count.
-      // This matches the top-level core.count() behaviour in the IDB adapter.
-      const all = await idbReq<unknown[]>(storeOf(table).getAll());
-
-      return all.filter((r) => decode(r) !== undefined).length;
-    },
-    delete: (table, key) => storeDelete<RecordOf<S, K>>(storeOf(table), encodeVaultKey(key), decode),
-    deleteMany: (table, keys) => storeDeleteMany<RecordOf<S, K>>(storeOf(table), keys.map(encodeVaultKey), decode),
-    get: (table, key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode),
-    getAll: (table) => getAllFromStore<RecordOf<S, typeof table>>(storeOf(table), decode),
-    getMany: (table, keys) =>
-      Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode))),
-    has: (table, key) => storeHas<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode),
-    pruneExpiredInTable: (table) => pruneExpiredInStore(storeOf(table)),
-    put(table, value, ttl) {
-      return storePutAt(storeOf(table), encodeVaultKey(getRecordKey(schema, table, value)), value, encode, ttl);
-    },
-    putAll(table, values, ttl) {
-      return Promise.all(
-        values.map((v) => storePutAt(storeOf(table), encodeVaultKey(getRecordKey(schema, table, v)), v, encode, ttl)),
-      ).then(() => undefined);
-    },
-  };
+export interface IndexedDbVaultStore<S extends AnySchema> extends DocumentVaultStore<S> {
+  getAllByIndex<K extends keyof S & string, Field extends keyof RecordOf<S, K> & string>(
+    table: K,
+    field: Field,
+    value: RecordOf<S, K>[Field],
+  ): Promise<RecordOf<S, K>[]>;
 }
 
-type IndexedDbOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
+type IndexedDbOptions<S extends AnySchema> = DurableStoreOptions<S> & {
   migrate?: MigrationFn;
   name: string;
   /** Schema version. Must be a positive integer. Increment when adding tables or changing the schema, then provide `migrate`. Defaults to 1. */
   version?: number;
 };
 
-export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): TransactionalVaultStore<S> {
-  const { migrate, name, schema, validators, version = 1 } = options;
+export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): IndexedDbVaultStore<S> {
+  const { migrate, name, schema, codecs, version = 1 } = options;
+
+  if (!codecs) {
+    throw new VaultError('createIndexedDB: codecs are required for durable persistence');
+  }
 
   if (!Number.isInteger(version) || version < 1) {
     throw new VaultError(`createIndexedDB: version must be a positive integer, got ${String(version)}`);
   }
 
   // Fixed envelopes keep IndexedDB records and `value.<field>` indexes portable across adapters.
-  const decode = <T extends object>(raw: unknown): T | undefined => {
-    const stored = parseStored<T>(raw);
-
-    return !stored || isExpired(stored.expiresAt) ? undefined : stored.value;
-  };
-
-  const encode = <T>(value: T, ttl?: number): StoredRecord<T> => {
-    return ttl === undefined ? { value } : { expiresAt: Date.now() + ttl, value };
-  };
+  // Table-aware codec encode/decode is applied in the backend methods below.
 
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`vault:${name}`) : undefined;
 
@@ -555,28 +507,56 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     channel?.postMessage({ table: String(table) });
   };
 
+  // Table-aware decode: unwrap envelope + apply codec.decode
+  const decodeWithCodec = <T extends object>(table: keyof S, raw: unknown): T | undefined => {
+    const stored = parseStored<unknown>(raw);
+
+    if (!stored || isExpired(stored.expiresAt)) return undefined;
+
+    try {
+      return decodeRecord(codecs[table], stored.value) as unknown as T;
+    } catch (err) {
+      throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
+    }
+  };
+
+  // Table-aware encode: apply codec.encode + wrap in envelope
+  const encodeWithCodec = <T>(table: keyof S, value: T, ttl?: number): StoredRecord<unknown> => {
+    const record = value as RecordOf<S, typeof table>;
+    const encoded = encodeRecord(codecs[table], record);
+
+    for (const field of schema[table].indexes ?? []) {
+      const indexedValue = (record as Record<string, unknown>)[field];
+      if (indexedValue === undefined) continue;
+
+      if (
+        typeof encoded !== 'object' ||
+        encoded === null ||
+        !Object.hasOwn(encoded, field) ||
+        !Object.is((encoded as Record<string, unknown>)[field], indexedValue)
+      ) {
+        throw new VaultError(`codec output for table "${String(table)}" must preserve indexed field "${field}"`);
+      }
+    }
+
+    return ttl === undefined ? { value: encoded } : { expiresAt: Date.now() + ttl, value: encoded };
+  };
+
   const core: StorageBackend<S> = {
     clear: (table) => withStore(table, 'readwrite', (s) => idbReq(s.clear()).then(() => undefined)),
 
-    count: (table) =>
-      withStore(table, 'readonly', async (s) => {
-        // Must inspect each stored record to exclude TTL-expired entries.
-        // Individual put() calls can attach a TTL even when the schema has no defaultTtl,
-        // so schema[table].defaultTtl being absent does not guarantee a clean count.
-        const all = await idbReq<unknown[]>(s.getAll());
+    delete: (table, key) =>
+      withStore(table, 'readwrite', (s) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
 
-        return all.filter((r) => decode(r) !== undefined).length;
+        return storeDelete<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode);
       }),
 
-    delete: (table, key) =>
-      withStore(table, 'readwrite', (s) => storeDelete<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode)),
-
     deleteMany: (table, keys) =>
-      keys.length === 0
-        ? Promise.resolve(0)
-        : withStore(table, 'readwrite', (s) =>
-            storeDeleteMany<RecordOf<S, typeof table>>(s, keys.map(encodeVaultKey), decode),
-          ),
+      withStore(table, 'readwrite', (s) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        return storeDeleteMany<RecordOf<S, typeof table>>(s, keys.map(encodeVaultKey), decode);
+      }),
 
     async dispose(): Promise<void> {
       disposed = true;
@@ -592,30 +572,76 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     },
 
     get: (table, key) =>
-      withStore(table, 'readonly', (s) => storeGet<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode)),
+      withStore(table, 'readonly', (s) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
 
-    getAll: (table) => withStore(table, 'readonly', (s) => getAllFromStore<RecordOf<S, typeof table>>(s, decode)),
+        return storeGet<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode);
+      }),
 
-    // Ad-hoc per-put TTLs can be attached regardless of schema-level defaultTtl (same caveat as
-    // count()), so we cannot take the O(1) store.getAllKeys() shortcut unconditionally — every
-    // record must be decoded to exclude TTL-expired entries correctly.
-    getAllKeys: (table) =>
-      withStore(table, 'readonly', async (s) => {
-        const records = await getAllFromStore<RecordOf<S, typeof table>>(s, decode);
-        const keyField = schema[table].key;
+    getAll: (table) =>
+      withStore(table, 'readonly', (s) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
 
-        return records.map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
+        return getAllFromStore<RecordOf<S, typeof table>>(s, decode);
       }),
 
     getMany: (table, keys) =>
-      keys.length === 0
-        ? Promise.resolve([])
-        : withStore(table, 'readonly', (s) =>
-            Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode))),
-          ),
+      withStore(table, 'readonly', (s) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        return Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode)));
+      }),
 
-    has: (table, key) =>
-      withStore(table, 'readonly', (s) => storeHas<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode)),
+    iterate: (table) => {
+      // Each call opens a fresh transaction so iteration doesn't hold locks across awaits.
+      const getIterable = async (): Promise<AsyncIterable<RecordOf<S, typeof table>>> => {
+        if (disposed) throw new VaultDisposedError(`"${name}" is disposed`);
+
+        if (!db) await connect();
+
+        if (!db || disposed) throw new VaultDisposedError(`"${name}" is disposed`);
+
+        const idb = db;
+        const tx = idb.transaction(String(table), 'readonly');
+        const store = tx.objectStore(String(table));
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+
+        return iterateStoreWithCursor<RecordOf<S, typeof table>>(
+          store,
+          decode as (raw: unknown) => RecordOf<S, typeof table> | undefined,
+        );
+      };
+
+      let inner: AsyncIterator<RecordOf<S, typeof table>> | undefined;
+
+      const initInner = (): Promise<AsyncIterator<RecordOf<S, typeof table>>> =>
+        getIterable().then((iterable) => {
+          inner = iterable[Symbol.asyncIterator]();
+
+          return inner;
+        });
+
+      return {
+        [Symbol.asyncIterator](): AsyncIterator<RecordOf<S, typeof table>> {
+          return {
+            next(): Promise<IteratorResult<RecordOf<S, typeof table>>> {
+              if (inner) return inner.next();
+
+              return initInner().then((it) => it.next());
+            },
+            return(value?: unknown): Promise<IteratorResult<RecordOf<S, typeof table>>> {
+              if (inner) return inner.return?.(value) ?? Promise.resolve({ done: true, value });
+
+              return Promise.resolve({ done: true, value });
+            },
+            throw(err?: unknown): Promise<IteratorResult<RecordOf<S, typeof table>>> {
+              if (inner) return inner.throw?.(err) ?? Promise.reject(err);
+
+              return Promise.reject(err);
+            },
+          };
+        },
+      };
+    },
 
     async pruneAllExpired() {
       const idb = await requireDb();
@@ -632,15 +658,20 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
     put(table, value, ttl) {
       const key = encodeVaultKey(getRecordKey(schema, table, value));
+      const encoded = encodeWithCodec(table, value, ttl);
 
-      return withStore(table, 'readwrite', (s) => storePutAt(s, key, value, encode, ttl));
+      return withStore(table, 'readwrite', (s) => idbReq(s.put(encoded, key)).then(() => undefined));
     },
 
     putAll(table, values, ttl) {
+      const encodedValues = values.map((v) => {
+        const key = encodeVaultKey(getRecordKey(schema, table, v));
+
+        return { encoded: encodeWithCodec(table, v, ttl), key };
+      });
+
       return withStore(table, 'readwrite', (s) =>
-        Promise.all(
-          values.map((v) => storePutAt(s, encodeVaultKey(getRecordKey(schema, table, v)), v, encode, ttl)),
-        ).then(() => undefined),
+        Promise.all(encodedValues.map(({ encoded, key }) => idbReq(s.put(encoded, key)))).then(() => undefined),
       );
     },
   };
@@ -656,21 +687,88 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     const idb = await requireDb();
     const idbTx = idb.transaction([...tables] as string[], 'readwrite');
     const dirtyTables = new Set<K>();
+    const storeOf = (table: K): IDBObjectStore => idbTx.objectStore(table);
 
-    const txCore = buildIdbBatchCore<S, K>(schema, idbTx, decode, encode);
+    const batchCore: StorageBackend<S, K> = {
+      clear: async (table) => {
+        await idbReq(storeOf(table).clear());
+      },
+      delete: (table, key) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+
+        return storeDelete<RecordOf<S, K>>(storeOf(table), encodeVaultKey(key), decode);
+      },
+      deleteMany: (table, keys) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        return storeDeleteMany<RecordOf<S, K>>(storeOf(table), keys.map(encodeVaultKey), decode);
+      },
+      get: (table, key) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+
+        return storeGet<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode);
+      },
+      getAll: (table) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+
+        return getAllFromStore<RecordOf<S, typeof table>>(storeOf(table), decode);
+      },
+      getMany: (table, keys) => {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+        const store = storeOf(table);
+        return Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(store, encodeVaultKey(key), decode)));
+      },
+      iterate(table) {
+        const decode = <T extends object>(raw: unknown): T | undefined => decodeWithCodec<T>(table, raw);
+
+        return iterateStoreWithCursor<RecordOf<S, typeof table>>(
+          storeOf(table),
+          decode as (raw: unknown) => RecordOf<S, typeof table> | undefined,
+        );
+      },
+      pruneExpiredInTable: (table) => pruneExpiredInStore(storeOf(table)),
+      put(table, value, ttl) {
+        const key = encodeVaultKey(getRecordKey(schema, table, value));
+        const encoded = encodeWithCodec(table, value, ttl);
+
+        return idbReq(storeOf(table).put(encoded, key)).then(() => undefined);
+      },
+      putAll(table, values, ttl) {
+        return Promise.all(
+          values.map((v) => {
+            const key = encodeVaultKey(getRecordKey(schema, table, v));
+            const encoded = encodeWithCodec(table, v, ttl);
+
+            return idbReq(storeOf(table).put(encoded, key));
+          }),
+        ).then(() => undefined);
+      },
+    };
+
     const scope = new Set<string>(tables);
-    const tx = buildTxContext<S, K>(schema, txCore, (t) => dirtyTables.add(t), validateFn, scope);
-    const result = await runIdbTx(idbTx, name, () => fn(tx));
+    let contextActive = true;
+    const tx = buildTxContext<S, K>(
+      schema,
+      batchCore,
+      (t) => dirtyTables.add(t),
+      validateFn,
+      scope,
+      () => contextActive,
+    );
 
-    for (const table of dirtyTables) {
-      notifyMutation(table);
+    try {
+      const result = await runIdbTx(idbTx, name, () => fn(tx));
+
+      for (const table of dirtyTables) notifyMutation(table);
+
+      return result;
+    } finally {
+      contextActive = false;
     }
-
-    return result;
   };
 
   let batch: BatchImpl<S> | undefined;
-  const adapter = buildAdapterOps(schema, core, {
+  const adapter = buildDocumentStore(schema, core, {
+    codecs,
     onCrossTabMessage(notify) {
       if (!channel) {
         return undefined;
@@ -693,75 +791,22 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       batch = (tables, fn) => idbBatch(tables, fn, deps.notifyMutation, deps.validate);
     },
     schema,
-    validators,
   });
-
-  /**
-   * F1: Attach cursor-based `iterate()` on top of the adapter.
-   * Opens a dedicated readonly transaction per call and streams records via IDB cursor —
-   * genuinely memory-efficient for large tables unlike the getAll()-then-yield pattern.
-   */
-  const store = {
-    ...adapter,
-    get disposalSignal(): AbortSignal {
-      return adapter.disposalSignal;
-    },
-    // Spread copies getters as static values; re-expose live disposal state.
-    get disposed(): boolean {
-      return adapter.disposed;
-    },
-    iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>> {
-      if (disposed) throw new VaultDisposedError(`"${name}" is disposed`);
-
-      // Each call opens a fresh transaction so iteration doesn't hold locks across awaits.
-      // We need to ensure the DB is connected before opening the transaction.
-      const getIterable = async (): Promise<AsyncIterable<RecordOf<S, K>>> => {
-        if (!db) await connect();
-
-        if (!db || disposed) throw new VaultDisposedError(`"${name}" is disposed`);
-
-        const idb = db;
-        const tx = idb.transaction(String(table), 'readonly');
-        const store = tx.objectStore(String(table));
-
-        return iterateStoreWithCursor<RecordOf<S, K>>(store, decode as (raw: unknown) => RecordOf<S, K> | undefined);
-      };
-
-      let inner: AsyncIterator<RecordOf<S, K>> | undefined;
-
-      const initInner = (): Promise<AsyncIterator<RecordOf<S, K>>> =>
-        getIterable().then((iterable) => {
-          inner = iterable[Symbol.asyncIterator]();
-
-          return inner;
-        });
-
-      return {
-        [Symbol.asyncIterator](): AsyncIterator<RecordOf<S, K>> {
-          return {
-            next(): Promise<IteratorResult<RecordOf<S, K>>> {
-              // Sync check avoids an extra Promise allocation on every iteration after the first.
-              if (inner) return inner.next();
-
-              return initInner().then((it) => it.next());
-            },
-            return(value?: unknown): Promise<IteratorResult<RecordOf<S, K>>> {
-              if (inner) return inner.return?.(value) ?? Promise.resolve({ done: true, value });
-
-              return Promise.resolve({ done: true, value });
-            },
-            throw(err?: unknown): Promise<IteratorResult<RecordOf<S, K>>> {
-              if (inner) return inner.throw?.(err) ?? Promise.reject(err);
-
-              return Promise.reject(err);
-            },
-          };
-        },
-      };
-    },
-  };
 
   if (!batch) throw new VaultError('IndexedDB transaction capability was not initialized');
 
-  return withIndexedDbTransactions(store, batch);
+  return Object.assign(withBatch(adapter, batch, schema), {
+    getAllByIndex<K extends keyof S & string, Field extends keyof RecordOf<S, K> & string>(
+      table: K,
+      field: Field,
+      value: RecordOf<S, K>[Field],
+    ): Promise<RecordOf<S, K>[]> {
+      return withStore(table, 'readonly', (store) => {
+        if (!store.indexNames.contains(field)) throw new VaultError(`Table "${table}" has no index "${field}"`);
+
+        const decode = (raw: unknown): RecordOf<S, K> | undefined => decodeWithCodec<RecordOf<S, K>>(table, raw);
+        return getAllFromStore(store.index(field), decode, value as IDBValidKey);
+      });
+    },
+  });
 }

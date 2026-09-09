@@ -9,7 +9,7 @@ describe('mount ownership and lifecycle', () => {
     const handler = mockHandler();
     const first = new FakeTarget();
     const second = new FakeTarget();
-    const map = createKeymap({ 'g g': handler });
+    const map = createKeymap([{ handler, id: 'top', shortcut: 'g g' }]);
 
     map.mount(first);
     map.mount(second);
@@ -23,7 +23,7 @@ describe('mount ownership and lifecycle', () => {
   it('reference-counts repeated mounts of the same target', () => {
     const handler = mockHandler();
     const target = new FakeTarget();
-    const map = createKeymap({ 'ctrl+k': handler });
+    const map = createKeymap([{ handler, id: 'save', shortcut: 'ctrl+k' }]);
     const firstUnmount = map.mount(target);
     const secondUnmount = map.mount(target);
 
@@ -42,7 +42,7 @@ describe('mount ownership and lifecycle', () => {
     const handler = mockHandler();
     const parent = document.createElement('div');
     const child = document.createElement('button');
-    const map = createKeymap({ 'g g': handler });
+    const map = createKeymap([{ handler, id: 'top', shortcut: 'g g' }]);
 
     parent.append(child);
     map.mount(parent);
@@ -58,7 +58,7 @@ describe('mount ownership and lifecycle', () => {
   it('handles each dispatch of a reused event object', () => {
     const handler = mockHandler();
     const target = document.createElement('button');
-    const map = createKeymap({ k: handler });
+    const map = createKeymap([{ handler, id: 'k', shortcut: 'k' }]);
     const event = new KeyboardEvent('keydown', { key: 'k' });
 
     map.mount(target);
@@ -70,12 +70,12 @@ describe('mount ownership and lifecycle', () => {
   });
 
   it('rejects new operations after disposal', () => {
-    const map = createKeymap({ 'ctrl+k': mockHandler() });
+    const map = createKeymap([{ handler: mockHandler(), id: 'save', shortcut: 'ctrl+k' }]);
 
     map.dispose();
 
-    expect(() => map.bind('ctrl+s', mockHandler())).toThrow(KeymapError);
-    expect(() => map.unbind('ctrl+k')).toThrow(KeymapError);
+    expect(() => map.bind({ handler: mockHandler(), id: 'open', shortcut: 'ctrl+s' })).toThrow(KeymapError);
+    expect(() => map.unbind('save')).toThrow(KeymapError);
     expect(() => map.mount(new FakeTarget())).toThrow(KeymapError);
   });
 });

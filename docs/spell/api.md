@@ -1,29 +1,28 @@
 ---
 title: Spell — API Reference
-description: Reference for Spell schema builders, parsing, diagnostics, and tooling exports.
+description: Reference for Spell schema builders, parsing, errors, context, and tooling exports.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                  | Purpose                         | Execution mode                     | Common gotcha                                        |
-| ----------------------- | ------------------------------- | ---------------------------------- | ---------------------------------------------------- |
-| `s`                     | Creates schemas                 | Sync or async, depending on checks | `checkAsync()` requires async parsing                |
-| `Schema` / `PipeSchema` | Base schema abstractions        | Sync or async                      | Use `Infer` rather than assuming input equals output |
-| `diagnostics`           | Parse-context and error helpers | Sync                               | Context is per parse/request, not global             |
-| `SpellValidationError`  | Validation failure details      | Sync/async parse failures          | Use `safeParse()` to handle it as a result           |
+| Symbol                   | Purpose                         | Execution mode                     | Common gotcha                              |
+| ------------------------ | ------------------------------- | ---------------------------------- | ------------------------------------------ |
+| `s`                      | Creates schemas                 | Sync or async, depending on checks | `checkAsync()` requires async parsing      |
+| `createParseContext()`   | Creates request-local messages  | Sync                               | Pass the context to each parse call        |
+| `SpellValidationError`   | Provides validation issues      | Sync/async parse failures          | Use `safeParse()` for expected invalid data |
 
 ## Package Entry Point
 
 | Import                       | Purpose                                         |
 | ---------------------------- | ----------------------------------------------- |
-| `@vielzeug/spell`            | Schema builders, errors, types, and diagnostics |
+| `@vielzeug/spell`            | Schema builders, errors, types, and parse contexts |
 | `@vielzeug/spell/json`       | Convert portable definitions to JSON Schema     |
 | `@vielzeug/spell/predicates` | Standalone format and type predicates           |
 
 ```ts
-import { diagnostics, s, type Infer } from '@vielzeug/spell';
+import { createParseContext, s, type Infer } from '@vielzeug/spell';
 import { fromDefinition } from '@vielzeug/spell/json';
 import { isEmail } from '@vielzeug/spell/predicates';
 ```
@@ -35,7 +34,7 @@ All builders live under `s`.
 | Builder                                                           | Purpose                    |
 | ----------------------------------------------------------------- | -------------------------- |
 | `string`, `number`, `boolean`, `bigint`, `date`                   | Primitive values           |
-| `literal`, `enum`, `null`, `undefined`, `unknown`, `any`, `never` | Exact and universal values |
+| `literal`, `enum`, `null`, `undefined`, `unknown`, `never` | Exact and universal values |
 | `array`, `tuple`, `set`, `map`, `record`, `object`                | Collections                |
 | `union`, `intersect`, `discriminatedUnion`, `lazy`                | Composition                |
 | `coerce.*`                                                        | Coercing primitive schemas |
@@ -51,6 +50,19 @@ type User = Infer<typeof User>;
 ```
 
 Object schemas reject unknown keys. Use `.relaxed()` to retain extras.
+
+## Standard Schema interoperability
+
+Every schema implements the dependency-free Standard Schema v1 structural protocol through `schema['~standard']`. Consumers that accept Standard Schema validators can use Spell schemas directly without an adapter.
+
+```ts
+const User = s.object({ name: s.string() });
+const result = await User['~standard'].validate({ name: 'Ada' });
+```
+
+Successful results contain `value`; failures contain portable `{ message, path }` issues. Failed unions remain one stable union issue instead of selecting a branch heuristically.
+
+The exported `StandardSchemaV1` interface mirrors the full v1 protocol, including `validate(value, options?)` and the `InferInput` and `InferOutput` namespace helpers.
 
 ## Parsing
 
@@ -125,14 +137,20 @@ const jsonSchema = fromDefinition(definition);
 
 No implicit schema-to-JSON conversion exists. Make definition boundary explicit.
 
-## Diagnostics
+## Parse Contexts
 
-`diagnostics` contains pure helpers and immutable parse-context creation.
+`createParseContext()` creates immutable request-local validation messages.
 
 ```ts
-import { diagnostics, s } from '@vielzeug/spell';
+function createParseContext(messages?: DeepPartial<Messages>): ParseContext;
+```
 
-const context = diagnostics.createParseContext({
+**Returns:** A parse context with built-in messages merged with the supplied overrides.
+
+```ts
+import { createParseContext, s } from '@vielzeug/spell';
+
+const context = createParseContext({
   object: { invalidKeys: () => 'Unsupported field' },
 });
 
@@ -144,65 +162,41 @@ if (!result.success) {
 }
 ```
 
-`diagnostics.fail(code, message, params?)` and `diagnostics.prependIssuePath(issues, segment)` support custom parser implementations.
-
-## Errors
-
-- `SpellError` — base class. Use `instanceof SpellError` for cross-boundary narrowing.
-- `SpellValidationError` — validation failure with `issues`, `bestMatch()`, `messagesAt()`, `flatten()`, and `flattenFirst()`.
-- `SpellDefinitionError` — schema cannot create portable definition.
-
-```ts
-const result = s.object({ email: s.string().email() }).safeParse({ email: 'invalid' });
-
-if (!result.success) {
-  const { fieldErrors, formErrors } = result.error.flatten();
-  console.log(fieldErrors, formErrors);
-}
-```
-
 ## Types
-
-### Core schema types
-
-```ts
-type SchemaMode = 'async' | 'sync';
-
-type AnySchema<Output = unknown, Input = Output, Mode extends SchemaMode = SchemaMode> = SchemaSurface<
-  Output,
-  Input,
-  Mode
->;
-
-type SchemaSurface<Output = unknown, Input = Output, Mode extends SchemaMode = SchemaMode> = {
-  _parseFullAsync(value: unknown, ctx?: ParseContext): Promise<{ data: unknown; issues: Issue[] }>;
-  _parseFullSync(value: unknown, ctx?: ParseContext): { data: unknown; issues: Issue[] };
-  definition(): SchemaDescriptor;
-  isOptional: boolean;
-  optional(): SchemaSurface<Output | undefined, Input | undefined, Mode>;
-  required(): SchemaSurface<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode>;
-  readonly [schemaInput]: Input;
-  readonly [schemaMode]: Mode;
-  readonly [schemaOutput]: Output;
-  walk<R>(visitor: SchemaWalker<R>): R | null;
-};
-```
-
-`schemaMode` is the public symbol marking a schema's parsing capability.
 
 ### Inference types
 
+| Type | Resolves to |
+| --- | --- |
+| `Infer<TSchema>` | Parsed output; alias of `InferOutput<TSchema>` |
+| `InferInput<TSchema>` | Input accepted before parsing or transformation |
+| `InferOutput<TSchema>` | Value returned after parsing and transformation |
+
+Composite schemas preserve child input types. Object input types make fields optional when their field schema accepts `undefined`.
+
+### Standard Schema
+
 ```ts
-type InferOutput<T> =
-  T extends Schema<infer Output, unknown, SchemaMode>
-    ? Output
-    : T extends { readonly [schemaOutput]: infer Output }
-      ? Output
-      : never;
-type InferInput<T> = T extends { readonly [schemaInput]: infer Input } ? Input : unknown;
-type Infer<T> = InferOutput<T>;
-type InferSchemaMode<T> = T extends { readonly [schemaMode]: infer Mode extends SchemaMode } ? Mode : never;
-type MergeSchemaModes<Modes extends SchemaMode> = 'async' extends Modes ? 'async' : 'sync';
+interface StandardSchemaV1<Input = unknown, Output = Input> {
+  readonly '~standard': StandardSchemaV1.Props<Input, Output>;
+}
+
+namespace StandardSchemaV1 {
+  interface Props<Input = unknown, Output = Input> {
+    readonly version: 1;
+    readonly vendor: string;
+    readonly validate: (value: unknown, options?: Options) => Result<Output> | Promise<Result<Output>>;
+    readonly types?: Types<Input, Output>;
+  }
+
+  type Result<Output> = { readonly value: Output; readonly issues?: undefined } | { readonly issues: readonly Issue[] };
+  interface Options { readonly libraryOptions?: Record<string, unknown> }
+  interface Issue { readonly message: string; readonly path?: readonly (PropertyKey | PathSegment)[] }
+  interface PathSegment { readonly key: PropertyKey }
+  interface Types<Input = unknown, Output = Input> { readonly input: Input; readonly output: Output }
+  type InferInput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['input'];
+  type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema['~standard']['types']>['output'];
+}
 ```
 
 ### Parse result and issues
@@ -261,8 +255,6 @@ type Issue =
 ```ts
 type ParseContext = { messages: Messages };
 
-type ValidateFn = (value: unknown, ctx?: ParseContext) => Issue[] | null | Promise<Issue[] | null>;
-
 type CheckContext = {
   addIssue: (issue: {
     code: string;
@@ -310,7 +302,7 @@ type DeepPartial<T> = {
 ```ts
 type SchemaDescriptor = BaseDescriptor &
   (
-    | { kind: 'any' | 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' }
+    | { kind: 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' }
     | { className: string; kind: 'instanceof' }
     | { contentEncoding?: string; format?: string; kind: 'string'; maxLength?: number; minLength?: number; pattern?: string | null }
     | { exclusiveMaximum?: number; exclusiveMinimum?: number; kind: 'number'; maximum?: number; minimum?: number; multipleOf?: number; typeHint?: 'integer' }
@@ -330,37 +322,28 @@ type SchemaDescriptor = BaseDescriptor &
 type JsonSchema = Record<string, unknown>;
 ```
 
-### Schema walker
+### Schema traversal
 
-```ts
-type SchemaWalker<R> = {
-  array?: <T extends AnySchema, Mode extends SchemaMode>(schema: ArraySchema<T, Mode>, item: R | null) => R;
-  bigint?: <Input, Mode extends SchemaMode>(schema: BigIntSchema<Input, Mode>) => R;
-  boolean?: <Input, Mode extends SchemaMode>(schema: BooleanSchema<Input, Mode>) => R;
-  date?: <Input, Mode extends SchemaMode>(schema: DateSchema<Input, Mode>) => R;
-  enum?: <T extends EnumValues, Mode extends SchemaMode>(schema: EnumSchema<T, Mode>) => R;
-  instanceof?: <T, Mode extends SchemaMode>(schema: InstanceOfSchema<T, Mode>) => R;
-  intersect?: <T extends readonly AnySchema[], Mode extends SchemaMode>(schema: IntersectSchema<T, Mode>, branches: (R | null)[]) => R;
-  lazy?: <T, Input, Mode extends SchemaMode>(schema: LazySchema<T, Input, Mode>) => R;
-  literal?: <T extends string | number | boolean | null | undefined, Mode extends SchemaMode>(schema: LiteralSchema<T, Mode>) => R;
-  map?: <K extends AnySchema, V extends AnySchema, Mode extends SchemaMode>(schema: MapSchema<K, V, Mode>, key: R | null, value: R | null) => R;
-  never?: <Mode extends SchemaMode>(schema: NeverSchema<Mode>) => R;
-  number?: <Input, Mode extends SchemaMode>(schema: NumberSchema<Input, Mode>) => R;
-  object?: <T extends ObjectShape, Mode extends SchemaMode>(schema: ObjectSchema<T, Mode>, fields: Record<string, R | null>) => R;
-  pipe?: <To extends AnySchema, From extends AnySchema, Mode extends SchemaMode>(schema: PipeSchema<To, From, Mode>, from: R | null, to: R | null) => R;
-  record?: <K extends AnySchema, V extends AnySchema, Mode extends SchemaMode>(schema: RecordSchema<K, V, Mode>, key: R | null, value: R | null) => R;
-  set?: <T extends AnySchema, Mode extends SchemaMode>(schema: SetSchema<T, Mode>, item: R | null) => R;
-  string?: <Input, Mode extends SchemaMode>(schema: StringSchema<Input, Mode>) => R;
-  tuple?: <T extends TupleSchemas, Rest extends AnySchema | null, Mode extends SchemaMode>(schema: TupleSchema<T, Rest, Mode>, items: (R | null)[], rest: R | null) => R;
-  union?: <T extends readonly AnySchema[], Mode extends SchemaMode>(schema: UnionSchema<T, Mode>, branches: (R | null)[]) => R;
-  unknown?: (schema: AnySchema) => R;
-  variant?: <K extends string, M extends Record<string, ObjectSchema<any, any>>, Mode extends SchemaMode>(schema: VariantSchema<K, M, Mode>, branches: Record<string, R | null>) => R;
-};
-```
+`SchemaWalker<R>` is the visitor type accepted by `schema.walk()`. Handlers are optional and correspond to schema kinds; composite handlers also receive their walked children. Use `unknown` as the fallback handler.
 
 ### Error helpers
 
 ```ts
 type FlatError = { messages: string[]; path: (string | number)[] };
 type FlatErrorFirst = { message: string; path: (string | number)[] };
+```
+
+## Errors
+
+- `SpellError` — base class. Use `instanceof SpellError` for cross-boundary narrowing.
+- `SpellValidationError` — validation failure with `issues`, `messagesAt()`, `flatten()`, and `flattenFirst()`.
+- `SpellDefinitionError` — schema cannot create portable definition.
+
+```ts
+const result = s.object({ email: s.string().email() }).safeParse({ email: 'invalid' });
+
+if (!result.success) {
+  const { fieldErrors, formErrors } = result.error.flatten();
+  console.log(fieldErrors, formErrors);
+}
 ```

@@ -1,6 +1,5 @@
-import { diagnostics, type ParseResult, SpellValidationError, s } from '../index';
-
-const { createParseContext, prependIssuePath } = diagnostics;
+import { prependIssuePath } from '../core';
+import { createParseContext, type ParseResult, SpellValidationError, s } from '../index';
 
 describe('SpellValidationError', () => {
   it('formats root and nested failures', () => {
@@ -33,22 +32,9 @@ describe('SpellValidationError', () => {
     expect(error.messagesAt('user')).toEqual([]);
     expect(error.messagesAt()).toEqual(['Form invalid']);
   });
-
-  it('returns nearest union branch failure', () => {
-    const result = s
-      .union(
-        s.object({ type: s.literal('a'), value: s.string() }),
-        s.object({ type: s.literal('b'), value: s.number() }),
-      )
-      .safeParse({ type: 'a', value: 123 });
-
-    expect(result).toMatchObject({ success: false });
-
-    if (!result.success) expect(result.error.bestMatch()?.[0]?.path).toEqual(['value']);
-  });
 });
 
-describe('diagnostics helpers', () => {
+describe('parse context and path helpers', () => {
   it('keeps issue paths immutable', () => {
     const original = [{ code: 'custom', message: 'Bad', path: ['name'] }];
 

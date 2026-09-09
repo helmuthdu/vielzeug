@@ -39,5 +39,4 @@ toggle(tags, { id: 1, name: 'ts' }, (t) => t.id);
 
 ### Related
 
-- [replace](./replace.md)
 - [uniq](./uniq.md)

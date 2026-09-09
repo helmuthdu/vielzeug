@@ -1,187 +1,163 @@
-import { batch, computed, signal } from '@vielzeug/ripple';
 import { ScoutConfigurationError, ScoutDisposedError } from './errors';
 import { createIndex, type ScoutIndex } from './scout-index';
-import type { CreateSearchOptions, ScoutIndexOptions, SearchResult, SearchState } from './types';
+import type {
+  CreateSearchOptions,
+  ScoutEvent,
+  ScoutIndexOptions,
+  SearchResult,
+  SearchSnapshot,
+  SearchState,
+  SearchSubscribeOptions,
+} from './types';
 
-/**
- * Combined index + reactive search state returned by `createReactiveSearch()`.
- * Exposes the underlying `ScoutIndex` for incremental mutations (`add`, `remove`, `reindex`).
- */
-export type ReactiveSearch<T> = SearchState<T> & {
-  readonly index: ScoutIndex<T>;
-};
+export type ReactiveSearch<T> = SearchState<T> & { readonly index: ScoutIndex<T> };
 
 const DEFAULT_DEBOUNCE = 200;
 
-/**
- * Creates a reactive search state backed by a `ScoutIndex`.
- *
- * - Set `state.query.value` to trigger a (debounced) search.
- * - Read `state.results.value` inside an `effect` or `computed` to consume results reactively.
- * - `state.isSearching.value` is `true` while debouncing, `false` otherwise.
- * - Call `state.dispose()` (or `using state = createSearch(...)`) to release subscriptions.
- *
- * @example
- * ```ts
- * const index = createIndex(users, { fields: ['name', 'email'] });
- * const search = createSearch(index, { debounce: 150 });
- *
- * effect(() => {
- *   const results = search.results.value;
- *   renderList(results.map(r => r.item));
- * });
- *
- * // Wire to an input
- * input.addEventListener('input', e => {
- *   search.query.value = e.currentTarget.value;
- * });
- *
- * // Clean up
- * search.dispose();
- * ```
- *
- * `results` also updates when the index is mutated directly via `index.add()` / `.remove()`
- * / `.reindex()` / `.setItems()` (not just when `query` changes), by subscribing to `index.onMutate()`.
- *
- * @param index - A `ScoutIndex` built with `createIndex()`.
- * @param options.debounce - Milliseconds to wait before committing query changes. Default: `200`.
- * @param options.limit - Override the index-level result limit.
- * @param options.minQueryLength - Override the index-level minimum query length.
- * @param options.threshold - Override the index-level score threshold.
- */
+function notify(listeners: Set<() => void>): void {
+  for (const listener of [...listeners]) {
+    try {
+      listener();
+    } catch (error) {
+      queueMicrotask(() => {
+        throw error;
+      });
+    }
+  }
+}
+
+function emit<T>(tappers: Set<(event: ScoutEvent<T>) => void>, event: ScoutEvent<T>): void {
+  if (tappers.size === 0) return;
+
+  for (const tapper of [...tappers]) {
+    try {
+      tapper(event);
+    } catch {}
+  }
+}
+
+function subscribe<T>(
+  listeners: Set<T>,
+  listener: T,
+  options: SearchSubscribeOptions | undefined,
+  disposed: boolean,
+  lifetimeSignal: AbortSignal,
+): () => void {
+  if (disposed || options?.signal?.aborted) return () => {};
+
+  listeners.add(listener);
+  const unsubscribe = (): void => {
+    listeners.delete(listener);
+    options?.signal?.removeEventListener('abort', unsubscribe);
+  };
+  options?.signal?.addEventListener('abort', unsubscribe, { once: true, signal: lifetimeSignal });
+  return unsubscribe;
+}
+
 export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptions = {}): SearchState<T> {
   const { debounce: debounceMs = DEFAULT_DEBOUNCE, limit, minQueryLength, threshold } = options;
 
-  if (!Number.isFinite(debounceMs) || !Number.isInteger(debounceMs) || debounceMs < 0) {
+  if (!Number.isSafeInteger(debounceMs) || debounceMs < 0) {
     throw new ScoutConfigurationError('debounce must be a finite non-negative integer.');
   }
 
-  const query = signal<string>('', { name: 'scout:query' });
-  const committedQuery = signal<string>('', { name: 'scout:committedQuery' });
-  const indexVersion = signal(0, { name: 'scout:indexVersion' });
+  const search = (query: string) => index.search(query, { limit, minQueryLength, threshold });
+  const createSnapshot = (
+    query: string,
+    isSearching: boolean,
+    results: ReadonlyArray<SearchResult<T>>,
+  ): SearchSnapshot<T> => Object.freeze({ isSearching, query, results: Object.freeze(results) });
+  const listeners = new Set<() => void>();
+  const tappers = new Set<(event: ScoutEvent<T>) => void>();
+  const controller = new AbortController();
+  let snapshot = createSnapshot('', false, search(''));
+  let committedQuery = '';
+  let disposed = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
-  const unsubscribeMutations = index.onMutate(() => {
-    indexVersion.value++;
+  const publish = (next: SearchSnapshot<T>): void => {
+    snapshot = next;
+    notify(listeners);
+    emit(tappers, { snapshot: next, type: 'state-change' });
+  };
+  const commit = (query: string): void => {
+    committedQuery = query;
+    publish(createSnapshot(query, false, search(query)));
+  };
+  const unsubscribeIndex = index.onMutate(() => {
+    publish(createSnapshot(snapshot.query, snapshot.isSearching, search(committedQuery)));
   });
-
-  const isSearching = computed(() => query.value !== committedQuery.value, { name: 'scout:isSearching' });
-
-  const results = computed<SearchResult<T>[]>(
-    () => {
-      // Reading .value establishes a dependency so index mutations trigger a recompute.
-      void indexVersion.value;
-
-      return index.search(committedQuery.value, { limit, minQueryLength, threshold });
-    },
-    { name: 'scout:results' },
-  );
-
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  function cancelTimer(): void {
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
-  }
-
-  const subscription = query.subscribe(() => {
-    const q = query.peek();
-
-    cancelTimer();
-
-    if (q === committedQuery.peek()) return;
-
-    if (debounceMs === 0) {
-      committedQuery.value = q;
-
-      return;
-    }
-
-    timer = setTimeout(() => {
-      committedQuery.value = q;
-      timer = null;
-    }, debounceMs);
-  });
-
-  function clear(): void {
-    if (isDisposed) throw new ScoutDisposedError('SearchState.clear() called after dispose()');
-
-    cancelTimer();
-
-    batch(() => {
-      query.value = '';
-      committedQuery.value = '';
-    });
-  }
-
-  let isDisposed = false;
-  const ac = new AbortController();
-
-  function dispose(): void {
-    if (isDisposed) return;
-    isDisposed = true;
-    ac.abort();
-    cancelTimer();
-    subscription();
-    unsubscribeMutations();
-  }
+  const assertActive = (method: string): void => {
+    if (disposed) throw new ScoutDisposedError(`SearchState.${method}() called after dispose()`);
+  };
+  const dispose = (): void => {
+    if (disposed) return;
+    disposed = true;
+    if (timer !== undefined) clearTimeout(timer);
+    timer = undefined;
+    unsubscribeIndex();
+    emit(tappers, { type: 'dispose' });
+    listeners.clear();
+    tappers.clear();
+    controller.abort();
+  };
 
   return {
-    clear,
-    get disposalSignal(): AbortSignal {
-      return ac.signal;
+    clear() {
+      assertActive('clear');
+      if (snapshot.query === '' && !snapshot.isSearching) return;
+      if (timer !== undefined) clearTimeout(timer);
+      timer = undefined;
+      commit('');
+    },
+    get disposalSignal() {
+      return controller.signal;
     },
     dispose,
-    get disposed(): boolean {
-      return isDisposed;
+    get disposed() {
+      return disposed;
     },
-    isSearching,
-    query,
-    results,
-    [Symbol.dispose](): void {
-      dispose();
+    getSnapshot() {
+      return snapshot;
     },
+    setQuery(query) {
+      assertActive('setQuery');
+      if (query === snapshot.query) return;
+      if (timer !== undefined) clearTimeout(timer);
+      timer = undefined;
+
+      if (query === committedQuery) {
+        publish(createSnapshot(query, false, snapshot.results));
+        return;
+      }
+
+      if (debounceMs === 0) {
+        commit(query);
+        return;
+      }
+
+      publish(createSnapshot(query, true, snapshot.results));
+      timer = setTimeout(() => {
+        timer = undefined;
+        commit(query);
+      }, debounceMs);
+    },
+    subscribe(listener, subscribeOptions) {
+      return subscribe(listeners, listener, subscribeOptions, disposed, controller.signal);
+    },
+    tap(handler, tapOptions) {
+      return subscribe(tappers, handler, tapOptions, disposed, controller.signal);
+    },
+    [Symbol.dispose]: dispose,
   };
 }
 
-/**
- * Creates a `ScoutIndex` and a reactive search state in one call — the shorthand
- * for the common pattern of `createIndex` + `createSearch`.
- *
- * The returned `ReactiveSearch` exposes the underlying index via `.index` for
- * incremental mutations (`add`, `remove`, `reindex`, `setItems`) after construction.
- *
- * @example
- * ```ts
- * const search = createReactiveSearch(users, {
- *   fields: [{ field: 'name', weight: 2 }, 'email'],
- *   debounce: 150,
- * });
- *
- * effect(() => renderList(search.results.value.map(r => r.item)));
- *
- * // Wire to an input
- * input.addEventListener('input', e => { search.query.value = e.currentTarget.value; });
- *
- * // Add a new item at runtime
- * search.index.add(newUser);
- * ```
- *
- * @param items - Initial corpus to index.
- * @param options - Index options (`fields`, `limit`, `minQueryLength`, `threshold`) plus optional `debounce`.
- */
 export function createReactiveSearch<T>(
   items: T[],
   options: ScoutIndexOptions<T> & Pick<CreateSearchOptions, 'debounce'>,
 ): ReactiveSearch<T> {
-  const index = createIndex(items, {
-    fields: options.fields,
-    limit: options.limit,
-    minQueryLength: options.minQueryLength,
-    threshold: options.threshold,
-  });
-  const state = createSearch(index, { debounce: options.debounce });
+  const index = createIndex(items, options);
+  const state = createSearch(index, options);
 
   return {
     clear: state.clear,
@@ -192,12 +168,11 @@ export function createReactiveSearch<T>(
     get disposed() {
       return state.disposed;
     },
+    getSnapshot: state.getSnapshot,
     index,
-    isSearching: state.isSearching,
-    query: state.query,
-    results: state.results,
-    [Symbol.dispose]() {
-      state[Symbol.dispose]();
-    },
+    setQuery: state.setQuery,
+    subscribe: state.subscribe,
+    tap: state.tap,
+    [Symbol.dispose]: state[Symbol.dispose],
   };
 }

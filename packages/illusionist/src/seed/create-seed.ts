@@ -1,14 +1,12 @@
-import { hash } from '@vielzeug/arsenal/object';
-import type { RandomSource } from '@vielzeug/arsenal/random';
-
 import { IllusionistSeedError } from '../errors';
+import type { RandomSource } from '../types';
 import { mulberry32 } from './mulberry32';
 
 /**
  * Creates a {@link RandomSource} from a seed.
  *
  * - **Number seed** — used directly as the mulberry32 state.
- * - **String seed** — hashed via `arsenal`'s `hash()` to produce a 32-bit integer.
+ * - **String seed** — serialized via `JSON.stringify` and folded into a 32-bit integer.
  * - **No seed** — falls back to `crypto.getRandomValues` for cryptographic randomness.
  *
  * @example
@@ -27,7 +25,7 @@ export function createSeed(seed?: number | string): RandomSource {
     return mulberry32(Math.trunc(seed));
   }
 
-  const hashed = hash(seed);
+  const hashed = JSON.stringify(seed);
 
   // FNV-1a-ish fold from the hash string into a 32-bit integer.
   let state = 0;

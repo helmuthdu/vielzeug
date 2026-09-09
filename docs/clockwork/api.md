@@ -1,6 +1,6 @@
 ---
 title: Clockwork — API Reference
-description: Reference for Clockwork machine definitions, actors, devtools, and types.
+description: Reference for Clockwork machine definitions, actors, and types.
 ---
 
 [[toc]]
@@ -22,6 +22,21 @@ description: Reference for Clockwork machine definitions, actors, devtools, and 
 | --- | --- |
 | `@vielzeug/clockwork` | Machine compiler, actor runtime, errors, and types |
 
+## Exported Surface
+
+Callback parameter types are inferred for inline definitions. Clockwork also exports reusable callback, transition, state-node, actor-option, result, and error-context types for shared helpers.
+
+| Primary export | Kind |
+| --- | --- |
+| `defineMachine` | Function |
+| `Machine` | Type |
+| `Actor` | Type |
+| `MachineSnapshot` | Type |
+| `MachineConfig` | Type |
+| `ClockworkError` | Class |
+
+Additional exported types: `ActorErrorContext`, `ActorOptions`, `After`, `Effect`, `EffectArgs`, `EventByType`, `EventType`, `Guard`, `Invoke`, `InvokeArgs`, `MachineEvent`, `Reducer`, `StateNode`, `Transition`, `TransitionInput`, and `TransitionResult`.
+
 ## Core Functions
 
 ### `defineMachine()`
@@ -33,7 +48,9 @@ function defineMachine<
 >(): <State extends string>(definition: MachineConfig<State, Context, Event>) => Machine<State, Context, Event>;
 ```
 
-Returns a factory that validates and compiles a typed flat machine definition. Context must be a non-array record. Omit `context` only when the context type has no keys.
+Returns a factory that validates and compiles a typed flat machine definition. Definitions and their structural entries must be ordinary or null-prototype records, not arrays or class instances. Context follows the same record rule; omit it only when the context type has no keys. Compilation snapshots invoke and transition callback references.
+
+The curried signature is required so TypeScript can infer `State` from the `states` object while you explicitly provide `Context` and `Event`. TypeScript does not support partial type argument inference, so the state-key union cannot be inferred in a single non-curried call when the context and event generics are explicit.
 
 **Returns:** A definition function that returns `Machine`.
 
@@ -57,10 +74,10 @@ Throws `ClockworkError` when a definition has an invalid context, initial state,
 ### `Actor.subscribe()`
 
 ```ts
-subscribe(listener: (snapshot: ActorSnapshot<State, Context>) => void): () => void;
+subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
 ```
 
-Subscribes to committed actor snapshots. Returns an unsubscribe function. The listener receives the current snapshot immediately on subscribe, then on every committed transition. It does not observe dispatched events or runtime errors.
+Subscribes to future committed actor snapshots. It does not run immediately; read `actor.snapshot` for the initial value. Returns an unsubscribe function. Subscriber failures are reported through `onError` without stopping remaining subscribers, declared effects, or the actor.
 
 **Example:**
 
@@ -131,7 +148,7 @@ Creates an independent actor for event dispatch, timers, invokes, effects, subsc
 | --- | --- | --- |
 | `options.snapshot` | `MachineSnapshot<State, Context>` | Optional restored actor snapshot |
 | `options.maxTransitions` | `number` | Positive queued-transition limit for one synchronous flush |
-| `options.onError` | `(error, context) => 'continue' \| 'dispose'` | Explicit disposition for runtime failures |
+| `options.onError` | `(error, context) => void` | Side-channel observation callback for runtime failures |
 
 **Returns:** Disposable `Actor`.
 
@@ -141,7 +158,6 @@ Creates an independent actor for event dispatch, timers, invokes, effects, subsc
 const actor = machine.createActor({
   onError(error, { phase, state }) {
     console.error(phase, state, error);
-    return 'continue';
   },
   snapshot: { context: {}, state: 'idle' },
 });
@@ -167,7 +183,7 @@ Dispatches a user event to the current actor state. Events sent while the actor 
 can(event: Event): boolean;
 ```
 
-Returns whether the current actor snapshot accepts an event. Returns `false` after disposal.
+Returns whether the current actor snapshot accepts an event. A guard failure is reported as a fatal transition error, disposes the actor, and returns `false`. Returns `false` after disposal.
 
 **Returns:** Boolean transition availability.
 
@@ -196,26 +212,23 @@ Cancels timers and invokes, clears queued events and listeners, and aborts `disp
 
 **Returns:** Nothing. Idempotent.
 
+## Error Handling Policy
+
+Machine-execution failures are fail-stop: guard, reducer, effect, invoke, timer, and queued-transition-limit failures dispose the actor. Subscriber failures are observational: Clockwork reports them, continues the stable subscriber snapshot and declared effects, and keeps the actor active.
+
+The optional `onError` callback receives the error and its phase/state context but cannot control disposition. Errors thrown by this observer are swallowed so error reporting cannot change synchronous, timer, or invoke behavior.
+
+```ts
+type ActorErrorContext<State, Event> = {
+  readonly event?: Event;
+  readonly phase: 'effect' | 'invoke' | 'subscriber' | 'transition';
+  readonly state: State;
+};
+```
+
+Subscriber iteration uses a stable snapshot: listeners added during notification begin with the next transition.
+
 ## Types
-
-### `MachineEvent`
-
-```ts
-type MachineEvent = { readonly type: string };
-```
-
-Base constraint for event unions.
-
-### `EventType<Event>` and `EventByType<Event, Type>`
-
-```ts
-type EventType<Event extends MachineEvent> = Event['type'] & string;
-
-type EventByType<Event extends MachineEvent, Type extends EventType<Event>> =
-  Extract<Event, { type: Type }>;
-```
-
-Extract event type names and a matching event from an event union.
 
 ### `MachineSnapshot<State, Context>`
 
@@ -226,108 +239,11 @@ type MachineSnapshot<State extends string, Context extends Record<string, unknow
 };
 ```
 
-The plain readonly snapshot value used by machines and actors. Readonly is a TypeScript contract; Clockwork does not copy or freeze snapshots at runtime.
+Clockwork shallow-clones and freezes each snapshot and its context record. Nested context values remain caller-owned and are not deep-frozen.
 
-### `Guard<Context, Event>` and `Reducer<Context, Event>`
-
-```ts
-type Guard<Context extends Record<string, unknown>, Event> = (args: {
-  readonly context: Readonly<Context>;
-  readonly event: Event;
-}) => boolean;
-
-type Reducer<Context extends Record<string, unknown>, Event> = (args: {
-  readonly context: Readonly<Context>;
-  readonly event: Event;
-}) => Context;
-```
-
-A guard selects a transition. A reducer returns replacement context, which must be a non-array record.
-
-### `EffectArgs<Context, Event>` and `Effect<Context, Event>`
+### `MachineConfig<State, Context, Event>`
 
 ```ts
-type EffectArgs<Context extends Record<string, unknown>, Event extends MachineEvent> = {
-  readonly context: Readonly<Context>;
-  readonly event: Event | undefined;
-  readonly send: (event: Event) => void;
-  readonly signal: AbortSignal;
-};
-
-type Effect<Context extends Record<string, unknown>, Event extends MachineEvent> =
-  (args: EffectArgs<Context, Event>) => void;
-```
-
-Post-commit effects receive `undefined` for initial entry and actor timer transitions. They cannot update machine context directly.
-
-### `Transition<State, Context, Event, Type>` and `TransitionInput`
-
-```ts
-type Transition<
-  State extends string,
-  Context extends Record<string, unknown>,
-  Event extends MachineEvent,
-  Type extends EventType<Event> = EventType<Event>,
-> = {
-  readonly effects?: readonly Effect<Context, Event>[];
-  readonly guard?: Guard<Context, EventByType<Event, Type>>;
-  readonly reduce?: Reducer<Context, EventByType<Event, Type>>;
-  readonly target: State;
-};
-
-type TransitionInput<
-  State extends string,
-  Context extends Record<string, unknown>,
-  Event extends MachineEvent,
-  Type extends EventType<Event> = EventType<Event>,
-> = Transition<State, Context, Event, Type> | readonly Transition<State, Context, Event, Type>[];
-```
-
-An ordered transition array selects the first guard that passes.
-
-### `After<State, Context, Event>`
-
-```ts
-type After<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
-  readonly delay: number;
-  readonly effects?: readonly Effect<Context, Event>[];
-  readonly guard?: Guard<Context, Event | undefined>;
-  readonly reduce?: Reducer<Context, Event | undefined>;
-  readonly target: State;
-};
-```
-
-A delayed state transition. Its guard and reducer receive `event: undefined`.
-
-### `InvokeArgs<Context, Event>` and `Invoke<Context, Event, Result>`
-
-```ts
-type InvokeArgs<Context extends Record<string, unknown>, Event extends MachineEvent> = {
-  readonly context: Readonly<Context>;
-  readonly event: Event | undefined;
-  readonly signal: AbortSignal;
-};
-
-type Invoke<Context extends Record<string, unknown>, Event extends MachineEvent, Result = unknown> = {
-  readonly onDone?: (args: { readonly context: Readonly<Context>; readonly result: Result }) => Event;
-  readonly onError?: (args: { readonly context: Readonly<Context>; readonly error: unknown }) => Event;
-  readonly src: (args: InvokeArgs<Context, Event>) => Promise<Result> | Result;
-};
-```
-
-An actor-owned task started on state entry. `event` is the triggering event or `undefined` for initial or restored resources.
-
-### `StateNode<State, Context, Event>` and `MachineConfig<State, Context, Event>`
-
-```ts
-type StateNode<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
-  readonly after?: readonly After<State, Context, Event>[];
-  readonly entry?: readonly Effect<Context, Event>[];
-  readonly exit?: readonly Effect<Context, Event>[];
-  readonly invoke?: readonly Invoke<Context, Event>[];
-  readonly on?: Partial<{ [Type in EventType<Event>]: TransitionInput<State, Context, Event, Type> }>;
-};
-
 type MachineConfig<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> =
   (keyof Context extends never ? { readonly context?: Context } : { readonly context: Context }) & {
     readonly initial: State;
@@ -335,38 +251,7 @@ type MachineConfig<State extends string, Context extends Record<string, unknown>
   };
 ```
 
-A flat machine definition. State nodes cannot contain child states.
-
-### `TransitionResult<State, Context>`
-
-```ts
-type TransitionResult<State extends string, Context extends Record<string, unknown>> = {
-  readonly snapshot: MachineSnapshot<State, Context>;
-  readonly type: 'ignored' | 'transition';
-};
-```
-
-Result of a pure user-event transition. It contains no effect plan.
-
-### `ActorErrorContext<State, Event>`, `ActorErrorDisposition`, and `ActorOptions<State, Context, Event>`
-
-```ts
-type ActorErrorContext<State extends string, Event extends MachineEvent> = {
-  readonly event?: Event;
-  readonly phase: 'effect' | 'invoke' | 'subscriber' | 'transition';
-  readonly state: State;
-};
-
-type ActorErrorDisposition = 'continue' | 'dispose';
-
-type ActorOptions<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
-  readonly maxTransitions?: number;
-  readonly onError?: (error: unknown, context: ActorErrorContext<State, Event>) => ActorErrorDisposition;
-  readonly snapshot?: MachineSnapshot<State, Context>;
-};
-```
-
-`onError` must explicitly return `'continue'` to keep the actor alive or `'dispose'` to end it. Without an error handler, Clockwork disposes the actor silently.
+A flat machine definition. State nodes cannot contain child states. The `StateNode`, `Transition`, `After`, `Invoke`, `Effect`, `Guard`, and `Reducer` shapes are inferred inline and exported for reusable helpers. `After.delay` must be finite and between 0 and 2,147,483,647 milliseconds; delayed guards and reducers receive `event: undefined`.
 
 ### `Actor<State, Context, Event>`
 
@@ -399,25 +284,6 @@ type Machine<State extends string, Context extends Record<string, unknown>, Even
 A compiled, reusable machine. Its transition lookup is map-based, so unknown or poison event names such as `__proto__` are safely ignored when no transition exists.
 
 ## Errors
-
-### `ClockworkErrorCode`
-
-```ts
-type ClockworkErrorCode =
-  | 'INVALID_AFTER_DELAY'
-  | 'INVALID_CONTEXT'
-  | 'INVALID_DEFINITION'
-  | 'INVALID_EFFECT'
-  | 'INVALID_INITIAL_STATE'
-  | 'INVALID_INVOKE'
-  | 'INVALID_MAX_TRANSITIONS'
-  | 'INVALID_SNAPSHOT_STATE'
-  | 'INVALID_TRANSITION'
-  | 'INVALID_TRANSITION_LIMIT'
-  | 'UNKNOWN_TARGET';
-```
-
-Stable machine-readable code identifying a Clockwork failure category.
 
 ### `ClockworkError`
 

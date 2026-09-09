@@ -1,9 +1,20 @@
-import type { Disposable, Readable, Ripple } from '@vielzeug/ripple';
+export type Unsubscribe = () => void;
+
+export interface Readable<T> {
+  getSnapshot(): T;
+  subscribe(listener: () => void): Unsubscribe;
+}
+
+export interface Disposable {
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  [Symbol.dispose](): void;
+}
 
 export interface Sentinel<T> extends Readable<T>, Disposable {}
 
 export interface SentinelOptions {
-  readonly runtime?: Pick<Ripple, 'signal'>;
   readonly signal?: AbortSignal;
 }
 

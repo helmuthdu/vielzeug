@@ -1,12 +1,12 @@
 {
   "name": "@vielzeug/prism",
   "version": "2.2.6",
-  "description": "Reactive SVG charts — line, bar, area, pie, and sparkline with signal-driven updates",
+  "description": "Responsive SVG charts — line, bar, area, pie, and sparkline with explicit updates",
   "keywords": [
     "chart",
     "svg",
     "visualization",
-    "reactive",
+    "responsive",
     "line-chart",
     "bar-chart",
     "area-chart",
@@ -71,8 +71,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@vielzeug/orbit": "workspace:*",
-    "@vielzeug/ripple": "workspace:*"
+    "@vielzeug/orbit": "workspace:*"
   },
   "devDependencies": {
     "axe-core": "^4.13.0",

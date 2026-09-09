@@ -1,4 +1,4 @@
-import { backoff } from '@vielzeug/arsenal/async';
+import { backoff } from '@vielzeug/arsenal';
 import { asJsonValue, failureFrom, isAbortError, runValidate } from './_json.ts';
 import { PostmasterDisposedError, PostmasterError, PostmasterJobError } from './errors.ts';
 import {
@@ -133,9 +133,22 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
           `job "${entry.name}" version ${entry.version} is newer than the registered version`,
         );
       }
-      const raw = entry.version === job.version ? entry.payload : job.migrate?.(entry.payload, entry.version);
-      if (raw === undefined) {
-        throw new PostmasterJobError(`job "${entry.name}" version ${entry.version} cannot be migrated`);
+      let raw: unknown = entry.payload;
+      if (entry.version < job.version) {
+        const migrations = job.migrate;
+        if (!migrations) {
+          throw new PostmasterJobError(`job "${entry.name}" has no migrations`);
+        }
+        for (let v = entry.version; v < job.version; v++) {
+          const step = migrations[v];
+          if (typeof step !== 'function') {
+            throw new PostmasterJobError(`job "${entry.name}" does not support stored version ${entry.version}`);
+          }
+          raw = step(raw);
+          if (raw === undefined) {
+            throw new PostmasterJobError(`job "${entry.name}" migration from version ${v} returned undefined`);
+          }
+        }
       }
       payload = runValidate(job.validate, raw);
     } catch (reason) {
@@ -356,7 +369,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
       if (result.status === 'retried') wake();
       return result;
     },
-    async start(): Promise<void> {
+    start(): void {
       assertLive();
       if (started) return;
       started = true;

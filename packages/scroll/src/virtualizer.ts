@@ -1,10 +1,9 @@
-import type { Signal } from '@vielzeug/ripple';
-
 import { createScrollAdapter } from './_adapter';
 import { createAxis1D, type VirtualItem } from './_axis1d';
 import { computeStickyItems } from './_sticky';
 import {
   createMeasurementCache,
+  createSnapshotStore,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   type MeasurementCache,
@@ -43,6 +42,11 @@ export interface VirtualizerState {
   readonly totalSize: number;
 }
 
+export interface ScrollStore<State> {
+  getSnapshot: () => State;
+  subscribe: (listener: () => void) => () => void;
+}
+
 export interface VirtualizerOptions {
   /**
    * Auto-attach ResizeObserver to visible items.
@@ -73,8 +77,6 @@ export interface VirtualizerOptions {
    */
   scrollEndDelay?: number;
   sticky?: (index: number) => boolean;
-  /** Optional signal factory for reactive state. */
-  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
 }
 
 /**
@@ -113,7 +115,7 @@ export interface ScrollToIndexOptions {
   onComplete?: () => void;
 }
 
-export interface Virtualizer {
+export interface Virtualizer extends ScrollStore<VirtualizerState> {
   readonly count: number;
   readonly disposalSignal: AbortSignal;
   dispose: () => void;
@@ -180,16 +182,9 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let onScrollingChange = options.onScrollingChange;
   let scrollEndDelay = options.scrollEndDelay ?? 150;
 
-  // Optional signal for reactive state
-  let stateSignal: Signal<VirtualizerState> | null = null;
-  if (options.toSignal) {
-    const initialState: VirtualizerState = { items: [], stickyItems: [], totalSize: 0 };
-    stateSignal = options.toSignal(initialState);
-  }
-
-  // Helper to emit state to both callback and signal
+  // Publish state before invoking the render callback.
   function emitState(state: VirtualizerState): void {
-    if (stateSignal) stateSignal.value = state;
+    stateStore.publish(state);
     onChange?.(state);
   }
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
@@ -223,6 +218,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   let items: VirtualItem[] = [];
   let stickyItems: VirtualItem[] = [];
+  const stateStore = createSnapshotStore<VirtualizerState>({ items, stickyItems, totalSize: 0 });
 
   // ─── Axis setup ──────────────────────────────────────────────────────────────
   // The axis1d primitive owns offset management. The sizeAt closure captures
@@ -620,6 +616,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     if (disposed) return;
 
     disposed = true;
+    stateStore.dispose();
     ac.abort();
 
     if (scrollEndTimer !== null) {
@@ -737,6 +734,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     get disposed() {
       return disposed;
     },
+    getSnapshot: stateStore.getSnapshot,
     invalidate,
     isAtEnd,
     get isScrolling() {
@@ -760,6 +758,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     get stickyItems() {
       return stickyItems;
     },
+    subscribe: stateStore.subscribe,
     [Symbol.dispose]: _dispose,
     get totalSize() {
       return ax.totalSize;

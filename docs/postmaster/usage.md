@@ -33,7 +33,7 @@ const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
 const postmaster = createPostmaster({ jobs, store });
 
 await postmaster.enqueue('createTodo', { id: crypto.randomUUID(), title: 'Buy milk' });
-await postmaster.start();
+postmaster.start();
 
 // On page unload:
 await postmaster.dispose();
@@ -66,9 +66,9 @@ const jobs = defineJobs({
 
 Never assume exactly-once execution. Design handlers so a repeated delivery is safe.
 
-## Postmaster jobs vs Courier mutations
+## Postmaster jobs vs Courier requests
 
-Courier performs immediate HTTP requests and cache reconciliation. Postmaster coordinates durable delivery. Use Courier inside a Postmaster job when the write must survive reloads.
+Courier performs immediate HTTP transport. Postmaster coordinates durable delivery. Use Courier inside a Postmaster job when the write must survive reloads.
 
 ```ts
 import { createCourier, CourierNetworkError } from '@vielzeug/courier';
@@ -82,14 +82,11 @@ const jobs = defineJobs({
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
     execute: async (payload, { key, signal }) => {
-      await courier.mutate({
-        request: () =>
-          courier.post('/todos', {
-            body: payload,
-            headers: { 'Idempotency-Key': key },
-            signal,
-          }),
-        invalidateKeys: [['todos']],
+      await courier.request('/todos', {
+        method: 'POST',
+        body: payload,
+        headers: { 'Idempotency-Key': key },
+        signal,
       });
     },
     retry: { maxAttempts: 5, shouldRetry: (error) => error instanceof CourierNetworkError },
@@ -101,7 +98,7 @@ Postmaster does not import Courier. The integration happens in your job definiti
 
 ## Payload and version migration
 
-Each job declares a `version` and an optional `validate` function. When a stored job's version is older than the registered version, Postmaster calls `migrate()` before validating. `validate` is called once at enqueue; omit it to accept the payload as-is. `validate` accepts a plain function `(value: unknown) => T` or any structural parser with `parse(value: unknown): T` — Spell schemas work directly:
+Each job declares a `version` and an optional `validate` function. When a stored job's version is older than the registered version, Postmaster applies contiguous version-step migrations before validating. `migrate` is keyed by the source version: key `n` transforms version `n` into `n + 1`. The lowest key declares the earliest stored version you support, and the range must lead into the current version without gaps. Omit `migrate` when a job has no supported older records. `validate` accepts a plain function `(value: unknown) => T` or any structural parser with `parse(value: unknown): T` — Spell schemas work directly:
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -111,9 +108,8 @@ const jobs = defineJobs({
     version: 2,
     validate: s.object({ id: s.string(), title: s.string(), priority: s.number().optional() }),
     key: (p) => p.id,
-    migrate: (payload, fromVersion) => {
-      if (fromVersion === 1) return { ...(payload as { id: string; title: string }), priority: 0 };
-      return payload;
+    migrate: {
+      1: (payload) => ({ ...(payload as { id: string; title: string }), priority: 0 }),
     },
     execute: async (payload, { key, signal }) => {
       await fetch('/api/todos', {
@@ -127,7 +123,20 @@ const jobs = defineJobs({
 });
 ```
 
-Unknown job names, incompatible versions, failed migrations, and invalid persisted payloads move to dead-letter rather than being executed.
+Unknown job names, unsupported versions, failed migrations, `undefined` migration output, and invalid migrated payloads move to dead-letter rather than being executed.
+
+## Corrupt persisted records
+
+The IndexedDB adapter validates durable records before the processor uses them. It skips malformed records so one corrupt value cannot block valid jobs. Supply `onCorruptRecord` to surface each distinct issue to your diagnostics:
+
+```ts
+const store = createIndexedDbPostmasterStore({
+  name: 'my-app-outbox',
+  onCorruptRecord: ({ id, reason }) => reportOutboxCorruption({ id, reason }),
+});
+```
+
+The callback may omit `id` when the persisted value has no usable identifier. Handler errors are ignored. Repair or remove reported records with your application's storage recovery tooling; Postmaster never deletes corrupt durable data automatically.
 
 ## Retry semantics
 
@@ -152,7 +161,7 @@ const jobs = defineJobs({
 
 - `maxAttempts` means total executions, including the first.
 - `shouldRetry` is required when retries are enabled. Postmaster never guesses whether a write is safe to repeat.
-- Default delay uses Arsenal's deterministic `backoff(attempt)` helper. Override with `delay`.
+- Default delay uses an exponential backoff cap (`min(1000 × 2ⁿ, 30_000)` ms). Override with `delay`.
 - Delay must be finite and non-negative.
 - Lifecycle aborts caused by disposal are not classified as job failures.
 
@@ -188,10 +197,10 @@ await postmaster.remove(entry.id);
 
 ## Lifecycle and disposal
 
-`start()` begins background processing. `dispose()` stops claiming new work, aborts owned work, and is idempotent. `flush()` processes every available job synchronously.
+`start()` begins background processing and returns immediately (synchronous, idempotent). `dispose()` stops claiming new work, aborts owned work, and is idempotent. `flush()` processes every available job and awaits completion.
 
 ```ts
-await postmaster.start();
+postmaster.start();
 // ...on unload
 await postmaster.dispose();
 await store.dispose();
@@ -289,7 +298,7 @@ export function OutboxProvider() {
   useEffect(() => {
     const store = createIndexedDbPostmasterStore({ name: 'outbox' });
     const postmaster = createPostmaster({ jobs, store });
-    void postmaster.start();
+    postmaster.start();
 
     return () => {
       void postmaster.dispose();
@@ -324,7 +333,7 @@ let store: ReturnType<typeof createIndexedDbPostmasterStore> | undefined;
 onMounted(() => {
   store = createIndexedDbPostmasterStore({ name: 'outbox' });
   postmaster = createPostmaster({ jobs, store });
-  void postmaster.start();
+  postmaster.start();
 });
 
 onUnmounted(() => {
@@ -358,7 +367,7 @@ onUnmounted(() => {
   onMount(() => {
     const store = createIndexedDbPostmasterStore({ name: 'outbox' });
     const postmaster = createPostmaster({ jobs, store });
-    void postmaster.start();
+    postmaster.start();
 
     return () => {
       void postmaster.dispose();
@@ -376,7 +385,7 @@ onUnmounted(() => {
 
 ### Postmaster + Courier
 
-Use Courier inside job handlers for HTTP transport and cache invalidation. Postmaster coordinates delivery; Courier performs the request.
+Use Courier inside job handlers for HTTP transport. Postmaster coordinates delivery; Courier performs the request.
 
 ```ts
 import { createCourier, CourierNetworkError } from '@vielzeug/courier';
@@ -390,14 +399,11 @@ const jobs = defineJobs({
     validate: (v: unknown) => v as { id: string; title: string },
     key: (p) => p.id,
     execute: async (payload, { key, signal }) => {
-      await courier.mutate({
-        request: () =>
-          courier.post('/todos', {
-            body: payload,
-            headers: { 'Idempotency-Key': key },
-            signal,
-          }),
-        invalidateKeys: [['todos']],
+      await courier.request('/todos', {
+        method: 'POST',
+        body: payload,
+        headers: { 'Idempotency-Key': key },
+        signal,
       });
     },
     retry: { maxAttempts: 5, shouldRetry: (e) => e instanceof CourierNetworkError },
@@ -417,7 +423,7 @@ const network = createNetwork();
 const postmaster = createPostmaster({ jobs, store });
 
 const unsubscribe = network.subscribe(() => {
-  if (network.value.online) void postmaster.flush();
+  if (network.getSnapshot().online) void postmaster.flush();
 });
 
 // On teardown:
@@ -436,7 +442,7 @@ The IndexedDB adapter is built on Vault. Use Vault directly for unrelated storag
 - **Dispose** both the processor and the store explicitly; the processor does not own the store.
 - **Classify** retryable errors explicitly with `shouldRetry`; never let Postmaster guess.
 - **Migrate** persisted payloads when job versions change; test migrations against stored fixtures.
-- **Inspect** the dead-letter queue regularly and retry or remove terminal failures.
+- **Inspect** dead-letter jobs and report `onCorruptRecord` diagnostics to your recovery tooling.
 - **Avoid** persisting sensitive data in payloads or failure messages; IndexedDB is per-origin but not encrypted.
 - **Flush** the outbox when Sentinel reports the network returns.
 - **Test** with the in-memory store and a deterministic clock for reproducible retry timing.

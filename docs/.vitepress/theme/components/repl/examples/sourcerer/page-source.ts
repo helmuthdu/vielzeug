@@ -4,18 +4,19 @@ export const pageSourceExample = {
 const allItems = Array.from({ length: 47 }, (_, index) => ({ id: index + 1, name: \`Item \${index + 1}\` }))
 
 const source = createPageSource({
-  initialQuery: { pageSize: 10 },
-  load: async ({ query }) => {
-    const filtered = query.search ? allItems.filter((item) => item.name.includes(query.search)) : allItems
-    const start = (query.page - 1) * query.pageSize
-    return { data: filtered.slice(start, start + query.pageSize), total: filtered.length }
+  load: async ({ page, pageSize, params: search }) => {
+    const filtered = search ? allItems.filter((item) => item.name.includes(search)) : allItems
+    const start = (page - 1) * pageSize
+    return { items: filtered.slice(start, start + pageSize), totalItems: filtered.length }
   },
+  pageSize: 10,
+  params: '',
 })
 
 await source.reload()
-await source.setQuery({ search: 'Item 4' })
-console.log(source.snapshot.data.map((item) => item.name))
-console.log(source.snapshot.pagination)
+await source.setParams('Item 4')
+console.log(source.state.items.map((item) => item.name))
+console.log(source.state.pagination)
 
 source.dispose()`,
   name: 'Page Source',

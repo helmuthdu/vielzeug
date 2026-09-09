@@ -1,23 +1,30 @@
-import { computed, signal } from '@vielzeug/ripple';
-import { courier, getUsers } from './api';
+import { computed, resource } from '@vielzeug/ripple';
+import { getUsers } from './api';
 import { seedUsers } from './seed-data';
 import type { User } from './types';
 
-const usersKey = ['users'] as const;
-const usersDefinition = {
-  fetch: () => getUsers(),
-  key: usersKey,
-  staleTime: 60_000,
-};
+/**
+ * Reactive user directory. The reactive/async split mirrors how the pieces now compose:
+ * `@vielzeug/ripple`'s `resource()` owns the async state lifecycle (pending → success/error,
+ * with `previous` retention across reloads), while `@vielzeug/courier`'s opt-in read cache (see
+ * api.ts's `getUsers`) owns HTTP request dedup + TTL. The loader takes no reactive source deps,
+ * so it runs once on creation; `usersResource.reload()` re-fetches through the same cached path.
+ */
+const usersResource = resource(
+  () => null,
+  () => getUsers(),
+);
 
-courier.queries.set(usersKey, seedUsers);
+/**
+ * The user list as a plain reactive value: seed data while pending or on error, the fetched
+ * directory on success. Consumers (task-dialog, task-card, backlog) read this rather than the
+ * resource's `AsyncState` shape, so the courier/ripple split stays an internal detail.
+ */
+export const usersSignal = computed<User[]>(() => {
+  const state = usersResource.value;
 
-export const usersSignal = signal<User[]>(seedUsers);
-
-courier.queries.subscribe(usersKey, () => {
-  usersSignal.value = courier.queries.getSnapshot<User[]>(usersKey)?.data ?? seedUsers;
+  return state.status === 'success' ? state.value : seedUsers;
 });
-void courier.queries.fetch(usersDefinition);
 
 export const userMap = computed(() => new Map(usersSignal.value.map((user) => [user.id, user])));
 

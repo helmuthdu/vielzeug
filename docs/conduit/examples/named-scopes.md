@@ -15,16 +15,18 @@ Create one resource per request lifecycle.
 const Request = scope('request');
 const Session = token<{ id: string }>('Session');
 
-root.factory(Session, [], () => ({ id: crypto.randomUUID() }), { lifetime: Request });
+const root = createContainer([
+  factoryProvider(Session, [], () => ({ id: crypto.randomUUID() }), { lifetime: Request }),
+]);
 
 const request = root.createScope(Request);
-const session = await request.resolve(Session);
+const services = await request.resolve({ session: Session });
 await request.dispose();
 ```
 
 ### Pitfalls
 
-Resolving `Session` from root throws because no matching request scope owns it. A singleton cannot depend on `Session`; use matching scoped lifetime for that factory.
+Resolving `Session` from `root` throws because no matching request scope owns it. A singleton cannot depend on `Session`; use matching scoped lifetime for that factory.
 
 ### Related
 

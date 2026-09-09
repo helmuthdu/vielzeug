@@ -1,118 +1,88 @@
 ---
-title: Ore 2.0 Migration
+title: Ore 3.0 Migration
 ---
 
-# Ore 2.0 Migration
+# Ore 3.0 Migration
 
-Ore 2.0 consolidates runtime APIs at the package root and removes sub-path runtime imports, `model()`, form-controller policy, `onError` recovery, colon bindings, asynchronous setup, and implicit HTML injection.
+Ore 3.0 reduces overlapping component, ID, binding, and testing APIs. It also makes context identity and keyed-list failures explicit.
 
-## Import runtime APIs from package root
+## Register components with define()
 
-Move browser-runtime imports to `@vielzeug/ore`. `@vielzeug/ore/testing` remains the only public sub-path.
-
-## Use synchronous setup and explicit HTML sinks
-
-Make component `setup()` synchronous. Replace implicit raw HTML rendering with explicit `unsafeHtml()` only after sanitizing untrusted content.
-
-## Migrate observer APIs to @vielzeug/sentinel
-
-Ore no longer exports observer factories (`intersectionObserver`, `mediaObserver`, `mutationObserver`, `resizeObserver`). Use Sentinel for stateful environment observations and the native MutationObserver API for mutation events.
-
-### Before (Ore)
+`createComponent()` has been removed. Keep registration in the module or browser bootstrap that owns the tag.
 
 ```ts
-import { intersectionObserver, onCleanup, onMounted } from '@vielzeug/ore';
-import { watch } from '@vielzeug/ripple';
+// Before
+const MyCard = createComponent({ setup: () => html`<slot></slot>` });
+customElements.define('my-card', MyCard);
 
-onMounted(() => {
-  const entry = intersectionObserver(element);
-
-  const intersectionWatcher = watch(entry, (state) => {
-    console.log('Intersecting:', state?.isIntersecting);
-  });
-
-  onCleanup(() => intersectionWatcher.dispose());
-});
+// After
+define('my-card', { setup: () => html`<slot></slot>` });
 ```
 
-Ore owned the native observers and disconnected them automatically when the component disconnected.
+## Use createId()
 
-### After (Sentinel)
+`createStableId()` and `resetStableIdCounter()` have been removed. `createId()` now provides the collision-resistant behavior.
 
 ```ts
-import { onCleanup, onMounted } from '@vielzeug/ore';
-import { watch } from '@vielzeug/ripple';
-import { createIntersection } from '@vielzeug/sentinel';
+// Before
+const labelId = createStableId('label');
 
-onMounted(() => {
-  const intersection = createIntersection(element);
-
-  const intersectionWatcher = watch(intersection, (state) => {
-    console.log('Intersecting:', state?.isIntersecting);
-  });
-
-  onCleanup(() => {
-    intersectionWatcher.dispose();
-    intersection.dispose();
-  });
-});
+// After
+const labelId = createId('label');
 ```
 
-### Migration checklist
+Test isolation resets Ore's internal ID counter through `cleanup()` or `install(afterEach)`. Application code cannot reset IDs.
 
-- Replace `intersectionObserver(el)` → `createIntersection(el)`
-- Replace `resizeObserver(el)` → `createElementSize(el)`
-- Replace `mediaObserver(query)` → `createMediaQuery(query)`
-- Continue using `watch(observer, ...)`; Sentinel implements Ripple's `Readable<T>`
-- Change `media.value` boolean reads to `media.value.matches`
-- Handle the initial `null` value from `createElementSize()`
-- Use `intersection.value?.isIntersecting` and `intersection.value?.intersectionRatio`; the native entry is no longer retained
-- Register `sentinel.dispose()` with `onCleanup()` because Sentinel owns its browser resources explicitly
-- Wrap `createMediaQuery()` in try/catch for feature detection:
+## Bind explicit ARIA attributes
+
+The separate `aria` binding map has been removed. Put complete `aria-*` names in `attr`.
 
 ```ts
-import { onCleanup } from '@vielzeug/ore';
-import { createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
+// Before
+bind({ aria: { expanded: isOpen, controls: panelId } }, { target: trigger });
 
-try {
-  const mq = createMediaQuery('(min-width: 768px)');
-  onCleanup(() => mq.dispose());
-} catch (err) {
-  if (err instanceof SentinelUnavailableError) {
-    // Gracefully degrade when matchMedia unavailable
-  }
-}
+// After
+bind({ attr: { 'aria-expanded': isOpen, 'aria-controls': panelId } }, { target: trigger });
 ```
 
-See [Sentinel documentation](/sentinel/) for more details.
+## Update host binding types
 
-### Replace mutation observation with the native API
+`ReflectConfig` is now `AttributeBindings`. Replace `HostBindFn` with `typeof bind` when a callable type is needed.
 
-Mutation deliveries are event batches rather than current environment state, so Sentinel does not wrap `MutationObserver`.
+## Treat context descriptions as labels
+
+`createContext(description)` now requires a description and returns a unique key on every call. Reuse the exported key object; do not recreate a context from its description.
 
 ```ts
-import { onCleanup, onMounted } from '@vielzeug/ore';
+// context.ts
+export const ThemeContext = createContext<Theme>('Theme');
 
-onMounted(() => {
-  const observer = new MutationObserver((records) => {
-    console.log(records);
-  });
-
-  observer.observe(element, {
-    childList: true,
-    subtree: true,
-  });
-
-  onCleanup(() => observer.disconnect());
-});
+// provider.ts and consumer.ts
+import { ThemeContext } from './context';
 ```
 
-## Replace removed APIs
+## Use the active host for useField()
 
-Remove `model()`, form-controller policy, `onError` recovery, and colon bindings. Use the 2.0 component, host-binding, lifecycle, and `useField` APIs instead.
+`FormFieldOptions.el` has been removed. Call `useField()` during the form-associated component's setup; it always attaches internals to the active host.
 
-## Update form and event integrations
+```ts
+useField({ value, disabled });
+```
 
-Use `bind({ aria }, { target })` for reactive ARIA bindings. Replace removed `FormFieldHandle.setValidity()` calls with `setCustomValidity()` or `ElementInternals` handling.
+## Replace removed testing conveniences
 
-Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current root API and component lifecycle contracts.
+Use the underlying operation directly:
+
+| Removed | Replacement |
+| --- | --- |
+| `debugFlush()` | `flush({ logger: console.debug })` |
+| `mountComponent(tag, definition, options)` | `define(tag, definition)` followed by `mount(tag, options)`, or inline `mount(setup, options)` |
+| `mock(tag, template)` | `customElements.define()` with a minimal test element |
+| `resetOreForTests()` | `cleanup()` or `install(afterEach)` |
+| `walkFlatTree()` | Native DOM and slot traversal in the test that needs it |
+
+## Account for keyed-list recovery
+
+`each()` now keeps numeric and string keys distinct. A duplicate-key update reports `ore:error` and leaves the last valid DOM in place instead of clearing the list.
+
+Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the current contracts.

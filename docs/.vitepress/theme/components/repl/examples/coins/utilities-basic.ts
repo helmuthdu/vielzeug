@@ -1,7 +1,7 @@
 export const utilitiesBasicExample = {
-  code: `import { currency, defineCurrency, isCurrency, isMoney, money } from '@vielzeug/coins'
+  code: `import { currency, isCurrency, isMoney, money } from '@vielzeug/coins'
 
-const points = defineCurrency({ code: 'PTS', minorUnit: 0 })
+const points = currency({ code: 'PTS', minorUnit: 0 })
 const balance = money('250', points)
 
 console.log(currency('USD').minorUnit)

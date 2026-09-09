@@ -69,16 +69,16 @@ export const applyCheckableBinding = (
   bind({
     attr: {
       ...(indeterminate !== undefined && { indeterminate }),
-      ariaChecked: () => {
+      'aria-checked': () => {
         if (role === 'checkbox' && indeterminate?.value) return 'mixed';
 
         return checked.value ? 'true' : 'false';
       },
-      ariaDescribedby: () => (errorText.value || helperText.value ? assistiveId : null),
-      ariaDisabled: () => (disabled.value ? 'true' : null),
-      ariaInvalid: () => (errorText.value ? 'true' : null),
-      ariaLabelledby: labelId,
-      ariaRequired: () => (required?.value ? 'true' : null),
+      'aria-describedby': () => (errorText.value || helperText.value ? assistiveId : null),
+      'aria-disabled': () => (disabled.value ? 'true' : null),
+      'aria-invalid': () => (errorText.value ? 'true' : null),
+      'aria-labelledby': labelId,
+      'aria-required': () => (required?.value ? 'true' : null),
       checked,
       role,
       size: fCtxSize,

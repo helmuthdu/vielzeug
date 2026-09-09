@@ -108,7 +108,7 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 
 ## Work Guidance
 
-- Depends on `arsenal`, `ore`, `dnd`, `orbit`, `ripple`, `tempo` (`workspace:*`) plus `lucide`.
+- Depends on `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, and `tempo` (`workspace:*`) plus `lucide`; `assay` is test-only.
 - Adding a component: create it under the right category folder, then run `sync:exports` so its sub-path export and types are wired.
 
 ## Verification

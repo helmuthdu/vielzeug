@@ -136,11 +136,11 @@ describe('buildDocument — lang validation', () => {
   });
 });
 
-describe('buildDocument — namedStyles id validation', () => {
+describe('buildDocument — styles id validation', () => {
   it.each(['theme" onmouseover="alert(1)', 'theme"><script>alert(1)</script>', 'theme id'])(
     'rejects invalid style id %s',
     (id) => {
-      expect(() => buildDocument('<p>hi</p>', { namedStyles: { [id]: 'body {}' } })).toThrow(SandboxConfigurationError);
+      expect(() => buildDocument('<p>hi</p>', { styles: { [id]: 'body {}' } })).toThrow(SandboxConfigurationError);
     },
   );
 });

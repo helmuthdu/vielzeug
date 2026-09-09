@@ -1,36 +1,36 @@
-import { createField, type FieldAccess } from './_field';
-import { createNotifier } from './_notify';
+import { abortable } from '@vielzeug/arsenal';
+
+import { createField, type FieldAccess } from './_field.js';
+import { createNotifier } from './_notify.js';
 import {
   assertSafeKey,
   immutable,
   isRecord,
   type MetaRoot,
-  normalizeErrors,
+  readAtPath,
   resetAtPath,
   touchAll,
   writeAtPath,
   writeMeta,
-} from './core/path';
-import { ForgeConfigError, ForgeDisposedError, ForgeSubmitError, ForgeValidationError } from './errors';
+} from './core/path.js';
+import { ForgeConfigError, ForgeDisposedError, ForgeSubmitError, ForgeValidationError } from './errors.js';
 import type {
   Form,
-  FormErrors,
   FormOptions,
   FormState,
+  FormValidator,
   MaybePromise,
-  ReadonlyDeep,
   SubmitResult,
   Unsubscribe,
-  ValidationErrors,
+  ValidationIssue,
   ValidationResult,
-} from './types';
+} from './types.js';
 
 type Validity = 'invalid' | 'unknown' | 'valid';
 
 type InternalState<TValues extends Record<string, unknown>> = Readonly<{
   baseline: TValues;
-  errors: FormErrors<TValues> | undefined;
-  formError: string | undefined;
+  issues: readonly ValidationIssue[] | undefined;
   isSubmitting: boolean;
   isValidating: boolean;
   submitCount: number;
@@ -39,11 +39,37 @@ type InternalState<TValues extends Record<string, unknown>> = Readonly<{
   value: TValues;
 }>;
 
-function makeFormState<TValues extends Record<string, unknown>>(current: InternalState<TValues>): FormState<TValues> {
+function normalizeIssues(result: readonly ValidationIssue[] | undefined): readonly ValidationIssue[] | undefined {
+  if (result === undefined || result.length === 0) return undefined;
+
+  return Object.freeze(
+    result.map((issue) => {
+      if (!issue || typeof issue.message !== 'string' || !Array.isArray(issue.path)) {
+        throw new ForgeConfigError('Validators must return issues with a string message and array path.');
+      }
+
+      const path = issue.path.map((part) => {
+        if (typeof part === 'number') {
+          if (!Number.isSafeInteger(part) || part < 0) throw new ForgeConfigError(`Invalid issue path index ${part}.`);
+          return part;
+        }
+        if (typeof part === 'string') {
+          assertSafeKey(part);
+          return part;
+        }
+        throw new ForgeConfigError('Issue paths may contain only string keys and non-negative integer indexes.');
+      });
+
+      return Object.freeze({ message: issue.message, path: Object.freeze(path) });
+    }),
+  );
+}
+
+function makeFormState<TValues extends Record<string, unknown>>(current: InternalState<TValues>): FormState {
   return Object.freeze({
-    errors: current.errors,
-    formError: current.formError,
-    hasErrors: current.formError !== undefined || current.errors !== undefined,
+    formError: current.issues?.find((issue) => issue.path.length === 0)?.message,
+    hasErrors: (current.issues?.length ?? 0) > 0,
+    issues: current.issues,
     submitCount: current.submitCount,
     submitting: current.isSubmitting,
     touched: Object.keys(current.touched).length > 0,
@@ -55,29 +81,44 @@ function makeFormState<TValues extends Record<string, unknown>>(current: Interna
 /** One immutable value tree and one explicit full-form validator keep form behavior locally understandable. */
 export function createForm<TValues extends Record<string, unknown>>(options: FormOptions<TValues>): Form<TValues> {
   const initial = immutable(options.initialValues);
-  const notifier = createNotifier(options.onSubscriberError);
+  const notifier = createNotifier<InternalState<TValues>>(options.onSubscriberError);
   const disposalController = new AbortController();
   let disposed = false;
+  let dispatching = false;
+  const pendingWrites: Array<(current: InternalState<TValues>) => InternalState<TValues>> = [];
   let validationController: AbortController | undefined;
+  let revision = 0;
+  let validatedSnapshot: { revision: number; value: TValues } | undefined;
   let current: InternalState<TValues> = {
     baseline: initial,
-    errors: undefined,
-    formError: undefined,
     isSubmitting: false,
+    issues: undefined,
     isValidating: false,
     submitCount: 0,
     touched: {},
     validity: 'unknown',
     value: initial,
   };
+  let publicState = makeFormState(current);
 
   function ensureActive(operation: string): void {
     if (disposed) throw new ForgeDisposedError(operation);
   }
 
   function write(update: (current: InternalState<TValues>) => InternalState<TValues>): void {
-    current = Object.freeze(update(current));
-    notifier.notify();
+    pendingWrites.push(update);
+    if (dispatching) return;
+
+    dispatching = true;
+    try {
+      while (pendingWrites.length > 0) {
+        current = Object.freeze(pendingWrites.shift()!(current));
+        publicState = makeFormState(current);
+        notifier.notify(current);
+      }
+    } finally {
+      dispatching = false;
+    }
   }
 
   function abortValidation(): void {
@@ -88,63 +129,80 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     abortValidation,
     addListener: notifier.add,
     ensureActive,
+    invokeListener: notifier.call,
     readState: () => current,
     resetValue(path) {
-      write((c) => ({
-        ...c,
-        touched: writeMeta(c.touched, path, false),
-        validity: 'unknown',
-        value: resetAtPath(c.value, c.baseline, path),
-      }));
+      write((c) => {
+        revision++;
+        validatedSnapshot = undefined;
+        return {
+          ...c,
+          touched: writeMeta(c.touched, path, false),
+          validity: 'unknown',
+          value: resetAtPath(c.value, c.baseline, path),
+        };
+      });
     },
     setTouched(path, touched) {
       write((c) => ({ ...c, touched: writeMeta(c.touched, path, touched) }));
     },
     setValue(path, next) {
-      write((c) => ({
-        ...c,
-        validity: 'unknown',
-        value: writeAtPath(c.value, path, next),
-      }));
+      write((c) => {
+        const previous = readAtPath(c.value, path);
+        const value = typeof next === 'function' ? next(previous) : next;
+        revision++;
+        validatedSnapshot = undefined;
+        return { ...c, validity: 'unknown', value: writeAtPath(c.value, path, value) };
+      });
     },
   };
 
-  async function validate(externalSignal?: AbortSignal): Promise<ValidationResult<TValues>> {
+  async function validate(externalSignal?: AbortSignal): Promise<ValidationResult> {
     ensureActive('validate');
     abortValidation();
 
     const controller = new AbortController();
     const signal = externalSignal ? AbortSignal.any([controller.signal, externalSignal]) : controller.signal;
+    if (signal.aborted) return Object.freeze({ status: 'aborted' });
 
+    const snapshot = current.value;
+    const snapshotRevision = revision;
     validationController = controller;
+    validatedSnapshot = undefined;
     write((c) => ({ ...c, isValidating: true }));
 
     try {
-      const result: ValidationErrors<TValues> | undefined = options.validate
-        ? await options.validate(current.value as ReadonlyDeep<TValues>, signal)
+      if (signal.aborted || revision !== snapshotRevision) return Object.freeze({ status: 'aborted' });
+      const result: readonly ValidationIssue[] | undefined = options.validate
+        ? await abortable(
+            Promise.resolve(options.validate(snapshot as Parameters<FormValidator<TValues>>[0], signal)),
+            signal,
+          )
         : undefined;
 
-      if (signal.aborted || validationController !== controller) return Object.freeze({ status: 'aborted' });
+      if (signal.aborted || validationController !== controller || revision !== snapshotRevision) {
+        return Object.freeze({ status: 'aborted' });
+      }
 
-      const errors = result?.fields
-        ? (normalizeErrors(immutable(result.fields)) as FormErrors<TValues> | undefined)
-        : undefined;
-      const formError = result?.formError;
-      const validity: Validity = errors === undefined && formError === undefined ? 'valid' : 'invalid';
+      const issues = normalizeIssues(result);
+      const validity: Validity = issues === undefined ? 'valid' : 'invalid';
+      validationController = undefined;
+      write((c) => ({ ...c, issues, isValidating: false, validity }));
 
-      write((c) => ({ ...c, errors, formError, validity }));
+      if (signal.aborted || revision !== snapshotRevision || validationController !== undefined) {
+        return Object.freeze({ status: 'aborted' });
+      }
 
+      validatedSnapshot = validity === 'valid' ? { revision, value: snapshot } : undefined;
       return validity === 'valid'
         ? Object.freeze({ status: 'valid' })
-        : Object.freeze({ errors, formError, status: 'invalid' });
+        : Object.freeze({ issues: issues as readonly ValidationIssue[], status: 'invalid' });
     } catch (error) {
       if (signal.aborted || validationController !== controller) return Object.freeze({ status: 'aborted' });
-
       throw new ForgeValidationError('Form validation failed.', { cause: error });
     } finally {
       if (validationController === controller) {
         validationController = undefined;
-
         if (!disposed) write((c) => ({ ...c, isValidating: false }));
       }
     }
@@ -158,6 +216,8 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       if (disposed) return;
 
       disposed = true;
+      pendingWrites.length = 0;
+      validatedSnapshot = undefined;
       disposalController.abort();
       abortValidation();
       notifier.clear();
@@ -175,34 +235,35 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       ensureActive('reset');
       abortValidation();
 
-      const baseline = next === undefined ? current.baseline : immutable(next);
-
-      write((c) => ({
-        ...c,
-        baseline,
-        errors: undefined,
-        formError: undefined,
-        touched: {},
-        validity: 'unknown',
-        value: baseline,
-      }));
+      const replacement = next === undefined ? undefined : immutable(next);
+      write((c) => {
+        const baseline = replacement ?? c.baseline;
+        revision++;
+        validatedSnapshot = undefined;
+        return { ...c, baseline, issues: undefined, touched: {}, validity: 'unknown', value: baseline };
+      });
     },
     set(next) {
       ensureActive('set');
       abortValidation();
 
-      const value =
-        typeof next === 'function' ? (next as (current: ReadonlyDeep<TValues>) => TValues)(form.value) : next;
-
-      write((c) => ({ ...c, errors: undefined, formError: undefined, validity: 'unknown', value: immutable(value) }));
+      write((c) => {
+        const value =
+          typeof next === 'function'
+            ? (next as (previous: Form<TValues>['value']) => TValues)(c.value as Form<TValues>['value'])
+            : next;
+        revision++;
+        validatedSnapshot = undefined;
+        return { ...c, issues: undefined, validity: 'unknown', value: immutable(value) };
+      });
     },
     get state() {
-      return makeFormState(current);
+      return publicState;
     },
     async submit<TResult = void>(
-      handler: (values: ReadonlyDeep<TValues>, signal: AbortSignal) => MaybePromise<TResult>,
+      handler: (values: Form<TValues>['value'], signal: AbortSignal) => MaybePromise<TResult>,
       externalSignal?: AbortSignal,
-    ): Promise<SubmitResult<TResult, TValues>> {
+    ): Promise<SubmitResult<TResult>> {
       ensureActive('submit');
 
       if (current.isSubmitting) {
@@ -226,11 +287,19 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
         if (result.status === 'aborted') return Object.freeze({ status: 'aborted' });
 
         if (result.status === 'invalid') {
-          return Object.freeze({ errors: result.errors, formError: result.formError, status: 'invalid' });
+          return Object.freeze({ issues: result.issues, status: 'invalid' });
+        }
+
+        const validated = validatedSnapshot;
+        if (!validated || validated.revision !== revision || signal.aborted) {
+          return Object.freeze({ status: 'aborted' });
         }
 
         try {
-          return Object.freeze({ status: 'ok', value: await handler(form.value, signal) });
+          return Object.freeze({
+            status: 'ok',
+            value: await handler(validated.value as Form<TValues>['value'], signal),
+          });
         } catch (error) {
           if (signal.aborted) return Object.freeze({ status: 'aborted' });
 
@@ -243,16 +312,16 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     subscribe(listener, subscribeOptions = {}): Unsubscribe {
       ensureActive('subscribe');
 
-      if (subscribeOptions.immediate) listener(makeFormState(current));
+      if (subscribeOptions.immediate) notifier.call(() => listener(publicState));
 
-      return notifier.add(() => listener(makeFormState(current)));
+      return notifier.add(() => listener(publicState));
     },
     [Symbol.dispose]() {
       form.dispose();
     },
     validate,
     get value() {
-      return current.value as ReadonlyDeep<TValues>;
+      return current.value as Form<TValues>['value'];
     },
   };
 

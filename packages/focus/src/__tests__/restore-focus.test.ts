@@ -37,6 +37,32 @@ describe('restoreFocus', () => {
     expect(document.activeElement).toBe(fallback);
   });
 
+  it('uses fallback when target focus throws', () => {
+    const target = document.createElement('button');
+    const fallback = document.createElement('button');
+    target.focus = () => {
+      throw new Error('focus failed');
+    };
+    document.body.append(target, fallback);
+
+    expect(restoreFocus(target, { fallback })).toBe(true);
+    expect(document.activeElement).toBe(fallback);
+  });
+
+  it('uses fallback when the target getter throws', () => {
+    const fallback = document.createElement('button');
+    document.body.append(fallback);
+
+    expect(
+      restoreFocus(
+        () => {
+          throw new Error('target unavailable');
+        },
+        { fallback },
+      ),
+    ).toBe(true);
+  });
+
   it('restores focus inside shadow DOM', () => {
     const host = document.createElement('div');
     const shadow = host.attachShadow({ mode: 'open' });

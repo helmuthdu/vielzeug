@@ -1,4 +1,4 @@
-import { createTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 import { locale } from './store';
 
 const catalogs = {
@@ -888,9 +888,9 @@ const catalogs = {
   },
 };
 
-export const i18n = createTranslationStore({ catalogs, locale: 'en' });
-export function setLocale(next: 'de' | 'en'): void {
-  void i18n.setLocale(next);
+export const i18n = createI18n({ catalogs, locale: 'en' });
+export async function setLocale(next: 'de' | 'en'): Promise<void> {
+  await i18n.setLocale(next);
   locale.value = next;
 }
 export function t(key: string, values?: Record<string, unknown>): string {

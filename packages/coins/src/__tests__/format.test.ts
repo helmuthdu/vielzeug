@@ -37,6 +37,25 @@ describe('format', () => {
     );
   });
 
+  it('supports independent fraction options', () => {
+    expect(format(money('1.99', USD), { maximumFractionDigits: 0 })).toBe('$2');
+    expect(format(money('1.99', USD), { minimumFractionDigits: 3 })).toBe('$1.990');
+  });
+
+  it('localizes fraction digits, names, and rounded negative signs through Intl', () => {
+    expect(format(money('1.25', USD), { locale: 'ar-EG' })).toContain('٢٥');
+    expect(format(money('1', USD), { maximumFractionDigits: 0, minimumFractionDigits: 0, style: 'name' })).toBe(
+      '1 US dollar',
+    );
+    expect(format(money('-0.01', USD), { maximumFractionDigits: 0, minimumFractionDigits: 0 })).toBe('-$0');
+  });
+
+  it('rejects invalid rounding even when no visible rounding is needed', () => {
+    expect(() => format(money('1', USD), { rounding: 'invalid' as never })).toThrow(
+      expect.objectContaining({ code: 'INVALID_ROUNDING' }),
+    );
+  });
+
   it('bounds fraction digits before bigint or Intl work', () => {
     expect(() => format(money('1', USD), { maximumFractionDigits: 21 })).toThrow(/maximum ≤ 20/);
   });

@@ -11,24 +11,21 @@ You want bundled default language and on-demand catalogs for other locales witho
 
 ### Solution
 
-Declare one catalog source per locale. Switch locale, then load it explicitly.
+Provide the default catalog eagerly and a `loadCatalog` function for other locales. Switching locale loads before committing the change.
 
 ```ts
-import { createTranslationStore } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
-const i18n = createTranslationStore({
-  catalogs: {
-    en: { title: 'Settings' },
-    fr: async () => ({ title: 'Réglages' }),
-  },
+const i18n = createI18n({
+  catalogs: { en: { title: 'Settings' } },
   locale: 'en',
+  loadCatalog: (locale) => import(`./locales/${locale}.ts`).then((m) => m.default),
 });
 
 try {
   console.log(i18n.translate('title'));
 
   await i18n.setLocale('fr');
-  await i18n.load();
   console.log(i18n.translate('title'));
 } finally {
   i18n.dispose();
@@ -37,8 +34,8 @@ try {
 
 ### Pitfalls
 
-- Declare source for every locale selected at runtime.
-- Load a lazy catalog before rendering its translations.
+- Await `setLocale()` before rendering the selected locale.
+- Use `load()` before first render only for loader-only configuration.
 - Keep each locale catalog complete for required keys.
 
 ### Related

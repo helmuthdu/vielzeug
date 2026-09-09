@@ -1,7 +1,7 @@
-import { createDropZone } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
 import {
   bind,
-  createStableId,
+  createId,
   define,
   getHost,
   html,
@@ -258,7 +258,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     // ============================================
     // IDs
     // ============================================
-    const fileInputId = createStableId('file-input');
+    const fileInputId = createId('file-input');
     const labelId = `label-${fileInputId}`;
     const helperId = `helper-${fileInputId}`;
     const errorId = `error-${fileInputId}`;

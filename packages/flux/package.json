@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/flux",
   "version": "2.4.0",
-  "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
+  "description": "Minimal push streams with explicit ownership, bounded buffering, and structural bridges",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -28,26 +28,6 @@
       "require": "./dist/async.cjs",
       "types": "./dist/async.d.ts"
     },
-    "./courier": {
-      "import": "./dist/courier.js",
-      "require": "./dist/courier.cjs",
-      "types": "./dist/courier.d.ts"
-    },
-    "./herald": {
-      "import": "./dist/herald.js",
-      "require": "./dist/herald.cjs",
-      "types": "./dist/herald.d.ts"
-    },
-    "./pulse": {
-      "import": "./dist/pulse.js",
-      "require": "./dist/pulse.cjs",
-      "types": "./dist/pulse.d.ts"
-    },
-    "./ripple": {
-      "import": "./dist/ripple.js",
-      "require": "./dist/ripple.cjs",
-      "types": "./dist/ripple.d.ts"
-    },
     "./subjects": {
       "import": "./dist/subjects.js",
       "require": "./dist/subjects.cjs",
@@ -58,18 +38,6 @@
     "*": {
       "async": [
         "dist/async.d.ts"
-      ],
-      "courier": [
-        "dist/courier.d.ts"
-      ],
-      "herald": [
-        "dist/herald.d.ts"
-      ],
-      "pulse": [
-        "dist/pulse.d.ts"
-      ],
-      "ripple": [
-        "dist/ripple.d.ts"
       ],
       "subjects": [
         "dist/subjects.d.ts"
@@ -82,41 +50,21 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run verify:exports",
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run test:types && pnpm --silent run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "test": "vitest",
+    "test:types": "tsc -p tsconfig.type-tests.json",
     "verify:exports": "node scripts/verify-exports.mjs && node scripts/verify-package-exports.mjs"
   },
-  "peerDependencies": {
-    "@vielzeug/courier": "workspace:*",
-    "@vielzeug/herald": "workspace:*",
-    "@vielzeug/pulse": "workspace:*",
-    "@vielzeug/ripple": "workspace:*"
-  },
-  "peerDependenciesMeta": {
-    "@vielzeug/courier": {
-      "optional": true
-    },
-    "@vielzeug/herald": {
-      "optional": true
-    },
-    "@vielzeug/pulse": {
-      "optional": true
-    },
-    "@vielzeug/ripple": {
-      "optional": true
-    }
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
-    "@vielzeug/courier": "workspace:*",
-    "@vielzeug/herald": "workspace:*",
-    "@vielzeug/pulse": "workspace:*",
-    "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"

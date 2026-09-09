@@ -51,6 +51,32 @@ describe('module worker protocol', () => {
     expect(postMessage).not.toHaveBeenCalled();
   });
 
+  it('rejects task and stream capability mismatches', async () => {
+    exposeTask((input: number) => input);
+    await dispatch({ id: 1, input: 1, kind: 'stream', version: PROTOCOL_VERSION });
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ category: 'protocol' }), id: 1, kind: 'error' }),
+    );
+
+    postMessage.mockClear();
+    exposeStream(async function* () {
+      yield 1;
+    });
+    await dispatch({ id: 2, input: 1, kind: 'run', version: PROTOCOL_VERSION });
+    expect(postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ category: 'protocol' }), id: 2, kind: 'error' }),
+    );
+  });
+
+  it('ignores requests with unsafe identifiers', async () => {
+    exposeTask((input: number) => input);
+
+    await dispatch({ id: Number.NaN, input: 1, kind: 'run', version: PROTOCOL_VERSION });
+    await dispatch({ id: -1, input: 1, kind: 'run', version: PROTOCOL_VERSION });
+
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+
   it('exposes versioned stream handlers', async () => {
     exposeStream(async function* (count: number) {
       for (let value = 0; value < count; value++) yield value;

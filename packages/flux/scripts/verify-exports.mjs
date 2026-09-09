@@ -11,3 +11,18 @@ for (const target of Object.values(manifest.exports)) {
   await import(pathToFileURL(resolve(root, target.import)).href);
   require(resolve(root, target.require));
 }
+
+const modules = [await import(pathToFileURL(resolve(root, manifest.exports['.'].import)).href), require(resolve(root, manifest.exports['.'].require))];
+for (const flux of modules) {
+  if (typeof flux.fromStore !== 'function' || typeof flux.fromSubscribe !== 'function') {
+    throw new Error('structural bridge export missing');
+  }
+  for (const [ErrorType, name, args] of [
+    [flux.FluxError, 'FluxError', ['artifact']],
+    [flux.FluxTimeoutError, 'FluxTimeoutError', [1]],
+    [flux.FluxCapacityError, 'FluxCapacityError', [1, 'artifact']],
+  ]) {
+    const error = new ErrorType(...args);
+    if (error.name !== name || !(error instanceof flux.FluxError)) throw new Error(`${name} identity mismatch`);
+  }
+}

@@ -14,7 +14,13 @@ import { gcd } from './gcd';
  * @returns The least common multiple of `a` and `b`, or `0` if either is `0`.
  */
 export function lcm(a: number, b: number): number {
-  if (a === 0 || b === 0) return 0;
+  const divisor = gcd(a, b);
 
-  return Math.abs(a * b) / gcd(a, b);
+  if (divisor === 0) return 0;
+
+  const result = Math.abs((a / divisor) * b);
+
+  if (!Number.isSafeInteger(result)) throw new RangeError('lcm: result exceeds the safe integer range');
+
+  return result;
 }

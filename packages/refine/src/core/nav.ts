@@ -11,10 +11,15 @@ import { type Readable, signal } from '@vielzeug/ripple';
 
 export type ListNavigationOptions<T> = Omit<FocusListNavigationOptions<T>, 'disabled'> & {
   disabled?: Readable<boolean | undefined>;
+  onNavigate?: (change: ListNavigationChange<T>) => void;
+  signal?: AbortSignal;
 };
+
+export type { ListKeyAction, ListNavigationAction, ListNavigationChange, ListNavigationTypeaheadOptions };
 
 export type ListControl<T> = {
   [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
   readonly focusedIndex: Readable<number>;
@@ -25,10 +30,10 @@ export type ListControl<T> = {
   set(index: number): number;
 };
 
-export type { ListKeyAction, ListNavigationAction, ListNavigationChange, ListNavigationTypeaheadOptions };
-
 export const createListControl = <T>(options: ListNavigationOptions<T>): ListControl<T> => {
+  const disposalController = new AbortController();
   const focusedIndex = signal(-1);
+  let disposed = false;
   let removeAbortListener: (() => void) | undefined;
   const navigation: ListNavigation<T> = createListNavigation<T>({
     direction: options.direction,
@@ -37,10 +42,6 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     isItemDisabled: options.isItemDisabled,
     keys: options.keys,
     loop: options.loop,
-    onNavigate: (change) => {
-      focusedIndex.value = change.index;
-      options.onNavigate?.(change);
-    },
     orientation: options.orientation,
     typeahead: options.typeahead,
   });
@@ -49,7 +50,21 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     focusedIndex.value = navigation.getIndex();
   };
 
+  const applyChange = (change: ListNavigationChange<T> | null): number => {
+    if (change) {
+      focusedIndex.value = change.index;
+      try {
+        options.onNavigate?.(change);
+      } finally {
+        syncIndex();
+      }
+    }
+
+    return navigation.getIndex();
+  };
+
   const set = (index: number): number => {
+    if (disposed) return -1;
     const next = navigation.set(index);
 
     syncIndex();
@@ -58,29 +73,34 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   };
 
   const navigate = (action: ListNavigationAction): number => {
-    const next = navigation.navigate(action);
+    if (disposed) return -1;
+    const change = navigation.navigate(action);
 
-    syncIndex();
-
-    return next;
+    return applyChange(change);
   };
 
   const reset = (): void => {
+    if (disposed) return;
     navigation.reset();
     syncIndex();
   };
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
-    const handled = navigation.handleKeydown(event);
+    if (disposed) return false;
 
-    syncIndex();
-
-    return handled;
+    const result = navigation.handleKeydown(event);
+    if (!result) return false;
+    if (result.change) applyChange(result.change);
+    return result.handled;
   };
 
   const dispose = (): void => {
-    navigation.dispose();
-    syncIndex();
+    if (disposed) return;
+
+    disposed = true;
+    navigation.reset();
+    focusedIndex.value = -1;
+    disposalController.abort();
     removeAbortListener?.();
     removeAbortListener = undefined;
   };
@@ -93,12 +113,15 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   }
 
   return {
+    get disposalSignal() {
+      return disposalController.signal;
+    },
     dispose,
     get disposed() {
-      return navigation.disposed;
+      return disposed;
     },
     focusedIndex,
-    getActiveItem: () => navigation.getActiveItem(),
+    getActiveItem: () => (disposed ? undefined : navigation.getActiveItem()),
     handleKeydown,
     navigate,
     reset,

@@ -3,7 +3,7 @@ export const viewportBasicExample = {
 
 const viewport = createViewport()
 const logViewport = () => {
-  const { dpr, height, width } = viewport.value
+  const { dpr, height, width } = viewport.getSnapshot()
   console.log(\`\${width}x\${height} at \${dpr}dpr\`)
 }
 

@@ -5,23 +5,27 @@ export function tokenName(token: Token<unknown>): string {
 }
 
 export class ConduitError extends Error {
+  protected static readonly errorName: string = 'ConduitError';
+
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = new.target.name;
+    this.name = (new.target as typeof ConduitError).errorName;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 export class ConduitCircularDependencyError extends ConduitError {
-  readonly cycle: Token<unknown>[];
+  protected static override readonly errorName = 'ConduitCircularDependencyError';
+  readonly cycle: readonly Token<unknown>[];
 
-  constructor(cycle: Token<unknown>[]) {
+  constructor(cycle: readonly Token<unknown>[]) {
     super(`Circular dependency detected: ${cycle.map(tokenName).join(' -> ')}`);
-    this.cycle = cycle;
+    this.cycle = Object.freeze([...cycle]);
   }
 }
 
 export class ConduitProviderNotFoundError extends ConduitError {
+  protected static override readonly errorName = 'ConduitProviderNotFoundError';
   readonly containerName: string;
   readonly token: Token<unknown>;
 
@@ -33,6 +37,7 @@ export class ConduitProviderNotFoundError extends ConduitError {
 }
 
 export class ConduitDuplicateRegistrationError extends ConduitError {
+  protected static override readonly errorName = 'ConduitDuplicateRegistrationError';
   readonly token: Token<unknown>;
 
   constructor(token: Token<unknown>) {
@@ -42,6 +47,7 @@ export class ConduitDuplicateRegistrationError extends ConduitError {
 }
 
 export class ConduitScopedResolutionError extends ConduitError {
+  protected static override readonly errorName = 'ConduitScopedResolutionError';
   readonly requiredScope: ScopeToken;
   readonly token: Token<unknown>;
 
@@ -53,6 +59,7 @@ export class ConduitScopedResolutionError extends ConduitError {
 }
 
 export class ConduitDisposedError extends ConduitError {
+  protected static override readonly errorName = 'ConduitDisposedError';
   readonly containerName: string;
 
   constructor(containerName: string) {
@@ -62,10 +69,11 @@ export class ConduitDisposedError extends ConduitError {
 }
 
 export class ConduitDisposeError extends ConduitError {
-  readonly errors: unknown[];
+  protected static override readonly errorName = 'ConduitDisposeError';
+  readonly errors: readonly unknown[];
 
-  constructor(errors: unknown[]) {
+  constructor(errors: readonly unknown[]) {
     super(`Container disposal failed with ${errors.length} cleanup error${errors.length === 1 ? '' : 's'}.`);
-    this.errors = errors;
+    this.errors = Object.freeze([...errors]);
   }
 }

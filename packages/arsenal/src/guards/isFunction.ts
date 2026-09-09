@@ -12,6 +12,6 @@
  *
  * @returns `true` if the value is a function, else `false`.
  */
-export function isFunction(arg: unknown): arg is (...args: any[]) => any {
+export function isFunction(arg: unknown): arg is (...args: never[]) => unknown {
   return typeof arg === 'function';
 }

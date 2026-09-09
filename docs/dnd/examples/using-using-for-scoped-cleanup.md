@@ -14,7 +14,8 @@ You set up drag-and-drop inside a function or block scope and want the cleanup t
 Both primitives implement `[Symbol.dispose]`, so they work with the `using` keyword in any block scope, including `try` blocks and async functions:
 
 ```ts
-import { createDropZone, createSortable } from '@vielzeug/dnd';
+import { createDropZone } from '@vielzeug/dnd/drop';
+import { createSortable } from '@vielzeug/dnd/sortable';
 
 const handleFiles = (files: File[]) => console.log('Dropped files:', files);
 const saveOrder = (ids: string[]) => console.log('Saved order:', ids);
@@ -29,7 +30,7 @@ async function setupPage() {
   using sortable = createSortable({
     element: document.getElementById('list')!,
     getKey: (el) => el.dataset.sortId!,
-    onReorder: ({ ids }) => saveOrder(ids),
+    onReorder: ({ after }) => saveOrder(after),
   });
 
   await pageReady();

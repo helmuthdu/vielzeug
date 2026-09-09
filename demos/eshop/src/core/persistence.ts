@@ -1,6 +1,7 @@
 import { effect } from '@vielzeug/ripple';
-import type { VaultStore } from '@vielzeug/vault';
-import { table } from '@vielzeug/vault';
+import { s } from '@vielzeug/spell';
+import type { KeyValueVaultStore } from '@vielzeug/vault';
+import { table, validatorCodec } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 import { cartItems, compareModelIds } from './cart-store';
 import { currencyFromCode, currentCurrency, setCurrency } from './currency';
@@ -28,12 +29,58 @@ const schema = {
   preferences: table<PreferencesRow, 'id'>('id'),
 };
 
-const store: VaultStore<typeof schema> = createLocalStorage({ name: 'vielzeug-motors', schema });
+// Persisted values cross a trust boundary (localStorage is editable by hand, by other
+// tabs, or by an older app version), so each table decodes through a real `@vielzeug/spell`
+// schema rather than a bare `as` cast. A row that fails validation is rejected by the codec;
+// the loaders below treat a rejected read as "no saved row" and fall back to defaults, so a
+// corrupt entry can never reach the in-memory signals as mistyped data.
+const configurationSchema = s.object({
+  colorId: s.string(),
+  modelId: s.string(),
+  packageIds: s.array(s.string()),
+  trimId: s.string(),
+  wheelId: s.string(),
+});
+
+const cartItemSchema = s.object({
+  addedAt: s.string(),
+  configuration: configurationSchema,
+  id: s.string(),
+  quantity: s.number(),
+});
+
+const cartSchema = s.object({
+  compareModelIds: s.array(s.string()),
+  id: s.literal('current'),
+  items: s.array(cartItemSchema),
+});
+
+const preferencesSchema = s.object({
+  accentHue: s.number(),
+  currency: s.string(),
+  id: s.literal('preferences'),
+  locale: s.enum(['de', 'en']),
+  theme: s.enum(['dark', 'light', 'system']),
+});
+
+const store: KeyValueVaultStore<typeof schema> = createLocalStorage({
+  codecs: {
+    cart: validatorCodec<CartRow>({ parse: (value) => cartSchema.parse(value) }),
+    preferences: validatorCodec<PreferencesRow>({ parse: (value) => preferencesSchema.parse(value) }),
+  },
+  name: 'vielzeug-motors',
+  schema,
+});
 
 async function loadCart(): Promise<CartRow | null> {
-  const row = await store.get('cart', 'current');
+  try {
+    const row = await store.get('cart', 'current');
 
-  return row ?? null;
+    return row ?? null;
+  } catch {
+    // Corrupt or schema-incompatible cart — discard and re-seed from current signals.
+    return null;
+  }
 }
 
 async function saveCart(items: CartItem[], compare: string[]): Promise<void> {
@@ -41,9 +88,13 @@ async function saveCart(items: CartItem[], compare: string[]): Promise<void> {
 }
 
 async function loadPreferences(): Promise<PreferencesRow | null> {
-  const row = await store.get('preferences', 'preferences');
+  try {
+    const row = await store.get('preferences', 'preferences');
 
-  return row ?? null;
+    return row ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function savePreferences(prefs: Omit<PreferencesRow, 'id'>): Promise<void> {

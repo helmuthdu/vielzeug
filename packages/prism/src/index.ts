@@ -1,9 +1,6 @@
 // Public API — all exports for @vielzeug/prism
 
 export type { EasingFn } from './animation/easing';
-export type { AnimationTarget } from './animation/transition';
-// Animation utilities (for plugin authors)
-export { animate } from './animation/transition';
 // Chart factories
 export { createAreaChart } from './charts/area';
 export { createBarChart } from './charts/bar';
@@ -12,15 +9,11 @@ export { createPieChart } from './charts/pie';
 export { createSparkline } from './charts/sparkline';
 // Error classes
 export { PrismError, PrismRenderError } from './errors';
-// Interaction types (useful for plugin authors)
-export type { LegendState } from './interaction/legend';
-export type { TooltipState } from './interaction/tooltip';
 // Scale factories
 export { bandScale } from './scales/band';
 export { linearScale } from './scales/linear';
 export { timeScale } from './scales/time';
-// SVG primitives (for plugin authors)
-export type { Point } from './svg/path';
+export type { BandScaleConfig, LinearScaleConfig, TimeScaleConfig } from './scales/types';
 // Theme utilities
 export { resetTheme, seriesColor, setTheme } from './theme';
 export type {
@@ -38,16 +31,15 @@ export type {
   ChartEvent,
   ChartHandle,
   ChartMargin,
-  ChartPlugin,
-  ChartPluginContext,
+  ContinuousDatum,
   CrosshairConfig,
   Datum,
   GridConfig,
+  HorizontalAxisPosition,
   LegendConfig,
   LegendPosition,
   LineChartConfig,
   LineSeriesConfig,
-  MaybeSignal,
   PieChartConfig,
   PieSliceConfig,
   PieVariant,
@@ -59,4 +51,7 @@ export type {
   StackSegment,
   TooltipConfig,
   TransitionConfig,
+  VerticalAxisPosition,
+  XAxisConfig,
+  YAxisConfig,
 } from './types';

@@ -167,36 +167,7 @@ describe('load()', () => {
     router.dispose();
   });
 
-  it('drains an AsyncGenerator data loader and returns the final value', async () => {
-    async function* streamingLoader(): AsyncGenerator<string, string> {
-      yield 'partial-1';
-      yield 'partial-2';
-
-      return 'final';
-    }
-
-    const history = createMemoryHistory('/');
-    const router = createRouter({
-      history,
-      routes: {
-        home: { path: '/' },
-        page: { data: streamingLoader, path: '/page' },
-      },
-    });
-
-    await settle();
-
-    const state = await router.load('/page');
-
-    expect(state?.status).toBe('idle');
-    // load() drains the generator and exposes the return value as data.
-    expect(state?.matches.at(-1)?.data).toBe('final');
-    // Router navigation state must remain unaffected.
-    expect(router.getSnapshot().location.pathname).toBe('/');
-    router.dispose();
-  });
-
-  it('returns status idle with data undefined when signal is already aborted (non-streaming loader)', async () => {
+  it('returns status idle when signal is already aborted', async () => {
     const history = createMemoryHistory('/');
     const controller = new AbortController();
     const router = createRouter({
@@ -214,8 +185,7 @@ describe('load()', () => {
 
     controller.abort();
 
-    // When the signal is already aborted, the data loader still runs for non-streaming loaders;
-    // the signal is forwarded to the loader for cooperative cancellation.
+    // The signal is forwarded to the loader for cooperative cancellation.
     const state = await router.load('/page', { signal: controller.signal });
 
     // The route still matches; data may be undefined or the loader result depending on timing.

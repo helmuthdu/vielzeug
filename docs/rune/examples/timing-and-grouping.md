@@ -36,7 +36,7 @@ console.log(result);
 
 - `time()` always emits at `debug` level with the label as the log message and `{ duration_ms }` in context. If `logLevel` is above `debug`, the timer still runs but no entry is emitted. Set `logLevel: 'debug'` when capturing timing data.
 - `time()` measures wall-clock time via `performance.now()`. For async functions, it covers total elapsed time including I/O wait — not CPU time. Long I/O waits will inflate the result.
-- `group()` and `groupCollapsed()` call `console.group`/`console.groupEnd` regardless of which transport is configured. They are visual wrappers for the console; other transports (remote, JSON, batch) receive entries as normal flat events with no grouping semantics.
+- `group()` and `groupCollapsed()` call `console.group`/`console.groupEnd` regardless of which transport is configured. They are visual wrappers for the console; other transports (JSON) receive entries as normal flat events with no grouping semantics.
 - When `logLevel` is `'off'`, the group wrapper is bypassed entirely but the callback still executes.
 
 ### Related

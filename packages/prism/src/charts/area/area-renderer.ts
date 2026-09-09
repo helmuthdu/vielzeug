@@ -5,7 +5,7 @@ import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
-import type { Datum, Scale, TransitionConfig } from '../../types';
+import type { ContinuousDatum, Scale, TransitionConfig } from '../../types';
 
 export interface AreaRenderOptions {
   color: string;
@@ -122,7 +122,11 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   activeAreaAnimations.set(parent, () => cancelAnimationFrame(id));
 }
 
-export function computeAreaPoints(data: Datum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
+export function computeAreaPoints(
+  data: ContinuousDatum[],
+  xScale: Scale<Date | number>,
+  yScale: Scale<number>,
+): Point[] {
   if (data.some((d) => d.key == null)) {
     warn(
       'computeAreaPoints: datum.key is null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',

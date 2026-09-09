@@ -1,11 +1,11 @@
 ---
-title: Forge — Immutable form state for TypeScript
-description: Framework-agnostic immutable form state with focused object fields and explicit validation results.
+title: Forge — Immutable typed form state
+description: Framework-neutral form and field state with nested handles, flat validation issues, and explicit integration helpers.
 package: forge
-category: forms
-keywords: [form-state, validation, immutable, input, submission]
-related: [spell, vault, courier]
-exports: [createForm, bindField, customValidator, saveForm, loadForm]
+category: state
+keywords: [forms, validation, fields, immutable, standard schema, formdata]
+exports: [createForm]
+related: [spell, vault, assay]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -15,108 +15,58 @@ environments: [browser, node, ssr, deno]
 
 ## Why Forge?
 
-Native form state becomes difficult to inspect once values, validation, draft restoration, and UI bindings share mutable objects. Forge owns one immutable value tree and gives you typed handles for object branches without string paths, scoped controllers, or framework state.
-
-```ts
-// Before
-const values = { email: '', password: '' };
-const errors: Record<string, string> = {};
-
-function submit() {
-  errors.email = values.email.includes('@') ? '' : 'Invalid email';
-  errors.password = values.password.length >= 8 ? '' : 'Use at least eight characters';
-}
-
-// After
-const form = createForm({
-  initialValues: { email: '', password: '' },
-  validate: (value) => ({
-    fields: {
-      email: value.email.includes('@') ? undefined : 'Invalid email',
-      password: value.password.length >= 8 ? undefined : 'Use at least eight characters',
-    },
-  }),
-});
-```
-
-| Feature | Forge | Native form state | Framework-owned form state |
-| --- | --- | --- | --- |
-| Bundle size | <PackageInfo package="forge" type="size" /> | <ore-icon name="check" size="16"></ore-icon> | Varies |
-| Zero external dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Immutable nested values | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Varies |
-| Typed object field handles | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Varies |
-| Framework-independent state | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-
-<div class="decision-callout">
-
-**Use Forge when** form state needs framework-independent immutable values, typed object fields, and one explicit validation boundary.
-
-**Consider framework-owned form state when** application only needs a single UI framework's native input bindings.
-
-</div>
-
-## Installation
-
-::: code-group
-
-```sh [pnpm]
-pnpm add @vielzeug/forge
-```
-
-```sh [npm]
-npm install @vielzeug/forge
-```
-
-```sh [yarn]
-yarn add @vielzeug/forge
-```
-
-:::
-
-Install `@vielzeug/spell` or `@vielzeug/vault` only when importing Forge's matching optional adapter.
+Forge owns form state without owning rendering or validation timing. Nested field handles keep access typed, flat validation issues compose across arrays and unions, and Forge-owned validation and persistence operations settle on cancellation.
 
 ## Quick Start
-
-Create a form, update a focused field, and submit only after validation passes.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
 
 const form = createForm({
-  initialValues: { profile: { email: '', name: '' } },
-  validate: (value) => ({
-    fields: { profile: { email: value.profile.email.includes('@') ? undefined : 'Invalid email' } },
-  }),
+  initialValues: { email: '', profile: { name: '' } },
+  validate: (values) =>
+    values.email.includes('@') ? undefined : [{ path: ['email'], message: 'Invalid email' }],
 });
 
-form.field('profile').field('email').set('ada@example.com');
+form.field('profile').field('name').set('Ada');
+const result = await form.validate();
+```
 
-const result = await form.submit(async (value) => {
-  const response = await fetch('/api/profile', {
-    body: JSON.stringify(value),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST',
-  });
+| Feature | Forge | Local component state |
+| --- | --- | --- |
+| Bundle size | <PackageInfo package="forge" type="size" /> | n/a |
+| Nested typed fields | <ore-icon name="check" size="16"></ore-icon> | Manual |
+| Flat validation issues | <ore-icon name="check" size="16"></ore-icon> | Manual |
+| Abortable validation | <ore-icon name="check" size="16"></ore-icon> | Manual |
+| Framework-neutral | <ore-icon name="check" size="16"></ore-icon> | Varies |
+| Zero third-party dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
-  return response.ok;
-});
+<div class="decision-callout">
 
-if (result.status === 'invalid') console.log(result.errors);
+**Use Forge when** several fields need coordinated validation, submission, dirty/touched state, nested updates, or explicit persistence.
+
+**Use local state when** a form has only one or two fields and no shared validation lifecycle.
+
+</div>
+
+## Installation
+
+```sh
+pnpm add @vielzeug/forge
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `form.value` exposes one immutable nested value tree.
-- `form.field(key)` selects typed object branches without string paths.
-- `field.set(updater)` replaces array values through immutable updater functions.
-- `field.field(index)` selects typed array item fields by index.
-- `form.validate()` returns valid, invalid, or aborted results.
-- `form.submit(handler, signal?)` touches, validates, and invokes the handler when valid.
-- `bindField()` connects one DOM element without owning validation timing.
-- `customValidator()` maps Spell schema errors into Forge fields.
-- `saveForm()` and `loadForm()` persist explicit Vault draft records.
+- `createForm()` — deeply readonly form state with structural sharing and cloned dates
+- `field().field()` — typed nested field handles
+- Flat `{ path, message }` validation issues
+- Explicit `validate()` and `submit()` timing
+- `/dom` — optional element binding
+- `/schema` — validator-agnostic Standard Schema adapter
+- `/persist` — explicit structural store integration
+- `/form-data` — browser submission serialization
 
 </div>
 
@@ -133,12 +83,8 @@ if (result.status === 'invalid') console.log(result.errors);
 
 ## See Also
 
-<div class="see-also">
+- [Spell](/spell/) — Standard Schema-compatible validation.
+- [Vault](/vault/) — durable typed storage for drafts.
+- [Assay](/assay/) — DOM test helpers for form interaction.
 
-- [Spell](/spell/) — adapt a Spell schema through `customValidator()`.
-- [Vault](/vault/) — save and restore explicit Forge draft records.
-- [Courier](/courier/) — send a validated form value through a mutation.
-
-</div>
-
-<!-- markdownlint-enable -->
+<!-- markdownlint-enable MD025 MD033 MD060 -->

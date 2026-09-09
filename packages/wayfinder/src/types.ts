@@ -26,20 +26,14 @@ export type ResolvedQueryParams = Record<string, ResolvedQueryValue | ResolvedQu
 
 export type MaybePromise<T> = T | Promise<T>;
 
-/**
- * An async generator used as a streaming data loader.
- * Each `yield` emits a partial result (status: `'streaming'`).
- * The `return` value becomes the final settled data (status: `'idle'`).
- */
-export type DataStream<T = unknown> = AsyncGenerator<T, T>;
-
-/** Navigation status for the whole router and per-route match status. */
-export type NavigationStatus = 'error' | 'idle' | 'loading' | 'streaming';
+/** Navigation status for the whole router. */
+export type NavigationStatus = 'error' | 'idle' | 'loading';
 
 export type IsActiveOptions = {
   /** Require an exact pathname match. Defaults to prefix matching. */
   exact?: boolean;
 };
+
 export type ScrollPosition = { x: number; y: number };
 export type ScrollDecision = ScrollPosition | 'preserve' | 'top';
 
@@ -59,8 +53,6 @@ export type RouterErrorContext =
       source: 'middleware';
     }
   | { source: 'coerce-search' | 'history-listener' | 'initial-navigation' | 'preload' };
-
-export type RouterErrorSource = RouterErrorContext['source'];
 
 /**
  * Per-route search-param coercion function.
@@ -158,10 +150,10 @@ export type DataContext<
   readonly signal: AbortSignal;
 };
 
-/** Data loader function. May return a plain value/Promise or an AsyncGenerator for streaming. */
+/** Data loader function. Returns a value or a Promise that resolves to the data. */
 export type DataFn<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = (
   context: DataContext<Params, TRoutes>,
-) => DataStream | MaybePromise<unknown>;
+) => MaybePromise<unknown>;
 
 /**
  * Global middleware function. Call `next()` to continue the chain; return without calling it to block navigation.
@@ -191,9 +183,6 @@ export type RouteMiddleware<Path extends string = string, TRoutes extends RouteT
 type RouteCommon = {
   /** Nested child routes. Keys become part of the compound route name (e.g. `dashboard.settings`). */
   children?: RouteChildren;
-  /** Optional view payload for framework-level RouterView rendering. */
-  component?: unknown;
-  meta?: unknown;
 };
 
 type PathRouteShape<Path extends string = string> = {
@@ -216,12 +205,8 @@ type ContentRouteDefinition<Path extends string = string> = RouteCommon &
     coerceSearch?: CoerceSearchFn;
     /**
      * Data loader. Runs after middleware; result is available as `match.data` in the matched branch.
-     * Supports streaming via AsyncGenerator. May also perform side effects directly
-     * (rendering, state hydration) — replaces the former `handler` concept.
      */
     data?: DataFn<PathParams<Path>>;
-    /** Lazy-load the route module. The resolved export replaces data/component/meta. */
-    lazy?: () => Promise<Pick<ContentRouteDefinition<Path>, 'component' | 'data' | 'meta'>>;
     /**
      * Per-route middleware with typed params. Use `RouteMiddleware<Path>` for inline type safety.
      * Runs after parent middleware, before this route's data loader.
@@ -241,7 +226,6 @@ type RedirectRouteDefinition<Path extends string = string> = RouteCommon &
   RoutePathShape<Path> & {
     coerceSearch?: never;
     data?: never;
-    lazy?: never;
     middleware?: never;
     onError?: never;
     /** Declarative redirect. Resolved before middleware runs. */
@@ -268,14 +252,15 @@ type BuildPath<Parent extends string, Def extends RouteDefinition<string>> = Def
     ? JoinPath<Parent, Path>
     : Parent;
 
-type RouteEntry<Name extends string, Path extends string> = {
+type RouteEntry<Name extends string, Path extends string, Definition extends RouteDefinition<string>> = {
+  definition: Definition;
   name: Name;
   path: Path;
 };
 
 type ChildEntries<Children extends RouteChildren, Prefix extends string, ParentPath extends string> = {
   [ChildName in keyof Children & string]:
-    | RouteEntry<`${Prefix}.${ChildName}`, BuildPath<ParentPath, Children[ChildName]>>
+    | RouteEntry<`${Prefix}.${ChildName}`, BuildPath<ParentPath, Children[ChildName]>, Children[ChildName]>
     | (Children[ChildName] extends { children: infer Nested extends RouteChildren }
         ? ChildEntries<Nested, `${Prefix}.${ChildName}`, BuildPath<ParentPath, Children[ChildName]>>
         : never);
@@ -283,7 +268,7 @@ type ChildEntries<Children extends RouteChildren, Prefix extends string, ParentP
 
 type RouteEntries<TRoutes extends RouteTable> = {
   [Name in keyof TRoutes & string]:
-    | RouteEntry<Name, BuildPath<'/', TRoutes[Name]>>
+    | RouteEntry<Name, BuildPath<'/', TRoutes[Name]>, TRoutes[Name]>
     | (TRoutes[Name] extends { children: infer Children extends RouteChildren }
         ? ChildEntries<Children, Name, BuildPath<'/', TRoutes[Name]>>
         : never);
@@ -300,6 +285,19 @@ export type RouteTable = Record<string, RouteDefinition<string>>;
 
 export type RouteName<TRoutes extends RouteTable> = RouteEntries<TRoutes>['name'];
 
+export type RouteViewName<TRoutes extends RouteTable> = Exclude<
+  RouteEntries<TRoutes>,
+  { definition: { redirect: unknown } }
+>['name'];
+
+export type RouteViewMap<TRoutes extends RouteTable> = {
+  readonly [Name in RouteViewName<TRoutes>]: unknown;
+};
+
+export type RouteViewRegistry<TView = unknown> = {
+  resolve(state: RouteState): TView | undefined;
+};
+
 export type NamedNavigationTarget<TRoutes extends RouteTable> = {
   [Name in RouteName<TRoutes>]: {
     hash?: string;
@@ -313,25 +311,17 @@ export type NamedNavigationTarget<TRoutes extends RouteTable> = {
 
 /**
  * A single node in the matched route branch (root → leaf).
- *
- * Each match node carries its own `status` so nested layouts can reflect
- * per-slot loading/streaming state without polling the router-level status.
  */
-export type RouteMatch<TMeta = unknown, TComponent = unknown> = {
-  /** Optional view payload copied from route `component` or lazy module output. */
-  readonly component: TComponent;
+export type RouteMatch = {
   /** Result of the route's `data()` function, or `undefined` if none was defined. */
   readonly data: unknown;
-  readonly meta: TMeta;
   readonly name: string;
   readonly params: RouteParams;
   readonly pathname: string;
-  /** Per-node loading status. Reflects individual loader state in nested layouts. */
-  readonly status: NavigationStatus;
 };
 
 /** Ordered array of matched route nodes from the root layout down to the active leaf. */
-export type RouteMatchBranch<TMeta = unknown, TComponent = unknown> = readonly RouteMatch<TMeta, TComponent>[];
+export type RouteMatchBranch = readonly RouteMatch[];
 
 export type RouteLocation = {
   readonly hash: string;
@@ -345,16 +335,15 @@ export type RouteLocation = {
   readonly query: QueryParams;
 };
 
-export type RouteState<TMeta = unknown, TComponent = unknown> = {
+export type RouteState = {
   /** The error thrown by a `data()` function. Only set when `status === 'error'`. */
   readonly error?: unknown;
   readonly location: RouteLocation;
-  /** Matched route branch from root to leaf, including per-node data loader results. */
-  readonly matches: RouteMatchBranch<TMeta, TComponent>;
+  /** Matched route branch from root to leaf, including data loader results. */
+  readonly matches: RouteMatchBranch;
   /**
    * `idle` — navigation settled successfully.
    * `loading` — data loaders are in-flight.
-   * `streaming` — at least one data loader is an AsyncGenerator still yielding partial results.
    * `error` — a data loader threw and no route-level `onError` handled it.
    */
   readonly status: NavigationStatus;
@@ -362,7 +351,7 @@ export type RouteState<TMeta = unknown, TComponent = unknown> = {
 
 // ─── Router configuration ──────────────────────────────────────────────────────
 
-export type RouterOptions<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown> = {
+export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
   /** Base path for all routes (default: '/'). */
   base?: string;
   /**
@@ -379,13 +368,13 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable, TMeta = unkno
    * Declared explicitly and matched last after all routes.
    * The `data` function receives the unmatched pathname via `ctx.pathname`.
    */
-  notFound?: Pick<ContentRouteDefinition, 'component' | 'data' | 'meta' | 'middleware'>;
+  notFound?: Pick<ContentRouteDefinition, 'data' | 'middleware'>;
   /** Optional sink for non-awaited/background router errors. */
   onError?: (error: unknown, context: RouterErrorContext) => void;
   /** Declarative route table. Object key order determines match precedence. */
   routes: TRoutes;
   /** Called after every successful navigation. Return `top`, `preserve`, or explicit coordinates. */
-  scroll?: (to: RouteState<TMeta, TComponent>, from: RouteState<TMeta, TComponent>) => ScrollDecision;
+  scroll?: (to: RouteState, from: RouteState) => ScrollDecision;
   /** Wrap navigation in the View Transition API when available. */
   viewTransition?: boolean;
 };
@@ -425,20 +414,8 @@ export type RouteMatcher = {
 };
 
 /** @internal Static per-node definition stored on a compiled RouteRecord (root → leaf). */
-export type RouteBranchDef<TMeta = unknown, TComponent = unknown> = {
-  readonly component?: TComponent;
+export type RouteBranchDef = {
   readonly dataFn?: DataFn;
-  readonly lazy?: () => Promise<
-    Pick<
-      {
-        component?: TComponent;
-        data?: DataFn;
-        meta?: TMeta;
-      },
-      'component' | 'data' | 'meta'
-    >
-  >;
-  readonly meta?: TMeta;
   readonly name: string;
   /**
    * Route-level error boundary for data loader failures.
@@ -450,10 +427,10 @@ export type RouteBranchDef<TMeta = unknown, TComponent = unknown> = {
 /**
  * @internal Compiled route record. Produced by `compileRoutes`.
  */
-export type RouteRecord<TMeta = unknown, TComponent = unknown> = {
-  readonly branchDefs: readonly RouteBranchDef<TMeta, TComponent>[];
+export type RouteRecord = {
+  readonly branchDefs: readonly RouteBranchDef[];
   readonly coerceSearch?: CoerceSearchFn;
-  readonly leaf: RouteBranchDef<TMeta, TComponent>;
+  readonly leaf: RouteBranchDef;
   readonly matcher: RouteMatcher;
   /** Per-route + ancestor middleware only. Global middleware is applied at execution time. */
   readonly ownMiddleware: readonly Middleware[];

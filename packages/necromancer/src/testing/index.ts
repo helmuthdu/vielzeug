@@ -46,19 +46,23 @@ export class FakeAnimation {
 }
 
 /**
- * Replaces `Element.prototype.animate` with a deterministic fake for the duration of a test.
- * Call `restore()` to put the original implementation (or its absence) back.
+ * Replaces `Element.prototype.animate` with a deterministic lifecycle fake for a test.
+ * Dispose the installation or call `restore()` to restore the original implementation.
  *
  * @example
- * const { calls, restore } = installFakeAnimations();
+ * using animations = installFakeAnimations();
  * const handle = animate(element, [{ opacity: 0 }, { opacity: 1 }]);
- * calls[0]?.animation.finish();
+ * animations.calls[0]?.animation.finish();
  * await handle.result; // { status: 'finished' }
- * restore();
  */
-export function installFakeAnimations(): { calls: AnimationCall[]; restore: () => void } {
+export function installFakeAnimations(): {
+  readonly calls: readonly AnimationCall[];
+  restore(): void;
+  [Symbol.dispose](): void;
+} {
   const calls: AnimationCall[] = [];
   const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'animate');
+  let restored = false;
 
   Object.defineProperty(Element.prototype, 'animate', {
     configurable: true,
@@ -73,12 +77,18 @@ export function installFakeAnimations(): { calls: AnimationCall[]; restore: () =
     writable: true,
   });
 
+  const restore = (): void => {
+    if (restored) return;
+
+    restored = true;
+    if (descriptor) Object.defineProperty(Element.prototype, 'animate', descriptor);
+    else Reflect.deleteProperty(Element.prototype, 'animate');
+  };
+
   return {
     calls,
-    restore() {
-      if (descriptor) Object.defineProperty(Element.prototype, 'animate', descriptor);
-      else Reflect.deleteProperty(Element.prototype, 'animate');
-    },
+    restore,
+    [Symbol.dispose]: restore,
   };
 }
 

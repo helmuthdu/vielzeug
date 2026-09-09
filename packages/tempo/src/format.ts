@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { toInstant, toZoned } from './_convert';
-import { inferTimeZone } from './_tz';
+import { inferTimeZone, validateTimeZone } from './_tz';
 import { fail, TempoInvalidInputError } from './errors';
 import type {
   DurationFormatOptions,
@@ -132,9 +132,7 @@ function getDurationFormatter(options: {
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3_600;
 const SECONDS_PER_DAY = 86_400;
-const SECONDS_PER_WEEK = 604_800;
-const SECONDS_PER_MONTH = 2_629_800; // ≈ 30.4375 days × 86400
-const SECONDS_PER_YEAR = 31_557_600; // 365.25 days × 86400
+const SECONDS_PER_WEEK = 604_800; // 7 × 86400 — fixed
 
 // ─── Relative time helpers ────────────────────────────────────────────────────
 
@@ -144,9 +142,7 @@ const RELATIVE_UNITS: ReadonlyArray<{ scale: number; thresholdToPromote: number;
     { scale: SECONDS_PER_MINUTE, thresholdToPromote: SECONDS_PER_HOUR / SECONDS_PER_MINUTE, unit: 'minute' },
     { scale: SECONDS_PER_HOUR, thresholdToPromote: SECONDS_PER_DAY / SECONDS_PER_HOUR, unit: 'hour' },
     { scale: SECONDS_PER_DAY, thresholdToPromote: SECONDS_PER_WEEK / SECONDS_PER_DAY, unit: 'day' },
-    { scale: SECONDS_PER_WEEK, thresholdToPromote: SECONDS_PER_MONTH / SECONDS_PER_WEEK, unit: 'week' },
-    { scale: SECONDS_PER_MONTH, thresholdToPromote: 12, unit: 'month' },
-    { scale: SECONDS_PER_YEAR, thresholdToPromote: Number.POSITIVE_INFINITY, unit: 'year' },
+    { scale: SECONDS_PER_WEEK, thresholdToPromote: Number.POSITIVE_INFINITY, unit: 'week' },
   ];
 
 function toRelativeUnit(seconds: number): { unit: Intl.RelativeTimeFormatUnit; value: number } {
@@ -160,7 +156,44 @@ function toRelativeUnit(seconds: number): { unit: Intl.RelativeTimeFormatUnit; v
     if (Math.abs(value) < thresholdToPromote) return { unit, value };
   }
 
-  return { unit: 'year', value: Math.round(roundedSeconds / SECONDS_PER_YEAR) };
+  return { unit: 'week', value: Math.round(roundedSeconds / SECONDS_PER_WEEK) };
+}
+
+function resolveRelativeTimeZone(input: RelativeTimeInput, base: RelativeTimeInput, timeZone?: string): string {
+  if (timeZone) return validateTimeZone(timeZone);
+
+  const inputTimeZone = input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined;
+  const baseTimeZone = base instanceof Temporal.ZonedDateTime ? base.timeZoneId : undefined;
+
+  if (inputTimeZone && baseTimeZone && inputTimeZone !== baseTimeZone) {
+    fail('formatRelative received ZonedDateTime inputs with different time zones. Pass options.timeZone explicitly.');
+  }
+
+  return inputTimeZone ?? baseTimeZone ?? 'UTC';
+}
+
+function toCalendarRelativeUnit(
+  input: RelativeTimeInput,
+  base: RelativeTimeInput,
+  timeZone: string,
+): { unit: Intl.RelativeTimeFormatUnit; value: number } {
+  const target = toZoned(input, { timeZone });
+  const reference = toZoned(base, { timeZone });
+  const comparison = Temporal.ZonedDateTime.compare(target, reference);
+
+  if (comparison === 0) return { unit: 'second', value: 0 };
+
+  const duration =
+    comparison > 0
+      ? target.since(reference, { largestUnit: 'year' })
+      : reference.since(target, { largestUnit: 'year' });
+  const direction = comparison > 0 ? 1 : -1;
+
+  if (duration.years) return { unit: 'year', value: duration.years * direction };
+
+  if (duration.months) return { unit: 'month', value: duration.months * direction };
+
+  return toRelativeUnit((input.epochMilliseconds - base.epochMilliseconds) / 1000);
 }
 
 // ─── Duration fallback renderer ───────────────────────────────────────────────
@@ -320,6 +353,9 @@ export function formatZoned(input: TimeInput, options: TimeZoneOptions = {}): st
 /**
  * Formats `input` relative to `options.base` (defaults to now) using `Intl.RelativeTimeFormat`.
  *
+ * Complete calendar months and years are resolved in the requested or inferred timezone.
+ * Shorter spans use fixed elapsed-time units.
+ *
  * @example
  * ```ts
  * formatRelative(parse('2026-03-21T12:00:00Z', { as: 'instant' }), {
@@ -331,14 +367,9 @@ export function formatZoned(input: TimeInput, options: TimeZoneOptions = {}): st
  * ```
  */
 export function formatRelative(input: RelativeTimeInput, options: RelativeFormatOptions = {}): string {
-  const target = input instanceof Temporal.Instant ? input : input.toInstant();
-  const base = options.base
-    ? options.base instanceof Temporal.Instant
-      ? options.base
-      : options.base.toInstant()
-    : Temporal.Now.instant();
-  const differenceInSeconds = (target.epochMilliseconds - base.epochMilliseconds) / 1000;
-  const { unit, value } = toRelativeUnit(differenceInSeconds);
+  const base = options.base ?? Temporal.Now.instant();
+  const timeZone = resolveRelativeTimeZone(input, base, options.timeZone);
+  const { unit, value } = toCalendarRelativeUnit(input, base, timeZone);
 
   return getRelativeFormatter(options).format(value, unit);
 }

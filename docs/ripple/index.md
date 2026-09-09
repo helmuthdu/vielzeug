@@ -1,11 +1,11 @@
 ---
 title: Ripple — Reactive graphs
-description: Framework-agnostic signals, derived values, effects, scopes, watchers, and async resources.
+description: Framework-agnostic signals, effects, async resources, scopes, structural bridges, and observability.
 package: ripple
 category: state
-keywords: [reactive, signals, computed, effects, graph, scope, batch, watch, resource, async]
+keywords: [reactive, signals, computed, effects, graph, scope, batch, watch, tap, observability]
 related: [ore, clockwork, ledger]
-exports: [createRipple, signal, computed, effect, batch, createScope, untrack, watch, resource, isReactive]
+exports: [createRipple, signal, computed, effect, batch, createScope, untrack, watch, resource, fromSubscribable, isReactive]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -76,7 +76,7 @@ yarn add @vielzeug/ripple
 
 ## Quick Start
 
-Create one graph, derive a value, observe it, then dispose resources when the graph lifetime ends.
+Create one graph, derive a value, observe it, then dispose when the graph lifetime ends.
 
 ```ts
 import { createRipple } from '@vielzeug/ripple';
@@ -106,7 +106,9 @@ ripple.dispose();
 - `batch()` coalesces synchronous writes and notifications.
 - `createScope()` groups owned reactive work.
 - `watch()` observes one selected source transition.
-- `resource()` loads async values with stale-work cancellation.
+- `tap()` provides runtime observability for all graph events.
+- `resource()` owns focused latest-request async state.
+- `fromSubscribable()` creates a disposable bridge for external `{ getSnapshot, subscribe }` sources.
 
 </div>
 

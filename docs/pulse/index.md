@@ -13,6 +13,7 @@ exports:
     RoomScope,
     RoomScopeBase,
     PresenceRoomScope,
+    ExternalStore,
     PulseOptions,
     PulseSchema,
     ChannelDefinition,
@@ -69,7 +70,7 @@ try {
 | Session restoration | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Protocol-specific |
 | Typed scoped channels | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Basic |
 | Typed rooms with presence | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Zero runtime dependencies | <ore-icon name="triangle-alert" size="16"></ore-icon> ripple | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -84,15 +85,15 @@ try {
 ::: code-group
 
 ```sh [pnpm]
-pnpm add @vielzeug/pulse @vielzeug/ripple
+pnpm add @vielzeug/pulse
 ```
 
 ```sh [npm]
-npm install @vielzeug/pulse @vielzeug/ripple
+npm install @vielzeug/pulse
 ```
 
 ```sh [yarn]
-yarn add @vielzeug/pulse @vielzeug/ripple
+yarn add @vielzeug/pulse
 ```
 
 :::
@@ -151,7 +152,7 @@ pulse.dispose();
 - **`transform`** — one synchronous transform or filter for application messages.
 - **`tap()`** — subscribe to lifecycle events (status changes, errors, disposal) via a typed `PulseEvent` stream.
 - **`heartbeat`** — ping/pong liveness detection that uses the same reconnect controller.
-- **`status` and `rooms`** — ripple readables for transport and confirmed membership state.
+- **`status` and `rooms`** — framework-neutral external stores for transport and confirmed membership state.
 
 </div>
 
@@ -170,7 +171,7 @@ pulse.dispose();
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — provides the reactive values exposed by Pulse.
+- [Ripple](/ripple/) — bridges Pulse external stores into computed values and effects.
 - [Herald](/herald/) — receives routed Pulse events in an in-process application bus.
 - [Courier](/courier/) — handles request/response traffic alongside a Pulse session.
 - [Clockwork](/clockwork/) — models application-level authentication or session workflows.

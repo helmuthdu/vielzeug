@@ -1,3 +1,5 @@
+import type { Part } from './types';
+
 export type TemplatePart = string | { readonly value: string };
 export type Template = readonly TemplatePart[];
 
@@ -37,21 +39,25 @@ export function renderText(
     .join('');
 }
 
-export function renderSegments<V>(
+export function renderParts<V>(
   parts: Template,
   values: Record<string, V | number>,
   missing: (name: string) => string,
-): Array<string | number | V> {
-  const result: Array<string | number | V> = [];
+): Array<Part<V | number>> {
+  const result: Array<Part<V | number>> = [];
 
   for (const part of parts) {
     if (typeof part === 'string') {
-      if (part !== '') result.push(part);
+      if (part !== '') result.push({ type: 'text', value: part });
 
       continue;
     }
 
-    result.push(Object.hasOwn(values, part.value) ? values[part.value]! : missing(part.value));
+    if (Object.hasOwn(values, part.value)) {
+      result.push({ type: 'value', value: values[part.value]! as V | number });
+    } else {
+      result.push({ type: 'text', value: missing(part.value) });
+    }
   }
 
   return result;

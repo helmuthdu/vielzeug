@@ -7,26 +7,25 @@ description: 'View transitions example for @vielzeug/wayfinder.'
 
 ### Problem
 
-The View Transition API requires wrapping every history push in `document.startViewTransition()`. Integrating this manually with a client-side router creates race conditions between animation callbacks and navigation state updates.
+The View Transition API must wrap the state update that triggers rendering. Applying it after a router subscription fires is too late and can race with navigation.
 
 ### Solution
 
-Set `viewTransition: true` at router creation. Route automatically wraps each navigation commit in `document.startViewTransition()`. Override per navigation with `{ viewTransition: false }`.
+Set `viewTransition: true` at router creation. Wayfinder wraps the navigation commit and falls back to plain navigation when the browser API is unavailable. Override the default per navigation.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
-  viewTransition: true,
   routes: {
     home: { path: '/' },
     settings: { path: '/settings' },
   },
-  notFound: { component: NotFoundPage },
+  viewTransition: true,
 });
 
-await router.navigate({ name: 'settings' }); // uses transition
-await router.navigate({ name: 'home' }, { viewTransition: false }); // skips transition
+await router.navigate({ name: 'settings' });
+await router.navigate({ name: 'home' }, { viewTransition: false });
 ```
 
 Optional CSS:
@@ -61,9 +60,9 @@ Optional CSS:
 
 ### Pitfalls
 
-- `document.startViewTransition` is not available in all browsers and is absent in Node.js test environments. Wayfinder falls back to a plain navigation silently, so tests always pass.
-- Transitions run synchronously during the commit phase of navigation. Heavy CSS animations block the next interaction until the transition resolves.
-- Per-navigation `{ viewTransition: false }` bypasses `document.startViewTransition`, even when the router default is `true`.
+- The browser controls transition support; Wayfinder silently uses plain navigation when `document.startViewTransition` is absent.
+- The transition wraps data loading as well as the final state update. Keep route loaders responsive and abortable.
+- `{ viewTransition: false }` bypasses the router default for one navigation.
 
 ### Related
 

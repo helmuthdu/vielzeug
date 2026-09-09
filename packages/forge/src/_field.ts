@@ -1,29 +1,45 @@
-import { assertSafeKey, hasAtPath, isRecord, type MetaRoot, readAtPath, readError, readMeta } from './core/path';
-import { ForgeConfigError } from './errors';
-import type { Field, FieldState, ReadonlyDeep, SubscribeOptions, Unsubscribe } from './types';
+import { isEqual } from '@vielzeug/arsenal';
+
+import {
+  assertArrayIndex,
+  assertSafeKey,
+  findIssue,
+  hasAtPath,
+  isRecord,
+  type MetaRoot,
+  readAtPath,
+  readMeta,
+} from './core/path.js';
+import { ForgeConfigError } from './errors.js';
+import type { Field, FieldState, SubscribeOptions, Unsubscribe, ValidationIssue } from './types.js';
+
+type FieldSourceState = {
+  baseline: unknown;
+  issues: readonly ValidationIssue[] | undefined;
+  touched: MetaRoot;
+  value: unknown;
+};
 
 export interface FieldAccess {
   abortValidation(): void;
-  addListener(listener: () => void): Unsubscribe;
+  addListener(listener: (state: FieldSourceState) => void): Unsubscribe;
   ensureActive(operation: string): void;
-  readState(): { baseline: unknown; errors: unknown; touched: MetaRoot; value: unknown };
+  invokeListener(listener: () => void): void;
+  readState(): FieldSourceState;
   resetValue(path: readonly (string | number)[]): void;
   setTouched(path: readonly (string | number)[], touched: boolean): void;
-  setValue(path: readonly (string | number)[], next: unknown): void;
+  setValue(path: readonly (string | number)[], next: unknown | ((previous: unknown) => unknown)): void;
 }
 
-function makeFieldState<V>(
-  state: { baseline: unknown; errors: unknown; touched: MetaRoot; value: unknown },
-  path: readonly (string | number)[],
-): FieldState<V> {
+function makeFieldState<V>(state: FieldSourceState, path: readonly (string | number)[]): FieldState<V> {
   const value = readAtPath<V>(state.value, path);
   const baseline = readAtPath<V>(state.baseline, path);
 
   return Object.freeze({
-    dirty: value !== baseline || hasAtPath(state.value, path) !== hasAtPath(state.baseline, path),
-    error: readError(state.errors, path),
+    dirty: !isEqual(value, baseline) || hasAtPath(state.value, path) !== hasAtPath(state.baseline, path),
+    error: findIssue(state.issues, path),
     touched: readMeta(state.touched, path),
-    value: value as ReadonlyDeep<V>,
+    value: value as FieldState<V>['value'],
   });
 }
 
@@ -40,14 +56,11 @@ export function createField<V>(path: readonly (string | number)[], access: Field
       access.abortValidation();
       access.resetValue(path);
     },
-    set(next: V | ((previous: ReadonlyDeep<V>) => V)) {
+    set(next: V | ((previous: FieldState<V>['value']) => V)) {
       access.ensureActive('field().set');
       access.abortValidation();
 
-      const previous = readAtPath<V>(access.readState().value, path) as ReadonlyDeep<V>;
-      const value = typeof next === 'function' ? (next as (current: ReadonlyDeep<V>) => V)(previous) : next;
-
-      access.setValue(path, value);
+      access.setValue(path, next as unknown | ((previous: unknown) => unknown));
     },
     get state() {
       return makeFieldState<V>(access.readState(), path);
@@ -57,10 +70,10 @@ export function createField<V>(path: readonly (string | number)[], access: Field
 
       let previous = makeFieldState<V>(access.readState(), path);
 
-      if (subscribeOptions.immediate) listener(previous);
+      if (subscribeOptions.immediate) access.invokeListener(() => listener(previous));
 
-      const filtered = () => {
-        const next = makeFieldState<V>(access.readState(), path);
+      const filtered = (state: FieldSourceState) => {
+        const next = makeFieldState<V>(state, path);
 
         if (
           next.value === previous.value &&
@@ -92,6 +105,7 @@ export function createField<V>(path: readonly (string | number)[], access: Field
   return Object.assign(common, {
     field(key: string | number): Field<unknown> {
       if (typeof key === 'number') {
+        assertArrayIndex(key);
         const currentVal = readAtPath(access.readState().value, path);
 
         if (currentVal !== undefined && !Array.isArray(currentVal)) {

@@ -71,6 +71,32 @@ describe('createGroupedVirtualizer – initial state', () => {
   });
 });
 
+describe('createGroupedVirtualizer – external store', () => {
+  it('publishes mapped grouped snapshots', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const listener = vi.fn();
+    const v = createGroupedVirtualizer(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [makeSection('A', 3)],
+    });
+    const unsubscribe = v.subscribe(listener);
+
+    v.refresh();
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(v.getSnapshot()).toMatchObject({
+      headers: expect.any(Array),
+      items: v.items,
+      stickyHeader: null,
+      totalSize: v.totalSize,
+    });
+
+    unsubscribe();
+    v.dispose();
+  });
+});
+
 // ─── Item / header shape ──────────────────────────────────────────────────────
 
 describe('createGroupedVirtualizer – item and header shape', () => {

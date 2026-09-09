@@ -1,7 +1,7 @@
 import {
   bind,
   createContext,
-  createStableId,
+  createId,
   define,
   getHost,
   html,
@@ -232,7 +232,7 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
       };
     });
 
-    const legendId = createStableId('checkbox-group-legend');
+    const legendId = createId('checkbox-group-legend');
     const errorId = `${legendId}-error`;
     const helperId = `${legendId}-helper`;
     const hasError = () => Boolean(props.error.value);

@@ -14,7 +14,7 @@ Your list items need to be both reorderable by drag and editable inline by click
 A list where items can be reordered by drag and inline-edited:
 
 ```ts
-import { createSortable } from '@vielzeug/dnd';
+import { createSortable } from '@vielzeug/dnd/sortable';
 
 const listEl = document.getElementById('list')!;
 let items = [
@@ -36,15 +36,15 @@ function render() {
     )
     .join('');
 
-  sortable.sync();
+  sortable.refresh();
 }
 
 const sortable = createSortable({
   element: listEl,
   getKey: (el) => el.dataset.sortId!,
   handle: '.handle',
-  onReorder: ({ ids }) => {
-    items = ids.map((id) => items.find((i) => i.id === id)!);
+  onReorder: ({ after }) => {
+    items = after.map((id) => items.find((i) => i.id === id)!);
     saveItems(items);
   },
 });
@@ -54,8 +54,8 @@ render();
 
 ### Pitfalls
 
-- A `pointerdown` event starts a drag by default. Guard inline-edit activation behind an explicit handle element or a long-press delay so a short click doesn't trigger a drag.
-- Avoid calling `sortable.sync()` while a drag is in progress. Re-render after `onDragEnd` if your UI rebuilds the list.
+- Use an explicit drag handle so pointer and keyboard events from inline controls remain editing interactions instead of sortable commands.
+- Avoid calling `sortable.refresh()` while a drag is in progress. Re-render after `onDragEnd` if your UI rebuilds the list.
 - Ensure the edit button calls `e.stopPropagation()` so a click on the button does not propagate to the item's drag listener.
 
 ### Related

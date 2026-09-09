@@ -1,42 +1,32 @@
 ---
 title: 'Ward Examples — Wildcard Action'
-description: 'Grant every action in a known action set with a Ward wildcard rule.'
+description: 'Grant every action with a wildcard helper rule.'
 ---
 
 ## Wildcard Action
 
 ### Problem
 
-Grant an administrator every supported action on a resource without repeating one rule for each action.
+An administrator needs every action on one resource.
 
 ### Solution
 
-Use `WILDCARD` in the rule, then provide the known action universe to `allowedActions()`.
-
 ```ts
-import { WILDCARD, createWard } from '@vielzeug/ward';
+import { allow, createWard, WILDCARD } from '@vielzeug/ward';
 
-const ward = createWard<'read' | 'update' | 'delete'>([
-  { role: 'admin', resource: 'posts', action: WILDCARD, effect: 'allow' },
+const ward = createWard([
+  allow('admin', 'posts', [WILDCARD]),
 ]);
 
-ward.explain({ principal: { id: 'u1', roles: ['admin'] }, resource: 'posts', action: 'read' }).allowed; // true
-ward.explain({ principal: { id: 'u1', roles: ['admin'] }, resource: 'posts', action: 'delete' }).allowed; // true
-
-const actions = ward.allowedActions({
-  principal: { id: 'u1', roles: ['admin'] },
-  resource: 'posts',
-  knownActions: ['read', 'update', 'delete'] as const,
-});
+const admin = { id: 'u1', roles: ['admin'] };
+ward.decide({ action: 'read', principal: admin, resource: 'posts' }).effect; // allow
+ward.decide({ action: 'delete', principal: admin, resource: 'posts' }).effect; // allow
 ```
 
 ### Pitfalls
 
-- `allowedActions()` needs a caller-provided `knownActions` list; Ward does not infer an action universe.
-- This inspection API does not fire a decision event via `tap()`.
+Ward does not infer a finite action universe; enumerate actions in the application when rendering permission lists.
 
 ### Related
 
-- [Multi-Role Rules](./multi-role-rules.md)
-- [Rule Specificity](./disabling-wildcard-fallback.md)
-- [Blog Roles](./blog-roles.md)
+- [Multi-role rules](./multi-role-rules.md)

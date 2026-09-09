@@ -22,7 +22,9 @@ bus.on('user:logout', handler3);
 
 bus.listenerCount('user:login'); // 2
 bus.listenerCount('user:logout'); // 1
-bus.listenerCount(); // 3 — total across all events
+bus.listenerCount(); // 3 — total across specific events
+bus.wildcardCount(); // onAny listeners only
+bus.eventNames(); // ['user:login', 'user:logout']
 
 unsub1();
 bus.listenerCount('user:login'); // 1
@@ -33,12 +35,12 @@ bus.listenerCount(); // 0
 
 ### Pitfalls
 
-- `listenerCount(event)` only counts listeners for that exact event name. Listeners registered under a different casing or alias are not included.
+- `listenerCount(event)` and `listenerCount()` exclude `onAny()` listeners; use `wildcardCount()` for those.
 - The count is live. If you cache it, it becomes stale the moment a listener is added or removed.
 - `eventNames()` only returns names with at least one active listener. A name with no listeners does not appear, even if it was previously used.
 
 ### Related
 
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
-- [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Observe listener failures](./custom-error-boundary.md)
+- [Inspect listeners](../usage.md#inspect-listeners)

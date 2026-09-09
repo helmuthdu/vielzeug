@@ -1,44 +1,48 @@
 ---
-title: 'Herald Examples — Streaming with `events()`'
-description: 'Streaming with `events()` example for @vielzeug/herald.'
+title: Herald Examples — Continuous Event Consumption
+description: Consume ongoing typed events with a lifecycle-owned synchronous subscription.
 ---
 
-## Streaming with `events()`
+## Consume Ongoing Events
 
 ### Problem
 
-You need to consume a continuous stream of events as an async iterable — processing each one in sequence with `for await` instead of registering a callback that runs in parallel.
+A component or service needs every future event until its owner ends.
 
 ### Solution
 
-Process an ongoing sequence of events as an async generator:
+Use `on()` with an ownership signal. Herald delivers synchronously and keeps no queue.
 
 ```ts
-async function watchCart() {
-  const controller = new AbortController();
+const controller = new AbortController();
 
-  // Stop streaming after 30 seconds of inactivity (extend pattern)
-  let timeout = setTimeout(() => controller.abort(), 30_000);
-
-  for await (const { items, total } of appBus.events('cart:updated', { signal: controller.signal, maxBuffer: 20 })) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => controller.abort(), 30_000);
+appBus.on(
+  'cart:updated',
+  ({ items, total }) => {
     renderCart(items, total);
-  }
-}
+  },
+  { signal: controller.signal },
+);
+
+controller.abort();
+```
+
+Use `wait()` when only the next event matters:
+
+```ts
+const cart = await appBus.wait('cart:updated', {
+  signal: AbortSignal.timeout(30_000),
+});
 ```
 
 ### Pitfalls
 
-- `events()` subscribes **eagerly** — when `events()` is called, not when iteration begins. Events emitted before the first `await` are buffered and will be yielded on the first iteration. There is no data loss between `events()` and the first iteration step.
-- Breaking out of the `for await` loop with `break` or `return` does not dispose the bus. Use `await using` around the stream or an `AbortSignal` for guaranteed cleanup.
-- If the bus is disposed while the generator is awaiting the next event, the generator **returns cleanly** — no exception is thrown. The `for await` loop simply exits. There is no need to wrap it in `try/catch` for disposal.
+- Events emitted before registration are not replayed.
+- Herald does not buffer or provide backpressure. Use a dedicated queue or stream when asynchronous sequential consumption is required.
+- Listener callbacks run inside `emit()`. Keep them short and handle asynchronous failures explicitly.
+- Aborting the ownership signal removes the subscription but does not dispose the bus.
 
 ### Related
 
-- [Async Workflows with watch (Ripple)](@vielzeug/ripple/examples/pattern-nextvalue-in-async-workflows)
-- [Polling (Courier)](@vielzeug/courier/examples/polling)
-
 - [Awaiting a one-time event](./awaiting-a-one-time-event.md)
-- [Custom error boundary](./custom-error-boundary.md)
-- [Framework Integration](../usage.md#framework-integration)
+- [Usage Guide](../usage.md#own-subscription-lifetimes)

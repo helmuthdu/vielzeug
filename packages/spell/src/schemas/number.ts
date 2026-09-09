@@ -220,15 +220,6 @@ export class NumberSchema<Input = number, Mode extends SchemaMode = 'sync'> exte
     });
   }
 
-  /**
-   * Returns a new schema that coerces the input to a number via `Number(value)` before validation.
-   *
-   * Equivalent to `s.coerce.number()`.
-   */
-  coerce(): NumberSchema<unknown> {
-    return NumberSchema.coerce();
-  }
-
   protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.number) return visitor.number(this);
 

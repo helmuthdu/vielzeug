@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/sentinel",
   "version": "2.0.3",
-  "description": "Reactive observables for external browser environment state",
+  "description": "Subscribable snapshots for external browser environment state",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -37,15 +37,11 @@
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "test": "vitest",
-    "test:e2e": "pnpm --filter @vielzeug/ripple build && pnpm --silent run build && playwright test"
-  },
-  "peerDependencies": {
-    "@vielzeug/ripple": "workspace:^"
+    "test:e2e": "pnpm --silent run build && playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.4.1",
-    "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "vitest": "^5.0.0"

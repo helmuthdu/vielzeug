@@ -5,12 +5,12 @@ import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
 describe('notFound option', () => {
-  it('renders the notFound component when no route matches', async () => {
-    const NotFoundPage = Symbol('not-found-page');
+  it('loads notFound data when no route matches', async () => {
+    const dataFn = vi.fn(async () => ({ fallback: true }));
     const history = createMemoryHistory('/missing');
     const router = createRouter({
       history,
-      notFound: { component: NotFoundPage },
+      notFound: { data: dataFn },
       routes: { home: { path: '/' } },
     });
 
@@ -18,7 +18,7 @@ describe('notFound option', () => {
 
     const leaf = router.getSnapshot().matches.at(-1);
 
-    expect(leaf?.component).toBe(NotFoundPage);
+    expect(leaf?.data).toEqual({ fallback: true });
     expect(router.getSnapshot().status).toBe('idle');
     router.dispose();
   });
@@ -77,6 +77,32 @@ describe('notFound option', () => {
     await settle();
 
     expect(dataFn).toHaveBeenCalledWith(expect.objectContaining({ query: { page: 3 } }));
+    router.dispose();
+  });
+
+  it('resolves declared and fallback views through an exhaustive registry', async () => {
+    const history = createMemoryHistory('/missing');
+    const router = createRouter({
+      history,
+      notFound: {},
+      routes: {
+        home: { path: '/' },
+        legacy: { path: '/legacy', redirect: { name: 'settings' } },
+        settings: { path: '/settings' },
+      },
+    });
+    const views = router.createViewRegistry({ home: 'home-view', settings: 'settings-view' } as const, {
+      notFound: 'not-found-view' as const,
+    });
+
+    await router.ready;
+
+    expect(views.resolve(router.getSnapshot())).toBe('not-found-view');
+
+    await router.navigate({ name: 'settings' });
+
+    expect(views.resolve(router.getSnapshot())).toBe('settings-view');
+    expectTypeOf(views.resolve).returns.toEqualTypeOf<'home-view' | 'not-found-view' | 'settings-view' | undefined>();
     router.dispose();
   });
 

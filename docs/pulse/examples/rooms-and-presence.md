@@ -15,7 +15,7 @@ Define room schemas at construction. Create a room scope, connect, then publish 
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
-import { effect } from '@vielzeug/ripple';
+import { effect, fromSubscribable } from '@vielzeug/ripple';
 
 type Schema = {
   rooms: {
@@ -35,18 +35,18 @@ try {
   console.error('Pulse connection failed:', error);
 }
 
-effect(() => {
-  for (const [memberId, member] of lobby.presence.value) {
-    console.log(memberId, member);
-  }
+const presence = fromSubscribable(lobby.presence, { signal: lobby.disposalSignal });
+const presenceEffect = effect(() => {
+  for (const [memberId, member] of presence.value) console.log(memberId, member);
 });
 
 lobby.onLeave((memberId) => console.log('left', memberId));
 
 const announcements = pulse.room('announcements');
 await announcements.joined;
-console.log('rooms:', [...pulse.rooms.value]);
+console.log('rooms:', [...pulse.rooms.getSnapshot()]);
 
+presenceEffect.dispose();
 announcements.dispose();
 lobby.dispose();
 pulse.dispose();

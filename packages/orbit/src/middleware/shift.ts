@@ -1,6 +1,8 @@
+import { clamp } from '@vielzeug/arsenal';
 import { detectOverflow } from '../overflow';
+
 import type { DetectOverflowOptions, Middleware, MiddlewareState } from '../types';
-import { clamp, getSide } from '../utils';
+import { getSide } from '../utils';
 
 /**
  * A limiter function passed to `shift()` that constrains the maximum allowed drift.

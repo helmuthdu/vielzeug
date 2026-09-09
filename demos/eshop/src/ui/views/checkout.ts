@@ -50,16 +50,18 @@ let lastPlacedOrder: Order | null = null;
 
 const shippingForm = createForm<Address>({
   initialValues: { city: '', country: '', fullName: '', phone: '', postalCode: '', street: '' },
-  validate: (value) => ({
-    fields: {
-      city: value.city.trim() ? undefined : 'City is required',
-      country: value.country.trim() ? undefined : 'Country is required',
-      fullName: value.fullName.trim() ? undefined : 'Full name is required',
-      phone: value.phone.trim() ? undefined : 'Phone is required',
-      postalCode: value.postalCode.trim() ? undefined : 'Postal code is required',
-      street: value.street.trim() ? undefined : 'Street is required',
-    },
-  }),
+  validate: (value) => {
+    const issues: { path: readonly (string | number)[]; message: string }[] = [];
+
+    if (!value.city.trim()) issues.push({ message: 'City is required', path: ['city'] });
+    if (!value.country.trim()) issues.push({ message: 'Country is required', path: ['country'] });
+    if (!value.fullName.trim()) issues.push({ message: 'Full name is required', path: ['fullName'] });
+    if (!value.phone.trim()) issues.push({ message: 'Phone is required', path: ['phone'] });
+    if (!value.postalCode.trim()) issues.push({ message: 'Postal code is required', path: ['postalCode'] });
+    if (!value.street.trim()) issues.push({ message: 'Street is required', path: ['street'] });
+
+    return issues.length > 0 ? issues : undefined;
+  },
 });
 
 /**
@@ -185,10 +187,17 @@ define('checkout-shipping', {
       const validation = await shippingForm.validate();
 
       if (validation.status !== 'valid') {
-        errors.value =
-          validation.status === 'invalid' && validation.errors && typeof validation.errors !== 'string'
-            ? validation.errors
-            : {};
+        const fieldErrors: Partial<Record<keyof Address, string>> = {};
+
+        if (validation.status === 'invalid') {
+          for (const issue of validation.issues) {
+            const key = issue.path[0] as keyof Address | undefined;
+
+            if (key) fieldErrors[key] = issue.message;
+          }
+        }
+
+        errors.value = fieldErrors;
 
         return;
       }

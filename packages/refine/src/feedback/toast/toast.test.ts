@@ -1,4 +1,4 @@
-import { delay, fireClick, retry } from '@vielzeug/assay';
+import { delay, eventually, fireClick } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import { createToastService } from './toast';
@@ -322,7 +322,7 @@ describe('toast service shortcuts and promises', () => {
     await result;
     await fixture.flush();
 
-    await retry(() => {
+    await eventually(() => {
       expect(fixture.query('ore-alert')?.textContent).toContain('Uploaded file');
     });
     expect(fixture.query('ore-alert')?.getAttribute('color')).toBe('success');

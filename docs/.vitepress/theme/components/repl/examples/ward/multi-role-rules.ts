@@ -1,29 +1,23 @@
 export const multiRoleRulesExample = {
-  code: `import { ANONYMOUS, createWard } from '@vielzeug/ward'
+  code: `import { createWard } from '@vielzeug/ward'
 
-// A single rule can cover multiple roles with array syntax.
-// Semantics are OR: the principal must hold at least one of the listed roles.
+// Use condition callbacks for multi-role checks (OR semantics)
 const ward = createWard([
-  // Everyone (including anonymous) can read public content
-  { role: [ANONYMOUS, 'user', 'moderator', 'admin'], resource: 'articles', action: 'read',   effect: 'allow' },
-  // Registered users and above can comment
-  { role: ['user', 'moderator', 'admin'],            resource: 'articles', action: 'comment', effect: 'allow' },
-  // Moderators and admins can remove content
-  { role: ['moderator', 'admin'],                    resource: 'articles', action: 'delete',  effect: 'allow' },
-  // Only admins can pin articles
-  { role: 'admin',                                   resource: 'articles', action: 'pin',     effect: 'allow' },
+  {
+    action: 'read',
+    resource: 'articles',
+    effect: 'allow',
+    condition: ({ principal }) => (principal?.roles.some(r => ['editor', 'reviewer', 'reader'].includes(r)) ?? false),
+  },
+  { action: 'read', resource: 'articles', effect: 'deny' },
 ])
 
-const guest     = null
-const user      = { id: '1', roles: ['user'] }
-const moderator = { id: '2', roles: ['moderator'] }
-const admin     = { id: '3', roles: ['admin'] }
+const editor   = { id: 'u1', roles: ['editor'] }
+const reviewer = { id: 'u2', roles: ['reviewer'] }
+const outsider = { id: 'u3', roles: ['guest'] }
 
-const ACTIONS = ['read', 'comment', 'delete', 'pin'] as const
-
-for (const [label, principal] of [['guest', guest], ['user', user], ['moderator', moderator], ['admin', admin]] as const) {
-  const allowed = ward.allowedActions({ knownActions: ACTIONS, principal, resource: 'articles' })
-  console.log(\`\${label} can:\`, allowed)
-}`,
+console.log('editor:  ', ward.decide({ action: 'read', principal: editor,   resource: 'articles' }).effect) // allow
+console.log('reviewer:', ward.decide({ action: 'read', principal: reviewer, resource: 'articles' }).effect) // allow
+console.log('outsider:', ward.decide({ action: 'read', principal: outsider, resource: 'articles' }).effect) // deny`,
   name: 'Multi-Role Rules',
 };

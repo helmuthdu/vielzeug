@@ -5,6 +5,7 @@ export function buildBridgeScript(bootstrap: BridgeBootstrap): string {
   const generation = String(bootstrap.generation);
 
   return `
+(function() {
 window.__sandboxChannel = ${channel};
 window.__sandboxGeneration = ${generation};
 const __sandboxChannel = window.__sandboxChannel;
@@ -13,9 +14,6 @@ if ('ontouchstart' in window) document.addEventListener('touchstart', function()
 window.addEventListener('message', function(e) {
   var msg = e.data;
   if (e.source !== parent || !msg || msg.channel !== __sandboxChannel || msg.generation !== __sandboxGeneration) return;
-  if (msg.type === 'state-update') {
-    document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key: msg.key, value: msg.value } }));
-  }
   if (msg.type === 'state-update-all' && msg.record && typeof msg.record === 'object') {
     var keys = Object.keys(msg.record);
     for (var i = 0; i < keys.length; i++) {
@@ -58,8 +56,9 @@ window.__sandbox__ = {
     };
   }
 };
-post({ type: 'ready' });
-if (typeof ResizeObserver !== 'undefined') {
+window.addEventListener('DOMContentLoaded', function() {
+  post({ type: 'ready' });
+  if (typeof ResizeObserver === 'undefined') return;
   new ResizeObserver(function(entries) {
     var entry = entries[0];
     if (!entry) return;
@@ -68,6 +67,7 @@ if (typeof ResizeObserver !== 'undefined') {
       : entry.contentRect.height;
     post({ type: 'resize', height: h });
   }).observe(document.body);
-}
+});
+})();
 `.trim();
 }

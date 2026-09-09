@@ -1,10 +1,10 @@
 ---
-title: Prism — Reactive SVG data visualization
-description: Reactive SVG charting library — line, bar, and area charts. Signal-driven updates, CSS-themeable, accessible.
+title: Prism — Responsive SVG data visualization
+description: Responsive SVG charts with explicit updates, accessible interactions, and CSS theming.
 package: prism
 category: ui
-keywords: [chart, svg, visualization, reactive, line-chart, bar-chart, area-chart, signals, typescript]
-related: [ripple, refine, orbit]
+keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, typescript]
+related: [refine, orbit]
 exports:
   [
     createLineChart,
@@ -18,19 +18,13 @@ exports:
     seriesColor,
     setTheme,
     resetTheme,
-    animate,
     PrismError,
     ChartA11y,
-    AnimationTarget,
+    ContinuousDatum,
     EasingFn,
-    LegendState,
-    TooltipState,
-    ChartPluginContext,
-    Point,
-    ScaffoldContext,
-    ScaffoldGroups,
-    ChartEventHandlers,
     StackSegment,
+    XAxisConfig,
+    YAxisConfig,
   ]
 environments: [browser]
 ---
@@ -50,40 +44,54 @@ const ctx = document.getElementById('myChart') as HTMLCanvasElement;
 new Chart(ctx, {
   type: 'line',
   data: { labels, datasets: [{ data: values }] },
-  // re-render manually when data changes, no signals, canvas not CSS-styleable
+  // re-create or mutate the Chart.js instance when data changes
 });
 
-// After — Prism, declarative SVG chart driven by a signal
+// After — Prism, responsive SVG with an explicit update boundary
 import { createLineChart } from '@vielzeug/prism';
-import { signal } from '@vielzeug/ripple';
 
-const data = signal([
-  { key: 1, value: 12 },
-  { key: 2, value: 40 },
-  { key: 3, value: 28 },
-]);
 const chart = createLineChart(document.getElementById('chart')!, {
   a11y: { ariaLabel: 'Users by day' },
-  series: [{ name: 'Users', data }],
+  series: [
+    {
+      data: [
+        { key: 1, value: 12 },
+        { key: 2, value: 40 },
+        { key: 3, value: 28 },
+      ],
+      name: 'Users',
+    },
+  ],
   tooltip: true,
 });
-// chart auto-updates when data.value changes — no manual re-render
-data.value = [...data.value, { key: 4, value: 65 }];
+
+chart.update([
+  {
+    data: [
+      { key: 1, value: 12 },
+      { key: 2, value: 40 },
+      { key: 3, value: 28 },
+      { key: 4, value: 65 },
+    ],
+    name: 'Users',
+  },
+]);
 ```
 
 | Feature            | Prism                                        | Chart.js                                 | Lightweight Charts                           | D3                                           |
 | ------------------ | -------------------------------------------- | ---------------------------------------- | -------------------------------------------- | -------------------------------------------- |
 | Bundle size        | <PackageInfo package="prism" type="size" />  | ~60 kB                                   | ~45 kB                                       | ~30 kB (core)                                |
+| Zero dependencies  | <ore-icon name="x" size="16"></ore-icon> (Orbit) | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> (modular) |
 | Renderer           | SVG                                          | Canvas                                   | Canvas                                       | SVG/Canvas                                   |
-| Reactive data model | Ripple signals | Plugin-specific | Plugin-specific | Manual |
-| CSS themeable      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Limited                                      | <ore-icon name="check" size="16"></ore-icon> |
-| Reactive (signals) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Data updates        | Explicit `update()`                            | Instance mutation                        | Series mutation                              | Manual                                       |
+| CSS themeable       | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Limited                                      | <ore-icon name="check" size="16"></ore-icon> |
+| Framework-neutral   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Accessible SVG     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Manual                                       |
 | TypeScript-first   | <ore-icon name="check" size="16"></ore-icon> | Partial                                  | <ore-icon name="check" size="16"></ore-icon> | Types available                              |
 
 <div class="decision-callout">
 
-**Use Prism when** you need lightweight, reactive charts that integrate with signal-based state and can be styled purely with CSS. Ideal for dashboards, admin panels, and data-heavy applications using Vielzeug.
+**Use Prism when** you need lightweight, framework-neutral charts with explicit updates and SVG output that can be styled with CSS. It fits dashboards, admin panels, and data-heavy applications.
 
 **Consider alternatives when** you need 50+ chart types (ECharts), financial trading charts (Lightweight Charts), or low-level visualization grammar (D3).
 
@@ -111,19 +119,22 @@ yarn add @vielzeug/prism
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
-import { signal } from '@vielzeug/ripple';
 import '@vielzeug/prism/theme';
-
-const data = signal([
-  { key: 1, value: 10 },
-  { key: 2, value: 25 },
-  { key: 3, value: 18 },
-  { key: 4, value: 32 },
-]);
 
 const chart = createLineChart(document.getElementById('chart')!, {
   a11y: { ariaLabel: 'Revenue by month' },
-  series: [{ name: 'Revenue', data, color: '#3b82f6' }],
+  series: [
+    {
+      color: '#3b82f6',
+      data: [
+        { key: 1, value: 10 },
+        { key: 2, value: 25 },
+        { key: 3, value: 18 },
+        { key: 4, value: 32 },
+      ],
+      name: 'Revenue',
+    },
+  ],
   xAxis: { position: 'bottom' },
   yAxis: { position: 'left', grid: true },
   tooltip: true,
@@ -131,8 +142,14 @@ const chart = createLineChart(document.getElementById('chart')!, {
   onHover: (event) => console.log(event?.datum),
 });
 
-// Update data → chart re-renders automatically
-data.value = [...data.value, { key: 5, value: 28 }];
+// Update chart data explicitly
+chart.update([
+  {
+    color: '#3b82f6',
+    data: [{ key: 1, value: 10 }, { key: 2, value: 25 }, { key: 3, value: 18 }, { key: 4, value: 32 }, { key: 5, value: 28 }],
+    name: 'Revenue',
+  },
+]);
 
 // Cleanup when done
 chart.dispose();
@@ -150,11 +167,10 @@ chart.dispose();
 - **`linearScale(config)`** — continuous numeric scale with nice tick generation
 - **`timeScale(config)`** — date/time scale with interval-based ticks
 - **`bandScale(config)`** — categorical scale for bar charts
-- **`MaybeSignal<T>`** — pass plain values or `@vielzeug/ripple` signals; both work seamlessly
+- **`ChartHandle.update(data)`** — replace chart data synchronously without coupling to a state library
 - **`seriesColor(index, override?)`** — resolve CSS palette color by series index
 - **`setTheme(theme)` / `resetTheme()`** — apply or clear custom colors, font, and grid tokens at runtime
 - **Event hooks** — `onClick` and `onHover` callbacks on every chart
-- **Plugin system** — extend charts with `ChartPlugin` (`install()`/`dispose()` lifecycle, each isolated from the other's failures); supported by all chart types including `createPieChart`
 - **Devtools** — `debugChart()` from `@vielzeug/prism/devtools` logs mount/resize/dispose to `console.debug`; tree-shaken from production unless imported
 - **CSS custom properties** — full theme control via `--prism-*` tokens
 - **Responsive** — auto-resizes via `ResizeObserver`
@@ -186,7 +202,6 @@ chart.dispose();
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — reactive signals that power Prism's auto-updating charts
 - [Refine](/refine/) — accessible web components that pair well with Prism for dashboards
 - [Orbit](/orbit/) — floating element positioning for chart tooltips and popovers
 

@@ -11,7 +11,7 @@ description: Job definitions, processor, store contracts, events, errors, and en
 | --- | --- | --- | --- |
 | `defineJobs()` | Typed job registry with validation | Sync | Throws on invalid version, missing fields, or bad retry config |
 | `createPostmaster()` | Processor with leased claims and retry | Sync | Store is borrowed, not disposed with the processor |
-| `createIndexedDbPostmasterStore()` | Durable browser store | Sync | Requires `@vielzeug/vault` as a workspace peer |
+| `createIndexedDbPostmasterStore()` | Durable browser store | Sync | Skips corrupt records and reports each issue through `onCorruptRecord` |
 | `createMemoryPostmasterStore()` | Deterministic in-memory store | Sync | Use for tests only |
 | `PostmasterError` | Base class for package errors | Sync | Catch a subtype when recovery is specific |
 
@@ -19,7 +19,8 @@ description: Job definitions, processor, store contracts, events, errors, and en
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/postmaster` | Job definitions, processor, store contract, events, errors |
+| `@vielzeug/postmaster` | Job definitions, processor, events, errors |
+| `@vielzeug/postmaster/store` | Store-author interfaces (`StoredJob`, `StoreTx`, `PostmasterStore`) |
 | `@vielzeug/postmaster/indexeddb` | Durable browser store backed by Vault IndexedDB |
 | `@vielzeug/postmaster/testing` | Deterministic in-memory store and test helpers |
 
@@ -31,7 +32,7 @@ description: Job definitions, processor, store contracts, events, errors, and en
 function defineJobs<const J extends JobDefinitions>(jobs: J): J;
 ```
 
-Returns the job registry after validating each definition. Rejects invalid versions, missing `execute`/`key`, and retry configurations with non-positive `maxAttempts`.
+Returns the job registry after validating each definition. Rejects invalid versions, missing `execute`/`key`, retry configurations with non-positive `maxAttempts`, and migration ranges that contain gaps or do not lead into the current version.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
@@ -90,7 +91,7 @@ import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 const store = createIndexedDbPostmasterStore({ name: 'outbox' });
 const postmaster = createPostmaster({ jobs, store });
 
-await postmaster.start();
+postmaster.start();
 await postmaster.dispose();
 await store.dispose();
 ```
@@ -100,14 +101,15 @@ await store.dispose();
 ### `createIndexedDbPostmasterStore()`
 
 ```ts
-function createIndexedDbPostmasterStore(options: { name: string }): PostmasterStore;
+function createIndexedDbPostmasterStore(options: IndexedDbPostmasterStoreOptions): PostmasterStore;
 ```
 
-Returns a durable Postmaster store backed by Vault IndexedDB. Uses one internal table indexed by `status`, `availableAt`, and `leaseExpiresAt`. All operations run inside Vault transactions.
+Returns a durable Postmaster store backed by Vault IndexedDB. Uses one internal table indexed by `status`, `availableAt`, and `leaseExpiresAt`. All operations run inside Vault transactions. Persisted records are validated before use; invalid records are skipped so they cannot block valid work.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `options.name` | `string` | IndexedDB database name |
+| `options.onCorruptRecord` | `(record: CorruptStoredJob) => void` | Optional diagnostic called once for each distinct invalid-record issue; handler errors are ignored |
 
 **Returns:** `PostmasterStore`.
 
@@ -116,7 +118,10 @@ Returns a durable Postmaster store backed by Vault IndexedDB. Uses one internal 
 ```ts
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
-const store = createIndexedDbPostmasterStore({ name: 'my-app-outbox' });
+const store = createIndexedDbPostmasterStore({
+  name: 'my-app-outbox',
+  onCorruptRecord: ({ id, reason }) => console.error('corrupt outbox record', id, reason),
+});
 await store.dispose();
 ```
 
@@ -178,10 +183,10 @@ await postmaster.enqueue('sendDigest', { userId }, { availableAt: Date.now() + 6
 ### `start()`
 
 ```ts
-start(): Promise<void>;
+start(): void;
 ```
 
-Begins background processing. Idempotent.
+Begins background processing. Idempotent — returns immediately and kicks off the pump in the background. Use `flush()` when you need to await completion of all available work.
 
 ---
 
@@ -277,11 +282,13 @@ interface JobDefinition<T> {
   readonly key: (payload: T) => string;
   readonly execute: (payload: T, context: JobContext) => Promise<void>;
   readonly retry?: RetryPolicy;
-  readonly migrate?: (payload: unknown, fromVersion: number) => unknown;
+  readonly migrate?: VersionMigrations;
 }
 ```
 
 `validate` is optional. Accepts a function `(value: unknown) => T` or any structural parser with `parse(value: unknown): T` (Spell schemas, Zod schemas, etc). Called once at enqueue. If omitted, payload trusted as-is.
+
+`migrate` declares contiguous version-step migrations keyed by the source version. Key `n` transforms a payload from version `n` to `n + 1`. The lowest key is the earliest supported stored version, and the highest key must lead into the current version. Omit `migrate` when only the current version is supported. Unsupported versions, thrown steps, and `undefined` migration output move the record to dead-letter.
 
 ---
 
@@ -292,6 +299,44 @@ type Validate<T> = ((value: unknown) => T) | { parse(value: unknown): T };
 ```
 
 Accepts either a plain validation function or any object with a `parse(value: unknown): T` method. Spell's `Schema` and `s.object(...)` satisfy this contract directly — no adapter needed.
+
+---
+
+### `VersionMigrations`
+
+```ts
+type VersionMigrations = { readonly [fromVersion: number]: (payload: unknown) => unknown };
+```
+
+Contiguous version-step migrations keyed by the source version. Key `n` transforms a payload from version `n` to `n + 1`. The lowest key declares the earliest supported stored version. The range must have no gaps and must end at the step entering the current job version.
+
+---
+
+### `IndexedDbPostmasterStoreOptions`
+
+Available from `@vielzeug/postmaster/indexeddb`.
+
+```ts
+type IndexedDbPostmasterStoreOptions = {
+  readonly name: string;
+  readonly onCorruptRecord?: (record: CorruptStoredJob) => void;
+};
+```
+
+---
+
+### `CorruptStoredJob`
+
+Available from `@vielzeug/postmaster/indexeddb`.
+
+```ts
+interface CorruptStoredJob {
+  readonly id?: string;
+  readonly reason: string;
+}
+```
+
+`id` is omitted when the malformed value contains no usable record identifier.
 
 ---
 
@@ -318,11 +363,13 @@ interface RetryPolicy {
 }
 ```
 
-`maxAttempts` is total executions including the first. `shouldRetry` is required when retries are enabled. Default delay uses Arsenal's `backoff(attempt)`.
+`maxAttempts` is total executions including the first. `shouldRetry` is required when retries are enabled. Default delay uses an exponential backoff cap (`min(1000 × 2ⁿ, 30_000)` ms).
 
 ---
 
 ### `StoredJob`
+
+Available from `@vielzeug/postmaster/store`.
 
 ```ts
 interface StoredJob {
@@ -372,6 +419,8 @@ The public entry view excludes `payload`, `ownerId`, and `leaseExpiresAt`.
 ---
 
 ### `PostmasterStore`
+
+Available from `@vielzeug/postmaster/store`.
 
 ```ts
 interface PostmasterStore {

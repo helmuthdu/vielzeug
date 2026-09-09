@@ -19,7 +19,7 @@ describe('createPulse lifecycle', () => {
   it('does not construct a socket before connect()', () => {
     const pulse = createPulse('ws://test');
 
-    expect(pulse.status.value).toBe('closed');
+    expect(pulse.status.getSnapshot()).toBe('closed');
     expect(MockWebSocket.instances).toHaveLength(0);
 
     pulse.dispose();
@@ -29,13 +29,29 @@ describe('createPulse lifecycle', () => {
     const pulse = createPulse('ws://test');
     const connecting = pulse.connect();
 
-    expect(pulse.status.value).toBe('connecting');
+    expect(pulse.status.getSnapshot()).toBe('connecting');
     expect(MockWebSocket.instances).toHaveLength(1);
 
     MockWebSocket.instances[0]?.open();
     await expect(connecting).resolves.toBeUndefined();
-    expect(pulse.status.value).toBe('open');
+    expect(pulse.status.getSnapshot()).toBe('open');
 
+    pulse.dispose();
+  });
+
+  it('notifies status subscribers once per distinct transition', async () => {
+    const pulse = createPulse('ws://test');
+    const statuses: string[] = [];
+    const unsubscribe = pulse.status.subscribe(() => statuses.push(pulse.status.getSnapshot()));
+    const connecting = pulse.connect();
+
+    MockWebSocket.instances.at(-1)?.open();
+    await connecting;
+    pulse.disconnect();
+
+    expect(statuses).toEqual(['connecting', 'open', 'closed']);
+
+    unsubscribe();
     pulse.dispose();
   });
 
@@ -51,13 +67,13 @@ describe('createPulse lifecycle', () => {
     const { pulse, socket } = await openPulse({ reconnect: { delay: 100, maxAttempts: 2 } });
 
     socket.drop();
-    expect(pulse.status.value).toBe('reconnecting');
+    expect(pulse.status.getSnapshot()).toBe('reconnecting');
 
     pulse.disconnect();
     await vi.advanceTimersByTimeAsync(100);
 
     expect(MockWebSocket.instances).toHaveLength(1);
-    expect(pulse.status.value).toBe('closed');
+    expect(pulse.status.getSnapshot()).toBe('closed');
 
     pulse.dispose();
   });
@@ -71,7 +87,7 @@ describe('createPulse lifecycle', () => {
     MockWebSocket.deferClose = true;
     pulse.disconnect();
 
-    expect(pulse.rooms.value).toEqual(new Set());
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set());
 
     const reconnecting = pulse.connect();
     const replacement = MockWebSocket.instances[1]!;
@@ -80,7 +96,7 @@ describe('createPulse lifecycle', () => {
     await reconnecting;
 
     expect(frames(replacement)).toContainEqual({ room: 'lobby', type: 'join' });
-    expect(pulse.rooms.value).toEqual(new Set());
+    expect(pulse.rooms.getSnapshot()).toEqual(new Set());
 
     socket.finishClose();
     lobby.dispose();
@@ -100,7 +116,7 @@ describe('createPulse lifecycle', () => {
     replacement.open();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(pulse.status.value).toBe('open');
+    expect(pulse.status.getSnapshot()).toBe('open');
 
     pulse.dispose();
   });
@@ -118,7 +134,7 @@ describe('createPulse lifecycle', () => {
     MockWebSocket.instances[1]?.drop();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(pulse.status.value).toBe('closed');
+    expect(pulse.status.getSnapshot()).toBe('closed');
     expect(errors.some((e) => e.error instanceof PulseConnectionError)).toBe(true);
 
     pulse.dispose();

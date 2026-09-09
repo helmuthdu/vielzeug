@@ -5,7 +5,7 @@ import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { linePath, monotonePath, stepPath } from '../../svg/path';
-import type { Datum, Scale, TransitionConfig } from '../../types';
+import type { ContinuousDatum, Scale, TransitionConfig } from '../../types';
 
 export interface LineRenderOptions {
   color: string;
@@ -150,7 +150,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 }
 
-export function computePoints(data: Datum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
+export function computePoints(data: ContinuousDatum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
   if (data.some((d) => d.key == null)) {
     warn(
       'computePoints: datum.key is null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',

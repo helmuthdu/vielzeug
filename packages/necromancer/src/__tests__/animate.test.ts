@@ -12,6 +12,16 @@ describe('animate', () => {
     vi.unstubAllGlobals();
   });
 
+  it('restores fake animations through explicit resource disposal', () => {
+    const original = Element.prototype.animate;
+    const installation = installFakeAnimations();
+
+    installation[Symbol.dispose]();
+    installation.restore();
+
+    expect(Element.prototype.animate).toBe(original);
+  });
+
   it('forwards keyframes and native timing options through its native animation', () => {
     const { calls, restore } = installFakeAnimations();
 
@@ -30,17 +40,17 @@ describe('animate', () => {
     handle.dispose();
   });
 
-  it('uses a visible duration by default while preserving an explicit zero duration', () => {
+  it('preserves native omitted and explicit zero durations', () => {
     const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
     const element = document.createElement('div');
-    const defaultDuration = animate(element, []);
+    const omitted = animate(element, []);
     const instant = animate(element, [], { duration: 0 });
 
-    expect(calls.map((call) => call.options?.duration)).toEqual([180, 0]);
-    defaultDuration.dispose();
+    expect(calls.map((call) => call.options?.duration)).toEqual([undefined, 0]);
+    omitted.dispose();
     instant.dispose();
   });
 
@@ -100,24 +110,30 @@ describe('animate', () => {
     await expect(handle.result).resolves.toEqual({ reason: 'route changed', status: 'cancelled' });
   });
 
-  it('optionally interrupts active Necromancer-owned animations on the same element', async () => {
+  it('disposes when the caller signal aborts during native animation startup', async () => {
     const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
+    const controller = new AbortController();
     const element = document.createElement('div');
-    const first = animate(element, []);
-    const second = animate(element, [], { interrupt: 'cancel' });
+    const nativeAnimate = element.animate.bind(element);
+    const reason = new Error('owner ended');
 
+    element.animate = (keyframes, options) => {
+      const animation = nativeAnimate(keyframes, options);
+      controller.abort(reason);
+      return animation;
+    };
+
+    const handle = animate(element, [], { signal: controller.signal });
+
+    expect(handle.disposed).toBe(true);
     expect(calls[0]?.animation.cancelCallCount).toBe(1);
-    expect(first.disposed).toBe(true);
-    await expect(first.result).resolves.toMatchObject({ status: 'cancelled' });
-
-    expect(calls[1]?.animation.cancelCallCount).toBe(0);
-    second.dispose();
+    await expect(handle.result).resolves.toEqual({ reason, status: 'cancelled' });
   });
 
-  it('allows concurrent animations and excludes native animations it does not own', () => {
+  it('allows concurrent animations without touching native animations it does not own', () => {
     const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
@@ -125,33 +141,11 @@ describe('animate', () => {
     const element = document.createElement('div');
 
     element.animate([]); // native animation Necromancer does not own — recorded as calls[0]
-    animate(element, []); // calls[1]
-    animate(element, []); // calls[2]
+    const first = animate(element, []); // calls[1]
+    const second = animate(element, []); // calls[2]
 
-    expect(calls[1]?.animation.cancelCallCount).toBe(0);
-
-    const interrupted = animate(element, [], { interrupt: 'cancel' });
-
-    expect(calls[0]?.animation.cancelCallCount).toBe(0);
-    expect(calls[1]?.animation.cancelCallCount).toBe(1);
-    expect(calls[2]?.animation.cancelCallCount).toBe(1);
-    interrupted.dispose();
-  });
-
-  it('releases a completed animation from later interruption', async () => {
-    const { calls, restore } = installFakeAnimations();
-
-    restoreWaapi = restore;
-
-    const element = document.createElement('div');
-    const first = animate(element, []);
-
-    calls[0]?.animation.finish();
-    await first.result;
-
-    const second = animate(element, [], { interrupt: 'cancel' });
-
-    expect(calls[0]?.animation.cancelCallCount).toBe(0);
+    expect(calls.map((call) => call.animation.cancelCallCount)).toEqual([0, 0, 0]);
+    first.dispose();
     second.dispose();
   });
 

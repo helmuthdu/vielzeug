@@ -11,53 +11,7 @@ import {
   fireSubmit,
 } from '../events';
 
-const dispatchCases: {
-  check: (e: Event) => void;
-  ctor: abstract new (...args: never[]) => Event;
-  dispatch: (el: Element) => boolean;
-  label: string;
-  type: string;
-}[] = [
-  {
-    check: (e) => expect((e as MouseEvent).clientX).toBe(100),
-    ctor: MouseEvent,
-    dispatch: (el) => fireClick(el, { clientX: 100 }),
-    label: 'fireClick',
-    type: 'click',
-  },
-  {
-    check: (e) => expect((e as KeyboardEvent).key).toBe('Enter'),
-    ctor: KeyboardEvent,
-    dispatch: (el) => fireKeyDown(el, { key: 'Enter' }),
-    label: 'fireKeyDown',
-    type: 'keydown',
-  },
-  {
-    check: (e) => expect((e as KeyboardEvent).key).toBe('Enter'),
-    ctor: KeyboardEvent,
-    dispatch: (el) => fireKeyUp(el, { key: 'Enter' }),
-    label: 'fireKeyUp',
-    type: 'keyup',
-  },
-];
-
-describe('event dispatchers', () => {
-  it.each(dispatchCases)('$label dispatches a $ctor.name for "$type"', ({ check, ctor, dispatch, type }) => {
-    const target = document.createElement('div');
-    const handler = vi.fn();
-
-    target.addEventListener(type, handler);
-
-    expect(dispatch(target)).toBe(true);
-    expect(handler).toHaveBeenCalledTimes(1);
-
-    const event = handler.mock.calls[0][0] as Event;
-
-    expect(event).toBeInstanceOf(ctor);
-    expect(event.type).toBe(type);
-    check(event);
-  });
-
+describe('dispatch()', () => {
   it('dispatches a pre-built Event instance unchanged', () => {
     const target = document.createElement('div');
     const handler = vi.fn();
@@ -69,132 +23,119 @@ describe('event dispatchers', () => {
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0][0]).toBe(event);
   });
-});
 
-describe('event dispatchers return dispatchEvent results', () => {
-  it('preserves cancellation for every event kind', () => {
+  it('returns false when the event is cancelled via preventDefault', () => {
     const target = document.createElement('div');
-
-    target.addEventListener('custom-event', (e) => e.preventDefault());
-    expect(fireCustom(target, 'custom-event')).toBe(false);
 
     target.addEventListener('ready', (e) => e.preventDefault());
     expect(dispatch(target, new Event('ready', { cancelable: true }))).toBe(false);
-
-    target.addEventListener('submit', (e) => e.preventDefault());
-    expect(fireSubmit(target)).toBe(false);
-  });
-});
-
-describe('fireCustom', () => {
-  it('allows composed: true to be passed explicitly for cross-boundary events', () => {
-    const parent = document.createElement('div');
-    const shadow = parent.attachShadow({ mode: 'open' });
-    const inner = document.createElement('span');
-
-    shadow.appendChild(inner);
-    document.body.appendChild(parent);
-
-    const handler = vi.fn();
-
-    parent.addEventListener('cross-boundary', handler);
-    fireCustom(inner, 'cross-boundary', { composed: true });
-
-    expect(handler).toHaveBeenCalledTimes(1);
-
-    parent.remove();
   });
 
-  it('does NOT cross shadow boundaries by default (composed: false)', () => {
-    const parent = document.createElement('div');
-    const shadow = parent.attachShadow({ mode: 'open' });
-    const inner = document.createElement('span');
+  it('returns true when no listener cancels the event', () => {
+    const target = document.createElement('div');
 
-    shadow.appendChild(inner);
-    document.body.appendChild(parent);
-
-    const handler = vi.fn();
-
-    parent.addEventListener('contained-event', handler);
-    fireCustom(inner, 'contained-event');
-
-    expect(handler).toHaveBeenCalledTimes(0);
-
-    parent.remove();
+    expect(dispatch(target, new Event('noop'))).toBe(true);
   });
-});
 
-describe('event defaults', () => {
-  it('allows overriding bubbles/cancelable defaults in options', () => {
+  it('provides typed convenience dispatchers without changing the confidence boundary', () => {
+    const target = document.createElement('button');
+    const click = vi.fn();
+    const keydown = vi.fn();
+
+    target.addEventListener('click', click);
+    target.addEventListener('keydown', keydown);
+
+    fireClick(target);
+    fireKeyDown(target, { key: 'Enter' });
+
+    expect(click.mock.calls[0][0]).toMatchObject({ bubbles: true, cancelable: true, isTrusted: false });
+    expect(keydown.mock.calls[0][0]).toMatchObject({ isTrusted: false, key: 'Enter' });
+  });
+
+  it('is a low-level dispatch API: isTrusted is always false', () => {
     const target = document.createElement('div');
     const handler = vi.fn();
 
     target.addEventListener('click', handler);
-
-    fireClick(target, { bubbles: false, cancelable: false });
-
-    expect(handler).toHaveBeenCalledTimes(1);
+    dispatch(target, new MouseEvent('click', { bubbles: true, cancelable: true }));
 
     const event = handler.mock.calls[0][0] as MouseEvent;
 
-    expect(event.bubbles).toBe(false);
-    expect(event.cancelable).toBe(false);
+    // Synthetic dispatch never carries the browser's trust flag — behavioral
+    // confidence belongs to Playwright, not this primitive.
+    expect(event.isTrusted).toBe(false);
   });
+});
 
-  it('uses non-bubbling platform defaults for focus and blur', () => {
-    const parent = document.createElement('div');
-    const target = document.createElement('input');
+describe('event convenience helpers', () => {
+  it.each([
+    ['fireClick', 'click', MouseEvent, (target: Element) => fireClick(target, { clientX: 100 })],
+    ['fireKeyDown', 'keydown', KeyboardEvent, (target: Element) => fireKeyDown(target, { key: 'Enter' })],
+    ['fireKeyUp', 'keyup', KeyboardEvent, (target: Element) => fireKeyUp(target, { key: 'Enter' })],
+    ['fireBlur', 'blur', FocusEvent, (target: Element) => fireBlur(target)],
+    ['fireChange', 'change', Event, (target: Element) => fireChange(target)],
+    ['fireFocus', 'focus', FocusEvent, (target: Element) => fireFocus(target)],
+    ['fireInput', 'input', InputEvent, (target: Element) => fireInput(target)],
+    ['fireSubmit', 'submit', SubmitEvent, (target: Element) => fireSubmit(target)],
+  ] as const)('%s dispatches the expected event class', (_label, type, constructor, fire) => {
+    const target = document.createElement('div');
     const handler = vi.fn();
 
-    parent.appendChild(target);
-    parent.addEventListener('focus', handler);
-    parent.addEventListener('blur', handler);
-
-    fireFocus(target);
-    fireBlur(target);
-
-    expect(handler).not.toHaveBeenCalled();
+    target.addEventListener(type, handler);
+    expect(fire(target)).toBe(true);
+    expect(handler).toHaveBeenCalledOnce();
+    expect(handler.mock.calls[0][0]).toBeInstanceOf(constructor);
   });
 
-  it('constructs input and submit events with their platform-specific payloads', () => {
+  it('forwards keyboard, input, and submit initializer data', () => {
     const input = document.createElement('input');
     const form = document.createElement('form');
     const submitter = document.createElement('button');
     const events: Event[] = [];
 
     form.appendChild(submitter);
+    input.addEventListener('keydown', (event) => events.push(event));
     input.addEventListener('input', (event) => events.push(event));
     form.addEventListener('submit', (event) => events.push(event));
 
+    fireKeyDown(input, { key: 'Enter' });
     fireInput(input, { data: 'a', inputType: 'insertText' });
     fireSubmit(form, { submitter });
 
-    expect(events[0]).toBeInstanceOf(InputEvent);
-    expect(events[0]).toMatchObject({ data: 'a', inputType: 'insertText' });
-    expect(events[1]).toBeInstanceOf(SubmitEvent);
-    expect(events[1]).toMatchObject({ submitter });
+    expect(events[0]).toMatchObject({ key: 'Enter' });
+    expect(events[1]).toMatchObject({ data: 'a', inputType: 'insertText' });
+    expect(events[2]).toMatchObject({ submitter });
   });
 
-  it('uses the event constructor named by each helper', () => {
+  it('preserves defaults, overrides, and cancellation results', () => {
     const target = document.createElement('div');
-    const events: Event[] = [];
+    const clicks: Event[] = [];
 
-    for (const type of ['blur', 'change', 'focus', 'input', 'submit']) {
-      target.addEventListener(type, (event) => events.push(event));
-    }
+    target.addEventListener('click', (event) => clicks.push(event));
+    fireClick(target);
+    fireClick(target, { bubbles: false, cancelable: false });
 
-    fireBlur(target);
-    fireChange(target);
-    fireFocus(target);
-    fireInput(target);
-    fireSubmit(target);
+    expect(clicks[0]).toMatchObject({ bubbles: true, cancelable: true });
+    expect(clicks[1]).toMatchObject({ bubbles: false, cancelable: false });
 
-    expect(events).toEqual([
-      expect.any(FocusEvent),
-      expect.any(Event),
-      expect.any(FocusEvent),
-      expect.any(InputEvent),
-      expect.any(SubmitEvent),
-    ]);
+    target.addEventListener('submit', (event) => event.preventDefault());
+    expect(fireSubmit(target)).toBe(false);
+  });
+
+  it('dispatches typed custom detail and crosses shadow boundaries only when requested', () => {
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    const target = document.createElement('span');
+    const handler = vi.fn();
+
+    shadow.appendChild(target);
+    host.addEventListener('item-added', handler);
+
+    fireCustom(target, 'item-added', { detail: { id: '1' } });
+    expect(handler).not.toHaveBeenCalled();
+
+    fireCustom(target, 'item-added', { composed: true, detail: { id: '2' } });
+    expect(handler).toHaveBeenCalledOnce();
+    expect((handler.mock.calls[0][0] as CustomEvent<{ id: string }>).detail.id).toBe('2');
   });
 });

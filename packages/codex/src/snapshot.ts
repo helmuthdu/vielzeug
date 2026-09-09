@@ -237,16 +237,80 @@ export function parseSearch(value: unknown, catalog: CatalogFile): SearchRecord[
   return records;
 }
 
+function optionalString(entry: Record<string, unknown>, key: string, path: string): void {
+  if (entry[key] !== undefined) string(entry[key], `${path}.${key}`);
+}
+
+function typeReference(value: unknown, path: string): void {
+  if (value === undefined) return;
+  const entry = record(value, path);
+  string(entry.text, `${path}.text`);
+}
+
+function declarationArray(
+  value: unknown,
+  path: string,
+  validate: (entry: Record<string, unknown>, path: string) => void,
+): void {
+  if (value === undefined) return;
+  if (!Array.isArray(value)) fail(path, 'must be an array.');
+
+  value.forEach((item, index) => {
+    validate(record(item, `${path}[${index}]`), `${path}[${index}]`);
+  });
+}
+
 export function parseRefine(value: unknown): CemDeclaration[] {
   if (!Array.isArray(value)) fail('refine.json', 'must be an array.');
 
+  const tags = new Set<string>();
+
   return value.map((item, index) => {
-    const declaration = record(item, `refine.json[${index}]`) as CemDeclaration;
+    const path = `refine.json[${index}]`;
+    const declaration = record(item, path);
 
-    if (declaration.tagName !== undefined && typeof declaration.tagName !== 'string')
-      fail(`refine.json[${index}].tagName`, 'must be a string.');
+    optionalString(declaration, 'description', path);
+    optionalString(declaration, 'name', path);
 
-    return declaration;
+    if (declaration.tagName !== undefined) {
+      const tagName = string(declaration.tagName, `${path}.tagName`);
+
+      if (tagName.length > 100 || !/^[a-z][a-z0-9._-]*-[a-z0-9._-]+$/.test(tagName)) {
+        fail(`${path}.tagName`, 'must be a custom element name of at most 100 characters.');
+      }
+      if (tags.has(tagName)) fail(`${path}.tagName`, `duplicates ${tagName}.`);
+      tags.add(tagName);
+    }
+
+    declarationArray(declaration.attributes, `${path}.attributes`, (entry, entryPath) => {
+      const name = string(entry.name, `${entryPath}.name`);
+      if (!/^[^\s"'<>/=]+$/.test(name)) fail(`${entryPath}.name`, 'must be a valid HTML attribute name.');
+      for (const key of ['default', 'description', 'fieldName']) optionalString(entry, key, entryPath);
+      typeReference(entry.type, `${entryPath}.type`);
+    });
+    for (const key of ['cssParts', 'cssProperties', 'events', 'slots'] as const) {
+      declarationArray(declaration[key], `${path}.${key}`, (entry, entryPath) => {
+        string(entry.name, `${entryPath}.name`);
+        optionalString(entry, 'default', entryPath);
+        optionalString(entry, 'description', entryPath);
+        typeReference(entry.type, `${entryPath}.type`);
+      });
+    }
+    declarationArray(declaration.members, `${path}.members`, (entry, entryPath) => {
+      string(entry.name, `${entryPath}.name`);
+      optionalString(entry, 'description', entryPath);
+      if (entry.kind !== undefined && entry.kind !== 'field' && entry.kind !== 'method') {
+        fail(`${entryPath}.kind`, 'must be "field" or "method".');
+      }
+      typeReference(entry.type, `${entryPath}.type`);
+    });
+    if (declaration.superclass !== undefined) {
+      const superclass = record(declaration.superclass, `${path}.superclass`);
+      string(superclass.name, `${path}.superclass.name`);
+      optionalString(superclass, 'package', `${path}.superclass`);
+    }
+
+    return declaration as CemDeclaration;
   });
 }
 

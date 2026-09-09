@@ -306,7 +306,9 @@ define('crm-app-shell', {
       const statusListener = (): void => {
         networkStatus.value === 'offline' ? void reconnect() : simulateOffline();
       };
-      const localeListener = (): void => setLocale(locale.value === 'en' ? 'de' : 'en');
+      const localeListener = (): void => {
+        void setLocale(locale.value === 'en' ? 'de' : 'en');
+      };
       const userListener = (event: Event): void => {
         const detail = (event as CustomEvent<{ value?: string; values?: string[] }>).detail;
         const id = detail?.values?.[0] ?? detail?.value ?? (event.currentTarget as typeof userSwitcher).value;
@@ -333,14 +335,22 @@ define('crm-app-shell', {
       palette.addEventListener('search', paletteSearchListener);
       palette.addEventListener('select', paletteSelectListener);
       const keymap = createKeymap(
-        {
-          'mod+shift+z': () => {
-            if (ledger.state.value.redo.length) runHistory(() => ledger.redo());
+        [
+          {
+            handler: () => {
+              if (ledger.state.value.redo.length) runHistory(() => ledger.redo());
+            },
+            id: 'redo',
+            shortcut: 'mod+shift+z',
           },
-          'mod+z': () => {
-            if (ledger.state.value.undo.length) runHistory(() => ledger.undo());
+          {
+            handler: () => {
+              if (ledger.state.value.undo.length) runHistory(() => ledger.undo());
+            },
+            id: 'undo',
+            shortcut: 'mod+z',
           },
-        },
+        ],
         { when: (event) => !typing(event) },
       );
       const unmountKeymap = keymap.mount(document);

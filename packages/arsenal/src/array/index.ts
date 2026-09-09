@@ -9,7 +9,6 @@ export * from './drop';
 export * from './dropLast';
 export * from './filterMap';
 export * from './first';
-export * from './flatten';
 export * from './groupBy';
 export * from './indexBy';
 export * from './intersection';

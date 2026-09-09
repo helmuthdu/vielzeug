@@ -14,6 +14,6 @@ import { variance } from './variance';
  * @param callback - An optional callback to map each item to a number.
  * @returns The population standard deviation, or `0` for an empty array.
  */
-export function standardDeviation<T>(array: T[], callback?: (item: T) => number): number {
+export function standardDeviation<T>(array: readonly T[], callback?: (item: T) => number): number {
   return Math.sqrt(variance(array, callback));
 }

@@ -22,7 +22,7 @@ console.log(format(euros, { locale: 'de-DE' }));
 
 ### Pitfalls
 
-Rate source currency must match the source money. Use decimal strings for rates.
+Rate source currency must be the same canonical instance as the source money currency. Rates are positive decimal strings. Name the rounding mode when conversion can produce fractional target minor units.
 
 ### Related
 

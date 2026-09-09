@@ -47,7 +47,7 @@ define('share-build-dialog', {
 
       sandbox?.dispose();
       sandbox = createBuildPreview(container);
-      void renderBuildPreview(sandbox, payload.model, payload.selections, payload.breakdown);
+      void renderBuildPreview(sandbox, payload.model, payload.selections, payload.breakdown).catch(console.error);
     });
 
     onCleanup(() => sandbox?.dispose());

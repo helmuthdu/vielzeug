@@ -7,7 +7,7 @@ description: Keep a document class synchronized with the reduced-motion media qu
 
 ### Problem
 
-Animation behavior must respond when the operating-system motion preference changes. `createMediaQuery()` exposes the current match as reactive state.
+Animation behavior must respond when the operating-system motion preference changes. `createMediaQuery()` exposes the current match as a subscribable snapshot.
 
 ### Solution
 
@@ -20,7 +20,7 @@ function observeReducedMotion(): () => void {
   try {
     const reducedMotion = createMediaQuery('(prefers-reduced-motion: reduce)');
     const render = () => {
-      document.documentElement.classList.toggle('reduce-motion', reducedMotion.value.matches);
+      document.documentElement.classList.toggle('reduce-motion', reducedMotion.getSnapshot().matches);
     };
 
     render();

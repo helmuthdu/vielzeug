@@ -8,6 +8,6 @@ export const keymapExamples = {
   'basic-shortcuts': basicShortcutsExample,
   'chord-sequences': chordSequencesExample,
   'conflict-detection': conflictDetectionExample,
-  'parse-and-match': parseAndMatchExample,
+  'format-and-conflicts': parseAndMatchExample,
   'shortcut-utilities': shortcutUtilitiesExample,
 };

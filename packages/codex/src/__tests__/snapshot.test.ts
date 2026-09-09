@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { SnapshotCatalog } from '../catalog.js';
-import { type LoadedSnapshot, loadSnapshot, validateSnapshot } from '../snapshot.js';
+import { type LoadedSnapshot, loadSnapshot, parseRefine, validateSnapshot } from '../snapshot.js';
 
 const roots: string[] = [];
 
@@ -130,6 +130,16 @@ describe('snapshot catalog', () => {
       JSON.stringify({ apiSource: null, docs: {}, examples: [{ id: 'bad', name: 'Bad' }], typeSignatures: {} }),
     );
     expect(() => validateSnapshot(root)).toThrow('packages/test.json.examples[0].code: must be a string');
+  });
+
+  it('validates Refine component metadata consumed by tools', () => {
+    expect(() => parseRefine([{ attributes: 'invalid', tagName: 'ore-button' }])).toThrow(
+      'refine.json[0].attributes: must be an array',
+    );
+    expect(() => parseRefine([{ tagName: '[' }])).toThrow('tagName: must be a custom element name');
+    expect(() => parseRefine([{ tagName: 'ore-button' }, { tagName: 'ore-button' }])).toThrow(
+      'tagName: duplicates ore-button',
+    );
   });
 
   it('rejects duplicate search records and ranks exact package matches first', () => {

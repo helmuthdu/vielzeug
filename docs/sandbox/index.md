@@ -1,14 +1,12 @@
 ---
 title: Sandbox — Sandboxed iframe runtime
-description: Isolated iframe runtime with a typed postMessage bridge for safe execution of untrusted HTML — component previews, playgrounds, plugin sandboxes, and more.
+description: Isolated iframe runtime with a typed state bridge and explicit message trust boundary for safe execution of untrusted HTML — component previews, playgrounds, plugin sandboxes, and more.
 package: sandbox
 category: ui-primitives
 keywords: [sandbox, iframe, isolation, playground, csp, postmessage, security, components]
 exports:
   [
     createSandbox,
-    buildCsp,
-    buildDocument,
     SandboxConfigurationError,
     SandboxError,
     SandboxTimeoutError,
@@ -16,8 +14,6 @@ exports:
     SandboxOptions,
     SandboxBridge,
     SandboxMessage,
-    SandboxStateUpdateDetail,
-    Unsubscribe,
   ]
 related: [codex, refine]
 environments: [browser]
@@ -29,7 +25,7 @@ environments: [browser]
 
 ## Why Sandbox?
 
-Running untrusted HTML in the main window is unsafe — arbitrary code can access the DOM, cookies, and user data. Sandbox creates an isolated `<iframe sandbox="allow-scripts">` that receives content over a typed postMessage bridge. The sandbox cannot reach the host page.
+Running untrusted HTML in the main window is unsafe — arbitrary code can access the DOM, cookies, and user data. Sandbox creates an isolated `<iframe sandbox="allow-scripts">` that receives content over a typed state bridge and explicit message trust boundary. The sandbox cannot reach the host page.
 
 ```ts
 // Before
@@ -54,13 +50,13 @@ Common use cases:
 | Bundle size                | 0 B (built-in)                               | <PackageInfo package="sandbox" type="size" /> |
 | Zero dependencies          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>  |
 | Content-Security-Policy    | Manual                                       | Auto-generated, strict by default             |
-| Typed postMessage protocol | <ore-icon name="x" size="16"></ore-icon>     | `setState()` / `SandboxMessage` union         |
+| Managed message protocol   | <ore-icon name="x" size="16"></ore-icon>     | Typed host state; untrusted inbound details   |
 | Error forwarding           | <ore-icon name="x" size="16"></ore-icon>     | `onerror` + `unhandledrejection` → host       |
 | Dispose / `using`          | Manual `remove()`                            | `dispose()` + `[Symbol.dispose]`              |
 
 <div class="decision-callout">
 
-**Use Sandbox when** you need to render untrusted or user-provided HTML in the browser with guaranteed isolation, CSP enforcement, and a typed event bridge.
+**Use Sandbox when** you need to render untrusted or user-provided HTML in the browser with iframe isolation, CSP enforcement, and explicit host/sandbox messaging.
 
 **Consider a raw `<iframe>` when** you only need to embed a known third-party URL — Sandbox is for programmatic `srcdoc` content, not URL-based embedding.
 
@@ -90,58 +86,40 @@ yarn add @vielzeug/sandbox
 import { createSandbox } from '@vielzeug/sandbox';
 
 const container = document.getElementById('preview')!;
-const sandbox = createSandbox(container);
+const sandbox = createSandbox<{ theme: 'dark' | 'light' }>(container);
 
-try {
-  // render() resolves when the document is ready
-  await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
-
-  // Push state into the sandbox
-  sandbox.setState('theme', 'dark');
-} catch (error) {
-  console.error('Sandbox render failed', error);
-}
-
-// Receive events from sandbox code (ready is not forwarded — internal use only)
-sandbox.onMessage((msg) => {
-  if (msg.type === 'custom') console.log(msg.event, msg.detail);
-  if (msg.type === 'error') console.error(msg.message);
-  if (msg.type === 'resize') console.log('height:', msg.height);
+sandbox.onMessage((message) => {
+  if (message.type === 'custom') console.log(message.event, message.detail);
+  if (message.type === 'error') console.error(message.message);
+  if (message.type === 'resize') console.log('height:', message.height);
 });
 
-// Re-render: await the returned Promise
-await sandbox.render(newHtml);
-
-// Clean up — removes iframe, clears listeners
-sandbox.dispose();
-// or: using sandbox = createSandbox(container);
+try {
+  await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
+  sandbox.setState({ theme: 'dark' });
+} catch (error) {
+  console.error('Sandbox render failed', error);
+} finally {
+  sandbox.dispose();
+}
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `createSandbox()` — Creates an isolated `<iframe sandbox="allow-scripts">` in the given container
-- `SandboxHandle.ready` — Promise resolving on first render's ready signal (also resolves on dispose; check `sandbox.disposed` to distinguish)
-- `SandboxHandle.disposalSignal` — `AbortSignal` aborted when the sandbox is disposed; tie async work to sandbox lifetime
-- `SandboxHandle.disposed` — Observable disposed state; check before deferred calls
-- `render(html, { signal? })` — Lazy iframe creation; returns `Promise<void>` resolving when ready, or rejecting with `SandboxTimeoutError` if the bridge never signals ready; pass `AbortSignal` to skip cancelled renders
-- `replaceBody(html)` — Replace body descendants without navigating; head scripts/styles survive while descendant state is replaced; suited to host-owned streaming markup
-- `updateStyle(id, css)` — Hot-patch a named `<style id="…">` block live without re-rendering; also updates baseline for next render
-- `setState(key, value)` — Push state into the sandbox; received as `sandbox:state-update` CustomEvent
-- `setStateAll(record)` — Push multiple state values in a single postMessage; more efficient than repeated `setState()` calls for initial setup
-- `namedStyles` option — Named `<style id="key">` blocks in document `<head>`; individually patchable via `updateStyle()`
-- `lang` / `title` options — Set basic language tag and `<title>` on generated documents for screen-reader correctness
-- `SandboxBridge` type — Ambient type for `window.__sandbox__` in sandbox-side TypeScript; `onState(key, handler)` subscribes to state pushed via `setState()`/`setStateAll()`
-- `custom` messages — Sandbox code emits `window.__sandbox__.emit(event, detail)` to the host
-- `resize` messages — Auto-emitted by the bridge's built-in `ResizeObserver`; no manual wiring needed
-- Strict CSP — `default-src 'none'`, inline scripts only, no network by default
-- `nonce` option — Cryptographic nonce for bridge `<script>` tag and `script-src` CSP
-- `scripts` option — Inject CDN scripts with `crossorigin="anonymous"`; origins auto-added to `script-src`
-- `buildCsp()` — Build a standalone CSP string using the same `SandboxOptions`
-- `buildDocument()` — Build static isolated sandbox markup for server-side or offline use; use `createSandbox()` for host-managed runtime controls
-- Error forwarding — `onerror` + `unhandledrejection` forwarded as `{ type: 'error' }` messages
-- Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
+- `createSandbox<State>()` — Creates an isolated `<iframe sandbox="allow-scripts">` with typed outbound state
+- `render(html)` — Creates or replaces the document and resolves when its bridge reports ready
+- `setState(update)` — Pushes one or more typed state values in one message
+- `replaceBody(html)` — Updates streamed body content without resetting head scripts and styles
+- `updateStyle(id, css)` — Patches a named style without replacing the document
+- `SandboxMessage` — Keeps sandbox-controlled custom details typed as `unknown` on the host
+- `SandboxBridge<State, Events>` — Types authored sandbox-side state subscriptions and event emission
+- `readyTimeout` — Rejects blocked document initialization with `SandboxTimeoutError`
+- Strict CSP — Uses `default-src 'none'` and blocks network requests by default
+- Error forwarding — Installs before user scripts and forwards uncaught errors and rejections
+- Stale-message protection — Rejects messages from superseded render generations
+- Disposable — Supports `dispose()`, `disposalSignal`, and `[Symbol.dispose]`
 
 </div>
 

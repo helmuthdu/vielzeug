@@ -5,7 +5,7 @@
  * public API so callers can use them independently of any Schema.
  *
  * ```ts
- * import { isEmail, isUuid } from '@vielzeug/spell';
+ * import { isEmail, isUuid } from '@vielzeug/spell/predicates';
  * isEmail('foo@bar.com'); // true
  * ```
  */

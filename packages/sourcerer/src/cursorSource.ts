@@ -1,82 +1,70 @@
-import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
-import { SourcererConfigurationError } from './errors';
-import { positiveInteger, sameQuery, totalItems } from './pagination';
-import type { CursorPagination, CursorQuery, CursorQueryPatch, CursorSource, CursorSourceConfig } from './types';
+import { SourcererConfigurationError, SourcererDisposedError } from './errors';
+import { positiveInteger, totalItems } from './pagination';
+import type { CursorPagination, CursorResult, CursorSource, CursorSourceConfig, CursorSourceState } from './types';
 
-const createPagination = <TCursor>(result?: {
-  nextCursor?: TCursor;
-  previousCursor?: TCursor;
-  total?: number;
-}): CursorPagination<TCursor> => ({
-  hasNext: result?.nextCursor !== undefined,
-  hasPrevious: result?.previousCursor !== undefined,
-  kind: 'cursor',
+type Request<TParams, TCursor> = Readonly<{
+  after?: TCursor;
+  before?: TCursor;
+  pageSize: number;
+  params: TParams;
+}>;
+
+const createPagination = <TCursor>(
+  pageSize: number,
+  result?: CursorResult<unknown, TCursor>,
+): CursorPagination<TCursor> => ({
   ...(result?.nextCursor !== undefined && { nextCursor: result.nextCursor }),
+  pageSize,
   ...(result?.previousCursor !== undefined && { previousCursor: result.previousCursor }),
-  ...(result?.total !== undefined && { total: totalItems(result.total) }),
+  ...(result?.totalItems !== undefined && { totalItems: totalItems(result.totalItems) }),
 });
 
-const normalizeQuery = <TCursor>(
-  current: CursorQuery<TCursor>,
-  patch: CursorQueryPatch<TCursor> = {},
-): CursorQuery<TCursor> => {
-  if (patch.after !== undefined && patch.before !== undefined) {
-    throw new SourcererConfigurationError('Cursor query cannot include both after and before');
+/** Cursor sources retain committed items and cursors while replacement work is pending. */
+export function createCursorSource<T, TParams = undefined, TCursor = string>(
+  config: CursorSourceConfig<T, TParams, TCursor>,
+): CursorSource<T, TParams, TCursor> {
+  if (config.after !== undefined && config.before !== undefined) {
+    throw new SourcererConfigurationError('Cursor source cannot start with both after and before');
   }
 
-  const resetsCursor = patch.pageSize !== undefined || patch.search !== undefined;
-  const after = resetsCursor || 'before' in patch ? undefined : 'after' in patch ? patch.after : current.after;
-  const before = resetsCursor || 'after' in patch ? undefined : 'before' in patch ? patch.before : current.before;
-
-  return {
-    ...(after !== undefined && { after }),
-    ...(before !== undefined && { before }),
-    pageSize: positiveInteger(patch.pageSize ?? current.pageSize, 'pageSize'),
-    search: patch.search ?? current.search,
+  let requested: Request<TParams, TCursor> = {
+    ...(config.after !== undefined && { after: config.after }),
+    ...(config.before !== undefined && { before: config.before }),
+    pageSize: positiveInteger(config.pageSize ?? 20, 'pageSize'),
+    params: config.params as TParams,
   };
-};
-
-/** Cursor sources retain loaded cursors while pendingQuery records newer navigation. */
-export function createCursorSource<T, TCursor = string>(
-  config: CursorSourceConfig<T, TCursor>,
-): CursorSource<T, TCursor> {
-  const initialQuery: CursorQuery<TCursor> = { pageSize: 20, search: '' };
-  let requestedQuery = normalizeQuery(initialQuery, config.initialQuery);
-  const asyncSource = createAsyncSource<T, CursorQuery<TCursor>, CursorPagination<TCursor>>({
-    data: [],
+  const asyncSource = createAsyncSource<CursorSourceState<T, TParams, TCursor>>({
     error: null,
-    isFetching: false,
-    pagination: createPagination(),
-    query: requestedQuery,
+    items: [],
+    loading: false,
+    pagination: createPagination(requested.pageSize),
+    params: requested.params,
   });
+  const assertLive = (): void => {
+    if (asyncSource.disposed) throw new SourcererDisposedError();
+  };
 
-  const fetch = (query: CursorQuery<TCursor>): Promise<void> =>
+  const fetch = (request: Request<TParams, TCursor>): Promise<void> =>
     asyncSource.fetch({
-      load: (signal) => config.load({ query, signal }),
-      query,
-      success: (result) => ({
-        data: result.data,
+      failure: (previous, error) => ({ ...previous, error, loading: false, pendingParams: undefined }),
+      load: (signal) => config.load({ ...request, signal }),
+      pending: (previous) => ({
+        ...previous,
         error: null,
-        isFetching: false,
-        pagination: createPagination(result),
-        query,
+        loading: true,
+        ...(Object.is(request.params, previous.params) ? {} : { pendingParams: request.params }),
+      }),
+      success: (result) => ({
+        error: null,
+        items: [...result.items],
+        loading: false,
+        pagination: createPagination(request.pageSize, result),
+        params: request.params,
       }),
     });
 
-  const reload = (): Promise<void> => fetch(requestedQuery);
-
-  const setQuery = async (patch: CursorQueryPatch<TCursor>): Promise<void> => {
-    const current = asyncSource.snapshot.pendingQuery ?? asyncSource.snapshot.query;
-    const next = normalizeQuery(current, patch);
-
-    if (sameQuery(next, requestedQuery)) return;
-
-    requestedQuery = next;
-    await fetch(next);
-  };
-
-  const source: CursorSource<T, TCursor> = {
+  const source: CursorSource<T, TParams, TCursor> = {
     get disposalSignal() {
       return asyncSource.disposalSignal;
     },
@@ -87,29 +75,55 @@ export function createCursorSource<T, TCursor = string>(
       return asyncSource.disposed;
     },
 
-    page: {
-      next() {
-        const cursor = asyncSource.snapshot.pagination.nextCursor;
-
-        return asyncSource.snapshot.isFetching || cursor === undefined
-          ? Promise.resolve()
-          : setQuery({ after: cursor });
-      },
-
-      previous() {
-        const cursor = asyncSource.snapshot.pagination.previousCursor;
-
-        return asyncSource.snapshot.isFetching || cursor === undefined
-          ? Promise.resolve()
-          : setQuery({ before: cursor });
-      },
+    async next() {
+      assertLive();
+      const cursor = asyncSource.state.pagination.nextCursor;
+      if (asyncSource.state.loading || cursor === undefined) return;
+      requested = { after: cursor, pageSize: requested.pageSize, params: requested.params };
+      await fetch(requested);
     },
 
-    reload,
-    setQuery,
+    async previous() {
+      assertLive();
+      const cursor = asyncSource.state.pagination.previousCursor;
+      if (asyncSource.state.loading || cursor === undefined) return;
+      requested = { before: cursor, pageSize: requested.pageSize, params: requested.params };
+      await fetch(requested);
+    },
 
-    get snapshot() {
-      return asyncSource.snapshot;
+    reload() {
+      return fetch(requested);
+    },
+
+    async setPageSize(pageSize) {
+      assertLive();
+      const normalized = positiveInteger(pageSize, 'pageSize');
+      if (normalized === requested.pageSize && requested.after === undefined && requested.before === undefined) {
+        if (
+          asyncSource.state.loading ||
+          (asyncSource.state.pagination.pageSize === normalized &&
+            Object.is(asyncSource.state.params, requested.params))
+        )
+          return;
+        await fetch(requested);
+        return;
+      }
+      requested = { pageSize: normalized, params: requested.params };
+      await fetch(requested);
+    },
+
+    async setParams(params) {
+      assertLive();
+      if (Object.is(params, requested.params)) {
+        if (!asyncSource.state.loading && !Object.is(params, asyncSource.state.params)) await fetch(requested);
+        return;
+      }
+      requested = { pageSize: requested.pageSize, params };
+      await fetch(requested);
+    },
+
+    get state() {
+      return asyncSource.state;
     },
 
     subscribe: asyncSource.subscribe,
@@ -118,9 +132,6 @@ export function createCursorSource<T, TCursor = string>(
       source.dispose();
     },
   };
-
-  if (config.autoStart !== false)
-    void reload().catch(() => warn('Initial load failed. Inspect source.snapshot.error.'));
 
   return source;
 }

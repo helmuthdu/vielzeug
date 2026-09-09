@@ -1,43 +1,38 @@
 ---
 title: Herald — API Reference
-description: Reference for typed temporal event delivery, lifecycle ownership, and compatible event piping.
+description: Reference for typed synchronous events, subscriptions, waits, tracing, lifecycle, and test helpers.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
+| Symbol | Purpose | Execution | Common gotcha |
 | --- | --- | --- | --- |
-| `createBus()` | Create typed temporal event bus | Sync | `emit()` and middleware are synchronous |
-| `pipeEvents()` | Forward compatible source events | Sync | Payloads must be assignable to target event |
-| `combineSignals()` | Abort when any input aborts | Sync | Public composition has no manual teardown |
-| `createTestBus()` | Record dispatched test events | Sync | Available from `/testing` only |
+| `createBus()` | Create a typed temporal event bus | Sync | Events are not retained or replayed |
+| `emit()` | Deliver one event | Sync | Returns `void`; rethrows the first listener failure after dispatch |
+| `on()` / `once()` | Subscribe to one event | Sync | Keep the unsubscribe function or pass a signal |
+| `onAny()` | Subscribe to every event | Sync | Payload is `unknown` |
+| `wait()` / `waitAny()` | Await future one-shot events | Async | Disposal and external abort reject the promise |
+| `tap()` | Observe bus runtime activity | Sync | Tap-handler failures are swallowed |
+| `createTestBus()` | Record emitted payloads | Sync | Import from `/testing` |
 
-## Package Entry Point
+## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/herald` | Runtime bus, pipes, public types, and errors |
+| `@vielzeug/herald` | Bus factory, errors, and public bus types |
 | `@vielzeug/herald/testing` | `createTestBus()` and `TestBus` |
 
-## Core Functions
-
-### `createBus()`
+## `createBus()`
 
 ```ts
 function createBus<T extends EventMap = Record<string, unknown>>(
   options?: BusOptions<T>,
-): Bus<T>;
+): Bus<T>
 ```
 
-Creates a synchronous bus for future event delivery.
-
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `options` | `BusOptions<T>` | Optional middleware, validation, error handling, and listener threshold configuration. |
-
-**Returns:** `Bus<T>`.
+Creates a synchronous bus for future event delivery. Construction has no external side effects.
 
 ```ts
 import { createBus } from '@vielzeug/herald';
@@ -47,112 +42,27 @@ interface Events {
   ready: void;
 }
 
-const bus = createBus<Events>();
+const bus = createBus<Events>({ maxListeners: 20, name: 'worker' });
 bus.emit('count', 1);
 bus.emit('ready');
 bus.dispose();
 ```
-
----
-
-### `pipeEvents()`
-
-```ts
-function pipeEvents<S extends EventMap, T extends EventMap>(
-  source: Bus<S>,
-  target: Bus<T>,
-  entries: readonly [NoInfer<PipeEntry<S, T>>, ...NoInfer<PipeEntry<S, T>>[]],
-  opts?: { signal?: AbortSignal },
-): Unsubscribe;
-```
-
-Forwards listed compatible events until manually stopped, either bus disposes, or `options.signal` aborts.
-
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `source` | `Bus<S>` | Bus that emits source events. |
-| `target` | `Bus<T>` | Bus that receives compatible events. |
-| `entries` | non-empty `PipeEntry` tuple | Same-name keys or compatible `{ from, to }` mappings. |
-| `opts.signal` | `AbortSignal` | Optional pipe lifetime signal. |
-
-**Returns:** Idempotent `Unsubscribe` function.
-
-```ts
-import { createBus, pipeEvents } from '@vielzeug/herald';
-
-interface SourceEvents {
-  'auth:login': { id: string };
-}
-
-interface TargetEvents {
-  'user:authenticated': { id: string };
-}
-
-const source = createBus<SourceEvents>();
-const target = createBus<TargetEvents>();
-const stop = pipeEvents(source, target, [{ from: 'auth:login', to: 'user:authenticated' }]);
-
-stop();
-source.dispose();
-target.dispose();
-```
-
----
-
-### `combineSignals()`
-
-```ts
-function combineSignals(first: AbortSignal, ...rest: AbortSignal[]): AbortSignal;
-```
-
-Returns a signal aborted with first input signal's reason.
-
-**Returns:** `AbortSignal`.
-
-```ts
-import { combineSignals } from '@vielzeug/herald';
-
-const signal = combineSignals(AbortSignal.timeout(1_000), controller.signal);
-```
-
-Input listeners remain until an input aborts. Bus APIs that accept `{ signal }` clean their internal signal composition when their owned operation ends.
-
-## Types
-
-### `EventMap` and `EventKey`
-
-```ts
-type EventMap = object;
-type EventKey<T extends EventMap> = Extract<keyof T, string>;
-```
-
-`EventMap` accepts interfaces and type aliases. Only string keys are event names.
-
----
 
 ### `BusOptions`
 
 ```ts
 type BusOptions<T extends EventMap = EventMap> = {
   maxListeners?: number;
-  middleware?: readonly Middleware<T>[];
   name?: string;
-  onError?: (context: EmissionErrorContext<T>) => void;
-  validatePayload?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
 };
 ```
 
 | Field | Description |
 | --- | --- |
-| `maxListeners` | Warn when one event exceeds this active-listener count. |
-| `middleware` | Synchronous dispatch middleware. |
-| `name` | Display name in disposal errors. |
-| `onError` | Handles listener and validation errors instead of rethrowing. |
-| `validatePayload` | Runs before middleware and listeners. |
+| `maxListeners` | Development warning threshold applied separately to one event's listeners and wildcard listeners. Omit to disable the check. |
+| `name` | Display name included in disposal errors and listener-threshold warnings. |
 
----
-
-### `Bus`
+## `Bus`
 
 ```ts
 type Bus<T extends EventMap> = {
@@ -160,37 +70,29 @@ type Bus<T extends EventMap> = {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): number;
+  emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): void;
   eventNames(): EventKey<T>[];
-  events<K extends EventKey<T>>(event: K, opts?: { maxBuffer?: number; signal?: AbortSignal }): EventStream<T[K]>;
   listenerCount(event?: EventKey<T>): number;
-  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
-  onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe;
-  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
+  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: SubscribeOptions): Unsubscribe;
+  onAny(listener: (event: EventKey<T>, payload: unknown) => void, options?: SubscribeOptions): Unsubscribe;
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: { signal?: AbortSignal }): Unsubscribe;
   tap(handler: (event: HeraldEvent<T>) => void, options?: { signal?: AbortSignal }): Unsubscribe;
-  wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
+  wait<K extends EventKey<T>>(event: K, options?: { signal?: AbortSignal }): Promise<T[K]>;
   waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
     events: K,
-    opts?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>>;
   wildcardCount(): number;
 };
 ```
 
-`emit()` returns listener count or `0` after disposal, blocked middleware, or handled validation rejection.
+### `emit()`
 
-`tap()` receives every `emit`, `subscribe`, `unsubscribe`, `listener-error`, and `dispose` event as a `HeraldEvent`. It is the supported way to observe bus activity for logging and diagnostics. The returned `Unsubscribe` stops the tap; pass `{ signal }` to bind its lifetime to an `AbortSignal`.
+Calls a snapshot of event-specific listeners synchronously, then wildcard listeners, then emits an `emit` trace event. It always returns `void`. Synchronous listener failures produce `error` trace events without stopping delivery; after dispatch, the first failure is rethrown.
 
-```ts
-import { createBus } from '@vielzeug/herald';
+After disposal, emission is a no-op.
 
-const bus = createBus<AppEvents>();
-const stop = bus.tap((event) => console.debug(`herald:${event.type}`, event));
-```
-
----
-
-### `Listener`, `SubscribeOptions`, and `Unsubscribe`
+### `on()` and `once()`
 
 ```ts
 type Listener<T> = (payload: T) => void;
@@ -198,87 +100,89 @@ type SubscribeOptions = { once?: boolean; signal?: AbortSignal };
 type Unsubscribe = () => void;
 ```
 
----
+`on()` returns an idempotent unsubscribe function. `{ once: true }` is equivalent to `once()`. Once-listeners unsubscribe before invocation. An already-aborted signal creates no subscription.
 
-### `HeraldEvent`
+### `onAny()`
+
+Receives `(event, payload)` after event-specific listeners. It supports both `signal` and `once`. Wildcard listeners are excluded from `listenerCount()` and reported by `wildcardCount()`.
+
+### `wait()`
+
+Resolves with the next payload for one event. It rejects with the external signal's reason when aborted, or `BusDisposedError` when bus disposal wins. Earlier emissions are not replayed.
+
+### `waitAny()`
+
+Requires at least two event keys at compile time and runtime. It resolves once with a typed `{ event, payload }` discriminated union and removes every losing subscription.
+
+```ts
+const result = await bus.waitAny(['count', 'ready']);
+if (result.event === 'count') console.log(result.payload);
+```
+
+### Listener inspection
+
+- `listenerCount(event)` returns specific listeners for one key.
+- `listenerCount()` returns all specific listeners.
+- `wildcardCount()` returns `onAny()` listeners.
+- `eventNames()` returns keys with active specific listeners.
+
+### `tap()`
+
+Observes runtime activity without affecting delivery. It returns an idempotent unsubscribe function and accepts an ownership signal. Tap-handler errors are swallowed.
+
+```ts
+const stop = bus.tap((event) => {
+  if (event.type === 'error') recordListenerFailure(event.error);
+});
+```
+
+### Disposal
+
+`dispose()` is permanent and idempotent. It emits a final `dispose` trace event, aborts `disposalSignal` with `BusDisposedError`, rejects pending waits, removes subscriptions, and clears taps. `[Symbol.dispose]()` delegates to it.
+
+## Runtime Events
 
 ```ts
 type HeraldEvent<T extends EventMap = EventMap> =
-  | { type: 'emit'; event: EventKey<T>; payload: unknown; timestamp: number }
-  | { type: 'subscribe'; event: EventKey<T>; timestamp: number }
-  | { type: 'unsubscribe'; event: EventKey<T>; timestamp: number }
-  | { type: 'listener-error'; event: EventKey<T>; err: unknown; timestamp: number }
-  | { type: 'dispose'; timestamp: number };
+  | { readonly event: EventKey<T>; readonly listeners: number; readonly payload: unknown; readonly type: 'emit' }
+  | { readonly event: EventKey<T>; readonly type: 'subscribe' }
+  | { readonly event: EventKey<T>; readonly type: 'unsubscribe' }
+  | { readonly type: 'subscribe-any' }
+  | { readonly type: 'unsubscribe-any' }
+  | { readonly error: unknown; readonly event: EventKey<T>; readonly type: 'error' }
+  | { readonly type: 'dispose' };
 ```
 
-Discriminated union delivered to `tap()` handlers. Narrow on `event.type` to access type-specific fields.
+`listeners` on an `emit` event counts every specific and wildcard listener invoked, including listeners that threw. Runtime events intentionally contain no timestamp; observers can add one using their own clock.
 
----
-
-### `EmissionErrorContext` and `Middleware`
+## Shared Types
 
 ```ts
-type EmissionErrorContext<T extends EventMap = EventMap> = {
-  err: unknown;
-  event: EventKey<T>;
-  payload: unknown;
-  timestamp: number;
-};
-
-type Middleware<T extends EventMap = EventMap> = (
-  event: EventKey<T>,
-  payload: unknown,
-  next: () => void,
-) => void;
-```
-
-Call middleware `next()` synchronously at most once. Omit it to block dispatch.
-
----
-
-### `EventStream` and `WaitAnyResult`
-
-```ts
-type EventStream<T> = AsyncGenerator<T> & AsyncDisposable;
+type EventMap = object;
+type EventKey<T extends EventMap> = Extract<keyof T, string>;
 
 type WaitAnyResult<T extends EventMap, K extends readonly EventKey<T>[]> = {
-  [I in keyof K]: K[I] extends EventKey<T> ? { event: K[I]; payload: T[K[I]] } : never;
+  [I in keyof K]: K[I] extends EventKey<T>
+    ? { event: K[I]; payload: T[K[I]] }
+    : never;
 }[number];
 ```
 
----
-
-### `PipeableKey`, `RenamedPipeEntry`, and `PipeEntry`
-
-```ts
-type PipeableKey<S extends EventMap, T extends EventMap> = {
-  [K in EventKey<S> & EventKey<T>]: S[K] extends T[K] ? K : never;
-}[EventKey<S> & EventKey<T>];
-
-type RenamedPipeEntry<S extends EventMap, T extends EventMap> = {
-  [From in EventKey<S>]: {
-    [To in EventKey<T>]: S[From] extends T[To] ? { from: From; to: To } : never;
-  }[EventKey<T>];
-}[EventKey<S>];
-
-type PipeEntry<S extends EventMap, T extends EventMap> =
-  | PipeableKey<S, T>
-  | RenamedPipeEntry<S, T>;
-```
+Interfaces and object type aliases are valid event maps. Only string keys participate in the bus API.
 
 ## Testing
 
 ### `createTestBus()`
 
 ```ts
+import { createTestBus } from '@vielzeug/herald/testing';
+
 function createTestBus<T extends EventMap = Record<string, unknown>>(
   options?: BusOptions<T>,
-): TestBus<T>;
+): TestBus<T>
 ```
 
-Creates a bus that records dispatched payloads.
-
-**Returns:** `TestBus<T>`.
+Creates a regular bus that records dispatches before listeners run.
 
 ### `TestBus`
 
@@ -291,10 +195,12 @@ type TestBus<T extends EventMap> = Bus<T> & {
 };
 ```
 
+`emitted()` and `allEmitted()` return array snapshots. `reset()` clears records without affecting subscriptions. Disposal clears records and the underlying bus. To prevent prototype mutation in the returned plain object, `allEmitted()` omits records named `__proto__`, `constructor`, or `prototype`; `emitted(event)` remains available for those keys.
+
 ## Errors
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `BusDisposedError` | `wait()` or `waitAny()` interrupted by disposal | Bus name appears when configured. |
-| `HeraldConfigError` | Invalid stream buffer, empty pipe entries, or fewer than two `waitAny()` events | — |
-| `HeraldError` | Base class for Herald-originated errors | `instanceof HeraldError` narrows subclasses. |
+| `BusDisposedError` | Bus disposal aborts `disposalSignal` or interrupts `wait()` / `waitAny()` | Configured bus name appears in the message |
+| `HeraldConfigError` | Runtime `waitAny()` input contains fewer than two keys | Extends `HeraldError` |
+| `HeraldError` | Base class for Herald-originated errors | Use `instanceof HeraldError` |

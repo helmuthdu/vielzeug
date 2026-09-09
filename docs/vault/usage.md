@@ -1,15 +1,16 @@
 ---
 title: Vault — Usage Guide
-description: Persist typed browser or SQLite data, observe table snapshots, and use atomic transactions.
+description: Persist typed browser or SQLite data, observe table snapshots, and use atomic transactions with required durable codecs.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create a portable store with one schema and write a typed row.
+Create a key-value store with a schema and codecs, then write a typed row.
 
 ```ts
+import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
@@ -18,18 +19,20 @@ interface Preference {
   theme: 'dark' | 'light';
 }
 
+const PreferenceSchema = s.object({ id: s.string(), theme: s.union('dark', 'light') });
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { preferences: table<Preference>('id') },
+  codecs: { preferences: PreferenceSchema },
 });
 
 await store.put('preferences', { id: 'theme', theme: 'dark' });
 console.log(await store.get('preferences', 'theme'));
 ```
 
-## Create a Portable Store
+## Create a Key-Value Store
 
-Memory, LocalStorage, and SessionStorage return `VaultStore`. They share portable string/number keys, CRUD methods, queries, TTL, and `observe()`. Vault keeps record values and expiry metadata separate; the physical storage layout is adapter-specific.
+Memory, LocalStorage, and SessionStorage return `KeyValueVaultStore`. They share portable string/number keys, bound helpers, fluent queries, TTL, and `observe()`. Memory may omit codecs; Web Storage requires them. Malformed storage envelopes are evicted lazily, while codec validation failures are surfaced without deleting persisted data.
 
 The root entry is adapter-free. Import `createMemory` from `@vielzeug/vault/memory`, `createLocalStorage` from `@vielzeug/vault/local-storage`, or `createSessionStorage` from `@vielzeug/vault/session-storage`. Import each adapter from its focused subpath so unused backends stay out of the bundle.
 
@@ -39,12 +42,13 @@ Use a new storage name when upgrading from Vault 1. Old key and envelope formats
 const store = createLocalStorage({
   name: 'app-v2',
   schema: { preferences: table<Preference>('id') },
+  codecs: { preferences: PreferenceSchema },
 });
 ```
 
 ## Read and Change Records
 
-Use `update()` for an existing row and `upsert()` when the row may not exist.
+Use bound `update()` and `upsert()` methods for read-modify-write operations; no helper imports are required.
 
 ```ts
 const updated = await store.update('preferences', 'theme', { theme: 'light' });
@@ -57,25 +61,27 @@ await store.upsert('preferences', 'locale', (current) => ({
 console.log(updated);
 ```
 
-`update()` returns `undefined` for a missing key. `upsert()` always writes the record returned by its callback.
+`update()` returns `undefined` for a missing key. `upsert()` always writes the record returned by its callback. Document-store methods run atomically; key-value-store methods are non-atomic conveniences when multiple writers race.
 
-## Query Records
+## Iterate and Filter Records
 
-Build a query from a table, then finish it with a terminal method. `count()` ignores pagination, which makes it suitable for page controls.
+Use `query()` for typed in-memory filtering, sorting, pagination, counting, and deletion. Use `iterate()` on a `DocumentVaultStore` for lazy cursor-based traversal, and `getAllByIndex()` on IndexedDB for declared equality indexes.
 
 ```ts
-const query = store.query('preferences').filter((p) => p.id.startsWith('theme'));
-const preferences = await query.orderBy('id').limit(10).toArray();
-const total = await query.count();
+// Bound fluent query
+const themed = await store.query('preferences').filter((preference) => preference.id.startsWith('theme')).toArray();
 
-console.log({ preferences, total });
+// Document store: iterate lazily
+for await (const pref of db.iterate('preferences')) {
+  if (pref.id.startsWith('theme')) console.log(pref);
+}
 ```
 
-Queries scan the table in memory. Use `equals()` for exact field matches and `filter()` for custom predicates. For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record.
+For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record with `getAll()`.
 
 ## Use TTL and Pruning
 
-Use `ttl.*` helpers for expiring rows. Call `pruneExpired()` to reclaim storage from stale rows that accumulate without reads.
+Use `ttl.*` helpers for expiring rows. Call `pruneExpired()` to reclaim storage from stale rows that accumulate without reads; tables with removed rows publish fresh observer snapshots.
 
 ```ts
 import { ttl } from '@vielzeug/vault';
@@ -89,7 +95,7 @@ store.disposalSignal.addEventListener('abort', () => clearInterval(pruneInterval
 
 ## Observe a Table
 
-Use `observe()` for current and future snapshots. Tie subscription lifetime to an `AbortSignal` when a component or request owns it.
+Use `observe()` for current and future snapshots. Notifications are revision-ordered, and explicit TTL pruning publishes fresh snapshots for affected tables. Tie subscription lifetime to an `AbortSignal` when a component or request owns it.
 
 ```ts
 const controller = new AbortController();
@@ -106,12 +112,15 @@ controller.abort();
 Choose IndexedDB when browser storage needs multiple writes to commit together or cursor iteration.
 
 ```ts
+import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createIndexedDB } from '@vielzeug/vault/indexeddb';
 
+const EventSchema = s.object({ id: s.number(), type: s.string() });
 const db = createIndexedDB({
   name: 'app-v2',
   schema: { events: table<{ id: number; type: string }>('id') },
+  codecs: { events: EventSchema },
 });
 
 await db.batch(['events'], async (tx) => {
@@ -120,7 +129,7 @@ await db.batch(['events'], async (tx) => {
 });
 ```
 
-Only await `tx.*` operations inside a batch callback. Do not await timers, fetches, or other external asynchronous work; IndexedDB can commit an inactive transaction.
+Transaction contexts expose the same bound helpers and fluent queries; `tx.update()`, `tx.upsert()`, `tx.deleteMany()`, and query deletion remain atomic. Only await `tx.*` operations inside a batch callback. Do not retain the transaction context after the callback; later use throws `VaultScopeError`. Do not await timers, fetches, or other external asynchronous work because IndexedDB can commit an inactive transaction.
 
 ## Use SQLite Outside the Browser
 
@@ -129,14 +138,17 @@ Import SQLite from the opt-in subpath so the browser root stays free of runtime 
 ```ts
 import { DatabaseSync } from 'node:sqlite';
 
+import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createSQLite } from '@vielzeug/vault/sqlite';
 
+const EventSchema = s.object({ id: s.number(), type: s.string() });
 const database = new DatabaseSync('app.db', { timeout: 5_000 });
 const store = createSQLite({
   database,
   name: 'app-v2',
   schema: { events: table<{ id: number; type: string }>('id') },
+  codecs: { events: EventSchema },
 });
 
 await store.batch(['events'], async (tx) => {
@@ -151,18 +163,20 @@ SQLite stores serialize all access through the injected connection. `batch()` st
 
 ## Store SQLite Values and Observe Changes
 
-SQLite accepts JSON-compatible plain-object records only. Circular values, `bigint`, dates, class instances, functions, and non-finite numbers are rejected before writing. Number and string primary keys remain distinct.
+SQLite accepts any JSON-compatible codec output. Circular values, `bigint`, class instances, functions, and non-finite numbers must be transformed by the codec before writing. Number and string primary keys remain distinct.
 
 `observe()` sees mutations written through Vault stores sharing the same injected connection after a commit. It cannot detect direct SQL changes, writes from another process, or writes through another connection. The connection belongs to the caller by default; use `closeOnDispose: true` only when the store owns it.
 
 ## Handle IndexedDB Schema Migrations
 
-Declare IndexedDB indexes in the schema. Use `migrate` only for IndexedDB version upgrades and mirror Vault’s fixed `value.<field>` index path.
+Declare IndexedDB indexes in the schema. Codecs must preserve each indexed field name and value in their encoded object. Use `migrate` only for IndexedDB version upgrades and mirror Vault's fixed `value.<field>` index path.
 
 ```ts
+import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createIndexedDB, type MigrationFn } from '@vielzeug/vault/indexeddb';
 
+const UserSchema = s.object({ id: s.number(), name: s.string() });
 const schema = { users: table<{ id: number; name: string }>('id', { indexes: ['name'] }) };
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
@@ -170,7 +184,13 @@ const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   }
 };
 
-createIndexedDB({ name: 'app-v2', migrate, schema, version: 2 });
+createIndexedDB({
+  name: 'app-v2',
+  migrate,
+  schema,
+  version: 2,
+  codecs: { users: UserSchema },
+});
 ```
 
 ## Framework Integration
@@ -180,9 +200,9 @@ createIndexedDB({ name: 'app-v2', migrate, schema, version: 2 });
 ```ts [React]
 import { useEffect, useState } from 'react';
 
-import type { AnySchema, RecordOf, VaultStore } from '@vielzeug/vault';
+import type { AnySchema, KeyValueVaultStore, RecordOf } from '@vielzeug/vault';
 
-export function useTable<S extends AnySchema, K extends keyof S & string>(store: VaultStore<S>, table: K) {
+export function useTable<S extends AnySchema, K extends keyof S & string>(store: KeyValueVaultStore<S>, table: K) {
   const [rows, setRows] = useState<RecordOf<S, K>[]>([]);
 
   useEffect(() => store.observe(table, setRows), [store, table]);
@@ -193,9 +213,9 @@ export function useTable<S extends AnySchema, K extends keyof S & string>(store:
 ```ts [Vue 3]
 import { onUnmounted, shallowRef } from 'vue';
 
-import type { AnySchema, RecordOf, VaultStore } from '@vielzeug/vault';
+import type { AnySchema, KeyValueVaultStore, RecordOf } from '@vielzeug/vault';
 
-export function useTable<S extends AnySchema, K extends keyof S & string>(store: VaultStore<S>, table: K) {
+export function useTable<S extends AnySchema, K extends keyof S & string>(store: KeyValueVaultStore<S>, table: K) {
   const rows = shallowRef<RecordOf<S, K>[]>([]);
   const stop = store.observe(table, (next) => (rows.value = next));
 
@@ -207,9 +227,9 @@ export function useTable<S extends AnySchema, K extends keyof S & string>(store:
 ```ts [Svelte]
 import { readable } from 'svelte/store';
 
-import type { AnySchema, RecordOf, VaultStore } from '@vielzeug/vault';
+import type { AnySchema, KeyValueVaultStore, RecordOf } from '@vielzeug/vault';
 
-export function tableStore<S extends AnySchema, K extends keyof S & string>(store: VaultStore<S>, table: K) {
+export function tableStore<S extends AnySchema, K extends keyof S & string>(store: KeyValueVaultStore<S>, table: K) {
   return readable<RecordOf<S, K>[]>([], (set) => store.observe(table, set));
 }
 ```
@@ -218,13 +238,13 @@ export function tableStore<S extends AnySchema, K extends keyof S & string>(stor
 
 ## Working with Other Vielzeug Libraries
 
-Use Forge’s Vault helpers for explicit form-draft persistence. Keep Ripple signals as application state and persist selected changes through Vault writes.
+Keep Ripple signals as application state and persist selected changes through Vault writes.
 
 ## Best Practices
 
 - Define one schema per storage namespace.
 - Use string or finite-number primary keys only.
-- Choose a new namespace for Vault 1 storage unless you migrate it yourself.
+- Provide codecs for every durable adapter; pass Spell or another parser schema directly when identity encoding is sufficient.
 - Use `observe()` for table snapshots.
 - Use IndexedDB or SQLite for atomic work.
 - Keep external asynchronous work outside `batch()` callbacks.

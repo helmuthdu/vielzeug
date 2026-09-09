@@ -16,13 +16,16 @@ Open the connection in application code, then pass it to the SQLite subpath.
 ```ts
 import { DatabaseSync } from 'node:sqlite';
 
+import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
 import { createSQLite } from '@vielzeug/vault/sqlite';
 
+const LogSchema = s.object({ id: s.number(), message: s.string() });
 const store = createSQLite({
   database: new DatabaseSync('events.db'),
   name: 'events',
   schema: { logs: table<{ id: number; message: string }>('id') },
+  codecs: { logs: LogSchema },
 });
 
 await store.batch(['logs'], async (tx) => {
@@ -47,5 +50,5 @@ await store.dispose();
 ### Related
 
 - [Usage](../usage.md#use-sqlite-outside-the-browser)
-- [API](../api.md#sqlite)
+- [API](../api.md#createsqlite)
 - [IndexedDB batch transactions](./batch.md)

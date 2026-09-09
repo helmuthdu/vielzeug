@@ -1,7 +1,5 @@
-import { stream } from '@vielzeug/flux';
-import { toSignal } from '@vielzeug/flux/ripple';
 import type { Readable, Signal } from '@vielzeug/ripple';
-import { computed, signal } from '@vielzeug/ripple';
+import { computed, fromSubscribable, signal } from '@vielzeug/ripple';
 import type { RouteParams } from '@vielzeug/wayfinder';
 import { router } from './router';
 import { demoUsers, generateDemoData, seedData } from './seed-data';
@@ -12,17 +10,10 @@ export const currentUser: Signal<DemoUser> = signal(demoUsers[0]);
 export const locale = signal<'de' | 'en'>('en');
 export const networkStatus = signal<'offline' | 'online' | 'syncing'>('online');
 
-function routeSnapshot() {
-  return router.getSnapshot();
-}
-
-const routeBinding = toSignal(
-  stream<ReturnType<typeof routeSnapshot>>((observer) => {
-    observer.next(routeSnapshot());
-    return router.subscribe((state) => observer.next(state));
-  }),
-  { initial: routeSnapshot() },
-);
+const routeBinding = fromSubscribable<ReturnType<typeof router.getSnapshot>>({
+  getSnapshot: () => router.getSnapshot(),
+  subscribe: (listener) => router.subscribe(() => listener()),
+});
 
 export const activeRoute: Readable<string | null> = computed(() => routeBinding.value.matches.at(-1)?.name ?? null);
 export const activeRouteParams: Readable<RouteParams> = computed(() => routeBinding.value.matches.at(-1)?.params ?? {});
