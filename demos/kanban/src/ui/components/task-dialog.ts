@@ -168,15 +168,23 @@ define('task-dialog', {
       if (request) populate(request);
     });
 
-    // `@close=` below is bound directly on `<ore-dialog>`, so it also receives any bubbling
-    // `close`-named event from a *descendant* field — `ore-select`/`ore-combobox` each fire their
-    // own public `close` event when their dropdown closes, which bubbles right through this
-    // dialog's light DOM (no shadow boundary to cross for this hop, since `<ore-dialog>` is a
-    // direct light-DOM ancestor of every field here). Without the `e.target` check, selecting an
-    // option in any dropdown field closes the whole dialog instead of just that field's dropdown.
-    // Also reused as `@click=` on the "Close" button, where `e.target === e.currentTarget` holds
-    // for a genuine click (native `click` retargets correctly at shadow boundaries), so the guard
-    // is a no-op there.
+    // `@open-change=` (not `@close=`) is required: `ore-dialog` emits `open-change`, not
+    // `close` — the native `<dialog>`'s `close` event stays inside `ore-dialog`'s shadow root
+    // and never reaches a listener on the host. Without this, closing via backdrop/Escape
+    // never resets `requestSignal`, so `?open` stays `true` while the attribute is removed by
+    // `handleNativeClose`; clicking another card sets `requestSignal` to a new value but `?open`
+    // goes `true → true` (no change), so the binding never re-sets the attribute and the dialog
+    // stays closed.
+    //
+    // `@click=` on the "Close" button still uses `onCancel` directly — that path sets
+    // `requestSignal = null` before the dialog's own close animation, so the `open-change`
+    // handler's redundant `requestSignal = null` is a no-op.
+    const onDialogClose = (e: Event): void => {
+      if ((e as CustomEvent).detail.open) return;
+
+      requestSignal.value = null;
+    };
+
     const onCancel = (e?: Event): void => {
       if (e && e.target !== e.currentTarget) return;
 
@@ -227,7 +235,14 @@ define('task-dialog', {
       confirmDeleteOpen.value = true;
     };
 
-    // See `onCancel`'s comment above — same dual `@close=`/`@click=` reuse, same guard.
+    // See `onDialogClose`'s comment above — same `@open-change=` fix for the delete dialog.
+    const onDeleteDialogClose = (e: Event): void => {
+      if ((e as CustomEvent).detail.open) return;
+
+      confirmDeleteOpen.value = false;
+    };
+
+    // See `onCancel`'s comment above — same dual `@open-change=`/`@click=` reuse, same guard.
     const onDeleteCancel = (e?: Event): void => {
       if (e && e.target !== e.currentTarget) return;
 
@@ -252,7 +267,7 @@ define('task-dialog', {
         dismissible
         label=${dialogLabel}
         ?open=${() => requestSignal.value !== null}
-        @close=${onCancel}>
+        @open-change=${onDialogClose}>
         <div style="display:flex;flex-direction:column;gap:var(--size-4)">
           <ore-input
             label=${() => t('taskDialog.title')}
@@ -355,7 +370,7 @@ define('task-dialog', {
         dismissible
         label=${() => t('taskDialog.deleteConfirmTitle')}
         ?open=${confirmDeleteOpen}
-        @close=${onDeleteCancel}>
+        @open-change=${onDeleteDialogClose}>
         <p>
           ${() => t('taskDialog.deleteConfirmBody', { title: editingTask.value?.title ?? t('taskDialog.thisTask') })}
         </p>

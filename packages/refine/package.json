@@ -646,7 +646,7 @@
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/sentinel": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
-    "lucide": "^1.41.0"
+    "lucide": "^1.43.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
