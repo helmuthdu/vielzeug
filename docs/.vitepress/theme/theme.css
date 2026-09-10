@@ -138,6 +138,24 @@
   padding: 0;
 }
 
+.VPDoc:has(.showcase-page) {
+  padding: 0;
+}
+
+.showcase-route .VPLocalNav {
+  display: none;
+}
+
+.showcase-route .VPDoc:not(.has-sidebar) .container,
+.showcase-route .VPDoc:not(.has-sidebar) .content,
+.showcase-route .VPDoc:not(.has-sidebar) .content-container,
+.showcase-route .VPDoc:not(.has-sidebar) .main,
+.showcase-route .VPDoc:not(.has-sidebar) .vp-doc {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
 /* Full-bleed REPL page — IDE fills viewport below navbar */
 .VPContent:has(#repl-container) {
   padding: 0;

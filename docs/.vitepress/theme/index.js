@@ -13,6 +13,7 @@ import PackageHero from './components/PackageHero.vue';
 import PackageInfo from './components/PackageInfo.vue';
 import PackagesMenu from './components/PackagesMenu.vue';
 import Repl from './components/REPL.vue';
+import ShowcasePage from './components/ShowcasePage.vue';
 
 // Import Refine styles - using direct paths for monorepo
 // FOUC prevention: hide unupgraded custom elements until their shadow DOM attaches.
@@ -39,6 +40,7 @@ export default {
     app.component('CodeWindow', CodeWindow);
     app.component('HomePage', HomePage);
     app.component('REPL', Repl);
+    app.component('ShowcasePage', ShowcasePage);
     app.component('ColorPalette', ColorPalette);
     app.component('PackageBadges', PackageBadges);
     app.component('PackageHero', PackageHero);

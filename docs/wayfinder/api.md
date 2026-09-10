@@ -10,7 +10,8 @@ description: Complete API reference for Wayfinder.
 | Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                                |
 | --------------------------------------- | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                                  |
-| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | —                                                                                                            |
+| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | Requires server-side SPA rewrites                                                                           |
+| `createHashHistory(options?)`            | Create a static-host-safe hash history driver              | Sync                 | Pass the same `base` to the history and router                                                               |
 | `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                            |
 | `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                     |
 | `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                               |
@@ -128,6 +129,21 @@ const history = createBrowserHistory();
 ```
 
 Create the default `HistoryDriver` backed by the browser History API.
+
+## `createHashHistory(options?)`
+
+```ts
+import { createHashHistory, createRouter } from '@vielzeug/wayfinder';
+
+const base = '/my-app/';
+const router = createRouter({
+  base,
+  history: createHashHistory({ base }),
+  routes,
+});
+```
+
+Create a browser history driver that stores the route after `#`. Use it for static hosts that cannot rewrite deep links to the SPA entry file. `push()`, `replace()`, query strings, route hashes, state, and back navigation follow the `HistoryDriver` contract.
 
 ## `createMemoryHistory(initialPath?)`
 

@@ -9,4 +9,8 @@ const alias = Object.entries(localPackageMap).map(([specifier, replacement]) => 
   replacement,
 }));
 
-export default defineConfig({ resolve: { alias } });
+export default defineConfig({
+  base: process.env.DEMO_BASE ?? '/',
+  build: { emptyOutDir: true, outDir: process.env.DEMO_OUT_DIR ?? 'dist' },
+  resolve: { alias },
+});

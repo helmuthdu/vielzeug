@@ -49,7 +49,7 @@ export function disposeShortcuts() {
 
 ### Preserve Native Text Editing
 
-Inspect `event.composedPath()` when global undo and redo must yield to browser behavior inside editable fields. This matches Kanban app shell policy.
+Inspect `event.composedPath()` when global undo and redo must yield to browser behavior inside editable fields. This matches CRM app shell policy.
 
 ```ts
 const isTypingInField = (event: KeyboardEvent): boolean =>

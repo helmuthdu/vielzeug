@@ -1,0 +1,52 @@
+import '@vielzeug/refine/badge';
+import '@vielzeug/refine/button';
+import '@vielzeug/refine/card';
+import '@vielzeug/refine/icon';
+import { html } from '@vielzeug/ore';
+import { toast } from '@vielzeug/refine/toast';
+import type { Experience } from '../../core/types';
+import { money } from '../format';
+
+export function experienceCard(experience: Experience) {
+  return html`
+    <ore-card class="experience-card" padding="none" elevation="1">
+      <div class="experience-card__media" slot="media">
+        <img
+          class="experience-card__image"
+          src=${experience.image}
+          alt=${`${experience.name} in ${experience.location}`}
+          loading="lazy"
+          width="900"
+          height="600" />
+        <ore-badge color="primary" size="sm" variant="frost">${experience.curation}</ore-badge>
+      </div>
+      <div class="experience-card__body">
+        <div class="experience-card__meta">
+          <span class="rating experience-card__rating">
+            <ore-icon name="star" size="14" aria-hidden="true"></ore-icon>
+            ${experience.rating}
+          </span>
+          <span>${experience.location} · ${experience.duration}</span>
+        </div>
+        <h3 class="experience-card__title">${experience.name}</h3>
+        <p class="experience-card__description">${experience.description}</p>
+        <div class="experience-card__footer">
+          <span>
+            <small>From</small>
+            <strong>${money(experience.price)}</strong>
+          </span>
+          <ore-button
+            color="primary"
+            size="sm"
+            rounded="full"
+            variant="flat"
+            aria-label=${`Add ${experience.name} to trip`}
+            @click=${() => toast.add({ color: 'success', message: `${experience.name} added to your trip.` })}>
+            <ore-icon slot="prefix" name="plus" size="14" aria-hidden="true"></ore-icon>
+            Add to trip
+          </ore-button>
+        </div>
+      </div>
+    </ore-card>
+  `;
+}

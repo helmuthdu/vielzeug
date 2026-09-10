@@ -1,3 +1,4 @@
+import { joinPaths, normalizePath, stripBase } from './path';
 import type { HistoryDriver } from './types';
 
 /** Creates a history driver backed by the browser History API. */
@@ -25,6 +26,49 @@ export function createBrowserHistory(): HistoryDriver {
     },
     replace(url, state) {
       window.history.replaceState(state, '', url);
+    },
+  };
+}
+
+export type HashHistoryOptions = { base?: string };
+
+export function createHashHistory(options: HashHistoryOptions = {}): HistoryDriver {
+  const base = normalizePath(options.base ?? '/');
+  const baseRoot = base === '/' ? '/' : `${base}/`;
+  const location = () => {
+    const parsed = new URL(window.location.hash.slice(1) || '/', 'http://localhost');
+
+    return {
+      hash: parsed.hash,
+      pathname: joinPaths(base, parsed.pathname),
+      search: parsed.search,
+      state: window.history.state,
+    };
+  };
+  const destination = (url: string) => {
+    const parsed = new URL(url, 'http://localhost');
+    const pathname = stripBase(parsed.pathname, base);
+
+    return `${baseRoot}#${pathname}${parsed.search}${parsed.hash}`;
+  };
+
+  return {
+    back() {
+      window.history.back();
+    },
+    get location() {
+      return location();
+    },
+    onPopstate(listener) {
+      window.addEventListener('popstate', listener);
+
+      return () => window.removeEventListener('popstate', listener);
+    },
+    push(url, state) {
+      window.history.pushState(state, '', destination(url));
+    },
+    replace(url, state) {
+      window.history.replaceState(state, '', destination(url));
     },
   };
 }

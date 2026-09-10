@@ -9,7 +9,7 @@ import { createAppShell } from './ui/app-shell';
  * `router` (core/router.ts) resolves the browser's actual current path the moment it's
  * constructed; it must not receive a forced initial navigation. `setupPersistence()`'s await
  * gives that construction-time resolution ample time to land before app-shell reads
- * `activeRoute.value` for the first time — same reasoning as demos/kanban/src/main.ts.
+ * `activeRoute.value` for the first time — same reasoning as demos/crm/src/main.ts.
  */
 async function main(): Promise<void> {
   await setupPersistence();

@@ -1,6 +1,6 @@
 import { computed, fromSubscribable } from '@vielzeug/ripple';
 import type { RouteParams } from '@vielzeug/wayfinder';
-import { createBrowserHistory, createRouter } from '@vielzeug/wayfinder';
+import { createBrowserHistory, createHashHistory, createRouter } from '@vielzeug/wayfinder';
 
 export type RouteNames =
   | 'admin'
@@ -28,10 +28,10 @@ const routes = {
   settings: { path: '/settings' },
 } as const;
 
-export const router = createRouter({
-  history: createBrowserHistory(),
-  routes,
-});
+const base = import.meta.env.BASE_URL;
+const history = base === '/' ? createBrowserHistory() : createHashHistory({ base });
+
+export const router = createRouter({ base, history, routes });
 
 // ── Reactive route (bridges wayfinder's subscribe()/getSnapshot() into a ripple signal via
 // `fromSubscribable` — the same structural adapter pattern used by core/i18n.ts) ───────────────

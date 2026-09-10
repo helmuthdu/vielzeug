@@ -135,7 +135,7 @@ const map = createKeymap(
 
 ### Preserve Native Text Editing
 
-Use `event.composedPath()` to keep browser undo and redo inside inputs, textareas, and `contenteditable` elements. Kanban app shell uses this policy for its global undo and redo shortcuts.
+Use `event.composedPath()` to keep browser undo and redo inside inputs, textareas, and `contenteditable` elements. CRM app shell uses this policy for its global undo and redo shortcuts.
 
 ```ts
 const isTypingInField = (event: KeyboardEvent): boolean =>

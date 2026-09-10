@@ -4,7 +4,7 @@ import type { Order, OrderStatus } from './types';
 
 // ---------------------------------------------------------------------------
 // In-memory "server" state — the mock endpoints below read/write these arrays,
-// exactly like demos/kanban/src/core/api.ts's `users` array models a read-only
+// exactly like demos/crm/src/core/api.ts's `users` array models a read-only
 // directory. Orders are the one genuinely mutable resource here (placed via
 // checkout, cancelled from Order History, status-progressed from Admin).
 // ---------------------------------------------------------------------------

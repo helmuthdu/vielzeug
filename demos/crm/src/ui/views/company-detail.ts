@@ -14,7 +14,7 @@ import { computed, signal } from '@vielzeug/ripple';
 import { can } from '../../core/auth';
 import { formatAmount, formatDate, formatRelativeDate } from '../../core/format';
 import { t } from '../../core/i18n';
-import { router } from '../../core/router';
+import { routeHref, router } from '../../core/router';
 import {
   companyActivities,
   companyById,
@@ -85,7 +85,7 @@ define<{ company: string }>('crm-company-detail', {
         () => html`
           <nav class="breadcrumb" aria-label=${() => t('nav.companyProfile')}>
             <a
-              href="/companies"
+              href=${routeHref(router.url('companies'))}
               @click=${(event: Event) => {
                 event.preventDefault();
                 void router.navigate({ name: 'companies' });

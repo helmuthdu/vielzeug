@@ -45,6 +45,7 @@ Defer to `.ai/core/conventions.md` for engineering conventions, `.ai/data/packag
 - Docs structure: `pnpm validate:docs -- --package=<name>`
 - README structure: `pnpm validate:readme -- --package=<name>`
 - Docs: `pnpm --filter @vielzeug/codex build && pnpm docs:build`
+- Deployable docs and demos: `pnpm site:build`
 - Demos: affected demo test/build; `pnpm validate:demos` for shared or broad demo impact
 - REPL examples: `pnpm validate:repl` (`-- --package=<name>` for a focused package run)
 - AI metadata: `pnpm check:ai-data` (`pnpm gen:ai-data` to refresh `.ai/data/` and generated references)

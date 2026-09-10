@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Use native anchor semantics for link buttons and improve dark field-label contrast.",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

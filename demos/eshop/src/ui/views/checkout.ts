@@ -147,8 +147,8 @@ function checkoutStepper(current: CheckoutStep) {
         )}
       </ore-stepper>
       <p class="checkout-progress__current">
-        ${() => t('checkout.steps.current', { current: STEP_ORDER.indexOf(current) + 2, total: steps.length })}
-        · ${() => t(STEP_LABEL_KEYS[current])}
+        ${() => t('checkout.steps.current', { current: STEP_ORDER.indexOf(current) + 2, total: steps.length })} ·
+        ${() => t(STEP_LABEL_KEYS[current])}
       </p>
     </div>
   `;

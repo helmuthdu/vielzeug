@@ -105,6 +105,20 @@ describe('ore-card', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it('emits activate when clicking non-interactive slotted content', async () => {
+    fixture = await mount('ore-card', {
+      attrs: { interactive: '' },
+      html: '<div><span id="card-content">Card content</span></div>',
+    });
+
+    const handler = vi.fn();
+
+    fixture.element.addEventListener('activate', handler);
+    fireClick(fixture.element.querySelector('#card-content') as HTMLSpanElement);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it('does not emit activate when clicking nested interactive content', async () => {
     fixture = await mount('ore-card', {
       attrs: { interactive: '' },

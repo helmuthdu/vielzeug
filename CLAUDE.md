@@ -28,6 +28,7 @@ pnpm test
 pnpm lint
 pnpm fix
 pnpm docs:build
+pnpm site:build
 pnpm validate:docs -- --package=<name>
 pnpm validate:repl -- --package=<name>
 pnpm check:ai-data

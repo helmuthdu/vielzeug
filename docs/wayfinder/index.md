@@ -5,7 +5,7 @@ package: wayfinder
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, WayfinderError, WayfinderApiError, WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError]
+exports: [createRouter, createBrowserHistory, createHashHistory, createMemoryHistory, redirectTo, WayfinderError, WayfinderApiError, WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -126,6 +126,7 @@ router.dispose();
 - `preload()` — Warms and reuses loader results for the next matching client navigation.
 - `createViewRegistry()` — Resolves exhaustive typed route views with an explicit not-found fallback.
 - `scroll` / `viewTransition` — Coordinate browser effects at the navigation commit boundary.
+- `createHashHistory()` — Runs browser routes on static hosts that cannot rewrite deep links.
 - `createMemoryHistory()` — Runs routers in tests and non-browser environments.
 - `subscribe()` — Reactive subscription to navigation state changes.
 

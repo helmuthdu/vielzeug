@@ -94,7 +94,7 @@
     font-size: var(--text-xs);
     font-weight: var(--font-medium);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-500);
+    color: var(--color-contrast-600);
     white-space: nowrap;
     cursor: pointer;
     user-select: none;

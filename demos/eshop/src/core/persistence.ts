@@ -12,7 +12,7 @@ import type { CartItem } from './types';
 
 // ---------------------------------------------------------------------------
 // Vault schema — one row per preference/collection, keyed by a fixed id, mirroring
-// demos/kanban/src/core/persistence.ts's single-row-per-concern shape.
+// demos/crm/src/core/persistence.ts's single-row-per-concern shape.
 // ---------------------------------------------------------------------------
 
 type CartRow = { compareModelIds: string[]; id: 'current'; items: CartItem[] };

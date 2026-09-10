@@ -355,19 +355,21 @@ describe('ore-button', () => {
       expect(rel).toContain('noreferrer');
     });
 
-    it('the inner anchor is decorative (tabindex -1) — the host carries the real link semantics', async () => {
+    it('uses the inner anchor as the sole focusable link', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/page' } });
 
-      expect(fixture.query('a[part="button"]')?.getAttribute('tabindex')).toBe('-1');
-      expect(fixture.element.getAttribute('tabindex')).toBe('0');
-      expect(fixture.element.getAttribute('role')).toBe('link');
+      expect(fixture.query('a[part="button"]')?.getAttribute('tabindex')).toBeNull();
+      expect(fixture.element.getAttribute('tabindex')).toBeNull();
+      expect(fixture.element.getAttribute('role')).toBeNull();
     });
 
-    it('disabling pointer interaction on the anchor when disabled', async () => {
+    it('removes disabled links from interaction and navigation', async () => {
       fixture = await mount('ore-button', { attrs: { disabled: '', href: '/page' } });
 
-      expect(fixture.element.getAttribute('tabindex')).toBe('-1');
-      expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
+      const anchor = fixture.query('a[part="button"]');
+      expect(anchor?.getAttribute('href')).toBeNull();
+      expect(anchor?.getAttribute('tabindex')).toBe('-1');
+      expect(anchor?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('link mode does not trigger form submission', async () => {
@@ -491,10 +493,12 @@ describe('ore-button accessibility', () => {
       expect(fixture.query('.loader')?.getAttribute('aria-label')).toBe('Loading');
     });
 
-    it('anchor in link mode carries role="link" on host', async () => {
+    it('anchor in link mode carries native link semantics', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/page' } });
 
-      expect(fixture.element.getAttribute('role')).toBe('link');
+      expect(fixture.query('a[part="button"]')?.getAttribute('href')).toBe('/page');
+      expect(fixture.query('a[part="button"]')?.getAttribute('aria-label')).toBeNull();
+      expect(fixture.element.getAttribute('role')).toBeNull();
     });
   });
 

@@ -165,6 +165,8 @@ define<OreButtonProps>(BUTTON_TAG, {
     };
 
     const handleKeydown = (e: KeyboardEvent) => {
+      if (isLink.value) return;
+
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         (el.shadowRoot?.querySelector('[part="button"]') as HTMLElement)?.click();
@@ -174,14 +176,14 @@ define<OreButtonProps>(BUTTON_TAG, {
     // ARIA attributes live on the host.
     bind({
       attr: {
-        'aria-busy': props.loading,
-        'aria-disabled': isDisabled,
-        'aria-label': props.label,
+        'aria-busy': computed(() => (isLink.value ? null : props.loading.value)),
+        'aria-disabled': computed(() => (isLink.value ? null : isDisabled.value)),
+        'aria-label': computed(() => (isLink.value ? null : props.label.value)),
         color: effectiveColor,
         effect: props.effect,
-        role: computed(() => el.getAttribute('role') ?? (isLink.value ? 'link' : 'button')),
+        role: computed(() => (isLink.value ? null : (el.getAttribute('role') ?? 'button'))),
         size: effectiveSize,
-        tabindex: computed(() => (isDisabled.value ? '-1' : '0')),
+        tabindex: computed(() => (isLink.value ? null : isDisabled.value ? '-1' : '0')),
         variant: effectiveVariant,
       },
       on: {
@@ -196,21 +198,19 @@ define<OreButtonProps>(BUTTON_TAG, {
       <slot name="suffix"></slot>
     `;
 
-    // The inner element (<a> or <span>) is deliberately non-focusable/decorative — this
-    // component's real interactive semantics (role, tabindex, aria-label) live on the
-    // custom-element host itself (see the `bind()` block above), since ore-button is
-    // formAssociated and needs the host, not an inner element, to carry ElementInternals.
-    // This differs from ore-navbar-item / ore-sidebar-item, which aren't form-associated
-    // and so render their <a> as the one real focusable/semantic element.
+    // Link mode delegates semantics and focus to the native anchor. Button mode keeps them on
+    // the form-associated host because its visual part is intentionally a non-semantic span.
     return html`
       ${() =>
         isLink.value
           ? html`
               <a
                 part="button"
-                role="presentation"
-                tabindex="-1"
-                href="${props.href}"
+                aria-busy="${props.loading}"
+                aria-disabled="${isDisabled}"
+                aria-label="${computed(() => props.label.value || el.textContent?.trim() || null)}"
+                tabindex="${computed(() => (isDisabled.value ? '-1' : null))}"
+                href="${computed(() => (isDisabled.value ? null : props.href.value))}"
                 rel="${effectiveRel}"
                 target="${props.target}"
                 @click="${handleClick}">

@@ -49,7 +49,7 @@ type ModelConfiguratorProps = { model: Model | undefined };
 
 /**
  * The configurator. Local, non-`ledger`-tracked draft state — trim/color/wheel/package picks
- * are transient page state until "Add to cart" commits them, mirroring how demos/kanban never
+ * are transient page state until "Add to cart" commits them, mirroring how demos/crm never
  * wraps its task-dialog draft in the app's undo/redo ledger either (see core/history.ts's
  * module comment). Defined once at module scope with a `model` data prop — NOT dynamically
  * per-model, which would try to re-register the same custom element tag on a repeat visit.

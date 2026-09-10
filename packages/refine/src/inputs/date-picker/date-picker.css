@@ -155,7 +155,7 @@
   /* ── Day grid ────────────────────────────────────────────────────────────── */
 
   /* Prevent display:flex from overriding the [hidden] attribute */
-  [hidden] {
+  .cal-grid[hidden] {
     display: none;
   }
 

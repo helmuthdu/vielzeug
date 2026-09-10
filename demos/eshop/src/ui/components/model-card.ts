@@ -96,37 +96,41 @@ define<ModelCardProps>('model-card', {
             <ore-card elevation="1" class="model-card__surface" data-model-id=${() => model().id}>
               <div slot="media" class="model-card__media" style=${() => `--model-hue: ${model().heroHue}deg`}>
                 <ore-skeleton striped aria-hidden="true"></ore-skeleton>
-                <div style="position: absolute; bottom: var(--size-6); display: flex; justify-content: center; flex-direction: column; align-items: center;">
-                <fieldset class="model-card__paint-picker">
-                  <legend>${() => t('model.selectColor')}</legend>
-                  <div class="model-card__swatches">
-                    ${model().colors.map(
-                      (c) => html`
-                        <label class="swatch-control" aria-label=${c.name}>
-                          <input
-                            class="swatch-control__input"
-                            type="radio"
-                            name=${`paint-${model().id}`}
-                            value=${c.id}
-                            ?checked=${() => colorId.value === c.id}
-                            ref=${(input: HTMLInputElement | null) => {
-                              if (!input) return;
+                <div
+                  style="position: absolute; bottom: var(--size-6); display: flex; justify-content: center; flex-direction: column; align-items: center;">
+                  <fieldset class="model-card__paint-picker">
+                    <legend>${() => t('model.selectColor')}</legend>
+                    <div class="model-card__swatches">
+                      ${model().colors.map(
+                        (c) => html`
+                          <label class="swatch-control" aria-label=${c.name}>
+                            <input
+                              class="swatch-control__input"
+                              type="radio"
+                              name=${`paint-${model().id}`}
+                              value=${c.id}
+                              ?checked=${() => colorId.value === c.id}
+                              ref=${(input: HTMLInputElement | null) => {
+                                if (!input) return;
 
-                              queueMicrotask(() => {
-                                input.checked = colorId.value === c.id;
-                                input.value = c.id;
-                              });
-                            }}
-                            @change=${() => {
-                              colorId.value = c.id;
-                            }} />
-                          <span class="swatch swatch--sm" aria-hidden="true" style=${`--swatch-color: ${c.hex}`}></span>
-                        </label>
-                      `,
-                    )}
-                  </div>
-                </fieldset>
-                <p class="model-card__paint">${() => paintSummary.value}</p>
+                                queueMicrotask(() => {
+                                  input.checked = colorId.value === c.id;
+                                  input.value = c.id;
+                                });
+                              }}
+                              @change=${() => {
+                                colorId.value = c.id;
+                              }} />
+                            <span
+                              class="swatch swatch--sm"
+                              aria-hidden="true"
+                              style=${`--swatch-color: ${c.hex}`}></span>
+                          </label>
+                        `,
+                      )}
+                    </div>
+                  </fieldset>
+                  <p class="model-card__paint">${() => paintSummary.value}</p>
                 </div>
               </div>
               <div slot="header">
@@ -146,7 +150,12 @@ define<ModelCardProps>('model-card', {
                 </ore-text>
               </div>
               <div slot="actions" class="model-card__actions">
-                <ore-button class="model-card__view-btn" rounded variant="solid" color="secondary" @click=${() => emit('view')}>
+                <ore-button
+                  class="model-card__view-btn"
+                  rounded
+                  variant="solid"
+                  color="secondary"
+                  @click=${() => emit('view')}>
                   ${() => t('common.viewDetails')}
                 </ore-button>
                 <ore-button

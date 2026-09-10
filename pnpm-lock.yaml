@@ -355,71 +355,20 @@ importers:
         specifier: 5.0.0
         version: 5.0.0(@types/node@26.4.1)(@vitest/coverage-v8@5.0.0)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.27.7)(jiti@2.7.0))
 
-  demos/kanban:
+  demos/voyage:
     dependencies:
-      '@vielzeug/clockwork':
+      '@vielzeug/illusionist':
         specifier: workspace:*
-        version: link:../../packages/clockwork
-      '@vielzeug/coins':
-        specifier: workspace:*
-        version: link:../../packages/coins
-      '@vielzeug/courier':
-        specifier: workspace:*
-        version: link:../../packages/courier
-      '@vielzeug/dnd':
-        specifier: workspace:*
-        version: link:../../packages/dnd
-      '@vielzeug/familiar':
-        specifier: workspace:*
-        version: link:../../packages/familiar
-      '@vielzeug/herald':
-        specifier: workspace:*
-        version: link:../../packages/herald
-      '@vielzeug/keymap':
-        specifier: workspace:*
-        version: link:../../packages/keymap
-      '@vielzeug/ledger':
-        specifier: workspace:*
-        version: link:../../packages/ledger
-      '@vielzeug/lingua':
-        specifier: workspace:*
-        version: link:../../packages/lingua
+        version: link:../../packages/illusionist
       '@vielzeug/ore':
         specifier: workspace:*
         version: link:../../packages/ore
-      '@vielzeug/prism':
-        specifier: workspace:*
-        version: link:../../packages/prism
-      '@vielzeug/pulse':
-        specifier: workspace:*
-        version: link:../../packages/pulse
       '@vielzeug/refine':
         specifier: workspace:*
         version: link:../../packages/refine
       '@vielzeug/ripple':
         specifier: workspace:*
         version: link:../../packages/ripple
-      '@vielzeug/rune':
-        specifier: workspace:*
-        version: link:../../packages/rune
-      '@vielzeug/scout':
-        specifier: workspace:*
-        version: link:../../packages/scout
-      '@vielzeug/scroll':
-        specifier: workspace:*
-        version: link:../../packages/scroll
-      '@vielzeug/spell':
-        specifier: workspace:*
-        version: link:../../packages/spell
-      '@vielzeug/tempo':
-        specifier: workspace:*
-        version: link:../../packages/tempo
-      '@vielzeug/vault':
-        specifier: workspace:*
-        version: link:../../packages/vault
-      '@vielzeug/ward':
-        specifier: workspace:*
-        version: link:../../packages/ward
       '@vielzeug/wayfinder':
         specifier: workspace:*
         version: link:../../packages/wayfinder

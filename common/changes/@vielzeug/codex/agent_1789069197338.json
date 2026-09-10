@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Update bundled Refine button link-mode documentation.",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

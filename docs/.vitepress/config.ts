@@ -96,6 +96,7 @@ export default defineConfig({
     logo: '/logo-main.svg',
     nav: [
       { link: '/guide/', text: 'Guide' },
+      { link: '/showcases', text: 'Showcase' },
       { component: 'PackagesMenu' },
       { link: '/refine/', text: 'Components' },
       { link: '/repl', text: 'REPL' },

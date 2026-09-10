@@ -161,30 +161,30 @@ define('crm-activity-view', {
                   () => group.value.items,
                   (item) => item.id,
                   (item) => html`
-                <article class="activity-swipe" data-activity-id=${() => item.value.id}>
-                  <span class=${() => `activity-kind activity-kind--${item.value.category}`}>
-                    <ore-icon
-                      name=${() => (item.value.category === 'email' ? 'mail' : item.value.category === 'meeting' ? 'calendar' : item.value.category === 'call' ? 'phone' : item.value.category === 'task' ? 'check-square' : 'activity')}
-                      size="15"></ore-icon>
-                  </span>
-                  <div>
-                    <strong>${() => item.value.actor}</strong>
-                    <p>${() => item.value.description}</p>
-                    <small>${() => categoryLabels[item.value.category]()}</small>
-                  </div>
-                  ${when(
-                    () => can('delete'),
-                    () => html`
-                      <button
-                        type="button"
-                        aria-label=${() => t('activity.archiveActivityBy', { name: item.value.actor })}
-                        @click=${() => void archiveActivity(item.value.id)}>
-                        <ore-icon name="archive" size="15"></ore-icon>
-                      </button>
-                    `,
-                  )}
-                </article>
-              `,
+                    <article class="activity-swipe" data-activity-id=${() => item.value.id}>
+                      <span class=${() => `activity-kind activity-kind--${item.value.category}`}>
+                        <ore-icon
+                          name=${() => (item.value.category === 'email' ? 'mail' : item.value.category === 'meeting' ? 'calendar' : item.value.category === 'call' ? 'phone' : item.value.category === 'task' ? 'check-square' : 'activity')}
+                          size="15"></ore-icon>
+                      </span>
+                      <div>
+                        <strong>${() => item.value.actor}</strong>
+                        <p>${() => item.value.description}</p>
+                        <small>${() => categoryLabels[item.value.category]()}</small>
+                      </div>
+                      ${when(
+                        () => can('delete'),
+                        () => html`
+                          <button
+                            type="button"
+                            aria-label=${() => t('activity.archiveActivityBy', { name: item.value.actor })}
+                            @click=${() => void archiveActivity(item.value.id)}>
+                            <ore-icon name="archive" size="15"></ore-icon>
+                          </button>
+                        `,
+                      )}
+                    </article>
+                  `,
                 )}
               </section>
             `,

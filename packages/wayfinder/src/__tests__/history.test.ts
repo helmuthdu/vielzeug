@@ -1,7 +1,7 @@
 /**
  * createMemoryHistory — in-memory history driver used by the router.
  */
-import { createBrowserHistory, createMemoryHistory, createRouter } from '../';
+import { createBrowserHistory, createHashHistory, createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
@@ -134,5 +134,34 @@ describe('createBrowserHistory', () => {
     await router.navigate({ path: '/page' }, { state: { from: 'home' } });
 
     expect(router.getSnapshot().location.historyState).toEqual({ from: 'home' });
+  });
+});
+
+describe('createHashHistory', () => {
+  beforeEach(resetMocks);
+
+  it('reads a base-prefixed route from the hash', () => {
+    mockLocation.pathname = '/demos/voyage/';
+    mockLocation.hash = '#/trips/japan?day=2#route';
+    const history = createHashHistory({ base: '/demos/voyage/' });
+
+    expect(history.location).toEqual({
+      hash: '#route',
+      pathname: '/demos/voyage/trips/japan',
+      search: '?day=2',
+      state: null,
+    });
+  });
+
+  it('writes base-prefixed destinations as hash routes', () => {
+    const history = createHashHistory({ base: '/demos/voyage/' });
+
+    history.push('/demos/voyage/trips/japan?day=2#route', { from: 'explore' });
+
+    expect(mockHistory.pushState).toHaveBeenCalledWith(
+      { from: 'explore' },
+      '',
+      '/demos/voyage/#/trips/japan?day=2#route',
+    );
   });
 });

@@ -22,9 +22,9 @@ function isNestedInteractiveTarget(host: HTMLElement, event: Event): boolean {
 
     if (node === host) return false;
 
-    if (node.matches(INTERACTIVE_DESCENDANT_SELECTOR) || node.closest(INTERACTIVE_DESCENDANT_SELECTOR)) {
-      return true;
-    }
+    const interactiveTarget = node.closest(INTERACTIVE_DESCENDANT_SELECTOR);
+
+    if (interactiveTarget && interactiveTarget !== host) return true;
   }
 
   return false;

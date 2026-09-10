@@ -1,4 +1,4 @@
-import { createBrowserHistory, createRouter } from '@vielzeug/wayfinder';
+import { createBrowserHistory, createHashHistory, createRouter } from '@vielzeug/wayfinder';
 
 export type RouteName =
   | 'activity'
@@ -11,8 +11,21 @@ export type RouteName =
   | 'pipeline'
   | 'showcase';
 
+const base = import.meta.env.BASE_URL;
+const history = base === '/' ? createBrowserHistory() : createHashHistory({ base });
+
+export const routeHref = (href: string): string => {
+  if (base === '/') return href;
+
+  const root = base.slice(0, -1);
+  const route = href.startsWith(root) ? href.slice(root.length) || '/' : href;
+
+  return `${base}#${route.startsWith('/') ? route : `/${route}`}`;
+};
+
 export const router = createRouter({
-  history: createBrowserHistory(),
+  base,
+  history,
   routes: {
     activity: { path: '/activity' },
     companies: { path: '/companies' },

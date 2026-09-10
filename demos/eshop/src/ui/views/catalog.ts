@@ -224,129 +224,129 @@ define('catalog-view', {
         </div>
 
         <section class="catalog__discovery" aria-label=${() => t('catalog.discoveryLabel')}>
-        <ore-box class="catalog__search-rail" effect="rainbow" fullwidth padding="none">
-          <ore-input
-            class="catalog__search"
-            type="text"
-            clearable
-            variant="text"
-            aria-label=${() => t('catalog.searchLabel')}
-            placeholder=${() => t('catalog.searchPlaceholder')}
-            value=${() => filters.value.query}
-            @input=${onSearchInput}>
-            <ore-icon slot="prefix" name="search" size="16" aria-hidden="true"></ore-icon>
-          </ore-input>
-          <div class="catalog__rail-actions">
-            <div class="catalog__sort-control">
-              ${when(
-                () => Boolean(filters.value.query.trim()),
-                () => html`
-                  <div class="catalog__relevance-sort" aria-label=${() => t('catalog.sortedByRelevance')}>
-                    <span>${() => t('catalog.sortLabel')}</span>
-                    <strong>${() => t('catalog.sortedByRelevance')}</strong>
-                  </div>
-                `,
-                () => html`
-                  <ore-select
-                    class="catalog__sort"
-                    fullwidth
-                    rounded="lg"
-                    variant="text"
-                    label=${() => t('catalog.sortLabel')}
-                    options=${() => sortOptions()}
-                    value=${() => filters.value.sortOrder}
-                    @change=${onSortChange}></ore-select>
-                `,
-              )}
+          <ore-box class="catalog__search-rail" effect="rainbow" fullwidth padding="none">
+            <ore-input
+              class="catalog__search"
+              type="text"
+              clearable
+              variant="text"
+              aria-label=${() => t('catalog.searchLabel')}
+              placeholder=${() => t('catalog.searchPlaceholder')}
+              value=${() => filters.value.query}
+              @input=${onSearchInput}>
+              <ore-icon slot="prefix" name="search" size="16" aria-hidden="true"></ore-icon>
+            </ore-input>
+            <div class="catalog__rail-actions">
+              <div class="catalog__sort-control">
+                ${when(
+                  () => Boolean(filters.value.query.trim()),
+                  () => html`
+                    <div class="catalog__relevance-sort" aria-label=${() => t('catalog.sortedByRelevance')}>
+                      <span>${() => t('catalog.sortLabel')}</span>
+                      <strong>${() => t('catalog.sortedByRelevance')}</strong>
+                    </div>
+                  `,
+                  () => html`
+                    <ore-select
+                      class="catalog__sort"
+                      fullwidth
+                      rounded="lg"
+                      variant="text"
+                      label=${() => t('catalog.sortLabel')}
+                      options=${() => sortOptions()}
+                      value=${() => filters.value.sortOrder}
+                      @change=${onSortChange}></ore-select>
+                  `,
+                )}
+              </div>
+              <ore-button
+                fullheight
+                fullwidth
+                class="catalog__filter-toggle"
+                color="secondary"
+                variant=${() => (selectedFilters.value.length ? 'flat' : 'ghost')}
+                aria-label=${() =>
+                  selectedFilters.value.length
+                    ? t('catalog.refineWithCount', { count: selectedFilters.value.length })
+                    : t('catalog.refine')}
+                aria-controls="catalog-filter-panel"
+                aria-expanded=${() => String(filtersOpen.value)}
+                @click=${toggleFilters}>
+                <ore-icon slot="prefix" name="sliders-horizontal" size="15" aria-hidden="true"></ore-icon>
+                ${() => t('catalog.refine')}
+                ${when(
+                  () => selectedFilters.value.length > 0,
+                  () => html`
+                    <ore-badge slot="suffix" size="sm" color="primary">${() => selectedFilters.value.length}</ore-badge>
+                  `,
+                )}
+              </ore-button>
             </div>
-            <ore-button
-              fullheight
-              fullwidth
-              class="catalog__filter-toggle"
-              color="secondary"
-              variant=${() => (selectedFilters.value.length ? 'flat' : 'ghost')}
-              aria-label=${() =>
-                selectedFilters.value.length
-                  ? t('catalog.refineWithCount', { count: selectedFilters.value.length })
-                  : t('catalog.refine')}
-              aria-controls="catalog-filter-panel"
-              aria-expanded=${() => String(filtersOpen.value)}
-              @click=${toggleFilters}>
-              <ore-icon slot="prefix" name="sliders-horizontal" size="15" aria-hidden="true"></ore-icon>
-              ${() => t('catalog.refine')}
-              ${when(
-                () => selectedFilters.value.length > 0,
-                () => html`
-                  <ore-badge slot="suffix" size="sm" color="primary">${() => selectedFilters.value.length}</ore-badge>
-                `,
-              )}
-            </ore-button>
-          </div>
-        </ore-box>
+          </ore-box>
 
-        <div class="catalog__popular-filters" aria-label=${() => t('catalog.popularFiltersLabel')}>
-          <p class="catalog__search-meta" role="status" aria-live="polite" aria-atomic="true">
-            ${() =>
-              t(
-                results.value.length === 1
-                  ? filters.value.query.trim()
-                    ? 'catalog.searchResultCountOne'
-                    : 'catalog.resultCountOne'
-                  : filters.value.query.trim()
-                    ? 'catalog.searchResultCount'
-                    : 'catalog.resultCount',
-                { count: results.value.length },
-              )}
-          </p>
-          <span>${() => t('catalog.popularFiltersLabel')}</span>
-          <div>
-            <ore-chip
-              class="catalog__quick-filter"
-              mode="selectable"
-              variant="bordered"
-              rounded
-              color="secondary"
-              label=${() => powertrainLabel('electric')}
-              value="electric"
-              ?checked=${() => filters.value.powertrains.includes('electric')}
-              @change=${() => togglePowertrain('electric')}>
-              ${() => powertrainLabel('electric')}
-            </ore-chip>
-            <ore-chip
-              class="catalog__quick-filter"
-              mode="selectable"
-              variant="bordered"
-              rounded
-              color="secondary"
-              label=${() => bodyTypeLabel('suv')}
-              value="suv"
-              ?checked=${() => filters.value.bodyTypes.includes('suv')}
-              @change=${() => toggleBodyType('suv')}>
-              ${() => bodyTypeLabel('suv')}
-            </ore-chip>
-            <ore-chip
-              class="catalog__quick-filter"
-              mode="selectable"
-              variant="bordered"
-              rounded
-              color="secondary"
-              label=${() => priceBandLabel('under-60000')}
-              value="under-60000"
-              ?checked=${() => filters.value.priceBand === 'under-60000'}
-              @change=${() => togglePriceBand('under-60000')}>
-              ${() => priceBandLabel('under-60000')}
-            </ore-chip>
+          <div class="catalog__popular-filters" aria-label=${() => t('catalog.popularFiltersLabel')}>
+            <p class="catalog__search-meta" role="status" aria-live="polite" aria-atomic="true">
+              ${() =>
+                t(
+                  results.value.length === 1
+                    ? filters.value.query.trim()
+                      ? 'catalog.searchResultCountOne'
+                      : 'catalog.resultCountOne'
+                    : filters.value.query.trim()
+                      ? 'catalog.searchResultCount'
+                      : 'catalog.resultCount',
+                  { count: results.value.length },
+                )}
+            </p>
+            <span>${() => t('catalog.popularFiltersLabel')}</span>
+            <div>
+              <ore-chip
+                class="catalog__quick-filter"
+                mode="selectable"
+                variant="bordered"
+                rounded
+                color="secondary"
+                label=${() => powertrainLabel('electric')}
+                value="electric"
+                ?checked=${() => filters.value.powertrains.includes('electric')}
+                @change=${() => togglePowertrain('electric')}>
+                ${() => powertrainLabel('electric')}
+              </ore-chip>
+              <ore-chip
+                class="catalog__quick-filter"
+                mode="selectable"
+                variant="bordered"
+                rounded
+                color="secondary"
+                label=${() => bodyTypeLabel('suv')}
+                value="suv"
+                ?checked=${() => filters.value.bodyTypes.includes('suv')}
+                @change=${() => toggleBodyType('suv')}>
+                ${() => bodyTypeLabel('suv')}
+              </ore-chip>
+              <ore-chip
+                class="catalog__quick-filter"
+                mode="selectable"
+                variant="bordered"
+                rounded
+                color="secondary"
+                label=${() => priceBandLabel('under-60000')}
+                value="under-60000"
+                ?checked=${() => filters.value.priceBand === 'under-60000'}
+                @change=${() => togglePriceBand('under-60000')}>
+                ${() => priceBandLabel('under-60000')}
+              </ore-chip>
+            </div>
           </div>
-        </div>
 
-        ${when(
-          () => selectedFilters.value.length > 0,
-          () => html`
-            <div class="catalog__active-filters" aria-label=${() => t('catalog.activeFiltersLabel')}>
-              <span>${() => t('catalog.activeFiltersLabel')}</span>
-              <div>
-                ${selectedFilters.value.map(
-                  (filter) => html`
+          ${when(
+            () => selectedFilters.value.length > 0,
+            () => html`
+              <div class="catalog__active-filters" aria-label=${() => t('catalog.activeFiltersLabel')}>
+                <span>${() => t('catalog.activeFiltersLabel')}</span>
+                <div>
+                  ${selectedFilters.value.map(
+                    (filter) => html`
                     <ore-chip
                       mode="removable"
                       variant="flat"
@@ -357,22 +357,22 @@ define('catalog-view', {
                       ${() => filterLabel(filter)}
                     </ore-chip>
                   `,
-                )}
-                <ore-button variant="ghost" @click=${clearRefinements}>${() => t('catalog.clearFilters')}</ore-button>
+                  )}
+                  <ore-button variant="ghost" @click=${clearRefinements}>${() => t('catalog.clearFilters')}</ore-button>
+                </div>
               </div>
-            </div>
-          `,
-        )}
-        ${when(
-          () => filtersOpen.value,
-          () => html`
-            <div class="catalog__filter-panel" id="catalog-filter-panel">
-              <fieldset class="catalog__filter-group">
-                <legend>${() => t('catalog.bodyTypeLabel')}</legend>
-                <div class="catalog__filter-options">
-                  ${() =>
-                    bodyTypeOptions.value.map(
-                      (option) => html`
+            `,
+          )}
+          ${when(
+            () => filtersOpen.value,
+            () => html`
+              <div class="catalog__filter-panel" id="catalog-filter-panel">
+                <fieldset class="catalog__filter-group">
+                  <legend>${() => t('catalog.bodyTypeLabel')}</legend>
+                  <div class="catalog__filter-options">
+                    ${() =>
+                      bodyTypeOptions.value.map(
+                        (option) => html`
                         <ore-chip
                           rounded
                           mode="selectable"
@@ -386,15 +386,15 @@ define('catalog-view', {
                           ${() => filterLabelWithCount(bodyTypeLabel(option.value), option.count)}
                         </ore-chip>
                       `,
-                    )}
-                </div>
-              </fieldset>
-              <fieldset class="catalog__filter-group">
-                <legend>${() => t('catalog.powertrainLabel')}</legend>
-                <div class="catalog__filter-options">
-                  ${() =>
-                    powertrainOptions.value.map(
-                      (option) => html`
+                      )}
+                  </div>
+                </fieldset>
+                <fieldset class="catalog__filter-group">
+                  <legend>${() => t('catalog.powertrainLabel')}</legend>
+                  <div class="catalog__filter-options">
+                    ${() =>
+                      powertrainOptions.value.map(
+                        (option) => html`
                         <ore-chip
                           rounded
                           mode="selectable"
@@ -408,24 +408,24 @@ define('catalog-view', {
                           ${() => filterLabelWithCount(powertrainLabel(option.value), option.count)}
                         </ore-chip>
                       `,
-                    )}
-                </div>
-              </fieldset>
-              <fieldset class="catalog__filter-group">
-                <legend>${() => t('catalog.priceLabel')}</legend>
-                <div class="catalog__filter-options">
-                  <label class="catalog__price-option">
-                    <input
-                      type="radio"
-                      name="catalog-price"
-                      value=""
-                      ?checked=${() => filters.value.priceBand === null}
-                      @change=${() => updateFilters((current) => ({ ...current, priceBand: null }))} />
-                    <span>${() => t('catalog.anyPrice')}</span>
-                  </label>
-                  ${() =>
-                    priceBandOptions.value.map(
-                      (option) => html`
+                      )}
+                  </div>
+                </fieldset>
+                <fieldset class="catalog__filter-group">
+                  <legend>${() => t('catalog.priceLabel')}</legend>
+                  <div class="catalog__filter-options">
+                    <label class="catalog__price-option">
+                      <input
+                        type="radio"
+                        name="catalog-price"
+                        value=""
+                        ?checked=${() => filters.value.priceBand === null}
+                        @change=${() => updateFilters((current) => ({ ...current, priceBand: null }))} />
+                      <span>${() => t('catalog.anyPrice')}</span>
+                    </label>
+                    ${() =>
+                      priceBandOptions.value.map(
+                        (option) => html`
                         <label class="catalog__price-option">
                           <input
                             type="radio"
@@ -437,66 +437,65 @@ define('catalog-view', {
                           <span>${() => filterLabelWithCount(priceBandLabel(option.value), option.count)}</span>
                         </label>
                       `,
-                    )}
-                </div>
-              </fieldset>
-            </div>
-          `,
-        )}
+                      )}
+                  </div>
+                </fieldset>
+              </div>
+            `,
+          )}
         </section>
       </section>
 
       ${when(
         () => featuredModel.value !== undefined && !hasActiveFilters(filters.value),
         () => html`
-            <section class="catalog__hero" aria-labelledby="catalog-featured-name">
-              <div class="catalog__hero-media">
-                <ore-skeleton striped width="100%" height="clamp(220px, 22vw, 280px)" aria-hidden="true"></ore-skeleton>
-              </div>
-              <div class="catalog__hero-content">
-                <h2 class="catalog__hero-name" id="catalog-featured-name">${() => featureModel().name}</h2>
-                <p class="catalog__hero-classification">
-                  ${() =>
-                    `${bodyTypeLabel(featureModel().bodyType)} · ${powertrainLabel(featureModel().powertrain)} · ${t('catalog.seatCount', { count: featureModel().seats })}`}
-                </p>
-                <p class="catalog__hero-description">${() => featureModel().description}</p>
-                <div class="catalog__hero-specs">
-                  <div class="spec">
-                    <span class="spec__label">${() => t('model.topSpeed')}</span>
-                    <strong>${() => `${featureModel().topSpeedKph} km/h`}</strong>
-                  </div>
-                  <div class="spec">
-                    <span class="spec__label">${() => t('common.startingAt')}</span>
-                    <strong>${() => formatPrice(featureModel().basePrice)}</strong>
-                  </div>
+          <section class="catalog__hero" aria-labelledby="catalog-featured-name">
+            <div class="catalog__hero-media">
+              <ore-skeleton striped width="100%" height="clamp(220px, 22vw, 280px)" aria-hidden="true"></ore-skeleton>
+            </div>
+            <div class="catalog__hero-content">
+              <h2 class="catalog__hero-name" id="catalog-featured-name">${() => featureModel().name}</h2>
+              <p class="catalog__hero-classification">
+                ${() =>
+                  `${bodyTypeLabel(featureModel().bodyType)} · ${powertrainLabel(featureModel().powertrain)} · ${t('catalog.seatCount', { count: featureModel().seats })}`}
+              </p>
+              <p class="catalog__hero-description">${() => featureModel().description}</p>
+              <div class="catalog__hero-specs">
+                <div class="spec">
+                  <span class="spec__label">${() => t('model.topSpeed')}</span>
+                  <strong>${() => `${featureModel().topSpeedKph} km/h`}</strong>
                 </div>
-                <div class="catalog__hero-actions">
-                  <ore-button
-                    rounded
-                    variant="solid"
-                    color="secondary"
-                    size="lg"
-                    @click=${() => void router.navigate({ name: 'modelDetail', params: { slug: featureModel().slug } })}>
-                    ${() => t('common.viewDetails')}
-                  </ore-button>
-                  <ore-button
-                    size="lg"
-                    icon-only
-                    rounded
-                    color=${() => (compareModelIds.value.includes(featureModel().id) ? 'primary' : 'secondary')}
-                    variant=${() => (compareModelIds.value.includes(featureModel().id) ? 'flat' : 'outline')}
-                    label=${() =>
-                      `${t(compareModelIds.value.includes(featureModel().id) ? 'common.removeFromCompare' : 'common.addToCompare')}: ${featureModel().name}`}
-                    aria-pressed=${() => String(compareModelIds.value.includes(featureModel().id))}
-                    @click=${() => toggleCompare(featureModel().id)}>
-                    <ore-icon name="git-compare" size="16" aria-hidden="true"></ore-icon>
-                  </ore-button>
+                <div class="spec">
+                  <span class="spec__label">${() => t('common.startingAt')}</span>
+                  <strong>${() => formatPrice(featureModel().basePrice)}</strong>
                 </div>
               </div>
-            </section>
-          `,
+              <div class="catalog__hero-actions">
+                <ore-button
+                  rounded
+                  variant="solid"
+                  color="secondary"
+                  size="lg"
+                  @click=${() => void router.navigate({ name: 'modelDetail', params: { slug: featureModel().slug } })}>
+                  ${() => t('common.viewDetails')}
+                </ore-button>
+                <ore-button
+                  size="lg"
+                  icon-only
+                  rounded
+                  color=${() => (compareModelIds.value.includes(featureModel().id) ? 'primary' : 'secondary')}
+                  variant=${() => (compareModelIds.value.includes(featureModel().id) ? 'flat' : 'outline')}
+                  label=${() =>
+                    `${t(compareModelIds.value.includes(featureModel().id) ? 'common.removeFromCompare' : 'common.addToCompare')}: ${featureModel().name}`}
+                  aria-pressed=${() => String(compareModelIds.value.includes(featureModel().id))}
+                  @click=${() => toggleCompare(featureModel().id)}>
+                  <ore-icon name="git-compare" size="16" aria-hidden="true"></ore-icon>
+                </ore-button>
+              </div>
+            </div>
+          </section>
+        `,
       )}
-
       ${when(
         () => results.value.length === 0,
         () => html`

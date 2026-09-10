@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add a hash history driver for static-hosted applications.",
+      "packageName": "@vielzeug/wayfinder",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wayfinder"
+}

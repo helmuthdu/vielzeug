@@ -25,6 +25,15 @@ test.describe('Accessibility', () => {
 
     expect(results.violations).toEqual([]);
   });
+
+  test('outside label passes dark-mode contrast', async ({ page, refinePage }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await refinePage.mountComponent('<ore-input label="Email address" label-placement="outside"></ore-input>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
 });
 
 test.describe('Layout', () => {

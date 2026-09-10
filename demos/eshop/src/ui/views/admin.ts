@@ -214,13 +214,25 @@ define('admin-view', {
         () => pageInfo.value.pageCount > 1,
         () => html`
           <div class="admin__pagination">
-            <ore-button rounded size="sm" variant="bordered" @click=${() => {
-              pageSignal.value = safePage.value - 1;
-            }}>← Prev</ore-button>
+            <ore-button
+              rounded
+              size="sm"
+              variant="bordered"
+              @click=${() => {
+                pageSignal.value = safePage.value - 1;
+              }}>
+              ← Prev
+            </ore-button>
             <span>${() => `Page ${pageInfo.value.page} / ${pageInfo.value.pageCount}`}</span>
-            <ore-button rounded size="sm" variant="bordered" @click=${() => {
-              pageSignal.value = safePage.value + 1;
-            }}>Next →</ore-button>
+            <ore-button
+              rounded
+              size="sm"
+              variant="bordered"
+              @click=${() => {
+                pageSignal.value = safePage.value + 1;
+              }}>
+              Next →
+            </ore-button>
           </div>
         `,
       )}

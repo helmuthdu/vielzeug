@@ -31,6 +31,15 @@ test.describe('Accessibility', () => {
 
     expect(results.violations).toEqual([]);
   });
+
+  test('link button exposes one accessible link', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-button href="/docs">Documentation</ore-button>');
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+    await expect(page.getByRole('link', { name: 'Documentation' })).toHaveCount(1);
+  });
 });
 
 test.describe('Layout', () => {

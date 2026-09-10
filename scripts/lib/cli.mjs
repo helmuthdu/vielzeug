@@ -52,9 +52,14 @@ export function npmEnvironment(environment = process.env) {
   return sanitized;
 }
 
-export function run(cmd, args, { cwd, inherit = false, quiet = false } = {}) {
+export function run(cmd, args, { cwd, env, inherit = false, quiet = false } = {}) {
   const stdio = quiet ? 'ignore' : inherit ? 'inherit' : undefined;
-  return execFileSync(cmd, args, { cwd, encoding: 'utf8', env: cmd === 'npm' ? npmEnvironment() : undefined, stdio });
+  return execFileSync(cmd, args, {
+    cwd,
+    encoding: 'utf8',
+    env: cmd === 'npm' ? npmEnvironment(env) : env,
+    stdio,
+  });
 }
 
 /**

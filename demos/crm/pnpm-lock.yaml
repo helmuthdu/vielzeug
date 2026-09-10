@@ -594,8 +594,8 @@ importers:
         specifier: workspace:*
         version: link:../tempo
       lucide:
-        specifier: ^1.41.0
-        version: 1.41.0
+        specifier: ^1.43.0
+        version: 1.43.0
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.13.0
@@ -1600,8 +1600,8 @@ packages:
     resolution: {integrity: sha512-4pfM1Ff0x50o0tQwb5ucw/RzNyD0/YJME6IVcStalZuMWxdt3sR3huStTtxz4PUmvZfRguvDejasvQ2kifR11g==}
     engines: {node: 20 || >=22}
 
-  lucide@1.41.0:
-    resolution: {integrity: sha512-fIXP7JzC1vehdqOrMhwpbcXzX6CvUMuoDf16HY1FmC4sDBeuwrH2A0c6QmLn3wnSvaMchpEyM+JWijyTvOs3kw==}
+  lucide@1.43.0:
+    resolution: {integrity: sha512-koRMVADN3XR9zte+NHXFHuJM4ejAqvwu/6DMf2O40jl2rMlhzu3t2mHSd3ugXnmTm5HIMUbOexhC/nClhetbGg==}
 
   magic-string@1.2.3:
     resolution: {integrity: sha512-Bpb0W2TbLKOZ7vJnOUnVRGq3WL2p+ISV29M6hYPL1AFCpyKZpdr5ytiXoTSSxRVhg8YW7f65+6gbG8WG6PCa/g==}
@@ -2494,7 +2494,7 @@ snapshots:
 
   lru-cache@11.5.2: {}
 
-  lucide@1.41.0: {}
+  lucide@1.43.0: {}
 
   magic-string@1.2.3:
     dependencies:

@@ -24,6 +24,7 @@ pnpm lint
 pnpm fix
 pnpm docs:dev
 pnpm docs:build
+pnpm site:build
 pnpm validate:docs -- --package=<name>
 pnpm validate:repl
 pnpm validate:repl -- --package=<name>

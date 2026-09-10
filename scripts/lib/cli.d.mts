@@ -8,6 +8,7 @@ export function npmEnvironment(environment?: NodeJS.ProcessEnv): NodeJS.ProcessE
 
 export interface RunOptions {
   cwd?: string;
+  env?: NodeJS.ProcessEnv;
   inherit?: boolean;
   quiet?: boolean;
 }

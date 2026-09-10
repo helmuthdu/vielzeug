@@ -154,7 +154,7 @@ control the size of, such as a swipe-revealed row action in [`ore-list-item`](./
 
 ## Link Mode
 
-Set `href` to render a real `<a>` internally instead of a `<button>`; the host itself takes `role="link"` (and carries the real `tabindex`/keyboard handling, since `ore-button` is form-associated). Native left/middle/ctrl-click, right-click context menu, and hover-preview behavior all work as expected. All variants, sizes, states, and slots behave identically.
+Set `href` to render a real, focusable `<a>` internally. The native anchor owns link semantics, keyboard behavior, context menus, and hover previews; the custom-element host remains a styling and property boundary. All variants, sizes, states, and slots behave identically.
 
 <ComponentPreview center>
 
@@ -297,11 +297,11 @@ Removes spacing and connects buttons with shared borders — use for segmented c
 | `loading`   | `boolean`                                                                       | `false`    | Shows spinner; also disables interaction                                    |
 | `effect`    | `'shine' \| 'rainbow'`                                                          | —          | Animated border effect                                                      |
 | `icon-only` | `boolean`                                                                       | `false`    | Square aspect ratio, no padding — pair with `label`                         |
-| `label`     | `string`                                                                        | —          | Sets `aria-label` on the host — required for icon-only buttons              |
+| `label`     | `string`                                                                        | —          | Sets the accessible label — required for icon-only buttons                   |
 | `fullwidth` | `boolean`                                                                       | `false`    | Expands to full container width                                             |
 | `fullheight` | `boolean`                                                                      | `false`    | Expands to full container height (see [List's swipe actions](./list.md))    |
 | `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`          | —          | Border radius; omit value or use `'full'` for pill shape                    |
-| `href`      | `string`                                                                        | —          | Renders as a real `<a>` internally when set; host takes `role="link"`       |
+| `href`      | `string`                                                                        | —          | Renders a native, focusable `<a>` internally                                 |
 | `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —          | Link target (requires `href`)                                               |
 | `rel`       | `string`                                                                        | —          | Link `rel` attribute (requires `href`)                                      |
 

@@ -1,0 +1,97 @@
+import '@vielzeug/refine/badge';
+import '@vielzeug/refine/button';
+import '@vielzeug/refine/card';
+import '@vielzeug/refine/icon';
+import { define, html } from '@vielzeug/ore';
+import { assetUrl } from '../../core/asset-url';
+import { upcomingBookings } from '../../core/state';
+import { navigate, tripRoute } from '../navigation';
+
+define('trips-view', {
+  setup() {
+    return html`
+      <div class="page-content page-content--narrow">
+        <header class="page-header">
+          <div>
+            <span class="eyebrow">MY JOURNEYS</span>
+            <h1>Trips</h1>
+            <p>Everything you need, from first idea to final train.</p>
+          </div>
+          <ore-button color="primary" @click=${() => navigate('explore')}>
+            <ore-icon slot="prefix" name="plus" size="17" aria-hidden="true"></ore-icon>
+            Plan a trip
+          </ore-button>
+        </header>
+        <section>
+          <h2 class="subheading">Upcoming</h2>
+          <ore-card class="trip-card" interactive padding="none" elevation="1" @activate=${tripRoute}>
+            <img
+              slot="media"
+              src=${assetUrl('images/tokyo.webp')}
+              alt="Tokyo skyline at sunset"
+              width="1400"
+              height="800" />
+            <div class="trip-card__shade"></div>
+            <div class="trip-card__content">
+              <ore-badge variant="frost" size="sm">UPCOMING · 32 DAYS</ore-badge>
+              <h2>Japan</h2>
+              <p>Tokyo · Kyoto · Osaka</p>
+              <div>
+                <span>
+                  <ore-icon name="calendar-days" size="17" aria-hidden="true"></ore-icon>
+                  12–19 October
+                </span>
+                <span>
+                  <ore-icon name="map-pin" size="17" aria-hidden="true"></ore-icon>
+                  3 cities
+                </span>
+                <span>
+                  <ore-icon name="ticket-check" size="17" aria-hidden="true"></ore-icon>
+                  ${() => upcomingBookings.value.length} bookings
+                </span>
+              </div>
+              <span class="trip-card__link">
+                View trip
+                <ore-icon name="arrow-right" size="17" aria-hidden="true"></ore-icon>
+              </span>
+            </div>
+          </ore-card>
+        </section>
+        <section class="past-trips">
+          <h2 class="subheading">Past journeys</h2>
+          <div>
+            <ore-card padding="none">
+              <img
+                slot="media"
+                src=${assetUrl('images/hokkaido.webp')}
+                alt="Lavender fields in Hokkaido"
+                loading="lazy"
+                width="900"
+                height="600" />
+              <div>
+                <h3>Nordic summer</h3>
+                <p>Copenhagen · Stockholm</p>
+                <span>June 2025</span>
+              </div>
+            </ore-card>
+            <ore-card padding="none">
+              <img
+                slot="media"
+                src=${assetUrl('images/kyoto.webp')}
+                alt="Golden Pavilion in Kyoto"
+                loading="lazy"
+                width="900"
+                height="600" />
+              <div>
+                <h3>Kyoto weekend</h3>
+                <p>Kyoto · Nara</p>
+                <span>April 2025</span>
+              </div>
+            </ore-card>
+          </div>
+        </section>
+      </div>
+    `;
+  },
+  shadow: false,
+});

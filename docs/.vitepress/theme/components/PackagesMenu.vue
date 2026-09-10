@@ -155,7 +155,6 @@ ore-navigation-menu-panel::part(footer) {
 .package-link:focus-visible,
 .package-link.current {
   color: var(--color-primary);
-  background: var(--color-contrast-100);
 }
 
 .package-link:focus-visible {

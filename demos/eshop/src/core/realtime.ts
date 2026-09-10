@@ -16,7 +16,7 @@ type Schema = {
  * A scripted mock WebSocket simulating other shoppers browsing the showroom concurrently.
  * Installed as `globalThis.WebSocket` before `createPulse()` runs so pulse's internal
  * `new WebSocket(url, protocols)` picks it up — same technique as
- * demos/kanban/src/core/realtime.ts's `MockWebSocket`. Wire protocol matches pulse's `InFrame`
+ * demos/crm/src/core/realtime.ts's `MockWebSocket`. Wire protocol matches pulse's `InFrame`
  * shapes: `presence_state` (snapshot), `presence_join`, `presence_leave`.
  */
 class MockWebSocket {

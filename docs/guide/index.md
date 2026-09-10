@@ -15,7 +15,7 @@ The [REPL](/repl) lets you run any package in the browser without installing any
 :::
 
 ::: info End-to-end showcase
-Looking for a full, multi-package example app? See [Showcases](/guide/showcases) and open the Kanban demo on StackBlitz.
+Looking for full, multi-package example apps? Explore the [Showcase](/showcases) and launch the Voyage, E-commerce, or CRM demos.
 :::
 
 ## What are you building?

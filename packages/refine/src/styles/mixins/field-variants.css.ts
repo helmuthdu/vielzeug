@@ -152,5 +152,20 @@ export const fieldVariantMixin = ({
     :host([variant='ghost']:not([disabled])) ${container}:hover {
       background: var(--${tokenPrefix}-hover-bg, var(--color-contrast-100));
     }
+
+    /* frost */
+    :host([variant='frost']) {
+      --_bg: var(--color-canvas);
+      --_border-color: var(--${tokenPrefix}-border-color, var(--color-contrast-300));
+    }
+
+    :host([variant='frost']) ${container} {
+      box-shadow: none;
+      backdrop-filter: blur(var(--blur-md));
+    }
+
+    :host([variant='frost']:not([disabled])) ${container}:hover {
+      background: var(--${tokenPrefix}-hover-bg, var(--color-contrast-100));
+    }
   }
 `;

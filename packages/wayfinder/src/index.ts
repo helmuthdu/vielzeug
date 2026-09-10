@@ -5,7 +5,7 @@ export {
   WayfinderRedirectLoopError,
   WayfinderRouteError,
 } from './errors';
-export { createBrowserHistory, createMemoryHistory } from './history';
+export { createBrowserHistory, createHashHistory, createMemoryHistory, type HashHistoryOptions } from './history';
 export { redirectTo } from './middleware';
 export type { Router } from './router';
 export { createRouter } from './router';

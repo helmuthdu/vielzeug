@@ -32,7 +32,7 @@ jobs:
       - name: Install demo workspaces
         run: |
           pnpm --dir demos/eshop install --frozen-lockfile
-          pnpm --dir demos/kanban install --frozen-lockfile
+          pnpm --dir demos/voyage install --frozen-lockfile
           pnpm --dir demos/crm install --frozen-lockfile
 
       - name: Build and test demos

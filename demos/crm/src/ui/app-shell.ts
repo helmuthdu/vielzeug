@@ -19,7 +19,7 @@ import { ledger } from '../core/history';
 import { setLocale, t } from '../core/i18n';
 import { reconnect, simulateOffline } from '../core/offline';
 import { presence, simulateLiveActivity } from '../core/realtime';
-import { type RouteName, router } from '../core/router';
+import { type RouteName, routeHref, router } from '../core/router';
 import { crmIndex } from '../core/search';
 import { demoUsers } from '../core/seed-data';
 import { activeRoute, activeRouteParams, currentUser, locale, networkStatus } from '../core/store';
@@ -49,14 +49,14 @@ const routes: RouteName[] = [
 ];
 
 const routePaths: Partial<Record<RouteName, string>> = {
-  activity: '/activity',
-  companies: '/companies',
-  contacts: '/contacts',
-  dashboard: '/',
-  leads: '/leads',
-  opportunities: '/opportunities',
-  pipeline: '/pipeline',
-  showcase: '/showcase',
+  activity: routeHref(router.url('activity')),
+  companies: routeHref(router.url('companies')),
+  contacts: routeHref(router.url('contacts')),
+  dashboard: routeHref(router.url('dashboard')),
+  leads: routeHref(router.url('leads')),
+  opportunities: routeHref(router.url('opportunities')),
+  pipeline: routeHref(router.url('pipeline')),
+  showcase: routeHref(router.url('showcase')),
 };
 
 function labelFor(route: string | null): string {
@@ -72,8 +72,10 @@ function recordGroupLabel(group: string): string {
 }
 
 function routeFromHref(href: string): RouteName | null {
-  const pathname = new URL(href, window.location.href).pathname;
-  return routes.find((route) => routePaths[route] === pathname) ?? null;
+  const url = new URL(href, window.location.href);
+  const destination = `${url.pathname}${url.hash}`;
+
+  return routes.find((route) => routePaths[route] === destination) ?? null;
 }
 
 function initials(name: string): string {
@@ -407,7 +409,12 @@ define('crm-app-shell', {
           collapse-label=${() => t('topbar.collapseSidebar')}
           expand-label=${() => t('topbar.expandSidebar')}
           mobile-close-label=${() => t('topbar.closeSidebar')}>
-          <a class="rail-brand" slot="logo" href="/" data-route="dashboard" aria-label="Vielzeug CRM">
+          <a
+            class="rail-brand"
+            slot="logo"
+            href=${routePaths.dashboard}
+            data-route="dashboard"
+            aria-label="Vielzeug CRM">
             <span></span>
             <span></span>
             <span></span>
@@ -419,7 +426,7 @@ define('crm-app-shell', {
 
           <ore-sidebar-group label=${() => t('nav.overview')}>
             <ore-sidebar-item
-              href="/"
+              href=${routePaths.dashboard}
               data-route="dashboard"
               bottom-nav
               bottom-nav-label=${() => t('nav.overview')}
@@ -430,7 +437,7 @@ define('crm-app-shell', {
           </ore-sidebar-group>
           <ore-sidebar-group label=${() => t('nav.sales')}>
             <ore-sidebar-item
-              href="/pipeline"
+              href=${routePaths.pipeline}
               data-route="pipeline"
               bottom-nav
               bottom-nav-label=${() => t('nav.pipeline')}
@@ -438,18 +445,21 @@ define('crm-app-shell', {
               <ore-icon slot="icon" name="kanban-square" size="19"></ore-icon>
               ${() => t('nav.pipeline')}
             </ore-sidebar-item>
-            <ore-sidebar-item href="/opportunities" data-route="opportunities" title=${() => t('nav.opportunities')}>
+            <ore-sidebar-item
+              href=${routePaths.opportunities}
+              data-route="opportunities"
+              title=${() => t('nav.opportunities')}>
               <ore-icon slot="icon" name="circle-dollar-sign" size="19"></ore-icon>
               ${() => t('nav.opportunities')}
             </ore-sidebar-item>
-            <ore-sidebar-item href="/leads" data-route="leads" title=${() => t('nav.leads')}>
+            <ore-sidebar-item href=${routePaths.leads} data-route="leads" title=${() => t('nav.leads')}>
               <ore-icon slot="icon" name="user-plus" size="19"></ore-icon>
               ${() => t('nav.leads')}
             </ore-sidebar-item>
           </ore-sidebar-group>
           <ore-sidebar-group label=${() => t('nav.customers')}>
             <ore-sidebar-item
-              href="/companies"
+              href=${routePaths.companies}
               data-route="companies"
               bottom-nav
               bottom-nav-label=${() => t('nav.companies')}
@@ -457,14 +467,14 @@ define('crm-app-shell', {
               <ore-icon slot="icon" name="building-2" size="19"></ore-icon>
               ${() => t('nav.companies')}
             </ore-sidebar-item>
-            <ore-sidebar-item href="/contacts" data-route="contacts" title=${() => t('nav.contacts')}>
+            <ore-sidebar-item href=${routePaths.contacts} data-route="contacts" title=${() => t('nav.contacts')}>
               <ore-icon slot="icon" name="users" size="19"></ore-icon>
               ${() => t('nav.contacts')}
             </ore-sidebar-item>
           </ore-sidebar-group>
           <ore-sidebar-group label=${() => t('nav.activity')}>
             <ore-sidebar-item
-              href="/activity"
+              href=${routePaths.activity}
               data-route="activity"
               bottom-nav
               bottom-nav-label=${() => t('companyDetail.activity')}
