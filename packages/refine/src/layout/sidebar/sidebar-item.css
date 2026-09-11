@@ -19,16 +19,21 @@
     display: flex;
     gap: var(--size-2);
     align-items: center;
+    width: 100%;
     min-width: 0;
     min-height: var(--_touch-target);
     padding: var(--size-1-5) var(--size-2);
+    font-family: inherit;
     font-size: var(--sidebar-item-font-size, var(--text-sm));
     font-weight: var(--font-medium);
     color: var(--sidebar-item-color, var(--color-contrast-700));
+    text-align: start;
     text-decoration: none;
     cursor: pointer;
     user-select: none;
     outline: none;
+    background: transparent;
+    border: 0;
     border-radius: var(--rounded-lg);
     transition:
       background var(--transition-fast),

@@ -298,8 +298,10 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | Attribute               | Type                                                                 | Default                | Description                                                                    |
 | ----------------------- | -------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
 | `label`                 | `string`                                                             | `'Main navigation'`    | Accessible nav landmark label                                                  |
-| `menu-open-label`       | `string`                                                             | `'Open navigation menu'` | Accessible label for the closed mobile menu toggle                           |
-| `menu-close-label`      | `string`                                                             | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                             |
+| `menu-icon`             | `string`                                                             | `'menu'`                 | Icon shown while the mobile menu is closed                                    |
+| `menu-open-label`       | `string`                                                             | `'Open navigation menu'` | Accessible label for the closed mobile menu toggle                            |
+| `menu-close-icon`       | `string`                                                             | `'x'`                    | Icon shown while the mobile menu is open                                      |
+| `menu-close-label`      | `string`                                                             | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                              |
 | `sticky`                | `boolean`                                                            | `false`                | Enables sticky mode                                                            |
 | `floating`              | `boolean`                                                            | `false`                | Enables floating mode                                                          |
 | `scroll-threshold`      | `number`                                                             | `80`                   | Scroll px threshold for floating+sticky transition                             |
@@ -309,6 +311,8 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `color`                 | `ThemeColor`                                                         | —                      | Theme color                                                                    |
 | `rounded`               | `RoundedSize`                                                        | —                      | Border radius token                                                            |
 | `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | —                      | Elevation shadow level                                                         |
+
+When `variant="frost"` has an explicit elevation, that elevation replaces the default frost halo so levels remain visually distinct.
 
 **`ore-navbar` Parts**
 

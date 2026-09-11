@@ -30,7 +30,7 @@ export type OreSkeletonProps = {
 /**
  * A shimmer placeholder that represents loading content.
  * Control dimensions via the `--skeleton-width` and `--skeleton-height` CSS custom properties,
- * or via `width` / `height` inline styles.
+ * or via `width` / `height` inline styles. Rectangle and circle bones fill the rendered host box.
  *
  * @element ore-skeleton
  *

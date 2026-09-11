@@ -1,6 +1,8 @@
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
+import '@vielzeug/refine/grid';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/skeleton';
 import { define, html } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 import { destinationById, experiences, hotels } from '../../core/data';
@@ -22,11 +24,7 @@ define('destination-view', {
     return html`
       <article>
         <header class="destination-hero">
-          <img
-            src=${() => destination.value.image}
-            alt=${() => `${destination.value.name}, Japan`}
-            width="1800"
-            height="1013" />
+          <ore-skeleton class="destination-hero__media" striped aria-hidden="true"></ore-skeleton>
           <div class="destination-hero__shade"></div>
           <div class="destination-hero__copy">
             <ore-button class="back-button" size="sm" variant="frost" @click=${() => navigate('explore')}>
@@ -62,7 +60,7 @@ define('destination-view', {
                 <ore-icon slot="suffix" name="arrow-right" size="16" aria-hidden="true"></ore-icon>
               </ore-button>
             </div>
-            <div class="hotel-grid">
+            <ore-grid class="hotel-grid" cols="1" cols-md="2" gap="lg" fullwidth>
               ${() =>
                 destinationHotels.value.length
                   ? destinationHotels.value.map(hotelCard)
@@ -72,15 +70,10 @@ define('destination-view', {
                         <p>Explore another destination for bookable accommodation.</p>
                       </ore-card>
                     `}
-            </div>
+            </ore-grid>
           </section>
           <section class="split-feature">
-            <img
-              src=${() => destination.value.feature.image}
-              alt=${() => destination.value.feature.imageAlt}
-              loading="lazy"
-              width="1200"
-              height="750" />
+            <ore-skeleton class="split-feature__media" striped aria-hidden="true"></ore-skeleton>
             <div>
               <span class="eyebrow">A DAY TO REMEMBER</span>
               <h2>${() => destination.value.feature.heading}</h2>
@@ -89,7 +82,9 @@ define('destination-view', {
           </section>
           <section class="content-section">
             ${sectionHeading('DO', 'Experiences worth traveling for')}
-            <div class="experience-grid">${() => destinationExperiences.value.map(experienceCard)}</div>
+            <ore-grid class="experience-grid" cols="1" cols-sm="2" cols-lg="3" gap="lg" fullwidth>
+              ${() => destinationExperiences.value.map(experienceCard)}
+            </ore-grid>
           </section>
         </div>
       </article>

@@ -3,6 +3,7 @@ import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/dialog';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/skeleton';
 import { define, html } from '@vielzeug/ore';
 import { toast } from '@vielzeug/refine/toast';
 import { computed, signal } from '@vielzeug/ripple';
@@ -50,22 +51,9 @@ define('hotel-view', {
           </ore-button>
         </header>
         <div class="gallery">
-          <img
-            class="gallery__main"
-            src=${() => hotel.value.gallery[0].src}
-            alt=${() => hotel.value.gallery[0].alt}
-            width="1400"
-            height="900" />
-          <img
-            src=${() => hotel.value.gallery[1].src}
-            alt=${() => hotel.value.gallery[1].alt}
-            width="900"
-            height="600" />
-          <img
-            src=${() => hotel.value.gallery[2].src}
-            alt=${() => hotel.value.gallery[2].alt}
-            width="900"
-            height="600" />
+          <ore-skeleton class="gallery__main" striped aria-hidden="true"></ore-skeleton>
+          <ore-skeleton class="gallery__secondary" striped aria-hidden="true"></ore-skeleton>
+          <ore-skeleton class="gallery__secondary" striped aria-hidden="true"></ore-skeleton>
           <ore-button
             class="gallery__button"
             color="primary"
@@ -168,12 +156,10 @@ define('hotel-view', {
           galleryOpen.value = (event as CustomEvent<{ open: boolean }>).detail.open;
         }}>
         <div class="gallery-dialog-grid">
-          ${() =>
-            hotel.value.gallery.map(
-              (image) => html`
-                <img src=${image.src} alt=${image.alt} width="1200" height="800" />
-              `,
-            )}
+          ${Array.from(
+            { length: 3 },
+            () => html`<ore-skeleton class="gallery-dialog__media" striped aria-hidden="true"></ore-skeleton>`,
+          )}
         </div>
       </ore-dialog>
     `;

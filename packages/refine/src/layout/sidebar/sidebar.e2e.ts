@@ -14,6 +14,21 @@ test.describe('Layout', () => {
     expect(await bottomBar.evaluate((bar) => getComputedStyle(bar).display)).toBe('none');
   });
 
+  test('hides the collapse control when the sidebar is not collapsible', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-sidebar id="sidebar"><span slot="header">Voyage</span></ore-sidebar>');
+
+    await expect(page.locator('#sidebar').locator('[part="toggle-btn"]')).toBeHidden();
+  });
+
+  test('normalizes button items without native control chrome', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-sidebar-item id="item">Explore</ore-sidebar-item>');
+
+    const item = page.locator('#item').locator('[part="item"]');
+    await expect(item).toHaveCSS('border-top-width', '0px');
+    await expect(item).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(item).toHaveCSS('text-align', 'start');
+  });
+
   test('promoted nested bottom tabs fit a mobile viewport', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <ore-sidebar id="sidebar" container-breakpoints bottom-nav-at="(max-width: 640px)">

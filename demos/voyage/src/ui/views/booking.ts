@@ -1,6 +1,7 @@
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/input';
+import '@vielzeug/refine/skeleton';
 import { define, html, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { hotelById } from '../../core/data';
@@ -199,7 +200,7 @@ define('booking-view', {
             )}
           </div>
           <aside class="booking-summary">
-            <img src=${() => hotel.value.gallery[0].src} alt="" width="800" height="500" />
+            <ore-skeleton class="booking-summary__media" striped radius="0" aria-hidden="true"></ore-skeleton>
             <div>
               <span class="rating">
                 <ore-icon name="star" size="14" aria-hidden="true"></ore-icon>

@@ -80,68 +80,65 @@ define('voyage-shell', {
       return undefined;
     });
 
-    const navButton = (item: { icon: string; label: string; route: RouteName }, mobile = false) => html`
-      <ore-button
-        class=${mobile ? 'mobile-nav__item' : 'side-nav__item'}
-        size=${mobile ? 'sm' : 'md'}
-        color=${() => (activeRoute.value === item.route ? 'primary' : 'secondary')}
-        variant=${() => (activeRoute.value === item.route ? 'flat' : 'text')}
-        aria-current=${() => (activeRoute.value === item.route ? 'page' : null)}
+    const navItem = (item: { icon: string; label: string; route: RouteName }, bottomNav = false) => html`
+      <ore-sidebar-item
+        ?active=${() => activeRoute.value === item.route}
+        ?bottom-nav=${bottomNav}
+        bottom-nav-label=${item.label}
+        title=${item.label}
         @click=${() => void router.navigate({ name: item.route })}>
-        <ore-icon slot="prefix" name=${item.icon} size="18" aria-hidden="true"></ore-icon>
-        <span>${item.label}</span>
-      </ore-button>
+        <ore-icon slot="icon" name=${item.icon} size="18" aria-hidden="true"></ore-icon>
+        ${item.label}
+      </ore-sidebar-item>
     `;
 
     return html`
       <nav class="skip-nav" aria-label="Skip navigation">
         <a class="skip-link" href="#main-content">Skip to content</a>
       </nav>
-      <aside class="sidebar" aria-label="Voyage navigation">
-        <button
-          class="brand"
-          type="button"
-          @click=${() => void router.navigate({ name: 'explore' })}
-          aria-label="Voyage home">
-          <span class="brand__mark" aria-hidden="true"><ore-icon name="navigation" size="18"></ore-icon></span>
-          <span>VOYAGE</span>
-        </button>
-        <nav class="side-nav" aria-label="Primary">${primaryNav.map((item) => navButton(item))}</nav>
-        <div class="sidebar__spacer"></div>
-        <nav class="side-nav side-nav--secondary" aria-label="Account">
-          ${secondaryNav.map((item) => navButton(item))}
-        </nav>
-        <div class="sidebar__footer">
-          <ore-button
-            icon-only
-            variant="ghost"
-            size="sm"
-            label=${() => `Use ${theme.value === 'dark' ? 'light' : 'dark'} theme`}
-            @click=${toggleTheme}>
-            <ore-icon name=${() => (theme.value === 'dark' ? 'sun' : 'moon')} size="17" aria-hidden="true"></ore-icon>
-          </ore-button>
-          <ore-avatar
-            size="sm"
-            initials=${() => `${travelerProfile.value.firstName[0] ?? ''}${travelerProfile.value.lastName[0] ?? ''}`}
-            alt=${() => `${travelerProfile.value.firstName} ${travelerProfile.value.lastName}`}></ore-avatar>
-          <span>
-            <strong>${() => travelerProfile.value.firstName}</strong>
-            <small>Japan · 7 days</small>
-          </span>
-        </div>
-      </aside>
-      <main class="app-main" id="main-content" ref=${main}></main>
-      <nav class="mobile-nav" aria-label="Mobile navigation">
-        ${primaryNav.map((item) => navButton(item, true))}
-        <ore-button class="mobile-nav__item" size="sm" variant="text" @click=${toggleTheme}>
-          <ore-icon
-            slot="prefix"
-            name=${() => (theme.value === 'dark' ? 'sun' : 'moon')}
-            size="18"
-            aria-hidden="true"></ore-icon>
-          <span>Theme</span>
-        </ore-button>
-      </nav>
+      <ore-grid class="app-layout" gap="none" fullwidth>
+        <ore-sidebar
+          id="voyage-sidebar"
+          class="sidebar"
+          label="Voyage navigation"
+          close-on-select
+          bottom-nav-at="(max-width: 680px)">
+          <button
+            class="brand"
+            slot="header"
+            type="button"
+            @click=${() => void router.navigate({ name: 'explore' })}
+            aria-label="Voyage home">
+            <span class="brand__mark" aria-hidden="true"><ore-icon name="navigation" size="18"></ore-icon></span>
+            <span>VOYAGE</span>
+          </button>
+
+          <span class="sidebar-section-label">Travel</span>
+          ${primaryNav.map((item) => navItem(item, true))}
+          <span class="sidebar-section-label sidebar-section-label--account">Account</span>
+          ${secondaryNav.map((item) => navItem(item, item.route === 'settings'))}
+          <ore-sidebar-item title="Change theme" @click=${toggleTheme}>
+            <ore-icon
+              slot="icon"
+              name=${() => (theme.value === 'dark' ? 'sun' : 'moon')}
+              size="18"
+              aria-hidden="true"></ore-icon>
+            Theme
+          </ore-sidebar-item>
+
+          <div class="sidebar__footer" slot="footer">
+            <ore-avatar
+              size="sm"
+              initials=${() => `${travelerProfile.value.firstName[0] ?? ''}${travelerProfile.value.lastName[0] ?? ''}`}
+              alt=${() => `${travelerProfile.value.firstName} ${travelerProfile.value.lastName}`}></ore-avatar>
+            <span>
+              <strong>${() => travelerProfile.value.firstName}</strong>
+              <small>Japan · 7 days</small>
+            </span>
+          </div>
+        </ore-sidebar>
+        <main class="app-main" id="main-content" ref=${main}></main>
+      </ore-grid>
     `;
   },
   shadow: false,

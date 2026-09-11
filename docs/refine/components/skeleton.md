@@ -64,6 +64,8 @@ A loading placeholder component for representing content that has not loaded yet
 
 </ComponentPreview>
 
+Rectangle and circle skeletons fill their rendered host box, including externally sized grid, flex, card-media, and `aspect-ratio` layouts. Set dimensions on the component; styling the `stack` or `bone` parts is unnecessary.
+
 ### List Item Placeholder
 
 <ComponentPreview center vertical>

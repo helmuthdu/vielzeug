@@ -1,6 +1,7 @@
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/skeleton';
 import { html } from '@vielzeug/ore';
 import type { Destination } from '../../core/types';
 import { navigate } from '../navigation';
@@ -13,13 +14,11 @@ export function destinationCard(destination: Destination, featured = false) {
       padding="none"
       elevation="1"
       @activate=${() => navigate('destination', { slug: destination.id })}>
-      <img
+      <ore-skeleton
+        class="destination-card__media"
         slot="media"
-        src=${destination.image}
-        alt=${`${destination.name}, Japan`}
-        loading="lazy"
-        width="1200"
-        height="800" />
+        striped
+        aria-hidden="true"></ore-skeleton>
       <div class="destination-card__overlay">
         <div class="destination-card__meta">
           ${

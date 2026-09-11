@@ -2,6 +2,7 @@ import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/skeleton';
 import { html } from '@vielzeug/ore';
 import type { Hotel } from '../../core/types';
 import { money } from '../format';
@@ -10,13 +11,7 @@ import { navigate } from '../navigation';
 export function hotelCard(hotel: Hotel) {
   return html`
     <ore-card class="hotel-card" padding="none" elevation="1">
-      <img
-        slot="media"
-        src=${hotel.gallery[0].src}
-        alt=${hotel.gallery[0].alt}
-        loading="lazy"
-        width="1000"
-        height="700" />
+      <ore-skeleton class="hotel-card__media" slot="media" striped aria-hidden="true"></ore-skeleton>
       <div class="hotel-card__body">
         <div class="card-row">
           <ore-badge color="primary" variant="flat" size="sm">Guest favorite</ore-badge>

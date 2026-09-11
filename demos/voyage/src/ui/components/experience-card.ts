@@ -2,6 +2,7 @@ import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/skeleton';
 import { html } from '@vielzeug/ore';
 import { toast } from '@vielzeug/refine/toast';
 import type { Experience } from '../../core/types';
@@ -11,14 +12,8 @@ export function experienceCard(experience: Experience) {
   return html`
     <ore-card class="experience-card" padding="none" elevation="1">
       <div class="experience-card__media" slot="media">
-        <img
-          class="experience-card__image"
-          src=${experience.image}
-          alt=${`${experience.name} in ${experience.location}`}
-          loading="lazy"
-          width="900"
-          height="600" />
-        <ore-badge color="primary" size="sm" variant="frost">${experience.curation}</ore-badge>
+        <ore-skeleton class="experience-card__image" striped aria-hidden="true" radius="0"></ore-skeleton>
+        <ore-badge color="primary" size="sm" variant="flat">${experience.curation}</ore-badge>
       </div>
       <div class="experience-card__body">
         <div class="experience-card__meta">

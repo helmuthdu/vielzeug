@@ -2,10 +2,9 @@ export type Destination = {
   coordinates: { latitude: string; longitude: string };
   description: string;
   editorial: { description: string; heading: string };
-  feature: { description: string; heading: string; image: string; imageAlt: string };
+  feature: { description: string; heading: string };
   highlight?: string;
   id: string;
-  image: string;
   name: string;
   region: string;
   stays: number;
@@ -15,7 +14,6 @@ export type Hotel = {
   amenities: string[];
   description: string;
   destinationId: string;
-  gallery: { alt: string; src: string }[];
   id: string;
   location: string;
   name: string;
@@ -38,7 +36,6 @@ export type Experience = {
   description: string;
   duration: string;
   id: string;
-  image: string;
   location: string;
   name: string;
   price: number;

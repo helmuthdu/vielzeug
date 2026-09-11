@@ -1,9 +1,10 @@
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
+import '@vielzeug/refine/grid';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/skeleton';
 import { define, html } from '@vielzeug/ore';
-import { assetUrl } from '../../core/asset-url';
 import { upcomingBookings } from '../../core/state';
 import { navigate, tripRoute } from '../navigation';
 
@@ -25,12 +26,11 @@ define('trips-view', {
         <section>
           <h2 class="subheading">Upcoming</h2>
           <ore-card class="trip-card" interactive padding="none" elevation="1" @activate=${tripRoute}>
-            <img
+            <ore-skeleton
+              class="trip-card__media"
               slot="media"
-              src=${assetUrl('images/tokyo.webp')}
-              alt="Tokyo skyline at sunset"
-              width="1400"
-              height="800" />
+              striped
+              aria-hidden="true"></ore-skeleton>
             <div class="trip-card__shade"></div>
             <div class="trip-card__content">
               <ore-badge variant="frost" size="sm">UPCOMING · 32 DAYS</ore-badge>
@@ -59,15 +59,9 @@ define('trips-view', {
         </section>
         <section class="past-trips">
           <h2 class="subheading">Past journeys</h2>
-          <div>
+          <ore-grid cols="1" cols-sm="2" gap="md" fullwidth>
             <ore-card padding="none">
-              <img
-                slot="media"
-                src=${assetUrl('images/hokkaido.webp')}
-                alt="Lavender fields in Hokkaido"
-                loading="lazy"
-                width="900"
-                height="600" />
+              <ore-skeleton class="past-trip__media" slot="media" striped aria-hidden="true"></ore-skeleton>
               <div>
                 <h3>Nordic summer</h3>
                 <p>Copenhagen · Stockholm</p>
@@ -75,20 +69,14 @@ define('trips-view', {
               </div>
             </ore-card>
             <ore-card padding="none">
-              <img
-                slot="media"
-                src=${assetUrl('images/kyoto.webp')}
-                alt="Golden Pavilion in Kyoto"
-                loading="lazy"
-                width="900"
-                height="600" />
+              <ore-skeleton class="past-trip__media" slot="media" striped aria-hidden="true"></ore-skeleton>
               <div>
                 <h3>Kyoto weekend</h3>
                 <p>Kyoto · Nara</p>
                 <span>April 2025</span>
               </div>
             </ore-card>
-          </div>
+          </ore-grid>
         </section>
       </div>
     `;

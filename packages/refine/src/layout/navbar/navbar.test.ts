@@ -305,7 +305,7 @@ describe('ore-navbar', () => {
     }
   });
 
-  it('uses custom labels for the mobile menu toggle', async () => {
+  it('uses custom labels and icons for the mobile menu toggle', async () => {
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -316,15 +316,23 @@ describe('ore-navbar', () => {
 
     try {
       fixture = await mount('ore-navbar', {
-        attrs: { 'menu-close-label': 'Close workspace', 'menu-open-label': 'Open workspace' },
+        attrs: {
+          'menu-close-icon': 'chevron-up',
+          'menu-close-label': 'Close workspace',
+          'menu-icon': 'search',
+          'menu-open-label': 'Open workspace',
+        },
         html: '<div slot="mobile-menu">Menu</div>',
       });
       const toggle = fixture.query<HTMLButtonElement>('[part="mobile-toggle"]');
+      const icon = toggle?.querySelector('ore-icon');
 
       expect(toggle?.getAttribute('aria-label')).toBe('Open workspace');
+      expect(icon?.getAttribute('name')).toBe('search');
       toggle?.click();
       await fixture.flush();
       expect(toggle?.getAttribute('aria-label')).toBe('Close workspace');
+      expect(icon?.getAttribute('name')).toBe('chevron-up');
     } finally {
       window.matchMedia = originalMatchMedia;
     }

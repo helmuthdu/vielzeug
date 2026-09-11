@@ -8,6 +8,39 @@
 import { expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
+  test('removes empty start and end regions from layout', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-navbar id="nav"><span>Search controls</span></ore-navbar>');
+
+    const navbar = page.locator('#nav');
+    await expect(navbar.locator('[part="logo"]')).toBeHidden();
+    await expect(navbar.locator('[part="start"]')).toBeHidden();
+    await expect(navbar.locator('[part="center"]')).toBeVisible();
+    await expect(navbar.locator('[part="end"]')).toBeHidden();
+  });
+
+  test('renders distinct shadows for different elevation levels', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-navbar id="low" variant="frost" elevation="1" ' +
+        'style="--shadow-sm:0 2px 3px rgb(255 0 0);--halo-shadow-neutral:0 2px 3px rgb(0 0 255)">' +
+        '<span>Low</span></ore-navbar>' +
+        '<ore-navbar id="high" variant="frost" elevation="4"><span>High</span></ore-navbar>',
+    );
+
+    const low = await page
+      .locator('#low')
+      .locator('[part="bar"]')
+      .evaluate((element) => getComputedStyle(element).boxShadow);
+    const high = await page
+      .locator('#high')
+      .locator('[part="bar"]')
+      .evaluate((element) => getComputedStyle(element).boxShadow);
+
+    expect(low).toContain('rgb(255, 0, 0)');
+    expect(low).not.toContain('rgb(0, 0, 255)');
+    expect(high).not.toBe('none');
+    expect(high).not.toBe(low);
+  });
+
   test('navbar items do not overflow outside nav bounds', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-navbar id="nav">' +

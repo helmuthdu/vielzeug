@@ -1,4 +1,5 @@
-.sidebar-logo[hidden] {
+.sidebar-logo[hidden],
+.toggle-btn[hidden] {
   display: none;
   min-width: 0;
   min-height: 0;

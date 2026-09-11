@@ -16,6 +16,15 @@
     height: var(--_height);
   }
 
+  :host(:not([variant='text'])) {
+    position: relative;
+  }
+
+  :host(:not([variant='text'])) .stack {
+    position: absolute;
+    inset: 0;
+  }
+
   .stack {
     display: grid;
     gap: var(--_line-gap);
@@ -25,6 +34,7 @@
 
   .bone {
     position: relative;
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -94,10 +104,6 @@
 }
 
 @layer refine.striped {
-  :host([striped]) .stack {
-    width: calc(100% - 2px);
-  }
-
   :host([striped]) .bone {
     --_stripe-color: var(--skeleton-stripe-color, var(--color-contrast-400));
 

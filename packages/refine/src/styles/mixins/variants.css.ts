@@ -43,9 +43,9 @@ export const frostVariantMixin = (selector: string) => css`
     box-shadow: var(--halo-shadow-neutral);
   }
 
-  /* Frost neutral with elevation: combine halo with elevation shadow */
+  /* Explicit elevation replaces the default halo so each depth remains visually distinct. */
   :host([variant='frost']:not([color])[elevation]) ${selector} {
-    box-shadow: var(--halo-shadow-neutral), var(--_shadow);
+    box-shadow: var(--_shadow);
   }
 
   :host([variant='frost'][color]) ${selector} {
@@ -64,9 +64,9 @@ export const frostVariantMixin = (selector: string) => css`
     box-shadow: var(--_theme-halo);
   }
 
-  /* Frost color with elevation: combine halo with elevation shadow */
+  /* Explicit elevation replaces the default halo so each depth remains visually distinct. */
   :host([variant='frost'][color][elevation]) ${selector} {
-    box-shadow: var(--_theme-halo), var(--_shadow);
+    box-shadow: var(--_shadow);
   }
 
   :host([variant='frost']:not([color])) ${selector}:hover {

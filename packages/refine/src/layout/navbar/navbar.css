@@ -75,6 +75,7 @@
     border-bottom: var(--border) solid var(--_navbar-border-color);
     border-left: none;
     border-radius: 0;
+    box-shadow: var(--_shadow, var(--_navbar-shadow));
     backdrop-filter: var(--navbar-backdrop-filter, blur(var(--blur-md)));
     transition: var(
       --_motion-transition,
@@ -106,6 +107,13 @@
 
   :host([data-mode-transitioning][data-mode='floating']) .navbar {
     animation: navbar-sticky-to-floating var(--transition-normal) var(--ease-in-out);
+  }
+
+  .navbar-logo[hidden],
+  .navbar-start[hidden],
+  .navbar-center[hidden],
+  .navbar-end[hidden] {
+    display: none;
   }
 
   .navbar-logo,

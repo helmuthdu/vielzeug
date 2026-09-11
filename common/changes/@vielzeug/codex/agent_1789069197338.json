@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Update bundled Refine button link-mode documentation.",
+      "comment": "Update bundled Refine button, skeleton, and navbar documentation.",
       "packageName": "@vielzeug/codex",
       "type": "patch"
     }

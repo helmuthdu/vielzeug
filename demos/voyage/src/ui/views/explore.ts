@@ -1,12 +1,14 @@
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/date-picker';
+import '@vielzeug/refine/grid';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/input';
 import '@vielzeug/refine/marquee';
+import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/select';
-import { define, html } from '@vielzeug/ore';
+import '@vielzeug/refine/skeleton';
+import { define, html, onMounted, ref } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { assetUrl } from '../../core/asset-url';
 import { destinations, experiences } from '../../core/data';
 import { router } from '../../core/router';
 import {
@@ -23,14 +25,43 @@ import { sectionHeading } from '../components/section-heading';
 import { valueOf } from '../format';
 import { tripRoute } from '../navigation';
 
+const shortDate = new Intl.DateTimeFormat('en-US', { day: 'numeric', month: 'short' });
+const formatShortDate = (value: string): string => shortDate.format(new Date(`${value}T00:00:00`));
+
 define('explore-view', {
   setup() {
     const destinationError = signal('');
     const dateError = signal('');
+    const searchNavbar = ref<HTMLElement>();
     const stayCount = computed(() => upcomingBookings.value.filter((booking) => booking.type === 'hotel').length);
     const experienceCount = computed(
       () => upcomingBookings.value.filter((booking) => booking.type === 'experience').length,
     );
+    const searchSummary = computed(
+      () =>
+        `${formatShortDate(searchDeparture.value)}–${formatShortDate(searchReturn.value)} · ${searchTravelers.value}`,
+    );
+    onMounted(() => {
+      const navbar = searchNavbar.value;
+      if (!navbar) return;
+      let frame = 0;
+      const update = (): void => {
+        frame = 0;
+        navbar.toggleAttribute('data-stuck', navbar.getBoundingClientRect().top <= 0);
+      };
+      const schedule = (): void => {
+        if (!frame) frame = requestAnimationFrame(update);
+      };
+      globalThis.addEventListener('scroll', schedule, { passive: true });
+      globalThis.addEventListener('resize', schedule);
+      update();
+      return () => {
+        if (frame) cancelAnimationFrame(frame);
+        globalThis.removeEventListener('scroll', schedule);
+        globalThis.removeEventListener('resize', schedule);
+      };
+    });
+
     const submitSearch = (event: Event): void => {
       event.preventDefault();
       const requestedDestination = searchDestination.value.trim().toLowerCase();
@@ -50,9 +81,97 @@ define('explore-view', {
       );
     };
 
+    const searchFields = (mobile: boolean) => html`
+      <ore-input
+        required
+        name="destination"
+        label="Where"
+        value=${searchDestination}
+        placeholder="City or destination"
+        error=${destinationError}
+        @input=${(event: Event) => {
+          searchDestination.value = valueOf(event);
+          destinationError.value = '';
+        }}
+        variant="frost"
+        size="md"
+        @keydown=${(event: KeyboardEvent) => {
+          if (event.key === 'Enter') submitSearch(event);
+        }}>
+        <ore-icon slot="prefix" name="map-pin" size="17" aria-hidden="true"></ore-icon>
+      </ore-input>
+      <ore-date-picker
+        required
+        name="departure"
+        label="Departure"
+        value=${searchDeparture}
+        min="2026-01-01"
+        rounded="lg"
+        error=${dateError}
+        variant="frost"
+        size="md"
+        @change=${(event: Event) => {
+          searchDeparture.value = valueOf(event);
+          dateError.value = '';
+        }}></ore-date-picker>
+      <ore-date-picker
+        required
+        name="return"
+        label="Return"
+        value=${searchReturn}
+        min=${searchDeparture}
+        rounded="lg"
+        error=${dateError}
+        variant="frost"
+        size="md"
+        @change=${(event: Event) => {
+          searchReturn.value = valueOf(event);
+          dateError.value = '';
+        }}></ore-date-picker>
+      <div class="search-panel__actions">
+        <ore-select
+          name="travelers"
+          label="Travelers"
+          rounded="lg"
+          value=${() => searchTravelers.value.split(' ')[0]}
+          options=${[
+            { label: '1', value: '1' },
+            { label: '2', value: '2' },
+            { label: '3', value: '3' },
+            { label: '4', value: '4' },
+          ]}
+          variant="frost"
+          size="md"
+          @change=${(event: Event) => {
+            searchTravelers.value = `${valueOf(event)} travelers`;
+          }}></ore-select>
+        ${
+          mobile
+            ? html`
+                <ore-button type="submit" class="search-panel__submit" color="primary" size="lg" rounded="lg">
+                  <ore-icon slot="prefix" name="search" size="18" aria-hidden="true"></ore-icon>
+                  Search
+                </ore-button>
+              `
+            : html`
+                <ore-button
+                  type="submit"
+                  class="search-panel__submit"
+                  color="primary"
+                  size="lg"
+                  rounded="lg"
+                  icon-only
+                  label="Search travel">
+                  <ore-icon name="search" size="18" aria-hidden="true"></ore-icon>
+                </ore-button>
+              `
+        }
+      </div>
+    `;
+
     return html`
       <section class="explore-hero" aria-labelledby="explore-title">
-        <img src=${assetUrl('images/tokyo.webp')} alt="Tokyo skyline at golden hour" width="1800" height="1013" />
+        <ore-skeleton class="explore-hero__media" striped aria-hidden="true"></ore-skeleton>
         <div class="explore-hero__shade"></div>
         <div class="explore-hero__copy">
           <span class="eyebrow eyebrow--light">CURATED JOURNEYS · JAPAN</span>
@@ -63,82 +182,55 @@ define('explore-view', {
           </h1>
           <p>Discover remarkable stays and experiences, then shape every day into a trip that is entirely yours.</p>
         </div>
-        <form class="search-panel" role="search" aria-label="Search travel" @submit=${submitSearch}>
-          <ore-input
-            required
-            name="destination"
-            label="Where"
-            label-placement="outside"
-            value=${searchDestination}
-            placeholder="City or destination"
-            error=${destinationError}
-            @input=${(event: Event) => {
-              searchDestination.value = valueOf(event);
-              destinationError.value = '';
-            }}
-            variant="frost"
-            @keydown=${(event: KeyboardEvent) => {
-              if (event.key === 'Enter') submitSearch(event);
-            }}>
-            <ore-icon slot="prefix" name="map-pin" size="17" aria-hidden="true"></ore-icon>
-          </ore-input>
-          <ore-date-picker
-            required
-            name="departure"
-            label="Departure"
-            label-placement="outside"
-            value=${searchDeparture}
-            min="2026-01-01"
-            rounded="lg"
-            error=${dateError}
-            variant="frost"
-            @change=${(event: Event) => {
-              searchDeparture.value = valueOf(event);
-              dateError.value = '';
-            }}></ore-date-picker>
-          <ore-date-picker
-            required
-            name="return"
-            label="Return"
-            label-placement="outside"
-            value=${searchReturn}
-            min=${searchDeparture}
-            rounded="lg"
-            error=${dateError}
-            variant="frost"
-            @change=${(event: Event) => {
-              searchReturn.value = valueOf(event);
-              dateError.value = '';
-            }}></ore-date-picker>
-          <ore-select
-            name="travelers"
-            label="Travelers"
-            label-placement="outside"
-            rounded="lg"
-            value=${() => searchTravelers.value.split(' ')[0]}
-            options=${[
-              { label: '1', value: '1' },
-              { label: '2', value: '2' },
-              { label: '3', value: '3' },
-              { label: '4', value: '4' },
-            ]}
-            variant="frost"
-            @change=${(event: Event) => {
-              searchTravelers.value = `${valueOf(event)} travelers`;
-            }}></ore-select>
-          <ore-button type="submit" class="search-panel__submit" color="primary" size="md" rounded="lg">
-            <ore-icon name="search" slot="prefix" size="18" aria-hidden="true"></ore-icon>
-            Search
-          </ore-button>
-        </form>
       </section>
+      <ore-navbar
+        class="search-navbar"
+        ref=${searchNavbar}
+        label="Travel search"
+        variant="frost"
+        rounded="2xl"
+        elevation="1"
+        sticky
+        breakpoint="(max-width: 680px)"
+        menu-icon="search"
+        menu-open-label="Edit search"
+        menu-close-label="Close search">
+        <div class="mobile-search-summary" slot="logo">
+          <span>
+            <strong>${searchDestination}</strong>
+            <small>${searchSummary}</small>
+          </span>
+        </div>
+        <form
+          class="search-panel search-panel--desktop"
+          role="search"
+          aria-label="Search travel"
+          @submit=${submitSearch}>
+          ${searchFields(false)}
+        </form>
+        <form
+          class="search-panel search-panel--mobile"
+          slot="mobile-menu"
+          role="search"
+          aria-label="Edit travel search"
+          @submit=${submitSearch}>
+          ${searchFields(true)}
+        </form>
+      </ore-navbar>
 
       <div class="page-content page-content--home">
         <section class="content-section" aria-labelledby="destinations-title">
           ${sectionHeading('DISCOVER', 'Japan, one place at a time', 'From kinetic cities to still mountain mornings—find the pace that feels right.')}
-          <div class="destination-grid" id="destinations-title">
+          <ore-grid
+            class="destination-grid"
+            id="destinations-title"
+            cols="1"
+            cols-sm="2"
+            cols-lg="6"
+            gap="lg"
+            fullwidth>
             ${destinations.map((destination, index) => destinationCard(destination, index < 2))}
-          </div>
+          </ore-grid>
         </section>
         <section class="content-section content-section--tint" aria-labelledby="experiences-title">
           ${sectionHeading('EXPERIENCE', 'More than a place to stay', 'Small-group moments selected for craft, character, and a genuine sense of place.')}
@@ -200,10 +292,6 @@ define('explore-view', {
             </ore-button>
           </footer>
         </section>
-        <p class="photo-credit">
-          Travel photography: David Kernan, Victor Porof, Mc681, MaedaAkihiko, Ryan Cragun, Mx. Granger, MichaelMaggs,
-          and Abasaa via Wikimedia Commons.
-        </p>
       </div>
     `;
   },

@@ -146,7 +146,11 @@ export type OreNavbarProps = {
   floating?: boolean;
   /** Accessible nav landmark label */
   label?: string;
+  /** Icon shown while the mobile menu is open */
+  'menu-close-icon'?: string;
   'menu-close-label'?: string;
+  /** Icon shown while the mobile menu is closed */
+  'menu-icon'?: string;
   'menu-open-label'?: string;
   /** CSS selector for an external sidebar toggled by the mobile button */
   'mobile-sidebar'?: string;
@@ -189,6 +193,8 @@ export type OreNavbarItemProps = {
  * @element ore-navbar-item - Navigation link or button placed in the default or mobile-menu slot
  *
  * @attr {string} label - Accessible nav landmark label
+ * @attr {string} menu-icon - Icon shown while the mobile menu is closed
+ * @attr {string} menu-close-icon - Icon shown while the mobile menu is open
  * @attr {boolean} sticky - Makes navbar sticky at top
  * @attr {boolean} floating - Makes navbar detached and floating
  * @attr {number} scroll-threshold - Scroll threshold for floating+sticky transition
@@ -252,7 +258,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     elevation: prop.number<ElevationLevel>(),
     floating: prop.bool(false),
     label: prop.string('Main navigation'),
+    'menu-close-icon': prop.string('x'),
     'menu-close-label': prop.string('Close navigation menu'),
+    'menu-icon': prop.string('menu'),
     'menu-open-label': prop.string('Open navigation menu'),
     'mobile-sidebar': prop.string(),
     rounded: prop.string<RoundedSize>(),
@@ -266,6 +274,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const slots = useSlots();
 
     const hasLogo = slots.has('logo');
+    const hasStart = slots.has('start');
+    const hasCenter = slots.has();
+    const hasEnd = slots.has('end');
     const mobileMenuElements = slots.elements('mobile-menu');
     const hasMobileMenu = signal(false);
     const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
@@ -732,15 +743,15 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             <slot name="logo"></slot>
           </div>
 
-          <div class="navbar-start" part="start">
+          <div class="navbar-start" part="start" ?hidden=${() => !hasStart.value}>
             <slot name="start"></slot>
           </div>
 
-          <div class="navbar-center" part="center">
+          <div class="navbar-center" part="center" ?hidden=${() => !hasCenter.value}>
             <slot></slot>
           </div>
 
-          <div class="navbar-end" part="end">
+          <div class="navbar-end" part="end" ?hidden=${() => !hasEnd.value}>
             <slot name="end"></slot>
           </div>
 
@@ -757,7 +768,10 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             ?hidden=${() => !isMobile.value || (!hasMobileMenu.value && !mobileSidebarTarget.value)}
             @click="${toggleMobileMenu}">
             <ore-icon
-              name="${() => ((hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value) ? 'x' : 'menu')}"
+              name="${() =>
+                (hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value)
+                  ? props['menu-close-icon'].value
+                  : props['menu-icon'].value}"
               size="18"
               stroke-width="2.5"
               aria-hidden="true"></ore-icon>

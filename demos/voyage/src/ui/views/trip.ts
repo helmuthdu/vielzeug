@@ -4,6 +4,7 @@ import '@vielzeug/refine/dialog';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/input';
 import '@vielzeug/refine/select';
+import '@vielzeug/refine/skeleton';
 import { define, html, onMounted, ref, when } from '@vielzeug/ore';
 import { toast } from '@vielzeug/refine/toast';
 import { signal } from '@vielzeug/ripple';
@@ -66,6 +67,7 @@ define('trip-view', {
     return html`
       <article class="trip-detail">
         <header class="trip-header">
+          <ore-skeleton class="trip-header__media" striped aria-hidden="true"></ore-skeleton>
           <div class="trip-header__top">
             <ore-button variant="frost" size="sm" @click=${() => navigate('trips')}>
               <ore-icon slot="prefix" name="arrow-left" size="16" aria-hidden="true"></ore-icon>
