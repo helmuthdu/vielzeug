@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+This log was last generated on Fri, 11 Sep 2026 11:19:30 GMT and should not be manually modified.
+
+## 3.1.0
+Fri, 11 Sep 2026 11:19:30 GMT
+
+### Minor changes
+
+- Use native anchor semantics for link buttons, improve dark field-label contrast, make skeleton media fill externally sized hosts, normalize native sidebar item controls, remove empty navbar regions from layout, apply perceptually distinct elevation to frost navbars, and support contextual mobile menu icons.
 
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT

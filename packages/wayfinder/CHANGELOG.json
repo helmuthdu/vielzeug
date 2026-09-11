@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Add a hash history driver for static-hosted applications.",
+            "commit": "cd8a34b30167685141768ef0e5ba593721382509"
+          }
+        ]
+      },
+      "date": "Fri, 11 Sep 2026 11:19:30 GMT",
+      "tag": "@vielzeug/wayfinder_v3.1.0",
+      "version": "3.1.0"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

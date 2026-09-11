@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/wayfinder
 
-This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+This log was last generated on Fri, 11 Sep 2026 11:19:30 GMT and should not be manually modified.
+
+## 3.1.0
+Fri, 11 Sep 2026 11:19:30 GMT
+
+### Minor changes
+
+- Add a hash history driver for static-hosted applications.
 
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT
