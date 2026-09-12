@@ -1,4 +1,5 @@
 import { cartItems, compareModelIds, savedModelIds } from './cart-store';
+import { modelMap } from './catalog';
 import { bus } from './events';
 import { t } from './i18n';
 import type { CartItem, Configuration } from './types';
@@ -15,7 +16,10 @@ import type { CartItem, Configuration } from './types';
 const MAX_QUANTITY = 5;
 const MAX_COMPARE = 3;
 
-export function addToCart(configuration: Configuration): string {
+export function addToCart(configuration: Configuration): string | null {
+  const model = modelMap.value.get(configuration.modelId);
+  if (!model || model.availability === 'coming-soon') return null;
+
   const id = crypto.randomUUID();
   const item: CartItem = { addedAt: new Date().toISOString(), configuration, id, quantity: 1 };
 

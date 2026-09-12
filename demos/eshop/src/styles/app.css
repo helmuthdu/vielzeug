@@ -1235,6 +1235,7 @@ ore-grid-item:has(> model-card) {
 .configurator__spec-bar .configurator__specs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
   width: 100%;
 }
 
@@ -1242,6 +1243,7 @@ ore-grid-item:has(> model-card) {
   flex-direction: column;
   gap: var(--size-1);
   align-items: flex-start;
+  justify-content: flex-start;
   min-width: 0;
   padding-inline: var(--size-5);
   white-space: normal;
@@ -1683,10 +1685,52 @@ ore-grid-item:has(> model-card) {
 }
 
 .configurator__breakdown .total {
-  padding-top: var(--size-2);
+  padding-top: var(--size-3);
   font-size: var(--text-lg);
-  font-weight: 500;
+  font-weight: 600;
   border-top: 1px solid var(--color-divider);
+}
+
+.configurator__price-breakdown dl {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--size-2);
+}
+
+.configurator__price-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--size-4);
+  align-items: baseline;
+}
+
+.configurator__price-row dd[data-included] {
+  color: var(--text-color-tertiary);
+}
+
+.configurator__price-row--subtotal {
+  padding-top: var(--size-3);
+  margin-top: var(--size-2);
+  font-weight: 600;
+  border-top: 1px solid var(--color-divider);
+}
+
+.configurator__price-row--tax {
+  color: var(--text-color-secondary);
+}
+
+.configurator__price-row--total {
+  padding-top: var(--size-3);
+  margin-top: var(--size-1);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  border-top: 1px solid var(--color-divider);
+}
+
+.configurator__price-disclaimer {
+  margin: var(--size-3) 0 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-color-tertiary);
 }
 
 .feature-grid {
@@ -2402,6 +2446,27 @@ ul.orders-view__list {
   border: 0;
 }
 
+.share-build__commands {
+  display: grid;
+  gap: var(--size-2);
+}
+
+.share-build__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
+.share-build__commands details {
+  padding-top: var(--size-2);
+  border-top: 1px solid var(--color-divider);
+}
+
+.share-build__commands summary {
+  margin-bottom: var(--size-2);
+  cursor: pointer;
+}
+
 /* ── Settings (shared with kanban demo's layout conventions) ────────────── */
 
 .settings-view {
@@ -2502,6 +2567,16 @@ ul.orders-view__list {
   padding: var(--size-2);
   font-size: var(--text-sm);
   color: var(--text-color-tertiary);
+}
+
+@media (width <= 720px) {
+  .app-main {
+    scroll-padding-bottom: calc(var(--size-24) + env(safe-area-inset-bottom));
+  }
+
+  .configurator :is(ore-button, ore-checkbox, ore-select, input, [tabindex]) {
+    scroll-margin-bottom: calc(var(--size-24) + env(safe-area-inset-bottom));
+  }
 }
 
 @media (width <= 900px) {

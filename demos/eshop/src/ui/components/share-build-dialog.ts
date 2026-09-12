@@ -12,7 +12,8 @@ import type { Model, PriceBreakdown } from '../../core/types';
 export interface ShareBuildPayload {
   breakdown: PriceBreakdown;
   model: Model;
-  selections: { color: string; trim: string; wheels: string };
+  selections: { color: string; packages: string[]; trim: string; wheels: string };
+  url: string;
 }
 
 const requestSignal = signal<ShareBuildPayload | null>(null);
@@ -33,10 +34,12 @@ define('share-build-dialog', {
 
     let sandbox: SandboxHandle | null = null;
 
-    function onClose(e?: Event): void {
-      if (e && e.target !== e.currentTarget) return;
-
+    function onClose(): void {
       requestSignal.value = null;
+    }
+
+    function onOpenChange(event: CustomEvent<{ open: boolean }>): void {
+      if (!event.detail.open) onClose();
     }
 
     effect(() => {
@@ -52,12 +55,11 @@ define('share-build-dialog', {
 
     onCleanup(() => sandbox?.dispose());
 
+    const buildUrl = (): string => requestSignal.value?.url ?? '';
+
     function embedSnippet(): string {
-      const payload = requestSignal.value;
-
-      if (!payload) return '';
-
-      return `<iframe src="https://vielzeug-motors.example/embed/${payload.model.slug}" width="360" height="220"></iframe>`;
+      const url = buildUrl().replaceAll('&', '&amp;');
+      return url ? `<iframe src="${url}" width="360" height="220"></iframe>` : '';
     }
 
     return html`
@@ -66,9 +68,16 @@ define('share-build-dialog', {
         dismissible
         label=${() => t('confirmation.shareBuild')}
         ?open=${() => requestSignal.value !== null}
-        @close=${onClose}>
+        @open-change=${onOpenChange}>
         <div class="share-build__preview" ref=${containerRef}></div>
-        <ore-copy-command value=${embedSnippet} size="sm"></ore-copy-command>
+        <div class="share-build__commands">
+          <span class="share-build__label">${() => t('confirmation.copyBuildLink')}</span>
+          <ore-copy-command value=${buildUrl} size="sm"></ore-copy-command>
+          <details>
+            <summary class="share-build__label">${() => t('confirmation.embedBuild')}</summary>
+            <ore-copy-command value=${embedSnippet} size="sm"></ore-copy-command>
+          </details>
+        </div>
         <div slot="footer">
           <ore-button rounded variant="bordered" @click=${onClose}>${() => t('common.close')}</ore-button>
         </div>

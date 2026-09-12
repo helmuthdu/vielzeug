@@ -14,14 +14,16 @@ import '../components/model-card';
 
 import { define, html, prop, when } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
+import { buildConfigurationUrl } from '../../core/build-url';
 import { compareModelIds, savedModelIds } from '../../core/cart-store';
 import { getModelBySlug, modelsSignal } from '../../core/catalog';
 import { controlValue } from '../../core/control-value';
 import { currentCurrency, displayAmount, displayAmountToUsd, formatPrice } from '../../core/currency';
+import { bus } from '../../core/events';
 import { addToCart, toggleCompare, toggleSavedModel } from '../../core/history';
 import { t } from '../../core/i18n';
 import { computePriceBreakdown, estimateMonthlyPayment, resolveConfiguration } from '../../core/pricing';
-import { router } from '../../core/router';
+import { activeRouteQuery, router } from '../../core/router';
 import type { Configuration, FeatureKey, Model } from '../../core/types';
 import { openShareBuildDialog } from '../components/share-build-dialog';
 
@@ -61,10 +63,26 @@ define<ModelConfiguratorProps>('model-configurator', {
   setup(props) {
     const model = (): Model => props.model.value!;
 
-    const trimId = signal(model().trims[0].id);
-    const colorId = signal(model().colors[0].id);
-    const wheelId = signal(model().wheels[0].id);
-    const extraPackageIds = signal<string[]>([]);
+    const queryValue = (key: string): string | null => {
+      const value = activeRouteQuery.value[key];
+      return typeof value === 'string' ? value : null;
+    };
+    const requestedTrim = queryValue('trim');
+    const requestedColor = queryValue('color');
+    const requestedWheel = queryValue('wheel');
+    const initialTrim = model().trims.find((option) => option.id === requestedTrim) ?? model().trims[0];
+    const trimId = signal(initialTrim.id);
+    const colorId = signal(
+      model().colors.some((option) => option.id === requestedColor) ? requestedColor! : model().colors[0].id,
+    );
+    const wheelId = signal(
+      model().wheels.some((option) => option.id === requestedWheel) ? requestedWheel! : model().wheels[0].id,
+    );
+    const extraPackageIds = signal(
+      (queryValue('packages')?.split(',') ?? []).filter(
+        (id) => model().packages.some((option) => option.id === id) && !initialTrim.includedPackageIds.includes(id),
+      ),
+    );
 
     const trim = computed(() => model().trims.find((option) => option.id === trimId.value)!);
     const color = computed(() => model().colors.find((option) => option.id === colorId.value)!);
@@ -85,7 +103,9 @@ define<ModelConfiguratorProps>('model-configurator', {
     }));
 
     const breakdown = computed(() => computePriceBreakdown(model(), configuration.value));
-
+    const purchaseLabel = computed(() =>
+      model().availability === 'coming-soon' ? t('model.notifyMe') : t('common.addToCart'),
+    );
     const trimOptions = computed(() =>
       model().trims.map((t) => ({ label: `${t.name} — ${formatPrice(t.priceDelta)}`, value: t.id })),
     );
@@ -198,28 +218,45 @@ define<ModelConfiguratorProps>('model-configurator', {
     }
 
     function onAddToCart(): void {
-      addToCart(configuration.value);
+      if (model().availability === 'coming-soon') {
+        bus.emit('toast:show', { message: t('model.notifyMeSuccess'), variant: 'success' });
+        return;
+      }
+
+      if (!addToCart(configuration.value)) return;
+      if (model().availability === 'limited') {
+        bus.emit('toast:show', { message: t('model.limitedAvailabilityNotice'), variant: 'info' });
+      }
       void router.navigate({ name: 'cart' });
     }
 
-    function onViewPriceDetails(): void {
-      const details = document.getElementById('configurator-price-details');
-      if (!details) return;
+    function focusSection(id: string): void {
+      const section = document.getElementById(id);
+      if (!section) return;
 
-      details.focus({ preventScroll: true });
-      details.scrollIntoView({
+      section.focus({ preventScroll: true });
+      section.scrollIntoView({
         behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
         block: 'center',
       });
     }
 
+    function onViewPriceDetails(): void {
+      focusSection('configurator-price-details');
+    }
+
     function onShareBuild(): void {
       const resolved = resolveConfiguration(model(), configuration.value);
-
       openShareBuildDialog({
         breakdown: breakdown.value,
         model: model(),
-        selections: { color: resolved.color.name, trim: resolved.trim.name, wheels: resolved.wheel.name },
+        selections: {
+          color: resolved.color.name,
+          packages: resolved.extraPackages.map((option) => option.name),
+          trim: resolved.trim.name,
+          wheels: resolved.wheel.name,
+        },
+        url: buildConfigurationUrl(model(), configuration.value),
       });
     }
 
@@ -230,7 +267,10 @@ define<ModelConfiguratorProps>('model-configurator', {
            the hero photo is the reason a shopper is here, and the caption reads as part of that
            product shot instead of a second, competing headline below it. -->
         <div class="configurator__hero">
-          <ore-skeleton striped aria-hidden="true"></ore-skeleton>
+          <ore-skeleton
+            striped
+            role="img"
+            aria-label=${() => `${model().name} in ${color.value.name}, exterior view`}></ore-skeleton>
           <span class="configurator__preview-label">${() => color.value.name}</span>
           <ore-button
             class="configurator__save"
@@ -398,9 +438,9 @@ define<ModelConfiguratorProps>('model-configurator', {
                     color="primary"
                     size="md"
                     rounded
-                    aria-label=${() => t('model.addToCartFromSummary')}
+                    aria-label=${() => purchaseLabel.value}
                     @click=${onAddToCart}>
-                    ${() => t('common.addToCart')}
+                    ${() => purchaseLabel.value}
                   </ore-button>
                 </div>
               </div>
@@ -431,9 +471,9 @@ define<ModelConfiguratorProps>('model-configurator', {
             rounded
             variant="solid"
             color="primary"
-            aria-label=${() => t('model.addToCartFromSummary')}
+            aria-label=${() => purchaseLabel.value}
             @click=${onAddToCart}>
-            ${() => t('common.addToCart')}
+            ${() => purchaseLabel.value}
           </ore-button>
         </div>
       </div>
@@ -531,26 +571,54 @@ define<ModelConfiguratorProps>('model-configurator', {
           </p>
         </section>
 
-        <section id="configurator-price-details" class="configurator__breakdown" tabindex="-1">
+        <section
+          id="configurator-price-details"
+          class="configurator__breakdown configurator__price-breakdown"
+          tabindex="-1">
           <h2>${() => t('model.priceBreakdown')}</h2>
           <dl>
-            <dt>${() => t('model.base')}</dt>
-            <dd><animated-price value-usd=${() => breakdown.value.base}></animated-price></dd>
-            <dt>${() => t('model.selectTrim')}</dt>
-            <dd><animated-price value-usd=${() => breakdown.value.trim}></animated-price></dd>
-            <dt>${() => t('model.selectColor')}</dt>
-            <dd><animated-price value-usd=${() => breakdown.value.color}></animated-price></dd>
-            <dt>${() => t('model.selectWheels')}</dt>
-            <dd><animated-price value-usd=${() => breakdown.value.wheels}></animated-price></dd>
-            <dt>${() => t('model.packages')}</dt>
-            <dd><animated-price value-usd=${() => breakdown.value.packages}></animated-price></dd>
-            <dt>${() => t('common.subtotal')}</dt>
-            <dd><animated-price value-usd=${() => breakdown.value.subtotal}></animated-price></dd>
-            <dt>${() => t('model.estimatedTax')}</dt>
-            <dd><animated-price value-usd=${() => breakdown.value.tax}></animated-price></dd>
-            <dt class="total">${() => t('common.total')}</dt>
-            <dd class="total"><animated-price value-usd=${() => breakdown.value.total}></animated-price></dd>
+            <div class="configurator__price-row">
+              <dt>${() => t('model.base')}</dt>
+              <dd><animated-price value-usd=${() => breakdown.value.base}></animated-price></dd>
+            </div>
+            <div class="configurator__price-row">
+              <dt>${() => t('model.selectTrim')}</dt>
+              <dd data-included=${() => (breakdown.value.trim === '0.00' ? '' : null)}>
+                ${() => formatOptionPrice(breakdown.value.trim)}
+              </dd>
+            </div>
+            <div class="configurator__price-row">
+              <dt>${() => t('model.selectColor')}</dt>
+              <dd data-included=${() => (breakdown.value.color === '0.00' ? '' : null)}>
+                ${() => formatOptionPrice(breakdown.value.color)}
+              </dd>
+            </div>
+            <div class="configurator__price-row">
+              <dt>${() => t('model.selectWheels')}</dt>
+              <dd data-included=${() => (breakdown.value.wheels === '0.00' ? '' : null)}>
+                ${() => formatOptionPrice(breakdown.value.wheels)}
+              </dd>
+            </div>
+            <div class="configurator__price-row">
+              <dt>${() => t('model.packages')}</dt>
+              <dd data-included=${() => (breakdown.value.packages === '0.00' ? '' : null)}>
+                ${() => formatOptionPrice(breakdown.value.packages)}
+              </dd>
+            </div>
+            <div class="configurator__price-row configurator__price-row--subtotal">
+              <dt>${() => t('common.subtotal')}</dt>
+              <dd><animated-price value-usd=${() => breakdown.value.subtotal}></animated-price></dd>
+            </div>
+            <div class="configurator__price-row configurator__price-row--tax">
+              <dt>${() => t('model.estimatedTax')}</dt>
+              <dd>${() => `+${formatPrice(breakdown.value.tax)}`}</dd>
+            </div>
+            <div class="configurator__price-row configurator__price-row--total">
+              <dt>${() => t('model.estimatedTotal')}</dt>
+              <dd><animated-price value-usd=${() => breakdown.value.total}></animated-price></dd>
+            </div>
           </dl>
+          <p class="configurator__price-disclaimer">${() => t('model.priceDisclaimer')}</p>
         </section>
       </div>
 

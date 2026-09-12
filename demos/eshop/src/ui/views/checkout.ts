@@ -17,6 +17,7 @@ import { createForm } from '@vielzeug/forge';
 import { define, html, when } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 import { currentUser } from '../../core/auth';
+import { buildConfigurationUrl } from '../../core/build-url';
 import { cartItems, cartLineBreakdowns, cartTotal } from '../../core/cart-store';
 import { modelMap } from '../../core/catalog';
 import type { CheckoutStep } from '../../core/checkout-machine';
@@ -578,7 +579,13 @@ define('checkout-confirmation', {
       openShareBuildDialog({
         breakdown: line.breakdown,
         model,
-        selections: { color: resolved.color.name, trim: resolved.trim.name, wheels: resolved.wheel.name },
+        selections: {
+          color: resolved.color.name,
+          packages: resolved.extraPackages.map((option) => option.name),
+          trim: resolved.trim.name,
+          wheels: resolved.wheel.name,
+        },
+        url: buildConfigurationUrl(model, line.configuration),
       });
     }
 

@@ -31,7 +31,7 @@ export function createBuildPreview(container: HTMLElement): SandboxHandle {
 export function renderBuildPreview(
   handle: SandboxHandle,
   model: Model,
-  selections: { color: string; trim: string; wheels: string },
+  selections: { color: string; packages: string[]; trim: string; wheels: string },
   breakdown: PriceBreakdown,
 ): Promise<void> {
   return handle.render(`
@@ -43,6 +43,7 @@ export function renderBuildPreview(
         <dt>Trim</dt><dd>${selections.trim}</dd>
         <dt>Paint</dt><dd>${selections.color}</dd>
         <dt>Wheels</dt><dd>${selections.wheels}</dd>
+        ${selections.packages.length ? `<dt>Packages</dt><dd>${selections.packages.join(', ')}</dd>` : ''}
       </dl>
       <div class="total"><span>Estimated total</span><span>${formatPrice(breakdown.total)}</span></div>
     </div>

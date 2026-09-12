@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Update bundled Refine button, skeleton, and navbar documentation.",
+      "comment": "chore(codex): refresh bundled docs data",
       "packageName": "@vielzeug/codex",
       "type": "patch"
     }

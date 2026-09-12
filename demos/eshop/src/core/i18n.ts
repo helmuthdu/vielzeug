@@ -132,6 +132,7 @@ const messages = {
       navigate: 'Navigation',
     },
     common: {
+      addToCart: 'In den Warenkorb',
       addToCompare: 'Zum Vergleich',
       back: 'Zurück',
       basePrice: 'Grundpreis',
@@ -167,6 +168,8 @@ const messages = {
     },
     confirmation: {
       backToOrders: 'Zu meinen Bestellungen',
+      copyBuildLink: 'Konfigurationslink kopieren',
+      embedBuild: 'Konfiguration einbetten',
       estimatedDelivery: 'Voraussichtliche Lieferung',
       notFound:
         'Diese Bestellung konnte nicht gefunden werden — sie wurde möglicherweise bereits in einem anderen Tab bestätigt.',
@@ -185,7 +188,6 @@ const messages = {
       tagline: 'Präzisionstechnik — bis vor Ihre Haustür geliefert.',
     },
     model: {
-      addToCartFromSummary: 'Zum Warenkorb hinzufügen (aus der Zusammenfassung)',
       availability: {
         available: 'Sofort verfügbar',
         comingSoon: 'Ab Oktober verfügbar',
@@ -195,6 +197,7 @@ const messages = {
       configuration: 'Konfiguration',
       configuredPrice: 'Konfigurierter Gesamtpreis',
       estimatedTax: 'Geschätzte Steuer (8 %)',
+      estimatedTotal: 'Geschätzter Gesamtpreis',
       features: {
         adaptiveCruise: 'Adaptiver Tempomat',
         headUpDisplay: 'Head-up-Display',
@@ -217,10 +220,13 @@ const messages = {
       fuelEconomy: 'Verbrauch',
       included: 'Inklusive',
       includedPackages: 'In dieser Ausstattungslinie enthalten',
+      limitedAvailabilityNotice: 'Die Verfügbarkeit wird vor Abschluss der Bestellung bestätigt.',
       newVehicle: 'Neu',
       notFound: 'Dieses Modell konnte nicht gefunden werden.',
       notFoundBack: 'Modelle durchsuchen',
       notFoundTitle: 'Modell nicht gefunden',
+      notifyMe: 'Benachrichtigen',
+      notifyMeSuccess: 'Wir informieren Sie, sobald dieses Modell verfügbar ist.',
       optionalPackages: 'Zusätzliche Pakete hinzufügen',
       packages: 'Pakete',
       packagesChanged: '{count} Zusatzpaket(e) ausgewählt.',
@@ -228,6 +234,7 @@ const messages = {
         'Optionale Ausstattungspakete — in Ihrer Ausstattungslinie bereits enthaltene Pakete sind oben als Chips aufgeführt.',
       priceBreakdown: 'Preisaufschlüsselung',
       priceDetails: 'Preisdetails',
+      priceDisclaimer: 'Enthält geschätzte Steuern. Zulassung, Lieferung und Händlergebühren sind nicht enthalten.',
       range: 'Reichweite',
       rangeTooltip: 'Geschätzte Reichweite bei voller Ladung, kombinierter Zyklus.',
       related: { title: 'Das könnte Sie auch interessieren' },
@@ -495,6 +502,8 @@ const messages = {
     },
     confirmation: {
       backToOrders: 'View my orders',
+      copyBuildLink: 'Copy build link',
+      embedBuild: 'Embed this build',
       estimatedDelivery: 'Estimated delivery',
       notFound: "We couldn't find that order — it may have already been confirmed in another tab.",
       orderNumber: 'Order number',
@@ -512,7 +521,6 @@ const messages = {
       tagline: 'Precision engineering, delivered to your driveway.',
     },
     model: {
-      addToCartFromSummary: 'Add configured vehicle to cart',
       availability: {
         available: 'Available now',
         comingSoon: 'Available from October',
@@ -522,6 +530,7 @@ const messages = {
       configuration: 'Configuration',
       configuredPrice: 'Configured total',
       estimatedTax: 'Estimated 8% tax',
+      estimatedTotal: 'Estimated total',
       features: {
         adaptiveCruise: 'Adaptive Cruise Control',
         headUpDisplay: 'Head-Up Display',
@@ -544,10 +553,13 @@ const messages = {
       fuelEconomy: 'Fuel economy',
       included: 'Included',
       includedPackages: 'Included with this trim',
+      limitedAvailabilityNotice: 'Availability will be confirmed before checkout.',
       newVehicle: 'New',
       notFound: 'This model could not be found.',
       notFoundBack: 'Browse models',
       notFoundTitle: 'Model not found',
+      notifyMe: 'Notify me',
+      notifyMeSuccess: 'We’ll let you know when this model becomes available.',
       optionalPackages: 'Add extra packages',
       packages: 'Packages',
       packagesChanged: '{count} extra package(s) selected.',
@@ -555,6 +567,7 @@ const messages = {
         'Optional equipment bundles — packages already included with your chosen trim are listed above as chips.',
       priceBreakdown: 'Price breakdown',
       priceDetails: 'Price details',
+      priceDisclaimer: 'Includes estimated tax. Excludes registration, delivery, and dealer fees.',
       range: 'Range',
       rangeTooltip: 'Estimated range on a full charge, combined cycle.',
       related: { title: 'You may also like' },

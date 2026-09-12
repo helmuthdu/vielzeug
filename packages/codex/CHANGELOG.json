@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Update bundled Refine button, skeleton, and navbar documentation.",
+            "commit": "047bffac838587e5958df5011a745d9ece34c56e"
+          }
+        ]
+      },
+      "date": "Fri, 11 Sep 2026 11:19:30 GMT",
+      "tag": "@vielzeug/codex_v3.0.1",
+      "version": "3.0.1"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

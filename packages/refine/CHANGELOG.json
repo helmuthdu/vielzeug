@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Use native anchor semantics for link buttons, improve dark field-label contrast, make skeleton media fill externally sized hosts, normalize native sidebar item controls, remove empty navbar regions from layout, apply perceptually distinct elevation to frost navbars, and support contextual mobile menu icons.",
+            "commit": "047bffac838587e5958df5011a745d9ece34c56e"
+          }
+        ]
+      },
+      "date": "Fri, 11 Sep 2026 11:19:30 GMT",
+      "tag": "@vielzeug/refine_v3.1.0",
+      "version": "3.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `3.0.0`"
