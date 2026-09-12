@@ -10,6 +10,7 @@ export const searchDestinationId = signal('tokyo');
 export const searchDeparture = signal('2026-10-12');
 export const searchReturn = signal('2026-10-19');
 export const searchTravelers = signal('2 travelers');
+export const savedHotelIds = signal<string[]>([]);
 export const searchDates = computed(() => {
   const format = (value: string, includeMonth = true): string =>
     new Intl.DateTimeFormat('en-GB', includeMonth ? { day: 'numeric', month: 'short' } : { day: 'numeric' }).format(
@@ -18,6 +19,13 @@ export const searchDates = computed(() => {
   const sameMonth = searchDeparture.value.slice(0, 7) === searchReturn.value.slice(0, 7);
   return `${format(searchDeparture.value, !sameMonth)}–${format(searchReturn.value)}`;
 });
+
+export function toggleSavedHotel(hotelId: string): boolean {
+  const saved = !savedHotelIds.value.includes(hotelId);
+  savedHotelIds.value = saved ? [...savedHotelIds.value, hotelId] : savedHotelIds.value.filter((id) => id !== hotelId);
+
+  return saved;
+}
 
 export function addBooking(booking: Booking): void {
   if (bookings.value.some((item) => item.id === booking.id)) return;

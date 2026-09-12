@@ -54,11 +54,11 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
             Independently useful. Designed to work together.
           </p>
           <div class="hero-actions">
-            <ore-button color="primary" effect="shine" href="#demos" rounded="lg" size="lg">
+            <ore-button color="primary" effect="shine" href="#demos" rounded="lg" size="md">
               Explore reference apps
               <ore-icon aria-hidden="true" name="arrow-down" size="16" slot="suffix"></ore-icon>
             </ore-button>
-            <ore-button href="/guide/#what-are-you-building" rounded="lg" size="lg" variant="outline">
+            <ore-button href="/guide/#what-are-you-building" rounded="lg" size="md" variant="outline">
               Explore the package ecosystem
             </ore-button>
           </div>
@@ -161,16 +161,23 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
                 <h3 :id="`${demo.id}-title`">{{ demo.headline }}</h3>
                 <p>{{ demo.summary }}</p>
                 <div class="active-demo-actions">
-                  <ore-button color="primary" rounded="lg" size="md" :href="demo.href">
+                  <ore-button
+                    color="primary"
+                    rel="noopener noreferrer"
+                    rounded="lg"
+                    size="md"
+                    target="_blank"
+                    :href="demo.href">
                     Launch {{ demo.name }}
-                    <ore-icon aria-hidden="true" name="play" size="15" slot="suffix"></ore-icon>
+                    <ore-icon aria-hidden="true" name="external-link" size="15" slot="suffix"></ore-icon>
+                    <span class="sr-only">(opens in a new tab)</span>
                   </ore-button>
                   <ore-button
                     rel="noopener noreferrer"
                     rounded="lg"
                     size="md"
                     target="_blank"
-                    variant="outline"
+                    variant="ghost"
                     :href="demo.source">
                     View source
                     <ore-icon aria-hidden="true" name="external-link" size="15" slot="suffix"></ore-icon>

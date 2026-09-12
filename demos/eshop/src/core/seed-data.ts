@@ -82,6 +82,7 @@ export const DEALERS: Dealer[] = [
 
 export const models: Model[] = [
   {
+    availability: 'available',
     basePrice: '38900.00',
     bodyType: 'sedan',
     colors: colorsStartingWith('polar-white'),
@@ -127,6 +128,7 @@ export const models: Model[] = [
     zeroToHundredSec: 7.9,
   },
   {
+    availability: 'limited',
     basePrice: '58900.00',
     bodyType: 'sedan',
     colors: colorsStartingWith('crimson-red'),
@@ -172,6 +174,7 @@ export const models: Model[] = [
     zeroToHundredSec: 5.9,
   },
   {
+    availability: 'available',
     basePrice: '94900.00',
     bodyType: 'sedan',
     colors: colorsStartingWith('obsidian-black'),
@@ -209,6 +212,7 @@ export const models: Model[] = [
     zeroToHundredSec: 4.8,
   },
   {
+    availability: 'available',
     basePrice: '52900.00',
     bodyType: 'suv',
     colors: colorsStartingWith('sapphire-blue'),
@@ -254,6 +258,7 @@ export const models: Model[] = [
     zeroToHundredSec: 7.2,
   },
   {
+    availability: 'limited',
     basePrice: '89900.00',
     bodyType: 'suv',
     colors: colorsStartingWith('graphite-grey'),
@@ -292,6 +297,7 @@ export const models: Model[] = [
     zeroToHundredSec: 3.9,
   },
   {
+    availability: 'coming-soon',
     basePrice: '71900.00',
     bodyType: 'sedan',
     colors: colorsStartingWith('glacier-silver'),

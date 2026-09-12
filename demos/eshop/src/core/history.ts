@@ -1,10 +1,10 @@
-import { cartItems, compareModelIds } from './cart-store';
+import { cartItems, compareModelIds, savedModelIds } from './cart-store';
 import { bus } from './events';
 import { t } from './i18n';
 import type { CartItem, Configuration } from './types';
 
 /**
- * Direct cart/compare mutations — every view calls into this module rather than writing to
+ * Direct cart/compare/saved mutations — every view calls into this module rather than writing to
  * `cart-store.ts`'s signals itself. This app deliberately does NOT keep an undo/redo history for
  * these (it used to, via `@vielzeug/ledger`): a shopping cart isn't a document a shopper expects
  * to "undo" the way they'd undo a keystroke — "Remove" already covers the only mutation that
@@ -56,6 +56,13 @@ export function removeFromCompare(modelId: string): void {
 }
 
 /** Shared by every catalog and model-detail compare action. */
+export function toggleSavedModel(modelId: string): void {
+  const saved = savedModelIds.value.includes(modelId);
+
+  savedModelIds.value = saved ? savedModelIds.value.filter((id) => id !== modelId) : [...savedModelIds.value, modelId];
+  bus.emit('toast:show', { message: t(saved ? 'saved.removed' : 'saved.added'), variant: saved ? 'info' : 'success' });
+}
+
 export function toggleCompare(modelId: string): void {
   if (compareModelIds.value.includes(modelId)) {
     removeFromCompare(modelId);

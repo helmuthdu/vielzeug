@@ -24,7 +24,6 @@
     "@vielzeug/forge": "workspace:*",
     "@vielzeug/herald": "workspace:*",
     "@vielzeug/lingua": "workspace:*",
-    "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ore": "workspace:*",
     "@vielzeug/prism": "workspace:*",
     "@vielzeug/pulse": "workspace:*",

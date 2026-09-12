@@ -59,6 +59,7 @@ export type TrimOption = {
 };
 
 export type Model = {
+  availability: 'available' | 'coming-soon' | 'limited';
   /** Base price in USD — the storage currency; `core/currency.ts` converts for display. */
   basePrice: string;
   bodyType: BodyType;

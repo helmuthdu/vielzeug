@@ -667,6 +667,7 @@ ore-grid-item:has(> model-card) {
   width: 100%;
   min-width: 0;
   height: 100%;
+  container-type: inline-size;
 }
 
 .model-card__surface {
@@ -675,29 +676,58 @@ ore-grid-item:has(> model-card) {
   height: 100%;
 }
 
+.model-card__surface::part(card) {
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.model-card:hover .model-card__surface::part(card) {
+  border-color: var(--color-contrast-300);
+  box-shadow: var(--shadow-sm);
+}
+
 .model-card__media {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: var(--aspect-photo);
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
   background:
-    radial-gradient(80% 90% at 50% 100%, hsl(var(--model-hue) 48% 48% / 12%), transparent 70%),
+    radial-gradient(80% 90% at 50% 100%, hsl(var(--model-hue) 48% 48% / 14%), transparent 70%),
     var(--color-contrast-100);
   border-bottom: 1px solid var(--color-divider);
 }
 
-.model-card__media ore-skeleton[striped] {
-  display: block;
-  width: 88%;
-  max-width: 88%;
-  height: auto;
-  aspect-ratio: var(--aspect-photo);
-  padding: var(--size-5);
+.model-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 300ms var(--ease-out-quart);
+}
+
+.model-card__surface:hover .model-card__image {
+  transform: scale(1.015);
+}
+
+.model-card__status,
+.model-card__save {
+  position: absolute;
+  z-index: 1;
+}
+
+.model-card__status {
+  top: var(--size-3);
+  left: var(--size-3);
+}
+
+.model-card__save {
+  top: var(--size-3);
+  right: var(--size-3);
 }
 
 .model-card__paint-picker {
+  min-width: 0;
   padding: 0;
   margin: 0;
   border: 0;
@@ -715,27 +745,135 @@ ore-grid-item:has(> model-card) {
   clip: rect(0 0 0 0);
 }
 
-.model-card__swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-1-5);
-  justify-content: center;
-  padding: 0 var(--size-2) var(--size-2);
+.model-card__paint-disclosure {
+  position: absolute;
+  bottom: var(--size-3);
+  left: 50%;
+  z-index: 1;
+  width: var(--size-24);
+  height: var(--size-10);
+  transform: translateX(-50%);
 }
 
-.model-card__paint {
-  margin: 0;
+.model-card__paint-trigger {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  cursor: pointer;
+  background: color-mix(in oklch, var(--color-canvas) 40%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-divider) 78%, transparent);
+  border-radius: var(--rounded-full);
+  box-shadow: var(--shadow-sm);
+  opacity: 1;
+  backdrop-filter: blur(var(--size-2));
+  transition: opacity var(--transition-fast);
+}
+
+.model-card__paint-trigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.model-card__paint-dot {
+  width: var(--size-3);
+  height: var(--size-3);
+  background: var(--swatch-color);
+  border: 1px solid color-mix(in oklch, var(--text-color-heading) 35%, transparent);
+  border-radius: var(--rounded-full);
+}
+
+.model-card__paint-dot--selected {
+  outline: 2px solid var(--text-color-heading);
+  outline-offset: 2px;
+}
+
+.model-card__paint-picker--media {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  box-sizing: border-box;
+  visibility: hidden;
+  width: calc(var(--size-44) + var(--size-1));
+  padding: var(--size-2) var(--size-2) var(--size-1);
+  color: var(--text-color-body);
+  pointer-events: none;
+  background: color-mix(in oklch, var(--color-canvas) 40%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-divider) 78%, transparent);
+  border-radius: var(--rounded-xl);
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
+  backdrop-filter: blur(var(--size-2));
+  transform: translate(-50%, var(--size-1)) scale(0.98);
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.model-card__paint-disclosure[data-open] .model-card__paint-trigger {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.model-card__paint-disclosure[data-open] .model-card__paint-picker--media {
+  visibility: visible;
+  pointer-events: auto;
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.model-card__paint-disclosure:has(.model-card__paint-trigger:focus-visible) .model-card__paint-picker--media {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.model-card__swatches {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--size-1-5);
+  width: 100%;
+  padding: var(--size-1);
+  margin: calc(-1 * var(--size-1));
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.model-card__paint-summary {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--size-5);
+  margin-top: var(--size-1);
   font-size: var(--text-xs);
-  color: var(--text-color-tertiary);
+  color: var(--text-color-secondary);
+}
+
+.model-card__paint-summary strong {
+  flex-shrink: 0;
+  color: var(--text-color-heading);
 }
 
 .swatch-control {
   position: relative;
   display: grid;
+  flex: 0 0 var(--size-7);
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: var(--size-7);
+  height: var(--size-7);
+  padding: 0;
   cursor: pointer;
+  background: transparent;
+  border: 0;
 }
 
 .swatch-control__input {
@@ -748,11 +886,16 @@ ore-grid-item:has(> model-card) {
   opacity: 0;
 }
 
+.model-card__identity {
+  min-height: var(--size-24);
+}
+
 .model-card__name {
-  margin: var(--size-0-5) 0 0;
+  margin: var(--size-1) 0 0;
 }
 
 .model-card__tagline {
+  min-height: 2.3em;
   margin: var(--size-1) 0 0;
 }
 
@@ -762,20 +905,60 @@ ore-grid-item:has(> model-card) {
   gap: var(--size-2);
 }
 
-.model-card__footer {
+.model-card__commerce {
   display: flex;
-  flex-direction: column;
-  gap: var(--size-0-5);
+  gap: var(--size-4);
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-top: var(--size-4);
+  border-top: 1px solid var(--color-divider);
 }
 
 .model-card__price {
+  display: grid;
+  gap: var(--size-1);
+}
+
+.model-card__price small {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.model-card__price strong {
+  font-size: var(--text-2xl);
   font-variant-numeric: tabular-nums;
+}
+
+.model-card__availability {
+  display: inline-flex;
+  gap: var(--size-1-5);
+  align-items: center;
+  padding-bottom: var(--size-1);
+  font-size: var(--text-xs);
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
+.model-card__availability i {
+  width: var(--size-2);
+  height: var(--size-2);
+  background: var(--color-success);
+  border-radius: var(--rounded-full);
+}
+
+.model-card__availability[data-availability='limited'] i {
+  background: var(--color-warning);
+}
+
+.model-card__availability[data-availability='coming-soon'] i {
+  background: var(--color-info);
 }
 
 .model-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-2);
+  align-items: center;
   width: 100%;
 }
 
@@ -785,6 +968,33 @@ ore-grid-item:has(> model-card) {
 
 .model-card__compare-btn {
   flex: 0 0 auto;
+}
+
+.model-card__compare-label {
+  margin-left: var(--size-1);
+}
+
+@container (width <= 340px) {
+  .model-card__commerce {
+    display: grid;
+    gap: var(--size-2);
+  }
+
+  .model-card__availability {
+    padding-bottom: 0;
+  }
+
+  .model-card__compare-label {
+    display: none;
+  }
+
+  .model-card__compare-btn {
+    width: var(--size-10);
+  }
+
+  .model-card__compare-btn::part(button) {
+    padding-inline: 0;
+  }
 }
 
 /* ── Compare drawer (global — see ui/components/compare-drawer.ts) ───────
@@ -908,8 +1118,8 @@ ore-grid-item:has(> model-card) {
   justify-content: center;
   padding: var(--size-6);
   background: var(--color-canvas);
-  border: 1px solid var(--color-divider);
-  border-radius: var(--radius-surface) var(--radius-surface) 0 0;
+  border: 0;
+  border-radius: 0;
 }
 
 .configurator__hero ore-skeleton[striped] {
@@ -924,7 +1134,7 @@ ore-grid-item:has(> model-card) {
 .configurator__preview-label {
   position: absolute;
   top: var(--size-4);
-  right: var(--size-4);
+  left: var(--size-4);
   padding: var(--size-1) var(--size-2);
   font-size: var(--text-xs);
   color: var(--text-color-secondary);
@@ -942,6 +1152,23 @@ ore-grid-item:has(> model-card) {
   background: radial-gradient(120% 140% at 0% 100%, var(--color-contrast-50) 45%, transparent 80%);
 }
 
+.configurator__save {
+  position: absolute;
+  top: var(--size-4);
+  right: var(--size-4);
+  z-index: 1;
+}
+
+.configurator__category {
+  display: block;
+  margin-bottom: var(--size-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .configurator__intro h1 {
   margin: 0;
   font-family: var(--font-display);
@@ -956,10 +1183,6 @@ ore-grid-item:has(> model-card) {
   color: var(--text-color-secondary);
 }
 
-/* Lives inside `.configurator__sticky-bar` now (not its own full-width strip) — one row that
-   carries model name, specs, running total, and the CTA together, instead of two separate
-   full-width bars stacked back to back. Compact single-line label+value pairs, sized for a
-   ~48px bar rather than the stacked card layout a standalone spec sheet would use. */
 .configurator__specs {
   display: flex;
   flex-wrap: wrap;
@@ -982,6 +1205,15 @@ ore-grid-item:has(> model-card) {
 
 .model-card__specs .spec {
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: var(--size-16);
+  white-space: normal;
+}
+
+.model-card__specs .spec > ore-text {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .spec__label {
@@ -990,33 +1222,49 @@ ore-grid-item:has(> model-card) {
 }
 
 .configurator__spec-bar {
-  display: flex;
+  display: grid;
   grid-column: 1 / -1;
-  gap: var(--size-4);
-  align-items: center;
-  min-height: var(--size-16);
-  padding: var(--size-2) var(--size-4);
-  margin-block: calc(var(--size-6) * -1);
+  gap: var(--size-3);
+  padding: var(--size-5);
   background: var(--color-contrast-100);
-  border: 1px solid var(--color-divider);
+  border: 0;
+  border-top: 1px solid var(--color-divider);
+  border-radius: 0;
 }
 
-.configurator__spec-name {
-  flex-shrink: 0;
-  font-weight: 600;
+.configurator__spec-bar .configurator__specs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+}
+
+.configurator__spec-bar .spec {
+  flex-direction: column;
+  gap: var(--size-1);
+  align-items: flex-start;
+  min-width: 0;
+  padding-inline: var(--size-5);
+  white-space: normal;
+}
+
+.configurator__spec-bar .spec:first-child {
+  padding-inline-start: 0;
+}
+
+.configurator__spec-value {
+  font-size: var(--text-lg);
   color: var(--text-color-heading);
-  white-space: nowrap;
 }
 
-.configurator__sticky-total {
-  display: flex;
-  flex: 1;
-  gap: var(--size-2);
-  align-items: baseline;
-  justify-content: flex-end;
-  padding-inline-start: var(--size-4);
-  font-variant-numeric: tabular-nums;
-  border-inline-start: 1px solid var(--color-divider);
+.configurator__tooltip-trigger {
+  display: inline-flex;
+  cursor: help;
+  border-radius: var(--rounded-sm);
+}
+
+.configurator__tooltip-trigger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .configurator__sticky-total-label {
@@ -1024,54 +1272,43 @@ ore-grid-item:has(> model-card) {
   color: var(--text-color-tertiary);
 }
 
-/* Hidden by default — shown only below the `768px` breakpoint (see the media query at the
-   bottom of this file), where it replaces `.configurator__sticky-bar` entirely. Real
-   `position: fixed` (not `sticky`): it needs to pin to the actual viewport regardless of which
-   ancestor is the scrolling container, the opposite of the desktop bar's `sticky` mode, which
-   only ever resolves against `.app-main`. */
 .configurator__mobile-bar {
   display: none;
 }
 
-.configurator__build-summary {
-  display: block;
+.configurator__product-builder {
+  display: grid;
   grid-column: 1 / -1;
-  padding: var(--size-3) var(--size-4);
+  overflow: hidden;
   background: var(--color-canvas);
   border: 1px solid var(--color-divider);
-  border-radius: 0 0 var(--radius-surface) var(--radius-surface);
+  border-radius: var(--radius-surface);
+}
+
+.configurator__build-summary {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--size-2);
+  padding: var(--size-5);
+  background: var(--color-canvas);
+  border: 0;
+  border-top: 1px solid var(--color-divider);
+  border-radius: 0;
 }
 
 .configurator__build-controls {
   display: grid;
-  grid-template-columns: 240px 220px 220px minmax(0, 1fr) max-content;
-  gap: var(--size-4);
-  align-items: start;
-}
-
-.configurator__build-action {
-  display: flex;
-  gap: var(--size-3);
+  grid-template-columns: 188px repeat(2, minmax(160px, 276px)) minmax(256px, 1fr);
+  gap: var(--size-6);
   align-items: center;
-  align-self: center;
-  min-width: max-content;
-}
-
-.configurator__build-action > span {
-  display: flex;
-  gap: var(--size-2);
-  align-items: baseline;
-}
-
-.configurator__build-action animated-price {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--text-color-heading);
-  letter-spacing: -0.02em;
 }
 
 .configurator__build-field {
   min-width: 0;
+}
+
+.configurator__build-field ore-select {
+  width: 100%;
 }
 
 .configurator__build-field-label {
@@ -1087,6 +1324,90 @@ ore-grid-item:has(> model-card) {
   padding: 0;
   margin: 0;
   border: 0;
+}
+
+.configurator__paint-summary {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--size-2);
+  font-size: var(--text-xs);
+  color: var(--text-color-secondary);
+}
+
+.configurator__paint-price {
+  flex-shrink: 0;
+  color: var(--text-color-heading);
+}
+
+.configurator__build-action {
+  display: grid;
+  gap: var(--size-3);
+  min-width: 0;
+  padding-left: var(--size-5);
+  border-left: 1px solid var(--color-divider);
+}
+
+.configurator__build-purchase {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.configurator__purchase-actions,
+.configurator__mobile-bar-actions {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+}
+
+.configurator__build-total {
+  display: grid;
+  gap: var(--size-0-5);
+  font-variant-numeric: tabular-nums;
+}
+
+.configurator__build-total-label {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.configurator__build-price {
+  display: flex;
+  gap: var(--size-1);
+  align-items: center;
+}
+
+.configurator__build-total animated-price {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-color-heading);
+  letter-spacing: -0.02em;
+}
+
+.configurator__build-total small {
+  display: inline-flex;
+  gap: var(--size-1-5);
+  align-items: center;
+  font-size: var(--text-xs);
+  color: var(--text-color-secondary);
+}
+
+.configurator__availability-dot {
+  width: var(--size-2);
+  height: var(--size-2);
+  background: var(--color-success);
+  border-radius: var(--rounded-full);
+}
+
+.configurator__build-total small[data-availability='limited'] .configurator__availability-dot {
+  background: var(--color-warning);
+}
+
+.configurator__build-total small[data-availability='coming-soon'] .configurator__availability-dot {
+  background: var(--color-info);
 }
 
 .swatches {
@@ -1115,16 +1436,34 @@ ore-grid-item:has(> model-card) {
 }
 
 .configurator__paint-field .swatches {
+  box-sizing: border-box;
   flex-wrap: nowrap;
+  width: min(calc(var(--size-44) + var(--size-3)), 100%);
+  padding: var(--size-2);
+  margin: calc(-1 * var(--size-2));
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
 }
 
-.configurator__paint-value {
-  margin: var(--size-1) 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: var(--text-xs);
-  color: var(--text-color-tertiary);
-  white-space: nowrap;
+.configurator__paint-field .swatches::-webkit-scrollbar {
+  display: none;
+}
+
+.configurator__paint-field .swatch-control {
+  scroll-snap-align: center;
+}
+
+.configurator__paint-field .configurator__paint-summary {
+  width: min(calc(var(--size-44) + var(--size-3)), 100%);
+}
+
+@media (pointer: coarse) {
+  .configurator__paint-field .swatches,
+  .configurator__paint-field .configurator__paint-summary {
+    width: min(calc(var(--size-64) + var(--size-3)), 100%);
+  }
 }
 
 .configurator__status {
@@ -1142,6 +1481,7 @@ ore-grid-item:has(> model-card) {
 .configurator__section {
   grid-column: 1 / -1;
   padding-top: var(--size-4);
+  margin-top: var(--size-2);
   border-top: 1px solid var(--color-divider);
 }
 
@@ -1190,6 +1530,12 @@ ore-grid-item:has(> model-card) {
    this CSS-only hover transform can't reach that JS check, so it needs its own media query to
    honor the same preference. */
 @media (prefers-reduced-motion: reduce) {
+  .model-card__paint-trigger,
+  .model-card__paint-picker--media {
+    transition: none;
+  }
+
+  .model-card__surface:hover .model-card__image,
   .swatch:hover {
     transform: none;
   }
@@ -1215,6 +1561,7 @@ ore-grid-item:has(> model-card) {
   outline-offset: 3px;
 }
 
+.swatch-control[data-selected] .swatch,
 .swatch-control__input:checked + .swatch {
   outline: 2px solid var(--text-color-heading);
   outline-offset: 2px;
@@ -1224,6 +1571,29 @@ ore-grid-item:has(> model-card) {
   outline-color: var(--color-primary);
   outline-offset: 4px;
   box-shadow: 0 0 0 2px var(--text-color-heading);
+}
+
+@media (max-width: 768px) {
+  .model-card__paint-disclosure {
+    width: calc(var(--size-32) + var(--size-1));
+    height: var(--size-12);
+  }
+
+  .model-card__paint-picker--media {
+    width: min(calc(var(--size-64) + var(--size-1)), calc(100cqi - var(--size-6)));
+  }
+
+  .model-card__swatches .swatch-control {
+    flex: 0 0 var(--size-11);
+    width: var(--size-11);
+    height: var(--size-11);
+    scroll-snap-align: center;
+  }
+
+  .model-card__swatches .swatch--sm {
+    width: var(--size-8);
+    height: var(--size-8);
+  }
 }
 
 .package-chips {
@@ -1253,16 +1623,15 @@ ore-grid-item:has(> model-card) {
   border-bottom: 1px solid var(--color-divider);
 }
 
-/* Financing and Price breakdown are the same decision (see model-detail.ts) — side by side on
-   desktop, in matched panels, instead of two stacked sections that read as unrelated. The whole
-   row still needs to read as a deliberate stop rather than a continuation of the option-to-option
-   rhythm above it, the same job `margin-top` (well past the page's ambient inter-section gap) did
-   here before this became a two-panel row. */
+.configurator__package-option:last-child {
+  border-bottom: 0;
+}
+
 .configurator__summary {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-column: 1 / -1;
-  gap: var(--size-4) var(--size-8);
+  gap: var(--size-8);
   align-items: start;
   padding-top: var(--size-8);
   margin-block: var(--size-4);
@@ -1275,13 +1644,6 @@ ore-grid-item:has(> model-card) {
   font-weight: 500;
 }
 
-.configurator__summary .configurator__review-heading {
-  grid-column: 1 / -1;
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--text-color-secondary);
-}
-
 /* `--color-contrast-200` — one step deeper than `.feature-card`'s own `--color-contrast-100` —
    so this row is a visibly different surface, not the same gray box the feature grid just used. */
 .configurator__finance,
@@ -1290,6 +1652,17 @@ ore-grid-item:has(> model-card) {
   background: var(--color-contrast-50);
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-surface);
+}
+
+.configurator__finance {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 720px;
+}
+
+.configurator__breakdown:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 
 .configurator__breakdown dl {
@@ -1314,24 +1687,6 @@ ore-grid-item:has(> model-card) {
   font-size: var(--text-lg);
   font-weight: 500;
   border-top: 1px solid var(--color-divider);
-}
-
-/* Capped, not full-bleed — at wide desktop widths the breakdown panel is easily 1000px+ wide,
-   and full-width buttons stretched across all of it (900px+ "Add to cart") read as an
-   unintentional layout bug, not a considered CTA. Full-width returns on tablet/mobile (see the
-   `900px` breakpoint below), where edge-to-edge buttons are the right call for touch. */
-.configurator__actions {
-  display: flex;
-  gap: var(--size-3);
-  margin-top: var(--size-3);
-}
-
-.configurator__actions ore-button {
-  flex: 1;
-}
-
-.configurator__actions ore-button[color='primary'] {
-  flex: 1;
 }
 
 .feature-grid {
@@ -1417,12 +1772,15 @@ ore-grid-item:has(> model-card) {
 .related-models {
   display: flex;
   gap: var(--size-4);
+  align-items: stretch;
   padding-bottom: var(--size-2);
   overflow-x: auto;
 }
 
 .related-models model-card {
   flex: 0 0 320px;
+  align-self: stretch;
+  height: auto;
 }
 
 .configurator--not-found {
@@ -2159,9 +2517,37 @@ ul.orders-view__list {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .configurator__summary,
+  .configurator__summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .configurator__build-controls {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--size-4);
+  }
+
+  .configurator__trim-field {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .configurator__wheel-field {
+    grid-row: 2;
+    grid-column: 2;
+  }
+
+  .configurator__paint-field {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+
+  .configurator__build-action {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    padding-top: var(--size-4);
+    padding-left: 0;
+    border-top: 1px solid var(--color-divider);
+    border-left: 0;
   }
 
   .catalog__filter-panel {
@@ -2187,10 +2573,6 @@ ul.orders-view__list {
 
   .checkout-form__row {
     grid-template-columns: 1fr;
-  }
-
-  .configurator__actions {
-    max-width: none;
   }
 
   .app-footer__grid {
@@ -2361,7 +2743,7 @@ ul.orders-view__list {
 /* Matches `ore-navbar`'s own default `breakpoint` prop `(max-width: 768px)` — but as a
    `@container` query against `.configurator` (see its own comment above), not a viewport
    `@media` query, since that's what the navbar itself actually measures for this instance. */
-@container (width <= 768px) {
+@container (width <= 640px) {
   .configurator__hero {
     flex-direction: column;
     align-items: stretch;
@@ -2376,26 +2758,65 @@ ul.orders-view__list {
   }
 
   .configurator__preview-label {
-    inset: var(--size-4) var(--size-4) auto auto;
+    inset: var(--size-4) auto auto var(--size-4);
   }
 
-  /* Stack the spec bar vertically on narrow screens — model name on its own line,
-     specs wrapping below — instead of cramming everything into one cramped row. */
   .configurator__spec-bar {
-    flex-direction: column;
-    gap: var(--size-2);
-    align-items: flex-start;
-    min-height: 0;
-    padding: var(--size-3) var(--size-4);
+    padding: var(--size-4);
   }
 
-  .configurator__spec-name {
-    width: 100%;
+  .configurator__spec-bar .configurator__specs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .configurator__specs {
-    gap: var(--size-2) var(--size-4);
-    width: 100%;
+  .configurator__spec-bar .spec {
+    padding: var(--size-3);
+    border-top: 1px solid var(--color-divider);
+  }
+
+  .configurator__spec-bar .spec:nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .configurator__spec-bar .spec:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .configurator__build-summary {
+    padding: var(--size-4);
+  }
+
+  .configurator__paint-field .swatches,
+  .configurator__paint-field .configurator__paint-summary {
+    width: min(calc(var(--size-64) + var(--size-3)), 100%);
+  }
+
+  .configurator__paint-field .swatch-control {
+    flex: 0 0 var(--size-11);
+    width: var(--size-11);
+    height: var(--size-11);
+  }
+
+  .configurator__paint-field .swatch {
+    width: var(--size-8);
+    height: var(--size-8);
+  }
+
+  .configurator__build-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .configurator__trim-field,
+  .configurator__paint-field,
+  .configurator__wheel-field,
+  .configurator__build-action {
+    grid-row: auto;
+    grid-column: 1;
+  }
+
+  .configurator__build-action {
+    display: none;
   }
 
   /* Clears the fixed mobile bar so the last section (Related Models) isn't hidden behind it. */

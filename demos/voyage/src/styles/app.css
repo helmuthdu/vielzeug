@@ -297,8 +297,7 @@ ore-date-picker {
   border-radius: var(--rounded-3xl);
 }
 
-.heading-row,
-.card-row {
+.heading-row {
   display: flex;
   gap: var(--size-6);
   align-items: center;
@@ -553,9 +552,8 @@ ore-date-picker {
 
 .destination-card__title {
   margin: var(--size-1-5) 0 var(--size-2);
-  font-family: var(--font-serif);
   font-size: var(--text-3xl);
-  font-weight: var(--font-normal);
+  font-weight: var(--font-bold);
   color: var(--voyage-on-media);
 }
 
@@ -626,8 +624,51 @@ ore-date-picker {
   overflow: hidden;
 }
 
+.hotel-card {
+  height: 100%;
+}
+
+.hotel-card::part(card) {
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.hotel-card:hover::part(card) {
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-md);
+}
+
 .hotel-card__media {
+  position: relative;
   aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.hotel-card__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transition: transform var(--transition-normal);
+}
+
+.hotel-card:hover .hotel-card__image {
+  transform: scale(1.015);
+}
+
+.hotel-card__badge,
+.hotel-card__save {
+  position: absolute;
+  top: var(--size-3);
+  z-index: 1;
+}
+
+.hotel-card__badge {
+  left: var(--size-3);
+}
+
+.hotel-card__save {
+  right: var(--size-3);
 }
 
 .experience-card__body,
@@ -654,9 +695,31 @@ ore-date-picker {
 }
 
 .experience-card__body {
+  display: grid;
+  grid-template-rows: auto var(--size-11) var(--size-11) auto;
+  gap: var(--size-2);
+}
+
+.hotel-card__body {
   display: flex;
   flex-direction: column;
-  height: calc(220px - var(--border-2));
+  min-height: var(--size-60);
+}
+
+.experience-card__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  margin: 0;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+
+.experience-card__rating {
+  flex-shrink: 0;
 }
 
 .experience-card__meta {
@@ -664,26 +727,38 @@ ore-date-picker {
   gap: var(--size-2);
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
+  margin: 0;
   font-size: var(--text-xs);
   color: var(--voyage-muted);
 }
 
-.experience-card__rating {
-  flex-shrink: 0;
+.experience-card__meta > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.experience-card__title {
-  margin: var(--size-3) 0 var(--size-2);
-  font-family: var(--font-serif);
-  font-size: var(--text-xl);
-  font-weight: var(--font-normal);
-  line-height: var(--leading-tight);
-  letter-spacing: var(--tracking-tight);
+.experience-card__price {
+  display: flex;
+  gap: var(--size-1-5);
+  align-items: baseline;
+  margin: 0;
+}
+
+.experience-card__price strong {
+  font-size: var(--text-lg);
+}
+
+.experience-card__price span {
+  font-size: var(--text-xs);
+  color: var(--voyage-muted);
 }
 
 .experience-card__description {
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  min-height: var(--size-11);
   margin: 0;
   overflow: hidden;
   -webkit-line-clamp: 2;
@@ -697,41 +772,112 @@ ore-date-picker {
   gap: var(--size-3);
   align-items: flex-end;
   justify-content: space-between;
-  margin-top: auto;
+  margin-top: var(--size-2);
 }
 
-.experience-card__footer > span {
-  display: grid;
-  gap: var(--size-0-5);
+.experience-card__action {
+  flex-shrink: 0;
 }
 
-.experience-card__footer small {
-  font-size: var(--text-2xs);
+.hotel-card__meta {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  margin-bottom: var(--size-2);
+  font-size: var(--text-xs);
   color: var(--voyage-muted);
-  text-transform: uppercase;
-  letter-spacing: var(--tracking-wide);
 }
 
-.experience-card__footer strong {
-  font-size: var(--text-base);
+.hotel-card__rating {
+  flex-shrink: 0;
 }
 
-.hotel-card h3 {
-  margin: var(--size-2-5) 0 var(--size-1-5);
+.hotel-card__rating small {
+  color: var(--voyage-muted);
+}
+
+.hotel-card__title {
+  min-height: var(--size-11);
+  margin: 0;
   font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-tight);
 }
 
-.hotel-card p {
-  margin-bottom: var(--size-4);
+.hotel-card__title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hotel-card__title a:hover {
+  color: var(--voyage-accent);
+}
+
+.hotel-card__title a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.hotel-card__location {
+  margin: var(--size-1) 0 0;
   font-size: var(--text-sm);
+  color: var(--voyage-muted);
+}
+
+.hotel-card__amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-1-5) var(--size-2);
+  min-height: var(--size-6);
+  padding: 0;
+  margin: var(--size-4) 0;
+  font-size: var(--text-xs);
+  color: var(--voyage-muted);
+  list-style: none;
+}
+
+.hotel-card__amenities li + li::before {
+  margin-right: var(--size-2);
+  content: '·';
+}
+
+.hotel-card__footer {
+  display: flex;
+  gap: var(--size-4);
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-top: var(--size-4);
+  margin-top: auto;
+  border-top: var(--size-px) solid var(--voyage-line);
+}
+
+.hotel-card__price {
+  display: grid;
+  gap: var(--size-0-5);
+}
+
+.hotel-card__price-label,
+.hotel-card__price-unit {
+  font-size: var(--text-xs);
+  color: var(--voyage-muted);
+}
+
+.hotel-card__price strong {
+  font-size: var(--text-xl);
+  color: var(--voyage-ink);
+}
+
+.hotel-card__footer ore-button {
+  flex-shrink: 0;
 }
 
 .experience-marquee {
   --marquee-gap: var(--size-5);
 
-  height: 476px;
+  height: 466px;
   background: transparent;
 }
 
@@ -763,18 +909,6 @@ ore-date-picker {
 
 .rating ore-icon {
   color: var(--color-warning);
-}
-
-.amenity-line {
-  min-height: var(--size-10);
-  font-size: var(--text-xs);
-  color: var(--voyage-muted);
-}
-
-.hotel-card__footer {
-  padding-top: var(--size-4);
-  font-size: var(--text-sm);
-  border-top: var(--size-px) solid var(--voyage-line);
 }
 
 .trip-promo {
@@ -2360,7 +2494,7 @@ body[data-route='booking'] .app-layout {
 }
 
 .profile-stat {
-  --profile-stat-color: var(--voyage-on-media);
+  --profile-stat-color: var(--voyage-accent-soft);
 
   display: grid;
   padding: var(--size-7);
@@ -2833,7 +2967,7 @@ body[data-route='booking'] .app-layout {
   }
 
   .experience-marquee {
-    height: 456px;
+    height: 418px;
   }
 
   .experience-marquee > .experience-card {
@@ -2926,6 +3060,16 @@ body[data-route='booking'] .app-layout {
     left: var(--size-5);
   }
 
+  .destination-hero + .page-content {
+    position: relative;
+    z-index: 2;
+    padding-top: var(--size-10);
+    margin-top: calc(-1 * var(--size-10));
+    background: var(--voyage-surface);
+    border-radius: var(--rounded-3xl) var(--rounded-3xl) 0 0;
+    box-shadow: var(--voyage-shadow);
+  }
+
   .editorial-intro {
     padding-bottom: var(--size-16);
   }
@@ -2963,8 +3107,14 @@ body[data-route='booking'] .app-layout {
   }
 
   .hotel-layout {
+    position: relative;
+    z-index: 2;
     gap: var(--size-9);
-    padding: var(--size-10) 0 var(--size-16);
+    padding: var(--size-10) var(--size-5) var(--size-16);
+    margin: calc(-1 * var(--size-8)) 0 0;
+    background: var(--voyage-surface);
+    border-radius: var(--rounded-3xl) var(--rounded-3xl) 0 0;
+    box-shadow: var(--voyage-shadow);
   }
 
   .amenities {
@@ -3254,7 +3404,7 @@ body[data-route='booking'] .app-layout {
 
 @media (prefers-reduced-motion: reduce), (hover: none) {
   .experience-marquee {
-    height: 420px;
+    height: 418px;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
   }
@@ -3262,7 +3412,7 @@ body[data-route='booking'] .app-layout {
   .experience-marquee::part(track) {
     position: relative;
     inset: auto;
-    height: 420px;
+    height: 418px;
     animation: none;
   }
 

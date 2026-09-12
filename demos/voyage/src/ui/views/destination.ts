@@ -60,7 +60,7 @@ define('destination-view', {
                 <ore-icon slot="suffix" name="arrow-right" size="16" aria-hidden="true"></ore-icon>
               </ore-button>
             </div>
-            <ore-grid class="hotel-grid" cols="1" cols-md="2" gap="lg" fullwidth>
+            <ore-grid class="hotel-grid" cols="1" cols-sm="2" cols-lg="3" gap="lg" fullwidth>
               ${() =>
                 destinationHotels.value.length
                   ? destinationHotels.value.map(hotelCard)

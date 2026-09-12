@@ -23,7 +23,7 @@
     "site:build": "node scripts/build-site.mjs",
     "sync:package-manifests": "node scripts/sync-package-manifests.mjs",
     "test": "vitest",
-    "validate:demos": "pnpm --dir demos/eshop build && pnpm --dir demos/eshop test && pnpm --dir demos/voyage build && pnpm --dir demos/crm build && pnpm --dir demos/crm test",
+    "validate:demos": "pnpm --dir demos/eshop build && pnpm --dir demos/eshop test && pnpm --dir demos/voyage build && pnpm --dir demos/voyage test && pnpm --dir demos/crm build && pnpm --dir demos/crm test",
     "validate:docs": "node --import jiti/register scripts/validate-docs.ts",
     "validate:readme": "node --import jiti/register scripts/validate-readme.ts",
     "validate:repl": "node --import jiti/register scripts/validate-repl.ts",

@@ -3,7 +3,7 @@ import { s } from '@vielzeug/spell';
 import type { KeyValueVaultStore } from '@vielzeug/vault';
 import { table, validatorCodec } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
-import { cartItems, compareModelIds } from './cart-store';
+import { cartItems, compareModelIds, savedModelIds } from './cart-store';
 import { currencyFromCode, currentCurrency, setCurrency } from './currency';
 import { setLocale } from './i18n';
 import type { ThemePreference } from './theme';
@@ -15,7 +15,7 @@ import type { CartItem } from './types';
 // demos/crm/src/core/persistence.ts's single-row-per-concern shape.
 // ---------------------------------------------------------------------------
 
-type CartRow = { compareModelIds: string[]; id: 'current'; items: CartItem[] };
+type CartRow = { compareModelIds: string[]; id: 'current'; items: CartItem[]; savedModelIds: string[] };
 type PreferencesRow = {
   accentHue: number;
   currency: string;
@@ -53,6 +53,7 @@ const cartSchema = s.object({
   compareModelIds: s.array(s.string()),
   id: s.literal('current'),
   items: s.array(cartItemSchema),
+  savedModelIds: s.array(s.string()),
 });
 
 const preferencesSchema = s.object({
@@ -83,8 +84,8 @@ async function loadCart(): Promise<CartRow | null> {
   }
 }
 
-async function saveCart(items: CartItem[], compare: string[]): Promise<void> {
-  await store.put('cart', { compareModelIds: compare, id: 'current', items });
+async function saveCart(items: CartItem[], compare: string[], saved: string[]): Promise<void> {
+  await store.put('cart', { compareModelIds: compare, id: 'current', items, savedModelIds: saved });
 }
 
 async function loadPreferences(): Promise<PreferencesRow | null> {
@@ -102,7 +103,7 @@ async function savePreferences(prefs: Omit<PreferencesRow, 'id'>): Promise<void>
 }
 
 /**
- * Hydrates cart/compare/preferences from vault-backed localStorage, then keeps every subsequent
+ * Hydrates cart/compare/saved/preferences from vault-backed localStorage, then keeps every subsequent
  * change durable by writing back on every reactive update. Call once at startup, before anything
  * else reads these signals.
  */
@@ -113,8 +114,9 @@ export async function setupPersistence(): Promise<void> {
   if (savedCart) {
     cartItems.value = savedCart.items;
     compareModelIds.value = savedCart.compareModelIds;
+    savedModelIds.value = savedCart.savedModelIds;
   } else {
-    await saveCart(cartItems.value, compareModelIds.value);
+    await saveCart(cartItems.value, compareModelIds.value, savedModelIds.value);
   }
 
   if (savedPrefs) {
@@ -132,7 +134,7 @@ export async function setupPersistence(): Promise<void> {
   }
 
   effect(() => {
-    void saveCart(cartItems.value, compareModelIds.value);
+    void saveCart(cartItems.value, compareModelIds.value, savedModelIds.value);
   });
 
   effect(() => {

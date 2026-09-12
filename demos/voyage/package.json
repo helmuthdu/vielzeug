@@ -9,7 +9,8 @@
     "build:local": "node --experimental-strip-types scripts/write-local-tsconfig.ts && tsc -p tsconfig.local-dev.json && VIELZEUG_LOCAL_DEV=1 vite build",
     "dev": "vite",
     "dev:local": "VIELZEUG_LOCAL_DEV=1 vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "pnpm --dir ../.. vitest run --config demos/voyage/vitest.config.ts"
   },
   "dependencies": {
     "@vielzeug/illusionist": "workspace:*",

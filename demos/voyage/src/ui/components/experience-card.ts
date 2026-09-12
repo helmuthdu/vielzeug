@@ -17,20 +17,18 @@ export function experienceCard(experience: Experience) {
       </div>
       <div class="experience-card__body">
         <div class="experience-card__meta">
-          <span class="rating experience-card__rating">
+          <span>${experience.location} · ${experience.duration}</span>
+          <span class="rating experience-card__rating" aria-label=${`Rated ${experience.rating} out of 5`}>
             <ore-icon name="star" size="14" aria-hidden="true"></ore-icon>
             ${experience.rating}
           </span>
-          <span>${experience.location} · ${experience.duration}</span>
         </div>
         <h3 class="experience-card__title">${experience.name}</h3>
         <p class="experience-card__description">${experience.description}</p>
         <div class="experience-card__footer">
-          <span>
-            <small>From</small>
-            <strong>${money(experience.price)}</strong>
-          </span>
+          <p class="experience-card__price"><strong>${money(experience.price)}</strong><span>per person</span></p>
           <ore-button
+            class="experience-card__action"
             color="primary"
             size="sm"
             rounded="full"

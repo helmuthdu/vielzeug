@@ -12,7 +12,7 @@ import '../components/model-card';
 
 import { define, html, onCleanup, when } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
-import { compareModelIds } from '../../core/cart-store';
+import { compareModelIds, savedModelIds } from '../../core/cart-store';
 import { modelMap, modelsSignal } from '../../core/catalog';
 import {
   BODY_TYPES,
@@ -30,7 +30,7 @@ import {
 } from '../../core/catalog-discovery';
 import { controlValue } from '../../core/control-value';
 import { formatPrice } from '../../core/currency';
-import { toggleCompare } from '../../core/history';
+import { toggleCompare, toggleSavedModel } from '../../core/history';
 import { t } from '../../core/i18n';
 import { activeRouteQuery, router } from '../../core/router';
 import { modelIndex } from '../../core/search-index';
@@ -518,7 +518,9 @@ define('catalog-view', {
                   <model-card
                     model=${model}
                     in-compare=${() => compareModelIds.value.includes(model.id)}
+                    saved=${() => savedModelIds.value.includes(model.id)}
                     @toggle-compare=${() => toggleCompare(model.id)}
+                    @toggle-save=${() => toggleSavedModel(model.id)}
                     @view=${() => void router.navigate({ name: 'modelDetail', params: { slug: model.slug } })}></model-card>
                 </ore-grid-item>
               `,

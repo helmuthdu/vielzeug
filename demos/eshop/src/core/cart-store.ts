@@ -6,6 +6,7 @@ import type { CartItem } from './types';
 export const cartItems = signal<CartItem[]>([]);
 
 export const compareModelIds = signal<string[]>([]);
+export const savedModelIds = signal<string[]>([]);
 
 export const cartCount = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0));
 

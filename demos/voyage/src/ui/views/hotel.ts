@@ -9,6 +9,7 @@ import { toast } from '@vielzeug/refine/toast';
 import { computed, signal } from '@vielzeug/ripple';
 import { hotelById } from '../../core/data';
 import { activeRouteParams } from '../../core/router';
+import { savedHotelIds, toggleSavedHotel } from '../../core/state';
 import { sectionHeading } from '../components/section-heading';
 import { money } from '../format';
 import { navigate } from '../navigation';
@@ -17,12 +18,12 @@ define('hotel-view', {
   setup() {
     const hotel = computed(() => hotelById(activeRouteParams.value.slug));
     const galleryOpen = signal(false);
-    const saved = signal(false);
+    const saved = computed(() => savedHotelIds.value.includes(hotel.value.id));
     const toggleSaved = (): void => {
-      saved.value = !saved.value;
+      const isSaved = toggleSavedHotel(hotel.value.id);
       toast.add({
-        color: 'success',
-        message: saved.value ? `${hotel.value.name} saved.` : `${hotel.value.name} removed.`,
+        color: isSaved ? 'success' : 'info',
+        message: isSaved ? `${hotel.value.name} saved.` : `${hotel.value.name} removed.`,
       });
     };
     return html`
@@ -33,9 +34,12 @@ define('hotel-view', {
         </ore-button>
         <header class="hotel-heading">
           <div>
-            <div class="rating">
+            <div
+              class="rating"
+              aria-label=${() =>
+                `Rated ${hotel.value.rating} out of 5 from ${hotel.value.reviewCount} reviews${hotel.value.badge ? `, ${hotel.value.badge}` : ''}`}>
               <ore-icon name="star" size="15" aria-hidden="true"></ore-icon>
-              ${() => hotel.value.rating} · Guest favorite
+              ${() => `${hotel.value.rating} (${hotel.value.reviewCount})${hotel.value.badge ? ` · ${hotel.value.badge}` : ''}`}
             </div>
             <h1>${() => hotel.value.name}</h1>
             <p>${() => hotel.value.location}</p>

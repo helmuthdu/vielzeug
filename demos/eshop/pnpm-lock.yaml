@@ -38,9 +38,6 @@ importers:
       '@vielzeug/lingua':
         specifier: workspace:*
         version: link:../../packages/lingua
-      '@vielzeug/orbit':
-        specifier: workspace:*
-        version: link:../../packages/orbit
       '@vielzeug/ore':
         specifier: workspace:*
         version: link:../../packages/ore

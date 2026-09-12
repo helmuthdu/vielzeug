@@ -12,13 +12,16 @@ export type Destination = {
 
 export type Hotel = {
   amenities: string[];
+  badge: 'Guest favorite' | 'New' | 'Only 2 rooms left' | null;
   description: string;
   destinationId: string;
   id: string;
   location: string;
   name: string;
   price: number;
+  propertyType: string;
   rating: number;
+  reviewCount: number;
   rooms: Room[];
   storyHeading: string;
 };
