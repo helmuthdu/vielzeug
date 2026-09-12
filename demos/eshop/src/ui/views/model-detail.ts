@@ -566,7 +566,7 @@ define<ModelConfiguratorProps>('model-configurator', {
               </strong>
             </div>
           </div>
-          <p class="configurator__helper">
+          <p class="configurator__helper configurator__panel-footer">
             *${() => t('model.finance.disclaimer')} (${() => t('model.finance.apr', { apr: FINANCE_DEFAULT_APR })})
           </p>
         </section>
@@ -618,7 +618,7 @@ define<ModelConfiguratorProps>('model-configurator', {
               <dd><animated-price value-usd=${() => breakdown.value.total}></animated-price></dd>
             </div>
           </dl>
-          <p class="configurator__price-disclaimer">${() => t('model.priceDisclaimer')}</p>
+          <p class="configurator__price-disclaimer configurator__panel-footer">${() => t('model.priceDisclaimer')}</p>
         </section>
       </div>
 

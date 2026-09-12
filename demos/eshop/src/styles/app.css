@@ -1634,7 +1634,7 @@ ore-grid-item:has(> model-card) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-column: 1 / -1;
   gap: var(--size-8);
-  align-items: start;
+  align-items: stretch;
   padding-top: var(--size-8);
   margin-block: var(--size-4);
   border-top: 1px solid var(--color-divider);
@@ -1694,6 +1694,7 @@ ore-grid-item:has(> model-card) {
 .configurator__price-breakdown dl {
   grid-template-columns: minmax(0, 1fr);
   gap: var(--size-2);
+  margin: 0;
 }
 
 .configurator__price-row {
@@ -1726,8 +1727,15 @@ ore-grid-item:has(> model-card) {
   border-top: 1px solid var(--color-divider);
 }
 
-.configurator__price-disclaimer {
-  margin: var(--size-3) 0 0;
+.configurator__summary > .configurator__finance,
+.configurator__summary > .configurator__price-breakdown {
+  display: flex;
+  flex-direction: column;
+}
+
+.configurator__summary .configurator__panel-footer {
+  padding-top: var(--size-3);
+  margin: auto 0 0;
   font-size: var(--text-xs);
   line-height: var(--leading-normal);
   color: var(--text-color-tertiary);
