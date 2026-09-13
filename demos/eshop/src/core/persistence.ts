@@ -3,9 +3,11 @@ import { s } from '@vielzeug/spell';
 import type { KeyValueVaultStore } from '@vielzeug/vault';
 import { table, validatorCodec } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
+import { currentUser } from './auth';
 import { cartItems, compareModelIds, savedModelIds } from './cart-store';
 import { currencyFromCode, currentCurrency, setCurrency } from './currency';
-import { setLocale } from './i18n';
+import { currentLocale, setLocale } from './i18n';
+import { seedUsers } from './seed-data';
 import type { ThemePreference } from './theme';
 import { accentHue, setAccentHue, setThemePreference, themePreference } from './theme';
 import type { CartItem } from './types';
@@ -22,6 +24,7 @@ type PreferencesRow = {
   id: 'preferences';
   locale: 'de' | 'en';
   theme: ThemePreference;
+  userId: string;
 };
 
 const schema = {
@@ -62,6 +65,7 @@ const preferencesSchema = s.object({
   id: s.literal('preferences'),
   locale: s.enum(['de', 'en']),
   theme: s.enum(['dark', 'light', 'system']),
+  userId: s.string(),
 });
 
 const store: KeyValueVaultStore<typeof schema> = createLocalStorage({
@@ -124,12 +128,14 @@ export async function setupPersistence(): Promise<void> {
     setAccentHue(savedPrefs.accentHue);
     setCurrency(currencyFromCode(savedPrefs.currency));
     setLocale(savedPrefs.locale);
+    currentUser.value = seedUsers.find(({ id }) => id === savedPrefs.userId) ?? seedUsers[0];
   } else {
     await savePreferences({
       accentHue: accentHue.value,
       currency: currentCurrency.value.code,
-      locale: 'en',
+      locale: currentLocale.value,
       theme: themePreference.value,
+      userId: currentUser.value.id,
     });
   }
 
@@ -141,8 +147,9 @@ export async function setupPersistence(): Promise<void> {
     void savePreferences({
       accentHue: accentHue.value,
       currency: currentCurrency.value.code,
-      locale: 'en',
+      locale: currentLocale.value,
       theme: themePreference.value,
+      userId: currentUser.value.id,
     });
   });
 }

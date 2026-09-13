@@ -96,10 +96,45 @@ test('empty cart offers a route back to models', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Browse models' })).toBeVisible();
 });
 
+test('settings expose named controls and immediate preference state', async ({ page }) => {
+  await page.goto('/settings');
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Language' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Currency' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByRole('button', { name: 'Custom color' }).click();
+  await expect(page.getByRole('slider', { name: 'Custom color' })).toBeVisible();
+
+  const salesPersona = page.getByRole('radio', { name: /Liam Ferreira/ });
+  await salesPersona.click();
+  await expect(salesPersona).toHaveAttribute('aria-checked', 'true');
+  await page.reload();
+  await expect(page.getByRole('radio', { name: /Liam Ferreira/ })).toHaveAttribute('aria-checked', 'true');
+
+  await page.getByRole('button', { name: 'Reset preferences' }).click();
+  await expect(page.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('status')).toContainText('Saved');
+});
+
+test('mobile settings stack descriptions and controls without overflow', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Mobile layout regression.');
+  await page.goto('/settings');
+
+  const layouts = await page.locator('.settings-field:has(ore-select)').evaluateAll((fields) =>
+    fields.map((field) => {
+      const copy = field.querySelector('.settings-field__identity')!.getBoundingClientRect();
+      const control = field.querySelector('ore-select')!.getBoundingClientRect();
+      return { controlTop: control.top, copyBottom: copy.bottom, overflow: field.scrollWidth - field.clientWidth };
+    }),
+  );
+  expect(layouts.every(({ controlTop, copyBottom, overflow }) => controlTop >= copyBottom && overflow <= 0)).toBe(true);
+});
+
 test('mobile cart and checkout stay within the viewport', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'Mobile layout regression.');
   await page.goto('/models/v500');
-  await page.getByRole('button', { name: 'Add to cart (from summary)' }).first().click();
+  await page.getByRole('button', { exact: true, name: 'Add to cart' }).click();
   const cartLine = page.locator('.cart-line');
   await expect(cartLine).toBeVisible();
   const overflow = await cartLine.evaluate((line) => line.scrollWidth - line.clientWidth);

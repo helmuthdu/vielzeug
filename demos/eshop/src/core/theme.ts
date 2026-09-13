@@ -8,14 +8,15 @@ const DARK_MODE_MEDIA_QUERY = '(prefers-color-scheme: dark)';
  * configurator sites (Mercedes-Benz, BMW) spend almost no color at all outside of links/CTAs; a
  * single restrained accent shared by the whole app reads as considered, not a missed opportunity
  * for "brand personality." */
-const DEFAULT_ACCENT_HUE = 222;
+export const DEFAULT_ACCENT_HUE = 222;
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = 'light';
 
 /**
  * Light by default — every real car-configurator reference (Mercedes-Benz Store, BMW's
  * Neuwagensuche) is a bright, white-canvas retail site, not a dark showroom stage. `dark`/
  * `system` stay one click away in Settings for anyone who prefers them.
  */
-export const themePreference = signal<ThemePreference>('light');
+export const themePreference = signal<ThemePreference>(DEFAULT_THEME_PREFERENCE);
 
 /** Drives `--color-primary-hue` — refine's secondary/derived tokens re-derive from it automatically. */
 export const accentHue = signal<number>(DEFAULT_ACCENT_HUE);
