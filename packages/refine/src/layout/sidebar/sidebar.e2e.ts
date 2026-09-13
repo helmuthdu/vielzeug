@@ -152,6 +152,10 @@ test.describe('Interaction', () => {
       return navbar?.hasAttribute('data-mobile') && sidebar?.hasAttribute('data-bottom-nav');
     });
 
+    const nav = page.locator('#sidebar').locator('[part="nav"]');
+
+    await expect(nav).toHaveAttribute('inert', '');
+    await expect(nav).toHaveAttribute('aria-hidden', 'true');
     await page.locator('#navbar').evaluate((navbar) => {
       const toggle = navbar.shadowRoot?.querySelector<HTMLButtonElement>('[part="mobile-toggle"]');
       toggle?.focus();
@@ -159,12 +163,16 @@ test.describe('Interaction', () => {
     });
     await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-mobile-open'));
 
+    await expect(nav).not.toHaveAttribute('inert', '');
+    await expect(nav).not.toHaveAttribute('aria-hidden', 'true');
     expect(
       await page.locator('#sidebar').evaluate((sidebar) => sidebar.shadowRoot?.activeElement?.getAttribute('part')),
     ).toBe('nav');
 
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-mobile-open'));
+    await expect(nav).toHaveAttribute('inert', '');
+    await expect(nav).toHaveAttribute('aria-hidden', 'true');
     expect(
       await page.locator('#navbar').evaluate((navbar) => navbar.shadowRoot?.activeElement?.getAttribute('part')),
     ).toBe('mobile-toggle');
@@ -177,5 +185,6 @@ test.describe('Interaction', () => {
       item.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
     });
     await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-mobile-open'));
+    await expect(nav).toHaveAttribute('inert', '');
   });
 });

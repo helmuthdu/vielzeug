@@ -169,7 +169,7 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState));
                     target="_blank"
                     :href="demo.href">
                     Launch {{ demo.name }}
-                    <ore-icon aria-hidden="true" name="external-link" size="15" slot="suffix"></ore-icon>
+                    <ore-icon aria-hidden="true" name="play" size="15" slot="suffix"></ore-icon>
                     <span class="sr-only">(opens in a new tab)</span>
                   </ore-button>
                   <ore-button

@@ -666,7 +666,12 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         aria-label="${props['mobile-close-label']}"
         ?hidden=${() => !isBottomNav.value || !isMobileOpen.value}
         @click=${() => setMobileOpen(false, 'toggle')}></button>
-      <nav aria-label="${props.label}" part="nav" tabindex="-1">
+      <nav
+        aria-label="${props.label}"
+        aria-hidden=${() => (isBottomNav.value && !isMobileOpen.value ? 'true' : null)}
+        part="nav"
+        tabindex="-1"
+        ?inert=${() => isBottomNav.value && !isMobileOpen.value}>
         <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
           <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
             <slot name="logo"></slot>

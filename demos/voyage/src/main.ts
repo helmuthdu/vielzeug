@@ -1,5 +1,6 @@
 import '@vielzeug/refine/tokens.css';
 import './styles/app.css';
+import './core/theme';
 import { createAppShell } from './ui/app-shell';
 
 const app = document.getElementById('app');

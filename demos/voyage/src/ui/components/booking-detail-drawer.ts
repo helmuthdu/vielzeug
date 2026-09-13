@@ -33,7 +33,7 @@ define('booking-detail-drawer', {
         ${when(
           () => selectedBooking.value !== null,
           () => html`
-            <article class="booking-detail" tabindex="0">
+            <article class="booking-detail">
               <header class="booking-detail__overview">
                 <div class=${() => `booking-detail__icon booking-card__icon--${selectedBooking.value?.type}`}>
                   <ore-icon
@@ -95,7 +95,7 @@ define('booking-detail-drawer', {
                       <span slot="description">Reservation secured with the provider</span>
                     </ore-step>
                     <ore-step value="upcoming">
-                      Upcoming
+                      ${() => (selectedBooking.value?.timeframe === 'past' ? 'Travel date' : 'Upcoming')}
                       <span slot="description">${() => selectedBooking.value?.dates}</span>
                     </ore-step>
                     <ore-step value="completed">

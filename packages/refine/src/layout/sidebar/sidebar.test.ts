@@ -171,20 +171,29 @@ describe('ore-sidebar', () => {
         openMobile(): void;
         toggleMobile(): void;
       };
+      const nav = fixture.query('nav')!;
 
+      expect(nav.hasAttribute('inert')).toBe(true);
+      expect(nav.getAttribute('aria-hidden')).toBe('true');
       el.openMobile();
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-mobile-open')).toBe(true);
+      expect(nav.hasAttribute('inert')).toBe(false);
+      expect(nav.hasAttribute('aria-hidden')).toBe(false);
 
       el.toggleMobile();
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+      expect(nav.hasAttribute('inert')).toBe(true);
+      expect(nav.getAttribute('aria-hidden')).toBe('true');
 
       el.openMobile();
       await fixture.flush();
       el.closeMobile();
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+      expect(nav.hasAttribute('inert')).toBe(true);
+      expect(nav.getAttribute('aria-hidden')).toBe('true');
     } finally {
       window.matchMedia = originalMatchMedia;
     }

@@ -1,13 +1,7 @@
-import { define, getHost, html, onCleanup, prop, useField } from '@vielzeug/ore';
+import { css, define, getHost, html, onCleanup, prop, useField } from '@vielzeug/ore';
 import { createCheckable, lifecycleSignal } from '../../core';
 import { disablableBundle, SWITCH_SIZE_PRESET, sizableBundle, themableBundle } from '../../shared';
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  disabledStateMixin,
-  forcedColorsFormControlMixin,
-  sizeVariantMixin,
-} from '../../styles';
+import { colorThemeMixin, disabledStateMixin, forcedColorsFormControlMixin, sizeVariantMixin } from '../../styles';
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 import { applyCheckableBinding } from '../shared/field-binding';
 import { defineFieldChecked, dispatchNativeFieldEvent, setFieldChecked } from '../shared/native-field-event';
@@ -71,6 +65,32 @@ export type OreSwitchProps = CheckableProps & {
  * ```
  */
 export const SWITCH_TAG = 'ore-switch' as const;
+const switchCoarsePointerMixin = css`
+  @media (pointer: coarse) {
+    :host,
+    :host([size='md']) {
+      --_touch-target: var(--size-11);
+      --_font-size: var(--text-base);
+      --_gap: var(--size-3);
+      --_height: var(--size-7);
+      --_thumb-size: var(--size-6);
+      --_width: var(--size-14);
+    }
+
+    :host([size='sm']) {
+      --_touch-target: var(--size-11);
+      --_font-size: var(--text-sm);
+      --_gap: var(--size-2);
+      --_height: var(--size-5);
+      --_thumb-size: var(--size-4);
+      --_width: var(--size-10);
+    }
+
+    :host([size='lg']) {
+      --_touch-target: var(--size-11);
+    }
+  }
+`;
 define<OreSwitchProps>(SWITCH_TAG, {
   formAssociated: true,
   props: {
@@ -141,8 +161,8 @@ define<OreSwitchProps>(SWITCH_TAG, {
     colorThemeMixin,
     forcedColorsFormControlMixin,
     disabledStateMixin,
-    coarsePointerMixin,
     sizeVariantMixin(SWITCH_SIZE_PRESET),
+    switchCoarsePointerMixin,
     componentStyles,
   ],
 });

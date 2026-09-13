@@ -49,6 +49,7 @@ export type Experience = {
 export type Booking = {
   dates: string;
   id: string;
+  start: string;
   location: string;
   status: 'Completed' | 'Confirmed';
   subtitle: string;

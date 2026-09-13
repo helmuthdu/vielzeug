@@ -9,6 +9,7 @@
     --_font-size: var(--switch-font-size, var(--text-sm));
 
     display: inline-flex;
+    flex-shrink: 0;
     flex-wrap: wrap;
     gap: var(--_gap, var(--size-2-5));
     align-items: center;

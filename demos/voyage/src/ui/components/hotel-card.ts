@@ -10,7 +10,8 @@ import type { Hotel } from '../../core/types';
 import { money } from '../format';
 import { navigate, routeHref } from '../navigation';
 
-export function hotelCard(hotel: Hotel) {
+export function hotelCard(hotel: Hotel, options: { horizontal?: boolean } = {}) {
+  const horizontal = options.horizontal ?? false;
   const hotelParams = { slug: hotel.id };
   const toggleSaved = (): void => {
     const saved = toggleSavedHotel(hotel.id);
@@ -28,7 +29,11 @@ export function hotelCard(hotel: Hotel) {
   const remainingAmenities = hotel.amenities.length - visibleAmenities.length;
 
   return html`
-    <ore-card class="hotel-card" padding="none" elevation="1">
+    <ore-card
+      class=${horizontal ? 'hotel-card hotel-card--result' : 'hotel-card'}
+      orientation=${horizontal ? 'horizontal' : null}
+      padding="none"
+      elevation="1">
       <div class="hotel-card__media" slot="media">
         <ore-skeleton class="hotel-card__image" striped aria-hidden="true" radius="0"></ore-skeleton>
         ${

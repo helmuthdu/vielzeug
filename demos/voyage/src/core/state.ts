@@ -3,6 +3,7 @@ import { initialBookings, initialItinerary } from './data';
 import type { Booking, ItineraryDay, ItineraryItem } from './types';
 
 export const bookings = signal<Booking[]>(structuredClone(initialBookings));
+export const compareBookings = (a: Booking, b: Booking): number => a.start.localeCompare(b.start);
 export const upcomingBookings = computed(() => bookings.value.filter((booking) => booking.timeframe === 'upcoming'));
 export const itinerary = signal<ItineraryDay[]>(structuredClone(initialItinerary));
 export const searchDestination = signal('Tokyo');

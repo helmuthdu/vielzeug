@@ -32,6 +32,7 @@ define('booking-view', {
         dates: '12–16 October',
         id: `booking-${hotel.value.id}`,
         location: hotel.value.location,
+        start: '2026-10-12T14:00:00+09:00',
         status: 'Confirmed',
         subtitle: `${selectedRoom.value.name} · 2 guests`,
         timeframe: 'upcoming',

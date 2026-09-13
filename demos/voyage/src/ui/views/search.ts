@@ -1,13 +1,15 @@
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
+import '@vielzeug/refine/chip';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/select';
 import { define, html } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { destinationById, destinations, hotels } from '../../core/data';
 import { searchDates, searchDestinationId, searchTravelers } from '../../core/state';
 import { destinationMaps } from '../components/destination-map';
 import { hotelCard } from '../components/hotel-card';
-import { formatDateRange, isIsoDate } from '../format';
+import { formatDateRange, isIsoDate, valueOf } from '../format';
 import { navigate, queryValue } from '../navigation';
 
 define('search-view', {
@@ -23,14 +25,19 @@ define('search-view', {
     const highlyRated = signal(false);
     const breakfastIncluded = signal(false);
     const mapOpen = signal(false);
+    const sortBy = signal<'recommended' | 'price' | 'rating'>('recommended');
     const visibleHotels = computed(() =>
-      hotels.filter(
-        (hotel) =>
-          hotel.destinationId === selectedDestination.value.id &&
-          (!underTwoHundred.value || hotel.price < 200) &&
-          (!highlyRated.value || hotel.rating >= 4.8) &&
-          (!breakfastIncluded.value || hotel.amenities.includes('Breakfast')),
-      ),
+      hotels
+        .filter(
+          (hotel) =>
+            hotel.destinationId === selectedDestination.value.id &&
+            (!underTwoHundred.value || hotel.price < 200) &&
+            (!highlyRated.value || hotel.rating >= 4.8) &&
+            (!breakfastIncluded.value || hotel.amenities.includes('Breakfast')),
+        )
+        .sort((a, b) =>
+          sortBy.value === 'price' ? a.price - b.price : sortBy.value === 'rating' ? b.rating - a.rating : 0,
+        ),
     );
     const criteriaDates = computed(() => {
       const departure = queryValue('from');
@@ -51,7 +58,7 @@ define('search-view', {
             <span class="eyebrow">STAYS IN JAPAN</span>
             <h1>${() => selectedDestination.value.name}</h1>
             <p>
-              ${() => `${selectedDestination.value.stays} stays · ${criteriaDates.value} · ${criteriaTravelers.value}`}
+              ${() => `${visibleHotels.value.length} stays available · ${criteriaDates.value} · ${criteriaTravelers.value}`}
             </p>
           </div>
           <ore-button variant="outline" @click=${() => navigate('explore')}>
@@ -59,40 +66,65 @@ define('search-view', {
             Edit search
           </ore-button>
         </header>
-        <div class="filter-bar" aria-label="Search filters">
-          <ore-button size="sm" variant="outline" @click=${() => navigate('explore')}>Dates</ore-button>
-          <ore-button size="sm" variant="outline" @click=${() => navigate('explore')}>Guests</ore-button>
-          <ore-button
-            size="sm"
-            color=${() => (underTwoHundred.value ? 'primary' : undefined)}
-            variant=${() => (underTwoHundred.value ? 'flat' : 'outline')}
-            aria-pressed=${() => String(underTwoHundred.value)}
-            @click=${() => {
-              underTwoHundred.value = !underTwoHundred.value;
-            }}>
-            Under €200
-          </ore-button>
-          <ore-button
-            size="sm"
-            color=${() => (highlyRated.value ? 'primary' : undefined)}
-            variant=${() => (highlyRated.value ? 'flat' : 'outline')}
-            aria-pressed=${() => String(highlyRated.value)}
-            @click=${() => {
-              highlyRated.value = !highlyRated.value;
-            }}>
-            Rating 4.8+
-          </ore-button>
-          <ore-button
-            size="sm"
-            color=${() => (breakfastIncluded.value ? 'primary' : undefined)}
-            variant=${() => (breakfastIncluded.value ? 'flat' : 'outline')}
-            aria-pressed=${() => String(breakfastIncluded.value)}
-            @click=${() => {
-              breakfastIncluded.value = !breakfastIncluded.value;
-            }}>
-            Breakfast
-          </ore-button>
-          <span class="filter-count">${() => `${visibleHotels.value.length} demo stays`}</span>
+        <div class="filter-bar">
+          <div class="filter-options" role="group" aria-label="Search filters">
+            <ore-chip mode="action" variant="outline" @click=${() => navigate('explore')}>
+              ${() => criteriaDates.value}
+            </ore-chip>
+            <ore-chip mode="action" variant="outline" @click=${() => navigate('explore')}>
+              ${() => criteriaTravelers.value}
+            </ore-chip>
+            <ore-chip
+              mode="selectable"
+              color=${() => (underTwoHundred.value ? 'primary' : undefined)}
+              variant=${() => (underTwoHundred.value ? 'flat' : 'outline')}
+              ?checked=${() => underTwoHundred.value}
+              @change=${(event: Event) => {
+                underTwoHundred.value = (event as CustomEvent<{ checked: boolean }>).detail.checked;
+              }}>
+              Under €200
+            </ore-chip>
+            <ore-chip
+              mode="selectable"
+              color=${() => (highlyRated.value ? 'primary' : undefined)}
+              variant=${() => (highlyRated.value ? 'flat' : 'outline')}
+              ?checked=${() => highlyRated.value}
+              @change=${(event: Event) => {
+                highlyRated.value = (event as CustomEvent<{ checked: boolean }>).detail.checked;
+              }}>
+              Rating 4.8+
+            </ore-chip>
+            <ore-chip
+              mode="selectable"
+              color=${() => (breakfastIncluded.value ? 'primary' : undefined)}
+              variant=${() => (breakfastIncluded.value ? 'flat' : 'outline')}
+              ?checked=${() => breakfastIncluded.value}
+              @change=${(event: Event) => {
+                breakfastIncluded.value = (event as CustomEvent<{ checked: boolean }>).detail.checked;
+              }}>
+              Breakfast
+            </ore-chip>
+          </div>
+          <div class="result-controls">
+            <span class="filter-count" aria-live="polite">${() => `${visibleHotels.value.length} stays`}</span>
+            <div class="search-sort">
+              <span>Sort</span>
+              <ore-select
+                label="Sort stays"
+                hide-label
+                rounded="lg"
+                variant="outline"
+                value=${sortBy}
+                options=${[
+                  { label: 'Recommended', value: 'recommended' },
+                  { label: 'Lowest price', value: 'price' },
+                  { label: 'Highest rated', value: 'rating' },
+                ]}
+                @change=${(event: Event) => {
+                  sortBy.value = valueOf(event) as 'recommended' | 'price' | 'rating';
+                }}></ore-select>
+            </div>
+          </div>
         </div>
         <ore-button
           class="mobile-map-toggle"
@@ -111,7 +143,7 @@ define('search-view', {
             <div class="hotel-results">
               ${() =>
                 visibleHotels.value.length > 0
-                  ? visibleHotels.value.map(hotelCard)
+                  ? visibleHotels.value.map((hotel) => hotelCard(hotel, { horizontal: true }))
                   : html`
                       <ore-card class="empty-results" padding="xl" elevation="1">
                         <ore-icon name="bed-double" size="28" aria-hidden="true"></ore-icon>

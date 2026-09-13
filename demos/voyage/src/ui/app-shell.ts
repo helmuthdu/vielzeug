@@ -1,21 +1,17 @@
 import '@vielzeug/refine/avatar';
-import '@vielzeug/refine/button';
 import '@vielzeug/refine/icon';
 import { define, html, ref } from '@vielzeug/ore';
 import { effect } from '@vielzeug/ripple';
 import { travelerProfile } from '../core/preferences';
 import { activeRoute, type RouteName, router } from '../core/router';
-import { theme, toggleTheme } from '../core/theme';
+import { navigate, routeHref } from './navigation';
+
+if (sessionStorage.getItem('voyage-support-chat-open') === 'true') void import('./components/travel-support-chat');
 
 const primaryNav: { icon: string; label: string; route: RouteName }[] = [
   { icon: 'compass', label: 'Explore', route: 'explore' },
   { icon: 'map', label: 'Trips', route: 'trips' },
   { icon: 'ticket-check', label: 'Bookings', route: 'bookings' },
-];
-
-const secondaryNav: { icon: string; label: string; route: RouteName }[] = [
-  { icon: 'user-round', label: 'Profile', route: 'profile' },
-  { icon: 'settings-2', label: 'Settings', route: 'settings' },
 ];
 
 const viewLoaders: Record<RouteName, () => Promise<unknown>> = {
@@ -80,13 +76,23 @@ define('voyage-shell', {
       return undefined;
     });
 
-    const navItem = (item: { icon: string; label: string; route: RouteName }, bottomNav = false) => html`
+    const openRoute = (event: MouseEvent, route: RouteName, params: Record<string, string> = {}): void => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      navigate(route, params);
+    };
+    const navItem = (
+      item: { icon: string; label: string; route: RouteName },
+      bottomNav = false,
+      mobileOnly = false,
+    ) => html`
       <ore-sidebar-item
+        class=${mobileOnly ? 'bottom-nav-source' : null}
+        href=${routeHref(item.route)}
         ?active=${() => activeRoute.value === item.route}
         ?bottom-nav=${bottomNav}
         bottom-nav-label=${item.label}
-        title=${item.label}
-        @click=${() => void router.navigate({ name: item.route })}>
+        @click=${(event: MouseEvent) => openRoute(event, item.route)}>
         <ore-icon slot="icon" name=${item.icon} size="18" aria-hidden="true"></ore-icon>
         ${item.label}
       </ore-sidebar-item>
@@ -113,32 +119,52 @@ define('voyage-shell', {
             <span>VOYAGE</span>
           </button>
 
-          <span class="sidebar-section-label">Travel</span>
           ${primaryNav.map((item) => navItem(item, true))}
-          <span class="sidebar-section-label sidebar-section-label--account">Account</span>
-          ${secondaryNav.map((item) => navItem(item, item.route === 'settings'))}
-          <ore-sidebar-item title="Change theme" @click=${toggleTheme}>
-            <ore-icon
-              slot="icon"
-              name=${() => (theme.value === 'dark' ? 'sun' : 'moon')}
-              size="18"
-              aria-hidden="true"></ore-icon>
-            Theme
-          </ore-sidebar-item>
+          ${navItem({ icon: 'user-round', label: 'Profile', route: 'profile' }, true, true)}
+          ${navItem({ icon: 'settings-2', label: 'Settings', route: 'settings' }, true, true)}
 
-          <div class="sidebar__footer" slot="footer">
-            <ore-avatar
-              size="sm"
-              initials=${() => `${travelerProfile.value.firstName[0] ?? ''}${travelerProfile.value.lastName[0] ?? ''}`}
-              alt=${() => `${travelerProfile.value.firstName} ${travelerProfile.value.lastName}`}></ore-avatar>
-            <span>
-              <strong>${() => travelerProfile.value.firstName}</strong>
-              <small>Japan · 7 days</small>
-            </span>
+          <div class="sidebar__lower" slot="footer">
+            <a
+              class="sidebar__next-trip"
+              href=${routeHref('trip', { id: 'japan-october' })}
+              aria-label="View Japan itinerary, 12 to 19 October"
+              aria-current=${() => (activeRoute.value === 'trip' ? 'page' : null)}
+              @click=${(event: MouseEvent) => openRoute(event, 'trip', { id: 'japan-october' })}>
+              <span class="sidebar__trip-label">Next trip</span>
+              <strong>Japan</strong>
+              <span class="sidebar__trip-route">Tokyo · Kyoto · Osaka</span>
+              <span class="sidebar__trip-meta">
+                <span>
+                  <ore-icon name="calendar-days" size="14" aria-hidden="true"></ore-icon>
+                  12–19 Oct
+                </span>
+                <ore-icon name="arrow-right" size="15" aria-hidden="true"></ore-icon>
+              </span>
+            </a>
+
+            <div class="sidebar__account">
+              ${navItem({ icon: 'settings-2', label: 'Settings', route: 'settings' })}
+              <a
+                class="sidebar__footer"
+                href=${routeHref('profile')}
+                aria-label=${() => `Open profile for ${travelerProfile.value.firstName} ${travelerProfile.value.lastName}`}
+                aria-current=${() => (activeRoute.value === 'profile' ? 'page' : null)}
+                @click=${(event: MouseEvent) => openRoute(event, 'profile')}>
+                <ore-avatar
+                  size="sm"
+                  initials=${() => `${travelerProfile.value.firstName[0] ?? ''}${travelerProfile.value.lastName[0] ?? ''}`}
+                  alt=""></ore-avatar>
+                <span>
+                  <strong>${() => `${travelerProfile.value.firstName} ${travelerProfile.value.lastName}`}</strong>
+                  <small>Profile</small>
+                </span>
+              </a>
+            </div>
           </div>
         </ore-sidebar>
         <main class="app-main" id="main-content" ref=${main}></main>
       </ore-grid>
+      <travel-support-chat></travel-support-chat>
     `;
   },
   shadow: false,

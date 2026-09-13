@@ -39,13 +39,14 @@ define('destination-view', {
         </header>
         <div class="page-content page-content--narrow">
           <section class="editorial-intro">
-            <span>
-              ${() => destination.value.coordinates.latitude}
-              <br />
-              ${() => destination.value.coordinates.longitude}
-            </span>
-            <div>
+            <div class="editorial-intro__meta">
               <span class="eyebrow">WHY GO</span>
+              <span class="editorial-intro__location">
+                <ore-icon name="map-pin" size="14" aria-hidden="true"></ore-icon>
+                ${() => destination.value.region}, Japan
+              </span>
+            </div>
+            <div class="editorial-intro__copy">
               <h2>${() => destination.value.editorial.heading}</h2>
               <p>${() => destination.value.editorial.description}</p>
             </div>
@@ -63,7 +64,7 @@ define('destination-view', {
             <ore-grid class="hotel-grid" cols="1" cols-sm="2" cols-lg="3" gap="lg" fullwidth>
               ${() =>
                 destinationHotels.value.length
-                  ? destinationHotels.value.map(hotelCard)
+                  ? destinationHotels.value.map((hotel) => hotelCard(hotel))
                   : html`
                       <ore-card class="empty-results" padding="xl">
                         <h3>No demo stays yet</h3>

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { hotels } from './data';
-import { savedHotelIds, toggleSavedHotel } from './state';
+import { hotels, initialBookings } from './data';
+import { compareBookings, savedHotelIds, toggleSavedHotel } from './state';
 
 describe('hotel discovery data', () => {
   it('provides commercially useful card metadata', () => {
@@ -9,6 +9,17 @@ describe('hotel discovery data', () => {
       expect(hotel.reviewCount).toBeGreaterThan(0);
       expect(hotel.amenities.length).toBeGreaterThanOrEqual(2);
     }
+  });
+});
+
+describe('booking chronology', () => {
+  it('sorts upcoming bookings by their machine-readable start time', () => {
+    expect(
+      initialBookings
+        .filter((booking) => booking.timeframe === 'upcoming')
+        .sort(compareBookings)
+        .map((booking) => booking.id),
+    ).toEqual(['stay-tokyo', 'sushi-tokyo', 'train-kyoto', 'stay-kyoto']);
   });
 });
 
