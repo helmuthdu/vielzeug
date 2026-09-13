@@ -453,6 +453,36 @@ describe('ore-popover accessibility', () => {
   });
 
   describe('Controlled mode — B2 regression', () => {
+    it('requests open when its trigger is clicked while closed', async () => {
+      fixture = await mount('ore-popover', {
+        attrs: { open: 'false' },
+        html: '<button>Open</button>',
+      });
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('open-change', handler);
+      fireClick(fixture.element.querySelector<HTMLButtonElement>('button')!);
+      await fixture.flush();
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: true, reason: 'click' });
+    });
+
+    it('requests close when its trigger is clicked while open', async () => {
+      fixture = await mount('ore-popover', {
+        attrs: { open: 'true' },
+        html: '<button>Open</button>',
+      });
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('open-change', handler);
+      fireClick(fixture.element.querySelector<HTMLButtonElement>('button')!);
+      await fixture.flush();
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'trigger' });
+    });
+
     it('does not fire open-change when open prop starts as false', async () => {
       const handler = vi.fn();
 

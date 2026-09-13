@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add explicit sidebar item labels and menu panel foreground theming, and fix controlled popover dismissal through triggers, outside clicks, and Escape.",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

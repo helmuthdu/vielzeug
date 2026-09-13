@@ -50,16 +50,16 @@ export type FloatingTriggerOptions = {
 };
 
 export type FloatingTriggerHandle = {
-  /** Closes the panel. No-op if controlled. */
+  /** Closes the panel or requests that a controlled consumer close it. */
   close: (reason?: DialogCloseReason) => void;
   /**
    * Call inside `onMounted`. Sets up slot + trigger event watchers
    * and returns a cleanup function to pass back to the framework.
    */
   mount: () => () => void;
-  /** Opens the panel. No-op if controlled. */
+  /** Opens the panel or requests that a controlled consumer open it. */
   open: (reason?: OverlayOpenReason) => void;
-  /** Toggles the panel. No-op if controlled. */
+  /** Toggles the panel or requests the matching controlled-state change. */
   toggle: () => void;
   /** Manually trigger a position recalculation. */
   updatePosition: () => void;
@@ -180,22 +180,28 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
   }
 
   function open(reason: OverlayOpenReason = 'programmatic'): void {
-    if (isControlled() || disabled.value || visible.value) return;
+    if (disabled.value || visible.value) return;
+    if (isControlled()) {
+      onOpen?.(reason);
+      return;
+    }
 
     showFloat();
     onOpen?.(reason);
   }
 
   function close(reason: DialogCloseReason = 'trigger'): void {
-    if (isControlled() || !visible.value) return;
+    if (!visible.value) return;
+    if (isControlled()) {
+      onClose?.(reason);
+      return;
+    }
 
     hideFloat();
     onClose?.(reason);
   }
 
   function toggle(): void {
-    if (isControlled()) return;
-
     if (visible.value) close();
     else open('click');
   }
@@ -316,13 +322,8 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
         initializedOpenProp = true;
 
-        if (openVal) {
-          showFloat();
-          onOpen?.('programmatic');
-        } else if (visible.value) {
-          hideFloat();
-          onClose?.('programmatic');
-        }
+        if (openVal) showFloat();
+        else if (visible.value) hideFloat();
       },
       { immediate: true },
     );

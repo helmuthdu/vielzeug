@@ -419,6 +419,12 @@ describe('ore-sidebar-item', () => {
     expect(fixture.query('a.item')).toBeTruthy();
   });
 
+  it('forwards an accessible label to the internal control', async () => {
+    fixture = await mount('ore-sidebar-item', { attrs: { href: '/home', label: 'Home' } });
+
+    expect(fixture.query('a.item')?.getAttribute('aria-label')).toBe('Home');
+  });
+
   it('renders a button when disabled even if href is present', async () => {
     fixture = await mount('ore-sidebar-item', { attrs: { disabled: '', href: '/home' } });
 

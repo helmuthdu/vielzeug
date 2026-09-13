@@ -1,6 +1,7 @@
 @layer refine.base {
   :host {
     --_menu-panel-bg: var(--menu-panel-bg, var(--color-canvas));
+    --_menu-panel-color: var(--menu-panel-color, var(--color-contrast-900));
     --_menu-panel-border-color: var(--menu-panel-border-color, var(--color-divider));
     --_menu-panel-blur: var(--menu-panel-blur, var(--blur-md));
     --_menu-panel-shadow: var(--menu-panel-shadow, var(--shadow-xl));
@@ -24,6 +25,7 @@
     padding: var(--_panel-padding, var(--size-1));
     margin: 0;
     overflow-y: auto;
+    color: var(--_menu-panel-color);
     pointer-events: none;
     background: var(--_menu-panel-bg);
     border: var(--border) solid var(--_menu-panel-border-color);

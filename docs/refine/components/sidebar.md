@@ -153,6 +153,7 @@ Use two breakpoints to get the full three-state behavior:
 - By default, bottom navigation tabs are derived from direct `ore-sidebar-item` children.
 - For grouped sidebars, mark any descendant item with `bottom-nav` to promote it. Once one item is marked, only marked items appear in the bottom bar.
 - Use `bottom-nav-label` when the mobile tab needs a shorter label than the desktop item.
+- Use `label` to give an item's internal link or button an explicit accessible name, especially in collapsed icon-only navigation.
 - `ore-sidebar-group` content remains available in the drawer opened by `openMobile()` or a linked `ore-navbar mobile-sidebar` trigger.
 - Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
 

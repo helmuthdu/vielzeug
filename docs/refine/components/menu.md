@@ -276,6 +276,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `--menu-panel-radius`       | Border radius of the panel                       | `var(--rounded-lg)` |
 | `--menu-panel-shadow`       | Box shadow of the panel                          | `var(--shadow-xl)`  |
 | `--menu-panel-bg`           | Panel background surface                         | Theme-dependent     |
+| `--menu-panel-color`        | Panel foreground and unchecked indicator color   | Theme-dependent     |
 | `--menu-panel-border-color` | Panel border color                               | Theme-dependent     |
 | `--menu-panel-blur`         | Panel backdrop blur amount                       | `var(--blur-md)`    |
 | `--menu-item-hover-bg`      | Item background on hover                         | Theme-dependent     |

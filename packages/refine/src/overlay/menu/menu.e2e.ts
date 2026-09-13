@@ -15,6 +15,26 @@ test.describe('Interaction', () => {
     expect(isOpen).toBe(true);
   });
 
+  test('uses the panel foreground for items inside a contrasting container', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div style="color: rgb(247, 249, 253); --color-contrast-900: rgb(13, 20, 34); --menu-panel-bg: rgb(255, 255, 255)">
+        <ore-menu default-open>
+          <ore-button slot="trigger">Switch user</ore-button>
+          <ore-menu-item type="radio" value="alex">Alex</ore-menu-item>
+        </ore-menu>
+      </div>
+    `);
+
+    const colors = await page.locator('ore-menu').evaluate((menu) => {
+      const panel = menu.shadowRoot?.querySelector<HTMLElement>('.menu-panel');
+      const item = menu.querySelector('ore-menu-item')?.shadowRoot?.querySelector<HTMLElement>('.item');
+
+      return { item: item ? getComputedStyle(item).color : '', panel: panel ? getComputedStyle(panel).color : '' };
+    });
+
+    expect(colors).toEqual({ item: 'rgb(13, 20, 34)', panel: 'rgb(13, 20, 34)' });
+  });
+
   test('opens menu inside an iframe preview', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<iframe title="Preview"></iframe>');
 

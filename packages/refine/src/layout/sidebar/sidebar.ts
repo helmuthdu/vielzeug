@@ -868,6 +868,7 @@ export type OreSidebarItemProps = {
   disabled?: boolean;
   /** Navigation href — renders an `<a>` when set, otherwise a `<button>` */
   href?: string;
+  label?: string;
   /**
    * Relationship of the linked URL (`rel` attribute on the inner `<a>`).
    * Only applies when `href` is set.
@@ -932,6 +933,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
     'bottom-nav-label': prop.string(),
     disabled: prop.bool(false),
     href: prop.string(),
+    label: prop.string(),
     rel: prop.string(),
     target: prop.string(),
   },
@@ -981,6 +983,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
               href="${props.href}"
               rel="${effectiveRel}"
               target="${props.target}"
+              aria-label="${props.label}"
               aria-current="${() => (props.active.value ? 'page' : null)}"
               @click=${closeMobileOnSelect}>
               ${renderItemContent()}
@@ -995,6 +998,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
               part="item"
               aria-disabled="true"
               tabindex="-1"
+              aria-label="${props.label}"
               aria-current="${() => (props.active.value ? 'page' : null)}">
               ${renderItemContent()}
             </div>
@@ -1007,6 +1011,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
             part="item"
             type="button"
             ?disabled="${props.disabled}"
+            aria-label="${props.label}"
             aria-current="${() => (props.active.value ? 'page' : null)}"
             @click=${closeMobileOnSelect}>
             ${renderItemContent()}

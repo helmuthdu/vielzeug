@@ -4,7 +4,9 @@ import '@vielzeug/refine/command-palette';
 import '@vielzeug/refine/grid';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/navbar';
-import '@vielzeug/refine/select';
+import '@vielzeug/refine/popover';
+import '@vielzeug/refine/radio';
+import '@vielzeug/refine/radio-group';
 import '@vielzeug/refine/sidebar';
 import '@vielzeug/refine/toast';
 import './components/record-dialog';
@@ -15,6 +17,7 @@ import { toast } from '@vielzeug/refine/toast';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { can } from '../core/auth';
 import { bus } from '../core/events';
+import { formatAmount } from '../core/format';
 import { ledger } from '../core/history';
 import { setLocale, t } from '../core/i18n';
 import { reconnect, simulateOffline } from '../core/offline';
@@ -22,7 +25,8 @@ import { presence, simulateLiveActivity } from '../core/realtime';
 import { type RouteName, routeHref, router } from '../core/router';
 import { crmIndex } from '../core/search';
 import { demoUsers } from '../core/seed-data';
-import { activeRoute, activeRouteParams, currentUser, locale, networkStatus } from '../core/store';
+import { leadsNeedingAttention, openPipeline, stageTotals, weightedPipeline } from '../core/selectors';
+import { activeRoute, activeRouteParams, crmData, currentUser, locale, networkStatus } from '../core/store';
 import { setThemePreference, themePreference } from '../core/theme';
 import { openRecordDialog } from './components/record-dialog';
 import { openRecordDrawer } from './components/record-drawer';
@@ -113,8 +117,19 @@ define('crm-app-shell', {
     const host = getHost();
     const query = signal('');
     const paletteOpen = signal(false);
+    const userMenuOpen = signal(false);
     const routeState = signal<'error' | 'loading' | 'ready'>('loading');
     const presenceUsers = computed(() => [...presence.value.entries()].map(([id, user]) => ({ id, name: user.name })));
+    const pipelineValue = computed(() => openPipeline(crmData.value));
+    const pipelineConfidence = computed(() =>
+      pipelineValue.value ? (weightedPipeline(crmData.value) / pipelineValue.value) * 100 : 0,
+    );
+    const pipelineAttention = computed(() => leadsNeedingAttention(crmData.value, '2026-08-31T12:00:00Z').length);
+    const pipelineSegments = computed(() =>
+      stageTotals(crmData.value)
+        .filter((item) => item.stage !== 'closed-won' && item.stage !== 'closed-lost')
+        .map((item) => ({ ...item, share: pipelineValue.value ? (item.value / pipelineValue.value) * 100 : 0 })),
+    );
     const presenceLabel = computed(() => {
       const names = presenceUsers.value.map((user) => user.name);
       return names.length ? t('presence.viewing', { names: names.join(', ') }) : t('presence.noTeammatesViewing');
@@ -127,6 +142,12 @@ define('crm-app-shell', {
       setThemePreference(
         themePreference.value === 'light' ? 'dark' : themePreference.value === 'dark' ? 'system' : 'light',
       );
+    const selectUser = (event: Event): void => {
+      const id = (event.currentTarget as HTMLElement & { value: string }).value;
+      const user = demoUsers.find((item) => item.id === id);
+      if (user) currentUser.value = user;
+      userMenuOpen.value = false;
+    };
     const runHistory = (action: () => Promise<void>): void => {
       void action().catch(() => toast.add({ color: 'error', message: t('action.historyFailed') }));
     };
@@ -193,12 +214,6 @@ define('crm-app-shell', {
       const viewHost = host.querySelector<HTMLElement>('.route-view')!;
       const sidebar = host.querySelector<SidebarElement>('#crm-sidebar')!;
       const palette = host.querySelector<HTMLElement & { items: PaletteItem[] }>('ore-command-palette')!;
-      const userSwitcher = host.querySelector<
-        HTMLElement & { options: Array<{ label: string; value: string }>; value: string }
-      >('.user-switcher')!;
-      const mobileUser = host.querySelector<
-        HTMLElement & { options: Array<{ label: string; value: string }>; value: string }
-      >('.mobile-user')!;
       const status = host.querySelector<HTMLButtonElement>('.status-control')!;
       const localeButton = host.querySelector<HTMLButtonElement>('.locale-button')!;
       const themeButton = host.querySelector<HTMLButtonElement>('.theme-button')!;
@@ -207,9 +222,6 @@ define('crm-app-shell', {
       const mobileNetwork = host.querySelector<HTMLElement>('.mobile-network')!;
       const searches = [...host.querySelectorAll<HTMLButtonElement>('.search-trigger')];
       const breadcrumb = host.querySelector<HTMLElement>('.topbar-context')!;
-      const avatar = host.querySelector<HTMLElement>('.rail-avatar')!;
-      const profileName = host.querySelector<HTMLElement>('.sidebar-profile__name')!;
-      const profileRole = host.querySelector<HTMLElement>('.sidebar-profile__role')!;
       let renderId = 0;
       const renderView = async (route: string | null, companyId: string): Promise<void> => {
         const id = ++renderId;
@@ -262,12 +274,7 @@ define('crm-app-shell', {
           localeButton.ariaLabel = label;
           localeButton.title = label;
           document.documentElement.lang = current;
-          userSwitcher.value = currentUser.value.id;
-          mobileUser.value = currentUser.value.id;
           host.dataset.role = currentUser.value.role;
-          avatar.textContent = initials(currentUser.value.name);
-          profileName.textContent = currentUser.value.name;
-          profileRole.textContent = currentUser.value.title;
           palette.items = paletteItems();
         }),
         effect(() => {
@@ -282,9 +289,6 @@ define('crm-app-shell', {
           mobileTheme.title = label;
         }),
       ];
-      const userOptions = demoUsers.map((user) => ({ label: `${user.name} — ${user.title}`, value: user.id }));
-      userSwitcher.options = userOptions;
-      mobileUser.options = userOptions;
       palette.items = paletteItems();
       const navigationListener = (event: MouseEvent): void => {
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -311,12 +315,6 @@ define('crm-app-shell', {
       const localeListener = (): void => {
         void setLocale(locale.value === 'en' ? 'de' : 'en');
       };
-      const userListener = (event: Event): void => {
-        const detail = (event as CustomEvent<{ value?: string; values?: string[] }>).detail;
-        const id = detail?.values?.[0] ?? detail?.value ?? (event.currentTarget as typeof userSwitcher).value;
-        const user = demoUsers.find((item) => item.id === id);
-        if (user) currentUser.value = user;
-      };
       const paletteSearchListener = (event: Event): void => {
         query.value = (event as CustomEvent<{ query: string }>).detail.query;
         palette.items = paletteItems();
@@ -329,8 +327,6 @@ define('crm-app-shell', {
       status.addEventListener('click', statusListener);
       themeButton.addEventListener('click', cycleTheme);
       localeButton.addEventListener('click', localeListener);
-      userSwitcher.addEventListener('change', userListener);
-      mobileUser.addEventListener('change', userListener);
       mobileTheme.addEventListener('click', cycleTheme);
       mobileLocale.addEventListener('click', localeListener);
       mobileNetwork.addEventListener('click', statusListener);
@@ -382,8 +378,6 @@ define('crm-app-shell', {
         status.removeEventListener('click', statusListener);
         themeButton.removeEventListener('click', cycleTheme);
         localeButton.removeEventListener('click', localeListener);
-        userSwitcher.removeEventListener('change', userListener);
-        mobileUser.removeEventListener('change', userListener);
         mobileTheme.removeEventListener('click', cycleTheme);
         mobileLocale.removeEventListener('click', localeListener);
         mobileNetwork.removeEventListener('click', statusListener);
@@ -424,23 +418,23 @@ define('crm-app-shell', {
             <small>${() => t('context.revenueWorkspace')}</small>
           </span>
 
-          <ore-sidebar-group label=${() => t('nav.overview')}>
-            <ore-sidebar-item
-              href=${routePaths.dashboard}
-              data-route="dashboard"
-              bottom-nav
-              bottom-nav-label=${() => t('nav.overview')}
-              title=${() => t('nav.overview')}>
-              <ore-icon slot="icon" name="layout-dashboard" size="19"></ore-icon>
-              ${() => t('nav.overview')}
-            </ore-sidebar-item>
-          </ore-sidebar-group>
+          <ore-sidebar-item
+            href=${routePaths.dashboard}
+            data-route="dashboard"
+            bottom-nav
+            bottom-nav-label=${() => t('nav.overview')}
+            label=${() => t('nav.overview')}
+            title=${() => t('nav.overview')}>
+            <ore-icon slot="icon" name="layout-dashboard" size="19"></ore-icon>
+            ${() => t('nav.overview')}
+          </ore-sidebar-item>
           <ore-sidebar-group label=${() => t('nav.sales')}>
             <ore-sidebar-item
               href=${routePaths.pipeline}
               data-route="pipeline"
               bottom-nav
               bottom-nav-label=${() => t('nav.pipeline')}
+              label=${() => t('nav.pipeline')}
               title=${() => t('nav.pipeline')}>
               <ore-icon slot="icon" name="kanban-square" size="19"></ore-icon>
               ${() => t('nav.pipeline')}
@@ -448,11 +442,16 @@ define('crm-app-shell', {
             <ore-sidebar-item
               href=${routePaths.opportunities}
               data-route="opportunities"
+              label=${() => t('nav.opportunities')}
               title=${() => t('nav.opportunities')}>
               <ore-icon slot="icon" name="circle-dollar-sign" size="19"></ore-icon>
               ${() => t('nav.opportunities')}
             </ore-sidebar-item>
-            <ore-sidebar-item href=${routePaths.leads} data-route="leads" title=${() => t('nav.leads')}>
+            <ore-sidebar-item
+              href=${routePaths.leads}
+              data-route="leads"
+              label=${() => t('nav.leads')}
+              title=${() => t('nav.leads')}>
               <ore-icon slot="icon" name="user-plus" size="19"></ore-icon>
               ${() => t('nav.leads')}
             </ore-sidebar-item>
@@ -463,40 +462,124 @@ define('crm-app-shell', {
               data-route="companies"
               bottom-nav
               bottom-nav-label=${() => t('nav.companies')}
+              label=${() => t('nav.companies')}
               title=${() => t('nav.companies')}>
               <ore-icon slot="icon" name="building-2" size="19"></ore-icon>
               ${() => t('nav.companies')}
             </ore-sidebar-item>
-            <ore-sidebar-item href=${routePaths.contacts} data-route="contacts" title=${() => t('nav.contacts')}>
+            <ore-sidebar-item
+              href=${routePaths.contacts}
+              data-route="contacts"
+              label=${() => t('nav.contacts')}
+              title=${() => t('nav.contacts')}>
               <ore-icon slot="icon" name="users" size="19"></ore-icon>
               ${() => t('nav.contacts')}
             </ore-sidebar-item>
           </ore-sidebar-group>
-          <ore-sidebar-group label=${() => t('nav.activity')}>
-            <ore-sidebar-item
-              href=${routePaths.activity}
-              data-route="activity"
-              bottom-nav
-              bottom-nav-label=${() => t('companyDetail.activity')}
-              title=${() => t('nav.activity')}>
-              <ore-icon slot="icon" name="activity" size="19"></ore-icon>
-              ${() => t('nav.activity')}
-            </ore-sidebar-item>
-          </ore-sidebar-group>
+          <ore-sidebar-item
+            href=${routePaths.activity}
+            data-route="activity"
+            bottom-nav
+            bottom-nav-label=${() => t('companyDetail.activity')}
+            label=${() => t('nav.activity')}
+            title=${() => t('nav.activity')}>
+            <ore-icon slot="icon" name="activity" size="19"></ore-icon>
+            ${() => t('nav.activity')}
+          </ore-sidebar-item>
           <div class="sidebar-footer-content" slot="footer">
-            <div class="sidebar-profile">
-              <div class="rail-avatar">AM</div>
-              <span>
-                <strong class="sidebar-profile__name">Alex Morgan</strong>
-                <small class="sidebar-profile__role">Sales manager</small>
+            <a
+              class="pipeline-pulse"
+              href=${routePaths.pipeline}
+              data-route="pipeline"
+              aria-label=${() =>
+                `${t('context.pipelinePulse')}: ${formatAmount(String(pipelineValue.value))} ${t('dashboard.openPipeline')}; ${pipelineConfidence.value.toFixed(0)}% ${t('context.forecastConfidence')}; ${pipelineAttention.value} ${t('context.needsAttention')}`}>
+              <span class="pipeline-pulse__label">${() => t('context.pipelinePulse')}</span>
+              <strong>${() => formatAmount(String(pipelineValue.value))}</strong>
+              <small>${() => t('dashboard.openPipeline')}</small>
+              <span class="pipeline-pulse__chart" aria-hidden="true">
+                ${each(
+                  pipelineSegments,
+                  (item) => item.stage,
+                  (item) => html`
+                    <i
+                      class=${() => `pipeline-pulse__segment pipeline-pulse__segment--${item.value.stage}`}
+                      style=${() => `width:${item.value.share}%`}></i>
+                  `,
+                )}
               </span>
+              <span class="pipeline-pulse__meta">
+                <span>${() => `${pipelineConfidence.value.toFixed(0)}% ${t('context.forecastConfidence')}`}</span>
+                <span>${() => `${pipelineAttention.value} ${t('context.needsAttention')}`}</span>
+              </span>
+              <span class="pipeline-pulse__action">
+                ${() => t('nav.pipeline')}
+                <ore-icon name="arrow-right" size="14"></ore-icon>
+              </span>
+            </a>
+            <span class="sidebar-user-label">${() => t('topbar.demoUser')}</span>
+            <div class="sidebar-profile">
+              <ore-popover
+                class="user-menu"
+                placement="top-start"
+                trigger="click"
+                label=${() => t('topbar.demoUser')}
+                ?open=${userMenuOpen}
+                @open-change=${(event: CustomEvent<{ open: boolean }>) => {
+                  userMenuOpen.value = event.detail.open;
+                }}>
+                <button
+                  class="user-menu__trigger"
+                  type="button"
+                  aria-label=${() => `${t('topbar.demoUser')}: ${currentUser.value.name}, ${currentUser.value.title}`}>
+                  <span class="rail-avatar">${() => initials(currentUser.value.name)}</span>
+                  <span class="user-menu__copy">
+                    <strong>${() => currentUser.value.name}</strong>
+                    <small>${() => currentUser.value.title}</small>
+                  </span>
+                  <ore-icon class="user-menu__chevrons" name="chevrons-up-down" size="15"></ore-icon>
+                </button>
+                <div class="user-menu__panel" slot="content">
+                  <ore-radio-group
+                    name="demo-user"
+                    label=${() => t('topbar.demoUser')}
+                    color="primary"
+                    value=${() => currentUser.value.id}
+                    @change=${selectUser}>
+                    ${demoUsers.map(
+                      (user) => html`
+                        <ore-radio value=${user.id}>
+                          <span class="user-menu__option">
+                            <span class="user-menu__option-avatar">${initials(user.name)}</span>
+                            <span class="user-menu__option-copy">
+                              <strong>${user.name}</strong>
+                              <small>${user.title}</small>
+                            </span>
+                          </span>
+                        </ore-radio>
+                      `,
+                    )}
+                  </ore-radio-group>
+                </div>
+              </ore-popover>
             </div>
             <div class="sidebar-mobile-controls">
-              <ore-select class="mobile-user" label=${() => t('topbar.demoUser')}></ore-select>
-              <ore-button class="mobile-theme" variant="outline">${() => t('topbar.changeTheme')}</ore-button>
-              <ore-button class="mobile-locale" variant="outline">${() => t('topbar.changeLanguage')}</ore-button>
-              <ore-button class="mobile-network" variant="outline">${() => t('topbar.toggleNetwork')}</ore-button>
-              <ore-button variant="outline" @click=${() => navigate('showcase')}>${() => t('nav.showcase')}</ore-button>
+              <span class="sidebar-mobile-controls__label">${() => t('topbar.workspaceControls')}</span>
+              <ore-button class="mobile-theme" variant="outline">
+                <ore-icon slot="prefix" name="monitor" size="17"></ore-icon>
+                ${() => t('topbar.changeTheme')}
+              </ore-button>
+              <ore-button class="mobile-locale" variant="outline">
+                <ore-icon slot="prefix" name="languages" size="17"></ore-icon>
+                ${() => t('topbar.changeLanguage')}
+              </ore-button>
+              <ore-button class="mobile-network" variant="outline">
+                <ore-icon slot="prefix" name="wifi" size="17"></ore-icon>
+                ${() => t('topbar.toggleNetwork')}
+              </ore-button>
+              <ore-button variant="outline" @click=${() => navigate('showcase')}>
+                <ore-icon slot="prefix" name="blocks" size="17"></ore-icon>
+                ${() => t('nav.showcase')}
+              </ore-button>
             </div>
           </div>
         </ore-sidebar>
@@ -550,7 +633,6 @@ define('crm-app-shell', {
               <button class="theme-button icon-button" type="button" aria-label=${() => t('topbar.changeTheme')}>
                 <ore-icon name="monitor" size="17"></ore-icon>
               </button>
-              <ore-select class="user-switcher" label=${() => t('topbar.demoUser')} hide-label></ore-select>
               <button class="locale-button" type="button">EN</button>
             </div>
           </ore-navbar>
