@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 11 Sep 2026 11:19:30 GMT and should not be manually modified.
+This log was last generated on Sun, 13 Sep 2026 20:22:23 GMT and should not be manually modified.
+
+## 3.2.0
+Sun, 13 Sep 2026 20:22:23 GMT
+
+### Minor changes
+
+- Add explicit sidebar item labels and menu panel foreground theming, and fix controlled popover dismissal through triggers, outside clicks, and Escape.
 
 ## 3.1.0
 Fri, 11 Sep 2026 11:19:30 GMT
