@@ -1,9 +1,10 @@
 import { computed, signal } from '@vielzeug/ripple';
 import { modelMap } from './catalog';
-import { combineBreakdowns, computePriceBreakdown, scaleBreakdown } from './pricing';
+import { combineBreakdowns, computePriceBreakdown, scaleBreakdown, summarizeCartPrice } from './pricing';
 import type { CartItem } from './types';
 
 export const cartItems = signal<CartItem[]>([]);
+export const appliedPromoCode = signal('');
 
 export const compareModelIds = signal<string[]>([]);
 export const savedModelIds = signal<string[]>([]);
@@ -27,7 +28,8 @@ export const cartLineBreakdowns = computed(() =>
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null),
 );
 
-export const cartTotal = computed(() => combineBreakdowns(cartLineBreakdowns.value.map((l) => l.priceBreakdown)));
+export const cartTotal = computed(() => combineBreakdowns(cartLineBreakdowns.value.map((line) => line.priceBreakdown)));
+export const cartSummary = computed(() => summarizeCartPrice(cartTotal.value, appliedPromoCode.value ? '0.10' : '0'));
 
 export const compareModels = computed(() =>
   compareModelIds.value.map((id) => modelMap.value.get(id)).filter((m): m is NonNullable<typeof m> => Boolean(m)),

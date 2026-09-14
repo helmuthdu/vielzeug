@@ -6,6 +6,7 @@ export type RouteNames =
   | 'admin'
   | 'cart'
   | 'catalog'
+  | 'compare'
   | 'checkoutConfirmation'
   | 'checkoutPayment'
   | 'checkoutReview'
@@ -22,6 +23,7 @@ const routes = {
   checkoutPayment: { path: '/checkout/payment' },
   checkoutReview: { path: '/checkout/review' },
   checkoutShipping: { path: '/checkout/shipping' },
+  compare: { path: '/compare' },
   modelDetail: { path: '/models/:slug' },
   orders: { path: '/orders' },
   root: { path: '/', redirect: { name: 'catalog' } },

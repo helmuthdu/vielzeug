@@ -3,7 +3,7 @@ import { exposeTask } from '@vielzeug/familiar/protocol';
 import type { Order } from './types';
 
 function serializeOrdersAsCsv(orders: Order[]): string {
-  const header = 'id,userId,status,placedAt,estimatedDeliveryDate,totalAmount,paymentMethod,models';
+  const header = 'id,userId,status,placedAt,estimatedDeliveryDate,total,paymentMethod,models';
   const rows = orders.map((order) =>
     [
       order.id,
@@ -11,7 +11,7 @@ function serializeOrdersAsCsv(orders: Order[]): string {
       order.status,
       order.placedAt,
       order.estimatedDeliveryDate,
-      order.totalAmount,
+      order.pricing.total,
       order.paymentMethod,
       order.items.map((item) => item.modelName).join(' + '),
     ]

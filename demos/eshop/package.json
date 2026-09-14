@@ -19,7 +19,6 @@
     "@vielzeug/coins": "workspace:*",
     "@vielzeug/conduit": "workspace:*",
     "@vielzeug/courier": "workspace:*",
-    "@vielzeug/dnd": "workspace:*",
     "@vielzeug/familiar": "workspace:*",
     "@vielzeug/forge": "workspace:*",
     "@vielzeug/herald": "workspace:*",

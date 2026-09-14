@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { combineBreakdowns, computePriceBreakdown } from './pricing';
+import { combineBreakdowns, computePriceBreakdown, summarizeCartPrice } from './pricing';
 import { models } from './seed-data';
 
 const x300 = models.find((model) => model.id === 'x300')!;
@@ -32,6 +32,24 @@ describe('pricing', () => {
 
     expect(duplicate.packages).toBe(single.packages);
     expect(duplicate.total).toBe(single.total);
+  });
+
+  it('recalculates tax and total after a cart discount', () => {
+    expect(
+      summarizeCartPrice(
+        {
+          base: '100.00',
+          color: '0.00',
+          packages: '0.00',
+          subtotal: '100.00',
+          tax: '8.00',
+          total: '108.00',
+          trim: '0.00',
+          wheels: '0.00',
+        },
+        '0.10',
+      ),
+    ).toEqual({ discount: '10.00', subtotal: '100.00', tax: '7.20', total: '97.20' });
   });
 
   it('returns a zero-valued USD breakdown for an empty cart', () => {

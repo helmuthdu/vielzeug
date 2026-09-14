@@ -13,7 +13,6 @@ import { t } from '../core/i18n';
 import type { RouteNames } from '../core/router';
 import { activeRoute, activeRouteParams, router } from '../core/router';
 import { modelIndex } from '../core/search-index';
-import { openCompareDrawer } from './components/compare-drawer';
 import './components/share-build-dialog';
 
 interface PaletteItem {
@@ -32,14 +31,14 @@ interface PaletteItem {
  * only shows content placed in `mobile-menu`, so anything missing from there is simply
  * unreachable on a phone.
  */
-type BrowseItem = { icon: string; kind: 'route'; route: RouteNames } | { icon: string; kind: 'compare' };
+type BrowseItem = { icon: string; route: RouteNames };
 
 const BROWSE_ITEMS: BrowseItem[] = [
-  { icon: 'car', kind: 'route', route: 'catalog' },
-  { icon: 'git-compare', kind: 'compare' },
+  { icon: 'car', route: 'catalog' },
+  { icon: 'git-compare', route: 'compare' },
 ];
 
-/** A single click-to-navigate-or-open action rendered in the navbar's utility tier. */
+/** A single action rendered in the navbar's utility tier. */
 type UtilityAction = {
   activate: () => void;
   badge?: () => number;
@@ -50,23 +49,22 @@ type UtilityAction = {
 };
 
 function browseItemKey(item: BrowseItem): string {
-  return item.kind === 'compare' ? 'compare' : item.route;
+  return item.route;
 }
 
 function browseItemLabel(item: BrowseItem): string {
-  return t(item.kind === 'compare' ? 'nav.compare' : `nav.${item.route}`);
+  return t(`nav.${item.route}`);
 }
 
 function activateBrowseItem(item: BrowseItem): void {
-  if (item.kind === 'compare') openCompareDrawer();
-  else void router.navigate({ name: item.route });
+  void router.navigate({ name: item.route });
 }
 
 function buildStaticItems(): PaletteItem[] {
   const items: PaletteItem[] = BROWSE_ITEMS.map((item) => ({
     group: t('command.navigate'),
     label: browseItemLabel(item),
-    value: item.kind === 'compare' ? 'compare:open' : `nav:${item.route}`,
+    value: `nav:${item.route}`,
   }));
 
   items.push(
@@ -106,12 +104,12 @@ function itemsForQuery(query: string): PaletteItem[] {
 function renderBrowseItem(item: BrowseItem) {
   return html`
     <ore-navbar-item
-      ?active=${() => item.kind === 'route' && activeRoute.value === item.route}
+      ?active=${() => activeRoute.value === item.route}
       @click=${() => activateBrowseItem(item)}>
       <ore-icon slot="icon" name=${item.icon} size="16" stroke-width="1.75" aria-hidden="true"></ore-icon>
       ${() => browseItemLabel(item)}
       ${when(
-        () => item.kind === 'compare' && compareModels.value.length > 0,
+        () => item.route === 'compare' && compareModels.value.length > 0,
         () => html`
           <ore-badge slot="end" size="sm" color="primary">${() => compareModels.value.length}</ore-badge>
         `,
@@ -170,9 +168,7 @@ function renderAccountItem(compact: boolean) {
   `;
 }
 
-/** A single footer link — same shape regardless of which column it's in or what it actually
- * does (navigate, open the compare drawer, open the command palette), so `renderFooterLink`
- * below doesn't need to branch on link "kind" the way `BrowseItem`/`UtilityAction` do. */
+/** A single footer link — same shape regardless of which destination it opens. */
 type FooterLink = { activate: () => void; labelKey: string };
 
 /** Footer "Shop" column — the same browse destinations `BROWSE_ITEMS` exposes in the navbar,
@@ -180,7 +176,7 @@ type FooterLink = { activate: () => void; labelKey: string };
  * navigation once they've scrolled past the header, not a second, different set of routes. */
 const FOOTER_SHOP_LINKS: FooterLink[] = [
   { activate: () => void router.navigate({ name: 'catalog' }), labelKey: 'nav.catalog' },
-  { activate: openCompareDrawer, labelKey: 'nav.compare' },
+  { activate: () => void router.navigate({ name: 'compare' }), labelKey: 'nav.compare' },
 ];
 
 function renderFooterLink(link: FooterLink) {
@@ -208,6 +204,7 @@ function renderFooterColumn(headingKey: string, links: FooterLink[] | (() => Foo
 
 async function createRouteView(routeName: string | null, params: Record<string, unknown>): Promise<HTMLElement> {
   if (routeName === 'catalog') return (await import('./views/catalog')).createCatalogView();
+  if (routeName === 'compare') return (await import('./views/compare')).createCompareView();
   if (routeName === 'modelDetail')
     return (await import('./views/model-detail')).createModelDetailView(String(params.slug ?? ''));
   if (routeName === 'cart') return (await import('./views/cart')).createCartView();
@@ -243,8 +240,7 @@ define('app-shell', {
     const onPaletteSelect = (e: Event): void => {
       const value = (e as CustomEvent<{ value: string }>).detail.value;
 
-      if (value === 'compare:open') openCompareDrawer();
-      else if (value.startsWith('nav:')) void router.navigate({ name: value.slice(4) as RouteNames });
+      if (value.startsWith('nav:')) void router.navigate({ name: value.slice(4) as RouteNames });
       else if (value.startsWith('model:'))
         void router.navigate({ name: 'modelDetail', params: { slug: value.slice(6) } });
     };
@@ -428,7 +424,6 @@ define('app-shell', {
         }}
         @select=${onPaletteSelect}></ore-command-palette>
       <share-build-dialog></share-build-dialog>
-      <compare-drawer></compare-drawer>
     `;
   },
   shadow: false,

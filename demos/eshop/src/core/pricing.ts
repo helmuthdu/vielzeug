@@ -8,6 +8,13 @@ function usd(value: string): Money<typeof USD> {
   return money(value, USD);
 }
 
+export type CartPriceSummary = {
+  discount: string;
+  subtotal: string;
+  tax: string;
+  total: string;
+};
+
 export interface ResolvedConfiguration {
   color: Model['colors'][number];
   extraPackages: Model['packages'];
@@ -53,6 +60,20 @@ export function computePriceBreakdown(model: Model, configuration: Configuration
     total: toDecimal(total),
     trim: toDecimal(trimAmount),
     wheels: toDecimal(wheelsAmount),
+  };
+}
+
+export function summarizeCartPrice(breakdown: PriceBreakdown, discountRate = '0'): CartPriceSummary {
+  const subtotal = usd(breakdown.subtotal);
+  const discount = multiply(subtotal, discountRate);
+  const discountedSubtotal = subtract(subtotal, discount);
+  const tax = multiply(discountedSubtotal, TAX_RATE);
+
+  return {
+    discount: toDecimal(discount),
+    subtotal: toDecimal(subtotal),
+    tax: toDecimal(tax),
+    total: toDecimal(add(discountedSubtotal, tax)),
   };
 }
 

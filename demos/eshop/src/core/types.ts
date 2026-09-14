@@ -158,6 +158,15 @@ export type OrderItem = {
   quantity: number;
 };
 
+export type OrderPricing = {
+  discount: string;
+  promoCode: string | null;
+  subtotal: string;
+  tax: string;
+  total: string;
+  tradeInCredit: string;
+};
+
 export type Order = {
   dealerId: string | null;
   deliveryMethod: DeliveryMethod;
@@ -167,9 +176,9 @@ export type Order = {
   items: OrderItem[];
   paymentMethod: PaymentMethod;
   placedAt: string;
+  pricing: OrderPricing;
   shippingAddress: Address;
   status: OrderStatus;
-  totalAmount: string;
   tradeIn: TradeIn | null;
   userId: string;
 };

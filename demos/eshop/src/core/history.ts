@@ -1,4 +1,4 @@
-import { cartItems, compareModelIds, savedModelIds } from './cart-store';
+import { appliedPromoCode, cartItems, compareModelIds, savedModelIds } from './cart-store';
 import { modelMap } from './catalog';
 import { bus } from './events';
 import { t } from './i18n';
@@ -6,11 +6,8 @@ import type { CartItem, Configuration } from './types';
 
 /**
  * Direct cart/compare/saved mutations — every view calls into this module rather than writing to
- * `cart-store.ts`'s signals itself. This app deliberately does NOT keep an undo/redo history for
- * these (it used to, via `@vielzeug/ledger`): a shopping cart isn't a document a shopper expects
- * to "undo" the way they'd undo a keystroke — "Remove" already covers the only mutation that
- * matters, and a hidden `⌘Z` most shoppers would never discover mostly demonstrated the package
- * rather than solving a real need. Kept here as plain synchronous mutations instead.
+ * `cart-store.ts`'s signals itself. The cart exposes a visible, time-limited removal recovery action
+ * through `restoreCartItem`; it does not retain a hidden document-style undo history.
  */
 
 const MAX_QUANTITY = 5;
@@ -33,7 +30,12 @@ export function removeFromCart(itemId: string): void {
   if (!cartItems.value.some((i) => i.id === itemId)) return;
 
   cartItems.value = cartItems.value.filter((i) => i.id !== itemId);
+  if (cartItems.value.length === 0) appliedPromoCode.value = '';
   bus.emit('cart:item-removed', { itemId });
+}
+
+export function restoreCartItem(item: CartItem): void {
+  if (!cartItems.value.some(({ id }) => id === item.id)) cartItems.value = [...cartItems.value, item];
 }
 
 export function setCartItemQuantity(itemId: string, quantity: number): void {
@@ -56,6 +58,11 @@ export function removeFromCompare(modelId: string): void {
   if (!compareModelIds.value.includes(modelId)) return;
 
   compareModelIds.value = compareModelIds.value.filter((id) => id !== modelId);
+  bus.emit('compare:changed', { modelIds: compareModelIds.value });
+}
+
+export function replaceCompare(modelIds: string[]): void {
+  compareModelIds.value = [...new Set(modelIds)].filter((id) => modelMap.value.has(id)).slice(0, MAX_COMPARE);
   bus.emit('compare:changed', { modelIds: compareModelIds.value });
 }
 
@@ -86,13 +93,4 @@ export function toggleCompare(modelId: string): void {
     message: t('compare.added', { count: compareModelIds.value.length }),
     variant: 'success',
   });
-}
-
-/** Reorders the compare tray after a drag — no-ops if the order didn't actually change. */
-export function reorderCompare(orderedIds: readonly string[]): void {
-  const previous = compareModelIds.value;
-
-  if (previous.length === orderedIds.length && previous.every((id, i) => id === orderedIds[i])) return;
-
-  compareModelIds.value = [...orderedIds];
 }

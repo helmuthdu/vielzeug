@@ -4,7 +4,7 @@ import type { KeyValueVaultStore } from '@vielzeug/vault';
 import { table, validatorCodec } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
 import { currentUser } from './auth';
-import { cartItems, compareModelIds, savedModelIds } from './cart-store';
+import { appliedPromoCode, cartItems, compareModelIds, savedModelIds } from './cart-store';
 import { currencyFromCode, currentCurrency, setCurrency } from './currency';
 import { currentLocale, setLocale } from './i18n';
 import { seedUsers } from './seed-data';
@@ -17,7 +17,13 @@ import type { CartItem } from './types';
 // demos/crm/src/core/persistence.ts's single-row-per-concern shape.
 // ---------------------------------------------------------------------------
 
-type CartRow = { compareModelIds: string[]; id: 'current'; items: CartItem[]; savedModelIds: string[] };
+type CartRow = {
+  compareModelIds: string[];
+  id: 'current';
+  items: CartItem[];
+  promoCode: string;
+  savedModelIds: string[];
+};
 type PreferencesRow = {
   accentHue: number;
   currency: string;
@@ -56,6 +62,7 @@ const cartSchema = s.object({
   compareModelIds: s.array(s.string()),
   id: s.literal('current'),
   items: s.array(cartItemSchema),
+  promoCode: s.string(),
   savedModelIds: s.array(s.string()),
 });
 
@@ -88,8 +95,8 @@ async function loadCart(): Promise<CartRow | null> {
   }
 }
 
-async function saveCart(items: CartItem[], compare: string[], saved: string[]): Promise<void> {
-  await store.put('cart', { compareModelIds: compare, id: 'current', items, savedModelIds: saved });
+async function saveCart(row: Omit<CartRow, 'id'>): Promise<void> {
+  await store.put('cart', { id: 'current', ...row });
 }
 
 async function loadPreferences(): Promise<PreferencesRow | null> {
@@ -117,10 +124,16 @@ export async function setupPersistence(): Promise<void> {
 
   if (savedCart) {
     cartItems.value = savedCart.items;
+    appliedPromoCode.value = savedCart.promoCode;
     compareModelIds.value = savedCart.compareModelIds;
     savedModelIds.value = savedCart.savedModelIds;
   } else {
-    await saveCart(cartItems.value, compareModelIds.value, savedModelIds.value);
+    await saveCart({
+      compareModelIds: compareModelIds.value,
+      items: cartItems.value,
+      promoCode: appliedPromoCode.value,
+      savedModelIds: savedModelIds.value,
+    });
   }
 
   if (savedPrefs) {
@@ -140,7 +153,12 @@ export async function setupPersistence(): Promise<void> {
   }
 
   effect(() => {
-    void saveCart(cartItems.value, compareModelIds.value, savedModelIds.value);
+    void saveCart({
+      compareModelIds: compareModelIds.value,
+      items: cartItems.value,
+      promoCode: appliedPromoCode.value,
+      savedModelIds: savedModelIds.value,
+    });
   });
 
   effect(() => {

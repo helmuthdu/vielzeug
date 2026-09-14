@@ -1,30 +1,35 @@
 import '@vielzeug/refine/async';
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/button';
-import '@vielzeug/refine/card';
+import '@vielzeug/refine/chip';
 import '@vielzeug/refine/dialog';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/input';
+import '@vielzeug/refine/select';
 import '@vielzeug/refine/skeleton';
+import '@vielzeug/refine/tab-item';
+import '@vielzeug/refine/tabs';
 
 import '../components/animated-price';
 import '../components/order-timeline';
 
 import { define, each, html, when } from '@vielzeug/ore';
-import { computed, type Readable, signal } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
+import { currentUser } from '../../core/auth';
 import { modelMap } from '../../core/catalog';
+import { controlValue } from '../../core/control-value';
 import { formatPrice } from '../../core/currency';
-import { formatLongDate, formatOrderStatus } from '../../core/format';
+import { formatLongDate, formatOrderStatus, formatPaymentMethod } from '../../core/format';
 import { t } from '../../core/i18n';
 import { attemptCancelOrder, canCancelOrder } from '../../core/order-actions';
 import { ordersLoading, ordersSignal } from '../../core/orders';
-import { combineBreakdowns, resolveConfiguration } from '../../core/pricing';
+import { resolveConfiguration } from '../../core/pricing';
 import { router } from '../../core/router';
+import { DEALERS } from '../../core/seed-data';
 import type { Order, OrderItem, OrderStatus } from '../../core/types';
 
-/** Placeholder card count for the loading skeleton — enough to plausibly fill the grid without
- * implying a specific real order count. */
 const SKELETON_CARD_COUNT = 3;
-
+const ACTIVE_STATUSES = new Set<OrderStatus>(['placed', 'processing', 'in-transit']);
 const STATUS_COLOR: Record<OrderStatus, string> = {
   cancelled: 'secondary',
   delivered: 'success',
@@ -32,69 +37,56 @@ const STATUS_COLOR: Record<OrderStatus, string> = {
   placed: 'info',
   processing: 'warning',
 };
+type OrderScope = 'active' | 'all' | 'past';
+type OrderSort = 'newest' | 'oldest';
+type DescribedItem = { colorName: string; item: OrderItem; trimName: string; wheelName: string };
 
-/** Celebratory/status-appropriate spotlight headline per `OrderStatus` — `cancelled` is only
- * ever reached here if it's the shopper's *only* order (see `pickCurrentOrder` below), since an
- * active order otherwise always wins the spotlight over a cancelled one. */
-const SPOTLIGHT_HEADLINE_KEYS: Record<OrderStatus, string> = {
-  cancelled: 'orders.current.headlineCancelled',
-  delivered: 'orders.current.headlineDelivered',
-  'in-transit': 'orders.current.headlineInTransit',
-  placed: 'orders.current.headlinePlaced',
-  processing: 'orders.current.headlineProcessing',
-};
-
-/** The order the spotlight hero highlights — the most recently placed order that isn't
- * cancelled (an order still moving through its lifecycle is more relevant than history), falling
- * back to the most recent order overall if every order has been cancelled. ISO timestamps sort
- * lexicographically the same as chronologically, so a plain string comparison is enough. */
-function pickCurrentOrder(orders: Order[]): Order | null {
-  if (orders.length === 0) return null;
-
-  const active = orders.filter((order) => order.status !== 'cancelled');
-  const pool = active.length > 0 ? active : orders;
-
-  return pool.reduce((latest, order) => (order.placedAt > latest.placedAt ? order : latest));
+function orderNumber(id: string): string {
+  return `#${id.replace(/^order-/, '')}`;
 }
 
-type SpotlightItem = { colorName: string; item: OrderItem; trimName: string; wheelName: string };
-
-/** Resolves an order item's configuration ids against the live catalog for display — falls back
- * to blank option names rather than throwing, since a model/option discontinued after purchase
- * shouldn't break the order page for an order already placed. */
-function describeSpotlightItem(item: OrderItem): SpotlightItem {
+function describeOrderItem(item: OrderItem): DescribedItem {
   const model = modelMap.value.get(item.modelId);
-
   if (!model) return { colorName: '', item, trimName: '', wheelName: '' };
-
   try {
     const { color, trim, wheel } = resolveConfiguration(model, item.configuration);
-
     return { colorName: color.name, item, trimName: trim.name, wheelName: wheel.name };
   } catch {
     return { colorName: '', item, trimName: '', wheelName: '' };
   }
 }
 
-/** Builds a plain-text invoice client-side and triggers a browser download — this demo has no
- * PDF generation or invoicing backend, so a readable text summary stands in for the design
- * brief's "Download Invoice" document action rather than a fake link to nowhere. */
-function downloadInvoice(order: Order): void {
-  const lines = [
-    'Vielzeug Motors — Invoice',
-    `Order ${order.id}`,
-    `Placed: ${formatLongDate(order.placedAt)}`,
-    '',
-    ...order.items.map((i) => `${i.modelName} × ${i.quantity} — ${formatPrice(i.breakdown.total)}`),
-    '',
-    `Total: ${formatPrice(order.totalAmount)}`,
-  ];
+function addressLabel(order: Order): string {
+  if (order.deliveryMethod === 'pickup') {
+    return DEALERS.find(({ id }) => id === order.dealerId)?.name ?? t('orders.details.dealerPickup');
+  }
+  const { city, country, postalCode, street } = order.shippingAddress;
+  return `${street}, ${postalCode} ${city}, ${country}`;
+}
 
+function downloadOrderSummary(order: Order): void {
+  const pricing = order.pricing;
+  const lines = [
+    'Vielzeug Motors — Order summary',
+    `Order ${orderNumber(order.id)}`,
+    `Placed: ${formatLongDate(order.placedAt)}`,
+    `Status: ${formatOrderStatus(order.status)}`,
+    '',
+    ...order.items.map((item) => `${item.modelName} × ${item.quantity} — ${formatPrice(item.breakdown.subtotal)}`),
+    '',
+    `Subtotal: ${formatPrice(pricing.subtotal)}`,
+    ...(Number(pricing.discount) > 0 ? [`Discount: -${formatPrice(pricing.discount)}`] : []),
+    `Tax: ${formatPrice(pricing.tax)}`,
+    ...(Number(pricing.tradeInCredit) > 0 ? [`Trade-in credit: -${formatPrice(pricing.tradeInCredit)}`] : []),
+    `Total: ${formatPrice(pricing.total)}`,
+    '',
+    `Delivery: ${addressLabel(order)}`,
+    `Payment: ${formatPaymentMethod(order.paymentMethod)}`,
+  ];
   const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain' }));
   const link = document.createElement('a');
-
   link.href = url;
-  link.download = `invoice-${order.id}.txt`;
+  link.download = `order-summary-${order.id}.txt`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -102,270 +94,385 @@ function downloadInvoice(order: Order): void {
 define('orders-view', {
   setup() {
     const cancelTarget = signal<Order | null>(null);
-
-    const currentOrder = computed<Order | null>(() => pickCurrentOrder(ordersSignal.value));
-    const previousOrders = computed<Order[]>(() => {
-      const current = currentOrder.value;
-
-      return current ? ordersSignal.value.filter((order) => order.id !== current.id) : ordersSignal.value;
+    const scope = signal<OrderScope>('active');
+    const sort = signal<OrderSort>('newest');
+    const query = signal('');
+    const selectedOrderId = signal('');
+    const activeOrders = computed(() => ordersSignal.value.filter(({ status }) => ACTIVE_STATUSES.has(status)));
+    const pastOrders = computed(() => ordersSignal.value.filter(({ status }) => !ACTIVE_STATUSES.has(status)));
+    const visibleOrders = computed(() => {
+      const search = query.value.trim().toLocaleLowerCase();
+      const pool =
+        scope.value === 'active' ? activeOrders.value : scope.value === 'past' ? pastOrders.value : ordersSignal.value;
+      return pool
+        .filter(
+          (order) =>
+            !search ||
+            `${order.id} ${order.items.map(({ modelName }) => modelName).join(' ')}`
+              .toLocaleLowerCase()
+              .includes(search),
+        )
+        .toSorted((left, right) =>
+          sort.value === 'newest'
+            ? right.placedAt.localeCompare(left.placedAt)
+            : left.placedAt.localeCompare(right.placedAt),
+        );
     });
+    const selectedOrder = computed(
+      () => visibleOrders.value.find(({ id }) => id === selectedOrderId.value) ?? visibleOrders.value[0] ?? null,
+    );
+    const selectedItems = computed(() => selectedOrder.value?.items.map(describeOrderItem) ?? []);
 
-    function onCancelConfirm(): void {
+    const selectScope = (next: OrderScope): void => {
+      scope.value = next;
+      selectedOrderId.value = '';
+    };
+
+    const onCancelConfirm = (): void => {
       const order = cancelTarget.value;
-
       cancelTarget.value = null;
-
       if (order) void attemptCancelOrder(order);
-    }
+    };
 
     return html`
-      <h1>${() => t('orders.title')}</h1>
+      <header class="orders-view__header">
+        <div>
+          <span class="orders-view__eyebrow">${() => t('orders.eyebrow')}</span>
+          <h1>${() => t('orders.title')}</h1>
+          <p>
+            ${() =>
+              t(ordersSignal.value.length === 1 ? 'orders.orderCountSingle' : 'orders.orderCountPlural', {
+                count: ordersSignal.value.length,
+                name: currentUser.value.name,
+              })}
+          </p>
+        </div>
+        <ore-button variant="outline" @click=${() => void router.navigate({ name: 'catalog' })}>
+          ${() => t('orders.browseModels')}
+          <ore-icon slot="suffix" name="arrow-right" size="15" aria-hidden="true"></ore-icon>
+        </ore-button>
+      </header>
+
       ${when(
-        // Only the *initial* load has no data to show yet — a background revalidation
-        // (courier refetch) keeps rendering the already-fetched list instead of replacing it
-        // with skeletons, so the loading state never flashes over content the user already has.
         () => ordersLoading.value && ordersSignal.value.length === 0,
         () => html`
-          <ul class="orders-view__list" role="status" aria-live="polite" aria-label=${() => t('orders.loading')}>
+          <ul class="orders-index__list" role="status" aria-live="polite" aria-label=${() => t('orders.loading')}>
             ${Array.from({ length: SKELETON_CARD_COUNT }).map(
               () => html`
-                <li aria-hidden="true">
-                  <ore-card class="order-card__surface" elevation="1">
-                    <div slot="header" class="order-card__header">
-                      <ore-skeleton width="7rem" height="0.75rem"></ore-skeleton>
-                      <ore-skeleton width="4.5rem" height="1.5rem" radius="999px"></ore-skeleton>
-                    </div>
-                    <div class="order-card__body">
-                      <ore-skeleton width="10rem" height="0.75rem"></ore-skeleton>
-                      <ore-skeleton height="2.5rem"></ore-skeleton>
-                      <ore-skeleton variant="text" lines="2" width="70%"></ore-skeleton>
-                    </div>
-                    <ore-skeleton slot="footer" width="4rem" height="1.25rem"></ore-skeleton>
-                    <ore-skeleton slot="actions" width="9rem" height="2rem"></ore-skeleton>
-                  </ore-card>
+                <li aria-hidden="true" class="orders-index__skeleton">
+                  <ore-skeleton width="7rem" height="0.75rem"></ore-skeleton>
+                  <ore-skeleton width="100%" height="2rem"></ore-skeleton>
+                  <ore-skeleton width="70%" height="0.75rem"></ore-skeleton>
                 </li>
               `,
             )}
           </ul>
         `,
-        // Nested when()'s two branches only ever swap once `ordersLoading` has already resolved
-        // — wrapped in its own html`` so the outer when() receives a mountable HTMLResult rather
-        // than a raw DirectiveResult.
         () => html`
           ${when(
             () => ordersSignal.value.length === 0,
             () => html`
-              <div class="orders-view__empty">
-                <ore-async status="empty" empty-label=${() => t('orders.empty')}></ore-async>
-                <ore-button variant="solid" @click=${() => void router.navigate({ name: 'catalog' })}>
-                  ${() => t('orders.emptyCta')}
-                </ore-button>
-              </div>
+              <section class="orders-view__empty" aria-labelledby="orders-empty-title">
+                <span class="orders-view__empty-icon">
+                  <ore-icon name="clipboard-list" size="28" aria-hidden="true"></ore-icon>
+                </span>
+                <h2 id="orders-empty-title">${() => t('orders.empty')}</h2>
+                <p>${() => t('orders.emptyHint', { name: currentUser.value.name })}</p>
+                <div class="orders-view__empty-actions">
+                  <ore-button color="primary" @click=${() => void router.navigate({ name: 'catalog' })}>
+                    ${() => t('orders.emptyCta')}
+                  </ore-button>
+                  <ore-button variant="outline" @click=${() => void router.navigate({ name: 'settings' })}>
+                    ${() => t('orders.switchPersona')}
+                  </ore-button>
+                </div>
+              </section>
             `,
             () => html`
-              ${when(
-                // The spotlight is a single optional entity, not a list — `when()` here (keyed
-                // only on the null/non-null transition) instead of a single-element `each()`
-                // avoids a real `each()` reconciliation defect where its enclosing branch being
-                // torn down and remounted (as happens once during the initial orders load, see
-                // `core/orders.ts`'s two-step `sync()` writes) can hand a freshly-created
-                // `<ore-button>` the *same* underlying DOM node an earlier pass already called
-                // `attachInternals()` on, which throws (`ElementInternals` can only ever be
-                // attached once per element, even across a logical unmount/remount). All the
-                // fields below stay reactive to `currentOrder.value` via nested `computed()`s so
-                // a *different* non-null order — e.g. Settings' user switcher — still updates
-                // this section correctly without needing a DOM remount.
-                () => currentOrder.value !== null,
-                () => {
-                  const order = currentOrder as Readable<Order>;
-                  const spotlightItems = computed(() => order.value.items.map(describeSpotlightItem));
-                  const pricing = computed(() => combineBreakdowns(order.value.items.map((i) => i.breakdown)));
+              <section class="orders-controls" aria-label=${() => t('orders.controls')}>
+                <ore-tabs
+                  class="orders-controls__scopes"
+                  variant="ghost"
+                  label=${() => t('orders.filterStatus')}
+                  value=${scope}
+                  @change=${(event: CustomEvent<{ value: OrderScope }>) => selectScope(event.detail.value)}>
+                  ${(['active', 'past', 'all'] as const).map(
+                    (value) => html`
+                      <ore-tab-item slot="tabs" value=${value} variant="ghost">
+                        <span>${() => t(`orders.scope${value[0].toUpperCase()}${value.slice(1)}`)}</span>
+                        <ore-chip class="orders-controls__count" size="sm" rounded="full" variant="flat">
+                          ${() =>
+                            value === 'active'
+                              ? activeOrders.value.length
+                              : value === 'past'
+                                ? pastOrders.value.length
+                                : ordersSignal.value.length}
+                        </ore-chip>
+                      </ore-tab-item>
+                    `,
+                  )}
+                </ore-tabs>
+                <div class="orders-controls__tools">
+                  <ore-input
+                    type="search"
+                    aria-label=${() => t('orders.search')}
+                    placeholder=${() => t('orders.search')}
+                    value=${query}
+                    @input=${(event: Event) => (query.value = controlValue(event) ?? '')}>
+                    <ore-icon slot="prefix" name="search" size="14" aria-hidden="true"></ore-icon>
+                  </ore-input>
+                  <ore-select
+                    hide-label
+                    label=${() => t('orders.sort')}
+                    value=${sort}
+                    options=${() => [
+                      { label: t('orders.sortNewest'), value: 'newest' },
+                      { label: t('orders.sortOldest'), value: 'oldest' },
+                    ]}
+                    @change=${(event: Event) => (sort.value = controlValue(event) === 'oldest' ? 'oldest' : 'newest')}></ore-select>
+                </div>
+              </section>
 
-                  return html`
-                    <section class="order-spotlight">
-                      <div class="order-spotlight__hero">
-                        <ore-skeleton striped aria-hidden="true"></ore-skeleton>
-                        <div class="order-spotlight__intro">
-                          <p class="order-spotlight__eyebrow">${() => t('orders.current.sectionEyebrow')}</p>
-                          <h2 class="order-spotlight__headline">
-                            ${() => t(SPOTLIGHT_HEADLINE_KEYS[order.value.status])}
-                          </h2>
-                          <p class="order-spotlight__subline">${() => formatOrderStatus(order.value.status)}</p>
-                          <p class="order-spotlight__meta">
-                            <span>${() => t('orders.current.orderNumber', { id: order.value.id })}</span>
-                            <span>
-                              ${() =>
-                                t('orders.current.estDelivery', {
-                                  date: formatLongDate(order.value.estimatedDeliveryDate),
-                                })}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                      <div class="order-spotlight__grid">
-                        <div class="order-spotlight__panels">
-                          <div class="order-spotlight__panel">
-                            <h3>${() => t('orders.current.statusTitle')}</h3>
-                            <order-timeline status=${() => order.value.status}></order-timeline>
-                          </div>
-                          <div class="order-spotlight__panel">
-                            <h3>${() => t('orders.current.configTitle')}</h3>
-                            <ul class="order-spotlight__items">
-                              ${() =>
-                                spotlightItems.value.map(
-                                  ({ colorName, item, trimName, wheelName }) => html`
-                                    <li class="order-spotlight__item">
-                                      <div>
-                                        <p class="order-spotlight__item-name">
-                                          ${`${item.modelName} × ${item.quantity}`}
-                                        </p>
-                                        ${when(
-                                          trimName !== '',
-                                          () => html`
-                                            <p class="order-spotlight__item-config">
-                                              ${`${trimName} · ${colorName} · ${wheelName}`}
-                                            </p>
-                                          `,
-                                        )}
-                                      </div>
-                                      <strong>${formatPrice(item.breakdown.total)}</strong>
-                                    </li>
-                                  `,
-                                )}
-                            </ul>
-                          </div>
-                        </div>
-                        <div class="configurator__breakdown order-spotlight__pricing">
-                          <h3>${() => t('model.priceBreakdown')}</h3>
-                          <dl>
-                            <dt>${() => t('model.base')}</dt>
-                            <dd><animated-price value-usd=${() => pricing.value.base}></animated-price></dd>
-                            <dt>${() => t('model.selectTrim')}</dt>
-                            <dd><animated-price value-usd=${() => pricing.value.trim}></animated-price></dd>
-                            <dt>${() => t('model.selectColor')}</dt>
-                            <dd><animated-price value-usd=${() => pricing.value.color}></animated-price></dd>
-                            <dt>${() => t('model.selectWheels')}</dt>
-                            <dd><animated-price value-usd=${() => pricing.value.wheels}></animated-price></dd>
-                            <dt>${() => t('model.packages')}</dt>
-                            <dd><animated-price value-usd=${() => pricing.value.packages}></animated-price></dd>
-                            <dt>${() => t('common.subtotal')}</dt>
-                            <dd><animated-price value-usd=${() => pricing.value.subtotal}></animated-price></dd>
-                            <dt>${() => t('common.tax')}</dt>
-                            <dd><animated-price value-usd=${() => pricing.value.tax}></animated-price></dd>
-                            <dt class="total">${() => t('common.total')}</dt>
-                            <dd class="total">
-                              <animated-price value-usd=${() => order.value.totalAmount}></animated-price>
-                            </dd>
-                          </dl>
-                          <div class="order-spotlight__actions">
-                            <ore-button
-                              rounded
-                              variant="bordered"
-                              size="sm"
-                              @click=${() => downloadInvoice(order.value)}>
-                              <ore-icon name="download" size="14" aria-hidden="true" slot="prefix"></ore-icon>
-                              ${() => t('orders.downloadInvoice')}
-                            </ore-button>
-                            ${when(
-                              () => canCancelOrder(order.value),
-                              () => html`
-                                <ore-button
-                                  rounded
-                                  variant="bordered"
-                                  size="sm"
-                                  color="error"
-                                  @click=${() => (cancelTarget.value = order.value)}>
-                                  <ore-icon name="x-circle" size="14" aria-hidden="true" slot="prefix"></ore-icon>
-                                  ${() => t('orders.cancel')}
-                                </ore-button>
-                              `,
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-                  `;
-                },
-              )}
               ${when(
-                () => previousOrders.value.length > 0,
+                () => visibleOrders.value.length === 0,
                 () => html`
-                  <section class="orders-view__previous">
-                    <h2>${() => t('orders.current.previousTitle')}</h2>
-                    <ul class="orders-view__list">
-                      ${each(
-                        previousOrders,
-                        (o) => o.id,
-                        (o) => html`
-                          <li>
-                            <ore-card class="order-card__surface" elevation="1">
-                              <div slot="header" class="order-card__header">
-                                <h3 class="order-card__id">${() => o.value.id}</h3>
-                                <ore-badge color=${() => STATUS_COLOR[o.value.status]} variant="flat">
-                                  ${() => formatOrderStatus(o.value.status)}
-                                </ore-badge>
-                              </div>
-                              <div class="order-card__body">
-                                <p class="order-card__meta">
-                                  ${() => t('orders.placedOn', { date: formatLongDate(o.value.placedAt) })}
+                  <div class="orders-view__no-results">
+                    <p>${() => t('orders.noResults')}</p>
+                    <ore-button
+                      variant="outline"
+                      @click=${() => {
+                        query.value = '';
+                        selectScope('all');
+                      }}>
+                      ${() => t('orders.clearFilters')}
+                    </ore-button>
+                  </div>
+                `,
+                () => html`
+                  <div class="orders-workspace">
+                    <aside class="orders-index" aria-label=${() => t('orders.orderList')}>
+                      <ul class="orders-index__list">
+                        ${each(
+                          visibleOrders,
+                          (order) => order.id,
+                          (order) => html`
+                            <li>
+                              <button
+                                type="button"
+                                class="orders-index__button"
+                                aria-current=${() => (selectedOrder.value?.id === order.value.id ? 'true' : null)}
+                                @click=${() => (selectedOrderId.value = order.value.id)}>
+                                <span class="orders-index__topline">
+                                  <span>${() => orderNumber(order.value.id)}</span>
+                                  <ore-badge color=${() => STATUS_COLOR[order.value.status]} variant="flat">
+                                    ${() => formatOrderStatus(order.value.status)}
+                                  </ore-badge>
+                                </span>
+                                <strong>${() => order.value.items.map(({ modelName }) => modelName).join(', ')}</strong>
+                                <span>
+                                  ${() => t('orders.placedOn', { date: formatLongDate(order.value.placedAt) })}
+                                </span>
+                                <span class="orders-index__total">${() => formatPrice(order.value.pricing.total)}</span>
+                              </button>
+                            </li>
+                          `,
+                        )}
+                      </ul>
+                    </aside>
+
+                    ${when(
+                      () => selectedOrder.value !== null,
+                      () => {
+                        const order = selectedOrder;
+                        return html`
+                          <article class="order-detail" aria-labelledby="selected-order-title">
+                            <header class="order-detail__overview">
+                              <ore-skeleton striped aria-hidden="true"></ore-skeleton>
+                              <div class="order-detail__intro">
+                                <span class="orders-view__eyebrow">${() => t('orders.selectedOrder')}</span>
+                                <div class="order-detail__title-row">
+                                  <div>
+                                    <h2 id="selected-order-title">
+                                      ${() => order.value.items.map(({ modelName }) => modelName).join(', ')}
+                                    </h2>
+                                    <p>
+                                      ${() => `${orderNumber(order.value.id)} · ${formatLongDate(order.value.placedAt)}`}
+                                    </p>
+                                  </div>
+                                  <ore-badge color=${() => STATUS_COLOR[order.value.status]} variant="flat">
+                                    ${() => formatOrderStatus(order.value.status)}
+                                  </ore-badge>
+                                </div>
+                                <p class="order-detail__delivery-date">
+                                  ${() => t('orders.current.estDelivery', { date: formatLongDate(order.value.estimatedDeliveryDate) })}
                                 </p>
-                                <ul class="order-card__items">
-                                  ${o.value.items.map(
-                                    (i) => html`
-                                      <li>${() => `${i.modelName} × ${i.quantity}`}</li>
+                              </div>
+                            </header>
+
+                            <section class="order-detail__status" aria-labelledby="order-status-title">
+                              <h3 id="order-status-title">${() => t('orders.current.statusTitle')}</h3>
+                              <order-timeline status=${() => order.value.status}></order-timeline>
+                            </section>
+
+                            <div class="order-detail__grid">
+                              <div class="order-detail__main">
+                                <section class="order-detail__panel" aria-labelledby="order-delivery-title">
+                                  <header>
+                                    <span><ore-icon name="map-pin" size="16" aria-hidden="true"></ore-icon></span>
+                                    <h3 id="order-delivery-title">${() => t('orders.details.delivery')}</h3>
+                                  </header>
+                                  <dl>
+                                    <dt>${() => t('orders.details.method')}</dt>
+                                    <dd>
+                                      ${() =>
+                                        t(
+                                          order.value.deliveryMethod === 'pickup'
+                                            ? 'orders.details.dealerPickup'
+                                            : 'orders.details.homeDelivery',
+                                        )}
+                                    </dd>
+                                    <dt>${() => t('orders.details.destination')}</dt>
+                                    <dd>${() => addressLabel(order.value)}</dd>
+                                  </dl>
+                                </section>
+
+                                <section class="order-detail__panel" aria-labelledby="order-payment-title">
+                                  <header>
+                                    <span><ore-icon name="credit-card" size="16" aria-hidden="true"></ore-icon></span>
+                                    <h3 id="order-payment-title">${() => t('orders.details.payment')}</h3>
+                                  </header>
+                                  <dl>
+                                    <dt>${() => t('orders.details.paymentMethod')}</dt>
+                                    <dd>${() => formatPaymentMethod(order.value.paymentMethod)}</dd>
+                                    ${when(
+                                      () => order.value.financing !== null,
+                                      () => html`
+                                        <dt>${() => t('orders.details.financing')}</dt>
+                                        <dd>
+                                          ${() =>
+                                            t('orders.details.financingTerms', {
+                                              apr: order.value.financing?.aprPercent ?? 0,
+                                              months: order.value.financing?.termMonths ?? 0,
+                                            })}
+                                        </dd>
+                                      `,
+                                    )}
+                                  </dl>
+                                </section>
+
+                                <section
+                                  class="order-detail__panel order-detail__vehicles"
+                                  aria-labelledby="order-config-title">
+                                  <header>
+                                    <span><ore-icon name="car-front" size="16" aria-hidden="true"></ore-icon></span>
+                                    <h3 id="order-config-title">${() => t('orders.current.configTitle')}</h3>
+                                  </header>
+                                  <ul>
+                                    ${() =>
+                                      selectedItems.value.map(
+                                        ({ colorName, item, trimName, wheelName }) => html`
+                                          <li>
+                                            <div class="order-detail__vehicle-identity">
+                                              <strong>${`${item.modelName} × ${item.quantity}`}</strong>
+                                              ${when(
+                                                trimName !== '',
+                                                () => html`
+                                                  <span>${`${trimName} · ${colorName} · ${wheelName}`}</span>
+                                                `,
+                                              )}
+                                            </div>
+                                            <span>${formatPrice(item.breakdown.subtotal)}</span>
+                                          </li>
+                                        `,
+                                      )}
+                                  </ul>
+                                </section>
+                              </div>
+
+                              <aside class="order-detail__pricing" aria-labelledby="order-pricing-title">
+                                <h3 id="order-pricing-title">${() => t('orders.details.orderTotal')}</h3>
+                                <dl>
+                                  <dt>${() => t('common.subtotal')}</dt>
+                                  <dd>${() => formatPrice(order.value.pricing.subtotal)}</dd>
+                                  ${when(
+                                    () => Number(order.value.pricing.discount) > 0,
+                                    () => html`
+                                      <dt class="discount">${() => t('cart.discount')}</dt>
+                                      <dd class="discount">${() => `−${formatPrice(order.value.pricing.discount)}`}</dd>
                                     `,
                                   )}
-                                </ul>
-                              </div>
-                              <strong slot="footer" class="order-card__price">
-                                ${() => formatPrice(o.value.totalAmount)}
-                              </strong>
-                              <div slot="actions" class="order-card__actions">
-                                <ore-button rounded variant="ghost" size="sm" @click=${() => downloadInvoice(o.value)}>
-                                  <ore-icon name="download" size="14" aria-hidden="true" slot="prefix"></ore-icon>
-                                  ${() => t('orders.downloadInvoice')}
-                                </ore-button>
+                                  <dt>${() => t('cart.estimatedTax')}</dt>
+                                  <dd>${() => formatPrice(order.value.pricing.tax)}</dd>
+                                  ${when(
+                                    () => Number(order.value.pricing.tradeInCredit) > 0,
+                                    () => html`
+                                      <dt class="discount">${() => t('orders.details.tradeInCredit')}</dt>
+                                      <dd class="discount">
+                                        ${() => `−${formatPrice(order.value.pricing.tradeInCredit)}`}
+                                      </dd>
+                                    `,
+                                  )}
+                                  <dt class="total">${() => t('common.total')}</dt>
+                                  <dd class="total">${() => formatPrice(order.value.pricing.total)}</dd>
+                                </dl>
                                 ${when(
-                                  () => canCancelOrder(o.value),
+                                  () => order.value.pricing.promoCode !== null,
                                   () => html`
-                                    <ore-button
-                                      rounded
-                                      variant="ghost"
-                                      size="sm"
-                                      color="error"
-                                      @click=${() => (cancelTarget.value = o.value)}>
-                                      <ore-icon name="x-circle" size="14" aria-hidden="true" slot="prefix"></ore-icon>
-                                      ${() => t('orders.cancel')}
-                                    </ore-button>
+                                    <p class="order-detail__promo">
+                                      ${() => t('orders.details.promoApplied', { code: order.value.pricing.promoCode ?? '' })}
+                                    </p>
                                   `,
                                 )}
-                              </div>
-                            </ore-card>
-                          </li>
-                        `,
-                      )}
-                    </ul>
-                  </section>
+                                <div class="order-detail__actions">
+                                  <ore-button
+                                    variant="outline"
+                                    size="sm"
+                                    @click=${() => downloadOrderSummary(order.value)}>
+                                    <ore-icon slot="prefix" name="download" size="14" aria-hidden="true"></ore-icon>
+                                    ${() => t('orders.downloadSummary')}
+                                  </ore-button>
+                                  ${when(
+                                    () => canCancelOrder(order.value),
+                                    () => html`
+                                      <ore-button
+                                        variant="ghost"
+                                        size="sm"
+                                        color="error"
+                                        label=${() => t('orders.cancelNamed', { id: orderNumber(order.value.id) })}
+                                        @click=${() => (cancelTarget.value = order.value)}>
+                                        ${() => t('orders.cancel')}
+                                      </ore-button>
+                                    `,
+                                  )}
+                                </div>
+                              </aside>
+                            </div>
+                          </article>
+                        `;
+                      },
+                    )}
+                  </div>
                 `,
               )}
             `,
           )}
         `,
       )}
+
       <ore-dialog
         size="sm"
         dismissible
         label=${() => t('orders.cancelConfirmTitle')}
         ?open=${() => cancelTarget.value !== null}
         @close=${() => (cancelTarget.value = null)}>
-        <p>${() => t('orders.cancelConfirmBody')}</p>
+        <p>
+          ${() => t('orders.cancelConfirmBody', { id: cancelTarget.value ? orderNumber(cancelTarget.value.id) : '' })}
+        </p>
         <div slot="footer">
-          <ore-button rounded variant="bordered" @click=${() => (cancelTarget.value = null)}>
+          <ore-button variant="outline" @click=${() => (cancelTarget.value = null)}>
             ${() => t('orders.cancelConfirmKeep')}
           </ore-button>
-          <ore-button rounded variant="solid" color="error" @click=${onCancelConfirm}>
-            ${() => t('orders.cancelConfirmAction')}
-          </ore-button>
+          <ore-button color="error" @click=${onCancelConfirm}>${() => t('orders.cancelConfirmAction')}</ore-button>
         </div>
       </ore-dialog>
     `;
@@ -374,9 +481,7 @@ define('orders-view', {
 });
 
 export function createOrdersView(): HTMLElement {
-  const el = document.createElement('orders-view');
-
-  el.className = 'orders-view';
-
-  return el;
+  const element = document.createElement('orders-view');
+  element.className = 'orders-view';
+  return element;
 }

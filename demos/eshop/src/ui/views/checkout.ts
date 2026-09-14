@@ -18,7 +18,7 @@ import { define, html, when } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 import { currentUser } from '../../core/auth';
 import { buildConfigurationUrl } from '../../core/build-url';
-import { cartItems, cartLineBreakdowns, cartTotal } from '../../core/cart-store';
+import { appliedPromoCode, cartItems, cartLineBreakdowns, cartSummary } from '../../core/cart-store';
 import { modelMap } from '../../core/catalog';
 import type { CheckoutStep } from '../../core/checkout-machine';
 import { checkoutMachine } from '../../core/checkout-machine';
@@ -103,12 +103,12 @@ function ensurePaymentCommitted(): boolean {
 }
 
 /** Resolves a trade-in-adjusted grand total — reads `committedTradeIn` (a plain module var, not a
- * signal) alongside the reactive `cartTotal`, so every call site stays reactive to cart changes
+ * signal) alongside the reactive cart summary, so every call site stays reactive to cart changes
  * while the trade-in credit itself is a fixed value for the rest of this checkout session. */
 function displayTotal(): string {
   return committedTradeIn
-    ? applyTradeInCredit(cartTotal.value.total, committedTradeIn.estimatedValueUsd)
-    : cartTotal.value.total;
+    ? applyTradeInCredit(cartSummary.value.total, committedTradeIn.estimatedValueUsd)
+    : cartSummary.value.total;
 }
 
 // ── Progress stepper — shared by all four steps below ───────────────────────
@@ -453,9 +453,16 @@ define('checkout-review', {
         })),
         paymentMethod: committedPayment.method,
         placedAt: new Date().toISOString(),
+        pricing: {
+          discount: cartSummary.value.discount,
+          promoCode: appliedPromoCode.value || null,
+          subtotal: cartSummary.value.subtotal,
+          tax: cartSummary.value.tax,
+          total: displayTotal(),
+          tradeInCredit: committedTradeIn?.estimatedValueUsd ?? '0.00',
+        },
         shippingAddress: committedShipping,
         status: 'placed',
-        totalAmount: displayTotal(),
         tradeIn: committedTradeIn,
         userId: currentUser.value.id,
       };
@@ -468,6 +475,7 @@ define('checkout-review', {
 
       lastPlacedOrder = placed;
       cartItems.value = [];
+      appliedPromoCode.value = '';
 
       checkoutMachine.send({ orderId: placed.id, type: 'CONFIRM' });
       goto('checkoutConfirmation', { orderId: placed.id });

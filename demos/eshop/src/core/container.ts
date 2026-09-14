@@ -60,12 +60,12 @@ function createReportService(api: typeof courier, log: typeof logger): ReportSer
 
         if (order.status === 'cancelled') continue;
 
-        totalRevenueUsd += Number.parseFloat(order.totalAmount);
+        totalRevenueUsd += Number.parseFloat(order.pricing.total);
 
         const dayKey = order.placedAt.slice(0, 10);
 
         if (revenueByDayMap.has(dayKey)) {
-          revenueByDayMap.set(dayKey, (revenueByDayMap.get(dayKey) ?? 0) + Number.parseFloat(order.totalAmount));
+          revenueByDayMap.set(dayKey, (revenueByDayMap.get(dayKey) ?? 0) + Number.parseFloat(order.pricing.total));
         }
       }
 

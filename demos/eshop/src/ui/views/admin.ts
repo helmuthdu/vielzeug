@@ -198,7 +198,7 @@ define('admin-view', {
                     @change=${() => toggleSelected(o.value.id)}></ore-checkbox>
                   <span class="order-card__id">${() => o.value.id}</span>
                 </div>
-                <span>${() => formatPrice(o.value.totalAmount)}</span>
+                <span>${() => formatPrice(o.value.pricing.total)}</span>
               </div>
               <p class="order-card__meta">${() => `${o.value.userId} — ${formatShortDate(o.value.placedAt)}`}</p>
               <ore-select

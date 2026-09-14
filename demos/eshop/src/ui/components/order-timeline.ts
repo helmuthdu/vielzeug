@@ -1,6 +1,7 @@
 import '@vielzeug/refine/step';
 import '@vielzeug/refine/stepper';
-import { define, html, prop, when } from '@vielzeug/ore';
+import { define, html, onMounted, prop, ref, when } from '@vielzeug/ore';
+import { effect } from '@vielzeug/ripple';
 import { formatOrderStatus } from '../../core/format';
 import { t } from '../../core/i18n';
 import type { OrderStatus } from '../../core/types';
@@ -28,6 +29,16 @@ define<OrderTimelineProps>('order-timeline', {
     status: prop.oneOf<OrderStatus>(['placed', 'processing', 'in-transit', 'delivered', 'cancelled'], 'placed'),
   },
   setup(props) {
+    const stepper = ref<HTMLElement>();
+
+    onMounted(() => {
+      const sync = effect(() => {
+        stepper.value?.setAttribute('value', props.status.value);
+        return undefined;
+      });
+      return () => sync.dispose();
+    });
+
     return html`
       ${when(
         () => props.status.value === 'cancelled',
@@ -41,7 +52,8 @@ define<OrderTimelineProps>('order-timeline', {
               size="sm"
               color="primary"
               label=${() => t('orders.timeline.ariaLabel')}
-              value=${() => props.status.value}>
+              value=${() => props.status.value}
+              ref=${stepper}>
               ${TIMELINE_STATUSES.map(
                 (status) => html`
                   <ore-step value=${status}>${() => formatOrderStatus(status)}</ore-step>

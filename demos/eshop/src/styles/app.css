@@ -997,92 +997,320 @@ ore-grid-item:has(> model-card) {
   }
 }
 
-/* ── Compare drawer (global — see ui/components/compare-drawer.ts) ───────
-   No dedicated page: a compact drag-reorderable chip row for managing the
-   selection, then the full spec comparison below it, laid out with
-   `ore-grid`'s `responsive` auto-fit mode so it collapses to one column on
-   narrow/mobile drawers instead of forcing a horizontally-scrolling table. */
+/* ── Compare ───────────────────────────────────────────────────────────── */
 
-.compare-drawer__chips {
+.compare-view__header > div:last-child {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-2);
-  margin-bottom: var(--size-4);
+  justify-content: flex-end;
 }
 
-.compare-drawer__chip {
-  display: flex;
-  gap: var(--size-2);
-  align-items: center;
-  padding: var(--size-1-5) var(--size-2);
-  cursor: grab;
-  background: var(--color-contrast-100);
-  border: 1px solid var(--color-divider);
-  border-radius: var(--radius-control);
-}
-
-.compare-drawer__chip-name {
-  font-size: var(--text-sm);
-}
-
-.compare-drawer__card {
+.compare-view {
   display: flex;
   flex-direction: column;
+  gap: var(--size-5);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.compare-view__header {
+  display: flex;
+  gap: var(--size-5);
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-block: var(--size-3) var(--size-2);
+}
+
+.compare-view__eyebrow {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.compare-view__header h1 {
+  margin: var(--size-1) 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.compare-view__header p {
+  margin: 0;
+  color: var(--text-color-secondary);
+}
+
+.compare-view__empty {
+  display: grid;
   gap: var(--size-3);
+  place-content: center;
+  justify-items: center;
+  min-height: 420px;
+  padding: var(--size-8);
+  text-align: center;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.compare-view__empty > span {
+  display: grid;
+  place-items: center;
+  width: var(--size-16);
+  height: var(--size-16);
+  color: var(--color-primary);
+  background: color-mix(in oklch, var(--color-primary) 10%, transparent);
+  border-radius: var(--rounded-full);
+}
+
+.compare-view__empty h2,
+.compare-view__empty p {
+  margin: 0;
+}
+
+.compare-view__notice,
+.compare-options {
   padding: var(--size-4);
   background: var(--color-contrast-50);
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-surface);
 }
 
-.compare-drawer__card-name {
-  margin: 0;
-  font-size: var(--text-base);
-  font-weight: 500;
-  color: var(--text-color-heading);
+.compare-view__notice {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
 }
 
-.compare-drawer__specs {
+.compare-view__notice > span {
+  flex: 1;
+}
+
+.compare-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: var(--size-4);
+  align-items: center;
+}
+
+.compare-options > p,
+.compare-options__status {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+}
+
+.compare-options > div,
+.compare-options label {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+}
+
+.compare-options > div {
+  gap: var(--size-5);
+}
+
+.compare-options label {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.compare-options__status {
+  font-size: var(--text-xs);
+}
+
+.compare-matrix {
+  position: relative;
+  max-height: min(66vh, 720px);
+  overflow: auto;
+  outline: none;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.compare-matrix:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.compare-matrix table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: fixed;
+  border-spacing: 0;
+  border-collapse: separate;
+}
+
+.compare-matrix caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+.compare-matrix th,
+.compare-matrix td {
+  width: 220px;
+  padding: var(--size-3) var(--size-4);
+  vertical-align: middle;
+  text-align: start;
+  background: var(--color-contrast-50);
+  border-block-end: 1px solid var(--color-divider);
+  border-inline-end: 1px solid var(--color-divider);
+}
+
+.compare-matrix th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 160px;
+  color: var(--text-color-secondary);
+  background: var(--color-contrast-100);
+}
+
+.compare-matrix thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  vertical-align: top;
+  background: var(--color-contrast-50);
+}
+
+.compare-matrix thead th:first-child {
+  z-index: 4;
+}
+
+.compare-model-header {
   display: flex;
   flex-direction: column;
   gap: var(--size-2);
-  margin: 0;
 }
 
-.compare-drawer__spec-row {
-  display: flex;
-  gap: var(--size-3);
-  align-items: baseline;
-  justify-content: space-between;
-  padding-bottom: var(--size-2);
-  font-size: var(--text-sm);
-  border-bottom: 1px solid var(--color-divider);
+.compare-model-header ore-skeleton {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--rounded-lg);
 }
 
-.compare-drawer__spec-row dt {
+.compare-model-header > span,
+.compare-model-header > small {
+  font-size: var(--text-xs);
   color: var(--text-color-tertiary);
 }
 
-.compare-drawer__spec-row dd {
-  margin: 0;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
+.compare-model-header > strong {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
   color: var(--text-color-heading);
-  text-align: right;
 }
 
-.compare-drawer__toolbar {
+.compare-model-header > b {
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-model-header > div {
   display: flex;
-  gap: var(--size-2);
-  margin-bottom: var(--size-3);
+  gap: var(--size-1);
 }
 
-/* "Best value" is a color+weight cue on the value itself, not a second badge/background —
-   consistent with this app's overall restraint on decorative chrome (see `:root`'s own comment
-   on where color gets spent). */
-.compare-drawer__spec-row--best dd {
+.compare-model-header > div ore-button:first-child {
+  flex: 1;
+}
+
+.compare-matrix__group-title {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: auto;
+  padding-block: var(--size-2);
+  font-size: var(--text-xs);
+  color: var(--text-color-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--color-contrast-100);
+}
+
+.compare-matrix tbody th,
+.compare-matrix tbody td {
+  font-size: var(--text-sm);
+}
+
+.compare-matrix td > span {
+  display: block;
+  font-weight: 500;
+  color: var(--text-color-heading);
+}
+
+.compare-matrix__best {
+  display: inline-block;
+  padding: 1px var(--size-2);
+  margin-top: var(--size-1);
+  font-size: var(--text-2xs);
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-success);
+  background: color-mix(in oklch, var(--color-success) 10%, transparent);
+  border-radius: var(--rounded-full);
+}
+
+.compare-matrix td.is-best {
+  background: color-mix(in oklch, var(--color-success) 5%, var(--color-contrast-50));
+}
+
+@media (width <= 720px) {
+  .compare-view__header {
+    display: grid;
+    align-items: start;
+  }
+
+  .compare-view__header > div:last-child {
+    justify-content: stretch;
+  }
+
+  .compare-view__action {
+    flex: 1;
+  }
+
+  .compare-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .compare-options > div {
+    display: grid;
+    gap: var(--size-3);
+  }
+
+  .compare-options label {
+    justify-content: space-between;
+  }
+
+  .compare-matrix {
+    max-height: none;
+  }
+
+  .compare-matrix table {
+    min-width: max-content;
+  }
+
+  .compare-matrix th,
+  .compare-matrix td {
+    width: 210px;
+  }
+
+  .compare-matrix th:first-child {
+    width: 120px;
+    padding-inline: var(--size-3);
+  }
 }
 
 /* ── Configurator ──────────────────────────────────────────────────────── */
@@ -1862,105 +2090,373 @@ ore-grid-item:has(> model-card) {
 .cart-view {
   display: flex;
   flex-direction: column;
-  gap: var(--size-5);
-  max-width: var(--size-4xl);
+  gap: var(--size-6);
+  max-width: 1120px;
   margin: 0 auto;
+}
+
+.cart-view__header {
+  display: flex;
+  gap: var(--size-5);
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-block: var(--size-3) var(--size-2);
+}
+
+.cart-view__eyebrow,
+.cart-line__eyebrow {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.cart-view__header h1 {
+  margin: var(--size-1) 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.cart-view__header p {
+  margin: 0;
+  color: var(--text-color-secondary);
 }
 
 .cart-view__empty {
   display: grid;
-  gap: var(--size-4);
+  gap: var(--size-3);
   place-content: center;
   justify-items: center;
-  min-height: 320px;
+  min-height: 360px;
+  padding: var(--size-10);
+  text-align: center;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.cart-view__empty-icon {
+  display: grid;
+  place-items: center;
+  width: var(--size-16);
+  height: var(--size-16);
+  color: var(--color-primary);
+  background: color-mix(in oklch, var(--color-primary) 9%, transparent);
+  border-radius: var(--rounded-full);
+}
+
+.cart-view__empty h2,
+.cart-view__empty p {
+  margin: 0;
+}
+
+.cart-view__empty h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+}
+
+.cart-view__empty p {
+  max-width: 36ch;
+  color: var(--text-color-secondary);
+}
+
+.cart-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--size-5);
+  align-items: start;
 }
 
 .cart-view__lines {
   display: flex;
   flex-direction: column;
   gap: var(--size-4);
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
 .cart-line {
   display: grid;
-  grid-template-columns: 140px 1fr auto;
-  gap: var(--size-4);
-  align-items: center;
-  padding: var(--size-4);
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: var(--size-5);
+  padding: var(--size-5);
   background: var(--color-contrast-50);
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-2xs);
 }
 
 .cart-line ore-skeleton[striped] {
   width: 100%;
   height: auto;
   aspect-ratio: var(--aspect-photo);
+  border-radius: var(--rounded-lg);
 }
 
-.cart-line__info h3 {
-  margin: 0 0 var(--size-1);
+.cart-line__content {
+  min-width: 0;
+}
+
+.cart-line__header {
+  display: flex;
+  gap: var(--size-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.cart-line__header h2 {
+  margin: var(--size-1) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
   font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
-.cart-line__config {
-  margin: 0 0 var(--size-2);
-  font-size: var(--text-sm);
+.cart-line__subtotal {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+  text-align: end;
+}
+
+.cart-line__subtotal-label {
+  font-size: var(--text-xs);
   color: var(--text-color-tertiary);
 }
 
-.cart-line__price {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-2);
-  align-items: flex-end;
-  text-align: right;
-}
-
-.cart-line__price strong {
+.cart-line__subtotal strong {
   font-size: var(--text-lg);
   font-variant-numeric: tabular-nums;
 }
 
-.cart-view__promo {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2);
-  align-items: center;
+.cart-line__configuration {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--size-3) var(--size-5);
+  padding-block: var(--size-4);
+  margin: var(--size-4) 0;
+  border-block: 1px solid var(--color-divider);
 }
 
-.cart-view__summary {
+.cart-line__configuration > div {
+  min-width: 0;
+}
+
+.cart-line__configuration dt,
+.cart-line__configuration dd {
+  margin: 0;
+}
+
+.cart-line__configuration dt {
+  margin-bottom: 2px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  color: var(--text-color-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cart-line__configuration dd {
+  font-size: var(--text-sm);
+  color: var(--text-color-heading);
+  overflow-wrap: anywhere;
+}
+
+.cart-line__actions {
+  display: flex;
+  gap: var(--size-4);
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.cart-line__actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-1);
+  justify-content: flex-end;
+}
+
+.cart-line__actions ore-number-input {
+  width: 150px;
+}
+
+.cart-summary {
+  position: sticky;
+  top: var(--size-4);
   display: flex;
   flex-direction: column;
   gap: var(--size-4);
   padding: var(--size-5);
-  background: var(--color-contrast-100);
+  background: var(--color-contrast-50);
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-xs);
 }
 
-.cart-view__summary dl {
+.cart-summary > header {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+}
+
+.cart-summary__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.cart-summary__icon {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--size-1);
+  place-items: center;
+  width: var(--size-8);
+  height: var(--size-8);
+  color: var(--color-primary);
+  background: color-mix(in oklch, var(--color-primary) 9%, transparent);
+  border-radius: var(--rounded-full);
+}
+
+.cart-summary__prices {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--size-2) var(--size-4);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.cart-summary__prices dt,
+.cart-summary__prices dd {
   margin: 0;
 }
 
-.cart-view__summary dt,
-.cart-view__summary dd {
-  margin: 0;
-}
-
-.cart-view__summary dd {
+.cart-summary__prices dd {
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
-.cart-view__summary .total {
-  padding-top: var(--size-2);
-  font-size: var(--text-xl);
-  font-weight: 500;
+.cart-summary__prices .cart-summary__discount {
+  color: var(--color-success);
+}
+
+.cart-summary__prices .total {
+  padding-top: var(--size-3);
+  margin-top: var(--size-1);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-color-heading);
+}
+
+.cart-promo {
+  padding-block: var(--size-3);
   border-top: 1px solid var(--color-divider);
+}
+
+.cart-promo__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--size-2);
+  align-items: end;
+}
+
+.cart-promo__applied,
+.cart-promo__identity {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+}
+
+.cart-promo__applied {
+  justify-content: space-between;
+}
+
+.cart-promo__copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-promo__applied ore-icon {
+  color: var(--color-success);
+}
+
+.cart-promo__applied small {
+  color: var(--text-color-tertiary);
+}
+
+.cart-summary__note {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-color-tertiary);
+}
+
+.cart-summary__checkout {
+  width: 100%;
+}
+
+.cart-summary__permission {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--size-2) var(--size-3);
+  align-items: start;
+  padding: var(--size-3);
+  color: var(--text-color-body);
+  background: color-mix(in oklch, var(--color-warning) 11%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-warning) 36%, var(--color-divider));
+  border-radius: var(--rounded-lg);
+}
+
+.cart-summary__permission > ore-icon {
+  color: var(--color-warning);
+}
+
+.cart-summary__permission p {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.cart-summary__permission ore-button {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.cart-summary__assurances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2) var(--size-4);
+  padding: 0;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+  list-style: none;
+}
+
+.cart-summary__assurances li {
+  display: flex;
+  gap: var(--size-1);
+  align-items: center;
+}
+
+.cart-undo {
+  position: fixed;
+  right: var(--size-5);
+  bottom: var(--size-5);
+  z-index: var(--z-toast);
+  display: flex;
+  gap: var(--size-4);
+  align-items: center;
+  padding: var(--size-3) var(--size-4);
+  color: var(--color-contrast-0);
+  background: var(--color-contrast-900);
+  border-radius: var(--rounded-lg);
+  box-shadow: var(--shadow-xl);
 }
 
 /* ── Checkout ──────────────────────────────────────────────────────────── */
@@ -2121,14 +2617,12 @@ ore-grid-item:has(> model-card) {
 
 /* ── Orders / Admin shared order-card ─────────────────────────────────── */
 
-.orders-view,
 .admin-view {
   display: flex;
   flex-direction: column;
   gap: var(--size-5);
 }
 
-.orders-view__list,
 .admin__orders {
   display: grid;
 
@@ -2140,26 +2634,7 @@ ore-grid-item:has(> model-card) {
   gap: var(--size-4);
 }
 
-/* `.orders-view__list` is a `<ul>` (screen readers get list/item-count context when scanning
-   many orders) — reset the browser's default list box styling since each `<li>` already
-   supplies its own visual shape (an `<ore-card>` for `orders-view`, `.order-card` below for
-   `admin.ts`'s compact rows). */
-ul.orders-view__list {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-/* `admin.ts`'s compact order-row chrome only — `orders-view`'s customer-facing cards moved to
-   `<ore-card>` (see `.order-card__surface` below); this block stays for the admin table view,
-   whose header/id/meta classes it still shares with orders-view's markup. */
-
-.orders-view__empty {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4);
-  align-items: center;
-}
+/* `admin.ts`'s compact order-row chrome. */
 
 .order-card {
   display: flex;
@@ -2203,134 +2678,337 @@ ul.orders-view__list {
   list-style: none;
 }
 
-/* `orders-view` only — `.order-card` above stays a plain chrome-bearing div for `admin.ts`'s
-   compact order rows, but the customer-facing list renders each order through `<ore-card>`
-   instead (richer footer/actions affordances warrant the primitive's real slot structure). Same
-   convention as `.model-card__surface`: this class only ever contributes layout — `ore-card`'s
-   own `elevation`/default-variant rules own every border/background/shadow pixel. */
-.order-card__surface {
-  height: 100%;
-}
-
-.order-card__body {
+.orders-view {
   display: flex;
   flex-direction: column;
-  gap: var(--size-2);
+  gap: var(--size-5);
+  max-width: 1120px;
+  margin: 0 auto;
 }
 
-.order-card__price {
-  font-size: var(--text-lg);
-  font-variant-numeric: tabular-nums;
-}
-
-.order-card__actions {
+.orders-view__header {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2);
-  justify-content: flex-end;
-  width: 100%;
+  gap: var(--size-5);
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-block: var(--size-3) var(--size-2);
 }
 
-/* ── Orders — current-order spotlight ─────────────────────────────────────
-   The one order most relevant right now (see `pickCurrentOrder` in
-   `ui/views/orders.ts`) gets the same overlay-caption hero treatment as
-   `.configurator__hero`/`.configurator__intro` — a full-width product shot
-   with the headline/status/meta scrimmed into its bottom-left corner —
-   instead of just another card in the grid below. */
-.order-spotlight {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4);
-}
-
-.order-spotlight__hero {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 220px;
-  padding: var(--size-6);
-  background: var(--color-contrast-100);
-  border: 1px solid var(--color-divider);
-  border-radius: var(--radius-surface);
-}
-
-.order-spotlight__hero ore-skeleton[striped] {
-  width: min(420px, 60%);
-  height: auto;
-  aspect-ratio: var(--aspect-photo);
-}
-
-.order-spotlight__intro {
-  position: absolute;
-  bottom: var(--size-5);
-  left: var(--size-5);
-  max-width: min(380px, calc(100% - var(--size-10)));
-  padding: var(--size-4) var(--size-5) var(--size-3);
-  background: radial-gradient(120% 140% at 0% 100%, var(--color-contrast-100) 45%, transparent 80%);
-}
-
-.order-spotlight__eyebrow {
-  margin: 0;
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--text-color-tertiary);
+.orders-view__eyebrow {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  color: var(--color-primary);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
-.order-spotlight__headline {
-  margin: var(--size-1) 0 0;
-  font-size: var(--text-3xl);
-  font-weight: 300;
-  color: var(--text-color-heading);
-  letter-spacing: -0.01em;
+.orders-view__header h1 {
+  margin: var(--size-1) 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
 }
 
-.order-spotlight__subline {
-  margin: var(--size-1) 0 0;
+.orders-view__header p {
+  margin: 0;
   color: var(--text-color-secondary);
 }
 
-.order-spotlight__meta {
+.orders-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-1) var(--size-4);
-  margin: var(--size-3) 0 0;
-  font-size: var(--text-sm);
-  color: var(--text-color-secondary);
-}
-
-.order-spotlight__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
-  gap: var(--size-4) var(--size-6);
-}
-
-.order-spotlight__panels {
-  display: flex;
-  flex-direction: column;
   gap: var(--size-4);
-}
-
-.order-spotlight__panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-3);
-  padding: var(--size-5);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--size-2);
   background: var(--color-contrast-50);
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-surface);
 }
 
-.order-spotlight__panel h3 {
+.orders-controls__scopes,
+.orders-controls__tools {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+}
+
+.orders-controls__scopes {
+  flex-direction: row;
+}
+
+.orders-controls__scopes ore-tab-item {
+  --tab-item-color: var(--text-color-secondary);
+  --tab-item-radius: var(--rounded-full);
+  --tab-item-active-bg: var(--color-contrast-100);
+  --tab-item-active-color: var(--text-color-heading);
+  --tab-item-active-shadow: inset 0 0 0 1px var(--color-divider);
+}
+
+.orders-controls__count {
+  --chip-bg: var(--color-contrast-100);
+}
+
+.orders-index__button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.orders-controls__tools ore-input {
+  width: 260px;
+}
+
+.orders-controls__tools ore-select {
+  width: 170px;
+}
+
+.orders-workspace {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: var(--size-5);
+  align-items: start;
+}
+
+.orders-index {
+  position: sticky;
+  top: var(--size-4);
+}
+
+.orders-index__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  padding: 0;
   margin: 0;
-  font-size: var(--text-base);
+  list-style: none;
+}
+
+.orders-index__button,
+.orders-index__skeleton {
+  width: 100%;
+  padding: var(--size-4);
+  text-align: start;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--rounded-lg);
+}
+
+.orders-index__button {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.orders-index__button:hover {
+  background: var(--color-contrast-100);
+}
+
+.orders-index__button[aria-current='true'] {
+  background: color-mix(in oklch, var(--color-primary) 7%, var(--color-contrast-50));
+  border-color: color-mix(in oklch, var(--color-primary) 45%, var(--color-divider));
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.orders-index__topline {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--text-color-secondary);
+}
+
+.orders-index__button > strong {
+  color: var(--text-color-heading);
+}
+
+.orders-index__button > span:not(.orders-index__topline, .orders-index__total) {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.orders-index__total {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.orders-index__skeleton {
+  display: grid;
+  gap: var(--size-3);
+}
+
+.order-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+  min-width: 0;
+}
+
+.order-detail__overview,
+.order-detail__status,
+.order-detail__panel,
+.order-detail__pricing {
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--shadow-2xs);
+}
+
+.order-detail__overview {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: var(--size-5);
+  align-items: center;
+  padding: var(--size-5);
+}
+
+.order-detail__overview ore-skeleton[striped] {
+  width: 100%;
+  height: auto;
+  aspect-ratio: var(--aspect-photo);
+  border-radius: var(--rounded-lg);
+}
+
+.order-detail__intro {
+  min-width: 0;
+}
+
+.order-detail__title-row {
+  display: flex;
+  gap: var(--size-4);
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: var(--size-2);
+}
+
+.order-detail__title-row h2,
+.order-detail__title-row p,
+.order-detail__delivery-date {
+  margin: 0;
+}
+
+.order-detail__title-row h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.order-detail__title-row p,
+.order-detail__delivery-date {
+  margin-top: var(--size-1);
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+}
+
+.order-detail__delivery-date {
+  margin-top: var(--size-3);
   font-weight: 500;
   color: var(--text-color-heading);
 }
 
-.order-spotlight__items {
+.order-detail__status,
+.order-detail__panel,
+.order-detail__pricing {
+  padding: var(--size-5);
+}
+
+.order-detail__status h3,
+.order-detail__panel h3,
+.order-detail__pricing h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.order-detail__status h3 {
+  margin-bottom: var(--size-3);
+}
+
+.order-detail__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--size-4);
+  align-items: start;
+}
+
+.order-detail__main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--size-4);
+}
+
+.order-detail__vehicles {
+  grid-column: 1 / -1;
+}
+
+.order-detail__panel > header {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  margin-bottom: var(--size-4);
+}
+
+.order-detail__panel > header > span {
+  display: grid;
+  place-items: center;
+  width: var(--size-7);
+  height: var(--size-7);
+  color: var(--color-primary);
+  background: color-mix(in oklch, var(--color-primary) 9%, transparent);
+  border-radius: var(--rounded-full);
+}
+
+.order-detail__panel dl,
+.order-detail__pricing dl {
+  display: grid;
+  gap: var(--size-2) var(--size-4);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.order-detail__panel dl {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--size-1);
+}
+
+.order-detail__pricing dl {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.order-detail__panel dt,
+.order-detail__panel dd,
+.order-detail__pricing dt,
+.order-detail__pricing dd {
+  margin: 0;
+}
+
+.order-detail__panel dt {
+  color: var(--text-color-tertiary);
+}
+
+.order-detail__panel dd {
+  margin-bottom: var(--size-3);
+}
+
+.order-detail__panel dd:last-child {
+  margin-bottom: 0;
+}
+
+.order-detail__pricing dd {
+  text-align: end;
+}
+
+.order-detail__vehicles ul {
   display: flex;
   flex-direction: column;
   gap: var(--size-3);
@@ -2339,57 +3017,194 @@ ul.orders-view__list {
   list-style: none;
 }
 
-.order-spotlight__item {
+.order-detail__vehicles li {
   display: flex;
-  gap: var(--size-3);
-  align-items: baseline;
+  gap: var(--size-4);
+  align-items: flex-start;
   justify-content: space-between;
-  padding-bottom: var(--size-3);
-  border-bottom: 1px solid var(--color-divider);
 }
 
-.order-spotlight__item:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
+.order-detail__vehicle-identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-1);
 }
 
-.order-spotlight__item-name {
-  margin: 0;
-  font-weight: 500;
-  color: var(--text-color-heading);
-}
-
-.order-spotlight__item-config {
-  margin: var(--size-1) 0 0;
-  font-size: var(--text-sm);
+.order-detail__vehicles li span {
+  font-size: var(--text-xs);
   color: var(--text-color-secondary);
 }
 
-/* `.configurator__breakdown` (see the configurator section above) supplies the surface chrome
-   and `dl` grid — this modifier only adds the spotlight's own action row underneath it. */
-.order-spotlight__pricing h3 {
-  margin: 0 0 var(--size-2);
-  font-size: var(--text-base);
-  font-weight: 500;
-  color: var(--text-color-heading);
+.order-detail__pricing {
+  position: sticky;
+  top: var(--size-4);
 }
 
-.order-spotlight__actions {
+.order-detail__pricing h3 {
+  margin-bottom: var(--size-4);
+}
+
+.order-detail__pricing .discount,
+.order-detail__promo {
+  color: var(--color-success);
+}
+
+.order-detail__pricing .total {
+  padding-top: var(--size-3);
+  margin-top: var(--size-1);
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.order-detail__promo {
+  margin: var(--size-3) 0 0;
+  font-size: var(--text-xs);
+}
+
+.order-detail__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  padding-top: var(--size-4);
+  margin-top: var(--size-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+.orders-view__empty,
+.orders-view__no-results {
+  display: grid;
+  gap: var(--size-3);
+  place-content: center;
+  justify-items: center;
+  min-height: 360px;
+  padding: var(--size-8);
+  text-align: center;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.orders-view__empty-icon {
+  display: grid;
+  place-items: center;
+  width: var(--size-16);
+  height: var(--size-16);
+  color: var(--color-primary);
+  background: color-mix(in oklch, var(--color-primary) 9%, transparent);
+  border-radius: var(--rounded-full);
+}
+
+.orders-view__empty h2,
+.orders-view__empty p,
+.orders-view__no-results p {
+  margin: 0;
+}
+
+.orders-view__empty h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+}
+
+.orders-view__empty p,
+.orders-view__no-results p {
+  color: var(--text-color-secondary);
+}
+
+.orders-view__empty-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-2);
-  margin-top: var(--size-4);
+  justify-content: center;
 }
 
-.order-spotlight__actions ore-button {
-  flex: 1;
+@media (width <= 900px) {
+  .orders-controls {
+    align-items: stretch;
+  }
+
+  .orders-controls,
+  .orders-controls__tools {
+    flex-direction: column;
+  }
+
+  .orders-controls__tools,
+  .orders-controls__tools ore-input,
+  .orders-controls__tools ore-select {
+    width: 100%;
+  }
+
+  .orders-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .orders-index {
+    position: static;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .orders-index__list {
+    flex-direction: row;
+  }
+
+  .orders-index__list > li {
+    flex: 0 0 min(300px, 82vw);
+  }
 }
 
-/* ── Orders — previous purchases (the pre-existing card grid, now demoted below the spotlight) */
-.orders-view__previous {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4);
+@media (width <= 640px) {
+  .orders-view__header {
+    display: grid;
+    align-items: start;
+  }
+
+  .orders-view__header ore-button {
+    justify-self: start;
+  }
+
+  .orders-controls__scopes {
+    width: 100%;
+  }
+
+  .orders-controls__scopes ore-tab-item {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .order-detail__overview {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--size-3);
+    padding: var(--size-4);
+  }
+
+  .order-detail__title-row {
+    display: grid;
+    gap: var(--size-2);
+  }
+
+  .order-detail__title-row h2 {
+    font-size: var(--text-lg);
+  }
+
+  .order-detail__grid,
+  .order-detail__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .order-detail__vehicles {
+    grid-column: auto;
+  }
+
+  .order-detail__pricing {
+    position: static;
+  }
+
+  .order-detail__status,
+  .order-detail__panel,
+  .order-detail__pricing {
+    padding: var(--size-4);
+  }
 }
 
 /* ── Admin ─────────────────────────────────────────────────────────────── */
@@ -2549,7 +3364,15 @@ ul.orders-view__list {
 }
 
 .settings-card--display {
-  grid-row: span 2;
+  grid-area: 1 / 1;
+}
+
+.settings-card--shopping {
+  grid-area: 2 / 1;
+}
+
+.settings-card--persona {
+  grid-area: 1 / 2 / span 2;
 }
 
 .settings-card--developer {
@@ -2783,13 +3606,7 @@ ul.orders-view__list {
 }
 
 .settings-card--shopping .settings-field {
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--size-3);
   padding-bottom: 0;
-}
-
-.settings-card--shopping .settings-field > ore-select {
-  width: 100%;
 }
 
 .settings-card__kicker {
@@ -2925,9 +3742,10 @@ ul.orders-view__list {
   }
 
   .settings-card--display,
+  .settings-card--shopping,
+  .settings-card--persona,
   .settings-card--developer {
-    grid-row: auto;
-    grid-column: auto;
+    grid-area: auto;
   }
 }
 
@@ -3054,14 +3872,6 @@ ul.orders-view__list {
     max-width: 640px;
   }
 
-  .order-spotlight__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .order-spotlight__hero ore-skeleton[striped] {
-    width: 80%;
-  }
-
   .checkout-form__row {
     grid-template-columns: 1fr;
   }
@@ -3087,23 +3897,75 @@ ul.orders-view__list {
     display: block;
   }
 
+  .cart-view__header {
+    display: grid;
+    align-items: start;
+  }
+
+  .cart-view__header ore-button {
+    width: 100%;
+  }
+
+  .cart-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .cart-line {
     grid-template-columns: 96px minmax(0, 1fr);
     gap: var(--size-3);
+    padding: var(--size-4);
   }
 
-  .cart-line__info,
-  .cart-line__info ore-number-input {
-    width: 100%;
-    min-width: 0;
+  .cart-line__content {
+    display: contents;
   }
 
-  .cart-line__price {
-    flex-direction: row;
+  .cart-line__header {
+    display: grid;
+    grid-column: 2;
+    gap: var(--size-3);
+  }
+
+  .cart-line__header h2 {
+    font-size: var(--text-lg);
+  }
+
+  .cart-line__subtotal {
+    align-items: flex-start;
+    text-align: start;
+  }
+
+  .cart-line__configuration,
+  .cart-line__actions {
     grid-column: 1 / -1;
-    align-items: center;
+  }
+
+  .cart-line__configuration {
+    margin: 0;
+  }
+
+  .cart-line__actions {
+    display: grid;
+    gap: var(--size-3);
+  }
+
+  .cart-line__actions ore-number-input {
+    width: 100%;
+  }
+
+  .cart-line__actions > div {
     justify-content: space-between;
-    text-align: left;
+  }
+
+  .cart-summary {
+    position: static;
+  }
+
+  .cart-undo {
+    right: var(--size-4);
+    bottom: var(--size-4);
+    left: var(--size-4);
+    justify-content: space-between;
   }
 
   .catalog {

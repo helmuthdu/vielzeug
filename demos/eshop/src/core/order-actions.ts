@@ -27,12 +27,14 @@ function decideOrderAction(action: OrderAction, order?: Order): boolean {
   );
 }
 
-/** The `ward` policy alone only checks ownership (see `core/auth.ts`) — it has no notion of an
- * order's current lifecycle state, so a cancelled order still "passes" a bare permission check.
- * Guarding the terminal state here (rather than teaching `ward` about it) keeps the RBAC policy
- * about *who* can act, and this domain rule about *when* the action still makes sense. */
+export function canPlaceOrder(): boolean {
+  return decideOrderAction('create');
+}
+
+/** The `ward` policy only checks who may cancel. The order lifecycle separately limits cancellation
+ * to newly placed orders, before processing or fulfillment begins. */
 export function canCancelOrder(order: Order): boolean {
-  return order.status !== 'cancelled' && decideOrderAction('cancel', order);
+  return order.status === 'placed' && decideOrderAction('cancel', order);
 }
 
 export function canUpdateOrderStatus(order: Order): boolean {
@@ -46,7 +48,7 @@ export function canUpdateOrderStatus(order: Order): boolean {
  * order list even if Settings' user-switcher changed it mid-session.
  */
 export async function attemptPlaceOrder(order: Order): Promise<Order | null> {
-  if (!decideOrderAction('create')) {
+  if (!canPlaceOrder()) {
     notify(t('orders.notify.noPermissionPlace'));
 
     return null;

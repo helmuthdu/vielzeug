@@ -281,9 +281,6 @@ importers:
       '@vielzeug/courier':
         specifier: workspace:*
         version: link:../../packages/courier
-      '@vielzeug/dnd':
-        specifier: workspace:*
-        version: link:../../packages/dnd
       '@vielzeug/familiar':
         specifier: workspace:*
         version: link:../../packages/familiar

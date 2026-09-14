@@ -91,9 +91,80 @@ test('search stays distinct from refinements without layout overlap', async ({ p
   await expect(page.locator('.catalog__empty')).toContainText('No vehicles match the selected filters.');
 });
 
+test('compare navigation opens the dedicated selection flow', async ({ page }, testInfo) => {
+  await page.goto('/catalog');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: 'Open navigation menu' }).click();
+  }
+  await page.locator('ore-navbar-item').filter({ hasText: 'Compare', visible: true }).click();
+  await expect(page).toHaveURL(/\/compare/);
+  await expect(page.getByRole('heading', { name: 'Choose models to compare' })).toBeVisible();
+  await page.getByRole('button', { name: 'Choose models' }).click();
+  await expect(page).toHaveURL(/\/catalog/);
+});
+
+test('comparison route preserves selection and exposes an aligned matrix', async ({ page }) => {
+  await page.goto('/catalog');
+  await page.getByRole('button', { name: 'Compare: Vielzeug V500' }).click();
+  await page
+    .locator('model-card')
+    .filter({ hasText: 'Vielzeug A200' })
+    .getByRole('button', { name: 'Compare' })
+    .click();
+  await page.goto('/compare');
+
+  await expect(page).toHaveURL(/\/compare\?models=/);
+  await expect(page.getByRole('table')).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: /Vielzeug V500/ })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: /Vielzeug A200/ })).toBeVisible();
+  await page.getByRole('switch', { name: 'Hide identical rows' }).click();
+  await expect(page.getByText('5 specifications visible')).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('columnheader', { name: /Vielzeug V500/ })).toBeVisible();
+});
+
+test('mobile comparison preserves horizontal row alignment', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', 'Mobile comparison regression.');
+  await page.goto('/compare?models=v500,a200,x300');
+  const overflow = await page.locator('.compare-matrix').evaluate((matrix) => matrix.scrollWidth - matrix.clientWidth);
+  expect(overflow).toBeGreaterThan(0);
+  await expect(page.getByRole('rowheader', { name: 'Starting price' })).toBeVisible();
+});
+
 test('empty cart offers a route back to models', async ({ page }) => {
   await page.goto('/cart');
   await expect(page.getByRole('button', { name: 'Browse models' })).toBeVisible();
+});
+
+test('cart applies discounts, persists them, and supports removal recovery', async ({ page }) => {
+  await page.goto('/models/v500');
+  await page.getByRole('button', { exact: true, name: 'Add to cart' }).click();
+  await expect(page.getByRole('region', { name: 'Configured vehicles' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remove Vielzeug V500' })).toBeVisible();
+  await expect(page.getByRole('spinbutton', { name: 'Quantity: Vielzeug V500' })).toBeVisible();
+
+  await page.getByRole('textbox', { name: 'Promo code' }).fill('VIELZEUG-1234');
+  await page.getByRole('button', { name: 'Apply' }).click();
+  await expect(page.locator('.cart-summary__discount').first()).toContainText('Discount');
+  await expect(page.locator('.cart-summary__prices')).toContainText('$92,243');
+  await page.reload();
+  await expect(page.locator('.cart-promo__applied')).toContainText('VIELZEUG-1234');
+
+  await page.getByRole('button', { name: 'Remove Vielzeug V500' }).click();
+  await expect(page.getByRole('heading', { name: 'Your cart is empty.' })).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('heading', { name: 'Vielzeug V500' })).toBeVisible();
+  await expect(page.locator('.cart-promo__applied')).toContainText('VIELZEUG-1234');
+});
+
+test('cart explains when the active persona cannot check out', async ({ page }) => {
+  await page.goto('/settings');
+  await page.getByRole('radio', { name: /Liam Ferreira/ }).click();
+  await page.goto('/models/v500');
+  await page.getByRole('button', { exact: true, name: 'Add to cart' }).click();
+  await expect(page.getByText('This demo persona can review carts but cannot place orders.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Switch demo persona' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Checkout' })).toHaveCount(0);
 });
 
 test('settings expose named controls and immediate preference state', async ({ page }) => {
@@ -144,7 +215,22 @@ test('mobile cart and checkout stay within the viewport', async ({ page }, testI
   await expect(page.locator('.checkout-progress__current')).toContainText('Shipping');
 });
 
-test('orders use the shared Ore stepper', async ({ page }) => {
+test('orders expose selectable scopes and an accurate lifecycle', async ({ page }) => {
+  await page.goto('/settings');
+  await page.getByRole('radio', { name: /Amara Okonkwo/ }).click();
   await page.goto('/orders');
-  await expect(page.locator('order-timeline ore-stepper').first()).toBeVisible();
+
+  const stepper = page.locator('order-timeline ore-stepper');
+  await expect(stepper).toHaveAttribute('value', 'in-transit');
+  await expect(page.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+
+  await page.getByRole('tab', { name: /Past 1/ }).click();
+  await expect(page.getByRole('heading', { name: 'Vielzeug A200' })).toBeVisible();
+  await expect(stepper).toHaveAttribute('value', 'delivered');
+  await expect(page.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
+
+  await page.getByRole('tab', { name: /All 3/ }).click();
+  await page.getByRole('searchbox', { name: 'Search order number or vehicle' }).fill('R350');
+  await expect(page.getByRole('button', { name: /Vielzeug R350/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Vielzeug X600 AS/ })).toHaveCount(0);
 });
