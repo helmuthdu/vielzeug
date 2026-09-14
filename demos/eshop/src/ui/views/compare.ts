@@ -162,7 +162,7 @@ define('compare-view', {
           <h1>${() => t('compare.pageTitle')}</h1>
           <p>${() => t('compare.pageHint')}</p>
         </div>
-        <div>
+        <div class="compare-view__header-actions" ?hidden=${() => compareModels.value.length < 2}>
           <ore-button class="compare-view__action" variant="outline" @click=${chooseModels}>
             <ore-icon slot="prefix" name="plus" size="15" aria-hidden="true"></ore-icon>
             ${() => t('compare.addModel')}
@@ -192,15 +192,68 @@ define('compare-view', {
           ${when(
             () => compareModels.value.length === 1,
             () => html`
-              <div class="compare-view__notice" role="status">
-                <ore-icon name="info" size="16" aria-hidden="true"></ore-icon>
-                <span>${() => t('compare.oneModelHint')}</span>
-                <ore-button size="sm" variant="outline" @click=${chooseModels}>${() => t('compare.addModel')}</ore-button>
-              </div>
+              <section class="compare-one" aria-labelledby="compare-one-title">
+                <div class="compare-one__heading">
+                  <span class="compare-view__eyebrow">${() => t('compare.firstSelected')}</span>
+                  <h2 id="compare-one-title">${() => t('compare.oneTitle')}</h2>
+                  <p>${() => t('compare.oneHint')}</p>
+                </div>
+                <div class="compare-one__grid">
+                  <article class="compare-one__model">
+                    <ore-skeleton
+                      striped
+                      role="img"
+                      radius="0"
+                      aria-label=${() => t('compare.modelImage', { name: compareModels.value[0]!.name })}></ore-skeleton>
+                    <div class="compare-one__model-copy">
+                      <ore-badge variant="flat" color="primary">${() => t('compare.selectedModel')}</ore-badge>
+                      <span>${() => compareModels.value[0]!.segment}</span>
+                      <h3>${() => compareModels.value[0]!.name}</h3>
+                      <dl>
+                        <div class="compare-one__spec">
+                          <dt>${() => t('compare.spec.powertrain')}</dt>
+                          <dd>${() => formatSpec('powertrain', compareModels.value[0]!)}</dd>
+                        </div>
+                        <div class="compare-one__spec">
+                          <dt>${() => t('compare.spec.zeroToHundredSec')}</dt>
+                          <dd>${() => formatSpec('zeroToHundredSec', compareModels.value[0]!)}</dd>
+                        </div>
+                        <div class="compare-one__spec">
+                          <dt>${() => t('compare.spec.seats')}</dt>
+                          <dd>${() => formatSpec('seats', compareModels.value[0]!)}</dd>
+                        </div>
+                      </dl>
+                      <div class="compare-one__model-actions">
+                        <ore-button
+                          size="sm"
+                          variant="outline"
+                          @click=${() => void router.navigate({ name: 'modelLanding', params: { slug: compareModels.value[0]!.slug } })}>
+                          ${() => t('compare.viewModel')}
+                        </ore-button>
+                        <ore-button
+                          size="sm"
+                          variant="text"
+                          @click=${() => removeFromCompare(compareModels.value[0]!.id)}>
+                          ${() => t('compare.removeModel')}
+                        </ore-button>
+                      </div>
+                    </div>
+                  </article>
+                  <button class="compare-one__add" type="button" @click=${chooseModels}>
+                    <span><ore-icon name="plus" size="24" aria-hidden="true"></ore-icon></span>
+                    <strong>${() => t('compare.addSecondTitle')}</strong>
+                    <small>${() => t('compare.addSecondHint')}</small>
+                    <b>${() => t('compare.addModel')}</b>
+                  </button>
+                </div>
+              </section>
             `,
           )}
 
-          <section class="compare-options" aria-label=${() => t('compare.options')}>
+          <section
+            class="compare-options"
+            ?hidden=${() => compareModels.value.length < 2}
+            aria-label=${() => t('compare.options')}>
             <p>${() => t('compare.baseModelNotice')}</p>
             <div>
               <label>
@@ -227,7 +280,12 @@ define('compare-view', {
             </span>
           </section>
 
-          <div class="compare-matrix" tabindex="0" role="region" aria-label=${() => t('compare.matrixLabel')}>
+          <div
+            class="compare-matrix"
+            ?hidden=${() => compareModels.value.length < 2}
+            tabindex="0"
+            role="region"
+            aria-label=${() => t('compare.matrixLabel')}>
             <table>
               <caption>${() => t('compare.matrixCaption')}</caption>
               <thead>
@@ -244,7 +302,10 @@ define('compare-view', {
                             <b>${formatPrice(model.basePrice)}</b>
                             <small>${() => t(`compare.availability.${model.availability.replace('-', '')}`)}</small>
                             <div>
-                              <ore-button size="sm" variant="outline" @click=${() => void router.navigate({ name: 'modelDetail', params: { slug: model.slug } })}>
+                              <ore-button
+                                size="sm"
+                                variant="outline"
+                                @click=${() => void router.navigate({ name: 'modelLanding', params: { slug: model.slug } })}>
                                 ${() => t('common.viewDetails')}
                               </ore-button>
                               <ore-button
@@ -270,7 +331,9 @@ define('compare-view', {
                         <th
                           class="compare-matrix__group-title"
                           scope="rowgroup"
-                          colspan=${compareModels.value.length + 1}>${() => t(`compare.group.${group.key}`)}</th>
+                          colspan=${compareModels.value.length + 1}>
+                          ${() => t(`compare.group.${group.key}`)}
+                        </th>
                       </tr>
                       ${group.rows.map((row) => {
                         const winners = winnerIds(row, compareModels.value);
@@ -279,7 +342,8 @@ define('compare-view', {
                             <th scope="row">${() => t(`compare.spec.${row.key}`)}</th>
                             ${compareModels.value.map(
                               (model) => html`
-                                <td class=${() => (highlightDifferences.value && winners.has(model.id) ? 'is-best' : '')}>
+                                <td
+                                  class=${() => (highlightDifferences.value && winners.has(model.id) ? 'is-best' : '')}>
                                   <span>${() => formatSpec(row.key, model)}</span>
                                   ${when(
                                     () => highlightDifferences.value && winners.has(model.id),

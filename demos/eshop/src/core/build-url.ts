@@ -7,7 +7,7 @@ export function buildConfigurationUrl(model: Model, configuration: Configuration
     wheel: configuration.wheelId,
   });
   if (configuration.packageIds.length) query.set('packages', configuration.packageIds.join(','));
-  const path = `/models/${encodeURIComponent(model.slug)}?${query}`;
+  const path = `/models/${encodeURIComponent(model.slug)}/configure?${query}`;
 
   return import.meta.env.BASE_URL === '/'
     ? new URL(path, location.origin).toString()

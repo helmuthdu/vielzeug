@@ -12,12 +12,18 @@ import { computePriceBreakdown } from '../../core/pricing';
 import type { ColorOption, Model } from '../../core/types';
 
 type ModelCardProps = {
+  actionLabel?: string;
   inCompare: boolean;
   model: Model | undefined;
   saved: boolean;
 };
 
-export type ModelCardElement = HTMLElement & { inCompare: boolean; model: Model; saved: boolean };
+export type ModelCardElement = HTMLElement & {
+  actionLabel?: string;
+  inCompare: boolean;
+  model: Model;
+  saved: boolean;
+};
 
 type ModelCardEvents = {
   'toggle-compare': undefined;
@@ -27,6 +33,7 @@ type ModelCardEvents = {
 
 define<ModelCardProps>('model-card', {
   props: {
+    actionLabel: prop.string(),
     inCompare: prop.bool(false),
     model: prop.data<Model>(),
     saved: prop.bool(false),
@@ -302,7 +309,7 @@ define<ModelCardProps>('model-card', {
                   rounded
                   variant="solid"
                   @click=${() => emit('view')}>
-                  ${() => t('common.viewDetails')}
+                  ${() => props.actionLabel.value ?? t('common.viewDetails')}
                 </ore-button>
                 <ore-button
                   class="model-card__compare-btn"

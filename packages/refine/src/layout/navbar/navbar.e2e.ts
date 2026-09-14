@@ -76,6 +76,25 @@ test.describe('Layout', () => {
   // even though it has no visible text. `icon-only` collapses that phantom gap and switches to
   // symmetric padding; regression-test the resulting box shape since jsdom can't evaluate it
   // (see navbar.test.ts's jsdom coverage note for the same limitation).
+  test('items inherit typography and preserve the default touch target', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<div style="font-family: Georgia, serif">' +
+        '<ore-navbar breakpoint="(max-width: 0px)">' +
+        '<ore-navbar-item id="item">Models</ore-navbar-item>' +
+        '</ore-navbar>' +
+        '</div>',
+    );
+
+    const style = await page.locator('#item').evaluate((item) => {
+      const button = item.shadowRoot!.querySelector<HTMLElement>('.item')!;
+      const computed = getComputedStyle(button);
+      return { fontFamily: computed.fontFamily, height: button.getBoundingClientRect().height };
+    });
+
+    expect(style.fontFamily).toContain('Georgia');
+    expect(style.height).toBeGreaterThanOrEqual(36);
+  });
+
   test('icon-only items render compact, roughly square padding around the icon', async ({ page, refinePage }) => {
     // Force desktop mode regardless of the test harness's narrow `.frame` (max-width: 600px) —
     // the default breakpoint (max-width: 768px) would otherwise put the navbar in mobile mode,

@@ -27,10 +27,13 @@
 
   .composer {
     position: relative;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: var(--message-composer-gap, var(--_gap));
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     padding: var(--_padding);
     background: var(--_surface);
     border: var(--border) solid var(--_border-color);

@@ -43,6 +43,30 @@ test.describe('Layout', () => {
   // rest-state `box-shadow` (`fieldVariantMixin`) lives in `@layer refine.variants` — cascade
   // layers beat specificity outright, so the glow always lost to the plain rest-state shadow,
   // regardless of focus/error/success. `box-shadow` is transitioned, so read after it settles.
+  test('full-width composer stays inside a constrained parent', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div id="container" style="width: 280px; padding: 16px; box-sizing: border-box;">
+        <ore-message-composer id="composer" fullwidth></ore-message-composer>
+      </div>
+    `);
+
+    const geometry = await page.evaluate(() => {
+      const container = document.getElementById('container')!.getBoundingClientRect();
+      const host = document.getElementById('composer')!;
+      const composer = host.shadowRoot!.querySelector<HTMLElement>('.composer')!;
+      const rect = composer.getBoundingClientRect();
+      return {
+        boxSizing: getComputedStyle(composer).boxSizing,
+        left: rect.left - container.left,
+        right: rect.right - container.right,
+      };
+    });
+
+    expect(geometry.boxSizing).toBe('border-box');
+    expect(geometry.left).toBeGreaterThanOrEqual(0);
+    expect(geometry.right).toBeLessThanOrEqual(0);
+  });
+
   for (const variant of ['solid', 'outline', 'ghost'] as const) {
     test(`${variant} variant shows a focus glow distinct from its rest-state box-shadow`, async ({
       page,

@@ -68,7 +68,7 @@ const shippingForm = createForm<Address>({
 /**
  * Wayfinder's `navigate()` is typed as a discriminated union keyed by the literal route name so
  * each route's own param shape is checked at the call site — exactly what every direct
- * `router.navigate({ name: 'modelDetail', params: { slug } })` call elsewhere in this app relies
+ * `router.navigate({ name: 'modelLanding', params: { slug } })` call elsewhere in this app relies
  * on. This helper deliberately takes the general `RouteNames` union (so every checkout step can
  * share one `goto()`), which the discriminated union can't narrow from — the cast documents that
  * trade-off instead of silently widening `router.navigate`'s own public signature.

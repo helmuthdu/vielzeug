@@ -635,11 +635,12 @@ define<ModelConfiguratorProps>('model-configurator', {
                 (m) => html`
                   <model-card
                     model=${() => m}
+                    action-label=${() => t('modelLanding.configure')}
                     in-compare=${() => compareModelIds.value.includes(m.id)}
                     saved=${() => savedModelIds.value.includes(m.id)}
                     @toggle-compare=${() => toggleCompare(m.id)}
                     @toggle-save=${() => toggleSavedModel(m.id)}
-                    @view=${() => void router.navigate({ name: 'modelDetail', params: { slug: m.slug } })}></model-card>
+                    @view=${() => void router.navigate({ name: 'modelConfigurator', params: { slug: m.slug } })}></model-card>
                 `,
               )}
             </div>
@@ -651,7 +652,7 @@ define<ModelConfiguratorProps>('model-configurator', {
   shadow: false,
 });
 
-/** Renders the "no such model" dead end — a mistyped/shared/bookmarked `/models/:slug` URL — as
+/** Renders the "no such model" dead end — a mistyped/shared/bookmarked configurator URL — as
  * a real empty state (heading, message, a way back to the catalog) instead of one bare, unstyled
  * sentence with no escape route. Built imperatively rather than through `define()`/`html` since
  * it's a one-shot render with no reactive state of its own. */
@@ -680,7 +681,7 @@ function createModelNotFoundView(): HTMLElement {
   return el;
 }
 
-export function createModelDetailView(slug: string): HTMLElement {
+export function createModelConfiguratorView(slug: string): HTMLElement {
   const model = getModelBySlug(slug);
 
   if (!model) return createModelNotFoundView();

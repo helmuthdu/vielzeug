@@ -476,8 +476,8 @@ define('catalog-view', {
                   variant="solid"
                   color="secondary"
                   size="lg"
-                  @click=${() => void router.navigate({ name: 'modelDetail', params: { slug: featureModel().slug } })}>
-                  ${() => t('common.viewDetails')}
+                  @click=${() => void router.navigate({ name: 'modelConfigurator', params: { slug: featureModel().slug } })}>
+                  ${() => t('modelLanding.configure')}
                 </ore-button>
                 <ore-button
                   size="lg"
@@ -517,11 +517,12 @@ define('catalog-view', {
                 <ore-grid-item>
                   <model-card
                     model=${model}
+                    action-label=${() => t('modelLanding.configure')}
                     in-compare=${() => compareModelIds.value.includes(model.id)}
                     saved=${() => savedModelIds.value.includes(model.id)}
                     @toggle-compare=${() => toggleCompare(model.id)}
                     @toggle-save=${() => toggleSavedModel(model.id)}
-                    @view=${() => void router.navigate({ name: 'modelDetail', params: { slug: model.slug } })}></model-card>
+                    @view=${() => void router.navigate({ name: 'modelConfigurator', params: { slug: model.slug } })}></model-card>
                 </ore-grid-item>
               `,
             )}

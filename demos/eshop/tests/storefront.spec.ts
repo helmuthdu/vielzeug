@@ -16,7 +16,7 @@ test('catalog exposes accessible actions, navigation, and route titles', async (
     .locator('.catalog__hero-actions > ore-button')
     .evaluateAll((actions) => actions.map((action) => action.getBoundingClientRect().top));
   expect(new Set(actionTops).size).toBe(1);
-  await expect(page).toHaveTitle('Models · Vielzeug Motors');
+  await expect(page).toHaveTitle('Shop · Vielzeug Motors');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
 });
@@ -91,6 +91,122 @@ test('search stays distinct from refinements without layout overlap', async ({ p
   await expect(page.locator('.catalog__empty')).toContainText('No vehicles match the selected filters.');
 });
 
+test('shop model actions open the configurator directly', async ({ page }) => {
+  await page.goto('/catalog');
+  await page.locator('.catalog__hero').getByRole('button', { name: 'Configure model' }).click();
+  await expect(page).toHaveURL(/\/models\/v500\/configure/);
+  await expect(page.getByRole('button', { name: 'Add to cart' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Back to model overview' })).toHaveCount(0);
+});
+
+test('configurator related models open their configurators directly', async ({ page }) => {
+  await page.goto('/models/v500/configure');
+  const relatedModel = page.locator('.related-models model-card').first();
+  const slug = await relatedModel.evaluate((card: HTMLElement & { model: { slug: string } }) => card.model.slug);
+  await relatedModel.getByRole('button', { name: 'Configure model' }).click();
+  await expect(page).toHaveURL(new RegExp(`/models/${slug}/configure$`));
+  await expect(page.getByRole('button', { name: 'Add to cart' })).toBeVisible();
+});
+
+test('model navigation opens landing pages and separates configuration', async ({ page }, testInfo) => {
+  await page.goto('/catalog');
+  if (testInfo.project.name === 'mobile') {
+    await page.getByRole('button', { name: 'Open navigation menu' }).click();
+    await page.locator('.model-navigation-mobile summary').click();
+    await expect(page.locator('.model-navigation-mobile__list button')).toHaveCount(6);
+    await page.locator('.model-navigation-mobile__list button').filter({ hasText: 'Vielzeug V500' }).click();
+    await expect(page.getByRole('button', { name: 'Open navigation menu' })).toBeVisible();
+  } else {
+    await page.getByRole('button', { exact: true, name: 'Models' }).click();
+    await expect(page.locator('.model-navigation__link')).toHaveCount(6);
+    await page.getByRole('link', { name: /Vielzeug V500/ }).click();
+  }
+
+  await expect(page).toHaveURL('/models/v500');
+  await expect(page.getByRole('heading', { level: 1, name: 'Vielzeug V500' })).toBeVisible();
+  await page.getByRole('button', { name: 'Configurations' }).click();
+  await page.getByRole('button', { name: 'Configure Prestige' }).click();
+  await expect(page).toHaveURL(/\/models\/v500\/configure\?trim=v500-prestige/);
+  await expect(page.getByRole('button', { name: 'Add to cart' })).toBeVisible();
+});
+
+test('every model has a complete landing route', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'Route inventory needs one viewport.');
+  for (const [slug, name] of [
+    ['a200', 'Vielzeug A200'],
+    ['r350', 'Vielzeug R350'],
+    ['v500', 'Vielzeug V500'],
+    ['x300', 'Vielzeug X300'],
+    ['x600-as', 'Vielzeug X600 AS'],
+    ['av400', 'Vielzeug AV400'],
+  ] as const) {
+    await page.goto(`/models/${slug}`);
+    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+    await expect(page.getByRole('button', { name: `Explore the ${name.replace('Vielzeug ', '')}` })).toBeVisible();
+  }
+});
+
+test('model landing supports discovery and intent-driven trim selection', async ({ page }, testInfo) => {
+  await page.goto('/models/v500');
+  await expect(page.locator('.model-landing-hero')).not.toContainText('$94,900');
+  await expect(page.locator('.model-landing-specs')).toHaveCount(0);
+  await expect(page.locator('.model-landing-feature-rail')).toHaveCount(0);
+  await expect(page.locator('.model-landing-related')).toHaveCount(3);
+  await expect(page.locator('.model-landing-related__reason').first()).toHaveText(/alternative|character/i);
+  expect(
+    await page.evaluate(() =>
+      Boolean(
+        document
+          .querySelector('#model-specifications')
+          ?.compareDocumentPosition(document.querySelector('#model-trims')!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ),
+  ).toBe(true);
+  await page.getByRole('tab', { name: /Sovereign/ }).click();
+  const configureTrim = page.getByRole('button', { name: 'Configure Sovereign' });
+  await expect(configureTrim).toBeVisible();
+  await page.getByRole('button', { name: 'Specifications' }).click();
+  await expect(page.getByRole('button', { name: 'Specifications' })).toHaveAttribute('aria-current', 'location');
+  const stickyNavigation = page.locator('.model-landing-nav');
+  await expect(stickyNavigation).toBeInViewport();
+  await expect(stickyNavigation).toHaveAttribute('data-stuck');
+  const stickyGeometry = await stickyNavigation.evaluate((navigation) => ({
+    navigation: navigation.getBoundingClientRect().width,
+    viewport: document.querySelector('.app-main')!.clientWidth,
+  }));
+  expect(stickyGeometry.navigation).toBe(stickyGeometry.viewport);
+  if (testInfo.project.name === 'mobile') {
+    await expect(page.locator('.model-landing-technical__desktop')).toBeHidden();
+    await page.getByText('Performance', { exact: true }).filter({ visible: true }).click();
+  } else {
+    await expect(page.locator('.model-landing-technical__mobile')).toBeHidden();
+  }
+  await expect(page.getByText('330 kW').filter({ visible: true })).toBeVisible();
+  await expect(page.locator('.model-landing-trim-explorer__disclaimer')).toContainText('Starting price before paint');
+  await configureTrim.click();
+  await expect(page).toHaveURL(/\/models\/v500\/configure\?trim=v500-sovereign/);
+});
+
+test('model advisor answers contextual questions and restores focus', async ({ page }) => {
+  await page.goto('/models/v500');
+  const trigger = page.getByRole('button', { name: 'Ask the model guide' });
+  await trigger.click();
+  const advisor = page.getByRole('region', { name: 'Vielzeug model guide' });
+  await expect(advisor).toBeVisible();
+  await expect(advisor).toBeFocused();
+  const composerOverflow = await advisor.evaluate((panel) => {
+    const panelRect = panel.getBoundingClientRect();
+    const composerRect = panel.querySelector('ore-message-composer')!.getBoundingClientRect();
+    return composerRect.left < panelRect.left || composerRect.right > panelRect.right;
+  });
+  expect(composerOverflow).toBe(false);
+  await advisor.getByText('Space and practicality', { exact: true }).click();
+  await expect(advisor).toContainText('5 seats and 550 litres');
+  await page.keyboard.press('Escape');
+  await expect(advisor).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
 test('compare navigation opens the dedicated selection flow', async ({ page }, testInfo) => {
   await page.goto('/catalog');
   if (testInfo.project.name === 'mobile') {
@@ -100,6 +216,28 @@ test('compare navigation opens the dedicated selection flow', async ({ page }, t
   await expect(page).toHaveURL(/\/compare/);
   await expect(page.getByRole('heading', { name: 'Choose models to compare' })).toBeVisible();
   await page.getByRole('button', { name: 'Choose models' }).click();
+  await expect(page).toHaveURL(/\/catalog/);
+});
+
+test('single-model comparison prioritizes adding a second vehicle', async ({ page }, testInfo) => {
+  await page.goto('/compare?models=v500');
+  await expect(page.getByRole('heading', { name: 'What would you like to compare it with?' })).toBeVisible();
+  await expect(page.getByRole('table')).toBeHidden();
+  await expect(page.locator('.compare-options')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Share comparison' })).toBeHidden();
+  const addModel = page.locator('.compare-one__add');
+  await expect(addModel).toBeVisible();
+  if (testInfo.project.name === 'mobile') {
+    const positions = await page
+      .locator('.compare-one__grid > *')
+      .evaluateAll((elements) =>
+        elements.map((element) => ({ className: element.className, top: element.getBoundingClientRect().top })),
+      );
+    expect(positions.find(({ className }) => className === 'compare-one__add')!.top).toBeLessThan(
+      positions.find(({ className }) => className === 'compare-one__model')!.top,
+    );
+  }
+  await addModel.click();
   await expect(page).toHaveURL(/\/catalog/);
 });
 
@@ -137,7 +275,7 @@ test('empty cart offers a route back to models', async ({ page }) => {
 });
 
 test('cart applies discounts, persists them, and supports removal recovery', async ({ page }) => {
-  await page.goto('/models/v500');
+  await page.goto('/models/v500/configure');
   await page.getByRole('button', { exact: true, name: 'Add to cart' }).click();
   await expect(page.getByRole('region', { name: 'Configured vehicles' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove Vielzeug V500' })).toBeVisible();
@@ -160,7 +298,7 @@ test('cart applies discounts, persists them, and supports removal recovery', asy
 test('cart explains when the active persona cannot check out', async ({ page }) => {
   await page.goto('/settings');
   await page.getByRole('radio', { name: /Liam Ferreira/ }).click();
-  await page.goto('/models/v500');
+  await page.goto('/models/v500/configure');
   await page.getByRole('button', { exact: true, name: 'Add to cart' }).click();
   await expect(page.getByText('This demo persona can review carts but cannot place orders.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Switch demo persona' })).toBeVisible();
@@ -204,7 +342,7 @@ test('mobile settings stack descriptions and controls without overflow', async (
 
 test('mobile cart and checkout stay within the viewport', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile', 'Mobile layout regression.');
-  await page.goto('/models/v500');
+  await page.goto('/models/v500/configure');
   await page.getByRole('button', { exact: true, name: 'Add to cart' }).click();
   const cartLine = page.locator('.cart-line');
   await expect(cartLine).toBeVisible();

@@ -1,5 +1,10 @@
+import '@vielzeug/refine/accordion';
+import '@vielzeug/refine/accordion-item';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/navbar';
+import '@vielzeug/refine/navigation-menu';
+import '@vielzeug/refine/skeleton';
+import '@vielzeug/refine/text';
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/command-palette';
 import '@vielzeug/refine/toast';
@@ -8,6 +13,8 @@ import { toast } from '@vielzeug/refine/toast';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { canAccessAdmin, currentUser } from '../core/auth';
 import { cartCount, compareModels } from '../core/cart-store';
+import { modelsSignal } from '../core/catalog';
+import { formatPrice } from '../core/currency';
 import { bus } from '../core/events';
 import { t } from '../core/i18n';
 import type { RouteNames } from '../core/router';
@@ -47,10 +54,6 @@ type UtilityAction = {
   key: string;
   labelKey: string;
 };
-
-function browseItemKey(item: BrowseItem): string {
-  return item.route;
-}
 
 function browseItemLabel(item: BrowseItem): string {
   return t(`nav.${item.route}`);
@@ -100,13 +103,101 @@ function itemsForQuery(query: string): PaletteItem[] {
   return [...matchedStatic, ...modelResults];
 }
 
+function modelHref(slug: string): string {
+  const path = `/models/${encodeURIComponent(slug)}`;
+  return import.meta.env.BASE_URL === '/' ? path : `${import.meta.env.BASE_URL}#${path}`;
+}
+
+function navigateToModel(event: Event, slug: string): void {
+  event.preventDefault();
+  (
+    document.querySelector('.app-navbar') as (HTMLElement & { closeMobileMenu?: () => void }) | null
+  )?.closeMobileMenu?.();
+  void router.navigate({ name: 'modelLanding', params: { slug } });
+}
+
+function renderModelNavigation() {
+  const modelsByBody = (bodyType: 'sedan' | 'suv') => modelsSignal.value.filter((model) => model.bodyType === bodyType);
+  return html`
+    <ore-navigation-menu
+      class=${() =>
+        `model-navigation${activeRoute.value === 'modelLanding' || activeRoute.value === 'modelConfigurator' ? ' is-active' : ''}`}
+      columns="2"
+      label=${() => t('nav.models')}>
+      <ore-navigation-menu-item value="models">
+        <ore-icon class="model-navigation__trigger-icon" name="chevron-down" size="14" aria-hidden="true"></ore-icon>
+        ${() => t('nav.models')}
+      </ore-navigation-menu-item>
+      <ore-navigation-menu-panel for="models">
+        ${(['sedan', 'suv'] as const).map(
+          (bodyType) => html`
+            <section class="model-navigation__group">
+              <ore-text variant="overline" size="xs" color="muted">
+                ${() => t(`catalog.bodyTypes.${bodyType}`)}
+              </ore-text>
+              ${() =>
+                modelsByBody(bodyType).map(
+                  (model) => html`
+                    <a
+                      class="model-navigation__link"
+                      href=${modelHref(model.slug)}
+                      @click=${(event: Event) => navigateToModel(event, model.slug)}>
+                      <ore-skeleton striped aria-hidden="true"></ore-skeleton>
+                      <span class="model-navigation__identity">
+                        <ore-text as="strong" weight="semibold">${model.name}</ore-text>
+                        <ore-text variant="caption" color="muted">${model.segment}</ore-text>
+                      </span>
+                      <ore-text as="span" size="xs" weight="semibold">${() => formatPrice(model.basePrice)}</ore-text>
+                    </a>
+                  `,
+                )}
+            </section>
+          `,
+        )}
+        <div class="model-navigation__footer" slot="footer">
+          <ore-text size="sm" color="muted">${() => t('modelLanding.menuHint')}</ore-text>
+          <ore-button size="sm" variant="ghost" @click=${() => void router.navigate({ name: 'catalog' })}>
+            ${() => t('modelLanding.shopAll')}
+            <ore-icon slot="suffix" name="arrow-right" size="14" aria-hidden="true"></ore-icon>
+          </ore-button>
+        </div>
+      </ore-navigation-menu-panel>
+    </ore-navigation-menu>
+  `;
+}
+
+function renderMobileModelNavigation() {
+  return html`
+    <ore-accordion class="model-navigation-mobile">
+      <ore-accordion-item>
+        <ore-icon slot="prefix" name="car-front" size="17" aria-hidden="true"></ore-icon>
+        <span slot="title">${() => t('nav.models')}</span>
+        <div class="model-navigation-mobile__list">
+          ${() =>
+            modelsSignal.value.map(
+              (model) => html`
+                <button type="button" @click=${(event: Event) => navigateToModel(event, model.slug)}>
+                  <span class="model-navigation-mobile__mark" aria-hidden="true">
+                    ${model.slug.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span>
+                    <strong>${model.name}</strong>
+                    <small>${model.segment}</small>
+                  </span>
+                  <ore-icon name="chevron-right" size="15" aria-hidden="true"></ore-icon>
+                </button>
+              `,
+            )}
+        </div>
+      </ore-accordion-item>
+    </ore-accordion>
+  `;
+}
+
 /** Browse nav item — identical markup reused for the desktop center slot and the mobile-menu. */
 function renderBrowseItem(item: BrowseItem) {
   return html`
-    <ore-navbar-item
-      ?active=${() => activeRoute.value === item.route}
-      @click=${() => activateBrowseItem(item)}>
-      <ore-icon slot="icon" name=${item.icon} size="16" stroke-width="1.75" aria-hidden="true"></ore-icon>
+    <ore-navbar-item ?active=${() => activeRoute.value === item.route} @click=${() => activateBrowseItem(item)}>
       ${() => browseItemLabel(item)}
       ${when(
         () => item.route === 'compare' && compareModels.value.length > 0,
@@ -205,8 +296,10 @@ function renderFooterColumn(headingKey: string, links: FooterLink[] | (() => Foo
 async function createRouteView(routeName: string | null, params: Record<string, unknown>): Promise<HTMLElement> {
   if (routeName === 'catalog') return (await import('./views/catalog')).createCatalogView();
   if (routeName === 'compare') return (await import('./views/compare')).createCompareView();
-  if (routeName === 'modelDetail')
-    return (await import('./views/model-detail')).createModelDetailView(String(params.slug ?? ''));
+  if (routeName === 'modelLanding')
+    return (await import('./views/model-landing')).createModelLandingView(String(params.slug ?? ''));
+  if (routeName === 'modelConfigurator')
+    return (await import('./views/model-detail')).createModelConfiguratorView(String(params.slug ?? ''));
   if (routeName === 'cart') return (await import('./views/cart')).createCartView();
   if (routeName?.startsWith('checkout')) return (await import('./views/checkout')).createCheckoutView(routeName);
   if (routeName === 'orders') return (await import('./views/orders')).createOrdersView();
@@ -218,7 +311,8 @@ async function createRouteView(routeName: string | null, params: Record<string, 
 }
 
 function routeTitle(routeName: string | null): string {
-  if (routeName === 'modelDetail') return t('nav.catalog');
+  if (routeName === 'modelLanding') return t('nav.models');
+  if (routeName === 'modelConfigurator') return t('modelLanding.configure');
   if (routeName?.startsWith('checkout')) return t('cart.checkout');
   return t(`nav.${routeName ?? 'catalog'}`);
 }
@@ -242,7 +336,7 @@ define('app-shell', {
 
       if (value.startsWith('nav:')) void router.navigate({ name: value.slice(4) as RouteNames });
       else if (value.startsWith('model:'))
-        void router.navigate({ name: 'modelDetail', params: { slug: value.slice(6) } });
+        void router.navigate({ name: 'modelLanding', params: { slug: value.slice(6) } });
     };
 
     const openPalette = (): void => {
@@ -313,7 +407,8 @@ define('app-shell', {
     const viewRef = ref<HTMLElement>();
 
     const routeViewKey = (routeName: string | null, params: Record<string, unknown>): string => {
-      if (routeName === 'modelDetail') return `modelDetail:${String(params.slug ?? '')}`;
+      if (routeName === 'modelLanding' || routeName === 'modelConfigurator')
+        return `${routeName}:${String(params.slug ?? '')}`;
       if (routeName === 'checkoutConfirmation') return `checkoutConfirmation:${String(params.orderId ?? '')}`;
 
       return routeName ?? 'not-found';
@@ -366,7 +461,7 @@ define('app-shell', {
       <ore-navbar class="app-navbar" sticky elevation="1">
         <span slot="logo" class="brand-logo">Vielzeug Motors</span>
 
-        ${each(BROWSE_ITEMS, browseItemKey, (n) => renderBrowseItem(n.value))}
+        ${renderBrowseItem(BROWSE_ITEMS[0])} ${renderModelNavigation()} ${renderBrowseItem(BROWSE_ITEMS[1])}
 
         <div slot="end" class="navbar-end">
           ${each(
@@ -378,7 +473,7 @@ define('app-shell', {
         </div>
 
         <div slot="mobile-menu" class="navbar-mobile-menu">
-          ${each(BROWSE_ITEMS, browseItemKey, (n) => renderBrowseItem(n.value))}
+          ${renderBrowseItem(BROWSE_ITEMS[0])} ${renderMobileModelNavigation()} ${renderBrowseItem(BROWSE_ITEMS[1])}
           ${each(
             utilityActions,
             (a) => a.key,

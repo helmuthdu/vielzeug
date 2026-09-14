@@ -296,8 +296,9 @@
     flex-shrink: 0;
     gap: var(--size-1);
     align-items: center;
-    min-height: var(--_touch-target);
+    min-height: var(--_touch-target, var(--size-9));
     padding: var(--size-1-5) var(--size-2-5);
+    font-family: inherit;
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
     color: var(--navbar-item-color, var(--color-contrast-700));

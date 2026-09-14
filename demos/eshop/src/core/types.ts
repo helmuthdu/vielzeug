@@ -58,6 +58,25 @@ export type TrimOption = {
   priceDelta: string;
 };
 
+export type ModelTechnical = {
+  batteryKwh: number | null;
+  cargoLitres: number;
+  chargeMinutes: number | null;
+  curbWeightKg: number;
+  deliveryWeeks: string;
+  drivetrain: 'awd' | 'fwd' | 'rwd';
+  heightMm: number;
+  lengthMm: number;
+  powerKw: number;
+  serviceIntervalKm: number | null;
+  tankLitres: number | null;
+  torqueNm: number;
+  towingCapacityKg: number;
+  warrantyYears: number;
+  wheelbaseMm: number;
+  widthMm: number;
+};
+
 export type Model = {
   availability: 'available' | 'coming-soon' | 'limited';
   /** Base price in USD — the storage currency; `core/currency.ts` converts for display. */
@@ -78,6 +97,7 @@ export type Model = {
   segment: string;
   slug: string;
   tagline: string;
+  technical: ModelTechnical;
   topSpeedKph: number;
   trims: TrimOption[];
   wheels: WheelOption[];

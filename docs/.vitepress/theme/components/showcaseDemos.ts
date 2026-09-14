@@ -78,7 +78,8 @@ export const SHOWCASE_DEMOS: ShowcaseDemo[] = [
   },
   {
     category: 'Consumer shopping',
-    detailAlt: 'E-commerce vehicle detail page with configuration choices, product imagery, and pricing',
+    detailAlt:
+      'Automotive model landing page with product story, specifications, trim levels, and configuration actions',
     detailImage: 'ss_eshop_model_detail',
     features: [
       {

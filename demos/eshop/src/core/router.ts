@@ -11,7 +11,8 @@ export type RouteNames =
   | 'checkoutPayment'
   | 'checkoutReview'
   | 'checkoutShipping'
-  | 'modelDetail'
+  | 'modelConfigurator'
+  | 'modelLanding'
   | 'orders'
   | 'settings';
 
@@ -24,7 +25,8 @@ const routes = {
   checkoutReview: { path: '/checkout/review' },
   checkoutShipping: { path: '/checkout/shipping' },
   compare: { path: '/compare' },
-  modelDetail: { path: '/models/:slug' },
+  modelConfigurator: { path: '/models/:slug/configure' },
+  modelLanding: { path: '/models/:slug' },
   orders: { path: '/orders' },
   root: { path: '/', redirect: { name: 'catalog' } },
   settings: { path: '/settings' },
