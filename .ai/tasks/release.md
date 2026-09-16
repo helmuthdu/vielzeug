@@ -1,20 +1,17 @@
+---
+description: Prepare delivery artifacts, change files, approved commits or pull requests, or release diagnostics.
+---
+
 # Release Task
 
 ## Use when
 
 Prepare delivery artifacts, create change files, assemble approved commits or pull requests, or diagnose release workflow behavior. Use `.ai/tasks/review.md` for code/PR quality assessment; this task owns delivery mechanics.
 
-## Inputs
-
-- `scope`
-- `goal`
-- `action`: change file, commit, pull request, release diagnosis, or publish
-
 ## Load
 
-- `.ai/core/policy.md`
-- `.ai/core/workspace.md`
-- relevant `AGENTS.md` chain
+- root `AGENTS.md` (safety, change files, conventional commits)
+- relevant subtree `AGENTS.md`
 - `.ai/tasks/review.md` when content quality has not already been assessed
 - `.github/AGENTS.md` for workflow changes
 
@@ -34,8 +31,8 @@ Never commit, push, tag, release, publish, rewrite history, or delete branches w
 
 ## Rules
 
-- Use `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`; never use `rush change --bulk`.
-- Treat docs changes as Codex release-relevant; Codex hook writes its change file automatically.
+- Use `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`; never `rush change --bulk`.
+- Treat docs changes as Codex release-relevant; the Codex hook writes its change file automatically.
 - Use conventional commit meaning for bump selection: `fix` patch, `feat` minor, breaking major.
 - Keep publishing diagnostics in scripts and workflows; do not bypass release checks or trusted-publishing controls.
 

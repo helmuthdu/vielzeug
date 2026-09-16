@@ -2,8 +2,8 @@
  * Validates package README structure across the monorepo.
  *
  * Enforces the canonical shape defined in `.ai/reference/readme-template.md`:
- * title, blockquote description, Installation, Quick Start, optional Features,
- * Documentation, License — and nothing else.
+ * title, blockquote description equal to `package.json#description`, Installation,
+ * Quick Start, optional Features, Documentation, License — and nothing else.
  *
  * Usage:
  *   pnpm validate:readme
@@ -51,10 +51,18 @@ export interface LoadReadmeWorkspaceOptions {
 }
 
 interface ReadmeFile {
+  description: string | null;
   path: string;
   slug: string;
   text: string;
   lines: string[];
+}
+
+function readManifestDescription(packageDir: string): string | null {
+  const manifestPath = join(packageDir, 'package.json');
+  if (!existsSync(manifestPath)) return null;
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { description?: unknown };
+  return typeof manifest.description === 'string' ? manifest.description : null;
 }
 
 function diagnostic(
@@ -77,7 +85,13 @@ function loadReadmes(packagesDir: string): Map<string, ReadmeFile> {
     const path = join(packagesDir, slug, 'README.md');
     if (!existsSync(path)) continue;
     const text = readFileSync(path, 'utf8');
-    readmes.set(slug, { lines: text.split(/\r?\n/), path, slug, text });
+    readmes.set(slug, {
+      description: readManifestDescription(join(packagesDir, slug)),
+      lines: text.split(/\r?\n/),
+      path,
+      slug,
+      text,
+    });
   }
 
   return readmes;
@@ -90,7 +104,7 @@ function headingText(line: string): string | null {
 
 function validateReadme(readme: ReadmeFile): readonly ReadmeDiagnostic[] {
   const diagnostics: ReadmeDiagnostic[] = [];
-  const { lines, path, slug } = readme;
+  const { description, lines, path, slug } = readme;
 
   // Rule: title
   const title = headingText(lines[0] ?? '');
@@ -103,13 +117,20 @@ function validateReadme(readme: ReadmeFile): readonly ReadmeDiagnostic[] {
     );
   }
 
-  // Rule: blockquote description on line 3 (after title + blank line)
+  // Rule: blockquote description on line 3 (after title + blank line), equal to the manifest description
   const descLine = lines[2] ?? '';
   if (!descLine.startsWith('> ')) {
     diagnostics.push(
       diagnostic(slug, path, 'readme/description', 'Line 3 must be a blockquote description ("> ...").', {
         line: 3,
         hint: `Current: "${descLine}"`,
+      }),
+    );
+  } else if (description !== null && descLine.slice(2).trim() !== description) {
+    diagnostics.push(
+      diagnostic(slug, path, 'readme/description', 'Blockquote description must equal package.json "description".', {
+        line: 3,
+        hint: `Expected: "> ${description}"`,
       }),
     );
   }

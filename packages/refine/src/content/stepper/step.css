@@ -136,6 +136,7 @@
     flex-direction: column;
     align-items: center;
     min-width: 0;
+    max-width: 100%;
     text-align: center;
   }
 
@@ -145,6 +146,7 @@
     align-items: baseline;
     justify-content: center;
     min-width: 0;
+    max-width: 100%;
     font-size: var(--step-font-size);
     font-weight: var(--font-medium);
     color: var(--color-contrast-700);

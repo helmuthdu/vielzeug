@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/refine",
   "version": "3.2.0",
-  "description": "Accessible, themeable web components built on Ore custom element primitives",
+  "description": "Accessible, themeable web components built on ore",
   "keywords": [
     "web-components",
     "custom-elements",

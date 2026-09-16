@@ -38,6 +38,9 @@ function unscope(name) {
  * genuinely needs to fail on a *specific* named package's own bad JSON already does — e.g.
  * `worktree.mjs`'s `cmdAdd()` throws "No such package" for a slug this function skipped.
  *
+ * `name` and `description` are copied verbatim from the manifest (`description` falls back to
+ * an empty string) so the generated package reference never needs a second curated source.
+ *
  * `dependencies` and `peers` are both already unscoped (`"ripple"`, not `"@vielzeug/ripple"`)
  * and contain only `@vielzeug/*` edges — this monorepo's graph never needs to know about
  * `vitest`, `vite`, etc. for any of the three current consumers.
@@ -83,7 +86,13 @@ export function readPackageManifests(packagesDir) {
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    manifests.push({ dependencies, peers, slug });
+    manifests.push({
+      dependencies,
+      description: typeof pkg.description === 'string' ? pkg.description : '',
+      name: typeof pkg.name === 'string' ? pkg.name : `@vielzeug/${slug}`,
+      peers,
+      slug,
+    });
   }
 
   return manifests;

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/sandbox",
   "version": "3.0.0",
-  "description": "Sandboxed iframe runtime with a typed postMessage state bridge for safe execution of AI-generated UI",
+  "description": "Sandboxed iframe runtime with typed postMessage state bridge",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

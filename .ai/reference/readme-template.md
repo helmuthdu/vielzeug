@@ -6,7 +6,7 @@ Shared structure for `packages/<name>/README.md`. A README is a package's npm la
 
 ## Global rules
 
-- One sentence describing what the package does, pulled from `.ai/data/packages.json`'s `description` field — never hand-maintained separately.
+- One sentence describing what the package does, equal to `package.json#description` — `pnpm validate:readme` enforces the match.
 - Address the reader as "you". Active voice. No marketing language.
 - Code first, prose second. The Quick Start snippet must be copy-paste runnable with all imports.
 - No npm badges, no logos, no collapsible `<details>` blocks. The README is already short — folding content behind a toggle adds friction without saving space.
@@ -15,7 +15,7 @@ Shared structure for `packages/<name>/README.md`. A README is a package's npm la
 ## Required structure, in order
 
 1. `# @vielzeug/<slug>` — package name as the sole `#` heading.
-2. `> <description>` — one-line blockquote, immediately after the title, separated by a blank line. Matches `packages.json` `description`.
+2. `> <description>` — one-line blockquote, immediately after the title, separated by a blank line. Equals `package.json#description`.
 3. `## Installation` — fenced `sh` block with pnpm, npm, and yarn lines. CLI packages (codex) use `## Install and run` with an `npx` line instead.
 4. `## Quick Start` — one fenced `ts` (or `sh` for CLI) block showing the minimal real usage, including imports and cleanup/dispose where applicable. One short paragraph after the block may clarify ownership boundaries.
 5. `## Features` (optional) — bullet list, one line each, backtick-quoted API name first where applicable. Omit when the description + Quick Start already cover it.
@@ -44,7 +44,7 @@ codex's tool tables are generated into `docs/codex/tools.md` by `packages/codex/
 `pnpm validate:readme -- --package=<name>` checks objective structure. Run before declaring a README pass done:
 
 - [ ] First line is `# @vielzeug/<slug>`
-- [ ] Line 3 is `> <description>` (blockquote)
+- [ ] Line 3 is `> <description>` and equals `package.json#description`
 - [ ] `## Installation` (or `## Install and run` for codex) present
 - [ ] `## Quick Start` present
 - [ ] `## Documentation` present with at least one `https://vielzeug.dev/<slug>` link

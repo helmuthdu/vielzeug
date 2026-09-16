@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/clockwork",
   "version": "3.0.0",
-  "description": "Framework-neutral typed finite state machines with pure transitions and actors",
+  "description": "Framework-neutral finite state machines with pure transitions and actors",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

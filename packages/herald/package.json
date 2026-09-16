@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/herald",
   "version": "3.0.0",
-  "description": "Typed event bus — pub/sub with namespaces, wildcards, and once-listeners",
+  "description": "Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

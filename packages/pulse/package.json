@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/pulse",
   "version": "3.0.0",
-  "description": "Typed WebSocket client with channel multiplexing, presence tracking, auto-reconnect, and heartbeat",
+  "description": "Typed WebSocket client with channels, rooms, presence, reconnect",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

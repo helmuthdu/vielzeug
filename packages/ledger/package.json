@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/ledger",
   "version": "3.0.0",
-  "description": "Serialized reversible command history with atomic state and cancellation ownership",
+  "description": "Serialized reversible command history with atomic framework-neutral state and cancellation ownership",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

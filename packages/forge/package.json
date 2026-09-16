@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/forge",
   "version": "3.0.0",
-  "description": "Immutable typed form state with focused fields and explicit full-form validation",
+  "description": "Typed form state, validation, submission",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

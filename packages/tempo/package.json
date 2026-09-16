@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/tempo",
   "version": "3.0.0",
-  "description": "Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting",
+  "description": "Temporal-powered date utilities",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

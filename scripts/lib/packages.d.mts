@@ -9,6 +9,8 @@ export interface PackagePeer {
 
 export interface PackageManifest {
   dependencies: string[];
+  description: string;
+  name: string;
   peers: PackagePeer[];
   slug: string;
 }

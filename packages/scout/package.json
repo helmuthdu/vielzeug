@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/scout",
   "version": "3.0.0",
-  "description": "Fast fuzzy-search with a trigram index, per-field weighting, match highlighting, and framework-neutral reactive state",
+  "description": "Trigram fuzzy-search index with highlighting and reactive layer",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/coins",
   "version": "3.0.0",
-  "description": "Bigint-based monetary arithmetic with currency formatting, exchange rates, and rounding policies",
+  "description": "Currency formatting and exchange utilities for monetary arithmetic",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

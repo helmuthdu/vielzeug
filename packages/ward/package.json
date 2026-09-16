@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/ward",
   "version": "3.0.0",
-  "description": "Ordered authorization rules with immutable policies, typed decisions, and composable conditions",
+  "description": "Ordered authorization rules with immutable policies and typed decisions",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

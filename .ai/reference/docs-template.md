@@ -1,6 +1,6 @@
 # Vielzeug Documentation Template
 
-Shared page structure for `docs/<name>/`. This is reference material, not a task narrative — the `document` task tells you when to load it and how to sequence edits; this file tells you exactly what each page must contain.
+Shared page structure for `docs/<name>/`. This file states exactly what each page must contain; `.ai/tasks/document.md` says when to load it and how to sequence edits. The public guide at `docs/guide/docs-template.md` includes this file verbatim.
 
 ## Global writing rules
 
@@ -16,9 +16,9 @@ Apply to every page you edit:
 ## Content adaptations
 
 These adaptations affect examples and framing, not validator structure. Packages use the `standard`
-validator contract unless `.ai/data/packages.json` declares a durable information-architecture
-exception. Check `package.json` (`bin`, `exports`, `engines`), source entry points, and
-`packages/<name>/AGENTS.md` before assuming the Library default.
+validator contract unless `DOCS_CONTRACT_OVERRIDES` in `scripts/validate-docs.ts` declares a durable
+information-architecture exception. Check `package.json` (`bin`, `exports`, `engines`), source entry
+points, and `packages/<name>/AGENTS.md` before assuming the Library default.
 
 | Archetype                    | Indicators                                                               | Adaptations                                                                                                                                                                                                                             |
 | ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -28,19 +28,24 @@ exception. Check `package.json` (`bin`, `exports`, `engines`), source entry poin
 
 ## Structural validator contracts
 
-`pnpm validate:docs` reads explicit structural contracts from each package's `docsContract` field in `.ai/data/packages.json`:
+`pnpm validate:docs` applies explicit structural contracts from `DOCS_CONTRACT_OVERRIDES` in `scripts/validate-docs.ts`:
 
 - **`arsenal` — catalog:** nested category indexes and helper pages are navigation, not individual how-to recipes. Contract validates root pages and catalog entry structure without requiring every leaf to use recipe headings or appear directly in top-level index.
 - **`refine` — component library:** component pages, framework guides, and stylesheet/component sub-paths replace `examples.md`. Contract requires `index.md`, `usage.md`, and `api.md`, but does not require function-library usage/API headings.
 
-Packages without `docsContract` use `standard`. Add a contract only for durable package-level information architecture. Do not use one to suppress normal documentation defects.
+Every other package uses `standard`. Add an override only for durable package-level information architecture. Do not use one to suppress normal documentation defects.
 
 ## `index.md` — Overview
 
 Diátaxis type: **Explanation**. Landing page — helps the reader decide whether to adopt the library in 2–3 minutes. Not a tutorial, not a reference.
 
-Required frontmatter: `title`, `description`, `package`, `category`, `keywords`, `related`, `exports`, `environments`.
+Required frontmatter: `title`, `description`, `package`, `category`, `keywords`, `related`, `exports`, `environments`. The Codex MCP server reads these fields to expose packages to AI clients (`list-packages`, `search-packages`, `get-package`), so keep them accurate.
 
+- `package` — folder name without the `@vielzeug/` prefix; must equal the docs directory name.
+- `category` — lowercase grouping key used by the docs site and Codex (e.g. `state`, `ui`, `http`).
+- `keywords` — searchable terms, e.g. `[signals, reactive, state-management]`.
+- `related` — slugs of related packages that exist as real packages.
+- `exports` — the 3–5 primary exports as strings, e.g. `[createApi, createQuery, HttpError]`.
 - `environments` — list only supported runtimes from `browser`, `node`, `ssr`, `deno`, rendered as badges by `<PackageHero>`. No separate `## Compatibility` table. `browser, node` is the safe default for universal packages; `browser` only for DOM/Web-API-dependent packages (`vault`, `dnd`, `orbit`); `node` only for server/CLI packages (`codex`).
 - Minimum Node version is derived automatically from `engines.node` and folded into the `node` badge — nothing to add by hand. Monorepo floor is `>=18`; raise per-package only for a real constraint (e.g. `codex` `>=22`).
 
@@ -106,19 +111,12 @@ Required structure: `## <Recipe Name>` then, in order, `### Problem` (1–3 sent
 
 ## Verification checklist
 
-`pnpm validate:docs -- --package=<name>` checks objective page shape, recipe/index parity, and relative links. It does not judge technical accuracy, examples, comparisons, prose, or Diátaxis fit; review those requirements below from source.
-
-Run before declaring a docs pass done:
+`pnpm validate:docs -- --package=<name>` checks objective page shape, frontmatter keys, recipe/index parity, and relative links — run it and fix what it reports. It cannot judge the items below; check them from source before declaring a docs pass done:
 
 - [ ] Every signature in `api.md` matches `src/index.ts` exactly
-- [ ] All code blocks use current API (no unmarked deprecated patterns)
-- [ ] `index.md` has all required frontmatter fields, `<PackageHero>`, `## Why`, comparison table, decision-callout
-- [ ] `usage.md` has `[[toc]]` and ends with Best Practices
-- [ ] `api.md` has `## API Overview` (4 columns) and `## Package Entry Point`
-- [ ] `examples.md` links match files on disk
-- [ ] Each `examples/*.md` has Problem/Solution/Pitfalls/Related
-- [ ] No dead internal links (`](./` targets all exist)
-- [ ] No references to removed APIs
+- [ ] All code blocks use the current API; no references to removed APIs
+- [ ] Comparison table, decision callout, and See Also reasons are factual and specific
+- [ ] `usage.md` ends with Best Practices; `api.md` overview covers every primary export
 - [ ] Breaking releases have a standalone `migration.md` linked from the package overview
-- [ ] Sidebar config (`docs/.vitepress/config.ts`) updated if examples were added/removed
+- [ ] Sidebar config (`docs/.vitepress/config.ts`) updated if examples were added or removed
 - [ ] If `src/_dev.ts` exists, `@security` JSDoc tags are present on messages carrying user-supplied data

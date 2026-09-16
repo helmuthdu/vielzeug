@@ -152,16 +152,15 @@ describe('documentation contracts', () => {
     expect(validate(paths)).toEqual({ checkedPackages: ['widget'], diagnostics: [] });
   });
 
-  it('selects explicit contracts from package metadata', () => {
+  it('applies an explicit contract override', () => {
     const paths = fixture();
-    const packageDataPath = join(paths.docsDir, '..', 'packages.json');
-    writeFileSync(packageDataPath, JSON.stringify({ packages: [{ docsContract: 'component-library', slug: 'widget' }] }));
+    const contracts = new Map([['widget', 'component-library' as const]]);
     rmSync(join(paths.docsDir, 'widget', 'examples.md'));
     rmSync(join(paths.docsDir, 'widget', 'examples'), { recursive: true });
     writeFileSync(join(paths.docsDir, 'widget', 'usage.md'), '[[toc]]\n');
     writeFileSync(join(paths.docsDir, 'widget', 'api.md'), '[[toc]]\n');
 
-    const result = validateDocsWorkspace(loadDocsWorkspace({ ...paths, packageDataPath }));
+    const result = validateDocsWorkspace(loadDocsWorkspace({ ...paths, contracts }));
     expect(result.diagnostics).toEqual([]);
   });
 

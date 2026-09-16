@@ -34,6 +34,7 @@ jobs:
           pnpm --dir demos/eshop install --frozen-lockfile
           pnpm --dir demos/voyage install --frozen-lockfile
           pnpm --dir demos/crm install --frozen-lockfile
+          pnpm --dir demos/primal install --frozen-lockfile
 
       - name: Build and test demos
         run: pnpm validate:demos

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/lingua",
   "version": "3.0.0",
-  "description": "Explicit typed localization with pluralization, lazy locale loading, and SSR hydration",
+  "description": "Typed i18n with pluralization and lazy locale loading",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

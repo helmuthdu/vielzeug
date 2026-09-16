@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/arsenal",
   "version": "3.0.0",
-  "description": "Tree-shakeable TypeScript utility library — array, object, string, async, cache, math, and more",
+  "description": "Non-trivial TypeScript utilities — retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

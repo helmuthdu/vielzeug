@@ -1,7 +1,7 @@
 # Vielzeug Engineering Conventions
 
-> Workspace and commands: `.ai/core/workspace.md`
-> Package metadata and dependency graph: `.ai/data/packages.json`
+> Policy, commands, and workflow facts: root `AGENTS.md`
+> Package metadata and dependency graph: `packages/<name>/package.json` (summarized in `.ai/reference/packages.md`)
 
 ## Rule strength
 
@@ -13,8 +13,8 @@
 
 - **MUST:** Use TypeScript strict mode. No `any` in package source.
 - **MUST:** Route public root exports through `src/index.ts`.
-- **MUST:** Do not add a third-party runtime dependency without explicit approval. This does not prohibit `@vielzeug/*` workspace dependencies.
-- **MUST:** Treat `package.json` as dependency authority. Use `.ai/data/packages.json` for agent-facing package facts and impact analysis.
+- **MUST:** Do not add a third-party runtime dependency without explicit approval. This does not prohibit `@vielzeug/*` workspace dependencies (`workspace:*`). Documented exceptions: `refine` bundles `lucide`; `refine`, `prism`, and `ore` use `axe-core` as a devDependency for accessibility tests (never bundled).
+- **MUST:** Treat `package.json` as the authority for name, description, and dependencies; use `.ai/reference/packages.md` for a one-page view during impact analysis.
 - **MUST:** Keep source, tests, public exports, and user-facing examples consistent.
 
 ## Public API design
@@ -126,6 +126,8 @@ interface Tappable<Events extends { readonly type: string }> {
 - **SHOULD:** Emit a `{ type: 'dispose' }` event before clearing tappers, so observers can clean up.
 - **SHOULD:** `tap()` after dispose returns a no-op unsubscribe. Packages with an explicit `DisposedError` class may throw instead for consistency with their other methods.
 
+To find current implementers, search for `tap(` in `packages/*/src`; do not maintain a list here.
+
 Rune integration (no adapter needed — rune's context-first `LogMethod` overload matches `(event, label)`):
 
 ```ts
@@ -136,9 +138,6 @@ const bus = createBus<MyEvents>();
 
 bus.tap((event) => log.debug(event, `herald:${event.type}`));
 ```
-
-Packages that implement `tap()`: herald, keymap, ward, postmaster, courier, pulse, scout.
-Packages that don't (no runtime observability gap): vault (has `observe()`), spell, arsenal, ore, refine, dnd, orbit (visual overlay only), scroll, lingua, tempo, flux, focus, gesture, necromancer, sourcerer, coins, assay, illusionist, familiar, conduit, ledger, sentinel, wayfinder (has `subscribe()`), clockwork (has `subscribe()`), prism, ripple.
 
 ## File layout
 
@@ -177,10 +176,10 @@ packages/<name>/
 Then:
 
 1. Register package in `rush.json`.
-2. Add curated `.ai/data/packages.json` metadata: `slug`, `name`, `category`, and `description`.
-3. Add `docsContract` only for a durable nonstandard documentation architecture.
+2. Give `package.json` a one-sentence `description`; the README blockquote must equal it.
+3. Add a `DOCS_CONTRACT_OVERRIDES` entry in `scripts/validate-docs.ts` only for a durable nonstandard documentation architecture.
 4. Run `.ai/tasks/document.md` after adding a public package surface.
-5. Run `pnpm check:ai-data`.
+5. Run `pnpm gen:ai-data` to refresh `.ai/reference/packages.md`, then `pnpm check:ai-data`.
 
 Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-packages.ts` derives them from valid package directories.
 
@@ -205,7 +204,7 @@ Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-p
 | Demo or integration                   | owning-package validation when library behavior changes, affected demo tests/build, and `pnpm validate:demos` for shared or broad demo impact; add responsive/accessibility checks when relevant |
 | REPL                                  | REPL validation, docs build                                        |
 | Tooling                               | focused script tests and a direct smoke command                    |
-| AI metadata                           | `pnpm check:ai-data`; run `pnpm gen:ai-data` first only when derived adapters or references must change |
+| AI metadata                           | `pnpm check:ai-data`; run `pnpm gen:ai-data` first when the package table or task stubs must change |
 | Release metadata                      | scoped artifact format and package/version intent                  |
 | Cross-package call sites              | focused tests, lint, and build for every affected package          |
 | Production dev-warning gate           | `pnpm verify:prod-gate`                                            |

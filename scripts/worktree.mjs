@@ -9,13 +9,13 @@
 // coupled packages (e.g. `ripple` + `ore`) *should* see each other's breaking
 // changes immediately in a shared checkout; isolating them in separate
 // worktrees just defers that collision to merge time, which is worse. See
-// .ai/core/workspace.md.
+// the Worktrees rule in the root AGENTS.md.
 //
 // The dependency graph is computed from packages/*/package.json at run time
 // — not from .ai/reference/packages.md's human-readable table. That table is
-// generated from .ai/data/packages.json (kept in sync with package.json via
-// `pnpm check:ai-data`), but reading package.json directly here avoids a
-// dependency on that generated-file step ever staying in sync.
+// generated from the same manifests (kept current via `pnpm check:ai-data`),
+// but reading package.json directly here avoids a dependency on that
+// generated-file step ever staying in sync.
 //
 // Worktrees live at .worktrees/<pkg>/ (gitignored), inside the repo — not a
 // sibling directory. Sibling worktrees are the more common git convention,

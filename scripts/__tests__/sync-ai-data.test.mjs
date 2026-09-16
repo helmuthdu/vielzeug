@@ -5,15 +5,13 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
-  assertTaskDocumentsExist,
-  assertValidPackages,
-  assertValidTasks,
   collectAiReferenceSources,
   extractAiReferences,
   findDanglingAiReferences,
   isAiReferenceSource,
-  mergePackageData,
+  parseTaskDescription,
   patchPackagesReference,
+  readAiTasks,
   renderPackagesTable,
   syncTaskAdapters,
   taskStubContent,
@@ -25,77 +23,59 @@ describe('module has no import-time side effects', () => {
   });
 });
 
-describe('assertValidTasks()', () => {
-  it('accepts well-formed task metadata', () => {
-    expect(() =>
-      assertValidTasks([
-        { description: 'Review.', key: 'review' },
+describe('parseTaskDescription()', () => {
+  it('reads a plain frontmatter description', () => {
+    expect(parseTaskDescription('---\ndescription: Review code.\n---\n\n# Review\n', 'x.md')).toBe('Review code.');
+  });
+
+  it('unquotes a JSON-style description', () => {
+    expect(parseTaskDescription('---\ndescription: "Review: architecture."\n---\n', 'x.md')).toBe(
+      'Review: architecture.',
+    );
+  });
+
+  it('rejects a document without a description', () => {
+    expect(() => parseTaskDescription('# No frontmatter\n', '.ai/tasks/x.md')).toThrow(/missing frontmatter/);
+  });
+});
+
+describe('readAiTasks()', () => {
+  it('derives tasks from .ai/tasks/*.md sorted by key', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'ai-tasks-test-'));
+    try {
+      mkdirSync(path.join(root, '.ai/tasks'), { recursive: true });
+      writeFileSync(path.join(root, '.ai/tasks/review.md'), '---\ndescription: Review.\n---\n');
+      writeFileSync(path.join(root, '.ai/tasks/build.md'), '---\ndescription: Build.\n---\n');
+
+      expect(readAiTasks(root)).toEqual([
         { description: 'Build.', key: 'build' },
-      ]),
-    ).not.toThrow();
+        { description: 'Review.', key: 'review' },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
-  it('rejects duplicate task keys', () => {
-    expect(() =>
-      assertValidTasks([
-        { description: 'Analyze.', key: 'analyze' },
-        { description: 'Analyze.', key: 'analyze' },
-      ]),
-    ).toThrow(/duplicate task key/);
-  });
-
-  it('rejects invalid task keys', () => {
-    expect(() => assertValidTasks([{ description: 'Bad.', key: 'Bad Key' }])).toThrow(/must match/);
-  });
-
-  it('rejects fields owned by canonical task documents', () => {
-    expect(() => assertValidTasks([{ description: 'Analyze.', inputs: ['scope'], key: 'analyze' }])).toThrow(
-      /unsupported fields: inputs/,
-    );
-  });
-});
-
-describe('assertTaskDocumentsExist()', () => {
-  it('rejects a missing canonical task document', () => {
-    expect(() => assertTaskDocumentsExist([{ key: 'missing' }], '/does-not-exist')).toThrow(
-      /canonical task document/,
-    );
-  });
-});
-
-describe('assertValidPackages()', () => {
-  it('rejects a package name that does not match its slug', () => {
-    expect(() =>
-      assertValidPackages([
-        { category: 'Utilities', description: 'Utility', name: '@vielzeug/other', slug: 'tool' },
-      ]),
-    ).toThrow(/must use name/);
-  });
-
-  it('rejects an unsupported documentation contract', () => {
-    expect(() =>
-      assertValidPackages([
-        {
-          category: 'Utilities',
-          description: 'Utility',
-          docsContract: 'unsupported',
-          name: '@vielzeug/tool',
-          slug: 'tool',
-        },
-      ]),
-    ).toThrow(/invalid docsContract/);
+  it('rejects an invalid task file name', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'ai-tasks-test-'));
+    try {
+      mkdirSync(path.join(root, '.ai/tasks'), { recursive: true });
+      writeFileSync(path.join(root, '.ai/tasks/Bad Key.md'), '---\ndescription: Bad.\n---\n');
+      expect(() => readAiTasks(root)).toThrow(/must match/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
 describe('taskStubContent()', () => {
-  it('points adapter stubs at the new task doc path', () => {
+  it('points adapter stubs at the canonical task doc', () => {
     const content = taskStubContent({
       description: 'Update docs with source-backed rules.',
       key: 'document',
     });
     expect(content).toMatch(/# document/);
     expect(content).toMatch(/\.ai\/tasks\/document\.md/);
-    expect(content).not.toMatch(/## Inputs|## Load/);
   });
 
   it('serializes a description containing a colon safely', () => {
@@ -105,66 +85,12 @@ describe('taskStubContent()', () => {
   });
 });
 
-describe('mergePackageData()', () => {
-  it('overwrites live dependency fields while preserving curated metadata', () => {
-    const merged = mergePackageData(
-      [
-        {
-          slug: 'forge',
-          category: 'Forms',
-          description: 'Form state',
-          name: '@vielzeug/forge',
-          dependencies: [],
-          optionalPeers: [],
-        },
-      ],
-      [{ slug: 'forge', dependencies: ['arsenal', 'ripple'], optionalPeers: [], peerDependencies: ['spell'] }],
-    );
-
-    expect(merged).toEqual([
-      {
-        slug: 'forge',
-        category: 'Forms',
-        description: 'Form state',
-        name: '@vielzeug/forge',
-        dependencies: ['arsenal', 'ripple'],
-        peerDependencies: ['spell'],
-      },
-    ]);
-  });
-
-  it('rejects curated metadata missing a real package', () => {
-    expect(() => mergePackageData([], [{ slug: 'forge', dependencies: [], optionalPeers: [] }])).toThrow(
-      /missing curated metadata/,
-    );
-  });
-
-  it('rejects stale curated entries for removed packages', () => {
-    expect(() =>
-      mergePackageData(
-        [
-          {
-            slug: 'ghost',
-            category: 'Utilities',
-            description: 'old',
-            name: '@vielzeug/ghost',
-            dependencies: [],
-            optionalPeers: [],
-          },
-        ],
-        [],
-      ),
-    ).toThrow(/stale curated entries/);
-  });
-});
-
 describe('renderPackagesTable() / patchPackagesReference()', () => {
-  it('renders a readable packages table', () => {
+  it('renders a readable packages table from manifest data', () => {
     const table = renderPackagesTable([
       {
         slug: 'refine',
         name: '@vielzeug/refine',
-        category: 'UI',
         description: 'Components',
         dependencies: ['ore', 'ripple'],
         optionalPeers: [],
@@ -172,12 +98,8 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
       },
     ]);
 
-    expect(table).toContain(
-      '| Package | Category | Description | Dependencies | Required peers | Optional peers |',
-    );
-    expect(table).toContain(
-      '| `@vielzeug/refine` | UI | Components | `ore`, `ripple` | — | — |',
-    );
+    expect(table).toContain('| Package | Description | Dependencies | Required peers | Optional peers |');
+    expect(table).toContain('| `@vielzeug/refine` | Components | `ore`, `ripple` | — | — |');
   });
 
   it('patches the generated table block in the packages reference', () => {
@@ -192,7 +114,6 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
       {
         slug: 'spell',
         name: '@vielzeug/spell',
-        category: 'Validation',
         description: 'Schema validation',
         dependencies: ['arsenal'],
         optionalPeers: [],
@@ -206,17 +127,20 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
 });
 
 describe('collectAiReferenceSources()', () => {
-  it('includes canonical documents and every generated client entrypoint', () => {
+  it('includes text sources across the repo and skips vendor, build, and changelog files', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'ai-reference-sources-test-'));
     try {
       for (const file of [
-        '.ai/README.md',
-        '.github/copilot-instructions.md',
-        '.junie/AGENTS.md',
+        '.ai/tasks/build.md',
         '.claude/commands/review.md',
-        '.devin/workflows/review.md',
         'AGENTS.md',
         'CLAUDE.md',
+        'packages/spell/CHANGELOG.md',
+        'packages/spell/src/index.ts',
+        'packages/spell/dist/index.js',
+        'docs/.vitepress/config.ts',
+        'node_modules/dep/README.md',
+        'assets/logo.png',
       ]) {
         const absPath = path.join(root, file);
         mkdirSync(path.dirname(absPath), { recursive: true });
@@ -224,24 +148,22 @@ describe('collectAiReferenceSources()', () => {
       }
 
       expect(collectAiReferenceSources(root)).toEqual([
-        '.ai/README.md',
+        '.ai/tasks/build.md',
         '.claude/commands/review.md',
-        '.devin/workflows/review.md',
-        '.github/copilot-instructions.md',
-        '.junie/AGENTS.md',
         'AGENTS.md',
         'CLAUDE.md',
+        'docs/.vitepress/config.ts',
+        'packages/spell/src/index.ts',
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
-  it('recognizes client entrypoints with Windows path separators', () => {
-    expect(isAiReferenceSource('.github\\copilot-instructions.md', false)).toBe(true);
-    expect(isAiReferenceSource('.junie\\AGENTS.md', false)).toBe(true);
-    expect(isAiReferenceSource('.claude\\commands\\review.md', false)).toBe(true);
-    expect(isAiReferenceSource('.devin\\workflows\\review.md', false)).toBe(true);
+  it('recognizes sources with Windows path separators', () => {
+    expect(isAiReferenceSource('.github\\copilot-instructions.md')).toBe(true);
+    expect(isAiReferenceSource('packages\\spell\\src\\index.ts')).toBe(true);
+    expect(isAiReferenceSource('packages\\spell\\CHANGELOG.md')).toBe(false);
   });
 });
 
@@ -268,8 +190,8 @@ describe('syncTaskAdapters()', () => {
 
 describe('extractAiReferences()', () => {
   it('extracts every distinct .ai/... path token', () => {
-    const text = 'See `.ai/core/policy.md` and `.ai/data/packages.json`. Also `.ai/core/policy.md` again.';
-    expect(extractAiReferences(text)).toEqual(['.ai/core/policy.md', '.ai/data/packages.json']);
+    const text = 'See `.ai/core/conventions.md` and `.ai/tasks/build.md`. Also `.ai/core/conventions.md` again.';
+    expect(extractAiReferences(text)).toEqual(['.ai/core/conventions.md', '.ai/tasks/build.md']);
   });
 
   it('ignores templated placeholders containing "<"', () => {
@@ -289,16 +211,16 @@ describe('findDanglingAiReferences()', () => {
   });
 
   it('reports nothing when every reference resolves', () => {
-    const dangling = findDanglingAiReferences({ 'AGENTS.md': 'See .ai/core/policy.md for details.' }, () => true);
+    const dangling = findDanglingAiReferences({ 'AGENTS.md': 'See .ai/core/conventions.md.' }, () => true);
 
     expect(dangling).toEqual([]);
   });
 
   it('checks references across multiple files independently', () => {
-    const exists = new Set(['.ai/core/policy.md']);
+    const exists = new Set(['.ai/core/conventions.md']);
     const dangling = findDanglingAiReferences(
       {
-        'AGENTS.md': 'See .ai/core/policy.md.',
+        'AGENTS.md': 'See .ai/core/conventions.md.',
         'packages/AGENTS.md': 'See .ai/core/missing.md.',
       },
       (ref) => exists.has(ref),

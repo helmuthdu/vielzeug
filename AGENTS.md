@@ -1,24 +1,13 @@
-# AGENTS.md — Vielzeug (DOX root rail)
+# AGENTS.md — Vielzeug
 
-## Purpose
+Canonical entrypoint for every AI client. `CLAUDE.md`, `.github/copilot-instructions.md`, and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file; task procedure lives in `.ai/tasks/`; engineering conventions live in `.ai/core/conventions.md`.
 
-Root [DOX](https://github.com/agent0ai/dox) rail for the Vielzeug monorepo. It anchors the AGENTS.md chain.
+Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeug/*`. Packages target ES2022, use strict TypeScript, and ship ESM and CJS builds through Vite.
 
-DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a subtree has local rules not already covered by the canonical files in `.ai/core/`, `.ai/data/`, `.ai/reference/`, and `.ai/tasks/`. Leaf packages that follow the standard conventions intentionally have **no** `AGENTS.md` — that absence is expected, not "unindexed".
+## Start work
 
-## Ownership
-
-- **AI system entrypoint** — `.ai/README.md`.
-- **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/core/conventions.md`.
-- **Package catalogue and dependency graph** — `.ai/data/packages.json` and `.ai/reference/packages.md`.
-- **Workspace toolchain, commands, versioning** — `.ai/core/workspace.md`.
-- **Task playbooks** (build / review / document / release) — `.ai/tasks/*.md`, with the client-adapter registry in `.ai/data/tasks.json`.
-- **Contributor workflow** — `.github/contributing.md`.
-- **Additional contributor/tooling context** — `CLAUDE.md`.
-
-## Task Index
-
-Reach for the smallest task that matches the job:
+1. Inspect the worktree and preserve changes you did not make.
+2. Pick the smallest task playbook that fits:
 
 | Situation                                      | Read                    |
 | ---------------------------------------------- | ----------------------- |
@@ -27,32 +16,107 @@ Reach for the smallest task that matches the job:
 | Update docs, README, recipes, or REPL examples | `.ai/tasks/document.md` |
 | Prepare releases, commits, or pull requests    | `.ai/tasks/release.md`  |
 
-Default guidance: prefer one focused task plus the smallest useful validation instead of a fixed multi-phase pipeline.
+3. Load the files in the task's `Load` section. Load `.ai/core/conventions.md` before editing package source.
+4. Read the nearest subtree `AGENTS.md` before editing inside it (see the index at the end).
 
-## Local Contracts
+## Source of truth
 
-- Do not duplicate canonical context; link to the relevant `.ai/core/**/*.md`, `.ai/tasks/**/*.md`, `.ai/data/**/*.json`, or `.ai/reference/**/*.md` file.
+1. Source code and package manifests win over docs, comments, and generated text.
+2. Prefer the `codex` package's MCP data when available, but verify against source before changing code.
+3. Do not use `git log`, `git diff`, or `git blame` as a default source of design truth.
+4. Package facts (name, description, dependency graph) come from `packages/<name>/package.json`. `.ai/reference/packages.md` is a generated one-page view of the same data.
 
-## Work Guidance
+## Safety
 
-Defer to `.ai/core/conventions.md` for engineering conventions, `.ai/data/packages.json` / `.ai/reference/packages.md` for package facts, `.ai/core/workspace.md` for toolchain and commands, and the relevant `.ai/tasks/*.md` file for task procedure.
+- Do not commit, push, tag, release, publish, rewrite history, or delete branches without explicit approval for that action.
+- Do not add dependencies without explicit approval.
+- Do not weaken, skip, or delete tests to force a green run.
+- If a change intentionally breaks public API, surface it clearly instead of hiding it behind compatibility code.
 
-## Verification
+## Working style
 
-- Tests: `pnpm vitest run packages/<name>/src/__tests__/`
-- Lint: `pnpm --filter @vielzeug/<name> lint`
-- Build: `pnpm --filter @vielzeug/<name> build`
-- Docs structure: `pnpm validate:docs -- --package=<name>`
-- README structure: `pnpm validate:readme -- --package=<name>`
-- Docs: `pnpm --filter @vielzeug/codex build && pnpm docs:build`
-- Deployable docs and demos: `pnpm site:build`
-- Demos: affected demo test/build; `pnpm validate:demos` for shared or broad demo impact
-- REPL examples: `pnpm validate:repl` (`-- --package=<name>` for a focused package run)
-- AI metadata: `pnpm check:ai-data` (`pnpm gen:ai-data` to refresh `.ai/data/` and generated references)
+- Prefer the smallest task that fits the work, direct code reading over speculation, and simple architecture over configurable architecture.
+- Prefer deleting obsolete patterns to wrapping them.
+- Treat demos as first-party integration harnesses. When a demo exposes a library gap, fix the owning package instead of adding a demo-only workaround, then cover both.
+- Treat the monorepo as one owned system: propagate changes across packages, demos, tests, and docs when required for correctness and coherence.
+- When valid approaches conflict, choose one definitive design favoring lower coupling, fewer moving parts, explicit behavior, and idiomatic TypeScript. Do not ship parallel alternatives unless explicitly required.
+- Scale effort to the change. A one-function fix does not need every review pass, but scaling down never skips an approval gate, a required validation, or a fix for a confirmed security finding.
 
-## Child DOX Index
+## Decision ownership and delegation
+
+- Keep one decision owner per task. Delegated work gathers bounded evidence or implements an independently owned surface; it does not make conflicting product or architecture decisions.
+- Delegate only when the subtask is self-contained enough to name its scope, required evidence, expected output, and write authority.
+- Run delegated work concurrently only when scopes do not depend on or modify the same files.
+- Treat delegated reports as evidence, not authority. Verify implementation-sensitive claims against source before editing or reporting completion.
+
+## Escalate before proceeding when
+
+- the baseline is already red and the task is not clearly about fixing it
+- requirements are ambiguous enough to produce materially different designs
+- the change would break multiple dependent packages
+- the change needs a new dependency, data migration, or irreversible deletion
+
+Surface the escalation with a `[BLOCKED]` marker instead of proceeding silently or burying it in prose.
+
+## Structured markers
+
+- `[BLOCKED] <decision>` — needs explicit user confirmation before proceeding.
+- `[VERIFY] <claim>: <reason>` — a claim not directly confirmed from source (e.g. browser-only runtime behavior). Flag it instead of asserting it.
+- `[DEFERRED] <work>: <reason>` — valuable but out of scope for this pass.
+
+User-requested output formats take precedence, except that a safety gate always uses `[BLOCKED]`.
+
+## Validation
+
+Every code change finishes with the narrowest useful validation for the changed surface. The enforcement map in `.ai/core/conventions.md` is the single source of truth for which validation applies to which surface. Report commands that could not run and their exact failure; never infer success from inspection alone.
+
+```bash
+pnpm setup                                          # fresh checkout
+pnpm vitest run packages/<name>/src/__tests__/      # standard test path
+pnpm --filter @vielzeug/<name> lint
+pnpm --filter @vielzeug/<name> build
+pnpm validate:docs -- --package=<name>
+pnpm validate:readme -- --package=<name>
+pnpm validate:repl -- --package=<name>
+pnpm --filter @vielzeug/codex build && pnpm docs:build   # docs changes (Codex bundles docs first)
+pnpm check:ai-data                                  # AI metadata and .ai/ cross-references
+```
+
+Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm fix` for Biome formatting and import organization instead of hand-formatting. Run `pnpm run` with no arguments for the full script list; package-specific test behavior belongs in each package's `test` script.
+
+## Toolchain and workflow facts
+
+- Node 22 (`.tool-versions`), pnpm, Rush (`rush.json`, `common/`), Vitest, Biome, VitePress.
+- Worktrees: `pnpm worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction; the script checks live manifests.
+- Change files: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`.
+- Conventional commits: `feat(courier): add retry logic`. `fix` → patch, `feat` → minor, `feat!` or any breaking change → major.
+- AI metadata: edit canonical `.ai/` sources, run `pnpm gen:ai-data`, then `pnpm check:ai-data`. Generated blocks and client task stubs are outputs, not editing surfaces.
+
+## Repository layout
+
+| Path                  | Purpose                                                        |
+| --------------------- | -------------------------------------------------------------- |
+| `packages/<name>/`    | Independent published packages                                 |
+| `docs/<name>/`        | Package documentation and recipes (VitePress)                  |
+| `demos/`              | Integration demos                                              |
+| `scripts/`            | Workspace, generation, validation, and release tooling         |
+| `.ai/`                | Conventions, task playbooks, and shared reference material     |
+| `common/`, `rush.json`| Rush workspace configuration                                   |
+| `.github/workflows/`  | CI and publishing workflows                                    |
+
+### `.ai/` contents
+
+- `core/conventions.md` — engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout, enforcement map.
+- `tasks/*.md` — task playbooks. Each file's frontmatter `description` feeds the generated `.claude/commands/` and `.devin/workflows/` stubs.
+- `reference/packages.md` — generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md` — hand-curated, shared by tasks.
+
+Every `.ai/...` path mentioned anywhere in the repo must resolve; `pnpm check:ai-data` fails on a dangling reference.
+
+## Child AGENTS.md index
+
+Subtrees carry their own `AGENTS.md` only when they have rules not covered here or in `.ai/core/conventions.md`; most packages intentionally have none.
 
 - `packages/AGENTS.md` — source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
 - `docs/AGENTS.md` — VitePress documentation site and REPL.
-- `scripts/AGENTS.md` — repo tooling: release automation, worktree helper, generated-doc sync, REPL codegen/validation, and the shared `scripts/lib/` primitives they're all built on. No top-level router/CLI entrypoint exists on purpose — run `pnpm run` (no args) to see every available command; see `scripts/AGENTS.md`'s Layout section for why a hand-maintained routing table was rejected.
-- `.github/AGENTS.md` — CI/CD workflow YAML and the `scripts/release/` automation it calls into; the npm Trusted Publishing constraints that shape `publish.yml`'s design.
+- `scripts/AGENTS.md` — repo tooling and the shared `scripts/lib/` primitives.
+- `.github/AGENTS.md` — CI/CD workflows and the release automation they call.

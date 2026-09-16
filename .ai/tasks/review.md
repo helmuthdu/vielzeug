@@ -1,65 +1,57 @@
+---
+description: Investigate, audit, redesign, plan, or review code.
+---
+
 # Review Task
 
 ## Use when
 
 Investigate, audit, redesign, plan, or review code without making changes unless explicitly requested.
 
-## Inputs
-
-- `scope`
-- `goal`
-- `mode`: `current` (default), `greenfield`, or `pr`
-- `intent`: PR description, change-file summary, or explicit goal
-- `changedFiles`: branch diff or named files
-- `checks`: `correctness`, `architecture`, `design`, `dx`, `maintainability`, `simplicity`, `readability`, `performance`, `regression`, `types`, `security`, `coverage`, `testQuality`
-- `depth`: `quick` or `full`
-
-### Default checks
-
-- `current`: `correctness`, `design`, `maintainability`, `types`, `coverage`.
-- `greenfield`: `architecture`, `design`, `dx`, `maintainability`, `simplicity`.
-- `pr`: `correctness`, `readability`, `maintainability`, `regression`, `types`, `coverage`.
-- Add `security` when security-sensitive code is in scope.
-- Add `performance` only for hot paths, measurable regressions, or explicit performance goals.
-
-`quick` may combine selected checks, but never skips mode-required evidence: full changed-file reads and call-site checks for `pr`; impact inventory for a breaking greenfield recommendation.
-
 ## Load
 
-- `.ai/core/policy.md`
-- `.ai/core/workspace.md`
+- root `AGENTS.md` (policy, safety, markers)
 - `.ai/core/conventions.md` when package source is in scope
 - `.ai/reference/security-checklist.md` for security review
-- relevant `AGENTS.md` chain
+- relevant subtree `AGENTS.md`
 
 ## Preconditions
 
-Confirm valid inputs and selected defaults. Use `[BLOCKED]` when requirements permit materially different designs or the review requires destructive/runtime-only evidence.
+Use `[BLOCKED]` when requirements permit materially different designs or the review requires destructive or runtime-only evidence.
 
-State assumptions before analysis when required files, runtime behavior, consumer constraints, or external usage cannot be verified. Mark each assumption `[VERIFY]`; do not treat it as design evidence.
+State assumptions before analysis when required files, runtime behavior, consumer constraints, or external usage cannot be verified. Mark each `[VERIFY]`; do not treat it as design evidence.
 
-## Common flow
+## Flow
 
 1. Read relevant contracts, source, tests, docs, and metadata.
-2. Apply selected checks at requested depth. Under full depth, review public API, stateful, or cross-package work in two source-first passes: contract (API, types, errors, lifecycle, exports, docs, dependents), then implementation (correctness, boundaries, cleanup, tests, races, security).
-3. Apply the selected mode flow.
-4. Verify every claim against source or mark it `[VERIFY]`.
-5. Rank findings by expected user/developer impact relative to implementation, migration, and validation cost; use dependency order to break ties.
+2. Pick the mode below that matches the request and apply its checks. For public API, stateful, or cross-package work, review in two source-first passes: contract (API, types, errors, lifecycle, exports, docs, dependents), then implementation (correctness, boundaries, cleanup, tests, races, security).
+3. Verify every claim against source or mark it `[VERIFY]`.
+4. Rank findings by expected user/developer impact relative to implementation, migration, and validation cost; use dependency order to break ties.
 
-## Current mode
+Add `security` whenever security-sensitive code is in scope. Add `performance` only for hot paths, measurable regressions, or explicit performance goals.
 
-- Evaluate selected checks within approved compatibility constraints.
+## Modes
+
+### Current
+
+Default checks: correctness, design, maintainability, types, coverage.
+
+- Evaluate within approved compatibility constraints.
 - Recommend source-backed improvements only.
 - Inspect changed and adjacent coordination hotspots for mixed responsibilities.
 
-## Greenfield mode
+### Greenfield
+
+Default checks: architecture, design, dx, maintainability, simplicity.
 
 - Treat current architecture as evidence of behavior, not proof of optimal design.
 - Challenge boundaries and abstractions but preserve source-backed mechanisms whose benefits exceed their complexity.
 - Before recommending removal, replacement, or incompatible redesign, enumerate source references, public exports, dependent packages, tests, and documentation surfaces; state unknown external usage separately.
 - Recommend deletion explicitly when an abstraction, layer, or extension point has no source-backed benefit proportional to its cost.
 
-## PR mode
+### PR
+
+Default checks: correctness, readability, maintainability, regression, types, coverage.
 
 1. Read every changed file in full, then surrounding source needed to establish its contracts; do not review diff hunks in isolation.
 2. Compare changed behavior against stated intent.
@@ -69,7 +61,7 @@ State assumptions before analysis when required files, runtime behavior, consume
 
 For an independent pass (reviewing a PR fresh, not building on a prior review), read both new and prior implementations in full. Actively seek counterexamples, failure modes, changed-call-site regressions, and simpler alternatives. State tradeoffs in complexity, flexibility, performance, coupling, testability, and DX.
 
-## Checks
+## Check glossary
 
 - `correctness`: logic, boundaries, async behavior, errors, cleanup, regression tests.
 - `architecture`: boundaries, layering, dependency direction, data flow, control flow, framework coupling.
@@ -85,7 +77,7 @@ For an independent pass (reviewing a PR fresh, not building on a prior review), 
 - `coverage`: public happy paths, failures, boundaries, races, guards, lifecycle behavior.
 - `testQuality`: discovery, behavior-vs-implementation assertions, duplication, determinism, mock/setup complexity.
 
-For security reviews, finish only after every raised finding is `[FIXED]`, `[DEFERRED]`, or explicitly open.
+For security reviews, finish only after every raised finding is fixed, `[DEFERRED]`, or explicitly open. When a finding is fixed in the same pass, annotate it inline rather than deleting the evidence.
 
 ## Cross-cutting completeness inventory
 
@@ -99,8 +91,6 @@ Use an evidence inventory only for removals, migrations, workspace-wide renames,
 
 ## Severity
 
-Use this scale for every finding:
-
 - `High`: merge-blocking correctness, security, data-loss, public-contract, or broad regression risk.
 - `Medium`: real behavior, maintainability, test, or DX defect with bounded impact.
 - `Low`: source-backed improvement with limited risk; never style preference alone.
@@ -109,28 +99,15 @@ Do not report style-only nits unless they impair readability, maintainability, o
 
 ## Output
 
-`[FINDING] <High|Medium|Low> — <file:line> — <problem> — <evidence> — <recommended fix>`
+Each finding names its severity, location, problem, evidence, and recommended fix. Each proposal names the references, packages, and surfaces checked, and known versus unknown consumers. Report `[DEFERRED]`, `[VERIFY]`, and `[BLOCKED]` as needed.
 
-`[IMPACT] <proposal> — <references/packages/surfaces checked> — <known and unknown consumers>`
+### Greenfield output
 
-Also report `[DEFERRED]`, `[VERIFY]`, and `[BLOCKED]` as needed.
+Report the 4–6 highest-value recommendations unless fewer source-backed issues exist. For each: **Problem**, **Actionable change**, **Why better** (affected checks), **Impact** (references, dependents, migration surfaces, unknown external usage), **Effort** (Low/Medium/High), and an **Example** only when a short diagram or signature removes ambiguity.
 
-## Greenfield output
+Finish with `## Top Priority Changes`, ranked by value-to-effort, long-term value, and dependency order. Add `## Future Improvements` only when source-backed deferred work exists, each item `[DEFERRED]` with its reason.
 
-Report 4–6 highest-value recommendations unless fewer source-backed issues exist. For each recommendation, use:
-
-1. **Problem** — source-backed deficiency.
-2. **Actionable change** — concrete refactor, removal, boundary, API, tooling, or workflow change.
-3. **Why better** — affected checks and specific improvement.
-4. **Impact** — references, dependents, migration surfaces, and unknown external usage.
-5. **Effort** — Low, Medium, or High, driven by implementation, migration, and validation scope.
-6. **Example** — only when a short diagram or signature removes ambiguity.
-
-Finish with `## Top Priority Changes`, ranked by value-to-effort, long-term value, and dependency order.
-
-Add `## Future Improvements` only when source-backed deferred work exists. Mark each item `[DEFERRED]` with its reason.
-
-## PR output
+### PR output
 
 Explicitly report:
 
@@ -140,4 +117,4 @@ Explicitly report:
 - Contracts: types, docs, exports, and change files aligned, or gaps.
 - Cleanup: dead, transitional, or redundant code removed, or findings.
 
-For an independent PR pass, start with `## Executive Summary`: 2–3 sentences covering better, worse, or mixed fitness for intent; main tradeoff; and final decision. Then report tradeoffs, risks, abstraction justification, complexity, and decision (`Approve`, `Approve with nits`, `Request changes`, or `Reject`). This is review output, not approval to merge, push, or release.
+For an independent PR pass, start with `## Executive Summary`: 2–3 sentences covering fitness for intent, the main tradeoff, and the decision (`Approve`, `Approve with nits`, `Request changes`, or `Reject`). Then report tradeoffs, risks, abstraction justification, and complexity. This is review output, not approval to merge, push, or release.

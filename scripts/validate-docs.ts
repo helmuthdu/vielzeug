@@ -17,10 +17,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(__dirname, '..');
 const DEFAULT_DOCS_DIR = join(ROOT, 'docs');
 const DEFAULT_PACKAGES_DIR = join(ROOT, 'packages');
-const DEFAULT_PACKAGE_DATA = join(ROOT, '.ai/data/packages.json');
 
 type LinkScope = 'all' | 'root';
 export type DocsContractName = 'catalog' | 'component-library' | 'standard';
+
+// Packages whose documentation architecture durably differs from the standard four-page
+// shape. Every other package uses `standard`. See `.ai/reference/docs-template.md`.
+export const DOCS_CONTRACT_OVERRIDES: ReadonlyMap<string, DocsContractName> = new Map([
+  ['arsenal', 'catalog'],
+  ['refine', 'component-library'],
+]);
 
 interface HeadingRequirement {
   alternatives?: readonly string[];
@@ -129,8 +135,8 @@ export interface ValidationResult {
 }
 
 export interface LoadDocsWorkspaceOptions {
+  contracts?: ReadonlyMap<string, DocsContractName>;
   docsDir?: string;
-  packageDataPath?: string;
   packagesDir?: string;
 }
 
@@ -170,27 +176,9 @@ function loadPackageDocs(docsDir: string, slug: string): PackageDocs {
   return { docsDir: packageDir, files, slug };
 }
 
-function contractName(value: unknown): DocsContractName {
-  if (value === 'catalog' || value === 'component-library') return value;
-  return 'standard';
-}
-
-function loadContracts(packageDataPath: string): Map<string, DocsContractName> {
-  if (!existsSync(packageDataPath)) return new Map();
-
-  const data = JSON.parse(readFileSync(packageDataPath, 'utf8')) as {
-    packages?: Array<{ docsContract?: unknown; slug?: unknown }>;
-  };
-  const contracts = new Map<string, DocsContractName>();
-  for (const pkg of data.packages ?? []) {
-    if (typeof pkg.slug === 'string') contracts.set(pkg.slug, contractName(pkg.docsContract));
-  }
-  return contracts;
-}
-
 export function loadDocsWorkspace({
+  contracts = DOCS_CONTRACT_OVERRIDES,
   docsDir = DEFAULT_DOCS_DIR,
-  packageDataPath = DEFAULT_PACKAGE_DATA,
   packagesDir = DEFAULT_PACKAGES_DIR,
 }: LoadDocsWorkspaceOptions = {}): DocsWorkspace {
   const sourceDirectories = new Map(directoryNames(packagesDir).map((slug) => [slug, join(packagesDir, slug)]));
@@ -204,7 +192,7 @@ export function loadDocsWorkspace({
   }
 
   return {
-    contracts: loadContracts(packageDataPath),
+    contracts,
     knownFiles: new Set(filesIn(docsDir).map((file) => normalize(file))),
     packageDocs,
     sourceDirectories,

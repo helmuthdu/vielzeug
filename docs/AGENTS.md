@@ -8,7 +8,7 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 - **Documentation template, tone, and per-page structure rules** — `.ai/reference/docs-template.md`.
 - **Documentation, README, recipe, and REPL rules** — `.ai/tasks/document.md`.
-- Package facts referenced by docs — `.ai/data/packages.json` and `.ai/reference/packages.md`.
+- Package facts referenced by docs — `packages/<name>/package.json`, summarized in the generated `.ai/reference/packages.md`.
 
 ## Local Contracts
 

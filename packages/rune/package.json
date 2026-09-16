@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/rune",
   "version": "3.0.0",
-  "description": "Structured logging — scoped loggers, pluggable transports, log levels, and remote log draining",
+  "description": "Structured scoped logger with remote transport",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

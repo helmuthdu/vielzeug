@@ -9,7 +9,7 @@ describe('buildSite()', () => {
 
     buildSite({ environment: { NODE_ENV: 'production' }, root, runCommand });
 
-    expect(runCommand).toHaveBeenCalledTimes(4);
+    expect(runCommand).toHaveBeenCalledTimes(SITE_DEMOS.length + 1);
     expect(runCommand).toHaveBeenNthCalledWith(1, 'pnpm', ['docs:build'], { cwd: root, inherit: true });
 
     for (const [index, demo] of SITE_DEMOS.entries()) {

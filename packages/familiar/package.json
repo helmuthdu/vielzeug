@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/familiar",
   "version": "3.0.0",
-  "description": "Typed ES module Worker pools with queueing, streaming, and AbortSignal cancellation",
+  "description": "Web Worker pool with tasks, timeouts, cancellation",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

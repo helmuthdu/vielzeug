@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/spell",
   "version": "3.0.0",
-  "description": "Zero-dependency schema validation with coercion, async checks, and Standard Schema interoperability",
+  "description": "Zero-dependency schema validation with Standard Schema interoperability",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

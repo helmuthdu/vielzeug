@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/keymap",
   "version": "3.0.0",
-  "description": "Headless keyboard shortcut manager with chord sequences, context guards, and disposable bindings",
+  "description": "Headless keyboard shortcut manager with chord sequences",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
