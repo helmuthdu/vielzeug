@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Fix checkbox, radio and switch labels wrapping below the control instead of beside it, and stepper labels overlapping on narrow widths.",
+            "commit": "3b0d886f9444d49a983e417324abf9467271d9ae"
+          }
+        ]
+      },
+      "date": "Wed, 16 Sep 2026 09:18:24 GMT",
+      "tag": "@vielzeug/refine_v3.2.1",
+      "version": "3.2.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

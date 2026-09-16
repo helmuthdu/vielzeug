@@ -2,6 +2,25 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/refine\" to `3.2.1`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "3b0d886f9444d49a983e417324abf9467271d9ae"
+          }
+        ]
+      },
+      "date": "Wed, 16 Sep 2026 09:18:24 GMT",
+      "tag": "@vielzeug/codex_v3.0.4",
+      "version": "3.0.4"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

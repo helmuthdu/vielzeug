@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 13 Sep 2026 20:22:23 GMT and should not be manually modified.
+This log was last generated on Wed, 16 Sep 2026 09:18:24 GMT and should not be manually modified.
+
+## 3.2.1
+Wed, 16 Sep 2026 09:18:24 GMT
+
+### Patches
+
+- Fix checkbox, radio and switch labels wrapping below the control instead of beside it, and stepper labels overlapping on narrow widths.
 
 ## 3.2.0
 Sun, 13 Sep 2026 20:22:23 GMT
