@@ -86,7 +86,7 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 
 ## Toolchain and workflow facts
 
-- Node 22 (`.tool-versions`), pnpm, Rush (`rush.json`, `common/`), Vitest, Biome, VitePress.
+- Node 22 (`.nvmrc` for CI, `.tool-versions` for asdf — keep both on the same major), pnpm (`package.json#packageManager`, one root workspace for `packages/*` and `demos/*`), Rush (`rush.json`, `common/`; publishing and change files only — it uses its own pinned pnpm), Vitest, Biome, VitePress.
 - Worktrees: `pnpm worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction; the script checks live manifests.
 - Change files: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`.
 - Conventional commits: `feat(courier): add retry logic`. `fix` → patch, `feat` → minor, `feat!` or any breaking change → major.

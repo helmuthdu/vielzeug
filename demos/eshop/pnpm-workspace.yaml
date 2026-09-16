@@ -1,7 +1,0 @@
-packages:
-  - .
-  - ../../packages/*
-allowBuilds:
-  esbuild: true
-  playwright: true
-  rs-module-lexer: true

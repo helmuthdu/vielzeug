@@ -5,7 +5,7 @@
  * hand-maintained table — the two used to drift (a removed tool stayed listed, a renamed one
  * kept its old name) with nothing catching it.
  *
- * Runs as a `postbuild` step (after `tsc`), not as part of `prepare:data`: `src/tools/*.ts`
+ * Run explicitly (`pnpm gen:tool-docs`) after a build, not as part of `build` or `prepare:data`: `src/tools/*.ts`
  * import their siblings with `.js` specifiers (required for the real NodeNext build), and
  * `node --experimental-strip-types` — unlike a bundler or `tsc` itself — does not rewrite those
  * back to `.ts` at run time, so this has to import the compiled `dist/` output, which only

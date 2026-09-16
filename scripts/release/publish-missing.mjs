@@ -2,7 +2,7 @@
  * Publish every public @vielzeug/* package whose current package.json version isn't on npm
  * yet. A one-off backfill for versions that were bumped and merged but never made it to the
  * registry (e.g. a prior release run failed after the version-bump commit but before
- * publish) — normal releases go through release.yml / release-all.yml instead.
+ * publish) — normal releases go through publish.yml's mode=single / mode=all instead.
  */
 
 import { existsSync, readFileSync } from 'node:fs';

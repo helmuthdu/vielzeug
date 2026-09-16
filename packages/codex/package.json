@@ -50,13 +50,11 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc && pnpm --silent run verify:exports",
+    "build": "pnpm --silent run prepare:data && rm -rf dist && tsc && pnpm --silent run verify:exports",
     "dev": "node --experimental-strip-types ./scripts/dev.ts",
     "fix": "biome check --write src",
     "gen:tool-docs": "node --experimental-strip-types ./scripts/generate-tool-docs.ts",
     "lint": "biome ci src",
-    "postbuild": "pnpm --silent run gen:tool-docs",
-    "prebuild": "pnpm --silent run prepare:data",
     "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",
     "prepublishOnly": "pnpm --silent run build",
     "start": "node dist/cli.js",
@@ -70,6 +68,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "@vielzeug/refine": "workspace:*",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"
   }

@@ -1,23 +1,22 @@
 name: Publish
 
-# Single entry point for every flow that can run `npm publish` — one package (mode=single),
-# every package with a pending change file as a matrix (mode=all), or a missing-version
-# backfill with no version bump (mode=missing).
+# The only workflow that can run `npm publish`.
 #
-# npm's Trusted Publishing (OIDC) validates the *triggering* workflow's filename, not whichever
-# reusable workflow actually runs `npm publish`, and allows exactly one filename per package —
-# so every flow that can publish has to originate from this one file, even the ones (mode=single,
-# mode=all) that delegate the actual `npm publish` step to the reusable `_publish-one.yml`.
-# Register `publish.yml` (this file — not `_publish-one.yml`) as the Trusted Publisher on
-# npmjs.com for every @vielzeug/* package. Splitting this back into three separate dispatchable
-# files (as it used to be) would silently break Trusted Publishing for whichever two aren't
-# registered — see `.github/AGENTS.md` for the full story if you're tempted to.
+# npm's Trusted Publishing (OIDC) validates the *triggering* workflow's filename and allows
+# exactly one filename per package, so every publish path must originate here — including the
+# ones that delegate the actual `npm publish` to the reusable `_publish-one.yml`. Register
+# `publish.yml` (not `_publish-one.yml`) as the Trusted Publisher on npmjs.com for every
+# @vielzeug/* package. See `.github/AGENTS.md`.
+#
+#   mode=single   bump + publish one package (needs "package"; it must have a pending change file)
+#   mode=all      bump + publish every package with a pending change file
+#   mode=missing  publish any version already committed but absent from npm (no version bump)
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'single: one package (needs "package" input) · all: every package with a pending change file · missing: backfill any version already committed but missing from npm (no version bump)'
+        description: 'single: one package (needs "package") · all: every package with a pending change file · missing: backfill versions already committed but absent from npm (no version bump)'
         required: true
         type: choice
         options:
@@ -25,7 +24,7 @@ on:
           - all
           - missing
       package:
-        description: 'mode=single only: package name (e.g. @vielzeug/coins). Must have a pending change file — run rush change locally first.'
+        description: 'mode=single only: package name (e.g. @vielzeug/coins). Must have a pending change file.'
         required: false
         type: string
       dry-run:
@@ -43,9 +42,13 @@ permissions:
   packages: write
 
 jobs:
-  verify-main:
-    name: Verify main ref
+  prepare:
+    if: inputs.mode != 'missing'
     runs-on: ubuntu-latest
+    outputs:
+      has-releases: ${{ steps.plan.outputs.has-releases }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      sha: ${{ steps.head.outputs.sha }}
     steps:
       - name: Require main
         if: github.ref != 'refs/heads/main'
@@ -53,74 +56,74 @@ jobs:
           echo "❌ Publishing can only run from main, not ${GITHUB_REF}."
           exit 1
 
-  prepare-single:
-    needs: verify-main
-    if: inputs.mode == 'single'
-    runs-on: ubuntu-latest
-    outputs:
-      folder: ${{ steps.project.outputs.folder }}
-      version: ${{ steps.project.outputs.version }}
-    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # A re-run (whether "re-run failed jobs" or "re-run all jobs") checks out the exact SHA
-      # the *original* dispatch pinned, not the current tip of main — so re-running a run whose
-      # earlier attempt already pushed a version-bump commit re-applies that same bump against
-      # a stale baseline. That produces a second, diverging "Bump versions" commit that conflicts
-      # with the one already on main the moment rush's internal `--target-branch main` merge
-      # fetches it. Force the checkout to the real current tip before doing anything else so a
-      # re-run is a no-op once main has already moved (no pending change files left to apply).
-      - name: Sync to latest main (guards against a re-run's stale pinned SHA)
+      # A re-run checks out the SHA the *original* dispatch pinned, not the current tip of main.
+      # If the earlier attempt already pushed a version-bump commit, re-applying against that
+      # stale baseline produces a second, conflicting "Bump versions" commit. Move to the real
+      # tip first so a re-run is a no-op once main has already moved.
+      - name: Sync to latest main
         run: |
           git fetch origin main
           git checkout main
           git reset --hard origin/main
 
-      # Node-only setup so a missing "package" input, a typo'd package name, or a missing
-      # change file fails in seconds instead of after paying for the full rush/pnpm install
-      # below.
+      # Node-only setup: a missing/typo'd "package" input or no pending change file fails in
+      # seconds, before paying for the full install below.
       - uses: ./.github/actions/setup
         with:
           root-install: 'false'
           rush-install: 'false'
 
-      - name: Validate inputs and require a pending change file
+      - name: Resolve packages to release
+        id: packages
         run: |
-          if [ -z "${{ inputs.package }}" ]; then
-            echo "❌ mode=single requires the 'package' input."
-            exit 1
+          PENDING=$(node scripts/release/cli.mjs changed-packages)
+          if [ "${{ inputs.mode }}" = "single" ]; then
+            if [ -z "${{ inputs.package }}" ]; then
+              echo "❌ mode=single requires the 'package' input."
+              exit 1
+            fi
+            node scripts/release/cli.mjs project "${{ inputs.package }}" > /dev/null
+            if ! echo "$PENDING" | tr ' ' '\n' | grep -Fxq "${{ inputs.package }}"; then
+              echo "❌ No pending change file for ${{ inputs.package }}. Run 'rush change', commit it, and re-trigger."
+              exit 1
+            fi
+            PACKAGES="${{ inputs.package }}"
+          else
+            PACKAGES="$PENDING"
           fi
-          node scripts/release/cli.mjs project "${{ inputs.package }}" > /dev/null
-          if ! node scripts/release/cli.mjs changed-packages | tr ' ' '\n' | grep -Fxq "${{ inputs.package }}"; then
-            echo "❌ No pending change file found for ${{ inputs.package }}."
-            echo "Run 'rush change' locally, commit the generated file, and re-trigger this workflow."
-            exit 1
-          fi
+          echo "list=$PACKAGES" >> "$GITHUB_OUTPUT"
+          echo "csv=$(echo "$PACKAGES" | tr ' ' ',')" >> "$GITHUB_OUTPUT"
 
-      - uses: ./.github/actions/setup
+      - name: Record versions before bump
+        run: node scripts/release/cli.mjs versions ${{ steps.packages.outputs.list }} > /tmp/versions-before.txt
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - uses: ./.github/actions/setup
+
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
 
-      # "rush publish --apply" has no per-package filter — it always consumes every pending
-      # change file. This isolates the target package's change file(s), applies, and restores
-      # the rest. See scripts/release/rush-publish-apply.mjs for why.
+      # `rush publish --apply` stages the whole tree (`git add ':/*'`) into the bump commit, so
+      # anything a build wrote to a tracked file would land on main unreviewed and `[skip ci]`.
+      - name: Require a clean tree after build
+        run: git diff --quiet || { git status --short; echo "❌ Build modified tracked files."; exit 1; }
+
+      # `rush publish --apply` has no per-package filter; for mode=single the CLI isolates the
+      # target's change file(s) first — see scripts/release/rush-publish-apply.mjs.
       - name: Apply version bump
-        run: node scripts/release/cli.mjs apply "${{ inputs.package }}"
+        run: node scripts/release/cli.mjs apply ${{ inputs.mode == 'single' && inputs.package || '' }}
 
-      - name: Verify packed consumer contract
-        run: pnpm verify:packed -- --package=${{ inputs.package }}
-
-      - id: project
-        run: node scripts/release/cli.mjs project "${{ inputs.package }}" >> "$GITHUB_OUTPUT"
+      - name: Verify packed consumer contracts
+        run: pnpm verify:packed -- --package=${{ steps.packages.outputs.csv }}
 
       - name: Push version bump commit
         if: ${{ !inputs.dry-run }}
@@ -136,115 +139,47 @@ jobs:
             echo "🔄 Retry ${attempt}/3..."
           done
 
+      # The commit each publish job checks out and tags: the pushed bump commit, so tags and
+      # release notes point at the CHANGELOG that includes this version.
+      - name: Record release commit
+        id: head
+        run: |
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Only what `npm pack` needs beyond the checkout: build output (codex also ships its
+      # generated `data/`) plus the manifests and changelogs rush just bumped (a dry run never
+      # pushes them, so the checkout won't have them).
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: built-packages
-          path: packages/
+          path: |
+            packages/*/dist
+            packages/codex/data
+            packages/*/package.json
+            packages/*/CHANGELOG.md
+            packages/*/CHANGELOG.json
           retention-days: 1
 
-  prepare-all:
-    needs: verify-main
-    if: inputs.mode == 'all'
-    runs-on: ubuntu-latest
-    outputs:
-      has-releases: ${{ steps.plan.outputs.has-releases }}
-      matrix: ${{ steps.plan.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      # See the identical step in prepare-single for why this is needed: a re-run of this job
-      # checks out the SHA the original dispatch was pinned to, not main's current tip.
-      - name: Sync to latest main (guards against a re-run's stale pinned SHA)
-        run: |
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
-
-      # Node-only setup so "nothing pending" fails in seconds instead of after the full
-      # rush/pnpm install below.
-      - uses: ./.github/actions/setup
-        with:
-          root-install: 'false'
-          rush-install: 'false'
-
-      - id: changes
-        run: echo "packages=$(node scripts/release/cli.mjs changed-packages)" >> "$GITHUB_OUTPUT"
-
-      - name: Record versions before bump
-        run: node scripts/release/cli.mjs versions ${{ steps.changes.outputs.packages }} > /tmp/versions-before.txt
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - uses: ./.github/actions/setup
-
-      - name: Build all packages
-        run: node common/scripts/install-run-rush.js build --verbose
-
-      - name: Apply version bumps
-        run: node scripts/release/cli.mjs apply
-
-      - name: Verify packed consumer contracts
-        run: pnpm verify:packed -- --package=$(echo "${{ steps.changes.outputs.packages }}" | tr ' ' ',')
-
-      - name: Push version bump commit
-        if: ${{ !inputs.dry-run }}
-        run: |
-          for attempt in 1 2 3; do
-            git fetch origin main
-            git rebase origin/main
-            if git push origin HEAD:main; then
-              echo "✅ Pushed version bumps to main"
-              break
-            fi
-            [ "$attempt" -eq 3 ] && { echo "❌ Push failed after 3 attempts"; exit 1; }
-            echo "🔄 Retry ${attempt}/3..."
-          done
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: built-packages
-          path: packages/
-          retention-days: 1
-
-      # Filters out anything already on npm or left unbumped by rush *before* the matrix is
-      # built, so the Actions UI only ever shows real publish jobs — no phantom "skipped"
-      # entries for a run where only 2 of 30 packages actually changed.
+      # Drops anything rush left unbumped or already on npm *before* the matrix is built, so the
+      # Actions UI only shows real publish jobs.
       - id: plan
         run: |
-          PLAN=$(node scripts/release/cli.mjs plan --before-file=/tmp/versions-before.txt ${{ steps.changes.outputs.packages }})
+          PLAN=$(node scripts/release/cli.mjs plan --before-file=/tmp/versions-before.txt ${{ steps.packages.outputs.list }})
           echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
           [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 
-  publish-single:
-    needs: prepare-single
-    if: inputs.mode == 'single'
-    uses: ./.github/workflows/_publish-one.yml
-    permissions:
-      contents: write
-      id-token: write
-    with:
-      dry-run: ${{ inputs.dry-run }}
-      folder: ${{ needs.prepare-single.outputs.folder }}
-      package: ${{ inputs.package }}
-      version: ${{ needs.prepare-single.outputs.version }}
-
-  # One matrix entry per package that actually needs publishing — each gets its own job (own
-  # log, own pass/fail) instead of one long bash loop. `fail-fast: false` because one package's
-  # publish failing is not a reason to abort the others; E409 registry conflicts between
-  # different packages' matrix jobs are handled by the retry/backoff in
-  # scripts/release/npm-publish.mjs, not by serializing the matrix.
-  publish-all:
-    needs: prepare-all
-    if: inputs.mode == 'all' && needs.prepare-all.outputs.has-releases == 'true'
+  # One job per package: own log, own pass/fail. `fail-fast: false` because one package failing
+  # is no reason to abort the others; E409 conflicts are retried inside npm-publish.mjs.
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.has-releases == 'true'
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.prepare-all.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     uses: ./.github/workflows/_publish-one.yml
     permissions:
       contents: write
@@ -253,39 +188,34 @@ jobs:
       dry-run: ${{ inputs.dry-run }}
       folder: ${{ matrix.folder }}
       package: ${{ matrix.package }}
+      ref: ${{ needs.prepare.outputs.sha }}
       version: ${{ matrix.version }}
 
   publish-missing:
-    needs: verify-main
     if: inputs.mode == 'missing'
     runs-on: ubuntu-latest
-    # Requires manual approval — configure required reviewers under
-    # Settings > Environments > npm-publish. Every job that runs `npm publish` uses this same
-    # environment so there's exactly one place that grants "can publish to npm" access.
+    # Manual approval: Settings > Environments > npm-publish (required reviewers). Every job that
+    # runs `npm publish` uses this environment, so it is the one place publish access is granted.
     environment: npm-publish
     permissions:
       contents: read
       packages: write
-      id-token: write # required for npm Trusted Publishing (OIDC)
+      id-token: write # npm Trusted Publishing (OIDC)
     steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "❌ Publishing can only run from main, not ${GITHUB_REF}."
+          exit 1
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 1
 
       - uses: ./.github/actions/setup
+        with:
+          trusted-publishing: 'true'
 
       - name: Build all packages
         run: node common/scripts/install-run-rush.js rebuild --verbose
-
-      # See scripts/release/npm-publish.mjs for why there's no "configure npm registry" step
-      # here — writing an .npmrc auth line breaks OIDC trusted publishing
-      # (actions/setup-node#1440); the repo-root .npmrc's `registry=` line is all npm needs.
-      - name: Upgrade npm for trusted publishing
-        # Pin to npm 11 — npm 12.0.0 (released 2026-07-08) has a release packaging bug that
-        # omits the `sigstore` module from the published tarball, breaking OIDC trusted
-        # publishing with a misleading ENEEDAUTH error (npm/cli#9722). Stay on 11.x until
-        # npm 12.x ships a fixed release.
-        run: npm install -g npm@11
 
       - name: Publish versions missing on npm
         env:

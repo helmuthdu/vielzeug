@@ -1,18 +1,14 @@
 name: Publish one package (reusable)
 
-# The single canonical "publish + tag + release" path — every place that ships a package to
-# npm (publish.yml's mode=single as a single `needs:` job, mode=all as a matrix over many)
-# calls this instead of re-implementing pack/publish/tag/release inline. A composite action
-# can't be used from a bash loop or a matrix, so previously this logic drifted into three
-# separate implementations; a reusable workflow can be both a single job and a matrix, which is
-# what makes one real implementation possible here.
+# The single "publish + tag + release" implementation. publish.yml runs it as a matrix, one job
+# per package. A reusable workflow (rather than a composite action) is what lets one
+# implementation serve as a matrix body with its own log and pass/fail per package.
 #
-# npm's Trusted Publishing (OIDC) validates the *triggering* workflow's filename, not this
-# reusable one — see publish.yml's header comment for why every publish path lives behind that
-# one entry-point file. Don't register this filename as the Trusted Publisher on npmjs.com.
+# npm's Trusted Publishing validates the *triggering* workflow's filename (publish.yml), not
+# this one — don't register `_publish-one.yml` on npmjs.com.
 #
-# Runs on a fresh runner, so it downloads the `built-packages` artifact the caller's prepare
-# job uploaded rather than assuming dist/ already exists on disk.
+# Runs on a fresh runner: the checkout provides sources, README and LICENSE; the
+# `built-packages` artifact from publish.yml's prepare job provides dist/ and the bumped manifests.
 
 on:
   workflow_call:
@@ -25,6 +21,10 @@ on:
         required: true
         type: string
       package:
+        required: true
+        type: string
+      ref:
+        description: Commit to check out and tag — the version-bump commit prepare pushed
         required: true
         type: string
       version:
@@ -41,6 +41,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref }}
 
       - uses: ./.github/actions/setup
         with:
@@ -60,38 +61,28 @@ jobs:
   publish:
     if: ${{ !inputs.dry-run }}
     runs-on: ubuntu-latest
-    # Requires manual approval — configure required reviewers under
-    # Settings > Environments > npm-publish. This is the one job that actually runs `npm
-    # publish`, so it's the one place "can publish to npm" access needs to be granted.
+    # Manual approval: Settings > Environments > npm-publish (required reviewers).
     environment: npm-publish
     permissions:
       contents: write
-      id-token: write # required for npm Trusted Publishing (OIDC)
+      id-token: write # npm Trusted Publishing (OIDC)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          ref: ${{ inputs.ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: ./.github/actions/setup
         with:
           root-install: 'false'
           rush-install: 'false'
+          trusted-publishing: 'true'
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: built-packages
           path: packages/
-
-      # See scripts/release/npm-publish.mjs for why there's no "configure npm registry" step
-      # here — writing an .npmrc auth line breaks OIDC trusted publishing
-      # (actions/setup-node#1440); the repo-root .npmrc's `registry=` line is all npm needs.
-      - name: Upgrade npm for trusted publishing
-        # Pin to npm 11 — npm 12.0.0 (released 2026-07-08) has a release packaging bug that
-        # omits the `sigstore` module from the published tarball, breaking OIDC trusted
-        # publishing with a misleading ENEEDAUTH error (npm/cli#9722). Stay on 11.x until
-        # npm 12.x ships a fixed release.
-        run: npm install -g npm@11
 
       - name: Publish, tag and release
         env:

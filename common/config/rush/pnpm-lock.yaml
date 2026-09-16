@@ -71,6 +71,9 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
+      '@vielzeug/refine':
+        specifier: workspace:*
+        version: link:../refine
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

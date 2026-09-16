@@ -11,11 +11,11 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 
 ## Local Contracts
 
-- **Build bundles the docs.** `prepare:data` (`scripts/generate-bundled-data.ts`) reads `docs/` and generates `packages/codex/data/` before compilation. It runs automatically via the `prebuild` and `pretest` hooks — do not call `tsc` directly when you need fresh data.
-- `packages/codex/data/` is **generated and gitignored** — never hand-edit or commit it.
+- **Build bundles the docs.** `prepare:data` (`scripts/generate-bundled-data.ts`) reads `docs/` and generates `packages/codex/data/` before compilation. It runs as the first step of `build` and `test:integration` (explicit, not an npm `pre*` hook — Rush does not run lifecycle hooks) — do not call `tsc` directly when you need fresh data.
+- `packages/codex/data/` is **generated and gitignored** — never hand-edit or commit it. `prepare:data` requires `packages/refine/dist/custom-elements.json` and fails without it; `@vielzeug/refine` is a workspace devDependency purely so `rush build` builds it first.
 - Entry points: `src/cli.ts` (CLI, run as `node dist/cli.js`), `src/index.ts` (generic catalog, snapshot loader, stdio transport, errors, and server hosts), `src/advanced.ts` (`./advanced` subpath — snapshot parser internals), `src/refine.ts` (`./refine` subpath — opt-in Refine catalog and tools), `src/catalog.ts` (pure data operations), `src/server.ts` (MCP adapter), `src/http.ts` (loopback Streamable HTTP host), and `src/snapshot.ts` (validated snapshot loader).
 - **MCP tools live in `src/tools/`, one file per domain**: `packages.ts` (generic catalog operations), `refine.ts` (refine-only, prefixed `refine-*`, registered via the `./refine` subpath's `registerRefineTools()` — not part of the main entry), `index.ts` (registry plus MCP adapter), `schema.ts` (local `ToolSchema` declarations — the single source for both wire `inputSchema` and runtime validation via `parseArgs()`), and `shared.ts` (MCP manifest shape). Tools return domain values; only `index.ts` serializes MCP results.
-- **README tool tables are generated, not hand-written.** `pnpm gen:tool-docs` (`scripts/generate-tool-docs.ts`, wired as `postbuild`) renders the `<!-- TOOLS:GENERIC -->` / `<!-- TOOLS:REFINE -->` tables in `docs/codex/tools.md` straight from `packageTools` and `refineTools` — never edit those tables by hand, edit the tool's `description`/`inputSchema` and rebuild. This script reads compiled `dist/tools/index.js` and `dist/tools/refine.js` (not `src/`) because `src/tools/*.ts` import each other with `.js` specifiers for the real NodeNext build, which `node --experimental-strip-types` does not rewrite at run time — run `pnpm build` first if you need fresh tables.
+- **README tool tables are generated, not hand-written.** `pnpm gen:tool-docs` (`scripts/generate-tool-docs.ts`, run explicitly after `build` — deliberately not part of `build`, which must not write outside the package) renders the `<!-- TOOLS:GENERIC -->` / `<!-- TOOLS:REFINE -->` tables in `docs/codex/tools.md` straight from `packageTools` and `refineTools` — never edit those tables by hand, edit the tool's `description`/`inputSchema` and rebuild. This script reads compiled `dist/tools/index.js` and `dist/tools/refine.js` (not `src/`) because `src/tools/*.ts` import each other with `.js` specifiers for the real NodeNext build, which `node --experimental-strip-types` does not rewrite at run time — run `pnpm build` first if you need fresh tables.
 - **Expected catalog failures throw `CatalogError(code, message)`, never hand-built MCP error results.** `code` is `'INVALID_ARG' | 'NOT_FOUND' | 'UNAVAILABLE'`; `registerTools()` centrally maps it to MCP `{isError: true}` JSON. Resolve package, content, and Refine data through `Catalog` methods instead of duplicate lookups in tools.
 - **No hand-duplicated package internals.** Don't hand-author reference data that mirrors another package's real exports (e.g. a curated list of another package's functions/types) — it drifts silently. If a tool needs that information, derive it from the already-bundled `apiSource`/`docs`/`typeSignatures` (see `get-type-signature`, `get-docs`) or from real generated build output (see refine's Custom Elements Manifest in `readRefineDeclarations` / REPL examples in `scripts/repl-examples.ts` / exported-symbol text in `scripts/type-signatures.ts`), not from a second, hand-maintained copy.
 - Scripts stderr output must go through `scripts/_log.ts` (`log()`). Never use bare `process.stderr.write` in scripts.
@@ -36,10 +36,10 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 
 ## Verification
 
-- Tests (auto-runs `prepare:data` via `pretest`): `pnpm --filter @vielzeug/codex test`
+- Tests (`test:integration` runs `prepare:data` first): `pnpm --filter @vielzeug/codex test`
 - Fast unit-only loop: `pnpm --filter @vielzeug/codex test:unit`
 - Lint: `pnpm --filter @vielzeug/codex lint`
-- Build (also refreshes README tool tables via `postbuild`): `pnpm --filter @vielzeug/codex build`
+- Build: `pnpm --filter @vielzeug/codex build`; then `pnpm --filter @vielzeug/codex gen:tool-docs` when tool descriptions or schemas changed
 
 ## Child DOX Index
 

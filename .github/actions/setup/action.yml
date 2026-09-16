@@ -6,20 +6,24 @@ inputs:
     description: Run rush install after cache restore (installs each package's workspace deps)
     default: 'true'
   root-install:
-    description: Run pnpm install for root-level tools (vitest, Biome) — not managed by Rush
+    description: Run pnpm install for the root workspace (packages/*, demos/*, repo tooling) — not managed by Rush
     default: 'true'
+  trusted-publishing:
+    description: Prepare npm for Trusted Publishing (OIDC). Only jobs that run `npm publish` need this.
+    default: 'false'
 
 runs:
   using: composite
   steps:
     # node-version-file keeps this the one place the Node version is declared — every other
     # workflow step that needs Node/npm relies on what this step installed instead of pinning
-    # its own `node-version`, which previously drifted out of sync in three separate files.
+    # its own `node-version`.
     - name: Setup Node.js
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
         node-version-file: '.nvmrc'
 
+    # Reads the version from root package.json#packageManager.
     - name: Setup pnpm
       uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
       with:
@@ -34,7 +38,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-store.outputs.path }}
-        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
         restore-keys: ${{ runner.os }}-pnpm-
 
     - name: Cache Rush
@@ -44,7 +48,7 @@ runs:
           common/temp/install-run
           common/temp/pnpm-store
           ~/.rush
-        key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
+        key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'common/config/rush/pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
         restore-keys: ${{ runner.os }}-rush-
 
     - name: Rush Install
@@ -52,10 +56,19 @@ runs:
       shell: bash
       run: node common/scripts/install-run-rush.js install
 
-    # Root package.json owns vitest/Biome/etc — Rush only manages packages/*, so every
-    # caller needs this too. Folding it in here (instead of repeating it in every workflow)
-    # is what makes `uses: ./.github/actions/setup` actually produce a working toolchain.
-    - name: Install root workspace tools
+    # Root package.json owns vitest/Biome/VitePress and links packages/* and demos/* as one
+    # pnpm workspace — Rush only manages packages/*.
+    - name: Install root workspace
       if: inputs.root-install == 'true'
       shell: bash
       run: pnpm install --frozen-lockfile
+
+    # Pin npm 11 — npm 12.0.0 (released 2026-07-08) omits the `sigstore` module from its
+    # tarball, breaking OIDC trusted publishing with a misleading ENEEDAUTH (npm/cli#9722).
+    # Drop this step once the Node 22 bundled npm is a fixed 12.x. No "configure npm registry"
+    # step exists on purpose: writing an .npmrc auth line breaks OIDC (actions/setup-node#1440);
+    # the repo-root .npmrc's `registry=` line is all npm needs.
+    - name: Pin npm for trusted publishing
+      if: inputs.trusted-publishing == 'true'
+      shell: bash
+      run: npm install -g npm@11

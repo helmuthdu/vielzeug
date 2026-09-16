@@ -1,6 +1,6 @@
 /**
  * Diff each changed package's current version against its pre-bump snapshot and drop anything
- * already on npm, producing the plan release-all.yml turns directly into a matrix.
+ * already on npm, producing the plan publish.yml turns directly into a matrix.
  *
  * Filtering "already published" here — once, before the matrix is built — rather than inside
  * each matrix job keeps the matrix itself an accurate list of real work: no phantom "skipped"

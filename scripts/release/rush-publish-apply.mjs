@@ -8,10 +8,9 @@
  * deletion, so restoring on disk isn't enough — we also re-commit them if git still sees them
  * as changed).
  *
- * `listChangeFiles`/`listChangedPackageNames` are also the one place that reads which packages
- * have pending changes — release.yml and release-all.yml both used to additionally shell out to
- * `find | jq` to answer that same question by reading each file's internal `packageName` field,
- * a second source of truth that could in principle disagree with the directory it lives in.
+ * `listChangeFiles`/`listChangedPackageNames` are the one place that reads which packages have
+ * pending changes: the directory a change file lives in is the package name, so there is no
+ * second source of truth to disagree with.
  */
 
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';

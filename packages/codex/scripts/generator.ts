@@ -44,7 +44,9 @@ function normalise(value: string): string {
 
 function readRefineComponents(repoRoot: string): CemDeclaration[] {
   const file = resolve(repoRoot, 'packages/refine/dist/custom-elements.json');
-  if (!existsSync(file)) return [];
+  if (!existsSync(file)) {
+    throw new Error(`Missing ${file} — build @vielzeug/refine first (a codex workspace devDependency, so "rush build" orders it).`);
+  }
   const manifest = readJson(file);
   const modules = Array.isArray(manifest.modules) ? manifest.modules : [];
   const declarations = modules.flatMap((module) => {

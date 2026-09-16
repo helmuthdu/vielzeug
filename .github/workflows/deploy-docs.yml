@@ -16,8 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify-main:
-    name: Verify main ref
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Require main
@@ -26,10 +25,6 @@ jobs:
           echo "❌ Production docs can only deploy from main, not ${GITHUB_REF}."
           exit 1
 
-  build:
-    needs: verify-main
-    runs-on: ubuntu-latest
-    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0

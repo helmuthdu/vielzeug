@@ -1,5 +1,5 @@
 /**
- * Plan for `release.yml`'s mode=all: every non-private @vielzeug/* package whose current
+ * Plan for `release.yml`: every non-private @vielzeug/* package whose current
  * package.json version is already on npm (published some other way — typically `pnpm
  * release:publish-local`, see that script's header comment) but doesn't have a git tag yet.
  *

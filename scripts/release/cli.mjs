@@ -21,8 +21,8 @@
  *   tag-release <pkg> <version> <folder>    tag + GitHub release only — no `npm publish` (the
  *                                            version must already exist on npm, e.g. published
  *                                            via `pnpm release:publish-local`)
- *   release-plan                            print a JSON tag+release plan (for release.yml's
- *                                            mode=all matrix): every publishable package whose
+ *   release-plan                            print a JSON tag+release plan (release.yml's matrix):
+ *                                            every publishable package whose
  *                                            current version is on npm but not yet tagged
  *
  * `publish` and `publish-missing` take two flags relevant only when running this locally

@@ -37,7 +37,7 @@ Everything else is identical across all packages.
 
 ## Generated content
 
-codex's tool tables are generated into `docs/codex/tools.md` by `packages/codex/scripts/generate-tool-docs.ts` (run as `postbuild`), never hand-edited. The README links to that page from its Documentation section. No other package has generated README content.
+codex's tool tables are generated into `docs/codex/tools.md` by `packages/codex/scripts/generate-tool-docs.ts` (run `pnpm --filter @vielzeug/codex gen:tool-docs` after a build), never hand-edited. The README links to that page from its Documentation section. No other package has generated README content.
 
 ## Verification checklist
 

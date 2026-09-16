@@ -52,9 +52,8 @@ for unknown attributes or slots — catching hallucinated attribute names before
 
 ### Pitfalls
 
-- All four tools return `isError: true` when Refine component metadata is not present in the snapshot. This happens in local monorepo builds when `@vielzeug/refine` has not been built yet. Run `rush build --to refine` then `pnpm run prepare:data` in `packages/codex`.
+- All four tools return `isError: true` when Refine component metadata is not present in the snapshot. `prepare:data` refuses to generate a snapshot without `@vielzeug/refine`'s `custom-elements.json`, so this only happens with a hand-assembled snapshot.
 - `refine-get-component` matches on `tagName` exactly. Passing a class name like `"Button"` instead of `"ore-button"` returns an error.
-- Published releases always include Refine CEM; the missing-metadata error only occurs during local development.
 
 ### Related
 
