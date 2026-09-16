@@ -1,96 +1,16 @@
 #!/usr/bin/env node
-// Keeps the derived parts of the AI system in sync with their sources:
-//   - .ai/reference/packages.md      ← packages/*/package.json (name, description, graph)
-//   - .claude/commands/*.md          ← .ai/tasks/*.md frontmatter
-//   - .devin/workflows/*.md          ← .ai/tasks/*.md frontmatter
-// and validates that every `.ai/...` path referenced anywhere in the repo resolves to a real
-// file — see "Reference integrity" below. There is deliberately no curated JSON layer: package
-// facts live in manifests and task facts live in the task documents themselves.
+// Keeps the derived parts of the agent contract in sync with their sources:
+//   - .agents/reference/packages.md  ← packages/*/package.json (name, description, graph)
+// and validates that every `.agents/...` path referenced anywhere in the repo resolves to a
+// real file — see "Reference integrity" below. There is deliberately no curated JSON layer:
+// package facts live in manifests and task procedures live as skills.
 
-import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { isMain, parseArgs } from './lib/cli.mjs';
 import { ROOT, replaceBetweenMarkers, syncFile } from './lib/marker-sync.mjs';
 import { readPackageManifests } from './lib/packages.mjs';
-
-const TASK_KEY_PATTERN = /^[a-z][a-z0-9-]*$/;
-const FRONTMATTER_DESCRIPTION = /^---\r?\n(?:[^\n]*\r?\n)*?description:[ \t]*(.+?)[ \t]*\r?\n(?:[^\n]*\r?\n)*?---/;
-
-// ---------------------------------------------------------------------------
-// Tasks — one entry per .ai/tasks/<key>.md, described by its own frontmatter.
-// ---------------------------------------------------------------------------
-
-/** Extracts the frontmatter `description` from a task document, unquoting a JSON-style value. */
-export function parseTaskDescription(markdown, relPath) {
-  const match = FRONTMATTER_DESCRIPTION.exec(markdown);
-  if (!match) throw new Error(`${relPath}: missing frontmatter "description"`);
-  const raw = match[1];
-  const description = raw.startsWith('"') ? JSON.parse(raw) : raw;
-  if (typeof description !== 'string' || description.trim() === '') {
-    throw new Error(`${relPath}: frontmatter "description" must be a non-empty string`);
-  }
-  return description;
-}
-
-export function readAiTasks(root = ROOT) {
-  const tasksDir = path.join(root, '.ai/tasks');
-  const tasks = [];
-  for (const entry of readdirSync(tasksDir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
-    const key = entry.name.slice(0, -'.md'.length);
-    const relPath = `.ai/tasks/${entry.name}`;
-    if (!TASK_KEY_PATTERN.test(key)) throw new Error(`${relPath}: task file name must match ${TASK_KEY_PATTERN}`);
-    tasks.push({ description: parseTaskDescription(readFileSync(path.join(tasksDir, entry.name), 'utf8'), relPath), key });
-  }
-  return tasks.sort((a, b) => a.key.localeCompare(b.key));
-}
-
-export function taskStubContent(task) {
-  const description = /[:#{}[\],&*!|>'"%@`\n]/.test(task.description)
-    ? JSON.stringify(task.description)
-    : task.description;
-
-  return `---
-description: ${description}
----
-
-# ${task.key}
-
-Read [\`.ai/tasks/${task.key}.md\`](../../.ai/tasks/${task.key}.md) and follow it as the canonical procedure.
-`;
-}
-
-const TASK_ADAPTER_DIRS = ['.claude/commands', '.devin/workflows'];
-
-export function syncTaskAdapters(tasks, { check = false, onStale, root = ROOT } = {}) {
-  const expectedFiles = new Set(tasks.map((task) => `${task.key}.md`));
-
-  for (const directory of TASK_ADAPTER_DIRS) {
-    for (const task of tasks) {
-      const relPath = `${directory}/${task.key}.md`;
-      syncFile(relPath, taskStubContent(task), {
-        check,
-        checkExistingIgnored: true,
-        onStale,
-        root,
-      });
-    }
-
-    const absDirectory = path.join(root, directory);
-    if (!existsSync(absDirectory)) continue;
-    for (const entry of readdirSync(absDirectory, { withFileTypes: true })) {
-      if (!entry.isFile() || !entry.name.endsWith('.md') || expectedFiles.has(entry.name)) continue;
-      const relPath = `${directory}/${entry.name}`;
-      if (check) {
-        onStale?.(`[STALE] ${relPath} has no task document`);
-        continue;
-      }
-      unlinkSync(path.join(absDirectory, entry.name));
-      console.log(`[REMOVE] ${relPath}`);
-    }
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Packages — the generated one-page view of packages/*/package.json.
@@ -133,13 +53,13 @@ export function patchPackagesReference(source, packages) {
 }
 
 // ---------------------------------------------------------------------------
-// Reference integrity: any text file in the repo may cross-reference an `.ai/...` path
-// (e.g. "see .ai/core/conventions.md"). A dangling reference silently sends an agent to a
-// missing contract, so both generation and check mode treat it as a hard error.
+// Reference integrity: any text file in the repo may cross-reference an `.agents/...` path
+// (e.g. "see .agents/conventions.md", ".agents/skills/build/SKILL.md"). A dangling
+// reference silently sends an agent to a missing contract, so both generation and check mode
+// treat it as a hard error.
 // ---------------------------------------------------------------------------
 
 const AI_REF_IGNORE_DIRS = new Set([
-  '.agents',
   '.git',
   '.idea',
   '.rumdl_cache',
@@ -154,9 +74,9 @@ const AI_REF_IGNORE_DIRS = new Set([
 ]);
 const AI_REF_EXTENSIONS = new Set(['.md', '.mjs', '.mts', '.ts', '.vue', '.yml', '.yaml']);
 const AI_REF_IGNORE_BASENAMES = new Set(['CHANGELOG.md']);
-const AI_REF_PATTERN = /\.ai\/[A-Za-z0-9._/-]+\.(?:md|json)/g;
+const AI_REF_PATTERN = /\.agents\/[A-Za-z0-9._/-]+\.md/g;
 
-/** Text files that may legitimately carry `.ai/...` references. Changelogs are release history
+/** Text files that may legitimately carry `.agents/...` references. Changelogs are release history
  * and are allowed to mention paths that no longer exist. */
 export function isAiReferenceSource(relPath) {
   const base = path.posix.basename(relPath.replaceAll('\\', '/'));
@@ -183,15 +103,14 @@ export function collectAiReferenceSources(root = ROOT) {
   return files.sort();
 }
 
-/** Pulls every literal `.ai/...` path token out of `text`, deduplicated. Skips obvious
- * placeholders (e.g. `.ai/tasks/<task>.md`) — anything containing `<` is a template, not a
- * real reference to validate. */
+/** Pulls every literal `.agents/...` path token out of `text`, deduplicated. Skips obvious placeholders (e.g. `.agents/skills/<name>/SKILL.md`) — anything
+ * containing `<` is a template, not a real reference to validate. */
 export function extractAiReferences(text) {
   const matches = text.match(AI_REF_PATTERN) ?? [];
   return [...new Set(matches)].filter((ref) => !ref.includes('<'));
 }
 
-/** Checks every `.ai/...` reference across `fileContents` (relPath -> content) against
+/** Checks every collected reference across `fileContents` (relPath -> content) against
  * `fileExists` (defaults to a real filesystem check rooted at `ROOT`) and returns every
  * dangling `{ file, ref }` pair. Takes an injectable `fileExists` so this stays unit-testable
  * without touching disk. */
@@ -207,7 +126,6 @@ export function findDanglingAiReferences(fileContents, fileExists = (relPath) =>
 
 export async function main({ check = false } = {}) {
   const packages = readLivePackages();
-  const tasks = readAiTasks();
 
   let stale = false;
   const onStale = (message) => {
@@ -215,11 +133,9 @@ export async function main({ check = false } = {}) {
     console.error(message);
   };
 
-  const packagesReferencePath = path.join(ROOT, '.ai/reference/packages.md');
+  const packagesReferencePath = path.join(ROOT, '.agents/reference/packages.md');
   const packagesReference = readFileSync(packagesReferencePath, 'utf8');
-  syncFile('.ai/reference/packages.md', patchPackagesReference(packagesReference, packages), { check, onStale });
-
-  syncTaskAdapters(tasks, { check, onStale });
+  syncFile('.agents/reference/packages.md', patchPackagesReference(packagesReference, packages), { check, onStale });
 
   const referenceSources = collectAiReferenceSources();
   const fileContents = Object.fromEntries(
@@ -235,7 +151,7 @@ export async function main({ check = false } = {}) {
     return false;
   }
   if (dangling.length > 0) {
-    console.error('\nFix the dangling .ai reference(s) above — regenerating will not resolve them.');
+    console.error('\nFix the dangling reference(s) above — regenerating will not resolve them.');
     return false;
   }
   if (!check) console.log('AI data synced.');

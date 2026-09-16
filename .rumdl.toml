@@ -14,7 +14,7 @@ exclude = [
 include = [
     "AGENTS.md",
     "README.md",
-    ".ai/**/*.md",
+    ".agents/**/*.md",
 ]
 
 # Set global line length (used by MD013 and other line-length rules)

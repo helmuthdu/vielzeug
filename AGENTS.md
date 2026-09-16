@@ -1,22 +1,22 @@
 # AGENTS.md — Vielzeug
 
-Canonical entrypoint for every AI client. `CLAUDE.md`, `.github/copilot-instructions.md`, and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file; task procedure lives in `.ai/tasks/`; engineering conventions live in `.ai/core/conventions.md`.
+Canonical entrypoint for every AI client. `.github/copilot-instructions.md` and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file; task procedure lives in `.agents/skills/*/SKILL.md` (vendor-neutral agent skills: Copilot discovers `.agents/skills/` directly; Devin and Junie read them as plain files; clients with their own skills directory can symlink it to `.agents/skills`); engineering conventions live in `.agents/conventions.md`.
 
 Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeug/*`. Packages target ES2022, use strict TypeScript, and ship ESM and CJS builds through Vite.
 
 ## Start work
 
 1. Inspect the worktree and preserve changes you did not make.
-2. Pick the smallest task playbook that fits:
+2. Pick the smallest skill that fits (clients with skill support load it automatically; otherwise read the file):
 
-| Situation                                      | Read                    |
-| ---------------------------------------------- | ----------------------- |
-| Change code, tests, tooling, or CI             | `.ai/tasks/build.md`    |
-| Investigate, audit, plan, or redesign          | `.ai/tasks/review.md`   |
-| Update docs, README, recipes, or REPL examples | `.ai/tasks/document.md` |
-| Prepare releases, commits, or pull requests    | `.ai/tasks/release.md`  |
+| Situation                                      | Skill                              |
+| ---------------------------------------------- | ---------------------------------- |
+| Change code, tests, tooling, or CI             | `.agents/skills/build/SKILL.md`    |
+| Investigate, audit, plan, or redesign          | `.agents/skills/review/SKILL.md`   |
+| Update docs, README, recipes, or REPL examples | `.agents/skills/document/SKILL.md` |
+| Prepare releases, commits, or pull requests    | `.agents/skills/release/SKILL.md`  |
 
-3. Load the files in the task's `Load` section. Load `.ai/core/conventions.md` before editing package source.
+3. Load the files in the skill's `Load` section. Load `.agents/conventions.md` before editing package source.
 4. Read the nearest subtree `AGENTS.md` before editing inside it (see the index at the end).
 
 ## Source of truth
@@ -24,7 +24,7 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 1. Source code and package manifests win over docs, comments, and generated text.
 2. Prefer the `codex` package's MCP data when available, but verify against source before changing code.
 3. Do not use `git log`, `git diff`, or `git blame` as a default source of design truth.
-4. Package facts (name, description, dependency graph) come from `packages/<name>/package.json`. `.ai/reference/packages.md` is a generated one-page view of the same data.
+4. Package facts (name, description, dependency graph) come from `packages/<name>/package.json`. `.agents/reference/packages.md` is a generated one-page view of the same data.
 
 ## Safety
 
@@ -68,7 +68,7 @@ User-requested output formats take precedence, except that a safety gate always 
 
 ## Validation
 
-Every code change finishes with the narrowest useful validation for the changed surface. The enforcement map in `.ai/core/conventions.md` is the single source of truth for which validation applies to which surface. Report commands that could not run and their exact failure; never infer success from inspection alone.
+Every code change finishes with the narrowest useful validation for the changed surface; each skill's Validation section says which. Report commands that could not run and their exact failure; never infer success from inspection alone.
 
 ```bash
 pnpm setup                                          # fresh checkout
@@ -79,7 +79,7 @@ pnpm validate:docs -- --package=<name>
 pnpm validate:readme -- --package=<name>
 pnpm validate:repl -- --package=<name>
 pnpm --filter @vielzeug/codex build && pnpm docs:build   # docs changes (Codex bundles docs first)
-pnpm check:ai-data                                  # AI metadata and .ai/ cross-references
+pnpm check:ai-data                                  # packages table and .agents/ cross-references
 ```
 
 Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm fix` for Biome formatting and import organization instead of hand-formatting. Run `pnpm run` with no arguments for the full script list; package-specific test behavior belongs in each package's `test` script.
@@ -90,7 +90,7 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 - Worktrees: `pnpm worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction; the script checks live manifests.
 - Change files: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`.
 - Conventional commits: `feat(courier): add retry logic`. `fix` → patch, `feat` → minor, `feat!` or any breaking change → major.
-- AI metadata: edit canonical `.ai/` sources, run `pnpm gen:ai-data`, then `pnpm check:ai-data`. Generated blocks and client task stubs are outputs, not editing surfaces.
+- AI metadata: edit `.agents/` sources directly, run `pnpm gen:ai-data` when the package table must change, then `pnpm check:ai-data`. Generated blocks are outputs, not editing surfaces.
 
 ## Repository layout
 
@@ -100,21 +100,21 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 | `docs/<name>/`        | Package documentation and recipes (VitePress)                  |
 | `demos/`              | Integration demos                                              |
 | `scripts/`            | Workspace, generation, validation, and release tooling         |
-| `.ai/`                | Conventions, task playbooks, and shared reference material     |
+| `.agents/`            | Agent contract: conventions, task skills, shared references    |
 | `common/`, `rush.json`| Rush workspace configuration                                   |
 | `.github/workflows/`  | CI and publishing workflows                                    |
 
-### `.ai/` contents
+### `.agents/` contents
 
-- `core/conventions.md` — engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout, enforcement map.
-- `tasks/*.md` — task playbooks. Each file's frontmatter `description` feeds the generated `.claude/commands/` and `.devin/workflows/` stubs.
-- `reference/packages.md` — generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md` — hand-curated, shared by tasks.
+- `conventions.md` — engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout.
+- `skills/<name>/SKILL.md` — task skills (`build`, `review`, `document`, `release`).
+- `reference/packages.md` — generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md` — hand-curated, shared by skills.
 
-Every `.ai/...` path mentioned anywhere in the repo must resolve; `pnpm check:ai-data` fails on a dangling reference.
+Every `.agents/...` path mentioned anywhere in the repo must resolve; `pnpm check:ai-data` fails on a dangling reference.
 
-## Child AGENTS.md index
+## Subtree AGENTS.md index
 
-Subtrees carry their own `AGENTS.md` only when they have rules not covered here or in `.ai/core/conventions.md`; most packages intentionally have none.
+Subtrees carry their own `AGENTS.md` only when they have rules not covered here or in `.agents/conventions.md`; most packages intentionally have none.
 
 - `packages/AGENTS.md` — source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
 - `docs/AGENTS.md` — VitePress documentation site and REPL.

@@ -22,7 +22,7 @@ type LinkScope = 'all' | 'root';
 export type DocsContractName = 'catalog' | 'component-library' | 'standard';
 
 // Packages whose documentation architecture durably differs from the standard four-page
-// shape. Every other package uses `standard`. See `.ai/reference/docs-template.md`.
+// shape. Every other package uses `standard`. See `.agents/reference/docs-template.md`.
 export const DOCS_CONTRACT_OVERRIDES: ReadonlyMap<string, DocsContractName> = new Map([
   ['arsenal', 'catalog'],
   ['refine', 'component-library'],

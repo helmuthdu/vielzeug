@@ -16,7 +16,7 @@
  *
  * Any import that isn't `@vielzeug/*` has nothing to resolve to inside the sandbox and is
  * removed, matching the REPL's long-standing rule that examples only use top-level
- * `@vielzeug/<name>` imports (see `.ai/tasks/document.md`).
+ * `@vielzeug/<name>` imports (see `.agents/skills/document/SKILL.md`).
  */
 
 const NAMED_IMPORT = /import\s*\{([^}]*)\}\s*from\s*['"]@vielzeug\/([\w-]+(?:\/[\w-]+)*)['"];?/g;

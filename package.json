@@ -17,6 +17,7 @@
     "gen:ai-data": "node scripts/sync-ai-data.mjs",
     "gen:repl-registry": "node --import jiti/register scripts/generate-repl-registry.ts",
     "lint": "biome ci .",
+    "new:package": "node scripts/new-package.mjs",
     "prepare": "lefthook install",
     "release:publish-local": "node scripts/release/local-publish.mjs",
     "setup": "rush install",

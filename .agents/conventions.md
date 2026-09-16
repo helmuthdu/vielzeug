@@ -1,7 +1,7 @@
 # Vielzeug Engineering Conventions
 
 > Policy, commands, and workflow facts: root `AGENTS.md`
-> Package metadata and dependency graph: `packages/<name>/package.json` (summarized in `.ai/reference/packages.md`)
+> Package metadata and dependency graph: `packages/<name>/package.json` (summarized in `.agents/reference/packages.md`)
 
 ## Rule strength
 
@@ -14,7 +14,7 @@
 - **MUST:** Use TypeScript strict mode. No `any` in package source.
 - **MUST:** Route public root exports through `src/index.ts`.
 - **MUST:** Do not add a third-party runtime dependency without explicit approval. This does not prohibit `@vielzeug/*` workspace dependencies (`workspace:*`). Documented exceptions: `refine` bundles `lucide`; `refine`, `prism`, and `ore` use `axe-core` as a devDependency for accessibility tests (never bundled).
-- **MUST:** Treat `package.json` as the authority for name, description, and dependencies; use `.ai/reference/packages.md` for a one-page view during impact analysis.
+- **MUST:** Treat `package.json` as the authority for name, description, and dependencies; use `.agents/reference/packages.md` for a one-page view during impact analysis.
 - **MUST:** Keep source, tests, public exports, and user-facing examples consistent.
 
 ## Public API design
@@ -39,7 +39,6 @@
 - **MUST:** Name owned-resource teardown `dispose()`, never `destroy()`, `disconnect()`, `close()`, or `cleanup()`.
 - **SHOULD:** Reserve async disposal for teardown that genuinely requires `await`.
 - **MAY:** Implement both `[Symbol.dispose]()` and `[Symbol.asyncDispose]()` only when synchronous abort and awaited drain have distinct guarantees. Document both guarantees beside methods.
-- **MUST:** Let Biome apply safe formatting and import-organization fixes; run `pnpm fix` instead of hand-formatting.
 
 ```ts
 interface SomeHandle {
@@ -77,6 +76,7 @@ export class PkgFooError extends PkgError {}
 - **MUST:** Organize tests by public behavior, feature, or domain; keep standard package tests under `src/__tests__/`.
 - **MUST:** Assert observable behavior: returned values, public errors, side effects, lifecycle, or documented output.
 - **SHOULD:** Keep one behavior or failure mode per test.
+- **SHOULD:** Name each test for the one observable behavior it asserts (`'returns null for an empty key'`), never a symbol or `'works'`.
 - **SHOULD:** Use deterministic inputs, clocks, randomness, and scheduling.
 - **SHOULD:** Keep setup local and visible; use small helpers only when they clarify repeated domain setup.
 - **MUST NOT:** Assert private state, internal helper calls, or incidental data structures unless that detail is public contract.
@@ -154,32 +154,9 @@ packages/<name>/src/
 - **MUST:** Never re-export `_`-prefixed files from `index.ts`.
 - **MAY:** Omit optional files. Do not create empty placeholders.
 
-## New-package scaffold
+## New packages
 
-Create:
-
-```text
-packages/<name>/
-  package.json
-  tsconfig.json
-  tsconfig.declarations.json
-  vitest.config.ts
-  vite.bundle.config.ts
-  vite.config.ts
-  src/
-    index.ts
-    __tests__/
-      <name>.test.ts
-  README.md
-```
-
-Then:
-
-1. Register package in `rush.json`.
-2. Give `package.json` a one-sentence `description`; the README blockquote must equal it.
-3. Add a `DOCS_CONTRACT_OVERRIDES` entry in `scripts/validate-docs.ts` only for a durable nonstandard documentation architecture.
-4. Run `.ai/tasks/document.md` after adding a public package surface.
-5. Run `pnpm gen:ai-data` to refresh `.ai/reference/packages.md`, then `pnpm check:ai-data`.
+Create a package with `pnpm new:package <name> "<description>"` (`scripts/new-package.mjs`). It writes the standard config files, the manifest (shared `devDependencies` come from `coins`), README, source and test stubs, the four `docs/<name>/` pages and one recipe, registers the project in `rush.json`, and refreshes generated data. Do not hand-create the scaffold; if the standard shape changes, change the script.
 
 Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-packages.ts` derives them from valid package directories.
 
@@ -190,21 +167,3 @@ Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-p
 - `ripple` — disposal, async lifecycle, and devtools patterns.
 - `ore` — DOM-output boundaries and accessibility testing.
 - `codex` — CLI behavior, generated data, and bundled documentation.
-
-## Enforcement map
-
-| Convention / changed surface          | Enforcement                                                        |
-| ------------------------------------- | ------------------------------------------------------------------ |
-| Import/export ordering                | Biome organize imports                                             |
-| Formatting                            | Biome / `pnpm fix`                                                 |
-| Package source                        | focused tests, package lint, package build                         |
-| Public API                            | package validation plus affected docs and REPL validation          |
-| Tests only                            | focused tests; lint/build only when config or imports require them |
-| Documentation                         | docs validation, Codex build, docs build                           |
-| Demo or integration                   | owning-package validation when library behavior changes, affected demo tests/build, and `pnpm validate:demos` for shared or broad demo impact; add responsive/accessibility checks when relevant |
-| REPL                                  | REPL validation, docs build                                        |
-| Tooling                               | focused script tests and a direct smoke command                    |
-| AI metadata                           | `pnpm check:ai-data`; run `pnpm gen:ai-data` first when the package table or task stubs must change |
-| Release metadata                      | scoped artifact format and package/version intent                  |
-| Cross-package call sites              | focused tests, lint, and build for every affected package          |
-| Production dev-warning gate           | `pnpm verify:prod-gate`                                            |

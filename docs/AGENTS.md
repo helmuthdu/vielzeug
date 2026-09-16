@@ -1,18 +1,10 @@
 # AGENTS.md — docs
 
-## Purpose
+VitePress documentation site. Per-package docs live in `docs/<name>/` and follow the Diátaxis framework (structure: `.agents/reference/docs-template.md`; procedure: the `document` skill, `.agents/skills/document/SKILL.md`). Also hosts the interactive REPL (`docs/repl.md`) and the custom theme under `docs/.vitepress/`.
 
-VitePress documentation site. Per-package docs live in `docs/<name>/` and follow the Diátaxis framework. Also hosts the interactive REPL (`docs/repl.md`) and the custom theme under `docs/.vitepress/`.
+## Local contracts
 
-## Ownership
-
-- **Documentation template, tone, and per-page structure rules** — `.ai/reference/docs-template.md`.
-- **Documentation, README, recipe, and REPL rules** — `.ai/tasks/document.md`.
-- Package facts referenced by docs — `packages/<name>/package.json`, summarized in the generated `.ai/reference/packages.md`.
-
-## Local Contracts
-
-- Each `docs/<name>/` has the four standard pages: `index.md` (Explanation), `usage.md` (How-to), `api.md` (Reference), `examples.md` + `examples/*.md` (How-to). Follow `.ai/reference/docs-template.md` for required frontmatter and section order.
+- Each `docs/<name>/` has the four standard pages: `index.md` (Explanation), `usage.md` (How-to), `api.md` (Reference), `examples.md` + `examples/*.md` (How-to). Follow `.agents/reference/docs-template.md` for required frontmatter and section order.
 - REPL wiring lives in `docs/.vitepress/theme/components/repl/`:
   - `examples/<name>/` — hand-authored example modules (the only content authors write by hand), registered in the matching `index.ts`.
   - `execution/` — the sandbox execution engine (Monaco loading + TS transpile, `@vielzeug/sandbox`-based iframe execution, import rewriting, output formatting). Pure logic here is unit-tested under `execution/__tests__/`.
@@ -20,10 +12,6 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 - **DOM-output packages (`ore`, `refine`, `prism`) have no REPL examples** — the REPL has no preview container. Do not add them (see `REPL_EXCLUDED_PACKAGES` in `scripts/vielzeug-packages.ts`).
 - `@vielzeug/*` alias maps used by `docs/.vitepress/config.ts` and `scripts/vitest.repl.config.ts` are both derived from the `packages/` directory listing (`scripts/vielzeug-packages.ts`) — don't hand-maintain either list.
 - Keep docs in sync with `packages/<name>/src/index.ts`; the `codex` package bundles these docs, so changes here feed the MCP server.
-
-## Work Guidance
-
-- Run docs, recipes, README, and REPL work through `.ai/tasks/document.md` rather than ad-hoc edits.
 - Editing docs invalidates the `codex` bundle — rebuild Codex before VitePress (`pnpm --filter @vielzeug/codex build`, then `pnpm docs:build`). Codex refreshes bundled MCP data and `llms*.txt`; VitePress copies those current files into site output.
 
 ## Verification
@@ -31,7 +19,3 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 - Structure and relative links: `pnpm validate:docs -- --package=<name>`.
 - Build: `pnpm docs:build` (renders VitePress; dead links are not a build gate while `ignoreDeadLinks` is enabled).
 - Local preview: `pnpm docs:dev`.
-
-## Child DOX Index
-
-- None.

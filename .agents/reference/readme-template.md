@@ -39,16 +39,4 @@ Everything else is identical across all packages.
 
 codex's tool tables are generated into `docs/codex/tools.md` by `packages/codex/scripts/generate-tool-docs.ts` (run `pnpm --filter @vielzeug/codex gen:tool-docs` after a build), never hand-edited. The README links to that page from its Documentation section. No other package has generated README content.
 
-## Verification checklist
-
-`pnpm validate:readme -- --package=<name>` checks objective structure. Run before declaring a README pass done:
-
-- [ ] First line is `# @vielzeug/<slug>`
-- [ ] Line 3 is `> <description>` and equals `package.json#description`
-- [ ] `## Installation` (or `## Install and run` for codex) present
-- [ ] `## Quick Start` present
-- [ ] `## Documentation` present with at least one `https://vielzeug.dev/<slug>` link
-- [ ] `## License` present and last section
-- [ ] No npm badge images (`img.shields.io`)
-- [ ] No `<details>` blocks
-- [ ] No `##` sections outside the permitted set
+`pnpm validate:readme -- --package=<name>` checks the structure above; run it before declaring a README pass done.

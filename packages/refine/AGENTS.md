@@ -1,15 +1,8 @@
 # AGENTS.md — refine
 
-## Purpose
+Accessible, themeable web components built on `ore`. Largest package; one custom element per component, organised by category folder (`content/`, `core/`, `disclosure/`, `feedback/`, `inputs/`, `layout/`, `overlay/`). Depends on `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, and `tempo` (`workspace:*`) plus `lucide`; `assay` is test-only.
 
-Accessible, themeable web components built on `ore`. Largest package; one custom element per component, organised by category folder (`content/`, `core/`, `disclosure/`, `feedback/`, `inputs/`, `layout/`, `overlay/`).
-
-## Ownership
-
-- Parent contract: `packages/AGENTS.md` and `.ai/core/conventions.md`.
-- Usage docs: `docs/refine/`.
-
-## Local Contracts
+## Local contracts
 
 - **`lucide` is an allowed external runtime dependency** (icons). This is the one documented exception to the monorepo zero-dependency rule. Do not add other external deps.
 - **Ore IIFE boundary** — Refine imports all Ore runtime APIs from `@vielzeug/ore`, which the bundle config externalizes as the single `'Ore'` global. Do not reintroduce Ore runtime sub-path imports: an unexternalized sub-path can inline a second runtime whose lifecycle hooks are disconnected from `window.Ore`.
@@ -58,29 +51,34 @@ Each `*.e2e.ts` file groups its tests into `describe('Accessibility', ...)` / `d
 Follow these when authoring or reviewing component styles and behaviour:
 
 ### Layout and Spacing
+
 - **4-point grid** — all spacing and dimensions use multiples of 4 via `var(--size-*)`.
 - **Whitespace** — sections breathe at 32 px / `var(--section-spacing)`; use proximity and containers to group related elements.
 - **Responsiveness** — 12-col desktop, 8-col tablet, 4-col mobile.
 
 ### Typography
+
 - Single sans-serif font via `var(--font-sans)`.
 - Headers: letter-spacing `var(--tracking-header)` (−5%), line-height `var(--leading-tight)` (115%).
 - Six font sizes max (`--text-xs` → `--text-2xl`); avoid sizes above 24 px on high-density pages.
 - Hierarchy via size, weight, and color — most important content large/bold/top.
 
 ### Color and Depth
+
 - One primary brand color; ramp it light for backgrounds, dark for text.
 - Semantic roles: blue = info/primary, red = danger/error, yellow = warning, green = success.
 - Dark mode: lighter card colors on darker backgrounds for depth; lower border contrast; dim accent saturation. Avoid heavy shadows.
 - Shadows: subtle, low-opacity, high-blur. Popovers need stronger shadows than cards.
 
 ### Components
+
 - **Buttons:** four states minimum (default, hover, active, disabled). Ghost buttons for secondary CTAs. Horizontal padding = 2× vertical (2:1 ratio).
 - **Icons:** sized to body line height (24 px / `var(--leading-6)`).
 - **Inputs:** clear focus and error states (red border + message).
 - **Overlays:** linear gradient or progressive blur for text-over-image readability.
 
 ### Feedback and Interaction
+
 - Every action gets a response (spinner, success message).
 - Micro-interactions confirm actions subtly (e.g., chip slide-up).
 - Signifiers (tooltips, active nav highlights) explain functionality without words.
@@ -106,10 +104,9 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 | **onboard** | Onboarding flows, empty states, first-use UX | `clarify`, `adapt`, `distill` | Component-level labels, helper text, and error text patterns |
 | **extract** | Consolidate reusable tokens and patterns | `normalize`, `distill`, `optimize` | Shared token and mixin layer is the default implementation path for new components |
 
-## Work Guidance
+## Adding a component
 
-- Depends on `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, and `tempo` (`workspace:*`) plus `lucide`; `assay` is test-only.
-- Adding a component: create it under the right category folder, then run `sync:exports` so its sub-path export and types are wired.
+Create it under the right category folder, then run `sync:exports` so its sub-path export and types are wired.
 
 ## Verification
 
@@ -117,7 +114,3 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 - **E2E tests** (Playwright/Chromium): `pnpm --filter @vielzeug/refine test:e2e`. Requires a built dist (`pnpm --filter @vielzeug/refine build` first). Co-located next to components as `src/<category>/<component>/<component>.e2e.ts`; shared harness lives in `src/testing/fixtures.ts`.
 - Lint: `pnpm --filter @vielzeug/refine lint` (`biome ci src`). This checks TypeScript and CSS in Refine source.
 - Build (includes `sync:exports` + `check:manifest` + manifest analyze): `pnpm --filter @vielzeug/refine build`
-
-## Child DOX Index
-
-- None.

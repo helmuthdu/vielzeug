@@ -5,7 +5,7 @@ description: Canonical structure, language, and formatting rules for all Vielzeu
 
 # Vielzeug Documentation Template
 
-How every `docs/<name>/` page set is structured and why. The structural contract below is included verbatim from `.ai/reference/docs-template.md`, the same file maintainers and AI agents follow, so there is one source for these rules. `pnpm validate:docs -- --package=<name>` enforces the objective parts.
+How every `docs/<name>/` page set is structured and why. The structural contract below is included verbatim from `.agents/reference/docs-template.md`, the same file maintainers and AI agents follow, so there is one source for these rules. `pnpm validate:docs -- --package=<name>` enforces the objective parts.
 
 ## Documentation Philosophy
 
@@ -41,4 +41,4 @@ Understanding this mapping is more important than memorising the structural rule
 
 **Tutorials:** Vielzeug does not currently have a dedicated tutorial file per package. If a library's complexity warrants one (e.g., a ground-up walkthrough for a first-time user), add a `tutorial.md` at `docs/<pkg>/tutorial.md` and link it from `index.md`. A tutorial is learning-oriented: it takes the reader through a fixed, complete scenario step by step, prioritising the learning experience over real-world flexibility.
 
-<!--@include: ../../.ai/reference/docs-template.md{5,}-->
+<!--@include: ../../.agents/reference/docs-template.md{5,}-->

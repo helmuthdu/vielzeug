@@ -1,28 +1,10 @@
 # AGENTS.md — Packages
 
-## Purpose
+Every `packages/<name>/` is an independent, publishable `@vielzeug/*` library. `.agents/conventions.md` is the full engineering contract for package source — read it before editing any package. Package facts come from `packages/<name>/package.json` (summarized in the generated `.agents/reference/packages.md`); usage docs live in `docs/<name>/`.
 
-DOX contract for all source work under `packages/`. Each `packages/<name>/` is an independent, publishable `@vielzeug/*` library.
+## Standard shape
 
-## Ownership
-
-- **Engineering conventions** (logging standard, dispose convention, error classes, file layout) — `.ai/core/conventions.md` (single source of truth). Read it before editing any package.
-- **Package catalogue and dependency graph** — `packages/<name>/package.json`, summarized in the generated `.ai/reference/packages.md`.
-- **Per-package usage docs** live in `docs/<name>/`; per-package overview in `packages/<name>/README.md`.
-
-## Local Contracts
-
-Standard package shape: `src/index.ts` (the only public surface), `src/__tests__/` (Vitest), `vite.config.ts` (ESM+CJS), strict `tsconfig.json`.
-
-- All public exports go through `src/index.ts`, organized with Biome.
-- Zero third-party runtime dependencies; inter-package `@vielzeug/*` dependencies are allowed and use `workspace:*`. The documented exceptions are listed under Non-negotiables in `.ai/core/conventions.md`.
-- Internal dev warnings go through `src/_dev.ts` (`warn()` / `error()`), never bare `console.*`. See the logging standard in `.ai/core/conventions.md`.
-- Owned-resource teardown is `dispose()` + `[Symbol.dispose]`. Never `destroy()`/`close()`/`cleanup()`.
-
-## Work Guidance
-
-- Most packages have no local AGENTS.md and need none — the rules above plus `.ai/core/conventions.md` are their full contract.
-- Only the packages in the Child DOX Index below carry extra local rules.
+`src/index.ts` (the only public surface), `src/__tests__/` (Vitest), `vite.config.ts` + `vite.bundle.config.ts` (ESM + CJS + IIFE), `tsconfig.json` / `tsconfig.declarations.json` (strict), `README.md`. Create new packages with `pnpm new:package`.
 
 ## Verification
 
@@ -30,9 +12,11 @@ Standard package shape: `src/index.ts` (the only public surface), `src/__tests__
 - Lint: `pnpm --filter @vielzeug/<name> lint`
 - Build: `pnpm --filter @vielzeug/<name> build`
 
-## Child DOX Index
+## Packages with local rules
 
-- `packages/ore/AGENTS.md` — web-component authoring primitives; multiple sub-path exports.
-- `packages/prism/AGENTS.md` — reactive SVG charting library; DOM-output package; accessibility hard requirement.
-- `packages/refine/AGENTS.md` — component library; manifest-driven exports; bundles `lucide`.
+Most packages need no `AGENTS.md`; only these carry rules beyond the conventions.
+
+- `packages/ore/AGENTS.md` — web-component authoring primitives; `./testing` sub-path; narrow a11y contract.
+- `packages/prism/AGENTS.md` — reactive SVG charting; DOM-output; a11y hard requirement.
+- `packages/refine/AGENTS.md` — component library; manifest-driven exports; bundles `lucide`; design modes.
 - `packages/codex/AGENTS.md` — MCP server + CLI; bundles docs at build time.

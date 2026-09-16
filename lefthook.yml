@@ -13,7 +13,7 @@ pre-commit:
       glob: '**/*.{spec,test}.{ts,tsx,js,jsx}'
       run: pnpm vitest {staged_files} --passWithNoTests --run
     check:ai-data:
-      glob: '.ai/**'
+      glob: '.agents/**'
       run: node scripts/sync-ai-data.mjs --check
     change:codex:
       glob: 'docs/**'

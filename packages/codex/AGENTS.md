@@ -1,15 +1,8 @@
 # AGENTS.md — codex
 
-## Purpose
+MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI clients. An executable tool, not a consumed library; standalone — no `@vielzeug/*` runtime dependencies. The docs it bundles live in `docs/` (see `docs/AGENTS.md`).
 
-MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI clients. Unlike the other packages, this is an executable tool, not a consumed library.
-
-## Ownership
-
-- Parent contract: `packages/AGENTS.md` and `.ai/core/conventions.md`.
-- Source docs it bundles live in `docs/` (owned by `docs/AGENTS.md`).
-
-## Local Contracts
+## Local contracts
 
 - **Build bundles the docs.** `prepare:data` (`scripts/generate-bundled-data.ts`) reads `docs/` and generates `packages/codex/data/` before compilation. It runs as the first step of `build` and `test:integration` (explicit, not an npm `pre*` hook — Rush does not run lifecycle hooks) — do not call `tsc` directly when you need fresh data.
 - `packages/codex/data/` is **generated and gitignored** — never hand-edit or commit it. `prepare:data` requires `packages/refine/dist/custom-elements.json` and fails without it; `@vielzeug/refine` is a workspace devDependency purely so `rush build` builds it first.
@@ -29,10 +22,9 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 - `pnpm test:integration` / `pnpm test` — integration coverage; `test:integration` regenerates snapshot data first.
 - `generator.integration.test.ts` validates real monorepo snapshot generation. New tests that load real package/docs inputs belong in `*.integration.test.ts`; all other tests must construct temporary snapshots.
 
-## Work Guidance
+## Adding an MCP tool
 
-- No `@vielzeug/*` runtime deps — codex is standalone.
-- When adding an MCP tool: add it to `src/tools/packages.ts` (generic) or `src/tools/refine.ts` (refine-specific — use a `refine-` name prefix), define its local `ToolSchema` once with `satisfies ToolSchema`, return a domain value from `execute()`, use `Catalog` methods for expected failures, cover it in `src/__tests__/`, then run `pnpm build` to refresh generated README tables.
+Add it to `src/tools/packages.ts` (generic) or `src/tools/refine.ts` (refine-specific — use a `refine-` name prefix), define its local `ToolSchema` once with `satisfies ToolSchema`, return a domain value from `execute()`, use `Catalog` methods for expected failures, cover it in `src/__tests__/`, then run `pnpm build` to refresh generated README tables.
 
 ## Verification
 
@@ -40,7 +32,3 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 - Fast unit-only loop: `pnpm --filter @vielzeug/codex test:unit`
 - Lint: `pnpm --filter @vielzeug/codex lint`
 - Build: `pnpm --filter @vielzeug/codex build`; then `pnpm --filter @vielzeug/codex gen:tool-docs` when tool descriptions or schemas changed
-
-## Child DOX Index
-
-- None.

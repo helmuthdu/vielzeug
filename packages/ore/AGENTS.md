@@ -1,15 +1,8 @@
 # AGENTS.md — ore
 
-## Purpose
+Functional web-component authoring primitives built on `ripple`; the foundation `refine` is built on. Output is real DOM / custom elements. Depends on `@vielzeug/ripple` (`workspace:*`); `@vielzeug/assay` is an **optional peer** (`workspace:^`) used only by the `./testing` sub-path — production consumers never install it, and the `^` keeps the published peer range from going stale on every assay bump. Breaking changes here cascade to `refine`.
 
-Functional web-component authoring primitives built on `ripple`. The foundation `refine` is built on. Output is real DOM / custom elements.
-
-## Ownership
-
-- Parent contract: `packages/AGENTS.md` and `.ai/core/conventions.md`.
-- Usage docs: `docs/ore/`.
-
-## Local Contracts
+## Local contracts
 
 - **Root-only runtime API** — browser runtime APIs (directives and `useField`) are exported from `.`. `./testing` is the only public sub-path. Keep `package.json` `exports` and `vite.config.ts`'s entry map aligned.
 - **IIFE build** — `vite.bundle.config.ts` bundles the root `src/index.ts` into `window.Ore`. Downstream IIFE consumers must import Ore only from `@vielzeug/ore`, so every lifecycle hook resolves through that single runtime.
@@ -29,13 +22,8 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 - **What to assert:** custom elements produced by `ore` primitives must not introduce structural violations — assert correct `role`, `tabindex`, `aria-*` attribute wiring, and slot/content projection plumbing. Use the global `axeCheck(element)` (defined in `vitest.setup.ts`, same pattern as `packages/refine/vitest.setup.ts`). Adopt it at the representative test for each structurally-distinct primitive area (host attr/class bindings, reactive `aria-*` attributes, prop→attribute reflection, `useSlots()`, `each()`/`when()` DOM insertion) rather than on every one of the hundreds of individual `it()`s in the suite — the goal is one regression tripwire per code path that can drop or corrupt real DOM structure, not exhaustive per-assertion coverage.
 - **What is out of scope here:** full ARIA pattern correctness (e.g. combobox state, dialog focus trap, roving tabindex) — those are the responsibility of the consuming component library (`refine`). Do not duplicate those assertions in `ore` tests.
-- `axeCheck` is test-infrastructure only — it lives in `vitest.setup.ts`, not `src/`, so it is never bundled into the published package (matches the `axe-core` devDependency exception documented in `.ai/core/conventions.md`).
+- `axeCheck` is test-infrastructure only — it lives in `vitest.setup.ts`, not `src/`, so it is never bundled into the published package (matches the `axe-core` devDependency exception documented in `.agents/conventions.md`).
 - **Why the distinction matters:** breaking the primitive plumbing (e.g. a prop reflection bug that drops an `aria-*` attribute) would silently break all consuming components. The goal is to catch those regressions here, not to duplicate `refine`'s full-pattern tests.
-
-## Work Guidance
-
-- Depends on `@vielzeug/ripple` (`workspace:*`). `@vielzeug/assay` is an **optional peer dependency** (`workspace:^`) used only by the `./testing` sub-path — production consumers never install it. The `^` keeps the published peer range from going stale on every assay version bump.
-- Breaking changes here cascade to `refine` — verify `refine` after public-API changes.
 
 ## Verification
 
@@ -43,7 +31,3 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 - Lint: `pnpm --filter @vielzeug/ore lint`
 - Build: `pnpm --filter @vielzeug/ore build`
 - Downstream: `pnpm vitest run packages/refine/src/` after API changes.
-
-## Child DOX Index
-
-- None.

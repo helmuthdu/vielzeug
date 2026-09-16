@@ -1,19 +1,12 @@
 # AGENTS.md — prism
 
-## Purpose
-
 Responsive SVG charting library with explicit data updates. Each chart factory mounts an `<svg>` into a host container and returns a typed `ChartHandle` with `update()` and `dispose()`.
 
-## Ownership
-
-- Parent contract: `packages/AGENTS.md` and `.ai/core/conventions.md`.
-- Usage docs: `docs/prism/`.
-
-## Local Contracts
+## Local contracts
 
 - **DOM-output package** — renders SVG into the host DOM. Excluded from the REPL.
 - Depends on `@vielzeug/orbit` (`workspace:*`). No other external runtime dependencies.
-- Teardown follows the monorepo convention: `handle.dispose()` + `[Symbol.dispose]`.
+- Tests live in `src/__tests__/`, one file per chart type plus shared suites for scales, animation, and internals. `vitest.setup.ts` stubs `ResizeObserver` (jsdom has none) and exposes the `axeCheck` global.
 
 ## Accessibility testing
 
@@ -25,17 +18,8 @@ Responsive SVG charting library with explicit data updates. Each chart factory m
 - **Out of automated scope** — verify in a real browser or by manual/visual review: colour contrast of data series, focus-visible on interactive points, target size of hover targets, and anything requiring real layout or computed CSS.
 - Why: axe-core targets real browsers; jsdom has no CSS box model and a stubbed `getComputedStyle`, so layout/colour rules produce false positives/negatives. (If a browser test harness is added later, move the visual rules there.)
 
-## Work Guidance
-
-- Tests live in `src/__tests__/`, one file per chart type plus shared suites for scales, animation, and internals.
-- The `vitest.setup.ts` stubs `ResizeObserver` (jsdom has none) and exposes the `axeCheck` global.
-
 ## Verification
 
 - Tests: `pnpm vitest run packages/prism/src/__tests__/` (or `pnpm --filter @vielzeug/prism test`)
 - Lint: `pnpm --filter @vielzeug/prism lint`
 - Build: `pnpm --filter @vielzeug/prism build`
-
-## Child DOX Index
-
-- None.

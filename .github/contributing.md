@@ -1,6 +1,6 @@
 # Contributing to Vielzeug
 
-Thanks for your interest in contributing! This guide covers the mechanics of getting a change merged. For engineering conventions (disposal, dev logging, error classes, file layout, package structure) see the root [`AGENTS.md`](../AGENTS.md) and `.ai/core/conventions.md` — read those before writing code, this file won't repeat them.
+Thanks for your interest in contributing! This guide covers the mechanics of getting a change merged. For engineering conventions (disposal, dev logging, error classes, file layout, package structure) see the root [`AGENTS.md`](../AGENTS.md) and `.agents/conventions.md` — read those before writing code, this file won't repeat them.
 
 ## Table of Contents
 
@@ -62,9 +62,9 @@ pnpm test    # verify the setup works
 
 ## Project Layout
 
-```
+```text
 vielzeug/
-├── packages/<name>/     # each package is self-contained — see .ai/reference/packages.md for the full list
+├── packages/<name>/     # each package is self-contained — see .agents/reference/packages.md for the full list
 │   ├── src/
 │   │   ├── __tests__/   # vitest test files
 │   │   └── index.ts     # public API — all exports defined here
@@ -73,7 +73,7 @@ vielzeug/
 └── docs/<name>/         # VitePress documentation for that package
 ```
 
-If you're adding new public API, update the package's docs under `docs/<name>/` (see `.ai/reference/docs-template.md` for the expected structure) and its `README.md`.
+If you're adding new public API, update the package's docs under `docs/<name>/` (see `.agents/reference/docs-template.md` for the expected structure) and its `README.md`.
 
 ## Need Help?
 

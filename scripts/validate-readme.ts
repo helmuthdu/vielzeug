@@ -1,7 +1,7 @@
 /**
  * Validates package README structure across the monorepo.
  *
- * Enforces the canonical shape defined in `.ai/reference/readme-template.md`:
+ * Enforces the canonical shape defined in `.agents/reference/readme-template.md`:
  * title, blockquote description equal to `package.json#description`, Installation,
  * Quick Start, optional Features, Documentation, License — and nothing else.
  *
@@ -75,7 +75,7 @@ function diagnostic(
   return { file, message, package: slug, rule, ...options };
 }
 
-function loadReadmes(packagesDir: string): Map<string, ReadmeFile> {
+export function loadReadmes(packagesDir: string): Map<string, ReadmeFile> {
   const readmes = new Map<string, ReadmeFile>();
 
   for (const slug of readdirSync(packagesDir, { withFileTypes: true })

@@ -1,6 +1,6 @@
 # Vielzeug Documentation Template
 
-Shared page structure for `docs/<name>/`. This file states exactly what each page must contain; `.ai/tasks/document.md` says when to load it and how to sequence edits. The public guide at `docs/guide/docs-template.md` includes this file verbatim.
+Shared page structure for `docs/<name>/`. This file states exactly what each page must contain; the `document` skill (`.agents/skills/document/SKILL.md`) says when to load it and how to sequence edits. The public guide at `docs/guide/docs-template.md` includes this file verbatim.
 
 ## Global writing rules
 

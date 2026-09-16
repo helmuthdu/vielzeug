@@ -12,7 +12,7 @@
 // the Worktrees rule in the root AGENTS.md.
 //
 // The dependency graph is computed from packages/*/package.json at run time
-// — not from .ai/reference/packages.md's human-readable table. That table is
+// — not from .agents/reference/packages.md's human-readable table. That table is
 // generated from the same manifests (kept current via `pnpm check:ai-data`),
 // but reading package.json directly here avoids a dependency on that
 // generated-file step ever staying in sync.

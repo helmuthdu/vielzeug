@@ -1,7 +1,5 @@
 # AGENTS.md — scripts
 
-## Purpose
-
 Repo tooling: release/publish automation, git worktree helper, generated-doc sync, and REPL
 codegen/validation. Not a published package — consumed by `pnpm` scripts, CI workflows, and
 directly via `node scripts/...`.
@@ -18,22 +16,23 @@ directly via `node scripts/...`.
 | `lib/package-manifest.mjs` / `lib/packed-package-model.mjs` | Pure package metadata normalization and packed-consumer verification model. `sync-package-manifests.mjs`, release packing, and `verify-packed-packages.mjs` share these contracts. |
 | `build-site.mjs`            | Builds VitePress, then embeds production demo builds under `docs/.vitepress/dist/demos/*` with deployment-safe base paths. |
 | `worktree.mjs`              | Git worktree helper for parallel multi-agent work — see its own header comment for the dependency-graph-gating rationale.                                                                                                                                                                                   |
+| `new-package.mjs`           | `pnpm new:package <name> "<description>"` — scaffolds a standard package: config files, normalized manifest (shared `devDependencies` from `packages/coins`), README, source/test stubs, the four `docs/<name>/` pages plus one recipe (all passing `validate:docs`/`validate:readme` on creation), a `rush.json` project entry, then refreshes `.agents/reference/packages.md`. Prints the manual follow-ups (install, sidebar, change file). |
 | `rush-change.mjs`           | Writes a single-package Rush change file (`common/changes/@vielzeug/<pkg>/...`).                                                                                                                                                                                                                            |
 | `auto-change-codex.mjs`     | Pre-commit hook body (glob `docs/**`, see `lefthook.yml`'s `change:codex`): writes a patch change file for `codex` when docs change and none is already pending — codex bundles all of `docs/` into its published `data/` dir, so a docs-only change still needs a codex release, and humans forget it. |
-| `sync-ai-data.mjs`          | Regenerates `.ai/reference/packages.md` from package manifests and client task stubs from `.ai/tasks/*.md` frontmatter. Also validates `.ai/...` references across every text file in the repo (excluding vendor, build, test, and changelog files); dangling references fail both `gen:ai-data` and `check:ai-data`. |
+| `sync-ai-data.mjs`          | Regenerates `.agents/reference/packages.md` from package manifests. Also validates `.agents/...` references across every text file in the repo (excluding vendor, build, test, and changelog files); dangling references fail both `gen:ai-data` and `check:ai-data`. |
 | `sync-package-manifests.mjs` | Normalizes root, demo, and publishable package manifests into standard field order; publishable manifests also lose source-only export branches and gain generated classic TypeScript subpath mappings. `pnpm check:package-manifests` is validation-only; run `pnpm sync:package-manifests` to update. |
 | `vielzeug-packages.ts`      | Single source of truth for "which `packages/*` directories are real, browser-resolvable `@vielzeug` packages" — every consumer (docs Vite config, REPL validator, REPL registry generator) derives its package list from here instead of hand-maintaining one.                                              |
 | `generate-repl-registry.ts` | Regenerates `docs/.vitepress/theme/components/repl/registry.generated.ts` from real build output (`dist/index.d.ts`, `dist/<name>.iife.js`, `vite.bundle.config.ts`) via the TS compiler API.                                                                                                               |
 | `repl-metadata.ts`          | Curated REPL display content (per-package descriptions, arsenal's function categories) that can't be derived from source — kept separate from the AST-manipulation logic in `generate-repl-registry.ts` so editing a description is a one-line content change.                                              |
 | `validate-repl.ts`          | Extracts every REPL example's `code`, writes it as a runnable temp file, and executes it via `vitest` (`vitest.repl.config.ts`) as a real test.                                                                                                                                                             |
 | `validate-docs.ts`          | Structural package-doc validator: explicit contracts, complete package/docs inventory, recipe-index parity, and relative Markdown links. It reports stable diagnostics but does not judge prose or API semantics.                                                                                               |
-| `validate-readme.ts`        | Structural package README validator: enforces the canonical README shape (title, blockquote description, Installation, Quick Start, optional Features, Documentation, License) defined in `.ai/reference/readme-template.md`. Reports stable diagnostics, does not judge prose.                                   |
+| `validate-readme.ts`        | Structural package README validator: enforces the canonical README shape (title, blockquote description, Installation, Quick Start, optional Features, Documentation, License) defined in `.agents/reference/readme-template.md`. Reports stable diagnostics, does not judge prose.                                   |
 | `verify-prod-gate.mjs`      | Repo-wide assertion that no published artifact contains a raw `__<PKG>_PROD__` reference (dev-warn gate compiled out). The gate is injected centrally by the root `vite.config.ts` (`prodGateDefine`) — this script is the tripwire if a build path ever loses it. Runs in CI (`ci.yml`, after a full `rush rebuild`); locally via `pnpm verify:prod-gate`. |
 | `verify-packed-packages.mjs` | Creates release-shaped tarballs, installs their workspace dependency closure into an isolated fixture, and validates packed metadata, ESM/CJS exports, and TypeScript resolution. Release preparation calls it after Rush applies version bumps; locally run `pnpm verify:packed -- --package=@vielzeug/<name>` or `--package=all`. |
 
 There is deliberately no `cli.mjs` discovery/router entrypoint. `pnpm run` (no args) already lists every command below by name straight from `package.json` — a second, hand-maintained routing table over the same information would be pure duplication with strictly worse ergonomics (an extra subprocess hop, and a table that can silently point at a renamed file with nothing to catch it).
 
-## Local Contracts
+## Local contracts
 
 - **Two runtimes, on purpose.** `.mjs` files run under plain `node`, no loader — required for anything CI or a git hook invokes directly (release automation, worktree, change files, doc sync) where adding a loader flag to every call site isn't worth it. `.ts` files (`generate-repl-registry.ts`, `validate-repl.ts`, `vielzeug-packages.ts`, `repl-metadata.ts`, the `vitest.*.config.ts` files) are docs/REPL tooling, run via `node --import jiti/register <file>.ts` (see their `pnpm` script wiring) — they need the TS compiler API and real project types, which a plain-JS script doesn't. Don't mix: a `.ts` file importing a plain `.mjs` module needs a hand-written `.d.mts` sibling (see `lib/cli.d.mts`, `lib/packages.d.mts`) since `tsc` can't infer types across that boundary on its own — `validate-repl.ts` and `vielzeug-packages.ts` do this because they use real, nontrivial logic from `lib/cli.mjs`/`lib/packages.mjs`; `generate-repl-registry.ts` deliberately does _not_ import `lib/cli.mjs` just for its one-line `isMain` check (see that file's own header) — a cross-language type contract isn't worth paying for a single three-token check. There's no automated check that a `.d.mts` and its `.mjs` stay in sync for the imports that do exist — a deliberate bet, given how small each of these modules' surfaces are; update both in the same commit.
 - **Every script follows the same "pure functions + guarded entry point" shape** — importing any script here for a test must never touch the filesystem, network, or spawn a process on its own. Side effects (reading real files, writing generated output, spawning `git`/`npm`/`gh`) live behind an `isMain` check at the bottom (`if (isMain(import.meta.url)) { ... }`, imported from `lib/cli.mjs` — or inlined as `process.argv[1] === fileURLToPath(import.meta.url)` for a `.ts` file with no other reason to import that module), exactly like every test file's own "module has no import-time side effects" smoke test asserts.
@@ -44,20 +43,16 @@ There is deliberately no `cli.mjs` discovery/router entrypoint. `pnpm run` (no a
 - **`run()`'s three IO postures** (`lib/cli.mjs`): default (capture stdout, for parsing output or when failure detail matters — e.g. npm E409 retry), `inherit: true` (share this process's terminal — required for anything interactive: an npm 2FA prompt, a browser-trust flow, or where a human should see git/gh/rush output live), `quiet: true` (discard stdio — for an exit-code-only probe like "does this git tag exist" where even the command's own expected-failure output would be noise).
 - **`parseArgs()` never supports a space-separated `--flag value` form** — only `--flag=value` or a bare boolean `--flag`. A space-separated value is ambiguous the moment a positional can also follow (`--interactive packages/ore` — is `packages/ore` the flag's value or the next positional?); one unambiguous rule beats a heuristic that's right most of the time. Every flag in every script here uses `=`.
 
-## Work Guidance
+## Adding or extending scripts
 
 - New shared behavior (a third IO posture, a new arg-parsing case) belongs in `lib/cli.mjs`/`lib/marker-sync.mjs`/`lib/packages.mjs`, not copy-pasted into the script that first needed it.
-- New codegen script with a `--check` mode: build on `lib/marker-sync.mjs`'s `syncFile`/`syncPatchedFile`, don't reimplement the write-vs-check branching.
+- New codegen script with a `--check` mode: build on `lib/marker-sync.mjs`'s `syncFile` + `replaceBetweenMarkers`, don't reimplement the write-vs-check branching.
 - New tool that needs "what packages exist / how do they depend on each other": build on `lib/packages.mjs`'s `readPackageManifests()`, don't re-scan `packages/*/package.json` by hand.
 - Adding a new top-level tool: give it the same shape as its neighbors (pure functions + `isMain()` guard), add a `pnpm` script for it in the root `package.json`, add it to this file's Layout table, and write `scripts/__tests__/<name>.test.ts(x)` alongside it.
 
 ## Verification
 
 - Tests: `pnpm vitest run scripts` (one vitest project — `vitest.config.ts`'s `projects` array includes `scripts/vitest.config.ts`).
-- AI metadata drift: `pnpm check:ai-data` — a stale `.ai/reference/packages.md`, stale adapter task stubs, or a dangling `.ai/...` cross-reference anywhere in the repo fail this without writing anything.
+- AI metadata drift: `pnpm check:ai-data` — a stale `.agents/reference/packages.md` or a dangling `.agents/...` cross-reference anywhere in the repo fail this without writing anything.
 - Lint: not linted (`scripts/` is Biome-ignored) — correctness here is enforced by tests and by the scripts actually running in CI.
 - Smoke-test any script directly: `node scripts/<file>.mjs` / `node --import jiti/register scripts/<file>.ts`.
-
-## Child DOX Index
-
-- None.
