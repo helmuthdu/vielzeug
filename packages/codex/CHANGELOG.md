@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Wed, 16 Sep 2026 09:18:24 GMT and should not be manually modified.
+This log was last generated on Mon, 21 Sep 2026 15:19:01 GMT and should not be manually modified.
+
+## 3.1.0
+Mon, 21 Sep 2026 15:19:01 GMT
+
+### Minor changes
+
+- Ship the vielzeug agent skill and add `codex skills install` to copy it into a project's skills directory
+
+### Patches
+
+- chore(codex): refresh bundled docs data
 
 ## 3.0.4
 Wed, 16 Sep 2026 09:18:24 GMT

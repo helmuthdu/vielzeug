@@ -4,6 +4,32 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/refine\" to `3.3.0`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Ship the vielzeug agent skill and add `codex skills install` to copy it into a project's skills directory",
+            "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "9791144e5c243e017dbe478aa739f93b4c4626d8"
+          }
+        ]
+      },
+      "date": "Mon, 21 Sep 2026 15:19:01 GMT",
+      "tag": "@vielzeug/codex_v3.1.0",
+      "version": "3.1.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/refine\" to `3.2.1`"
           }
         ],

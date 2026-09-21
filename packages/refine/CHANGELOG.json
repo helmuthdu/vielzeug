@@ -2,6 +2,37 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/sigil\" to `3.1.0`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Add ore-qr-code and ore-qr-scanner components backed by @vielzeug/sigil",
+            "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(refine): add ore-counter tally control with quick-steps, chip layout=stacked and ore-progress segments",
+            "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(refine): honor documented --button-padding, --button-gap and --button-font-size overrides",
+            "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"
+          }
+        ]
+      },
+      "date": "Mon, 21 Sep 2026 15:19:01 GMT",
+      "tag": "@vielzeug/refine_v3.3.0",
+      "version": "3.3.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

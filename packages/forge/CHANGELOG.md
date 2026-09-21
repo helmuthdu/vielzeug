@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+This log was last generated on Mon, 21 Sep 2026 15:19:01 GMT and should not be manually modified.
+
+## 3.1.0
+Mon, 21 Sep 2026 15:19:01 GMT
+
+### Minor changes
+
+- feat: add normalize option, toPlainValues, and form.patch; ForgeConfigError now names the offending value path
 
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT

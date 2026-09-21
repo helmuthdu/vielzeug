@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: export SyncParsable, IssuePath, and joinIssuePath for UI adapters",
+            "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"
+          }
+        ]
+      },
+      "date": "Mon, 21 Sep 2026 15:19:01 GMT",
+      "tag": "@vielzeug/spell_v3.1.0",
+      "version": "3.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `3.0.0`"

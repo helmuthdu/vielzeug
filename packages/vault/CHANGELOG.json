@@ -4,6 +4,18 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `3.1.0`"
+          }
+        ]
+      },
+      "date": "Mon, 21 Sep 2026 15:19:01 GMT",
+      "tag": "@vielzeug/vault_v3.0.1",
+      "version": "3.0.1"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/spell\" to `3.0.0`"
           }
         ],

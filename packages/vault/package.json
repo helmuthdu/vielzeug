@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/vault",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Adapter-free typed storage core with focused browser and SQLite subpaths",
   "repository": {
     "type": "git",

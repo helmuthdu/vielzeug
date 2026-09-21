@@ -4,6 +4,28 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `3.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `3.0.1`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add normalize option, toPlainValues, and form.patch; ForgeConfigError now names the offending value path",
+            "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"
+          }
+        ]
+      },
+      "date": "Mon, 21 Sep 2026 15:19:01 GMT",
+      "tag": "@vielzeug/forge_v3.1.0",
+      "version": "3.1.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `3.0.0`"
           },
           {

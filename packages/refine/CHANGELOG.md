@@ -1,6 +1,18 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 16 Sep 2026 09:18:24 GMT and should not be manually modified.
+This log was last generated on Mon, 21 Sep 2026 15:19:01 GMT and should not be manually modified.
+
+## 3.3.0
+Mon, 21 Sep 2026 15:19:01 GMT
+
+### Minor changes
+
+- Add ore-qr-code and ore-qr-scanner components backed by @vielzeug/sigil
+- feat(refine): add ore-counter tally control with quick-steps, chip layout=stacked and ore-progress segments
+
+### Patches
+
+- fix(refine): honor documented --button-padding, --button-gap and --button-font-size overrides
 
 ## 3.2.1
 Wed, 16 Sep 2026 09:18:24 GMT

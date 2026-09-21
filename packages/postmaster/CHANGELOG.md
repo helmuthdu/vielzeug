@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/postmaster
 
-This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+This log was last generated on Mon, 21 Sep 2026 15:19:01 GMT and should not be manually modified.
+
+## 3.0.1
+Mon, 21 Sep 2026 15:19:01 GMT
+
+_Version update only_
 
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT
