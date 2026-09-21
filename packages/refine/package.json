@@ -497,6 +497,9 @@
       "copy-command": [
         "dist/content/copy-command/copy-command.d.ts"
       ],
+      "counter": [
+        "dist/inputs/counter/counter.d.ts"
+      ],
       "datagrid": [
         "dist/inputs/datagrid/datagrid.d.ts"
       ],

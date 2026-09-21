@@ -103,7 +103,12 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     dc.addEventListener('close', () => {
       if (core.disposed) return;
       if (peer.status === 'connecting')
-        failPeer(peer, new MeshConnectionError('channel closed before opening', peer.id));
+        failPeer(
+          peer,
+          openTimer
+            ? new MeshTimeoutError('Timed out waiting for the data channel to open')
+            : new MeshConnectionError('channel closed before opening', peer.id),
+        );
       else disconnectPeer(peer, 'channel closed');
     });
     dc.addEventListener('error', () => {

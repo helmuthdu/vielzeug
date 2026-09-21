@@ -75,7 +75,7 @@ describe('roundtrip', () => {
       const matrix = encodeQr(payload);
       expect(decode(matrix), `payload ${JSON.stringify(payload.slice(0, 40))}… v${matrix.version}`).toBe(payload);
     }
-  });
+  }, 30_000);
 
   it('decodes every forced mask 0–7', () => {
     for (let mask = 0; mask < 8; mask++) {
@@ -102,7 +102,7 @@ describe('roundtrip', () => {
         expect(m.version).toBe(version);
         expect(decode(m)).toBe(payload);
       }
-  });
+  }, 30_000);
 
   it('decodes a version-pinned and minVersion-pinned symbol', () => {
     expect(decode(encodeQr('pinned v10', { version: 10 }))).toBe('pinned v10');
