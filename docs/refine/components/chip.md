@@ -1,10 +1,10 @@
 # Chip
 
-A compact, styled label for tags, filters, and selected values. Supports a leading icon, interaction modes (static, removable, selectable), all color themes, five variants, and three sizes. Used internally by `ore-select` and `ore-combobox` in multiselect mode.
+A compact, styled label for tags, filters, and selected values. Supports a leading icon, interaction modes (static, removable, selectable), all color themes, six variants, and three sizes. Used internally by `ore-select` and `ore-combobox` in multiselect mode.
 
 ## Variants
 
-Five visual variants for different levels of emphasis.
+Six visual variants for different levels of emphasis.
 
 <ComponentPreview center>
 
@@ -14,6 +14,7 @@ Five visual variants for different levels of emphasis.
 <ore-chip color="primary" variant="bordered">Bordered</ore-chip>
 <ore-chip color="primary" variant="outline">Outline</ore-chip>
 <ore-chip color="primary" variant="ghost">Ghost</ore-chip>
+<ore-chip color="primary" variant="frost">Frost</ore-chip>
 ```
 
 </ComponentPreview>
@@ -153,6 +154,25 @@ Override the border radius with the `rounded` attribute.
 
 </ComponentPreview>
 
+## Stacked Layout
+
+`layout="stacked"` turns a chip into a square tile: the icon sits above a wrapping, two-line label. Combine with `mode="selectable"` and `--chip-icon-size` for toggle grids of token art or status effects.
+
+<ComponentPreview center>
+
+```html
+<ore-chip mode="selectable" layout="stacked" size="lg" variant="bordered" color="warning" style="--chip-icon-size: 2rem">
+  <ore-icon slot="icon" name="flame"></ore-icon>
+  Burning
+</ore-chip>
+<ore-chip mode="selectable" layout="stacked" size="lg" variant="bordered" color="info" style="--chip-icon-size: 2rem" default-checked>
+  <ore-icon slot="icon" name="dizzy"></ore-icon>
+  Dazed
+</ore-chip>
+```
+
+</ComponentPreview>
+
 ## Disabled
 
 <ComponentPreview center>
@@ -194,10 +214,11 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 | ----------------- | ------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
 | `aria-label`      | `string`                                                                  | —          | Accessible label for icon-only chips and custom action text      |
 | `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Color theme                                                      |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`  | Visual style variant                                             |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | `'solid'`  | Visual style variant                                             |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Chip size                                                        |
 | `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | —          | Border radius override                                           |
 | `mode`            | `'static' \| 'removable' \| 'selectable' \| 'action'`                     | `'static'` | Interaction mode                                                 |
+| `layout`          | `'inline' \| 'stacked'`                                                   | `'inline'` | `stacked` places the icon above a wrapping label (tile)          |
 | `disabled`        | `boolean`                                                                 | `false`    | Disable the chip (remove button becomes non-functional)          |
 | `value`           | `string`                                                                  | —          | Value passed in the `remove`, `change`, and `click` event detail |
 | `checked`         | `boolean`                                                                 | —          | Controlled checked state for selectable chips                    |
@@ -231,6 +252,7 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 | `--chip-padding-x`          | Horizontal padding                          | `var(--size-2-5)`     |
 | `--chip-padding-y`          | Vertical padding                            | `var(--size-0-5)`     |
 | `--chip-gap`                | Gap between icon, label, and remove button  | `var(--size-1)`       |
+| `--chip-icon-size`          | Size of the slotted icon                    | `1em`                 |
 | `--chip-hover-bg`           | Background on hover (interactive modes)     | Variant-dependent     |
 | `--chip-hover-color`        | Text color on hover (interactive modes)     | Variant-dependent     |
 | `--chip-hover-border-color` | Border color on hover (interactive modes)   | Variant-dependent     |

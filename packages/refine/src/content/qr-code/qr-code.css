@@ -1,0 +1,74 @@
+@layer refine.base {
+  :host {
+    --_dark: var(--qr-code-dark, currentColor);
+    --_light: var(--qr-code-light, transparent);
+    --_radius: var(--qr-code-radius, var(--rounded-md));
+    --_padding: var(--qr-code-padding, var(--size-3));
+    --_bg: var(--qr-code-bg, var(--color-canvas));
+    --_error-color: var(--qr-code-error-color, var(--text-color-secondary));
+    --_border: var(--qr-code-border, var(--border));
+    --_border-color: var(--qr-code-border-color, var(--color-divider));
+    --_shadow: var(--qr-code-shadow, var(--shadow-sm));
+
+    display: inline-block;
+  }
+
+  :host([hidden]) {
+    display: none;
+  }
+
+  .wrapper {
+    /* --_size resolves here (not :host) so it can see the inline --_size-px set on this element. */
+    --_size: var(--qr-code-size, var(--_size-px, 192px));
+
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--size-2);
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .svg {
+    box-sizing: border-box;
+    display: block;
+    width: var(--_size);
+    height: var(--_size);
+    padding: var(--_padding);
+    background: var(--_light);
+    border-radius: var(--_radius);
+  }
+
+  :host([variant='card']) .svg {
+    background: var(--_bg);
+    border: var(--_border) solid var(--_border-color);
+    box-shadow: var(--_shadow);
+  }
+
+  .svg svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .caption {
+    margin-block: var(--size-2);
+    font-size: var(--text-sm);
+    color: var(--text-color-secondary);
+    text-align: center;
+  }
+
+  .error {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--_size);
+    min-height: var(--_size);
+    padding: var(--_padding);
+    font-size: var(--text-sm);
+    color: var(--_error-color);
+    text-align: center;
+    border: var(--border-width, 1px) dashed var(--color-contrast-300);
+    border-radius: var(--_radius);
+  }
+}

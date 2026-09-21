@@ -41,7 +41,7 @@ Declare commands with `ore-command-palette-item` elements in the default slot. E
 
 </ComponentPreview>
 
-The global shortcut (`mod+k` by default — `⌘K` on macOS, `Ctrl+K` elsewhere) works as soon as the element is connected. Use `open` as the controlled state and update it from `open-change`; use `default-open` only to initialize an uncontrolled palette.
+The global shortcut (`mod+k` by default — `⌘K` on macOS, `Ctrl+K` elsewhere) works as soon as the element is connected. Shortcut hints use [`ore-keyboard-key`](./keyboard-key.md), which is also available for settings screens and key-state displays. Use `open` as the controlled state and update it from `open-change`; use `default-open` only to initialize an uncontrolled palette.
 
 ## Data-Driven Items
 

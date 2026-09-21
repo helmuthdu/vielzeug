@@ -10,6 +10,7 @@ description: Immutable typed form state, flat validation issues, and optional in
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `createForm()` | Create immutable form and field state | Sync | Dispose with its owner |
+| `toPlainValues()` | Flatten class instances to the plain value shape | Sync | Drops circular branches |
 | `validate()` | Run the configured full-form validator | Async | Superseded work returns `aborted` |
 | `submit()` | Validate and submit one captured snapshot | Async | Concurrent submission rejects |
 | `bindField()` | Bind a field to an HTML element | Sync | Caller owns returned cleanup |
@@ -45,6 +46,38 @@ const form = createForm({
 });
 ```
 
+`normalize` runs before value validation at every write boundary (`initialValues`, `set`, `patch`, `reset`, `field().set`), so a caller that normalizes once at `createForm` stays correct everywhere. Pair it with `toPlainValues()` to hold domain-model classes in form state.
+
+```ts
+import { createForm, toPlainValues } from '@vielzeug/forge';
+
+const form = createForm({ initialValues: { user: new UserModel() }, normalize: toPlainValues });
+
+form.reset({ user: new UserModel() }); // same normalization as init
+```
+
+## toPlainValues
+
+```ts
+function toPlainValues<T>(value: T): T;
+```
+
+Deeply converts a value into the plain shape Forge accepts: primitives pass through, `Date` is cloned, `File`/`Blob` keep identity, arrays map, and class instances flatten to their own enumerable entries. Unsafe keys (`__proto__`, `constructor`, `prototype`) are dropped, so the output always passes value validation. The returned type parameter is a convenience cast — the flattened shape differs from the input type whenever class instances are present.
+
+Lossy conversions replace the error an un-normalized write would throw: `Map`, `Set`, and other keyless built-ins flatten to `{}`; sparse array slots are dropped, shifting later indexes; `NaN`, `Infinity`, functions, and circular branches become `undefined`. Normalize model classes, not arbitrary graphs.
+
+```ts
+import { createForm, toPlainValues } from '@vielzeug/forge';
+
+class UserModel {
+  email = '';
+  name = '';
+}
+
+toPlainValues(new UserModel()); // { email: '', name: '' }
+const form = createForm({ initialValues: { user: new UserModel() }, normalize: toPlainValues });
+```
+
 ## Form
 
 ```ts
@@ -55,6 +88,8 @@ interface Form<TValues extends Record<string, unknown>> {
   readonly disposalSignal: AbortSignal;
   field<K extends keyof TValues & string>(key: K): Field<TValues[K]>;
   set(next: TValues | ((previous: ReadonlyDeep<TValues>) => TValues)): void;
+  patch(next: Partial<TValues>): void;
+  patch(updater: (previous: ReadonlyDeep<TValues>) => Partial<TValues>): void;
   reset(next?: TValues): void;
   validate(signal?: AbortSignal): Promise<ValidationResult>;
   submit<TResult>(handler, signal?: AbortSignal): Promise<SubmitResult<TResult>>;
@@ -65,6 +100,8 @@ interface Form<TValues extends Record<string, unknown>> {
 ```
 
 `validate()` and `submit()` return `{ status: 'valid' }`, `{ status: 'invalid', issues }`, or `{ status: 'aborted' }`. Successful submission returns `{ status: 'ok', value }`. Submission handlers receive the exact snapshot that passed validation. `form.state` retains one stable reference until the next transition for framework external-store adapters.
+
+`patch()` shallow-merges top-level keys — `form.patch({ count: 1 })` equals `form.set((prev) => ({ ...prev, count: 1 }))` without the `as T` cast a spread requires. Nested values replace by identity; there is no deep merge.
 
 ```ts
 type FormState = Readonly<{

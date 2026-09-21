@@ -10,7 +10,9 @@ import {
   findDanglingAiReferences,
   isAiReferenceSource,
   patchPackagesReference,
+  patchSkillPackages,
   renderPackagesTable,
+  renderSkillPackages,
 } from '../sync-ai-data.mjs';
 
 describe('module has no import-time side effects', () => {
@@ -57,6 +59,32 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
 
     expect(patched).toMatch(/`@vielzeug\/spell`/);
     expect(patched).toMatch(/Schema validation/);
+  });
+});
+
+describe('renderSkillPackages() / patchSkillPackages()', () => {
+  const packages = [
+    { slug: 'codex', name: '@vielzeug/codex', description: 'MCP server', dependencies: [], optionalPeers: [], peerDependencies: [] },
+    { slug: 'ripple', name: '@vielzeug/ripple', description: 'Signals', dependencies: [], optionalPeers: [], peerDependencies: [] },
+    { slug: 'spell', name: '@vielzeug/spell', description: '', dependencies: [], optionalPeers: [], peerDependencies: [] },
+  ];
+
+  it('renders a flat list and excludes the codex tooling package', () => {
+    const list = renderSkillPackages(packages);
+
+    expect(list).toBe(['- `@vielzeug/ripple` — Signals', '- `@vielzeug/spell` — —'].join('\n'));
+  });
+
+  it('patches the generated block in the consumer skill', () => {
+    const source = ['# Vielzeug', '', '<!-- GENERATED:skill-packages:BEGIN -->', '<!-- GENERATED:skill-packages:END -->', '', '## Done when'].join(
+      '\n',
+    );
+
+    const patched = patchSkillPackages(source, packages);
+
+    expect(patched).toContain('- `@vielzeug/ripple` — Signals');
+    expect(patched).not.toContain('@vielzeug/codex');
+    expect(patched.endsWith('## Done when')).toBe(true);
   });
 });
 

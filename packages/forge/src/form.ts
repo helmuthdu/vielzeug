@@ -80,7 +80,9 @@ function makeFormState<TValues extends Record<string, unknown>>(current: Interna
 
 /** One immutable value tree and one explicit full-form validator keep form behavior locally understandable. */
 export function createForm<TValues extends Record<string, unknown>>(options: FormOptions<TValues>): Form<TValues> {
-  const initial = immutable(options.initialValues);
+  const normalize = options.normalize;
+  const prepare = (value: unknown): unknown => (normalize ? normalize(value) : value);
+  const initial = immutable(prepare(options.initialValues) as TValues);
   const notifier = createNotifier<InternalState<TValues>>(options.onSubscriberError);
   const disposalController = new AbortController();
   let disposed = false;
@@ -149,7 +151,8 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     setValue(path, next) {
       write((c) => {
         const previous = readAtPath(c.value, path);
-        const value = typeof next === 'function' ? next(previous) : next;
+        const raw = typeof next === 'function' ? next(previous) : next;
+        const value = prepare(raw);
         revision++;
         validatedSnapshot = undefined;
         return { ...c, validity: 'unknown', value: writeAtPath(c.value, path, value) };
@@ -231,11 +234,26 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
 
       return createField<TValues[typeof key]>([key], access);
     },
+    patch(next) {
+      ensureActive('patch');
+      abortValidation();
+
+      write((c) => {
+        const partial =
+          typeof next === 'function'
+            ? (next as (previous: Form<TValues>['value']) => Partial<TValues>)(c.value as Form<TValues>['value'])
+            : next;
+        const merged = { ...c.value, ...partial };
+        revision++;
+        validatedSnapshot = undefined;
+        return { ...c, issues: undefined, validity: 'unknown', value: immutable(prepare(merged) as TValues) };
+      });
+    },
     reset(next) {
       ensureActive('reset');
       abortValidation();
 
-      const replacement = next === undefined ? undefined : immutable(next);
+      const replacement = next === undefined ? undefined : immutable(prepare(next) as TValues);
       write((c) => {
         const baseline = replacement ?? c.baseline;
         revision++;
@@ -254,7 +272,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
             : next;
         revision++;
         validatedSnapshot = undefined;
-        return { ...c, issues: undefined, validity: 'unknown', value: immutable(value) };
+        return { ...c, issues: undefined, validity: 'unknown', value: immutable(prepare(value) as TValues) };
       });
     },
     get state() {

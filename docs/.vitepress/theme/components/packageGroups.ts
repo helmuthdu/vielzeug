@@ -24,6 +24,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
     name: 'Data & Connectivity',
     packages: [
       { id: 'courier', tagline: 'HTTP client & caching' },
+      { id: 'mesh', tagline: 'Backendless P2P sessions' },
       { id: 'postmaster', tagline: 'Durable job outbox' },
       { id: 'pulse', tagline: 'WebSocket client & presence' },
       { id: 'scout', tagline: 'Trigram fuzzy search' },
@@ -60,6 +61,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'prism', tagline: 'SVG charts' },
       { id: 'refine', tagline: 'Accessible components' },
       { id: 'sentinel', tagline: 'Reactive environment state' },
+      { id: 'sigil', tagline: 'QR generation & scanning' },
     ],
   },
   {

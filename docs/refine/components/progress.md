@@ -91,6 +91,19 @@ The `floating-label` attribute renders a chip **above the fill endpoint**, cente
 
 </ComponentPreview>
 
+## Segments
+
+Set `segments` to split the linear bar into discrete blocks. Blocks up to `value / max` are filled, which reads as a token track (stages, steps, struggle) rather than a percentage. Ignored when `indeterminate` or `type="vertical"`.
+
+<ComponentPreview vertical>
+
+```html
+<ore-progress value="2" max="6" segments="6" label="2 / 6" color="error"></ore-progress>
+<ore-progress value="3" max="5" segments="5" title="Onboarding" label="Step 3 of 5" value-text="Step 3 of 5"></ore-progress>
+```
+
+</ComponentPreview>
+
 ## Circular
 
 Set `type="circular"` to render a circular progress ring. The default diameter is `6rem` (sm: `4rem`, lg: `9rem`) — large enough to display content inside. Use `circular` for dashboard metrics, profile completions, or storage indicators where the ring itself communicates the proportion. For circular, combine `label` (value like `"75%"`) with `title` (context like `"Storage"`) for a self-contained widget.
@@ -229,6 +242,7 @@ const interval = setInterval(() => {
 | `label`          | `string`                                                                  | —          | Visible text label and accessible name. **Linear** without `title`: rendered at bar end. **Linear** with `title`: moved to the header row. **Circular**: large text centered inside the ring. Falls back to `title`, then `"Progress"` for `aria-label`. |
 | `title`          | `string`                                                                  | —          | **Linear**: header text above the bar; moves `label` to the header row when combined. **Circular**: smaller text below the `label` inside the ring.                                                                                                      |
 | `floating-label` | `string`                                                                  | —          | Text for the floating chip above the fill endpoint (linear only). Hidden when `indeterminate`.                                                                                                                                                           |
+| `segments`       | `number`                                                                  | `0`        | Split the linear bar into this many discrete blocks; blocks up to `value / max` are filled. Ignored when `indeterminate` or vertical.                                                                                                                  |
 | `value-text`     | `string`                                                                  | —          | Human-readable value for screen readers (e.g. `"Step 2 of 5"`). Overrides the raw `aria-valuenow`.                                                                                                                                                       |
 
 ### CSS Custom Properties
@@ -244,6 +258,7 @@ const interval = setInterval(() => {
 | `--progress-circular-label-size` | Font size of the label inside the ring                        | `--text-xl` (size-dependent) |
 | `--progress-circular-title-size` | Font size of the title inside the ring                        | `--text-xs` (size-dependent) |
 | `--progress-label-gap`           | Gap between header/bar row and between bar and trailing label | `0.25rem`                    |
+| `--progress-segment-gap`         | Gap between blocks when `segments` is set                     | `var(--size-1)`              |
 | `--progress-title-color`         | Title text color                                              | `currentColor`               |
 | `--progress-label-color`         | Label text color                                              | `currentColor`               |
 

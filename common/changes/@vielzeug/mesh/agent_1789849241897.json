@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add @vielzeug/mesh: backendless WebRTC peer-to-peer session transport",
+      "packageName": "@vielzeug/mesh",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

@@ -29,6 +29,26 @@ describe('ore-tabs', () => {
       expect(fixture.query('.panels')).toBeTruthy();
     });
 
+    it('hides the panel container until a tab panel is assigned', async () => {
+      fixture = await mount('ore-tabs', {
+        attrs: { value: 'overview' },
+        html: '<ore-tab-item slot="tabs" value="overview">Overview</ore-tab-item>',
+      });
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-has-panels')).toBe(false);
+      expect(fixture.query('.panels')?.hasAttribute('hidden')).toBe(true);
+
+      fixture.element.insertAdjacentHTML(
+        'beforeend',
+        '<ore-tab-panel value="overview">Overview content</ore-tab-panel>',
+      );
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-has-panels')).toBe(true);
+      expect(fixture.query('.panels')?.hasAttribute('hidden')).toBe(false);
+    });
+
     it('propagates compact density to tab items', async () => {
       fixture = await mount('ore-tabs', { attrs: { density: 'compact', value: 'overview' }, html: htmlTabs });
       await fixture.flush();

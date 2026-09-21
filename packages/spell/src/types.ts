@@ -326,6 +326,25 @@ export type AnySchema<Output = unknown, Input = Output, Mode extends SchemaMode 
   Mode
 >;
 
+/**
+ * The synchronous parse capability every sync schema carries. UI adapters that accept
+ * `AnySchema` cannot call `safeParse` on it (the surface type omits it); type adapter
+ * parameters against this instead.
+ *
+ * The shape is structural, so an async-only schema is assignable to it; calling `safeParse`
+ * on one returns a failed `ParseResult` ("parse() cannot evaluate async checks"). When the
+ * schema's mode is not statically known, narrow with `InferSchemaMode` and use
+ * `safeParseAsync` for async members.
+ */
+export type SyncParsable<T = unknown> = { safeParse(value: unknown): ParseResult<T> };
+
+/**
+ * An issue path in either shape: spell-native `(string | number)[]` or the
+ * Standard Schema `(PropertyKey | { key })[]` format.
+ */
+export type IssuePathSegment = PropertyKey | { readonly key: PropertyKey };
+export type IssuePath = readonly IssuePathSegment[];
+
 /** Extracts a schema's parsing capability. */
 export type InferSchemaMode<T> = T extends { readonly [schemaMode]: infer Mode extends SchemaMode } ? Mode : never;
 

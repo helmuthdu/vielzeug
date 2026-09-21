@@ -114,11 +114,13 @@ define<OreTabsProps>(TABS_TAG, {
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const selectedValue = signal<string | undefined>(props.value.value);
+    const hasPanels = signal(false);
     const isManualActivation = () => props.activation.value === 'manual';
     const isVertical = () => props.orientation.value === 'vertical';
 
     bind({
       attr: {
+        'data-has-panels': () => (hasPanels.value ? '' : null),
         value: () => selectedValue.value ?? null,
       },
     });
@@ -315,24 +317,23 @@ define<OreTabsProps>(TABS_TAG, {
     // ────────────────────────────────────────────────────────────────
 
     onMounted(() => {
-      const syncSelection = () => {
+      const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
+      const panelsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])');
+      const sync = () => {
         ensureSelection();
+        hasPanels.value = panelsSlot?.assignedElements().some((child) => child.localName === 'ore-tab-panel') ?? false;
         updateIndicator();
       };
 
-      const tabsSlot = shadowRoot?.querySelector<HTMLSlotElement>('slot[name="tabs"]');
+      tabsSlot?.addEventListener('slotchange', sync);
+      panelsSlot?.addEventListener('slotchange', sync);
 
-      if (tabsSlot) {
-        tabsSlot.addEventListener('slotchange', syncSelection);
-      }
-
-      syncSelection();
-      requestAnimationFrame(syncSelection);
+      sync();
+      requestAnimationFrame(sync);
 
       return () => {
-        if (tabsSlot) {
-          tabsSlot.removeEventListener('slotchange', syncSelection);
-        }
+        tabsSlot?.removeEventListener('slotchange', sync);
+        panelsSlot?.removeEventListener('slotchange', sync);
       };
     });
 
@@ -348,7 +349,7 @@ define<OreTabsProps>(TABS_TAG, {
         </div>
         <div class="indicator" ref="${indicatorRef}" part="indicator"></div>
       </div>
-      <div class="panels" part="panels">
+      <div class="panels" part="panels" ?hidden="${() => !hasPanels.value}">
         <slot></slot>
       </div>
     `;

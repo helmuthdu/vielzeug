@@ -11,6 +11,7 @@ description: Reference for Spell schema builders, parsing, errors, context, and 
 | ------------------------ | ------------------------------- | ---------------------------------- | ------------------------------------------ |
 | `s`                      | Creates schemas                 | Sync or async, depending on checks | `checkAsync()` requires async parsing      |
 | `createParseContext()`   | Creates request-local messages  | Sync                               | Pass the context to each parse call        |
+| `joinIssuePath()`        | Flattens issue paths to UI keys | Sync                               | Empty or undefined paths join to `''`      |
 | `SpellValidationError`   | Provides validation issues      | Sync/async parse failures          | Use `safeParse()` for expected invalid data |
 
 ## Package Entry Point
@@ -78,6 +79,18 @@ schema.assert(value, label?);           // assertion
 ```
 
 `parse()`, `safeParse()`, `is()`, and `assert()` are available on synchronous schemas. Calling `checkAsync()` returns an async-only schema, where TypeScript exposes only `parseAsync()` and `safeParseAsync()`. That async-only mode propagates through compositional schemas when a child is asynchronous.
+
+UI adapters that accept `AnySchema` cannot call `safeParse()` on it — the structural surface type omits it. Type adapter parameters against `SyncParsable` instead:
+
+```ts
+import type { SyncParsable } from '@vielzeug/spell';
+
+function spellValidator(schema: SyncParsable<unknown>) {
+  const result = schema.safeParse(value); // types cleanly, no shim or cast
+}
+```
+
+The shape is structural, so an async-only schema is assignable to `SyncParsable`; calling `safeParse()` on one returns a failed result ("parse() cannot evaluate async checks"). When the mode is not statically known, narrow with `InferSchemaMode` and use `safeParseAsync()` for async members.
 
 ## Custom Checks
 
@@ -331,7 +344,18 @@ type JsonSchema = Record<string, unknown>;
 ```ts
 type FlatError = { messages: string[]; path: (string | number)[] };
 type FlatErrorFirst = { message: string; path: (string | number)[] };
+
+/** An issue path in either shape: spell-native segments or Standard Schema `{ key }` segments. */
+type IssuePathSegment = PropertyKey | { readonly key: PropertyKey };
+type IssuePath = readonly IssuePathSegment[];
+
+/** The synchronous parse surface; `AnySchema` omits `safeParse`, adapter parameters use this. */
+type SyncParsable<T = unknown> = { safeParse(value: unknown): ParseResult<T> };
+
+function joinIssuePath(path: IssuePath | undefined, separator?: string): string;
 ```
+
+`joinIssuePath()` flattens an issue path into a UI key such as `'permissions.0.slug'`. It accepts spell-native `(string | number)[]` paths and Standard Schema paths with `{ key }` segments, and returns `''` for empty or undefined paths.
 
 ## Errors
 

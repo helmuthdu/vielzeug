@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add normalize option, toPlainValues, and form.patch; ForgeConfigError now names the offending value path",
+      "packageName": "@vielzeug/forge",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

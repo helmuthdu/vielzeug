@@ -88,6 +88,7 @@ Before each minor release:
 | `ore-switch`       | `switch`                  | Space                             | `aria-checked`                                                        |
 | `ore-slider`       | `slider`                  | Arrow keys                        | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext`   |
 | `ore-rating`       | `radiogroup` + `radio`    | Arrow keys                        | `aria-label` per star                                                 |
+| `ore-counter`      | `group` + `spinbutton`    | Arrow keys, Home/End, Page Up/Down | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-live`        |
 | `ore-number-input` | `spinbutton`              | Arrow keys                        | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`                     |
 | `ore-otp-input`    | `group` of text inputs    | Arrow / Backspace / Tab           | `aria-label` per cell                                                 |
 | `ore-file-input`   | `button`-triggered native | Standard                          | `aria-label`                                                          |

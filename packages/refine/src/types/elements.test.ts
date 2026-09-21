@@ -32,6 +32,8 @@ describe('HTMLElementTagNameMap — form-associated element type coverage', () =
       'assistant' | 'system' | 'user' | undefined
     >();
     expectTypeOf<RefineElementMap['ore-command-palette']['open']>().toEqualTypeOf<boolean | undefined>();
+    expectTypeOf<RefineElementMap['ore-keyboard-key']['size']>().toEqualTypeOf<'lg' | 'sm' | undefined>();
+    expectTypeOf<RefineElementMap['ore-keyboard-shortcut']['pressed']>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<RefineElementMap['ore-list']['selectable']>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<RefineElementMap['ore-navigation-menu']['open']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-stats']['value']>().toEqualTypeOf<string | undefined>();

@@ -25,6 +25,38 @@ form.field('email').set('ada@example.com');
 form.field('profile').field('name').set('Ada');
 ```
 
+`patch()` shallow-merges top-level keys without the cast a spread `set()` needs:
+
+```ts
+form.patch({ email: 'ada@example.com' }); // siblings keep their values
+```
+
+## Hold domain-model classes
+
+Forge values must be plain JSON-safe data. When your app stores class instances (models, DTOs with behavior), pass `normalize: toPlainValues` once at `createForm`; it runs before validation at every write boundary — init, `set`, `patch`, `reset`, and nested `field().set` — so a reset with fresh models behaves like init.
+
+```ts
+import { createForm, toPlainValues } from '@vielzeug/forge';
+
+class ProviderUserModel {
+  id: number;
+  email = '';
+  constructor(id: number) { this.id = id; }
+}
+
+const form = createForm<{ users: ProviderUserModel[] }>({
+  initialValues: { users: [new ProviderUserModel(1)] },
+  normalize: toPlainValues,
+});
+
+form.field('users').field(0).set(new ProviderUserModel(2)); // flattened like init
+form.reset({ users: [new ProviderUserModel(3)] });          // flattened like init
+// Rebuild models at submit:
+await form.submit((values) => send(values.users.map((u) => new ProviderUserModel(u.id))));
+```
+
+Without `normalize`, a rejected write throws `ForgeConfigError` naming the offending path (for example `list[0]`).
+
 ## Validate explicitly
 
 Validators return a flat issue list. Forge does not choose blur/change/submit policy for the application.
@@ -137,6 +169,8 @@ export function useFormState<T extends Record<string, unknown>>(form: Form<T>) {
   return useSyncExternalStore(form.subscribe, () => form.state, () => form.state);
 }
 ```
+
+When the component is the form's sole owner, create it in a ref and skip explicit disposal — writes on a disposed form throw `ForgeDisposedError`, which is what a StrictMode double-mount hits when effect cleanup disposes a ref-held form that survives the remount. Garbage collection reclaims a sole-subscriber form; dispose explicitly only when external subscribers or in-flight work need teardown.
 
 ```ts [Vue]
 import { onUnmounted, shallowRef } from 'vue';

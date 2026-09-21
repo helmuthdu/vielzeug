@@ -16,6 +16,8 @@ export type {
   OreComboboxProps,
 } from './combobox/combobox';
 export { COMBOBOX_OPTION_TAG, COMBOBOX_TAG } from './combobox/combobox';
+export type { OreCounterChangeDetail, OreCounterEvents, OreCounterProps } from './counter/counter';
+export { COUNTER_TAG } from './counter/counter';
 export type {
   DataGridColumn,
   DataGridLabels,
@@ -37,6 +39,13 @@ export type { OreNumberInputEvents, OreNumberInputProps } from './number-input/n
 export { NUMBER_INPUT_TAG } from './number-input/number-input';
 export type { OreOtpInputEvents, OreOtpInputProps } from './otp-input/otp-input';
 export { OTP_INPUT_TAG } from './otp-input/otp-input';
+export type {
+  OreQrScannerEvents,
+  OreQrScannerProps,
+  OreQrScannerStatus,
+  QrScannerFactory,
+} from './qr-scanner/qr-scanner';
+export { QR_SCANNER_TAG } from './qr-scanner/qr-scanner';
 export type { OreRadioEvents, OreRadioProps } from './radio/radio';
 export { RADIO_TAG } from './radio/radio';
 export type { OreRadioGroupEvents, OreRadioGroupProps } from './radio-group/radio-group';

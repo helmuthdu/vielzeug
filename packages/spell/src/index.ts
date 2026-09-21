@@ -7,6 +7,8 @@ export type {
   InferInput,
   InferOutput,
   Issue,
+  IssuePath,
+  IssuePathSegment,
   JsonSchema,
   MessageFn,
   Messages,
@@ -15,8 +17,9 @@ export type {
   SchemaDescriptor,
   SchemaWalker,
   StandardSchemaV1,
+  SyncParsable,
   ValidateResult,
 } from './core';
-export { ErrorCode, Schema, SpellDefinitionError, SpellError, SpellValidationError } from './core';
+export { ErrorCode, joinIssuePath, Schema, SpellDefinitionError, SpellError, SpellValidationError } from './core';
 export { createParseContext, type DeepPartial } from './messages';
 export { s } from './s';

@@ -1,4 +1,4 @@
-import type { ErrorCode, Issue, MessageFn } from './types';
+import type { ErrorCode, Issue, IssuePath, MessageFn } from './types';
 
 /* -------------------- Helpers -------------------- */
 
@@ -21,6 +21,22 @@ export function resolveMessage<Ctx extends Record<string, unknown>>(msg: Message
 
 export function prependIssuePath(issues: Issue[], prefix: string | number): Issue[] {
   return issues.map((issue) => ({ ...issue, path: [prefix, ...issue.path] }));
+}
+
+/**
+ * Flattens an issue path into a UI key such as `'permissions.0.slug'`. Handles spell-native
+ * `(string | number)[]` paths and Standard Schema paths with `{ key }` segments; empty or
+ * undefined paths join to `''`.
+ */
+export function joinIssuePath(path: IssuePath | undefined, separator = '.'): string {
+  if (!path || path.length === 0) return '';
+
+  return path
+    .map((segment) => {
+      if (typeof segment === 'object' && segment !== null && 'key' in segment) return String(segment.key);
+      return String(segment);
+    })
+    .join(separator);
 }
 
 /* -------------------- SpellError -------------------- */

@@ -2,6 +2,7 @@ import { createKeymap } from '@vielzeug/keymap';
 import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
+import '../../content/keyboard-key/keyboard-key';
 import { announce, createListControl, lifecycleSignal } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
@@ -344,7 +345,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
                                 <span class="item-shortcut">
                                   ${splitShortcutKeys(row.item.shortcut).map(
                                     (key) => html`
-                                      <kbd>${key}</kbd>
+                                      <ore-keyboard-key>${key}</ore-keyboard-key>
                                     `,
                                   )}
                                 </span>
@@ -357,16 +358,16 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
           </div>
           <div class="footer" part="footer">
             <span class="footer-hint">
-              <kbd>↑</kbd>
-              <kbd>↓</kbd>
+              <ore-keyboard-key>↑</ore-keyboard-key>
+              <ore-keyboard-key>↓</ore-keyboard-key>
               Navigate
             </span>
             <span class="footer-hint">
-              <kbd>Enter</kbd>
+              <ore-keyboard-key>Enter</ore-keyboard-key>
               Select
             </span>
             <span class="footer-hint">
-              <kbd>Esc</kbd>
+              <ore-keyboard-key>Esc</ore-keyboard-key>
               Close
             </span>
           </div>

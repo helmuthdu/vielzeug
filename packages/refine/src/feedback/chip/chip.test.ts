@@ -82,6 +82,18 @@ describe('ore-chip', () => {
 
       expect(fixture.element.getAttribute('value')).toBe('tag-1');
     });
+
+    it('defaults layout to inline and reflects stacked', async () => {
+      fixture = await mount('ore-chip');
+
+      expect(fixture.element.getAttribute('layout')).toBe('inline');
+
+      await fixture.attr('layout', 'stacked');
+      expect(fixture.element.getAttribute('layout')).toBe('stacked');
+
+      await fixture.attr('layout', 'bogus');
+      expect(fixture.element.getAttribute('layout')).toBe('inline');
+    });
   });
 
   describe('Removable Mode', () => {

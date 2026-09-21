@@ -14,7 +14,8 @@
   "files": [
     "data",
     "dist",
-    "mcp-setup.json"
+    "mcp-setup.json",
+    "skills"
   ],
   "types": "./dist/index.d.ts",
   "exports": {

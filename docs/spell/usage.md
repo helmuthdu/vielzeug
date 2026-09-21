@@ -277,7 +277,39 @@ if (!result.success && result.error instanceof SpellValidationError) {
 }
 ```
 
+Key inline errors by dot-path with `joinIssuePath()`, which also unwraps Standard Schema `{ key }` segments:
+
+```ts
+import { joinIssuePath } from '@vielzeug/spell';
+
+for (const issue of result.error.issues) {
+  console.log(joinIssuePath(issue.path), issue.message); // 'profile.name: ...'
+}
+```
+
 Union failures produce one stable `invalid_union` issue. Use `s.discriminatedUnion()` when a discriminator can identify the intended object branch and provide field-specific errors.
+
+## Validating synchronously in React
+
+Adapters that validate inside a render or `validate` callback need the sync parse surface. `AnySchema` does not expose `safeParse`; type the adapter parameter against `SyncParsable` instead:
+
+```ts
+import { type SyncParsable } from '@vielzeug/spell';
+
+function spellValidator(schema: SyncParsable<unknown>) {
+  return (values: unknown) => {
+    const result = schema.safeParse(values);
+    if (result.success) return undefined;
+
+    return result.error.issues.map((issue) => ({
+      message: issue.message,
+      path: issue.path,
+    }));
+  };
+}
+
+spellValidator(s.object({ email: s.string() })); // no shim or cast
+```
 
 ## Schema Traversal with walk()
 

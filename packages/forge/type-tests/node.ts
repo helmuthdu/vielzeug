@@ -15,12 +15,19 @@ const mutableDateMethod: MutableDateMethod = false;
 const form = createForm({ initialValues: { profile: { name: 'Ada' } } });
 const name: string = form.value.profile.name;
 
+const patchForm = createForm<{ count: number; name: string }>({ initialValues: { count: 1, name: 'Ada' } });
+patchForm.patch({ count: 1 });
+patchForm.patch((previous) => ({ name: previous.name.toUpperCase() }));
+// @ts-expect-error patch keys must exist on TValues
+patchForm.patch({ nope: 1 });
+
 void bindField;
 void form;
 void loadForm;
 void mutableDateMethod;
 void name;
 void nestedReadonly;
+void patchForm;
 void saveForm;
 void schemaValidator;
 void toFormData;

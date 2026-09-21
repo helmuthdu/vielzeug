@@ -154,6 +154,19 @@ describe('ore-button', () => {
     });
   });
 
+  describe('Documented CSS overrides', () => {
+    // The size presets only set private `--_*` vars, so the public overrides from the JSDoc
+    // (`--button-padding`, `--button-gap`, `--button-font-size`) must sit in front of them.
+    it('reads --button-padding, --button-gap and --button-font-size ahead of the size presets', () => {
+      const match = buttonCss.match(/\[part='button'\]\s*{([^}]*)}/);
+
+      expect(match).not.toBeNull();
+      expect(match?.[1]).toContain('padding: var(--button-padding, var(--_padding,');
+      expect(match?.[1]).toContain('gap: var(--button-gap, var(--_gap,');
+      expect(match?.[1]).toContain('font-size: var(--button-font-size, var(--_font-size,');
+    });
+  });
+
   describe('Disabled state', () => {
     it('does not fire click when disabled', async () => {
       fixture = await mount('ore-button', { attrs: { disabled: '' } });

@@ -9,12 +9,13 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 1. Inspect the worktree and preserve changes you did not make.
 2. Pick the smallest skill that fits (clients with skill support load it automatically; otherwise read the file):
 
-| Situation                                      | Skill                              |
-| ---------------------------------------------- | ---------------------------------- |
-| Change code, tests, tooling, or CI             | `.agents/skills/build/SKILL.md`    |
-| Investigate, audit, plan, or redesign          | `.agents/skills/review/SKILL.md`   |
-| Update docs, README, recipes, or REPL examples | `.agents/skills/document/SKILL.md` |
-| Prepare releases, commits, or pull requests    | `.agents/skills/release/SKILL.md`  |
+| Situation                                              | Skill                              |
+| ------------------------------------------------------ | ---------------------------------- |
+| Change code, tests, tooling, or CI                     | `.agents/skills/build/SKILL.md`    |
+| Investigate, audit, plan, or redesign                  | `.agents/skills/review/SKILL.md`   |
+| Update docs, README, recipes, or REPL examples         | `.agents/skills/document/SKILL.md` |
+| Prepare releases, commits, or pull requests            | `.agents/skills/release/SKILL.md`  |
+| Consume `@vielzeug/*` packages (demos, Refine UI work) | `.agents/skills/vielzeug/SKILL.md` |
 
 3. Load the files in the skill's `Load` section. Load `.agents/conventions.md` before editing package source.
 4. Read the nearest subtree `AGENTS.md` before editing inside it (see the index at the end).
@@ -38,6 +39,8 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 - Prefer the smallest task that fits the work, direct code reading over speculation, and simple architecture over configurable architecture.
 - Prefer deleting obsolete patterns to wrapping them.
 - Treat demos as first-party integration harnesses. When a demo exposes a library gap, fix the owning package instead of adding a demo-only workaround, then cover both.
+- Demo UI MUST favor existing `@vielzeug/refine` components over custom composite controls. When Refine lacks the required primitive or behavior, improve or add it in `packages/refine` with tests and documentation before consuming it from a demo; use native elements only for document semantics that do not duplicate a Refine component.
+- Every UI change that consumes Refine MUST use Refine design tokens and component variables for spacing, dimensions, typography, radii, colors, borders, shadows, and motion instead of hardcoded or magic values. Use a hardcoded value only when no suitable token exists and the value is an intrinsic technical constraint; make that reason evident in the implementation.
 - Treat the monorepo as one owned system: propagate changes across packages, demos, tests, and docs when required for correctness and coherence.
 - When valid approaches conflict, choose one definitive design favoring lower coupling, fewer moving parts, explicit behavior, and idiomatic TypeScript. Do not ship parallel alternatives unless explicitly required.
 - Scale effort to the change. A one-function fix does not need every review pass, but scaling down never skips an approval gate, a required validation, or a fix for a confirmed security finding.
@@ -107,7 +110,7 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 ### `.agents/` contents
 
 - `conventions.md` — engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout.
-- `skills/<name>/SKILL.md` — task skills (`build`, `review`, `document`, `release`).
+- `skills/<name>/SKILL.md` — task skills (`build`, `review`, `document`, `release`); `skills/vielzeug` is a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`) — edit it there, and load it with `build` when working inside `demos/`.
 - `reference/packages.md` — generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md` — hand-curated, shared by skills.
 
 Every `.agents/...` path mentioned anywhere in the repo must resolve; `pnpm check:ai-data` fails on a dangling reference.

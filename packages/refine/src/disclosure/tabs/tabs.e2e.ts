@@ -53,6 +53,81 @@ test.describe('Layout', () => {
     await page.locator('#compact ore-tab-item[value="two"]').click();
     await expect(page.locator('#compact')).toHaveAttribute('value', 'two');
   });
+
+  test('navigation-only tabs do not reserve panel space', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="navigation" value="campaign" variant="frost">' +
+        '<ore-tab-item slot="tabs" value="campaign">Campaign</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="party">Party</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const geometry = await page.locator('#navigation').evaluate((tabs) => {
+      const host = tabs.getBoundingClientRect();
+      const tablist = tabs.shadowRoot!.querySelector<HTMLElement>('.tablist-wrapper')!.getBoundingClientRect();
+      const panels = tabs.shadowRoot!.querySelector<HTMLElement>('.panels')!;
+      return {
+        hostHeight: host.height,
+        panelDisplay: getComputedStyle(panels).display,
+        panelsHidden: panels.hidden,
+        tablistHeight: tablist.height,
+      };
+    });
+
+    expect(geometry.panelsHidden).toBe(true);
+    expect(geometry.panelDisplay).toBe('none');
+    expect(geometry.hostHeight).toBeCloseTo(geometry.tablistHeight, 1);
+  });
+
+  test('navigation-only tabs shrink to their tablist width and grow with tab count', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="two" value="one" variant="frost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="five" value="one" variant="frost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="three">Members</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="four">Billing</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="five">Activity</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const widths = await page.evaluate(() => {
+      const measure = (id: string) => {
+        const host = document.getElementById(id)!;
+        const tablist = host.shadowRoot!.querySelector<HTMLElement>('[role="tablist"]')!;
+
+        return { host: host.getBoundingClientRect().width, tablist: tablist.getBoundingClientRect().width };
+      };
+
+      return { five: measure('five'), frame: document.querySelector('.frame')!.clientWidth, two: measure('two') };
+    });
+
+    expect(widths.two.host).toBeCloseTo(widths.two.tablist, 0);
+    expect(widths.five.host).toBeCloseTo(widths.five.tablist, 0);
+    expect(widths.five.host).toBeGreaterThan(widths.two.host);
+    expect(widths.two.host).toBeLessThan(widths.frame);
+  });
+
+  test('tabs with panels keep filling the container width', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="tabbed" value="one" variant="frost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '<ore-tab-panel value="one"><p>Overview content</p></ore-tab-panel>' +
+        '<ore-tab-panel value="two"><p>Settings content</p></ore-tab-panel>' +
+        '</ore-tabs>',
+    );
+
+    const widths = await page.evaluate(() => ({
+      frame: document.querySelector('.frame')!.clientWidth,
+      host: document.getElementById('tabbed')!.getBoundingClientRect().width,
+    }));
+
+    expect(widths.host).toBeCloseTo(widths.frame, 0);
+  });
 });
 
 test.describe('Interaction', () => {

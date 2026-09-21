@@ -113,6 +113,7 @@ const heroPackages = [
   { cmd: 'pnpm add @vielzeug/keymap', id: 'keymap', name: 'keymap', tagline: 'Keyboard shortcuts & chords' },
   { cmd: 'pnpm add @vielzeug/ledger', id: 'ledger', name: 'ledger', tagline: 'Async undo / redo history' },
   { cmd: 'pnpm add @vielzeug/lingua', id: 'lingua', name: 'lingua', tagline: 'i18n & pluralization' },
+  { cmd: 'pnpm add @vielzeug/mesh', id: 'mesh', name: 'mesh', tagline: 'Backendless P2P sessions' },
   {
     cmd: 'pnpm add @vielzeug/necromancer',
     id: 'necromancer',
@@ -131,6 +132,7 @@ const heroPackages = [
   { cmd: 'pnpm add @vielzeug/scout', id: 'scout', name: 'scout', tagline: 'Trigram fuzzy search' },
   { cmd: 'pnpm add @vielzeug/scroll', id: 'scroll', name: 'scroll', tagline: 'Virtual lists' },
   { cmd: 'pnpm add @vielzeug/sentinel', id: 'sentinel', name: 'sentinel', tagline: 'Reactive environment state' },
+  { cmd: 'pnpm add @vielzeug/sigil', id: 'sigil', name: 'sigil', tagline: 'QR generation & scanning' },
   { cmd: 'pnpm add @vielzeug/sourcerer', id: 'sourcerer', name: 'sourcerer', tagline: 'Reactive data sources' },
   { cmd: 'pnpm add @vielzeug/spell', id: 'spell', name: 'spell', tagline: 'Schema validation' },
   { cmd: 'pnpm add @vielzeug/tempo', id: 'tempo', name: 'tempo', tagline: 'Date & time' },

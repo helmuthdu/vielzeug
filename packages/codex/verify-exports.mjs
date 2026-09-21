@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 
-for (const file of ['dist/index.d.ts', 'dist/advanced.d.ts', 'dist/refine.d.ts']) {
-  if (!existsSync(file)) throw new Error(`missing declaration: ${file}`);
+for (const file of ['dist/index.d.ts', 'dist/advanced.d.ts', 'dist/refine.d.ts', 'skills/vielzeug/SKILL.md']) {
+  if (!existsSync(file)) throw new Error(`missing packaged file: ${file}`);
 }
 
 const root = await import('./dist/index.js');

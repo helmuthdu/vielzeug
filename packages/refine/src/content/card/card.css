@@ -23,7 +23,6 @@
     color: var(--_color);
     background: var(--_bg);
     border-radius: var(--_radius);
-    backdrop-filter: blur(var(--blur-md));
     transition:
       box-shadow var(--transition-normal),
       transform var(--transition-normal),
@@ -173,7 +172,7 @@
 
   :host([interactive]:not([disabled]):hover) .card {
     box-shadow: var(--_hover-shadow);
-    transform: translateY(-2px) scale(1.01);
+    transform: translateY(-2px);
   }
 
   :host([interactive]) .card {

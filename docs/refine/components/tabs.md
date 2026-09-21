@@ -298,6 +298,18 @@ Use the `prefix` and `suffix` slots on `ore-tab-item` to add icons or notificati
 
 ## States
 
+### Navigation-only Tabs
+
+`ore-tab-panel` children are optional. When tabs are used only as a navigation control, omit the panels; the component removes the empty panel region and shrink-wraps to the tablist instead of stretching to the container width. Set `width: 100%` on the element to fill the container anyway.
+
+```html
+<ore-tabs value="campaign" variant="frost" label="Campaign destinations">
+  <ore-tab-item slot="tabs" value="campaign">Campaign</ore-tab-item>
+  <ore-tab-item slot="tabs" value="party">Party</ore-tab-item>
+  <ore-tab-item slot="tabs" value="overview">Overview</ore-tab-item>
+</ore-tabs>
+```
+
 ### Lazy Panels
 
 Add `lazy` to a `ore-tab-panel` to defer rendering its slot content until the tab is first activated. Once activated, the content stays rendered even if the tab is later switched away. This is useful for panels containing expensive components or data-fetching logic.

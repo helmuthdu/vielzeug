@@ -69,6 +69,54 @@ describe('ore-progress', () => {
     });
   });
 
+  describe('Segments', () => {
+    it('renders discrete blocks and fills them up to value / max', async () => {
+      fixture = await mount('ore-progress', { attrs: { max: '6', segments: '6', value: '2' } });
+
+      const blocks = fixture.queryAll<HTMLElement>('[part="segment"]');
+
+      expect(blocks).toHaveLength(6);
+      expect(blocks.filter((b) => b.hasAttribute('data-filled'))).toHaveLength(2);
+      expect(fixture.query('[part="fill"]')).toBeNull();
+      expect(fixture.query('.track')?.classList.contains('track-segmented')).toBe(true);
+    });
+
+    it('rounds partial progress to the nearest block and follows value changes', async () => {
+      fixture = await mount('ore-progress', { attrs: { max: '100', segments: '4', value: '60' } });
+
+      const filled = () => fixture.queryAll<HTMLElement>('[part="segment"][data-filled]').length;
+
+      expect(filled()).toBe(2);
+
+      fixture.element.setAttribute('value', '100');
+      await fixture.flush();
+      expect(filled()).toBe(4);
+    });
+
+    it('keeps the continuous fill when segments is 0, indeterminate or vertical', async () => {
+      fixture = await mount('ore-progress', { attrs: { segments: '0', value: '40' } });
+      expect(fixture.query('[part="fill"]')).not.toBeNull();
+      fixture.dispose();
+
+      fixture = await mount('ore-progress', { attrs: { indeterminate: true, segments: '5' } });
+      expect(fixture.query('[part="segment"]')).toBeNull();
+      fixture.dispose();
+
+      fixture = await mount('ore-progress', { attrs: { segments: '5', type: 'vertical', value: '40' } });
+      expect(fixture.query('[part="segment"]')).toBeNull();
+      expect(fixture.query('[part="fill"]')).not.toBeNull();
+    });
+
+    it('keeps progressbar semantics on the segmented track', async () => {
+      fixture = await mount('ore-progress', { attrs: { label: 'Struggle', max: '6', segments: '6', value: '3' } });
+
+      const track = fixture.query('[role="progressbar"]');
+
+      expect(track?.getAttribute('aria-valuenow')).toBe('3');
+      expect(track?.getAttribute('aria-valuemax')).toBe('6');
+    });
+  });
+
   describe('Accessibility', () => {
     it('exposes valuemin and valuemax attributes', async () => {
       fixture = await mount('ore-progress', { attrs: { max: '200', value: '40' } });

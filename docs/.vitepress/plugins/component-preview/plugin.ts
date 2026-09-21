@@ -43,12 +43,13 @@ const temporalUmd = resolve(dirname(req.resolve('@js-temporal/polyfill')), '../d
 const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide.js');
 
 // Load order: each entry must appear after its own dependencies.
-// Temporal → Ripple → Sentinel(Ripple) → Arsenal → Focus → Gesture → Keymap → Ore(Ripple)
+// Temporal → Ripple → Sentinel(Ripple) → Sigil → Arsenal → Focus → Gesture → Keymap → Ore(Ripple)
 // → Orbit(Arsenal) → Prism(Ripple,Orbit) → Tempo(Temporal) → Dnd → Lucide
 const depPaths = [
   temporalUmd,
   resolve(pkgDir, 'ripple/dist/ripple.iife.js'),
   resolve(pkgDir, 'sentinel/dist/sentinel.iife.js'),
+  resolve(pkgDir, 'sigil/dist/sigil.iife.js'),
   resolve(pkgDir, 'arsenal/dist/arsenal.iife.js'),
   resolve(pkgDir, 'focus/dist/focus.iife.js'),
   resolve(pkgDir, 'gesture/dist/gesture.iife.js'),

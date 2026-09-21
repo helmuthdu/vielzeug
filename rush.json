@@ -233,6 +233,18 @@
       "projectFolder": "packages/necromancer",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/mesh",
+      "projectFolder": "packages/mesh",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/sigil",
+      "projectFolder": "packages/sigil",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

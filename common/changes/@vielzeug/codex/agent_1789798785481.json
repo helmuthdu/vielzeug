@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Ship the vielzeug agent skill and add `codex skills install` to copy it into a project's skills directory",
+      "packageName": "@vielzeug/codex",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

@@ -34,6 +34,7 @@ exports:
     ore-command-palette,
     ore-command-palette-item,
     ore-copy-command,
+    ore-counter,
     ore-datagrid,
     ore-date-picker,
     ore-dialog,
@@ -43,6 +44,8 @@ exports:
     ore-grid-item,
     ore-icon,
     ore-input,
+    ore-keyboard-key,
+    ore-keyboard-shortcut,
     ore-list,
     ore-list-item,
     ore-marquee,
@@ -61,6 +64,8 @@ exports:
     ore-password-strength,
     ore-popover,
     ore-progress,
+    ore-qr-code,
+    ore-qr-scanner,
     ore-radio,
     ore-radio-group,
     ore-rating,
@@ -214,13 +219,13 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 ### Components
 
-**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-separator`, `ore-stats`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
+**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-keyboard-key`, `ore-keyboard-shortcut`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-qr-code`, `ore-separator`, `ore-stats`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
 
 **Disclosure:** `ore-accordion`, `ore-accordion-item`, `ore-tabs`, `ore-tab-item`, `ore-tab-panel`
 
 **Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`, `ore-typing-indicator`
 
-**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
+**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
 **Layout:** `ore-box`, `ore-grid`, `ore-grid-item`, `ore-navbar`, `ore-sidebar`
 

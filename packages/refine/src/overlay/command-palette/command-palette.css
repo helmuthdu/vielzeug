@@ -252,17 +252,6 @@
     gap: var(--size-1);
   }
 
-  .item-shortcut kbd {
-    padding: var(--size-0-5) var(--size-1-5);
-    font-family: var(--font-mono, monospace);
-    font-size: var(--text-xs);
-    color: var(--color-contrast-500);
-    background: var(--color-contrast-100);
-    border: var(--border) solid var(--color-contrast-200);
-    border-bottom-width: calc(var(--border) + 1px);
-    border-radius: var(--rounded-sm);
-  }
-
   /* =====================
        Footer hints
        ===================== */
@@ -284,14 +273,9 @@
     align-items: center;
   }
 
-  .footer kbd {
-    padding: var(--size-0-5) var(--size-1);
-    font-family: inherit;
-    font-size: var(--text-xs);
-    background: var(--color-contrast-100);
-    border: var(--border) solid var(--color-contrast-200);
-    border-bottom-width: calc(var(--border) + 1px);
-    border-radius: var(--rounded-sm);
+  .footer ore-keyboard-key {
+    --keyboard-key-font-family: inherit;
+    --keyboard-key-padding-inline: var(--size-1);
   }
 
   /* Slotted item elements are pure data nodes — never rendered directly. */

@@ -21,6 +21,8 @@ export type { OreCopyCommandEvents, OreCopyCommandProps } from './copy-command/c
 export { COPY_COMMAND_TAG } from './copy-command/copy-command';
 export type { IconNode, OreIconProps } from './icon/icon';
 export { ICON_TAG, registerIcons } from './icon/icon';
+export type { KeyboardKeySize, OreKeyboardKeyProps, OreKeyboardShortcutProps } from './keyboard-key/keyboard-key';
+export { KEYBOARD_KEY_TAG, KEYBOARD_SHORTCUT_TAG } from './keyboard-key/keyboard-key';
 export type { ListContext, ListVariant, OreListEvents, OreListProps } from './list/list';
 export { LIST_CTX, LIST_TAG } from './list/list';
 export type { ListItemRevealSide, OreListItemEvents, OreListItemProps } from './list/list-item';
@@ -29,6 +31,8 @@ export type { MarqueeDirection, OreMarqueeProps } from './marquee/marquee';
 export { MARQUEE_TAG } from './marquee/marquee';
 export type { OrePaginationEvents, OrePaginationProps } from './pagination/pagination';
 export { PAGINATION_TAG } from './pagination/pagination';
+export type { OreQrCodeEvents, OreQrCodeProps } from './qr-code/qr-code';
+export { QR_CODE_TAG } from './qr-code/qr-code';
 export type { OreSeparatorProps } from './separator/separator';
 export { SEPARATOR_TAG } from './separator/separator';
 export type { OreStatsProps, StatsTrendDirection, StatsVariant } from './stats/stats';

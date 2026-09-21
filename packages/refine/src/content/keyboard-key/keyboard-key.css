@@ -1,0 +1,84 @@
+@layer refine.base {
+  :host {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  .key {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--keyboard-key-padding-block, var(--size-0-5)) var(--keyboard-key-padding-inline, var(--size-1-5));
+    font-family: var(--keyboard-key-font-family, var(--font-mono, monospace));
+    font-size: var(--keyboard-key-font-size, var(--text-xs));
+    font-weight: var(--keyboard-key-font-weight, inherit);
+    line-height: var(--leading-normal);
+    color: var(--keyboard-key-color, var(--color-contrast-500));
+    white-space: nowrap;
+    background: var(--keyboard-key-bg, var(--color-contrast-100));
+    border: var(--border) solid var(--keyboard-key-border-color, var(--color-contrast-200));
+    border-block-end-width: calc(var(--border) + 1px);
+    border-radius: var(--keyboard-key-radius, var(--rounded-sm));
+    box-shadow: var(--keyboard-key-shadow, none);
+    transition:
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  .symbol[hidden] {
+    display: none;
+  }
+}
+
+@layer refine.sizes {
+  :host([size='lg']) .key {
+    position: relative;
+    min-width: var(--keyboard-key-min-width, var(--size-16));
+    min-height: var(--keyboard-key-min-height, var(--size-16));
+    padding: var(--keyboard-key-padding-block, var(--size-3)) var(--keyboard-key-padding-inline, var(--size-4));
+    font-family: var(--keyboard-key-font-family, var(--font-sans));
+    font-size: var(--keyboard-key-font-size, var(--text-2xl));
+    font-weight: var(--keyboard-key-font-weight, var(--font-medium));
+    color: var(--keyboard-key-color, var(--color-contrast-700));
+    background: var(--keyboard-key-bg, var(--color-contrast-50));
+    border-color: var(--keyboard-key-border-color, var(--color-contrast-300));
+    border-block-end-width: var(--size-1);
+    border-radius: var(--keyboard-key-radius, var(--rounded-md));
+    box-shadow: var(--keyboard-key-shadow, var(--shadow-xs));
+  }
+
+  :host([size='lg']) .key[data-has-symbol] {
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding-block-start: var(--size-6);
+  }
+
+  :host([size='lg']) .symbol {
+    position: absolute;
+    inset-block-start: var(--size-2);
+    inset-inline-end: var(--size-2-5);
+    font-size: var(--text-sm);
+    color: var(--keyboard-key-symbol-color, var(--color-contrast-500));
+  }
+
+  :host([size='lg']) .key[data-has-symbol] .label {
+    font-size: var(--text-md);
+  }
+}
+
+@layer refine.states {
+  .key[data-pressed] {
+    box-shadow:
+      0 0 0 var(--size-2) var(--keyboard-key-pressed-ring-color, var(--color-contrast-200)),
+      var(--keyboard-key-shadow, none);
+    transform: translateY(var(--border-2));
+  }
+
+  :host([size='lg']) .key[data-pressed] {
+    border-block-end-width: var(--border);
+    box-shadow:
+      0 0 0 var(--size-2) var(--keyboard-key-pressed-ring-color, var(--color-contrast-200)),
+      var(--keyboard-key-shadow, var(--shadow-xs));
+  }
+}

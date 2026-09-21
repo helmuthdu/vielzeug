@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Keeps the derived parts of the agent contract in sync with their sources:
-//   - .agents/reference/packages.md  ← packages/*/package.json (name, description, graph)
+//   - .agents/reference/packages.md            ← packages/*/package.json (name, description, graph)
+//   - packages/codex/skills/vielzeug/SKILL.md  ← same manifests (flat package list for consumers)
 // and validates that every `.agents/...` path referenced anywhere in the repo resolves to a
 // real file — see "Reference integrity" below. There is deliberately no curated JSON layer:
 // package facts live in manifests and task procedures live as skills.
@@ -49,6 +50,31 @@ export function patchPackagesReference(source, packages) {
     '<!-- GENERATED:packages-table:BEGIN -->',
     '<!-- GENERATED:packages-table:END -->',
     renderPackagesTable(packages),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Consumer skill — the `vielzeug` skill shipped inside @vielzeug/codex carries a flat
+// "what exists" list so agents in downstream projects can map a need to a package even
+// without the MCP server. Tooling-only packages are excluded (codex is the server itself).
+// ---------------------------------------------------------------------------
+
+export const SKILL_PATH = 'packages/codex/skills/vielzeug/SKILL.md';
+const SKILL_EXCLUDED_SLUGS = new Set(['codex']);
+
+export function renderSkillPackages(packages) {
+  return packages
+    .filter((pkg) => !SKILL_EXCLUDED_SLUGS.has(pkg.slug))
+    .map((pkg) => `- \`${pkg.name}\` — ${pkg.description || '—'}`)
+    .join('\n');
+}
+
+export function patchSkillPackages(source, packages) {
+  return replaceBetweenMarkers(
+    source,
+    '<!-- GENERATED:skill-packages:BEGIN -->',
+    '<!-- GENERATED:skill-packages:END -->',
+    renderSkillPackages(packages),
   );
 }
 
@@ -136,6 +162,9 @@ export async function main({ check = false } = {}) {
   const packagesReferencePath = path.join(ROOT, '.agents/reference/packages.md');
   const packagesReference = readFileSync(packagesReferencePath, 'utf8');
   syncFile('.agents/reference/packages.md', patchPackagesReference(packagesReference, packages), { check, onStale });
+
+  const skill = readFileSync(path.join(ROOT, SKILL_PATH), 'utf8');
+  syncFile(SKILL_PATH, patchSkillPackages(skill, packages), { check, onStale });
 
   const referenceSources = collectAiReferenceSources();
   const fileContents = Object.fromEntries(

@@ -11,6 +11,12 @@ npx -y @vielzeug/codex --port=3100
 
 Stdio is default. HTTP uses Streamable HTTP on `127.0.0.1`; health endpoint: `http://127.0.0.1:3100/health`.
 
+Install the bundled `vielzeug` agent skill into a project (autodetects `.agents/skills`, `.github/skills`, or `.claude/skills`):
+
+```sh
+npx -y @vielzeug/codex skills install
+```
+
 ## Quick Start
 
 ```ts

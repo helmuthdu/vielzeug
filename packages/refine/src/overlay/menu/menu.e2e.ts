@@ -74,3 +74,40 @@ test.describe('Interaction', () => {
     expect(panel.top).toBeGreaterThanOrEqual(0);
   });
 });
+
+test.describe('Layout', () => {
+  test('positions against its trigger inside a clipping card', async ({ page, refinePage }) => {
+    const errors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(message.text());
+    });
+    await refinePage.mountComponent(
+      '<ore-card style="width:480px;margin-left:240px"><ore-menu id="menu" placement="bottom-end">' +
+        '<ore-button id="trigger" slot="trigger">More</ore-button>' +
+        '<ore-menu-item value="rename">Rename</ore-menu-item>' +
+        '<ore-menu-item value="delete">Delete</ore-menu-item>' +
+        '</ore-menu></ore-card>',
+    );
+
+    await page.locator('#trigger').click();
+    await page.waitForTimeout(100);
+    const geometry = await page.locator('#menu').evaluate((menu) => {
+      const card = menu
+        .closest('ore-card')!
+        .shadowRoot!.querySelector<HTMLElement>('[part="card"]')!
+        .getBoundingClientRect();
+      const trigger = menu.querySelector<HTMLElement>('#trigger')!.getBoundingClientRect();
+      const panel = menu.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!.getBoundingClientRect();
+      return {
+        cardBottom: card.bottom,
+        panelBottom: panel.bottom,
+        panelRight: panel.right,
+        triggerRight: trigger.right,
+      };
+    });
+
+    expect(geometry.panelRight).toBeCloseTo(geometry.triggerRight, 0);
+    expect(geometry.panelBottom).toBeGreaterThan(geometry.cardBottom);
+    expect(errors).toEqual([]);
+  });
+});

@@ -1,0 +1,193 @@
+@layer refine.base {
+  :host {
+    --_bg: var(--counter-bg, var(--color-contrast-100));
+    --_border-color: var(--counter-border-color, var(--color-divider));
+    --_radius: var(--counter-radius, var(--rounded-lg));
+    --_gap: var(--counter-gap, var(--size-3));
+    --_button-size: var(--counter-button-size, var(--size-11));
+    --_value-size: var(--counter-value-size, var(--text-2xl));
+    --_icon-size: var(--size-5);
+    --_slot-icon-size: var(--counter-icon-size, var(--size-6));
+    --_label-size: var(--text-sm);
+    --_accent: var(--_theme-base, var(--text-color-heading));
+    box-sizing: border-box;
+
+    display: inline-flex;
+    min-width: 0;
+    vertical-align: middle;
+  }
+
+  :host([size='sm']) {
+    --_button-size: var(--counter-button-size, var(--size-10));
+    --_value-size: var(--counter-value-size, var(--text-xl));
+    --_icon-size: var(--size-4);
+    --_slot-icon-size: var(--counter-icon-size, var(--size-5));
+    --_label-size: var(--text-xs);
+  }
+
+  :host([size='lg']) {
+    --_button-size: var(--counter-button-size, var(--size-12));
+    --_value-size: var(--counter-value-size, var(--text-3xl));
+    --_icon-size: var(--size-6);
+    --_slot-icon-size: var(--counter-icon-size, var(--size-8));
+    --_label-size: var(--text-base);
+  }
+
+  .counter {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--size-2);
+    min-width: 0;
+    padding: var(--size-3);
+    color: var(--text-color-body);
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+  }
+
+  .header {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
+  }
+
+  ::slotted([slot='icon']) {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--_slot-icon-size);
+    height: var(--_slot-icon-size);
+    color: var(--_accent);
+  }
+
+  .label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--_label-size);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-none);
+    color: var(--text-color-heading);
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: flex;
+    gap: var(--_gap);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .btn {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--_button-size);
+    min-width: var(--_touch-target, var(--_button-size));
+    height: var(--_button-size);
+    min-height: var(--_touch-target, var(--_button-size));
+    color: var(--text-color-heading);
+    touch-action: manipulation;
+    cursor: pointer;
+    background: var(--color-contrast-200);
+    border-radius: var(--_radius);
+    transition:
+      background var(--transition-fast),
+      transform 120ms var(--ease-spring);
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--color-contrast-300);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  .btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .btn[hidden] {
+    display: none;
+  }
+
+  /* Quick-step buttons: same footprint, quieter surface, numeric label instead of an icon. */
+  .btn-large {
+    font-size: var(--_label-size);
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-color-secondary);
+    background: transparent;
+    border: var(--border) solid var(--_border-color);
+  }
+
+  .btn-large:hover:not(:disabled) {
+    color: var(--text-color-heading);
+    background: var(--color-contrast-200);
+  }
+
+  .value {
+    flex: 1;
+    min-width: 2ch;
+    font-size: var(--_value-size);
+    font-weight: var(--font-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--leading-none);
+    color: var(--_accent);
+    text-align: center;
+    touch-action: manipulation;
+    border-radius: var(--rounded-md);
+  }
+
+  .value:focus-visible {
+    outline: 2px solid var(--_theme-focus, var(--color-primary));
+    outline-offset: 2px;
+  }
+
+  :host([data-bump]) .value {
+    animation: var(--_motion-animation, counter-bump 200ms var(--ease-spring));
+  }
+
+  @keyframes counter-bump {
+    0% {
+      transform: scale(1);
+    }
+
+    40% {
+      transform: scale(1.18);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .hint,
+  ::slotted([slot='hint']) {
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug, 1.35);
+    color: var(--text-color-tertiary);
+  }
+
+  .hint[hidden] {
+    display: none;
+  }
+
+  :host([readonly]) .controls {
+    justify-content: flex-start;
+  }
+
+  :host([readonly]) .value {
+    flex: 0;
+    text-align: start;
+  }
+}

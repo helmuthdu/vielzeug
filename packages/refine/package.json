@@ -179,6 +179,11 @@
       "require": "./dist/copy-command.cjs",
       "types": "./dist/content/copy-command/copy-command.d.ts"
     },
+    "./counter": {
+      "import": "./dist/counter.js",
+      "require": "./dist/counter.cjs",
+      "types": "./dist/inputs/counter/counter.d.ts"
+    },
     "./datagrid": {
       "import": "./dist/datagrid.js",
       "require": "./dist/datagrid.cjs",
@@ -223,6 +228,11 @@
       "import": "./dist/input.js",
       "require": "./dist/input.cjs",
       "types": "./dist/inputs/input/input.d.ts"
+    },
+    "./keyboard-key": {
+      "import": "./dist/keyboard-key.js",
+      "require": "./dist/keyboard-key.cjs",
+      "types": "./dist/content/keyboard-key/keyboard-key.d.ts"
     },
     "./list": {
       "import": "./dist/list.js",
@@ -288,6 +298,16 @@
       "import": "./dist/progress.js",
       "require": "./dist/progress.cjs",
       "types": "./dist/feedback/progress/progress.d.ts"
+    },
+    "./qr-code": {
+      "import": "./dist/qr-code.js",
+      "require": "./dist/qr-code.cjs",
+      "types": "./dist/content/qr-code/qr-code.d.ts"
+    },
+    "./qr-scanner": {
+      "import": "./dist/qr-scanner.js",
+      "require": "./dist/qr-scanner.cjs",
+      "types": "./dist/inputs/qr-scanner/qr-scanner.d.ts"
     },
     "./radio": {
       "import": "./dist/radio.js",
@@ -504,6 +524,9 @@
       "input": [
         "dist/inputs/input/input.d.ts"
       ],
+      "keyboard-key": [
+        "dist/content/keyboard-key/keyboard-key.d.ts"
+      ],
       "list": [
         "dist/content/list/list.d.ts"
       ],
@@ -542,6 +565,12 @@
       ],
       "progress": [
         "dist/feedback/progress/progress.d.ts"
+      ],
+      "qr-code": [
+        "dist/content/qr-code/qr-code.d.ts"
+      ],
+      "qr-scanner": [
+        "dist/inputs/qr-scanner/qr-scanner.d.ts"
       ],
       "radio": [
         "dist/inputs/radio/radio.d.ts"
@@ -645,6 +674,7 @@
     "@vielzeug/ore": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/sentinel": "workspace:*",
+    "@vielzeug/sigil": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
     "lucide": "^1.43.0"
   },

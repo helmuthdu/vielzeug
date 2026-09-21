@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: export SyncParsable, IssuePath, and joinIssuePath for UI adapters",
+      "packageName": "@vielzeug/spell",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

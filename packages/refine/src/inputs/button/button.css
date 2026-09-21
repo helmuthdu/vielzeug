@@ -25,15 +25,15 @@
     position: relative;
     box-sizing: border-box;
     display: flex;
-    gap: var(--_gap, var(--size-2));
+    gap: var(--button-gap, var(--_gap, var(--size-2)));
     align-items: center;
     justify-content: var(--button-justify, center);
     width: 100%;
     min-width: 0;
     height: var(--_height, var(--size-10));
     min-height: var(--_touch-target);
-    padding: var(--_padding, var(--size-2) var(--size-4));
-    font-size: var(--_font-size, var(--text-sm));
+    padding: var(--button-padding, var(--_padding, var(--size-2) var(--size-4)));
+    font-size: var(--button-font-size, var(--_font-size, var(--text-sm)));
     font-weight: var(--font-medium);
     line-height: var(--_line-height, var(--leading-normal));
     color: var(--_color);

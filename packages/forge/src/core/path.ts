@@ -35,46 +35,120 @@ function isBlobLeaf(value: object): boolean {
   return tag(value) === '[object Blob]' || tag(value) === '[object File]';
 }
 
-function invalidValue(): never {
+/** Formats a value path as `list[0].name` for error messages. */
+export function formatValuePath(path: readonly (string | number)[]): string {
+  let out = '';
+  for (const segment of path) {
+    if (typeof segment === 'number') out += `[${segment}]`;
+    else out += out ? `.${segment}` : segment;
+  }
+  return out;
+}
+
+function pathSuffix(path: readonly (string | number)[]): string {
+  return path.length > 0 ? ` at '${formatValuePath(path)}'` : '';
+}
+
+function invalidValue(path: readonly (string | number)[]): never {
   throw new ForgeConfigError(
-    'Form values must contain only finite JSON primitives, plain objects, arrays, Date, File, or Blob.',
+    `Form values must contain only finite JSON primitives, plain objects, arrays, Date, File, or Blob${pathSuffix(path)}.`,
   );
 }
 
-export function immutable<T>(value: T, ancestors = new Set<object>()): T {
+export function immutable<T>(value: T, ancestors = new Set<object>(), path: (string | number)[] = []): T {
   if (value === null || value === undefined || typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : invalidValue();
-  if (typeof value !== 'object') return invalidValue();
+  if (typeof value === 'number') return Number.isFinite(value) ? value : invalidValue(path);
+  if (typeof value !== 'object') return invalidValue(path);
 
   const date = value as unknown as Date;
   if (tag(value) === '[object Date]' && typeof date.getTime === 'function') {
     const time = date.getTime();
-    if (!Number.isFinite(time)) return invalidValue();
+    if (!Number.isFinite(time)) return invalidValue(path);
     return Object.freeze(new Date(time)) as T;
   }
 
   if (isBlobLeaf(value)) return value;
-  if (ancestors.has(value)) throw new ForgeConfigError('Form values must not contain circular references.');
+  if (ancestors.has(value))
+    throw new ForgeConfigError(`Form values must not contain circular references${pathSuffix(path)}.`);
 
   ancestors.add(value);
   try {
     if (Array.isArray(value)) {
       const copy: unknown[] = [];
       for (let index = 0; index < value.length; index++) {
-        if (!Object.hasOwn(value, index)) throw new ForgeConfigError('Form arrays must not contain empty slots.');
-        copy.push(immutable(value[index], ancestors));
+        path.push(index);
+        try {
+          if (!Object.hasOwn(value, index))
+            throw new ForgeConfigError(`Form arrays must not contain empty slots${pathSuffix(path)}.`);
+          copy.push(immutable(value[index], ancestors, path));
+        } finally {
+          path.pop();
+        }
       }
       return Object.freeze(copy) as T;
     }
 
-    if (!isRecord(value)) return invalidValue();
+    if (!isRecord(value)) return invalidValue(path);
     const entries = Object.entries(value).map(([key, child]) => {
       assertSafeKey(key);
-      return [key, immutable(child, ancestors)] as const;
+      path.push(key);
+      try {
+        return [key, immutable(child, ancestors, path)] as const;
+      } finally {
+        path.pop();
+      }
     });
     return Object.freeze(Object.fromEntries(entries)) as T;
   } finally {
     ancestors.delete(value);
+  }
+}
+
+/**
+ * Deeply converts a value into the plain shape `immutable()` accepts: primitives pass
+ * through, `Date` is cloned, `File`/`Blob` keep identity, arrays map, and class instances
+ * flatten to their own enumerable entries. Use as the `normalize` option of `createForm`
+ * to hold domain-model classes in form state.
+ *
+ * Lossy conversions, applied instead of the error `immutable()` would throw: `Map`, `Set`,
+ * and other keyless built-ins flatten to `{}` (their entries live on the prototype); sparse
+ * array slots are dropped, which shifts later indexes; `NaN`, `Infinity`, functions, and
+ * circular branches become `undefined`. Normalize model classes, not arbitrary graphs.
+ */
+export function toPlainValues<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || value === undefined || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : (undefined as T);
+  if (typeof value !== 'object') return undefined as T;
+
+  const object = value as unknown as object;
+  const date = value as unknown as Date;
+  if (tag(object) === '[object Date]' && typeof date.getTime === 'function') {
+    const time = date.getTime();
+    return (Number.isFinite(time) ? new Date(time) : undefined) as T;
+  }
+  if (isBlobLeaf(object)) return value;
+  if (seen.has(object)) return undefined as T;
+
+  seen.add(object);
+  try {
+    if (Array.isArray(value)) {
+      const copy: unknown[] = [];
+      for (let index = 0; index < value.length; index++) {
+        if (Object.hasOwn(value, index)) copy.push(toPlainValues(value[index], seen));
+      }
+      return copy as T;
+    }
+
+    // Plain objects and class instances both flatten to own enumerable entries;
+    // unsafe keys are dropped so the result always passes immutable()'s key checks.
+    const copy: RecordValue = {};
+    for (const [key, child] of Object.entries(object)) {
+      if (isUnsafeKey(key)) continue;
+      copy[key] = toPlainValues(child, seen);
+    }
+    return copy as T;
+  } finally {
+    seen.delete(object);
   }
 }
 
@@ -128,7 +202,12 @@ export function hasAtPath(value: unknown, path: readonly (string | number)[]): b
   return true;
 }
 
-export function writeAtPath<T extends TreeValue>(value: T, path: readonly (string | number)[], next: unknown): T {
+export function writeAtPath<T extends TreeValue>(
+  value: T,
+  path: readonly (string | number)[],
+  next: unknown,
+  fullPath: readonly (string | number)[] = [],
+): T {
   const [key, ...rest] = path;
 
   if (typeof key === 'number') {
@@ -144,14 +223,14 @@ export function writeAtPath<T extends TreeValue>(value: T, path: readonly (strin
     if (rest.length === 0) {
       const copy = [...value];
 
-      copy[key] = immutable(next);
+      copy[key] = immutable(next, new Set<object>(), [...fullPath, key]);
 
       return Object.freeze(copy) as T;
     }
 
     const copy = [...value];
 
-    copy[key] = writeAtPath(value[key] as TreeValue, rest, next);
+    copy[key] = writeAtPath(value[key] as TreeValue, rest, next, [...fullPath, key]);
 
     return Object.freeze(copy) as T;
   }
@@ -162,7 +241,8 @@ export function writeAtPath<T extends TreeValue>(value: T, path: readonly (strin
     throw new ForgeConfigError(`Cannot select '${key}' because the current value is not an object.`);
   }
 
-  if (rest.length === 0) return Object.freeze({ ...value, [key]: immutable(next) }) as T;
+  if (rest.length === 0)
+    return Object.freeze({ ...value, [key]: immutable(next, new Set<object>(), [...fullPath, key]) }) as T;
 
   const child = value[key];
 
@@ -172,7 +252,7 @@ export function writeAtPath<T extends TreeValue>(value: T, path: readonly (strin
 
   const childTree = (child ?? {}) as TreeValue;
 
-  return Object.freeze({ ...value, [key]: writeAtPath(childTree, rest, next) }) as T;
+  return Object.freeze({ ...value, [key]: writeAtPath(childTree, rest, next, [...fullPath, key]) }) as T;
 }
 
 export function resetAtPath<T extends TreeValue>(value: T, baseline: T, path: readonly (string | number)[]): T {

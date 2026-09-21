@@ -32,6 +32,8 @@ export type FormValidator<TValues extends Record<string, unknown>> = (
 
 export type FormOptions<TValues extends Record<string, unknown>> = Readonly<{
   initialValues: TValues;
+  /** Applied before immutable() at every write boundary (init, set, patch, reset, field.set). */
+  normalize?: (value: unknown) => unknown;
   onSubscriberError?: (error: unknown) => void;
   validate?: FormValidator<NoInfer<TValues>>;
 }>;
@@ -91,6 +93,8 @@ export type Form<TValues extends Record<string, unknown>> = {
   dispose(): void;
   readonly disposed: boolean;
   field<K extends keyof TValues & string>(key: K): Field<TValues[K]>;
+  patch(next: Partial<TValues>): void;
+  patch(updater: (previous: ReadonlyDeep<TValues>) => Partial<TValues>): void;
   reset(next?: TValues): void;
   set(next: TValues | ((previous: ReadonlyDeep<TValues>) => TValues)): void;
   readonly state: FormState;

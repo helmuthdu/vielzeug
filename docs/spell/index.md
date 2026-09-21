@@ -6,7 +6,7 @@ category: validation
 keywords: [schema, validation, parsing, standard-schema, json-schema, locale, typescript, descriptors]
 related: [forge, courier, vault]
 exports:
-  [s, createParseContext, SpellValidationError, SpellDefinitionError, StandardSchemaV1, ErrorCode, './json', './predicates']
+  [s, createParseContext, joinIssuePath, SpellValidationError, SpellDefinitionError, StandardSchemaV1, ErrorCode, './json', './predicates']
 environments: [browser, node, ssr, deno]
 ---
 

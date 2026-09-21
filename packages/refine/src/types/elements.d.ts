@@ -21,10 +21,12 @@ import type { OreChatMessageEvents, OreChatMessageProps } from '../content/chat-
 import type { OreCodeWindowProps } from '../content/code-window/code-window';
 import type { OreCopyCommandEvents, OreCopyCommandProps } from '../content/copy-command/copy-command';
 import type { OreIconProps } from '../content/icon/icon';
+import type { OreKeyboardKeyProps, OreKeyboardShortcutProps } from '../content/keyboard-key/keyboard-key';
 import type { OreListEvents, OreListProps } from '../content/list/list';
 import type { OreListItemEvents, OreListItemProps } from '../content/list/list-item';
 import type { OreMarqueeProps } from '../content/marquee/marquee';
 import type { OrePaginationEvents, OrePaginationProps } from '../content/pagination/pagination';
+import type { OreQrCodeEvents, OreQrCodeProps } from '../content/qr-code/qr-code';
 import type { OreSeparatorProps } from '../content/separator/separator';
 import type { OreStatsProps } from '../content/stats/stats';
 import type { OreStepProps } from '../content/stepper/step';
@@ -51,6 +53,7 @@ import type { OreCalendarEvents, OreCalendarProps } from '../inputs/calendar/cal
 import type { OreCheckboxEvents, OreCheckboxProps } from '../inputs/checkbox/checkbox';
 import type { OreCheckboxGroupEvents, OreCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
 import type { OreComboboxEvents, OreComboboxOptionProps, OreComboboxProps } from '../inputs/combobox/combobox.types';
+import type { OreCounterEvents, OreCounterProps } from '../inputs/counter/counter';
 import type { OreDataGridEvents, OreDataGridProps } from '../inputs/datagrid/datagrid';
 import type { OreDatePickerEvents, OreDatePickerProps } from '../inputs/date-picker/date-picker';
 import type { OreFileInputEvents, OreFileInputProps } from '../inputs/file-input/file-input';
@@ -58,6 +61,7 @@ import type { OreInputEvents, OreInputProps } from '../inputs/input/input';
 import type { OreMessageComposerEvents, OreMessageComposerProps } from '../inputs/message-composer/message-composer';
 import type { OreNumberInputEvents, OreNumberInputProps } from '../inputs/number-input/number-input';
 import type { OreOtpInputEvents, OreOtpInputProps } from '../inputs/otp-input/otp-input';
+import type { OreQrScannerEvents, OreQrScannerProps } from '../inputs/qr-scanner/qr-scanner';
 import type { OreRadioEvents, OreRadioProps } from '../inputs/radio/radio';
 import type { OreRadioGroupEvents, OreRadioGroupProps } from '../inputs/radio-group/radio-group';
 import type { OreRatingEvents, OreRatingProps } from '../inputs/rating/rating';
@@ -130,6 +134,7 @@ export interface RefineElementMap {
   'ore-command-palette': HTMLElement & OreCommandPaletteProps & AddEventListeners<OreCommandPaletteEvents>;
   'ore-command-palette-item': HTMLElement & CommandPaletteItemInput;
   'ore-copy-command': HTMLElement & OreCopyCommandProps & AddEventListeners<OreCopyCommandEvents>;
+  'ore-counter': HTMLElement & OreCounterProps & AddEventListeners<OreCounterEvents>;
   'ore-datagrid': HTMLElement & OreDataGridProps & AddEventListeners<OreDataGridEvents>;
   'ore-date-picker': HTMLElement & OreDatePickerProps & AddEventListeners<OreDatePickerEvents>;
   // overlay
@@ -140,6 +145,8 @@ export interface RefineElementMap {
   'ore-grid-item': HTMLElement & OreGridItemProps;
   'ore-icon': HTMLElement & OreIconProps;
   'ore-input': HTMLElement & OreInputProps & FormValidityMethods & AddEventListeners<OreInputEvents>;
+  'ore-keyboard-key': HTMLElement & OreKeyboardKeyProps;
+  'ore-keyboard-shortcut': HTMLElement & OreKeyboardShortcutProps;
   'ore-list': HTMLElement & OreListProps & AddEventListeners<OreListEvents>;
   'ore-list-item': HTMLElement & OreListItemProps & AddEventListeners<OreListItemEvents>;
   'ore-marquee': HTMLElement & OreMarqueeProps;
@@ -161,6 +168,8 @@ export interface RefineElementMap {
   'ore-password-strength': HTMLElement & OrePasswordStrengthProps;
   'ore-popover': HTMLElement & OrePopoverProps & AddEventListeners<OrePopoverEvents>;
   'ore-progress': HTMLElement & OreProgressProps;
+  'ore-qr-code': HTMLElement & OreQrCodeProps & AddEventListeners<OreQrCodeEvents>;
+  'ore-qr-scanner': HTMLElement & OreQrScannerProps & AddEventListeners<OreQrScannerEvents>;
   'ore-radio': HTMLElement & OreRadioProps & FormValidityMethods & AddEventListeners<OreRadioEvents>;
   'ore-radio-group': HTMLElement & OreRadioGroupProps & FormValidityMethods & AddEventListeners<OreRadioGroupEvents>;
   'ore-rating': HTMLElement & OreRatingProps & FormValidityMethods & AddEventListeners<OreRatingEvents>;

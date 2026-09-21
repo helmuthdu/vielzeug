@@ -4,7 +4,7 @@ description: Framework-neutral form and field state with nested handles, flat va
 package: forge
 category: state
 keywords: [forms, validation, fields, immutable, standard schema, formdata]
-exports: [createForm]
+exports: [createForm, toPlainValues]
 related: [spell, vault, assay]
 environments: [browser, node, ssr, deno]
 ---
@@ -61,6 +61,8 @@ pnpm add @vielzeug/forge
 
 - `createForm()` — deeply readonly form state with structural sharing and cloned dates
 - `field().field()` — typed nested field handles
+- `patch()` — shallow top-level merge without spread casts
+- `normalize` + `toPlainValues()` — hold domain-model classes in form state
 - Flat `{ path, message }` validation issues
 - Explicit `validate()` and `submit()` timing
 - `/dom` — optional element binding

@@ -124,7 +124,7 @@ describe('ore-command-palette', () => {
     it('renders one kbd per key in a shortcut hint', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
-      const keys = getRows()[0]?.querySelectorAll('.item-shortcut kbd');
+      const keys = getRows()[0]?.querySelectorAll('.item-shortcut ore-keyboard-key');
 
       expect(keys).toHaveLength(2);
       expect(keys?.[0]?.textContent).toBe('⌘');
@@ -137,7 +137,7 @@ describe('ore-command-palette', () => {
         props: { items: [{ label: 'Save', shortcut: 'F2', value: 'save' }] },
       });
 
-      const keys = getRows()[0]?.querySelectorAll('.item-shortcut kbd');
+      const keys = getRows()[0]?.querySelectorAll('.item-shortcut ore-keyboard-key');
 
       expect(keys).toHaveLength(1);
       expect(keys?.[0]?.textContent).toBe('F2');

@@ -1,0 +1,28 @@
+@layer refine.base {
+  :host {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  .shortcut {
+    box-sizing: border-box;
+    display: inline-flex;
+    gap: var(--keyboard-shortcut-gap, var(--size-2));
+    align-items: stretch;
+    padding: var(--keyboard-shortcut-padding, var(--size-2));
+    background: transparent;
+    border-radius: var(--keyboard-shortcut-radius, var(--rounded-lg));
+    transition:
+      background var(--transition-fast),
+      box-shadow var(--transition-fast),
+      transform var(--transition-fast);
+  }
+}
+
+@layer refine.states {
+  .shortcut[data-pressed] {
+    background: var(--keyboard-shortcut-pressed-bg, var(--color-contrast-200));
+    box-shadow: 0 0 0 var(--border) var(--keyboard-shortcut-pressed-border-color, var(--color-contrast-300));
+    transform: translateY(var(--border-2));
+  }
+}

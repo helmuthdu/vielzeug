@@ -9,6 +9,7 @@
     --_padding-x: var(--chip-padding-x, var(--size-2-5));
     --_padding-y: var(--chip-padding-y, var(--size-0-5));
     --_gap: var(--chip-gap, var(--size-1));
+    --_icon-size: var(--chip-icon-size, 1em);
 
     display: inline-flex;
     align-items: center;
@@ -91,8 +92,41 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 1em;
-    height: 1em;
+    width: var(--_icon-size);
+    height: var(--_icon-size);
+  }
+
+  /* ========================================
+       Stacked layout — icon above a wrapping label (tile-like chips)
+       ======================================== */
+
+  :host([layout='stacked']) {
+    display: inline-flex;
+  }
+
+  :host([layout='stacked']) .chip {
+    flex-direction: column;
+    gap: var(--_gap);
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: var(--_padding-x);
+    text-align: center;
+    white-space: normal;
+  }
+
+  :host([layout='stacked']) .label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: clip;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+  }
+
+  :host([layout='stacked']) .remove-btn {
+    margin-inline: 0;
   }
 
   .chip-btn {
@@ -188,6 +222,20 @@
     --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
+  :host([variant='frost']:not([color])) {
+    --_hover-bg: var(--chip-hover-bg, color-mix(in oklch, var(--color-canvas) 70%, transparent));
+    --_hover-border-color: var(--chip-hover-border-color, color-mix(in oklch, var(--_theme-focus) 40%, transparent));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--color-canvas) 70%, transparent));
+    --_active-border-color: color-mix(in oklch, var(--_theme-focus) 40%, transparent);
+  }
+
+  :host([variant='frost'][color]) {
+    --_hover-bg: var(--chip-hover-bg, color-mix(in oklch, var(--_theme-backdrop) 50%, var(--_theme-base) 50%));
+    --_hover-border-color: var(--chip-hover-border-color, color-mix(in oklch, var(--_theme-focus) 65%, transparent));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-backdrop) 50%, var(--_theme-base) 50%));
+    --_active-border-color: color-mix(in oklch, var(--_theme-focus) 65%, transparent);
+  }
+
   /* ── Remove button theming (tokens set per-variant above) ── */
 
   :host([variant='bordered']) .remove-btn,
@@ -222,7 +270,8 @@
         [variant='flat'],
         [variant='bordered'],
         [variant='outline'],
-        [variant='ghost']
+        [variant='ghost'],
+        [variant='frost']
       ):is([mode='selectable'], [mode='action']):not([disabled])
     )
     .chip-btn:hover
@@ -239,13 +288,15 @@
         [variant='flat'],
         [variant='bordered'],
         [variant='outline'],
-        [variant='ghost']
+        [variant='ghost'],
+        [variant='frost']
       ):is([mode='selectable'], [mode='action']):not([disabled])
     )
     .chip-btn:active
     .chip {
     color: var(--_active-color, var(--_color));
     background: var(--_active-bg, var(--_bg));
+    border-color: var(--_active-border-color, var(--_border-color));
     box-shadow: var(--inset-shadow-2xs);
   }
 }

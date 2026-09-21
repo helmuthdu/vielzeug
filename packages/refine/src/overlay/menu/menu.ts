@@ -275,6 +275,7 @@ define<OreMenuProps>(MENU_TAG, {
       matchWidth: false,
       offsetPx: 4,
       padding: 6,
+      useClippingAncestor: false,
     });
     const list = createListControl<HTMLElement>({
       disabled: computed(() => !isOpenSignal.value),

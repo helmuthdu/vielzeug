@@ -8,6 +8,7 @@ import {
   colorThemeMixin,
   disabledStateMixin,
   forcedColorsMixin,
+  frostVariantMixin,
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
@@ -28,6 +29,8 @@ type ChipBaseProps = {
   disabled?: boolean;
   /** Accessible label (required for icon-only chips) */
   label?: string;
+  /** Content layout: 'inline' (default) keeps icon and label on one line; 'stacked' places the icon above a wrapping label */
+  layout?: 'inline' | 'stacked';
   /** Border radius override */
   rounded?: RoundedSize | '';
   /** Component size */
@@ -35,7 +38,7 @@ type ChipBaseProps = {
   /** Value associated with this chip — included in emitted event detail */
   value?: string;
   /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
+  variant?: Exclude<VisualVariant, 'text'>;
 };
 
 type OreChipMode = 'static' | 'removable' | 'selectable' | 'action';
@@ -87,10 +90,11 @@ export type OreChipProps = ChipBaseProps &
  *
  * @attr {string}  label     - Accessible label (required for icon-only chips)
  * @attr {string}  color     - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string}  variant   - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
+ * @attr {string}  variant   - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
  * @attr {string}  size      - Component size: 'sm' | 'md' | 'lg'
  * @attr {string}  rounded   - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string}  mode      - Interaction mode: 'static' | 'removable' | 'selectable' | 'action'
+ * @attr {string}  layout    - Content layout: 'inline' (default) | 'stacked' — stacked places the icon above a wrapping label, for tile-like selectable chips
  * @attr {boolean} disabled  - Disable the chip
  * @attr {string}  value     - Value included in emitted event detail
  * @attr {boolean} checked   - Controlled checked state for selectable chips
@@ -112,6 +116,7 @@ export type OreChipProps = ChipBaseProps &
  * @cssprop --chip-padding-x       - Horizontal padding
  * @cssprop --chip-padding-y       - Vertical padding
  * @cssprop --chip-gap             - Gap between icon, label and remove button
+ * @cssprop --chip-icon-size       - Size of the slotted icon (default: 1em)
  * @cssprop --chip-hover-bg        - Background on hover (interactive modes)
  * @cssprop --chip-hover-color     - Text color on hover (interactive modes)
  * @cssprop --chip-hover-border-color - Border color on hover (interactive modes)
@@ -168,11 +173,12 @@ define<OreChipComponentProps>(CHIP_TAG, {
     'default-checked': prop.bool(false),
     disabled: prop.bool(false),
     label: prop.string(),
+    layout: prop.oneOf(['inline', 'stacked'] as const, 'inline'),
     mode: prop.oneOf(['static', 'removable', 'selectable', 'action'] as const, 'static'),
     rounded: prop.string<RoundedSize | ''>(),
     size: prop.string<ComponentSize>(),
     value: prop.string(),
-    variant: prop.string<Exclude<VisualVariant, 'text' | 'frost'>>(),
+    variant: prop.string<Exclude<VisualVariant, 'text'>>(),
   },
 
   setup(props) {
@@ -333,6 +339,7 @@ define<OreChipComponentProps>(CHIP_TAG, {
         '--_padding-y': 'var(--size-px)',
       },
     }),
+    frostVariantMixin('.chip'),
     forcedColorsMixin,
     componentStyles,
   ],

@@ -1,7 +1,14 @@
 import { expectTypeOf } from 'vitest';
 
 import { type AnySchema, type InferSchemaMode, schemaMode } from '../core';
-import { type InferInput, type InferOutput, type StandardSchemaV1, s } from '../index';
+import {
+  type InferInput,
+  type InferOutput,
+  type IssuePath,
+  type StandardSchemaV1,
+  type SyncParsable,
+  s,
+} from '../index';
 
 describe('public type contracts', () => {
   it('keeps coercion input separate from parsed output', () => {
@@ -163,5 +170,12 @@ describe('public type contracts', () => {
       retries?: number | undefined;
     }>();
     expectTypeOf<InferInput<typeof variant>>().toEqualTypeOf<{ kind: 'text'; value: string }>();
+  });
+
+  it('accepts built schemas where a synchronous parse surface is required', () => {
+    const schema = s.object({ email: s.string() });
+
+    expectTypeOf(schema).toMatchTypeOf<SyncParsable<{ email: string }>>();
+    expectTypeOf<StandardSchemaV1.Issue['path']>().toMatchTypeOf<IssuePath | undefined>();
   });
 });

@@ -26,6 +26,18 @@ curl http://127.0.0.1:3100/health
 
 Response includes snapshot version. Runtime bind validation and Host/Origin allowlists restrict access to localhost; no remote host mode exists. Programmatic `configureServer` hooks run once per MCP request server, not at host startup. Dispose the host asynchronously and observe `disposed` or `disposalSignal` when coordinating shutdown.
 
+## Agent Skill
+
+Codex ships a `vielzeug` agent skill — a `SKILL.md` that tells an AI agent working in *your* project to discover packages through the MCP tools instead of guessing, to use the owning `@vielzeug/*` package instead of hand-rolling, and to build UI from Refine components, tokens, and theme whenever `@vielzeug/refine` is installed. Install it into the project:
+
+```sh
+npx -y @vielzeug/codex skills install
+npx -y @vielzeug/codex skills install --target=.claude/skills
+npx -y @vielzeug/codex skills install --force   # overwrite an existing copy
+```
+
+Without `--target`, the first existing directory among `.agents/skills`, `.github/skills`, and `.claude/skills` is used; when none exists, `.agents/skills` is created. The command refuses to overwrite an installed skill unless `--force` is passed. Rerun after upgrading codex to pick up the current package list, which is generated from the published manifests. The skill pairs with the MCP server: its lookups (`get-docs`, `refine-get-component`, `refine-validate-usage`, …) assume codex is connected, and it documents `node_modules` fallbacks for when it is not.
+
 ## Local Development
 
 Requires Node 22+ and root setup:

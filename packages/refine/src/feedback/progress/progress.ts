@@ -20,6 +20,8 @@ export type OreProgressProps = {
   label?: string;
   /** Maximum value. Defaults to 100. */
   max?: number;
+  /** Split the linear bar into this many discrete blocks; blocks up to `value / max` are filled. Ignored when `indeterminate` or circular. */
+  segments?: number;
   /** Size variant controlling bar height */
   size?: ComponentSize;
   /** Title text.
@@ -46,6 +48,7 @@ export type OreProgressProps = {
  * @attr {string} color   - Theme color: 'primary' | 'success' | 'warning' | 'error' | …
  * @attr {string} size    - Bar height/width: 'sm' | 'md' | 'lg'
  * @attr {string} type   - 'linear' (default) | 'circular' | 'vertical'
+ * @attr {number} segments - Split the linear bar into discrete blocks (tracks, steps, stages)
  *
  * @cssprop --progress-width  - Bar width override (vertical only)
  * @attr {string} label          - Visible text label + accessible name. Linear: at bar end (or header row with title). Circular: large text centered inside the ring.
@@ -62,13 +65,16 @@ export type OreProgressProps = {
  * @cssprop --progress-circle-size          - Circular indicator diameter (default 6rem)
  * @cssprop --progress-circular-label-size  - Font size of the label inside the ring (default --text-xl)
  * @cssprop --progress-circular-title-size  - Font size of the title inside the ring (default --text-xs)
+ * @cssprop --progress-segment-gap           - Gap between blocks when `segments` is set (default --size-1)
  *
  * @part fill - Progress fill element.
+ * @part segment - One block when `segments` is set; carries `data-filled` once reached.
  * @example
  * ```html
  * <ore-progress value="45"></ore-progress>
  * <ore-progress value="75" max="100" color="success" size="lg"></ore-progress>
  * <ore-progress indeterminate color="primary" label="Loading…"></ore-progress>
+ * <ore-progress value="2" max="6" segments="6" label="Struggle"></ore-progress>
  * ```
  */
 export const PROGRESS_TAG = 'ore-progress' as const;
@@ -80,6 +86,7 @@ define<OreProgressProps>(PROGRESS_TAG, {
     indeterminate: prop.bool(false),
     label: prop.string(),
     max: prop.number(100),
+    segments: prop.number(0),
     title: prop.string(),
     type: prop.oneOf(['linear', 'circular', 'vertical'] as const, 'linear'),
     value: prop.number(0),
@@ -114,6 +121,15 @@ define<OreProgressProps>(PROGRESS_TAG, {
     const strokeDasharray = () => (props.indeterminate.value ? undefined : `${CIRC}px`);
     const strokeDashoffset = () => (props.indeterminate.value ? undefined : `${dashoffset.value}px`);
     const isVertical = computed(() => props.type.value === 'vertical');
+    const segmentCount = computed(() => Math.max(0, Math.floor(Number(props.segments.value) || 0)));
+    const isSegmented = computed(() => segmentCount.value > 0 && !props.indeterminate.value && !isVertical.value);
+    const filledSegments = computed(() => {
+      const v = Math.max(0, Math.min(Number(props.value.value), Number(props.max.value)));
+      const m = Math.max(1, Number(props.max.value));
+
+      return Math.round((v / m) * segmentCount.value);
+    });
+    const segmentStyle = styleMap({ '--_segments': () => String(segmentCount.value) });
     const linearFillStyle = styleMap({
       height: () => (!props.indeterminate.value && isVertical.value ? percent.value : null),
       width: () => (!props.indeterminate.value && !isVertical.value ? percent.value : null),
@@ -159,14 +175,28 @@ define<OreProgressProps>(PROGRESS_TAG, {
         <div class=${() => `bar-row${isVertical.value ? ' bar-row-vertical' : ''}`}>
           <div class="track-outer">
             <div
-              class="track"
+              class=${() => `track${isSegmented.value ? ' track-segmented' : ''}`}
               role="progressbar"
               aria-valuenow="${ariaValueNow}"
               aria-valuemin="0"
               aria-valuemax="${props.max}"
               aria-label="${ariaLabel}"
-              aria-valuetext="${props['value-text']}">
-              <div class="fill" part="fill" style="${linearFillStyle}"></div>
+              aria-valuetext="${props['value-text']}"
+              style="${segmentStyle}">
+              ${() =>
+                isSegmented.value
+                  ? Array.from(
+                      { length: segmentCount.value },
+                      (_, i) => html`
+                        <span
+                          class="segment"
+                          part="segment"
+                          data-filled="${() => (i < filledSegments.value ? '' : null)}"></span>
+                      `,
+                    )
+                  : html`
+                      <div class="fill" part="fill" style="${linearFillStyle}"></div>
+                    `}
             </div>
             ${() =>
               !isVertical.value

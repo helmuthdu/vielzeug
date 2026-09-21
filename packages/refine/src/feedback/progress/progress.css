@@ -68,6 +68,33 @@
   }
 
   /* ========================================
+       Segmented Bar
+       ======================================== */
+
+  /* Discrete blocks replace the continuous fill. The track goes transparent so the
+     gaps read as separate tokens; each block keeps the track groove colour until filled. */
+  .track-segmented {
+    display: grid;
+    grid-template-columns: repeat(var(--_segments, 1), minmax(0, 1fr));
+    gap: var(--progress-segment-gap, var(--size-1, 0.25rem));
+    overflow: visible;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .segment {
+    min-width: 0;
+    height: 100%;
+    background: var(--progress-track-bg, var(--color-contrast-300, #ddd));
+    border-radius: var(--_radius);
+    transition: var(--_motion-transition, background var(--transition-normal));
+  }
+
+  .segment[data-filled] {
+    background: var(--progress-fill, var(--_theme-base, #3b82f6));
+  }
+
+  /* ========================================
        Vertical Bar
        ======================================== */
 

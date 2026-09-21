@@ -24,19 +24,21 @@ Generated from `packages/*/package.json` by `pnpm gen:ai-data`. Edit manifests, 
 | `@vielzeug/keymap` | Headless keyboard shortcut manager with chord sequences | — | — | — |
 | `@vielzeug/ledger` | Serialized reversible command history with atomic framework-neutral state and cancellation ownership | — | — | — |
 | `@vielzeug/lingua` | Typed i18n with pluralization and lazy locale loading | — | — | — |
+| `@vielzeug/mesh` | Backendless peer-to-peer session transport over WebRTC data channels with manual pairing and host-authoritative star topology | `arsenal` | — | — |
 | `@vielzeug/necromancer` | Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP | — | — | — |
 | `@vielzeug/orbit` | Floating UI positioning with lifecycle-owned geometry and middleware | `arsenal` | — | `ripple` |
 | `@vielzeug/ore` | Functional web-component authoring on top of ripple | — | `ripple` | `assay` |
 | `@vielzeug/postmaster` | Typed durable job outbox with leased processing, retries, and dead-letter recovery | `arsenal`, `vault` | — | — |
 | `@vielzeug/prism` | Responsive SVG charts with explicit updates — line, bar, area, pie, sparkline | `orbit` | — | — |
 | `@vielzeug/pulse` | Typed WebSocket client with channels, rooms, presence, reconnect | — | — | — |
-| `@vielzeug/refine` | Accessible, themeable web components built on ore | `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, `tempo` | — | — |
+| `@vielzeug/refine` | Accessible, themeable web components built on ore | `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, `sigil`, `tempo` | — | — |
 | `@vielzeug/ripple` | Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources | — | — | — |
 | `@vielzeug/rune` | Structured scoped logger with remote transport | — | — | — |
 | `@vielzeug/sandbox` | Sandboxed iframe runtime with typed postMessage state bridge | — | — | — |
 | `@vielzeug/scout` | Trigram fuzzy-search index with highlighting and reactive layer | — | — | — |
 | `@vielzeug/scroll` | Virtual list engine for large datasets | — | — | — |
 | `@vielzeug/sentinel` | Subscribable snapshots for external browser environment state | — | — | — |
+| `@vielzeug/sigil` | QR code generation and scanning — pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning | — | — | — |
 | `@vielzeug/sourcerer` | Reactive collection sources with local, page, cursor, and infinite pagination | `arsenal` | — | — |
 | `@vielzeug/spell` | Zero-dependency schema validation with Standard Schema interoperability | `arsenal` | — | — |
 | `@vielzeug/tempo` | Temporal-powered date utilities | — | — | — |

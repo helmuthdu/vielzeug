@@ -8,6 +8,11 @@
     height: 100%;
   }
 
+  :host(:not([data-has-panels])) {
+    width: fit-content;
+    height: auto;
+  }
+
   .tablist-wrapper {
     position: relative;
     flex-shrink: 0;
@@ -42,6 +47,10 @@
     flex: 1;
     flex-direction: column;
     min-height: 0;
+  }
+
+  .panels[hidden] {
+    display: none;
   }
 }
 

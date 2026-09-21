@@ -14,6 +14,7 @@ import { illusionistExamples } from './illusionist';
 import { keymapExamples } from './keymap';
 import { ledgerExamples } from './ledger';
 import { linguaExamples } from './lingua';
+import { meshExamples } from './mesh';
 import { necromancerExamples } from './necromancer';
 import { orbitExamples } from './orbit';
 import { postmasterExamples } from './postmaster';
@@ -24,6 +25,7 @@ import { sandboxExamples } from './sandbox';
 import { scoutExamples } from './scout';
 import { scrollExamples } from './scroll';
 import { sentinelExamples } from './sentinel';
+import { sigilExamples } from './sigil';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
 import { tempoExamples } from './tempo';
@@ -49,6 +51,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   keymap: keymapExamples,
   ledger: ledgerExamples,
   lingua: linguaExamples,
+  mesh: meshExamples,
   necromancer: necromancerExamples,
   orbit: orbitExamples,
   postmaster: postmasterExamples,
@@ -59,6 +62,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   scout: scoutExamples,
   scroll: scrollExamples,
   sentinel: sentinelExamples,
+  sigil: sigilExamples,
   sourcerer: sourcererExamples,
   spell: spellExamples,
   tempo: tempoExamples,
