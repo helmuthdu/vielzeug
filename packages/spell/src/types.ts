@@ -291,11 +291,11 @@ export type ParseResult<T> = { data: T; success: true } | { error: SpellValidati
 
 /* -------------------- Schema execution mode / Infer (forward-references Schema) -------------------- */
 
-/** @internal */
+/** Structural marker for a schema's input type. Emitted so public types can key on it. */
 export const schemaInput = Symbol('spell.schemaInput');
 /** Public structural marker for a schema's parsing capability. */
 export const schemaMode = Symbol('spell.schemaMode');
-/** @internal */
+/** Structural marker for a schema's output type. Emitted so public types can key on it. */
 export const schemaOutput = Symbol('spell.schemaOutput');
 export declare const schemaAcceptsMissing: unique symbol;
 export type AcceptsMissing = { readonly [schemaAcceptsMissing]: true };

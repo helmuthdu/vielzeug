@@ -155,9 +155,9 @@ function cloneState<Output>(state: SchemaState<Output>): SchemaState<Output> {
   };
 }
 
-/* -------------------- Internal parse-value return type -------------------- */
+/* -------------------- Parse-value return type -------------------- */
 
-/** @internal */
+/** Parse-value return type for `_parse` implementations. Emitted as part of the public class surface. */
 export type ParseValue = { data: unknown; issues: Issue[]; typeOk: boolean };
 
 type MaybePromise<T> = T | Promise<T>;
