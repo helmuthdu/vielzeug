@@ -26,6 +26,12 @@ export type OreAlertProps = {
   color?: ThemeColor;
   /** Show a dismissible (×) button */
   dismissible?: boolean;
+  /**
+   * Render as a passive surface inside a host that owns lifecycle and
+   * announcements (for example `ore-toast`): no live-region role, and the
+   * close button only emits `dismiss` instead of hiding the alert.
+   */
+  embedded?: boolean;
   /** Heading text shown above the content */
   heading?: string;
   /** Position action buttons to the right instead of below */
@@ -49,10 +55,11 @@ export type OreAlertProps = {
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} heading - Bold heading text above the content
  * @attr {boolean} dismissible - Show a close (×) button
+ * @attr {boolean} embedded - Passive surface for a host that owns lifecycle and announcements; the close button only emits `dismiss`
  * @attr {boolean} accented - Add a left accent border (flat/bordered only)
  * @attr {boolean} horizontal - Position action buttons to the right instead of below
  *
- * @fires dismiss - Fired when the alert is dismissed. detail: { originalEvent: MouseEvent }
+ * @fires dismiss - Fired when the alert is dismissed (after the exit animation, or immediately when `embedded`). detail: { originalEvent: MouseEvent }
  *
  * @slot - Default slot for the alert message content
  * @slot icon - Icon on the left side
@@ -93,6 +100,7 @@ define<OreAlertProps>(ALERT_TAG, {
     ...roundableBundle,
     accented: prop.bool(false),
     dismissible: prop.bool(false),
+    embedded: prop.bool(false),
     heading: prop.string(),
     horizontal: prop.bool(false),
     variant: prop.string<'solid' | 'flat' | 'bordered'>(),
@@ -116,6 +124,12 @@ define<OreAlertProps>(ALERT_TAG, {
     const handleDismiss = (e: MouseEvent) => {
       if (!props.dismissible.value) return;
 
+      if (props.embedded.value) {
+        emit('dismiss', { originalEvent: e });
+
+        return;
+      }
+
       el.setAttribute('dismissing', '');
       awaitExit(el, () => {
         el.removeAttribute('dismissing');
@@ -125,7 +139,11 @@ define<OreAlertProps>(ALERT_TAG, {
       });
     };
 
-    const alertRole = () => (props.color.value === 'error' ? 'alert' : 'status');
+    const alertRole = () => {
+      if (props.embedded.value) return 'presentation';
+
+      return props.color.value === 'error' ? 'alert' : 'status';
+    };
 
     return html`
       <span

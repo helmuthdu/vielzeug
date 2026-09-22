@@ -25,6 +25,7 @@
   :host([fullwidth]) {
     display: block;
     width: 100%;
+    min-width: 0;
   }
 
   /* .sr-only is provided by the shared srOnlyMixin (see styles: [...] in combobox.ts) */

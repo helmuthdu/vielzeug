@@ -272,6 +272,98 @@ describe('RTL placement mirroring (via getDir)', () => {
 // some elements in the exact same subtree needed the correction and some didn't. These tests
 // pin down the measure-after-write correction that replaced it instead.
 
+describe('width matching', () => {
+  // `makeElements()` mocks the floating element at 50px wide and the reference at 100px.
+  it('floors the floating width at the reference width when its content is narrower', () => {
+    const { cleanup, floating, reference } = makeElements();
+
+    const pos = createDropdownPositioner({ getFloating: () => floating, getReference: () => reference });
+
+    pos.update();
+
+    expect(floating.style.minWidth).toBe('100px');
+    expect(floating.style.width).toBe('100px');
+
+    cleanup();
+  });
+
+  it('lets the floating element grow past the reference to fit its own content', () => {
+    const { cleanup, floating, reference } = makeElements();
+
+    vi.spyOn(floating, 'getBoundingClientRect').mockImplementation(
+      () =>
+        ({
+          bottom: 0,
+          height: 20,
+          left: Number.parseFloat(floating.style.left) || 0,
+          right: 0,
+          toJSON: () => ({}),
+          top: Number.parseFloat(floating.style.top) || 0,
+          width: 260,
+          x: Number.parseFloat(floating.style.left) || 0,
+          y: Number.parseFloat(floating.style.top) || 0,
+        }) as DOMRect,
+    );
+
+    const pos = createDropdownPositioner({ getFloating: () => floating, getReference: () => reference });
+
+    pos.update();
+
+    expect(floating.style.width).toBe('260px');
+
+    cleanup();
+  });
+
+  it('caps the floating width at the boundary when its content is wider than the boundary', () => {
+    const { cleanup, floating, reference } = makeElements();
+
+    vi.spyOn(floating, 'getBoundingClientRect').mockImplementation(
+      () =>
+        ({
+          bottom: 0,
+          height: 20,
+          left: Number.parseFloat(floating.style.left) || 0,
+          right: 0,
+          toJSON: () => ({}),
+          top: Number.parseFloat(floating.style.top) || 0,
+          width: 900,
+          x: Number.parseFloat(floating.style.left) || 0,
+          y: Number.parseFloat(floating.style.top) || 0,
+        }) as DOMRect,
+    );
+
+    const pos = createDropdownPositioner({
+      boundary: { height: 600, width: 400, x: 0, y: 0 },
+      getFloating: () => floating,
+      getReference: () => reference,
+      padding: 0,
+    });
+
+    pos.update();
+
+    expect(floating.style.width).toBe('400px');
+
+    cleanup();
+  });
+
+  it('leaves the width alone when matchWidth is off', () => {
+    const { cleanup, floating, reference } = makeElements();
+
+    const pos = createDropdownPositioner({
+      getFloating: () => floating,
+      getReference: () => reference,
+      matchWidth: false,
+    });
+
+    pos.update();
+
+    expect(floating.style.width).toBe('');
+    expect(floating.style.minWidth).toBe('');
+
+    cleanup();
+  });
+});
+
 describe('containing-block self-correction', () => {
   it('leaves the written position alone when the browser rendered it exactly where asked', () => {
     const { cleanup, floating, reference } = makeElements(); // no drift — the common case

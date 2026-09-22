@@ -102,4 +102,19 @@ test.describe('Layout', () => {
       expect(focused).not.toBe(rest);
     });
   }
+
+  // `fullwidth` means "fill the track": in a track narrower than the 12rem floor the field must
+  // follow the track, not overflow it. The same contract holds for every field built on the
+  // 12rem floor, so the composites are checked here alongside the primitive.
+  for (const tag of ['ore-input', 'ore-select', 'ore-number-input', 'ore-combobox', 'ore-date-picker'] as const) {
+    test(`fullwidth ${tag} never exceeds a 120px track`, async ({ page, refinePage }) => {
+      await refinePage.mountComponent(
+        `<div id="track" style="width:120px"><${tag} id="field" fullwidth label="Narrow"></${tag}></div>`,
+      );
+
+      const width = await page.evaluate(() => document.getElementById('field')?.getBoundingClientRect().width);
+
+      expect(width).toBeLessThanOrEqual(120);
+    });
+  }
 });

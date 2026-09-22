@@ -146,6 +146,7 @@
     flex: 1;
     min-width: 0;
     min-height: var(--size-6);
+    text-overflow: ellipsis;
     font: inherit;
     font-size: var(--_font-size);
     line-height: var(--leading-normal);
@@ -407,9 +408,11 @@
 }
 
 @layer refine.utilities {
-  /* Full width */
+  /* Full width: fill the track and never overflow it — a `fullwidth` field in a track narrower
+     than the 12rem floor shrinks with the track instead of pushing past it. */
   :host([fullwidth]) {
     width: 100%;
+    min-width: 0;
   }
 }
 

@@ -211,6 +211,7 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 | `dismissible` | `boolean`                                                                 | `false`  | Show a close (×) button                          |
 | `accented`    | `boolean`                                                                 | `false`  | Left accent border (flat/bordered variants only) |
 | `horizontal`  | `boolean`                                                                 | `false`  | Place action buttons beside the content          |
+| `embedded`    | `boolean`                                                                 | `false`  | Host-managed mode: no live region or `role`, and `dismiss` fires immediately without the exit animation (used by `ore-toast`) |
 
 ### Slots
 
@@ -225,7 +226,7 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 
 | Event     | Detail                          | Description                            |
 | --------- | ------------------------------- | -------------------------------------- |
-| `dismiss` | `{ originalEvent: MouseEvent }` | Fired when the close button is clicked |
+| `dismiss` | `{ originalEvent: MouseEvent }` | Fired after the exit animation completes (immediately when `embedded`) |
 
 ### CSS Parts
 

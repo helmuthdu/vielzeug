@@ -136,6 +136,22 @@ describe('ore-alert', () => {
       expect(fixture.element.hasAttribute('dismissed')).toBe(true);
       expect(handler).toHaveBeenCalled();
     });
+
+    it('only emits dismiss and drops live-region semantics when embedded', async () => {
+      fixture = await mount('ore-alert', { attrs: { color: 'error', dismissible: '', embedded: '' } });
+
+      const handler = vi.fn();
+
+      fixture.element.addEventListener('dismiss', handler);
+      expect(fixture.query('.alert')?.getAttribute('role')).toBe('presentation');
+
+      fireClick(fixture.query<HTMLElement>('.close')!);
+      await fixture.flush();
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(fixture.element.hasAttribute('dismissing')).toBe(false);
+      expect(fixture.element.hasAttribute('dismissed')).toBe(false);
+    });
   });
 
   describe('Colors', () => {

@@ -26,6 +26,7 @@
       "!scripts",
       "!**/scripts",
       "!**/dist",
+      "!**/*.md",
       "!docs/.vitepress/cache",
       "!docs/.vitepress/theme/components/repl/registry.generated.ts"
     ]

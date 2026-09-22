@@ -93,7 +93,7 @@ Use attributes to set a host's placement and notification limit:
 
 | Attribute  | Default          | Description                          |
 | ---------- | ---------------- | ------------------------------------ |
-| `position` | `bottom-right`   | `top-*` or `bottom-*` stack position |
+| `position` | `bottom-right`   | `top-*` or `bottom-*` list anchor    |
 | `max`      | `5`              | Maximum live notifications per scope  |
 
 ## Notification options
@@ -118,10 +118,37 @@ toast.add({
 | `variant`     | `solid`     | `solid`, `flat`, or `bordered`                                   |
 | `duration`    | `5000`      | Auto-dismiss delay in milliseconds; `0` keeps it visible         |
 | `dismissible` | `true`      | Shows the close button                                            |
-| `actions`     | —           | Buttons that run `onClick` then dismiss the notification          |
+| `actions`     | —           | Buttons (flat by default) that run `onClick` then dismiss         |
 | `urgency`     | derived     | `polite` or `assertive`; errors are assertive by default          |
 | `onDismiss`   | —           | Called after the exit animation completes                         |
 
 ## Behavior and accessibility
 
-Notifications use separate polite and assertive live regions. Hovering or focusing the stack pauses auto-dismiss timers; leaving resumes the remaining duration. Users can dismiss closable notifications with the alert close button or a horizontal swipe. Multiple notifications exit independently, and all timers and subscriptions are cleaned up when a scoped service is disposed.
+Notifications render as a vertical list anchored to the host position — newest nearest the anchored edge — so every notification stays readable and reachable with a pointer, touch, or keyboard. Each notification is announced once through the host's polite or assertive live region; the embedded alert itself carries no live-region semantics.
+
+Timed notifications show a thin progress bar along the bottom edge. Hovering or focusing the list pauses auto-dismiss timers and the bar; leaving resumes the remaining duration. Users can dismiss closable notifications with the close button, the <kbd>Escape</kbd> key while the notification has focus, or a horizontal swipe. Notifications fade and slide in and out; both transitions honour `prefers-reduced-motion`, which also hides the progress bar. On narrow viewports (≤ 480px) notifications span the full width above the safe-area inset.
+
+Flat and bordered notifications use an opaque surface (`--toast-bg`) tinted with the notification colour so they never blend into the page beneath them. Multiple notifications exit independently, and all timers and subscriptions are cleaned up when a scoped service is disposed.
+
+## CSS custom properties
+
+| Property                                                                          | Description                                          | Default                                 |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------- |
+| `--toast-max-width`                                                               | Notification width cap (full width on phones)        | `400px`                                 |
+| `--toast-gap`                                                                     | Gap between notifications                            | `var(--size-2)`                         |
+| `--toast-bg`                                                                      | Opaque surface for flat and bordered notifications   | Tinted `var(--color-contrast-50)`       |
+| `--toast-shadow`                                                                  | Elevation shadow                                     | `var(--shadow-xl)`                      |
+| `--toast-enter-duration` / `--toast-exit-duration`                                | Motion durations                                     | `var(--duration-200)`                   |
+| `--toast-progress-height`                                                         | Height of the auto-dismiss progress bar              | `3px`                                   |
+| `--toast-progress-color`                                                          | Colour of the auto-dismiss progress bar              | Notification colour                     |
+| `--toast-inset-top` / `--toast-inset-bottom` / `--toast-inset-left` / `--toast-inset-right` | Viewport insets                          | `var(--size-4)`                         |
+| `--toast-z-index`                                                                 | Stacking order                                       | `var(--z-toast)`                        |
+
+## CSS parts
+
+| Part            | Description                                   |
+| --------------- | --------------------------------------------- |
+| `container`     | Notification list                             |
+| `toast-wrapper` | Per-notification layout wrapper (swipe target) |
+| `toast-inner`   | Per-notification motion target                |
+| `progress`      | Auto-dismiss progress bar                     |

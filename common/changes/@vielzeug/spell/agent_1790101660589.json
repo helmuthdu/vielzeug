@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: emit schema marker symbols in published declarations",
+      "packageName": "@vielzeug/spell",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

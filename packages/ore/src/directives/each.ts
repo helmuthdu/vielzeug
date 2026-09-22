@@ -105,6 +105,9 @@ const reconcileItems = <T>(
   }
 
   // DOM ordering: right-to-left pass — move any item not already adjacent to cursor.
+  // An item is in place when its last node directly precedes the cursor; items may
+  // span several nodes (whitespace text around an element), so compare the last one.
+  // Moving an already-placed item would disconnect and reconnect its custom elements.
   // O(n) DOM operations in the worst case; optimal for the typical small list sizes
   // encountered in UI components (tabs, options, menu items).
   let cursor: Node = endMarker;
@@ -112,8 +115,9 @@ const reconcileItems = <T>(
   for (let j = nextOrdered.length - 1; j >= 0; j--) {
     const entry = nextOrdered[j];
     const firstNode = entry.nodes[0];
+    const lastNode = entry.nodes[entry.nodes.length - 1];
 
-    if (firstNode && firstNode !== cursor.previousSibling) {
+    if (firstNode && lastNode !== cursor.previousSibling) {
       for (const node of entry.nodes) parent.insertBefore(node, cursor);
     }
 

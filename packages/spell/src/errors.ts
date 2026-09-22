@@ -14,7 +14,7 @@ export function fail(code: string, message: string, params?: Record<string, unkn
   return [{ code, message, params, path: [] } as Issue];
 }
 
-/** Resolve a message value or factory against a context. Re-exported by `core` for schema modules. */
+/** @internal */
 export function resolveMessage<Ctx extends Record<string, unknown>>(msg: MessageFn<Ctx>, ctx: Ctx): string {
   return typeof msg === 'function' ? msg(ctx) : msg;
 }

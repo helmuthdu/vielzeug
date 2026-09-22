@@ -1,14 +1,14 @@
 import '../alert/alert';
 import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
-import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { define, each, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 import { reducedMotionMixin } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
 
-/** Must match toast.css's default opacity transition duration. */
-const TOAST_EXIT_MS = 300;
+/** Fallback exit budget when the computed transition duration is unavailable; matches toast.css's default. */
+const TOAST_EXIT_MS = 200;
 
 export type OreToastEvents = {
   add: { id: string };
@@ -108,8 +108,12 @@ class ToastStore {
     this.#setEntries([...this.#entries.value, entry]);
     this.#emit({ id, type: 'add' });
 
+    // Two frames: the first lets the browser compute styles for the `entering` state,
+    // the second flips to `active` so the CSS transition has a start value to animate from.
     requestAnimationFrame(() => {
-      if (this.#entry(id)?.phase === 'entering') this.#update(id, { phase: 'active' });
+      requestAnimationFrame(() => {
+        if (this.#entry(id)?.phase === 'entering') this.#update(id, { phase: 'active' });
+      });
     });
 
     if (entry.duration > 0) this.#scheduleTimer(id, entry.duration);
@@ -278,27 +282,39 @@ const bindToastHost = (host: HTMLElement, store: ToastStore): void => {
   hostBindings.get(host)?.bind(store);
 };
 
-/** Renders the action buttons for a toast entry. */
-function renderToastActions(entry: ToastEntry, dismiss: () => void) {
-  if (!entry.actions?.length) return '';
+const NO_ACTIONS: NonNullable<ToastItem['actions']> = [];
+
+const urgencyOf = (entry: ToastEntry): 'polite' | 'assertive' =>
+  entry.urgency ?? (entry.color === 'error' ? 'assertive' : 'polite');
+
+/** Renders the action buttons for a toast entry. Buttons are keyed so focus survives store updates. */
+function renderToastActions(item: Readable<ToastEntry>, dismiss: () => void) {
+  const actions = computed(() => item.value.actions ?? NO_ACTIONS);
 
   return html`
-    <div slot="actions" class="toast-actions">
-      ${entry.actions.map(
-        (action) => html`
-          <ore-button
-            size="sm"
-            color=${action.color || entry.color || 'primary'}
-            variant=${action.variant || 'solid'}
-            @click=${() => {
-              action.onClick?.();
-              dismiss();
-            }}>
-            ${action.label}
-          </ore-button>
-        `,
-      )}
-    </div>
+    ${() =>
+      actions.value.length
+        ? html`
+            <div slot="actions" class="toast-actions">
+              ${each(
+                () => actions.value,
+                (action, index) => `${index}:${action.label}`,
+                (action) => html`
+                  <ore-button
+                    size="sm"
+                    color=${() => action.value.color || item.value.color || 'primary'}
+                    variant=${() => action.value.variant || 'flat'}
+                    @click=${() => {
+                      action.value.onClick?.();
+                      dismiss();
+                    }}>
+                    ${() => action.value.label}
+                  </ore-button>
+                `,
+              )}
+            </div>
+          `
+        : ''}
   `;
 }
 
@@ -308,10 +324,29 @@ export const TOAST_TAG = 'ore-toast' as const;
  * Declarative toast host. It subscribes to the service for its scope and
  * renders notifications, but has no imperative mutation API of its own.
  *
+ * Notifications render as a vertical list (newest nearest the anchored edge)
+ * inside polite and assertive live regions. Entries are keyed by id, so store
+ * updates (timer pauses, message updates, phase changes) patch the existing
+ * DOM instead of re-creating it — focus, in-flight gestures, and CSS
+ * transitions all survive.
+ *
  * @element ore-toast
  *
  * @attr {string} position - Stack placement.
  * @attr {number} max - Maximum live notifications for the scoped service.
+ *
+ * @cssprop --toast-max-width - Panel width cap (default 400px; full width on phones).
+ * @cssprop --toast-gap - Gap between notifications.
+ * @cssprop --toast-bg - Opaque surface for flat/bordered notifications.
+ * @cssprop --toast-shadow - Elevation shadow.
+ * @cssprop --toast-enter-duration / --toast-exit-duration - Motion durations.
+ * @cssprop --toast-progress-height - Height of the auto-dismiss progress bar.
+ * @cssprop --toast-inset-top / --toast-inset-bottom / --toast-inset-left / --toast-inset-right - Viewport insets.
+ *
+ * @part container - Notification list.
+ * @part toast-wrapper - Per-notification layout wrapper (swipe target).
+ * @part toast-inner - Per-notification motion target.
+ * @part progress - Auto-dismiss progress bar.
  */
 define<OreToastProps>(TOAST_TAG, {
   props: {
@@ -516,33 +551,64 @@ define<OreToastProps>(TOAST_TAG, {
       if (paused.value) store.pauseTimers();
     };
 
-    const renderEntry = (entry: ToastEntry) => {
-      const dismiss = () => store?.dismiss(entry.id);
+    /** Escape dismisses the notification that currently holds focus. */
+    const onKeydown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+
+      const wrapper = event
+        .composedPath()
+        .find((node): node is HTMLElement => node instanceof HTMLElement && node.classList.contains('toast-wrapper'));
+      const id = wrapper?.dataset.toastId;
+      const entry = id ? entries.value.find((candidate) => candidate.id === id) : undefined;
+
+      if (!entry?.dismissible) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      store?.dismiss(entry.id);
+    };
+
+    const renderEntry = (item: Readable<ToastEntry>) => {
+      const id = item.value.id;
+      const dismiss = () => store?.dismiss(id);
+      const meta = computed(() => item.value.meta ?? '');
+      const innerClass = computed(() => `toast-inner${item.value.phase !== 'active' ? ` ${item.value.phase}` : ''}`);
+      const innerStyle = computed(
+        () =>
+          `--_toast-accent: var(--color-${item.value.color || 'primary'}); --_toast-radius: var(--rounded-${item.value.rounded || 'md'})`,
+      );
+      // Progress restarts from the correct fraction whenever the timer is (re)scheduled:
+      // the animation runs for the full duration with a negative delay for elapsed time.
+      const progressStyle = computed(() => {
+        const { duration, timer } = item.value;
+
+        if (!timer || duration <= 0) return '';
+
+        return `--_toast-duration: ${duration}ms; --_toast-elapsed: -${Math.max(0, duration - timer.remaining)}ms`;
+      });
 
       return html`
-        <div
-          class="toast-wrapper"
-          data-toast-id=${entry.id}
-          part="toast-wrapper">
-          <div class="${() => `toast-inner${entry.phase !== 'active' ? ` ${entry.phase}` : ''}`}" part="toast-inner">
+        <div class="toast-wrapper" data-toast-id=${id} part="toast-wrapper">
+          <div class=${() => innerClass.value} style=${() => innerStyle.value} part="toast-inner">
             <ore-alert
-              color=${entry.color || (entry.urgency === 'assertive' ? 'error' : 'primary')}
-              variant=${entry.variant || 'solid'}
-              size=${entry.size || 'md'}
-              rounded=${entry.rounded || 'md'}
-              ?horizontal=${entry.horizontal}
-              heading=${entry.heading || ''}
-              ?dismissible=${entry.dismissible}
+              embedded
+              color=${() => item.value.color || (urgencyOf(item.value) === 'assertive' ? 'error' : 'primary')}
+              variant=${() => item.value.variant || 'solid'}
+              size=${() => item.value.size || 'md'}
+              rounded=${() => item.value.rounded || 'md'}
+              ?horizontal=${() => Boolean(item.value.horizontal)}
+              heading=${() => item.value.heading || null}
+              ?dismissible=${() => item.value.dismissible}
               @dismiss=${dismiss}>
-              ${
-                entry.meta
-                  ? html`
-                      <span slot="meta">${entry.meta}</span>
-                    `
-                  : ''
-              }
-              ${entry.message} ${renderToastActions(entry, dismiss)}
+              <span slot="meta" ?hidden=${() => !meta.value}>${() => meta.value}</span>
+              ${() => item.value.message} ${renderToastActions(item, dismiss)}
             </ore-alert>
+            <div
+              class="toast-progress"
+              part="progress"
+              style=${() => progressStyle.value}
+              ?hidden=${() => !progressStyle.value}
+              aria-hidden="true"></div>
           </div>
         </div>
       `;
@@ -576,21 +642,19 @@ define<OreToastProps>(TOAST_TAG, {
       for (const id of exiting.keys()) clearExitListener(id);
     });
 
-    const urgencyOf = (entry: ToastEntry) => entry.urgency ?? (entry.color === 'error' ? 'assertive' : 'polite');
     const politeEntries = computed(() => entries.value.filter((entry) => urgencyOf(entry) === 'polite'));
     const assertiveEntries = computed(() => entries.value.filter((entry) => urgencyOf(entry) === 'assertive'));
+    const keyOf = (entry: ToastEntry) => entry.id;
 
     return html`
       <div
-        class="toast-container"
+        class=${() => `toast-container${paused.value ? ' paused' : ''}`}
         ref=${containerRef}
         @pointerenter=${() => {
           hoverPaused.value = true;
-          el.classList.add('hovered');
         }}
         @pointerleave=${() => {
           hoverPaused.value = false;
-          el.classList.remove('hovered');
         }}
         @focusin=${() => {
           focusPaused.value = true;
@@ -598,6 +662,7 @@ define<OreToastProps>(TOAST_TAG, {
         @focusout=${() => {
           focusPaused.value = false;
         }}
+        @keydown=${onKeydown}
         part="container">
         <div
           role="region"
@@ -606,7 +671,7 @@ define<OreToastProps>(TOAST_TAG, {
           aria-atomic="false"
           aria-label="Notifications"
           class="toast-live-region">
-          ${() => politeEntries.value.map(renderEntry)}
+          ${each(politeEntries, keyOf, renderEntry)}
         </div>
         <div
           role="region"
@@ -615,7 +680,7 @@ define<OreToastProps>(TOAST_TAG, {
           aria-atomic="false"
           aria-label="Critical notifications"
           class="toast-live-region">
-          ${() => assertiveEntries.value.map(renderEntry)}
+          ${each(assertiveEntries, keyOf, renderEntry)}
         </div>
         <slot></slot>
       </div>

@@ -42,3 +42,46 @@ test.describe('Disabled reason', () => {
     await expect(option.locator('.disabled-reason')).toHaveAttribute('title', 'Contact sales to enable');
   });
 });
+
+test.describe('Layout', () => {
+  // A narrow (e.g. fullwidth in a phone grid column) select must still open a readable list: the
+  // dropdown is floored at the trigger width, grows to fit its longest option, and `shift` keeps
+  // it inside the viewport even when the trigger sits at the right edge.
+  test('narrow select at the right edge opens a dropdown that fits its options and the viewport', async ({
+    page,
+    refinePage,
+  }) => {
+    await refinePage.mountComponent(
+      '<div style="display:flex;justify-content:flex-end">' +
+        '<div style="width:110px">' +
+        '<ore-select id="narrow" fullwidth label="Potion">' +
+        '<option value="a">Alemore · Lv. 1</option>' +
+        '<option value="b">Concentrated Bitterroot Tonic · Lv. 3</option>' +
+        '</ore-select>' +
+        '</div></div>',
+    );
+
+    await page.locator('#narrow').click();
+    const option = page.getByRole('option', { name: 'Concentrated Bitterroot Tonic · Lv. 3' });
+    await expect(option).toBeVisible();
+
+    const metrics = await page.evaluate(() => {
+      const select = document.getElementById('narrow') as HTMLElement & { shadowRoot: ShadowRoot };
+      const dropdown = select.shadowRoot.querySelector('.dropdown') as HTMLElement;
+      const label = dropdown.querySelector('.option:nth-of-type(2) > span:first-child') as HTMLElement;
+      const rect = dropdown.getBoundingClientRect();
+
+      return {
+        right: rect.right,
+        triggerWidth: select.getBoundingClientRect().width,
+        truncated: label.scrollWidth > label.clientWidth,
+        viewportWidth: window.innerWidth,
+        width: rect.width,
+      };
+    });
+
+    expect(metrics.width).toBeGreaterThan(metrics.triggerWidth);
+    expect(metrics.truncated).toBe(false);
+    expect(metrics.right).toBeLessThanOrEqual(metrics.viewportWidth);
+  });
+});

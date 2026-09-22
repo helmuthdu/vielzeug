@@ -353,6 +353,46 @@ describe('Directive: each()', () => {
     expect(updatedNodes[0].textContent).toBe('A-Updated');
   });
 
+  it('does not detach in-place multi-node items when an item value updates', async () => {
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+    ]);
+
+    register(
+      'test-keyed-stable-position',
+      () => html`
+        <div>
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`
+              <div class="item">${() => item.value.value}</div>
+            `,
+          )}
+        </div>
+      `,
+    );
+
+    const { element, flush, queryAll } = await mount('test-keyed-stable-position');
+    const region = queryAll('.item')[0].parentNode as Node;
+    const mutations: MutationRecord[] = [];
+    const observer = new MutationObserver((records) => mutations.push(...records));
+
+    observer.observe(region, { childList: true });
+    observer.observe(element.shadowRoot ?? element, { childList: true });
+
+    items.value = [
+      { id: 1, value: 'A-Updated' },
+      { id: 2, value: 'B' },
+    ];
+    await flush();
+    observer.disconnect();
+
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A-Updated', 'B']);
+    expect(mutations.filter((record) => record.removedNodes.length > 0)).toHaveLength(0);
+  });
+
   it('should re-render list in correct order when items reorder', async () => {
     const items = signal([
       { id: 1, value: 'A' },

@@ -13,6 +13,7 @@
 
   :host([fullwidth]) {
     display: block;
+    min-width: 0;
   }
 
   :host([color='secondary']) {

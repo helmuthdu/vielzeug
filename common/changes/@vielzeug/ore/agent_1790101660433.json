@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: keep multi-node items in place during each directive reconcile",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

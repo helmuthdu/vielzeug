@@ -6,6 +6,7 @@ import {
   offset,
   type Placement,
   type Rect,
+  type SizeData,
   shift,
   size,
 } from '@vielzeug/orbit';
@@ -47,7 +48,10 @@ export type DropdownPositionerOptions = {
   getPlacement?: () => Placement;
   /** Getter for the reference (trigger) element. */
   getReference: () => HTMLElement | null;
-  /** Whether to match the floating element width to the reference. Default: true */
+  /**
+   * Whether to size the floating element from the reference: at least as wide as the reference,
+   * growing to fit its own content, capped by the boundary. Default: true
+   */
   matchWidth?: boolean;
   /** Additional offset in pixels between reference and floating element. Default: 0 */
   offsetPx?: number;
@@ -112,6 +116,20 @@ export function createDropdownPositioner({
     // dialog).
     const resolvedBoundary = boundary ?? (useClippingAncestor ? getClippingAncestorRect(floating) : undefined);
 
+    const refWidth = ref.getBoundingClientRect().width;
+    let naturalWidth = 0;
+
+    if (matchWidth) {
+      // Measure the panel at its natural content width, floored at the reference width, so
+      // `computePosition()` places (and `shift` keeps inside the boundary) the box that will
+      // actually render. `left: 0` frees the measurement from the shrink-to-fit clamp a previous
+      // `left` would impose on a `position: fixed` element near the right edge.
+      floating.style.left = '0px';
+      floating.style.width = 'auto';
+      floating.style.minWidth = `${refWidth}px`;
+      naturalWidth = floating.getBoundingClientRect().width;
+    }
+
     const result = computePosition(ref, floating, {
       boundary: resolvedBoundary,
       middleware: [
@@ -168,7 +186,10 @@ export function createDropdownPositioner({
     }
 
     if (matchWidth) {
-      floating.style.width = `${ref.getBoundingClientRect().width}px`;
+      const available =
+        (result.middlewareData.size as SizeData | undefined)?.availableWidth ?? Number.POSITIVE_INFINITY;
+      // A panel measured while not yet rendered reports 0 — fall back to the reference width.
+      floating.style.width = `${Math.min(Math.max(naturalWidth, refWidth), available)}px`;
     }
   }
 

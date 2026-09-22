@@ -188,6 +188,89 @@ describe('ore-toast', () => {
 
     expect(results.violations).toHaveLength(0);
   });
+
+  it('keeps the same DOM nodes across timer pauses and updates', async () => {
+    const id = service.add({ actions: [{ label: 'Undo' }], duration: 5000, message: 'Saved' });
+
+    await fixture.flush();
+
+    const wrapper = fixture.query<HTMLElement>(`[data-toast-id="${id}"]`)!;
+    const alert = wrapper.querySelector('ore-alert')!;
+    const action = wrapper.querySelector('ore-button')!;
+    const container = fixture.element.shadowRoot?.querySelector('.toast-container')!;
+
+    container.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    container.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    service.update(id, { message: 'Saved twice' });
+    await fixture.flush();
+
+    expect(fixture.query(`[data-toast-id="${id}"]`)).toBe(wrapper);
+    expect(wrapper.querySelector('ore-alert')).toBe(alert);
+    expect(wrapper.querySelector('ore-button')).toBe(action);
+    expect(alert.textContent).toContain('Saved twice');
+  });
+
+  it('renders the alert as an embedded surface that defers dismissal to the store', async () => {
+    const id = service.add({ duration: 0, message: 'Closable' });
+
+    await fixture.flush();
+
+    const alert = fixture.query<HTMLElement>('ore-alert')!;
+
+    expect(alert.hasAttribute('embedded')).toBe(true);
+    expect(alert.shadowRoot?.querySelector('[role="status"], [role="alert"]')).toBeNull();
+
+    fireClick(getCloseButton(fixture)!);
+    await fixture.flush();
+
+    expect(alert.hasAttribute('dismissed')).toBe(false);
+    expect(fixture.query(`[data-toast-id="${id}"] .toast-inner.exiting`)).toBeTruthy();
+  });
+
+  it('dismisses the focused notification with Escape', async () => {
+    const id = service.add({ duration: 0, message: 'Escape me' });
+    const persistent = service.add({ dismissible: false, duration: 0, message: 'Stay' });
+
+    await fixture.flush();
+
+    getCloseButton(fixture)!.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, composed: true, key: 'Escape' }),
+    );
+    fixture
+      .query(`[data-toast-id="${persistent}"] ore-alert`)!
+      .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, composed: true, key: 'Escape' }));
+    await fixture.flush();
+
+    expect(fixture.query(`[data-toast-id="${id}"] .toast-inner.exiting`)).toBeTruthy();
+    expect(fixture.query(`[data-toast-id="${persistent}"] .toast-inner.exiting`)).toBeNull();
+  });
+
+  it('shows an auto-dismiss progress bar only for timed notifications', async () => {
+    const timed = service.add({ duration: 4000, message: 'Timed' });
+    const persistent = service.add({ duration: 0, message: 'Persistent' });
+
+    await fixture.flush();
+
+    const progress = fixture.query<HTMLElement>(`[data-toast-id="${timed}"] .toast-progress`);
+
+    expect(progress?.style.getPropertyValue('--_toast-duration')).toBe('4000ms');
+    expect(progress?.hidden).toBe(false);
+    expect(fixture.query<HTMLElement>(`[data-toast-id="${persistent}"] .toast-progress`)?.hidden).toBe(true);
+  });
+
+  it('renders action buttons flat by default and keyed to their label', async () => {
+    const id = service.add({
+      actions: [{ label: 'Undo' }, { label: 'Open', variant: 'solid' }],
+      duration: 0,
+      message: 'Done',
+    });
+
+    await fixture.flush();
+
+    const buttons = fixture.queryAll<HTMLElement>(`[data-toast-id="${id}"] ore-button`);
+
+    expect(buttons.map((button) => button.getAttribute('variant'))).toEqual(['flat', 'solid']);
+  });
 });
 
 describe('createToastService', () => {

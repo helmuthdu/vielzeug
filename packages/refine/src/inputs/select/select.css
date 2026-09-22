@@ -7,6 +7,7 @@
   :host([fullwidth]) {
     display: block;
     width: 100%;
+    min-width: 0;
   }
 
   /* Hide native <option> elements — we render our own UI */

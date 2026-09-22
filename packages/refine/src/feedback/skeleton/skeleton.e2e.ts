@@ -2,8 +2,11 @@ import { expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   test('fills an externally sized card media slot', async ({ page, refinePage }) => {
+    // The card sizes its media container from content, so consumers size it externally —
+    // via ::part(media) — exactly like demos/voyage does for its card media skeletons.
     await refinePage.mountComponent(
-      '<ore-card id="card" padding="none" style="display:block;height:240px">' +
+      '<style>#card::part(media) { height: 100%; }</style>' +
+        '<ore-card id="card" padding="none" style="height:240px">' +
         '<ore-skeleton id="media" slot="media" style="display:block;width:100%;height:100%"></ore-skeleton>' +
         '</ore-card>',
     );

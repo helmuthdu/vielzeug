@@ -37,6 +37,7 @@
      convention as ore-input's own :host([fullwidth]). */
   :host([fullwidth]) {
     width: 100%;
+    min-width: 0;
   }
 }
 
