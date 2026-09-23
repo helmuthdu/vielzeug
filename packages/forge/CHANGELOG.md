@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Wed, 23 Sep 2026 03:47:55 GMT and should not be manually modified.
+This log was last generated on Wed, 23 Sep 2026 06:05:22 GMT and should not be manually modified.
+
+## 3.1.2
+Wed, 23 Sep 2026 06:05:22 GMT
+
+_Version update only_
 
 ## 3.1.1
 Wed, 23 Sep 2026 03:47:55 GMT

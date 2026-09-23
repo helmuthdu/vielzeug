@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: restore emission of schema marker symbols and ParseValue/resolveMessage in published declarations (regressed in 7023dbf1)",
+            "commit": "5970527952828839477d15793146df60de685b85"
+          }
+        ]
+      },
+      "date": "Wed, 23 Sep 2026 06:05:22 GMT",
+      "tag": "@vielzeug/spell_v3.1.2",
+      "version": "3.1.2"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "fix: emit schema marker symbols in published declarations",
             "commit": "7023dbf1f65d0b84012b44ff4aa2033d69eba7ac"
           }

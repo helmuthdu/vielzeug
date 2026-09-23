@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/spell
 
-This log was last generated on Wed, 23 Sep 2026 03:47:55 GMT and should not be manually modified.
+This log was last generated on Wed, 23 Sep 2026 06:05:22 GMT and should not be manually modified.
+
+## 3.1.2
+Wed, 23 Sep 2026 06:05:22 GMT
+
+### Patches
+
+- fix: restore emission of schema marker symbols and ParseValue/resolveMessage in published declarations (regressed in 7023dbf1)
 
 ## 3.1.1
 Wed, 23 Sep 2026 03:47:55 GMT
