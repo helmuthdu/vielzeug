@@ -2,22 +2,180 @@
 
 `<ore-toast>` is a declarative notification host. It renders the notification store for its scope; application code always creates, updates, and dismisses notifications through a toast service.
 
-## Basic usage
+## Basic Usage
 
 Place a host once, then use the singleton service:
+
+<ComponentPreview height="320px">
 
 ```html
 <ore-toast position="bottom-right"></ore-toast>
 
+<div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+  <ore-button id="btn-basic" color="primary">Show Toast</ore-button>
+</div>
+
 <script type="module">
-  import '@vielzeug/refine/toast';
   import { toast } from '@vielzeug/refine/toast';
 
-  toast.success('Changes saved!');
+  document.getElementById('btn-basic').addEventListener('click', () => {
+    toast.success('Changes saved successfully!');
+  });
 </script>
 ```
 
+</ComponentPreview>
+
 If no host exists, the service creates one in `document.body` on first use. The host is intentionally render-only: it has no `add`, `update`, `dismiss`, or `clear` methods.
+
+## Colors & Types
+
+Use semantic color shortcuts to communicate outcome and intent.
+
+<ComponentPreview height="320px">
+
+```html
+<ore-toast position="bottom-right"></ore-toast>
+
+<div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+  <ore-button id="btn-success" color="success">Success</ore-button>
+  <ore-button id="btn-info" color="info">Info</ore-button>
+  <ore-button id="btn-warning" color="warning">Warning</ore-button>
+  <ore-button id="btn-error" color="error">Error</ore-button>
+</div>
+
+<script type="module">
+  import { toast } from '@vielzeug/refine/toast';
+
+  document.getElementById('btn-success').addEventListener('click', () => {
+    toast.success('Profile updated successfully.');
+  });
+  document.getElementById('btn-info').addEventListener('click', () => {
+    toast.info('A new update is available.');
+  });
+  document.getElementById('btn-warning').addEventListener('click', () => {
+    toast.warning('Your session will expire in 5 minutes.');
+  });
+  document.getElementById('btn-error').addEventListener('click', () => {
+    toast.error('Failed to save changes. Please try again.');
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Heading & Metadata
+
+Add a `heading` and `meta` (such as a timestamp) to provide structured context.
+
+<ComponentPreview height="320px">
+
+```html
+<ore-toast position="bottom-right"></ore-toast>
+
+<ore-button id="btn-heading" color="primary">Show Detailed Toast</ore-button>
+
+<script type="module">
+  import { toast } from '@vielzeug/refine/toast';
+
+  document.getElementById('btn-heading').addEventListener('click', () => {
+    toast.add({
+      color: 'success',
+      heading: 'Deployment Successful',
+      message: 'Production build v2.4.0 is now live.',
+      meta: 'Just now',
+    });
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Action Buttons
+
+Attach interactive action buttons that execute callbacks before dismissing.
+
+<ComponentPreview height="320px">
+
+```html
+<ore-toast position="bottom-right"></ore-toast>
+
+<ore-button id="btn-action" color="primary">Delete Item</ore-button>
+
+<script type="module">
+  import { toast } from '@vielzeug/refine/toast';
+
+  document.getElementById('btn-action').addEventListener('click', () => {
+    toast.add({
+      actions: [
+        {
+          label: 'Undo',
+          onClick: () => console.log('Action undone'),
+        },
+      ],
+      color: 'info',
+      heading: 'Item Deleted',
+      message: 'The item has been moved to trash.',
+    });
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Positions
+
+Set `position` on `<ore-toast>` to control list placement (`top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, `bottom-right`).
+
+<ComponentPreview height="320px">
+
+```html
+<ore-toast position="top-right"></ore-toast>
+
+<ore-button id="btn-top-right" color="primary">Top Right Toast</ore-button>
+
+<script type="module">
+  import { toast } from '@vielzeug/refine/toast';
+
+  document.getElementById('btn-top-right').addEventListener('click', () => {
+    toast.info('Notification anchored at top-right.');
+  });
+</script>
+```
+
+</ComponentPreview>
+
+## Variants
+
+Toasts support `solid` (default), `flat`, and `bordered` visual variants.
+
+<ComponentPreview height="320px">
+
+```html
+<ore-toast position="bottom-right"></ore-toast>
+
+<div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+  <ore-button id="btn-solid" variant="solid" color="primary">Solid</ore-button>
+  <ore-button id="btn-flat" variant="flat" color="primary">Flat</ore-button>
+  <ore-button id="btn-bordered" variant="bordered" color="primary">Bordered</ore-button>
+</div>
+
+<script type="module">
+  import { toast } from '@vielzeug/refine/toast';
+
+  document.getElementById('btn-solid').addEventListener('click', () => {
+    toast.add({ color: 'primary', message: 'Solid variant notification', variant: 'solid' });
+  });
+  document.getElementById('btn-flat').addEventListener('click', () => {
+    toast.add({ color: 'primary', message: 'Flat variant notification', variant: 'flat' });
+  });
+  document.getElementById('btn-bordered').addEventListener('click', () => {
+    toast.add({ color: 'primary', message: 'Bordered variant notification', variant: 'bordered' });
+  });
+</script>
+```
+
+</ComponentPreview>
 
 ## Toast service
 

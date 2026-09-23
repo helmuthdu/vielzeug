@@ -76,6 +76,14 @@ document.addEventListener('select', (event) => {
   const overlay = event.target instanceof HTMLElement && overlayTags.has(event.target.tagName) ? event.target : null;
   if (overlay?.tagName === 'ORE-COMMAND-PALETTE') overlay.removeAttribute('open');
 });
+Object.defineProperty(window, 'toast', {
+  get() { return window.Refine?.components?.feedback?.toast; },
+  configurable: true,
+});
+Object.defineProperty(window, 'createToastService', {
+  get() { return window.Refine?.components?.feedback?.createToastService; },
+  configurable: true,
+});
 queueMicrotask(syncAllOverlays);
 `;
 
@@ -99,7 +107,10 @@ export interface SandboxDocResult {
 
 export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
   const { align = 'center', background, dark, dir, height, html, justify = 'center', vertical } = options;
-  const previewHtml = html.replace(/^\s*import\s+['"]@vielzeug\/refine\/[^'"]+['"];?\s*$/gm, '');
+  const previewHtml = html.replace(
+    /^\s*import\s+(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)?\s*(?:from\s+)?['"]@vielzeug\/refine(?:\/[^'"]+)?['"];?\s*$/gm,
+    '',
+  );
 
   const flexDirection = vertical ? 'column' : 'row';
   const bodyBackground = background ?? 'transparent';
