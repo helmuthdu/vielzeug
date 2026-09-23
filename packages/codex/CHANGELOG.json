@@ -4,6 +4,25 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/refine\" to `3.3.1`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "7023dbf1f65d0b84012b44ff4aa2033d69eba7ac"
+          }
+        ]
+      },
+      "date": "Wed, 23 Sep 2026 03:47:55 GMT",
+      "tag": "@vielzeug/codex_v3.1.1",
+      "version": "3.1.1"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/refine\" to `3.3.0`"
           }
         ],

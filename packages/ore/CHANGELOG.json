@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: keep multi-node items in place during each directive reconcile",
+            "commit": "7023dbf1f65d0b84012b44ff4aa2033d69eba7ac"
+          }
+        ]
+      },
+      "date": "Wed, 23 Sep 2026 03:47:55 GMT",
+      "tag": "@vielzeug/ore_v3.0.1",
+      "version": "3.0.1"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/assay\" to `3.0.0`"

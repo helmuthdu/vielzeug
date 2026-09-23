@@ -4,6 +4,18 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `3.0.2`"
+          }
+        ]
+      },
+      "date": "Wed, 23 Sep 2026 03:47:55 GMT",
+      "tag": "@vielzeug/postmaster_v3.0.2",
+      "version": "3.0.2"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/vault\" to `3.0.1`"
           }
         ]

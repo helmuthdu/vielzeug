@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Mon, 21 Sep 2026 15:19:01 GMT and should not be manually modified.
+This log was last generated on Wed, 23 Sep 2026 03:47:55 GMT and should not be manually modified.
+
+## 3.3.1
+Wed, 23 Sep 2026 03:47:55 GMT
+
+### Patches
+
+- fix: size dropdown panels from natural width and add embedded alert surface for toasts
 
 ## 3.3.0
 Mon, 21 Sep 2026 15:19:01 GMT

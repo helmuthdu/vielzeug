@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+This log was last generated on Wed, 23 Sep 2026 03:47:55 GMT and should not be manually modified.
+
+## 3.0.1
+Wed, 23 Sep 2026 03:47:55 GMT
+
+### Patches
+
+- fix: keep multi-node items in place during each directive reconcile
 
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT

@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: emit schema marker symbols in published declarations",
+            "commit": "7023dbf1f65d0b84012b44ff4aa2033d69eba7ac"
+          }
+        ]
+      },
+      "date": "Wed, 23 Sep 2026 03:47:55 GMT",
+      "tag": "@vielzeug/spell_v3.1.1",
+      "version": "3.1.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
