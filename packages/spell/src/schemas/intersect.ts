@@ -1,22 +1,8 @@
 import { isPlainObject } from '@vielzeug/arsenal';
 
-import type {
-  AnySchema,
-  CheckContext,
-  InferInput,
-  InferOutput,
-  InferSchemaMode,
-  Issue,
-  MergeSchemaModes,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
-} from '../core';
+import type { AnySchema, InferInput, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { _makeCtx, Schema, SpellValidationError } from '../core';
+import { Schema } from '../core';
 import { cloneRecord, defineOwnProperty } from '../safe-object';
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
@@ -40,21 +26,14 @@ function deepMerge(target: unknown, source: unknown): unknown {
 }
 
 /** All schemas must pass — intersection semantics. */
-export class IntersectSchema<
-  T extends readonly AnySchema[],
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number]>>,
-> extends Schema<UnionToIntersection<InferOutput<T[number]>>, UnionToIntersection<InferInput<T[number]>>, Mode> {
+export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
+  UnionToIntersection<InferOutput<T[number]>>,
+  UnionToIntersection<InferInput<T[number]>>
+> {
   readonly schemas: T;
 
   protected override get _kind(): string {
     return 'intersect';
-  }
-
-  override checkAsync(
-    this: IntersectSchema<T, 'sync'>,
-    fn: (value: UnionToIntersection<InferOutput<T[number]>>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): IntersectSchema<T, 'async'> {
-    return this._addCheck(fn, true) as unknown as IntersectSchema<T, 'async'>;
   }
 
   constructor(schemas: T) {
@@ -85,52 +64,30 @@ export class IntersectSchema<
     return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<UnionToIntersection<InferOutput<T[number]>>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    const state: { hasOutput: boolean; issues: Issue[]; output: unknown } = {
+      hasOutput: false,
+      issues: [],
+      output: value,
+    };
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    for (let i = 0; i < this.schemas.length; i++) {
+      const result = await this.schemas[i]._parseFullAsync(value, ctx);
 
-      if (prepared.skip) return prepared.value as UnionToIntersection<InferOutput<T[number]>>;
-
-      const state: { hasOutput: boolean; issues: Issue[]; output: unknown } = {
-        hasOutput: false,
-        issues: [],
-        output: prepared.value,
-      };
-
-      for (let i = 0; i < this.schemas.length; i++) {
-        const result = await this.schemas[i]._parseFullAsync(prepared.value, c);
-
-        if (result.issues.length > 0) {
-          state.issues.push(...result.issues);
-        } else if (!state.hasOutput) {
-          state.hasOutput = true;
-          state.output = result.data;
-        } else {
-          state.output = deepMerge(state.output, result.data);
-        }
+      if (result.issues.length > 0) {
+        state.issues.push(...result.issues);
+      } else if (!state.hasOutput) {
+        state.hasOutput = true;
+        state.output = result.data;
+      } else {
+        state.output = deepMerge(state.output, result.data);
       }
+    }
 
-      if (state.issues.length > 0) throw new SpellValidationError(state.issues);
-
-      const validationIssues = await this._runValidatorsAsync(state.output, c);
-
-      if (validationIssues.length) throw new SpellValidationError(validationIssues);
-
-      return this._runPostprocessors(state.output) as UnionToIntersection<InferOutput<T[number]>>;
-    });
+    return { data: state.output, issues: state.issues, typeOk: state.issues.length === 0 };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'intersect' };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const branches = this.schemas.map((s) => s.walk(visitor));
-
-    if (visitor.intersect) return visitor.intersect(this, branches);
-
-    return super._walk(visitor);
   }
 }

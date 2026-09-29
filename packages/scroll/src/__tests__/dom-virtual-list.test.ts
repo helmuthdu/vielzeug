@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createDomVirtualList, createVirtualScroller } from '../dom-virtual-list';
-import { ScrollConfigurationError, ScrollRangeError } from '../errors';
+import { ScrollConfigError, ScrollRangeError } from '../errors';
 import { flushMicrotasks, makeContainer } from './test-utils';
 
 type Row = { id: number; label: string; size: number };
@@ -31,7 +31,7 @@ describe('createDomVirtualList – configuration', () => {
           scrollElement: scrollEl,
           stickToBottom,
         }),
-      ).toThrow(ScrollConfigurationError);
+      ).toThrow(ScrollConfigError);
     }
   });
 });

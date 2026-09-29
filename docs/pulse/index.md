@@ -13,7 +13,7 @@ exports:
     RoomScope,
     RoomScopeBase,
     PresenceRoomScope,
-    ExternalStore,
+    Subscribable,
     PulseOptions,
     PulseSchema,
     ChannelDefinition,

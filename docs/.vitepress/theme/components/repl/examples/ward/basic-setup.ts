@@ -4,7 +4,7 @@ export const basicSetupExample = {
 // Simple allow/deny rules evaluated in order — first match wins
 const ward = createWard([
   { action: 'read', resource: 'posts', effect: 'allow' },
-  { action: 'write', resource: 'posts', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('writer') ?? false },
+  { action: 'write', resource: 'posts', effect: 'allow', roles: ['writer'] },
   { action: 'delete', resource: 'posts', effect: 'deny' },
 ])
 

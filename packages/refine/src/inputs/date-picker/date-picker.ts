@@ -6,6 +6,7 @@ import {
   createDropdownPositioner,
   type DatePickerView,
   formatDisplayDate,
+  handleCalendarGridKeydown,
   parseIso,
   toIsoString,
 } from '../../core';
@@ -253,9 +254,9 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
     const positioner = createDropdownPositioner({
       getFloating: () => calendarRef.value ?? null,
+      getOffsetPx: () => 4,
       getReference: () => triggerRef.value ?? null,
       matchWidth: false,
-      offsetPx: 4,
     });
 
     let stopAutoUpdate: (() => void) | null = null;
@@ -348,81 +349,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     }
 
     function handleDayKeydown(e: KeyboardEvent): void {
-      const cell = e.currentTarget as HTMLElement;
-      const grid = cell.closest('.cal-grid-days');
-
-      if (!grid) return;
-
-      const allCells = Array.from(grid.querySelectorAll<HTMLElement>('.cal-cell-day'));
-      const idx = allCells.indexOf(cell);
-
-      if (idx === -1) return;
-
-      let target: HTMLElement | undefined;
-
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleSelectDay(cell.dataset.iso ?? '');
-
-        return;
-      } else if (e.key === 'ArrowRight') {
-        target = allCells[idx + 1];
-      } else if (e.key === 'ArrowLeft') {
-        target = allCells[idx - 1];
-      } else if (e.key === 'ArrowDown') {
-        target = allCells[idx + 7];
-      } else if (e.key === 'ArrowUp') {
-        target = allCells[idx - 7];
-      } else if (e.key === 'Home') {
-        target = allCells[Math.floor(idx / 7) * 7];
-      } else if (e.key === 'End') {
-        target = allCells[Math.floor(idx / 7) * 7 + 6];
-      } else {
-        return;
-      }
-
-      e.preventDefault();
-      target?.focus();
-    }
-
-    // ── Month/year-cell keyboard navigation (fixed 4-column grid) ─────────────
-
-    function handleGridKeydown(e: KeyboardEvent, cellSelector: string, columns: number, onSelect: () => void): void {
-      const cell = e.currentTarget as HTMLElement;
-      const grid = cell.closest('.cal-grid');
-
-      if (!grid) return;
-
-      const allCells = Array.from(grid.querySelectorAll<HTMLElement>(cellSelector));
-      const idx = allCells.indexOf(cell);
-
-      if (idx === -1) return;
-
-      let target: HTMLElement | undefined;
-
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSelect();
-
-        return;
-      } else if (e.key === 'ArrowRight') {
-        target = allCells[idx + 1];
-      } else if (e.key === 'ArrowLeft') {
-        target = allCells[idx - 1];
-      } else if (e.key === 'ArrowDown') {
-        target = allCells[idx + columns];
-      } else if (e.key === 'ArrowUp') {
-        target = allCells[idx - columns];
-      } else if (e.key === 'Home') {
-        target = allCells[Math.floor(idx / columns) * columns];
-      } else if (e.key === 'End') {
-        target = allCells[Math.min(Math.floor(idx / columns) * columns + columns - 1, allCells.length - 1)];
-      } else {
-        return;
-      }
-
-      e.preventDefault();
-      target?.focus();
+      handleCalendarGridKeydown(e, '.cal-cell-day', 7, (cell) => handleSelectDay(cell.dataset.iso ?? ''));
     }
 
     // ── Open / close ─────────────────────────────────────────────────────────
@@ -665,7 +592,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                           if (!cell.isDisabled) handleSelectMonth(cell.month);
                         }}"
                         @keydown="${(e: KeyboardEvent) =>
-                          handleGridKeydown(e, '.cal-cell-month', 4, () => {
+                          handleCalendarGridKeydown(e, '.cal-cell-month', 4, () => {
                             if (!cell.isDisabled) handleSelectMonth(cell.month);
                           })}">
                         ${cell.shortLabel}
@@ -707,7 +634,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                           if (!cell.isDisabled) handleSelectYear(cell.year);
                         }}"
                         @keydown="${(e: KeyboardEvent) =>
-                          handleGridKeydown(e, '.cal-cell-year', 4, () => {
+                          handleCalendarGridKeydown(e, '.cal-cell-year', 4, () => {
                             if (!cell.isDisabled) handleSelectYear(cell.year);
                           })}">
                         ${String(cell.year)}

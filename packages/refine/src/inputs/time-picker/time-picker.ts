@@ -225,9 +225,9 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
 
     const positioner = createDropdownPositioner({
       getFloating: () => dropdownRef.value ?? null,
+      getOffsetPx: () => 4,
       getReference: () => triggerRef.value ?? null,
       matchWidth: false,
-      offsetPx: 4,
     });
 
     let stopAutoUpdate: (() => void) | null = null;

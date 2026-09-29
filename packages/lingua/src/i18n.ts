@@ -8,6 +8,11 @@ import type { Catalog, I18nOptions, Locale, SubscribeOptions, TranslationState }
 export type I18nSnapshot<C extends Catalog = Catalog> = {
   readonly locale: Locale;
   readonly revision: number;
+  /**
+   * Translator for this snapshot's locale and loaded catalogs. Components can hold the
+   * snapshot and translate through it without importing the whole i18n instance; always
+   * re-read it after a notification instead of caching a translator across snapshots.
+   */
   readonly translator: Translator<C>;
 };
 
@@ -25,7 +30,7 @@ export type I18n<C extends Catalog = Catalog> = Translator<C> & {
 };
 
 export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> {
-  if (options.state && options.state.version !== 4) {
+  if (options.state && options.state.version !== 1) {
     throw new LinguaInvalidStateError(`Unsupported lingua state version: ${String(options.state.version)}.`);
   }
 
@@ -57,7 +62,7 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
     return changed;
   };
 
-  const buildSnapshot = (): I18nSnapshot<C> => {
+  const buildTranslator = (): Translator<C> => {
     const ready = localeChain(locale, fallbackLocales).some(catalogs.isLoaded);
     const missing = ready
       ? options.missing
@@ -67,12 +72,11 @@ export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> 
           );
         };
 
-    return {
-      locale,
-      revision,
-      translator: createTranslatorFromCompiled<C>(catalogs.catalogMap(), { fallback, locale, missing }),
-    };
+    return createTranslatorFromCompiled<C>(catalogs.catalogMap(), { fallback, locale, missing });
   };
+
+  const buildSnapshot = (): I18nSnapshot<C> => ({ locale, revision, translator: buildTranslator() });
+
   let snapshot = buildSnapshot();
 
   const assertLive = (): void => {

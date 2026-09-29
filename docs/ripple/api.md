@@ -238,7 +238,7 @@ function watch<T>(
 ): EffectHandle;
 ```
 
-Observes selected output changes using the default graph or a `Ripple.watch()` method. Callback-only reactive reads are untracked. `once` disposes after the first callback invocation even when it throws; without `immediate`, initial evaluation does not count as an invocation.
+Observes selected output changes using the default graph or a `Ripple.watch()` method. Callback-only reactive reads are untracked; without `immediate`, initial evaluation does not count as an invocation. For one-shot observation, dispose the returned handle from inside the callback — with `immediate: true`, do the first invocation at the call site instead, because the callback runs before the handle exists.
 
 **Returns:** `EffectHandle`.
 
@@ -321,8 +321,8 @@ type Unsubscribe = () => void;
 
 type SignalOptions<T> = { equals?: Equality<T>; name?: string };
 type ComputedOptions<T> = { equals?: Equality<T>; name?: string };
-type EffectOptions = { name?: string; scheduler?: 'microtask' | 'sync' };
-type WatchOptions<T> = { equals?: Equality<T>; immediate?: boolean; name?: string; once?: boolean };
+type EffectOptions = { name?: string };
+type WatchOptions<T> = { equals?: Equality<T>; immediate?: boolean; name?: string };
 
 type RippleErrorContext = { readonly kind: 'cleanup' | 'computed' | 'effect' | 'listener'; readonly name?: string };
 type RippleErrorPolicy = 'throw' | 'swallow';

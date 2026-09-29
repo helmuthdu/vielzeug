@@ -1,6 +1,6 @@
 export const subjectsExample = {
   code: `// Replay latest events to late subscribers while keeping send() at one boundary.
-import { createChannel } from '@vielzeug/flux/subjects'
+import { createChannel } from '@vielzeug/flux'
 
 const events = createChannel({ replay: 2 })
 

@@ -1,13 +1,13 @@
 export const multiRoleRulesExample = {
   code: `import { createWard } from '@vielzeug/ward'
 
-// Use condition callbacks for multi-role checks (OR semantics)
+// A rule's roles array matches with OR semantics — any listed role matches
 const ward = createWard([
   {
     action: 'read',
     resource: 'articles',
     effect: 'allow',
-    condition: ({ principal }) => (principal?.roles.some(r => ['editor', 'reviewer', 'reader'].includes(r)) ?? false),
+    roles: ['editor', 'reviewer', 'reader'],
   },
   { action: 'read', resource: 'articles', effect: 'deny' },
 ])

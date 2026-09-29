@@ -2,9 +2,7 @@ import { computed, isReactive, type Readable, effect as rawEffect, untrack } fro
 
 import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../template/result';
-import { createReplaceableSlot, removeNodes } from '../utils/dom';
-
-type MaybeReactive<T> = T | (() => T) | Readable<T>;
+import { createReplaceableSlot, type MaybeReactive, removeNodes } from '../utils/dom';
 
 type WhenRenderable = HTMLResult | null | undefined | false;
 

@@ -1,22 +1,19 @@
 import type { Readable, Signal } from '@vielzeug/ripple';
-import { computed, fromSubscribable, signal } from '@vielzeug/ripple';
+import { signal } from '@vielzeug/ripple';
 import type { RouteParams } from '@vielzeug/wayfinder';
+import { createRouteSignals } from '@vielzeug/wayfinder';
 import { router } from './router';
 import { demoUsers, generateDemoData, seedData } from './seed-data';
 import type { Activity, CrmData, DemoUser, Opportunity, OpportunityStage } from './types';
 
 export const crmData: Signal<CrmData> = signal(structuredClone(seedData));
 export const currentUser: Signal<DemoUser> = signal(demoUsers[0]);
-export const locale = signal<'de' | 'en'>('en');
 export const networkStatus = signal<'offline' | 'online' | 'syncing'>('online');
 
-const routeBinding = fromSubscribable<ReturnType<typeof router.getSnapshot>>({
-  getSnapshot: () => router.getSnapshot(),
-  subscribe: (listener) => router.subscribe(() => listener()),
-});
+const routeSignals = createRouteSignals(router);
 
-export const activeRoute: Readable<string | null> = computed(() => routeBinding.value.matches.at(-1)?.name ?? null);
-export const activeRouteParams: Readable<RouteParams> = computed(() => routeBinding.value.matches.at(-1)?.params ?? {});
+export const activeRoute: Readable<string | null> = routeSignals.name;
+export const activeRouteParams: Readable<RouteParams> = routeSignals.params;
 
 export function opportunitiesByStage(stage: OpportunityStage): Opportunity[] {
   return crmData.value.opportunities.filter((opportunity) => opportunity.stage === stage);

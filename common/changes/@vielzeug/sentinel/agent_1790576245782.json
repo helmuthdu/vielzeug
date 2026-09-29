@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add createFullscreen",
+      "packageName": "@vielzeug/sentinel",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sentinel"
+}

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove EffectOptions.scheduler; effects coalesce through batch() flush-batching only",
+      "packageName": "@vielzeug/ripple",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

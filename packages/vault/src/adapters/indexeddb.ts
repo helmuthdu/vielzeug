@@ -2,11 +2,10 @@
 
 import {
   assertBatchTables,
-  type BatchImpl,
+  batchScopeGuard,
   buildDocumentStore,
-  buildTxContext,
+  buildOperations,
   type StorageBackend,
-  withBatch,
 } from '../adapter-core';
 import { decodeRecord, encodeRecord } from '../codec';
 import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
@@ -22,73 +21,13 @@ export type MigrationContext = {
   tx: IDBTransaction;
 };
 
-/** Synchronous IndexedDB schema upgrade callback. */
+/**
+ * Synchronous IndexedDB schema upgrade callback, invoked from `onupgradeneeded`.
+ * Tables and schema-declared indexes are created automatically; use the hook
+ * only for work the schema cannot express, such as deleting a removed object
+ * store or transforming records written by an older format.
+ */
 export type MigrationFn = (ctx: MigrationContext) => void;
-
-/**
- * A single step in a typed migration definition.
- * Compose multiple steps to describe the full schema change between two versions.
- */
-export type MigrationStep =
-  | { field: string; table: string; type: 'addIndex' }
-  | { field: string; table: string; type: 'removeIndex' }
-  | { name: string; type: 'addTable' }
-  | { name: string; type: 'removeTable' };
-
-/**
- * Builds a typed `MigrationFn` from a declarative list of schema change steps.
- * Each step is applied in order and is idempotent (safe to run when the target
- * already exists or has already been removed).
- *
- * ```ts
- * const migrate = defineMigration([
- *   { type: 'addTable', name: 'sessions' },
- *   { type: 'addIndex', table: 'users', field: 'email' },
- *   { type: 'removeTable', name: 'legacyTokens' },
- * ]);
- *
- * const db = createIndexedDB({ name: 'app', version: 2, schema, codecs, migrate });
- * ```
- */
-export function defineMigration(steps: MigrationStep[]): MigrationFn {
-  return ({ db, tx }) => {
-    for (const step of steps) {
-      switch (step.type) {
-        case 'addIndex': {
-          const store = tx.objectStore(step.table);
-
-          // keyPath mirrors the vault storage envelope: { value: T, expiresAt?: number }
-          if (!store.indexNames.contains(step.field)) {
-            store.createIndex(step.field, `value.${step.field}`);
-          }
-
-          break;
-        }
-        case 'addTable':
-          if (!db.objectStoreNames.contains(step.name)) {
-            db.createObjectStore(step.name);
-          }
-
-          break;
-        case 'removeIndex': {
-          const store = tx.objectStore(step.table);
-
-          if (store.indexNames.contains(step.field)) {
-            store.deleteIndex(step.field);
-          }
-
-          break;
-        }
-        case 'removeTable':
-          if (db.objectStoreNames.contains(step.name)) {
-            db.deleteObjectStore(step.name);
-          }
-
-          break;
-      }
-    }
-  };
-}
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
@@ -744,15 +683,13 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       },
     };
 
-    const scope = new Set<string>(tables);
     let contextActive = true;
-    const tx = buildTxContext<S, K>(
+    const tx = buildOperations<S, K>(
       schema,
       batchCore,
       (t) => dirtyTables.add(t),
       validateFn,
-      scope,
-      () => contextActive,
+      batchScopeGuard(tables, () => contextActive),
     );
 
     try {
@@ -766,9 +703,9 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     }
   };
 
-  let batch: BatchImpl<S> | undefined;
   const adapter = buildDocumentStore(schema, core, {
     codecs,
+    createBatch: (deps) => (tables, fn) => idbBatch(tables, fn, deps.notifyMutation, deps.validate),
     onCrossTabMessage(notify) {
       if (!channel) {
         return undefined;
@@ -787,15 +724,10 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       };
     },
     onMutation: publish,
-    onTransactions: (deps) => {
-      batch = (tables, fn) => idbBatch(tables, fn, deps.notifyMutation, deps.validate);
-    },
     schema,
   });
 
-  if (!batch) throw new VaultError('IndexedDB transaction capability was not initialized');
-
-  return Object.assign(withBatch(adapter, batch, schema), {
+  return Object.assign(adapter, {
     getAllByIndex<K extends keyof S & string, Field extends keyof RecordOf<S, K> & string>(
       table: K,
       field: Field,

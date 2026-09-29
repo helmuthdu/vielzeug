@@ -188,9 +188,8 @@ define<OreQrScannerProps>(QR_SCANNER_TAG, {
         if (event.type === 'status-change') {
           if (event.status === 'starting') setStatus('starting');
           else if (event.status === 'scanning') setStatus('scanning');
-          // 'stopped' after a once-result must not clobber the result view.
-          else if (event.status === 'stopped' && status.value !== 'result') setStatus('idle');
-          else if (event.status === 'idle') setStatus('idle');
+          // 'idle' after a once-result must not clobber the result view.
+          else if (event.status === 'idle' && status.value !== 'result') setStatus('idle');
         } else if (event.type === 'error') {
           emit('error', { error: event.error });
           if (status.value === 'scanning' || status.value === 'starting') setStatus('error', event.error.message);

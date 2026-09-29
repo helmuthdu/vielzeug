@@ -32,7 +32,7 @@ npx -y @vielzeug/codex
 - `loadSnapshot` validates chunked snapshot metadata.
 - `SnapshotCatalog` loads package content only when requested.
 - `createMcpServer` registers generic package tools; `/refine` adds component tools explicitly.
-- Root, `/advanced`, and `/refine` entry points publish TypeScript declarations.
+- Root and `/refine` entry points publish TypeScript declarations.
 - `startHttpHost` enforces loopback binding plus localhost Host and Origin validation.
 
 ## Documentation

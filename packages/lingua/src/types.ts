@@ -108,5 +108,5 @@ export type SubscribeOptions = {
 export type TranslationState<C extends Catalog = Catalog> = {
   readonly catalogs: Catalogs<C>;
   readonly locale: Locale;
-  readonly version: 4;
+  readonly version: 1;
 };

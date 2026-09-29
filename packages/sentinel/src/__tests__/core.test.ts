@@ -22,16 +22,13 @@ describe('Sentinel lifecycle', () => {
     expect(sentinel.disposed).toBe(true);
   });
 
-  it('skips setup when the external signal is already aborted', () => {
+  it('throws when the external signal is already aborted', () => {
     const controller = new AbortController();
     const setup = vi.fn(() => () => {});
     controller.abort();
 
-    const sentinel = createSentinel({ initialValue: 1, signal: controller.signal }, setup);
-
+    expect(() => createSentinel({ initialValue: 1, signal: controller.signal }, setup)).toThrow('already aborted');
     expect(setup).not.toHaveBeenCalled();
-    expect(sentinel.disposed).toBe(true);
-    expect(sentinel.disposalSignal.aborted).toBe(true);
   });
 
   it('disposes when the external signal aborts', () => {
@@ -120,6 +117,32 @@ describe('Sentinel lifecycle', () => {
     expect(() => queued[0]?.()).toThrow('listener failed');
 
     sentinel.dispose();
+    queueMicrotaskSpy.mockRestore();
+  });
+
+  it('observes listener errors through tap before the async rethrow', () => {
+    let update: ((value: number) => void) | undefined;
+    const queued: VoidFunction[] = [];
+    const queueMicrotaskSpy = vi
+      .spyOn(globalThis, 'queueMicrotask')
+      .mockImplementation((callback) => queued.push(callback));
+    const sentinel = createSentinel({ initialValue: 0 }, (setValue) => {
+      update = setValue;
+      return () => {};
+    });
+    const events: unknown[] = [];
+    sentinel.tap((event) => events.push(event));
+    sentinel.subscribe(() => {
+      throw new Error('listener failed');
+    });
+
+    update?.(1);
+
+    expect(events).toEqual([{ error: expect.any(Error), type: 'error' }]);
+
+    sentinel.dispose();
+    expect(events).toHaveLength(2);
+    expect(events[1]).toEqual({ type: 'dispose' });
     queueMicrotaskSpy.mockRestore();
   });
 

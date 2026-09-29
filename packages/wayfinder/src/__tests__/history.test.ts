@@ -1,7 +1,7 @@
 /**
  * createMemoryHistory — in-memory history driver used by the router.
  */
-import { createBrowserHistory, createHashHistory, createMemoryHistory, createRouter } from '../';
+import { createBrowserHistory, createHashHistory, createHistoryForBase, createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
@@ -163,5 +163,25 @@ describe('createHashHistory', () => {
       '',
       '/demos/voyage/#/trips/japan?day=2#route',
     );
+  });
+});
+
+describe('createHistoryForBase', () => {
+  beforeEach(resetMocks);
+
+  it('uses History-API paths at the origin root', () => {
+    const history = createHistoryForBase('/');
+
+    history.push('/about', null);
+
+    expect(mockHistory.pushState).toHaveBeenCalledWith(null, '', '/about');
+  });
+
+  it('uses the hash driver under a deployment base', () => {
+    const history = createHistoryForBase('/demos/primal/');
+
+    history.push('/demos/primal/settings', null);
+
+    expect(mockHistory.pushState).toHaveBeenCalledWith(null, '', '/demos/primal/#/settings');
   });
 });

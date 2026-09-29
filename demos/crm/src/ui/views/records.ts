@@ -17,7 +17,7 @@ import { can } from '../../core/auth';
 import { dateFilterValue, formatAmount, formatDate } from '../../core/format';
 import { t } from '../../core/i18n';
 import type { RecordKind } from '../../core/record-actions';
-import { routeHref, router } from '../../core/router';
+import { router } from '../../core/router';
 import { companyOpportunities, conversion, openPipeline, weightedPipeline } from '../../core/selectors';
 import { crmData } from '../../core/store';
 import type { Company, Lead, Opportunity } from '../../core/types';
@@ -104,7 +104,7 @@ define('crm-companies-view', {
         renderCell: (company) => html`
           <a
             part="company-cell"
-            href=${routeHref(router.url('companyDetail', { id: company.id }))}
+            href=${router.href('companyDetail', { id: company.id })}
             @click=${(event: Event) => {
               event.preventDefault();
               void router.navigate({ name: 'companyDetail', params: { id: company.id } });

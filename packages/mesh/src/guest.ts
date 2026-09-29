@@ -1,3 +1,8 @@
+import {
+  DEFAULT_CHANNEL_OPEN_TIMEOUT_MS,
+  DEFAULT_ICE_GATHERING_TIMEOUT_MS,
+  DEFAULT_MAX_MESSAGE_BYTES,
+} from './_defaults';
 import { createMessenger, createNodeCore, createPeerRecord, type PeerRecord } from './_node';
 import { createProof } from './_proof';
 import { randomId } from './_random';
@@ -13,10 +18,6 @@ import type {
   RTCPeerConnectionLike,
 } from './types';
 
-const DEFAULT_CHANNEL_OPEN_TIMEOUT_MS = 60_000;
-const DEFAULT_MAX_MESSAGE_BYTES = 65_536;
-const DEFAULT_ICE_GATHERING_TIMEOUT_MS = 5_000;
-
 /**
  * Create a guest mesh node. The guest pairs with one host by consuming an
  * out-of-band invitation and returning an answer.
@@ -24,8 +25,6 @@ const DEFAULT_ICE_GATHERING_TIMEOUT_MS = 5_000;
 export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOptions = {}): MeshGuest<P> {
   const rtc = options.rtc ?? nativeRtcFactory;
   const clock = options.clock ?? (() => Date.now());
-  const serialize = options.serialize ?? JSON.stringify;
-  const deserialize = options.deserialize ?? JSON.parse;
   const maxMessageBytes = options.maxMessageBytes ?? DEFAULT_MAX_MESSAGE_BYTES;
   const channelOpenTimeoutMs = options.channelOpenTimeoutMs ?? DEFAULT_CHANNEL_OPEN_TIMEOUT_MS;
   const iceGatheringTimeoutMs = options.iceGatheringTimeoutMs ?? DEFAULT_ICE_GATHERING_TIMEOUT_MS;
@@ -33,29 +32,17 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
   const core = createNodeCore(randomId(options.random), options.signal);
   const messenger = createMessenger({
     clock,
-    deserialize,
     emitTap: core.emitTap,
     maxMessageBytes,
-    peerIdOf: (peer) => peer.id,
     random: options.random,
-    serialize,
   });
 
   let hostPeer: PeerRecord | null = null;
   let openTimer: ReturnType<typeof setTimeout> | null = null;
-  let downgradeNotified = false;
-
-  function onSecurityDowngrade(): void {
-    if (downgradeNotified) return;
-    downgradeNotified = true;
-    core.emitTap({
-      reason: 'SubtleCrypto unavailable — proof uses a non-cryptographic hash',
-      type: 'security-downgrade',
-    });
-  }
 
   function failPeer(peer: PeerRecord, error: MeshError): void {
-    if (core.disposed || peer.status === 'failed') return;
+    // Ignore events from a superseded peer after re-pairing replaced hostPeer.
+    if (core.disposed || peer !== hostPeer || peer.status === 'failed') return;
     peer.status = 'failed';
     if (openTimer) {
       clearTimeout(openTimer);
@@ -69,16 +56,17 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     }, 0);
     core.emitTap({ peerId: peer.id, status: 'failed', type: 'status-change' });
     core.emitTap({ error, type: 'error' });
-    core.emitTap({ peerId: peer.id, reason: error.message, type: 'peer-left' });
+    core.emitTap({ peer: peer.publicPeer, reason: error.message, type: 'peer-left' });
     core.setStatus('failed');
   }
 
   function disconnectPeer(peer: PeerRecord, reason: string): void {
-    if (core.disposed || peer.status === 'disconnected' || peer.status === 'failed') return;
+    if (core.disposed || peer !== hostPeer) return;
+    if (peer.status === 'disconnected' || peer.status === 'failed') return;
     peer.status = 'disconnected';
     peer.pc?.close();
     core.emitTap({ peerId: peer.id, status: 'disconnected', type: 'status-change' });
-    core.emitTap({ peerId: peer.id, reason, type: 'peer-left' });
+    core.emitTap({ peer: peer.publicPeer, reason, type: 'peer-left' });
     core.setStatus('disconnected');
   }
 
@@ -93,7 +81,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       }
       peer.status = 'connected';
       core.emitTap({ peerId: peer.id, status: 'connected', type: 'status-change' });
-      core.emitTap({ peerId: peer.id, type: 'peer-joined' });
+      core.emitTap({ peer: peer.publicPeer, type: 'peer-joined' });
       core.setStatus('connected');
     });
     dc.addEventListener('message', (event) => {
@@ -131,9 +119,22 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
   const guest: MeshGuest<P> = {
     async acceptInvitation(invitation, meta) {
       core.ensureLive();
-      if (hostPeer) throw new MeshPairingError('Guest is already paired');
+      // A terminal host peer (failed/disconnected) may be replaced by a fresh
+      // pairing on the same node — listeners stay attached and keep working.
+      if (hostPeer && hostPeer.status !== 'failed' && hostPeer.status !== 'disconnected') {
+        throw new MeshPairingError('Guest is already paired');
+      }
       if (invitation?.v !== 1) throw new MeshPairingError('Unsupported invitation version');
       if (clock() >= invitation.expiresAt) throw new MeshPairingError('Invitation expired');
+
+      if (hostPeer) {
+        if (openTimer) {
+          clearTimeout(openTimer);
+          openTimer = null;
+        }
+        hostPeer.pc?.close();
+        hostPeer = null;
+      }
 
       core.setStatus('pairing');
       let pc: RTCPeerConnectionLike;
@@ -144,9 +145,10 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
         throw error;
       }
 
-      // The invitation carries no host identity — the session id doubles as
-      // the host-side peer id for inbound metadata and tap events.
-      const peer = createPeerRecord(invitation.sessionId, undefined, 'host');
+      // The invitation carries no host identity beyond an optional display
+      // name — the session id doubles as the host-side peer id for inbound
+      // metadata and tap events.
+      const peer = createPeerRecord(invitation.sessionId, invitation.hostName, 'host');
       peer.pc = pc;
       hostPeer = peer;
 
@@ -189,7 +191,15 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       }
 
       const peerId = randomId(options.random);
-      const proof = await createProof(invitation.secret, answerSdp, onSecurityDowngrade);
+      let proof: string;
+      try {
+        proof = await createProof(invitation.secret, answerSdp);
+      } catch (cause) {
+        hostPeer = null;
+        pc.close();
+        core.setStatus('idle');
+        throw cause;
+      }
       core.setStatus('connecting');
 
       // If the channel never opens (host never accepts the answer), fail loudly

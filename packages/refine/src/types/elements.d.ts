@@ -18,6 +18,7 @@ import type { OreBreadcrumbItemProps, OreBreadcrumbProps } from '../content/brea
 import type { OreCardEvents, OreCardProps } from '../content/card/card';
 import type { OreCarouselEvents, OreCarouselProps } from '../content/carousel/carousel';
 import type { OreChatMessageEvents, OreChatMessageProps } from '../content/chat-message/chat-message';
+import type { ChatPanelElement, OreChatPanelEvents } from '../content/chat-panel/chat-panel';
 import type { OreCodeWindowProps } from '../content/code-window/code-window';
 import type { OreCopyCommandEvents, OreCopyCommandProps } from '../content/copy-command/copy-command';
 import type { OreIconProps } from '../content/icon/icon';
@@ -121,6 +122,7 @@ export interface RefineElementMap {
   'ore-carousel': HTMLElement & OreCarouselProps & AddEventListeners<OreCarouselEvents>;
   'ore-carousel-slide': HTMLElement;
   'ore-chat-message': HTMLElement & OreChatMessageProps & AddEventListeners<OreChatMessageEvents>;
+  'ore-chat-panel': ChatPanelElement & AddEventListeners<OreChatPanelEvents>;
   'ore-checkbox': HTMLElement & OreCheckboxProps & FormValidityMethods & AddEventListeners<OreCheckboxEvents>;
   'ore-checkbox-group': HTMLElement &
     OreCheckboxGroupProps &

@@ -33,6 +33,8 @@ Three segment modes cover every payload:
 
 Mode selection is automatic — `encodeQr('01234567')` uses `numeric`, `'HELLO WORLD'` uses `alphanumeric`, anything else uses `byte`. Force a mode with `mode`, but a forced mode that cannot represent the input throws `SigilOptionError`.
 
+`Uint8Array` input is raw binary: it always encodes in byte mode, byte-for-byte, with no UTF-8 round-trip — invalid UTF-8 (tokens, provisioning payloads) survives intact. Forcing a non-byte mode with binary input throws `SigilOptionError`.
+
 Check capacity before encoding with `qrCapacity(version, errorCorrection, mode)` — it returns the maximum *bytes* (for `byte` mode) or *characters* the symbol holds:
 
 ```ts
@@ -115,9 +117,11 @@ scanner.onResult((result) => showPairing(result.value));
 scanner.tap((event) => console.debug(event.type)); // status-change, detect, frame-skipped…
 
 await scanner.start(); // requests camera, attaches stream, starts the loop
-scanner.stop();        // pauses; start() resumes
+scanner.stop();        // releases the camera, back to 'idle'; start() resumes
 scanner.dispose();     // terminal — releases everything
 ```
+
+Statuses are `'idle' | 'starting' | 'scanning' | 'disposed'`. A `stop()` or `dispose()` that lands while the camera permission prompt is pending wins the race: the late stream is released and `start()` resolves without restarting the loop.
 
 `start()` rejects with `SigilUnsupportedError` (no detector/getUserMedia) or `SigilPermissionError` (`NotAllowedError`). Detection failures mid-scan surface through `tap` `error` events and stop the scanner.
 

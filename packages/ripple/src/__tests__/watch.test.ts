@@ -52,21 +52,6 @@ describe('watch', () => {
     ripple.dispose();
   });
 
-  it('disposes a once watcher even when its callback fails', () => {
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    const count = ripple.signal(1);
-    const callback = vi.fn(() => {
-      throw new Error('failed callback');
-    });
-    const stop = ripple.watch(count, callback, { immediate: true, once: true });
-
-    count.value = 2;
-
-    expect(callback).toHaveBeenCalledOnce();
-    expect(stop.disposed).toBe(true);
-    ripple.dispose();
-  });
-
   it('retries watcher after immediate callback fails', () => {
     const errors: string[] = [];
     const ripple = createRipple({ errorPolicy: 'swallow' });

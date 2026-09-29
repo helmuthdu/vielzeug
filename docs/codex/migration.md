@@ -2,7 +2,13 @@
 title: Codex Migration
 ---
 
-# Codex 3.0 Migration
+# Codex Migration
+
+## Codex 3.2
+
+The `@vielzeug/codex/advanced` subpath is removed. It had no consumers outside the package's own build tooling, which imports the parsers relatively. Snapshot parsing stays internal; use `loadSnapshot()` (with `validateContents: true` for full artifact verification) from the root entry.
+
+## Codex 3.0
 
 Codex 3.0 separates generic package tools, snapshot internals, and Refine component tools into explicit typed entry points. It also hardens custom snapshot validation and loopback HTTP hosting.
 
@@ -23,6 +29,9 @@ registerRefineTools(server, catalog);
 The generic `Catalog` and `SnapshotCatalog` no longer expose component methods. Refine integrations use `RefineCatalog` and `SnapshotRefineCatalog` from `@vielzeug/codex/refine`.
 
 ## Move snapshot internals to `/advanced`
+
+> [!NOTE]
+> The `/advanced` subpath was removed in Codex 3.2. The historical steps below describe the 3.0 layout only.
 
 The supported root keeps `loadSnapshot()` and `LoadedSnapshot`. Import lower-level parsers, full validation, raw snapshot types, and schema constants from `@vielzeug/codex/advanced`:
 

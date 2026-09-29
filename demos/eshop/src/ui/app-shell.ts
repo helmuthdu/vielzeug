@@ -104,8 +104,7 @@ function itemsForQuery(query: string): PaletteItem[] {
 }
 
 function modelHref(slug: string): string {
-  const path = `/models/${encodeURIComponent(slug)}`;
-  return import.meta.env.BASE_URL === '/' ? path : `${import.meta.env.BASE_URL}#${path}`;
+  return router.href('modelLanding', { slug });
 }
 
 function navigateToModel(event: Event, slug: string): void {

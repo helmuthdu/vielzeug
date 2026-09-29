@@ -80,21 +80,7 @@ await delay(100); // real timer dependency, such as a debounce
 
 `waitUntil()` polls a boolean predicate. `eventually()` retries a throwing assertion and can include a diagnostic `message`. Both enforce one hard deadline while asynchronous callbacks are pending. Abort rejects immediately with the signal reason, but cannot stop callback-owned work; forward an application signal into that work when needed.
 
-Timeouts reject with `AssayTimeoutError`. Timeout and delay values must be finite and non-negative; polling intervals must be finite and positive. All durations must fit the platform timer limit of 2,147,483,647 ms. `nextTick()` crosses one explicitly queued microtask boundary. Prefer it for microtask-scheduled reactive work over a timer delay.
-
-## Test Live Regions
-
-Query or wait for DOM live-region state. Assay recognizes explicit `aria-live` and implicit `alert`, `log`, `marquee`, `status`, and `timer` roles. Waits inspect every matching region.
-
-```ts
-import { queryAllLiveRegions, waitForLiveRegion, waitForLiveRegionCleared } from '@vielzeug/assay';
-
-await waitForLiveRegion('3 results found', { politeness: 'polite', root: panel });
-expect(queryAllLiveRegions({ root: panel })).toHaveLength(1);
-await waitForLiveRegionCleared({ root: panel });
-```
-
-These helpers assert DOM attributes and text only. Use browser and assistive-technology testing to verify actual announcement behavior.
+Timeouts reject with `AssayTimeoutError`. Timeout and delay values must be finite and non-negative; polling intervals must be finite and positive. All durations must fit the platform timer limit of 2,147,483,647 ms.
 
 ## Testing custom elements
 

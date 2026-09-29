@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**37 independent, zero-dependency TypeScript packages for modern JavaScript**
+**40 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -754,6 +754,67 @@ pnpm add @vielzeug/illusionist
 - No cleanup lifecycle; `system.uuid()` uses crypto and is non-deterministic by design
 
 [📖 Documentation](https://vielzeug.dev/illusionist/) • [Examples](https://vielzeug.dev/illusionist/examples)
+
+---
+
+### [@vielzeug/mesh](packages/mesh) – Backendless P2P Sessions
+
+WebRTC data-channel sessions with manual pairing — invitation/answer codes delivered out-of-band (QR, copy/paste), no signaling server required.
+
+```bash
+pnpm add @vielzeug/mesh
+```
+
+**Key Features:**
+
+- `createMeshHost` / `createMeshGuest` — host-authoritative sessions with typed protocol maps
+- HMAC-SHA-256 invitation proofs; `approvePeer` hook for host-side authorization
+- `meshCodec` (base64url) and `meshQrCodec` (deflate + base45, QR-alphanumeric charset) pairing codecs
+- Structural WebRTC types — inject an `rtc` factory for tests and non-browser runtimes
+- Typed message envelope with per-peer LRU deduplication and `maxMessageBytes` frame cap
+- `Symbol.dispose`, `AbortSignal` disposal, and `tap()` observability
+
+[📖 Documentation](https://vielzeug.dev/mesh/) • [Examples](https://vielzeug.dev/mesh/examples)
+
+---
+
+### [@vielzeug/sigil](packages/sigil) – QR Generation & Scanning
+
+SVG QR code generation and camera scanning with a unified result shape.
+
+```bash
+pnpm add @vielzeug/sigil
+```
+
+**Key Features:**
+
+- `createQrCode` — pure SVG output, no canvas dependency
+- Error-correction levels, quiet zone, and module sizing options
+- `createQrScanner` — camera-based scanning with `BarcodeDetector` fallback
+- Zero dependencies, framework-agnostic
+
+[📖 Documentation](https://vielzeug.dev/sigil/) • [Examples](https://vielzeug.dev/sigil/examples)
+
+---
+
+### [@vielzeug/tavern](packages/tavern) – Table Session Replication
+
+Host-owned state replication over `@vielzeug/mesh`: one device owns the state, guests mirror it, and every guest command runs through the host's own command table.
+
+```bash
+pnpm add @vielzeug/tavern
+```
+
+**Key Features:**
+
+- `hostTavern` / `joinTavern` — host one subject, join as a guest, paired through mesh's invitation/answer codes
+- The host's command table is the same object the host's own UI calls — remote actions cannot bypass validation
+- Snapshot broadcasting coalesced on a microtask: bursts of local changes ship one snapshot
+- `TavernNotices` — consumer-defined notice serialization; catalog keys cross the wire, each client translates locally
+- `onEnded` fires exactly once whether the channel drops or the guest disposes
+- Typed errors: `TavernPairingError` separates pasted-the-wrong-code from programming errors
+
+[📖 Documentation](https://vielzeug.dev/tavern/) • [Examples](https://vielzeug.dev/tavern/examples)
 
 ---
 

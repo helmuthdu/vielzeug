@@ -1,6 +1,6 @@
 ---
 title: Conduit — Usage Guide
-description: Register an immutable provider array, resolve a typed service object at composition roots, create scopes, and dispose owned resources.
+description: Register an immutable provider array, resolve a typed service object at composition roots, scope work to child containers, and dispose owned resources.
 ---
 
 [[toc]]
@@ -48,36 +48,40 @@ const container = createContainer([
 
 ## Choose Lifetimes
 
-Factories are singletons by default and cached on the registering container. Concurrent singleton resolutions share one in-flight attempt; a rejected attempt is evicted for retry. Use `'transient'` for one value per resolution or a `ScopeToken` for request, job, or test ownership. Singletons cannot depend on transient or scoped factories, and one named scope cannot depend on another.
+Factories are singletons by default and cached on the registering container. Concurrent singleton resolutions share one in-flight attempt; a rejected attempt is evicted for retry. Use `'transient'` for one value per resolution. Singletons cannot depend on transient factories.
 
 ```ts
-import { createContainer, factoryProvider, scope, token } from '@vielzeug/conduit';
+import { createContainer, factoryProvider, token } from '@vielzeug/conduit';
 
-const Request = scope('request');
-const Session = token<{ id: string }>('Session');
+const Clock = token<{ now(): number }>('Clock');
 
 const root = createContainer([
-  factoryProvider(Session, [], () => ({ id: crypto.randomUUID() }), { lifetime: Request }),
+  factoryProvider(Clock, [], () => ({ now: () => Date.now() }), { lifetime: 'transient' }),
 ]);
 ```
 
-Factory dependency tuples are copied at construction, so later caller mutation cannot change Conduit's graph. Add `disposalSignalToken` to a factory tuple when work must observe its owning container or scope cancellation.
+Factory dependency tuples are copied at construction, so later caller mutation cannot change Conduit's graph. Add `disposalSignalToken` to a factory tuple when work must observe its owning container's cancellation.
 
-## Create Named Scopes
+## Scope Work to Child Containers
 
-Use a scope token when a resource belongs to a request, job, or test lifecycle. Pass immutable local providers through `createScope()` options to override parent registrations.
+Use a child container when a resource belongs to a request, job, or test lifecycle. Pass immutable local providers through `createScope()` options to shadow parent registrations; the child owns and disposes them.
 
 ```ts
+const Session = token<{ id: string }>('Session');
 const TraceId = token<string>('TraceId');
-const request = root.createScope(Request, {
-  providers: [valueProvider(TraceId, 'request-trace')],
+
+const request = root.createScope({
+  providers: [
+    factoryProvider(Session, [], () => ({ id: crypto.randomUUID() })),
+    valueProvider(TraceId, 'request-trace'),
+  ],
 });
-const services = await request.resolve({ session: Session });
+const services = await request.resolve({ session: Session, traceId: TraceId });
 await request.dispose();
 await root.dispose();
 ```
 
-Resolving `Session` from `root` throws `ConduitScopedResolutionError` because no matching scope owns it.
+Each child caches its own singleton, so two request children resolve distinct `Session` values while the root never sees request-owned work unless it registers it.
 
 ## Resolve at Composition Roots
 
@@ -91,13 +95,13 @@ const services = await container.resolve({ client: Client, config: Config });
 
 ## Dispose Resources
 
-`dispose()` rejects new work, aborts `disposalSignal`, disposes child scopes, waits for in-flight creation, then releases services in reverse creation order. A factory that finishes after disposal starts is immediately cleaned up and its resolver receives `ConduitDisposedError`.
+`dispose()` rejects new work, aborts `disposalSignal`, disposes child containers, waits for in-flight creation, then releases services in reverse creation order. A factory that finishes after disposal starts is immediately cleaned up and its resolver receives `ConduitDisposedError`.
 
 ```ts
 await container.dispose();
 ```
 
-`ConduitDisposeError.errors` contains every cleanup failure after Conduit attempts all hooks, including cleanup from in-flight factories and child scopes.
+`ConduitDisposeError.errors` contains every cleanup failure after Conduit attempts all hooks, including cleanup from in-flight factories and child containers.
 
 ## Testing
 
@@ -123,8 +127,8 @@ await container.dispose();
 - Use `valueProvider()` and `factoryProvider()` so tokens, values, dependencies, and disposers remain type-safe.
 - Declare every factory dependency in its tuple.
 - Keep factories focused on one service.
-- Use scopes for request/job-owned resources.
+- Use child containers for request/job-owned resources.
 - Resolve once at a composition root; pass the typed service object downstream.
-- Dispose every scope and root container.
+- Dispose every child container and root container.
 - Keep optional application fallback policy outside Conduit.
 - Use `await using container = createContainer([...])` when lexical async disposal fits application lifetime.

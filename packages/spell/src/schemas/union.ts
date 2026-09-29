@@ -1,36 +1,12 @@
-import type {
-  AnySchema,
-  CheckContext,
-  InferInput,
-  InferOutput,
-  InferSchemaMode,
-  Issue,
-  MergeSchemaModes,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
-} from '../core';
+import type { AnySchema, InferInput, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
+import { ErrorCode, Schema } from '../core';
 
-export class UnionSchema<
-  T extends readonly AnySchema[],
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number]>>,
-> extends Schema<InferOutput<T[number]>, InferInput<T[number]>, Mode> {
+export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOutput<T[number]>, InferInput<T[number]>> {
   readonly schemas: T;
 
   protected override get _kind(): string {
     return 'union';
-  }
-
-  override checkAsync(
-    this: UnionSchema<T, 'sync'>,
-    fn: (value: InferOutput<T[number]>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): UnionSchema<T, 'async'> {
-    return this._addCheck(fn, true) as unknown as UnionSchema<T, 'async'>;
   }
 
   constructor(schemas: T) {
@@ -38,7 +14,7 @@ export class UnionSchema<
     this.schemas = Object.freeze([...schemas]) as T;
   }
 
-  protected override _parse(value: unknown, ctx: ParseContext): ParseValue | Promise<ParseValue> {
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
     const branchErrors: Issue[][] = [];
 
     for (const schema of this.schemas) {
@@ -63,53 +39,32 @@ export class UnionSchema<
     };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferOutput<T[number]>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    const branchErrors: Issue[][] = [];
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    for (const schema of this.schemas) {
+      const result = await schema._parseFullAsync(value, ctx);
 
-      if (prepared.skip) return prepared.value as InferOutput<T[number]>;
+      if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
 
-      const v = prepared.value;
+      branchErrors.push(result.issues);
+    }
 
-      const branchErrors: Issue[][] = [];
-
-      for (const schema of this.schemas) {
-        const result = await schema._parseFullAsync(v, c);
-
-        if (result.issues.length > 0) {
-          branchErrors.push(result.issues);
-          continue;
-        }
-
-        const validationIssues = await this._runValidatorsAsync(result.data, c);
-
-        if (validationIssues.length > 0) throw new SpellValidationError(validationIssues);
-
-        return this._runPostprocessors(result.data) as InferOutput<T[number]>;
-      }
-
-      throw new SpellValidationError([
+    return {
+      data: value,
+      issues: [
         {
           code: ErrorCode.invalid_union,
-          message: c.messages.union.invalid(),
+          message: ctx.messages.union.invalid(),
           params: { errors: branchErrors },
           path: [],
         },
-      ]);
-    });
+      ],
+      typeOk: false,
+    };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'union' };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const branches = this.schemas.map((s) => s.walk(visitor));
-
-    if (visitor.union) return visitor.union(this, branches);
-
-    return super._walk(visitor);
   }
 }

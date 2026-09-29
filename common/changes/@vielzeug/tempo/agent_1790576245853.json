@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add formatTimer",
+      "packageName": "@vielzeug/tempo",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tempo"
+}

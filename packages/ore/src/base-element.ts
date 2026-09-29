@@ -15,8 +15,8 @@ import {
 import type { HTMLResult } from './template/result';
 import { loadStylesheet } from './utils/css';
 
-// ─── Component phases & lifecycle events ──────────────────────────────────────
-// Internal to BaseElement — the only state machine and event dispatcher in the package.
+// ─── Component phases ─────────────────────────────────────────────────────────
+// Internal to BaseElement — the only state machine in the package.
 
 const ComponentPhase = {
   SETUP_DONE: 'setup_done',
@@ -26,11 +26,6 @@ const ComponentPhase = {
 } as const;
 
 type ComponentPhase = (typeof ComponentPhase)[keyof typeof ComponentPhase];
-
-const LIFECYCLE_EVENTS = {
-  CONNECT: 'ore:connect',
-  DISCONNECT: 'ore:disconnect',
-} as const;
 
 // ─── Internal component state ─────────────────────────────────────────────────
 
@@ -109,7 +104,6 @@ export class BaseElement extends HTMLElement {
 
       this._init();
     });
-    this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.CONNECT, { bubbles: false, composed: false }));
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
@@ -133,7 +127,6 @@ export class BaseElement extends HTMLElement {
   disconnectedCallback(): void {
     this._component.generation++;
     this._component.phase = ComponentPhase.UNMOUNTED;
-    this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
     this._resetSetupState();
   }
 

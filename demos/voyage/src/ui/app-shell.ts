@@ -4,7 +4,7 @@ import { define, html, ref } from '@vielzeug/ore';
 import { effect } from '@vielzeug/ripple';
 import { travelerProfile } from '../core/preferences';
 import { activeRoute, type RouteName, router } from '../core/router';
-import { navigate, routeHref } from './navigation';
+import { navigateDynamic, routeHref } from './navigation';
 
 if (sessionStorage.getItem('voyage-support-chat-open') === 'true') void import('./components/travel-support-chat');
 
@@ -79,7 +79,7 @@ define('voyage-shell', {
     const openRoute = (event: MouseEvent, route: RouteName, params: Record<string, string> = {}): void => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
-      navigate(route, params);
+      navigateDynamic(route, params);
     };
     const navItem = (
       item: { icon: string; label: string; route: RouteName },

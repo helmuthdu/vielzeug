@@ -16,11 +16,14 @@ export type WorkerOptions = {
   maxQueue?: number;
   /** Reject new work or wait for queue capacity. Default: 'reject'. */
   onFull?: 'reject' | 'wait';
-  /** Called after an unhandled worker runtime error. The failed slot is replaced lazily. */
-  onSlotError?: (error: FamiliarRuntimeError) => void;
   /** Default timeout in milliseconds. Timed-out work terminates and replaces its worker slot. */
   timeout?: number;
 };
+
+/** Observation event delivered to `pool.tap()` handlers. */
+export type FamiliarTapEvent =
+  | { readonly error: FamiliarRuntimeError; readonly type: 'worker-error' }
+  | { readonly type: 'dispose' };
 
 export type RunOptions = {
   /** Higher values run before lower values. Equal values run FIFO. Default: 0. */
@@ -45,6 +48,11 @@ export interface PoolBase {
   drain(options?: DrainOptions): Promise<void>;
   readonly stats: WorkerStats;
   readonly status: WorkerStatus;
+  /**
+   * Observe runtime events without affecting pool behavior.
+   * Handler errors are swallowed. Returns an unsubscribe function.
+   */
+  tap(handler: (event: FamiliarTapEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
 }
@@ -59,6 +67,8 @@ export interface StreamWorkerPool<TInput, TChunk> extends PoolBase {
 
 export type SlotStrategy<TInput, TOutput> = {
   cancel(reason: unknown): void;
+  /** Wired by the pool factory to report unhandled worker runtime errors through `tap()`. */
+  notify?(error: FamiliarRuntimeError): void;
   run(input: TInput, transferables: Transferable[], timeout: number | undefined): Promise<TOutput>;
   terminate(): void;
 };

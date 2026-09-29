@@ -13,14 +13,16 @@
     "test": "pnpm --dir ../.. vitest run --config demos/voyage/vitest.config.ts"
   },
   "dependencies": {
+    "@vielzeug/coins": "workspace:*",
     "@vielzeug/illusionist": "workspace:*",
     "@vielzeug/ore": "workspace:*",
     "@vielzeug/refine": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
+    "@vielzeug/tempo": "workspace:*",
     "@vielzeug/wayfinder": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
-    "vite": "^8.2.2"
+    "vite": "^8.3.0"
   }
 }

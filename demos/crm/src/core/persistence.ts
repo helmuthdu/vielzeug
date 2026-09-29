@@ -2,9 +2,9 @@ import { effect } from '@vielzeug/ripple';
 import type { KeyValueVaultStore } from '@vielzeug/vault';
 import { table, validatorCodec } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
-import { setLocale } from './i18n';
+import { locale, setLocale } from './i18n';
 import { seedData } from './seed-data';
-import { crmData, currentUser, locale } from './store';
+import { crmData, currentUser } from './store';
 import { setThemePreference, type ThemePreference, themePreference } from './theme';
 import type { Activity, ActivityCategory, Company, CrmData } from './types';
 
@@ -91,7 +91,7 @@ export async function setupPersistence(): Promise<void> {
   effect(() => {
     void vault.put('preferences', {
       id: 'preferences',
-      locale: locale.value,
+      locale: locale.value === 'de' ? 'de' : 'en',
       theme: themePreference.value,
       userId: currentUser.value.id,
     });

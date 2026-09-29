@@ -3,7 +3,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { count, deleteMany, getMany, type KeyValueVaultStore, table, ttl, VaultError, validatorCodec } from '../index';
+import { type KeyValueVaultStore, table, ttl, VaultError, validatorCodec } from '../index';
 import { createSQLite } from '../sqlite';
 
 type User = { id: number | string; name: string; role?: string };
@@ -43,11 +43,11 @@ describe('SQLite DocumentVaultStore', () => {
       { id: '1', name: 'Grace' },
     ]);
 
-    await expect(getMany(reader as unknown as KeyValueVaultStore<typeof schema>, 'users', ['1', 1])).resolves.toEqual([
+    await expect((reader as unknown as KeyValueVaultStore<typeof schema>).getMany('users', ['1', 1])).resolves.toEqual([
       { id: '1', name: 'Grace' },
       { id: 1, name: 'Ada' },
     ]);
-    await expect(count(reader as unknown as KeyValueVaultStore<typeof schema>, 'users')).resolves.toBe(2);
+    await expect((reader as unknown as KeyValueVaultStore<typeof schema>).count('users')).resolves.toBe(2);
   });
 
   test('applies TTL expiry and prunes expired records', async () => {
@@ -230,7 +230,7 @@ describe('SQLite DocumentVaultStore', () => {
     expect(() => store.iterate('users')).toThrow('disposed');
   });
 
-  test('surfaces malformed stored JSON as a VaultError', async () => {
+  test('self-heals malformed stored JSON by evicting the corrupt row', async () => {
     const database = createDatabase();
     const store = createStore(database);
 
@@ -238,12 +238,42 @@ describe('SQLite DocumentVaultStore', () => {
     database
       .prepare(
         `INSERT INTO "__vielzeug_vault_records"
-          (namespace, table_name, key_tag, key_kind, key_number, key_string, value_json, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          (namespace, table_name, key_tag, value_json, expires_at)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run('app', 'users', 'n:1', 'number', 1, null, '{invalid', null);
+      .run('app', 'users', 'n:1', '{invalid', null);
 
-    await expect(store.get('users', 1)).rejects.toBeInstanceOf(VaultError);
+    await expect(store.get('users', 1)).resolves.toBeUndefined();
+    await expect(store.getAll('users')).resolves.toEqual([]);
+  });
+
+  test('surfaces codec rejections of readable stored data as a VaultError', async () => {
+    const database = createDatabase();
+    const strict = createSQLite({
+      codecs: {
+        users: validatorCodec({
+          parse: (value) => {
+            if (typeof value !== 'object' || value === null || !('name' in value)) throw new Error('schema mismatch');
+
+            return value as User;
+          },
+        }),
+      },
+      database,
+      name: 'strict',
+      schema,
+    });
+
+    await strict.getAll('users');
+    database
+      .prepare(
+        `INSERT INTO "__vielzeug_vault_records"
+          (namespace, table_name, key_tag, value_json, expires_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run('strict', 'users', 'n:1', JSON.stringify({ id: 1 }), null);
+
+    await expect(strict.get('users', 1)).rejects.toBeInstanceOf(VaultError);
   });
 
   test('putAll inside batch() commits atomically without nested-transaction error', async () => {
@@ -281,8 +311,7 @@ describe('SQLite DocumentVaultStore', () => {
     const items = Array.from({ length: 1000 }, (_, i) => ({ id: i }));
 
     await store.putAll('items', items);
-    const deleted = await deleteMany(
-      store as unknown as KeyValueVaultStore<typeof bigSchema>,
+    const deleted = await (store as unknown as KeyValueVaultStore<typeof bigSchema>).deleteMany(
       'items',
       items.map((i) => i.id),
     );
@@ -308,8 +337,13 @@ describe('SQLite DocumentVaultStore', () => {
     await store.batch(['users'], async (tx) => {
       await tx.upsert('users', 1, () => ({ id: 1, name: 'Ada', role: 'admin' }));
       await tx.upsert('users', 2, () => ({ id: 2, name: 'Grace', role: 'viewer' }));
-      await expect(tx.query('users').equals('role', 'admin').count()).resolves.toBe(1);
-      await expect(tx.query('users').equals('role', 'viewer').delete()).resolves.toBe(1);
+      const admins = (await tx.getAll('users')).filter((user) => user.role === 'admin');
+
+      expect(admins).toHaveLength(1);
+      await tx.deleteMany(
+        'users',
+        (await tx.getAll('users')).filter((user) => user.role === 'viewer').map((user) => user.id),
+      );
     });
 
     await expect(store.getAll('users')).resolves.toEqual([{ id: 1, name: 'Ada', role: 'admin' }]);

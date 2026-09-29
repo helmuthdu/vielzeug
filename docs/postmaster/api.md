@@ -223,10 +223,10 @@ Returns counts of queued, running, and dead-letter jobs.
 ### `retry()`
 
 ```ts
-retry(id: string): Promise<RetryResult>;
+requeue(id: string): Promise<RequeueResult>;
 ```
 
-Moves a dead-letter job back to queued. Returns a discriminated result: `retried`, `not-found`, `not-dead-letter`, or `running`.
+Moves a dead-letter job back to queued. Returns a discriminated result: `requeued`, `not-found`, `not-dead-letter`, or `running`.
 
 ---
 
@@ -358,12 +358,12 @@ interface JobContext {
 ```ts
 interface RetryPolicy {
   readonly maxAttempts: number;
-  readonly shouldRetry: (error: unknown, attempt: number) => boolean;
+  readonly shouldRetry?: (error: unknown, attempt: number) => boolean;
   readonly delay?: (attempt: number) => number;
 }
 ```
 
-`maxAttempts` is total executions including the first. `shouldRetry` is required when retries are enabled. Default delay uses an exponential backoff cap (`min(1000 × 2ⁿ, 30_000)` ms).
+`maxAttempts` is total executions including the first. When `shouldRetry` is omitted, any error retries until `maxAttempts` is reached. Default delay uses an exponential backoff cap (`min(1000 × 2ⁿ, 30_000)` ms).
 
 ---
 
@@ -472,12 +472,12 @@ interface FlushResult {
 
 ---
 
-### `RetryResult` / `RemoveResult`
+### `RequeueResult` / `RemoveResult`
 
 ```ts
-type RetryResult =
+type RequeueResult =
   | { readonly status: 'not-found' | 'not-dead-letter' | 'running' }
-  | { readonly status: 'retried'; readonly entry: PostmasterEntry };
+  | { readonly status: 'requeued'; readonly entry: PostmasterEntry };
 
 type RemoveResult =
   | { readonly status: 'not-found' | 'running' }

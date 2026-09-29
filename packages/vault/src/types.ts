@@ -1,7 +1,6 @@
 /// <reference lib="dom" />
 
 import { VaultError } from './errors';
-import type { QueryBuilder } from './query';
 import { assertPositiveFinite } from './ttl';
 
 /** Portable primary-key values. Vault preserves their type and encodes them distinctly at rest. */
@@ -72,7 +71,6 @@ export type VaultConveniences<S extends AnySchema, K extends keyof S & string = 
   has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
   isEmpty<T extends K>(table: T): Promise<boolean>;
   keys<T extends K>(table: T, filter?: (record: RecordOf<S, T>) => boolean): Promise<KeyOf<S, T>[]>;
-  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
   update<T extends K>(
     table: T,
     key: KeyOf<S, T>,

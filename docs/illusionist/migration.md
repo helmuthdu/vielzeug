@@ -5,6 +5,24 @@ description: Migrate to Illusionist 3 resource-free instances and validated cust
 
 [[toc]]
 
+## Illusionist 3.1
+
+Illusionist 3.1 removes the per-category import subpaths. Every category function was already re-exported from the root entry, and the standalone subpaths had no consumers outside the package's own build.
+
+### Category subpaths removed
+
+`@vielzeug/illusionist/seed`, `/person`, `/internet`, `/commerce`, `/date`, `/finance`, `/location`, `/lorem`, and `/system` are gone. Import from the root instead — the symbols are identical:
+
+```ts
+// Before
+import { createSeed, mulberry32 } from '@vielzeug/illusionist/seed';
+
+// After
+import { createSeed, mulberry32 } from '@vielzeug/illusionist';
+```
+
+The `/locales`, `/locales/en`, and `/locales/de` subpaths remain: locale data is the one surface that benefits from a separate tree-shakeable entry, and the root deliberately does not statically import it.
+
 ## Illusionist 3.0
 
 Illusionist 3 removes lifecycle methods from `createIllusion()` instances. Instances retain only their locale and pseudorandom generator state, own no external resources, and require no cleanup.

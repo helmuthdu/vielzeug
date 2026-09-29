@@ -14,10 +14,11 @@ import '../components/animated-price';
 import '../components/order-timeline';
 
 import { define, each, html, when } from '@vielzeug/ore';
+import { eventFieldValue } from '@vielzeug/refine';
 import { computed, signal } from '@vielzeug/ripple';
 import { currentUser } from '../../core/auth';
 import { modelMap } from '../../core/catalog';
-import { controlValue } from '../../core/control-value';
+
 import { formatPrice } from '../../core/currency';
 import { formatLongDate, formatOrderStatus, formatPaymentMethod } from '../../core/format';
 import { t } from '../../core/i18n';
@@ -218,7 +219,7 @@ define('orders-view', {
                     aria-label=${() => t('orders.search')}
                     placeholder=${() => t('orders.search')}
                     value=${query}
-                    @input=${(event: Event) => (query.value = controlValue(event) ?? '')}>
+                    @input=${(event: Event) => (query.value = eventFieldValue(event) ?? '')}>
                     <ore-icon slot="prefix" name="search" size="14" aria-hidden="true"></ore-icon>
                   </ore-input>
                   <ore-select
@@ -229,7 +230,7 @@ define('orders-view', {
                       { label: t('orders.sortNewest'), value: 'newest' },
                       { label: t('orders.sortOldest'), value: 'oldest' },
                     ]}
-                    @change=${(event: Event) => (sort.value = controlValue(event) === 'oldest' ? 'oldest' : 'newest')}></ore-select>
+                    @change=${(event: Event) => (sort.value = eventFieldValue(event) === 'oldest' ? 'oldest' : 'newest')}></ore-select>
                 </div>
               </section>
 

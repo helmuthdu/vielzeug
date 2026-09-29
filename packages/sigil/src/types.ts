@@ -21,15 +21,13 @@ export interface QrEncodeOptions {
   readonly version?: number;
 }
 
-/** An encoded QR symbol: a frozen square matrix of dark/light modules. */
+/** An encoded QR symbol: a square matrix of dark/light modules. */
 export interface QrMatrix {
   readonly errorCorrection: QrErrorCorrection;
-  /** `false` outside bounds. */
+  /** Module color at (`x`, `y`) — `true` = dark, `false` outside bounds. */
   get(x: number, y: number): boolean;
   readonly mask: number;
   readonly mode: QrMode;
-  /** Row-major; `true` = dark module. Frozen. */
-  readonly modules: ReadonlyArray<ReadonlyArray<boolean>>;
   /** Modules per side: `17 + 4 * version`. */
   readonly size: number;
   readonly version: number;
@@ -90,7 +88,7 @@ export interface QrScannerOptions {
   readonly video: HTMLVideoElement;
 }
 
-export type QrScannerStatus = 'idle' | 'starting' | 'scanning' | 'stopped' | 'disposed';
+export type QrScannerStatus = 'idle' | 'starting' | 'scanning' | 'disposed';
 
 export interface QrScanner {
   readonly disposalSignal: AbortSignal;
@@ -101,7 +99,7 @@ export interface QrScanner {
   /** Requests the camera, attaches the stream to `video`, and begins the detect loop. */
   start(): Promise<void>;
   readonly status: QrScannerStatus;
-  /** Stops the loop and tracks; the instance stays usable. */
+  /** Stops the loop and tracks and returns to `'idle'`; the instance stays usable. */
   stop(): void;
   /** Side-channel observation; swallowing handler errors per conventions. */
   tap(handler: (event: SigilEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;

@@ -1,19 +1,10 @@
-import { signal } from '@vielzeug/ripple';
+import { createThemeController } from '@vielzeug/refine/theme';
 
-export type Theme = 'dark' | 'light';
-const systemTheme: Theme = globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-export const theme = signal<Theme>(systemTheme);
+const controller = createThemeController();
 
-theme.subscribe(() => applyTheme());
+/** The effective light/dark mode, following the OS until an explicit choice is made. */
+export const theme = controller.resolved;
 
-export function applyTheme(): void {
-  document.documentElement.classList.toggle('dark', theme.value === 'dark');
-  document.documentElement.classList.toggle('light', theme.value === 'light');
-  document.documentElement.style.colorScheme = theme.value;
+export function setTheme(mode: 'dark' | 'light'): void {
+  controller.setPreference(mode);
 }
-
-export function toggleTheme(): void {
-  theme.value = theme.value === 'dark' ? 'light' : 'dark';
-}
-
-applyTheme();

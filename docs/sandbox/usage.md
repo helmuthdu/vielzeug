@@ -85,7 +85,7 @@ window.__sandbox__.onState('theme', (theme) => {
 });
 ```
 
-Call `setState()` only after `render()` resolves. An early update can arrive before the generated bridge installs its listener and is dropped with a development warning.
+`setState()` is safe to call at any point in the lifecycle. Updates made before `render()` resolves are accumulated and delivered in one message when the bridge reports ready, so an early call never loses state.
 
 ## Receiving Sandbox Messages
 

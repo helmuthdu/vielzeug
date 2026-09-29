@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-import { buildVielzeugSrcAliases, REPL_EXCLUDED_PACKAGES } from './vielzeug-packages';
+import { buildVielzeugSrcAliases, REPL_EXCLUDED_PACKAGES } from './vielzeug-packages.ts';
 
 const TMP_DIR = process.env['REPL_TMP_DIR'];
 

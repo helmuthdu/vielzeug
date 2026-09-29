@@ -93,6 +93,14 @@ describe('createListNavigation', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it('ignores navigation keys pressed with a modifier', () => {
+    const nav = createNavigation([{}, {}]);
+    nav.set(0);
+
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { ctrlKey: true, key: 'ArrowDown' }))).toBeNull();
+    expect(nav.getIndex()).toBe(0);
+  });
+
   it('returns null for keydown when disabled', () => {
     const nav = createNavigation([{}, {}], { disabled: () => true });
 

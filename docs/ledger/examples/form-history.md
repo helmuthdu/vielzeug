@@ -33,7 +33,7 @@ async function updateField(field: keyof typeof form, next: string): Promise<void
 }
 
 function renderHistory(): void {
-  const { redo, undo } = ledger.state.value;
+  const { redo, undo } = ledger.state.getSnapshot();
   undoButton.disabled = undo.length === 0;
   redoButton.disabled = redo.length === 0;
 }

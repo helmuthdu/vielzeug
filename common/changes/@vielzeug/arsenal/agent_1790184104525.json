@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add tapper and shared Subscribable/Unsubscribe types",
+      "packageName": "@vielzeug/arsenal",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/arsenal"
+}

@@ -57,7 +57,7 @@ export interface SandboxHandle<State extends object = Record<string, unknown>> {
   render(html: string): Promise<void>;
   /** Replace body descendants without navigating the iframe. */
   replaceBody(html: string): void;
-  /** Push one or more typed state values into the ready document. */
+  /** Push one or more typed state values; calls before ready accumulate and flush on ready. */
   setState(update: Partial<State>): void;
   /** Update a named style in the live document and future renders. */
   updateStyle(id: string, css: string): void;

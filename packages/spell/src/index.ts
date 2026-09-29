@@ -15,7 +15,6 @@ export type {
   ParseContext,
   ParseResult,
   SchemaDescriptor,
-  SchemaWalker,
   StandardSchemaV1,
   SyncParsable,
   ValidateResult,
@@ -23,3 +22,4 @@ export type {
 export { ErrorCode, joinIssuePath, Schema, SpellDefinitionError, SpellError, SpellValidationError } from './core';
 export { createParseContext, type DeepPartial } from './messages';
 export { s } from './s';
+export { tolerate } from './tolerate';

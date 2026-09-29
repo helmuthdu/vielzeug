@@ -385,6 +385,13 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable> = {
 export interface HistoryDriver {
   /** Navigate one entry back in history, equivalent to the browser back button. */
   back(): void;
+  /**
+   * Optional: translate a router-internal URL (as produced by `Router.url()` and consumed
+   * by `push()`/`replace()`) into the address-bar href an anchor element should carry.
+   * Drivers whose internal URLs already match the address bar (browser, memory) may omit
+   * it — `Router.href()` falls back to the internal URL.
+   */
+  href?(url: string): string;
   readonly location: {
     readonly hash: string;
     readonly pathname: string;

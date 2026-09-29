@@ -1,5 +1,5 @@
 export const resolveAndErrorExample = {
-  code: `import { ClockworkError, defineMachine } from '@vielzeug/clockwork'
+  code: `import { ClockworkDefinitionError, defineMachine } from '@vielzeug/clockwork'
 
 const machine = defineMachine()({
   context: { role: 'guest' },
@@ -31,8 +31,8 @@ for (const definition of [
   try {
     defineMachine()(definition)
   } catch (error) {
-    if (error instanceof ClockworkError) {
-      console.log('Validation code:', error.code)
+    if (error instanceof ClockworkDefinitionError) {
+      console.log('Validation failed:', error.message)
       console.log('Details:', error.details)
     }
   }

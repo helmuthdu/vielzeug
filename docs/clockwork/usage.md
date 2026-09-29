@@ -205,19 +205,18 @@ Validate untrusted persisted data before passing it to `createActor()`. Clockwor
 
 ## Error handling
 
-Guard, reducer, effect, invoke, timer, and transition-limit failures dispose the actor. Subscriber failures are reported but do not dispose the actor or interrupt remaining subscribers and declared effects.
+Guard, reducer, effect, invoke, timer, and transition-limit failures dispose the actor. The transition limit is a fixed internal guard against runaway loops. Subscriber failures are reported but do not dispose the actor or interrupt remaining subscribers and declared effects.
 
-Use `onError` to observe either class without controlling disposition. The callback receives the error and its `phase` and `state`; callback failures are swallowed so observation cannot alter actor behavior.
+Use `tap()` to observe either class without controlling disposition. The `error` event carries the error and its `phase` and `state`; handler failures are swallowed so observation cannot alter actor behavior.
 
 ```ts
-const actor = machine.createActor({
-  onError(error, { event, phase, state }) {
-    console.error({ error, event, phase, state });
-  },
+const actor = machine.createActor();
+actor.tap((event) => {
+  if (event.type === 'error') console.error({ error: event.error, event: event.event, phase: event.phase, state: event.state });
 });
 ```
 
-For fatal machine failures, the observer runs before disposal. Without `onError`, fatal failures dispose silently.
+For fatal machine failures, the `error` event is emitted before disposal. Without a tap handler, fatal failures dispose silently.
 
 ## Debugging
 
@@ -317,4 +316,4 @@ bus.on('REFRESH', () => actor.send({ type: 'FETCH' }));
 - Read the current snapshot from `actor.snapshot`, not a wrapper value.
 - Validate persisted context before restoring a snapshot.
 - Dispose every actor at its ownership boundary.
-- Route runtime failures through the `onError` observer for logging and diagnostics.
+- Route runtime failures through the `tap()` observer for logging and diagnostics.

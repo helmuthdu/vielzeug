@@ -1,24 +1,8 @@
-import { ANONYMOUS, WILDCARD } from './constants';
 import type { WardAttributes, WardCondition, WardPattern, WardRule } from './types';
 
 type RuleOptions<TAttributes extends WardAttributes> = Readonly<{
   when?: WardCondition<TAttributes>;
 }>;
-
-function roleCondition<TAttributes extends WardAttributes>(
-  role: string | readonly string[],
-): WardCondition<TAttributes> {
-  const roles = Object.freeze(Array.isArray(role) ? [...role] : [role]);
-
-  return ({ principal }) =>
-    roles.some((candidate) =>
-      candidate === ANONYMOUS
-        ? principal === null
-        : candidate === WILDCARD
-          ? principal !== null
-          : principal?.roles.includes(candidate),
-    );
-}
 
 function buildRules<TAction extends string, TResource extends string, TAttributes extends WardAttributes>(
   effect: 'allow' | 'deny',
@@ -27,12 +11,15 @@ function buildRules<TAction extends string, TResource extends string, TAttribute
   actions: readonly WardPattern<TAction>[],
   options?: RuleOptions<TAttributes>,
 ): WardRule<TAction, TResource, TAttributes>[] {
-  const matchesRole = roleCondition<TAttributes>(role);
-  const condition = options?.when
-    ? (input: Parameters<WardCondition<TAttributes>>[0]) => matchesRole(input) && options.when!(input)
-    : matchesRole;
+  const roles = Object.freeze(Array.isArray(role) ? [...role] : [role]);
 
-  return actions.map((action) => ({ action, condition, effect, resource }));
+  return actions.map((action) => ({
+    action,
+    ...(options?.when === undefined ? {} : { condition: options.when }),
+    effect,
+    resource,
+    roles,
+  }));
 }
 
 export const allow = <
@@ -57,10 +44,6 @@ export const deny = <
   options?: RuleOptions<TAttributes>,
 ): WardRule<TAction, TResource, TAttributes>[] => buildRules('deny', role, resource, actions, options);
 
-const hasRole =
-  <TAttributes extends WardAttributes = WardAttributes>(role: string): WardCondition<TAttributes> =>
-  ({ principal }) =>
-    principal?.roles.includes(role) ?? false;
 const owns =
   <TAttributes extends WardAttributes = WardAttributes>(
     attribute: keyof TAttributes & string,
@@ -86,4 +69,4 @@ const not =
   (input) =>
     !condition(input);
 
-export const predicate = { and, hasRole, not, or, owns } as const;
+export const predicate = { and, not, or, owns } as const;

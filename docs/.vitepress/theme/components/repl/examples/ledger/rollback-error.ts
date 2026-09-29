@@ -17,7 +17,7 @@ try {
   }
 }
 
-console.log('undo entries:', ledger.state.value.undo.length)
+console.log('undo entries:', ledger.state.getSnapshot().undo.length)
 ledger.dispose()`,
   name: 'Rollback Error',
 };

@@ -5,3 +5,4 @@
  * ownership and bundle contents obvious to application code.
  */
 export { RefineError } from './errors';
+export { eventFieldChecked, eventFieldValue } from './inputs/shared/native-field-event';

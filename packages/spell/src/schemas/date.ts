@@ -1,17 +1,10 @@
-import type { CheckContext, MessageFn, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 
-export class DateSchema<Input = Date, Mode extends SchemaMode = 'sync'> extends Schema<Date, Input, Mode> {
+export class DateSchema<Input = Date> extends Schema<Date, Input> {
   protected override get _kind(): string {
     return 'date';
-  }
-
-  override checkAsync(
-    this: DateSchema<Input, 'sync'>,
-    fn: (value: Date, ctx: CheckContext) => Promise<ValidateResult>,
-  ): DateSchema<Input, 'async'> {
-    return this._addCheck(fn, true) as unknown as DateSchema<Input, 'async'>;
   }
 
   constructor() {
@@ -48,12 +41,6 @@ export class DateSchema<Input = Date, Mode extends SchemaMode = 'sync'> extends 
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'date' };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    if (visitor.date) return visitor.date(this);
-
-    return super._walk(visitor);
   }
 
   static coerce(): DateSchema<unknown> {

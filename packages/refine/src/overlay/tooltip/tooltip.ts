@@ -2,7 +2,12 @@ import type { Placement } from '@vielzeug/orbit';
 
 import { bind, createId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { type OverlayOpenChangeDetail, type OverlayOpenReason, parseStringTriggers } from '../../core';
+import {
+  type OverlayOpenChangeDetail,
+  type OverlayOpenReason,
+  parseOptionalBool,
+  parseStringTriggers,
+} from '../../core';
 import { disablableBundle, sizableBundle } from '../../shared';
 import { forcedColorsMixin } from '../../styles';
 import type { ComponentSize } from '../../types';
@@ -23,9 +28,6 @@ const parseDelayMs = (value: string | null): number => {
 
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 };
-
-const parseOptionalBool = (value: string | null): boolean | undefined =>
-  value == null ? undefined : value === '' || value === 'true';
 
 const normalizeTriggers = (value: string | null | undefined): TooltipTrigger[] =>
   parseStringTriggers(value, VALID_TOOLTIP_TRIGGERS, DEFAULT_TOOLTIP_TRIGGERS);
@@ -154,7 +156,6 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       defaultOpen: props['default-open'],
       disabled: isDisabled,
       getPanel: () => tooltipEl,
-      offset: 8,
       onCleanup,
       onClose: (reason) => emit('open-change', { open: false, reason }),
       onOpen: (reason) => emit('open-change', { open: true, reason }),

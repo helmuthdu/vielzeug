@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add createGridNavigation and rescueFocus",
+      "packageName": "@vielzeug/focus",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/focus"
+}

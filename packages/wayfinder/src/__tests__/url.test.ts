@@ -1,7 +1,7 @@
 /**
  * router.url() — named-route URL construction.
  */
-import { createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
+import { createHashHistory, createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
 import { settle } from './test-utils';
 
 describe('url()', () => {
@@ -113,6 +113,49 @@ describe('url()', () => {
     await router.navigate({ hash: 'intro', name: 'section' });
 
     expect(router.getSnapshot().location.hash).toBe('intro');
+    router.dispose();
+  });
+});
+
+describe('href()', () => {
+  it('matches url() for drivers whose internal URLs are address-bar ready', async () => {
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: { home: { path: '/' }, user: { path: '/users/:id' } },
+    });
+
+    await settle();
+
+    expect(router.href('user', { id: '42' })).toBe('/users/42');
+    expect(router.href('home')).toBe('/');
+    router.dispose();
+  });
+
+  it('hash-prefixes the route behind the driver base under createHashHistory', async () => {
+    const router = createRouter({
+      base: '/demos/primal/',
+      history: createHashHistory({ base: '/demos/primal/' }),
+      routes: { home: { path: '/' }, user: { path: '/users/:id' } },
+    });
+
+    await settle();
+
+    expect(router.url('user', { id: '42' })).toBe('/demos/primal/users/42');
+    expect(router.href('user', { id: '42' })).toBe('/demos/primal/#/users/42');
+    expect(router.href('home')).toBe('/demos/primal/#/');
+    router.dispose();
+  });
+
+  it('keeps query strings inside the hash-prefixed form', async () => {
+    const router = createRouter({
+      base: '/demos/primal/',
+      history: createHashHistory({ base: '/demos/primal/' }),
+      routes: { home: { path: '/' }, search: { path: '/search' } },
+    });
+
+    await settle();
+
+    expect(router.href('search', undefined, { page: 2 })).toBe('/demos/primal/#/search?page=2');
     router.dispose();
   });
 });

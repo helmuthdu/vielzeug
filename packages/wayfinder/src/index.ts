@@ -1,12 +1,23 @@
 export {
   WayfinderApiError,
+  WayfinderConfigError,
   WayfinderDisposedError,
   WayfinderError,
   WayfinderRedirectLoopError,
   WayfinderRouteError,
 } from './errors';
-export { createBrowserHistory, createHashHistory, createMemoryHistory, type HashHistoryOptions } from './history';
+export {
+  createBrowserHistory,
+  createHashHistory,
+  createHistoryForBase,
+  createMemoryHistory,
+  type HashHistoryOptions,
+} from './history';
 export { redirectTo } from './middleware';
+export type { PhaseMirror, PhaseMirrorOptions } from './phase-mirror';
+export { createPhaseMirror } from './phase-mirror';
+export type { RouteSignals } from './route-signals';
+export { createRouteSignals } from './route-signals';
 export type { Router } from './router';
 export { createRouter } from './router';
 export type {

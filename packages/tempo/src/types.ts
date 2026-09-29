@@ -44,6 +44,11 @@ export interface DurationFormatOptions {
   style?: 'digital' | 'long' | 'narrow' | 'short';
 }
 
+export interface TimerFormatOptions {
+  /** Always render the hours part (`0:47:12`); default omits it for durations under an hour. */
+  hours?: 'always' | 'auto';
+}
+
 export type TempoUnit =
   | 'day'
   | 'hour'

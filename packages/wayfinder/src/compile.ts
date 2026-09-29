@@ -1,5 +1,5 @@
 import { warn } from './_dev';
-import { WayfinderRouteError } from './errors';
+import { WayfinderConfigError } from './errors';
 import { compilePathMatcher, joinPaths, normalizePath } from './path';
 import type { Middleware, RouteBranchDef, RouteDefinition, RouteRecord, RouterOptions, RouteTable } from './types';
 
@@ -19,11 +19,11 @@ export function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions
     ancestorMiddleware: RouteRecord['ownMiddleware'],
   ): void => {
     if (route.index && route.path !== undefined) {
-      throw new WayfinderRouteError(`Route "${name}" cannot define both index and path`);
+      throw new WayfinderConfigError(`Route "${name}" cannot define both index and path`);
     }
 
     if (!route.index && route.path === undefined) {
-      throw new WayfinderRouteError(`Route "${name}" must define path or set index: true`);
+      throw new WayfinderConfigError(`Route "${name}" must define path or set index: true`);
     }
 
     const ownPath = route.index
@@ -76,7 +76,7 @@ export function compileRoutes<TRoutes extends RouteTable>(options: RouterOptions
 
   for (const record of records) {
     if (namesSeen.has(record.leaf.name)) {
-      throw new WayfinderRouteError(
+      throw new WayfinderConfigError(
         `Duplicate route name: "${record.leaf.name}". A top-level route key must not coincide with a nested route's dot-notation name.`,
       );
     }

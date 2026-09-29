@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add encoding/base64url — environment-independent base64url text and byte codecs",
+      "packageName": "@vielzeug/arsenal",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/arsenal"
+}

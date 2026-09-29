@@ -5,7 +5,7 @@ package: tempo
 category: time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl]
 related: [rune, vault]
-exports: [Temporal, parse, now, nowInstant, isValid, toInstant, inTimeZone, shift, difference, isBefore, isAfter, isSame, contains, clamp, startOf, endOf, dateRange, recurrence, format, formatParts, formatRange, formatRangeParts, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, classifyExpiry, timeDiff, humanize, TempoError, TempoInvalidInputError, TempoInvalidTzError, TempoMissingTzError, TempoUnsupportedInputError]
+exports: [Temporal, parse, now, nowInstant, isValid, toInstant, inTimeZone, shift, difference, isBefore, isAfter, isSame, contains, clamp, startOf, endOf, dateRange, recurrence, format, formatParts, formatRange, formatRangeParts, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, formatTimer, classifyExpiry, timeDiff, humanize, TempoError, TempoInvalidInputError, TempoInvalidTzError, TempoMissingTzError, TempoUnsupportedInputError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -88,6 +88,7 @@ const text = format(reminder, {
 - `startOf()` / `endOf()` — Resolve timezone-aware calendar boundaries, including configurable week starts.
 - `dateRange()` / `recurrence()` — Generate validated, lazy zoned calendar sequences.
 - `format()` / `formatRelative()` / `formatDuration()` — Render localized values through `Intl`, including calendar-aware relative months and years.
+- `formatTimer()` — Deterministic stopwatch clocks (`47:12`, `1:02:35`) for elapsed-time UI.
 - `classifyExpiry()` — Classify fixed elapsed-time thresholds without month or year approximation.
 
 </div>

@@ -64,7 +64,7 @@ import { from, pipe, retry, switchMap } from '@vielzeug/flux';
 const results = pipe(
   queries,
   switchMap((query) => from(fetch(`/api/search?q=${encodeURIComponent(query)}`).then((response) => response.json()))),
-  retry({ attempts: 2, delay: (attempt) => 250 * (attempt + 1) }),
+  retry({ times: 2, delay: (attempt) => 250 * (attempt + 1) }),
 );
 ```
 
@@ -90,7 +90,7 @@ Use `first()` for first emission and `last()` for last value before completion. 
 Use channels only at imperative boundaries. Expose `channel.stream` to consumers; keep `send()` near event producer.
 
 ```ts
-import { createChannel } from '@vielzeug/flux/subjects';
+import { createChannel } from '@vielzeug/flux';
 
 const status = createChannel({ initial: 'starting', replay: 1 });
 status.stream.subscribe({ error: console.error, next: console.log });

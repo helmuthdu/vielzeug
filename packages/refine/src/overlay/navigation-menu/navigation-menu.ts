@@ -140,10 +140,10 @@ define<OreNavigationMenuProps>(NAVIGATION_MENU_TAG, {
 
     const positioner = createDropdownPositioner({
       getFloating: () => activePanel,
+      getOffsetPx: () => 8,
       getPlacement: () => props.placement.value ?? 'bottom-start',
       getReference: () => activeTrigger?.shadowRoot?.querySelector<HTMLElement>('.trigger') ?? activeTrigger,
       matchWidth: false,
-      offsetPx: 8,
       useClippingAncestor: false,
     });
 

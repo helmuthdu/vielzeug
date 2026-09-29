@@ -1,11 +1,11 @@
 export const permissionManagementExample = {
   code: `import { createWard } from '@vielzeug/ward'
 
-// Rules are plain objects — build them dynamically from config or a database
+// Rules are plain data — build them dynamically from config or a database
 const rules = [
   { action: 'read',   resource: 'comments', effect: 'allow' },
-  { action: 'write',  resource: 'comments', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('user') ?? false },
-  { action: 'delete', resource: 'comments', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('moderator') ?? false },
+  { action: 'write',  resource: 'comments', effect: 'allow', roles: ['user'] },
+  { action: 'delete', resource: 'comments', effect: 'allow', roles: ['moderator'] },
 ]
 
 const ward = createWard(rules)

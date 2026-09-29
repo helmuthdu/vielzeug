@@ -13,23 +13,18 @@ import {
   type Infer,
   type InferInput,
   type InferOutput,
-  type InferSchemaMode,
   type Issue,
   type IssuePath,
   type IssuePathSegment,
   type JsonSchema,
-  type MergeSchemaModes,
   type MessageFn,
   type Messages,
   type ParseContext,
   type ParseResult,
   type SchemaDescriptor,
-  type SchemaMode,
-  type SchemaWalker,
   type StandardSchemaV1,
   type SyncParsable,
   schemaInput,
-  schemaMode,
   schemaOutput,
   type ValidateFn,
   type ValidateResult,
@@ -54,22 +49,17 @@ export {
   type Infer,
   type InferInput,
   type InferOutput,
-  type InferSchemaMode,
   type Issue,
   type IssuePath,
   type IssuePathSegment,
   type JsonSchema,
-  type MergeSchemaModes,
   type MessageFn,
   type Messages,
   type ParseContext,
   type ParseResult,
   type SchemaDescriptor,
-  type SchemaMode,
-  type SchemaWalker,
   type StandardSchemaV1,
   type SyncParsable,
-  schemaMode,
   type ValidateFn,
   type ValidateResult,
 };
@@ -160,8 +150,6 @@ function cloneState<Output>(state: SchemaState<Output>): SchemaState<Output> {
 /** Parse-value return type for `_parse` implementations. Emitted as part of the public class surface. */
 export type ParseValue = { data: unknown; issues: Issue[]; typeOk: boolean };
 
-type MaybePromise<T> = T | Promise<T>;
-
 /* -------------------- ParseContext default -------------------- */
 
 /** @internal */
@@ -185,11 +173,8 @@ function normalizeValidateResult(result: ValidateResult, ctxIssues: Issue[], ctx
 
 /* -------------------- Base Schema -------------------- */
 
-export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 'sync'>
-  implements StandardSchemaV1<Input, Output>
-{
+export class Schema<Output = unknown, Input = Output> implements StandardSchemaV1<Input, Output> {
   declare readonly [schemaInput]: Input;
-  declare readonly [schemaMode]: Mode;
   declare readonly [schemaOutput]: Output;
 
   protected state: SchemaState<Output>;
@@ -219,7 +204,6 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
   /* -------------------- Parse -------------------- */
 
-  parse(this: Schema<Output, Input, 'sync'>, value: unknown, ctx?: ParseContext): Output;
   parse(value: unknown, ctx?: ParseContext): Output {
     if (this.state.hasAsyncChecks) {
       throw new SpellValidationError([
@@ -234,19 +218,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
       if (prepared.skip) return prepared.value as Output;
 
-      const coreOrPromise = this._parse(prepared.value, c);
-
-      if (coreOrPromise instanceof Promise) {
-        throw new SpellValidationError([
-          {
-            code: ErrorCode.custom,
-            message: 'parse() received an async schema. Use parseAsync() instead.',
-            path: [],
-          },
-        ]);
-      }
-
-      const core = coreOrPromise;
+      const core = this._parse(prepared.value, c);
       const validationIssues = core.typeOk ? this._runValidatorsSync(core.data, c) : [];
       const allIssues = [...core.issues, ...validationIssues];
 
@@ -256,7 +228,6 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     });
   }
 
-  safeParse(this: Schema<Output, Input, 'sync'>, value: unknown, ctx?: ParseContext): ParseResult<Output>;
   safeParse(value: unknown, ctx?: ParseContext): ParseResult<Output> {
     try {
       return {
@@ -278,7 +249,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
       if (prepared.skip) return prepared.value as Output;
 
-      const core = await this._parse(prepared.value, c);
+      const core = await this._parseAsync(prepared.value, c);
       const validationIssues = core.typeOk ? await this._runValidatorsAsync(core.data, c) : [];
       const allIssues = [...core.issues, ...validationIssues];
 
@@ -316,19 +287,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
     if (prepared.skip) return { data: prepared.value, issues: [] };
 
-    const coreOrPromise = this._parse(prepared.value, c);
-
-    if (coreOrPromise instanceof Promise) {
-      throw new SpellValidationError([
-        {
-          code: ErrorCode.custom,
-          message: 'Sync parse path received an async schema. Use parseAsync() instead.',
-          path: [],
-        },
-      ]);
-    }
-
-    const core = coreOrPromise;
+    const core = this._parse(prepared.value, c);
     const validationIssues = core.typeOk ? this._runValidatorsSync(core.data, c) : [];
     const allIssues = [...core.issues, ...validationIssues];
 
@@ -351,7 +310,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
     if (prepared.skip) return { data: prepared.value, issues: [] };
 
-    const core = await this._parse(prepared.value, c);
+    const core = await this._parseAsync(prepared.value, c);
     const validationIssues = core.typeOk ? await this._runValidatorsAsync(core.data, c) : [];
     const allIssues = [...core.issues, ...validationIssues];
 
@@ -376,11 +335,8 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return this._addCheck(fn as (value: Output, ctx: CheckContext) => ValidateResult, false);
   }
 
-  checkAsync(
-    this: Schema<Output, Input, 'sync'>,
-    fn: (value: Output, ctx: CheckContext) => Promise<ValidateResult>,
-  ): Schema<Output, Input, 'async'> {
-    return this._addCheck(fn, true) as unknown as Schema<Output, Input, 'async'>;
+  checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<ValidateResult>): this {
+    return this._addCheck(fn, true);
   }
 
   protected _addCheck(
@@ -414,33 +370,33 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
   /* -------------------- Nullability / Optionality -------------------- */
 
-  optional(): Schema<Output | undefined, Input | undefined, Mode> & AcceptsMissing {
-    const cloned = this._clone() as unknown as Schema<Output | undefined, Input | undefined, Mode>;
+  optional(): Schema<Output | undefined, Input | undefined> & AcceptsMissing {
+    const cloned = this._clone() as unknown as Schema<Output | undefined, Input | undefined>;
 
     cloned.state.isOptional = true;
 
-    return cloned as Schema<Output | undefined, Input | undefined, Mode> & AcceptsMissing;
+    return cloned as Schema<Output | undefined, Input | undefined> & AcceptsMissing;
   }
 
-  nullable(): Schema<Output | null, Input | null, Mode> {
-    const cloned = this._clone() as unknown as Schema<Output | null, Input | null, Mode>;
+  nullable(): Schema<Output | null, Input | null> {
+    const cloned = this._clone() as unknown as Schema<Output | null, Input | null>;
 
     cloned.state.isNullable = true;
 
     return cloned;
   }
 
-  nullish(): Schema<Output | null | undefined, Input | null | undefined, Mode> & AcceptsMissing {
-    const cloned = this._clone() as unknown as Schema<Output | null | undefined, Input | null | undefined, Mode>;
+  nullish(): Schema<Output | null | undefined, Input | null | undefined> & AcceptsMissing {
+    const cloned = this._clone() as unknown as Schema<Output | null | undefined, Input | null | undefined>;
 
     cloned.state.isOptional = true;
     cloned.state.isNullable = true;
 
-    return cloned as Schema<Output | null | undefined, Input | null | undefined, Mode> & AcceptsMissing;
+    return cloned as Schema<Output | null | undefined, Input | null | undefined> & AcceptsMissing;
   }
 
-  required(): Schema<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode> {
-    const cloned = this._clone() as unknown as Schema<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode>;
+  required(): Schema<Exclude<Output, undefined>, Exclude<Input, undefined>> {
+    const cloned = this._clone() as unknown as Schema<Exclude<Output, undefined>, Exclude<Input, undefined>>;
 
     cloned.state.isOptional = false;
 
@@ -466,8 +422,8 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return cloned as this & AcceptsMissing;
   }
 
-  transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input, Mode> {
-    const next = this._clone() as unknown as Schema<NewOutput, Input, Mode>;
+  transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input> {
+    const next = this._clone() as unknown as Schema<NewOutput, Input>;
 
     next.state.postprocessors.push(fn as (v: unknown) => unknown);
 
@@ -482,7 +438,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return cloned;
   }
 
-  pipe<B extends AnySchema>(next: B): PipeSchema<B, this, MergeSchemaModes<Mode | InferSchemaMode<B>>> {
+  pipe<B extends AnySchema>(next: B): PipeSchema<B, this> {
     return new PipeSchema(this, next);
   }
 
@@ -524,11 +480,11 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return this.state.isNullable;
   }
 
-  is(this: Schema<Output, Input, 'sync'>, value: unknown): value is Output {
+  is(value: unknown): value is Output {
     return this.safeParse(value).success;
   }
 
-  assert(this: Schema<Output, Input, 'sync'>, value: unknown, label?: string): asserts value is Output {
+  assert(value: unknown, label?: string): asserts value is Output {
     const result = this._parseFullSync(value);
 
     if (result.issues.length === 0) return;
@@ -541,10 +497,6 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
       : result.issues;
 
     throw new SpellValidationError(issues);
-  }
-
-  walk<R>(visitor: SchemaWalker<R>): R | null {
-    return this._walk(visitor);
   }
 
   get kind(): string {
@@ -596,12 +548,6 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     target.state = cloneState(this.state);
 
     return target;
-  }
-
-  protected _walk<R>(visitor: SchemaWalker<R>): R | null {
-    if (visitor.unknown) return visitor.unknown(this);
-
-    return null;
   }
 
   protected _toDescriptorImpl(): SchemaDescriptor {
@@ -717,30 +663,31 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return issues;
   }
 
-  protected _parse(_value: unknown, _ctx: ParseContext): MaybePromise<ParseValue> {
+  protected _parse(_value: unknown, _ctx: ParseContext): ParseValue {
     return { data: _value, issues: [], typeOk: true };
+  }
+
+  /**
+   * Async counterpart of `_parse`. Composites override this to parse their
+   * children through `_parseFullAsync`, which keeps async checks reachable at
+   * any nesting depth. The default defers to the synchronous `_parse`.
+   */
+  protected _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    return Promise.resolve(this._parse(value, ctx));
   }
 }
 
 /* -------------------- PipeSchema -------------------- */
 
-export class PipeSchema<
-  To extends AnySchema,
-  From extends AnySchema,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<To | From>>,
-> extends Schema<InferOutput<To>, InferInput<From>, Mode> {
+export class PipeSchema<To extends AnySchema, From extends AnySchema> extends Schema<
+  InferOutput<To>,
+  InferInput<From>
+> {
   readonly from: From;
   readonly to: To;
 
   protected override get _kind(): string {
     return 'pipe';
-  }
-
-  override checkAsync(
-    this: PipeSchema<To, From, 'sync'>,
-    fn: (value: InferOutput<To>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): PipeSchema<To, From, 'async'> {
-    return this._addCheck(fn, true) as unknown as PipeSchema<To, From, 'async'>;
   }
 
   constructor(from: From, to: To) {
@@ -749,64 +696,28 @@ export class PipeSchema<
     this.to = to;
   }
 
-  protected override _parse(value: unknown, ctx: ParseContext): MaybePromise<ParseValue> {
-    const r1OrPromise = this.from._parseFullSync(value, ctx);
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
+    const first = this.from._parseFullSync(value, ctx);
 
-    if (r1OrPromise instanceof Promise) {
-      return (r1OrPromise as Promise<{ data: unknown; issues: Issue[] }>).then((r1) => {
-        if (r1.issues.length > 0) return { data: value, issues: r1.issues, typeOk: false };
+    if (first.issues.length > 0) return { data: value, issues: first.issues, typeOk: false };
 
-        return this.to
-          ._parseFullAsync(r1.data, ctx)
-          .then((r2) =>
-            r2.issues.length > 0
-              ? { data: r1.data, issues: r2.issues, typeOk: false }
-              : { data: r2.data, issues: [], typeOk: true },
-          );
-      });
-    }
+    const second = this.to._parseFullSync(first.data, ctx);
 
-    if (r1OrPromise.issues.length > 0) return { data: value, issues: r1OrPromise.issues, typeOk: false };
-
-    const r2OrPromise = this.to._parseFullSync(r1OrPromise.data, ctx);
-
-    if (r2OrPromise instanceof Promise) {
-      return r2OrPromise.then((r2) =>
-        r2.issues.length > 0
-          ? { data: r1OrPromise.data, issues: r2.issues, typeOk: false }
-          : { data: r2.data, issues: [], typeOk: true },
-      );
-    }
-
-    return r2OrPromise.issues.length > 0
-      ? { data: r1OrPromise.data, issues: r2OrPromise.issues, typeOk: false }
-      : { data: r2OrPromise.data, issues: [], typeOk: true };
+    return second.issues.length > 0
+      ? { data: first.data, issues: second.issues, typeOk: false }
+      : { data: second.data, issues: [], typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferOutput<To>> {
-    const c = ctx ?? _makeCtx();
-    const first = await this.from._parseFullAsync(value, c);
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    const first = await this.from._parseFullAsync(value, ctx);
 
-    if (first.issues.length > 0) throw new SpellValidationError(first.issues);
+    if (first.issues.length > 0) return { data: value, issues: first.issues, typeOk: false };
 
-    const second = await this.to._parseFullAsync(first.data, c);
+    const second = await this.to._parseFullAsync(first.data, ctx);
 
-    if (second.issues.length > 0) throw new SpellValidationError(second.issues);
-
-    const issues = await this._runValidatorsAsync(second.data, c);
-
-    if (issues.length > 0) throw new SpellValidationError(issues);
-
-    return this._runPostprocessors(second.data) as InferOutput<To>;
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const fromR = this.from.walk(visitor);
-    const toR = this.to.walk(visitor);
-
-    if (visitor.pipe) return visitor.pipe(this, fromR, toR);
-
-    return super._walk(visitor);
+    return second.issues.length > 0
+      ? { data: first.data, issues: second.issues, typeOk: false }
+      : { data: second.data, issues: [], typeOk: true };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

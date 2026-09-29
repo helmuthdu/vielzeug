@@ -273,15 +273,28 @@ describe('assert()', () => {
   });
 });
 
-describe('walk() fallback', () => {
-  it('returns null when no handler matches and no unknown fallback is provided', () => {
-    expect(s.string().walk({})).toBeNull();
+describe('nested async checks', () => {
+  it('parses async checks nested inside a composite', async () => {
+    const asyncString = s.string().checkAsync(async (value) => value.length > 2 || 'too short');
+    const schema = s.object({ tags: s.array(asyncString) });
+
+    await expect(schema.parseAsync({ tags: ['abc', 'abcd'] })).resolves.toEqual({ tags: ['abc', 'abcd'] });
+    await expect(schema.parseAsync({ tags: ['ab'] })).rejects.toThrow('too short');
   });
 
-  it('calls the unknown fallback when no specific handler matches', () => {
-    const result = s.string().walk({ unknown: () => 'caught' });
+  it('parses async checks at any nesting depth', async () => {
+    const asyncString = s.string().checkAsync(async (value) => value !== 'bad' || 'Rejected');
+    const schema = s.object({ nested: s.object({ tags: s.array(asyncString) }) });
 
-    expect(result).toBe('caught');
+    await expect(schema.parseAsync({ nested: { tags: ['ok'] } })).resolves.toEqual({ nested: { tags: ['ok'] } });
+    await expect(schema.parseAsync({ nested: { tags: ['bad'] } })).rejects.toThrow('Rejected');
+  });
+
+  it('sync parse() still rejects schemas with nested async checks', () => {
+    const asyncString = s.string().checkAsync(async (value) => value.length > 0 || 'empty');
+    const schema = s.object({ tags: s.array(asyncString) });
+
+    expect(() => schema.parse({ tags: ['a'] })).toThrow('async checks');
   });
 });
 

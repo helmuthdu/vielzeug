@@ -91,11 +91,18 @@ export function compileRule<TAction extends string, TResource extends string, TA
     throw new WardConfigError(`${at}.condition must be a function`);
   }
 
+  if (rule.roles !== undefined) {
+    if (!Array.isArray(rule.roles) || rule.roles.some((role) => typeof role !== 'string' || !role.trim())) {
+      throw new WardConfigError(`${at}.roles must be an array of non-empty strings`);
+    }
+  }
+
   return Object.freeze({
     action: rule.action,
     ...(rule.attributes === undefined ? {} : { attributes: snapshotAttributes(rule.attributes, `${at}.attributes`) }),
     ...(rule.condition === undefined ? {} : { condition: rule.condition }),
     effect: rule.effect,
     resource: rule.resource,
+    ...(rule.roles === undefined ? {} : { roles: Object.freeze([...rule.roles]) }),
   }) as WardRule<TAction, TResource, TAttributes>;
 }

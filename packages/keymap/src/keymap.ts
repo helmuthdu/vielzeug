@@ -1,5 +1,5 @@
 import { warn } from './_dev';
-import { KeymapError } from './errors';
+import { KeymapConfigError, KeymapError } from './errors';
 import type { Shortcut } from './parser';
 import { detectModKey, matchStep, parseShortcut } from './parser';
 import type { Binding, BindingEntry, Handler, Keymap, KeymapEvent, KeymapOptions, When } from './types';
@@ -120,11 +120,10 @@ function createChordTracker(
  * const unmount = map.mount(document);
  */
 export function createKeymap(initialBindings: readonly Binding[] = [], options: KeymapOptions = {}): Keymap {
-  const { chordTimeout: rawChordTimeout = 1000, modKey = detectModKey(), when: globalWhen } = options;
-  const chordTimeout = Number.isFinite(rawChordTimeout) && rawChordTimeout > 0 ? rawChordTimeout : 1000;
+  const { chordTimeout = 1000, modKey = detectModKey(), when: globalWhen } = options;
 
-  if (chordTimeout !== rawChordTimeout) {
-    warn(`chordTimeout must be a positive finite number; received ${rawChordTimeout}. Using default of 1000ms.`);
+  if (!Number.isFinite(chordTimeout) || chordTimeout <= 0) {
+    throw new KeymapConfigError(`chordTimeout must be a positive finite number; received ${chordTimeout}.`);
   }
 
   // Ordered map keyed by binding id — preserves insertion order and supports

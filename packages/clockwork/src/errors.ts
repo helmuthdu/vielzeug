@@ -1,27 +1,20 @@
-export type ClockworkErrorCode =
-  | 'INVALID_AFTER_DELAY'
-  | 'INVALID_CONTEXT'
-  | 'INVALID_DEFINITION'
-  | 'INVALID_EFFECT'
-  | 'INVALID_INITIAL_STATE'
-  | 'INVALID_INVOKE'
-  | 'INVALID_MAX_TRANSITIONS'
-  | 'INVALID_SNAPSHOT_STATE'
-  | 'INVALID_TRANSITION'
-  | 'INVALID_TRANSITION_LIMIT'
-  | 'UNKNOWN_TARGET';
-
-/** A Clockwork failure with a stable machine-readable code and contextual details. */
+/** Base class for every Clockwork failure. */
 export class ClockworkError extends Error {
-  private static readonly errorName = 'ClockworkError';
-  readonly code: ClockworkErrorCode;
   readonly details: Readonly<Record<string, unknown>>;
 
-  constructor(code: ClockworkErrorCode, message: string, details: Record<string, unknown> = {}, opts?: ErrorOptions) {
+  constructor(message: string, details: Record<string, unknown> = {}, opts?: ErrorOptions) {
     super(message, opts);
-    this.name = ClockworkError.errorName;
-    this.code = code;
+    this.name = new.target.name;
     this.details = Object.freeze({ ...details });
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+/** The machine definition failed validation at `defineMachine()` time. */
+export class ClockworkDefinitionError extends ClockworkError {}
+
+/** A snapshot, its context, or a reducer result failed validation. */
+export class ClockworkSnapshotError extends ClockworkError {}
+
+/** An actor exceeded the fixed queued-transition limit and disposed itself. */
+export class ClockworkTransitionLimitError extends ClockworkError {}

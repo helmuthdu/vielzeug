@@ -1,37 +1,21 @@
 import type {
   AnySchema,
-  CheckContext,
   InferInput,
   InferOutput,
-  InferSchemaMode,
   Issue,
-  MergeSchemaModes,
   MessageFn,
   ParseContext,
   ParseValue,
   SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
 } from '../core';
 
-import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError } from '../core';
+import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
 
-export class SetSchema<
-  T extends AnySchema,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T>>,
-> extends Schema<Set<InferOutput<T>>, Set<InferInput<T>>, Mode> {
+export class SetSchema<T extends AnySchema> extends Schema<Set<InferOutput<T>>, Set<InferInput<T>>> {
   readonly itemSchema: T;
 
   protected override get _kind(): string {
     return 'set';
-  }
-
-  override checkAsync(
-    this: SetSchema<T, 'sync'>,
-    fn: (value: Set<InferOutput<T>>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): SetSchema<T, 'async'> {
-    return this._addCheck(fn, true) as unknown as SetSchema<T, 'async'>;
   }
 
   constructor(itemSchema: T) {
@@ -67,43 +51,32 @@ export class SetSchema<
     return { data: parsed, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<Set<InferOutput<T>>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    if (!(value instanceof Set)) {
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.set.type(), path: [] }],
+        typeOk: false,
+      };
+    }
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    const items = [...value];
+    const settled = await Promise.all(items.map((item) => this.itemSchema._parseFullAsync(item, ctx)));
 
-      if (prepared.skip) return prepared.value as unknown as Set<InferOutput<T>>;
+    const issues: Issue[] = [];
+    const parsed = new Set<InferOutput<T>>();
 
-      const raw = prepared.value;
+    for (let i = 0; i < settled.length; i++) {
+      const result = settled[i];
 
-      if (!(raw instanceof Set)) {
-        throw new SpellValidationError([{ code: ErrorCode.invalid_type, message: c.messages.set.type(), path: [] }]);
+      if (result.issues.length === 0) {
+        parsed.add(result.data as InferOutput<T>);
+      } else {
+        issues.push(...prependIssuePath(result.issues, i));
       }
+    }
 
-      const items = [...raw];
-      const settled = await Promise.all(items.map((item) => this.itemSchema._parseFullAsync(item, c)));
-
-      const issues: Issue[] = [];
-      const parsed = new Set<InferOutput<T>>();
-
-      for (let i = 0; i < settled.length; i++) {
-        const result = settled[i];
-
-        if (result.issues.length === 0) {
-          parsed.add(result.data as InferOutput<T>);
-        } else {
-          issues.push(...prependIssuePath(result.issues, i));
-        }
-      }
-
-      const validationIssues = await this._runValidatorsAsync(parsed, c);
-      const allIssues = [...issues, ...validationIssues];
-
-      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
-
-      return this._runPostprocessors(parsed) as Set<InferOutput<T>>;
-    });
+    return { data: parsed, issues, typeOk: true };
   }
 
   min(size: number, message?: MessageFn<{ min: number; value: Set<unknown> }>): this {
@@ -156,13 +129,5 @@ export class SetSchema<
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), items: this.itemSchema.definition(), kind: 'set' };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const item = this.itemSchema.walk(visitor);
-
-    if (visitor.set) return visitor.set(this, item);
-
-    return super._walk(visitor);
   }
 }

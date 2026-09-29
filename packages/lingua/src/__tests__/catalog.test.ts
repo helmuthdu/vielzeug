@@ -56,7 +56,7 @@ describe('catalogKeys', () => {
     expect(() => catalogKeys({ bad: [1, 2] as unknown as string })).toThrow(LinguaInvalidCatalogError);
   });
 
-  test('enumerates keys from an i18n instance using its current locale', async () => {
+  test('enumerates keys for an i18n instance current locale catalog', async () => {
     const catalogs = {
       de: { abschied: 'Tschüss', begrüßung: 'Hallo' },
       en: { farewell: 'Goodbye', greeting: 'Hello' },
@@ -69,12 +69,12 @@ describe('catalogKeys', () => {
 
     await i18n.load();
 
-    const keys = catalogKeys(i18n);
-    expect(keys).toEqual(['farewell', 'greeting']);
+    const state = i18n.serialize();
+    expect(catalogKeys(state.catalogs[state.locale])).toEqual(['farewell', 'greeting']);
 
     await i18n.setLocale('de');
-    const deKeys = catalogKeys(i18n);
-    expect(deKeys).toEqual(['abschied', 'begrüßung']);
+    const deState = i18n.serialize();
+    expect(catalogKeys(deState.catalogs[deState.locale])).toEqual(['abschied', 'begrüßung']);
 
     i18n.dispose();
   });

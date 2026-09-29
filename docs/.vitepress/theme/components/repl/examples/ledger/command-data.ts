@@ -13,9 +13,9 @@ await ledger.do({
 })
 
 console.log('state:', documentState)
-console.log('history meta:', ledger.state.value.undo.at(-1)?.meta)
-console.log('queued:', ledger.state.value.queued)
-console.log('running:', ledger.state.value.running)
+console.log('history meta:', ledger.state.getSnapshot().undo.at(-1)?.meta)
+console.log('queued:', ledger.state.getSnapshot().queued)
+console.log('running:', ledger.state.getSnapshot().running)
 
 await ledger.undo()
 console.log('after undo:', documentState)

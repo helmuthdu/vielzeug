@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatInfoBits } from '../_format';
-import { buildDataCodewords } from '../_segments';
+import { buildDataCodewords, payloadFromText } from '../_segments';
 import { encodeQr } from '../encode';
 
 /**
@@ -15,13 +15,13 @@ describe('vectors', () => {
   it('builds the canonical HELLO WORLD v1-Q data codewords', () => {
     // From the worked example: mode 0010, count 000001011, pairs
     // HE/LL/O␣/WO/R, terminator, then EC/11 pads to 13 codewords.
-    expect(buildDataCodewords('HELLO WORLD', 'alphanumeric', 1, 'Q')).toEqual([
+    expect(buildDataCodewords(payloadFromText('HELLO WORLD', 'alphanumeric'), 1, 'Q')).toEqual([
       0x20, 0x5b, 0x0b, 0x78, 0xd1, 0x72, 0xdc, 0x4d, 0x43, 0x40, 0xec, 0x11, 0xec,
     ]);
   });
 
   it('builds the 01234567 v1-M numeric data codewords', () => {
-    expect(buildDataCodewords('01234567', 'numeric', 1, 'M')).toEqual([
+    expect(buildDataCodewords(payloadFromText('01234567', 'numeric'), 1, 'M')).toEqual([
       0x10, 0x20, 0x0c, 0x56, 0x61, 0x80, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11, 0xec, 0x11,
     ]);
   });
@@ -92,6 +92,6 @@ describe('vectors', () => {
     const a = encodeQr('HELLO WORLD', { mask: 3 });
     const b = encodeQr('HELLO WORLD', { mask: 3 });
     expect(a.mask).toBe(3);
-    expect(a.modules).toEqual(b.modules);
+    for (let y = 0; y < a.size; y++) for (let x = 0; x < a.size; x++) expect(a.get(x, y)).toBe(b.get(x, y));
   });
 });

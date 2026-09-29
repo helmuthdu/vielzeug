@@ -1,7 +1,7 @@
 export { compose } from './compose';
 export {
   LedgerCancelledError,
-  LedgerConfigurationError,
+  LedgerConfigError,
   LedgerDisposedError,
   LedgerError,
   LedgerExecutionError,
@@ -14,8 +14,8 @@ export type {
   Ledger,
   LedgerCallOptions,
   LedgerOptions,
-  LedgerReadable,
   LedgerState,
   ReversibleCommand,
+  Subscribable,
   Unsubscribe,
 } from './types';

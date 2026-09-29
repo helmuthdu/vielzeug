@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add remeasure() to re-read viewport and offset when a hidden scroll container becomes visible",
+      "packageName": "@vielzeug/scroll",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scroll"
+}

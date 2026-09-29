@@ -1,4 +1,4 @@
-import { captureFocus, restoreFocus } from '../index';
+import { captureFocus, rescueFocus, restoreFocus } from '../index';
 
 describe('restoreFocus', () => {
   it('restores focus to a connected target', () => {
@@ -139,5 +139,53 @@ describe('captureFocus', () => {
     controller.abort();
 
     expect(captureFocus({ signal: controller.signal })()).toBe(false);
+  });
+});
+
+describe('rescueFocus', () => {
+  it('hands focus to the target when focus is lost to the body', () => {
+    const target = document.createElement('button');
+
+    document.body.append(target);
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    expect(rescueFocus(target)).toBe(true);
+    expect(document.activeElement).toBe(target);
+  });
+
+  it('returns false when focus is already on a real element', () => {
+    const held = document.createElement('button');
+    const target = document.createElement('button');
+
+    document.body.append(held, target);
+    held.focus();
+
+    expect(rescueFocus(target)).toBe(false);
+    expect(document.activeElement).toBe(held);
+  });
+
+  it('uses the fallback when the rescue target cannot be focused', () => {
+    const disabled = document.createElement('button');
+    const fallback = document.createElement('button');
+
+    disabled.disabled = true;
+    document.body.append(disabled, fallback);
+    (document.activeElement as HTMLElement | null)?.blur();
+
+    expect(rescueFocus(disabled, { fallback })).toBe(true);
+    expect(document.activeElement).toBe(fallback);
+  });
+
+  it('rescues after the focused element unmounts', () => {
+    const focused = document.createElement('button');
+    const target = document.createElement('button');
+
+    document.body.append(focused, target);
+    focused.focus();
+
+    focused.remove();
+
+    expect(rescueFocus(target)).toBe(true);
+    expect(document.activeElement).toBe(target);
   });
 });

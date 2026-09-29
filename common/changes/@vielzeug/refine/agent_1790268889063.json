@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Unify overlay positioning on createDropdownPositioner (popover/tooltip gain RTL, containing-block correction, autoUpdate; menu data-placement now set); extract shared calendar grid keyboard navigation; collapse useDialogControl mount API to mount(); derive check-css-contract mixin emissions from sources; extract datagrid labels; rename layer.css to layers.css",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

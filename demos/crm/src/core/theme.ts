@@ -1,23 +1,12 @@
-import { effect, signal } from '@vielzeug/ripple';
+import { createThemeController, type ThemePreference } from '@vielzeug/refine/theme';
 
-export type ThemePreference = 'dark' | 'light' | 'system';
-export const themePreference = signal<ThemePreference>('system');
-const systemTheme = matchMedia('(prefers-color-scheme: dark)');
+export type { ThemePreference };
 
-function applyTheme(preference: ThemePreference): void {
-  const dark = preference === 'dark' || (preference === 'system' && systemTheme.matches);
-  document.documentElement.classList.toggle('dark', dark);
-  document.documentElement.classList.toggle('light', !dark);
-  document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-}
+const controller = createThemeController();
+
+/** The user's light/dark/system selection. */
+export const themePreference = controller.preference;
 
 export function setThemePreference(preference: ThemePreference): void {
-  themePreference.value = preference;
+  controller.setPreference(preference);
 }
-
-effect(() => {
-  applyTheme(themePreference.value);
-});
-systemTheme.addEventListener('change', () => {
-  if (themePreference.value === 'system') applyTheme('system');
-});

@@ -2,6 +2,7 @@ import {
   autoUpdate,
   computePosition,
   flip,
+  getBoundaryRect,
   getClippingAncestorRect,
   offset,
   type Placement,
@@ -53,8 +54,17 @@ export type DropdownPositionerOptions = {
    * growing to fit its own content, capped by the boundary. Default: true
    */
   matchWidth?: boolean;
-  /** Additional offset in pixels between reference and floating element. Default: 0 */
-  offsetPx?: number;
+  /**
+   * Returns the offset in pixels between reference and floating element, read on every update so a
+   * reactive offset prop is honored. Default: 0.
+   */
+  getOffsetPx?: () => number;
+  /**
+   * Called after each update with the resolved placement (after RTL mirroring and flip). The
+   * positioner also writes it to the floating element's `data-placement` attribute itself, so this
+   * is only needed to react to placement changes (e.g. tooltip's per-side closed transform).
+   */
+  onPlacementChange?: (placement: Placement) => void;
   /** Padding (px) used by flip, shift, and size middleware. Default: 6 */
   padding?: number;
   /**
@@ -87,10 +97,11 @@ export function createDropdownPositioner({
   boundary,
   getDir,
   getFloating,
+  getOffsetPx = () => 0,
   getPlacement,
   getReference,
   matchWidth = true,
-  offsetPx = 0,
+  onPlacementChange,
   padding = 6,
   useClippingAncestor = true,
 }: DropdownPositionerOptions): OverlayPositioner {
@@ -114,7 +125,9 @@ export function createDropdownPositioner({
     // across opens (e.g. the same `<ore-select>` reused in different dialogs), and the detected
     // ancestor's own rect can change between opens even when it's the same element (a resized
     // dialog).
-    const resolvedBoundary = boundary ?? (useClippingAncestor ? getClippingAncestorRect(floating) : undefined);
+    const resolvedBoundary = getBoundaryRect(
+      boundary ?? (useClippingAncestor ? getClippingAncestorRect(floating) : undefined),
+    );
 
     const refWidth = ref.getBoundingClientRect().width;
     let naturalWidth = 0;
@@ -128,12 +141,26 @@ export function createDropdownPositioner({
       floating.style.width = 'auto';
       floating.style.minWidth = `${refWidth}px`;
       naturalWidth = floating.getBoundingClientRect().width;
+      // Clamp to the width the `size` middleware will report *before* positioning, so `flip`
+      // and `shift` compensate for the box that actually renders. Without this, a panel whose
+      // natural width exceeds the boundary is shifted fully inside for a width it is then
+      // clamped out of — landing further inside the boundary than needed, misaligned with its
+      // trigger. Horizontal placements derive their available width from the post-shift x and
+      // cannot be pre-clamped; they keep the post-positioning clamp below.
+      if (placement.startsWith('top') || placement.startsWith('bottom')) {
+        const availableWidth = Math.max(0, resolvedBoundary.width - padding * 2);
+        floating.style.width = `${Math.min(Math.max(naturalWidth, refWidth), availableWidth)}px`;
+      }
     }
 
     const result = computePosition(ref, floating, {
       boundary: resolvedBoundary,
       middleware: [
-        ...(offsetPx ? [offset(offsetPx)] : []),
+        ...(() => {
+          const offsetPx = getOffsetPx();
+
+          return offsetPx ? [offset(offsetPx)] : [];
+        })(),
         flip({ padding }),
         shift({ padding }),
         ...(matchWidth ? [size({ padding })] : []),
@@ -191,6 +218,10 @@ export function createDropdownPositioner({
       // A panel measured while not yet rendered reports 0 — fall back to the reference width.
       floating.style.width = `${Math.min(Math.max(naturalWidth, refWidth), available)}px`;
     }
+
+    // Reported last, after every `left`/`top`/`width` write has settled, so a consumer reacting to
+    // the placement (e.g. tooltip's per-side closed transform) sees the final geometry.
+    onPlacementChange?.(result.placement);
   }
 
   function startAutoUpdate(): () => void {

@@ -1,21 +1,15 @@
 import type {
   AcceptsMissing,
   AnySchema,
-  CheckContext,
   InferInput,
   InferOutput,
-  InferSchemaMode,
   Issue,
-  MergeSchemaModes,
   ParseContext,
   ParseValue,
   SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
 } from '../core';
 
-import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
+import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
 import { UnionSchema } from './union';
@@ -32,22 +26,12 @@ export type InferObjectInput<T extends ObjectShape> = Simplify<
   }
 >;
 
-export class ObjectSchema<
-  T extends ObjectShape,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[keyof T]>>,
-> extends Schema<InferObject<T>, InferObjectInput<T>, Mode> {
+export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, InferObjectInput<T>> {
   readonly shape: T;
   private readonly _isRelaxed: boolean;
 
   protected override get _kind(): string {
     return 'object';
-  }
-
-  override checkAsync(
-    this: ObjectSchema<T, 'sync'>,
-    fn: (value: InferObject<T>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): ObjectSchema<T, 'async'> {
-    return this._addCheck(fn, true) as unknown as ObjectSchema<T, 'async'>;
   }
 
   constructor(shape: T, isRelaxed = false) {
@@ -116,11 +100,8 @@ export class ObjectSchema<
     };
   }
 
-  private _rebuildWith<U extends ObjectShape, NewMode extends SchemaMode = Mode>(
-    shape: U,
-    isRelaxed = this._isRelaxed,
-  ): ObjectSchema<U, NewMode> {
-    return this._copyStateTo(new ObjectSchema(shape, isRelaxed)) as unknown as ObjectSchema<U, NewMode>;
+  private _rebuildWith<U extends ObjectShape>(shape: U, isRelaxed = this._isRelaxed): ObjectSchema<U> {
+    return this._copyStateTo(new ObjectSchema(shape, isRelaxed)) as unknown as ObjectSchema<U>;
   }
 
   protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
@@ -149,59 +130,44 @@ export class ObjectSchema<
     return { data: output, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferObject<T>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    const guarded = this._guardObjectInput(value, ctx);
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
-      if (prepared.skip) return prepared.value as unknown as InferObject<T>;
+    const { obj } = guarded;
+    const { issues, output } = this._createObjectParseContext(obj, ctx);
 
-      const guarded = this._guardObjectInput(prepared.value, c);
+    const keys = Object.keys(this.shape);
+    const results = await Promise.all(keys.map((key) => this.shape[key]._parseFullAsync(obj[key], ctx)));
 
-      if (!guarded.ok) throw new SpellValidationError(guarded.issues);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const result = results[i];
 
-      const { obj } = guarded;
-      const { issues, output } = this._createObjectParseContext(obj, c);
-
-      const keys = Object.keys(this.shape);
-      const results = await Promise.all(keys.map((key) => this.shape[key]._parseFullAsync(obj[key], c)));
-
-      for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
-        const result = results[i];
-
-        if (result.issues.length === 0) {
-          defineOwnProperty(output, key, result.data);
-        } else {
-          issues.push(...prependIssuePath(result.issues, key));
-        }
+      if (result.issues.length === 0) {
+        defineOwnProperty(output, key, result.data);
+      } else {
+        issues.push(...prependIssuePath(result.issues, key));
       }
+    }
 
-      this._copyRelaxedUnknownKeys(obj, output);
+    this._copyRelaxedUnknownKeys(obj, output);
 
-      const validationIssues = await this._runValidatorsAsync(output, c);
-      const allIssues = [...issues, ...validationIssues];
-
-      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
-
-      return this._runPostprocessors(output) as InferObject<T>;
-    });
+    return { data: output, issues, typeOk: true };
   }
 
-  partial(): ObjectSchema<
-    { [K in keyof T]: Schema<InferOutput<T[K]> | undefined, InferInput<T[K]> | undefined, Mode> & AcceptsMissing },
-    Mode
-  >;
+  partial(): ObjectSchema<{
+    [K in keyof T]: Schema<InferOutput<T[K]> | undefined, InferInput<T[K]> | undefined> & AcceptsMissing;
+  }>;
   partial<K extends keyof T>(
     ...keys: K[]
   ): ObjectSchema<
     Omit<T, K> & {
-      [P in K]: Schema<InferOutput<T[P]> | undefined, InferInput<T[P]> | undefined, Mode> & AcceptsMissing;
-    },
-    Mode
+      [P in K]: Schema<InferOutput<T[P]> | undefined, InferInput<T[P]> | undefined> & AcceptsMissing;
+    }
   >;
-  partial<K extends keyof T>(...keys: K[]): ObjectSchema<any, Mode> {
+  partial<K extends keyof T>(...keys: K[]): ObjectSchema<any> {
     const targetKeys = keys.length > 0 ? new Set(keys as string[]) : null;
 
     return this._rebuildWith(
@@ -212,51 +178,48 @@ export class ObjectSchema<
     );
   }
 
-  override optional(): ObjectSchema<T, Mode> &
-    Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode> &
+  override optional(): ObjectSchema<T> &
+    Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined> &
     AcceptsMissing {
-    return super.optional() as ObjectSchema<T, Mode> &
-      Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode> &
+    return super.optional() as ObjectSchema<T> &
+      Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined> &
       AcceptsMissing;
   }
 
-  override nullable(): ObjectSchema<T, Mode> & Schema<InferObject<T> | null, InferObjectInput<T> | null, Mode> {
-    return super.nullable() as ObjectSchema<T, Mode> & Schema<InferObject<T> | null, InferObjectInput<T> | null, Mode>;
+  override nullable(): ObjectSchema<T> & Schema<InferObject<T> | null, InferObjectInput<T> | null> {
+    return super.nullable() as ObjectSchema<T> & Schema<InferObject<T> | null, InferObjectInput<T> | null>;
   }
 
-  override nullish(): ObjectSchema<T, Mode> &
-    Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode> &
+  override nullish(): ObjectSchema<T> &
+    Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined> &
     AcceptsMissing {
-    return super.nullish() as ObjectSchema<T, Mode> &
-      Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode> &
+    return super.nullish() as ObjectSchema<T> &
+      Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined> &
       AcceptsMissing;
   }
 
-  override required(): ObjectSchema<T, Mode> &
-    Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>, Mode> {
+  override required(): ObjectSchema<T> &
+    Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>> {
     return this._rebuildWith(
       objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
       this._isRelaxed,
-    ) as ObjectSchema<T, Mode> &
-      Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>, Mode>;
+    ) as ObjectSchema<T> & Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>>;
   }
 
-  extend<U extends ObjectShape>(
-    extra: U,
-  ): ObjectSchema<Omit<T, keyof U> & U, MergeSchemaModes<Mode | InferSchemaMode<U[keyof U]>>> {
+  extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
     return this._rebuildWith(
       objectFromEntries([...Object.entries(this.shape), ...Object.entries(extra)]) as any,
       this._isRelaxed,
     );
   }
 
-  pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>, Mode> {
+  pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
     const keySet = new Set(keys as string[]);
 
     return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
   }
 
-  omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>, Mode> {
+  omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
     const keySet = new Set(keys as string[]);
 
     return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
@@ -271,7 +234,7 @@ export class ObjectSchema<
    * const Config = s.object({ host: s.string().default('localhost'), port: s.number().default(3000) });
    * Config.defaults(); // { host: 'localhost', port: 3000 }
    */
-  defaults(this: ObjectSchema<T, 'sync'>): InferObject<T> {
+  defaults(): InferObject<T> {
     return this.parse({});
   }
 
@@ -285,7 +248,7 @@ export class ObjectSchema<
    * const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
    * Form.partialDefaults(); // { role: 'viewer' }  — name is omitted
    */
-  partialDefaults(this: ObjectSchema<T, 'sync'>): Partial<InferObject<T>> {
+  partialDefaults(): Partial<InferObject<T>> {
     const result: Record<string, unknown> = {};
 
     for (const key of Object.keys(this.shape)) {
@@ -328,7 +291,7 @@ export class ObjectSchema<
    * Returns `ObjectSchema<T>` so fluent methods like `.pick()`, `.omit()`,
    * `.extend()`, and `.partial()` remain usable after calling `.relaxed()`.
    */
-  relaxed(): ObjectSchema<T, Mode> {
+  relaxed(): ObjectSchema<T> {
     return this._rebuildWith(this.shape, true);
   }
 
@@ -336,7 +299,7 @@ export class ObjectSchema<
    * Alias for the default strict mode — rejects unknown keys.
    * Useful after calling `.relaxed()` to return a new strict schema.
    */
-  strict(): ObjectSchema<T, Mode> {
+  strict(): ObjectSchema<T> {
     return this._rebuildWith(this.shape, false);
   }
 
@@ -367,17 +330,7 @@ export class ObjectSchema<
     return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
   }
 
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const fields = objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.walk(visitor)]));
-
-    if (visitor.object) return visitor.object(this, fields);
-
-    return super._walk(visitor);
-  }
-
-  merge<U extends ObjectShape, OtherMode extends SchemaMode>(
-    other: ObjectSchema<U, OtherMode>,
-  ): ObjectSchema<T & U, MergeSchemaModes<Mode | OtherMode>> {
+  merge<U extends ObjectShape>(other: ObjectSchema<U>): ObjectSchema<T & U> {
     return this._rebuildWith(
       objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as any,
       other._isRelaxed,

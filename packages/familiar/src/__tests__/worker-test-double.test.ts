@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-
+import { FamiliarInvalidOptionsError, FamiliarTaskError, FamiliarTimeoutError } from '../index';
 import { createTestWorker } from '../testing';
-import { FamiliarInvalidOptionsError, FamiliarTaskError, FamiliarTimeoutError } from '../worker';
 
 describe('createTestWorker', () => {
   it('matches production task error wrapping', async () => {

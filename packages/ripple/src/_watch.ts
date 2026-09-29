@@ -4,7 +4,6 @@ export type WatchOptions<T> = {
   equals?: Equality<T>;
   immediate?: boolean;
   name?: string;
-  once?: boolean;
 };
 
 type WatchRuntime = {
@@ -23,12 +22,8 @@ export const createWatch =
     const equals = options?.equals ?? Object.is;
     let initial = true;
     let previous: T | undefined;
-    // `handle` is in the temporal dead zone during the effect's initial synchronous run —
-    // `runtime.effect()` calls `node.run()` before returning. Defer disposal until after
-    // the constructor returns so `handle.dispose()` is reachable from inside the callback.
-    let disposeAfterInit = false;
 
-    const handle = runtime.effect(
+    return runtime.effect(
       () => {
         const value = read();
 
@@ -36,13 +31,7 @@ export const createWatch =
           initial = false;
           previous = value;
 
-          if (options?.immediate) {
-            try {
-              runtime.untrack(() => callback(value, undefined));
-            } finally {
-              if (options?.once) disposeAfterInit = true;
-            }
-          }
+          if (options?.immediate) runtime.untrack(() => callback(value, undefined));
 
           return;
         }
@@ -52,16 +41,8 @@ export const createWatch =
         const oldValue = previous;
 
         previous = value;
-        try {
-          runtime.untrack(() => callback(value, oldValue));
-        } finally {
-          if (options?.once) handle.dispose();
-        }
+        runtime.untrack(() => callback(value, oldValue));
       },
       { name: options?.name },
     );
-
-    if (disposeAfterInit) handle.dispose();
-
-    return handle;
   };

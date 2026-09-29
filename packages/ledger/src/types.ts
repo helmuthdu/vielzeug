@@ -1,9 +1,13 @@
 export type Unsubscribe = () => void;
 
-export interface LedgerReadable<T> {
-  peek(): T;
+/**
+ * Read-only observable contract: `getSnapshot()` reads current state,
+ * `subscribe()` registers a change listener. Structural by design; matches
+ * `Subscribable` in `@vielzeug/arsenal`.
+ */
+export interface Subscribable<T> {
+  getSnapshot(): T;
   subscribe(listener: () => void): Unsubscribe;
-  readonly value: T;
 }
 
 export interface CommandContext {
@@ -31,7 +35,6 @@ export interface LedgerOptions {
 }
 
 export interface LedgerState<TMeta = undefined> {
-  readonly accepting: boolean;
   readonly queued: number;
   readonly redo: readonly HistoryEntry<TMeta>[];
   readonly running: number;
@@ -44,8 +47,15 @@ export interface Ledger<TMeta = undefined> {
   dispose(): void;
   readonly disposed: boolean;
   do(command: ReversibleCommand<TMeta>, options?: LedgerCallOptions): Promise<void>;
+  /**
+   * Appends an already-executed command to the history without running it through the queue.
+   * For stores that execute synchronously and own their writes: `undo()` calls the recorded
+   * `revert`, `redo()` calls the recorded `apply` — so `apply` must be able to re-apply the
+   * effect. Synchronous by design: the work happened before `record`, there is nothing to run.
+   */
+  record(command: ReversibleCommand<TMeta>): void;
   redo(options?: LedgerCallOptions): Promise<void>;
-  readonly state: LedgerReadable<LedgerState<TMeta>>;
+  readonly state: Subscribable<LedgerState<TMeta>>;
   undo(options?: LedgerCallOptions): Promise<void>;
   whenIdle(): Promise<void>;
   [Symbol.dispose](): void;

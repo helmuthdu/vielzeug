@@ -3,7 +3,7 @@ import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmi
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 import '../../content/keyboard-key/keyboard-key';
-import { announce, createListControl, lifecycleSignal } from '../../core';
+import { announce, createListControl, lifecycleSignal, parseOptionalBool } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
@@ -12,9 +12,6 @@ import '../../content/icon/icon';
 import componentStyles from './command-palette.css?inline';
 
 export type { OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
-
-const parseOptionalBool = (value: string | null): boolean | undefined =>
-  value == null ? undefined : value === '' || value === 'true';
 
 /**
  * A pure data node describing one command. Never rendered directly — `ore-command-palette`
@@ -167,7 +164,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       list.reset();
     };
 
-    const { closeWithAnimation, overlay, requestClose, setupNativeListeners } = useDialogControl({
+    const { closeWithAnimation, handleBackdropClick, overlay, requestClose, mount } = useDialogControl({
       defaultOpen: props['default-open'],
       dialogRef,
       getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
@@ -223,7 +220,8 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     );
 
     onMounted(() => {
-      setupNativeListeners();
+      mount();
+      if (dialogRef.value) onEvent(dialogRef.value, 'click', handleBackdropClick);
     });
 
     // ── Selection ────────────────────────────────────────────────────────────

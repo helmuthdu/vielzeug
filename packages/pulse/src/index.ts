@@ -13,7 +13,6 @@ export type {
   ChannelDefinitions,
   ClientEvents,
   EventKey,
-  ExternalStore,
   HeartbeatOptions,
   MessageMap,
   OutgoingMessage,
@@ -33,5 +32,6 @@ export type {
   RoomScope,
   RoomScopeBase,
   ServerEvents,
+  Subscribable,
   Unsubscribe,
 } from './types';

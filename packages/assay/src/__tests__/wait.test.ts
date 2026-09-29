@@ -1,6 +1,6 @@
 import { AssayTimeoutError } from '../errors';
 import { dispatch } from '../events';
-import { delay, eventually, nextTick, waitForEvent, waitUntil } from '../wait';
+import { delay, eventually, waitForEvent, waitUntil } from '../wait';
 
 afterEach(() => vi.useRealTimers());
 
@@ -14,7 +14,7 @@ describe('wait conveniences', () => {
 
     let ticked = false;
     queueMicrotask(() => (ticked = true));
-    await nextTick();
+    await Promise.resolve();
     expect(ticked).toBe(true);
   });
 });
@@ -134,16 +134,6 @@ describe('eventually()', () => {
 });
 
 describe('scheduling validation', () => {
-  it('preserves an explicit microtask boundary', async () => {
-    const order: string[] = [];
-    const tick = nextTick().then(() => order.push('tick'));
-
-    queueMicrotask(() => order.push('queued-after-call'));
-    await tick;
-
-    expect(order).toEqual(['queued-after-call', 'tick']);
-  });
-
   it('uses a cancellable macrotask for delay()', async () => {
     const controller = new AbortController();
     const reason = new Error('cancelled');

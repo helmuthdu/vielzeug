@@ -228,14 +228,20 @@ Conflict detection compares only bindings with same trigger. An empty proposal r
 For custom tooling, validators, or framework integrations that need direct access to the shortcut parser, import from `@vielzeug/keymap/parse`:
 
 ```ts
-import { parseShortcut, parseStep, matchStep, canonicalizeShortcut, detectModKey } from '@vielzeug/keymap/parse';
+import { parseShortcut, parseStep, matchStep, canonicalizeShortcut } from '@vielzeug/keymap/parse';
 
 const steps = parseShortcut('ctrl+k ctrl+s', 'ctrl');
 const step = parseStep('ctrl+k', 'ctrl');
 const isMatch = matchStep(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }), steps[0]);
 ```
 
-These functions are not exported from the root entry point to keep the common API surface small.
+`matchKey()` and `detectModKey()` are also exported from the root entry point. For a one-off check against a pattern string, prefer `matchKey()` — it parses and matches in one call and returns `false` instead of throwing:
+
+```ts
+import { matchKey } from '@vielzeug/keymap';
+
+if (matchKey(event, 'mod+k')) openPalette();
+```
 
 ## Mount Targets
 

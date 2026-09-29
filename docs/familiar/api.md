@@ -140,11 +140,10 @@ type WorkerOptions = {
   maxQueue?: number;
   onFull?: 'reject' | 'wait';
   timeout?: number;
-  onSlotError?: (error: FamiliarRuntimeError) => void;
 };
 ```
 
-`concurrency` is limited to 512; `"auto"` clamps the reported hardware concurrency to that limit. `maxQueue` must be a positive integer and `onFull` must be `"reject"` or `"wait"`. Timeout values must be integer milliseconds from 1 through 2,147,483,647. `onSlotError` runs after active work settles, and callback failures cannot interrupt slot replacement.
+`concurrency` is limited to 512; `"auto"` clamps the reported hardware concurrency to that limit. `maxQueue` must be a positive integer and `onFull` must be `"reject"` or `"wait"`. Timeout values must be integer milliseconds from 1 through 2,147,483,647. Unhandled worker runtime errors are reported through `tap()`; a throwing tap handler cannot interrupt slot replacement.
 
 ### `RunOptions`
 
@@ -168,6 +167,7 @@ interface WorkerPool<TInput, TOutput> {
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
   drain(options?: DrainOptions): Promise<void>;
   dispose(): void;
+  tap(handler: (event: FamiliarTapEvent) => void, options?: { signal?: AbortSignal }): () => void;
   readonly stats: WorkerStats;
   readonly status: WorkerStatus;
   readonly disposed: boolean;
@@ -184,6 +184,7 @@ interface StreamWorkerPool<TInput, TChunk> {
   runStream(input: TInput, options?: RunOptions): AsyncIterable<TChunk>;
   drain(options?: DrainOptions): Promise<void>;
   dispose(): void;
+  tap(handler: (event: FamiliarTapEvent) => void, options?: { signal?: AbortSignal }): () => void;
   readonly disposed: boolean;
   readonly disposalSignal: AbortSignal;
   readonly stats: WorkerStats;
@@ -206,14 +207,15 @@ type WorkerStats = {
 
 `queued` includes admitted queue entries and calls waiting for queue capacity. Cancellation is not counted as failure even when a caller supplies a custom abort reason.
 
-### `RunningStream`
+### `FamiliarTapEvent`
 
 ```ts
-type RunningStream<TChunk> = {
-  done: Promise<void>;
-  iterable: AsyncIterable<TChunk>;
-};
+type FamiliarTapEvent =
+  | { error: FamiliarRuntimeError; type: 'worker-error' }
+  | { type: 'dispose' };
 ```
+
+`tap()` observes the pool: `worker-error` fires when a slot fails with an unhandled runtime error (the slot is replaced regardless), and `dispose` fires once when the pool terminates. Handler errors are swallowed; `tap()` returns an unsubscribe function and honors an optional `signal`.
 
 ### `WorkerStatus`
 
@@ -234,7 +236,7 @@ type DrainOptions = {
 ### `TestWorkerOptions`
 
 ```ts
-type TestWorkerOptions = Omit<WorkerOptions, 'concurrency' | 'onSlotError'> & {
+type TestWorkerOptions = Omit<WorkerOptions, 'concurrency'> & {
   concurrency?: number;
 };
 ```

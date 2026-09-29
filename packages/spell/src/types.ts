@@ -166,81 +166,6 @@ export type ValidateResult = boolean | null | undefined | string;
 /** Re-exported from errors for convenience — defined there. */
 export type { FlatError, FlatErrorFirst } from './errors';
 
-/* -------------------- Schema Introspection -------------------- */
-
-/**
- * Visitor map for schema.walk(). Container handlers receive already-walked children (type R).
- * All handlers are optional — unmatched kinds return `null` unless an `unknown` fallback is provided.
- *
- * Each handler receives the concrete schema type for that kind, enabling access to
- * schema-specific properties (e.g. `ArraySchema.itemSchema`) without casting.
- */
-export type SchemaWalker<R> = {
-  array?: <T extends AnySchema, Mode extends SchemaMode>(
-    schema: import('./schemas/array').ArraySchema<T, Mode>,
-    item: R | null,
-  ) => R;
-  bigint?: <Input, Mode extends SchemaMode>(schema: import('./schemas/bigint').BigIntSchema<Input, Mode>) => R;
-  boolean?: <Input, Mode extends SchemaMode>(schema: import('./schemas/boolean').BooleanSchema<Input, Mode>) => R;
-  date?: <Input, Mode extends SchemaMode>(schema: import('./schemas/date').DateSchema<Input, Mode>) => R;
-  enum?: <T extends import('./schemas/enum').EnumValues, Mode extends SchemaMode>(
-    schema: import('./schemas/enum').EnumSchema<T, Mode>,
-  ) => R;
-  instanceof?: <T, Mode extends SchemaMode>(schema: import('./schemas/instanceof').InstanceOfSchema<T, Mode>) => R;
-  intersect?: <T extends readonly AnySchema[], Mode extends SchemaMode>(
-    schema: import('./schemas/intersect').IntersectSchema<T, Mode>,
-    branches: (R | null)[],
-  ) => R;
-  lazy?: <T, Input, Mode extends SchemaMode>(schema: import('./schemas/lazy').LazySchema<T, Input, Mode>) => R;
-  literal?: <T extends string | number | boolean | null | undefined, Mode extends SchemaMode>(
-    schema: import('./schemas/literal').LiteralSchema<T, Mode>,
-  ) => R;
-  map?: <K extends AnySchema, V extends AnySchema, Mode extends SchemaMode>(
-    schema: import('./schemas/map').MapSchema<K, V, Mode>,
-    key: R | null,
-    value: R | null,
-  ) => R;
-  never?: <Mode extends SchemaMode>(schema: import('./schemas/never').NeverSchema<Mode>) => R;
-  number?: <Input, Mode extends SchemaMode>(schema: import('./schemas/number').NumberSchema<Input, Mode>) => R;
-  object?: <T extends import('./schemas/object').ObjectShape, Mode extends SchemaMode>(
-    schema: import('./schemas/object').ObjectSchema<T, Mode>,
-    fields: Record<string, R | null>,
-  ) => R;
-  pipe?: <To extends AnySchema, From extends AnySchema, Mode extends SchemaMode>(
-    schema: import('./core').PipeSchema<To, From, Mode>,
-    from: R | null,
-    to: R | null,
-  ) => R;
-  record?: <K extends AnySchema, V extends AnySchema, Mode extends SchemaMode>(
-    schema: import('./schemas/record').RecordSchema<K, V, Mode>,
-    key: R | null,
-    value: R | null,
-  ) => R;
-  set?: <T extends AnySchema, Mode extends SchemaMode>(
-    schema: import('./schemas/set').SetSchema<T, Mode>,
-    item: R | null,
-  ) => R;
-  string?: <Input, Mode extends SchemaMode>(schema: import('./schemas/string').StringSchema<Input, Mode>) => R;
-  tuple?: <T extends import('./schemas/tuple').TupleSchemas, Rest extends AnySchema | null, Mode extends SchemaMode>(
-    schema: import('./schemas/tuple').TupleSchema<T, Rest, Mode>,
-    items: (R | null)[],
-    rest: R | null,
-  ) => R;
-  union?: <T extends readonly AnySchema[], Mode extends SchemaMode>(
-    schema: import('./schemas/union').UnionSchema<T, Mode>,
-    branches: (R | null)[],
-  ) => R;
-  unknown?: (schema: AnySchema) => R;
-  variant?: <
-    K extends string,
-    M extends Record<string, import('./schemas/object').ObjectSchema<any, any>>,
-    Mode extends SchemaMode,
-  >(
-    schema: import('./schemas/variant').VariantSchema<K, M, Mode>,
-    branches: Record<string, R | null>,
-  ) => R;
-};
-
 type BaseDescriptor = {
   description?: string;
   isNullable?: boolean;
@@ -293,18 +218,13 @@ export type ParseResult<T> = { data: T; success: true } | { error: SpellValidati
 
 /** Structural marker for a schema's input type. Emitted so public types can key on it. */
 export const schemaInput = Symbol('spell.schemaInput');
-/** Public structural marker for a schema's parsing capability. */
-export const schemaMode = Symbol('spell.schemaMode');
 /** Structural marker for a schema's output type. Emitted so public types can key on it. */
 export const schemaOutput = Symbol('spell.schemaOutput');
 export declare const schemaAcceptsMissing: unique symbol;
 export type AcceptsMissing = { readonly [schemaAcceptsMissing]: true };
 
-/** Whether a schema can be parsed synchronously or requires asynchronous parsing. */
-export type SchemaMode = 'async' | 'sync';
-
 /** A structural schema surface accepted by composition helpers. */
-export type SchemaSurface<Output = unknown, Input = Output, Mode extends SchemaMode = SchemaMode> = {
+export type SchemaSurface<Output = unknown, Input = Output> = {
   /** @internal */
   _parseFullAsync(value: unknown, ctx?: ParseContext): Promise<{ data: unknown; issues: Issue[] }>;
   /** @internal */
@@ -312,29 +232,22 @@ export type SchemaSurface<Output = unknown, Input = Output, Mode extends SchemaM
   safeParseAsync(value: unknown, ctx?: ParseContext): Promise<ParseResult<Output>>;
   definition(): SchemaDescriptor;
   isOptional: boolean;
-  optional(): SchemaSurface<Output | undefined, Input | undefined, Mode>;
-  required(): SchemaSurface<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode>;
+  optional(): SchemaSurface<Output | undefined, Input | undefined>;
+  required(): SchemaSurface<Exclude<Output, undefined>, Exclude<Input, undefined>>;
   readonly [schemaInput]: Input;
-  readonly [schemaMode]: Mode;
   readonly [schemaOutput]: Output;
-  walk<R>(visitor: SchemaWalker<R>): R | null;
 };
 
-export type AnySchema<Output = unknown, Input = Output, Mode extends SchemaMode = SchemaMode> = SchemaSurface<
-  Output,
-  Input,
-  Mode
->;
+export type AnySchema<Output = unknown, Input = Output> = SchemaSurface<Output, Input>;
 
 /**
- * The synchronous parse capability every sync schema carries. UI adapters that accept
+ * The synchronous parse capability every schema carries. UI adapters that accept
  * `AnySchema` cannot call `safeParse` on it (the surface type omits it); type adapter
  * parameters against this instead.
  *
- * The shape is structural, so an async-only schema is assignable to it; calling `safeParse`
- * on one returns a failed `ParseResult` ("parse() cannot evaluate async checks"). When the
- * schema's mode is not statically known, narrow with `InferSchemaMode` and use
- * `safeParseAsync` for async members.
+ * The shape is structural, so a schema with async checks is assignable to it; calling
+ * `safeParse` on one returns a failed `ParseResult` ("parse() cannot evaluate async
+ * checks"). Use `safeParseAsync` when async checks may be present.
  */
 export type SyncParsable<T = unknown> = { safeParse(value: unknown): ParseResult<T> };
 
@@ -345,14 +258,8 @@ export type SyncParsable<T = unknown> = { safeParse(value: unknown): ParseResult
 export type IssuePathSegment = PropertyKey | { readonly key: PropertyKey };
 export type IssuePath = readonly IssuePathSegment[];
 
-/** Extracts a schema's parsing capability. */
-export type InferSchemaMode<T> = T extends { readonly [schemaMode]: infer Mode extends SchemaMode } ? Mode : never;
-
-/** Selects async mode when any member of a schema collection is async. */
-export type MergeSchemaModes<Modes extends SchemaMode> = 'async' extends Modes ? 'async' : 'sync';
-
 export type InferOutput<T> =
-  T extends Schema<infer Output, unknown, SchemaMode>
+  T extends Schema<infer Output, unknown>
     ? Output
     : T extends { readonly [schemaOutput]: infer Output }
       ? Output

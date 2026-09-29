@@ -1,3 +1,5 @@
+import { matchKey } from '@vielzeug/keymap';
+
 import { warn } from './_dev.js';
 import { createDisposable, resolveDisabled } from './_shared.js';
 import { createScopeTouchController, type ScopeTouchController, type TouchInputOptions } from './_touch.js';
@@ -579,21 +581,23 @@ function maybeAutoScroll(
 function keyboardTargetIndex(
   items: HTMLElement[],
   item: HTMLElement,
-  key: string,
+  event: KeyboardEvent,
   axis: 'vertical' | 'horizontal',
 ): number | null {
   const currentIndex = items.indexOf(item);
 
   if (currentIndex < 0) return null;
 
-  const isForward = axis === 'vertical' ? key === 'ArrowDown' : key === 'ArrowRight';
-  const isBackward = axis === 'vertical' ? key === 'ArrowUp' : key === 'ArrowLeft';
+  const forwardKey = axis === 'vertical' ? 'ArrowDown' : 'ArrowRight';
+  const backwardKey = axis === 'vertical' ? 'ArrowUp' : 'ArrowLeft';
+  const isForward = matchKey(event, forwardKey);
+  const isBackward = matchKey(event, backwardKey);
   let targetIndex: number;
 
   if (isForward) targetIndex = Math.min(items.length - 1, currentIndex + 1);
   else if (isBackward) targetIndex = Math.max(0, currentIndex - 1);
-  else if (key === 'Home') targetIndex = 0;
-  else if (key === 'End') targetIndex = items.length - 1;
+  else if (matchKey(event, 'Home')) targetIndex = 0;
+  else if (matchKey(event, 'End')) targetIndex = items.length - 1;
   else return null;
 
   // Already at the boundary — return null so the caller does not call preventDefault
@@ -1059,7 +1063,7 @@ export function createSortable(options: SortableOptions): Sortable {
 
     const items = getItems();
     const prevIndex = items.indexOf(item);
-    const targetIndex = keyboardTargetIndex(items, item, e.key, axis);
+    const targetIndex = keyboardTargetIndex(items, item, e, axis);
 
     // null means unrecognized key or boundary — let the browser handle it (e.g. page scroll)
     if (targetIndex === null) return;

@@ -22,11 +22,12 @@ import { ledger } from '../core/history';
 import { setLocale, t } from '../core/i18n';
 import { reconnect, simulateOffline } from '../core/offline';
 import { presence, simulateLiveActivity } from '../core/realtime';
-import { type RouteName, routeHref, router } from '../core/router';
+import { type RouteName, router } from '../core/router';
 import { crmIndex } from '../core/search';
 import { demoUsers } from '../core/seed-data';
 import { leadsNeedingAttention, openPipeline, stageTotals, weightedPipeline } from '../core/selectors';
-import { activeRoute, activeRouteParams, crmData, currentUser, locale, networkStatus } from '../core/store';
+import { locale } from '../core/i18n';
+import { activeRoute, activeRouteParams, crmData, currentUser, networkStatus } from '../core/store';
 import { setThemePreference, themePreference } from '../core/theme';
 import { openRecordDialog } from './components/record-dialog';
 import { openRecordDrawer } from './components/record-drawer';
@@ -38,7 +39,7 @@ interface PaletteItem {
 }
 
 interface SidebarElement extends HTMLElement {
-  closeMobile(): void;
+  closeDrawer(): void;
 }
 
 const routes: RouteName[] = [
@@ -53,14 +54,14 @@ const routes: RouteName[] = [
 ];
 
 const routePaths: Partial<Record<RouteName, string>> = {
-  activity: routeHref(router.url('activity')),
-  companies: routeHref(router.url('companies')),
-  contacts: routeHref(router.url('contacts')),
-  dashboard: routeHref(router.url('dashboard')),
-  leads: routeHref(router.url('leads')),
-  opportunities: routeHref(router.url('opportunities')),
-  pipeline: routeHref(router.url('pipeline')),
-  showcase: routeHref(router.url('showcase')),
+  activity: router.href('activity'),
+  companies: router.href('companies'),
+  contacts: router.href('contacts'),
+  dashboard: router.href('dashboard'),
+  leads: router.href('leads'),
+  opportunities: router.href('opportunities'),
+  pipeline: router.href('pipeline'),
+  showcase: router.href('showcase'),
 };
 
 function labelFor(route: string | null): string {
@@ -303,7 +304,7 @@ define('crm-app-shell', {
 
         event.preventDefault();
         navigate(route);
-        sidebar.closeMobile();
+        sidebar.closeDrawer();
       };
       const searchListener = (): void => {
         query.value = '';
@@ -336,14 +337,14 @@ define('crm-app-shell', {
         [
           {
             handler: () => {
-              if (ledger.state.value.redo.length) runHistory(() => ledger.redo());
+              if (ledger.state.getSnapshot().redo.length) runHistory(() => ledger.redo());
             },
             id: 'redo',
             shortcut: 'mod+shift+z',
           },
           {
             handler: () => {
-              if (ledger.state.value.undo.length) runHistory(() => ledger.undo());
+              if (ledger.state.getSnapshot().undo.length) runHistory(() => ledger.undo());
             },
             id: 'undo',
             shortcut: 'mod+z',
@@ -402,7 +403,7 @@ define('crm-app-shell', {
           label=${() => t('topbar.workspaceSections')}
           collapse-label=${() => t('topbar.collapseSidebar')}
           expand-label=${() => t('topbar.expandSidebar')}
-          mobile-close-label=${() => t('topbar.closeSidebar')}>
+          drawer-close-label=${() => t('topbar.closeSidebar')}>
           <a
             class="rail-brand"
             slot="logo"

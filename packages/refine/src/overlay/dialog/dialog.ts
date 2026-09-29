@@ -1,6 +1,6 @@
 import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
 
-import type { OverlayOpenChangeDetail } from '../../core';
+import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
 import { coarsePointerMixin, roundedVariantMixin } from '../../styles';
 import type { PaddingSize, RoundedSize } from '../../types';
 import { useDialogControl } from '../shared/use-dialog';
@@ -10,9 +10,6 @@ import componentStyles from './dialog.css?inline';
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 type DialogBackdrop = 'opaque' | 'blur' | 'transparent';
 type DialogElevation = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
-
-const parseOptionalBool = (value: string | null): boolean | undefined =>
-  value == null ? undefined : value === '' || value === 'true';
 
 /** Dialog component properties */
 
@@ -143,7 +140,7 @@ define<OreDialogProps>(DIALOG_TAG, {
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;
 
-    const { closeWithAnimation, overlay, requestClose, setupNativeListeners } = useDialogControl({
+    const { closeWithAnimation, handleBackdropClick, overlay, requestClose, mount } = useDialogControl({
       defaultOpen: props['default-open'],
       dialogRef,
       getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
@@ -170,7 +167,8 @@ define<OreDialogProps>(DIALOG_TAG, {
 
       if (!dialog) return;
 
-      setupNativeListeners();
+      mount();
+      onEvent(dialog, 'click', handleBackdropClick);
 
       return () => {
         overlay.dispose();

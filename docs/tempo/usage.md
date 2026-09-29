@@ -103,6 +103,16 @@ formatRelative(instant, { base: parse('2026-03-21T09:15:30Z', { as: 'instant' })
 
 `formatRelative()` uses fixed elapsed-time units for short spans and complete calendar months or years for longer spans. Pass `timeZone` when calendar-relative output must use a specific regional calendar boundary.
 
+Use `formatTimer()` for stopwatch-style clocks — elapsed timers, recorded durations — where localized prose does not fit:
+
+```ts
+import { formatTimer } from '@vielzeug/tempo';
+
+formatTimer('PT47M12S'); // '47:12'
+formatTimer({ milliseconds: 3_753_000 }); // '1:02:33'
+formatTimer('PT5M', { hours: 'always' }); // '0:05:00'
+```
+
 ## Generate Calendar Sequences
 
 Use zoned values when the sequence already has a timezone. Plain and instant starts require `timeZone`.

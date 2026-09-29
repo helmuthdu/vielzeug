@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Greenfield refactor: catalogKeys is catalog-only (no I18n overload), unserializable formatter options bypass the cache, shared isDev flag, TranslationState version reset to 1",
+      "packageName": "@vielzeug/lingua",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

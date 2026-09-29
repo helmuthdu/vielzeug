@@ -10,11 +10,12 @@ import '@vielzeug/refine/select';
 import '@vielzeug/refine/slider';
 
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
+import { eventFieldValue } from '@vielzeug/refine';
 import { computed, signal } from '@vielzeug/ripple';
 import type { LogEntry } from '@vielzeug/rune';
 
 import { currentUser } from '../../core/auth';
-import { controlValue } from '../../core/control-value';
+
 import { currentCurrency, SUPPORTED_CURRENCIES, setCurrency } from '../../core/currency';
 import { bus } from '../../core/events';
 import { currentLocale, setLocale, t } from '../../core/i18n';
@@ -297,7 +298,7 @@ define('settings-view', {
                     value=${accentHue}
                     value-text=${() => t('settings.accentHueValue', { value: accentHue.value })}
                     @input=${(event: Event) => {
-                      const hue = Number(controlValue(event));
+                      const hue = Number(eventFieldValue(event));
                       if (Number.isFinite(hue)) setAccentHue(hue);
                     }}
                     @change=${markSaved}>${() => t('settings.accentCustom')}</ore-slider>
@@ -321,7 +322,7 @@ define('settings-view', {
               options=${LANGUAGE_OPTIONS}
               value=${currentLocale}
               @change=${(event: Event) => {
-                const locale = controlValue(event);
+                const locale = eventFieldValue(event);
                 if (locale && isLanguage(locale)) void setLocale(locale).then(markSaved);
               }}></ore-select>
           </div>
@@ -349,7 +350,7 @@ define('settings-view', {
               options=${CURRENCY_OPTIONS}
               value=${() => currentCurrency.value.code}
               @change=${(event: Event) => {
-                const selected = controlValue(event);
+                const selected = eventFieldValue(event);
                 const currency = SUPPORTED_CURRENCIES.find(({ code }) => code === selected);
                 if (currency) {
                   setCurrency(currency);
@@ -373,7 +374,7 @@ define('settings-view', {
             label=${() => t('settings.userLabel')}
             value=${() => currentUser.value.id}
             @change=${(event: Event) => {
-              const selected = controlValue(event);
+              const selected = eventFieldValue(event);
               const user = seedUsers.find(({ id }) => id === selected);
               if (user) {
                 currentUser.value = user;

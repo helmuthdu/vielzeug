@@ -2,7 +2,7 @@ import type { Placement } from '@vielzeug/orbit';
 import { bind, createId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
-import { type OverlayOpenChangeDetail, parseStringTriggers } from '../../core';
+import { type OverlayOpenChangeDetail, parseOptionalBool, parseStringTriggers } from '../../core';
 import { disablableBundle } from '../../shared';
 import { reducedMotionMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
@@ -13,9 +13,6 @@ export type PopoverTrigger = 'click' | 'focus' | 'hover';
 const PANEL_OFFSET = 8;
 const VALID_TRIGGERS = new Set<PopoverTrigger>(['click', 'focus', 'hover']);
 const DEFAULT_POPOVER_TRIGGERS: PopoverTrigger[] = ['click'];
-
-const parseOptionalBool = (value: string | null): boolean | undefined =>
-  value == null ? undefined : value === '' || value === 'true';
 
 const normalizeTriggers = (value: unknown): PopoverTrigger[] =>
   parseStringTriggers(String(value ?? ''), VALID_TRIGGERS, DEFAULT_POPOVER_TRIGGERS);
@@ -124,7 +121,7 @@ define<OrePopoverProps>(POPOVER_TAG, {
       disabled: isDisabled,
       getHost: () => el,
       getPanel: () => panelEl,
-      offset: props.offset,
+      offset: () => props.offset.value,
       onCleanup,
       onClose: (reason) => emit('open-change', { open: false, reason }),
       onOpen: (reason) => emit('open-change', { open: true, reason }),

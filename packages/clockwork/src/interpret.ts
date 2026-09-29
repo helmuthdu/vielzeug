@@ -1,11 +1,13 @@
+import { tapper } from '@vielzeug/arsenal';
 import { isContextRecord } from './_context.js';
 import { warn } from './_dev.js';
 import { type CompiledAfter, type CompiledMachine, type CompiledState, compileDefinition } from './definition.js';
-import { ClockworkError } from './errors.js';
+import { ClockworkSnapshotError, ClockworkTransitionLimitError } from './errors.js';
 import type {
   Actor,
   ActorErrorContext,
   ActorOptions,
+  ActorTapEvent,
   Effect,
   Machine,
   MachineConfig,
@@ -57,7 +59,7 @@ const normalizeSnapshot = <State extends string, Context extends Record<string, 
     : createSnapshot(snapshot.state, snapshot.context as Context);
 
 const invalidSnapshot = (state: unknown): never => {
-  throw new ClockworkError('INVALID_SNAPSHOT_STATE', `snapshot state "${String(state)}" is not declared`, { state });
+  throw new ClockworkSnapshotError(`snapshot state "${String(state)}" is not declared`, { state });
 };
 
 const isMachineEvent = (event: unknown): event is MachineEvent => {
@@ -78,7 +80,7 @@ const assertSnapshot = <State extends string, Context extends Record<string, unk
   snapshot: MachineSnapshot<State, Context>,
 ): void => {
   if (!isContextRecord(snapshot.context)) {
-    throw new ClockworkError('INVALID_CONTEXT', 'snapshot context must be a non-array object record', {});
+    throw new ClockworkSnapshotError('snapshot context must be a non-array object record', {});
   }
 
   stateNode(machine, snapshot.state);
@@ -144,7 +146,7 @@ const transition = <State extends string, Context extends Record<string, unknown
   const nextContext = reducer ? reducer({ context: snapshot.context, event: selected.event }) : snapshot.context;
 
   if (!isContextRecord(nextContext)) {
-    throw new ClockworkError('INVALID_CONTEXT', 'a reducer must return a non-array object record', {
+    throw new ClockworkSnapshotError('a reducer must return a non-array object record', {
       state: snapshot.state,
     });
   }
@@ -162,31 +164,24 @@ const canTransition = <State extends string, Context extends Record<string, unkn
   event: Event,
 ): boolean => selectTransition(machine, snapshot, { event, kind: 'event' }) !== undefined;
 
+const MAX_TRANSITIONS = 1_000;
+
 const createActor = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
   machine: CompiledMachine<State, Context, Event>,
   initialSnapshot: MachineSnapshot<State, Context>,
-  options: ActorOptions<State, Context, Event> = {},
+  options: ActorOptions<State, Context> = {},
 ): Actor<State, Context, Event> => {
-  if (
-    options.maxTransitions !== undefined &&
-    (!Number.isInteger(options.maxTransitions) || options.maxTransitions < 1)
-  ) {
-    throw new ClockworkError('INVALID_MAX_TRANSITIONS', 'maxTransitions must be a positive integer', {
-      maxTransitions: options.maxTransitions,
-    });
-  }
-
   const restored = options.snapshot ?? initialSnapshot;
 
   assertSnapshot(machine, restored);
   let current = createSnapshot(restored.state, restored.context as Context);
 
   const listeners = new Set<(snapshot: MachineSnapshot<State, Context>) => void>();
+  const tappers = tapper<ActorTapEvent<State, Context, Event>>();
   const disposal = new AbortController();
   const timers = new Set<ReturnType<typeof setTimeout>>();
   const invokes = new Set<AbortController>();
   const queue: RuntimeEvent<State, Context, Event>[] = [];
-  const maxTransitions = options.maxTransitions ?? 1_000;
   let disposed = false;
   let processing = false;
 
@@ -205,13 +200,13 @@ const createActor = <State extends string, Context extends Record<string, unknow
     queue.length = 0;
     cancelStateResources();
     listeners.clear();
+    tappers.emit({ type: 'dispose' });
+    tappers.clear();
     disposal.abort();
   };
 
   const observeError = (error: unknown, context: ActorErrorContext<State, Event>): void => {
-    try {
-      options.onError?.(error, context);
-    } catch {}
+    tappers.emit({ error, event: context.event, phase: context.phase, state: context.state, type: 'error' });
   };
 
   const fail = (error: unknown, context: ActorErrorContext<State, Event>): void => {
@@ -343,11 +338,15 @@ const createActor = <State extends string, Context extends Record<string, unknow
       return;
     }
 
-    if (outcome.result.type === 'ignored' || !outcome.transition) return;
+    if (outcome.result.type === 'ignored' || !outcome.transition) {
+      tappers.emit({ event: outcome.event, snapshot: outcome.result.snapshot, type: 'ignored' });
+      return;
+    }
 
     const source = stateNode(machine, previous.state);
 
     current = outcome.result.snapshot;
+    tappers.emit({ event: outcome.event, snapshot: current, type: 'transition' });
     cancelStateResources();
     establishStateResources(current.state, outcome.event);
     notify(outcome.event);
@@ -362,10 +361,13 @@ const createActor = <State extends string, Context extends Record<string, unknow
     while (queue.length > 0 && !disposed) {
       transitions += 1;
 
-      if (transitions > maxTransitions) {
+      if (transitions > MAX_TRANSITIONS) {
         fail(
-          new ClockworkError('INVALID_TRANSITION_LIMIT', 'maximum queued transitions exceeded', { maxTransitions }),
-          { phase: 'transition', state: current.state },
+          new ClockworkTransitionLimitError('maximum queued transitions exceeded', { maxTransitions: MAX_TRANSITIONS }),
+          {
+            phase: 'transition',
+            state: current.state,
+          },
         );
 
         return;
@@ -416,6 +418,11 @@ const createActor = <State extends string, Context extends Record<string, unknow
       listeners.add(listener);
 
       return () => listeners.delete(listener);
+    },
+    tap(handler, tapOptions) {
+      if (disposed) return () => undefined;
+
+      return tappers.tap(handler, tapOptions);
     },
     [Symbol.dispose]: dispose,
   };

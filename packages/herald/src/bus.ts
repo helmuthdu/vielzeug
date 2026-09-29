@@ -1,5 +1,5 @@
 import { warn as _internalWarn } from './_dev';
-import { BusDisposedError, HeraldConfigError } from './errors';
+import { BusDisposedError } from './errors';
 import type {
   Bus,
   BusOptions,
@@ -26,7 +26,7 @@ type RegisterEntryOpts<T extends EventMap> = {
   wildcard?: boolean;
 };
 
-export function createBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions<T>): Bus<T> {
+export function createBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions): Bus<T> {
   const listeners = new Map<string, Set<Entry>>();
   const wildcards = new Set<WildcardEntry>();
   const tappers = new Set<(event: HeraldEvent<T>) => void>();
@@ -153,31 +153,8 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
     return ref.unsub;
   }
 
-  function onAnyWithOnce(
-    listener: (event: EventKey<T>, payload: unknown) => void,
-    signal: AbortSignal,
-    onRemove?: () => void,
-  ): () => void {
-    const ref = { unsub: noop as Unsubscribe };
-
-    ref.unsub = onAnyWithSignal(
-      (event, payload) => {
-        ref.unsub();
-        listener(event, payload);
-      },
-      signal,
-      onRemove,
-    );
-
-    return ref.unsub;
-  }
-
   function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): () => void {
-    const signal = createSubscriptionScope(opts?.signal);
-
-    if (opts?.once) return onceWithSignal(event, listener, signal);
-
-    return onWithSignal(event, listener, signal);
+    return onWithSignal(event, listener, createSubscriptionScope(opts?.signal));
   }
 
   function once<K extends EventKey<T>>(
@@ -191,11 +168,7 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
   }
 
   function onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): () => void {
-    const signal = createSubscriptionScope(opts?.signal);
-
-    if (opts?.once) return onAnyWithOnce(listener, signal);
-
-    return onAnyWithSignal(listener, signal);
+    return onAnyWithSignal(listener, createSubscriptionScope(opts?.signal));
   }
 
   function wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]> {
@@ -222,8 +195,6 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
   }
 
   function dispatch(event: EventKey<T>, payload: unknown): void {
-    options?._onDispatch?.(event, payload);
-
     let count = 0;
     let firstError: { value: unknown } | undefined;
     const set = listeners.get(event);
@@ -304,12 +275,10 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
     };
   }
 
-  function waitAny<K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
+  function waitAny<K extends readonly EventKey<T>[]>(
     eventList: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>> {
-    if (eventList.length < 2) throw new HeraldConfigError('waitAny() requires at least 2 event keys');
-
     const activeSignal = createSubscriptionScope(opts?.signal);
 
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);

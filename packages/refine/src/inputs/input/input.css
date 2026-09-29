@@ -143,6 +143,7 @@
        ======================================== */
 
   input {
+    box-sizing: border-box;
     flex: 1;
     min-width: 0;
     min-height: var(--size-6);

@@ -116,17 +116,6 @@ describe('messaging', () => {
     );
   });
 
-  it('supports a custom serializer', async () => {
-    const serialize = (value: unknown) => `X${JSON.stringify(value)}`;
-    const deserialize = (text: string) => JSON.parse(text.slice(1)) as unknown;
-    const { host, guest, peerId } = await pairNodes({ deserialize, serialize }, { deserialize, serialize });
-
-    const received: unknown[] = [];
-    guest.on('pong', (m) => received.push(m.payload));
-    host.send(peerId, 'pong', { n: 3 });
-    await vi.waitFor(() => expect(received).toEqual([{ n: 3 }]));
-  });
-
   it('taps message-sent and message-received with byte counts', async () => {
     const { host, guest, peerId } = await pairNodes();
     const hostEvents: MeshEvent[] = [];

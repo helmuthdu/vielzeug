@@ -52,8 +52,10 @@ export function waitIceGathering(pc: RTCPeerConnectionLike, timeoutMs: number): 
 
 /**
  * Resolves when the data channel opens. Rejects with `MeshTimeoutError` after
- * `timeoutMs`, `MeshConnectionError` when the channel or ICE transport dies
- * first, and `MeshDisposedError` when `disposalSignal` aborts.
+ * `timeoutMs` — or when the channel closes while that deadline is still
+ * pending, since a peer tearing down a never-opened channel races the same
+ * deadline — `MeshConnectionError` when the ICE transport dies first, and
+ * `MeshDisposedError` when `disposalSignal` aborts.
  */
 export function waitChannelOpen(
   dc: RTCDataChannelLike,
@@ -64,12 +66,15 @@ export function waitChannelOpen(
 ): Promise<void> {
   if (dc.readyState === 'open') return Promise.resolve();
   return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const timeout = () => new MeshTimeoutError(`Timed out waiting ${timeoutMs}ms for the data channel to open`);
     const fail = (error: Error) => {
       cleanup();
       reject(error);
     };
     const cleanup = () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
+      timer = null;
       dc.removeEventListener('open', onOpen);
       dc.removeEventListener('close', onClose);
       pc.removeEventListener('iceconnectionstatechange', onIce);
@@ -79,7 +84,10 @@ export function waitChannelOpen(
       cleanup();
       resolve();
     };
-    const onClose = () => fail(new MeshConnectionError('Data channel closed before opening', peerId));
+    // A close while our open deadline is still armed is the timeout it
+    // effectively is; mirror the guest's open-timer guard so both ends agree
+    // on the cause instead of racing to report whichever event landed first.
+    const onClose = () => fail(timeout());
     const onIce = () => {
       const state = pc.iceConnectionState;
       if (state === 'failed' || state === 'closed' || state === 'disconnected') {
@@ -87,10 +95,7 @@ export function waitChannelOpen(
       }
     };
     const onDispose = () => fail(new MeshDisposedError());
-    const timer = setTimeout(
-      () => fail(new MeshTimeoutError(`Timed out waiting ${timeoutMs}ms for the data channel to open`)),
-      timeoutMs,
-    );
+    timer = setTimeout(() => fail(timeout()), timeoutMs);
     dc.addEventListener('open', onOpen);
     dc.addEventListener('close', onClose);
     pc.addEventListener('iceconnectionstatechange', onIce);

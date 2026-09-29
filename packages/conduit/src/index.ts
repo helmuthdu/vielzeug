@@ -6,20 +6,20 @@ export {
   ConduitDuplicateRegistrationError,
   ConduitError,
   ConduitProviderNotFoundError,
-  ConduitScopedResolutionError,
 } from './errors.js';
 export type {
+  AnyProvider,
   Container,
+  CreateScopeOptions,
   FactoryOptions,
   FactoryProvider,
   InferServices,
   InferTokens,
   Lifetime,
   Provider,
-  ScopeToken,
   ServiceMap,
   Token,
   ValueOptions,
   ValueProvider,
 } from './types.js';
-export { disposalSignalToken, factoryProvider, scope, token, valueProvider } from './types.js';
+export { disposalSignalToken, factoryProvider, token, valueProvider } from './types.js';

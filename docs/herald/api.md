@@ -28,7 +28,7 @@ description: Reference for typed synchronous events, subscriptions, waits, traci
 
 ```ts
 function createBus<T extends EventMap = Record<string, unknown>>(
-  options?: BusOptions<T>,
+  options?: BusOptions,
 ): Bus<T>
 ```
 
@@ -51,7 +51,7 @@ bus.dispose();
 ### `BusOptions`
 
 ```ts
-type BusOptions<T extends EventMap = EventMap> = {
+type BusOptions = {
   maxListeners?: number;
   name?: string;
 };
@@ -78,7 +78,7 @@ type Bus<T extends EventMap> = {
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: { signal?: AbortSignal }): Unsubscribe;
   tap(handler: (event: HeraldEvent<T>) => void, options?: { signal?: AbortSignal }): Unsubscribe;
   wait<K extends EventKey<T>>(event: K, options?: { signal?: AbortSignal }): Promise<T[K]>;
-  waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
+  waitAny<const K extends readonly EventKey<T>[]>(
     events: K,
     options?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>>;
@@ -96,15 +96,15 @@ After disposal, emission is a no-op.
 
 ```ts
 type Listener<T> = (payload: T) => void;
-type SubscribeOptions = { once?: boolean; signal?: AbortSignal };
+type SubscribeOptions = { signal?: AbortSignal };
 type Unsubscribe = () => void;
 ```
 
-`on()` returns an idempotent unsubscribe function. `{ once: true }` is equivalent to `once()`. Once-listeners unsubscribe before invocation. An already-aborted signal creates no subscription.
+`on()` returns an idempotent unsubscribe function. `once()` is the one-shot variant: it unsubscribes before invoking the listener. An already-aborted signal creates no subscription.
 
 ### `onAny()`
 
-Receives `(event, payload)` after event-specific listeners. It supports both `signal` and `once`. Wildcard listeners are excluded from `listenerCount()` and reported by `wildcardCount()`.
+Receives `(event, payload)` after event-specific listeners and supports `signal`. Wildcard listeners are excluded from `listenerCount()` and reported by `wildcardCount()`.
 
 ### `wait()`
 
@@ -112,7 +112,7 @@ Resolves with the next payload for one event. It rejects with the external signa
 
 ### `waitAny()`
 
-Requires at least two event keys at compile time and runtime. It resolves once with a typed `{ event, payload }` discriminated union and removes every losing subscription.
+Accepts one or more event keys. It resolves once with a typed `{ event, payload }` discriminated union and removes every losing subscription.
 
 ```ts
 const result = await bus.waitAny(['count', 'ready']);
@@ -178,11 +178,11 @@ Interfaces and object type aliases are valid event maps. Only string keys partic
 import { createTestBus } from '@vielzeug/herald/testing';
 
 function createTestBus<T extends EventMap = Record<string, unknown>>(
-  options?: BusOptions<T>,
+  options?: BusOptions,
 ): TestBus<T>
 ```
 
-Creates a regular bus that records dispatches before listeners run.
+Creates a regular bus that records every dispatched payload through a `tap()` observer, including dispatches whose listeners throw.
 
 ### `TestBus`
 
@@ -202,5 +202,4 @@ type TestBus<T extends EventMap> = Bus<T> & {
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
 | `BusDisposedError` | Bus disposal aborts `disposalSignal` or interrupts `wait()` / `waitAny()` | Configured bus name appears in the message |
-| `HeraldConfigError` | Runtime `waitAny()` input contains fewer than two keys | Extends `HeraldError` |
 | `HeraldError` | Base class for Herald-originated errors | Use `instanceof HeraldError` |

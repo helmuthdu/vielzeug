@@ -92,7 +92,7 @@ await server.connect(new StdioServerTransport());
 - Use `search-packages` for capability discovery before loading broad source.
 - Use `get-type-signature` before loading full source.
 - Published package snapshots are static directories; local dev snapshots are immutable generations selected by `.dev/current.json`.
-- Import `validateSnapshot()` from `/advanced` for artifact verification; normal startup keeps package chunks lazy.
+- Pass `validateContents: true` to `loadSnapshot()` for artifact verification; normal startup keeps package chunks lazy.
 - Treat `configureServer` as a per-request factory hook and avoid process-global side effects.
 - Keep HTTP local. Use stdio for normal client integration.
 - Run `pnpm test:unit` before `pnpm test:integration`.

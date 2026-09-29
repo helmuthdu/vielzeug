@@ -1,6 +1,7 @@
+import { tapper } from '@vielzeug/arsenal';
+
 import { compileRule } from './_compile';
 import { ruleMatches, snapshotDecisionInput, snapshotPrincipal } from './_match';
-import { WardConfigError } from './errors';
 import type {
   BoundWard,
   Principal,
@@ -23,9 +24,11 @@ import type {
  * A rule matches when:
  * 1. Its `action` pattern matches the requested action (`*` or `ns:*` or exact).
  * 2. Its `resource` pattern matches the requested resource.
- * 3. Every key in its declarative `attributes` is present and equal in the
+ * 3. Its declarative `roles` (if any) include the principal's role, `ANONYMOUS`
+ *    matches a null principal, and `WILDCARD` matches any authenticated principal.
+ * 4. Every key in its declarative `attributes` is present and equal in the
  *    request's `attributes` (deep equality).
- * 4. Its `condition` escape-hatch callback (if any) returns `true`.
+ * 5. Its `condition` escape-hatch callback (if any) returns `true`.
  */
 export function createWard<
   TAction extends string = string,
@@ -38,7 +41,12 @@ export function createWard<
   )[] = [],
 ): Ward<TAction, TResource, TAttributes> {
   const compiled = Object.freeze(rules.flat().map((rule, index) => compileRule(rule, index)));
-  const tappers = new Set<(event: WardEvent<TAction, TResource, TAttributes>) => void>();
+  const knownActions = Object.freeze([
+    ...new Set(
+      compiled.flatMap((rule) => (rule.effect === 'allow' && !rule.action.includes('*') ? [rule.action] : [])),
+    ),
+  ]) as readonly TAction[];
+  const tappers = tapper<WardEvent<TAction, TResource, TAttributes>>();
 
   function evaluate(
     input: WardDecisionInput<TAction, TResource, TAttributes>,
@@ -76,14 +84,7 @@ export function createWard<
     input: WardDecisionInput<TAction, TResource, TAttributes> & { principal: Principal },
     decision: WardDecision<TAction, TResource, TAttributes>,
   ): void {
-    if (tappers.size === 0) return;
-
-    const event = Object.freeze({ decision, input, type: 'decision' as const });
-    for (const tapper of tappers) {
-      try {
-        tapper(event);
-      } catch {}
-    }
+    tappers.emit(Object.freeze({ decision, input, type: 'decision' as const }));
   }
 
   function decide(
@@ -100,13 +101,14 @@ export function createWard<
 
   function allowedActions(input: {
     attributes?: TAttributes;
-    knownActions: readonly TAction[];
+    filter?: readonly TAction[];
     principal?: Principal;
     resource: TResource;
   }): TAction[] {
+    const candidates = input.filter ?? knownActions;
     const seen = new Set<TAction>();
 
-    return input.knownActions.filter((action) => {
+    return candidates.filter((action) => {
       if (seen.has(action)) return false;
       seen.add(action);
       return evaluate({ ...input, action }, false).effect === 'allow';
@@ -123,22 +125,13 @@ export function createWard<
     };
   }
 
-  function tap(
-    handler: (event: WardEvent<TAction, TResource, TAttributes>) => void,
-    options?: { readonly signal?: AbortSignal },
-  ): () => void {
-    if (typeof handler !== 'function') throw new WardConfigError('tap handler must be a function');
-    if (options?.signal?.aborted) return () => {};
-
-    tappers.add(handler);
-    const onAbort = () => tappers.delete(handler);
-    options?.signal?.addEventListener('abort', onAbort, { once: true });
-
-    return () => {
-      tappers.delete(handler);
-      options?.signal?.removeEventListener('abort', onAbort);
-    };
-  }
-
-  return { allowedActions, checkAll, decide, forPrincipal, rules: compiled, tap };
+  return {
+    allowedActions,
+    checkAll,
+    decide,
+    forPrincipal,
+    knownActions,
+    rules: compiled,
+    tap: (handler, options) => tappers.tap(handler, options),
+  };
 }

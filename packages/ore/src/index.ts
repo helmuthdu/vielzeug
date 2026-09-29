@@ -40,6 +40,7 @@ export { type ComponentSlots, useSlots } from './slots';
 export { html } from './template/instantiator';
 export { type HTMLResult, type Ref, type RefCallback, ref } from './template/result';
 export { type CSSResult, css } from './utils/css';
+export type { MaybeReactive } from './utils/dom';
 export { type EmitFn, useEmit } from './utils/emit';
 
 export { createId } from './utils/id';

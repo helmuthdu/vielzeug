@@ -1,6 +1,5 @@
 import { expectTypeOf } from 'vitest';
 
-import { type AnySchema, type InferSchemaMode, schemaMode } from '../core';
 import {
   type InferInput,
   type InferOutput,
@@ -37,7 +36,7 @@ describe('public type contracts', () => {
     expectTypeOf(schema.parse({ email: 'ada@example.com' })).toEqualTypeOf<{ email: string }>();
   });
 
-  it('removes synchronous parsing from direct and chained asynchronous schemas', () => {
+  it('keeps checkAsync chainable and preserves input types', () => {
     const asyncString = s.string().checkAsync(async () => true);
     const chained = asyncString
       .min(1)
@@ -45,53 +44,31 @@ describe('public type contracts', () => {
       .default('value')
       .transform((value) => value?.length ?? 0);
 
-    expectTypeOf<InferSchemaMode<typeof asyncString>>().toEqualTypeOf<'async'>();
     expectTypeOf<InferInput<typeof asyncString>>().toEqualTypeOf<string>();
-    expectTypeOf<InferSchemaMode<typeof chained>>().toEqualTypeOf<'async'>();
     expectTypeOf<InferInput<typeof chained>>().toEqualTypeOf<string | undefined>();
     expectTypeOf(asyncString.min).toBeFunction();
     expectTypeOf(chained.parseAsync('value')).toEqualTypeOf<Promise<number>>();
     expectTypeOf(chained.safeParseAsync('value')).toMatchTypeOf<Promise<unknown>>();
-
-    const assertSyncParsersAreUnavailable = (): void => {
-      // @ts-expect-error Async schemas require parseAsync().
-      asyncString.parse('value');
-      // @ts-expect-error Async schemas require safeParseAsync().
-      asyncString.safeParse('value');
-      // @ts-expect-error Chained async schemas require parseAsync().
-      chained.parse('value');
-      // @ts-expect-error Chained async schemas require safeParseAsync().
-      chained.safeParse('value');
-      // @ts-expect-error Async schemas do not support is() — use safeParseAsync().
-      asyncString.is('value');
-      // @ts-expect-error Async schemas do not support assert() — use parseAsync().
-      asyncString.assert('value');
-    };
-
-    expectTypeOf(assertSyncParsersAreUnavailable).toBeFunction();
   });
 
-  it('preserves object methods after mode-changing modifiers', () => {
+  it('rejects at runtime when sync parsing meets async checks', async () => {
+    const asyncString = s.string().checkAsync(async () => true);
+
+    expect(() => asyncString.parse('value')).toThrow('async checks');
+    expect(asyncString.safeParse('value').success).toBe(false);
+    await expect(asyncString.parseAsync('value')).resolves.toBe('value');
+  });
+
+  it('preserves object methods after async modifiers', () => {
     const asyncObject = s.object({ value: s.string() }).checkAsync(async () => true);
     const requiredObject = asyncObject.required().extend({ count: s.number() });
     const optionalObject = asyncObject.optional().extend({ count: s.number() });
 
-    expectTypeOf<InferSchemaMode<typeof requiredObject>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof optionalObject>>().toEqualTypeOf<'async'>();
     expectTypeOf(requiredObject.pick).toBeFunction();
     expectTypeOf(optionalObject.omit).toBeFunction();
-
-    const assertObjectSyncParsersAreUnavailable = (): void => {
-      // @ts-expect-error Async object schemas require parseAsync().
-      requiredObject.parse({ count: 1, value: 'value' });
-      // @ts-expect-error Async object schemas require safeParseAsync().
-      optionalObject.safeParse({ count: 1, value: 'value' });
-    };
-
-    expectTypeOf(assertObjectSyncParsersAreUnavailable).toBeFunction();
   });
 
-  it('propagates asynchronous mode through every composite schema', () => {
+  it('infers output and input through every composite schema', async () => {
     const asyncString = s.string().checkAsync(async () => true);
     const asyncObject = s.object({ value: asyncString });
     const array = s.array(asyncString);
@@ -106,29 +83,21 @@ describe('public type contracts', () => {
     const pipe = s.string().pipe(asyncString);
     const variant = s.discriminatedUnion('kind', { async: asyncObject });
 
-    expectTypeOf<InferSchemaMode<typeof array>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof asyncObject>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof union>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof intersect>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof tuple>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof restTuple>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof map>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof record>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof set>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof lazy>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof pipe>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof variant>>().toEqualTypeOf<'async'>();
-  });
+    expectTypeOf<InferOutput<typeof array>>().toEqualTypeOf<string[]>();
+    expectTypeOf<InferOutput<typeof asyncObject>>().toEqualTypeOf<{ value: string }>();
 
-  it('infers modes from structural custom schemas and retains their input types', () => {
-    const customAsync = null as unknown as AnySchema<number, { source: string }, 'async'> & {
-      readonly [schemaMode]: 'async';
-    };
-    const composite = s.array(customAsync);
-
-    expectTypeOf<InferSchemaMode<typeof customAsync>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferSchemaMode<typeof composite>>().toEqualTypeOf<'async'>();
-    expectTypeOf<InferInput<typeof customAsync>>().toEqualTypeOf<{ source: string }>();
+    await expect(array.parseAsync(['a'])).resolves.toEqual(['a']);
+    await expect(asyncObject.parseAsync({ value: 'a' })).resolves.toEqual({ value: 'a' });
+    await expect(union.parseAsync('a')).resolves.toBe('a');
+    await expect(intersect.parseAsync('a')).resolves.toBe('a');
+    await expect(tuple.parseAsync(['a'])).resolves.toEqual(['a']);
+    await expect(restTuple.parseAsync(['a', 'b'])).resolves.toEqual(['a', 'b']);
+    await expect(map.parseAsync(new Map([['k', 'a']]))).resolves.toEqual(new Map([['k', 'a']]));
+    await expect(record.parseAsync({ k: 'a' })).resolves.toEqual({ k: 'a' });
+    await expect(set.parseAsync(new Set(['a']))).resolves.toEqual(new Set(['a']));
+    await expect(lazy.parseAsync('a')).resolves.toBe('a');
+    await expect(pipe.parseAsync('a')).resolves.toBe('a');
+    await expect(variant.parseAsync({ kind: 'async', value: 'a' })).resolves.toEqual({ kind: 'async', value: 'a' });
   });
 
   it('exposes the complete Standard Schema type contract', () => {

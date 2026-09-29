@@ -32,7 +32,7 @@ console.log(await store.get('preferences', 'theme'));
 
 ## Create a Key-Value Store
 
-Memory, LocalStorage, and SessionStorage return `KeyValueVaultStore`. They share portable string/number keys, bound helpers, fluent queries, TTL, and `observe()`. Memory may omit codecs; Web Storage requires them. Malformed storage envelopes are evicted lazily, while codec validation failures are surfaced without deleting persisted data.
+LocalStorage and SessionStorage return `KeyValueVaultStore`; Memory returns a `DocumentVaultStore` (it adds `batch()` and `iterate()`). They share portable string/number keys, bound helpers, fluent queries, TTL, and `observe()`. Memory may omit codecs; Web Storage requires them. Malformed storage envelopes are evicted lazily, while codec validation failures are surfaced without deleting persisted data.
 
 The root entry is adapter-free. Import `createMemory` from `@vielzeug/vault/memory`, `createLocalStorage` from `@vielzeug/vault/local-storage`, or `createSessionStorage` from `@vielzeug/vault/session-storage`. Import each adapter from its focused subpath so unused backends stay out of the bundle.
 
@@ -65,11 +65,11 @@ console.log(updated);
 
 ## Iterate and Filter Records
 
-Use `query()` for typed in-memory filtering, sorting, pagination, counting, and deletion. Use `iterate()` on a `DocumentVaultStore` for lazy cursor-based traversal, and `getAllByIndex()` on IndexedDB for declared equality indexes.
+Filter the plain array returned by `getAll()` for in-memory selection, sorting, and pagination. Use `iterate()` on a `DocumentVaultStore` for lazy cursor-based traversal, and `getAllByIndex()` on IndexedDB for declared equality indexes.
 
 ```ts
-// Bound fluent query
-const themed = await store.query('preferences').filter((preference) => preference.id.startsWith('theme')).toArray();
+// In-memory selection over getAll()
+const themed = (await store.getAll('preferences')).filter((preference) => preference.id.startsWith('theme'));
 
 // Document store: iterate lazily
 for await (const pref of db.iterate('preferences')) {
@@ -129,7 +129,7 @@ await db.batch(['events'], async (tx) => {
 });
 ```
 
-Transaction contexts expose the same bound helpers and fluent queries; `tx.update()`, `tx.upsert()`, `tx.deleteMany()`, and query deletion remain atomic. Only await `tx.*` operations inside a batch callback. Do not retain the transaction context after the callback; later use throws `VaultScopeError`. Do not await timers, fetches, or other external asynchronous work because IndexedDB can commit an inactive transaction.
+Transaction contexts expose the same bound helpers; `tx.update()`, `tx.upsert()`, and `tx.deleteMany()` run inside the enclosing transaction. Only await `tx.*` operations inside a batch callback. Do not retain the transaction context after the callback; later use throws `VaultScopeError`. Do not await timers, fetches, or other external asynchronous work because IndexedDB can commit an inactive transaction.
 
 ## Use SQLite Outside the Browser
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canonicalizeShortcut, detectModKey, matchStep, parseShortcut, parseStep } from '../parser';
+import { canonicalizeShortcut, detectModKey, matchKey, matchStep, parseShortcut, parseStep } from '../parser';
 import { makeEvent } from './_fixtures';
 
 describe('parseStep', () => {
@@ -195,6 +195,37 @@ describe('matchStep', () => {
 
     expect(() => matchStep(malformedEvent, step)).not.toThrow();
     expect(matchStep(malformedEvent, step)).toBe(false);
+  });
+});
+
+describe('matchKey', () => {
+  it('matches a plain key pattern', () => {
+    expect(matchKey(makeEvent('ArrowDown'), 'ArrowDown')).toBe(true);
+    expect(matchKey(makeEvent('ArrowUp'), 'ArrowDown')).toBe(false);
+  });
+
+  it('resolves aliases', () => {
+    expect(matchKey(makeEvent('Escape'), 'esc')).toBe(true);
+    expect(matchKey(makeEvent(' '), 'space')).toBe(true);
+  });
+
+  it('resolves mod against the given modKey', () => {
+    expect(matchKey(makeEvent('k', { metaKey: true }), 'mod+k', 'meta')).toBe(true);
+    expect(matchKey(makeEvent('k', { ctrlKey: true }), 'mod+k', 'meta')).toBe(false);
+  });
+
+  it('requires exact modifier state', () => {
+    expect(matchKey(makeEvent('ArrowDown', { ctrlKey: true }), 'ArrowDown')).toBe(false);
+    expect(matchKey(makeEvent('Home', { shiftKey: true }), 'shift+Home')).toBe(true);
+  });
+
+  it('returns false for unparseable patterns instead of throwing', () => {
+    expect(matchKey(makeEvent('k'), 'k+j+k')).toBe(false);
+    expect(matchKey(makeEvent('k'), '')).toBe(false);
+  });
+
+  it('returns false for multi-step chord patterns (single-step matcher)', () => {
+    expect(matchKey(makeEvent('k', { ctrlKey: true }), 'ctrl+k ctrl+s')).toBe(false);
   });
 });
 

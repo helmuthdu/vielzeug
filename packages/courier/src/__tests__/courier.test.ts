@@ -4,6 +4,7 @@ import type { RequestConfig } from '../index';
 
 import {
   CourierAbortError,
+  CourierConfigError,
   CourierError,
   CourierParseError,
   CourierSchemaValidationError,
@@ -362,10 +363,10 @@ describe('Courier HTTP transport', () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response('unused'));
     const courier = createCourier({ fetch });
 
-    await expect(courier.get('/users', { body: {} } as never)).rejects.toBeInstanceOf(CourierParseError);
+    await expect(courier.get('/users', { body: {} } as never)).rejects.toBeInstanceOf(CourierConfigError);
     await expect(
       courier.get('/raw', { responseType: 'raw', schema: { parse: (value: unknown) => value } } as never),
-    ).rejects.toBeInstanceOf(CourierParseError);
+    ).rejects.toBeInstanceOf(CourierConfigError);
     expect(fetch).not.toHaveBeenCalled();
   });
 

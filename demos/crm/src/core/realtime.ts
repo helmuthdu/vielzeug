@@ -1,5 +1,6 @@
 import { animate } from '@vielzeug/necromancer';
 import { createPulse } from '@vielzeug/pulse';
+import { MockWebSocket } from '@vielzeug/pulse/testing';
 import type { Readable } from '@vielzeug/ripple';
 import { computed, fromSubscribable } from '@vielzeug/ripple';
 import { bus } from './events';
@@ -10,28 +11,16 @@ interface PresenceUser {
 }
 type Schema = { rooms: { crm: { presence: PresenceUser } } };
 
-class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-  readyState = 1;
-  onopen: ((event: Event) => void) | null = null;
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
-  onclose: ((event: CloseEvent) => void) | null = null;
-  constructor() {
-    setTimeout(() => this.onopen?.(new Event('open')), 0);
+// The wire-protocol stub comes from @vielzeug/pulse/testing; the demo only adds
+// the scripted presence frames that make the workspace look busy.
+class ScriptedWebSocket extends MockWebSocket {
+  constructor(url: string, protocols?: string | string[]) {
+    super(url, protocols, { autoOpen: true });
     setTimeout(() => {
-      this.emit({ room: 'crm', type: 'joined' });
-      this.emit({ id: 'john', room: 'crm', state: { name: 'John Becker' }, type: 'presence_join' });
-      this.emit({ id: 'maria', room: 'crm', state: { name: 'Maria Silva' }, type: 'presence_join' });
+      this.receive({ room: 'crm', type: 'joined' });
+      this.receive({ id: 'john', room: 'crm', state: { name: 'John Becker' }, type: 'presence_join' });
+      this.receive({ id: 'maria', room: 'crm', state: { name: 'Maria Silva' }, type: 'presence_join' });
     }, 60);
-  }
-  send(): void {}
-  close(): void {}
-  private emit(frame: object): void {
-    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(frame) }));
   }
 }
 
@@ -45,7 +34,7 @@ export const presence = {
 export const presenceCount = computed(() => presence.value.size);
 
 export function setupRealtime(): void {
-  (globalThis as Record<string, unknown>).WebSocket = MockWebSocket;
+  (globalThis as Record<string, unknown>).WebSocket = ScriptedWebSocket;
   const pulse = createPulse<Schema>('wss://vielzeug-crm.invalid/ws');
   void pulse.connect();
   const room = pulse.room('crm');

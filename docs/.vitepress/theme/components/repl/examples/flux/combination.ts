@@ -1,7 +1,7 @@
 export const combinationExample = {
   code: `// Combine current filter and page state from replaying channels.
 import { combineLatest } from '@vielzeug/flux'
-import { createChannel } from '@vielzeug/flux/subjects'
+import { createChannel } from '@vielzeug/flux'
 
 const count = createChannel({ initial: 0 })
 const label = createChannel({ initial: 'items' })

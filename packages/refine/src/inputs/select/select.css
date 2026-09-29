@@ -47,6 +47,26 @@
     display: none;
   }
 
+  /* Selected option's icon(s) inside the ore-input prefix (single-select only). */
+  .trigger-selected-icons {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: var(--size-0-5);
+    align-items: center;
+  }
+
+  .trigger-selected-icon {
+    flex-shrink: 0;
+    color: var(--color-contrast-500);
+  }
+
+  .trigger-selected-icon--image {
+    flex-shrink: 0;
+    width: 1.25em;
+    height: 1.25em;
+    object-fit: contain;
+  }
+
   /* Suffix: loader (left) + chevron (right) */
   .trigger-suffix {
     display: flex;
@@ -160,12 +180,36 @@
   }
 
   /* Truncate long labels to keep option rows compact and readable. */
-  .option > span:first-child {
+  .option > span:first-of-type {
     flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Leading icon group rendered when an option provides one or more icons. */
+  .option-icons {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: var(--size-0-5);
+    align-items: center;
+  }
+
+  .option-icon {
+    flex-shrink: 0;
+    color: var(--color-contrast-500);
+  }
+
+  /* Image icons (URL or data: sources) — sized to match the lucide icon variant. */
+  .option-icon--image {
+    width: 1.25em;
+    height: 1.25em;
+    object-fit: contain;
+  }
+
+  .option[data-selected] .option-icon {
+    color: var(--_theme-base);
   }
 
   .disabled-reason {

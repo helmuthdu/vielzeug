@@ -26,7 +26,6 @@
  */
 
 import { getOrCreate } from './_bounded-cache';
-import { warn } from './_dev';
 
 const FORMAT_CACHE_MAX = 128;
 
@@ -139,11 +138,10 @@ export function createFormatter(source: string | (() => string)): Formatter {
 
   const getLocale = typeof source === 'string' ? () => source : source;
 
-  // Warn at most once per formatter instance on the unserializable-options fallback —
-  // a hot render loop with such options must not spam the console on every call.
-  let warnedUnserializable = false;
-
-  function cachedKey(locale: string, options?: object): string {
+  // Options that cannot be serialized (circular references, BigInt) get no cache key at
+  // all, so each call builds a fresh formatter — sharing one instance across different
+  // options would silently format wrong.
+  function cachedKey(locale: string, options?: object): string | undefined {
     if (!options) return locale;
 
     const sorted: Record<string, unknown> = {};
@@ -155,16 +153,12 @@ export function createFormatter(source: string | (() => string)): Formatter {
     try {
       return `${locale}:${JSON.stringify(sorted)}`;
     } catch {
-      // Circular references or BigInt values — fall back to locale-only key.
-      // Multiple callers with different unserializable options will share the same
-      // formatter instance; never silently.
-      if (!warnedUnserializable) {
-        warnedUnserializable = true;
-        warn('formatter options could not be serialized — falling back to a shared per-locale formatter instance.');
-      }
-
-      return locale;
+      return undefined;
     }
+  }
+
+  function cached<T>(cache: Map<string, T>, key: string | undefined, build: () => T): T {
+    return key === undefined ? build() : getOrCreate(cache, key, FORMAT_CACHE_MAX, build);
   }
 
   return {
@@ -172,23 +166,15 @@ export function createFormatter(source: string | (() => string)): Formatter {
       const locale = getLocale();
       const opts: Intl.NumberFormatOptions = { ...options, currency, style: 'currency' };
 
-      return getOrCreate(
-        currencyCache,
-        cachedKey(locale, opts),
-        FORMAT_CACHE_MAX,
-        () => new Intl.NumberFormat(locale, opts),
-      ).format(value);
+      return cached(currencyCache, cachedKey(locale, opts), () => new Intl.NumberFormat(locale, opts)).format(value);
     },
 
     date(value, options) {
       const locale = getLocale();
 
-      return getOrCreate(
-        dateCache,
-        cachedKey(locale, options),
-        FORMAT_CACHE_MAX,
-        () => new Intl.DateTimeFormat(locale, options),
-      ).format(value);
+      return cached(dateCache, cachedKey(locale, options), () => new Intl.DateTimeFormat(locale, options)).format(
+        value,
+      );
     },
 
     duration(value, options) {
@@ -199,10 +185,9 @@ export function createFormatter(source: string | (() => string)): Formatter {
 
       if (DURATION_UNITS.every((u) => value[u] === undefined)) return '';
 
-      return getOrCreate(
+      return cached(
         durationCache,
         cachedKey(locale, options),
-        FORMAT_CACHE_MAX,
         () => new IntlExt.DurationFormat!(locale, options),
       ).format(value);
     },
@@ -217,10 +202,9 @@ export function createFormatter(source: string | (() => string)): Formatter {
       const style = options?.style ?? 'long';
       const type = options?.type === 'or' ? 'disjunction' : 'conjunction';
 
-      return getOrCreate(
+      return cached(
         listCache,
         cachedKey(locale, { style, type }),
-        FORMAT_CACHE_MAX,
         () => new Intl.ListFormat(locale, { style, type }),
       ).format(items);
     },
@@ -228,21 +212,17 @@ export function createFormatter(source: string | (() => string)): Formatter {
     number(value, options) {
       const locale = getLocale();
 
-      return getOrCreate(
-        numberCache,
-        cachedKey(locale, options),
-        FORMAT_CACHE_MAX,
-        () => new Intl.NumberFormat(locale, options),
-      ).format(value);
+      return cached(numberCache, cachedKey(locale, options), () => new Intl.NumberFormat(locale, options)).format(
+        value,
+      );
     },
 
     relative(value, unit, options) {
       const locale = getLocale();
 
-      return getOrCreate(
+      return cached(
         relativeCache,
         cachedKey(locale, options),
-        FORMAT_CACHE_MAX,
         () => new Intl.RelativeTimeFormat(locale, options),
       ).format(value, unit);
     },

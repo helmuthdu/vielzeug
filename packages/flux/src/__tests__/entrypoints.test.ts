@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { toAsyncIterable } from '../async';
-import { fromStore, fromSubscribe, pipe, stream } from '../index';
-import { createChannel } from '../subjects';
+import { createChannel, fromStore, fromSubscribe, pipe, stream } from '../index';
 
 describe('public entrypoints', () => {
   it('exposes core composition and async conversion', () => {
@@ -12,7 +11,7 @@ describe('public entrypoints', () => {
     expect(typeof toAsyncIterable).toBe('function');
   });
 
-  it('exposes fromSubscribe bridge and subjects', () => {
+  it('exposes fromSubscribe bridge and channels', () => {
     expect(typeof fromStore).toBe('function');
     expect(typeof fromSubscribe).toBe('function');
     expect(typeof createChannel).toBe('function');

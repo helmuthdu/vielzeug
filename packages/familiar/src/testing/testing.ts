@@ -8,7 +8,7 @@ import {
 } from '../errors.js';
 import type { SlotStrategy, WorkerOptions, WorkerPool } from '../types.js';
 
-export type TestWorkerOptions = Omit<WorkerOptions, 'concurrency' | 'onSlotError'> & { concurrency?: number };
+export type TestWorkerOptions = Omit<WorkerOptions, 'concurrency'> & { concurrency?: number };
 
 export type TestWorkerCall<TInput, TOutput> =
   | { input: TInput; status: 'fulfilled'; value: TOutput }
@@ -125,7 +125,6 @@ export function createTestWorker<TInput, TOutput>(
   }
 
   const pool = createPool(Array.from({ length: concurrency }, makeSlot), {
-    concurrency,
     defaultTimeout: timeout,
     maxQueue,
     onFull,

@@ -36,6 +36,12 @@ function decode(matrix: QrMatrix): string | null {
   return result?.data ?? null;
 }
 
+/** Raw byte stream jsQR recovered from byte-mode segments (UTF-8-lossless). */
+function decodeBytes(matrix: QrMatrix): number[] | null {
+  const { data, width, height } = rasterize(matrix);
+  return jsQR(data, width, height)?.binaryData ?? null;
+}
+
 const ALPHANUM = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
 const seeded = (seed: number) => {
   let s = seed;
@@ -112,5 +118,14 @@ describe('roundtrip', () => {
   it('decodes Uint8Array input', () => {
     const m = encodeQr(new TextEncoder().encode('binary input ✓'));
     expect(decode(m)).toBe('binary input ✓');
+  });
+
+  it('round-trips invalid-UTF-8 bytes without corruption', () => {
+    // 0xFF/0xFE are not valid UTF-8 — a TextDecoder round-trip would turn
+    // them into U+FFFD replacement characters. Byte mode must carry them as-is.
+    const raw = Uint8Array.from([0xff, 0xfe, 0x00, 0x80, 0xc3, 0x28, 0xbf, 0x42]);
+    const m = encodeQr(raw);
+    expect(m.mode).toBe('byte');
+    expect(decodeBytes(m)).toEqual([...raw]);
   });
 });

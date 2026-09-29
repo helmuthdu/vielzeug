@@ -1,4 +1,5 @@
 import { createPulse } from '@vielzeug/pulse';
+import { MockWebSocket } from '@vielzeug/pulse/testing';
 import type { Readable } from '@vielzeug/ripple';
 import { computed, fromSubscribable } from '@vielzeug/ripple';
 
@@ -15,78 +16,54 @@ type Schema = {
 /**
  * A scripted mock WebSocket simulating other shoppers browsing the showroom concurrently.
  * Installed as `globalThis.WebSocket` before `createPulse()` runs so pulse's internal
- * `new WebSocket(url, protocols)` picks it up — same technique as
- * demos/crm/src/core/realtime.ts's `MockWebSocket`. Wire protocol matches pulse's `InFrame`
- * shapes: `presence_state` (snapshot), `presence_join`, `presence_leave`.
+ * `new WebSocket(url, protocols)` picks it up. The wire-protocol stub comes from
+ * `@vielzeug/pulse/testing`; this class only adds the scripted presence frames. Wire protocol
+ * matches pulse's `InFrame` shapes: `presence_state` (snapshot), `presence_join`, `presence_leave`.
  */
-class MockWebSocket {
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-  static CONNECTING = 0;
+class ScriptedWebSocket extends MockWebSocket {
+  #thirdShopperPresent = false;
+  #timeout: ReturnType<typeof setTimeout> | null = null;
 
-  readyState = 1;
-
-  onopen: ((ev: Event) => void) | null = null;
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-  onerror: ((ev: Event) => void) | null = null;
-  onclose: ((ev: CloseEvent) => void) | null = null;
-
-  private _timeout: ReturnType<typeof setTimeout> | null = null;
-  private _thirdShopperPresent = false;
-
-  constructor(_url: string, _protocols?: string | string[]) {
-    setTimeout(() => this.onopen?.(new Event('open')), 0);
+  constructor(url: string, protocols?: string | string[]) {
+    super(url, protocols, { autoOpen: true });
     setTimeout(() => {
-      this._emit({ room: 'showroom', type: 'joined' });
-      this._sendPresenceState();
+      this.receive({ room: 'showroom', type: 'joined' });
+      this.receive({
+        members: { 'shopper-jana': { name: 'Jana' }, 'shopper-tom': { name: 'Tom' } },
+        room: 'showroom',
+        type: 'presence_state',
+      });
     }, 50);
-    this._scheduleNextActivity();
+    this.#scheduleNextActivity();
   }
 
-  send(_data: string): void {}
-
-  close(_code?: number, _reason?: string): void {
-    if (this._timeout !== null) {
-      clearTimeout(this._timeout);
-      this._timeout = null;
+  override close(code?: number, reason?: string): void {
+    if (this.#timeout !== null) {
+      clearTimeout(this.#timeout);
+      this.#timeout = null;
     }
+    super.close(code, reason);
   }
 
   /** Jittered 4–15s re-schedule (not a fixed `setInterval`) — a metronomically exact cadence is
    * the tell that gives away a scripted "N shoppers configuring" presence count; a randomized
    * gap reads as organic activity instead. */
-  private _scheduleNextActivity(): void {
+  #scheduleNextActivity(): void {
     const jitterMs = 4000 + Math.random() * 11000;
 
-    this._timeout = setTimeout(() => {
-      this._simulateActivity();
-      this._scheduleNextActivity();
+    this.#timeout = setTimeout(() => {
+      this.#simulateActivity();
+      this.#scheduleNextActivity();
     }, jitterMs);
   }
 
-  private _emit(frame: object): void {
-    this.onmessage?.(new MessageEvent('message', { data: JSON.stringify(frame) }));
-  }
-
-  private _sendPresenceState(): void {
-    this._emit({
-      members: {
-        'shopper-jana': { name: 'Jana' },
-        'shopper-tom': { name: 'Tom' },
-      },
-      room: 'showroom',
-      type: 'presence_state',
-    });
-  }
-
-  private _simulateActivity(): void {
-    if (this._thirdShopperPresent) {
-      this._emit({ id: 'shopper-noor', room: 'showroom', type: 'presence_leave' });
-      this._thirdShopperPresent = false;
+  #simulateActivity(): void {
+    if (this.#thirdShopperPresent) {
+      this.receive({ id: 'shopper-noor', room: 'showroom', type: 'presence_leave' });
+      this.#thirdShopperPresent = false;
     } else {
-      this._emit({ id: 'shopper-noor', room: 'showroom', state: { name: 'Noor' }, type: 'presence_join' });
-      this._thirdShopperPresent = true;
+      this.receive({ id: 'shopper-noor', room: 'showroom', state: { name: 'Noor' }, type: 'presence_join' });
+      this.#thirdShopperPresent = true;
     }
   }
 }
@@ -106,7 +83,7 @@ export const presenceCount = computed(() => presenceSignal.value.size);
 
 /** Install the mock WebSocket, connect Pulse, and wire up the reactive presence signal. Call once at startup. */
 export function setupRealtime(): void {
-  (globalThis as Record<string, unknown>).WebSocket = MockWebSocket;
+  (globalThis as Record<string, unknown>).WebSocket = ScriptedWebSocket;
 
   const pulse = createPulse<Schema>('wss://argentum-motors-demo/ws');
 

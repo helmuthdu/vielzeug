@@ -1,4 +1,6 @@
 export { toAsyncIterable } from './async.js';
+export type { Channel, ChannelOptions } from './channel.js';
+export { createChannel } from './channel.js';
 export { fromStore, fromSubscribe, stream } from './core.js';
 export { FluxCapacityError, FluxEmptyError, FluxError, FluxTimeoutError } from './errors.js';
 export { combineLatest, concat, merge } from './operators/combination.js';

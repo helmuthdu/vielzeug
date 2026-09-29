@@ -8,7 +8,7 @@ export type {
   VirtualScrollerOptions,
 } from './dom-virtual-list';
 export { createDomVirtualList, createVirtualScroller } from './dom-virtual-list';
-export { ScrollConfigurationError, ScrollError, ScrollRangeError } from './errors';
+export { ScrollConfigError, ScrollError, ScrollRangeError } from './errors';
 export type {
   GridRangeChangeEvent,
   GridVirtualizer,

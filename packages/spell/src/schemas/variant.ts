@@ -1,24 +1,12 @@
-import type {
-  AnySchema,
-  CheckContext,
-  InferSchemaMode,
-  Issue,
-  MergeSchemaModes,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
-} from '../core';
+import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
+import { ErrorCode, Schema } from '../core';
 import { SpellError } from '../errors';
-import { defineOwnProperty, objectFromEntries } from '../safe-object';
+import { defineOwnProperty } from '../safe-object';
 import { LiteralSchema } from './literal';
 import type { InferObject, InferObjectInput, ObjectSchema, ObjectShape } from './object';
 
-type VariantMap = Record<string, ObjectSchema<any, any>>;
+type VariantMap = Record<string, ObjectSchema<any>>;
 type Simplify<T> = { [P in keyof T]: T[P] };
 type InferVariantMap<K extends string, M extends VariantMap> = {
   [Tag in keyof M & string]: M[Tag] extends { shape: infer S extends ObjectShape }
@@ -31,23 +19,15 @@ type InferVariantInputMap<K extends string, M extends VariantMap> = {
     : never;
 }[keyof M & string];
 
-export class VariantSchema<
-  K extends string,
-  M extends VariantMap,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<M[keyof M]>>,
-> extends Schema<InferVariantMap<K, M>, InferVariantInputMap<K, M>, Mode> {
+export class VariantSchema<K extends string, M extends VariantMap> extends Schema<
+  InferVariantMap<K, M>,
+  InferVariantInputMap<K, M>
+> {
   private readonly _map: Map<string, VariantMap[string]>;
   private readonly _discriminator: K;
 
   protected override get _kind(): string {
     return 'variant';
-  }
-
-  override checkAsync(
-    this: VariantSchema<K, M, 'sync'>,
-    fn: (value: InferVariantMap<K, M>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): VariantSchema<K, M, 'async'> {
-    return this._addCheck(fn, true) as unknown as VariantSchema<K, M, 'async'>;
   }
 
   constructor(discriminator: K, variantMap: M) {
@@ -135,28 +115,16 @@ export class VariantSchema<
       : { data: value, issues: result.issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferVariantMap<K, M>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    const resolved = this._resolveVariant(value, ctx);
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    if ('issues' in resolved) return { data: value, issues: resolved.issues, typeOk: false };
 
-      if (prepared.skip) return prepared.value as unknown as InferVariantMap<K, M>;
+    const result = await resolved.matched._parseFullAsync(value, ctx);
 
-      const resolved = this._resolveVariant(prepared.value, c);
-
-      if ('issues' in resolved) throw new SpellValidationError(resolved.issues);
-
-      const branch = await resolved.matched.safeParseAsync(prepared.value, c);
-
-      if (!branch.success) throw branch.error;
-
-      const validationIssues = await this._runValidatorsAsync(branch.data, c);
-
-      if (validationIssues.length > 0) throw new SpellValidationError(validationIssues);
-
-      return this._runPostprocessors(branch.data) as InferVariantMap<K, M>;
-    });
+    return result.issues.length === 0
+      ? { data: result.data, issues: [], typeOk: true }
+      : { data: value, issues: result.issues, typeOk: true };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
@@ -167,13 +135,5 @@ export class VariantSchema<
     }
 
     return { ...this._describeBase(), branches, discriminator: this._discriminator, kind: 'variant' };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const branches = objectFromEntries([...this._map.entries()].map(([k, s]) => [k, s.walk(visitor)]));
-
-    if (visitor.variant) return visitor.variant(this, branches);
-
-    return super._walk(visitor);
   }
 }

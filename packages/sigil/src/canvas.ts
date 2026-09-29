@@ -1,3 +1,4 @@
+import { SigilUnsupportedError } from './errors';
 import type { QrCanvasOptions, QrMatrix } from './types';
 
 /**
@@ -20,7 +21,7 @@ export function drawToCanvas(matrix: QrMatrix, canvas: HTMLCanvasElement, option
   canvas.style.height = `${cssSize}px`;
 
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas 2D context unavailable');
+  if (!ctx) throw new SigilUnsupportedError('Canvas 2D context unavailable');
   ctx.scale(dpr, dpr);
   ctx.fillStyle = light;
   ctx.fillRect(0, 0, cssSize, cssSize);

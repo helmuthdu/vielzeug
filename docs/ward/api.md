@@ -13,7 +13,6 @@ description: Ordered authorization rules, typed decisions, immutable policies, a
 | `allow()` / `deny()` | Create role-conditioned rules | Sync | One rule is produced per action |
 | `predicate` | Compose typed synchronous conditions | Sync | Async results throw |
 | `matchesPattern()` | Match exact and wildcard values | Sync | `posts:*` does not match `posts` |
-| `patternCovers()` | Compare pattern coverage | Sync | It does not inspect conditions |
 
 ## Package Entry Point
 
@@ -49,9 +48,10 @@ const ward = createWard<'read', 'posts'>([allow('viewer', 'posts', ['read'])]);
 | --- | --- | --- |
 | `decide(input)` | `WardDecision` | Evaluates and emits one decision event |
 | `checkAll(inputs)` | `WardDecision[]` | Evaluates each input in order |
-| `allowedActions(input)` | `Action[]` | Deduplicates and filters known actions without emitting events |
+| `allowedActions(input)` | `Action[]` | Deduplicates and filters the derived known actions without emitting events |
 | `forPrincipal(principal?)` | `BoundWard` | Binds an immutable principal snapshot |
 | `tap(handler, options?)` | `() => void` | Observes decisions; supports `AbortSignal` |
+| `knownActions` | `readonly Action[]` | Exact allow-side actions derived from the compiled rules, in declaration order |
 | `rules` | `readonly WardRule[]` | Immutable compiled rules |
 
 ---
@@ -63,7 +63,7 @@ allow<Action, Resource, Attributes>(role, resource, actions, options?): WardRule
 deny<Action, Resource, Attributes>(role, resource, actions, options?): WardRule[]
 ```
 
-Return one role-conditioned rule per action.
+Return one role-conditioned rule per action. The role list is stored as declarative `roles` data on each rule, not a condition callback.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
@@ -85,14 +85,13 @@ const rules = [deny('blocked', WILDCARD, [WILDCARD]), allow(['editor', 'admin'],
 ### `predicate`
 
 ```ts
-predicate.hasRole<Attributes>(role)
 predicate.owns<Attributes>(attribute)
 predicate.and<Attributes>(...conditions)
 predicate.or<Attributes>(...conditions)
 predicate.not<Attributes>(condition)
 ```
 
-Returns typed `WardCondition` functions. `owns()` accepts only a string key from the selected attribute type.
+Returns typed `WardCondition` functions. `owns()` accepts only a string key from the selected attribute type. Role checks do not need a predicate — declare `roles` on the rule instead.
 
 ---
 
@@ -100,10 +99,9 @@ Returns typed `WardCondition` functions. `owns()` accepts only a string key from
 
 ```ts
 matchesPattern(pattern: string, value: string): boolean
-patternCovers(broad: string, narrow: string): boolean
 ```
 
-`matchesPattern()` supports exact values, `*`, and namespace wildcards such as `posts:*`. `patternCovers()` compares those pattern sets.
+`matchesPattern()` supports exact values, `*`, and namespace wildcards such as `posts:*`.
 
 ## Types
 
@@ -148,6 +146,7 @@ type WardRule<Action extends string, Resource extends string, Attributes extends
   condition?: WardCondition<Attributes>;
   effect: 'allow' | 'deny';
   resource: WardPattern<Resource>;
+  roles?: readonly string[];
 }>;
 ```
 
@@ -174,7 +173,7 @@ type WardEvent<Action extends string, Resource extends string, Attributes extend
 }>;
 ```
 
-`BoundWard`, `WardAllowedActionsInput`, `BoundWardAllowedActionsInput`, and `BoundWardDecisionInput` expose the corresponding principal-bound method contracts.
+`BoundWard` is `Pick<Ward, 'allowedActions' | 'checkAll' | 'decide'>` for the principal-bound form, and `BoundWardDecisionInput` is the principal-free decision input.
 
 ## Errors
 

@@ -27,7 +27,8 @@ import {
   weightedPipeline,
   wonValue,
 } from '../../core/selectors';
-import { crmData, currentUser, locale } from '../../core/store';
+import { locale } from '../../core/i18n';
+import { crmData, currentUser } from '../../core/store';
 import { openRecordDrawer } from '../components/record-drawer';
 
 function greeting(): string {

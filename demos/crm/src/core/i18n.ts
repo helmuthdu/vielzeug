@@ -1,5 +1,5 @@
 import { createI18n } from '@vielzeug/lingua';
-import { locale } from './store';
+import { createReactiveI18n } from '@vielzeug/lingua/ripple';
 
 const catalogs = {
   de: {
@@ -935,12 +935,16 @@ const catalogs = {
   },
 };
 
-export const i18n = createI18n({ catalogs, locale: 'en' });
-export async function setLocale(next: 'de' | 'en'): Promise<void> {
+export type DemoLocale = keyof typeof catalogs;
+
+const reactive = createReactiveI18n(createI18n({ catalogs, locale: 'en' }));
+
+export const i18n = reactive.i18n;
+/** Single reactive source of truth for the active locale. */
+export const locale = reactive.locale;
+export async function setLocale(next: DemoLocale): Promise<void> {
   await i18n.setLocale(next);
-  locale.value = next;
 }
 export function t(key: string, values?: Record<string, unknown>): string {
-  void locale.value;
-  return i18n.translateDynamic(key, values ? { values } : undefined);
+  return reactive.translateDynamic(key, values ? { values } : undefined);
 }

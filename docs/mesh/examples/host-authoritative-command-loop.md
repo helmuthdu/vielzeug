@@ -81,6 +81,6 @@ guest.send('command', { key: 'volume', op: 'set', value: 8 });
 
 ### Related
 
-- [Getting Started](./getting-started.md)
+- [Pair Two Devices](./pair-two-devices.md)
 - [Usage Guide — Sending and Receiving](../usage.md#sending-and-receiving)
 - [Pulse](/pulse/) — rooms and presence when a server is available

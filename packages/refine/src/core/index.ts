@@ -35,6 +35,7 @@ export {
   type DatePickerControlOptions,
   type DatePickerView,
   formatDisplayDate,
+  handleCalendarGridKeydown,
   type MonthCell,
   parseIso,
   toIsoString,
@@ -116,6 +117,6 @@ export {
   type ListboxDropdownOptions,
   type ListboxDropdownPlacementOptions,
 } from './option-list';
-export { parseStringTriggers } from './parse';
+export { parseOptionalBool, parseStringTriggers } from './parse';
 export { createDropdownPositioner, type DropdownPositionerOptions, type OverlayPositioner } from './positioner';
 export { syncedSignal } from './signals';

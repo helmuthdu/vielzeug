@@ -117,4 +117,33 @@ test.describe('Layout', () => {
       expect(width).toBeLessThanOrEqual(120);
     });
   }
+
+  // Regression coverage for a 2px-height bug: the global preflight `*{box-sizing:border-box}` does
+  // not cross shadow boundaries, so the inner `<input>` fell back to the UA default — border-box
+  // for `input[type=search]` but content-box for a plain input (the `ore-select` trigger), whose
+  // 1px vertical padding then added 2px to every select next to a search field.
+  test('inner input is border-box so search fields and select triggers match height', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      `<div style="display:grid;grid-template-columns:1fr 1fr">
+        <ore-input id="search" type="search" label="Search"></ore-input>
+        <ore-select id="pick" label="Pick"><option value="a">A</option></ore-select>
+      </div>`,
+    );
+
+    const boxSizing = await page.evaluate(() => {
+      const input = (
+        document.getElementById('search') as HTMLElement & { shadowRoot: ShadowRoot }
+      ).shadowRoot.querySelector('input') as HTMLInputElement;
+
+      return getComputedStyle(input).boxSizing;
+    });
+
+    expect(boxSizing).toBe('border-box');
+
+    const heights = await page.evaluate(() =>
+      ['search', 'pick'].map((id) => document.getElementById(id)?.getBoundingClientRect().height),
+    );
+
+    expect(heights[0]).toBe(heights[1]);
+  });
 });

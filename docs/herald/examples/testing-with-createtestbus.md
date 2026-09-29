@@ -50,7 +50,7 @@ describe('cart module', () => {
 
 ### Pitfalls
 
-- `createTestBus()` uses the same synchronous delivery as `createBus()` and records dispatch before listeners run, including dispatches whose listeners throw.
+- `createTestBus()` uses the same synchronous delivery as `createBus()` and records every dispatch through a `tap()` observer, including dispatches whose listeners throw.
 - `emitted(event)` returns every recorded payload in order and returns a copied array.
 - `reset()` clears only recording history; existing listeners remain active.
 - `allEmitted()` omits `__proto__`, `constructor`, and `prototype` keys to keep its plain result object safe. Use `emitted(event)` for those names.

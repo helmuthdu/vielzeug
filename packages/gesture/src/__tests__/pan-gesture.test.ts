@@ -1,3 +1,4 @@
+import { GestureConfigError } from '../errors';
 import { createPanGesture, type PanGesture, type PanGestureOptions } from '../pan-gesture';
 
 describe('createPanGesture', () => {
@@ -94,9 +95,9 @@ describe('createPanGesture', () => {
 
     dispatch('pointermove', { clientX: 0.1 });
     expect(onStart).toHaveBeenCalledOnce();
-    expect(() => createGesture({ activationDistance: -5 })).toThrow(RangeError);
-    expect(() => createGesture({ activationDistance: Number.POSITIVE_INFINITY })).toThrow(RangeError);
-    expect(() => createGesture({ activationDistance: Number.NaN })).toThrow(RangeError);
+    expect(() => createGesture({ activationDistance: -5 })).toThrow(GestureConfigError);
+    expect(() => createGesture({ activationDistance: Number.POSITIVE_INFINITY })).toThrow(GestureConfigError);
+    expect(() => createGesture({ activationDistance: Number.NaN })).toThrow(GestureConfigError);
   });
 
   it('ends an active pan once on pointer release', () => {
@@ -296,7 +297,7 @@ describe('createPanGesture', () => {
   });
 
   it('rejects an invalid fixed axis at creation', () => {
-    expect(() => createGesture({ axis: 'diagonal' as never })).toThrow(RangeError);
+    expect(() => createGesture({ axis: 'diagonal' as never })).toThrow(GestureConfigError);
   });
 
   it('rejects non-primary pointers and secondary buttons for every pointer type', () => {

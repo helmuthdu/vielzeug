@@ -38,7 +38,7 @@ for await (const entry of db.iterate('logs')) {
 }
 console.log('Streamed via iterate():', messages)
 
-const errors = await db.query('logs').equals('level', 'error').toArray()
+const errors = (await db.getAll('logs')).filter((entry) => entry.level === 'error')
 console.log('Errors:', errors.map((e) => e.message))
 console.log('Total logs:', await db.count('logs'))
 

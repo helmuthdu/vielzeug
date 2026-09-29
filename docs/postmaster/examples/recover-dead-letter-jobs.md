@@ -48,9 +48,9 @@ for (const entry of deadLettered) {
 }
 
 // Retry a fixed job back into the queue:
-const result = await postmaster.retry(deadLettered[0].id);
-if (result.status === 'retried') {
-  console.log('retried', result.entry.id);
+const result = await postmaster.requeue(deadLettered[0].id);
+if (result.status === 'requeued') {
+  console.log('requeued', result.entry.id);
 } else {
   console.log('could not retry:', result.status);
 }

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add createPhaseMirror — two-way phase routing for stepped flows",
+      "packageName": "@vielzeug/wayfinder",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wayfinder"
+}

@@ -3,8 +3,8 @@ title: Gesture — Pointer movement primitives
 description: Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles.
 package: gesture
 category: input
-keywords: [pointer, pan, swipe, gesture, touch, drag]
-exports: [createDragGesture, createPanGesture]
+keywords: [pointer, pan, swipe, gesture, touch, drag, long press]
+exports: [createDragGesture, createPanGesture, createLongPress, GestureConfigError]
 related: [refine, dnd, keymap]
 environments: [browser]
 ---
@@ -99,6 +99,7 @@ window.addEventListener('pagehide', () => pan.dispose(), { once: true });
 
 - `createDragGesture()` — unrestricted two-dimensional pointer movement tracking
 - `createPanGesture()` — one-axis pointer movement with direction intent recognition
+- `createLongPress()` — hold recognition with slop cancellation and click swallowing
 - Direction locking — activates only when movement favors the configured axis
 - Configurable pointer capture — own the pointer by default or preserve native targeting
 - Configurable `activationDistance` — tune slop for touch density and component needs

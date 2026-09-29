@@ -1,14 +1,7 @@
-export const EXPORTS = {
-  commerce: ['commerce'],
-  date: ['date'],
-  finance: ['finance'],
-  internet: ['internet'],
-  location: ['location'],
-  lorem: ['lorem'],
-  person: ['person'],
-  seed: ['create-seed', 'mulberry32'],
-  system: ['system'],
-};
+// Category functions are re-exported from the root barrel (ROOT_EXPORTS) and reach
+// consumers through the bound `createIllusion()` instance. Only locale data keeps a
+// dedicated subpath because the root deliberately does not statically import it.
+export const EXPORTS = {};
 
 export const SUBPATH_EXPORTS = {
   'locales': 'locales/index',

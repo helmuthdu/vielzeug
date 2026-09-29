@@ -1,5 +1,6 @@
 import { createI18n } from '@vielzeug/lingua';
-import { computed, fromSubscribable } from '@vielzeug/ripple';
+import { createReactiveI18n } from '@vielzeug/lingua/ripple';
+import { computed } from '@vielzeug/ripple';
 
 // ── Message catalog ──────────────────────────────────────────────────────────
 
@@ -1433,10 +1434,14 @@ const messages = {
 
 // ── Instance ─────────────────────────────────────────────────────────────────
 
-export const i18n = createI18n({
-  catalogs: messages,
-  locale: 'en',
-});
+const reactive = createReactiveI18n(
+  createI18n({
+    catalogs: messages,
+    locale: 'en',
+  }),
+);
+
+export const i18n = reactive.i18n;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1444,24 +1449,13 @@ export function setLocale(locale: 'de' | 'en'): Promise<void> {
   return i18n.setLocale(locale);
 }
 
-// ── Reactive locale (bridges lingua's subscribe() into a ripple signal via flux — the same
-// fromSubscribe-style producer pattern used by core/router.ts and
-// core/catalog.ts / core/orders.ts's query bindings) ─────────────────────────
-
-const localeBinding = fromSubscribable<'de' | 'en'>({
-  getSnapshot: () => i18n.locale as 'de' | 'en',
-  subscribe: (listener) => i18n.subscribe(() => listener()),
-});
-
-export const currentLocale = computed(() => localeBinding.value);
+/** Reactive locale — reading it inside a computed/template registers the dependency. */
+export const currentLocale = computed<'de' | 'en'>(() => (reactive.locale.value === 'de' ? 'de' : 'en'));
 
 /**
- * `i18n.translateDynamic()` itself isn't a ripple-reactive read — reading `currentLocale.value` here (even
- * though its value is unused) registers that dependency on every caller's behalf, so any
- * template binding built on `t()` re-evaluates the instant `setLocale()` runs.
+ * Locale-reactive translate: `reactive.translateDynamic` reads the reactive locale first, so
+ * any template binding built on `t()` re-evaluates the instant `setLocale()` runs.
  */
 export function t(key: string, vars?: Record<string, unknown>): string {
-  void currentLocale.value;
-
-  return i18n.translateDynamic(key, { values: vars });
+  return reactive.translateDynamic(key, vars ? { values: vars } : undefined);
 }

@@ -1,10 +1,10 @@
 ---
 title: Conduit — Dependency Injection for TypeScript
-description: Dependency-first asynchronous dependency injection with typed tokens, lifecycle scopes, startup validation, and deterministic disposal.
+description: Dependency-first asynchronous dependency injection with typed tokens, child-container scoping, startup validation, and deterministic disposal.
 package: conduit
 category: infrastructure
 keywords: [dependency injection, container, token, lifecycle, scope]
-exports: [createContainer, valueProvider, factoryProvider, disposalSignalToken, token, scope]
+exports: [createContainer, valueProvider, factoryProvider, disposalSignalToken, token]
 related: [courier, vault, rune]
 environments: [browser, node, ssr, deno]
 ---
@@ -89,7 +89,7 @@ await container.dispose();
 - **`valueProvider` / `factoryProvider`**: token-safe immutable registrations
 - **`createContainer`**: validated provider graph
 - **`resolve`**: direct service or typed composition map
-- **`scope`**: explicit request and job ownership
+- **`createScope`**: child containers for request and job ownership
 - **`dispose`**: in-flight-safe resource cleanup
 
 </div>

@@ -28,6 +28,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'postmaster', tagline: 'Durable job outbox' },
       { id: 'pulse', tagline: 'WebSocket client & presence' },
       { id: 'scout', tagline: 'Trigram fuzzy search' },
+      { id: 'tavern', tagline: 'Table session replication over mesh' },
       { id: 'sourcerer', tagline: 'Reactive data sources' },
       { id: 'vault', tagline: 'Browser storage' },
     ],

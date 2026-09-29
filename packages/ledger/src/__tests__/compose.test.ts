@@ -32,7 +32,7 @@ describe('compose()', () => {
       ),
     );
 
-    expect(ledger.state.value.undo).toEqual([{ label: 'multi-edit', meta: undefined }]);
+    expect(ledger.state.getSnapshot().undo).toEqual([{ label: 'multi-edit', meta: undefined }]);
     ledger.dispose();
   });
 
@@ -81,7 +81,7 @@ describe('compose()', () => {
 
       return error.cause.errors.includes(applyFailure) && error.cause.errors.includes(compensationFailure);
     });
-    expect(ledger.state.value.undo).toHaveLength(0);
+    expect(ledger.state.getSnapshot().undo).toHaveLength(0);
     ledger.dispose();
   });
 
@@ -104,7 +104,7 @@ describe('compose()', () => {
 
     await expect(ledger.undo()).rejects.toMatchObject({ cause: expect.any(AggregateError) });
     expect(firstRevert).toHaveBeenCalledOnce();
-    expect(ledger.state.value.undo).toHaveLength(1);
+    expect(ledger.state.getSnapshot().undo).toHaveLength(1);
     ledger.dispose();
   });
 

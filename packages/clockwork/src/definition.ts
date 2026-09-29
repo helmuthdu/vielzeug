@@ -1,5 +1,5 @@
 import { isContextRecord } from './_context.js';
-import { ClockworkError } from './errors.js';
+import { ClockworkDefinitionError } from './errors.js';
 import type { After, Effect, Invoke, MachineConfig, MachineEvent, Transition } from './types.js';
 
 export type CompiledAfter<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
@@ -33,12 +33,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return prototype === Object.prototype || prototype === null;
 };
 
-const fail = (code: ClockworkError['code'], message: string, details: Record<string, unknown>): never => {
-  throw new ClockworkError(code, message, details);
+const fail = (message: string, details: Record<string, unknown>): never => {
+  throw new ClockworkDefinitionError(message, details);
 };
 
 const array = (value: unknown, message: string, details: Record<string, unknown>): readonly unknown[] => {
-  if (!Array.isArray(value)) fail('INVALID_DEFINITION', message, details);
+  if (!Array.isArray(value)) fail(message, details);
 
   return value as readonly unknown[];
 };
@@ -52,7 +52,7 @@ const functions = <Value>(
 
   return values.map((candidate, index) => {
     if (typeof candidate !== 'function') {
-      fail('INVALID_EFFECT', `${phase} entry at index ${index} must be a function`, { ...details, index, phase });
+      fail(`${phase} entry at index ${index} must be a function`, { ...details, index, phase });
     }
 
     return candidate as Value;
@@ -65,7 +65,7 @@ const validateTarget = <State extends string>(
   details: Record<string, unknown>,
 ): State => {
   if (typeof target !== 'string' || !states.has(target as State)) {
-    return fail('UNKNOWN_TARGET', `target "${String(target)}" is not a declared state`, { ...details, target });
+    return fail(`target "${String(target)}" is not a declared state`, { ...details, target });
   }
 
   return target as State;
@@ -76,15 +76,15 @@ const compileTransition = <State extends string, Context extends Record<string, 
   states: ReadonlyMap<State, unknown>,
   details: Record<string, unknown>,
 ): Transition<State, Context, Event> => {
-  const transition = isRecord(input) ? input : fail('INVALID_TRANSITION', 'a transition must be an object', details);
+  const transition = isRecord(input) ? input : fail('a transition must be an object', details);
   const target = validateTarget(states, transition.target, details);
 
   if (transition.guard !== undefined && typeof transition.guard !== 'function') {
-    fail('INVALID_TRANSITION', 'transition guard must be a function', { ...details, phase: 'guard' });
+    fail('transition guard must be a function', { ...details, phase: 'guard' });
   }
 
   if (transition.reduce !== undefined && typeof transition.reduce !== 'function') {
-    fail('INVALID_TRANSITION', 'transition reducer must be a function', { ...details, phase: 'reduce' });
+    fail('transition reducer must be a function', { ...details, phase: 'reduce' });
   }
 
   return {
@@ -105,7 +105,7 @@ const compileTransitions = <State extends string, Context extends Record<string,
 ): readonly Transition<State, Context, Event>[] => {
   const values = Array.isArray(input) ? input : [input];
 
-  if (values.length === 0) fail('INVALID_TRANSITION', 'a transition array must not be empty', details);
+  if (values.length === 0) fail('a transition array must not be empty', details);
 
   return values.map((value, transitionIndex) =>
     compileTransition<State, Context, Event>(value, states, { ...details, transitionIndex }),
@@ -118,13 +118,11 @@ const compileAfter = <State extends string, Context extends Record<string, unkno
   index: number,
   state: State,
 ): CompiledAfter<State, Context, Event> => {
-  const after = isRecord(input)
-    ? input
-    : fail('INVALID_TRANSITION', `state "${state}" after entries must be objects`, { index, state });
+  const after = isRecord(input) ? input : fail(`state "${state}" after entries must be objects`, { index, state });
   const delay = after.delay;
 
   if (typeof delay !== 'number' || !Number.isFinite(delay) || delay < 0 || delay > MAX_TIMER_MS) {
-    fail('INVALID_AFTER_DELAY', `state "${state}" after delay must be between 0 and ${MAX_TIMER_MS}`, {
+    fail(`state "${state}" after delay must be between 0 and ${MAX_TIMER_MS}`, {
       delay,
       index,
       state,
@@ -134,11 +132,11 @@ const compileAfter = <State extends string, Context extends Record<string, unkno
   const details = { delay, index, state };
 
   if (after.guard !== undefined && typeof after.guard !== 'function') {
-    fail('INVALID_TRANSITION', 'after guard must be a function', { ...details, phase: 'guard' });
+    fail('after guard must be a function', { ...details, phase: 'guard' });
   }
 
   if (after.reduce !== undefined && typeof after.reduce !== 'function') {
-    fail('INVALID_TRANSITION', 'after reducer must be a function', { ...details, phase: 'reduce' });
+    fail('after reducer must be a function', { ...details, phase: 'reduce' });
   }
 
   return {
@@ -158,20 +156,18 @@ const compileInvokes = <Context extends Record<string, unknown>, Event extends M
   state: string,
 ): readonly Invoke<Context, Event>[] =>
   array(value, `state "${state}" invoke must be an array`, { state }).map((value, index) => {
-    const candidate = isRecord(value)
-      ? value
-      : fail('INVALID_INVOKE', 'invoke entry must be an object', { index, state });
+    const candidate = isRecord(value) ? value : fail('invoke entry must be an object', { index, state });
 
     if (typeof candidate.src !== 'function') {
-      fail('INVALID_INVOKE', 'invoke src must be a function', { index, phase: 'src', state });
+      fail('invoke src must be a function', { index, phase: 'src', state });
     }
 
     if (candidate.onDone !== undefined && typeof candidate.onDone !== 'function') {
-      fail('INVALID_INVOKE', 'invoke onDone must be a function', { index, phase: 'onDone', state });
+      fail('invoke onDone must be a function', { index, phase: 'onDone', state });
     }
 
     if (candidate.onError !== undefined && typeof candidate.onError !== 'function') {
-      fail('INVALID_INVOKE', 'invoke onError must be a function', { index, phase: 'onError', state });
+      fail('invoke onError must be a function', { index, phase: 'onError', state });
     }
 
     return {
@@ -190,40 +186,34 @@ export const compileDefinition = <
   definition: MachineConfig<State, Context, Event>,
 ): CompiledMachine<State, Context, Event> => {
   const raw = definition as unknown;
-  const machine = isRecord(raw) ? raw : fail('INVALID_DEFINITION', 'machine definition must be an object', {});
-  const rawStates = isRecord(machine.states)
-    ? machine.states
-    : fail('INVALID_DEFINITION', 'machine states must be an object', {});
+  const machine = isRecord(raw) ? raw : fail('machine definition must be an object', {});
+  const rawStates = isRecord(machine.states) ? machine.states : fail('machine states must be an object', {});
   const rawStateEntries = Object.entries(rawStates) as [State, unknown][];
   const rawStateMap = new Map<State, unknown>(rawStateEntries);
 
   if (typeof machine.initial !== 'string' || !rawStateMap.has(machine.initial as State)) {
-    fail('INVALID_INITIAL_STATE', `initial state "${String(machine.initial)}" is not declared`, {
+    fail(`initial state "${String(machine.initial)}" is not declared`, {
       initial: machine.initial,
     });
   }
 
   if (machine.context !== undefined && !isContextRecord(machine.context)) {
-    fail('INVALID_CONTEXT', 'machine context must be a non-array object record', {});
+    fail('machine context must be a non-array object record', {});
   }
 
   const states = new Map<State, CompiledState<State, Context, Event>>();
 
   for (const [state, rawNodeValue] of rawStateEntries) {
-    const rawNode = isRecord(rawNodeValue)
-      ? rawNodeValue
-      : fail('INVALID_DEFINITION', `state "${state}" must be an object`, { state });
+    const rawNode = isRecord(rawNodeValue) ? rawNodeValue : fail(`state "${state}" must be an object`, { state });
 
     if ('states' in rawNode || 'initial' in rawNode) {
-      fail('INVALID_DEFINITION', `state "${state}" must be flat and cannot declare child states`, { state });
+      fail(`state "${state}" must be flat and cannot declare child states`, { state });
     }
 
     const on = new Map<string, readonly Transition<State, Context, Event>[]>();
 
     if (rawNode.on !== undefined) {
-      const rawOn = isRecord(rawNode.on)
-        ? rawNode.on
-        : fail('INVALID_TRANSITION', `state "${state}" on must be an object`, { state });
+      const rawOn = isRecord(rawNode.on) ? rawNode.on : fail(`state "${state}" on must be an object`, { state });
 
       for (const [type, transition] of Object.entries(rawOn)) {
         on.set(type, compileTransitions<State, Context, Event>(transition, rawStateMap, { state, type }));

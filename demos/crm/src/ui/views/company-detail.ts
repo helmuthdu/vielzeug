@@ -14,7 +14,7 @@ import { computed, signal } from '@vielzeug/ripple';
 import { can } from '../../core/auth';
 import { formatAmount, formatDate, formatRelativeDate } from '../../core/format';
 import { t } from '../../core/i18n';
-import { routeHref, router } from '../../core/router';
+import { router } from '../../core/router';
 import {
   companyActivities,
   companyById,
@@ -22,7 +22,8 @@ import {
   companyLeads,
   companyOpportunities,
 } from '../../core/selectors';
-import { crmData, locale } from '../../core/store';
+import { locale } from '../../core/i18n';
+import { crmData } from '../../core/store';
 import { openRecordDialog } from '../components/record-dialog';
 import { openRecordDrawer } from '../components/record-drawer';
 
@@ -85,7 +86,7 @@ define<{ company: string }>('crm-company-detail', {
         () => html`
           <nav class="breadcrumb" aria-label=${() => t('nav.companyProfile')}>
             <a
-              href=${routeHref(router.url('companies'))}
+              href=${router.href('companies')}
               @click=${(event: Event) => {
                 event.preventDefault();
                 void router.navigate({ name: 'companies' });

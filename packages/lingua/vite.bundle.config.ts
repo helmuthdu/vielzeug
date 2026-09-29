@@ -6,4 +6,6 @@ import { getBundleConfig } from '../../vite.config.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(getBundleConfig(__dirname, { fileName: 'lingua', name: 'Lingua' }));
+export default defineConfig(
+  getBundleConfig(__dirname, { external: ['@vielzeug/ripple'], fileName: 'lingua', name: 'Lingua' }),
+);

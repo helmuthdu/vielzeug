@@ -14,14 +14,12 @@ description: Snapshot, catalog, MCP server, and local HTTP host APIs.
 | `createMcpServer` | MCP adapter factory (generic tools) | Sync | Requires catalog and version |
 | `startHttpHost` | Loopback Streamable HTTP host | Async | HTTP remains local-only |
 | `registerRefineTools` | Opt-in Refine tool registration | Sync | Import from `@vielzeug/codex/refine` |
-| `parsePointer` / `parseManifest` / `parseCatalog` / `parseContent` / `parseSearch` | Pure snapshot parsers | Sync | Import from `@vielzeug/codex/advanced`; throw `CodexError` on malformed input |
 
 ## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/codex` | `Catalog`, `SnapshotCatalog`, `loadSnapshot`, MCP server, and HTTP host |
-| `@vielzeug/codex/advanced` | Snapshot parser internals and raw snapshot types |
 | `@vielzeug/codex/refine` | Opt-in Refine component tools (`registerRefineTools`) |
 
 ## Snapshot
@@ -32,7 +30,7 @@ description: Snapshot, catalog, MCP server, and local HTTP host APIs.
 loadSnapshot(snapshotRoot?: string, options?: { validateContents?: boolean }): LoadedSnapshot;
 ```
 
-Loads catalog/search metadata and Refine metadata. `snapshotRoot` defaults to bundled `data/`. Package content chunks stay lazy unless `validateContents: true`; `validateSnapshot()` from `/advanced` is the full-validation shortcut.
+Loads catalog/search metadata and Refine metadata. `snapshotRoot` defaults to bundled `data/`. Package content chunks stay lazy unless `validateContents: true`, which validates every package content chunk during loading.
 
 ### `SnapshotCatalog`
 
@@ -43,21 +41,6 @@ new SnapshotCatalog(snapshot: LoadedSnapshot)
 Provides generic package lookup, docs/source/example/signature access, and deterministic search. Use `SnapshotRefineCatalog` from `/refine` when component methods are needed.
 
 ---
-
-### Snapshot parsers (`@vielzeug/codex/advanced`)
-
-```ts
-validateSnapshot(snapshotRoot?: string): void;
-loadSnapshotDirectory(directory: string, options?: { validateContents?: boolean }): LoadedSnapshot;
-parsePointer(value: unknown): SnapshotPointer;
-parseManifest(value: unknown): SnapshotManifest;
-parseCatalog(value: unknown): CatalogFile;
-parseContent(value: unknown, slug: string): PackageContent;
-parseSearch(value: unknown, catalog: CatalogFile): SearchRecord[];
-parseRefine(value: unknown): CemDeclaration[];
-```
-
-Pure validation parsers used by `loadSnapshot`. Each throws `CodexError` on malformed input. `validateSnapshot` loads and validates every package content chunk — use during generation, integration tests, or explicit artifact verification.
 
 ## MCP
 
@@ -227,7 +210,7 @@ type DocPage = (typeof DOC_PAGES)[number];
 const SNAPSHOT_SCHEMA_VERSION = 1 as const;
 ```
 
-`DOC_PAGES`, `SNAPSHOT_SCHEMA_VERSION`, and raw snapshot types are exported from `/advanced`. CEM types and `RefineCatalog` are exported from `/refine`.
+CEM types and `RefineCatalog` are exported from `/refine`.
 
 ```ts
 interface CemDeclaration {

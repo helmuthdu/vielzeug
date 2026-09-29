@@ -9,7 +9,7 @@ import { define, html } from '@vielzeug/ore';
 import { toast } from '@vielzeug/refine/toast';
 import { travelerProfile, travelPreferences } from '../../core/preferences';
 import { activeRoute } from '../../core/router';
-import { theme } from '../../core/theme';
+import { setTheme, theme } from '../../core/theme';
 import { checkedOf, valueOf } from '../format';
 
 define('account-view', {
@@ -47,7 +47,7 @@ define('account-view', {
                     type="button"
                     class=${() => (theme.value === 'light' ? 'theme-choice is-selected' : 'theme-choice')}
                     @click=${() => {
-                      theme.value = 'light';
+                      setTheme('light');
                     }}>
                     <span class="theme-preview theme-preview--light">
                       <i></i>
@@ -61,7 +61,7 @@ define('account-view', {
                     type="button"
                     class=${() => (theme.value === 'dark' ? 'theme-choice is-selected' : 'theme-choice')}
                     @click=${() => {
-                      theme.value = 'dark';
+                      setTheme('dark');
                     }}>
                     <span class="theme-preview theme-preview--dark">
                       <i></i>

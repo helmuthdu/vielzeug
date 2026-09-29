@@ -12,7 +12,6 @@ export default defineConfig(
       entry: {
         async: resolve(__dirname, 'src/async.ts'),
         index: resolve(__dirname, 'src/index.ts'),
-        subjects: resolve(__dirname, 'src/subjects.ts'),
       },
       name: 'flux',
     }),

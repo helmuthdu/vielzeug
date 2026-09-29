@@ -337,7 +337,7 @@ Makes the direct children of a container element reorderable via drag. Returns a
 - `getKey`: `(element: HTMLElement) => string`, required. Maps each item element to its stable string identity. Children for which `getKey` returns a falsy value are skipped.
 - `scope`: `SortableScope`, default private scope. Connects sortable lists explicitly; containers only exchange items when they share the same scope instance.
 - `handle`: `string`. Valid CSS selector for a drag handle inside each item. Invalid selectors throw `DndError`; an empty selector warns and disables dragging.
-- `keyboard`: `boolean`, default `true`. Enables keyboard reordering with arrow keys plus `Home` and `End`. Events from interactive descendants are ignored unless they match the configured handle.
+- `keyboard`: `boolean`, default `true`. Enables keyboard reordering with arrow keys plus `Home` and `End`, matched through `matchKey` from `@vielzeug/keymap` — modifier chords (e.g. Ctrl+ArrowDown, browser back/forward) are ignored. Events from interactive descendants are ignored unless they match the configured handle.
 - `axis`: `'vertical' | 'horizontal'`, default `'vertical'`. Controls midpoint calculation for placeholder insertion.
 - `autoScroll`: `boolean | AutoScrollOptions`, default `true`. Scrolls near edges; threshold must be finite and non-negative and speed finite and positive.
 - `dragImage`: `HTMLElement | ((id, item, event) => HTMLElement | null | undefined)`. Custom native drag preview passed to `dataTransfer.setDragImage()`. A `null` or `undefined` return skips `setDragImage` entirely.

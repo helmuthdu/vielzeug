@@ -1,4 +1,4 @@
-import { deleteMany, type KeyValueVaultStore, table, ttl, validatorCodec } from '../index';
+import { type KeyValueVaultStore, table, ttl, validatorCodec } from '../index';
 import { createSessionStorage } from '../session-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
@@ -36,13 +36,13 @@ describe('SessionStorage adapter', () => {
     expect(sessionStorage.getItem('SS~other~1')).not.toBeNull();
   });
 
-  test('deleteMany removes matching records (derived helper)', async () => {
+  test('deleteMany removes matching records', async () => {
     await db.putAll('users', [
       { age: 20, id: 1, name: 'Alice' },
       { age: 30, id: 2, name: 'Bob' },
     ]);
 
-    expect(await deleteMany(db, 'users', [2])).toBe(1);
+    expect(await db.deleteMany('users', [2])).toBe(1);
     expect(await db.getAll('users')).toEqual([{ age: 20, id: 1, name: 'Alice' }]);
   });
 

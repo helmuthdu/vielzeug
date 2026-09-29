@@ -14,7 +14,8 @@ description: Reference for Clockwork machine definitions, actors, and types.
 | `Machine.createActor()` | Create a runtime owner | Sync | Fresh and restored actors have different entry behavior |
 | `Actor.send()` | Dispatch an event | Sync | Returns `void`; re-entrant events queue internally |
 | `Actor.subscribe()` | Observe committed snapshots | Sync | Observes only; it does not trace sends or errors |
-| `ClockworkError` | Report definition and snapshot validation failures | Sync | Use `code`, not message text |
+| `Actor.tap()` | Observe transitions, ignores, errors, disposal | Sync | Handler errors are swallowed; it cannot control disposition |
+| `ClockworkError` | Report definition and snapshot validation failures | Sync | Narrow with the error subtypes, not message text |
 
 ## Package Entry Points
 
@@ -34,8 +35,11 @@ Callback parameter types are inferred for inline definitions. Clockwork also exp
 | `MachineSnapshot` | Type |
 | `MachineConfig` | Type |
 | `ClockworkError` | Class |
+| `ClockworkDefinitionError` | Class |
+| `ClockworkSnapshotError` | Class |
+| `ClockworkTransitionLimitError` | Class |
 
-Additional exported types: `ActorErrorContext`, `ActorOptions`, `After`, `Effect`, `EffectArgs`, `EventByType`, `EventType`, `Guard`, `Invoke`, `InvokeArgs`, `MachineEvent`, `Reducer`, `StateNode`, `Transition`, `TransitionInput`, and `TransitionResult`.
+Additional exported types: `ActorErrorContext`, `ActorOptions`, `ActorTapEvent`, `After`, `Effect`, `EffectArgs`, `EventByType`, `EventType`, `Guard`, `Invoke`, `InvokeArgs`, `MachineEvent`, `Reducer`, `StateNode`, `Transition`, `TransitionInput`, and `TransitionResult`.
 
 ## Core Functions
 
@@ -139,7 +143,7 @@ Returns whether a transition exists and its guard passes.
 ### `machine.createActor()`
 
 ```ts
-createActor(options?: ActorOptions<State, Context, Event>): Actor<State, Context, Event>;
+createActor(options?: ActorOptions<State, Context>): Actor<State, Context, Event>;
 ```
 
 Creates an independent actor for event dispatch, timers, invokes, effects, subscriptions, and disposal. A fresh actor starts the initial state's entry effects and resources. An actor restored with `options.snapshot` starts only the restored state's resources: invokes and timers, not entry effects.
@@ -147,20 +151,13 @@ Creates an independent actor for event dispatch, timers, invokes, effects, subsc
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `options.snapshot` | `MachineSnapshot<State, Context>` | Optional restored actor snapshot |
-| `options.maxTransitions` | `number` | Positive queued-transition limit for one synchronous flush |
-| `options.onError` | `(error, context) => void` | Side-channel observation callback for runtime failures |
 
 **Returns:** Disposable `Actor`.
 
 **Example:**
 
 ```ts
-const actor = machine.createActor({
-  onError(error, { phase, state }) {
-    console.error(phase, state, error);
-  },
-  snapshot: { context: {}, state: 'idle' },
-});
+const actor = machine.createActor({ snapshot: { context: {}, state: 'idle' } });
 ```
 
 ## Actor Methods
@@ -208,23 +205,30 @@ dispose(): void;
 [Symbol.dispose](): void;
 ```
 
-Cancels timers and invokes, clears queued events and listeners, and aborts `disposalSignal`.
+Cancels timers and invokes, clears queued events, tappers and listeners, emits a final `dispose` tap event, and aborts `disposalSignal`.
 
 **Returns:** Nothing. Idempotent.
 
-## Error Handling Policy
-
-Machine-execution failures are fail-stop: guard, reducer, effect, invoke, timer, and queued-transition-limit failures dispose the actor. Subscriber failures are observational: Clockwork reports them, continues the stable subscriber snapshot and declared effects, and keeps the actor active.
-
-The optional `onError` callback receives the error and its phase/state context but cannot control disposition. Errors thrown by this observer are swallowed so error reporting cannot change synchronous, timer, or invoke behavior.
+### `actor.tap()`
 
 ```ts
-type ActorErrorContext<State, Event> = {
-  readonly event?: Event;
-  readonly phase: 'effect' | 'invoke' | 'subscriber' | 'transition';
-  readonly state: State;
-};
+tap(
+  handler: (event: ActorTapEvent<State, Context, Event>) => void,
+  options?: { signal?: AbortSignal },
+): () => void;
 ```
+
+Observes actor lifecycle without affecting machine behavior: `{ type: 'transition' | 'ignored' }` carries the event and resulting snapshot, `{ type: 'error' }` carries the error with its `phase`/`state`/`event` context, and `{ type: 'dispose' }` is the final event before tappers are cleared. Handler errors are swallowed. Returns an unsubscribe function.
+
+```ts
+actor.tap((event) => {
+  if (event.type === 'error') console.error(event.phase, event.state, event.error);
+});
+```
+
+## Error Handling Policy
+
+Machine-execution failures are fail-stop: guard, reducer, effect, invoke, timer, and queued-transition-limit failures dispose the actor. The queued-transition limit is a fixed internal guard against runaway loops, not a configurable option. Subscriber failures are observational: Clockwork reports them through `tap()`, continues the stable subscriber snapshot and declared effects, and keeps the actor active. Tap handlers cannot control disposition.
 
 Subscriber iteration uses a stable snapshot: listeners added during notification begin with the next transition.
 
@@ -265,17 +269,40 @@ type Actor<State extends string, Context extends Record<string, unknown>, Event 
   send(event: Event): void;
   readonly snapshot: MachineSnapshot<State, Context>;
   subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
+  tap(
+    handler: (event: ActorTapEvent<State, Context, Event>) => void,
+    options?: { readonly signal?: AbortSignal },
+  ): () => void;
 };
 ```
 
 An actor's `snapshot` is the current plain readonly snapshot.
+
+### `ActorTapEvent<State, Context, Event>`
+
+```ts
+type ActorTapEvent<State, Context, Event> =
+  | (ActorErrorContext<State, Event> & { readonly error: unknown; readonly type: 'error' })
+  | {
+      readonly event: Event | undefined;
+      readonly snapshot: MachineSnapshot<State, Context>;
+      readonly type: 'transition' | 'ignored';
+    }
+  | { readonly type: 'dispose' };
+
+type ActorErrorContext<State, Event> = {
+  readonly event?: Event;
+  readonly phase: 'effect' | 'invoke' | 'subscriber' | 'transition';
+  readonly state: State;
+};
+```
 
 ### `Machine<State, Context, Event>`
 
 ```ts
 type Machine<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   can(snapshot: MachineSnapshot<State, Context>, event: Event): boolean;
-  createActor(options?: ActorOptions<State, Context, Event>): Actor<State, Context, Event>;
+  createActor(options?: ActorOptions<State, Context>): Actor<State, Context, Event>;
   readonly initialSnapshot: MachineSnapshot<State, Context>;
   transition(snapshot: MachineSnapshot<State, Context>, event: Event): TransitionResult<State, Context>;
 };
@@ -287,10 +314,16 @@ A compiled, reusable machine. Its transition lookup is map-based, so unknown or 
 
 ### `ClockworkError`
 
-`ClockworkError` reports invalid definitions, contexts, snapshots, and actor transition limits. It has `code`, `details`, and standard `Error` fields. Use `instanceof ClockworkError` to narrow an unknown error.
+`ClockworkError` is the base class for every Clockwork failure, with `details` and standard `Error` fields. Use `instanceof ClockworkError` to narrow an unknown error. Three subtypes carry the failure category:
+
+| Subtype | Raised when |
+| --- | --- |
+| `ClockworkDefinitionError` | `defineMachine()` rejects an invalid definition (states, transitions, effects, invokes, delays, targets) |
+| `ClockworkSnapshotError` | A snapshot, its context, or a reducer result is not a plain object record, or names an undeclared state |
+| `ClockworkTransitionLimitError` | An actor exceeds the fixed queued-transition limit and disposes itself |
 
 ```ts
-if (error instanceof ClockworkError) {
-  console.error(error.code, error.details);
+if (error instanceof ClockworkDefinitionError) {
+  console.error(error.message, error.details);
 }
 ```

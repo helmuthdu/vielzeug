@@ -1,8 +1,20 @@
 ---
-title: Spell 3.0 Migration
+title: Spell Migration
 ---
 
-# Spell 3.0 Migration
+# Spell Migration
+
+## Spell 3.2
+
+### Schema traversal removed
+
+`schema.walk()` and the `SchemaWalker<R>` visitor type were removed. Schema structure is available through `schema.definition()`, which returns a serializable `SchemaDescriptor` tree, and `fromDefinition()` from `@vielzeug/spell/json` converts it to JSON Schema.
+
+### Execution-mode generics removed
+
+The third `SchemaMode` type parameter on `Schema` and every schema class, plus the `InferSchemaMode`, `MergeSchemaModes`, and `SchemaMode` types and the `schemaMode` symbol, were removed. `checkAsync()` now returns the same schema type instead of flipping a type-level mode. Synchronous parsing of a schema with async checks throws at runtime (`parse() cannot evaluate async checks`) exactly as before, and async checks now compose correctly at any nesting depth — `s.object({ tags: s.array(s.string().checkAsync(fn)) }).parseAsync(...)` previously failed with "Sync parsing cannot evaluate async checks" and now evaluates the nested check.
+
+## Spell 3.0
 
 Spell 3.0 removes duplicate and internal-facing APIs, preserves composite input types, and adds Standard Schema v1 interoperability.
 

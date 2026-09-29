@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: once() method replaces { once } option; drop HeraldConfigError and waitAny guard",
+      "packageName": "@vielzeug/herald",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/herald"
+}

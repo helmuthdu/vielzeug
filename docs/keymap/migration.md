@@ -1,9 +1,41 @@
 ---
 title: Keymap — Migration Guide
-description: Migrate to Keymap 3 ordered bindings, per-binding event control, parser subpath, chord tracing, and stable lifecycle ownership.
+description: Migrate to Keymap 3.1 strict option validation and the shared matchKey matcher, on top of Keymap 3 ordered bindings and parser subpath.
 ---
 
 [[toc]]
+
+## Keymap 3.1
+
+Keymap 3.1 makes invalid configuration fail loudly and exports the shortcut matcher from the root entry point so other packages can share one key vocabulary.
+
+### `chordTimeout` throws instead of warning
+
+A non-positive or non-finite `chordTimeout` previously warned in dev builds and silently fell back to 1000ms. It now throws `KeymapConfigError` at `createKeymap()` time, matching how every sibling package rejects invalid configuration:
+
+```ts
+// Before — warned and used 1000
+createKeymap([], { chordTimeout: -5 });
+
+// After — throws KeymapConfigError
+try {
+  createKeymap([], { chordTimeout: -5 });
+} catch (e) {
+  if (e instanceof KeymapConfigError) {
+    /* fix the option */
+  }
+}
+```
+
+### `matchKey()` on the root entry point
+
+`matchKey(event, pattern, modKey?)` matches a `KeyboardEvent` against one shortcut pattern (`'ArrowDown'`, `'esc'`, `'mod+k'`, `'shift+Home'`) with the same aliases, `mod` resolution, and exact modifier semantics `createKeymap` uses. It never throws — unparseable patterns and multi-step chords return `false`. Use it instead of hand-rolled `event.key === ...` tables in components and other packages:
+
+```ts
+import { matchKey } from '@vielzeug/keymap';
+
+if (matchKey(event, 'mod+k')) openPalette();
+```
 
 ## Keymap 3.0
 

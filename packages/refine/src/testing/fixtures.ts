@@ -34,15 +34,25 @@ const TEMPORAL_UMD = path.join(
 );
 const LUCIDE_UMD = require.resolve('lucide/dist/umd/lucide.js');
 
+// Topological order: each IIFE bundle receives its dependencies as bare globals in its
+// invocation arguments (e.g. sentinel's tail is `})({},Arsenal)`), so a bundle MUST load
+// after every global it consumes. A violation throws ReferenceError at the argument list,
+// which hoists the bundle's own global to `undefined` instead of defining it — downstream
+// refine then fails deep inside with confusing errors like "Cannot read properties of
+// undefined (reading 'captureFocus')". The graph below is read from each dist bundle's own
+// argument list, not from package.json.
+//   sentinel ← Arsenal · focus ← Keymap · ore ← Ripple · orbit ← Arsenal · tempo ← Temporal
+//   dnd ← Keymap, Gesture · refine ← Ore, Ripple, Lucide, Tempo, Focus, Arsenal, Orbit,
+//          Gesture, Sigil, Sentinel, Dnd, Keymap
 const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: TEMPORAL_UMD, shim: 'if(typeof temporal!=="undefined"){window.Temporal=temporal;}' },
   { path: path.join(PKG, 'ripple/dist/ripple.iife.js') },
-  { path: path.join(PKG, 'sentinel/dist/sentinel.iife.js') },
-  { path: path.join(PKG, 'sigil/dist/sigil.iife.js') },
   { path: path.join(PKG, 'arsenal/dist/arsenal.iife.js') },
-  { path: path.join(PKG, 'focus/dist/focus.iife.js') },
-  { path: path.join(PKG, 'gesture/dist/gesture.iife.js') },
   { path: path.join(PKG, 'keymap/dist/keymap.iife.js') },
+  { path: path.join(PKG, 'sigil/dist/sigil.iife.js') },
+  { path: path.join(PKG, 'gesture/dist/gesture.iife.js') },
+  { path: path.join(PKG, 'sentinel/dist/sentinel.iife.js') },
+  { path: path.join(PKG, 'focus/dist/focus.iife.js') },
   { path: path.join(PKG, 'ore/dist/ore.iife.js') },
   { path: path.join(PKG, 'orbit/dist/orbit.iife.js') },
   { path: path.join(PKG, 'tempo/dist/tempo.iife.js') },
@@ -60,7 +70,7 @@ const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
 // Concatenating the files directly in the production cascade order
 // sidesteps needing a real file:// page origin at all.
 const STYLES_DIR = path.join(PKG, 'refine/dist/styles');
-const STYLES_CSS = ['fouc.css', 'preflight.css', 'theme.css', 'animation.css', 'layer.css']
+const STYLES_CSS = ['fouc.css', 'preflight.css', 'theme.css', 'animation.css', 'layers.css']
   .map((name) => readFileSync(path.join(STYLES_DIR, name), 'utf-8'))
   .join('\n');
 

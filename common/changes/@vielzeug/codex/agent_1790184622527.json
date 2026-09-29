@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: drop advanced MCP server entry and internal catalog types",
+      "packageName": "@vielzeug/codex",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

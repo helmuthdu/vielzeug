@@ -4,11 +4,9 @@
  * Use `CourierHttpError.is(e, status?)` to check for a specific HTTP status code.
  */
 export class CourierError extends Error {
-  protected static readonly errorName: string = 'CourierError';
-
   constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
-    this.name = (new.target as typeof CourierError).errorName;
+    this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
@@ -18,7 +16,6 @@ export class CourierError extends Error {
  * Use `CourierHttpError.is(e, status?)` to narrow to a specific status.
  */
 export class CourierHttpError extends CourierError {
-  protected static override readonly errorName = 'CourierHttpError';
   readonly url: string;
   readonly method: string;
   readonly status: number;
@@ -56,7 +53,6 @@ export class CourierHttpError extends CourierError {
  * for a missing `status` field.
  */
 export class CourierNetworkError extends CourierError {
-  protected static override readonly errorName = 'CourierNetworkError';
   readonly url: string;
   readonly method: string;
 
@@ -73,7 +69,6 @@ export class CourierNetworkError extends CourierError {
  * without checking any `kind` discriminant.
  */
 export class CourierTimeoutError extends CourierError {
-  protected static override readonly errorName = 'CourierTimeoutError';
   readonly url: string;
   readonly method: string;
 
@@ -89,7 +84,6 @@ export class CourierTimeoutError extends CourierError {
  * `cancelAll()` / `dispose()`. Safe to ignore in most UI handlers.
  */
 export class CourierAbortError extends CourierError {
-  protected static override readonly errorName = 'CourierAbortError';
   readonly url: string;
   readonly method: string;
 
@@ -106,7 +100,6 @@ export class CourierAbortError extends CourierError {
  * vs. data contract violations without inspecting the error shape.
  */
 export class CourierSchemaValidationError extends CourierError {
-  protected static override readonly errorName = 'CourierSchemaValidationError';
   /** The raw (pre-validation) response body that failed parsing. */
   readonly data: unknown;
 
@@ -118,17 +111,21 @@ export class CourierSchemaValidationError extends CourierError {
 
 /** Thrown when a method is called on a disposed client instance. */
 export class CourierDisposedError extends CourierError {
-  protected static override readonly errorName = 'CourierDisposedError';
-
   constructor(clientName: string) {
     super(`${clientName} disposed`);
   }
 }
 
 /** Thrown when a response body cannot be read or parsed. */
-export class CourierParseError extends CourierError {
-  protected static override readonly errorName = 'CourierParseError';
-}
+export class CourierParseError extends CourierError {}
+
+/**
+ * Thrown when a request configuration is structurally invalid — a GET/HEAD
+ * carrying a body, a raw response paired with a schema, or an out-of-range
+ * timeout. These are caller bugs fixed by editing code, unlike `CourierParseError`,
+ * which reports malformed data arriving over the wire.
+ */
+export class CourierConfigError extends CourierError {}
 
 /**
  * Classify an error thrown by `fetch` or an abort signal into the appropriate

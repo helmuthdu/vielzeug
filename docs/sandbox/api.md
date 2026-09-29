@@ -124,7 +124,7 @@ Sends one object containing one or more state values. Inside the iframe, each ke
 sandbox.setState({ locale: 'en', theme: 'dark' });
 ```
 
-Calling before `render()` resolves can lose the update and emits a development warning.
+Calls made before the document is ready are accumulated instead of dropped: the newest value per key is delivered in one message when the bridge reports ready, and again after each later `render()` so a re-rendered document starts with current state.
 
 #### `updateStyle(id, css)`
 

@@ -6,7 +6,13 @@ import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
 
 import '../../content/icon/icon';
 import '../../feedback/badge/badge';
-import { createDatePickerControl, type DatePickerView, parseIso, toIsoString } from '../../core';
+import {
+  createDatePickerControl,
+  type DatePickerView,
+  handleCalendarGridKeydown,
+  parseIso,
+  toIsoString,
+} from '../../core';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './calendar.css?inline';
@@ -336,84 +342,11 @@ define<OreCalendarProps>(CALENDAR_TAG, {
       ctrl.select(date); // ctrl.select() internally rejects disabled/out-of-range dates
     }
 
-    // ── Day-cell keyboard navigation (full ARIA grid pattern) ─────────────────
+    // ── Cell keyboard navigation (shared ARIA grid pattern) ───────────────────
+    // Day cells activate by their `data-iso`; month/year cells use their closure value.
 
     function handleDayKeydown(e: KeyboardEvent): void {
-      const cell = e.currentTarget as HTMLElement;
-      const grid = cell.closest('.cal-grid-days');
-
-      if (!grid) return;
-
-      const allCells = Array.from(grid.querySelectorAll<HTMLElement>('.cal-cell-day'));
-      const idx = allCells.indexOf(cell);
-
-      if (idx === -1) return;
-
-      let target: HTMLElement | undefined;
-
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleSelectDay(cell.dataset.iso ?? '');
-
-        return;
-      } else if (e.key === 'ArrowRight') {
-        target = allCells[idx + 1];
-      } else if (e.key === 'ArrowLeft') {
-        target = allCells[idx - 1];
-      } else if (e.key === 'ArrowDown') {
-        target = allCells[idx + 7];
-      } else if (e.key === 'ArrowUp') {
-        target = allCells[idx - 7];
-      } else if (e.key === 'Home') {
-        target = allCells[Math.floor(idx / 7) * 7]; // first cell in same row
-      } else if (e.key === 'End') {
-        target = allCells[Math.floor(idx / 7) * 7 + 6]; // last cell in same row
-      } else {
-        return;
-      }
-
-      e.preventDefault();
-      target?.focus();
-    }
-
-    // ── Month/year-cell keyboard navigation (fixed 4-column grid) ─────────────
-
-    function handleGridKeydown(e: KeyboardEvent, cellSelector: string, columns: number, onSelect: () => void): void {
-      const cell = e.currentTarget as HTMLElement;
-      const grid = cell.closest('.cal-grid');
-
-      if (!grid) return;
-
-      const allCells = Array.from(grid.querySelectorAll<HTMLElement>(cellSelector));
-      const idx = allCells.indexOf(cell);
-
-      if (idx === -1) return;
-
-      let target: HTMLElement | undefined;
-
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSelect();
-
-        return;
-      } else if (e.key === 'ArrowRight') {
-        target = allCells[idx + 1];
-      } else if (e.key === 'ArrowLeft') {
-        target = allCells[idx - 1];
-      } else if (e.key === 'ArrowDown') {
-        target = allCells[idx + columns];
-      } else if (e.key === 'ArrowUp') {
-        target = allCells[idx - columns];
-      } else if (e.key === 'Home') {
-        target = allCells[Math.floor(idx / columns) * columns];
-      } else if (e.key === 'End') {
-        target = allCells[Math.min(Math.floor(idx / columns) * columns + columns - 1, allCells.length - 1)];
-      } else {
-        return;
-      }
-
-      e.preventDefault();
-      target?.focus();
+      handleCalendarGridKeydown(e, '.cal-cell-day', 7, (cell) => handleSelectDay(cell.dataset.iso ?? ''));
     }
 
     // ── Host bindings ────────────────────────────────────────────────────────
@@ -607,7 +540,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
                         @click="${() => handleSelectMonth(cell.month)}"
                         @keydown="${(e: KeyboardEvent) =>
-                          handleGridKeydown(e, '.cal-cell-month', 4, () => handleSelectMonth(cell.month))}">
+                          handleCalendarGridKeydown(e, '.cal-cell-month', 4, () => handleSelectMonth(cell.month))}">
                         ${cell.shortLabel}
                       </div>
                     `,
@@ -645,7 +578,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
                         @click="${() => handleSelectYear(cell.year)}"
                         @keydown="${(e: KeyboardEvent) =>
-                          handleGridKeydown(e, '.cal-cell-year', 4, () => handleSelectYear(cell.year))}">
+                          handleCalendarGridKeydown(e, '.cal-cell-year', 4, () => handleSelectYear(cell.year))}">
                         ${String(cell.year)}
                       </div>
                     `,

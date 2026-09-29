@@ -242,6 +242,22 @@ describe('Template: HTML System', () => {
       expect(query('button')?.hasAttribute('disabled')).toBe(false);
     });
 
+    it('should keep sibling boolean bindings aligned around an attribute binding that resolves to null', async () => {
+      const { query } = await mount(() => {
+        const state = signal({ dismissible: true, heading: null as string | null, horizontal: false });
+
+        return html`
+          <div
+            ?horizontal=${() => Boolean(state.value.horizontal)}
+            heading=${() => state.value.heading || null}
+            ?dismissible=${() => state.value.dismissible}></div>
+        `;
+      });
+
+      expect(query('div')?.hasAttribute('horizontal')).toBe(false);
+      expect(query('div')?.hasAttribute('dismissible')).toBe(true);
+    });
+
     it('should support reactive attributes', async () => {
       const { flush, query } = await mount(() => {
         const cls = signal('initial');

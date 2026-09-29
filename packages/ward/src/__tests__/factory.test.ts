@@ -472,35 +472,81 @@ describe('ward: anonymous / null principal', () => {
     expect(allowed(ward, { action: 'read', principal: null, resource: 'posts' })).toBe(true);
   });
 
-  it('can gate access on authenticated principal via condition', () => {
-    const ward = createWard([
-      {
-        action: 'read',
-        condition: ({ principal }) => principal !== null && principal !== undefined,
-        effect: 'allow',
-        resource: 'posts',
-      },
-    ]);
+  it('can gate access on authenticated principal via WILDCARD roles', () => {
+    const ward = createWard([allow(WILDCARD, 'posts', ['read'])]);
 
     expect(allowed(ward, { action: 'read', principal: user('u1', ['viewer']), resource: 'posts' })).toBe(true);
     expect(allowed(ward, { action: 'read', principal: null, resource: 'posts' })).toBe(false);
     expect(allowed(ward, { action: 'read', resource: 'posts' })).toBe(false);
   });
 
-  it('ANONYMOUS constant is exported and usable in conditions', () => {
+  it('ANONYMOUS constant is exported and usable as a declarative role', () => {
     expect(ANONYMOUS).toBe('anonymous');
 
-    const ward = createWard([
-      {
-        action: 'read',
-        condition: ({ principal }) => principal === null || principal === undefined,
-        effect: 'allow',
-        resource: 'public-posts',
-      },
-    ]);
+    const ward = createWard([allow(ANONYMOUS, 'public-posts', ['read'])]);
 
     expect(allowed(ward, { action: 'read', principal: null, resource: 'public-posts' })).toBe(true);
     expect(allowed(ward, { action: 'read', principal: user('u1', ['viewer']), resource: 'public-posts' })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Declarative roles
+// ---------------------------------------------------------------------------
+
+describe('ward: declarative roles', () => {
+  it('matches when the principal holds one of the declared roles', () => {
+    const ward = createWard([{ action: 'read', effect: 'allow', resource: 'posts', roles: ['admin', 'editor'] }]);
+
+    expect(allowed(ward, { action: 'read', principal: user('u1', ['editor']), resource: 'posts' })).toBe(true);
+    expect(allowed(ward, { action: 'read', principal: user('u2', ['viewer']), resource: 'posts' })).toBe(false);
+    expect(allowed(ward, { action: 'read', resource: 'posts' })).toBe(false);
+  });
+
+  it('exposes roles as data on the compiled rule', () => {
+    const ward = createWard([allow('editor', 'posts', ['read'])]);
+
+    expect(ward.rules[0]?.roles).toEqual(['editor']);
+    expect(ward.rules[0]?.condition).toBeUndefined();
+    expect(Object.isFrozen(ward.rules[0]?.roles)).toBe(true);
+  });
+
+  it('combines declarative roles with a condition callback', () => {
+    const ward = createWard([allow('editor', 'posts', ['update'], { when: predicate.owns('ownerId') })]);
+
+    expect(
+      allowed(ward, {
+        action: 'update',
+        attributes: { ownerId: 'u1' },
+        principal: user('u1', ['editor']),
+        resource: 'posts',
+      }),
+    ).toBe(true);
+    expect(
+      allowed(ward, {
+        action: 'update',
+        attributes: { ownerId: 'u1' },
+        principal: user('u1', ['viewer']),
+        resource: 'posts',
+      }),
+    ).toBe(false);
+    expect(
+      allowed(ward, {
+        action: 'update',
+        attributes: { ownerId: 'u2' },
+        principal: user('u1', ['editor']),
+        resource: 'posts',
+      }),
+    ).toBe(false);
+  });
+
+  it('rejects malformed roles', () => {
+    expect(() => createWard([{ action: 'read', effect: 'allow', resource: 'posts', roles: [''] }])).toThrow(
+      'Rule[0].roles must be an array of non-empty strings',
+    );
+    expect(() =>
+      createWard([{ action: 'read', effect: 'allow', resource: 'posts', roles: 'editor' as never }]),
+    ).toThrow(WardConfigError);
   });
 });
 
@@ -781,10 +827,7 @@ describe('ward: ergonomic decision APIs', () => {
         ])
         .map((decision) => decision.effect),
     ).toEqual(['allow', 'deny']);
-    expect(ward.allowedActions({ knownActions: ['read', 'update', 'delete'], principal, resource: 'posts' })).toEqual([
-      'read',
-      'update',
-    ]);
+    expect(ward.allowedActions({ principal, resource: 'posts' })).toEqual(['read', 'update']);
   });
 
   it('binds an immutable principal snapshot', () => {
@@ -794,7 +837,7 @@ describe('ward: ergonomic decision APIs', () => {
     principal.roles[0] = 'viewer';
 
     expect(bound.decide({ action: 'read', resource: 'posts' }).effect).toBe('allow');
-    expect(bound.allowedActions({ knownActions: ['read', 'update'], resource: 'posts' })).toEqual(['read']);
+    expect(bound.allowedActions({ resource: 'posts' })).toEqual(['read']);
   });
 
   it('emits typed decisions and supports unsubscribe and abort', () => {

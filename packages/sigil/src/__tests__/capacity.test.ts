@@ -73,9 +73,23 @@ describe('capacity', () => {
     expect(() => encodeQr('abc', { mode: 'alphanumeric' })).toThrow(SigilOptionError);
   });
 
-  it('accepts Uint8Array input', () => {
+  it('accepts Uint8Array input as raw byte mode', () => {
     const m = encodeQr(new TextEncoder().encode('hello'));
     expect(m.mode).toBe('byte');
     expect(m.version).toBe(1);
+  });
+
+  it('rejects Uint8Array input with a forced non-byte mode', () => {
+    expect(() => encodeQr(new Uint8Array([49]), { mode: 'numeric' })).toThrow(SigilOptionError);
+  });
+
+  it('counts bytes (not decoded chars) in capacity errors for binary input', () => {
+    try {
+      encodeQr(new Uint8Array(20).fill(0xff), { version: 1 });
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(SigilCapacityError);
+      expect((error as SigilCapacityError).bytes).toBe(20);
+    }
   });
 });

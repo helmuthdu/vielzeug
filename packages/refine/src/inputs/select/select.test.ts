@@ -70,6 +70,88 @@ describe('ore-select', () => {
       expect(groups?.length).toBeGreaterThan(0);
     });
 
+    it('renders option icons from data-icon attributes', async () => {
+      fixture = await mount('ore-select', {
+        html: `
+          <option value="apple" data-icon="apple">Apple</option>
+          <option value="banana" data-icon="banana">Banana</option>
+          <option value="cherry">Cherry</option>
+        `,
+      });
+
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      await fixture.flush();
+
+      const icons = fixture.query('.dropdown')?.querySelectorAll('ore-icon.option-icon');
+
+      expect(icons?.length).toBe(2);
+      expect(icons?.[0]?.getAttribute('name')).toBe('apple');
+      expect(icons?.[1]?.getAttribute('name')).toBe('banana');
+    });
+
+    it('renders option icons from structured options', async () => {
+      fixture = await mount('ore-select', {});
+      const select = fixture.element as HTMLElement & { options: OreSelectOptionInput[] };
+      select.options = [
+        { icon: 'flag', label: 'Flagged', value: 'flagged' },
+        { label: 'Plain', value: 'plain' },
+      ];
+
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      await fixture.flush();
+
+      const icons = fixture.query('.dropdown')?.querySelectorAll('ore-icon.option-icon');
+
+      expect(icons?.length).toBe(1);
+      expect(icons?.[0]?.getAttribute('name')).toBe('flag');
+    });
+
+    it('renders image icons for URL-like icon sources', async () => {
+      fixture = await mount('ore-select', {});
+      const select = fixture.element as HTMLElement & { options: OreSelectOptionInput[] };
+      select.options = [
+        { icon: '/resources/fire.svg', label: 'Fire', value: 'fire' },
+        { icon: 'flame', label: 'Flame', value: 'flame' },
+      ];
+
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      await fixture.flush();
+
+      const image = fixture.query('.dropdown')?.querySelector('img.option-icon--image');
+      const lucide = fixture.query('.dropdown')?.querySelector('ore-icon.option-icon');
+
+      expect(image?.getAttribute('src')).toBe('/resources/fire.svg');
+      expect(lucide?.getAttribute('name')).toBe('flame');
+    });
+
+    it('renders multiple icons per option from space-separated and array sources', async () => {
+      fixture = await mount('ore-select', {
+        html: `
+          <option value="mix" data-icon="/resources/blood.svg /resources/bones.svg">Blood + Bones</option>
+        `,
+      });
+      const select = fixture.element as HTMLElement & { options: OreSelectOptionInput[] };
+
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      await fixture.flush();
+
+      const slotted = fixture.query('.dropdown')?.querySelectorAll('.option-icons img.option-icon--image');
+
+      expect(slotted?.length).toBe(2);
+      expect(slotted?.[0]?.getAttribute('src')).toBe('/resources/blood.svg');
+      expect(slotted?.[1]?.getAttribute('src')).toBe('/resources/bones.svg');
+
+      fireKeyDown(fixture.query<HTMLElement>('ore-input.trigger')!, { key: 'Escape' });
+      select.options = [{ icon: ['/resources/fire.svg', 'flame'], label: 'Fire + Flame', value: 'mix' }];
+
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      await fixture.flush();
+
+      const structured = fixture.query('.dropdown')?.querySelector('.option-icons');
+
+      expect(structured?.querySelectorAll('img.option-icon--image, ore-icon.option-icon').length).toBe(2);
+    });
+
     it('renders placeholder text when no value selected', async () => {
       fixture = await mount('ore-select', {
         attrs: { placeholder: 'Select item' },
@@ -168,6 +250,31 @@ describe('ore-select', () => {
       const input = fixture.query('ore-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input');
 
       expect(input?.value).toBe('Apple');
+    });
+
+    it('shows the selected option icon in the trigger', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { value: 'apple' },
+        html: `
+          <option value="apple" data-icon="/fruits/apple.svg">Apple</option>
+          <option value="banana" data-icon="banana">Banana</option>
+        `,
+      });
+      await fixture.flush();
+
+      const trigger = fixture.query('ore-input.trigger');
+      const image = trigger?.querySelector('img.trigger-selected-icon--image');
+
+      expect(image?.getAttribute('src')).toBe('/fruits/apple.svg');
+
+      fixture.element.value = 'banana';
+      await fixture.flush();
+
+      const lucide = trigger?.querySelector('ore-icon.trigger-selected-icon');
+      const gone = trigger?.querySelector('img.trigger-selected-icon--image');
+
+      expect(lucide?.getAttribute('name')).toBe('banana');
+      expect(gone).toBeNull();
     });
 
     it('opens dropdown when clicked', async () => {

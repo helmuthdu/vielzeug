@@ -5,6 +5,38 @@ description: Migrate Scout index configuration and corpus updates to Scout.
 
 [[toc]]
 
+## Scout 3.1 Changes
+
+Scout 3.1 trims the observation surface and aligns error naming with the rest of the monorepo.
+
+### `tap()` no longer emits `dispose`
+
+The `{ type: 'dispose' }` event duplicated `disposed` and `disposalSignal`. `ScoutEvent<T>` is now a single `state-change` shape. Observe disposal through the signal instead:
+
+```ts
+// Before
+search.tap((event) => {
+  if (event.type === 'dispose') cleanup();
+});
+
+// After
+search.disposalSignal.addEventListener('abort', cleanup);
+```
+
+### `ScoutConfigurationError` is renamed
+
+The config error is now `ScoutConfigError`, matching the `<Pkg>ConfigError` name used across the monorepo.
+
+```ts
+// Before
+import { ScoutConfigurationError } from '@vielzeug/scout';
+
+// After
+import { ScoutConfigError } from '@vielzeug/scout';
+```
+
+---
+
 ## Scout 3 Changes
 
 Scout 3 replaces per-property Ripple signals with one framework-neutral external store. This is a breaking change: use `setQuery()` for writes and read `query`, `isSearching`, and `results` together through `getSnapshot()`.

@@ -5,15 +5,15 @@ import {
   ConduitDuplicateRegistrationError,
   ConduitError,
   ConduitProviderNotFoundError,
-  ConduitScopedResolutionError,
 } from './errors.js';
 import type {
+  AnyProvider,
   Container,
+  CreateScopeOptions,
   FactoryProvider,
   InferServices,
   Lifetime,
   Provider,
-  ScopeToken,
   ServiceMap,
   Token,
   ValueProvider,
@@ -52,20 +52,14 @@ class ContainerImpl implements Container {
   #owned: OwnedResource[] = [];
   #parent?: ContainerImpl;
   #registry = new Map<Token<unknown>, Registration<unknown>>();
-  #scope?: ScopeToken;
   readonly name: string;
 
-  constructor(
-    parent: ContainerImpl | undefined,
-    providers: readonly Provider<any, any>[],
-    options: { name?: string; scope?: ScopeToken },
-  ) {
+  constructor(parent: ContainerImpl | undefined, providers: readonly AnyProvider[], options: CreateScopeOptions) {
     this.#parent = parent;
-    this.#scope = options.scope;
 
     if (parent) parent.#children.add(this);
 
-    this.name = options.name ?? (parent ? `${parent.name}:${options.scope?.description ?? 'child'}` : 'root');
+    this.name = options.name ?? (parent ? `${parent.name}:child` : 'root');
     this.#registry.set(disposalSignalToken, { kind: 'value', value: this.disposalSignal });
 
     try {
@@ -119,13 +113,10 @@ class ContainerImpl implements Container {
     return services;
   }
 
-  createScope(
-    scope?: ScopeToken,
-    options?: { readonly name?: string; readonly providers?: readonly Provider<any, any>[] },
-  ): Container {
+  createScope(options: CreateScopeOptions = {}): Container {
     this.#assertActive();
 
-    return new ContainerImpl(this, options?.providers ?? [], { name: options?.name, scope });
+    return new ContainerImpl(this, options.providers ?? [], { name: options.name });
   }
 
   dispose(): Promise<void> {
@@ -189,7 +180,7 @@ class ContainerImpl implements Container {
     if (this.#registry.has(token)) throw new ConduitDuplicateRegistrationError(token);
   }
 
-  #registerProviders(providers: readonly Provider<any, any>[]): void {
+  #registerProviders(providers: readonly AnyProvider[]): void {
     if (!Array.isArray(providers)) throw new ConduitError('Container providers must be an array');
 
     for (const input of providers) {
@@ -232,12 +223,7 @@ class ContainerImpl implements Container {
         if (typeof factory.factory !== 'function') {
           throw new ConduitError(`Factory provider "${provider.token.description ?? 'anonymous'}" requires a factory`);
         }
-        if (
-          factory.lifetime !== undefined &&
-          factory.lifetime !== 'singleton' &&
-          factory.lifetime !== 'transient' &&
-          typeof factory.lifetime !== 'symbol'
-        ) {
+        if (factory.lifetime !== undefined && factory.lifetime !== 'singleton' && factory.lifetime !== 'transient') {
           throw new ConduitError(
             `Factory provider "${provider.token.description ?? 'anonymous'}" has an invalid lifetime`,
           );
@@ -316,16 +302,6 @@ class ContainerImpl implements Container {
             `Singleton "${token.description ?? 'anonymous'}" cannot depend on a transient factory`,
           );
         }
-        if (registration.lifetime === 'singleton' && typeof found.registration.lifetime === 'symbol') {
-          throw new ConduitScopedResolutionError(token, found.registration.lifetime);
-        }
-        if (
-          typeof registration.lifetime === 'symbol' &&
-          typeof found.registration.lifetime === 'symbol' &&
-          registration.lifetime !== found.registration.lifetime
-        ) {
-          throw new ConduitScopedResolutionError(token, found.registration.lifetime);
-        }
 
         found.owner.#validatePath(dependency, found.registration, visiting, [...path, token]);
       }
@@ -345,12 +321,11 @@ class ContainerImpl implements Container {
 
     if (registration.kind === 'value') return registration.value as T;
 
-    const owner = this.#ownerFor(found.owner, registration, token);
-
     if (registration.lifetime === 'transient') {
-      return owner.#track(owner.#create(registration, owner, [...path, token])) as Promise<T>;
+      return this.#track(this.#create(registration, this, [...path, token])) as Promise<T>;
     }
 
+    const owner = found.owner;
     const existing = owner.#cache.get(registration);
 
     if (existing?.resolved) return existing.value as T;
@@ -373,23 +348,6 @@ class ContainerImpl implements Container {
     owner.#cache.set(registration, entry);
 
     return entry.promise as Promise<T>;
-  }
-
-  #ownerFor(owner: ContainerImpl, registration: FactoryRegistration, token: Token<unknown>): ContainerImpl {
-    if (registration.lifetime === 'singleton') return owner;
-    if (registration.lifetime === 'transient') return this;
-
-    const scopeOwner = this.#scopeOwner(registration.lifetime as ScopeToken);
-
-    if (!scopeOwner) throw new ConduitScopedResolutionError(token, registration.lifetime as ScopeToken);
-
-    return scopeOwner;
-  }
-
-  #scopeOwner(scope: ScopeToken): ContainerImpl | undefined {
-    if (this.#scope === scope) return this;
-
-    return this.#parent ? this.#parent.#scopeOwner(scope) : undefined;
   }
 
   #track<T>(promise: Promise<T>): Promise<T> {
@@ -424,9 +382,6 @@ class ContainerImpl implements Container {
   }
 }
 
-export function createContainer(
-  providers: readonly Provider<any, any>[],
-  options?: { readonly name?: string },
-): Container {
+export function createContainer(providers: readonly AnyProvider[], options?: { readonly name?: string }): Container {
   return new ContainerImpl(undefined, providers, { name: options?.name });
 }

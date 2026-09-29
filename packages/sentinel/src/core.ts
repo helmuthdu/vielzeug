@@ -1,4 +1,7 @@
-import type { Sentinel, SentinelOptions, Unsubscribe } from './types.ts';
+import { type Tapper, tapper } from '@vielzeug/arsenal';
+
+import { SentinelError } from './errors.ts';
+import type { Sentinel, SentinelEvent, SentinelOptions, Unsubscribe } from './types.ts';
 
 export interface CreateSentinelOptions<T> extends SentinelOptions {
   readonly initialValue: T;
@@ -20,16 +23,15 @@ class SentinelHandle<T> implements Sentinel<T> {
   private disposedValue = false;
   private externalSignal: AbortSignal | undefined;
   private externalAbortListener: (() => void) | undefined;
+  private readonly tapper: Tapper<SentinelEvent> = tapper<SentinelEvent>();
 
   constructor(options: CreateSentinelOptions<T>, setup: (update: (value: T) => void) => () => void) {
+    if (options.signal?.aborted) {
+      throw new SentinelError('Sentinel signal is already aborted');
+    }
+
     this.currentValue = options.initialValue;
     this.disposalSignal = this.abortController.signal;
-
-    if (options.signal?.aborted) {
-      this.disposedValue = true;
-      this.abortController.abort();
-      return;
-    }
 
     try {
       this.cleanup = setup((value) => {
@@ -80,15 +82,21 @@ class SentinelHandle<T> implements Sentinel<T> {
     try {
       cleanup?.();
     } finally {
+      this.tapper.emit({ type: 'dispose' });
+      this.tapper.clear();
       this.abortController.abort();
     }
   };
+
+  readonly tap = (handler: (event: SentinelEvent) => void, options?: { readonly signal?: AbortSignal }): Unsubscribe =>
+    this.tapper.tap(handler, options);
 
   private notify(): void {
     for (const listener of [...this.listeners]) {
       try {
         listener();
       } catch (error) {
+        this.tapper.emit({ error, type: 'error' });
         queueMicrotask(() => {
           throw error;
         });

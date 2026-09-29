@@ -1,4 +1,4 @@
-import { ScoutConfigurationError } from './errors';
+import { ScoutConfigError } from './errors';
 import { findMatchRanges } from './highlight';
 import { defaultStringify, tokenize } from './tokenize';
 import { generateTrigrams, overlapSimilarity } from './trigram';
@@ -75,7 +75,7 @@ export interface ScoutIndex<T> {
 
 function requireFiniteInteger(value: number, name: string, minimum: number): number {
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < minimum) {
-    throw new ScoutConfigurationError(`${name} must be a finite integer greater than or equal to ${minimum}.`);
+    throw new ScoutConfigError(`${name} must be a finite integer greater than or equal to ${minimum}.`);
   }
 
   return value;
@@ -83,7 +83,7 @@ function requireFiniteInteger(value: number, name: string, minimum: number): num
 
 function requireFiniteNumber(value: number, name: string, minimum: number, maximum = Number.POSITIVE_INFINITY): number {
   if (!Number.isFinite(value) || value < minimum || value > maximum) {
-    throw new ScoutConfigurationError(`${name} must be a finite number between ${minimum} and ${maximum}.`);
+    throw new ScoutConfigError(`${name} must be a finite number between ${minimum} and ${maximum}.`);
   }
 
   return value;
@@ -120,11 +120,11 @@ function resolveFields<T>(defs: ReadonlyArray<FieldDef<T>>): FieldConfig<T>[] {
  * const results = index.search('alice');
  * ```
  *
- * @throws {ScoutConfigurationError} If options use an invalid field or numeric configuration.
+ * @throws {ScoutConfigError} If options use an invalid field or numeric configuration.
  */
 export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T> {
   if (options.fields.length === 0) {
-    throw new ScoutConfigurationError('createIndex: at least one field is required.');
+    throw new ScoutConfigError('createIndex: at least one field is required.');
   }
 
   const fields = resolveFields(options.fields);

@@ -28,6 +28,11 @@
       "require": "./dist/format.cjs",
       "types": "./dist/format.d.ts"
     },
+    "./ripple": {
+      "import": "./dist/ripple.js",
+      "require": "./dist/ripple.cjs",
+      "types": "./dist/ripple.d.ts"
+    },
     "./validate": {
       "import": "./dist/validate.js",
       "require": "./dist/validate.cjs",
@@ -38,6 +43,9 @@
     "*": {
       "format": [
         "dist/format.d.ts"
+      ],
+      "ripple": [
+        "dist/ripple.d.ts"
       ],
       "validate": [
         "dist/validate.d.ts"
@@ -61,10 +69,19 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify:exports": "node ./scripts/verify-exports.mjs"
   },
+  "peerDependencies": {
+    "@vielzeug/ripple": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@vielzeug/ripple": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
+    "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
-    "vite": "^8.2.2",
-    "vitest": "^5.0.0"
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   }
 }

@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { ScrollConfigurationError, ScrollError, ScrollRangeError } from '../errors';
+import { ScrollConfigError, ScrollError, ScrollRangeError } from '../errors';
 
 describe('ScrollError — base class', () => {
   it('sets .name to the concrete class name', () => {
-    expect(new ScrollConfigurationError('invalid option').name).toBe('ScrollConfigurationError');
+    expect(new ScrollConfigError('invalid option').name).toBe('ScrollConfigError');
     expect(new ScrollError('boom').name).toBe('ScrollError');
     expect(new ScrollRangeError('out of range').name).toBe('ScrollRangeError');
   });
 
   it('is an instance of Error', () => {
-    expect(new ScrollConfigurationError('invalid option')).toBeInstanceOf(Error);
+    expect(new ScrollConfigError('invalid option')).toBeInstanceOf(Error);
     expect(new ScrollError('boom')).toBeInstanceOf(Error);
     expect(new ScrollRangeError('out of range')).toBeInstanceOf(Error);
   });

@@ -9,15 +9,13 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createMemory()` | In-memory key-value store | Async API | Import from `/memory`; codecs optional |
+| `createMemory()` | In-memory document store | Async API | Import from `/memory`; codecs optional |
 | `createLocalStorage()` / `createSessionStorage()` | Web Storage-backed key-value stores | Async API | Codecs required; available only where the corresponding Web API exists |
 | `createIndexedDB()` | Browser document store with transactions and cursor iteration | Async API | Import from `/indexeddb`; codecs required |
 | `createSQLite()` | Driver-neutral SQLite document store | Async API over a synchronous driver | Import from `/sqlite`; codecs required |
-| `defineMigration()` | Declarative IndexedDB schema upgrade | Sync | Import from `/indexeddb` |
 | `table()` | Typed record schema | Sync | The key field must be a string or finite number |
 | `validatorCodec()` | Create an identity-encoding codec from a parser | Sync | Spell schemas can also be passed directly |
 | `ttl` | Valid expiration durations | Sync | Durations must be positive |
-| `isExpired()` | Check an expiration timestamp | Sync | Returns `false` when no expiry is set |
 
 ## Package Entry Points
 
@@ -27,7 +25,7 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 | `@vielzeug/vault/memory` | `createMemory` |
 | `@vielzeug/vault/local-storage` | `createLocalStorage` |
 | `@vielzeug/vault/session-storage` | `createSessionStorage` |
-| `@vielzeug/vault/indexeddb` | `createIndexedDB`, `defineMigration`, migrations, and IndexedDB-only types |
+| `@vielzeug/vault/indexeddb` | `createIndexedDB`, the `migrate` upgrade-hook types, and IndexedDB-only types |
 | `@vielzeug/vault/sqlite` | `createSQLite`, the SQLite driver protocol types, and `TransactionContext` |
 
 ## Schemas, Codecs, and TTL
@@ -109,24 +107,6 @@ import { ttl } from '@vielzeug/vault';
 const cacheLifetime = ttl.minutes(5);
 ```
 
----
-
-### `isExpired()`
-
-```ts
-function isExpired(expiresAt: number | undefined): boolean;
-```
-
-Reports whether an expiration timestamp has passed.
-
-**Returns:** `true` when `expiresAt` is defined and no later than the current time.
-
-```ts
-import { isExpired } from '@vielzeug/vault';
-
-if (isExpired(record.expiresAt)) console.log('expired');
-```
-
 ## Factories
 
 Durable factories (LocalStorage, SessionStorage, IndexedDB, SQLite) require `codecs`. Memory may omit them.
@@ -134,17 +114,17 @@ Durable factories (LocalStorage, SessionStorage, IndexedDB, SQLite) require `cod
 ### `createMemory()`
 
 ```ts
-function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>): KeyValueVaultStore<S>;
+function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>): DocumentVaultStore<S>;
 ```
 
-Creates an in-memory key-value store. Codecs are optional because memory values never cross a trust boundary.
+Creates an in-memory document store with `batch()` and `iterate()`. `batch()` snapshots the declared tables and restores them when the callback throws. Codecs are optional because memory values never cross a trust boundary.
 
 | Parameter | Description |
 | --- | --- |
 | `schema` | Tables created by `table()` |
 | `codecs` | Optional per-table codecs |
 
-**Returns:** `KeyValueVaultStore<S>`.
+**Returns:** `DocumentVaultStore<S>`.
 
 ```ts
 import { table } from '@vielzeug/vault';
@@ -160,7 +140,6 @@ const store = createMemory({ schema: { users: table<{ id: number; name: string }
 ```ts
 function createLocalStorage<S extends AnySchema>(options: DurableStoreOptions<S> & {
   name: string;
-  onQuotaExceeded?: (table: keyof S, error: VaultQuotaError) => 'ignore' | 'throw';
 }): KeyValueVaultStore<S>;
 ```
 
@@ -171,7 +150,8 @@ Creates a namespaced `localStorage` store. Codecs are required.
 | `schema` | Tables created by `table()` |
 | `codecs` | Required per-table codecs |
 | `name` | Required storage namespace |
-| `onQuotaExceeded` | Handles a Web Storage quota error; returning `'ignore'` drops that write |
+
+A write that exceeds the browser quota rejects with `VaultQuotaError`.
 
 **Returns:** `KeyValueVaultStore<S>`.
 
@@ -193,7 +173,6 @@ const store = createLocalStorage({
 ```ts
 function createSessionStorage<S extends AnySchema>(options: DurableStoreOptions<S> & {
   name: string;
-  onQuotaExceeded?: (table: keyof S, error: VaultQuotaError) => 'ignore' | 'throw';
 }): KeyValueVaultStore<S>;
 ```
 
@@ -232,7 +211,7 @@ Creates an IndexedDB document store with atomic batches, lazy cursor iteration, 
 | `codecs` | Required per-table codecs |
 | `name` | Required database name |
 | `version` | Positive schema version; defaults to `1` |
-| `migrate` | Synchronous upgrade callback for version changes |
+| `migrate` | Synchronous `onupgradeneeded` callback. Object stores and schema-declared indexes are created automatically; use the hook only for deletes or record transforms |
 
 **Returns:** `IndexedDbVaultStore<S>`. Its `getAllByIndex(table, field, value)` method queries a declared IndexedDB index without scanning the full table.
 
@@ -301,7 +280,6 @@ interface KeyValueVaultStore<S extends AnySchema> {
   has(table, key): Promise<boolean>;
   isEmpty(table): Promise<boolean>;
   keys(table, filter?): Promise<VaultKey[]>;
-  query(table): QueryBuilder<Record>;
   update(table, key, changes, ttl?): Promise<Record | undefined>;
   upsert(table, key, update, ttl?): Promise<Record>;
   observe(table, listener, options?): Unsubscribe;
@@ -348,20 +326,20 @@ await store.batch(['users'], async (tx) => {
 for await (const user of store.iterate('users')) console.log(user);
 ```
 
-## Bound and Standalone Helpers
+## Bound Helpers
 
-Convenience operations are bound to every store and transaction context. Standalone forms remain exported from `@vielzeug/vault` for functional composition. `store.query(table)` provides fluent in-memory filtering, ordering, pagination, counting, first-match, and deletion.
+Convenience operations are bound to every store and transaction context. For filtering, ordering, and pagination, compose over `getAll()` — it returns a plain array — or use `iterate()` on document stores and `getAllByIndex()` on IndexedDB for declared equality indexes.
 
 | Helper | Signature | Description |
 | --- | --- | --- |
-| `has()` | `(store, table, key) => Promise<boolean>` | Check whether a record exists |
-| `count()` | `(store, table) => Promise<number>` | Count live records |
-| `isEmpty()` | `(store, table) => Promise<boolean>` | Check whether a table has no live records |
-| `getMany()` | `(store, table, keys) => Promise<(T \| undefined)[]>` | Fetch multiple records by key |
-| `keys()` | `(store, table, filter?) => Promise<VaultKey[]>` | Fetch live primary keys, optionally filtered by record |
-| `deleteMany()` | `(store, table, keys) => Promise<number>` | Delete multiple records, return count |
-| `update()` | `(store, table, key, changes, ttl?) => Promise<T \| undefined>` | Partially update an existing record |
-| `upsert()` | `(store, table, key, fn, ttl?) => Promise<T>` | Read-modify-write with callback |
+| `has()` | `(table, key) => Promise<boolean>` | Check whether a record exists |
+| `count()` | `(table) => Promise<number>` | Count live records |
+| `isEmpty()` | `(table) => Promise<boolean>` | Check whether a table has no live records |
+| `getMany()` | `(table, keys) => Promise<(T \| undefined)[]>` | Fetch multiple records by key |
+| `keys()` | `(table, filter?) => Promise<VaultKey[]>` | Fetch live primary keys, optionally filtered by record |
+| `deleteMany()` | `(table, keys) => Promise<number>` | Delete multiple records, return count |
+| `update()` | `(table, key, changes, ttl?) => Promise<T \| undefined>` | Partially update an existing record |
+| `upsert()` | `(table, key, fn, ttl?) => Promise<T>` | Read-modify-write with callback |
 
 ```ts
 const exists = await store.has('users', 1);
@@ -370,50 +348,11 @@ const [a, b] = await store.getMany('users', [1, 2]);
 const updated = await store.update('users', 1, { name: 'Alice' });
 const result = await store.upsert('users', 99, (existing) => ({ id: 99, name: existing?.name ?? 'Guest' }));
 
-const active = await store.query('users').equals('status', 'active').orderBy('name').limit(20).toArray();
-const activeCount = await store.query('users').equals('status', 'active').count();
-
-// Standalone form when functional composition is preferable:
-const empty = await isEmpty(store, 'users');
+const all = await store.getAll('users');
+const active = all.filter((user) => user.status === 'active').sort((a, b) => a.name.localeCompare(b.name)).slice(0, 20);
 ```
 
 Bound `update()` and `upsert()` are atomic on document stores. Their key-value-store forms are non-atomic convenience operations.
-
-### `QueryBuilder`
-
-```ts
-interface QueryBuilder<T extends object> {
-  equals<K extends keyof T & string>(field: K, value: T[K]): QueryBuilder<T>;
-  filter(predicate: (value: T, index: number, array: readonly T[]) => boolean): QueryBuilder<T>;
-  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
-  offset(count: number): QueryBuilder<T>;
-  limit(count: number): QueryBuilder<T>;
-  count(): Promise<number>;
-  first(): Promise<T | undefined>;
-  delete(): Promise<number>;
-  toArray(): Promise<T[]>;
-}
-```
-
-Queries materialize through `getAll()`. `count()` ignores ordering, offset, and limit. Document-store query deletion and bound bulk mutations execute atomically.
-
-## Migrations
-
-### `defineMigration()`
-
-```ts
-function defineMigration(steps: MigrationStep[]): MigrationFn;
-```
-
-Builds an idempotent IndexedDB migration callback from schema-change steps.
-
-**Returns:** An IndexedDB `MigrationFn`.
-
-```ts
-import { defineMigration } from '@vielzeug/vault/indexeddb';
-
-const migrate = defineMigration([{ field: 'email', table: 'users', type: 'addIndex' }]);
-```
 
 ## Types
 
@@ -470,15 +409,9 @@ type MigrationContext = {
 };
 
 type MigrationFn = (ctx: MigrationContext) => void;
-
-type MigrationStep =
-  | { field: string; table: string; type: 'addIndex' }
-  | { field: string; table: string; type: 'removeIndex' }
-  | { name: string; type: 'addTable' }
-  | { name: string; type: 'removeTable' };
 ```
 
-Import `MigrationContext`, `MigrationFn`, and `MigrationStep` from `@vielzeug/vault/indexeddb`.
+Import `MigrationContext` and `MigrationFn` from `@vielzeug/vault/indexeddb`.
 
 ```ts
 type SQLiteParameter = null | number | string;

@@ -1,6 +1,9 @@
+import { tapper } from '@vielzeug/arsenal';
+
 import { createReadCache } from './_cache.js';
 import {
   CourierAbortError,
+  CourierConfigError,
   CourierDisposedError,
   CourierError,
   CourierHttpError,
@@ -50,6 +53,7 @@ export type CourierEvent =
 
 export {
   CourierAbortError,
+  CourierConfigError,
   CourierDisposedError,
   CourierError,
   CourierHttpError,
@@ -64,35 +68,18 @@ export function createCourier(options: CourierOptions = {}) {
   const { cache: cacheOptions, ...transportOptions } = options;
   const transport = createTransportCore(transportOptions);
   const readCache = createReadCache(cacheOptions);
-  const tapCleanups = new Set<() => void>();
-  const tappers = new Set<(event: CourierEvent) => void>();
+  const tappers = tapper<CourierEvent>();
 
   function emit(event: CourierEvent): void {
     if (tappers.size === 0) return;
-    const snapshot = Object.freeze(event);
 
-    for (const tapper of [...tappers]) {
-      try {
-        tapper(snapshot);
-      } catch {}
-    }
+    tappers.emit(Object.freeze(event));
   }
 
   function tap(handler: (event: CourierEvent) => void, options?: { signal?: AbortSignal }): () => void {
-    if (transport.disposed || options?.signal?.aborted) return () => {};
+    if (transport.disposed) return () => {};
 
-    tappers.add(handler);
-    const remove = (): void => {
-      tappers.delete(handler);
-      tapCleanups.delete(remove);
-      options?.signal?.removeEventListener('abort', remove);
-    };
-
-    if (options?.signal) {
-      tapCleanups.add(remove);
-      options.signal.addEventListener('abort', remove, { once: true });
-    }
-    return remove;
+    return tappers.tap(handler, options);
   }
 
   async function execute<T>(
@@ -175,10 +162,10 @@ export function createCourier(options: CourierOptions = {}) {
     const { body, fetchInit, headers, responseType, schema, signal: extSignal, timeout: cfgTimeout } = config;
 
     if ((m === 'GET' || m === 'HEAD') && body !== undefined) {
-      throw new CourierParseError(`${m} requests cannot include a body`);
+      throw new CourierConfigError(`${m} requests cannot include a body`);
     }
     if (responseType === 'raw' && schema !== undefined) {
-      throw new CourierParseError('Raw responses cannot use a schema');
+      throw new CourierConfigError('Raw responses cannot use a schema');
     }
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
@@ -289,7 +276,6 @@ export function createCourier(options: CourierOptions = {}) {
     dispose() {
       if (transport.disposed) return;
       emit({ type: 'dispose' });
-      for (const cleanup of [...tapCleanups]) cleanup();
       tappers.clear();
       readCache.dispose();
       transport.dispose();

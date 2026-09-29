@@ -3,9 +3,9 @@ export const basicRulesExample = {
 
 // Ordered first-match rules — the first matching rule wins; default deny if none match
 const ward = createWard([
-  { action: WILDCARD, resource: WILDCARD, effect: 'deny', condition: ({ principal }) => principal?.roles.includes('blocked') ?? false },
+  { action: WILDCARD, resource: WILDCARD, effect: 'deny', roles: ['blocked'] },
   { action: 'read',   resource: 'posts', effect: 'allow' },
-  { action: 'update', resource: 'posts', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('editor') ?? false },
+  { action: 'update', resource: 'posts', effect: 'allow', roles: ['editor'] },
 ])
 
 const viewer  = { id: 'u1', roles: ['viewer'] }

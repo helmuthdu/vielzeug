@@ -1,12 +1,10 @@
-import '@vielzeug/refine/avatar';
-import '@vielzeug/refine/button';
-import '@vielzeug/refine/chat-message';
-import '@vielzeug/refine/chip';
-import '@vielzeug/refine/icon';
-import '@vielzeug/refine/message-composer';
+import '@vielzeug/refine/chat-panel';
 
-import { define, getHost, html, onCleanup, onMounted, prop, ref, when } from '@vielzeug/ore';
+import { shouldReduceMotion } from '@vielzeug/necromancer';
+import { define, getHost, html, prop, ref } from '@vielzeug/ore';
+import type { ChatPanelElement, OreChatPanelMessage, OreChatPanelSuggestion } from '@vielzeug/refine/chat-panel';
 import { signal } from '@vielzeug/ripple';
+
 import { currentLocale, t } from '../../core/i18n';
 import type { Model } from '../../core/types';
 
@@ -117,146 +115,82 @@ export function openModelAdvisorChat(event?: Event): void {
   else void customElements.whenDefined(MODEL_ADVISOR_TAG).then(() => queueMicrotask(open));
 }
 
+/**
+ * App-specific wrapper around `ore-chat-panel`. It owns only what is unique to the
+ * model advisor — the scripted replies, per-model/per-locale transcript persistence,
+ * and the "scroll to spec section" action semantics. All presentation, transcript
+ * rendering, suggestions, composer, Escape, and focus handling come from the panel.
+ */
 define<ModelAdvisorProps>(MODEL_ADVISOR_TAG, {
   props: { model: prop.data<Model>() },
   setup(props) {
     const host = getHost() as ModelAdvisorElement;
-    const open = signal(false);
+    const panel = ref<ChatPanelElement>();
     const messages = signal<AdvisorMessage[]>([]);
-    const messageList = ref<HTMLElement>();
-    const panel = ref<HTMLElement>();
-    let returnFocus: HTMLElement | undefined;
+
     const model = () => props.model.value!;
-    const close = (): void => {
-      open.value = false;
-      requestAnimationFrame(() => returnFocus?.focus());
-    };
+    // The panel renders a plain message array; map the advisor's richer shape
+    // (action.section) into the panel's opaque action payload.
+    const panelMessages = (): OreChatPanelMessage[] =>
+      messages.value.map((message) => ({
+        sender: message.sender,
+        text: message.text,
+        ...(message.action ? { action: { label: message.action.label, payload: message.action.section } } : {}),
+      }));
+    const panelSuggestions = (): OreChatPanelSuggestion[] =>
+      (['fit', 'space', 'performance', 'ownership'] as const).map((key) => ({
+        label: t(`modelAdvisor.suggestionLabels.${key}`),
+        value: t(`modelAdvisor.questions.${key}`),
+      }));
+
     host.open = (trigger) => {
       if (!props.model.value) return;
-      returnFocus = trigger;
       messages.value = loadMessages(model());
-      open.value = true;
-      requestAnimationFrame(() => panel.value?.focus());
+      panel.value?.show(trigger);
     };
-    const save = (): void => sessionStorage.setItem(storageKey(model()), JSON.stringify(messages.value));
-    const scrollToLatest = (): void => {
-      requestAnimationFrame(() =>
-        messageList.value?.scrollTo({ behavior: 'auto', top: messageList.value.scrollHeight }),
-      );
-    };
-    const sendMessage = (message: string): void => {
-      const text = message.trim();
-      if (!text) return;
+
+    const onSend = (event: Event): void => {
+      const text = (event as CustomEvent<{ text: string }>).detail.text;
       messages.value = [
         ...messages.value,
         { sender: 'user', text },
         { sender: 'assistant', ...replyFor(text, model()) },
       ];
-      save();
-      scrollToLatest();
+      sessionStorage.setItem(storageKey(model()), JSON.stringify(messages.value));
     };
-    const reset = (): void => {
+
+    const onAction = (event: Event): void => {
+      const section = (event as CustomEvent<{ payload: AdvisorAction['section'] }>).detail.payload;
+      panel.value?.hide();
+      document.getElementById(`model-${section}`)?.scrollIntoView({
+        behavior: shouldReduceMotion('system') ? 'auto' : 'smooth',
+      });
+    };
+
+    const onReset = (): void => {
       messages.value = initialMessages(model());
       sessionStorage.removeItem(storageKey(model()));
     };
-    const followAction = (action: AdvisorAction): void => {
-      close();
-      document.getElementById(`model-${action.section}`)?.scrollIntoView({
-        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      });
-    };
-    const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && open.value) close();
-    };
-    onMounted(() => {
-      document.addEventListener('keydown', closeOnEscape);
-    });
-    onCleanup(() => document.removeEventListener('keydown', closeOnEscape));
 
     return html`
-      <aside
-        class="model-advisor-window"
-        role="region"
-        aria-label=${() => t('modelAdvisor.title')}
-        tabindex="-1"
-        ?hidden=${() => !open.value}
+      <ore-chat-panel
+        label=${() => t('modelAdvisor.title')}
+        labels=${() => ({
+          assistantName: t('modelAdvisor.guide'),
+          close: t('modelAdvisor.close'),
+          composerLabel: t('modelAdvisor.messageLabel'),
+          composerPlaceholder: t('modelAdvisor.placeholder'),
+          conversation: t('modelAdvisor.conversation'),
+          startOver: t('modelAdvisor.startOver'),
+          status: t('modelAdvisor.status'),
+          suggestions: t('modelAdvisor.suggestions'),
+        })}
+        messages=${panelMessages}
         ref=${panel}
-        @keydown=${(event: KeyboardEvent) => {
-          if (event.key === 'Escape') close();
-        }}>
-        <header class="model-advisor__header">
-          <div>
-            <strong>${() => t('modelAdvisor.title')}</strong>
-            <span class="model-advisor__status"><i class="model-advisor__status-dot"></i>${() => t('modelAdvisor.status')}</span>
-          </div>
-          <div class="model-advisor__tools">
-            ${when(
-              () => messages.value.length > 1,
-              () =>
-                html`<ore-button size="sm" variant="text" @click=${reset}>${() => t('modelAdvisor.startOver')}</ore-button>`,
-            )}
-            <ore-button icon-only label=${() => t('modelAdvisor.close')} size="sm" variant="ghost" @click=${close}>
-              <ore-icon name="x" size="17" aria-hidden="true"></ore-icon>
-            </ore-button>
-          </div>
-        </header>
-        <div class="model-advisor__body">
-          <div
-            class="model-advisor__messages"
-            role="log"
-            aria-live="polite"
-            aria-label=${() => t('modelAdvisor.conversation')}
-            ref=${messageList}>
-            ${() =>
-              messages.value.map(
-                (message) => html`
-                  <ore-chat-message sender=${message.sender} name=${message.sender === 'assistant' ? t('modelAdvisor.guide') : null}>
-                    ${
-                      message.sender === 'assistant'
-                        ? html`<ore-avatar slot="avatar" initials="V" size="sm" color="primary"></ore-avatar>`
-                        : ''
-                    }
-                    ${message.text}
-                    ${
-                      message.action
-                        ? html`
-                          <ore-button slot="actions" size="sm" variant="text" @click=${() => followAction(message.action!)}>
-                            ${message.action.label}
-                            <ore-icon slot="suffix" name="arrow-right" size="14" aria-hidden="true"></ore-icon>
-                          </ore-button>
-                        `
-                        : ''
-                    }
-                  </ore-chat-message>
-                `,
-              )}
-          </div>
-          ${when(
-            () => messages.value.length === 1,
-            () => html`
-              <div class="model-advisor__suggestions" role="group" aria-label=${() => t('modelAdvisor.suggestions')}>
-                ${(['fit', 'space', 'performance', 'ownership'] as const).map(
-                  (suggestion) => html`
-                    <ore-chip mode="action" variant="outline" @click=${() => sendMessage(t(`modelAdvisor.questions.${suggestion}`))}>
-                      ${() => t(`modelAdvisor.suggestionLabels.${suggestion}`)}
-                    </ore-chip>
-                  `,
-                )}
-              </div>
-            `,
-          )}
-        </div>
-        <div class="model-advisor__composer">
-          <ore-message-composer
-            color="primary"
-            fullwidth
-            label=${() => t('modelAdvisor.messageLabel')}
-            maxlength="240"
-            placeholder=${() => t('modelAdvisor.placeholder')}
-            variant="flat"
-            @send=${(event: CustomEvent<{ value: string }>) => sendMessage(event.detail.value)}></ore-message-composer>
-        </div>
-      </aside>
+        suggestions=${panelSuggestions}
+        @send=${onSend}
+        @action=${onAction}
+        @reset=${onReset}></ore-chat-panel>
     `;
   },
   shadow: false,

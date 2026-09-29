@@ -4,4 +4,5 @@ export * from './once';
 export * from './pipe';
 export * from './runAll';
 export * from './tap';
+export * from './tapper';
 export * from './throttle';

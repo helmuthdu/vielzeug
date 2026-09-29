@@ -55,32 +55,25 @@ export type UseDialogOptions = {
 export type UseDialogHandle = {
   closeWithAnimation: () => void;
   /**
-   * Dispatch a cancelable `close-request` event on the host. Returns true when
-   * the close is allowed (event not prevented), false when it was cancelled.
+   * Standard backdrop-click-to-close handler. Callers wire it themselves
+   * (`onEvent(dialog, 'click', handleBackdropClick)`) because some overlays — e.g. drawer's
+   * swipe-to-dismiss — need a backdrop handler with extra guards, so it is deliberately not
+   * registered by `mount()`.
    */
-  dispatchCloseRequest: (reason: Exclude<DialogCloseReason, 'programmatic'>) => boolean;
   handleBackdropClick: (e: MouseEvent) => void;
-  handleCancel: (e: Event) => void;
   isOpen: Signal<boolean>;
+  /**
+   * Registers the open-prop watcher and the standard native `close`/`cancel` listeners on the
+   * dialog element (Escape closes via the native `cancel` event). Call inside `onMounted()`.
+   * Backdrop-click-to-close is intentionally left to the caller — see `handleBackdropClick`.
+   */
+  mount: () => void;
   /** The modal dialog controller — open/close/toggle/dispose. */
   overlay: ModalDialogController;
   /**
    * Dispatch `close-request`; if allowed, call `overlay.close()`.
    */
   requestClose: (reason: Exclude<DialogCloseReason, 'programmatic'>) => void;
-  /**
-   * Registers the open-prop watcher AND standard click/cancel event listeners on
-   * the dialog element (backdrop click-to-close, Escape via the native `cancel`
-   * event). Use for components that need standard dialog behavior.
-   * Call inside `onMounted()`.
-   */
-  setupNativeListeners: () => void;
-  /**
-   * Registers only the open-prop watcher (without adding click/cancel listeners).
-   * Use for components like drawer that register their own event handlers.
-   * Call inside `onMounted()`.
-   */
-  watchOpenProp: () => void;
 };
 
 type ModalDialogController = {
@@ -117,6 +110,9 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   });
   // ─────────────────────────────────────────────────────────────────────────
 
+  /** Cancels a pending exit animation so a reopen can keep the dialog open. No-op otherwise. */
+  let cancelExit = (): void => {};
+
   const closeWithAnimation = (): void => {
     const dialog = options.dialogRef.value;
 
@@ -125,7 +121,20 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     isClosing = true;
     dialog.classList.add('closing');
 
+    let settled = false;
+
+    cancelExit = (): void => {
+      if (settled) return;
+
+      settled = true;
+      dialog.classList.remove('closing');
+      isClosing = false;
+    };
+
     const finish = () => {
+      if (settled) return;
+
+      settled = true;
       dialog.close();
       // Do NOT remove 'closing' here — removing it while the native ::backdrop is
       // still held in the top layer by the 'overlay allow-discrete' transition
@@ -171,11 +180,19 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
       overlay.close('programmatic');
     },
     open(reason: OverlayOpenReason = 'programmatic'): void {
-      if (isOpen.value) return;
-
       const dialog = options.dialogRef.value;
 
-      if (!dialog || dialog.open) return;
+      if (dialog?.open) {
+        // A reopen that arrives while the exit animation is still running cancels
+        // the pending close and keeps the dialog open — the open prop is
+        // authoritative, so a quick close→reopen cycle must not end with the
+        // native dialog closed while the prop still says open.
+        cancelExit();
+
+        return;
+      }
+
+      if (!dialog || isOpen.value) return;
 
       // Clean up any leftover 'closing' class from the previous close animation
       // before opening so the entry @starting-style and transition work correctly.
@@ -266,10 +283,13 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     options.onNativeClose?.(reason);
   };
 
-  const watchOpenProp = (): void => {
+  const mount = (): void => {
     const dialog = options.dialogRef.value;
 
-    if (dialog) options.onEvent(dialog, 'close', handleNativeClose);
+    if (!dialog) return;
+
+    options.onEvent(dialog, 'close', handleNativeClose);
+    options.onEvent(dialog, 'cancel', handleCancel);
 
     let initialized = false;
 
@@ -302,25 +322,5 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     );
   };
 
-  const setupNativeListeners = (): void => {
-    const dialog = options.dialogRef.value;
-
-    if (!dialog) return;
-
-    watchOpenProp();
-    options.onEvent(dialog, 'click', handleBackdropClick);
-    options.onEvent(dialog, 'cancel', handleCancel);
-  };
-
-  return {
-    closeWithAnimation,
-    dispatchCloseRequest,
-    handleBackdropClick,
-    handleCancel,
-    isOpen,
-    overlay,
-    requestClose,
-    setupNativeListeners,
-    watchOpenProp,
-  };
+  return { closeWithAnimation, handleBackdropClick, isOpen, mount, overlay, requestClose };
 }

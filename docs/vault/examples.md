@@ -99,7 +99,7 @@ const stop = store.observe('sessions', (sessions) => {
 store.disposalSignal.addEventListener('abort', stop);
 ```
 
-## Bound Helpers and Queries
+## Bound Helpers
 
 ```ts
 console.log(await store.has('sessions', 'current'));
@@ -116,7 +116,7 @@ await store.upsert('sessions', 'temp', (existing) => ({
   token: existing?.token ?? 'generated',
 }));
 
-const current = await store.query('sessions').equals('id', 'current').first();
+const current = (await store.getAll('sessions')).find((session) => session.id === 'current');
 (void a, b, current);
 ```
 
@@ -140,20 +140,24 @@ export function useTable<S extends AnySchema, K extends keyof S & string>(
 
 ## Migration Example
 
+Object stores and schema-declared indexes are created automatically on upgrade. The `migrate` hook covers only what the schema cannot express, such as deleting a removed store or transforming old records.
+
 ```ts
 import { s } from '@vielzeug/spell';
 import { table } from '@vielzeug/vault';
-import { createIndexedDB, defineMigration } from '@vielzeug/vault/indexeddb';
+import { createIndexedDB } from '@vielzeug/vault/indexeddb';
 
 const UserSchema = s.object({ email: s.string().email(), id: s.number() });
-const migrate = defineMigration([
-  { field: 'email', table: 'users', type: 'addIndex' },
-]);
 
 const db = createIndexedDB({
   name: 'app-v2',
   version: 2,
-  migrate,
+  migrate({ db, oldVersion, tx }) {
+    // The 'users' store and its 'email' index already exist; drop a retired store.
+    if (oldVersion < 2 && db.objectStoreNames.contains('legacy_sessions')) {
+      tx.deleteObjectStore('legacy_sessions');
+    }
+  },
   schema: { users: table<{ id: number; email: string }>('id', { indexes: ['email'] }) },
   codecs: { users: UserSchema },
 });
@@ -162,7 +166,6 @@ const db = createIndexedDB({
 ## Recipe Examples
 
 - [CRUD Operations](./examples/crud.md)
-- [Filtering and Pagination](./examples/querying.md)
 - [TTL and Pruning](./examples/ttl.md)
 - [IndexedDB Batch Transactions](./examples/batch.md)
 - [IndexedDB Lazy Iteration](./examples/iterate.md)

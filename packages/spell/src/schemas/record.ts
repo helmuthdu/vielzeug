@@ -1,39 +1,17 @@
-import type {
-  AnySchema,
-  CheckContext,
-  InferInput,
-  InferOutput,
-  InferSchemaMode,
-  Issue,
-  MergeSchemaModes,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
-} from '../core';
+import type { AnySchema, InferInput, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
+import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { defineOwnProperty, isUnsafeObjectKey } from '../safe-object';
 
-export class RecordSchema<
-  K extends AnySchema,
-  V extends AnySchema,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<K | V>>,
-> extends Schema<Record<InferOutput<K> & string, InferOutput<V>>, Record<InferInput<K> & string, InferInput<V>>, Mode> {
+export class RecordSchema<K extends AnySchema, V extends AnySchema> extends Schema<
+  Record<InferOutput<K> & string, InferOutput<V>>,
+  Record<InferInput<K> & string, InferInput<V>>
+> {
   readonly keySchema: K;
   readonly valueSchema: V;
 
   protected override get _kind(): string {
     return 'record';
-  }
-
-  override checkAsync(
-    this: RecordSchema<K, V, 'sync'>,
-    fn: (value: Record<InferOutput<K> & string, InferOutput<V>>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): RecordSchema<K, V, 'async'> {
-    return this._addCheck(fn, true) as unknown as RecordSchema<K, V, 'async'>;
   }
 
   constructor(keySchema: K, valueSchema: V) {
@@ -99,61 +77,45 @@ export class RecordSchema<
     return { data: output, issues, typeOk: true };
   }
 
-  override async parseAsync(
-    value: unknown,
-    ctx?: ParseContext,
-  ): Promise<Record<InferOutput<K> & string, InferOutput<V>>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    const guarded = this._guardRecordInput(value, ctx);
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
-      if (prepared.skip) return prepared.value as unknown as Record<InferOutput<K> & string, InferOutput<V>>;
+    const obj = guarded.value;
+    const keys = Object.keys(obj);
+    const settled = await Promise.all(
+      keys.map((key) =>
+        Promise.all([this.keySchema._parseFullAsync(key, ctx), this.valueSchema._parseFullAsync(obj[key], ctx)]),
+      ),
+    );
 
-      const guarded = this._guardRecordInput(prepared.value, c);
+    const issues: Issue[] = [];
+    const output: Record<string, unknown> = {};
 
-      if (!guarded.ok) throw new SpellValidationError(guarded.issues);
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const [keyResult, valResult] = settled[i];
 
-      const obj = guarded.value;
-      const keys = Object.keys(obj);
-      const settled = await Promise.all(
-        keys.map((key) =>
-          Promise.all([this.keySchema._parseFullAsync(key, c), this.valueSchema._parseFullAsync(obj[key], c)]),
-        ),
-      );
-
-      const issues: Issue[] = [];
-      const output: Record<string, unknown> = {};
-
-      for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
-        const [keyResult, valResult] = settled[i];
-
-        if (keyResult.issues.length > 0) {
-          issues.push(...prependIssuePath(keyResult.issues, key));
-          continue;
-        }
-
-        const parsedKey = keyResult.data as string;
-
-        // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
-        // prototype mutation on the output object.
-        if (isUnsafeObjectKey(parsedKey)) continue;
-
-        if (valResult.issues.length === 0) {
-          defineOwnProperty(output, parsedKey, valResult.data);
-        } else {
-          issues.push(...prependIssuePath(valResult.issues, key));
-        }
+      if (keyResult.issues.length > 0) {
+        issues.push(...prependIssuePath(keyResult.issues, key));
+        continue;
       }
 
-      const validationIssues = await this._runValidatorsAsync(output, c);
-      const allIssues = [...issues, ...validationIssues];
+      const parsedKey = keyResult.data as string;
 
-      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
+      // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
+      // prototype mutation on the output object.
+      if (isUnsafeObjectKey(parsedKey)) continue;
 
-      return this._runPostprocessors(output) as Record<InferOutput<K> & string, InferOutput<V>>;
-    });
+      if (valResult.issues.length === 0) {
+        defineOwnProperty(output, parsedKey, valResult.data);
+      } else {
+        issues.push(...prependIssuePath(valResult.issues, key));
+      }
+    }
+
+    return { data: output, issues, typeOk: true };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
@@ -163,14 +125,5 @@ export class RecordSchema<
       kind: 'record',
       value: this.valueSchema.definition(),
     };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const key = this.keySchema.walk(visitor);
-    const value = this.valueSchema.walk(visitor);
-
-    if (visitor.record) return visitor.record(this, key, value);
-
-    return super._walk(visitor);
   }
 }

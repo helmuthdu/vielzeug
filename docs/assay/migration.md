@@ -4,9 +4,21 @@ title: Assay Migration
 
 # Assay Migration
 
+## Assay 3.1
+
+Assay 3.1 removes surfaces with no consumers outside their own tests.
+
+### Removed `nextTick()`
+
+`nextTick()` duplicated `await Promise.resolve()` for a single microtask boundary. Replace calls with `await Promise.resolve()`; keep `delay()` for real timer dependencies.
+
+### Removed live-region helpers
+
+`queryLiveRegion`, `queryAllLiveRegions`, `waitForLiveRegion`, and `waitForLiveRegionCleared` are removed. jsdom cannot prove assistive-technology speech, so these helpers only asserted DOM attributes and text — query them directly with `within(root).get(...)` and `waitUntil()` instead, or test announcement behavior with browser and assistive-technology tooling.
+
 ## Assay 3.0
 
-Assay 3.0 renames retrying assertions, makes wait deadlines hard and cancellable during pending async callbacks, completes live-region matching, and clarifies its synthetic-event confidence boundary.
+Assay 3.0 renames retrying assertions and makes wait deadlines hard and cancellable during pending async callbacks.
 
 ### Replace `retry()` with `eventually()`
 
@@ -36,20 +48,6 @@ Durations are validated:
 - `interval` must be finite and greater than zero.
 - Every duration must be no greater than 2,147,483,647 ms, the platform timer limit.
 - Invalid values throw `RangeError` before waiting starts.
-
-`nextTick()` retains an explicit queued-microtask boundary rather than returning an already-resolved promise.
-
-### Live-region matching
-
-Live-region waits inspect every matching region, so text or an empty state in a later region can satisfy the wait. A supplied live-region root is included when it matches. Implicit roles now include:
-
-| Role | Effective politeness |
-| --- | --- |
-| `alert` | `assertive` |
-| `log` | `polite` |
-| `status` | `polite` |
-| `marquee` | `off` |
-| `timer` | `off` |
 
 ## Assay 2.0
 

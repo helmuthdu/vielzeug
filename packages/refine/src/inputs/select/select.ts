@@ -19,6 +19,7 @@ type OptionItem = {
   disabled: boolean;
   disabledReason?: string;
   group?: string;
+  icons?: string[];
   label: string;
   value: string;
 };
@@ -28,6 +29,8 @@ export type OreSelectOptionInput = {
   /** Explanation displayed and announced when the option is disabled. */
   disabledReason?: string;
   group?: string;
+  /** Icon(s) rendered before the option label — lucide name(s) or image URL(s). */
+  icon?: string | string[];
   label?: string;
   value: string;
 };
@@ -42,6 +45,19 @@ type FlatRow =
       label: string;
       type: 'group';
     };
+
+/**
+ * Icon sources containing a path separator or a `data:` scheme are treated as image URLs and
+ * rendered as `<img>`; anything else is a lucide icon name rendered via `ore-icon`.
+ */
+const isIconImage = (icon: string): boolean => icon.includes('/') || icon.startsWith('data:');
+
+/** Normalizes an icon value — single name/URL, space-separated list, or array — to icon entries. */
+const normalizeIcons = (icon: string | string[] | undefined): string[] | undefined => {
+  const list = Array.isArray(icon) ? icon : icon?.split(' ');
+  const icons = list?.map((entry) => entry.trim()).filter(Boolean);
+  return icons?.length ? icons : undefined;
+};
 
 // ── Styles ─────────────────────────────────────────────────────────────
 
@@ -170,6 +186,7 @@ define<OreSelectProps>(SELECT_TAG, {
         disabled: Boolean(option.disabled),
         disabledReason: option.disabledReason,
         group: option.group,
+        icons: normalizeIcons(option.icon),
         label: option.label ?? option.value,
         value: option.value,
       };
@@ -270,6 +287,7 @@ define<OreSelectProps>(SELECT_TAG, {
           items.push({
             disabled: opt.disabled,
             disabledReason: opt.dataset.disabledReason,
+            icons: normalizeIcons(opt.dataset.icon),
             label: opt.text || opt.value,
             value: opt.value,
           });
@@ -284,6 +302,7 @@ define<OreSelectProps>(SELECT_TAG, {
               disabled: opt.disabled,
               disabledReason: opt.dataset.disabledReason,
               group: groupLabel,
+              icons: normalizeIcons(opt.dataset.icon),
               label: opt.text || opt.value,
               value: opt.value,
             });
@@ -304,6 +323,12 @@ define<OreSelectProps>(SELECT_TAG, {
       const first = selectedValues.value[0];
 
       return options.value.find((o) => o.value === first)?.label ?? first;
+    });
+    const selectedIcons = computed(() => {
+      if (props.multiple.value || selectedValues.value.length === 0) return undefined;
+      const first = selectedValues.value[0];
+
+      return options.value.find((o) => o.value === first)?.icons;
     });
     const selectedChipItems = computed(() => {
       if (!props.multiple.value) return [];
@@ -365,6 +390,9 @@ define<OreSelectProps>(SELECT_TAG, {
     }
 
     function openPopup(reason: OverlayOpenReason = 'programmatic') {
+      // Show the popover before positioning so the positioner measures the element in the top
+      // layer, not inside a possible ancestor containing block (a transformed dialog panel).
+      if (dropdownEl && 'showPopover' in dropdownEl && !dropdownEl.matches(':popover-open')) dropdownEl.showPopover();
       optionList.open(reason);
 
       requestAnimationFrame(() => {
@@ -520,6 +548,19 @@ define<OreSelectProps>(SELECT_TAG, {
         ref="${(el: HTMLElement) => {
           triggerEl = el;
         }}">
+        ${() => {
+          const icons = selectedIcons.value;
+
+          if (!icons?.length) return html``;
+
+          return html`<span class="trigger-selected-icons" slot="prefix">
+            ${icons.map((icon) =>
+              isIconImage(icon)
+                ? html`<img alt="" aria-hidden="true" class="trigger-selected-icon--image" src="${icon}" />`
+                : html`<ore-icon aria-hidden="true" class="trigger-selected-icon" name="${icon}" size="14"></ore-icon>`,
+            )}
+          </span>`;
+        }}
         <div slot="prefix" class="chips-row" ?hidden="${() => !showChips.value}">
           ${() =>
             selectedChipItems.value.map(
@@ -583,6 +624,17 @@ define<OreSelectProps>(SELECT_TAG, {
                       @pointerenter="${() => {
                         optionList.set(row.idx);
                       }}">
+                      ${
+                        row.opt.icons?.length
+                          ? html`<span class="option-icons" aria-hidden="true">
+                              ${row.opt.icons.map((icon) =>
+                                isIconImage(icon)
+                                  ? html`<img alt="" class="option-icon option-icon--image" src="${icon}" />`
+                                  : html`<ore-icon class="option-icon" name="${icon}" size="14"></ore-icon>`,
+                              )}
+                            </span>`
+                          : html``
+                      }
                       <span>${row.opt.label}</span>
                       ${
                         row.opt.disabled && row.opt.disabledReason

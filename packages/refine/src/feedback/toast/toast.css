@@ -157,6 +157,34 @@
     align-self: center;
   }
 
+  /* ── Snackbar (Material-style compact bar) ────────────────────────────── */
+
+  /* The snackbar inverts the surface: the dark end of the contrast ramp in light themes,
+     the light end in dark themes, with the opposite end for text. Compact single-row
+     padding; borderless; real elevation. Actions render as flat text buttons. */
+  .toast-inner.snackbar ore-alert {
+    --alert-bg: var(--toast-snackbar-bg, var(--color-contrast-900));
+    --alert-color: var(--toast-snackbar-color, var(--color-contrast-100));
+    --alert-border-color: transparent;
+    --alert-padding: var(--toast-snackbar-padding, var(--size-2) var(--size-4));
+    --alert-shadow: var(--toast-snackbar-shadow, var(--shadow-lg));
+  }
+
+  /* The bar sizes to its content up to the host's width cap — a short confirmation stays
+     a chip instead of stretching the full notification width. Anchored edges keep it
+     flush with the position's side. */
+  .toast-inner.snackbar {
+    width: fit-content;
+  }
+
+  :host([position$='-right']) .toast-inner.snackbar {
+    margin-inline-start: auto;
+  }
+
+  :host([position$='-center']) .toast-inner.snackbar {
+    margin-inline: auto;
+  }
+
   /* ── Progress ─────────────────────────────────────────────────────────── */
 
   .toast-progress {

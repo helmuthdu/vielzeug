@@ -14,6 +14,8 @@ description: Factory signatures, options, state types, lifecycle handles, and er
 | `createMediaQuery()` | Observe one media query | Sync | Throws when `matchMedia` is unavailable |
 | `createElementSize()` | Observe element content-box dimensions | Sync | Value is `null` before the first delivery |
 | `createIntersection()` | Observe element intersection state | Sync | Value is `null` before the first delivery |
+| `createWakeLock()` | Prevent the screen from sleeping | Async | Degrades silently when the Wake Lock API is unavailable |
+| `createFullscreen()` | Track and drive document fullscreen state | Sync | Degrades silently when the Fullscreen API is unavailable |
 | `Sentinel<T>` | Expose an external-store snapshot with explicit browser-resource ownership | Sync | Call `getSnapshot()` inside subscription listeners |
 | `SentinelError` | Base class for package-defined errors | Sync | Catch a subtype when recovery is specific |
 | `SentinelUnavailableError` | Report an unavailable browser API | Sync | Invalid observer inputs retain their native errors |
@@ -175,14 +177,86 @@ unsubscribe();
 intersection.dispose();
 ```
 
+---
+
+### `createWakeLock()`
+
+```ts
+function createWakeLock(options?: SentinelOptions & { readonly target?: Window }): WakeLockSentinel;
+```
+
+Returns a Sentinel-backed screen wake lock. `request()` acquires the lock; `release()` frees it. When the tab is hidden the browser auto-releases the lock; the Sentinel re-acquires it automatically on `visibilitychange` if the lock was active. Degrades silently when the Screen Wake Lock API is unavailable.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `options.target` | `Window` | Window whose document and navigator are used |
+| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
+
+**Returns:** `WakeLockSentinel`.
+
+**Example**
+
+```ts
+import { createWakeLock } from '@vielzeug/sentinel';
+
+const wakeLock = createWakeLock();
+wakeLock.request();
+
+const unsubscribe = wakeLock.subscribe(() => {
+  console.log('Wake lock active:', wakeLock.getSnapshot().active);
+});
+
+// Later
+wakeLock.release();
+unsubscribe();
+wakeLock.dispose();
+```
+
+---
+
+### `createFullscreen()`
+
+```ts
+function createFullscreen(options?: SentinelOptions & { readonly target?: Window }): FullscreenSentinel;
+```
+
+Returns a Sentinel-backed fullscreen view. `request()` enters fullscreen for an element (default: the document element), `exit()` leaves it, and `toggle()` flips it. All degrade silently when the Fullscreen API is missing or the browser refuses (user-activation requirements). Disposing the sentinel exits fullscreen and stops tracking `fullscreenchange`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `options.target` | `Window` | Window whose document is tracked |
+| `options.signal` | `AbortSignal` | External signal that disposes the Sentinel |
+
+**Returns:** `FullscreenSentinel`.
+
+**Example**
+
+```ts
+import { createFullscreen } from '@vielzeug/sentinel';
+
+const fullscreen = createFullscreen();
+fullscreen.request();
+
+const unsubscribe = fullscreen.subscribe(() => {
+  console.log('Fullscreen active:', fullscreen.getSnapshot().active);
+});
+
+// Later
+fullscreen.toggle();
+unsubscribe();
+fullscreen.dispose();
+```
+
 ## Types
 
 ### `Sentinel<T>`
 
 ```ts
-interface Sentinel<T> extends Readable<T>, Disposable {}
+interface Sentinel<T> extends Subscribable<T>, Disposable {
+  tap(handler: (event: SentinelEvent) => void, options?: { signal?: AbortSignal }): () => void;
+}
 
-interface Readable<T> {
+interface Subscribable<T> {
   getSnapshot(): T;
   subscribe(listener: () => void): () => void;
 }
@@ -197,6 +271,7 @@ interface Readable<T> {
 | `disposed` | `boolean` | Whether observation has ended |
 | `disposalSignal` | `AbortSignal` | Aborts when observation ends |
 | `dispose()` | `() => void` | Stop observation and release owned browser resources |
+| `tap(handler, options?)` | `(handler: (event: SentinelEvent) => void, options?: { signal?: AbortSignal }) => () => void` | Observe `{ type: 'error' }` when a listener throws and `{ type: 'dispose' }` on disposal; handler errors are swallowed |
 | `[Symbol.dispose]()` | `() => void` | Dispose through the explicit resource-management protocol |
 
 ---
@@ -208,6 +283,21 @@ interface SentinelOptions {
   readonly signal?: AbortSignal;
 }
 ```
+
+`options.signal` disposes the Sentinel when it aborts. Passing an already-aborted signal throws `SentinelError` instead of constructing a dead handle.
+
+---
+
+### `createSentinel()`
+
+```ts
+function createSentinel<T>(
+  options: CreateSentinelOptions<T>,
+  setup: (update: (value: T) => void) => () => void,
+): Sentinel<T>
+```
+
+The generic primitive every built-in sensor is built on. `setup` starts observing and returns its cleanup; it calls `update(value)` whenever the underlying source changes. Use it for platform sensors the built-ins do not cover (for example `prefers-reduced-motion`).
 
 ---
 
@@ -300,6 +390,76 @@ interface IntersectionState {
 }
 ```
 
+---
+
+### `WakeLockState`
+
+```ts
+interface WakeLockState {
+  readonly active: boolean;
+  readonly supported: boolean;
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `active` | `boolean` | Whether a wake lock is currently held |
+| `supported` | `boolean` | Whether the Screen Wake Lock API is available in this environment |
+
+---
+
+### `WakeLockSentinel`
+
+```ts
+interface WakeLockSentinel extends Sentinel<WakeLockState> {
+  request(): void;
+  release(): void;
+}
+```
+
+A `Sentinel<WakeLockState>` with two additional methods:
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `request()` | `() => void` | Acquire the screen wake lock. No-op if already active or unsupported |
+| `release()` | `() => void` | Release the wake lock. No-op if not active |
+
+---
+
+### `FullscreenState`
+
+```ts
+interface FullscreenState {
+  readonly active: boolean;
+  readonly supported: boolean;
+}
+```
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `active` | `boolean` | Whether an element is currently shown fullscreen |
+| `supported` | `boolean` | Whether the Fullscreen API is available in this environment |
+
+---
+
+### `FullscreenSentinel`
+
+```ts
+interface FullscreenSentinel extends Sentinel<FullscreenState> {
+  request(element?: Element): void;
+  exit(): void;
+  toggle(element?: Element): void;
+}
+```
+
+A `Sentinel<FullscreenState>` with three additional methods:
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `request(element?)` | `() => void` | Enter fullscreen for `element` (default: the document element). No-op when already active or unsupported |
+| `exit()` | `() => void` | Leave fullscreen. No-op when not active |
+| `toggle(element?)` | `() => void` | Flip fullscreen for `element` (default: the document element) |
+
 ## Errors
 
 ### `SentinelError`
@@ -326,5 +486,7 @@ Thrown when a required browser API or Window is unavailable:
 - `createMediaQuery()` when `matchMedia` is unavailable.
 - `createElementSize()` when the element has no Window or `ResizeObserver` is unavailable.
 - `createIntersection()` when the element has no Window or `IntersectionObserver` is unavailable.
+- `createWakeLock()` when no browser Window is available.
+- `createFullscreen()` when no browser Window is available.
 
 Native setup errors remain unchanged, including invalid observer options or targets.

@@ -1,5 +1,5 @@
 export { createBus } from './bus';
-export { BusDisposedError, HeraldConfigError, HeraldError } from './errors';
+export { BusDisposedError, HeraldError } from './errors';
 export type {
   Bus,
   BusOptions,

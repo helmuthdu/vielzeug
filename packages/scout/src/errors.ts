@@ -11,4 +11,4 @@ export class ScoutError extends Error {
 export class ScoutDisposedError extends ScoutError {}
 
 /** Thrown when an index, search, or reactive search receives an invalid configuration. */
-export class ScoutConfigurationError extends ScoutError {}
+export class ScoutConfigError extends ScoutError {}

@@ -115,6 +115,24 @@ const Port = s.number().int().min(1).max(65535).catch(3000);
 Port.parse('not-a-number'); // 3000
 ```
 
+## Tolerating Removed Fields
+
+When a persisted record shape evolves, records saved by older versions carry keys the current schema no longer declares. `tolerate` accepts and drops exactly the named keys, so one call documents one removed field — no optional placeholder in the schema and no strip step after parsing.
+
+```ts
+import { s, tolerate } from '@vielzeug/spell';
+
+const Person = tolerate(
+  s.object({ name: s.string(), email: s.number() }),
+  'address',
+);
+
+const parsed = Person.parse({ name: 'John Doe', address: 'p sherman 42 wallaby way sydney', email: 'johndoe@mail.com' });
+// { name: 'John Doe', email: 'johndoe@mail.com' } — the tolerated key never reaches the output
+```
+
+Fields added to later schema versions do not need `tolerate`: give them `default()` and older records repair on parse.
+
 ## Custom Validation
 
 Use `check()` for synchronous domain rules and `checkAsync()` for asynchronous rules. Sync parsing rejects schemas with asynchronous checks.
@@ -139,7 +157,7 @@ const Signup = s.object({ confirm: s.string(), password: s.string() }).check((v,
 });
 ```
 
-`checkAsync()` returns an async-only schema: TypeScript exposes `parseAsync()` and `safeParseAsync()` but not `parse()` or `safeParse()`. This mode survives fluent modifiers and propagates through nested arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches. Sync parsing also fails at runtime instead of accepting an unchecked value.
+`checkAsync()` marks a schema as asynchronous: synchronous parsing throws at runtime instead of accepting an unchecked value, so async checks require `parseAsync()` or `safeParseAsync()`. Async checks compose at any nesting depth — arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches all evaluate nested async checks correctly through `parseAsync()`.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -310,36 +328,6 @@ function spellValidator(schema: SyncParsable<unknown>) {
 
 spellValidator(s.object({ email: s.string() })); // no shim or cast
 ```
-
-## Schema Traversal with walk()
-
-Use `walk()` to inspect or transform a schema tree without importing internal implementation classes.
-
-```ts
-import { s, type SchemaWalker } from '@vielzeug/spell';
-
-const fields: string[] = [];
-
-const collectFields: SchemaWalker<void> = {
-  object(schema) {
-    for (const [key, child] of Object.entries(schema.shape)) {
-      fields.push(key);
-      child.walk(collectFields);
-    }
-  },
-  unknown() {},
-};
-
-const User = s.object({
-  email: s.string().email(),
-  profile: s.object({ name: s.string() }),
-});
-
-User.walk(collectFields);
-console.log(fields); // ['email', 'profile', 'name']
-```
-
-`walk()` dispatches by `schema.kind`. If no handler matches and no `unknown` fallback is provided, `walk()` returns `null`. Add an `unknown` handler to capture any kind not explicitly listed in your visitor.
 
 ## Framework Integration
 

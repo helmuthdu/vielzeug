@@ -11,7 +11,7 @@ Detect missing registrations and cycles before application services receive traf
 
 ### Solution
 
-`createContainer` validates the full provider graph at construction — malformed providers, duplicate local tokens, missing dependencies, cycles, captive singleton dependencies, and incompatible named scopes all fail fast.
+`createContainer` validates the full provider graph at construction — malformed providers, duplicate local tokens, missing dependencies, cycles, and captive singleton dependencies all fail fast.
 
 ```ts
 try {

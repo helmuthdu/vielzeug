@@ -42,7 +42,7 @@ notice.dispose();
 ### Pitfalls
 
 - Keep event flow directed; cyclic subscriptions can create feedback loops.
-- `maxTransitions` protects an actor from loops but is not normal control flow.
+- The fixed queued-transition limit protects an actor from loops but is not normal control flow.
 
 ### Related
 

@@ -59,7 +59,7 @@
     overflow: visible;
   }
 
-  .mobile-backdrop {
+  .drawer-backdrop {
     position: absolute;
     inset: 0;
     z-index: calc(var(--z-sticky) + 1);
@@ -70,7 +70,7 @@
     border: 0;
   }
 
-  :host([data-bottom-nav][data-mobile-open]) .mobile-backdrop {
+  :host([data-bottom-nav][data-drawer-open]) .drawer-backdrop {
     position: fixed;
     inset: 0;
     z-index: calc(var(--z-sticky) + 1);
@@ -79,7 +79,7 @@
     height: 100dvh;
   }
 
-  :host([data-preview-mode][data-bottom-nav][data-mobile-open]) .mobile-backdrop {
+  :host([data-preview-mode][data-bottom-nav][data-drawer-open]) .drawer-backdrop {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -143,7 +143,7 @@
     transform: translateX(104%);
   }
 
-  :host([data-bottom-nav][data-mobile-open]) > nav {
+  :host([data-bottom-nav][data-drawer-open]) > nav {
     transform: translateX(0);
   }
 
@@ -187,7 +187,7 @@
     height: var(--sidebar-bottom-nav-height, 3.75rem);
   }
 
-  :host([data-bottom-nav][data-mobile-open]) .bottom-bar {
+  :host([data-bottom-nav][data-drawer-open]) .bottom-bar {
     z-index: calc(var(--z-sticky) + 1);
     pointer-events: none;
     opacity: 0;

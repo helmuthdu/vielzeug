@@ -1,5 +1,4 @@
-import type { RandomSource } from '@vielzeug/arsenal';
-import { utf8Bytes } from './_base64';
+import { type RandomSource, tapper, utf8Bytes } from '@vielzeug/arsenal';
 import { randomId } from './_random';
 import { MessageDedupe, toEnvelope } from './_wire';
 import { MeshConnectionError, MeshDisposedError, MeshError, MeshPayloadError } from './errors';
@@ -30,7 +29,7 @@ export interface NodeCore {
 }
 
 export function createNodeCore(id: string, signal?: AbortSignal): NodeCore {
-  const tappers = new Set<Tapper>();
+  const tappers = tapper<MeshEvent>();
   const disposalCtrl = new AbortController();
 
   const core: NodeCore = {
@@ -38,14 +37,7 @@ export function createNodeCore(id: string, signal?: AbortSignal): NodeCore {
     disposed: false,
 
     emitTap(event) {
-      if (tappers.size === 0) return;
-      for (const tapper of tappers) {
-        try {
-          tapper(event);
-        } catch {
-          // Observability must not affect mesh behavior.
-        }
-      }
+      tappers.emit(event);
     },
 
     ensureLive() {
@@ -72,22 +64,7 @@ export function createNodeCore(id: string, signal?: AbortSignal): NodeCore {
 
     tap(handler, options) {
       if (core.disposed) return () => {};
-      tappers.add(handler);
-
-      const detach = () => tappers.delete(handler);
-      if (options?.signal) {
-        if (options.signal.aborted) {
-          detach();
-          return () => {};
-        }
-        const onAbort = () => detach();
-        options.signal.addEventListener('abort', onAbort, { once: true });
-        return () => {
-          detach();
-          options.signal?.removeEventListener('abort', onAbort);
-        };
-      }
-      return detach;
+      return tappers.tap(handler, options);
     },
   };
 
@@ -149,24 +126,18 @@ type InboundHandler = (message: MeshInbound<unknown>) => void;
 
 export interface MessengerOptions {
   readonly clock: () => number;
-  readonly deserialize: (text: string) => unknown;
   readonly emitTap: (event: MeshEvent) => void;
   readonly maxMessageBytes: number;
-  readonly peerIdOf: (peer: PeerRecord) => string;
   readonly random?: RandomSource;
-  readonly serialize: (value: unknown) => string;
 }
 
 export interface Messenger {
   clear(): void;
   /** Entry point for `dc` 'message' events. */
   handleInbound(peer: PeerRecord, data: unknown): void;
-  hasListeners(type: string): boolean;
   on(type: string, handler: InboundHandler): Unsubscribe;
   /** Sends a typed envelope to a peer. Throws `MeshConnectionError`/`MeshPayloadError`. */
   sendTo(peer: PeerRecord, type: string, payload: unknown): void;
-  /** Serialized-byte size of an outbound message — used by broadcast pre-checks. */
-  wireBytes(type: string, payload: unknown): number;
 }
 
 export function createMessenger(options: MessengerOptions): Messenger {
@@ -182,7 +153,7 @@ export function createMessenger(options: MessengerOptions): Messenger {
     },
 
     handleInbound(peer, data) {
-      const peerId = options.peerIdOf(peer);
+      const peerId = peer.id;
 
       if (typeof data !== 'string') {
         reject(peerId, 'malformed');
@@ -197,7 +168,7 @@ export function createMessenger(options: MessengerOptions): Messenger {
 
       let decoded: unknown;
       try {
-        decoded = options.deserialize(data);
+        decoded = JSON.parse(data);
       } catch {
         reject(peerId, 'malformed');
         return;
@@ -236,9 +207,6 @@ export function createMessenger(options: MessengerOptions): Messenger {
       }
     },
 
-    hasListeners(type) {
-      return (handlers.get(type)?.size ?? 0) > 0;
-    },
     on(type, handler) {
       let set = handlers.get(type);
       if (!set) {
@@ -261,7 +229,7 @@ export function createMessenger(options: MessengerOptions): Messenger {
       const envelope = { id: randomId(options.random), p: payload, t: type, ts: options.clock(), v: 1 as const };
       let text: string;
       try {
-        text = options.serialize(envelope);
+        text = JSON.stringify(envelope);
       } catch (cause) {
         throw new MeshPayloadError(`Failed to serialize message "${type}"`, { cause });
       }
@@ -277,11 +245,6 @@ export function createMessenger(options: MessengerOptions): Messenger {
         throw new MeshConnectionError(`Failed to send message "${type}"`, peer.id, { cause });
       }
       options.emitTap({ bytes, messageType: type, peerId: peer.id, type: 'message-sent' });
-    },
-
-    wireBytes(type, payload) {
-      const envelope = { id: randomId(options.random), p: payload, t: type, ts: options.clock(), v: 1 as const };
-      return utf8Bytes(options.serialize(envelope));
     },
   };
 }

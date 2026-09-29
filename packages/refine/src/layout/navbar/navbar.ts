@@ -27,6 +27,7 @@ import {
   roundedVariantMixin,
 } from '../../styles';
 import { computeSafeRel } from '../../utils';
+import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
 import navbarStyles from './navbar.css?inline';
 
 const listen = <E extends Event = Event>(
@@ -52,38 +53,6 @@ const hasElementContent = (el: Element): boolean => {
   if (el.childElementCount > 0) return true;
 
   return (el.textContent ?? '').trim().length > 0;
-};
-
-const parseMaxWidthPx = (query: string | undefined): number | undefined => {
-  const value = String(query ?? '').trim();
-
-  if (!value) return undefined;
-
-  const match = /max-width\s*:\s*([0-9]+(?:\.[0-9]+)?)px/i.exec(value);
-
-  if (!match) return undefined;
-
-  const parsed = Number.parseFloat(match[1]);
-
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
-const resolveContainerElement = (el: HTMLElement): HTMLElement | null => {
-  let container = el.parentElement;
-
-  while (container?.tagName.toLowerCase() === 'ore-grid-item') {
-    container = container.parentElement;
-  }
-
-  return container;
-};
-
-const readContainerWidth = (el: HTMLElement): number => {
-  const parentWidth = resolveContainerElement(el)?.clientWidth ?? 0;
-
-  if (parentWidth > 0) return parentWidth;
-
-  return el.offsetWidth;
 };
 
 const findScrollContainer = (start: HTMLElement): HTMLElement | null => {
@@ -127,9 +96,9 @@ export type NavbarElement = HTMLElement &
   };
 
 type MobileSidebarElement = HTMLElement & {
-  closeMobile?: () => void;
-  openMobile?: () => void;
-  toggleMobile?: () => void;
+  closeDrawer?: () => void;
+  openDrawer?: () => void;
+  toggleDrawer?: () => void;
 };
 
 /** Navbar component properties */
@@ -334,9 +303,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 
         if (target) {
           if (open) {
-            target.openMobile?.();
+            target.openDrawer?.();
           } else {
-            target.closeMobile?.();
+            target.closeDrawer?.();
           }
 
           return;
@@ -358,13 +327,13 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         const target = mobileSidebarTarget.value ?? getExternalSidebar();
 
         if (target) {
-          if (typeof target.toggleMobile === 'function') {
-            target.toggleMobile();
-          } else if (typeof target.openMobile === 'function' && typeof target.closeMobile === 'function') {
-            const isOpen = target.hasAttribute('data-mobile-open');
+          if (typeof target.toggleDrawer === 'function') {
+            target.toggleDrawer();
+          } else if (typeof target.openDrawer === 'function' && typeof target.closeDrawer === 'function') {
+            const isOpen = target.hasAttribute('data-drawer-open');
 
-            if (isOpen) target.closeMobile();
-            else target.openMobile();
+            if (isOpen) target.closeDrawer();
+            else target.openDrawer();
           }
 
           return;
@@ -485,10 +454,10 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 
         const syncTargetState = (event?: CustomEvent<{ open: boolean }>) => {
           const hasBottomNav = target.hasAttribute('data-bottom-nav');
-          const hasMobileOpen = target.hasAttribute('data-mobile-open');
+          const hasDrawerOpen = target.hasAttribute('data-drawer-open');
 
           isExternalMobileMode.value = hasBottomNav;
-          isExternalMobileOpen.value = event?.detail ? event.detail.open : hasMobileOpen;
+          isExternalMobileOpen.value = event?.detail ? event.detail.open : hasDrawerOpen;
 
           // If the sidebar is reporting it's open, it must be in bottom-nav mode
           // (either natural or forced). We honor this to avoid race conditions
@@ -506,13 +475,13 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 
         syncTargetState();
         targetObserver.observe(target, {
-          attributeFilter: ['data-bottom-nav', 'data-mobile-open'],
+          attributeFilter: ['data-bottom-nav', 'data-drawer-open'],
           attributes: true,
         });
-        target.addEventListener('mobile-open-change', syncTargetState as EventListener);
+        target.addEventListener('drawer-change', syncTargetState as EventListener);
         mobileSidebarCleanup = () => {
           targetObserver.disconnect();
-          target.removeEventListener('mobile-open-change', syncTargetState as EventListener);
+          target.removeEventListener('drawer-change', syncTargetState as EventListener);
         };
         mobileSidebarTarget.value = target;
       };

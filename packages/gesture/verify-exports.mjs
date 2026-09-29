@@ -23,7 +23,7 @@ for (const gesture of modules) {
   try {
     gesture.createPanGesture(target, { activationDistance: -1 });
   } catch (error) {
-    rejected = error instanceof RangeError;
+    rejected = error instanceof gesture.GestureConfigError;
   }
   if (!rejected) throw new Error('invalid activation distance was accepted');
 }

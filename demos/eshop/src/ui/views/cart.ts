@@ -9,12 +9,13 @@ import '@vielzeug/refine/skeleton';
 import '../components/animated-price';
 
 import { define, each, html, onCleanup, when } from '@vielzeug/ore';
+import { eventFieldValue } from '@vielzeug/refine';
 import { computed, signal } from '@vielzeug/ripple';
 import { s } from '@vielzeug/spell';
 
 import { buildConfigurationUrl } from '../../core/build-url';
 import { appliedPromoCode, cartCount, cartLineBreakdowns, cartSummary } from '../../core/cart-store';
-import { controlValue } from '../../core/control-value';
+
 import { removeFromCart, restoreCartItem, setCartItemQuantity } from '../../core/history';
 import { t } from '../../core/i18n';
 import { canPlaceOrder } from '../../core/order-actions';
@@ -184,7 +185,7 @@ define('cart-view', {
                                 @input=${(event: Event) =>
                                   setCartItemQuantity(
                                     line.value.item.id,
-                                    Number(controlValue(event)) || 1,
+                                    Number(eventFieldValue(event)) || 1,
                                   )}></ore-number-input>
                               <div>
                                 <ore-button
@@ -273,7 +274,7 @@ define('cart-view', {
                         value=${promoInput}
                         error=${promoError}
                         @input=${(event: Event) => {
-                          promoInput.value = controlValue(event) ?? '';
+                          promoInput.value = eventFieldValue(event) ?? '';
                           promoError.value = '';
                         }}></ore-input>
                       <ore-button

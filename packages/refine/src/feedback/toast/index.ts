@@ -3,6 +3,7 @@ export {
   type OreToastEvents,
   type OreToastProps,
   TOAST_TAG,
+  type ToastEvent,
   type ToastItem,
   type ToastService,
   type ToastServiceConfig,

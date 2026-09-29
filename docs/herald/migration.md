@@ -5,6 +5,12 @@ description: Migrate to Herald's focused synchronous event bus, tracing, waits, 
 
 [[toc]]
 
+## Herald 3.1
+
+- The `once` option is removed from `SubscribeOptions`. `bus.once(event, listener, { signal })` is the only once-API; `bus.on(event, listener, { once: true })` becomes `bus.once(event, listener)`.
+- `waitAny()` accepts one or more event keys. The minimum-two-keys runtime guard and its `HeraldConfigError` are removed, and `HeraldConfigError` no longer exists.
+- `BusOptions._onDispatch` is removed. `createTestBus()` now records emissions as a pure observer over the public `bus.tap()` channel with the same recorded-payload behavior.
+
 ## Herald 3.0
 
 Herald 3.0 removes middleware, validation, async streams, bus pipes, and general signal helpers. The remaining bus is a small synchronous temporal-delivery primitive with one-shot waits, wildcard listeners, tracing, and explicit lifecycle ownership.

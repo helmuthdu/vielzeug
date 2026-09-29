@@ -7,6 +7,13 @@ export {
   type DragGestureOptions,
   type DragPoint,
 } from './drag-gesture.js';
+export { GestureConfigError, GestureError } from './errors.js';
+export {
+  createLongPress,
+  type LongPress,
+  type LongPressDetail,
+  type LongPressOptions,
+} from './long-press.js';
 export {
   createPanGesture,
   type PanAxis,

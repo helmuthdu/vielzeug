@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "useEmit dispatches composed:true (crosses nested shadow roots); define() returns its class; dead ore:connect/ore:disconnect events removed; MaybeReactive exported",
+      "packageName": "@vielzeug/ore",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

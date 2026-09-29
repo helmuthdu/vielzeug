@@ -36,14 +36,14 @@ Encodes `data` into a QR symbol. Picks the most compact mode covering the whole 
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `data` | `string \| Uint8Array` | — | Payload; `Uint8Array` implies byte mode |
+| `data` | `string \| Uint8Array` | — | Payload; `Uint8Array` is raw binary and always byte mode (no UTF-8 round-trip) |
 | `options.errorCorrection` | `'L' \| 'M' \| 'Q' \| 'H'` | `'M'` | Error-correction level |
 | `options.version` | `1–40` | auto | Pin the version; throws if payload can't fit |
 | `options.minVersion` | `1–40` | `1` | Smallest acceptable version |
 | `options.mode` | `QrMode` | auto | Force a segment mode |
 | `options.mask` | `0–7` | auto | Force the mask (test vectors only) |
 
-**Returns** a frozen `QrMatrix` with `size`, `version`, `mode`, `errorCorrection`, `mask`, `modules`, and `get(x, y)`.
+**Returns** a frozen `QrMatrix` with `size`, `version`, `mode`, `errorCorrection`, `mask`, and `get(x, y)`.
 
 **Throws** `SigilCapacityError` (payload exceeds capacity), `SigilOptionError` (invalid mode/version/mask combination).
 
@@ -133,11 +133,11 @@ Creates a camera scan loop around the native `BarcodeDetector`.
 
 | Member | Signature | Description |
 | --- | --- | --- |
-| `start()` | `() => Promise<void>` | Request camera, attach stream, run the detect loop. Rejects with `SigilUnsupportedError` / `SigilPermissionError` |
-| `stop()` | `() => void` | Stop the loop and tracks; instance stays usable |
+| `start()` | `() => Promise<void>` | Request camera, attach stream, run the detect loop. Rejects with `SigilUnsupportedError` / `SigilPermissionError`. `stop()`/`dispose()` while the camera prompt is pending win: the late stream is released and the call resolves |
+| `stop()` | `() => void` | Stop the loop and tracks, return to `'idle'`; instance stays usable |
 | `onResult(handler)` | `(handler) => () => void` | Decode results; returns unsubscribe |
 | `tap(handler, options?)` | `(handler, { signal? }) => () => void` | Observe `SigilEvent`s; handler errors are swallowed |
-| `status` | `QrScannerStatus` | `'idle' \| 'starting' \| 'scanning' \| 'stopped' \| 'disposed'` |
+| `status` | `QrScannerStatus` | `'idle' \| 'starting' \| 'scanning' \| 'disposed'` |
 | `dispose()` / `[Symbol.dispose]` | `() => void` | Terminal teardown; `disposalSignal` aborts |
 | `disposed` | `boolean` | Whether `dispose()` ran |
 
@@ -176,16 +176,15 @@ function qrScanSupport(): Promise<boolean>;
 ```ts
 type QrErrorCorrection = 'L' | 'M' | 'Q' | 'H';
 type QrMode = 'numeric' | 'alphanumeric' | 'byte';
-type QrScannerStatus = 'idle' | 'starting' | 'scanning' | 'stopped' | 'disposed';
+type QrScannerStatus = 'idle' | 'starting' | 'scanning' | 'disposed';
 
 interface QrMatrix {
   readonly errorCorrection: QrErrorCorrection;
   readonly mask: number;
   readonly mode: QrMode;
-  readonly modules: ReadonlyArray<ReadonlyArray<boolean>>; // frozen, row-major
   readonly size: number;    // 17 + 4 * version
   readonly version: number; // 1–40
-  get(x: number, y: number): boolean; // false outside bounds
+  get(x: number, y: number): boolean; // true = dark; false outside bounds
 }
 
 interface QrScanResult {
@@ -216,7 +215,7 @@ type SigilEvent =
 | `SigilError` | Base class for all sigil errors | — |
 | `SigilCapacityError` | Payload exceeds the version/mode limit | `bytes`, `maxBytes`, `version` |
 | `SigilOptionError` | Invalid option combination (forced mode can't represent input, bad mask/version) | — |
-| `SigilUnsupportedError` | `BarcodeDetector`/`getUserMedia` missing | — |
+| `SigilUnsupportedError` | `BarcodeDetector`/`getUserMedia`/canvas 2D context missing | — |
 | `SigilPermissionError` | Camera `NotAllowedError` | — |
 | `SigilDisposedError` | `start()` on a disposed scanner | — |
 

@@ -1,4 +1,4 @@
-import { abortError } from '@vielzeug/arsenal';
+import { abortError, sleep } from '@vielzeug/arsenal';
 
 import { AssayTimeoutError } from './errors';
 
@@ -37,28 +37,6 @@ const validateWait = (interval: number, timeout: number): void => {
   validateDuration('timeout', timeout, true);
 };
 
-const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
-  new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(abortError(signal, 'The operation was aborted.'));
-      return;
-    }
-
-    const timer = setTimeout(done, ms);
-
-    function done(): void {
-      signal?.removeEventListener('abort', abort);
-      resolve();
-    }
-
-    function abort(): void {
-      clearTimeout(timer);
-      reject(abortError(signal, 'The operation was aborted.'));
-    }
-
-    signal?.addEventListener('abort', abort, { once: true });
-  });
-
 const runBounded = <T>(run: () => T | Promise<T>, deadline: number, signal?: AbortSignal): Promise<T> =>
   new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -96,8 +74,6 @@ export const delay = (ms = 0, options: DelayOptions = {}): Promise<void> => {
   validateDuration('ms', ms, true);
   return sleep(ms, options.signal);
 };
-
-export const nextTick = (): Promise<void> => new Promise((resolve) => queueMicrotask(resolve));
 
 export async function waitUntil(
   predicate: () => boolean | Promise<boolean>,

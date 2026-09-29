@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: replace scope()/ScopeToken with createChild containers and AnyProvider",
+      "packageName": "@vielzeug/conduit",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/conduit"
+}

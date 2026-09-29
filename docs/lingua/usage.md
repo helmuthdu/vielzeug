@@ -79,7 +79,7 @@ const translator = createTranslator(messages, { locale: 'en', missing: 'throw' }
 
 Use `catalogKeys()` to derive key arrays from the catalog itself instead of maintaining a parallel list that can go stale. It traverses nested grouping objects and explicit `{ plural: ... }` messages, returning the same dotted paths that `MessageKey<C>` represents at the type level.
 
-Pass an `I18n` instance to enumerate keys from its current locale catalog without specifying a locale explicitly.
+For an `I18n` instance, read its current locale catalog first.
 
 ```ts
 import { catalogKeys, createI18n } from '@vielzeug/lingua';
@@ -95,7 +95,8 @@ const i18n = createI18n({
   locale: 'en',
 });
 
-const allKeys = catalogKeys(i18n);
+const state = i18n.serialize();
+const allKeys = catalogKeys(state.catalogs[state.locale]);
 // ['greeting', 'inbox', 'nav.home', 'nav.settings']
 ```
 

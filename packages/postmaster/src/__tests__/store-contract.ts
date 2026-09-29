@@ -7,8 +7,8 @@ import {
   releaseJob,
   removeJob,
   renewLeaseJob,
+  requeueJob,
   rescheduleJob,
-  retryJob,
   toEntry,
 } from '../store-ops.ts';
 
@@ -202,7 +202,7 @@ export function describePostmasterStore(label: string, factory: StoreFactory): v
     });
 
     it('retry returns not-found for unknown ids', async () => {
-      await expect(tx((t) => retryJob(t, 'missing', 100))).resolves.toMatchObject({ status: 'not-found' });
+      await expect(tx((t) => requeueJob(t, 'missing', 100))).resolves.toMatchObject({ status: 'not-found' });
     });
 
     it('retry returns not-dead-letter for queued or running jobs', async () => {
@@ -210,8 +210,8 @@ export function describePostmasterStore(label: string, factory: StoreFactory): v
       await tx((t) => enqueueJob(t, entry({ createdAt: 10, id: 'queued', updatedAt: 10 })));
       await tx((t) => claimJob(t, { leaseDuration: 1000, now: 0, ownerId: 'a' }));
 
-      await expect(tx((t) => retryJob(t, 'queued', 100))).resolves.toMatchObject({ status: 'not-dead-letter' });
-      await expect(tx((t) => retryJob(t, 'running', 100))).resolves.toMatchObject({ status: 'running' });
+      await expect(tx((t) => requeueJob(t, 'queued', 100))).resolves.toMatchObject({ status: 'not-dead-letter' });
+      await expect(tx((t) => requeueJob(t, 'running', 100))).resolves.toMatchObject({ status: 'running' });
     });
 
     it('retry moves a dead-letter job back to queued at now', async () => {
@@ -227,14 +227,14 @@ export function describePostmasterStore(label: string, factory: StoreFactory): v
         ),
       );
 
-      await expect(tx((t) => retryJob(t, 'one', 500))).resolves.toMatchObject({
+      await expect(tx((t) => requeueJob(t, 'one', 500))).resolves.toMatchObject({
         entry: { availableAt: 500, id: 'one', status: 'queued' },
-        status: 'retried',
+        status: 'requeued',
       });
 
       await expect(store.list()).resolves.toMatchObject([{ id: 'one', status: 'queued' }]);
-      const [retried] = await store.list();
-      expect('failure' in retried).toBe(false);
+      const [requeued] = await store.list();
+      expect('failure' in requeued).toBe(false);
     });
 
     it('remove returns not-found for unknown ids', async () => {

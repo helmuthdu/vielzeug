@@ -754,6 +754,23 @@ describe('createSortable', () => {
       sortable.dispose();
     });
 
+    it('ignores ArrowDown pressed with a modifier', () => {
+      const {
+        element,
+        items: [, second],
+      } = makeList('a', 'b', 'c');
+      const onReorder = vi.fn();
+      const sortable = createSortable({ element, getKey, onReorder });
+
+      second.dispatchEvent(
+        new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ctrlKey: true, key: 'ArrowDown' }),
+      );
+
+      expect(onReorder).not.toHaveBeenCalled();
+
+      sortable.dispose();
+    });
+
     it('moves item backward with ArrowUp', () => {
       const {
         element,

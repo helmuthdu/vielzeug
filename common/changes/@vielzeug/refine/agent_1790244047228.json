@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Adapt ore-qr-scanner to sigil 4-state scanner status",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

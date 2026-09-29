@@ -69,7 +69,7 @@ interface Ledger<TMeta = undefined> {
   readonly disposed: boolean;
   do(command: ReversibleCommand<TMeta>, options?: LedgerCallOptions): Promise<void>;
   redo(options?: LedgerCallOptions): Promise<void>;
-  readonly state: LedgerReadable<LedgerState<TMeta>>;
+  readonly state: Subscribable<LedgerState<TMeta>>;
   undo(options?: LedgerCallOptions): Promise<void>;
   whenIdle(): Promise<void>;
   [Symbol.dispose](): void;
@@ -90,17 +90,21 @@ Reverts the final undo entry. Success moves it to the end of redo history. If no
 
 Applies the final redo entry. Success moves it to the end of undo history. If no redo entry exists, it resolves without changing history. Apply failure rejects with `LedgerExecutionError` and leaves the entry in redo history.
 
+### `record()`
+
+Appends an already-executed command to undo history synchronously, without running it through the queue. For stores that execute their own writes — typically synchronous, embedded state stores — `undo()` calls the recorded `revert`, and `redo()` calls the recorded `apply`, so `apply` must be able to re-apply the effect. Recording shares `do()`'s bookkeeping: it clears redo history and evicts the oldest entry beyond `maxHistory`. It throws `LedgerDisposedError` on a disposed ledger.
+
 ### `clear()`
 
-Queues removal of all undo and redo entries. It does not call command revert functions and does not cancel earlier work.
+Queues removal of all undo and redo entries. It does not call command revert functions and does not cancel earlier work. When history is already empty it resolves without queueing; after disposal it rejects with `LedgerDisposedError`.
 
 ### `whenIdle()`
 
-Resolves immediately when `queued` and `running` are zero, otherwise resolves after both reach zero. Multiple waiters are supported. It does not reject on disposal or cancel operations.
+Resolves immediately when `queued` and `running` are zero, otherwise resolves after both reach zero. Multiple waiters are supported. It rejects with `LedgerDisposedError` when the ledger is disposed, immediately or while waiting.
 
 ### Disposal
 
-`dispose()` is permanent and idempotent. It sets `accepting: false`, clears undo and redo history, aborts active command contexts, and rejects queued operations that have not started with `LedgerDisposedError`. Active commands must observe their signal and settle before `running` reaches zero. `[Symbol.dispose]()` delegates to `dispose()`.
+`dispose()` is permanent and idempotent. It clears undo and redo history, aborts active command contexts, rejects queued operations that have not started with `LedgerDisposedError`, and rejects pending `whenIdle()` waiters. Active commands must observe their signal and settle before `running` reaches zero. Read `disposed` to detect permanent disposal. `[Symbol.dispose]()` delegates to `dispose()`.
 
 ## Command Types
 
@@ -143,7 +147,6 @@ Supported by `do()`, `undo()`, and `redo()`. `clear()` has no call options.
 
 ```ts
 interface LedgerState<TMeta = undefined> {
-  readonly accepting: boolean;
   readonly queued: number;
   readonly redo: readonly HistoryEntry<TMeta>[];
   readonly running: number;
@@ -153,7 +156,6 @@ interface LedgerState<TMeta = undefined> {
 
 | Field | Meaning |
 | --- | --- |
-| `accepting` | `true` until permanent disposal |
 | `queued` | Submitted operations that have not started |
 | `running` | Currently executing operation; serialization keeps this at 0 or 1 |
 | `undo` | Chronological successfully applied history; final entry is next to undo |
@@ -172,17 +174,16 @@ interface HistoryEntry<TMeta = undefined> {
 
 History entries are frozen and intentionally omit command callbacks.
 
-### `LedgerReadable` and `Unsubscribe`
+### `Subscribable` and `Unsubscribe`
 
-`Ledger.state` implements this framework-neutral structural contract. Both names are root type exports.
+`Ledger.state` implements this framework-neutral structural contract, which matches `Subscribable` in `@vielzeug/arsenal`. Both names are root type exports.
 
 ```ts
 type Unsubscribe = () => void;
 
-interface LedgerReadable<T> {
-  peek(): T;
+interface Subscribable<T> {
+  getSnapshot(): T;
   subscribe(listener: () => void): Unsubscribe;
-  readonly value: T;
 }
 ```
 
@@ -196,7 +197,7 @@ Subscriptions are not immediate and receive no value argument. Listeners run syn
 | `LedgerDisposedError` | Submission after disposal or queued work rejected by disposal | History already cleared by disposal |
 | `LedgerExecutionError` | `apply()` fails during `do()` or `redo()` | New command absent, or redo entry retained |
 | `LedgerRollbackError` | `revert()` fails during `undo()` | Undo entry retained |
-| `LedgerConfigurationError` | Invalid `maxHistory` | Construction fails |
+| `LedgerConfigError` | Invalid `maxHistory` | Construction fails |
 | `LedgerError` | Base class and internal history corruption | Depends on operation |
 
 Wrapped operation failures preserve the original value in `.cause`. Use `instanceof LedgerError` to catch the hierarchy, then narrow to a specific subtype.

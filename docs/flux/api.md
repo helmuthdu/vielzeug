@@ -29,9 +29,8 @@ description: Complete reference for @vielzeug/flux streams, operators, channels,
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/flux` | Core streams, operators, consumers, errors, and types |
+| `@vielzeug/flux` | Core streams, operators, consumers, errors, types, and `createChannel()` |
 | `@vielzeug/flux/async` | `toAsyncIterable()` only |
-| `@vielzeug/flux/subjects` | `createChannel()` and channel types |
 
 ## Core
 
@@ -293,7 +292,7 @@ Resubscribes after source errors until attempts are exhausted.
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `attempts` | `number` | Non-negative retry count |
+| `times` | `number` | Non-negative retry count |
 | `delay` | `number \| (attempt: number) => number` | Optional delay/backoff returning 0 through 2,147,483,647 milliseconds |
 
 ## Combination
@@ -451,7 +450,7 @@ type OverflowPolicy = 'drop-newest' | 'drop-oldest' | 'error';
 type AsyncIterableOptions = { capacity: number; overflow: OverflowPolicy; signal?: AbortSignal };
 type TimerOptions = { delay: number; interval?: number };
 type FlattenOptions = { concurrency: number; capacity: number };
-type RetryOptions = { attempts: number; delay?: number | ((attempt: number) => number) };
+type RetryOptions = { times: number; delay?: number | ((attempt: number) => number) };
 type ToArrayOptions = { maxItems: number; signal?: AbortSignal };
 type ValueOptions<T> = { signal?: AbortSignal; defaultValue?: T };
 type ChannelOptions<T> = { initial?: T; replay?: number };

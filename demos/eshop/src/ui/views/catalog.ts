@@ -11,6 +11,7 @@ import '@vielzeug/refine/skeleton';
 import '../components/model-card';
 
 import { define, html, onCleanup, when } from '@vielzeug/ore';
+import { eventFieldValue } from '@vielzeug/refine';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { compareModelIds, savedModelIds } from '../../core/cart-store';
 import { modelMap, modelsSignal } from '../../core/catalog';
@@ -28,7 +29,7 @@ import {
   type SortOrder,
   sortModels,
 } from '../../core/catalog-discovery';
-import { controlValue } from '../../core/control-value';
+
 import { formatPrice } from '../../core/currency';
 import { toggleCompare, toggleSavedModel } from '../../core/history';
 import { t } from '../../core/i18n';
@@ -159,13 +160,13 @@ define('catalog-view', {
     onCleanup(() => routeWatcher.dispose());
 
     const onSearchInput = (event: Event): void => {
-      const query = controlValue(event) ?? '';
+      const query = eventFieldValue(event) ?? '';
 
       updateFilters((current) => ({ ...current, query }));
     };
 
     const onSortChange = (event: Event): void => {
-      const sortOrder = controlValue(event);
+      const sortOrder = eventFieldValue(event);
 
       if (sortOrder && isSortOrder(sortOrder)) updateFilters((current) => ({ ...current, sortOrder }));
     };

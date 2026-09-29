@@ -11,6 +11,7 @@ import '@vielzeug/refine/tab-item';
 import '@vielzeug/refine/tabs';
 import '@vielzeug/refine/text';
 
+import { shouldReduceMotion } from '@vielzeug/necromancer';
 import { define, getHost, html, onCleanup, onMounted, prop } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { compareModelIds, savedModelIds } from '../../core/cart-store';
@@ -27,7 +28,7 @@ type ModelSection = 'design' | 'experience' | 'interior' | 'specifications' | 't
 
 function scrollToSection(section: ModelSection): void {
   document.getElementById(`model-${section}`)?.scrollIntoView({
-    behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    behavior: shouldReduceMotion('system') ? 'auto' : 'smooth',
   });
 }
 
@@ -38,16 +39,12 @@ function relatedReason(current: Model, related: Model): string {
   return 'similar';
 }
 
-function routeHref(path: string): string {
-  return import.meta.env.BASE_URL === '/' ? path : `${import.meta.env.BASE_URL}#${path}`;
-}
-
 function shortModelName(model: Model): string {
   return model.name.replace(/^Vielzeug\s+/, '');
 }
 
 function landingHref(model: Model): string {
-  return routeHref(`/models/${encodeURIComponent(model.slug)}`);
+  return router.href('modelLanding', { slug: model.slug });
 }
 
 function configure(event: Event, model: Model, trimId?: string): void {

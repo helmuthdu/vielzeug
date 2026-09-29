@@ -1,9 +1,9 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
 import {
+  createDropdownPositioner,
   createOutsidePointerDismissal,
   type DialogCloseReason,
   lifecycleSignal,
@@ -27,8 +27,8 @@ export type FloatingTriggerOptions = {
   getHost?: () => Element | null;
   /** Returns the panel element, if mounted. */
   getPanel: () => HTMLElement | null;
-  /** Gap from reference to floating panel in px. Default: 8. Accepts a signal for runtime reactivity. */
-  offset?: Readable<number | undefined> | number;
+  /** Gap from reference to floating panel in px, read on every position update. Default: 8. */
+  offset?: () => number | undefined;
   /** Cleanup registrar from the component setup ctx. Automatically called on disconnect. */
   onCleanup: (fn: () => void) => void;
   /** Called when the popover closes. */
@@ -41,8 +41,8 @@ export type FloatingTriggerOptions = {
   openProp: Readable<boolean | undefined>;
   /** Preferred placement. Default: 'bottom'. */
   placement: Readable<Placement>;
-  /** Slot element or a factory to lazily find it. Resolved each time bindEvents runs. */
-  slot: HTMLSlotElement | null | (() => HTMLSlotElement | null);
+  /** Resolves the trigger slot element. Called each time events are (re)bound. */
+  slot: () => HTMLSlotElement | null;
   /** Slot elements signal — used to rebind when slotted elements change. */
   slotElements: Readable<Element[]>;
   /** Which triggers are active. Set to empty array or omit if handling events manually. */
@@ -98,47 +98,39 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     triggers,
   } = options;
 
-  const resolveSlot = (): HTMLSlotElement | null => (typeof slot === 'function' ? slot() : slot);
-  const getOffset = (): number => {
-    const o = options.offset;
-
-    if (o == null) return 8;
-
-    const val = typeof o === 'object' ? (o as Readable<number | undefined>).value : o;
-
-    return val ?? 8;
-  };
+  const getOffset = (): number => options.offset?.() ?? 8;
   const abortSignal = lifecycleSignal(options.onCleanup);
   const visible = signal(false);
   const isControlled = () => openProp.value !== undefined;
   let currentTrigger: HTMLElement | null = null;
   let triggerBinding: (() => void) | null = null;
 
+  const resolveTrigger = (): HTMLElement | null =>
+    currentTrigger ?? (slot()?.assignedElements({ flatten: true })[0] as HTMLElement | undefined) ?? null;
+
+  // The same Orbit positioner the dropdown overlays use — RTL placement mirroring, the
+  // containing-block self-correction, and flip/shift, so popover/tooltip no longer carry a second,
+  // divergent copy of the positioning logic. Panels render in the Popover API top layer (no
+  // clipping ancestor) and size themselves (no width matching), matching `ore-menu`'s config.
+  const positioner = createDropdownPositioner({
+    getFloating: getPanel,
+    getOffsetPx: getOffset,
+    getPlacement: () => placement.value,
+    getReference: resolveTrigger,
+    matchWidth: false,
+    onPlacementChange: (resolved) => {
+      const panel = getPanel();
+
+      if (panel) panel.dataset.placement = resolved;
+
+      onPlacementChange?.(resolved);
+    },
+    padding: 8,
+    useClippingAncestor: false,
+  });
+
   function updatePosition(): void {
-    const panel = getPanel();
-    const trigger =
-      currentTrigger ?? (resolveSlot()?.assignedElements({ flatten: true })[0] as HTMLElement | undefined);
-
-    if (!panel || !trigger) return;
-
-    const previousTransition = panel.style.transition;
-    const previousTransform = panel.style.transform;
-
-    panel.style.transition = 'none';
-    panel.style.transform = 'none';
-
-    const result = computePosition(trigger, panel, {
-      middleware: [offset(getOffset()), flip(), shift({ padding: 8 })],
-      placement: placement.value,
-    });
-
-    panel.style.left = `${result.x}px`;
-    panel.style.top = `${result.y}px`;
-    panel.style.transition = previousTransition;
-    panel.style.transform = previousTransform;
-    panel.dataset.placement = result.placement;
-
-    onPlacementChange?.(result.placement as Placement);
+    positioner.update();
   }
 
   function showFloat(): void {
@@ -225,7 +217,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     triggerBinding?.();
     triggerBinding = null;
 
-    const triggerEl = resolveSlot()?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
+    const triggerEl = slot()?.assignedElements({ flatten: true })[0] as HTMLElement | undefined;
 
     if (!triggerEl) {
       currentTrigger = null;
@@ -295,7 +287,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
   const mount = (): (() => void) => {
     let initializedOpenProp = false;
-    const triggerSlot = resolveSlot();
+    const triggerSlot = slot();
     const rebind = (): void => {
       queueMicrotask(() => {
         if (!abortSignal.aborted) bindEvents();

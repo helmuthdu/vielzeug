@@ -16,7 +16,7 @@ await ledger.do(compose([
 ], 'Move node'))
 
 console.log('after apply:', node)
-console.log('undo entries:', ledger.state.value.undo.length)
+console.log('undo entries:', ledger.state.getSnapshot().undo.length)
 
 await ledger.undo()
 console.log('after revert:', node)

@@ -4,7 +4,7 @@ description: Zero-dependency authorization decisions with ordered rules, role he
 package: ward
 category: security
 keywords: [authorization, rbac, permissions, policy, roles, predicates]
-exports: [createWard, allow, deny, predicate, ANONYMOUS, WILDCARD, matchesPattern, patternCovers]
+exports: [createWard, allow, deny, predicate, ANONYMOUS, WILDCARD, matchesPattern]
 related: [herald, postmaster, refine]
 environments: [browser, node, ssr, deno]
 ---
@@ -49,6 +49,7 @@ const decision = ward.decide({
 <div class="features-grid">
 
 - Ordered `allow` and `deny` decisions
+- Declarative `roles` data on every rule
 - Concise role/action rule factories
 - `predicate.owns()`, `and()`, `or()`, and `not()`
 - Exact, namespace, and wildcard action/resource patterns

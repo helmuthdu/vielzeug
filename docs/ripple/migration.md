@@ -2,6 +2,46 @@
 title: Ripple Migration
 ---
 
+# Ripple 3.1 Migration
+
+Ripple 3.1 removes the `once` option from `watch()` and its options type. No stored or serialized formats change.
+
+## `subscribe()` listeners fire per registration
+
+Previously, two `subscribe()` registrations that shared one callback function on signals written in the same
+synchronous flush fired that callback once instead of once per subscription. Each registration now fires once per
+flush. No call-site change is required; code that relied on the collapsed behavior (rare, and almost always a bug)
+observes one additional invocation.
+
+## `watch()` `once` option removed
+
+`{ once: true }` duplicated what the returned handle already expresses, and its immediate-run disposal needed a temporal-dead-zone workaround inside `watch()` itself. Dispose the handle from the callback instead:
+
+```ts
+// Before
+const stop = watch(count, (value) => report(value), { once: true });
+
+// After
+const stop = watch(count, (value) => {
+  report(value);
+  stop.dispose();
+});
+```
+
+With `immediate: true` the callback runs before `watch()` returns, so a self-disposing callback would reference a handle that does not exist yet. Do the immediate work at the call site instead:
+
+```ts
+// Before
+const stop = watch(count, (value) => report(value), { immediate: true, once: true });
+
+// After
+report(count.value);
+const stop = watch(count, (value) => {
+  report(value);
+  stop.dispose();
+});
+```
+
 # Ripple 3.0 Migration
 
 Ripple 3.0 adds structural store interoperability and unifies observability under `tap()`. The focused `resource()` helper remains available for reactive request succession; use Sourcerer when collection pagination or a richer loading model is required.
@@ -66,6 +106,24 @@ ripple.dispose();
 `ReactiveEvent` is now `RippleEvent` and uses `type` instead of `kind`. Replace `ReactiveObserver` with a `tap()` handler. `ReactiveErrorContext` is now `RippleErrorContext` and includes `computed` failures. `RippleOptions` no longer accepts `observer` or `onError`; use `errorPolicy` and `tap()`.
 
 ---
+
+## Remove the effect scheduler option (3.2)
+
+`EffectOptions.scheduler` is removed. Effects already coalesce: every write made during a synchronous
+flush — inside `batch()` or during a flush pass — produces a single effect run, so the extra microtask
+deferral added a second, redundant queue with no distinct behavior.
+
+```ts
+// Before
+ripple.effect(() => console.log(count.value), { scheduler: 'microtask' });
+
+// After — batch coalesces the writes instead
+ripple.effect(() => console.log(count.value));
+ripple.batch(() => {
+  count.value = 1;
+  count.value = 2;
+}); // one run, sees 2
+```
 
 # Ripple 2.0 Migration
 

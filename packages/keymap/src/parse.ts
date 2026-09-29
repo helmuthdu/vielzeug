@@ -6,7 +6,7 @@
  * or framework integrations that need direct access to the shortcut parser.
  *
  * @example
- * import { parseShortcut, parseStep, matchStep, canonicalizeShortcut, detectModKey } from '@vielzeug/keymap/parse';
+ * import { parseShortcut, parseStep, matchStep, matchKey, canonicalizeShortcut, detectModKey } from '@vielzeug/keymap/parse';
  */
 export type { ModifierKey, Shortcut, ShortcutStep } from './parser';
-export { canonicalizeShortcut, detectModKey, matchStep, parseShortcut, parseStep } from './parser';
+export { canonicalizeShortcut, detectModKey, matchKey, matchStep, parseShortcut, parseStep } from './parser';

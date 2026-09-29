@@ -1,16 +1,4 @@
-import {
-  count,
-  deleteMany,
-  has,
-  isEmpty,
-  type KeyValueVaultStore,
-  table,
-  ttl,
-  update,
-  upsert,
-  VaultDisposedError,
-  validatorCodec,
-} from '../index';
+import { type KeyValueVaultStore, table, ttl, VaultDisposedError, validatorCodec } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
@@ -49,30 +37,30 @@ describe('LocalStorage adapter', () => {
     expect(window.localStorage.getItem('LS\x00other\x001')).not.toBeNull();
   });
 
-  test('has and update work as expected (derived helpers)', async () => {
+  test('has and update work as expected', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
-    expect(await has(db, 'users', 1)).toBe(true);
-    expect(await update(db, 'users', 1, { city: 'Paris' })).toEqual({
+    expect(await db.has('users', 1)).toBe(true);
+    expect(await db.update('users', 1, { city: 'Paris' })).toEqual({
       city: 'Paris',
       id: 1,
       name: 'Alice',
     });
   });
 
-  test('upsert inserts when record does not exist (derived helper)', async () => {
-    const result = await upsert(db, 'users', 1, () => ({ id: 1, name: 'Alice' }));
+  test('upsert inserts when record does not exist', async () => {
+    const result = await db.upsert('users', 1, () => ({ id: 1, name: 'Alice' }));
 
     expect(result).toEqual({ id: 1, name: 'Alice' });
   });
 
-  test('deleteMany removes matching records (derived helper)', async () => {
+  test('deleteMany removes matching records', async () => {
     await db.putAll('users', [
       { age: 20, id: 1, name: 'Alice' },
       { age: 30, id: 2, name: 'Bob' },
     ]);
 
-    expect(await deleteMany(db, 'users', [1])).toBe(1);
+    expect(await db.deleteMany('users', [1])).toBe(1);
     expect(await db.getAll('users')).toEqual([{ age: 30, id: 2, name: 'Bob' }]);
   });
 
@@ -81,7 +69,7 @@ describe('LocalStorage adapter', () => {
     await delay(5);
 
     expect(await db.get('users', 1)).toBeUndefined();
-    expect(await has(db, 'users', 1)).toBe(false);
+    expect(await db.has('users', 1)).toBe(false);
   });
 
   test('storage clear event notifies observers', async () => {
@@ -144,7 +132,7 @@ describe('LocalStorage adapter', () => {
 
     await db.put('users', { id: 2, name: 'Alice' });
 
-    expect(await count(db, 'users')).toBe(1);
+    expect(await db.count('users')).toBe(1);
     expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Alice' }]);
   });
 
@@ -155,7 +143,7 @@ describe('LocalStorage adapter', () => {
       { id: 3, name: 'Charlie' },
     ]);
 
-    const deleted = await deleteMany(db, 'users', [1, 3]);
+    const deleted = await db.deleteMany('users', [1, 3]);
 
     expect(deleted).toBe(2);
     expect(await db.getAll('users')).toEqual([{ id: 2, name: 'Bob' }]);
@@ -170,7 +158,7 @@ describe('LocalStorage adapter', () => {
     vi.advanceTimersByTime(2000); // Alice is now expired
 
     // Attempt to delete both — Alice is expired, Bob is live
-    const deleted = await deleteMany(db, 'users', [1, 2]);
+    const deleted = await db.deleteMany('users', [1, 2]);
 
     vi.useRealTimers();
 
@@ -197,7 +185,7 @@ describe('LocalStorage adapter', () => {
     await Promise.resolve();
 
     // Our schema only has 'users' — phantom table key must not be tracked
-    expect(await count(db, 'users')).toBe(1);
+    expect(await db.count('users')).toBe(1);
     // Cross-tab write to phantom table must not trigger a users observer
   });
 
@@ -253,15 +241,15 @@ describe('LocalStorage adapter', () => {
   });
 
   test('isEmpty() returns true for empty table, false when records exist', async () => {
-    expect(await isEmpty(db, 'users')).toBe(true);
+    expect(await db.isEmpty('users')).toBe(true);
 
     await db.put('users', { id: 1, name: 'Alice' });
 
-    expect(await isEmpty(db, 'users')).toBe(false);
+    expect(await db.isEmpty('users')).toBe(false);
 
     await db.clear('users');
 
-    expect(await isEmpty(db, 'users')).toBe(true);
+    expect(await db.isEmpty('users')).toBe(true);
   });
 });
 

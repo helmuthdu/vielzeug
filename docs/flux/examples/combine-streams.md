@@ -15,7 +15,7 @@ Seed channels with initial state, combine them, then map tuple to request state.
 
 ```ts
 import { combineLatest, map, pipe } from '@vielzeug/flux';
-import { createChannel } from '@vielzeug/flux/subjects';
+import { createChannel } from '@vielzeug/flux';
 
 type Filter = { category: string };
 type Page = { page: number; size: number };

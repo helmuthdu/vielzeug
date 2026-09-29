@@ -11,10 +11,10 @@ description: API reference for @vielzeug/assay queries, event dispatch, and asyn
 | -------------------------------------------- | ------------------------------------------- | -------------- | ------------------------------------------------ |
 | `within`                                     | Creates scoped query API                    | Sync           | Required `get*` methods throw `AssayQueryError`  |
 | `queryInShadow` / `queryPart` / `getSlotted` | Crosses custom-element boundaries           | Sync           | Open shadow roots are required                   |
-| `queryLiveRegion` / `waitForLiveRegion`      | ARIA live-region queries and waits          | Sync/Async     | jsdom cannot prove AT speech — manual AT tests still required |
+
 | `fire*` / `dispatch`                         | Dispatches platform event instances         | Sync           | Does not reproduce browser default behavior      |
-| `waitUntil` / `eventually` / `waitForEvent`       | Waits for conditions, assertions, or events | Async          | Use a signal or timeout for bounded waits        |
-| `delay` / `nextTick`                         | Schedules timers or microtasks              | Async          | Prefer `nextTick()` for microtask-scheduled work |
+| `waitUntil` / `eventually` / `waitForEvent`  | Waits for conditions, assertions, or events | Async          | Use a signal or timeout for bounded waits                     |
+| `delay`                                      | Schedules a cancellable timer               | Async          | Pass a signal to cancel a pending wait                        |
 
 ## Package Entry Point
 
@@ -99,7 +99,6 @@ await waitUntil(() => ready, { interval: 20, signal, timeout: 1000 });
 await eventually(() => expect(spy).toHaveBeenCalled(), { signal, timeout: 1000 });
 await waitForEvent(target, 'ready', { signal, timeout: 1000 });
 await delay(100, { signal });
-await nextTick();
 ```
 
 | Function                               | Success condition        | Options                                    |
@@ -108,59 +107,11 @@ await nextTick();
 | `eventually(assertion, options?)`       | Assertion stops throwing | `timeout`, `interval`, `signal`, `message`            |
 | `waitForEvent(target, type, options?)` | Target emits `type`      | `timeout`, `signal`                        |
 | `delay(ms?, options?)`                 | Timer elapses            | `signal`                                   |
-| `nextTick()`                           | Next microtask           | none                                       |
+
 
 `waitUntil()`, `eventually()`, and `waitForEvent()` reject with `AssayTimeoutError` when their shared deadline expires. `waitUntil()` and `eventually()` remain bounded while an asynchronous callback is pending. Abort rejects with the signal reason and removes Assay-owned timers and listeners. Callback work itself must cooperate with application cancellation.
 
-`timeout` and delay milliseconds must be finite, non-negative, and no greater than 2,147,483,647 ms; `interval` must be finite, positive, and within the same timer limit. Invalid durations throw `RangeError`. `eventually()` also accepts `message` for diagnostic timeout context. `nextTick()` adds one explicit queued-microtask boundary.
-
-## Live Regions
-
-Helpers for querying and waiting on ARIA live regions — the visually-hidden elements
-that screen readers use to announce dynamic status changes.
-
-::: warning jsdom limitation
-These helpers assert DOM structure and text content only. jsdom has no accessibility
-tree and cannot prove a screen reader actually spoke the message. Manual AT testing
-across the supported browser/screen-reader matrix remains required for production
-sign-off.
-:::
-
-### `queryLiveRegion(options?)`
-
-Returns the first live region matching `politeness` (default `'polite'`) and optional
-`role` within `root` (default `document.body`). Returns `null` when none exists.
-
-Matches explicit `aria-live` attributes and implicit roles: `alert` is assertive; `log` and `status` are polite; `marquee` and `timer` are off. Explicit `aria-live` takes precedence. A matching `root` element is included before its descendants.
-
-| Option        | Type                    | Default       | Description                          |
-| ------------- | ----------------------- | ------------- | ------------------------------------ |
-| `politeness`  | `'polite' \| 'assertive' \| 'off'` | `'polite'` | `aria-live` value (or implicit role) to match |
-| `role`        | `string`                | —             | `role` attribute to match (e.g. `'status'`, `'alert'`) |
-| `root`        | `ParentNode`            | `document.body` | Scope the query                    |
-| `document`    | `Document`              | global `document` | Document to search                |
-
-### `queryAllLiveRegions(options?)`
-
-Returns all live regions matching the criteria — useful for asserting no duplicate
-regions were created.
-
-### `waitForLiveRegion(text, options?)`
-
-Retries until any matching live region has `textContent` that includes `text`.
-Handles the clear-then-set announce pattern (region briefly empty before the message
-is written). Throws `AssayTimeoutError` on timeout.
-
-```ts
-import { waitForLiveRegion } from '@vielzeug/assay';
-
-await waitForLiveRegion('3 results found');
-await waitForLiveRegion('Session expired', { politeness: 'assertive' });
-```
-
-### `waitForLiveRegionCleared(options?)`
-
-Retries until any matching live region has empty `textContent`.
+`timeout` and delay milliseconds must be finite, non-negative, and no greater than 2,147,483,647 ms; `interval` must be finite, positive, and within the same timer limit. Invalid durations throw `RangeError`. `eventually()` also accepts `message` for diagnostic timeout context.
 
 ## Types
 

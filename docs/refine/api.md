@@ -16,14 +16,17 @@ description: Published component, stylesheet, framework type, and error entry po
 | `@vielzeug/refine/frameworks/elements` | Register typed DOM tag mappings | Types only | Import for side effects in TypeScript |
 | `@vielzeug/refine/frameworks/react` | Register typed React JSX elements | Types only | Does not provide runtime wrappers |
 | `@vielzeug/refine/frameworks/vue` | Register typed Vue global components | Types only | Does not install a Vue plugin |
+| `@vielzeug/refine/theme` | `createThemeController()` — light/dark/system document theme | Sync | Does not persist the preference or set an accent color |
+| `eventFieldValue()` / `eventFieldChecked()` | Read a form control's value/checked from `event.currentTarget` | Sync | Exported from the package root; guards non-field targets |
 | `RefineError` | Base class for package-defined public errors | Sync | Component configuration warnings do not throw this error |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/refine` | Export `RefineError` without registering components |
+| `@vielzeug/refine` | Export `RefineError` and the `eventFieldValue`/`eventFieldChecked` field readers without registering components |
 | `@vielzeug/refine/<component>` | Register one component and export its tag constant, props, events, and related types |
+| `@vielzeug/refine/theme` | `createThemeController()` and its theme types |
 | `@vielzeug/refine/tokens.css` | Required global design contract |
 | `@vielzeug/refine/fouc.css` | Optional pre-upgrade visibility rule |
 | `@vielzeug/refine/styles/*` | Focused theme, animation, layer, and preflight stylesheets |
@@ -83,6 +86,34 @@ The declarations cover every supported tag and derive component properties from 
 Form controls expose `.value` or `.checked` and dispatch standard `input` and `change` events. Read the property from `event.currentTarget`.
 
 Stateful overlays expose controlled `open`, optional `default-open`, and an `open-change` custom event with `{ open, reason }` detail. Component pages define additional detail fields and reasons.
+
+## Utilities
+
+### `createThemeController(options?)`
+
+```ts
+import { createThemeController } from '@vielzeug/refine/theme';
+
+const theme = createThemeController(); // starts in 'system' mode
+theme.setPreference('dark');
+theme.dispose();
+```
+
+Owns the light/dark/system theme for the document: a reactive `preference` signal, the effective `resolved` mode (`'dark' | 'light'` after resolving `system` against the OS), and the DOM application `styles/theme.css` expects — the `.dark` class plus the `color-scheme` property on the root element, so every `light-dark()` token resolves to the right branch. While in `system` mode the controller tracks the OS `prefers-color-scheme` via sentinel's `createMediaQuery`.
+
+The controller does **not** persist the preference or expose an accent color — those are consumer concerns (wire `watch(controller.preference, save)` for persistence; set `--color-primary-hue` yourself). Options: `initial` (starting preference, default `'system'`), `root` (element carrying the classes, default `document.documentElement`), `target` (window whose `matchMedia` backs `system`). The handle is disposable: `dispose()`, `disposed`, `disposalSignal`, `[Symbol.dispose]`.
+
+### `eventFieldValue(event)` / `eventFieldChecked(event)`
+
+```ts
+import { eventFieldChecked, eventFieldValue } from '@vielzeug/refine';
+
+input.addEventListener('input', (event) => {
+  const value = eventFieldValue(event); // string | undefined — never a blind cast
+});
+```
+
+Guarded readers for the standard `input`/`change` event pattern above: they read `value`/`checked` from `event.currentTarget` only when the target actually carries it, so a handler wired to the wrong element yields `undefined`/`false` instead of a crash or a lie. Exported from the package root, which registers no components.
 
 ## Types
 

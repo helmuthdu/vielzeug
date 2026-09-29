@@ -11,7 +11,7 @@ You need to validate records before they reach storage and handle quota, disposa
 
 ### Solution
 
-Durable Vault factories require one codec or parser schema per table. Memory may omit them. Spell schemas work directly; `validatorCodec()` remains available for explicit identity encoding. Web Storage factories also accept `onQuotaExceeded`.
+Durable Vault factories require one codec or parser schema per table. Memory may omit them. Spell schemas work directly; `validatorCodec()` remains available for explicit identity encoding.
 
 #### Codecs
 
@@ -40,28 +40,6 @@ const db = createMemory({
 await db.put('users', { id: 1, name: 'Alice', age: -5 });
 ```
 
-#### Quota exceeded hook (LocalStorage / SessionStorage)
-
-```ts
-import { s } from '@vielzeug/spell';
-import { table, type VaultQuotaError } from '@vielzeug/vault';
-import { createLocalStorage } from '@vielzeug/vault/local-storage';
-
-type CacheEntry = { id: string; payload: string };
-const schema = { cache: table<CacheEntry>('id') };
-const CacheSchema = s.object({ id: s.string(), payload: s.string() });
-
-const db = createLocalStorage({
-  name: 'app',
-  schema,
-  codecs: { cache: CacheSchema },
-  onQuotaExceeded: (tableName, error: VaultQuotaError) => {
-    console.warn(`[${String(tableName)}] quota exceeded — dropping write`, error.message);
-    return 'ignore'; // silently drop the write; use 'throw' to rethrow (default)
-  },
-});
-```
-
 #### IndexedDB migration hook
 
 ```ts
@@ -73,9 +51,11 @@ type User = { id: number; name: string };
 const schema = { users: table<User>('id', { indexes: ['name'] }) };
 const UserSchema = s.object({ id: s.number(), name: s.string() });
 
+// Object stores and schema-declared indexes are created automatically.
+// The hook only handles work the schema cannot express.
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
-  if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
-    tx.objectStore('users').createIndex('name', 'value.name', { unique: false });
+  if (oldVersion < 2 && db.objectStoreNames.contains('legacy_users')) {
+    tx.deleteObjectStore('legacy_users');
   }
 };
 
@@ -130,7 +110,7 @@ try {
 - Parser schemas validate writes and persisted reads. Transforming codecs validate writes with `decode(encode(value))` and decode persisted values before they enter typed code.
 - IndexedDB codecs must preserve declared index field names and values in encoded objects.
 - The `migrate` callback on IndexedDB runs synchronously inside `onupgradeneeded`. Do not call `await` or open a second transaction inside it — IDB will throw. Errors thrown from `migrate` surface as `VaultMigrationError` on the first operation.
-- `onQuotaExceeded` returning `'ignore'` silently drops the write without throwing. The adapter continues operating normally. Returning `'throw'` (or not providing the hook) rethrows the original `VaultQuotaError`.
+- A Web Storage write that exceeds the browser quota always rejects with `VaultQuotaError`; the failed write is simply not persisted.
 
 ### Related
 

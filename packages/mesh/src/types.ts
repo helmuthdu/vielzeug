@@ -77,6 +77,8 @@ export interface MeshRtcFactory {
 export interface MeshInvitation {
   /** Expiry instant in epoch milliseconds. */
   readonly expiresAt: number;
+  /** Host-supplied display name; the guest shows it as its host peer's name. */
+  readonly hostName?: string;
   /** Host offer SDP with ICE candidates inlined (non-trickle). */
   readonly sdp: string;
   /** Random 256-bit secret, base64url-encoded. Proves possession of the invitation. */
@@ -96,16 +98,6 @@ export interface MeshAnswer {
   readonly sdp: string;
   readonly sessionId: string;
   readonly v: 1;
-}
-
-/**
- * Encodes/decodes pairing payloads for out-of-band transport (copy/paste,
- * `navigator.share`, QR). Kept separate from the transport so new encodings
- * can be added without touching connection logic.
- */
-export interface MeshCodec {
-  decode(text: string): MeshInvitation | MeshAnswer;
-  encode(payload: MeshInvitation | MeshAnswer): string;
 }
 
 // ─── Options ─────────────────────────────────────────────────────────────────
@@ -129,8 +121,6 @@ export interface MeshOptions {
   readonly channelOpenTimeoutMs?: number;
   /** Clock for TTLs and message timestamps. Default: `Date.now`. */
   readonly clock?: () => number;
-  /** Message deserializer. Default: `JSON.parse`. */
-  readonly deserialize?: (text: string) => unknown;
   /**
    * How long to wait for ICE gathering to complete before proceeding with
    * whatever candidates were gathered. Default: `5_000`.
@@ -153,8 +143,6 @@ export interface MeshOptions {
   readonly random?: RandomSource;
   /** WebRTC factory — the injection point for tests and non-browser runtimes. */
   readonly rtc?: MeshRtcFactory;
-  /** Message serializer. Default: `JSON.stringify`. */
-  readonly serialize?: (value: unknown) => string;
   /** Disposes the node when aborted. */
   readonly signal?: AbortSignal;
 }
@@ -189,12 +177,6 @@ export interface MeshPeer extends MeshPeerInfo {
   readonly status: MeshStatus;
 }
 
-/** Peer lifecycle event delivered to `MeshHost.onPeer` handlers. */
-export type MeshPeerEvent =
-  | { readonly type: 'joined'; readonly peer: MeshPeer }
-  | { readonly type: 'left'; readonly peer: MeshPeer; readonly reason?: string }
-  | { readonly type: 'status-change'; readonly peer: MeshPeer };
-
 // ─── Messaging ───────────────────────────────────────────────────────────────
 
 /** A deserialized inbound message with transport metadata. */
@@ -217,11 +199,9 @@ export type Unsubscribe = () => void;
 export type MeshEvent =
   | { readonly type: 'status-change'; readonly peerId: string | null; readonly status: MeshStatus }
   | { readonly type: 'invitation-created' | 'invitation-expired'; readonly sessionId: string }
-  | {
-      readonly type: 'peer-approved' | 'peer-rejected' | 'peer-joined' | 'peer-left';
-      readonly peerId: string;
-      readonly reason?: string;
-    }
+  | { readonly type: 'peer-approved' | 'peer-rejected'; readonly peerId: string }
+  | { readonly type: 'peer-joined'; readonly peer: MeshPeer }
+  | { readonly type: 'peer-left'; readonly peer: MeshPeer; readonly reason?: string }
   | {
       readonly type: 'message-sent' | 'message-received';
       readonly peerId: string;
@@ -234,7 +214,6 @@ export type MeshEvent =
       readonly reason: 'too-large' | 'duplicate' | 'malformed' | 'unknown-type';
     }
   | { readonly type: 'ice-state'; readonly peerId: string; readonly state: string }
-  | { readonly type: 'security-downgrade'; readonly reason: string }
   | { readonly type: 'error'; readonly error: MeshError }
   | { readonly type: 'dispose' };
 
@@ -282,7 +261,8 @@ export interface MeshHost<P extends MeshProtocol> extends MeshNode {
   /**
    * Create a single-use invitation for one prospective guest. Deliver the
    * encoded invitation out-of-band (copy/paste, `navigator.share`, QR).
-   * May be called repeatedly — one invitation per guest.
+   * May be called repeatedly — one invitation per guest. `meta.name` is
+   * shown to the guest as this host's peer name.
    */
   createInvitation(meta?: { readonly name?: string }): Promise<MeshInvitation>;
   /** Disconnect a peer. The guest observes `disconnected`. */
@@ -292,8 +272,6 @@ export interface MeshHost<P extends MeshProtocol> extends MeshNode {
     type: K,
     handler: (message: MeshInbound<P['toHost'][K]>) => void,
   ): Unsubscribe;
-  /** Subscribe to peer lifecycle events. */
-  onPeer(handler: (event: MeshPeerEvent) => void): Unsubscribe;
   /** Live peers keyed by peer id. */
   readonly peers: ReadonlyMap<string, MeshPeer>;
   /** Send a typed message to one peer. Throws `MeshConnectionError` if unconnected. */

@@ -23,51 +23,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./commerce": {
-      "types": "./dist/commerce/index.d.ts",
-      "import": "./dist/commerce/index.js",
-      "require": "./dist/commerce/index.cjs"
-    },
-    "./date": {
-      "types": "./dist/date/index.d.ts",
-      "import": "./dist/date/index.js",
-      "require": "./dist/date/index.cjs"
-    },
-    "./finance": {
-      "types": "./dist/finance/index.d.ts",
-      "import": "./dist/finance/index.js",
-      "require": "./dist/finance/index.cjs"
-    },
-    "./internet": {
-      "types": "./dist/internet/index.d.ts",
-      "import": "./dist/internet/index.js",
-      "require": "./dist/internet/index.cjs"
-    },
-    "./location": {
-      "types": "./dist/location/index.d.ts",
-      "import": "./dist/location/index.js",
-      "require": "./dist/location/index.cjs"
-    },
-    "./lorem": {
-      "types": "./dist/lorem/index.d.ts",
-      "import": "./dist/lorem/index.js",
-      "require": "./dist/lorem/index.cjs"
-    },
-    "./person": {
-      "types": "./dist/person/index.d.ts",
-      "import": "./dist/person/index.js",
-      "require": "./dist/person/index.cjs"
-    },
-    "./seed": {
-      "types": "./dist/seed/index.d.ts",
-      "import": "./dist/seed/index.js",
-      "require": "./dist/seed/index.cjs"
-    },
-    "./system": {
-      "types": "./dist/system/index.d.ts",
-      "import": "./dist/system/index.js",
-      "require": "./dist/system/index.cjs"
-    },
     "./locales": {
       "types": "./dist/locales/index.d.ts",
       "import": "./dist/locales/index.js",
@@ -86,33 +41,6 @@
   },
   "typesVersions": {
     "*": {
-      "commerce": [
-        "dist/commerce/index.d.ts"
-      ],
-      "date": [
-        "dist/date/index.d.ts"
-      ],
-      "finance": [
-        "dist/finance/index.d.ts"
-      ],
-      "internet": [
-        "dist/internet/index.d.ts"
-      ],
-      "location": [
-        "dist/location/index.d.ts"
-      ],
-      "lorem": [
-        "dist/lorem/index.d.ts"
-      ],
-      "person": [
-        "dist/person/index.d.ts"
-      ],
-      "seed": [
-        "dist/seed/index.d.ts"
-      ],
-      "system": [
-        "dist/system/index.d.ts"
-      ],
       "locales": [
         "dist/locales/index.d.ts"
       ],
@@ -147,9 +75,9 @@
     "@vielzeug/tempo": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
     "typescript": "^6.0.3",
-    "vite": "^8.2.2",
-    "vitest": "^5.0.0"
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   }
 }

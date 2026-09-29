@@ -10,8 +10,8 @@
 import { ORE_ERRORS, OreApiError } from '../errors';
 
 // ─── Slot kinds ───────────────────────────────────────────────────────────────
-// Const object + derived union, same pattern as `ComponentPhase`/`LIFECYCLE_EVENTS`
-// in types.ts — used here (rather than plain string literals) because the kind
+// Const object + derived union, same pattern as `ComponentPhase`
+// in base-element.ts — used here (rather than plain string literals) because the kind
 // crosses a module boundary (compiler.ts produces it, instantiator.ts consumes
 // it): importing `SlotKind` gives autocomplete and a single rename point at the
 // consuming site, where a bare string literal wouldn't.

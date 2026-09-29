@@ -128,7 +128,7 @@
     padding-inline: 2px;
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-400);
+    color: var(--color-contrast-600);
   }
 
   .counter.near-limit {

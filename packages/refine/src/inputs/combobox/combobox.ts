@@ -362,6 +362,10 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
 
     // ── Open / Close ─────────────────────────────────────────────────────────
     function openPopup(clearFilter = true, reason: OverlayOpenReason = 'programmatic') {
+      // Show the popover before positioning so the positioner measures the element in the top
+      // layer, not inside a possible ancestor containing block (a transformed dialog panel).
+      if (dropdownEl && 'showPopover' in dropdownEl && !dropdownEl.matches(':popover-open')) dropdownEl.showPopover();
+
       if (clearFilter) {
         lastQueryBeforeClear = query.value;
         query.value = '';

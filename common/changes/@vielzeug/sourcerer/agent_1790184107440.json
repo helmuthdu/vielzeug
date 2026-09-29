@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: unify error naming on new.target.name",
+      "packageName": "@vielzeug/sourcerer",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sourcerer"
+}

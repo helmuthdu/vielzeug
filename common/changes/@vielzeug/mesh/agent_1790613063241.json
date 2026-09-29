@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove peerIdOf indirection from MessengerOptions, consolidate isRecord guard, fix meshCodec JSDoc placement",
+      "packageName": "@vielzeug/mesh",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

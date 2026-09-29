@@ -276,11 +276,11 @@ describe('createTestBus - allEmitted()', () => {
 });
 
 describe('createTestBus - on() SubscribeOptions forwarding', () => {
-  it('{ once: true } — listener fires once then auto-removes', () => {
+  it('once() — listener fires once then auto-removes', () => {
     const bus = createTestBus<TestEvents>();
     const listener = vi.fn();
 
-    bus.on('count', listener, { once: true });
+    bus.once('count', listener);
     bus.emit('count', 1);
     bus.emit('count', 2);
 

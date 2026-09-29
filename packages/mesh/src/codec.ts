@@ -1,8 +1,9 @@
-import { base64UrlToText, textToBase64Url } from './_base64';
+import { base64UrlToText, textToBase64Url } from '@vielzeug/arsenal';
 import { MeshPairingError } from './errors';
-import type { MeshAnswer, MeshCodec, MeshInvitation } from './types';
+import type { MeshAnswer, MeshInvitation } from './types';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+/** Structural guard shared by the plain and QR pairing codecs. */
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
@@ -29,21 +30,6 @@ function isAnswer(value: Record<string, unknown>): value is Record<string, unkno
 }
 
 /**
- * Compact JSON → base64url codec for pairing payloads. Pure and transport-free
- * so alternative encodings (compressed, QR-optimized) can be added later
- * without touching the transport.
- *
- * @example
- * ```ts
- * const invitation = await host.createInvitation();
- * const text = meshCodec.encode(invitation);   // copy/paste or navigator.share
- * const answer = await guest.acceptInvitation(meshCodec.decode(text));
- * await host.acceptAnswer(meshCodec.decode(meshCodec.encode(answer)));
- * ```
- *
- * @throws {MeshPairingError} On malformed text or unsupported payload shape/version.
- */
-/**
  * Validate a decoded pairing payload. Shared by `meshCodec` and `meshQrCodec`
  * so both encodings enforce the same shape/version contract.
  *
@@ -59,8 +45,23 @@ export function parsePairingPayload(parsed: unknown): MeshInvitation | MeshAnswe
   throw new MeshPairingError('Unrecognized pairing payload shape');
 }
 
-export const meshCodec: MeshCodec = {
-  decode(text) {
+/**
+ * Compact JSON → base64url codec for pairing payloads. Pure and transport-free
+ * so alternative encodings (compressed, QR-optimized) can be added later
+ * without touching the transport.
+ *
+ * @example
+ * ```ts
+ * const invitation = await host.createInvitation();
+ * const text = meshCodec.encode(invitation);   // copy/paste or navigator.share
+ * const answer = await guest.acceptInvitation(meshCodec.decode(text));
+ * await host.acceptAnswer(meshCodec.decode(meshCodec.encode(answer)));
+ * ```
+ *
+ * @throws {MeshPairingError} On malformed text or unsupported payload shape/version.
+ */
+export const meshCodec = {
+  decode(text: string): MeshInvitation | MeshAnswer {
     let parsed: unknown;
     try {
       parsed = JSON.parse(base64UrlToText(text.trim()));
@@ -69,7 +70,7 @@ export const meshCodec: MeshCodec = {
     }
     return parsePairingPayload(parsed);
   },
-  encode(payload) {
+  encode(payload: MeshInvitation | MeshAnswer): string {
     return textToBase64Url(JSON.stringify(payload));
   },
 };

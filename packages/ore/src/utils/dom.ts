@@ -8,10 +8,17 @@ import { warn } from '../_dev';
 import { ORE_ERRORS } from '../errors';
 
 /**
+ * A value that may be a plain value, a reactive signal, or a getter function —
+ * the shape `when()`, `each()`, `classMap()`, and `bind()` accept.
+ * Exported so consumers can annotate their own composable parameters with it.
+ */
+export type MaybeReactive<T> = T | Readable<T> | (() => T);
+
+/**
  * Resolves a value that may be a plain value, a getter function, or a reactive
  * signal — the one shared three-way branch used by `classMap`/`styleMap`/`bind()`.
  */
-export const resolveMaybeReactive = <T>(value: T | Readable<T> | (() => T)): T =>
+export const resolveMaybeReactive = <T>(value: MaybeReactive<T>): T =>
   typeof value === 'function' ? (value as () => T)() : isReactive(value) ? value.value : value;
 
 /**

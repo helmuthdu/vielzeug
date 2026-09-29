@@ -1,4 +1,4 @@
-import { type AnySchema, type InferInput, type InferOutput, type InferSchemaMode, Schema } from './core';
+import { type AnySchema, type InferInput, type InferOutput, Schema } from './core';
 import { ArraySchema } from './schemas/array';
 import { BigIntSchema } from './schemas/bigint';
 import { BooleanSchema } from './schemas/boolean';
@@ -32,8 +32,8 @@ const sIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema
   ...items: T
 ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
   new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
-const sLazy = <T extends AnySchema>(getter: () => T): LazySchema<InferOutput<T>, InferInput<T>, InferSchemaMode<T>> =>
-  new LazySchema(getter as unknown as () => Schema<InferOutput<T>, InferInput<T>, InferSchemaMode<T>>);
+const sLazy = <T extends AnySchema>(getter: () => T): LazySchema<InferOutput<T>, InferInput<T>> =>
+  new LazySchema(getter as unknown as () => Schema<InferOutput<T>, InferInput<T>>);
 const sLiteral = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
   new LiteralSchema(value);
 const sMap = <K extends AnySchema, V extends AnySchema>(keySchema: K, valueSchema: V): MapSchema<K, V> =>
@@ -48,12 +48,17 @@ const sSet = <T extends AnySchema>(schema: T): SetSchema<T> => new SetSchema(sch
 const sString = (): StringSchema => new StringSchema();
 const sTuple = <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items);
 const sUndefined = (): LiteralSchema<undefined> => new LiteralSchema(undefined);
-const sUnion = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
+// Schema-only tuples keep their concrete branch types; the second overload normalizes raw
+// literals, where intersecting with AnySchema[] costs nothing.
+function sUnion<T extends readonly [AnySchema, AnySchema, ...AnySchema[]]>(...items: T): UnionSchema<T>;
+function sUnion<T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
   ...items: T
-): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
-  new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
+): UnionSchema<NormalizeItems<T> & readonly AnySchema[]>;
+function sUnion(this: unknown, ...items: readonly RawOrSchema[]): UnionSchema<readonly AnySchema[]> {
+  return new UnionSchema(normalizeToSchemas(items) as AnySchema[]);
+}
 const sUnknown = (): Schema<unknown> => new Schema();
-const sVariant = <K extends string, M extends Record<string, ObjectSchema<any, any>>>(
+const sVariant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
   discriminator: K,
   map: M,
 ): VariantSchema<K, M> => new VariantSchema(discriminator, map);

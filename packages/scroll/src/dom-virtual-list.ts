@@ -11,7 +11,7 @@ import {
   requirePositiveNumber,
   validateOverscan,
 } from './_validation';
-import { ScrollConfigurationError, ScrollRangeError } from './errors';
+import { ScrollConfigError, ScrollRangeError } from './errors';
 import {
   createVirtualizer,
   type ScrollToIndexOptions,
@@ -68,8 +68,6 @@ export type DomVirtualListOptions<T> = {
   gap?: number;
   getItemKey?: (index: number, item: T) => VirtualKey;
   horizontal?: boolean;
-  /** Enable keyboard navigation (Arrow/Page/Home/End keys). */
-  keyboardScroll?: boolean;
   listElement: HTMLElement;
   /** External measurement cache for scroll restoration. */
   measurementCache?: MeasurementCache;
@@ -174,7 +172,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
   if (options.stickToBottom !== undefined && typeof options.stickToBottom !== 'boolean') {
     if (options.stickToBottom === null || Array.isArray(options.stickToBottom)) {
-      throw new ScrollConfigurationError('stickToBottom must be a boolean or options object.');
+      throw new ScrollConfigError('stickToBottom must be a boolean or options object.');
     }
 
     if (options.stickToBottom.threshold !== undefined) {
@@ -299,7 +297,6 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       gap: options.gap,
       getItemKey: resolveKey,
       horizontal: options.horizontal,
-      keyboardScroll: options.keyboardScroll,
       measurementCache: options.measurementCache,
       onChange: emitState,
       overscan: options.overscan ?? DEFAULT_OVERSCAN,
@@ -388,6 +385,12 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       if (disposed) return;
 
       virtualizer?.refresh();
+    },
+
+    remeasure() {
+      if (disposed) return;
+
+      virtualizer?.remeasure();
     },
 
     get scrollOffset() {

@@ -3,8 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-import { buildVielzeugSrcAliases } from '../scripts/vielzeug-packages';
-import { componentPreviewPlugin } from './.vitepress/plugins/component-preview/plugin';
+import { buildVielzeugSrcAliases } from '../scripts/vielzeug-packages.ts';
+import { componentPreviewPlugin } from './.vitepress/plugins/component-preview/plugin.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

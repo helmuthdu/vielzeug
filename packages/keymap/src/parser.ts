@@ -119,3 +119,16 @@ export function matchStep(event: KeyboardEvent, step: ShortcutStep): boolean {
     event.shiftKey === modifiers.has('shift')
   );
 }
+
+/**
+ * Match a keyboard event against a single shortcut pattern such as `'ArrowDown'`,
+ * `'esc'`, `'mod+k'`, or `'shift+Home'`. Aliases and `mod` resolve through the same
+ * parser `createKeymap` uses, and modifier state must match exactly: `ArrowDown`
+ * does not match Ctrl+ArrowDown. Returns `false` for unparseable patterns instead
+ * of throwing, so it is safe inside event listeners.
+ */
+export function matchKey(event: KeyboardEvent, pattern: string, modKey: 'ctrl' | 'meta' = detectModKey()): boolean {
+  const step = parseStep(pattern, modKey);
+
+  return step !== null && matchStep(event, step);
+}

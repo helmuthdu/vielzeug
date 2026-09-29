@@ -1,21 +1,15 @@
 import type {
   AnySchema,
-  CheckContext,
   InferInput,
   InferOutput,
-  InferSchemaMode,
   Issue,
-  MergeSchemaModes,
   MessageFn,
   ParseContext,
   ParseValue,
   SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
 } from '../core';
 
-import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError } from '../core';
+import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
 
 /* -------------------- Typed annotations -------------------- */
 
@@ -24,21 +18,11 @@ interface ArrayAnnotations extends Record<string, unknown> {
   minItems?: number;
 }
 
-export class ArraySchema<
-  T extends AnySchema,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T>>,
-> extends Schema<InferOutput<T>[], InferInput<T>[], Mode> {
+export class ArraySchema<T extends AnySchema> extends Schema<InferOutput<T>[], InferInput<T>[]> {
   readonly itemSchema: T;
 
   protected override get _kind(): string {
     return 'array';
-  }
-
-  override checkAsync(
-    this: ArraySchema<T, 'sync'>,
-    fn: (value: InferOutput<T>[], ctx: CheckContext) => Promise<ValidateResult>,
-  ): ArraySchema<T, 'async'> {
-    return this._addCheck(fn, true) as unknown as ArraySchema<T, 'async'>;
   }
 
   constructor(itemSchema: T) {
@@ -74,43 +58,28 @@ export class ArraySchema<
     return { data: items, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferOutput<T>[]> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    if (!Array.isArray(value)) {
+      return { data: value, issues: fail(ErrorCode.invalid_type, ctx.messages.array.type()), typeOk: false };
+    }
 
-    return this._withCatchAsync<InferOutput<T>[]>(async () => {
-      const prepared = this._prepareInput(value);
+    const settled = await Promise.all(value.map((item) => this.itemSchema._parseFullAsync(item, ctx)));
 
-      if (prepared.skip) return prepared.value as unknown as InferOutput<T>[];
+    const issues: Issue[] = [];
+    const parsed: InferOutput<T>[] = [];
 
-      const raw = prepared.value;
+    for (let i = 0; i < settled.length; i++) {
+      const result = settled[i];
 
-      if (!Array.isArray(raw)) {
-        throw new SpellValidationError(fail(ErrorCode.invalid_type, c.messages.array.type()));
+      if (result.issues.length === 0) {
+        parsed.push(result.data as InferOutput<T>);
+      } else {
+        issues.push(...prependIssuePath(result.issues, i));
+        parsed.push(value[i] as InferOutput<T>);
       }
+    }
 
-      const settled = await Promise.all(raw.map((item) => this.itemSchema._parseFullAsync(item, c)));
-
-      const issues: Issue[] = [];
-      const parsed: InferOutput<T>[] = [];
-
-      for (let i = 0; i < settled.length; i++) {
-        const result = settled[i];
-
-        if (result.issues.length === 0) {
-          parsed.push(result.data as InferOutput<T>);
-        } else {
-          issues.push(...prependIssuePath(result.issues, i));
-          parsed.push(raw[i] as InferOutput<T>);
-        }
-      }
-
-      const validationIssues = await this._runValidatorsAsync(parsed, c);
-      const allIssues = [...issues, ...validationIssues];
-
-      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
-
-      return this._runPostprocessors(parsed) as InferOutput<T>[];
-    });
+    return { data: parsed, issues, typeOk: true };
   }
 
   min(length: number, message?: MessageFn<{ min: number; value: unknown[] }>): this {
@@ -246,13 +215,5 @@ export class ArraySchema<
       items: this.itemSchema.definition(),
       kind: 'array',
     };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const item = this.itemSchema.walk(visitor);
-
-    if (visitor.array) return visitor.array(this, item);
-
-    return super._walk(visitor);
   }
 }

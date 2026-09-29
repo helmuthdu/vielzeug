@@ -12,7 +12,8 @@ description: Complete API reference for @vielzeug/lingua.
 | `createTranslator()` | Compile one immutable locale catalog | Sync | No fallback locales |
 | `createI18n()` | Create mutable locale and catalog store | Sync | Provide catalogs, serialized state, or a loader |
 | `createFormatter()` | Create a cached Intl facade from `/format` | Sync | Pass a locale getter for dynamic locale changes |
-| `catalogKeys()` | Enumerate message keys as dotted paths | Sync | Accepts i18n instance (current locale) or raw catalog; traverse subtrees for group-scoped keys |
+| `createReactiveI18n()` | Mirror an i18n instance into ripple readables from `/ripple` | Sync | Optional `@vielzeug/ripple` peer; import from subpath |
+| `catalogKeys()` | Enumerate message keys as dotted paths | Sync | Takes a catalog (or subtree) only; for an i18n instance pass `state.catalogs[state.locale]` |
 | `validateCatalog()` | Check explicit plural forms from `/validate` | Sync | Import from subpath |
 | `compareCatalogs()` | Compare key parity across locales from `/validate` | Sync | First locale is the base; import from subpath |
 | `LinguaError` | Base class for Lingua errors | Sync | Use `instanceof LinguaError` for broad narrowing |
@@ -23,6 +24,7 @@ description: Complete API reference for @vielzeug/lingua.
 | --- | --- |
 | `@vielzeug/lingua` | Translation factories, state types, and Lingua errors |
 | `@vielzeug/lingua/format` | Standalone cached Intl formatter factory |
+| `@vielzeug/lingua/ripple` | `createReactiveI18n()` — reactive locale/translate bridge (optional `@vielzeug/ripple` peer) |
 | `@vielzeug/lingua/validate` | `validateCatalog()`, `compareCatalogs()`, and `ValidationIssue` |
 
 ## Translation Factories
@@ -116,19 +118,51 @@ i18n.translate('title');
 
 ---
 
+## Reactive bridge (`@vielzeug/lingua/ripple`)
+
+### createReactiveI18n
+
+```ts
+function createReactiveI18n<C extends Catalog>(i18n: I18n<C>): ReactiveI18n<C>;
+```
+
+Bridges a lingua instance into `@vielzeug/ripple` so translated strings are reactive. `i18n.translate()` is not ripple-reactive on its own: reading it inside a `computed()` computes once and never re-runs, since it registers no tracked dependency. Both translate methods here first read the reactive `locale` readable, so any binding built on them re-evaluates the instant `setLocale()` resolves.
+
+`@vielzeug/ripple` is an optional peer dependency — install it only when you use this subpath.
+
+```ts
+import { createI18n } from '@vielzeug/lingua';
+import { createReactiveI18n } from '@vielzeug/lingua/ripple';
+import { computed } from '@vielzeug/ripple';
+
+const reactive = createReactiveI18n(createI18n({ catalogs, locale: 'en' }));
+
+const heading = computed(() => reactive.translate('title')); // re-computes on setLocale()
+await reactive.i18n.setLocale('fr');
+```
+
+| Property or method | Signature | Returns |
+| --- | --- | --- |
+| `i18n` | `I18n<C>` | The underlying instance for imperative work (`setLocale`, `load`, disposal) |
+| `locale` | `Readable<Locale>` | Reactive locale — reading it inside a computed/template registers the dependency |
+| `translate` | `(key, options?)` | Rendered string; re-evaluates whenever the locale changes |
+| `translateDynamic` | `(key, options?)` | Same, for runtime-assembled keys |
+
+---
+
 ## Catalog Utilities
 
 ### catalogKeys
 
 ```ts
-function catalogKeys<C extends Catalog>(source: I18n<C> | C): ReadonlyArray<MessageKey<C>>;
+function catalogKeys<C extends Catalog>(catalog: C): ReadonlyArray<MessageKey<C>>;
 ```
 
-Enumerates every message key as a dotted path. Traverses nested grouping objects and explicit `{ plural: ... }` messages, producing the same paths that `TextKey<C>` represents at the type level. Pass an `I18n` instance to read from its current locale catalog; pass a raw catalog object to enumerate directly.
+Enumerates every message key as a dotted path. Traverses nested grouping objects and explicit `{ plural: ... }` messages, producing the same paths that `TextKey<C>` represents at the type level. Pass any catalog object or subtree; for an `I18n` instance, read its current locale catalog first.
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `source` | `I18n<C> \| C` | I18n instance (uses current locale) or raw catalog object |
+| Parameter | Type                | Description                               |
+| --------- | ------------------- | ----------------------------------------- |
+| `catalog` | `C extends Catalog` | Raw catalog object or any catalog subtree |
 
 **Returns:** `ReadonlyArray<MessageKey<C>>` — dotted paths to every text and plural message.
 
@@ -140,8 +174,9 @@ const i18n = createI18n({
   locale: 'en',
 });
 
-const allKeys = catalogKeys(i18n); // ['nav.home', 'nav.settings']
-const navKeys = catalogKeys(i18n.serialize().catalogs.en.nav); // ['home', 'settings']
+const state = i18n.serialize();
+const allKeys = catalogKeys(state.catalogs[state.locale]); // ['nav.home', 'nav.settings']
+const navKeys = catalogKeys(state.catalogs.en.nav); // ['home', 'settings']
 ```
 
 ---
@@ -245,7 +280,7 @@ type CatalogLoader<C extends Catalog> = (locale: Locale) => Promise<C> | C;
 type TranslationState<C extends Catalog = Catalog> = {
   readonly catalogs: Catalogs<C>;
   readonly locale: Locale;
-  readonly version: 4;
+  readonly version: 1;
 };
 
 type I18nSnapshot<C extends Catalog = Catalog> = {

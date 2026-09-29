@@ -15,6 +15,15 @@ export type {
   OreChatMessageProps,
 } from './chat-message/chat-message';
 export { CHAT_MESSAGE_TAG } from './chat-message/chat-message';
+export type {
+  OreChatPanelEvents,
+  OreChatPanelLabels,
+  OreChatPanelMessage,
+  OreChatPanelProps,
+  OreChatPanelSender,
+  OreChatPanelSuggestion,
+} from './chat-panel/chat-panel';
+export { CHAT_PANEL_TAG } from './chat-panel/chat-panel';
 export type { CodeWindowVariant, OreCodeWindowProps } from './code-window/code-window';
 export { CODE_WINDOW_TAG } from './code-window/code-window';
 export type { OreCopyCommandEvents, OreCopyCommandProps } from './copy-command/copy-command';

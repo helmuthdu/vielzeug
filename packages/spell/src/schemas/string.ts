@@ -1,5 +1,5 @@
 import { warn } from '../_dev';
-import type { CheckContext, MessageFn, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import {
   isBase64,
@@ -40,16 +40,9 @@ type UrlOptions = {
   protocols?: readonly string[];
 };
 
-export class StringSchema<Input = string, Mode extends SchemaMode = 'sync'> extends Schema<string, Input, Mode> {
+export class StringSchema<Input = string> extends Schema<string, Input> {
   protected override get _kind(): string {
     return 'string';
-  }
-
-  override checkAsync(
-    this: StringSchema<Input, 'sync'>,
-    fn: (value: string, ctx: CheckContext) => Promise<ValidateResult>,
-  ): StringSchema<Input, 'async'> {
-    return this._addCheck(fn, true) as unknown as StringSchema<Input, 'async'>;
   }
 
   constructor() {
@@ -535,12 +528,6 @@ export class StringSchema<Input = string, Mode extends SchemaMode = 'sync'> exte
    */
   uppercase(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toUpperCase() : v));
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    if (visitor.string) return visitor.string(this);
-
-    return super._walk(visitor);
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

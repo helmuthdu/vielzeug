@@ -58,6 +58,27 @@ window.addEventListener('pagehide', () => drag.dispose(), { once: true });
 
 `start`, `current`, and `delta` are readonly `{ x, y }` points. Set `touch-action: none` when the surface owns movement in both dimensions. Drag recognition does not provide previews, drop targets, DOM movement, or `DataTransfer`; use Dnd for those semantics.
 
+## Recognize Long Presses
+
+Use `createLongPress()` for hold interactions — the touch counterpart of a keyboard preview key. `onLongPress` receives the originating pointerdown once the hold outlasts `durationMs`:
+
+```ts
+import { createLongPress } from '@vielzeug/gesture';
+
+const hold = createLongPress(grid, {
+  durationMs: 500,
+  shouldStart: (event) =>
+    event.pointerType !== 'mouse' &&
+    (event.target as HTMLElement).closest('.tile') !== null,
+  onLongPress: (detail) => {
+    const tile = (detail.event.target as HTMLElement).closest<HTMLElement>('.tile');
+    openPreview(tile?.dataset.id);
+  },
+});
+```
+
+Movement beyond `slopPx` cancels back to a normal press, so scrolling never triggers the hold. The click that follows a fired hold is swallowed through a capture-phase listener on `target` — bind `target` to a stable ancestor of the pressed controls so the swallow precedes their click handlers, and gate `shouldStart` to the elements the hold belongs to.
+
 ## Completion Rules
 
 Gesture reports movement and terminal state but does not decide what constitutes a swipe. Apply thresholds and allowed directions in `onEnd`.

@@ -22,30 +22,31 @@ await db.putAll('products', [
   { id: 5, name: 'Monitor', price: 399, category: 'electronics', inStock: true },
 ])
 
-const products = db.query('products')
-const electronics = products
+// getAll() returns a plain array — compose with standard array operations
+const all = await db.getAll('products')
+const electronics = all
   .filter((product) => product.category === 'electronics' && product.inStock)
-  .orderBy('price')
+  .sort((a, b) => a.price - b.price)
 
 const pageSize = 2
 const pageIndex = 0
-const page = await electronics.offset(pageIndex * pageSize).limit(pageSize).toArray()
-const total = await electronics.count()
+const page = electronics.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize)
 
 console.log('Page:', page.map((p) => p.name))
-console.log('Total matching:', total)
-console.log('Page 1 of', Math.ceil(total / pageSize))
+console.log('Total matching:', electronics.length)
+console.log('Page 1 of', Math.ceil(electronics.length / pageSize))
 
-// prefix match via filter
-const mice = await products.filter((product) => product.name.toLowerCase().startsWith('m')).toArray()
+// prefix match
+const mice = all.filter((product) => product.name.toLowerCase().startsWith('m'))
 console.log('Starts with m:', mice.map((p) => p.name))
 
-const removed = await products.filter((product) => !product.inStock).delete()
-console.log('Removed out-of-stock:', removed)
+// deletion via deleteMany with the keys to remove
+const outOfStock = all.filter((product) => !product.inStock).map((product) => product.id)
+console.log('Removed out-of-stock:', await db.deleteMany('products', outOfStock))
 
-const cheapest = await products.orderBy('price').first()
+const cheapest = (await db.getAll('products')).sort((a, b) => a.price - b.price)[0]
 console.log('Cheapest:', cheapest?.name, cheapest?.price)
 
 console.log('Remaining count:', await db.count('products'))`,
-  name: 'Filtering — fluent query, pagination, and deletion',
+  name: 'Filtering — getAll composition, pagination, and deletion',
 };

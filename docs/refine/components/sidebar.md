@@ -154,7 +154,7 @@ Use two breakpoints to get the full three-state behavior:
 - For grouped sidebars, mark any descendant item with `bottom-nav` to promote it. Once one item is marked, only marked items appear in the bottom bar.
 - Use `bottom-nav-label` when the mobile tab needs a shorter label than the desktop item.
 - Use `label` to give an item's internal link or button an explicit accessible name, especially in collapsed icon-only navigation.
-- `ore-sidebar-group` content remains available in the drawer opened by `openMobile()` or a linked `ore-navbar mobile-sidebar` trigger.
+- `ore-sidebar-group` content remains available in the drawer opened by `openDrawer()` or a linked `ore-navbar mobile-sidebar` trigger.
 - Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
 
 ## Groups
@@ -394,9 +394,9 @@ sidebar.setCollapsed(false); // expand to full width
 sidebar.toggle(); // toggle between states
 
 // bottom-nav mode drawer controls
-sidebar.openMobile();
-sidebar.closeMobile();
-sidebar.toggleMobile();
+sidebar.openDrawer();
+sidebar.closeDrawer();
+sidebar.toggleDrawer();
 ```
 
 ## Events
@@ -408,8 +408,8 @@ sidebar.addEventListener('collapsed-change', (e) => {
   console.log('Collapsed:', e.detail.collapsed, 'source:', e.detail.source);
 });
 
-sidebar.addEventListener('mobile-open-change', (e) => {
-  console.log('Mobile drawer open:', e.detail.open, 'source:', e.detail.source);
+sidebar.addEventListener('drawer-change', (e) => {
+  console.log('Drawer open:', e.detail.open, 'source:', e.detail.source);
 });
 
 const group = document.querySelector('ore-sidebar-group[collapsible]');
@@ -458,10 +458,11 @@ ore-sidebar-item {
 | `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
 | `responsive`        | `string`  | —                      | Media query that enables compact (collapsed) sidebar mode    |
 | `bottom-nav-at`     | `string`  | —                      | Media query that switches to mobile bottom-nav + drawer mode |
-| `close-on-select`   | `boolean` | `false`                | Closes the mobile drawer after primary item activation       |
+| `close-on-select`   | `boolean` | `false`                | Closes the drawer after primary item activation             |
 | `collapse-label`    | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                    |
 | `expand-label`      | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                      |
-| `mobile-close-label`| `string`  | `'Close sidebar'`      | Accessible label for the mobile backdrop close control       |
+| `drawer`            | `boolean` | `false`                | Drawer-only mode: no inline panel or bottom bar              |
+| `drawer-close-label`| `string`  | `'Close sidebar'`      | Accessible label for the drawer backdrop close control       |
 | `variant`           | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`                    |
 | `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
@@ -479,7 +480,7 @@ ore-sidebar-item {
 | Event                | Detail                                                              | Description                                         |
 | -------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
 | `collapsed-change`   | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested     |
-| `mobile-open-change` | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the bottom-nav drawer open state changes |
+| `drawer-change`      | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the drawer open state changes            |
 
 **`ore-sidebar` Methods**
 
@@ -487,9 +488,9 @@ ore-sidebar-item {
 | -------------------- | ----------------------------------- |
 | `setCollapsed(next)` | Set collapsed state                 |
 | `toggle()`           | Toggle between collapsed / expanded |
-| `openMobile()`       | Open the bottom-nav drawer          |
-| `closeMobile()`      | Close the bottom-nav drawer         |
-| `toggleMobile()`     | Toggle the bottom-nav drawer        |
+| `openDrawer()`       | Open the drawer                     |
+| `closeDrawer()`      | Close the drawer                    |
+| `toggleDrawer()`     | Toggle the drawer                   |
 
 **`ore-sidebar` CSS Custom Properties**
 

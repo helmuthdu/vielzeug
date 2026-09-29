@@ -1,5 +1,5 @@
 import type { HeraldEvent } from '../index';
-import { BusDisposedError, createBus, HeraldConfigError, HeraldError } from '../index';
+import { BusDisposedError, createBus, HeraldError } from '../index';
 
 type TestEvents = {
   count: number;
@@ -167,31 +167,6 @@ describe('createBus - subscription lifecycle', () => {
     bus.emit('count', 2); // both consumed — no further calls
 
     expect(listener).toHaveBeenCalledTimes(2);
-  });
-
-  it('on() with { once: true } fires exactly once and auto-removes', () => {
-    const bus = createBus<TestEvents>();
-    const listener = vi.fn();
-
-    bus.on('count', listener, { once: true });
-
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-
-    expect(listener).toHaveBeenCalledOnce();
-    expect(listener).toHaveBeenCalledWith(1);
-  });
-
-  it('on() with { once: true, signal } cancels before first fire when signal aborts', () => {
-    const bus = createBus<TestEvents>();
-    const listener = vi.fn();
-    const controller = new AbortController();
-
-    bus.on('count', listener, { once: true, signal: controller.signal });
-    controller.abort();
-    bus.emit('count', 1);
-
-    expect(listener).not.toHaveBeenCalled();
   });
 
   it('eventNames returns only events with active listeners', () => {
@@ -456,6 +431,15 @@ describe('createBus - wait', () => {
 });
 
 describe('createBus - waitAny', () => {
+  it('resolves for a single-event list', async () => {
+    const bus = createBus<TestEvents>();
+    const pending = bus.waitAny(['count']);
+
+    bus.emit('count', 5);
+
+    await expect(pending).resolves.toEqual({ event: 'count', payload: 5 });
+  });
+
   it('resolves with winning event and payload', async () => {
     const bus = createBus<TestEvents>();
     const pending = bus.waitAny(['count', 'greet']);
@@ -585,32 +569,6 @@ describe('createBus - onAny (wildcard listener)', () => {
 
     controller.abort();
     bus.onAny(listener, { signal: controller.signal });
-    bus.emit('count', 1);
-
-    expect(listener).not.toHaveBeenCalled();
-  });
-
-  it('fires exactly once when { once: true } is passed', () => {
-    const bus = createBus<TestEvents>();
-    const listener = vi.fn();
-
-    bus.onAny(listener, { once: true });
-
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-    bus.emit('greet', { name: 'Alice' });
-
-    expect(listener).toHaveBeenCalledOnce();
-    expect(listener).toHaveBeenCalledWith('count', 1);
-  });
-
-  it('{ once: true } with signal cancels before firing when signal aborts', () => {
-    const bus = createBus<TestEvents>();
-    const listener = vi.fn();
-    const controller = new AbortController();
-
-    bus.onAny(listener, { once: true, signal: controller.signal });
-    controller.abort();
     bus.emit('count', 1);
 
     expect(listener).not.toHaveBeenCalled();
@@ -970,23 +928,9 @@ describe('createBus - maxListeners warning', () => {
   });
 });
 
-describe('createBus - waitAny() guards', () => {
-  it('throws HeraldConfigError when called with fewer than 2 event keys', () => {
-    const bus = createBus<TestEvents>();
-
-    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(HeraldConfigError);
-    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(
-      'waitAny() requires at least 2 event keys',
-    );
-
-    bus.dispose();
-  });
-});
-
 describe('HeraldError instanceof', () => {
-  it('returns true for BusDisposedError and HeraldConfigError instances', () => {
+  it('returns true for BusDisposedError instances', () => {
     expect(new BusDisposedError()).toBeInstanceOf(HeraldError);
-    expect(new HeraldConfigError('bad config')).toBeInstanceOf(HeraldError);
   });
 
   it('returns false for a plain Error or a non-error value', () => {

@@ -1,3 +1,7 @@
+import { matchKey } from '@vielzeug/keymap';
+
+import { FocusConfigError } from './errors.js';
+
 export type ListNavigationAction = 'first' | 'last' | 'next' | 'prev';
 export type ListKeyAction = ListNavigationAction | 'typeahead';
 
@@ -77,7 +81,8 @@ const findBackward = <T>(
 
 const resolveTypeaheadDelay = (delay: number | undefined): number => {
   if (delay === undefined) return DEFAULT_TYPEAHEAD_DELAY_MS;
-  if (!Number.isFinite(delay) || delay <= 0) throw new RangeError('Typeahead delay must be a positive finite number');
+  if (!Number.isFinite(delay) || delay <= 0)
+    throw new FocusConfigError('Typeahead delay must be a positive finite number');
   return delay;
 };
 
@@ -88,7 +93,8 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
   for (const action of ['next', 'prev', 'first', 'last'] as const) {
     for (const key of options.keys?.[action] ?? []) {
       const owner = owners.get(key);
-      if (owner && owner !== action) throw new RangeError(`Key "${key}" is assigned to both ${owner} and ${action}`);
+      if (owner && owner !== action)
+        throw new FocusConfigError(`Key "${key}" is assigned to both ${owner} and ${action}`);
       owners.set(key, action);
     }
   }
@@ -290,13 +296,13 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
   const resolve = <V>(value: MaybeGetter<V> | undefined, fallback: V): V =>
     typeof value === 'function' ? (value as () => V)() : (value ?? fallback);
 
-  const resolveKeyAction = (eventKey: string): ListNavigationAction | undefined => {
+  const resolveKeyAction = (event: KeyboardEvent): ListNavigationAction | undefined => {
     const keys = options.keys;
     const keyTable = resolve(options.direction, 'ltr') === 'rtl' ? DEFAULT_KEYS_RTL : DEFAULT_KEYS;
     const defaults = keyTable[resolve(options.orientation, 'vertical')];
 
     for (const action of ['next', 'prev', 'first', 'last'] as const) {
-      if ((keys?.[action] ?? defaults[action]).includes(eventKey)) return action;
+      if ((keys?.[action] ?? defaults[action]).some((pattern) => matchKey(event, pattern))) return action;
     }
 
     return undefined;
@@ -308,7 +314,7 @@ export const createListNavigation = <T>(options: ListNavigationOptions<T>): List
     const items = options.getItems();
     normalizeIndex(items);
 
-    const action = resolveKeyAction(event.key);
+    const action = resolveKeyAction(event);
 
     if (action) {
       const change = navigateWithItems(items, action, event);

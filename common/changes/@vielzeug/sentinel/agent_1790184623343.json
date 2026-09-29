@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: drop Readable alias in favour of Subscribable; add SentinelEvent",
+      "packageName": "@vielzeug/sentinel",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sentinel"
+}

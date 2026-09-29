@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "assist": {
     "actions": {
       "source": {
@@ -25,10 +25,14 @@
       "!common",
       "!scripts",
       "!**/scripts",
+      // Symlinked agent skills resolve into packages/*/skills; Biome has no Markdown handler.
+      "!.agents",
       "!**/dist",
-      "!**/*.md",
       "!docs/.vitepress/cache",
-      "!docs/.vitepress/theme/components/repl/registry.generated.ts"
+      "!docs/.vitepress/theme/components/repl/registry.generated.ts",
+      // SVGs are exported artwork (Inkscape), not authored source — inline CSS uses
+      // Inkscape-specific properties and font names that Biome flags.
+      "!**/*.svg"
     ]
   },
   "formatter": {

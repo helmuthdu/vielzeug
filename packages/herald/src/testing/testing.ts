@@ -1,4 +1,4 @@
-import type { Bus, BusOptions, EventKey, EventMap } from '..';
+import type { Bus, BusOptions, EventKey, EventMap, HeraldEvent } from '..';
 import { createBus } from '../bus';
 
 // Property names that must never be used as a bracket-assignment key on a plain object literal —
@@ -21,18 +21,21 @@ export type TestBus<T extends EventMap> = Bus<T> & {
   reset(): void;
 };
 
-export function createTestBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions<T>): TestBus<T> {
+export function createTestBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const bus = createBus<T>({
-    ...options,
-    _onDispatch: (event: EventKey<T>, payload: unknown) => {
-      const list = records.get(event);
-
-      if (list) list.push(payload);
-      else records.set(event, [payload]);
-    },
-  });
+  const bus = createBus<T>(options);
   const disposeBus = bus.dispose;
+
+  // Pure observer over the public tap channel: the `emit` event is traced after every
+  // listener has run, so a dispatch whose listener throws still records its payload.
+  bus.tap((event: HeraldEvent<T>) => {
+    if (event.type !== 'emit') return;
+
+    const list = records.get(event.event);
+
+    if (list) list.push(event.payload);
+    else records.set(event.event, [event.payload]);
+  });
 
   function allEmitted(): { [K in EventKey<T>]?: T[K][] } {
     const result: { [K in EventKey<T>]?: T[K][] } = {};

@@ -129,6 +129,7 @@ const staticExportKeys = new Set([
   './frameworks/elements',
   './frameworks/react',
   './frameworks/vue',
+  './theme',
 ]);
 
 const staticCssExports = {
@@ -137,8 +138,8 @@ const staticCssExports = {
     default: './dist/styles/animation.css',
   },
   './styles/layers.css': {
-    import: './dist/styles/layer.css',
-    default: './dist/styles/layer.css',
+    import: './dist/styles/layers.css',
+    default: './dist/styles/layers.css',
   },
   './styles/preflight.css': {
     import: './dist/styles/preflight.css',
@@ -164,6 +165,17 @@ const staticCssExports = {
   },
   './frameworks/vue': {
     types: './dist/frameworks/vue.d.ts',
+  },
+};
+
+// Framework-neutral JS utilities that are not `define(...)` components, so the
+// filesystem discovery never sees them. Each is a top-level `src/<name>.ts` built as its own
+// entry (see getRefineLibraryEntries) with declarations emitted by the tsc build.
+const staticJsExports = {
+  './theme': {
+    import: './dist/theme.js',
+    require: './dist/theme.cjs',
+    types: './dist/theme.d.ts',
   },
 };
 
@@ -208,6 +220,7 @@ export function getComponentExports() {
 export function getRefineLibraryEntries(rootDir) {
   return Object.fromEntries([
     ['index', resolve(rootDir, './src/index')],
+    ['theme', resolve(rootDir, './src/theme')],
     ...componentManifest.map(({ name, source }) => [name, resolve(rootDir, source)]),
   ]);
 }
@@ -237,6 +250,7 @@ export function createRefineExports(exportsField = {}) {
   return {
     ...staticNonCss,
     ...staticCssExports,
+    ...staticJsExports,
     ...getComponentExports(),
   };
 }

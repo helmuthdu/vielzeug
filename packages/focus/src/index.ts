@@ -1,3 +1,13 @@
+export { FocusConfigError, FocusError } from './errors.js';
+export type {
+  GridColumns,
+  GridKeyResult,
+  GridNavigation,
+  GridNavigationAction,
+  GridNavigationChange,
+  GridNavigationOptions,
+} from './grid-navigation.js';
+export { createGridNavigation } from './grid-navigation.js';
 export type {
   ListKeyAction,
   ListKeyResult,
@@ -15,4 +25,4 @@ export type {
   FocusTarget,
   RestoreFocusOptions,
 } from './restore-focus.js';
-export { captureFocus, restoreFocus } from './restore-focus.js';
+export { captureFocus, rescueFocus, restoreFocus } from './restore-focus.js';

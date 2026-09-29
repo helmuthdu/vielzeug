@@ -1,178 +1,58 @@
 import { abortError } from '@vielzeug/arsenal';
 import { createPoolCore, type PoolCore, type PoolOptions, validatePriority, validateTimeout } from './_pool-core.js';
-import { type QueueItem, TaskQueue } from './_queue.js';
-import { FamiliarQueueFullError, FamiliarRuntimeError, FamiliarTerminatedError } from './errors.js';
+import { FamiliarRuntimeError, FamiliarTerminatedError } from './errors.js';
 import type { RunOptions, SlotStrategy, WorkerPool } from './types.js';
 
 export type { PoolOptions } from './_pool-core.js';
 
 export function createPool<TInput, TOutput>(
-  slots: SlotStrategy<TInput, TOutput>[],
+  slots: readonly SlotStrategy<TInput, TOutput>[],
   options: PoolOptions,
 ): WorkerPool<TInput, TOutput> {
-  const freeSlots = [...slots];
-  const queue = new TaskQueue<TInput, TOutput>();
-  let draining = false;
+  const core: PoolCore<SlotStrategy<TInput, TOutput>> = createPoolCore(slots, options);
 
-  const isIdle = (): boolean => freeSlots.length === slots.length && queue.size === 0;
+  for (const slot of slots) slot.notify = (error) => core.emitTap({ error, type: 'worker-error' });
 
-  const core: PoolCore = createPoolCore({
-    isIdle,
-    onDispose() {
-      for (const slot of slots) slot.terminate();
+  function run(input: TInput, runOptions: RunOptions = {}): Promise<TOutput> {
+    let priority: number;
+    let timeout: number | undefined;
+    let transferables: Transferable[];
 
-      while (queue.size > 0) {
-        const item = queue.shift();
-
-        if (!item) break;
-
-        item.cleanupAbort?.();
-        item.reject(new FamiliarTerminatedError());
-      }
-    },
-    onDrainStart() {
-      // No pending waiters to reject for the queue-based pool; capacity waiters
-      // are rejected by the core's drain().
-    },
-  });
-
-  function nextItem(): QueueItem<TInput, TOutput> | undefined {
-    while (queue.size > 0) {
-      const item = queue.shift();
-
-      if (!item) break;
-
-      if (item.signal?.aborted) {
-        item.cleanupAbort?.();
-        item.reject(abortError(item.signal));
-        core.releaseCapacity();
-        continue;
-      }
-
-      return item;
+    try {
+      priority = validatePriority(runOptions.priority ?? 0);
+      timeout = validateTimeout(runOptions.timeout) ?? options.defaultTimeout;
+      transferables = [...(runOptions.transferables ?? [])];
+    } catch (error) {
+      return Promise.reject(error);
     }
 
-    core.settleIdle();
-
-    return undefined;
-  }
-
-  function drainQueue(): void {
-    if (draining || core.disposed) return;
-
-    draining = true;
-
-    while (!core.disposed && freeSlots.length > 0 && queue.size > 0) {
-      const next = nextItem();
-
-      if (!next) break;
-
-      const item = next;
-      const slot = freeSlots.pop()!;
-      const timeout = item.timeout ?? options.defaultTimeout;
-
+    return core.acquire({ priority, signal: runOptions.signal }, (slot) => {
       core.trackActive(1);
-      core.releaseCapacity();
 
-      const onAbort = () => {
-        item.aborted = true;
-        slot.cancel(abortError(item.signal!));
+      const onAbort = () => slot.cancel(abortError(runOptions.signal!));
+      runOptions.signal?.addEventListener('abort', onAbort, { once: true });
+
+      const finish = async (): Promise<TOutput> => {
+        try {
+          const value = await slot.run(input, transferables, timeout);
+
+          core.trackCompleted();
+
+          return value;
+        } catch (error) {
+          if (!runOptions.signal?.aborted && !(error instanceof FamiliarTerminatedError)) core.trackFailed();
+
+          throw error;
+        } finally {
+          runOptions.signal?.removeEventListener('abort', onAbort);
+          core.trackActive(-1);
+          core.release(slot);
+          core.settleIdle();
+        }
       };
 
-      item.cleanupAbort = () => {
-        item.signal?.removeEventListener('abort', onAbort);
-        item.cleanupAbort = undefined;
-      };
-      item.signal?.addEventListener('abort', onAbort, { once: true });
-
-      slot.run(item.input, item.transferables, timeout).then(
-        (value) => finish(value),
-        (error: unknown) => fail(error),
-      );
-
-      function finish(value: TOutput): void {
-        item.cleanupAbort?.();
-        freeSlots.push(slot);
-        core.trackActive(-1);
-        core.trackCompleted();
-        item.resolve(value);
-        drainQueue();
-        core.settleIdle();
-      }
-
-      function fail(error: unknown): void {
-        item.cleanupAbort?.();
-        freeSlots.push(slot);
-        core.trackActive(-1);
-
-        if (!item.aborted && !(error instanceof FamiliarTerminatedError)) core.trackFailed();
-
-        item.reject(error);
-        drainQueue();
-        core.settleIdle();
-      }
-    }
-
-    draining = false;
-  }
-
-  async function run(input: TInput, runOptions: RunOptions = {}): Promise<TOutput> {
-    const { signal } = runOptions;
-    const priority = validatePriority(runOptions.priority ?? 0);
-    const timeout = validateTimeout(runOptions.timeout);
-    const transferables = [...(runOptions.transferables ?? [])];
-
-    if (core.disposed) throw new FamiliarTerminatedError();
-
-    if (core.drainPromise) throw new FamiliarTerminatedError('Worker is draining');
-
-    if (signal?.aborted) throw abortError(signal);
-
-    while (options.onFull === 'wait' && options.maxQueue !== undefined && queue.size >= options.maxQueue) {
-      await core.waitForCapacity(signal, priority);
-
-      if (core.disposed) throw new FamiliarTerminatedError();
-
-      if (core.drainPromise) throw new FamiliarTerminatedError('Worker is draining');
-
-      if (signal?.aborted) {
-        core.releaseCapacity();
-        throw abortError(signal);
-      }
-    }
-
-    let resolve!: (value: TOutput) => void;
-    let reject!: (reason: unknown) => void;
-    const promise = new Promise<TOutput>((res, rej) => {
-      resolve = res;
-      reject = rej;
+      return finish();
     });
-    const item: QueueItem<TInput, TOutput> = { input, priority, reject, resolve, signal, timeout, transferables };
-
-    if (!queue.enqueue(item, options.onFull === 'wait' ? undefined : options.maxQueue)) {
-      throw new FamiliarQueueFullError(options.maxQueue!);
-    }
-
-    if (signal) {
-      const onAbort = () => {
-        if (!queue.remove(item)) return;
-
-        item.cleanupAbort?.();
-        reject(abortError(signal));
-        core.releaseCapacity();
-        core.settleIdle();
-      };
-
-      item.cleanupAbort = () => {
-        signal.removeEventListener('abort', onAbort);
-        item.cleanupAbort = undefined;
-      };
-      signal.addEventListener('abort', onAbort, { once: true });
-    }
-
-    drainQueue();
-
-    return promise;
   }
 
   return {
@@ -186,11 +66,12 @@ export function createPool<TInput, TOutput>(
     drain: core.drain,
     run,
     get stats() {
-      return core.stats(queue.size);
+      return core.stats();
     },
     get status() {
       return core.status();
     },
+    tap: core.tap,
     [Symbol.asyncDispose]: () => core.drain({}),
     [Symbol.dispose]: core.dispose,
   };

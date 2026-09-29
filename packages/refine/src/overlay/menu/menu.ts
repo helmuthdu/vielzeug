@@ -23,6 +23,7 @@ import {
   lifecycleSignal,
   type OverlayOpenChangeDetail,
   type OverlayOpenReason,
+  parseOptionalBool,
 } from '../../core';
 import { disablableBundle, MENU_SIZE_PRESET, sizableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
@@ -179,9 +180,6 @@ define(SEPARATOR_TAG, {
 const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
   value === 'checkbox' || value === 'radio';
 
-const parseOptionalBool = (value: string | null): boolean | undefined =>
-  value == null ? undefined : value === '' || value === 'true';
-
 /**
  * Action dropdown menu triggered by a slotted trigger element.
  *
@@ -270,10 +268,13 @@ define<OreMenuProps>(MENU_TAG, {
     let stopPositioning: (() => void) | null = null;
     const positioner = createDropdownPositioner({
       getFloating: () => panelEl,
+      getOffsetPx: () => 4,
       getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement,
       getReference: () => triggerEl,
       matchWidth: false,
-      offsetPx: 4,
+      // menu.css keys the panel's transform-origin off [data-placement]; the positioner reports the
+      // resolved (RTL-mirrored, flipped) placement here so that rule finally has something to match.
+      onPlacementChange: (placement) => panelEl?.setAttribute('data-placement', placement),
       padding: 6,
       useClippingAncestor: false,
     });

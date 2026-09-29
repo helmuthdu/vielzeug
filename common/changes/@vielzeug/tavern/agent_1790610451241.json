@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(tavern): initial release \u2014 host-owned session replication over mesh",
+      "packageName": "@vielzeug/tavern",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tavern"
+}

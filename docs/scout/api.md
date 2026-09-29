@@ -31,7 +31,7 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/scout` | All exports — index/search/highlighting/adapters, `ScoutConfigurationError`, `ScoutDisposedError`, `ScoutError`, and all types |
+| `@vielzeug/scout` | All exports — index/search/highlighting/adapters, `ScoutConfigError`, `ScoutDisposedError`, `ScoutError`, and all types |
 
 ---
 
@@ -482,9 +482,7 @@ Snapshots and their result arrays are frozen at runtime.
 ### `ScoutEvent<T>`
 
 ```ts
-type ScoutEvent<T> =
-  | { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' }
-  | { readonly type: 'dispose' };
+type ScoutEvent<T> = { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' };
 ```
 
 ### `SearchState<T>`
@@ -503,7 +501,7 @@ type SearchState<T> = {
 };
 ```
 
-`subscribe()` observers are notified after the full snapshot commits. An observer error is reported asynchronously after the remaining observers run. `tap()` emits `state-change` and `dispose`; tapper errors are swallowed.
+`subscribe()` observers are notified after the full snapshot commits. An observer error is reported asynchronously after the remaining observers run. `tap()` emits `state-change` only — disposal is observable through `disposed` and `disposalSignal`; tapper errors are swallowed.
 
 ### `ReactiveSearch<T>`
 
@@ -531,5 +529,25 @@ class ScoutError extends Error {}
 
 | Class               | Thrown when                                                            |
 | ------------------- | ---------------------------------------------------------------------- |
-| `ScoutConfigurationError` | An index, search, or reactive search receives invalid fields or numeric options |
+| `ScoutConfigError` | An index, search, or reactive search receives invalid fields or numeric options |
 | `ScoutDisposedError` | A method is called on a disposed `SearchState` instance |
+
+## Entry Ranking
+
+Reference lists — glossaries, rule compendiums, profile directories — rank and render through the same helpers.
+
+### `rankEntries(entries, query, options?)`
+
+Orders `RankableEntry` items (`{ id, label, meta, text }`) by how directly they match the query: exact label, label prefix, label contains, meta contains, text contains, and finally `options.fuzzyIds` hits as last resort. Non-matching entries drop; ties break alphabetically. A blank query returns every entry.
+
+### `dedupeEntries(entries)`
+
+Drops entries whose label and body text are identical to an earlier entry (case-insensitive) — alias rows in merged catalogs.
+
+### `splitPattern(text, pattern)`
+
+Splits text on a global regular expression, marking matched pieces (`SplitSegment`), for rendering keyword links over prose. A `null` pattern keeps the text whole.
+
+### `escapeRegExp(value)`
+
+Escapes a literal for embedding in a regular expression — build keyword patterns from display names.

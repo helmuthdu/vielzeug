@@ -1931,118 +1931,6 @@ ore-grid-item:has(> model-card) {
   gap: var(--size-1);
 }
 
-.model-advisor-window {
-  position: fixed;
-  right: var(--size-6);
-  bottom: var(--size-6);
-  z-index: 80;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  width: min(420px, calc(100vw - var(--size-12)));
-  height: min(640px, calc(100dvh - var(--size-12)));
-  overflow: hidden;
-  color: var(--text-color-body);
-  background: var(--color-contrast-50);
-  border: 1px solid var(--color-divider);
-  border-radius: var(--rounded-2xl);
-  box-shadow: var(--shadow-xl);
-}
-
-.model-advisor-window[hidden] {
-  display: none;
-}
-
-.model-advisor-window:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: var(--size-1);
-}
-
-.model-advisor__header {
-  display: flex;
-  gap: var(--size-4);
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--size-4) var(--size-5);
-  border-bottom: 1px solid var(--color-divider);
-}
-
-.model-advisor__header > div:first-child {
-  display: grid;
-  gap: var(--size-1);
-}
-
-.model-advisor__header strong {
-  font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 500;
-}
-
-.model-advisor__status {
-  display: flex;
-  gap: var(--size-2);
-  align-items: center;
-  font-size: var(--text-xs);
-  color: var(--text-color-tertiary);
-}
-
-.model-advisor__status-dot {
-  width: var(--size-2);
-  height: var(--size-2);
-  background: var(--color-success);
-  border-radius: var(--rounded-full);
-}
-
-.model-advisor__tools {
-  display: flex;
-  gap: var(--size-1);
-  align-items: center;
-}
-
-.model-advisor__body {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  min-height: 0;
-  padding: var(--size-5);
-  overflow: hidden;
-}
-
-.model-advisor__messages {
-  display: grid;
-  gap: var(--size-4);
-  align-content: start;
-  min-height: 0;
-  padding-right: var(--size-1);
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.model-advisor-window ore-chat-message {
-  --chat-message-max-width: 88%;
-}
-
-.model-advisor__suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2);
-  padding-top: var(--size-5);
-}
-
-.model-advisor__composer {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  padding: var(--size-4);
-  background: var(--color-contrast-100);
-  border-top: 1px solid var(--color-divider);
-}
-
-.model-advisor__composer ore-message-composer {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-}
-
 .model-landing-trim-tabs ore-tab-item span {
   display: block;
   font-weight: var(--font-semibold);
@@ -2284,20 +2172,6 @@ ore-grid-item:has(> model-card) {
 
   .model-advisor-callout ore-button {
     width: 100%;
-  }
-
-  .model-advisor-window {
-    right: var(--size-3);
-    bottom: var(--size-3);
-    width: calc(100vw - var(--size-6));
-    height: min(620px, calc(100dvh - var(--size-6)));
-    border-radius: var(--rounded-xl);
-  }
-
-  .model-advisor__header,
-  .model-advisor__body,
-  .model-advisor__composer {
-    padding: var(--size-4);
   }
 
   .model-landing-technical__desktop {
@@ -2791,7 +2665,8 @@ ore-grid-item:has(> model-card) {
   transform: scale(1.08);
 }
 
-/* `animated-price` gates its hand-rolled tween on `prefersReducedMotion()` via `core/motion.ts` —
+/* `animated-price` gates its hand-rolled tween on `shouldReduceMotion('system')` from
+   `@vielzeug/necromancer` —
    this CSS-only hover transform can't reach that JS check, so it needs its own media query to
    honor the same preference. */
 @media (prefers-reduced-motion: reduce) {

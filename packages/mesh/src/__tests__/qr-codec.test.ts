@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bytesToBase64Url } from '../_base64';
+import { bytesToBase45 } from '../_base45';
 import { createProof } from '../_proof';
 import { compactSdp } from '../_sdp';
 import { meshCodec } from '../codec';
@@ -84,12 +84,9 @@ describe('meshQrCodec', () => {
   });
 
   it('keeps the pairing proof stable across the rebuilt SDP', async () => {
-    const noop = () => {};
     const text = await meshQrCodec.encode(answer);
     const decoded = await meshQrCodec.decode(text);
-    expect(await createProof(invitation.secret, decoded.sdp, noop)).toBe(
-      await createProof(invitation.secret, answer.sdp, noop),
-    );
+    expect(await createProof(invitation.secret, decoded.sdp)).toBe(await createProof(invitation.secret, answer.sdp));
   });
 
   it('produces shorter output than the plain codec on realistic SDP', async () => {
@@ -103,29 +100,19 @@ describe('meshQrCodec', () => {
     expect(await meshQrCodec.decode(meshCodec.encode(answer))).toEqual(answer);
   });
 
-  it('decodes mq1. payloads from older encoders', async () => {
-    const compressed = await deflate(new TextEncoder().encode(JSON.stringify(invitation)));
-    const legacy = `mq1.${bytesToBase64Url(compressed)}`;
-    expect(await meshQrCodec.decode(legacy)).toEqual(invitation);
-  });
-
   it('throws MeshPairingError on corrupt base45', async () => {
     await expect(meshQrCodec.decode('mq2.!!!not-base45!!!')).rejects.toBeInstanceOf(MeshPairingError);
   });
 
-  it('throws MeshPairingError on corrupt base64', async () => {
-    await expect(meshQrCodec.decode('mq1.!!!not-base64!!!')).rejects.toBeInstanceOf(MeshPairingError);
-  });
-
   it('throws MeshPairingError on corrupt deflate data', async () => {
-    // Valid base64url, but the bytes are not a deflate stream.
-    const bogus = `mq1.${bytesToBase64Url(new TextEncoder().encode('garbage'))}`;
+    // Valid base45, but the bytes are not a deflate stream.
+    const bogus = `mq2.${bytesToBase45(new TextEncoder().encode('garbage'))}`;
     await expect(meshQrCodec.decode(bogus)).rejects.toBeInstanceOf(MeshPairingError);
   });
 
   it('throws MeshPairingError on well-formed compression of a bad payload', async () => {
     const compressed = await deflate(new TextEncoder().encode('{"v":99}'));
-    await expect(meshQrCodec.decode(`mq1.${bytesToBase64Url(compressed)}`)).rejects.toBeInstanceOf(MeshPairingError);
+    await expect(meshQrCodec.decode(`mq2.${bytesToBase45(compressed)}`)).rejects.toBeInstanceOf(MeshPairingError);
   });
 
   it('throws MeshUnsupportedError when CompressionStream is missing', async () => {

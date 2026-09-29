@@ -1,8 +1,43 @@
 ---
-title: Focus 3.0 Migration
+title: Focus — Migration
+description: Migrate through Focus 3.1 typed configuration errors and Focus 3 pure in-memory list navigation.
 ---
 
-# Focus 3.0 Migration
+# Focus Migration
+
+## 3.1
+
+Focus 3.1 replaces raw `RangeError` throws with typed errors and matches navigation keys through `@vielzeug/keymap`.
+
+### Typed configuration errors
+
+Invalid configuration now throws `FocusConfigError` (extending a new `FocusError` base) instead of `RangeError`:
+
+```ts
+// Before
+try {
+  createListNavigation({ getItems, keys: { next: ['j'], prev: ['j'] } });
+} catch (e) {
+  if (e instanceof RangeError) {
+    /* ... */
+  }
+}
+
+// After
+import { FocusConfigError } from '@vielzeug/focus';
+
+try {
+  createListNavigation({ getItems, keys: { next: ['j'], prev: ['j'] } });
+} catch (e) {
+  if (e instanceof FocusConfigError) {
+    /* ... */
+  }
+}
+```
+
+### Keys match through `@vielzeug/keymap`
+
+Default and custom key tables are matched with `matchKey`, so entries accept shortcut patterns with aliases (`esc`, `space`, `up`) and modifiers (`shift+Home`), and modifier state must match exactly — a plain `ArrowDown` entry no longer fires on Ctrl+ArrowDown, so browser and app chords reach the page.
 
 ## 3.0
 
@@ -58,7 +93,7 @@ The layer that attaches `keydown` owns listener removal. Framework adapters that
 ### Validate navigation configuration
 
 - `set(index)` accepts only integer indexes; invalid or disabled indexes reset to `-1`.
-- Conflicting custom key assignments throw `RangeError`.
+- Conflicting custom key assignments throw `RangeError` (replaced by `FocusConfigError` in Focus 3.1).
 - `typeahead.delayMs` must be a positive finite number.
 - Typeahead timing uses a monotonic clock and ignores IME composition.
 

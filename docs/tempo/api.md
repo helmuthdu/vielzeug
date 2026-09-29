@@ -232,16 +232,17 @@ format(parse('2026-03-21T10:15:30Z', { as: 'instant' }), {
 });
 ```
 
-### `formatInstant()` / `formatZoned()` / `formatRelative()` / `formatDuration()`
+### `formatInstant()` / `formatZoned()` / `formatRelative()` / `formatDuration()` / `formatTimer()`
 
 ```ts
 formatInstant(input: TimeInput, options?: TimeZoneOptions): string;
 formatZoned(input: TimeInput, options?: TimeZoneOptions): string;
 formatRelative(input: RelativeTimeInput, options?: RelativeFormatOptions): string;
 formatDuration(input: string | Temporal.DurationLike, options?: DurationFormatOptions): string;
+formatTimer(input: string | Temporal.DurationLike, options?: TimerFormatOptions): string;
 ```
 
-`formatInstant()` produces UTC transport text (`timeZone` needed for wall-time input, ignored for `Instant`). `formatZoned()` produces zoned ISO text (`timeZone` required for non-`ZonedDateTime` input). `formatRelative()` uses fixed units for short spans and complete calendar months or years in the requested or inferred timezone. Zoned inputs with different zones require `options.timeZone`. `formatDuration()` falls back to English when `Intl.DurationFormat` is unavailable.
+`formatInstant()` produces UTC transport text (`timeZone` needed for wall-time input, ignored for `Instant`). `formatZoned()` produces zoned ISO text (`timeZone` required for non-`ZonedDateTime` input). `formatRelative()` uses fixed units for short spans and complete calendar months or years in the requested or inferred timezone. Zoned inputs with different zones require `options.timeZone`. `formatDuration()` falls back to English when `Intl.DurationFormat` is unavailable. `formatTimer()` renders a stopwatch-style clock — `47:12` under an hour, `1:02:35` from an hour up — deterministic and locale-independent; sub-second parts are truncated, negative durations clamp to zero, `days` fold into hours, and durations above days throw `TempoInvalidInputError`.
 
 ### `formatParts()` / `formatRange()` / `formatRangeParts()`
 

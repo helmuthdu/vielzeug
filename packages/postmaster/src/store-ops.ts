@@ -1,5 +1,5 @@
 import { PostmasterJobError } from './errors.ts';
-import type { PostmasterEntry, RemoveResult, RetryResult, StoredFailure, StoredJob, StoreTx } from './types.ts';
+import type { PostmasterEntry, RemoveResult, RequeueResult, StoredFailure, StoredJob, StoreTx } from './types.ts';
 
 export interface ClaimParams {
   readonly leaseDuration: number;
@@ -100,21 +100,21 @@ export async function renewLeaseJob(tx: StoreTx, params: OwnedParams & { leaseEx
   return true;
 }
 
-/** Retry a dead-letter job back to queued. Returns discriminated result. */
-export async function retryJob(tx: StoreTx, id: string, now: number): Promise<RetryResult> {
+/** Requeue a dead-letter job back to queued. Returns discriminated result. */
+export async function requeueJob(tx: StoreTx, id: string, now: number): Promise<RequeueResult> {
   const entry = await tx.get(id);
   if (!entry) return { status: 'not-found' };
   if (entry.status === 'running') return { status: 'running' };
   if (entry.status !== 'dead-letter') return { status: 'not-dead-letter' };
-  const retried: StoredJob = {
+  const requeued: StoredJob = {
     ...entry,
     availableAt: now,
     failure: undefined,
     status: 'queued',
     updatedAt: now,
   };
-  await tx.put(retried);
-  return { entry: toEntry(retried), status: 'retried' };
+  await tx.put(requeued);
+  return { entry: toEntry(requeued), status: 'requeued' };
 }
 
 /** Remove a queued or dead-letter job. Running jobs cannot be removed. */

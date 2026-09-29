@@ -3,13 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { toAsyncIterable } from '../async';
 import { stream } from '../core';
 import { FluxCapacityError } from '../errors';
+import { createChannel } from '../index';
 import { combineLatest, concat, merge } from '../operators/combination';
 import { from, interval, of, timer } from '../operators/creation';
 import { debounce, take, takeUntil, timeout } from '../operators/filtering';
 import { concatMap, filter, map, mergeMap, scan, switchMap } from '../operators/transformation';
 import { first, last, retry, toArray } from '../operators/utility';
 import { pipe } from '../pipe';
-import { createChannel } from '../subjects';
 
 afterEach(() => vi.useRealTimers());
 
@@ -150,7 +150,7 @@ describe('core operators', () => {
       }
     });
 
-    expect(await toArray(pipe(source, retry({ attempts: 2 })), { maxItems: 1 })).toEqual([42]);
+    expect(await toArray(pipe(source, retry({ times: 2 })), { maxItems: 1 })).toEqual([42]);
   });
 
   it('keeps active synchronous retry cleanup reachable', async () => {
@@ -167,7 +167,7 @@ describe('core operators', () => {
 
       return cleanup;
     });
-    const subscription = pipe(source, retry({ attempts: 1 })).subscribe(() => {});
+    const subscription = pipe(source, retry({ times: 1 })).subscribe(() => {});
 
     await Promise.resolve();
     subscription.unsubscribe();
@@ -183,10 +183,10 @@ describe('core operators', () => {
         sink.error(new Error('retry'));
       }),
       retry({
-        attempts: 1,
         delay: () => {
           throw new Error('bad retry policy');
         },
+        times: 1,
       }),
     ).subscribe({ error, next: () => {} });
 

@@ -80,6 +80,7 @@ export interface Binding {
 }
 
 export interface KeymapOptions {
+  /** Milliseconds to wait for the next step of a chord before the partial chord expires. Defaults to 1000. Must be a positive finite number; `createKeymap` throws `KeymapConfigError` otherwise. */
   chordTimeout?: number;
   modKey?: 'ctrl' | 'meta';
 

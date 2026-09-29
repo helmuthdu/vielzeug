@@ -60,8 +60,6 @@ export interface VirtualizerOptions {
   getItemKey?: (index: number) => VirtualKey;
   horizontal?: boolean;
   initialOffset?: number;
-  /** Enable keyboard scroll (arrow keys, Page Up/Down, Home, End). */
-  keyboardScroll?: boolean;
   /** External measurement cache for scroll restoration or SSR pre-measurement. */
   measurementCache?: MeasurementCache;
   /** Called after every render cycle with the new state. Replace through `update()`. */
@@ -97,7 +95,6 @@ export interface VirtualizerUpdateOptions {
   estimateSize?: number | ((index: number) => number);
   gap?: number;
   getItemKey?: ((index: number) => VirtualKey) | undefined;
-  keyboardScroll?: boolean;
   /** Replace the active measurement cache. Existing entries in the new cache are used immediately on the next rebuild. */
   measurementCache?: MeasurementCache;
   onChange?: ((state: VirtualizerState) => void) | undefined;
@@ -140,6 +137,13 @@ export interface Virtualizer extends ScrollStore<VirtualizerState> {
   prepend: (additionalCount: number) => void;
   /** Rebuild the full offset table and re-emit (use when item sizes may have changed). */
   refresh: () => void;
+  /**
+   * Re-read viewport size and scroll offset from the DOM and recompute.
+   * Call this when a `display: none` container hosting the virtualizer becomes
+   * visible again: a hidden target reports a zero viewport and the adapter's
+   * ResizeObserver never fires for the none→visible transition.
+   */
+  remeasure: () => void;
   readonly scrollOffset: number;
   scrollToBottom: (options?: { behavior?: ScrollBehavior }) => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
@@ -166,7 +170,6 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   const horizontal = !!options.horizontal;
   const defaultItemKey = (index: number): VirtualKey => index;
-  const enableKeyboardScroll = options.keyboardScroll ?? false;
 
   let count = requireNonNegativeInteger(options.count, 'count');
   let estimateFn = resolveEstimateFn(options.estimateSize, DEFAULT_ESTIMATE_SIZE);
@@ -174,7 +177,6 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let getItemKey = options.getItemKey ?? defaultItemKey;
   let overscan = normalizeOverscan(options.overscan, DEFAULT_OVERSCAN);
   let stickyFn: ((index: number) => boolean) | null = options.sticky ?? null;
-  let keyboardScrollEnabled = enableKeyboardScroll;
   let autoMeasureEnabled = options.autoMeasure ?? false;
 
   let onChange = options.onChange;
@@ -487,10 +489,6 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       needsCompute = true;
     }
 
-    if (Object.hasOwn(next, 'keyboardScroll')) {
-      keyboardScrollEnabled = next.keyboardScroll ?? false;
-    }
-
     if (Object.hasOwn(next, 'autoMeasure')) {
       autoMeasureEnabled = next.autoMeasure ?? false;
     }
@@ -501,10 +499,31 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       restoreScrollAnchor();
     }
 
-    if (needsCompute || needsRebuild) computeVisible();
+    if (needsCompute || needsRebuild) {
+      // Re-sync scroll state from the DOM before recomputing: a hidden target
+      // (display: none) reports a zero viewport and stale offsets, and the
+      // adapter's ResizeObserver only catches the change asynchronously.
+      viewportSize = domAxis.readViewportSize();
+      scrollOffset = clampScrollOffset(domAxis.readOffset());
+      computeVisible();
+    }
   }
 
   // ─── Public API ───────────────────────────────────────────────────────────────
+
+  /**
+   * Re-read viewport size and scroll offset from the DOM and recompute.
+   * A `display: none` container reports a zero viewport and the adapter's
+   * ResizeObserver never fires for the none→visible transition, so callers
+   * that toggle visibility (tabs, `v-show`) must call this when showing again.
+   */
+  function remeasure(): void {
+    if (disposed) return;
+
+    viewportSize = domAxis.readViewportSize();
+    scrollOffset = clampScrollOffset(domAxis.readOffset());
+    computeVisible();
+  }
 
   function invalidate(): void {
     if (disposed) return;
@@ -647,67 +666,6 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   const adapter = createScrollAdapter(target, handleScroll, handleResize);
   const domAxis = horizontal ? adapter.x : adapter.y;
 
-  // ─── Keyboard scroll support ──────────────────────────────────────────────────
-
-  if (keyboardScrollEnabled) {
-    const handleKeyDown = (e: Event): void => {
-      if (disposed) return;
-      if (!(e instanceof KeyboardEvent)) return;
-      if (count === 0) return;
-
-      let handled = false;
-      let newOffset = scrollOffset;
-      const pageScrollSize = Math.max(viewportSize * 0.8, viewportSize - 100);
-
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'ArrowLeft': {
-          const itemSize = typeof estimateFn(0) === 'number' ? estimateFn(0) : DEFAULT_ESTIMATE_SIZE;
-          newOffset = Math.max(0, scrollOffset - (itemSize + gap));
-          handled = true;
-          break;
-        }
-        case 'ArrowDown':
-        case 'ArrowRight': {
-          const itemSize = typeof estimateFn(0) === 'number' ? estimateFn(0) : DEFAULT_ESTIMATE_SIZE;
-          newOffset = Math.min(ax.totalSize - viewportSize, scrollOffset + (itemSize + gap));
-          handled = true;
-          break;
-        }
-        case 'PageUp':
-          newOffset = Math.max(0, scrollOffset - pageScrollSize);
-          handled = true;
-          break;
-        case 'PageDown':
-          newOffset = Math.min(ax.totalSize - viewportSize, scrollOffset + pageScrollSize);
-          handled = true;
-          break;
-        case 'Home':
-          newOffset = 0;
-          handled = true;
-          break;
-        case 'End':
-          newOffset = Math.max(0, ax.totalSize - viewportSize);
-          handled = true;
-          break;
-      }
-
-      if (handled) {
-        e.preventDefault();
-        domAxis.writeOffset(newOffset, 'auto');
-        scrollOffset = clampScrollOffset(newOffset);
-        computeVisible();
-      }
-    };
-
-    if (typeof target === 'object' && target !== null && 'addEventListener' in target) {
-      (target as EventTarget).addEventListener('keydown', handleKeyDown);
-      ac.signal.addEventListener('abort', () => {
-        (target as EventTarget).removeEventListener('keydown', handleKeyDown);
-      });
-    }
-  }
-
   if (hasNativeScrollEnd) {
     (target as EventTarget).addEventListener('scrollend', notifyScrollEnd, { passive: true });
   }
@@ -748,6 +706,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     measureEl,
     prepend,
     refresh,
+    remeasure,
     get scrollOffset() {
       return scrollOffset;
     },

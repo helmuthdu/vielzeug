@@ -25,19 +25,10 @@ description: createIllusion, all category functions, seed utilities, types, and 
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/illusionist` | `createIllusion`, `Illusionist`, `IllusionistOptions`, `IllusionistLocale`, error classes |
+| `@vielzeug/illusionist` | `createIllusion`, `createSeed`, `mulberry32`, `Illusionist`, `IllusionistOptions`, `IllusionistLocale`, error classes |
 | `@vielzeug/illusionist/locales` | Tree-shakeable barrel — `en`, `de` locale objects |
 | `@vielzeug/illusionist/locales/en` | English locale object only |
 | `@vielzeug/illusionist/locales/de` | German locale object only |
-| `@vielzeug/illusionist/seed` | `createSeed`, `mulberry32` |
-| `@vielzeug/illusionist/person` | Person category functions |
-| `@vielzeug/illusionist/internet` | Internet category functions |
-| `@vielzeug/illusionist/commerce` | Commerce category functions |
-| `@vielzeug/illusionist/date` | Date category functions |
-| `@vielzeug/illusionist/finance` | Finance category functions |
-| `@vielzeug/illusionist/location` | Location category functions |
-| `@vielzeug/illusionist/lorem` | Lorem category functions |
-| `@vielzeug/illusionist/system` | System category functions |
 
 ## createIllusion
 
@@ -663,10 +654,8 @@ Returns a random process name of the form `prefix_suffix`.
 
 ## Seed
 
-Import from the `seed` subpath:
-
 ```ts
-import { createSeed, mulberry32 } from '@vielzeug/illusionist/seed';
+import { createSeed, mulberry32 } from '@vielzeug/illusionist';
 ```
 
 ### `createSeed(seed?)`

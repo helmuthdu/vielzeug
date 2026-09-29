@@ -1,6 +1,4 @@
-import { computed, fromSubscribable } from '@vielzeug/ripple';
-import type { RouteParams } from '@vielzeug/wayfinder';
-import { createBrowserHistory, createHashHistory, createRouter } from '@vielzeug/wayfinder';
+import { createHistoryForBase, createRouteSignals, createRouter } from '@vielzeug/wayfinder';
 
 export type RouteNames =
   | 'admin'
@@ -33,22 +31,11 @@ const routes = {
 } as const;
 
 const base = import.meta.env.BASE_URL;
-const history = base === '/' ? createBrowserHistory() : createHashHistory({ base });
 
-export const router = createRouter({ base, history, routes });
+export const router = createRouter({ base, history: createHistoryForBase(base), routes });
 
-// ── Reactive route (bridges wayfinder's subscribe()/getSnapshot() into a ripple signal via
-// `fromSubscribable` — the same structural adapter pattern used by core/i18n.ts) ───────────────
-// `router.getSnapshot()` alone is NOT ripple-reactive: reading it inside a `computed()` would
-// compute once and never re-run, since it registers no tracked dependency.
+const routeSignals = createRouteSignals(router);
 
-const routeBinding = fromSubscribable<ReturnType<typeof router.getSnapshot>>({
-  getSnapshot: () => router.getSnapshot(),
-  subscribe: (listener) => router.subscribe(() => listener()),
-});
-
-export const activeRoute = computed(() => routeBinding.value.matches.at(-1)?.name ?? null);
-
-export const activeRouteParams = computed<RouteParams>(() => routeBinding.value.matches.at(-1)?.params ?? {});
-
-export const activeRouteQuery = computed(() => routeBinding.value.location.query);
+export const activeRoute = routeSignals.name;
+export const activeRouteParams = routeSignals.params;
+export const activeRouteQuery = routeSignals.query;

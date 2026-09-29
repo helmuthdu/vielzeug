@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Greenfield hardening: WebCrypto required for pairing proofs (no forgeable fallback), invitation hostName reaches the guest, duplicate peer ids rejected, guest re-pairs on the same node, onPeer folded into tap with live MeshPeer payloads, codec interfaces and dead messenger surface removed",
+      "packageName": "@vielzeug/mesh",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

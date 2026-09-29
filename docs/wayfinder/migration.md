@@ -5,6 +5,38 @@ description: Migrate to the narrowed Wayfinder routing core API.
 
 [[toc]]
 
+## Wayfinder 3.2
+
+Wayfinder 3.2 separates definition errors from navigation errors and hardens state notification.
+
+### `WayfinderConfigError` for malformed route tables
+
+Definition-time failures now throw `WayfinderConfigError` instead of `WayfinderRouteError`: a route that sets both `index: true` and `path`, a route with neither, a duplicate compound route name, and invalid path patterns (misplaced `*` or `:param*`, non-word param names). `WayfinderRouteError` remains for navigation-time failures: unknown route names and missing path params in `url()`/`navigate()`. Both extend `WayfinderError`, so a catch on the base class keeps working:
+
+```ts
+// Before
+try {
+  createRouter({ routes: { home: { index: true, path: '/' } } });
+} catch (e) {
+  if (e instanceof WayfinderRouteError) {
+    /* ... */
+  }
+}
+
+// After
+try {
+  createRouter({ routes: { home: { index: true, path: '/' } } });
+} catch (e) {
+  if (e instanceof WayfinderConfigError) {
+    /* ... */
+  }
+}
+```
+
+### Subscriber errors no longer abort navigation
+
+If a `subscribe()` listener throws, the error is rethrown in a microtask (surfacing as an unhandled error) instead of propagating into the navigation that notified it. Remaining listeners still run and router state stays consistent.
+
 ## Wayfinder 3.0
 
 Wayfinder 3.0 narrows the scope to routing core functionalities: route compilation, matching, history, navigation, and cancellation. Data loading remains as an optional layer. UI ownership, speculative async features, and error mutation have been removed.

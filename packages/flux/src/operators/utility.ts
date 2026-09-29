@@ -9,7 +9,7 @@ import { FluxCapacityError, FluxEmptyError } from '../errors.js';
 import type { Operator, Stream, Subscription } from '../types.js';
 
 export type RetryOptions = {
-  attempts: number;
+  times: number;
   delay?: number | ((attempt: number) => number);
 };
 
@@ -25,7 +25,7 @@ export type ValueOptions<T> = {
 };
 
 export function retry<T>(options: RetryOptions): Operator<T, T> {
-  assertNonNegativeInteger(options.attempts, 'retry attempts');
+  assertNonNegativeInteger(options.times, 'retry times');
 
   return (source) =>
     stream((sink, signal) => {
@@ -41,7 +41,7 @@ export function retry<T>(options: RetryOptions): Operator<T, T> {
           {
             complete: sink.complete,
             error(reason) {
-              if (attempts === options.attempts) {
+              if (attempts === options.times) {
                 sink.error(reason);
 
                 return;

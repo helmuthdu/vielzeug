@@ -27,12 +27,13 @@ try {
 console.log('captured errors:', errors)
 // [{ event: 'order:placed', message: 'inventory check failed' }]
 
-try {
-  bus.waitAny(['event-a']) // waitAny requires at least 2 event keys
-} catch (err) {
-  console.log('caught herald error?', err instanceof HeraldError, '-', err.message)
-}
+// Disposal interrupts pending waits with BusDisposedError
+const pending = bus.wait('order:placed')
 
-bus.dispose()`,
+bus.dispose()
+
+pending.catch((err) => {
+  console.log('caught herald error?', err instanceof HeraldError, '-', err.message)
+})`,
   name: 'Error Handling',
 };

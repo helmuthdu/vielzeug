@@ -6,11 +6,9 @@ import {
   ConduitDisposeError,
   ConduitDuplicateRegistrationError,
   ConduitProviderNotFoundError,
-  ConduitScopedResolutionError,
   createContainer,
   disposalSignalToken,
   factoryProvider,
-  scope,
   token,
   valueProvider,
 } from '../index';
@@ -51,16 +49,13 @@ describe('Conduit', () => {
     await container.dispose();
   });
 
-  it('creates one named-scope value per matching scope', async () => {
-    const Request = scope('request');
+  it('caches singletons per registering child container', async () => {
     const Session = token<object>('Session');
 
-    const root = createContainer([{ dependencies: [], factory: () => ({}), lifetime: Request, token: Session }]);
+    const root = createContainer([{ dependencies: [], factory: () => ({}), token: Session }]);
 
-    await expect(root.resolve({ session: Session })).rejects.toBeInstanceOf(ConduitScopedResolutionError);
-
-    const firstScope = root.createScope(Request);
-    const secondScope = root.createScope(Request);
+    const firstScope = root.createScope({ providers: [{ dependencies: [], factory: () => ({}), token: Session }] });
+    const secondScope = root.createScope({ providers: [{ dependencies: [], factory: () => ({}), token: Session }] });
 
     const first = await firstScope.resolve({ a: Session });
     const firstAgain = await firstScope.resolve({ b: Session });
@@ -95,17 +90,16 @@ describe('Conduit', () => {
     ).toThrow(ConduitCircularDependencyError);
   });
 
-  it('fails fast when a singleton depends on a scoped factory', () => {
-    const Request = scope('request');
+  it('fails fast when a singleton depends on a transient factory', () => {
     const Session = token<object>('Session');
     const Service = token<{ session: object }>('Service');
 
     expect(() =>
       createContainer([
-        { dependencies: [], factory: () => ({}), lifetime: Request, token: Session },
+        { dependencies: [], factory: () => ({}), lifetime: 'transient', token: Session },
         { dependencies: [Session], factory: (session) => ({ session }), token: Service },
       ]),
-    ).toThrow(ConduitScopedResolutionError);
+    ).toThrow(/cannot depend on a transient factory/);
   });
 
   it('fails fast at construction for duplicate tokens', () => {
@@ -166,16 +160,14 @@ describe('Conduit', () => {
     expect(order).toEqual(['service', 'database']);
   });
 
-  it('disposes child scopes when parent container ends', async () => {
-    const Request = scope('request');
+  it('disposes child containers when parent container ends', async () => {
     const Session = token<object>('Session');
     const dispose = vi.fn();
 
-    const root = createContainer([
-      { dependencies: [], dispose, factory: () => ({}), lifetime: Request, token: Session },
-    ]);
-
-    const request = root.createScope(Request);
+    const root = createContainer([]);
+    const request = root.createScope({
+      providers: [{ dependencies: [], dispose, factory: () => ({}), token: Session }],
+    });
     await request.resolve({ session: Session });
 
     await root.dispose();
@@ -260,13 +252,12 @@ describe('Conduit', () => {
     await expect(container.resolve({ value: Value })).rejects.toBeInstanceOf(ConduitDisposedError);
   });
 
-  it('checks registration visibility across parent scopes', async () => {
-    const Request = scope('request');
+  it('checks registration visibility across parent containers', async () => {
     const Session = token<object>('Session');
 
-    const root = createContainer([{ dependencies: [], factory: () => ({}), lifetime: Request, token: Session }]);
+    const root = createContainer([valueProvider(Session, {})]);
 
-    const request = root.createScope(Request);
+    const request = root.createScope();
 
     expect(root.has(Session)).toBe(true);
     expect(request.has(Session)).toBe(true);
@@ -287,15 +278,14 @@ describe('Conduit', () => {
     await container.dispose();
   });
 
-  it('supports transient factories and immutable scope-local overrides', async () => {
-    const Request = scope('request');
+  it('supports transient factories and immutable child-local overrides', async () => {
     const Config = token<string>('Config');
     const Transient = token<object>('Transient');
     const root = createContainer([
       valueProvider(Config, 'root'),
       factoryProvider(Transient, [], () => ({}), { lifetime: 'transient' }),
     ]);
-    const request = root.createScope(Request, { providers: [valueProvider(Config, 'request')] });
+    const request = root.createScope({ providers: [valueProvider(Config, 'request')] });
 
     await expect(request.resolve(Config)).resolves.toBe('request');
     expect(await request.resolve(Transient)).not.toBe(await request.resolve(Transient));
@@ -304,12 +294,11 @@ describe('Conduit', () => {
   });
 
   it('injects the owning container disposal signal', async () => {
-    const Request = scope('request');
     const Signal = token<AbortSignal>('Signal');
-    const root = createContainer([
-      factoryProvider(Signal, [disposalSignalToken], (signal) => signal, { lifetime: Request }),
-    ]);
-    const request = root.createScope(Request);
+    const root = createContainer([]);
+    const request = root.createScope({
+      providers: [factoryProvider(Signal, [disposalSignalToken], (signal) => signal)],
+    });
     const signal = await request.resolve(Signal);
 
     expect(signal).toBe(request.disposalSignal);
@@ -380,18 +369,16 @@ describe('Conduit', () => {
     await container.dispose();
   });
 
-  it('rejects malformed providers and incompatible scope dependencies at construction', () => {
-    const Request = scope('request');
-    const Transaction = scope('transaction');
+  it('rejects malformed providers and transient singleton dependencies at construction', () => {
     const Dependency = token<object>('Dependency');
     const Service = token<object>('Service');
 
     expect(() => createContainer([{ dependencies: [], token: Service, value: {} } as never])).toThrow(/provider/i);
     expect(() =>
       createContainer([
-        factoryProvider(Dependency, [], () => ({}), { lifetime: Transaction }),
-        factoryProvider(Service, [Dependency], (dependency) => ({ dependency }), { lifetime: Request }),
+        factoryProvider(Dependency, [], () => ({}), { lifetime: 'transient' }),
+        factoryProvider(Service, [Dependency], (dependency) => ({ dependency })),
       ]),
-    ).toThrow(ConduitScopedResolutionError);
+    ).toThrow(/cannot depend on a transient factory/);
   });
 });

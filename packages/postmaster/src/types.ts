@@ -4,7 +4,8 @@ export type JsonValue = JsonPrimitive | JsonValue[] | { readonly [key: string]: 
 export interface RetryPolicy {
   readonly delay?: (attempt: number) => number;
   readonly maxAttempts: number;
-  readonly shouldRetry: (error: unknown, attempt: number) => boolean;
+  /** Defaults to retrying any error until `maxAttempts` is reached. */
+  readonly shouldRetry?: (error: unknown, attempt: number) => boolean;
 }
 
 export interface JobContext {
@@ -76,9 +77,9 @@ export interface PostmasterStats {
   readonly running: number;
 }
 
-export type RetryResult =
+export type RequeueResult =
   | { readonly status: 'not-dead-letter' | 'not-found' | 'running' }
-  | { readonly entry: PostmasterEntry; readonly status: 'retried' };
+  | { readonly entry: PostmasterEntry; readonly status: 'requeued' };
 
 export type RemoveResult =
   | { readonly status: 'not-found' | 'running' }
@@ -158,7 +159,7 @@ export interface Postmaster<J extends JobDefinitions> {
   flush(options?: { signal?: AbortSignal }): Promise<FlushResult>;
   list(filter?: EntryFilter): Promise<PostmasterEntry[]>;
   remove(id: string): Promise<RemoveResult>;
-  retry(id: string): Promise<RetryResult>;
+  requeue(id: string): Promise<RequeueResult>;
   start(): void;
   stats(): Promise<PostmasterStats>;
   tap(handler: (event: PostmasterEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;

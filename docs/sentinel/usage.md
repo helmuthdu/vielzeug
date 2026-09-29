@@ -160,6 +160,55 @@ controller.abort();
 
 Sentinel follows the standard external-store shape, so reactive libraries can bridge it without a Sentinel-specific adapter.
 
+## Prevent Screen Sleep
+
+Use `createWakeLock()` to keep the screen awake during active use — for example, during a game, presentation, or long-running task.
+
+```ts
+import { createWakeLock } from '@vielzeug/sentinel';
+
+const wakeLock = createWakeLock();
+wakeLock.request();
+
+const unsubscribe = wakeLock.subscribe(() => {
+  console.log('Wake lock active:', wakeLock.getSnapshot().active);
+});
+
+// Later — release the lock and dispose
+wakeLock.release();
+unsubscribe();
+wakeLock.dispose();
+```
+
+The lock auto-releases when the tab is hidden (the browser does this). The Sentinel re-acquires it automatically when the tab becomes visible again if `request()` was called and `release()` was not.
+
+Check `getSnapshot().supported` before acquiring if you need to show different UI when the Wake Lock API is unavailable.
+
+```ts
+const wakeLock = createWakeLock();
+
+if (wakeLock.getSnapshot().supported) {
+  wakeLock.request();
+}
+```
+
+## Track Fullscreen State
+
+Use `createFullscreen()` to observe and drive document fullscreen state — for example, immersing a board or map view:
+
+```ts
+import { createFullscreen } from '@vielzeug/sentinel';
+
+const fullscreen = createFullscreen();
+const unsubscribe = fullscreen.subscribe(() => {
+  fullscreenButton.pressed = fullscreen.getSnapshot().active;
+});
+
+fullscreenButton.addEventListener('click', () => fullscreen.toggle());
+```
+
+`request()`, `exit()`, and `toggle()` degrade silently when the Fullscreen API is unavailable or the browser refuses (user activation is required in some browsers). Disposing the sentinel exits fullscreen, so leaving the owning view releases it.
+
 ## Handle Unavailable APIs
 
 `createMediaQuery()`, `createElementSize()`, and `createIntersection()` report unavailable platform APIs with `SentinelUnavailableError`.

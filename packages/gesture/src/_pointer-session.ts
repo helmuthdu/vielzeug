@@ -1,4 +1,5 @@
 import type { GestureEndReason, GestureHandle } from './_gesture.js';
+import { GestureConfigError } from './errors.js';
 
 export type PointerAxis = 'x' | 'y';
 
@@ -7,7 +8,7 @@ const DEFAULT_ACTIVATION_DISTANCE = 6;
 export function resolveActivationDistance(value: number | undefined): number {
   if (value === undefined) return DEFAULT_ACTIVATION_DISTANCE;
   if (!Number.isFinite(value) || value < 0) {
-    throw new RangeError(`activationDistance must be a non-negative finite number, got: ${value}`);
+    throw new GestureConfigError(`activationDistance must be a non-negative finite number, got: ${value}`);
   }
   return value;
 }
@@ -53,7 +54,7 @@ const read = <T>(value: T | (() => T) | undefined, fallback: T): T =>
 const resolveAxis = (value: PointerSessionOptions['axis']): PointerAxis | undefined => {
   if (value === undefined) return undefined;
   const axis = typeof value === 'function' ? value() : value;
-  if (axis !== 'x' && axis !== 'y') throw new RangeError(`axis must be "x" or "y", got: ${String(axis)}`);
+  if (axis !== 'x' && axis !== 'y') throw new GestureConfigError(`axis must be "x" or "y", got: ${String(axis)}`);
   return axis;
 };
 

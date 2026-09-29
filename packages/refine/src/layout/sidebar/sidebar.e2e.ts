@@ -163,7 +163,7 @@ test.describe('Interaction', () => {
       toggle?.focus();
       toggle?.click();
     });
-    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-mobile-open'));
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
 
     await expect(nav).not.toHaveAttribute('inert', '');
     await expect(nav).not.toHaveAttribute('aria-hidden', 'true');
@@ -172,7 +172,7 @@ test.describe('Interaction', () => {
     ).toBe('nav');
 
     await page.keyboard.press('Escape');
-    await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-mobile-open'));
+    await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
     await expect(nav).toHaveAttribute('inert', '');
     await expect(nav).toHaveAttribute('aria-hidden', 'true');
     expect(
@@ -182,11 +182,11 @@ test.describe('Interaction', () => {
     await page.locator('#navbar').evaluate((navbar) => {
       navbar.shadowRoot?.querySelector<HTMLButtonElement>('[part="mobile-toggle"]')?.click();
     });
-    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-mobile-open'));
+    await page.waitForFunction(() => document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
     await page.locator('#pipeline').evaluate((item) => {
       item.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
     });
-    await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-mobile-open'));
+    await page.waitForFunction(() => !document.getElementById('sidebar')?.hasAttribute('data-drawer-open'));
     await expect(nav).toHaveAttribute('inert', '');
   });
 });

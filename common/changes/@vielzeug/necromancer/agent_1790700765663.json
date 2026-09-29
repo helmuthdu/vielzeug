@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Export shouldReduceMotion for shared prefers-reduced-motion checks",
+      "packageName": "@vielzeug/necromancer",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/necromancer"
+}

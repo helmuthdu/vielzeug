@@ -6,7 +6,8 @@ import { effect, signal } from '@vielzeug/ripple';
 import { createSandbox, type SandboxHandle } from '@vielzeug/sandbox';
 import { t } from '../../core/i18n';
 import { crmIndex } from '../../core/search';
-import { crmData, locale, regenerateDemoData } from '../../core/store';
+import { locale } from '../../core/i18n';
+import { crmData, regenerateDemoData } from '../../core/store';
 import { countContactsByTitle } from '../../core/worker-tasks';
 
 const capabilities = [

@@ -1,0 +1,148 @@
+@layer refine.base {
+  :host {
+    --_panel-width: var(--chat-panel-width, min(420px, calc(100vw - var(--size-12))));
+    --_panel-height: var(--chat-panel-height, min(640px, calc(100dvh - var(--size-12))));
+    --_panel-inset: var(--chat-panel-inset, var(--size-6));
+    --_panel-z-index: var(--chat-panel-z-index, var(--z-fixed));
+
+    display: contents;
+  }
+
+  .window {
+    position: fixed;
+    right: var(--_panel-inset);
+    bottom: var(--_panel-inset);
+    z-index: var(--_panel-z-index);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: var(--_panel-width);
+    height: var(--_panel-height);
+    overflow: hidden;
+    color: var(--text-color-body);
+    background: var(--color-contrast-50);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--rounded-2xl);
+    box-shadow: var(--shadow-xl);
+  }
+
+  .window[hidden] {
+    display: none;
+  }
+
+  .window:focus-visible {
+    outline: var(--border-2) solid var(--color-primary);
+    outline-offset: var(--size-1);
+  }
+
+  .header {
+    display: flex;
+    gap: var(--size-4);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--size-4) var(--size-5);
+    border-bottom: 1px solid var(--color-divider);
+  }
+
+  .header ::slotted(*),
+  .identity {
+    display: grid;
+    gap: var(--size-1);
+  }
+
+  .identity strong {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 500;
+  }
+
+  .status {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    font-size: var(--text-xs);
+    color: var(--text-color-tertiary);
+  }
+
+  .status-dot {
+    width: var(--size-2);
+    height: var(--size-2);
+    background: var(--color-success);
+    border-radius: var(--rounded-full);
+  }
+
+  .tools {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-1);
+    align-items: center;
+  }
+
+  .body {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    padding: var(--size-5);
+    overflow: hidden;
+  }
+
+  .messages {
+    display: grid;
+    gap: var(--size-4);
+    align-content: start;
+    min-height: 0;
+    padding-right: var(--size-1);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .messages:focus-visible {
+    outline: var(--border-2) solid var(--color-primary);
+    outline-offset: calc(var(--size-1) * -1);
+    border-radius: var(--rounded-md);
+  }
+
+  .messages ore-chat-message {
+    --chat-message-max-width: 88%;
+  }
+
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    padding-top: var(--size-5);
+  }
+
+  .composer {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: var(--size-4);
+    background: var(--color-contrast-100);
+    border-top: 1px solid var(--color-divider);
+  }
+
+  .composer ore-message-composer {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  @media (width < 48rem) {
+    :host {
+      --_panel-inset: var(--size-3);
+      --_panel-width: calc(100vw - var(--size-6));
+      --_panel-height: min(620px, calc(100dvh - var(--size-6)));
+    }
+
+    .window {
+      border-radius: var(--rounded-xl);
+    }
+
+    .header,
+    .body,
+    .composer {
+      padding: var(--size-4);
+    }
+  }
+}

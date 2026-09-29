@@ -15,6 +15,7 @@ import '../components/share-build-dialog';
 
 import { createForm } from '@vielzeug/forge';
 import { define, html, when } from '@vielzeug/ore';
+import { eventFieldValue } from '@vielzeug/refine';
 import { signal } from '@vielzeug/ripple';
 import { currentUser } from '../../core/auth';
 import { buildConfigurationUrl } from '../../core/build-url';
@@ -22,7 +23,7 @@ import { appliedPromoCode, cartItems, cartLineBreakdowns, cartSummary } from '..
 import { modelMap } from '../../core/catalog';
 import type { CheckoutStep } from '../../core/checkout-machine';
 import { checkoutMachine } from '../../core/checkout-machine';
-import { controlValue } from '../../core/control-value';
+
 import { formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
 import { estimateDeliveryDate, formatLongDate, formatPaymentMethod } from '../../core/format';
@@ -173,14 +174,14 @@ define('checkout-shipping', {
     const dealerError = signal('');
 
     function onDeliveryMethodChange(event: Event): void {
-      const value = controlValue(event);
+      const value = eventFieldValue(event);
 
       if (value && isDeliveryMethod(value)) deliveryMethod.value = value;
       dealerError.value = '';
     }
 
     function onDealerChange(event: Event): void {
-      dealerId.value = controlValue(event) || null;
+      dealerId.value = eventFieldValue(event) || null;
       dealerError.value = '';
     }
 
@@ -227,7 +228,7 @@ define('checkout-shipping', {
         required
         value=${() => shippingForm.field(name).value}
         error=${() => errors.value[name] ?? ''}
-        @input=${(event: Event) => shippingForm.field(name).set(controlValue(event) ?? '')}
+        @input=${(event: Event) => shippingForm.field(name).set(eventFieldValue(event) ?? '')}
         @blur=${() => shippingForm.field(name).touch()}></ore-input>
     `;
 
@@ -352,13 +353,13 @@ define('checkout-payment', {
               step="500"
               max=${() => Number(displayTotal())}
               value=${() => downPayment.value}
-              @input=${(event: Event) => (downPayment.value = Number(controlValue(event)) || 0)}></ore-number-input>
+              @input=${(event: Event) => (downPayment.value = Number(eventFieldValue(event)) || 0)}></ore-number-input>
             <ore-select
               label=${() => t('checkout.payment.termLabel')}
               options=${TERM_MONTH_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
               value=${() => String(termMonths.value)}
               @change=${(event: Event) => {
-                const next = Number(controlValue(event));
+                const next = Number(eventFieldValue(event));
 
                 if (TERM_MONTH_OPTIONS.includes(next)) termMonths.value = next;
               }}></ore-select>
@@ -367,7 +368,7 @@ define('checkout-payment', {
             label=${() => t('checkout.payment.verificationCode')}
             length="6"
             value=${() => verificationCode.value}
-            @change=${(event: Event) => (verificationCode.value = controlValue(event) ?? '')}></ore-otp-input>
+            @change=${(event: Event) => (verificationCode.value = eventFieldValue(event) ?? '')}></ore-otp-input>
           <p class="checkout-form__hint">${() => t('checkout.payment.verificationHint')}</p>
         `,
       )}
@@ -391,13 +392,13 @@ define('checkout-payment', {
               <ore-input
                 label=${() => t('checkout.tradeIn.descriptionLabel')}
                 value=${() => tradeInDescription.value}
-                @input=${(event: Event) => (tradeInDescription.value = controlValue(event) ?? '')}></ore-input>
+                @input=${(event: Event) => (tradeInDescription.value = eventFieldValue(event) ?? '')}></ore-input>
               <ore-number-input
                 label=${() => t('checkout.tradeIn.valueLabel')}
                 min="0"
                 step="500"
                 value=${() => tradeInValue.value}
-                @input=${(event: Event) => (tradeInValue.value = Number(controlValue(event)) || 0)}></ore-number-input>
+                @input=${(event: Event) => (tradeInValue.value = Number(eventFieldValue(event)) || 0)}></ore-number-input>
             </div>
             <div class="checkout-tradein__photos">
               <ore-icon name="camera" size="18" aria-hidden="true"></ore-icon>

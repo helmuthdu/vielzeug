@@ -44,8 +44,10 @@ All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/c
 ### `define(tag, definition)`
 
 ```ts
-define<Props>(tag: string, definition: ComponentDefinition<Props>): void;
+define<Props>(tag: string, definition: ComponentDefinition<Props>): CustomElementConstructor;
 ```
+
+Returns the registered class (for `instanceof` or subclassing); registration itself is the only global side effect.
 
 The `setup()` function receives only typed prop signals:
 
@@ -407,11 +409,9 @@ See the [Ripple documentation](/ripple/) for the full API.
 
 ## Lifecycle Events
 
-| Event              | When                                                          |
-| ------------------ | ------------------------------------------------------------- |
-| `ore:connect`    | After every `connectedCallback` (including reconnects)        |
-| `ore:disconnect` | After `disconnectedCallback`, before component state is reset |
-| `ore:error`      | When a lifecycle callback fails — bubbles, composed; detail is `OreLifecycleError` |
+| Event         | When                                                                      |
+| ------------- | ------------------------------------------------------------------------- |
+| `ore:error`   | When a lifecycle callback fails — bubbles, composed; detail is `OreLifecycleError` |
 
 ## Types
 
@@ -476,14 +476,9 @@ type ComponentDefinition<Props extends Record<string, unknown> = Record<never, n
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
-type HostBindingValue =
-  | (() => string | number | boolean | null | undefined)
-  | Readable<string | number | boolean | null | undefined>
-  | string
-  | number
-  | boolean
-  | null
-  | undefined;
+type MaybeReactive<T> = T | Readable<T> | (() => T); // Plain value, signal, or getter — accepted by when(), each(), classMap(), and bind()
+
+type HostBindingValue = MaybeReactive<string | number | boolean | null | undefined>;
 
 type AttributeBindings = Record<string, HostBindingValue>;
 

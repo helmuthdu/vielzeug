@@ -15,7 +15,7 @@ Pulse 3.0 removes the Ripple runtime dependency and exposes state through framew
 
 ### Replace `Readable` access
 
-`status`, `rooms`, and room `presence` now expose `ExternalStore<T>`. Replace `.value` and `.peek()` reads with `getSnapshot()`.
+`status`, `rooms`, and room `presence` now expose `Subscribable<T>`. Replace `.value` and `.peek()` reads with `getSnapshot()`.
 
 ```ts
 // Before
@@ -119,7 +119,7 @@ Room join failures now use standard error types:
 
 **Before:** `pulse.rooms` was a signal of room names with presence.
 
-**After:** `pulse.rooms` is an `ExternalStore<ReadonlySet<string>>` tracking confirmed room memberships with or without presence.
+**After:** `pulse.rooms` is an `Subscribable<ReadonlySet<string>>` tracking confirmed room memberships with or without presence.
 
 ```ts
 const unsubscribe = pulse.rooms.subscribe(() => {
@@ -162,5 +162,5 @@ const announcements = pulse.room('announcements');
 2. Replace `pulse.join(name)` / `pulse.leave(name)` with `pulse.room(name)` / `scope.dispose()`.
 3. Replace `channel.presence` with `pulse.room(name).presence`.
 4. Replace `PulsePresenceError` handling with the appropriate new error type.
-5. Update `pulse.rooms` consumers to read from the `ExternalStore<ReadonlySet<string>>`.
+5. Update `pulse.rooms` consumers to read from the `Subscribable<ReadonlySet<string>>`.
 6. Add `timeout` and `signal` options to room scopes where appropriate.

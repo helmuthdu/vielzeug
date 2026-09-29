@@ -1,5 +1,5 @@
 import { type CompiledCatalog, type CompiledMessage, compileCatalog } from './_catalog';
-import { warn } from './_dev';
+import { isDev, warn } from './_dev';
 import { canonicalLocale, localeChain, pluralCategory } from './_locale';
 import { renderParts, renderText, type Template } from './_template';
 import { LinguaInvalidPluralCountError, LinguaMissingKeyError, LinguaMissingValueError } from './errors';
@@ -34,8 +34,6 @@ type InternalOptions = {
   readonly locale?: Locale;
   readonly missing?: MissingStrategy;
 };
-
-const isDev = !(globalThis as { __LINGUA_PROD__?: boolean }).__LINGUA_PROD__;
 
 function resolveMissing(strategy: MissingStrategy | undefined, info: MissingInfo): string {
   if (strategy === 'throw') {

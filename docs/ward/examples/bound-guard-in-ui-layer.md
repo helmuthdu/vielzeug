@@ -23,10 +23,7 @@ const ward = createWard<'read' | 'update' | 'delete', 'posts'>([
 
 export function postActions(principal) {
   const permissions = ward.forPrincipal(principal);
-  const actions = permissions.allowedActions({
-    knownActions: ['read', 'update', 'delete'],
-    resource: 'posts',
-  });
+  const actions = permissions.allowedActions({ resource: 'posts' });
 
   return {
     canDelete: actions.includes('delete'),

@@ -1,4 +1,4 @@
-import { backoff } from '@vielzeug/arsenal';
+import { backoff, tapper } from '@vielzeug/arsenal';
 import { asJsonValue, failureFrom, isAbortError, runValidate } from './_json.ts';
 import { PostmasterDisposedError, PostmasterError, PostmasterJobError } from './errors.ts';
 import {
@@ -9,8 +9,8 @@ import {
   releaseJob,
   removeJob,
   renewLeaseJob,
+  requeueJob,
   rescheduleJob,
-  retryJob,
   toEntry,
 } from './store-ops.ts';
 import type {
@@ -27,7 +27,7 @@ import type {
   PostmasterEvent,
   PostmasterStats,
   RemoveResult,
-  RetryResult,
+  RequeueResult,
   StoredJob,
 } from './types.ts';
 
@@ -56,7 +56,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
 
   const controller = new AbortController();
   const ownerId = crypto.randomUUID();
-  const tappers = new Set<(event: PostmasterEvent) => void>();
+  const tappers = tapper<PostmasterEvent>();
   let disposed = false;
   let started = false;
   let running: Promise<void> | undefined;
@@ -70,14 +70,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
   };
 
   const emitTap = (event: PostmasterEvent): void => {
-    if (tappers.size === 0) return;
-    for (const tapper of tappers) {
-      try {
-        tapper(event);
-      } catch {
-        // Observability must not affect postmaster behavior.
-      }
-    }
+    tappers.emit(event);
   };
 
   const assertLive = (): void => {
@@ -210,7 +203,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
 
       try {
         shouldRetry =
-          entry.attempts < (job.retry?.maxAttempts ?? 1) && (job.retry?.shouldRetry(reason, entry.attempts) ?? false);
+          entry.attempts < (job.retry?.maxAttempts ?? 1) && (job.retry?.shouldRetry?.(reason, entry.attempts) ?? true);
         if (!shouldRetry) return deadLetter(entry, reason);
         delay = job.retry?.delay?.(entry.attempts - 1) ?? backoff(entry.attempts - 1);
         if (!Number.isFinite(delay) || delay < 0) {
@@ -363,10 +356,10 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
       if (result.status === 'removed') emitTap({ id, type: 'removed' });
       return result;
     },
-    async retry(id: string): Promise<RetryResult> {
+    async requeue(id: string): Promise<RequeueResult> {
       assertLive();
-      const result = await store.transact((tx) => retryJob(tx, id, clock()));
-      if (result.status === 'retried') wake();
+      const result = await store.transact((tx) => requeueJob(tx, id, clock()));
+      if (result.status === 'requeued') wake();
       return result;
     },
     start(): void {
@@ -381,22 +374,8 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     },
     tap(handler: (event: PostmasterEvent) => void, opts?: { readonly signal?: AbortSignal }): () => void {
       assertLive();
-      tappers.add(handler);
 
-      if (opts?.signal) {
-        if (opts.signal.aborted) {
-          tappers.delete(handler);
-          return () => {};
-        }
-        const onAbort = () => tappers.delete(handler);
-        opts.signal.addEventListener('abort', onAbort, { once: true });
-        return () => {
-          tappers.delete(handler);
-          opts.signal?.removeEventListener('abort', onAbort);
-        };
-      }
-
-      return () => tappers.delete(handler);
+      return tappers.tap(handler, opts);
     },
     async [Symbol.asyncDispose](): Promise<void> {
       await dispose();

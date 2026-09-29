@@ -91,6 +91,27 @@ The theme color tints the value and the slotted icon.
 
 </ComponentPreview>
 
+## Frost Variant
+
+`variant="frost"` turns the panel into frosted glass so a counter placed over artwork — a card, a battle-board image — blends into the scene instead of covering it with an opaque patch.
+
+<ComponentPreview center>
+
+```html
+<div style="position: relative; width: 14rem; aspect-ratio: 3 / 4; background: linear-gradient(160deg, oklch(45% 0.12 30), oklch(25% 0.08 20)); border-radius: var(--rounded-lg)">
+  <ore-counter
+    color="error"
+    variant="frost"
+    label="Wounds"
+    hint="Carried into the next chapter"
+    value="1"
+    max="3"
+    style="position: absolute; inset-inline: var(--size-3); bottom: var(--size-3)"></ore-counter>
+</div>
+```
+
+</ComponentPreview>
+
 ## Readonly and Disabled
 
 `readonly` hides the buttons and shows the value only; `disabled` keeps the buttons visible but inert.
@@ -141,6 +162,7 @@ Override `--counter-value-size` and `--counter-button-size` to turn a counter in
 | `disabled`   | `boolean`                                                                 | `false` | Disables the control                                   |
 | `color`      | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Theme color for the value and slotted icon             |
 | `size`       | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Component size                                         |
+| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | —       | Surface variant; `frost` blurs the panel over artwork   |
 
 ### Events
 

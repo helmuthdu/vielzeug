@@ -2,7 +2,8 @@ import type { ScoutIndex } from './scout-index';
 import type { SearchConstraints } from './types';
 
 /**
- * Adapts a `ScoutIndex` to sourcerer's explicit local `match` callback.
+ * Adapts a `ScoutIndex` to sourcerer's local-source `filter` callback
+ * (`filter?: (item, params) => boolean`, with the query passed as `params`).
  * Caches one match set per query so local filtering does not repeat index work per item.
  */
 export function toSearchMatcher<T>(

@@ -71,6 +71,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/sigil` — QR code generation and scanning — pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning
 - `@vielzeug/sourcerer` — Reactive collection sources with local, page, cursor, and infinite pagination
 - `@vielzeug/spell` — Zero-dependency schema validation with Standard Schema interoperability
+- `@vielzeug/tavern` — Table sessions over mesh — host-owned state replication with guest command forwarding
 - `@vielzeug/tempo` — Temporal-powered date utilities
 - `@vielzeug/vault` — Adapter-free typed storage core with focused browser and SQLite subpaths
 - `@vielzeug/ward` — Ordered authorization rules with immutable policies and typed decisions

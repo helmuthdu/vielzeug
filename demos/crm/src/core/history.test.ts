@@ -21,6 +21,6 @@ describe('opportunity history', () => {
   it('does not record an invalid transition', async () => {
     await expect(moveOpportunity('opportunity-1', 'closed-won')).resolves.toBe(false);
     expect(crmData.value.opportunities[0].stage).toBe('proposal');
-    expect(ledger.state.value.undo).toHaveLength(0);
+    expect(ledger.state.getSnapshot().undo).toHaveLength(0);
   });
 });

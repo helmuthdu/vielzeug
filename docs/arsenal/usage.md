@@ -151,6 +151,21 @@ randomFloat(source); // 0.5
 random(1, 4, source); // 3
 ```
 
+## Encode Text for URLs and QR Codes
+
+Share codes ride in URLs and QR payloads, where `+`, `/`, and padding `=` break consumers. The base64url codecs are environment-independent — no `btoa`, no `Buffer` — so the same encode/decode pair works in the browser, in workers, and in Node.
+
+```ts
+import { base64UrlToText, textToBase64Url } from '@vielzeug/arsenal';
+
+const code = textToBase64Url(JSON.stringify({ hunterId: 'daeron', version: 2 }));
+// eyJodW50ZXJJZCI6ImRhZXJvbiIsInZlcnNpb24iOjJ9 — safe in a query string or QR
+
+const payload = JSON.parse(base64UrlToText(code));
+```
+
+Decoding throws on characters outside the base64url alphabet, so corrupted input fails loudly instead of decoding to garbage.
+
 ## Working with Other Vielzeug Libraries
 
 Use Spell after `tryParseJson` for typed external data. Use Vault instead of `cache` when data must survive reloads or process restart.

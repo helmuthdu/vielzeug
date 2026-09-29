@@ -116,6 +116,37 @@
     opacity: 0.4;
   }
 
+  /* Frost: the variant mixin paints the surface with its own high-contrast theme ink.
+     Keep every inner element on that same ink — the page-ink defaults (--text-color-*)
+     and the base-tinted value were written for opaque panels and fail over artwork. */
+  :host([variant='frost']) .label,
+  :host([variant='frost']) .value,
+  :host([variant='frost']) .btn {
+    color: inherit;
+  }
+
+  :host([variant='frost']) ::slotted([slot='icon']) {
+    color: inherit;
+  }
+
+  /* Solid button fills would read as opaque patches over the blur; glass tints instead. */
+  :host([variant='frost']) .btn {
+    background: color-mix(in oklch, currentColor 18%, transparent);
+  }
+
+  :host([variant='frost']) .btn:hover:not(:disabled) {
+    background: color-mix(in oklch, currentColor 30%, transparent);
+  }
+
+  :host([variant='frost']) .btn-large {
+    background: transparent;
+    border-color: color-mix(in oklch, currentColor 45%, transparent);
+  }
+
+  :host([variant='frost']) .hint {
+    color: color-mix(in oklch, currentColor 80%, transparent);
+  }
+
   .btn[hidden] {
     display: none;
   }
@@ -190,4 +221,15 @@
     flex: 0;
     text-align: start;
   }
+}
+
+/* Unlayered on purpose: the frost surface comes from the unlayered frostVariantMixin, and
+   layered rules can never beat unlayered ones. The mixin paints the tinted film at 50% alpha,
+   which lets dark artwork drag the surface below the lightness the theme ink (--_theme-content)
+   was designed against — dark ink on dark glass in dark mode, washed-out white in light mode.
+   A denser film keeps the color's own lightness dominant, so the ink pairing both themes define
+   (dark ink on the light-mode base, light ink on the dark-mode base) holds over any artwork,
+   while the blur and saturation still read as glass. */
+:host([variant='frost'][color]) .counter {
+  background: color-mix(in oklch, var(--_theme-base) 78%, transparent);
 }

@@ -3,8 +3,8 @@ export const permissionChecksExample = {
 
 const ward = createWard([
   { action: 'read',   resource: 'articles', effect: 'allow' },
-  { action: 'create', resource: 'articles', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('editor') ?? false },
-  { action: 'update', resource: 'articles', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('editor') ?? false },
+  { action: 'create', resource: 'articles', effect: 'allow', roles: ['editor'] },
+  { action: 'update', resource: 'articles', effect: 'allow', roles: ['editor'] },
   { action: 'delete', resource: 'articles', effect: 'deny' },
 ])
 

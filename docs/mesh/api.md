@@ -41,7 +41,6 @@ Returns a host node in status `'idle'`. Creating it never touches WebRTC — the
 | `maxMessageBytes` | `number` | `65_536` | Serialized message cap, both directions. |
 | `invitationTtlMs` | `number` | `300_000` | Invitation validity window. |
 | `iceGatheringTimeoutMs` | `number` | `5_000` | ICE gathering cap; also bounds the channel-open wait. |
-| `serialize` / `deserialize` | functions | `JSON.stringify` / `JSON.parse` | Message envelope serialization. |
 | `rtc` | `MeshRtcFactory` | `globalThis.RTCPeerConnection` | Injection point for tests and non-browser runtimes. |
 | `clock` | `() => number` | `Date.now` | TTLs and message timestamps. |
 | `random` | `RandomSource` | `crypto.getRandomValues` | Ids and secrets. |
@@ -82,13 +81,12 @@ const answer = await guest.acceptInvitation(meshCodec.decode(invitationText), { 
 
 | Member | Signature | Purpose |
 | --- | --- | --- |
-| `createInvitation` | `(meta?: { name?: string }) => Promise<MeshInvitation>` | Single-use invitation for one guest; repeatable — one per guest. |
-| `acceptAnswer` | `(answer: MeshAnswer) => Promise<MeshPeer>` | Verifies proof + approval, then resolves once the channel opens. Rejects `MeshPairingError` (unknown/expired/duplicate session, proof mismatch, refusal) or `MeshTimeoutError`. |
+| `createInvitation` | `(meta?: { name?: string }) => Promise<MeshInvitation>` | Single-use invitation for one guest; repeatable — one per guest. `meta.name` becomes this host's peer name on the guest side. |
+| `acceptAnswer` | `(answer: MeshAnswer) => Promise<MeshPeer>` | Verifies proof + approval, then resolves once the channel opens. Rejects `MeshPairingError` (unknown/expired/duplicate session, duplicate peer id, proof mismatch, refusal) or `MeshTimeoutError`. |
 | `peers` | `ReadonlyMap<string, MeshPeer>` | Live peer inventory keyed by peer id. |
 | `send` | `<K extends keyof P['toGuest'] & string>(peerId: string, type: K, payload: P['toGuest'][K]) => void` | Typed unicast; throws `MeshConnectionError` for unknown/unconnected peers, `MeshPayloadError` over the cap. |
 | `broadcast` | `<K extends keyof P['toGuest'] & string>(type: K, payload: P['toGuest'][K], options?: { except?: readonly string[] }) => void` | Sends to every connected peer not in `except`. |
 | `on` | `<K extends keyof P['toHost'] & string>(type: K, handler: (message: MeshInbound<P['toHost'][K]>) => void) => Unsubscribe` | Typed inbound subscription from any guest. |
-| `onPeer` | `(handler: (event: MeshPeerEvent) => void) => Unsubscribe` | `'joined'` / `'left'` / `'status-change'` per peer. |
 | `kick` | `(peerId: string, reason?: string) => void` | Disconnects a peer; the guest observes `'disconnected'`. |
 
 ## Guest Surface
@@ -97,7 +95,7 @@ const answer = await guest.acceptInvitation(meshCodec.decode(invitationText), { 
 
 | Member | Signature | Purpose |
 | --- | --- | --- |
-| `acceptInvitation` | `(invitation: MeshInvitation, meta?: { name?: string }) => Promise<MeshAnswer>` | Consumes an invitation; the returned answer goes back to the host out-of-band. Throws `MeshPairingError` on expired/malformed input or when already paired. |
+| `acceptInvitation` | `(invitation: MeshInvitation, meta?: { name?: string }) => Promise<MeshAnswer>` | Consumes an invitation; the returned answer goes back to the host out-of-band. Throws `MeshPairingError` on expired/malformed input or while a live host peer exists; after the host peer fails or disconnects, a fresh invitation re-pairs on the same node with listeners intact. |
 | `host` | `MeshPeer \| null` | The host peer once pairing started; its `id` is the invitation's `sessionId`. |
 | `send` | `<K extends keyof P['toHost'] & string>(type: K, payload: P['toHost'][K]) => void` | Typed send to the host; throws `MeshConnectionError` when unpaired. |
 | `on` | `<K extends keyof P['toGuest'] & string>(type: K, handler: (message: MeshInbound<P['toGuest'][K]>) => void) => Unsubscribe` | Typed inbound subscription from the host. |
@@ -142,10 +140,10 @@ const meshQrCodec: {
 };
 ```
 
-QR-oriented variant: deflate-raw compresses the JSON payload, then base64url-encodes it with an `mq1.` prefix. `decode` accepts both `mq1.*` and plain `meshCodec` output, so camera scans and paste fallbacks share one path.
+QR-oriented variant: deflate-raw compresses the JSON payload, then base45-encodes it with an `mq2.` prefix. `decode` accepts both `mq2.*` and plain `meshCodec` output, so camera scans and paste fallbacks share one path.
 
 ```ts
-const invitationText = await meshQrCodec.encode(await host.createInvitation()); // "mq1.…"
+const invitationText = await meshQrCodec.encode(await host.createInvitation()); // "mq2.…"
 const answer = await host.acceptAnswer(await meshQrCodec.decode(scannedText));
 ```
 
@@ -172,6 +170,7 @@ interface MeshInvitation {
   readonly sessionId: string;  // 128-bit, base64url
   readonly secret: string;     // 256-bit, base64url
   readonly expiresAt: number;  // epoch ms
+  readonly hostName?: string;  // host display name for the guest's peer list
   readonly sdp: string;        // host offer, candidates inlined
 }
 
@@ -199,11 +198,6 @@ interface MeshPeer extends MeshPeerInfo {
   readonly role: 'host' | 'guest';
 }
 
-type MeshPeerEvent =
-  | { readonly type: 'joined'; readonly peer: MeshPeer }
-  | { readonly type: 'left'; readonly peer: MeshPeer; readonly reason?: string }
-  | { readonly type: 'status-change'; readonly peer: MeshPeer };
-
 interface MeshInbound<T> {
   readonly peerId: string;
   readonly messageId: string;
@@ -220,11 +214,12 @@ type Unsubscribe = () => void;
 type MeshEvent =
   | { readonly type: 'status-change'; readonly peerId: string | null; readonly status: MeshStatus }
   | { readonly type: 'invitation-created' | 'invitation-expired'; readonly sessionId: string }
-  | { readonly type: 'peer-approved' | 'peer-rejected' | 'peer-joined' | 'peer-left'; readonly peerId: string; readonly reason?: string }
+  | { readonly type: 'peer-approved' | 'peer-rejected'; readonly peerId: string }
+  | { readonly type: 'peer-joined'; readonly peer: MeshPeer }
+  | { readonly type: 'peer-left'; readonly peer: MeshPeer; readonly reason?: string }
   | { readonly type: 'message-sent' | 'message-received'; readonly peerId: string; readonly messageType: string; readonly bytes: number }
   | { readonly type: 'message-rejected'; readonly peerId: string; readonly reason: 'too-large' | 'duplicate' | 'malformed' | 'unknown-type' }
   | { readonly type: 'ice-state'; readonly peerId: string; readonly state: string }
-  | { readonly type: 'security-downgrade'; readonly reason: string }
   | { readonly type: 'error'; readonly error: MeshError }
   | { readonly type: 'dispose' };
 ```
@@ -246,8 +241,6 @@ interface MeshOptions {
   readonly maxMessageBytes?: number;
   readonly invitationTtlMs?: number;
   readonly iceGatheringTimeoutMs?: number;
-  readonly serialize?: (value: unknown) => string;
-  readonly deserialize?: (text: string) => unknown;
   readonly rtc?: MeshRtcFactory;
   readonly clock?: () => number;
   readonly random?: RandomSource;

@@ -11,9 +11,11 @@ description: API reference for two-dimensional drag and one-axis pan recognition
 | --- | --- | --- | --- |
 | `createDragGesture()` | Track unrestricted two-dimensional pointer movement | Sync | Does not provide DOM movement or drop semantics |
 | `createPanGesture()` | Track pointer movement projected onto one axis | Sync | Cross-axis intent ends a pending interaction |
-| `DragGesture` / `PanGesture` | Control recognition lifecycle | Sync | `dispose()` does not invoke `onEnd` |
+| `createLongPress()` | Recognize a primary pointer held in place | Sync | The click that follows a fired hold is swallowed |
+| `DragGesture` / `PanGesture` / `LongPress` | Control recognition lifecycle | Sync | `dispose()` does not invoke `onEnd` |
 | `DragGestureOptions` | Configure free-drag recognition | Sync | `activationDistance` uses Euclidean distance |
 | `PanGestureOptions` | Configure axis-locked recognition | Sync | Completion thresholds belong in `onEnd` |
+| `LongPressOptions` | Configure hold recognition | Sync | `durationMs` and `slopPx` are validated at construction |
 
 ## Package Entry Point
 
@@ -94,6 +96,39 @@ Both handles expose the same members:
 | `disposed` | `boolean` | `true` after disposal |
 | `[Symbol.dispose]()` | `() => void` | Calls `dispose()` |
 
+---
+
+### `createLongPress()`
+
+```ts
+function createLongPress(target: Element, options?: LongPressOptions): LongPress;
+```
+
+Recognizes a primary pointer held in place: `onLongPress` fires with the originating pointerdown once the hold outlasts `durationMs`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `target` | `Element` | Element that owns pointer admission, document tracking, and click swallowing |
+| `options` | `LongPressOptions` | Hold time, slop distance, admission, callback, and lifecycle configuration |
+
+**Returns:** A lifecycle-owned `LongPress` handle with the same members as the other gestures; `active` is `true` while a hold is pending.
+
+**Example**
+
+```ts
+import { createLongPress } from '@vielzeug/gesture';
+
+const hold = createLongPress(list, {
+  shouldStart: (event) => event.pointerType !== 'mouse',
+  onLongPress: (detail) => {
+    const tile = (detail.event.target as HTMLElement).closest('.tile');
+    openDetail(tile?.dataset.id);
+  },
+});
+```
+
+Movement beyond `slopPx` cancels back to a normal press, and window blur or a hidden document cancels a pending hold. The click that follows a fired hold is swallowed through a capture-phase listener on `target`, so releasing never commits what the hold opened; bind `target` to a stable ancestor of the pressed controls so the swallow precedes their click handlers.
+
 ## Types
 
 ### Drag types
@@ -172,6 +207,28 @@ type PanGestureOptions = Readonly<{
 
 Pan details project `start`, `current`, and `distance` onto `axis`. The default axis is `'x'`.
 
+### Long-press types
+
+```ts
+type LongPressDetail = Readonly<{
+  event: PointerEvent;
+  pointerId: number;
+  pointerType: string;
+  target: Element;
+}>;
+
+type LongPressOptions = Readonly<{
+  durationMs?: number;
+  disabled?: boolean | (() => boolean | undefined);
+  onLongPress?: (detail: LongPressDetail) => void;
+  shouldStart?: (event: PointerEvent) => boolean;
+  slopPx?: number;
+  signal?: AbortSignal;
+}>;
+```
+
+`durationMs` defaults to `500` and `slopPx` to `8`. `event` is the pointerdown that started the hold, so `event.target` is the pressed element.
+
 ### Handle types
 
 ```ts
@@ -207,8 +264,11 @@ Gesture tracks accepted movement with capture-phase listeners on the target's cu
 
 ## Errors
 
-Gesture does not export custom error classes.
+| Error | Trigger | Notable properties |
+| --- | --- | --- |
+| `GestureError` | Base class for every gesture-originated error | `instanceof GestureError` catches any gesture error |
+| `GestureConfigError` | Invalid option value | Extends `GestureError` |
 
-- Invalid `activationDistance` values throw `RangeError` during construction.
-- Invalid fixed `axis` values throw `RangeError` during construction.
-- Invalid values returned by a dynamic `axis` getter throw `RangeError` when a pointer interaction starts.
+- Invalid `activationDistance` values throw `GestureConfigError` during construction.
+- Invalid fixed `axis` values throw `GestureConfigError` during construction.
+- Invalid values returned by a dynamic `axis` getter throw `GestureConfigError` when a pointer interaction starts.

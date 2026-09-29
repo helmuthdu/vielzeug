@@ -61,7 +61,6 @@ describe('Postmaster', () => {
       }),
       store: createMemoryPostmasterStore(),
     });
-
     await postmaster.enqueue('send', 'hello');
     await expect(postmaster.flush()).resolves.toEqual({
       completed: 0,
@@ -77,6 +76,33 @@ describe('Postmaster', () => {
       deadLettered: 0,
       processed: 1,
       retryScheduled: 0,
+    });
+    expect(execute).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries any error when shouldRetry is omitted', async () => {
+    const execute = vi
+      .fn<(payload: unknown, context: JobContext) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValueOnce(undefined);
+    const postmaster = createPostmaster({
+      jobs: defineJobs({
+        send: {
+          execute,
+          key: (payload: unknown) => String(payload),
+          retry: { delay: () => 0, maxAttempts: 2 },
+          version: 1,
+        },
+      }),
+      store: createMemoryPostmasterStore(),
+    });
+
+    await postmaster.enqueue('send', 'hello');
+    await expect(postmaster.flush()).resolves.toEqual({
+      completed: 1,
+      deadLettered: 0,
+      processed: 2,
+      retryScheduled: 1,
     });
     expect(execute).toHaveBeenCalledTimes(2);
   });
@@ -97,7 +123,7 @@ describe('Postmaster', () => {
       { failure: { message: 'bad request' }, id: entry.id, status: 'dead-letter' },
     ]);
 
-    await expect(postmaster.retry(entry.id)).resolves.toMatchObject({ status: 'retried' });
+    await expect(postmaster.requeue(entry.id)).resolves.toMatchObject({ status: 'requeued' });
     await expect(postmaster.flush()).resolves.toEqual({
       completed: 1,
       deadLettered: 0,

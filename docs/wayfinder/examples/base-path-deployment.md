@@ -36,6 +36,7 @@ const branch = router.match('/my-app/users/7'); // strips base: params.id = '7'
 - Browser history requires the server to rewrite all requests under `/my-app/*` to serve the SPA entry file. Without rewrites, use `createHashHistory({ base: '/my-app/' })` so direct links remain static-host safe.
 - When using `match()`, always pass the full URL including the base prefix. Wayfinder strips the base internally.
 - Do not set `base` in development if `vite.config.ts` already sets `base: '/my-app'`; double-prefixing breaks all navigation.
+- Anchor `href` attributes must come from `router.href()`, not `url()` — under the hash driver the route lives behind `#`, and `router.href('userDetail', { id: '7' })` returns `/my-app/#/users/7`.
 
 ### Related
 

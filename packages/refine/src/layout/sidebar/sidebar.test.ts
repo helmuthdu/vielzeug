@@ -152,7 +152,7 @@ describe('ore-sidebar', () => {
     }
   });
 
-  it('supports openMobile/closeMobile/toggleMobile API in bottom-nav mode', async () => {
+  it('supports openDrawer/closeDrawer/toggleDrawer API in bottom-nav mode', async () => {
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -167,31 +167,31 @@ describe('ore-sidebar', () => {
       });
 
       const el = fixture.element as HTMLElement & {
-        closeMobile(): void;
-        openMobile(): void;
-        toggleMobile(): void;
+        closeDrawer(): void;
+        openDrawer(): void;
+        toggleDrawer(): void;
       };
       const nav = fixture.query('nav')!;
 
       expect(nav.hasAttribute('inert')).toBe(true);
       expect(nav.getAttribute('aria-hidden')).toBe('true');
-      el.openMobile();
+      el.openDrawer();
       await fixture.flush();
-      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(true);
+      expect(fixture.element.hasAttribute('data-drawer-open')).toBe(true);
       expect(nav.hasAttribute('inert')).toBe(false);
       expect(nav.hasAttribute('aria-hidden')).toBe(false);
 
-      el.toggleMobile();
+      el.toggleDrawer();
       await fixture.flush();
-      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+      expect(fixture.element.hasAttribute('data-drawer-open')).toBe(false);
       expect(nav.hasAttribute('inert')).toBe(true);
       expect(nav.getAttribute('aria-hidden')).toBe('true');
 
-      el.openMobile();
+      el.openDrawer();
       await fixture.flush();
-      el.closeMobile();
+      el.closeDrawer();
       await fixture.flush();
-      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+      expect(fixture.element.hasAttribute('data-drawer-open')).toBe(false);
       expect(nav.hasAttribute('inert')).toBe(true);
       expect(nav.getAttribute('aria-hidden')).toBe('true');
     } finally {
@@ -299,7 +299,7 @@ describe('ore-sidebar', () => {
     }
   });
 
-  it('uses custom labels for collapse and mobile close controls', async () => {
+  it('uses custom labels for collapse and drawer close controls', async () => {
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -315,19 +315,19 @@ describe('ore-sidebar', () => {
           'collapse-label': 'Collapse navigation',
           collapsible: '',
           'default-collapsed': '',
+          'drawer-close-label': 'Close navigation',
           'expand-label': 'Expand navigation',
-          'mobile-close-label': 'Close navigation',
         },
       });
 
       expect(fixture.query('[part="toggle-btn"]')?.getAttribute('aria-label')).toBe('Expand navigation');
-      expect(fixture.query('[part="mobile-backdrop"]')?.getAttribute('aria-label')).toBe('Close navigation');
+      expect(fixture.query('[part="drawer-backdrop"]')?.getAttribute('aria-label')).toBe('Close navigation');
     } finally {
       window.matchMedia = originalMatchMedia;
     }
   });
 
-  it('closes the mobile drawer on item selection and Escape when enabled', async () => {
+  it('closes the drawer on item selection and Escape when enabled', async () => {
     const originalMatchMedia = window.matchMedia;
 
     window.matchMedia = vi.fn().mockImplementation(() => ({
@@ -341,20 +341,20 @@ describe('ore-sidebar', () => {
         attrs: { 'bottom-nav-at': '(max-width: 768px)', 'close-on-select': '' },
         html: '<ore-sidebar-item>Dashboard</ore-sidebar-item>',
       });
-      const sidebar = fixture.element as HTMLElement & { openMobile(): void };
+      const sidebar = fixture.element as HTMLElement & { openDrawer(): void };
       const item = fixture.element.querySelector('ore-sidebar-item')!;
 
-      sidebar.openMobile();
+      sidebar.openDrawer();
       await fixture.flush();
       item.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
       await fixture.flush();
-      expect(sidebar.hasAttribute('data-mobile-open')).toBe(false);
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
 
-      sidebar.openMobile();
+      sidebar.openDrawer();
       await fixture.flush();
       sidebar.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
       await fixture.flush();
-      expect(sidebar.hasAttribute('data-mobile-open')).toBe(false);
+      expect(sidebar.hasAttribute('data-drawer-open')).toBe(false);
     } finally {
       window.matchMedia = originalMatchMedia;
     }
@@ -529,11 +529,11 @@ describe('ore-sidebar responsive integration', () => {
 
       toggle.click();
       await fixture.flush();
-      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(true);
+      expect(sidebar?.hasAttribute('data-drawer-open')).toBe(true);
 
       toggle.click();
       await fixture.flush();
-      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(false);
+      expect(sidebar?.hasAttribute('data-drawer-open')).toBe(false);
       expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(true);
     } finally {
       window.matchMedia = originalMatchMedia;
@@ -573,13 +573,13 @@ describe('ore-sidebar responsive integration', () => {
       navbarEl.toggleMobileMenu();
       await fixture.flush();
 
-      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(true);
+      expect(sidebar?.hasAttribute('data-drawer-open')).toBe(true);
       expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(true);
 
       navbarEl.toggleMobileMenu();
       await fixture.flush();
 
-      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(false);
+      expect(sidebar?.hasAttribute('data-drawer-open')).toBe(false);
       expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(false);
     } finally {
       window.matchMedia = originalMatchMedia;

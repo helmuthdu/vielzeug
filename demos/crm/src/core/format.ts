@@ -1,6 +1,6 @@
 import { EUR, format as formatMoney, money } from '@vielzeug/coins';
-import { Temporal } from '@vielzeug/tempo';
-import { locale } from './store';
+import { formatRelative, Temporal } from '@vielzeug/tempo';
+import { locale } from './i18n';
 
 export function formatAmount(value: string): string {
   return formatMoney(money(value, EUR), {
@@ -21,6 +21,8 @@ export function dateFilterValue(value: string): number {
 }
 
 export function formatRelativeDate(value: string): string {
-  const days = Math.round((Number(Temporal.Instant.from(value).epochMilliseconds) - Date.now()) / 86_400_000);
-  return new Intl.RelativeTimeFormat(locale.value === 'de' ? 'de' : 'en', { numeric: 'auto' }).format(days, 'day');
+  return formatRelative(Temporal.Instant.from(value), {
+    locale: locale.value === 'de' ? 'de' : 'en',
+    numeric: 'auto',
+  });
 }

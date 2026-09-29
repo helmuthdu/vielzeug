@@ -1,6 +1,6 @@
-import type { ExternalStore, Unsubscribe } from './types';
+import type { Subscribable, Unsubscribe } from './types';
 
-export type MutableStore<T> = ExternalStore<T> & {
+export type MutableStore<T> = Subscribable<T> & {
   set(next: T): void;
 };
 

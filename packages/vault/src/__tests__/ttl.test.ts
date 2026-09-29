@@ -1,4 +1,4 @@
-import { count, isEmpty, table, ttl, validatorCodec } from '../index';
+import { table, ttl, validatorCodec } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
@@ -79,12 +79,12 @@ describe('ttl helpers', () => {
       const db = createLocalStorage({ codecs, name: 'TtlHelper', schema: userSchema });
 
       await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(100));
-      expect(await count(db, 'users')).toBe(1);
+      expect(await db.count('users')).toBe(1);
 
       vi.advanceTimersByTime(100);
 
-      await expect(count(db, 'users')).resolves.toBe(0);
-      await expect(isEmpty(db, 'users')).resolves.toBe(true);
+      await expect(db.count('users')).resolves.toBe(0);
+      await expect(db.isEmpty('users')).resolves.toBe(true);
       vi.useRealTimers();
     });
 

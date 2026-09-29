@@ -1,39 +1,25 @@
 import type {
   AnySchema,
-  CheckContext,
   InferInput,
   InferOutput,
-  InferSchemaMode,
   Issue,
-  MergeSchemaModes,
   MessageFn,
   ParseContext,
   ParseValue,
   SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
 } from '../core';
 
-import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError } from '../core';
+import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
 
-export class MapSchema<
-  K extends AnySchema,
-  V extends AnySchema,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<K | V>>,
-> extends Schema<Map<InferOutput<K>, InferOutput<V>>, Map<InferInput<K>, InferInput<V>>, Mode> {
+export class MapSchema<K extends AnySchema, V extends AnySchema> extends Schema<
+  Map<InferOutput<K>, InferOutput<V>>,
+  Map<InferInput<K>, InferInput<V>>
+> {
   readonly keySchema: K;
   readonly valueSchema: V;
 
   protected override get _kind(): string {
     return 'map';
-  }
-
-  override checkAsync(
-    this: MapSchema<K, V, 'sync'>,
-    fn: (value: Map<InferOutput<K>, InferOutput<V>>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): MapSchema<K, V, 'async'> {
-    return this._addCheck(fn, true) as unknown as MapSchema<K, V, 'async'>;
   }
 
   constructor(keySchema: K, valueSchema: V) {
@@ -72,48 +58,37 @@ export class MapSchema<
     return { data: out, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<Map<InferOutput<K>, InferOutput<V>>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    if (!(value instanceof Map)) {
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.map.type(), path: [] }],
+        typeOk: false,
+      };
+    }
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    const entries = [...value];
+    const settled = await Promise.all(
+      entries.map(([key, val]) =>
+        Promise.all([this.keySchema._parseFullAsync(key, ctx), this.valueSchema._parseFullAsync(val, ctx)]),
+      ),
+    );
 
-      if (prepared.skip) return prepared.value as unknown as Map<InferOutput<K>, InferOutput<V>>;
+    const issues: Issue[] = [];
+    const out = new Map<InferOutput<K>, InferOutput<V>>();
 
-      const raw = prepared.value;
+    for (let i = 0; i < settled.length; i++) {
+      const [keyResult, valResult] = settled[i];
 
-      if (!(raw instanceof Map)) {
-        throw new SpellValidationError([{ code: ErrorCode.invalid_type, message: c.messages.map.type(), path: [] }]);
-      }
+      if (keyResult.issues.length > 0) issues.push(...prependIssuePath(keyResult.issues, i));
 
-      const entries = [...raw];
-      const settled = await Promise.all(
-        entries.map(([key, val]) =>
-          Promise.all([this.keySchema._parseFullAsync(key, c), this.valueSchema._parseFullAsync(val, c)]),
-        ),
-      );
+      if (valResult.issues.length > 0) issues.push(...prependIssuePath(valResult.issues, i));
 
-      const issues: Issue[] = [];
-      const out = new Map<InferOutput<K>, InferOutput<V>>();
+      if (keyResult.issues.length === 0 && valResult.issues.length === 0)
+        out.set(keyResult.data as InferOutput<K>, valResult.data as InferOutput<V>);
+    }
 
-      for (let i = 0; i < settled.length; i++) {
-        const [keyResult, valResult] = settled[i];
-
-        if (keyResult.issues.length > 0) issues.push(...prependIssuePath(keyResult.issues, i));
-
-        if (valResult.issues.length > 0) issues.push(...prependIssuePath(valResult.issues, i));
-
-        if (keyResult.issues.length === 0 && valResult.issues.length === 0)
-          out.set(keyResult.data as InferOutput<K>, valResult.data as InferOutput<V>);
-      }
-
-      const validationIssues = await this._runValidatorsAsync(out, c);
-      const allIssues = [...issues, ...validationIssues];
-
-      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
-
-      return this._runPostprocessors(out) as Map<InferOutput<K>, InferOutput<V>>;
-    });
+    return { data: out, issues, typeOk: true };
   }
 
   min(size: number, message?: MessageFn<{ min: number; value: Map<unknown, unknown> }>): this {
@@ -171,14 +146,5 @@ export class MapSchema<
       kind: 'map',
       value: this.valueSchema.definition(),
     };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const key = this.keySchema.walk(visitor);
-    const value = this.valueSchema.walk(visitor);
-
-    if (visitor.map) return visitor.map(this, key, value);
-
-    return super._walk(visitor);
   }
 }

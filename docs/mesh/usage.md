@@ -74,7 +74,7 @@ On the guest, the host's `peerId` is the invitation's `sessionId` — the invita
 
 ### Pairing over QR
 
-`meshQrCodec` is an async codec that compresses pairing payloads (deflate-raw + base64url, `mq1.` prefix) so they fit a QR code comfortably. `decode` accepts both the compressed `mq1.*` form and plain `meshCodec` output — paste fallback and camera scanning work through one code path.
+`meshQrCodec` is an async codec that compresses pairing payloads (deflate-raw + base45, `mq2.` prefix) so they fit a QR code comfortably. `decode` accepts both the compressed `mq2.*` form and plain `meshCodec` output — paste fallback and camera scanning work through one code path.
 
 ```ts
 import { meshQrCodec } from '@vielzeug/mesh';
@@ -91,7 +91,7 @@ const answer = await host.acceptAnswer(await meshQrCodec.decode(scannedAnswerTex
 
 ## Sending and Receiving
 
-`send`/`on`/`broadcast` are typed from the protocol. Outbound messages serialize through `serialize` (default `JSON.stringify`) into a versioned envelope with id, type, timestamp, and payload.
+`send`/`on`/`broadcast` are typed from the protocol. Outbound messages serialize through `JSON.stringify` into a versioned envelope with id, type, timestamp, and payload.
 
 ```ts
 host.send(peerId, 'ack', { ok: true }); // one guest
@@ -113,18 +113,20 @@ Node `status` moves through `idle → pairing → connecting → connected`, the
 ```ts
 host.tap((event) => {
   if (event.type === 'status-change' && event.peerId === null) console.log('node:', event.status);
-  if (event.type === 'peer-left') console.log('left:', event.peerId, event.reason);
+  if (event.type === 'peer-left') console.log('left:', event.peer.id, event.reason);
 });
 ```
 
-The host gets structured peer events through `onPeer` and the live inventory through `peers`:
+`peer-joined` and `peer-left` carry the live `MeshPeer`; the inventory itself lives on `peers`:
 
 ```ts
-host.onPeer(({ type, peer }) => console.log(type, peer.id, peer.status));
+host.tap((event) => {
+  if (event.type === 'peer-joined') console.log('peers now:', [...host.peers.keys()]);
+});
 host.kick(peerId, 'bye'); // guest observes 'disconnected'
 ```
 
-`peerId` on a `status-change` event distinguishes node-level (`null`) from per-peer transitions. Per-peer events also flow through `tap` so a single subscription observes the whole session.
+`peerId` on a `status-change` event distinguishes node-level (`null`) from per-peer transitions. A guest whose host peer failed or disconnected can re-pair on the same node — call `acceptInvitation` again with a fresh invitation and existing `on`/`tap` listeners keep working.
 
 Dispose nodes deterministically — `dispose()` is idempotent, aborts `disposalSignal`, emits a final `'dispose'` event, and detaches all tappers. Passing an `AbortSignal` option disposes on abort; `using` works too.
 
@@ -142,7 +144,7 @@ Dispose nodes deterministically — `dispose()` is idempotent, aborts `disposalS
 
 Mesh reduces the manual-pairing attack surface but does not remove it:
 
-- Every invitation carries a random 256-bit **secret**; the answer must present a proof derived from it (HMAC-SHA-256 via `SubtleCrypto`, falling back to a non-cryptographic hash with a `'security-downgrade'` tap).
+- Every invitation carries a random 256-bit **secret**; the answer must present a proof derived from it (HMAC-SHA-256 via `SubtleCrypto`). Pairing requires a secure context — without `SubtleCrypto` both ends throw `MeshUnsupportedError` rather than fall back to a forgeable hash.
 - Invitations are **single-use and time-boxed**, so a leaked invite is only useful briefly.
 - `approvePeer` is the host's admission hook — use it for a name check, a shared passphrase confirmed out-of-band, or an allowlist.
 - `maxMessageBytes` caps every inbound frame; malformed frames are dropped, never dispatched.

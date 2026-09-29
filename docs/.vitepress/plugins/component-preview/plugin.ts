@@ -16,14 +16,14 @@
 
 import type { Plugin } from 'vite';
 
-export { REFINE_CSS_HMR_EVENT } from './constants';
+export { REFINE_CSS_HMR_EVENT } from './constants.ts';
 
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { REFINE_CSS_HMR_EVENT } from './constants';
+import { REFINE_CSS_HMR_EVENT } from './constants.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -42,18 +42,24 @@ const req = createRequire(resolve(__dirname, '../../../../node_modules/.pnpm/nod
 const temporalUmd = resolve(dirname(req.resolve('@js-temporal/polyfill')), '../dist/index.umd.js');
 const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide.js');
 
-// Load order: each entry must appear after its own dependencies.
-// Temporal → Ripple → Sentinel(Ripple) → Sigil → Arsenal → Focus → Gesture → Keymap → Ore(Ripple)
-// → Orbit(Arsenal) → Prism(Ripple,Orbit) → Tempo(Temporal) → Dnd → Lucide
+// Load order: each entry must appear after its own dependencies. Each IIFE receives its
+// dependencies as bare globals in its invocation arguments (read from each bundle's own tail,
+// e.g. sentinel's is `})({},Arsenal)`), so an out-of-order entry captures `undefined` for that
+// dependency — silently, because everything here is concatenated into one script where `var`
+// hoisting suppresses the ReferenceError. The previous order loaded Sentinel before Arsenal
+// and Focus before Keymap, leaving both with an undefined dependency.
+//   Temporal → Ripple → Arsenal → Keymap → Sigil → Gesture → Sentinel(Arsenal)
+//   → Focus(Keymap) → Ore(Ripple) → Orbit(Arsenal) → Prism(Orbit) → Tempo(Temporal)
+//   → Dnd(Keymap,Gesture) → Lucide
 const depPaths = [
   temporalUmd,
   resolve(pkgDir, 'ripple/dist/ripple.iife.js'),
-  resolve(pkgDir, 'sentinel/dist/sentinel.iife.js'),
-  resolve(pkgDir, 'sigil/dist/sigil.iife.js'),
   resolve(pkgDir, 'arsenal/dist/arsenal.iife.js'),
-  resolve(pkgDir, 'focus/dist/focus.iife.js'),
-  resolve(pkgDir, 'gesture/dist/gesture.iife.js'),
   resolve(pkgDir, 'keymap/dist/keymap.iife.js'),
+  resolve(pkgDir, 'sigil/dist/sigil.iife.js'),
+  resolve(pkgDir, 'gesture/dist/gesture.iife.js'),
+  resolve(pkgDir, 'sentinel/dist/sentinel.iife.js'),
+  resolve(pkgDir, 'focus/dist/focus.iife.js'),
   resolve(pkgDir, 'ore/dist/ore.iife.js'),
   resolve(pkgDir, 'orbit/dist/orbit.iife.js'),
   resolve(pkgDir, 'prism/dist/prism.iife.js'),

@@ -1,10 +1,16 @@
 import { bind, createId, define, getHost, html, onCleanup, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createSpinnerControl } from '../../core';
-import type { ComponentSize, ThemeColor } from '../../types';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import '../../content/icon/icon';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, reducedMotionMixin } from '../../styles';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledStateMixin,
+  frostVariantMixin,
+  reducedMotionMixin,
+} from '../../styles';
 import componentStyles from './counter.css?inline';
 
 export type OreCounterChangeDetail = {
@@ -42,6 +48,8 @@ export type OreCounterProps = {
   size?: ComponentSize;
   /** Increment/decrement step (default: 1) */
   step?: number;
+  /** Surface variant; 'frost' turns the panel into frosted glass over artwork */
+  variant?: Exclude<VisualVariant, 'text'>;
   /** Current value */
   value?: number;
 };
@@ -73,6 +81,7 @@ export const COUNTER_HOLD_REPEAT_MS = 120;
  * @attr {string} hint - One-line hint under the controls
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - 'sm' | 'md' | 'lg'
+ * @attr {string} variant - Surface variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
  *
  * @fires change - Fired after every accepted change. detail: { value: number, delta: number }
  *
@@ -105,6 +114,7 @@ export const COUNTER_HOLD_REPEAT_MS = 120;
  * </ore-counter>
  * <ore-counter label="Score" value="10" min="0" max="99" size="lg" color="primary"></ore-counter>
  * <ore-counter label="Damage" value="12" large-step="5" quick-steps></ore-counter>
+ * <ore-counter label="Wounds" value="1" max="3" variant="frost" color="error"></ore-counter>
  * ```
  */
 export const COUNTER_TAG = 'ore-counter' as const;
@@ -122,6 +132,7 @@ define<OreCounterProps>(COUNTER_TAG, {
     readonly: prop.bool(false),
     step: prop.number(1),
     value: prop.number(0),
+    variant: prop.string<Exclude<VisualVariant, 'text'>>(),
   },
   setup(props) {
     const el = getHost();
@@ -336,5 +347,12 @@ define<OreCounterProps>(COUNTER_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, disabledStateMixin, coarsePointerMixin, reducedMotionMixin, componentStyles],
+  styles: [
+    colorThemeMixin,
+    disabledStateMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    frostVariantMixin('.counter'),
+    componentStyles,
+  ],
 });

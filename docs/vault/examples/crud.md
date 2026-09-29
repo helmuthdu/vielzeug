@@ -11,7 +11,7 @@ You need to create, read, update, and delete typed records in browser storage ac
 
 ### Solution
 
-Every Vault store binds core CRUD, bulk helpers, `update`, `upsert`, and `query`; only `table` and the adapter factory need imports.
+Every Vault store binds core CRUD plus bulk helpers, `update`, and `upsert`; only `table` and the adapter factory need imports.
 
 ```ts
 import { table } from '@vielzeug/vault';
@@ -59,7 +59,6 @@ await db.clear('users'); // removes all records
 
 ### Pitfalls
 
-- Bound `update()` and `upsert()` need no schema argument. Their standalone forms accept the schema explicitly.
 - `update()` returns `undefined` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
 - `deleteMany()` returns the count of records that actually existed and were deleted, not the length of the keys array. Keys that are not found are silently skipped.
 - `isEmpty(table)` is a convenience shorthand for `(await count(table)) === 0` — useful for seeding default data on first run.
@@ -69,7 +68,7 @@ await db.clear('users'); // removes all records
 
 ### Related
 
-- [Filtering](./querying.md)
+- [Lazy Iteration](./iterate.md)
 - [TTL and Pruning](./ttl.md)
 - [Batch Writes](./batch.md)
 - [Usage Guide — Read and Change Records](/vault/usage.md#read-and-change-records)

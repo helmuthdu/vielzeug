@@ -25,3 +25,18 @@ export const parseStringTriggers = <T extends string>(
 
   return parsed.length > 0 ? parsed : [...defaults];
 };
+
+// ── Boolean attribute parser ──────────────────────────────────────────────────
+
+/**
+ * Parses a boolean HTML attribute value into `true | false | undefined`, where
+ * `undefined` means "attribute absent" — the signal controlled components (`open`)
+ * use to distinguish uncontrolled from controlled mode.
+ *
+ * The grammar is the standard attribute one: presence with no value (`open`) or
+ * the literal `"true"` is true; anything else, including `"false"`, is false.
+ * Every controlled overlay (dialog, drawer, menu, popover, tooltip,
+ * command-palette) parses its `open` prop with this exact contract.
+ */
+export const parseOptionalBool = (value: string | null): boolean | undefined =>
+  value == null ? undefined : value === '' || value === 'true';

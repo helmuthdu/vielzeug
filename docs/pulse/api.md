@@ -19,7 +19,7 @@ category: websockets
 | `RoomScope` | Ref-counted room membership with optional presence. | Sync methods, async `joined` | `joined` rejects on transport close or timeout. |
 | `PulseSchema` | Declares server/client events, channels, and rooms. | Type-only | Infer all named scope types from this schema. |
 | `PulseOptions` | Configuration: heartbeat, reconnect, transform. | Type-only | `reconnect` and `heartbeat` default to `false`. |
-| `ExternalStore` | Framework-neutral snapshot and change subscription. | Sync | `subscribe()` does not emit the initial snapshot. |
+| `Subscribable` | Framework-neutral snapshot and change subscription. | Sync | `subscribe()` does not emit the initial snapshot. |
 | `PulseError` | Base class for all Pulse errors. | Runtime | Check `instanceof` against subclasses. |
 
 ## Package Entry Point
@@ -27,6 +27,7 @@ category: websockets
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/pulse` | All public exports: `createPulse`, types, and error classes. |
+| `@vielzeug/pulse/testing` | Wire-protocol-accurate `MockWebSocket` for tests and demos. |
 
 ## `createPulse()`
 
@@ -175,10 +176,10 @@ type Pulse<S extends PulseSchema = PulseSchema> = {
 
   // Rooms
   room<K extends keyof RoomMap<S> & string>(name: K, opts?: RoomOptions): RoomScope<RoomMap<S>[K]>;
-  readonly rooms: ExternalStore<ReadonlySet<string>>;
+  readonly rooms: Subscribable<ReadonlySet<string>>;
 
   // Status
-  readonly status: ExternalStore<PulseStatus>;
+  readonly status: Subscribable<PulseStatus>;
 
   // Tap
   tap(handler: (event: PulseEvent) => void, options?: { signal?: AbortSignal }): () => void;
@@ -250,10 +251,10 @@ pulse.tap((event) => {
 
 ---
 
-## `ExternalStore`
+## `Subscribable`
 
 ```ts
-interface ExternalStore<T> {
+interface Subscribable<T> {
   getSnapshot(): T;
   subscribe(listener: () => void): Unsubscribe;
 }
@@ -329,7 +330,7 @@ type RoomScopeBase = {
 
 ```ts
 type PresenceRoomScope<T = unknown> = RoomScopeBase & {
-  readonly presence: ExternalStore<ReadonlyMap<string, T>>;
+  readonly presence: Subscribable<ReadonlyMap<string, T>>;
   updatePresence(state: T): void;
   onJoin(handler: (memberId: string, state: T) => void): Unsubscribe;
   onLeave(handler: (memberId: string) => void): Unsubscribe;
@@ -338,7 +339,7 @@ type PresenceRoomScope<T = unknown> = RoomScopeBase & {
 
 | Member | Type | Description |
 | --- | --- | --- |
-| `presence` | `ExternalStore<ReadonlyMap<string, T>>` | Reactive map of `memberId → state`. |
+| `presence` | `Subscribable<ReadonlyMap<string, T>>` | Reactive map of `memberId → state`. |
 | `updatePresence(state)` | `(state: T) => void` | Broadcast this client's presence state. Throws `PulseConnectionError` unless open. |
 | `onJoin(handler)` | `(handler) => Unsubscribe` | Called whenever a new member joins with their initial state. |
 | `onLeave(handler)` | `(handler) => Unsubscribe` | Called whenever a member leaves. |
@@ -469,4 +470,42 @@ type Unsubscribe = () => void;
 
 ```ts
 type PulseStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
+```
+
+---
+
+## Testing APIs
+
+Import from `@vielzeug/pulse/testing`.
+
+### `MockWebSocket`
+
+```ts
+import { MockWebSocket } from '@vielzeug/pulse/testing';
+
+// Tests: drive the socket pulse created
+const socket = MockWebSocket.instances.at(-1)!;
+socket.open();
+socket.receive({ type: 'joined', room: 'crm' });
+
+// Demos: subclass and install as the global
+class ScriptedWebSocket extends MockWebSocket {
+  constructor(url: string, protocols?: string | string[]) {
+    super(url, protocols, { autoOpen: true });
+    setTimeout(() => this.receive({ room: 'crm', type: 'joined' }), 60);
+  }
+}
+(globalThis as Record<string, unknown>).WebSocket = ScriptedWebSocket;
+```
+
+A wire-protocol-accurate `WebSocket` stand-in: pulse dials it through `new WebSocket(url, protocols)`, tests drive it through `open()`, `receive()`, `drop()`, `error()`, and `close()`, and every outbound frame lands in `sentMessages` for `frames()` to decode. Instances register on the static `MockWebSocket.instances` array in construction order, so a test can grab the socket pulse just created. `MockWebSocket.deferClose = true` parks closes in `CLOSING` until `finishClose()` runs, for testing reconnect timing. Requires a browser-like environment for the `CloseEvent`/`MessageEvent` globals.
+
+### `frames(socket)`
+
+Decodes every frame the socket sent, in order.
+
+```ts
+import { frames, MockWebSocket } from '@vielzeug/pulse/testing';
+
+expect(frames(MockWebSocket.instances[0]!)).toContainEqual({ room: 'lobby', type: 'join' });
 ```

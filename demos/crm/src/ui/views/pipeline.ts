@@ -137,7 +137,7 @@ define('crm-pipeline-view', {
     });
     const stageChangeCount = computed(() => stageChangeTrend.value.reduce((total, count) => total + count, 0));
     const recentChanges = computed(() => stageChanges.value.slice(0, 12));
-    const undoEntry = signal(ledger.state.value.undo.at(-1));
+    const undoEntry = signal(ledger.state.getSnapshot().undo.at(-1));
     const visibleStageCount = computed(() =>
       showCompleted.value ? stages.length : stages.length - completedStages.size,
     );
@@ -214,7 +214,7 @@ define('crm-pipeline-view', {
     };
     onMounted(() => {
       const stopLedger = ledger.state.subscribe(() => {
-        undoEntry.value = ledger.state.value.undo.at(-1);
+        undoEntry.value = ledger.state.getSnapshot().undo.at(-1);
       });
       const stopControls = effect(() => {
         ownerFilter.value!.options = [

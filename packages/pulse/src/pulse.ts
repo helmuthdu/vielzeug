@@ -1,3 +1,5 @@
+import { tapper } from '@vielzeug/arsenal';
+
 import { createConnection } from './_connection';
 import { createStore } from './_store';
 import { createWaitPromise } from './_wait';
@@ -66,21 +68,14 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
   const disposalCtrl = new AbortController();
   const listeners = new ListenerMap();
   const channelReferences = new Map<string, number>();
-  const tappers = new Set<(event: PulseEvent) => void>();
+  const tappers = tapper<PulseEvent>();
 
   let disposed = false;
   let transportClosed = true;
   let lastStatus: PulseStatus = 'closed';
 
   function emitTap(event: PulseEvent): void {
-    if (tappers.size === 0) return;
-    for (const tapper of tappers) {
-      try {
-        tapper(event);
-      } catch {
-        // Observability must not affect pulse behavior.
-      }
-    }
+    tappers.emit(event);
   }
 
   function report(error: PulseError): void {
@@ -331,22 +326,8 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
 
     tap(handler: (event: PulseEvent) => void, opts?: { signal?: AbortSignal }): Unsubscribe {
       if (disposed) throw new PulseDisposedError();
-      tappers.add(handler);
 
-      if (opts?.signal) {
-        if (opts.signal.aborted) {
-          tappers.delete(handler);
-          return () => {};
-        }
-        const onAbort = () => tappers.delete(handler);
-        opts.signal.addEventListener('abort', onAbort, { once: true });
-        return () => {
-          tappers.delete(handler);
-          opts.signal?.removeEventListener('abort', onAbort);
-        };
-      }
-
-      return () => tappers.delete(handler);
+      return tappers.tap(handler, opts);
     },
 
     [Symbol.dispose]() {

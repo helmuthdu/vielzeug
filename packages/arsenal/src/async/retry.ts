@@ -3,7 +3,6 @@ import { sleep } from './sleep';
 
 export type RetryOptions = {
   delay?: number | ((attempt: number) => number);
-  onError?: (error: unknown) => void;
   shouldRetry?: (error: unknown, attempt: number) => boolean;
   signal?: AbortSignal;
   timeout?: number;
@@ -50,17 +49,16 @@ function buildSignal(timeout: number | undefined, signal: AbortSignal | undefine
  * @param [options.signal] - External AbortSignal to cancel all retries.
  * @param [options.shouldRetry] - Predicate called after each non-final failure.
  *   Receives the error and the number of failures so far (0-indexed: `0` on the first failure,
- *   `1` on the second, etc.). Return `false` to abort immediately. **Not called on the final attempt**
- *   (use `onError` to observe the final error unconditionally).
- * @param [options.onError] - Called with the last error before rethrowing — both on final attempt exhaustion
- *   and when `shouldRetry` returns `false` to abort early.
+ *   `1` on the second, etc.). Return `false` to abort immediately. Not called on the final
+ *   attempt, because there is no retry left to decide about; observe the thrown error with
+ *   `attempt()` or `try/catch` instead.
  * @returns The resolved value.
  * @throws {RangeError} If `times` is not a positive integer.
  * @throws The last error if all attempts fail.
  */
 export async function retry<T>(
   fn: (signal?: AbortSignal) => Promise<T>,
-  { delay = 250, onError, shouldRetry, signal, timeout, times = 3 }: RetryOptions = {},
+  { delay = 250, shouldRetry, signal, timeout, times = 3 }: RetryOptions = {},
 ): Promise<T> {
   if (!Number.isInteger(times) || times < 1) {
     throw new RangeError(`retry: times must be a positive integer, got ${times}`);
@@ -74,15 +72,9 @@ export async function retry<T>(
     try {
       return await fn(callSignal);
     } catch (err) {
-      if (tryCount === times) {
-        onError?.(err);
-        throw err;
-      }
+      if (tryCount === times) throw err;
 
-      if (shouldRetry && !shouldRetry(err, tryCount - 1)) {
-        onError?.(err);
-        throw err;
-      }
+      if (shouldRetry && !shouldRetry(err, tryCount - 1)) throw err;
 
       const ms = typeof delay === 'function' ? delay(tryCount - 1) : delay;
 

@@ -1,11 +1,77 @@
 ---
 title: Vault Migration
-description: Move Vault adapter imports to focused entry points, adopt required codecs, and use bound helpers or fluent queries.
+description: Move Vault adapter imports to focused entry points, adopt required codecs, and use bound store methods.
 ---
+
+# Vault 3.1 Migration
+
+Vault 3.1 removes the standalone helper functions, the fluent query builder, the declarative IndexedDB migration builder, the root `isExpired()` export, and the `onQuotaExceeded` hook. It also upgrades the SQLite storage format. Bound store methods are the single surface for `has`, `count`, `isEmpty`, `getMany`, `keys`, `deleteMany`, `update`, and `upsert`.
+
+## Standalone helpers removed
+
+The free-function forms (`count(store, 'users')` and friends) duplicated the bound methods with zero adoption. Call the method on the store or transaction context instead:
+
+```ts
+// Before
+import { count } from '@vielzeug/vault';
+await count(store, 'users');
+
+// After
+await store.count('users');
+```
+
+## `query()` and `QueryBuilder` removed
+
+The fluent builder only composed over `getAll()`, so plain array operations replace it with no lost capability:
+
+```ts
+// Before
+const active = await store.query('users').equals('status', 'active').orderBy('name').limit(20).toArray();
+
+// After
+const active = (await store.getAll('users'))
+  .filter((user) => user.status === 'active')
+  .sort((a, b) => a.name.localeCompare(b.name))
+  .slice(0, 20);
+```
+
+For large tables, `iterate()` on document stores and `getAllByIndex()` on IndexedDB remain the lazy paths.
+
+## `defineMigration()` removed
+
+Object stores and schema-declared indexes were already created automatically from the schema, so declarative `addTable`/`addIndex` steps were no-ops. Pass a plain `migrate` function to `createIndexedDB()` for the remaining cases — deleting a removed object store or transforming old records:
+
+```ts
+// Before
+import { defineMigration } from '@vielzeug/vault/indexeddb';
+const migrate = defineMigration([{ field: 'email', table: 'users', type: 'addIndex' }]);
+
+// After — omit it entirely; the schema declares the index and Vault creates it on upgrade.
+```
+
+## `isExpired()` is no longer a root export
+
+Stores already evict expired records lazily on read and via `pruneExpired()`. The root export had no callers that needed the raw predicate.
+
+## `onQuotaExceeded` removed
+
+Web Storage quota errors now always reject with `VaultQuotaError`; the silent-drop branch encouraged data loss without a signal. Catch the error at the call site if a write is optional:
+
+```ts
+try {
+  await store.put('cache', entry);
+} catch (err) {
+  if (!(err instanceof VaultQuotaError)) throw err;
+}
+```
+
+## SQLite storage format v2
+
+`createSQLite()` writes storage format version 2, which drops the never-read `key_kind`/`key_number`/`key_string` columns and their indexes. Records, expiration, and namespaces are otherwise unchanged. Opening a namespace still recorded at format version 1 rejects with `VaultError`; export the data through an older build and re-import it, or start a fresh namespace. Unreadable rows are now evicted on read instead of throwing, matching the Web Storage behavior.
 
 # Vault 3.0 Migration
 
-Vault 3.0 splits key-value stores from transactional document stores and requires durable codecs. Bound convenience methods and the fluent query API remain available; standalone helpers are retained for functional composition. Stored data formats are unchanged from 2.x.
+Vault 3.0 splits key-value stores from transactional document stores and requires durable codecs. Bound convenience methods remain available. Stored data formats are unchanged from 2.x.
 
 ## `VaultStore` split into `KeyValueVaultStore` and `DocumentVaultStore`
 
@@ -52,21 +118,9 @@ const store = createLocalStorage({
 
 IndexedDB codecs must preserve declared index field names and values in their encoded object. SQLite codecs may emit any JSON-compatible value.
 
-## Fluent queries remain available
+## Convenience methods are bound
 
-`store.query(table)` retains typed `equals`, `filter`, `orderBy`, `offset`, `limit`, `count`, `first`, `delete`, and `toArray` operations. Queries are in-memory composition over `getAll()`; use `iterate()` for lazy document-store scans and IndexedDB's `getAllByIndex()` for declared equality indexes.
-
-```ts
-const adults = await db.query('users').filter((user) => user.age >= 18).toArray();
-const activeCount = await db.query('users').equals('status', 'active').count();
-const removed = await db.query('users').equals('status', 'expired').delete();
-```
-
-`count()` ignores presentation-only `orderBy`, `offset`, and `limit`, preserving the full filtered-set count for pagination.
-
-## Convenience methods are bound and standalone
-
-`has`, `count`, `isEmpty`, `getMany`, `keys`, `deleteMany`, `update`, and `upsert` remain available on store instances, so existing call sites need no extra imports. Standalone forms are also exported for functional composition and mirror bound argument order without a separate schema parameter. `put()`, `update()`, and `upsert()` return the canonical value produced by codec validation.
+`has`, `count`, `isEmpty`, `getMany`, `keys`, `deleteMany`, `update`, and `upsert` are available on store instances, so existing call sites need no extra imports. `put()`, `update()`, and `upsert()` return the canonical value produced by codec validation.
 
 ```ts
 // Bound API
@@ -76,17 +130,13 @@ await store.getMany('users', [1, 2]);
 await store.deleteMany('users', [1, 2]);
 await store.update('users', 1, { name: 'Alice' });
 await store.upsert('users', 1, (existing) => ({ id: 1, name: existing?.name ?? 'Guest' }));
-
-// Standalone alternative
-import { count } from '@vielzeug/vault';
-await count(store, 'users');
 ```
 
 Bound `update()` and `upsert()` are atomic on `DocumentVaultStore`; key-value stores provide non-atomic read-modify-write convenience. Use IndexedDB or SQLite when concurrent writers require atomicity.
 
 ## Transaction contexts retain the ergonomic API
 
-`TransactionContext` includes core CRUD, `iterate()`, bound convenience methods, and `query()`. Its `update()`, `upsert()`, query deletion, and `deleteMany()` operations remain inside the enclosing transaction. A captured context becomes invalid as soon as the batch callback settles.
+`TransactionContext` includes core CRUD, `iterate()`, and the bound convenience methods. Its `update()`, `upsert()`, and `deleteMany()` operations run inside the enclosing transaction. A captured context becomes invalid as soon as the batch callback settles.
 
 # Vault 2.5 Migration
 

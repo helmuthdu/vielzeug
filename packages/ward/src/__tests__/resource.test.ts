@@ -1,4 +1,4 @@
-import { createWard, matchesPattern, patternCovers, WILDCARD } from '../index';
+import { createWard, matchesPattern, WILDCARD } from '../index';
 
 // ---------------------------------------------------------------------------
 // matchesPattern — hierarchical pattern matching (resources and actions)
@@ -68,47 +68,5 @@ describe('ward: hierarchical resource patterns in rules', () => {
     expect(ward.decide({ action: 'read', resource: 'posts:123' }).effect).toBe('deny');
     // other resources fall through to the allow rule
     expect(ward.decide({ action: 'read', resource: 'comments:1' }).effect).toBe('allow');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// patternCovers
-// ---------------------------------------------------------------------------
-
-describe('patternCovers', () => {
-  it('global wildcard covers everything', () => {
-    expect(patternCovers(WILDCARD, 'posts')).toBe(true);
-    expect(patternCovers(WILDCARD, 'posts:*')).toBe(true);
-    expect(patternCovers(WILDCARD, WILDCARD)).toBe(true);
-  });
-
-  it('nothing covers global wildcard except itself', () => {
-    expect(patternCovers('posts', WILDCARD)).toBe(false);
-    expect(patternCovers('posts:*', WILDCARD)).toBe(false);
-  });
-
-  it('namespace wildcard covers exact IDs in same namespace', () => {
-    expect(patternCovers('posts:*', 'posts:123')).toBe(true);
-    expect(patternCovers('posts:*', 'posts:abc')).toBe(true);
-  });
-
-  it('namespace wildcard covers same namespace wildcard', () => {
-    expect(patternCovers('posts:*', 'posts:*')).toBe(true);
-  });
-
-  it('namespace wildcard covers nested namespace wildcards', () => {
-    expect(patternCovers('posts:*', 'posts:sub:*')).toBe(true);
-    expect(patternCovers('posts:*', 'posts:draft:42')).toBe(true);
-  });
-
-  it('namespace wildcard does not cover different namespace', () => {
-    expect(patternCovers('posts:*', 'comments:123')).toBe(false);
-    expect(patternCovers('posts:*', 'comments:*')).toBe(false);
-  });
-
-  it('exact pattern covers only itself', () => {
-    expect(patternCovers('posts', 'posts')).toBe(true);
-    expect(patternCovers('posts', 'posts:123')).toBe(false);
-    expect(patternCovers('posts', 'comments')).toBe(false);
   });
 });

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Make RetryPolicy.shouldRetry optional; default retries any error until maxAttempts",
+      "packageName": "@vielzeug/postmaster",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/postmaster"
+}

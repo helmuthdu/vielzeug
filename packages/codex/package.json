@@ -23,10 +23,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./advanced": {
-      "types": "./dist/advanced.d.ts",
-      "import": "./dist/advanced.js"
-    },
     "./refine": {
       "types": "./dist/refine.d.ts",
       "import": "./dist/refine.js"
@@ -34,9 +30,6 @@
   },
   "typesVersions": {
     "*": {
-      "advanced": [
-        "dist/advanced.d.ts"
-      ],
       "refine": [
         "dist/refine.d.ts"
       ]
@@ -65,12 +58,12 @@
     "verify:exports": "node verify-exports.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0"
+    "@modelcontextprotocol/server": "2.1.0"
   },
   "devDependencies": {
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
     "@vielzeug/refine": "workspace:*",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   }
 }

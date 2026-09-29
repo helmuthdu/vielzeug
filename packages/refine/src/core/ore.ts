@@ -14,7 +14,9 @@
  *
  * @example
  * ```ts
- * setup(props, { el }) {
+ * import { onCleanup } from '@vielzeug/ore';
+ *
+ * setup(props) {
  *   const signal = lifecycleSignal(onCleanup);
  *   const tf = createTextField({ ..., signal });
  * }

@@ -5,11 +5,8 @@ export type Unsubscribe = () => void;
 
 /**
  * Options for a single-event subscription. Passed as the third argument to `bus.on()`.
- * Both fields are optional and can be combined freely.
  */
 export type SubscribeOptions = {
-  /** Auto-remove the listener after its first invocation. Equivalent to calling `bus.once()`. */
-  once?: boolean;
   /** Auto-remove the listener when this signal aborts. */
   signal?: AbortSignal;
 };
@@ -27,7 +24,7 @@ export type HeraldEvent<T extends EventMap = EventMap> =
   | { readonly error: unknown; readonly event: EventKey<T>; readonly type: 'error' }
   | { readonly type: 'dispose' };
 
-export type BusOptions<T extends EventMap = EventMap> = {
+export type BusOptions = {
   /**
    * Warn when a single event's active listener count exceeds this threshold.
    * Useful for detecting listener leaks during development. Default: no check.
@@ -38,8 +35,6 @@ export type BusOptions<T extends EventMap = EventMap> = {
    * Appears in `BusDisposedError` messages.
    */
   name?: string;
-  /** @internal Called before listeners run. Used by TestBus. */
-  _onDispatch?: (event: EventKey<T>, payload: unknown) => void;
 };
 
 /** Discriminated-union result type for `waitAny`. */
@@ -75,9 +70,7 @@ export type Bus<T extends EventMap> = {
   listenerCount(event?: EventKey<T>): number;
   /**
    * Subscribe to an event. Returns an unsubscribe function.
-   *
-   * - `opts.signal` — auto-unsubscribe when the signal aborts.
-   * - `opts.once` — auto-unsubscribe after the first invocation (equivalent to `bus.once()`).
+   * `opts.signal` auto-unsubscribes when the signal aborts.
    */
   on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
   /**
@@ -96,11 +89,11 @@ export type Bus<T extends EventMap> = {
    */
   wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
   /**
-   * Resolve when any of the listed events (minimum 2) fires first.
+   * Resolve when any of the listed events fires first. Accepts one or more event keys.
    * Returns a typed `{ event, payload }` discriminated union.
    * Rejects with `BusDisposedError` if the bus is disposed, or with the signal's reason if the signal aborts.
    */
-  waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
+  waitAny<const K extends readonly EventKey<T>[]>(
     events: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>>;

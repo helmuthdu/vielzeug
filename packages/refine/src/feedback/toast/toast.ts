@@ -2,18 +2,24 @@ import '../alert/alert';
 import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 import { define, each, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
-import { warn } from '../../_dev';
 import { reducedMotionMixin } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
 
-/** Fallback exit budget when the computed transition duration is unavailable; matches toast.css's default. */
+/**
+ * The single exit budget: removal happens this many milliseconds (plus a small buffer)
+ * after dismissal, on a store-owned timeout. The CSS exit transition
+ * (`--toast-exit-duration`, default 200ms) must stay within it or the fade is clipped.
+ */
 const TOAST_EXIT_MS = 200;
 
 export type OreToastEvents = {
   add: { id: string };
   dismiss: { id: string };
 };
+
+/** Runtime events exposed through {@link ToastService.tap}. */
+export type ToastEvent = { id: string; type: 'add' | 'dismiss' } | { type: 'dispose' };
 
 export type OreToastProps = {
   max?: number;
@@ -42,7 +48,19 @@ export type ToastItem = {
   meta?: string;
   /** Called after the toast is fully dismissed and removed. */
   onDismiss?: () => void;
+  /**
+   * Replace a live entry carrying the same message instead of stacking a duplicate —
+   * repeated bursts update the existing notification and restart its timer.
+   */
+  replace?: boolean;
   rounded?: RoundedSize | '';
+  /**
+   * Material-style compact bar: an inverted neutral surface (dark chip in light themes,
+   * light chip in dark themes) with single-row padding, and actions rendered as flat text
+   * buttons. Overrides the alert `variant`; the close button inherits the surface's text
+   * color. Style through `--toast-snackbar-*` custom properties.
+   */
+  snackbar?: boolean;
   size?: ComponentSize;
   /**
    * Screen-reader announcement urgency. Error-coloured toasts are assertive by
@@ -57,7 +75,7 @@ type ToastPhase = 'entering' | 'active' | 'exiting';
 type ToastTimer = {
   remaining: number;
   startedAt: number;
-  timeoutId: ReturnType<typeof setTimeout>;
+  timeoutId: ReturnType<typeof setTimeout> | null;
 };
 
 type ToastEntry = Required<Pick<ToastItem, 'dismissible' | 'duration' | 'id'>> &
@@ -68,11 +86,6 @@ type ToastEntry = Required<Pick<ToastItem, 'dismissible' | 'duration' | 'id'>> &
     timer: ToastTimer | null;
   };
 
-type ToastStoreEvent = {
-  id: string;
-  type: 'add' | 'dismiss';
-};
-
 /**
  * Owns notification data and every timer. Renderers only subscribe to this
  * store; they never expose imperative mutation methods themselves.
@@ -80,14 +93,26 @@ type ToastStoreEvent = {
 class ToastStore {
   readonly #entries = signal<ToastEntry[]>([]);
   readonly #listeners = new Set<(entries: ToastEntry[]) => void>();
-  readonly #eventListeners = new Set<(event: ToastStoreEvent) => void>();
+  readonly #tappers = new Set<(event: ToastEvent) => void>();
   #disposed = false;
   #max = 5;
+  #paused = false;
 
   add(item: ToastItem): string {
     if (this.#disposed) return item.id ?? crypto.randomUUID();
 
     const id = item.id ?? crypto.randomUUID();
+
+    // A repeated burst replaces its own live entry instead of stacking duplicates.
+    if (item.replace) {
+      const existing = this.#entries.value.find((entry) => entry.phase !== 'exiting' && entry.message === item.message);
+
+      if (existing) {
+        this.update(existing.id, { ...item, id: existing.id });
+        return existing.id;
+      }
+    }
+
     const active = this.#entries.value.filter((entry) => entry.phase !== 'exiting');
     const overflow = active.length - (this.#max - 1);
 
@@ -96,9 +121,11 @@ class ToastStore {
     }
 
     const entry: ToastEntry = {
-      dismissible: true,
-      duration: 5000,
       ...item,
+      dismissible: item.dismissible ?? true,
+      // Action toasts persist until dismissed by default: keyboard and screen-reader users
+      // reach toasts last in tab order, so a timed expiry would expire the choice unseen.
+      duration: item.duration ?? (item.actions?.length ? 0 : 5000),
       exitTimeoutId: null,
       id,
       phase: 'entering',
@@ -106,7 +133,7 @@ class ToastStore {
     };
 
     this.#setEntries([...this.#entries.value, entry]);
-    this.#emit({ id, type: 'add' });
+    this.#dispatch({ id, type: 'add' });
 
     // Two frames: the first lets the browser compute styles for the `entering` state,
     // the second flips to `active` so the CSS transition has a start value to animate from.
@@ -116,7 +143,14 @@ class ToastStore {
       });
     });
 
-    if (entry.duration > 0) this.#scheduleTimer(id, entry.duration);
+    if (entry.duration > 0) {
+      // While paused the window is recorded without arming a timeout; resume arms it.
+      if (this.#paused) {
+        this.#update(id, { timer: { remaining: entry.duration, startedAt: Date.now(), timeoutId: null } });
+      } else {
+        this.#scheduleTimer(id, entry.duration);
+      }
+    }
 
     return id;
   }
@@ -133,14 +167,15 @@ class ToastStore {
     this.#disposed = true;
 
     for (const entry of this.#entries.value) {
-      if (entry.timer) clearTimeout(entry.timer.timeoutId);
+      if (entry.timer?.timeoutId) clearTimeout(entry.timer.timeoutId);
 
       if (entry.exitTimeoutId) clearTimeout(entry.exitTimeoutId);
     }
 
+    this.#dispatch({ type: 'dispose' });
     this.#setEntries([]);
     this.#listeners.clear();
-    this.#eventListeners.clear();
+    this.#tappers.clear();
   }
 
   dismiss(id: string): void {
@@ -157,23 +192,25 @@ class ToastStore {
 
     if (!entry || this.#disposed) return;
 
-    if (entry.timer) clearTimeout(entry.timer.timeoutId);
+    if (entry.timer?.timeoutId) clearTimeout(entry.timer.timeoutId);
 
     if (entry.exitTimeoutId) clearTimeout(entry.exitTimeoutId);
 
     this.#setEntries(this.#entries.value.filter((candidate) => candidate.id !== id));
     entry.onDismiss?.();
-    this.#emit({ id, type: 'dismiss' });
+    this.#dispatch({ id, type: 'dismiss' });
   }
 
   pauseTimers(): void {
-    if (this.#disposed) return;
+    if (this.#disposed || this.#paused) return;
+
+    this.#paused = true;
 
     this.#setEntries(
       this.#entries.value.map((entry) => {
         if (!entry.timer) return entry;
 
-        clearTimeout(entry.timer.timeoutId);
+        if (entry.timer.timeoutId) clearTimeout(entry.timer.timeoutId);
 
         return {
           ...entry,
@@ -187,12 +224,12 @@ class ToastStore {
   }
 
   resumeTimers(): void {
-    if (this.#disposed) return;
+    if (this.#disposed || !this.#paused) return;
+
+    this.#paused = false;
 
     for (const entry of this.#entries.value) {
-      if (entry.phase === 'active' && entry.timer && entry.timer.remaining > 0) {
-        this.#scheduleTimer(entry.id, entry.timer.remaining);
-      }
+      if (entry.timer && entry.timer.remaining > 0) this.#scheduleTimer(entry.id, entry.timer.remaining);
     }
   }
 
@@ -219,10 +256,20 @@ class ToastStore {
     return () => this.#listeners.delete(listener);
   }
 
-  subscribeEvents(listener: (event: ToastStoreEvent) => void): () => void {
-    this.#eventListeners.add(listener);
+  /** Side-channel observation of add/dismiss/dispose transitions; handler errors are swallowed. */
+  tap(handler: (event: ToastEvent) => void, options?: { readonly signal?: AbortSignal }): () => void {
+    if (this.#disposed) return () => {};
 
-    return () => this.#eventListeners.delete(listener);
+    this.#tappers.add(handler);
+    options?.signal?.addEventListener(
+      'abort',
+      () => {
+        this.#tappers.delete(handler);
+      },
+      { once: true },
+    );
+
+    return () => this.#tappers.delete(handler);
   }
 
   update(id: string, updates: Partial<ToastItem>): void {
@@ -230,21 +277,42 @@ class ToastStore {
 
     if (!entry || this.#disposed) return;
 
-    const cleared = updates.duration !== undefined ? this.#clearTimer(entry) : entry;
+    // Omitted fields leave the entry unchanged; only provided values patch it.
+    const patch = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined),
+    ) as Partial<ToastItem>;
 
-    this.#update(id, { ...cleared, ...updates, id });
+    const cleared = patch.duration !== undefined ? this.#clearTimer(entry) : entry;
 
-    if (updates.duration !== undefined && updates.duration > 0) this.#scheduleTimer(id, updates.duration);
+    this.#update(id, { ...cleared, ...patch, id });
+
+    if (patch.duration !== undefined && patch.duration > 0) {
+      // Same pause contract as add(): record the window, let resumeTimers() arm it,
+      // so a toast updated behind an open dialog does not expire unseen.
+      if (this.#paused) {
+        this.#update(id, { timer: { remaining: patch.duration, startedAt: Date.now(), timeoutId: null } });
+      } else {
+        this.#scheduleTimer(id, patch.duration);
+      }
+    }
   }
 
   #clearTimer(entry: ToastEntry): ToastEntry {
-    if (entry.timer) clearTimeout(entry.timer.timeoutId);
+    if (entry.timer?.timeoutId) clearTimeout(entry.timer.timeoutId);
 
     return { ...entry, timer: null };
   }
 
-  #emit(event: ToastStoreEvent): void {
-    for (const listener of this.#eventListeners) listener(event);
+  #dispatch(event: ToastEvent): void {
+    if (this.#tappers.size === 0) return;
+
+    for (const tapper of this.#tappers) {
+      try {
+        tapper(event);
+      } catch {
+        // Observability must not affect toast behavior.
+      }
+    }
   }
 
   #entry(id: string): ToastEntry | undefined {
@@ -303,7 +371,7 @@ function renderToastActions(item: Readable<ToastEntry>, dismiss: () => void) {
                   <ore-button
                     size="sm"
                     color=${() => action.value.color || item.value.color || 'primary'}
-                    variant=${() => action.value.variant || 'flat'}
+                    variant=${() => action.value.variant || (item.value.snackbar ? 'ghost' : 'flat')}
                     @click=${() => {
                       action.value.onClick?.();
                       dismiss();
@@ -356,34 +424,104 @@ define<OreToastProps>(TOAST_TAG, {
       'bottom-right',
     ),
   },
-  setup() {
+  setup(props) {
     const el = getHost() as HTMLElement;
     const emit = useEmit<OreToastEvents>();
     const containerRef = ref<HTMLDivElement>();
     const entries = signal<ToastEntry[]>([]);
     const hoverPaused = signal(false);
     const focusPaused = signal(false);
-    const paused = computed(() => hoverPaused.value || focusPaused.value);
+    const modalPaused = signal(false);
+    const paused = computed(() => hoverPaused.value || focusPaused.value || modalPaused.value);
     const swipeControls = new Map<string, { element: HTMLElement; gesture: PanGesture }>();
-    const exiting = new Map<string, () => void>();
-    const swiping = new Set<string>();
     let pendingSyncFrame: number | undefined;
     let store: ToastStore | null = null;
     let unsubscribeEntries = () => {};
     let unsubscribeEvents = () => {};
 
+    // The declarative `max` attribute stays live: the service seeds it once at host
+    // creation, and later attribute changes take effect through this watch.
+    watch(
+      () => props.max.value,
+      (max) => store?.setMax(max),
+    );
+
     const getInner = (wrapper: HTMLElement): HTMLElement | null => {
       return wrapper.querySelector<HTMLElement>('.toast-inner');
     };
 
-    const clearExitListener = (id: string): void => {
-      exiting.get(id)?.();
-      exiting.delete(id);
+    const wrapperFromEvent = (event: Event): HTMLElement | null =>
+      event
+        .composedPath()
+        .find((node): node is HTMLElement => node instanceof HTMLElement && node.classList.contains('toast-wrapper')) ??
+      null;
+
+    /** Timers pause while a top-layer surface (an open dialog, fullscreen) covers the
+     *  toasts: the user cannot interact with them, so choices must not expire unseen.
+     *  Any open dialog counts — pausing wrongly is safer than expiring a choice the
+     *  user could not see. `fullscreenElement` is undefined on engines without the API. */
+    const syncTopLayer = (): void => {
+      const doc = el.ownerDocument;
+      modalPaused.value = doc.querySelector('dialog[open]') !== null || doc.fullscreenElement != null;
     };
 
-    const finalizeSwipe = (id: string): void => {
-      swiping.delete(id);
-      store?.finalize(id);
+    /** The element focused before a toast took focus; removal hands it back so keyboard
+     *  users keep their place instead of restarting from the document top. */
+    let lastExternalFocus: HTMLElement | null = null;
+    let focusedWrapperId: string | null = null;
+    /** Frame budget for the focus-restore re-check; see the restore block in syncControls. */
+    let restoreCheckFrames = 0;
+
+    /** The deepest focused element, piercing shadow roots — document-level targets
+     *  retarget to their host, and focusing a host without a tabindex is a no-op. */
+    const deepActiveElement = (doc: Document): HTMLElement | null => {
+      let active = doc.activeElement as HTMLElement | null;
+
+      while (active?.shadowRoot) {
+        const deeper = active.shadowRoot.activeElement as HTMLElement | null;
+        if (!deeper) break;
+        active = deeper;
+      }
+
+      return active;
+    };
+
+    const onDocumentFocusIn = (event: FocusEvent): void => {
+      if (event.composedPath().includes(el)) return;
+      lastExternalFocus = deepActiveElement(el.ownerDocument);
+    };
+
+    const onToastFocusIn = (event: FocusEvent): void => {
+      focusPaused.value = true;
+      focusedWrapperId = wrapperFromEvent(event)?.dataset.toastId ?? null;
+      restoreCheckFrames = 0;
+    };
+
+    const onToastFocusOut = (): void => {
+      focusPaused.value = false;
+      // Focusout fires before the next focusin settles; check after the microtask so a
+      // move inside the region keeps the tracked wrapper while leaving clears it. Focus
+      // that fell to `<body>` means the focused node was removed — keep the marker so
+      // the restore in syncControls can hand focus back.
+      void Promise.resolve().then(() => {
+        const doc = el.ownerDocument;
+        if (!focusPaused.value && doc.activeElement !== doc.body) focusedWrapperId = null;
+      });
+    };
+
+    /** Escape dismisses the newest dismissible toast when nothing inside the toast region
+     *  holds focus (the in-region handler owns that case and stops the event) and no
+     *  top-layer surface is open — those own the Escape key. */
+    const onDocumentKeydown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || event.defaultPrevented || modalPaused.value) return;
+      if (focusPaused.value) return;
+
+      const newest = [...entries.value].reverse().find((entry) => entry.dismissible && entry.phase !== 'exiting');
+
+      if (newest) {
+        event.preventDefault();
+        store?.dismiss(newest.id);
+      }
     };
 
     const createToastSwipe = (id: string, wrapper: HTMLElement): PanGesture => {
@@ -412,15 +550,11 @@ define<OreToastProps>(TOAST_TAG, {
 
           if (!inner || !store) return;
 
-          swiping.add(id);
-
           store.dismiss(id);
-
-          const finish = () => finalizeSwipe(id);
 
           if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             inner.style.opacity = '0';
-            finish();
+            store.scheduleFinalization(id, 0);
 
             return;
           }
@@ -432,14 +566,8 @@ define<OreToastProps>(TOAST_TAG, {
           inner.style.transform = `translateX(${direction * 120}%)`;
           inner.style.opacity = '0';
 
-          const onTransitionEnd = (transition: TransitionEvent) => {
-            if (transition.target !== inner || transition.propertyName !== 'transform') return;
-
-            inner.removeEventListener('transitionend', onTransitionEnd);
-            finish();
-          };
-
-          inner.addEventListener('transitionend', onTransitionEnd);
+          // Removal spans the 0.22s flight; the store's dismiss() timeout is rescheduled
+          // here so the swipe animation finishes before the node leaves the DOM.
           store.scheduleFinalization(id, 300);
         },
         onMove: ({ distance }) => {
@@ -459,40 +587,6 @@ define<OreToastProps>(TOAST_TAG, {
       });
     };
 
-    const beginExit = (id: string): void => {
-      if (!store || exiting.has(id) || swiping.has(id)) return;
-
-      requestAnimationFrame(() => {
-        if (!store || exiting.has(id) || swiping.has(id)) return;
-
-        const inner = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"] .toast-inner`);
-
-        if (!inner) {
-          store.scheduleFinalization(id, TOAST_EXIT_MS);
-
-          return;
-        }
-
-        void inner.offsetHeight;
-
-        const duration = parseFloat(getComputedStyle(inner).transitionDuration) * 1000;
-        const exitMs = Number.isFinite(duration) && duration > 0 ? duration : TOAST_EXIT_MS;
-        const onTransitionEnd = (event: TransitionEvent) => {
-          const wrapper = (event.target as HTMLElement | null)?.closest?.(`[data-toast-id="${id}"]`);
-
-          if (!wrapper) return;
-
-          clearExitListener(id);
-          store?.finalize(id);
-        };
-        const remove = () => containerRef.value?.removeEventListener('transitionend', onTransitionEnd);
-
-        exiting.set(id, remove);
-        containerRef.value?.addEventListener('transitionend', onTransitionEnd);
-        store.scheduleFinalization(id, exitMs + 50);
-      });
-    };
-
     const syncControls = (): void => {
       const currentIds = new Set(entries.value.map((entry) => entry.id));
 
@@ -501,8 +595,26 @@ define<OreToastProps>(TOAST_TAG, {
           control.gesture.dispose();
 
           swipeControls.delete(id);
-          clearExitListener(id);
-          swiping.delete(id);
+        }
+      }
+
+      // A removed wrapper that held focus drops focus to `<body>`; hand it back so
+      // keyboard users keep their place. The entry leaves the store before the keyed
+      // removal unmounts the focused node, so the frame re-checks below perform the
+      // restore once focus has actually fallen to `<body>`.
+      if (focusedWrapperId !== null && !currentIds.has(focusedWrapperId)) {
+        const doc = el.ownerDocument;
+
+        if (doc.activeElement === doc.body) {
+          const restore = lastExternalFocus;
+          focusedWrapperId = null;
+          if (restore?.isConnected) restore.focus();
+        } else if (restoreCheckFrames < 10) {
+          // The keyed removal has not unmounted the focused node yet; re-check until
+          // focus actually falls to `<body>`. A timer, not a frame: animation frames
+          // never fire while the tab is hidden, and toasts outlive tab switches.
+          restoreCheckFrames += 1;
+          setTimeout(() => syncControls(), 16);
         }
       }
 
@@ -514,8 +626,6 @@ define<OreToastProps>(TOAST_TAG, {
           control?.gesture.dispose();
           swipeControls.set(entry.id, { element: wrapper, gesture: createToastSwipe(entry.id, wrapper) });
         }
-
-        if (entry.phase === 'exiting') beginExit(entry.id);
       }
     };
 
@@ -543,10 +653,14 @@ define<OreToastProps>(TOAST_TAG, {
 
       unsubscribeEvents();
       store = nextStore;
+      store.setMax(props.max.value);
       unsubscribeEntries = store.subscribe((nextEntries) => {
         entries.value = nextEntries;
       });
-      unsubscribeEvents = store.subscribeEvents((event) => emit(event.type, { id: event.id }));
+      unsubscribeEvents = store.tap((event) => {
+        if (event.type === 'dispose') return;
+        emit(event.type, { id: event.id });
+      });
 
       if (paused.value) store.pauseTimers();
     };
@@ -555,10 +669,7 @@ define<OreToastProps>(TOAST_TAG, {
     const onKeydown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
 
-      const wrapper = event
-        .composedPath()
-        .find((node): node is HTMLElement => node instanceof HTMLElement && node.classList.contains('toast-wrapper'));
-      const id = wrapper?.dataset.toastId;
+      const id = wrapperFromEvent(event)?.dataset.toastId;
       const entry = id ? entries.value.find((candidate) => candidate.id === id) : undefined;
 
       if (!entry?.dismissible) return;
@@ -572,10 +683,17 @@ define<OreToastProps>(TOAST_TAG, {
       const id = item.value.id;
       const dismiss = () => store?.dismiss(id);
       const meta = computed(() => item.value.meta ?? '');
-      const innerClass = computed(() => `toast-inner${item.value.phase !== 'active' ? ` ${item.value.phase}` : ''}`);
+      const innerClass = computed(
+        () =>
+          `toast-inner${item.value.phase !== 'active' ? ` ${item.value.phase}` : ''}${
+            item.value.snackbar ? ' snackbar' : ''
+          }`,
+      );
       const innerStyle = computed(
         () =>
-          `--_toast-accent: var(--color-${item.value.color || 'primary'}); --_toast-radius: var(--rounded-${item.value.rounded || 'md'})`,
+          `--_toast-accent: var(--color-${item.value.color || 'primary'}); --_toast-radius: var(--rounded-${
+            item.value.rounded || (item.value.snackbar ? 'sm' : 'md')
+          })`,
       );
       // Progress restarts from the correct fraction whenever the timer is (re)scheduled:
       // the animation runs for the full duration with a negative delay for elapsed time.
@@ -593,7 +711,7 @@ define<OreToastProps>(TOAST_TAG, {
             <ore-alert
               embedded
               color=${() => item.value.color || (urgencyOf(item.value) === 'assertive' ? 'error' : 'primary')}
-              variant=${() => item.value.variant || 'solid'}
+              variant=${() => (item.value.snackbar ? 'flat' : item.value.variant || 'solid')}
               size=${() => item.value.size || 'md'}
               rounded=${() => item.value.rounded || 'md'}
               ?horizontal=${() => Boolean(item.value.horizontal)}
@@ -625,6 +743,21 @@ define<OreToastProps>(TOAST_TAG, {
         },
       });
 
+      const doc = el.ownerDocument;
+
+      // The host mounts with the first toast, so pre-toast focus was never tracked by
+      // the document listener — snapshot where focus sits right now (the control that
+      // triggered the toast) as the restore target.
+      const beforeFirstToast = deepActiveElement(doc);
+      lastExternalFocus = beforeFirstToast !== doc.body ? beforeFirstToast : null;
+
+      doc.addEventListener('focusin', onDocumentFocusIn);
+      doc.addEventListener('keydown', onDocumentKeydown);
+      // `toggle` does not bubble; the capture listener still sees dialog and popover toggles.
+      doc.addEventListener('toggle', syncTopLayer, true);
+      doc.addEventListener('fullscreenchange', syncTopLayer);
+      syncTopLayer();
+
       const boundStore = hostStores.get(el);
 
       if (boundStore) bind(boundStore);
@@ -639,7 +772,13 @@ define<OreToastProps>(TOAST_TAG, {
 
       for (const control of swipeControls.values()) control.gesture.dispose();
       swipeControls.clear();
-      for (const id of exiting.keys()) clearExitListener(id);
+
+      const doc = el.ownerDocument;
+
+      doc.removeEventListener('focusin', onDocumentFocusIn);
+      doc.removeEventListener('keydown', onDocumentKeydown);
+      doc.removeEventListener('toggle', syncTopLayer, true);
+      doc.removeEventListener('fullscreenchange', syncTopLayer);
     });
 
     const politeEntries = computed(() => entries.value.filter((entry) => urgencyOf(entry) === 'polite'));
@@ -656,12 +795,8 @@ define<OreToastProps>(TOAST_TAG, {
         @pointerleave=${() => {
           hoverPaused.value = false;
         }}
-        @focusin=${() => {
-          focusPaused.value = true;
-        }}
-        @focusout=${() => {
-          focusPaused.value = false;
-        }}
+        @focusin=${onToastFocusIn}
+        @focusout=${onToastFocusOut}
         @keydown=${onKeydown}
         part="container">
         <div
@@ -710,6 +845,8 @@ export interface ToastService {
     },
   ): Promise<T>;
   success(message: string, opts?: Partial<ToastItem>): string;
+  /** Side-channel observation of add/dispose/dismiss transitions; handler errors are swallowed. */
+  tap(handler: (event: ToastEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   update(id: string, updates: Partial<ToastItem>): void;
   warning(message: string, opts?: Partial<ToastItem>): string;
   [Symbol.dispose](): void;
@@ -730,12 +867,24 @@ export function createToastService(root: ParentNode = document.body): ToastServi
   const store = new ToastStore();
   const disposalController = new AbortController();
   let disposed = false;
-  let configured = false;
   let pendingConfig: ToastServiceConfig | null = null;
   let host: HTMLElement | null = null;
 
   const assertActive = (): boolean => !disposed;
   const rootNode = root as Element | Document | ShadowRoot;
+
+  /** Applies stashed configuration to the host as attributes; the component's own `max`
+   *  watch and the bind-time seed carry them into the store, so this stays declarative. */
+  const applyConfig = (): void => {
+    if (!pendingConfig || !host) return;
+
+    if (pendingConfig.position) host.setAttribute('position', pendingConfig.position);
+
+    if (pendingConfig.max != null) host.setAttribute('max', String(pendingConfig.max));
+
+    pendingConfig = null;
+  };
+
   const getHost = (): HTMLElement | null => {
     if (!assertActive()) return null;
 
@@ -745,23 +894,10 @@ export function createToastService(root: ParentNode = document.body): ToastServi
 
     if (!host) {
       host = document.createElement(TOAST_TAG);
-
-      if (pendingConfig?.position) host.setAttribute('position', pendingConfig.position);
-
-      if (pendingConfig?.max != null) host.setAttribute('max', String(pendingConfig.max));
-
       rootNode.appendChild(host);
     }
 
-    if (pendingConfig?.max != null) store.setMax(pendingConfig.max);
-    else {
-      const max = Number(host.getAttribute('max'));
-
-      if (Number.isFinite(max) && max > 0) store.setMax(max);
-    }
-
-    pendingConfig = null;
-    configured = true;
+    applyConfig();
     bindToastHost(host, store);
 
     return host;
@@ -780,13 +916,8 @@ export function createToastService(root: ParentNode = document.body): ToastServi
     },
 
     configure(config) {
-      if (configured) {
-        warn('toast.configure() called after the container was already created; options ignored.');
-
-        return;
-      }
-
       pendingConfig = { ...pendingConfig, ...config };
+      applyConfig();
     },
 
     dismiss(id) {
@@ -822,14 +953,15 @@ export function createToastService(root: ParentNode = document.body): ToastServi
     },
 
     async promise(promise, messages) {
-      const id = service.add({ color: 'primary', dismissible: false, duration: 0, message: messages.loading });
+      // The loading entry stays dismissible: if the promise never settles, the user keeps
+      // an escape hatch instead of an immortal notification.
+      const id = service.add({ color: 'primary', duration: 0, message: messages.loading });
 
       try {
         const data = await promise;
 
         service.update(id, {
           color: 'success',
-          dismissible: true,
           duration: 5000,
           message: typeof messages.success === 'function' ? messages.success(data) : messages.success,
         });
@@ -838,7 +970,6 @@ export function createToastService(root: ParentNode = document.body): ToastServi
       } catch (err) {
         service.update(id, {
           color: 'error',
-          dismissible: true,
           duration: 5000,
           message: typeof messages.error === 'function' ? messages.error(err) : messages.error,
         });
@@ -848,6 +979,10 @@ export function createToastService(root: ParentNode = document.body): ToastServi
 
     success(message, opts) {
       return service.add({ color: 'success', ...opts, message });
+    },
+
+    tap(handler, options) {
+      return store.tap(handler, options);
     },
 
     [Symbol.dispose]() {

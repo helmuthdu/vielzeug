@@ -76,7 +76,7 @@ export class SpellValidationError extends SpellError {
 
   constructor(issues: Issue[], cause?: unknown) {
     super(formatIssues(issues), { cause });
-    this.issues = issues;
+    this.issues = Object.freeze([...issues]) as Issue[];
   }
 
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] } {

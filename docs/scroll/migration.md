@@ -1,9 +1,44 @@
 ---
-title: Scroll 3 Migration
-description: Migrate Ripple-specific signal integration to Scroll's framework-neutral external-store contract.
+title: Scroll — Migration
+description: Migrate through Scroll 3.1 keyboard-handler removal and Scroll 3 framework-neutral external-store contract.
 ---
 
 [[toc]]
+
+## Scroll 3.1 Changes
+
+Scroll 3.1 removes the `keyboardScroll` option and renames `ScrollConfigurationError` to `ScrollConfigError`, matching the `<Pkg>ConfigError` convention used across the monorepo. Catch the base `ScrollError` to stay version-agnostic:
+
+```ts
+// Before
+if (error instanceof ScrollConfigurationError) {
+  /* ... */
+}
+
+// After
+if (error instanceof ScrollConfigError) {
+  /* ... */
+}
+```
+
+The built-in handler hardcoded its own Arrow/Page/Home/End table, ignored modifier keys (Ctrl+ArrowDown scrolled anyway), and called `preventDefault()` unconditionally. Keyboard scrolling is navigation policy: compose it from the public `scrollToIndex()` API and your own key handling — `matchKey` from `@vielzeug/keymap` gives the same aliases and exact modifier semantics as the rest of the app:
+
+```ts
+// Before
+const virt = createVirtualizer(scrollEl, { count, estimateSize: 36, keyboardScroll: true });
+
+// After
+import { matchKey } from '@vielzeug/keymap';
+
+let focusedIndex = 0;
+scrollEl.addEventListener('keydown', (event) => {
+  if (matchKey(event, 'ArrowDown')) focusedIndex = Math.min(focusedIndex + 1, count - 1);
+  else if (matchKey(event, 'ArrowUp')) focusedIndex = Math.max(focusedIndex - 1, 0);
+  else return;
+  event.preventDefault();
+  virt.scrollToIndex(focusedIndex, { align: 'auto' });
+});
+```
 
 ## Scroll 3 Changes
 
@@ -106,7 +141,7 @@ Scroll 2 removed `createReactiveVirtualizer()`, `createReactiveGroupedVirtualize
 
 Scroll 2 also added:
 
-- `keyboardScroll?: boolean`
+- `keyboardScroll?: boolean` (removed in Scroll 3.1 — compose keyboard scrolling from `scrollToIndex()` and your own key handling)
 - `autoMeasure?: boolean`
 - `dispose()` and `[Symbol.dispose]()` lifecycle consistency
 

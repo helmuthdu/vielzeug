@@ -1,6 +1,7 @@
 export {
   type Courier,
   CourierAbortError,
+  CourierConfigError,
   CourierDisposedError,
   CourierError,
   type CourierEvent,

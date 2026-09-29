@@ -1,5 +1,4 @@
-import { type RandomSource, randomFloat } from '@vielzeug/arsenal';
-import { bytesToBase64Url } from './_base64';
+import { bytesToBase64Url, type RandomSource, randomFloat } from '@vielzeug/arsenal';
 
 /**
  * Random bytes from `crypto.getRandomValues`, or from an injected

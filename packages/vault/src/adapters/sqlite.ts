@@ -1,16 +1,23 @@
 import {
   assertBatchTables,
-  type BatchImpl,
+  batchScopeGuard,
   buildDocumentStore,
-  buildTxContext,
+  buildOperations,
   type StorageBackend,
-  withBatch,
 } from '../adapter-core';
 import { decodeRecord, encodeRecord } from '../codec';
 import { VaultDisposedError, VaultError } from '../errors';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import { isExpired } from '../ttl';
-import type { AnySchema, DocumentVaultStore, DurableStoreOptions, KeyOf, RecordOf, TransactionContext } from '../types';
+import type {
+  AnySchema,
+  CodecInput,
+  DocumentVaultStore,
+  DurableStoreOptions,
+  KeyOf,
+  RecordOf,
+  TransactionContext,
+} from '../types';
 
 export type { TransactionContext };
 
@@ -57,14 +64,25 @@ type ConnectionState = {
   listeners: Set<ConnectionListener>;
 };
 type ConnectionListener = (name: string, table: string) => void;
-type KeyColumns = { encoded: string; kind: 'number' | 'string'; number: number | null; string: string | null };
 type StoredRow = { expiresAt: number | undefined; json: string; rowId: number };
+/** The direct core implements every backend operation except lazy iteration. */
+type SqliteCore<S extends AnySchema, K extends keyof S & string> = StorageBackend<S, K> & {
+  deleteMany<T extends K>(table: T, keys: readonly KeyOf<S, T>[]): Promise<number>;
+  getMany<T extends K>(table: T, keys: readonly KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  pruneAllExpired(): Promise<Record<string, number>>;
+};
 
 const connectionStates = new WeakMap<SQLiteDatabase, ConnectionState>();
 const RECORDS_TABLE = '"__vielzeug_vault_records"';
 const METADATA_TABLE = '"__vielzeug_vault_metadata"';
-const STORAGE_FORMAT_VERSION = 1;
+const STORAGE_FORMAT_VERSION = 2;
 const ITERATION_PAGE_SIZE = 100;
+const UPSERT_SQL = `INSERT INTO ${RECORDS_TABLE}
+  (namespace, table_name, key_tag, value_json, expires_at)
+ VALUES (?, ?, ?, ?, ?)
+ ON CONFLICT(namespace, table_name, key_tag) DO UPDATE SET
+   value_json = excluded.value_json,
+   expires_at = excluded.expires_at`;
 
 class ConnectionExecutor {
   private tail: Promise<void> = Promise.resolve();
@@ -121,19 +139,12 @@ function initializeDatabase(database: SQLiteDatabase): void {
         namespace TEXT NOT NULL,
         table_name TEXT NOT NULL,
         key_tag TEXT NOT NULL,
-        key_kind TEXT NOT NULL,
-        key_number REAL,
-        key_string TEXT,
         value_json TEXT NOT NULL,
         expires_at INTEGER,
         PRIMARY KEY (namespace, table_name, key_tag)
       );
       CREATE INDEX IF NOT EXISTS "__vielzeug_vault_records_expiration"
         ON ${RECORDS_TABLE} (namespace, table_name, expires_at);
-      CREATE INDEX IF NOT EXISTS "__vielzeug_vault_records_number_key"
-        ON ${RECORDS_TABLE} (namespace, table_name, key_kind, key_number);
-      CREATE INDEX IF NOT EXISTS "__vielzeug_vault_records_string_key"
-        ON ${RECORDS_TABLE} (namespace, table_name, key_kind, key_string);
     `,
   );
 }
@@ -209,22 +220,13 @@ function encodeJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
+/** Returns `undefined` for unparseable JSON so callers can evict the corrupt row. */
 function decodeJson(json: string): unknown {
   try {
     return JSON.parse(json) as unknown;
-  } catch (error) {
-    if (error instanceof VaultError) throw error;
-
-    throw new VaultError('stored record contains invalid JSON', { cause: error });
+  } catch {
+    return undefined;
   }
-}
-
-function toKeyColumns(key: number | string): KeyColumns {
-  const encoded = encodeVaultKey(key);
-
-  return typeof key === 'number'
-    ? { encoded, kind: 'number', number: key, string: null }
-    : { encoded, kind: 'string', number: null, string: key };
 }
 
 function getStoredRow(row: SQLiteRow): StoredRow {
@@ -267,13 +269,43 @@ function all(database: SQLiteDatabase, sql: string, parameters: SQLiteParameter[
   return withStatement(database, sql, (statement) => statement.all(...parameters));
 }
 
-function deleteExpired(database: SQLiteDatabase, name: string, table: string): void {
-  run(
+/**
+ * Decodes a stored row, self-healing: expired or unparseable rows are deleted
+ * and reported as missing, matching the Web Storage adapter. Codec rejections
+ * (schema drift on readable data) still throw so they stay visible.
+ */
+function decodeRow<S extends AnySchema, K extends keyof S & string>(
+  database: SQLiteDatabase,
+  table: K,
+  codec: CodecInput<RecordOf<S, K>>,
+  stored: StoredRow,
+): RecordOf<S, K> | undefined {
+  const decoded = isExpired(stored.expiresAt) ? undefined : decodeJson(stored.json);
+
+  if (decoded === undefined) {
+    run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
+
+    return undefined;
+  }
+
+  try {
+    return decodeRecord(codec, decoded) as RecordOf<S, K>;
+  } catch (err) {
+    if (err instanceof VaultError) throw err;
+
+    throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
+  }
+}
+
+function deleteExpired(database: SQLiteDatabase, name: string, table: string): number {
+  const result = run(
     database,
     `DELETE FROM ${RECORDS_TABLE}
      WHERE namespace = ? AND table_name = ? AND expires_at IS NOT NULL AND expires_at <= ?`,
     [name, table, Date.now()],
-  );
+  ) as { changes?: number } | undefined;
+
+  return result?.changes ?? 0;
 }
 
 function createDirectCore<S extends AnySchema, K extends keyof S & string>(
@@ -282,50 +314,32 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
   schema: S,
   codecs: NonNullable<DurableStoreOptions<S>['codecs']>,
   inTransaction = false,
-): StorageBackend<S, K> {
+): SqliteCore<S, K> {
   const getRecord = <T extends K>(table: T, key: KeyOf<S, T>): RecordOf<S, T> | undefined => {
-    const columns = toKeyColumns(key);
     const row = get(
       database,
       `SELECT rowid AS row_id, expires_at, value_json
        FROM ${RECORDS_TABLE}
        WHERE namespace = ? AND table_name = ? AND key_tag = ?`,
-      [name, table, columns.encoded],
+      [name, table, encodeVaultKey(key)],
     );
 
     if (row === undefined) return undefined;
 
-    const stored = getStoredRow(row);
-
-    if (isExpired(stored.expiresAt)) {
-      run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
-
-      return undefined;
-    }
-
-    try {
-      const decoded = decodeJson(stored.json);
-
-      return decodeRecord(codecs[table], decoded) as RecordOf<S, T>;
-    } catch (err) {
-      if (err instanceof VaultError) throw err;
-
-      throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
-    }
+    return decodeRow(database, table, codecs[table], getStoredRow(row));
   };
 
-  const core: StorageBackend<S, K> = {
+  const core: SqliteCore<S, K> = {
     async clear(table) {
       run(database, `DELETE FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`, [name, table]);
     },
     async delete(table, key) {
-      const columns = toKeyColumns(key);
       const result = run(
         database,
         `DELETE FROM ${RECORDS_TABLE}
          WHERE namespace = ? AND table_name = ? AND key_tag = ?
            AND (expires_at IS NULL OR expires_at > ?)`,
-        [name, table, columns.encoded, Date.now()],
+        [name, table, encodeVaultKey(key), Date.now()],
       ) as { changes?: number } | undefined;
 
       return (result?.changes ?? 0) > 0;
@@ -333,7 +347,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
     async deleteMany(table, keys) {
       let deleted = 0;
       const maxKeysPerChunk = 996;
-      const encodedKeys = keys.map((key) => toKeyColumns(key).encoded);
+      const encodedKeys = keys.map((key) => encodeVaultKey(key));
 
       for (let index = 0; index < encodedKeys.length; index += maxKeysPerChunk) {
         const chunk = encodedKeys.slice(index, index + maxKeysPerChunk);
@@ -366,23 +380,9 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       );
 
       return records.flatMap((row) => {
-        const stored = getStoredRow(row);
+        const value = decodeRow(database, table, codecs[table], getStoredRow(row));
 
-        if (isExpired(stored.expiresAt)) {
-          run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
-
-          return [];
-        }
-
-        try {
-          const decoded = decodeJson(stored.json);
-
-          return [decodeRecord(codecs[table], decoded) as RecordOf<S, typeof table>];
-        } catch (err) {
-          if (err instanceof VaultError) throw err;
-
-          throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
-        }
+        return value === undefined ? [] : [value];
       });
     },
     async getMany(table, keys) {
@@ -398,47 +398,14 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       return results;
     },
     async pruneExpiredInTable(table) {
-      const beforeRow = get(
-        database,
-        `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
-        [name, table],
-      );
-      const before = beforeRow?.count;
-
-      if (typeof before !== 'number') throw new VaultError('SQLite storage returned an invalid count');
-
-      deleteExpired(database, name, table);
-
-      const afterRow = get(
-        database,
-        `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
-        [name, table],
-      );
-      const after = afterRow?.count;
-
-      if (typeof after !== 'number') throw new VaultError('SQLite storage returned an invalid count');
-
-      return before - after;
+      return deleteExpired(database, name, table);
     },
     async put(table, value, ttl) {
       const key = getRecordKey(schema, table, value);
-      const columns = toKeyColumns(key);
       const expiresAt = ttl === undefined ? null : Date.now() + ttl;
       const encoded = encodeRecord(codecs[table], value as RecordOf<S, typeof table>);
 
-      run(
-        database,
-        `INSERT INTO ${RECORDS_TABLE}
-          (namespace, table_name, key_tag, key_kind, key_number, key_string, value_json, expires_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(namespace, table_name, key_tag) DO UPDATE SET
-           key_kind = excluded.key_kind,
-           key_number = excluded.key_number,
-           key_string = excluded.key_string,
-           value_json = excluded.value_json,
-           expires_at = excluded.expires_at`,
-        [name, table, columns.encoded, columns.kind, columns.number, columns.string, encodeJson(encoded), expiresAt],
-      );
+      run(database, UPSERT_SQL, [name, table, encodeVaultKey(key), encodeJson(encoded), expiresAt]);
     },
     async putAll(table, values, ttl) {
       if (values.length === 0) return;
@@ -447,33 +414,11 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       const encodedJsonValues = values.map((v) =>
         encodeJson(encodeRecord(codecs[table], v as RecordOf<S, typeof table>)),
       );
-      const columnsList = values.map((v) => toKeyColumns(getRecordKey(schema, table, v)));
+      const encodedKeys = values.map((v) => encodeVaultKey(getRecordKey(schema, table, v)));
 
       const writeAll = () => {
         for (let i = 0; i < values.length; i++) {
-          const columns = columnsList[i];
-          run(
-            database,
-            `INSERT INTO ${RECORDS_TABLE}
-              (namespace, table_name, key_tag, key_kind, key_number, key_string, value_json, expires_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-             ON CONFLICT(namespace, table_name, key_tag) DO UPDATE SET
-               key_kind = excluded.key_kind,
-               key_number = excluded.key_number,
-               key_string = excluded.key_string,
-               value_json = excluded.value_json,
-               expires_at = excluded.expires_at`,
-            [
-              name,
-              table,
-              columns.encoded,
-              columns.kind,
-              columns.number,
-              columns.string,
-              encodedJsonValues[i],
-              expiresAt,
-            ],
-          );
+          run(database, UPSERT_SQL, [name, table, encodedKeys[i], encodedJsonValues[i], expiresAt]);
         }
       };
 
@@ -528,24 +473,92 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
 
       return work();
     });
-  const guardedCore = Object.fromEntries(
-    Object.entries(directCore).map(([method, implementation]) => [
-      method,
-      (...arguments_: unknown[]) => {
-        if (state.batchActive) {
-          throw new VaultError(
-            'cannot call a SQLite store sharing this connection from batch(); use the transaction context instead',
-          );
-        }
 
-        return withConnection(() => (implementation as (...args: unknown[]) => Promise<unknown>)(...arguments_));
-      },
-    ]),
-  ) as unknown as StorageBackend<S>;
+  // A synchronous SQLite connection cannot serve store calls while a batch
+  // holds its transaction, so every guarded call checks the shared flag first.
+  const guard = <A extends readonly unknown[], R>(work: (...args: A) => Promise<R>): ((...args: A) => Promise<R>) => {
+    return (...args: A) => {
+      if (state.batchActive) {
+        throw new VaultError(
+          'cannot call a SQLite store sharing this connection from batch(); use the transaction context instead',
+        );
+      }
 
-  let batch: BatchImpl<S> | undefined;
+      return withConnection(() => work(...args));
+    };
+  };
+
+  const guardedCore: StorageBackend<S> = {
+    clear: guard((table) => directCore.clear(table)),
+    delete: guard((table, key) => directCore.delete(table, key)),
+    deleteMany: guard((table, keys) => directCore.deleteMany(table, keys)),
+    get: guard((table, key) => directCore.get(table, key)),
+    getAll: guard((table) => directCore.getAll(table)),
+    getMany: guard((table, keys) => directCore.getMany(table, keys)),
+    pruneAllExpired: guard(() => directCore.pruneAllExpired()),
+    pruneExpiredInTable: guard((table) => directCore.pruneExpiredInTable(table)),
+    put: guard((table, value, ttl) => directCore.put(table, value, ttl)),
+    putAll: guard((table, values, ttl) => directCore.putAll(table, values, ttl)),
+  };
+
   const adapter = buildDocumentStore(schema, guardedCore, {
     codecs,
+    createBatch: (deps) => async (tables, fn) => {
+      assertBatchTables(tables);
+
+      if (state.batchActive) {
+        throw new VaultError(
+          'cannot call a SQLite store sharing this connection from batch(); use the transaction context instead',
+        );
+      }
+
+      return state.executor.run(async () => {
+        await state.initialized;
+        await namespaceReady;
+
+        const dirtyTables = new Set<keyof S & string>();
+        const txCore = createDirectCore<S, keyof S & string>(database, name, schema, codecs, true);
+        let contextActive = true;
+        const tx = buildOperations(
+          schema,
+          txCore,
+          (table) => dirtyTables.add(table),
+          deps.validate,
+          batchScopeGuard(tables, () => contextActive),
+        );
+        let transactionStarted = false;
+
+        state.batchActive = true;
+
+        try {
+          database.exec('BEGIN IMMEDIATE');
+          transactionStarted = true;
+
+          const result = await fn(tx);
+
+          database.exec('COMMIT');
+
+          for (const table of dirtyTables) {
+            deps.notifyMutation(table);
+          }
+
+          return result;
+        } catch (error) {
+          if (transactionStarted) {
+            try {
+              database.exec('ROLLBACK');
+            } catch (rollbackError) {
+              throw new VaultError('SQLite batch rollback failed', { cause: rollbackError });
+            }
+          }
+
+          throw error;
+        } finally {
+          contextActive = false;
+          state.batchActive = false;
+        }
+      });
+    },
     onCrossTabMessage(notify) {
       const listener: ConnectionListener = (eventName, table) => {
         if (eventName === name && Object.hasOwn(schema, table)) notify(table as keyof S & string);
@@ -565,74 +578,10 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
         if (listener !== ownListener) listener(name, table);
       }
     },
-    onTransactions: (deps) => {
-      batch = async (tables, fn) => {
-        assertBatchTables(tables);
-
-        if (state.batchActive) {
-          throw new VaultError(
-            'cannot call a SQLite store sharing this connection from batch(); use the transaction context instead',
-          );
-        }
-
-        return state.executor.run(async () => {
-          await state.initialized;
-          await namespaceReady;
-
-          const dirtyTables = new Set<keyof S & string>();
-          const txCore = createDirectCore<S, keyof S & string>(database, name, schema, codecs, true);
-          let contextActive = true;
-          const tx = buildTxContext(
-            schema,
-            txCore,
-            (table) => dirtyTables.add(table),
-            deps.validate,
-            new Set<string>(tables),
-            () => contextActive,
-          );
-          let transactionStarted = false;
-          let committed = false;
-
-          state.batchActive = true;
-
-          try {
-            database.exec('BEGIN IMMEDIATE');
-            transactionStarted = true;
-
-            const result = await fn(tx);
-
-            database.exec('COMMIT');
-            committed = true;
-
-            for (const table of dirtyTables) {
-              deps.notifyMutation(table);
-            }
-
-            return result;
-          } catch (error) {
-            if (transactionStarted && !committed) {
-              try {
-                database.exec('ROLLBACK');
-              } catch (rollbackError) {
-                throw new VaultError('SQLite batch rollback failed', { cause: rollbackError });
-              }
-            }
-
-            throw error;
-          } finally {
-            contextActive = false;
-            state.batchActive = false;
-          }
-        });
-      };
-    },
     schema,
   });
 
-  if (!batch) throw new VaultError('SQLite transaction capability was not initialized');
-
-  const batched = withBatch(adapter, batch, schema);
-  const store = Object.assign(batched, {
+  const store = Object.assign(adapter, {
     iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>> {
       if (adapter.disposed) throw new VaultDisposedError(`"${name}" is disposed`);
 
@@ -662,17 +611,9 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
                 const stored = getStoredRow(row);
                 lastRowId = stored.rowId;
 
-                if (isExpired(stored.expiresAt)) {
-                  run(database, `DELETE FROM ${RECORDS_TABLE} WHERE rowid = ?`, [stored.rowId]);
-                  continue;
-                }
+                const value = decodeRow(database, table, codecs[table], stored);
 
-                try {
-                  values.push(decodeRecord(codecs[table], decodeJson(stored.json)) as RecordOf<S, K>);
-                } catch (err) {
-                  if (err instanceof VaultError) throw err;
-                  throw new VaultError(`validation failed for table "${String(table)}"`, { cause: err });
-                }
+                if (value !== undefined) values.push(value);
               }
 
               return { done: storedRows.length === 0, values };

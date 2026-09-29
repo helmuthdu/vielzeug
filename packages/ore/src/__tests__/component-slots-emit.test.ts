@@ -177,7 +177,7 @@ describe('component slots and emit', () => {
     expect(retrySpy).toHaveBeenCalledTimes(1);
   });
 
-  it('dispatches bubbling (non-composed) custom events from setup emit', async () => {
+  it('dispatches bubbling, composed custom events from setup emit', async () => {
     const { element } = await mount(((_props) => {
       const emit = useEmit<{ ping: { ok: boolean } }>();
 
@@ -192,7 +192,41 @@ describe('component slots and emit', () => {
 
     expect(event.detail.ok).toBe(true);
     expect(event.bubbles).toBe(true);
-    expect(event.composed).toBe(false);
+    expect(event.composed).toBe(true);
+  });
+
+  it('emit() crosses a nested shadow boundary so an outer listener observes it', async () => {
+    // The inner component emits; it lives inside an outer component's shadow root.
+    // A listener on the outer host must still observe the event — only a composed
+    // event propagates out of the inner component's own shadow tree.
+    define('ore-emit-nested-inner', {
+      setup: () => {
+        const emit = useEmit<{ ping: undefined }>();
+
+        setTimeout(() => emit('ping'), 30);
+
+        return html`
+          <span></span>
+        `;
+      },
+    });
+
+    define('ore-emit-nested-outer', {
+      setup: () => html`
+        <ore-emit-nested-inner></ore-emit-nested-inner>
+      `,
+    });
+
+    const { element } = await mount('ore-emit-nested-outer');
+
+    const inner = element.shadowRoot?.querySelector('ore-emit-nested-inner');
+
+    // The event originates inside the inner shadow tree; the outer host listener
+    // only sees it because emit() dispatches composed:true.
+    const seen = waitForEvent(element, 'ping');
+
+    await expect(seen).resolves.toBeTruthy();
+    expect(inner).toBeTruthy();
   });
 
   it('emit() returns false when a listener calls preventDefault(), true otherwise', async () => {

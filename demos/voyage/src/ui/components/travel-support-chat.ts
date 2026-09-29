@@ -1,12 +1,12 @@
-import '@vielzeug/refine/avatar';
-import '@vielzeug/refine/button';
-import '@vielzeug/refine/chat-message';
-import '@vielzeug/refine/chip';
-import '@vielzeug/refine/message-composer';
-import { define, getHost, html, ref, when } from '@vielzeug/ore';
+import '@vielzeug/refine/chat-panel';
+
+import { define, getHost, html, onMounted, ref } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
+
+import { type ChatPanelElement, type OreChatPanelMessage, type OreChatPanelSuggestion } from '@vielzeug/refine/chat-panel';
+
 import type { RouteName } from '../../core/router';
-import { navigate } from '../navigation';
+import { navigateDynamic } from '../navigation';
 
 type SupportAction = { label: string; params?: Record<string, string>; route: RouteName };
 type SupportMessage = { action?: SupportAction; sender: 'assistant' | 'user'; text: string };
@@ -94,155 +94,85 @@ const replyFor = (message: string): Omit<SupportMessage, 'sender'> => {
   };
 };
 
+const SUGGESTIONS: OreChatPanelSuggestion[] = [
+  { label: 'Booking reference', value: 'Where is my booking reference?' },
+  { label: 'Change a booking', value: 'I need to change a reservation' },
+  { label: 'Find another stay', value: 'Help me find another stay' },
+];
+
+/**
+ * App-specific wrapper around `ore-chat-panel`. It owns only what is unique to
+ * Voyage support — the scripted replies, transcript persistence, the persisted
+ * open state, and the "navigate to a route" action semantics. All presentation,
+ * transcript rendering, suggestions, composer, Escape, and focus handling come
+ * from the panel.
+ */
 define(TRAVEL_SUPPORT_CHAT_TAG, {
   setup() {
     const el = getHost() as TravelSupportChatElement;
-    const chatOpen = signal(sessionStorage.getItem(TRAVEL_SUPPORT_CHAT_OPEN_KEY) === 'true');
-    const chatMessages = signal<SupportMessage[]>(loadMessages());
-    const messageList = ref<HTMLElement>();
-    const panel = ref<HTMLElement>();
-    let returnFocus: HTMLElement | undefined;
-    const close = (): void => {
-      chatOpen.value = false;
-      sessionStorage.removeItem(TRAVEL_SUPPORT_CHAT_OPEN_KEY);
-      requestAnimationFrame(() => returnFocus?.focus());
+    const panel = ref<ChatPanelElement>();
+    const messages = signal<SupportMessage[]>(loadMessages());
+
+    // The panel renders a plain message array; map the support action (route +
+    // params) into the panel's opaque action payload.
+    const panelMessages = (): OreChatPanelMessage[] =>
+      messages.value.map((message) => ({
+        sender: message.sender,
+        text: message.text,
+        ...(message.action
+          ? { action: { label: message.action.label, payload: { params: message.action.params, route: message.action.route } } }
+          : {}),
+      }));
+
+    // `show()` fires an open-change event, which persists the open state.
+    el.open = (trigger) => panel.value?.show(trigger);
+
+    const onSend = (event: Event): void => {
+      const text = (event as CustomEvent<{ text: string }>).detail.text;
+      messages.value = [...messages.value, { sender: 'user', text }, { sender: 'assistant', ...replyFor(text) }];
+      saveMessages(messages.value);
     };
-    el.open = (trigger) => {
-      returnFocus = trigger;
-      chatOpen.value = true;
-      sessionStorage.setItem(TRAVEL_SUPPORT_CHAT_OPEN_KEY, 'true');
-      requestAnimationFrame(() => panel.value?.focus());
+
+    const onAction = (event: Event): void => {
+      const { params, route } = (event as CustomEvent<{ payload: { params?: Record<string, string>; route: RouteName } }>).detail.payload;
+      panel.value?.hide();
+      navigateDynamic(route, params);
     };
-    const scrollToLatest = (): void => {
-      requestAnimationFrame(() =>
-        messageList.value?.scrollTo({ behavior: 'auto', top: messageList.value.scrollHeight }),
-      );
+
+    const onOpenChange = (event: Event): void => {
+      const { open } = (event as CustomEvent<{ open: boolean }>).detail;
+      if (open) sessionStorage.setItem(TRAVEL_SUPPORT_CHAT_OPEN_KEY, 'true');
+      else sessionStorage.removeItem(TRAVEL_SUPPORT_CHAT_OPEN_KEY);
     };
-    const sendMessage = (message: string): void => {
-      const text = message.trim();
-      if (!text) return;
-      chatMessages.value = [
-        ...chatMessages.value,
-        { sender: 'user', text },
-        { sender: 'assistant', ...replyFor(text) },
-      ];
-      saveMessages(chatMessages.value);
-      scrollToLatest();
-    };
-    const sendSuggestion = (event: Event, message: string): void => {
-      if (event instanceof CustomEvent) sendMessage(message);
-    };
-    const reset = (): void => {
-      chatMessages.value = initialMessages();
+
+    const onReset = (): void => {
+      messages.value = initialMessages();
       sessionStorage.removeItem(TRAVEL_SUPPORT_CHAT_MESSAGES_KEY);
     };
 
+    // Restore the persisted open state once the panel element is available.
+    onMounted(() => {
+      if (sessionStorage.getItem(TRAVEL_SUPPORT_CHAT_OPEN_KEY) === 'true') panel.value?.show();
+    });
+
     return html`
-      <aside
-        class="support-chat-window"
-        role="region"
-        aria-label="Voyage support"
-        tabindex="-1"
-        ?hidden=${() => !chatOpen.value}
+      <ore-chat-panel
+        class="support-chat-panel"
+        label="Voyage support"
+        labels=${() => ({
+          assistantName: 'Voyage guide',
+          close: 'Close Voyage support',
+          composerLabel: 'Message Voyage support',
+          composerPlaceholder: 'Ask about a reservation…',
+          conversation: 'Conversation with Voyage support',
+        })}
+        messages=${panelMessages}
         ref=${panel}
-        @keydown=${(event: KeyboardEvent) => {
-          if (event.key === 'Escape') close();
-        }}>
-        <header class="support-chat__header">
-          <div>
-            <strong>Voyage support</strong>
-            <span class="support-chat__status"><i></i>Demo assistant · replies instantly</span>
-          </div>
-          <div class="support-chat__tools">
-            ${when(
-              () => chatMessages.value.length > 1,
-              () => html`
-                <ore-button size="sm" variant="text" @click=${reset}>
-                  Start over
-                </ore-button>
-              `,
-            )}
-            <ore-button icon-only label="Close Voyage support" size="sm" variant="ghost" @click=${close}>
-              <ore-icon name="x" size="17" aria-hidden="true"></ore-icon>
-            </ore-button>
-          </div>
-        </header>
-        <div class="support-chat__body">
-          <div
-            class="support-chat__messages"
-            role="log"
-            aria-live="polite"
-            aria-label="Conversation with Voyage support"
-            ref=${messageList}>
-            ${() =>
-              chatMessages.value.map(
-                (message) => html`
-                  <ore-chat-message
-                    sender=${message.sender}
-                    name=${message.sender === 'assistant' ? 'Voyage guide' : null}>
-                    ${
-                      message.sender === 'assistant'
-                        ? html`
-                          <ore-avatar slot="avatar" initials="V" size="sm" color="primary"></ore-avatar>
-                        `
-                        : ''
-                    }
-                    ${message.text}
-                    ${
-                      message.action
-                        ? html`
-                          <ore-button
-                            slot="actions"
-                            size="sm"
-                            variant="text"
-                            @click=${() => navigate(message.action!.route, message.action!.params)}>
-                            ${message.action.label}
-                            <ore-icon slot="suffix" name="arrow-right" size="14" aria-hidden="true"></ore-icon>
-                          </ore-button>
-                        `
-                        : ''
-                    }
-                  </ore-chat-message>
-                `,
-              )}
-          </div>
-          ${when(
-            () => chatMessages.value.length === 1,
-            () => html`
-              <div class="support-chat__suggestions" role="group" aria-label="Suggested questions">
-                <ore-chip
-                  mode="action"
-                  variant="outline"
-                  @click=${(event: Event) => sendSuggestion(event, 'Where is my booking reference?')}>
-                  Booking reference
-                </ore-chip>
-                <ore-chip
-                  mode="action"
-                  variant="outline"
-                  @click=${(event: Event) => sendSuggestion(event, 'I need to change a reservation')}>
-                  Change a booking
-                </ore-chip>
-                <ore-chip
-                  mode="action"
-                  variant="outline"
-                  @click=${(event: Event) => sendSuggestion(event, 'Help me find another stay')}>
-                  Find another stay
-                </ore-chip>
-              </div>
-            `,
-          )}
-        </div>
-        <div class="support-chat__composer">
-          <ore-message-composer
-            color="primary"
-            fullwidth
-            label="Message Voyage support"
-            maxlength="240"
-            placeholder="Ask about a reservation…"
-            variant="flat"
-            @send=${(event: CustomEvent<{ value: string }>) => sendMessage(event.detail.value)}></ore-message-composer>
-        </div>
-      </aside>
+        suggestions=${SUGGESTIONS}
+        @send=${onSend}
+        @action=${onAction}
+        @open-change=${onOpenChange}
+        @reset=${onReset}></ore-chat-panel>
     `;
   },
   shadow: false,

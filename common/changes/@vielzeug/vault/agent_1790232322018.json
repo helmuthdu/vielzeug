@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "createMemory returns a DocumentVaultStore with batch() and iterate()",
+      "packageName": "@vielzeug/vault",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

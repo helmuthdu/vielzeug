@@ -1,4 +1,5 @@
 import { snapshotAttributes } from './_compile';
+import { ANONYMOUS, WILDCARD } from './constants';
 import { WardConditionError, WardConfigError } from './errors';
 import { matchesPattern } from './resource';
 import type {
@@ -97,6 +98,23 @@ export function attributesMatch(expected: WardAttributes | undefined, actual: Wa
   return Object.keys(expected).every((key) => Object.hasOwn(actual, key) && deepEqual(expected[key], actual[key]));
 }
 
+/**
+ * Declarative role check: `ANONYMOUS` matches a null principal, `WILDCARD`
+ * matches any authenticated principal, an exact role must be in the principal's
+ * roles. A rule without `roles` matches every principal.
+ */
+function rolesMatch(expected: readonly string[] | undefined, principal: Principal): boolean {
+  if (!expected) return true;
+
+  return expected.some((candidate) =>
+    candidate === ANONYMOUS
+      ? principal === null
+      : candidate === WILDCARD
+        ? principal !== null
+        : (principal?.roles.includes(candidate) ?? false),
+  );
+}
+
 function isThenable(value: unknown): value is PromiseLike<unknown> {
   return (
     (typeof value === 'object' && value !== null && 'then' in value && typeof value.then === 'function') ||
@@ -111,6 +129,7 @@ export function ruleMatches<TAction extends string, TResource extends string, TA
 ): boolean {
   if (!matchesPattern(rule.action, input.action)) return false;
   if (!matchesPattern(rule.resource, input.resource)) return false;
+  if (!rolesMatch(rule.roles, input.principal)) return false;
   if (!attributesMatch(rule.attributes, input.attributes)) return false;
   if (!rule.condition) return true;
 

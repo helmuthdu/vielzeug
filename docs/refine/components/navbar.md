@@ -186,7 +186,7 @@ Recommended app-shell pattern:
       overflow: auto;
     }
 
-    .navbar-sidebar-shell:has(.shell-sidebar[data-bottom-nav][data-mobile-open]) .shell-panel {
+    .navbar-sidebar-shell:has(.shell-sidebar[data-bottom-nav][data-drawer-open]) .shell-panel {
       transform: translateX(calc(var(--shell-drawer-width) + var(--shell-push-gap)));
     }
 
@@ -194,7 +194,7 @@ Recommended app-shell pattern:
       margin: var(--size-3) 0 var(--size-3) var(--size-3);
     }
 
-    .navbar-sidebar-shell:has(.shell-sidebar[variant='floating'][data-bottom-nav][data-mobile-open]) .shell-panel {
+    .navbar-sidebar-shell:has(.shell-sidebar[variant='floating'][data-bottom-nav][data-drawer-open]) .shell-panel {
       transform: translateX(calc(var(--shell-drawer-width) + var(--size-2) + var(--shell-push-gap)));
     }
   </style>

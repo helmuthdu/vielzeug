@@ -1,20 +1,9 @@
-import { computed, fromSubscribable } from '@vielzeug/ripple';
-import type { RouteParams } from '@vielzeug/wayfinder';
-import { createBrowserHistory, createHashHistory, createRouter } from '@vielzeug/wayfinder';
+import { computed } from '@vielzeug/ripple';
+import { createHistoryForBase, createRouteSignals, createRouter, type RouteViewName } from '@vielzeug/wayfinder';
 
-export type RouteName =
-  | 'booking'
-  | 'bookings'
-  | 'destination'
-  | 'explore'
-  | 'hotel'
-  | 'profile'
-  | 'search'
-  | 'settings'
-  | 'trip'
-  | 'trips';
+export type RouteName = RouteViewName<typeof routes>;
 
-const routes = {
+export const routes = {
   booking: { path: '/booking/:slug' },
   bookings: { path: '/bookings' },
   destination: { path: '/destinations/:slug' },
@@ -29,13 +18,12 @@ const routes = {
 } as const;
 
 const base = import.meta.env.BASE_URL;
-const history = base === '/' ? createBrowserHistory() : createHashHistory({ base });
 
-export const router = createRouter({ base, history, routes });
-const routeBinding = fromSubscribable({
-  getSnapshot: () => router.getSnapshot(),
-  subscribe: (listener) => router.subscribe(() => listener()),
-});
-export const activeRoute = computed(() => routeBinding.value.matches.at(-1)?.name as RouteName | null);
-export const activeRouteParams = computed<RouteParams>(() => routeBinding.value.matches.at(-1)?.params ?? {});
-export const activeRouteQuery = computed(() => routeBinding.value.location.query);
+export const router = createRouter({ base, history: createHistoryForBase(base), routes });
+
+const routeSignals = createRouteSignals(router);
+
+// `root` always redirects, so the deepest match is never reported as 'root'.
+export const activeRoute = computed(() => routeSignals.name.value as RouteName | null);
+export const activeRouteParams = routeSignals.params;
+export const activeRouteQuery = routeSignals.query;

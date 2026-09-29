@@ -4,7 +4,7 @@ title: Conduit Migration
 
 # Conduit 3.0 Migration
 
-Conduit 3.0 moves registration to immutable provider arrays and validates static graphs during container construction. Typed provider builders preserve token/value and dependency inference. Direct resolution, transient lifetime, and scope-local overrides remain available.
+Conduit 3.0 moves registration to immutable provider arrays and validates static graphs during container construction. Typed provider builders preserve token/value and dependency inference. Direct resolution, transient lifetime, and child-container overrides remain available.
 
 ## Adopt immutable provider builders
 
@@ -26,7 +26,7 @@ const container = createContainer([
 
 Use the builders for inline definitions. They infer factory arguments from the dependency tuple and verify values, results, and disposers against the token type. Explicit `ValueProvider` and `FactoryProvider` annotations remain available for reusable declarations.
 
-Construction validates provider shape, duplicate local tokens, missing static dependencies, cycles, and captive singleton or cross-scope dependencies. There is no separate `validate()` step. Ownership of disposable value providers transfers only after construction succeeds.
+Construction validates provider shape, duplicate local tokens, missing static dependencies, cycles, and captive singleton dependencies. There is no separate `validate()` step. Ownership of disposable value providers transfers only after construction succeeds.
 
 ## Resolve one service or a composition map
 
@@ -39,36 +39,36 @@ const services = await container.resolve({ client: Client, config: Config });
 
 Top-level tokens that are not static factory dependencies cannot be checked during construction and fail when resolved.
 
-## Keep transient and named-scope lifetimes
+## Keep transient lifetime and child-container ownership
 
-`'transient'` creates one value per resolution and assigns cleanup to the requesting container. A `ScopeToken` caches one value on the nearest matching scope.
+`'transient'` creates one value per resolution and assigns cleanup to the requesting container. A child container caches its own singletons, which is how request, job, and test ownership is spelled.
 
 ```ts
-const Request = scope('request');
 const root = createContainer([
-  factoryProvider(RequestId, [], () => ({ id: crypto.randomUUID() }), { lifetime: Request }),
   factoryProvider(Attempt, [], () => ({}), { lifetime: 'transient' }),
 ]);
 
-const request = root.createScope(Request);
+const request = root.createScope({
+  providers: [factoryProvider(RequestId, [], () => ({ id: crypto.randomUUID() }))],
+});
 const requestId = await request.resolve(RequestId);
 await request.dispose();
 ```
 
-Singletons cannot depend on transient or scoped factories. A named-scope factory can depend on singletons, transients, or factories in the same named scope. Add `disposalSignalToken` to a dependency tuple when a factory needs its owning lifecycle's cancellation signal.
+Singletons cannot depend on transient factories. Add `disposalSignalToken` to a dependency tuple when a factory needs its owning container's cancellation signal.
 
-## Add immutable scope-local overrides
+## Add immutable child-container overrides
 
-Pass local providers when creating a child scope instead of mutating it after construction:
+Pass local providers when creating a child container instead of mutating it after construction:
 
 ```ts
-const test = root.createScope(undefined, {
+const test = root.createScope({
   name: 'test',
   providers: [valueProvider(Clock, fakeClock)],
 });
 ```
 
-Local providers shadow parent registrations for that scope and descendants. Their graph is validated before the scope is returned.
+Local providers shadow parent registrations for that child and its descendants. Their graph is validated before the child is returned.
 
 ## Recheck disposal
 

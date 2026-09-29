@@ -20,7 +20,7 @@ export type FieldDef<T> =
        * Defaults to `String(value)` for numbers and booleans, empty string otherwise.
        */
       stringify?: (value: unknown) => string;
-      /** Finite relative ranking weight greater than `0` (default `1`). Invalid values throw `ScoutConfigurationError`. */
+      /** Finite relative ranking weight greater than `0` (default `1`). Invalid values throw `ScoutConfigError`. */
       weight?: number;
     };
 
@@ -28,7 +28,7 @@ export type FieldDef<T> =
  * Shared search-tuning knobs used by `createIndex()` and `search()`.
  */
 export type SearchConstraints = {
-  /** Finite non-negative integer maximum results returned. Default: `50`. Invalid values throw `ScoutConfigurationError`. */
+  /** Finite non-negative integer maximum results returned. Default: `50`. Invalid values throw `ScoutConfigError`. */
   limit?: number;
   /**
    * Finite positive integer minimum query length (in characters) before trigram scoring is used.
@@ -60,9 +60,7 @@ export type SearchSnapshot<T> = Readonly<{
 
 export type SearchSubscribeOptions = { readonly signal?: AbortSignal };
 
-export type ScoutEvent<T> =
-  | { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' }
-  | { readonly type: 'dispose' };
+export type ScoutEvent<T> = { readonly snapshot: SearchSnapshot<T>; readonly type: 'state-change' };
 
 export type SearchState<T> = {
   [Symbol.dispose](): void;

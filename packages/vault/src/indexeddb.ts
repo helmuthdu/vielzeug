@@ -1,3 +1,3 @@
-export type { MigrationContext, MigrationFn, MigrationStep } from './adapters/indexeddb';
-export { createIndexedDB, defineMigration } from './adapters/indexeddb';
+export type { MigrationContext, MigrationFn } from './adapters/indexeddb';
+export { createIndexedDB } from './adapters/indexeddb';
 export type { TransactionContext } from './types';

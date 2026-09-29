@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: remove per-category subpath exports; root entry only",
+      "packageName": "@vielzeug/illusionist",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/illusionist"
+}

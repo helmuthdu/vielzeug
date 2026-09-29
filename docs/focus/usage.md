@@ -66,7 +66,7 @@ const nav = createListNavigation({
 });
 ```
 
-Horizontal arrows mirror in RTL. Vertical arrows do not. Custom key tables override defaults; assigning one key to multiple actions throws `RangeError`.
+Horizontal arrows mirror in RTL. Vertical arrows do not. Custom key tables override defaults and are matched through `matchKey` from `@vielzeug/keymap`, so entries accept aliases and modifiers and require exact modifier state; assigning one key to multiple actions throws `FocusConfigError`.
 
 ## Add Typeahead
 
@@ -84,6 +84,28 @@ const nav = createListNavigation({
 ```
 
 `delayMs` defaults to `500` and must be positive and finite. Repeated characters cycle matching items. Set `preventDefault: true` for menu-style typeahead; leave it false when an editable combobox input must receive the printable key.
+
+## Navigate Grids
+
+Use `createGridNavigation()` when items lay out in rows: vertical arrows step one row, horizontal arrows one item, and Home/End jump to the ends. Point `getActiveIndex` at the DOM so focus moved by pointer or Tab stays in sync:
+
+```ts
+import { createGridNavigation } from '@vielzeug/focus';
+
+const tiles = () => [...grid.querySelectorAll<HTMLElement>('.tile')];
+
+const nav = createGridNavigation<HTMLElement>({
+  columns: 4,
+  getActiveIndex: () => tiles().indexOf(document.activeElement as HTMLElement),
+  getItems: tiles,
+});
+
+grid.addEventListener('keydown', (event) => {
+  nav.handleKeydown(event)?.change?.item.focus();
+});
+```
+
+`columns` resolves on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. Clamping is the default; set `loop: true` to wrap moves around the grid's edges by flat index. Items are never skipped when disabled — skipping in two dimensions would break row alignment.
 
 ## Restore Focus
 
@@ -112,6 +134,18 @@ restore(); // false
 ```
 
 Use `restoreFocus()` directly when the target is already known. Disconnected, disabled, inert, throwing, or non-focusable targets fall through to the lazy fallback.
+
+When the focused element unmounts — browsing a dialog whose swap removes the item that held focus — the browser drops focus to `<body>`, where keydown never reaches a handler. Call `rescueFocus()` after the swap to hand focus to a control that survives it:
+
+```ts
+import { rescueFocus } from '@vielzeug/focus';
+
+const onAfterSwap = () => {
+  rescueFocus(() => footer.querySelector<HTMLElement>('button'));
+};
+```
+
+`rescueFocus()` returns `false` without touching anything when focus is already on a real element, so it is safe to call from both a watcher and a transition's after-leave hook.
 
 ## Framework Integration
 
@@ -212,4 +246,5 @@ map.mount(document);
 - Reset navigation when an overlay closes or its item context changes.
 - Use typeahead only with stable labels, and set `preventDefault` according to whether the keyboard surface is editable.
 - Capture return focus before opening transient surfaces.
+- Rescue focus after swaps that can unmount the focused element.
 - Remove the owning event listener when a widget unmounts.

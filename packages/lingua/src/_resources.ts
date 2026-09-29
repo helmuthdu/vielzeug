@@ -67,7 +67,7 @@ export function createCatalogStore<C extends Catalog>(options: CatalogStoreOptio
 
       for (const [loadedLocale, { catalog }] of loaded) catalogs[loadedLocale] = catalog;
 
-      return { catalogs, locale, version: 4 };
+      return { catalogs, locale, version: 1 };
     },
   };
 }

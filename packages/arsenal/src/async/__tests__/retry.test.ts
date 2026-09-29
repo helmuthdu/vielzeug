@@ -120,26 +120,6 @@ describe('retry', () => {
     expect(shouldRetry).toHaveBeenNthCalledWith(2, expect.any(Error), 1);
   });
 
-  it('onError is called with the final error before throwing', async () => {
-    const onError = vi.fn();
-    const err = new Error('final');
-    const mockFn = vi.fn().mockRejectedValue(err);
-
-    await expect(retry(mockFn, { onError, times: 3 })).rejects.toThrow('final');
-    expect(onError).toHaveBeenCalledOnce();
-    expect(onError).toHaveBeenCalledWith(err);
-  });
-
-  it('onError is called when shouldRetry halts retries early', async () => {
-    const onError = vi.fn();
-    const err = new Error('fatal');
-    const mockFn = vi.fn().mockRejectedValue(err);
-
-    await expect(retry(mockFn, { onError, shouldRetry: () => false, times: 5 })).rejects.toThrow('fatal');
-    expect(onError).toHaveBeenCalledOnce();
-    expect(onError).toHaveBeenCalledWith(err);
-  });
-
   it('fn receives an AbortSignal when timeout is set', async () => {
     const received: AbortSignal[] = [];
     const mockFn = vi.fn().mockImplementation(async (sig?: AbortSignal) => {

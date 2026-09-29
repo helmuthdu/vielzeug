@@ -10,14 +10,17 @@ description: Complete API reference for Wayfinder.
 | Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                                |
 | --------------------------------------- | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                                  |
-| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | Requires server-side SPA rewrites                                                                           |
+| `createRouteSignals(router)`            | Mirror a router into ripple readables (name/params/query/state) | Sync              | `router.getSnapshot()` alone is not ripple-reactive — use this bridge                                        |
+| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | Requires server-side SPA rewrites                                                                            |
 | `createHashHistory(options?)`            | Create a static-host-safe hash history driver              | Sync                 | Pass the same `base` to the history and router                                                               |
+| `createHistoryForBase(base)`            | Pick browser vs hash history for a deploy base             | Sync                 | Returns the hash driver for any base other than `'/'`                                                        |
 | `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                            |
 | `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                     |
 | `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                               |
 | `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                                  |
 | `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                    |
 | `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                          |
+| `router.href(name, params?, query?)`    | Build an anchor-ready href for a named route               | Sync                 | Hash-prefixed under `createHashHistory`                                                                     |
 | `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                              |
 | `router.match(pathname)`                | Inspect a pathname as a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                           |
 | `router.load(url, options?)`            | Load a detached URL state for SSR or prerendering          | Async                | Middleware is not executed and results are not cached                                                       |
@@ -145,6 +148,19 @@ const router = createRouter({
 
 Create a browser history driver that stores the route after `#`. Use it for static hosts that cannot rewrite deep links to the SPA entry file. `push()`, `replace()`, query strings, route hashes, state, and back navigation follow the `HistoryDriver` contract.
 
+## `createHistoryForBase(base)`
+
+```ts
+import { createHistoryForBase, createRouter } from '@vielzeug/wayfinder';
+
+const base = import.meta.env.BASE_URL;
+const router = createRouter({ base, history: createHistoryForBase(base), routes });
+```
+
+Choose the history driver for a deploy base: `createBrowserHistory()` when `base` is `'/'` (clean paths), `createHashHistory({ base })` otherwise (deep links survive a static host that cannot rewrite them). Removes the `base === '/' ? … : …` branch every app otherwise hand-rolls.
+
+**Returns:** `HistoryDriver`
+
 ## `createMemoryHistory(initialPath?)`
 
 ```ts
@@ -239,6 +255,16 @@ router.url('userDetail', { id: '42' }, { tab: 'profile' });
 ```
 
 Build a base-aware URL for a named route.
+
+**Returns:** `string`
+
+#### `router.href(name, params?, query?)`
+
+```ts
+router.href('userDetail', { id: '42' });
+```
+
+Build the address-bar form of a named route for anchor elements. Under `createBrowserHistory()` and `createMemoryHistory()` it matches `url()`; under `createHashHistory()` the route lives behind `#`, and `href()` returns that form (`/my-app/#/users/42`).
 
 **Returns:** `string`
 
@@ -368,6 +394,30 @@ router.beforeLeave(async () => confirm('Discard changes?'), { routes: ['editor']
 The guard fires when the router is leaving any route whose name appears in the `routes` array (any node in the active branch, not just the leaf). Declarative `redirect` routes bypass all leave guards.
 
 **Returns:** `() => void`
+
+## `createPhaseMirror(options)`
+
+Mirrors a domain state machine's phase into a `/:subject/:id/:phase` route segment — the shared routing approach for stepped flows (wizards, chapters, onboarding). Two-way, with the state machine as the sole source of truth:
+
+- **Domain → URL**: every phase change lands on the phase's route, replacing so the browser back button exits the flow rather than stepping between phases.
+- **URL → domain**: a mismatched phase route is a revisit request (`requestRevisit` — the consumer owns its confirm dialog) when `canRevisit(current, target)` allows it, otherwise a bounce back to the actual phase. Reacts to the URL and to the domain loading, never to domain-led changes. The mirror stops following entirely when the route leaves the flow or names a different subject.
+- **Canonicalization**: the bare `detailRoute` URL redirects onto the current phase's route, so every arrival is shareable and reload-safe.
+
+Options carry the router, the valid `phases`, both route names, and ripple `Readable`s for `currentPhase` and `subjectId` (`null` while the subject is missing). The mirror exposes `routePhase`, `revisitPhases` (readables), `phaseHref`, `followPhase`, `bounceIfMismatched` (the dialog cancel path), and `dispose()`.
+
+## `createRouteSignals(router)`
+
+```ts
+import { createRouteSignals } from '@vielzeug/wayfinder';
+
+const route = createRouteSignals(router);
+
+const activeName = computed(() => route.name.value); // re-computes on every navigation
+```
+
+Mirrors a router into ripple readables so templates and computeds react to navigation. `router.getSnapshot()` alone is **not** ripple-reactive: reading it inside a `computed()` computes once and never re-runs, because it registers no tracked dependency. This bridge wraps `subscribe()`/`getSnapshot()` with `fromSubscribable` once, for every consumer.
+
+**Returns:** `RouteSignals<TRoutes>` — `name` (deepest matched route name, `null` while nothing matches), `params` (its path params), `query` (raw string-valued query params of the current location), and `state` (the full `RouteState`, for deriving further computeds).
 
 ## `redirectTo(target, options?)`
 
@@ -804,9 +854,13 @@ try {
 }
 ```
 
+### `WayfinderConfigError`
+
+Thrown at `createRouter()` time when the route table or a path pattern is malformed — for example a route that sets both `index: true` and `path`, a duplicate route name, or a wildcard that is not the final path segment.
+
 ### `WayfinderRouteError`
 
-Thrown for malformed route definitions — at `createRouter()` time for config errors, or when a `url()`/`navigate()` call references an unknown route name or a missing path param.
+Thrown at navigation time when a `url()`/`navigate()` call references an unknown route name or omits a path param the pattern requires.
 
 ### `WayfinderRedirectLoopError`
 
@@ -822,13 +876,13 @@ Thrown on middleware misuse — currently only when a middleware function calls 
 | ---------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
 | `Router is disposed`                                             | `WayfinderDisposedError`      | Calling a guarded method (see above) after `dispose()`                |
 | `Unknown route name: X. Available routes: Y`                     | `WayfinderRouteError`         | Navigating to, resolving, or building a URL for an unregistered route  |
-| `Route "X" cannot define both index and path`                    | `WayfinderRouteError`         | A route sets `index: true` and `path` at the same time                |
-| `Route "X" must define path or set index: true`                  | `WayfinderRouteError`         | A route defines neither `index: true` nor `path`                      |
-| `Duplicate route name: "X"`                                      | `WayfinderRouteError`         | Two routes resolve to the same compound name during `createRouter()`  |
+| `Route "X" cannot define both index and path`                    | `WayfinderConfigError`       | A route sets `index: true` and `path` at the same time                |
+| `Route "X" must define path or set index: true`                  | `WayfinderConfigError`       | A route defines neither `index: true` nor `path`                      |
+| `Duplicate route name: "X"`                                      | `WayfinderConfigError`       | Two routes resolve to the same compound name during `createRouter()`  |
 | `Missing path param: X`                                          | `WayfinderRouteError`         | `url()`/`navigate()` omits a param the path pattern requires          |
-| `Invalid param name ":X" in path "Y"`                            | `WayfinderRouteError`         | A param name contains non-word characters (e.g., `:user-id`)          |
-| `Wildcard "*" must be the final segment in path: X`              | `WayfinderRouteError`         | A `*` segment appears before the last segment                         |
-| `Wildcard param must be final segment in path: X`                | `WayfinderRouteError`         | A `:param*` greedy param appears before the last segment              |
+| `Invalid param name ":X" in path "Y"`                            | `WayfinderConfigError`       | A param name contains non-word characters (e.g., `:user-id`)          |
+| `Wildcard "*" must be the final segment in path: X`              | `WayfinderConfigError`       | A `*` segment appears before the last segment                         |
+| `Wildcard param must be final segment in path: X`                | `WayfinderConfigError`       | A `:param*` greedy param appears before the last segment              |
 | `Redirect loop detected`                                         | `WayfinderRedirectLoopError`  | A declarative `redirect` chain (or mixed redirect + `navigate()`) exceeds 5 hops |
 | `next() called multiple times`                                  | `WayfinderApiError`           | Middleware calls its `next()` callback more than once                 |
 

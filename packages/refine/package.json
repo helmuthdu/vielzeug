@@ -36,13 +36,18 @@
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
+    "./theme": {
+      "import": "./dist/theme.js",
+      "require": "./dist/theme.cjs",
+      "types": "./dist/theme.d.ts"
+    },
     "./styles/animation.css": {
       "import": "./dist/styles/animation.css",
       "default": "./dist/styles/animation.css"
     },
     "./styles/layers.css": {
-      "import": "./dist/styles/layer.css",
-      "default": "./dist/styles/layer.css"
+      "import": "./dist/styles/layers.css",
+      "default": "./dist/styles/layers.css"
     },
     "./styles/preflight.css": {
       "import": "./dist/styles/preflight.css",
@@ -143,6 +148,11 @@
       "import": "./dist/chat-message.js",
       "require": "./dist/chat-message.cjs",
       "types": "./dist/content/chat-message/chat-message.d.ts"
+    },
+    "./chat-panel": {
+      "import": "./dist/chat-panel.js",
+      "require": "./dist/chat-panel.cjs",
+      "types": "./dist/content/chat-panel/chat-panel.d.ts"
     },
     "./checkbox": {
       "import": "./dist/checkbox.js",
@@ -422,6 +432,9 @@
   },
   "typesVersions": {
     "*": {
+      "theme": [
+        "dist/theme.d.ts"
+      ],
       "frameworks/elements": [
         "dist/frameworks/elements.d.ts"
       ],
@@ -475,6 +488,9 @@
       ],
       "chat-message": [
         "dist/content/chat-message/chat-message.d.ts"
+      ],
+      "chat-panel": [
+        "dist/content/chat-panel/chat-panel.d.ts"
       ],
       "checkbox": [
         "dist/inputs/checkbox/checkbox.d.ts"
@@ -679,23 +695,23 @@
     "@vielzeug/sentinel": "workspace:*",
     "@vielzeug/sigil": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
-    "lucide": "^1.43.0"
+    "lucide": "^1.47.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@biomejs/biome": "^2.5.12",
+    "@biomejs/biome": "^2.5.14",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@playwright/test": "^1.63.0",
     "@types/culori": "^4.0.1",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
     "@vielzeug/assay": "workspace:*",
     "axe-core": "^4.13.0",
-    "browserslist": "^4.28.9",
+    "browserslist": "^4.29.0",
     "culori": "^4.0.2",
     "lightningcss": "^1.33.0",
     "typescript": "^6.0.3",
-    "vite": "^8.2.2",
-    "vitest": "^5.0.0"
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   },
   "customElements": "dist/custom-elements.json"
 }

@@ -69,7 +69,7 @@ await Slug.parseAsync('changelog'); // 'changelog'
 
 ### Pitfalls
 
-- `checkAsync()` makes a schema async-only: TypeScript removes `parse()` and `safeParse()`, while runtime guards still reject sync parsing. Use `parseAsync()` when any rule performs I/O.
+- `checkAsync()` marks a schema asynchronous: runtime guards reject synchronous parsing, so use `parseAsync()` when any rule performs I/O. Async checks compose at any nesting depth.
 - Keep I/O inside `checkAsync()`, not inside `transform()`. Validation failures must go through the issue model.
 - Call `ctx.addIssue()` more than once to emit multiple issues from a single async rule.
 

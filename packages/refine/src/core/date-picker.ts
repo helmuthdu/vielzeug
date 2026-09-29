@@ -392,3 +392,58 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
     yearCells: buildYearCells,
   };
 }
+
+// ── Grid keyboard navigation (shared by ore-calendar and ore-date-picker) ─────
+
+/**
+ * Roving-arrow keyboard navigation for a calendar grid, implementing the ARIA `grid` cell pattern:
+ * Arrow keys move by one cell / one row (`columns` wide), Home/End jump to the row's first/last
+ * cell, and Enter/Space activate the focused cell. Every calendar grid — days (7 columns) and
+ * months/years (4 columns) — carries the base `.cal-grid` class, so `closest('.cal-grid')` scopes
+ * the movement to the grid the event fired in regardless of view.
+ *
+ * `onSelect` receives the activated cell element so the day view can read its `data-iso` while the
+ * month/year views ignore the argument and use their own closure value.
+ */
+export function handleCalendarGridKeydown(
+  event: KeyboardEvent,
+  cellSelector: string,
+  columns: number,
+  onSelect: (cell: HTMLElement) => void,
+): void {
+  const cell = event.currentTarget as HTMLElement;
+  const grid = cell.closest('.cal-grid');
+
+  if (!grid) return;
+
+  const allCells = Array.from(grid.querySelectorAll<HTMLElement>(cellSelector));
+  const idx = allCells.indexOf(cell);
+
+  if (idx === -1) return;
+
+  let target: HTMLElement | undefined;
+
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    onSelect(cell);
+
+    return;
+  } else if (event.key === 'ArrowRight') {
+    target = allCells[idx + 1];
+  } else if (event.key === 'ArrowLeft') {
+    target = allCells[idx - 1];
+  } else if (event.key === 'ArrowDown') {
+    target = allCells[idx + columns];
+  } else if (event.key === 'ArrowUp') {
+    target = allCells[idx - columns];
+  } else if (event.key === 'Home') {
+    target = allCells[Math.floor(idx / columns) * columns];
+  } else if (event.key === 'End') {
+    target = allCells[Math.min(Math.floor(idx / columns) * columns + columns - 1, allCells.length - 1)];
+  } else {
+    return;
+  }
+
+  event.preventDefault();
+  target?.focus();
+}

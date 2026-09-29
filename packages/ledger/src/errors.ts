@@ -20,4 +20,4 @@ export class LedgerExecutionError extends LedgerError {}
 export class LedgerRollbackError extends LedgerError {}
 
 /** Thrown when the ledger is constructed with invalid options. */
-export class LedgerConfigurationError extends LedgerError {}
+export class LedgerConfigError extends LedgerError {}

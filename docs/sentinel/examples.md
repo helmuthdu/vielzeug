@@ -10,3 +10,4 @@ description: Focused browser and DOM observation examples for Sentinel.
 - [Respect Reduced Motion Preference](./examples/respect-reduced-motion-preference.md)
 - [Responsive Column Layout](./examples/responsive-column-layout.md)
 - [Lazy Load Images on Intersection](./examples/lazy-load-images-on-intersection.md)
+- [Prevent Screen Sleep](./examples/prevent-screen-sleep.md)

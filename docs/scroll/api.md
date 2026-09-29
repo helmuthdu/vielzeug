@@ -30,7 +30,7 @@ import {
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   ScrollError,
-  ScrollConfigurationError,
+  ScrollConfigError,
   ScrollRangeError,
   type Virtualizer,
   type VirtualItem,
@@ -116,7 +116,6 @@ const virt = createVirtualizer(scrollEl, {
 | `getItemKey`        | `(index: number) => string \| number`        | `index => index` | Stable key for the measurement cache                                                       |
 | `horizontal`        | `boolean`                                    | `false`          | Virtualize along the X axis instead of Y                                                   |
 | `initialOffset`     | `number`                                     | —                | Initial scroll position; applied once on construction                                      |
-| `keyboardScroll`    | `boolean`                                    | `false`          | Enable keyboard navigation (Arrow/Page/Home/End keys)                                      |
 | `autoMeasure`       | `boolean`                                    | `false`          | Automatically measure visible items via ResizeObserver                                     |
 | `measurementCache`  | `MeasurementCache`                           | —                | Shared external cache for scroll restoration or SSR pre-measurement                        |
 | `onChange`          | `(state: VirtualizerState) => void`          | —                | Called when the visible window changes; replace through `update()`.                         |
@@ -166,6 +165,7 @@ interface VirtualizerState {
 | `measureBatch`     | `(entries: Array<{ index: number; size: number }>) => void`         | Record many sizes; single rebuild                                    |
 | `measureEl`        | `(index: number, el: HTMLElement) => () => void`                    | Attach ResizeObserver to auto-measure. Returns a disconnect function |
 | `refresh`          | `() => void`                                                        | Rebuild offset table and re-emit; preserves cached measurements      |
+| `remeasure`        | `() => void`                                                        | Re-read viewport size and scroll offset from the DOM and recompute   |
 | `prepend`          | `(additionalCount: number) => void`                                 | Add items at the top; adjusts scroll offset to keep viewport stable  |
 | `scrollToIndex`    | `(index: number, options?: ScrollToIndexOptions) => void`           | Scroll to an item; out-of-range indices are clamped                  |
 | `scrollToOffset`   | `(offset: number, options?: { behavior?: ScrollBehavior }) => void` | Scroll to a raw pixel offset                                         |
@@ -178,7 +178,7 @@ interface VirtualizerState {
 
 ### `update(next)`
 
-Atomically updates one or more live options. Accepts: `autoMeasure`, `count`, `estimateSize`, `gap`, `getItemKey`, `keyboardScroll`, `measurementCache`, `onChange`, `onScrollEnd`, `onScrollingChange`, `overscan`, `scrollEndDelay`, and `sticky`. `horizontal` and `initialOffset` remain construction-only. Invalid static numeric values throw `ScrollConfigurationError` before any update applies.
+Atomically updates one or more live options. Accepts: `autoMeasure`, `count`, `estimateSize`, `gap`, `getItemKey`, `measurementCache`, `onChange`, `onScrollEnd`, `onScrollingChange`, `overscan`, `scrollEndDelay`, and `sticky`. `horizontal` and `initialOffset` remain construction-only. Invalid static numeric values throw `ScrollConfigError` before any update applies.
 
 When `estimateSize` changes, the measurement cache is cleared and a scroll anchor is applied to keep the current viewport position visually stable.
 
@@ -214,6 +214,15 @@ const disconnect = virt.measureEl(item.index, rowEl);
 ### `refresh()`
 
 Rebuilds the full offset table and re-emits. Preserves cached measurements. Use after reordering, filtering, or any data change where sizes may have changed.
+
+### `remeasure()`
+
+Re-reads the viewport size and scroll offset from the DOM and recomputes the visible window. A `display: none` container reports a zero viewport and the adapter's `ResizeObserver` never fires for the none→visible transition, so callers that toggle visibility (tabs, `v-show`) must call this when showing the container again.
+
+```ts
+// Re-showing a v-show/hidden scroll container
+virt.remeasure();
+```
 
 ### `prepend(additionalCount)`
 
@@ -302,7 +311,6 @@ ctrl.dispose();
 | `gap`              | `number`                                      | `0`      | Gap between items in pixels                                |
 | `getItemKey`       | `(index, item) => string \| number`           | —        | Stable key; keeps measurements across `setItems()` calls   |
 | `horizontal`       | `boolean`                                     | `false`  | Virtualize along X axis                                    |
-| `keyboardScroll`   | `boolean`                                     | `false`  | Enable keyboard navigation (Arrow/Page/Home/End keys)      |
 | `measurementCache` | `MeasurementCache`                            | —        | External measurement cache                                 |
 | `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric       |
 | `sticky`           | `(index: number, item: T) => boolean`         | —        | Mark items as sticky headers                               |
@@ -371,6 +379,7 @@ Extends `Virtualizer` (minus `prepend` and `update`) with `setItems()`. All virt
 | `measureBatch`     | Batch measurement delegate                                                                  |
 | `measureEl`        | Attach auto-measuring ResizeObserver                                                        |
 | `refresh`          | Rebuild offset table and re-emit                                                            |
+| `remeasure`        | Re-read viewport size and scroll offset from the DOM and recompute                          |
 | `invalidate`       | Clear measurements and rebuild from estimates                                               |
 | `scrollToIndex`    | Scroll to an item                                                                           |
 | `scrollToOffset`   | Scroll to a pixel offset                                                                    |
@@ -619,7 +628,6 @@ grid.dispose();
 | `overscanX`           | `{ start?: number; end?: number }`      | `{ start: 3, end: 3 }` | Column overscan                        |
 | `initialScrollTop`    | `number`                                | —                      | Initial vertical scroll position       |
 | `initialScrollLeft`   | `number`                                | —                      | Initial horizontal scroll position     |
-| `keyboardScroll`      | `boolean`                               | `false`                | Enable keyboard navigation (Arrow/Page/Home/End keys) |
 | `onChange`            | `(state: GridVirtualizerState) => void` | —                      | Called when the visible window changes |
 | `onRangeChange`       | `(range: GridRangeChangeEvent) => void` | —                      | Zero-allocation range callback         |
 | `rowMeasurementCache` | `Map<number, number>`                   | —                      | External row measurement cache         |
@@ -774,7 +782,6 @@ interface VirtualizerUpdateOptions {
   estimateSize?: number | ((index: number) => number);
   gap?: number;
   getItemKey?: ((index: number) => VirtualKey) | undefined;
-  keyboardScroll?: boolean;
   /** Replace the active measurement cache. Existing entries are used immediately on the next rebuild. */
   measurementCache?: MeasurementCache;
   onChange?: ((state: VirtualizerState) => void) | undefined;
@@ -805,7 +812,6 @@ interface GridVirtualizerUpdateOptions {
   colGap?: number;
   estimateColSize?: number | ((col: number) => number);
   estimateRowSize?: number | ((row: number) => number);
-  keyboardScroll?: boolean;
   onChange?: ((state: GridVirtualizerState) => void) | undefined;
   onRangeChange?: ((range: GridRangeChangeEvent) => void) | undefined;
   overscanX?: Overscan;
@@ -839,7 +845,6 @@ interface VirtualizerOptions {
   getItemKey?: (index: number) => VirtualKey;
   horizontal?: boolean;
   initialOffset?: number;
-  keyboardScroll?: boolean;
   measurementCache?: MeasurementCache;
   onChange?: (state: VirtualizerState) => void;
   onScrollEnd?: (offset: number) => void;
@@ -867,6 +872,7 @@ interface Virtualizer extends ScrollStore<VirtualizerState> {
   measureEl: (index: number, el: HTMLElement) => () => void;
   prepend: (additionalCount: number) => void;
   refresh: () => void;
+  remeasure: () => void;
   readonly scrollOffset: number;
   scrollToBottom: (options?: { behavior?: ScrollBehavior }) => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
@@ -897,7 +903,6 @@ type DomVirtualListOptions<T> = {
   gap?: number;
   getItemKey?: (index: number, item: T) => VirtualKey;
   horizontal?: boolean;
-  keyboardScroll?: boolean;
   listElement: HTMLElement;
   measurementCache?: MeasurementCache;
   overscan?: Overscan;
@@ -1064,7 +1069,6 @@ interface GridVirtualizerOptions {
   estimateRowSize?: number | ((row: number) => number);
   initialScrollLeft?: number;
   initialScrollTop?: number;
-  keyboardScroll?: boolean;
   onChange?: (state: GridVirtualizerState) => void;
   onRangeChange?: (range: GridRangeChangeEvent) => void;
   overscanX?: Overscan;
@@ -1109,7 +1113,7 @@ interface GridVirtualizer extends ScrollStore<GridVirtualizerState> {
 | Class | Thrown when | Notable properties |
 | --- | --- | --- |
 | `ScrollError` | Base class for every Scroll error. | Use `instanceof ScrollError` to narrow unknown errors narrows errors from this package. |
-| `ScrollConfigurationError` | A constructor or `update()` receives invalid static configuration. | Extends `ScrollError`; malformed JavaScript values also use this class. |
+| `ScrollConfigError` | A constructor or `update()` receives invalid static configuration. | Extends `ScrollError`; malformed JavaScript values also use this class. |
 | `ScrollRangeError` | A DOM virtual-list render detects that a caller mutated its items array without calling `setItems()` again. | Extends `ScrollError`; message includes stale index and current item count. |
 
 Runtime estimator failures, stale measurements, and out-of-range navigation remain resilient: they fall back, no-op, or clamp as documented.

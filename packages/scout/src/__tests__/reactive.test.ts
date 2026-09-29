@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import { ScoutConfigurationError, ScoutDisposedError } from '../errors';
+import { ScoutConfigError, ScoutDisposedError } from '../errors';
 import { createReactiveSearch, createSearch } from '../reactive';
 import { createIndex } from '../scout-index';
 
@@ -363,7 +363,7 @@ describe('createSearch — subscriptions', () => {
     search.dispose();
   });
 
-  test('emits typed state and dispose events without exposing control flow to tapper errors', () => {
+  test('emits typed state events without exposing control flow to tapper errors', () => {
     const search = makeSearch(0);
     const events: string[] = [];
     search.tap((event) => events.push(event.type));
@@ -373,7 +373,7 @@ describe('createSearch — subscriptions', () => {
 
     expect(() => search.setQuery('alice')).not.toThrow();
     expect(() => search.dispose()).not.toThrow();
-    expect(events).toEqual(['state-change', 'dispose']);
+    expect(events).toEqual(['state-change']);
   });
 });
 
@@ -401,7 +401,7 @@ describe('createSearch — configuration validation', () => {
   test.each([[-1], [1.5], [Number.NaN], [Number.POSITIVE_INFINITY]])('rejects invalid debounce %s', (debounce) => {
     const index = createIndex(USERS, { fields: ['name'] });
 
-    expect(() => createSearch(index, { debounce })).toThrow(ScoutConfigurationError);
+    expect(() => createSearch(index, { debounce })).toThrow(ScoutConfigError);
   });
 });
 

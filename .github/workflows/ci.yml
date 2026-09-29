@@ -42,6 +42,13 @@ jobs:
       - name: Unit tests
         run: pnpm test --run ${{ github.event_name == 'push' && '--coverage' || '' }}
 
+      # Real-browser tests against the built dist IIFE bundles (rush rebuild above produced
+      # them). The fixture loads bundles directly via page.setContent(), so no dev server.
+      # - name: Browser e2e tests (refine)
+      #   run: |
+      #     pnpm exec playwright install --with-deps chromium
+      #     pnpm --filter @vielzeug/refine test:e2e
+
       - name: Build and test demos
         run: pnpm validate:demos
 

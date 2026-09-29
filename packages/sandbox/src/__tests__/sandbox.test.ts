@@ -754,37 +754,64 @@ describe('createSandbox — setState', () => {
     sandbox.dispose();
   });
 
-  it('warns before render() — no contentWindow yet', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('defers setState() before render() and flushes it on ready', async () => {
     const sandbox = createSandbox(container);
 
     sandbox.setState({ theme: 'dark' });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
-    warnSpy.mockRestore();
-    sandbox.dispose();
-  });
 
-  it('warns after render() but before ready fires', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>test</p>');
-    sandbox.setState({ theme: 'dark' });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('before ready'));
-    warnSpy.mockRestore();
-    sandbox.dispose();
-  });
-
-  it('does not warn after ready fires', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const sandbox = createSandbox(container);
     const p = sandbox.render('<p>test</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
     helpers.fireReady();
     await p;
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ record: { theme: 'dark' }, type: 'state-update-all' }),
+      '*',
+    );
+    sandbox.dispose();
+  });
+
+  it('defers setState() after render() but before ready fires', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>test</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
     sandbox.setState({ theme: 'dark' });
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
+
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
+
+    helpers.fireReady();
+    await p;
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ record: { theme: 'dark' }, type: 'state-update-all' }),
+      '*',
+    );
+    sandbox.dispose();
+  });
+
+  it('re-pushes accumulated state after a re-render', async () => {
+    const sandbox = createSandbox(container);
+
+    const first = sandbox.render('<p>first</p>');
+    helpers.fireReady();
+    await first;
+
+    sandbox.setState({ theme: 'dark' });
+
+    const second = sandbox.render('<p>second</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
+
+    helpers.fireReady();
+    await second;
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ record: { theme: 'dark' }, type: 'state-update-all' }),
+      '*',
+    );
     sandbox.dispose();
   });
 
@@ -834,37 +861,37 @@ describe('createSandbox — batched setState', () => {
     sandbox.dispose();
   });
 
-  it('warns before render() — no contentWindow yet', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('merges deferred updates into one flush', async () => {
     const sandbox = createSandbox(container);
 
-    sandbox.setState({ key: 'value' });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
-    warnSpy.mockRestore();
-    sandbox.dispose();
-  });
+    sandbox.setState({ a: 1 });
+    sandbox.setState({ b: 2 });
 
-  it('warns after render() but before ready fires', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>test</p>');
-    sandbox.setState({ key: 'value' });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('before ready'));
-    warnSpy.mockRestore();
-    sandbox.dispose();
-  });
-
-  it('does not warn after ready fires', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const sandbox = createSandbox(container);
     const p = sandbox.render('<p>test</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
     helpers.fireReady();
     await p;
-    sandbox.setState({ key: 'value' });
-    expect(warnSpy).not.toHaveBeenCalled();
-    warnSpy.mockRestore();
+
+    expect(postSpy).toHaveBeenCalledWith(expect.objectContaining({ record: { a: 1, b: 2 } }), '*');
+    sandbox.dispose();
+  });
+
+  it('lets a later update win for the same key', async () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.setState({ key: 'first' });
+    sandbox.setState({ key: 'second' });
+
+    const p = sandbox.render('<p>test</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
+
+    helpers.fireReady();
+    await p;
+
+    expect(postSpy).toHaveBeenCalledWith(expect.objectContaining({ record: { key: 'second' } }), '*');
     sandbox.dispose();
   });
 

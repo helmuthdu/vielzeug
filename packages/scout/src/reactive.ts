@@ -1,4 +1,6 @@
-import { ScoutConfigurationError, ScoutDisposedError } from './errors';
+import { tapper } from '@vielzeug/arsenal';
+
+import { ScoutConfigError, ScoutDisposedError } from './errors';
 import { createIndex, type ScoutIndex } from './scout-index';
 import type {
   CreateSearchOptions,
@@ -26,19 +28,9 @@ function notify(listeners: Set<() => void>): void {
   }
 }
 
-function emit<T>(tappers: Set<(event: ScoutEvent<T>) => void>, event: ScoutEvent<T>): void {
-  if (tappers.size === 0) return;
-
-  for (const tapper of [...tappers]) {
-    try {
-      tapper(event);
-    } catch {}
-  }
-}
-
-function subscribe<T>(
-  listeners: Set<T>,
-  listener: T,
+function subscribe(
+  listeners: Set<() => void>,
+  listener: () => void,
   options: SearchSubscribeOptions | undefined,
   disposed: boolean,
   lifetimeSignal: AbortSignal,
@@ -58,7 +50,7 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
   const { debounce: debounceMs = DEFAULT_DEBOUNCE, limit, minQueryLength, threshold } = options;
 
   if (!Number.isSafeInteger(debounceMs) || debounceMs < 0) {
-    throw new ScoutConfigurationError('debounce must be a finite non-negative integer.');
+    throw new ScoutConfigError('debounce must be a finite non-negative integer.');
   }
 
   const search = (query: string) => index.search(query, { limit, minQueryLength, threshold });
@@ -68,7 +60,7 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     results: ReadonlyArray<SearchResult<T>>,
   ): SearchSnapshot<T> => Object.freeze({ isSearching, query, results: Object.freeze(results) });
   const listeners = new Set<() => void>();
-  const tappers = new Set<(event: ScoutEvent<T>) => void>();
+  const tappers = tapper<ScoutEvent<T>>();
   const controller = new AbortController();
   let snapshot = createSnapshot('', false, search(''));
   let committedQuery = '';
@@ -78,7 +70,7 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
   const publish = (next: SearchSnapshot<T>): void => {
     snapshot = next;
     notify(listeners);
-    emit(tappers, { snapshot: next, type: 'state-change' });
+    tappers.emit({ snapshot: next, type: 'state-change' });
   };
   const commit = (query: string): void => {
     committedQuery = query;
@@ -96,7 +88,6 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     if (timer !== undefined) clearTimeout(timer);
     timer = undefined;
     unsubscribeIndex();
-    emit(tappers, { type: 'dispose' });
     listeners.clear();
     tappers.clear();
     controller.abort();
@@ -146,7 +137,9 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
       return subscribe(listeners, listener, subscribeOptions, disposed, controller.signal);
     },
     tap(handler, tapOptions) {
-      return subscribe(tappers, handler, tapOptions, disposed, controller.signal);
+      if (disposed) return () => {};
+
+      return tappers.tap(handler, tapOptions);
     },
     [Symbol.dispose]: dispose,
   };

@@ -80,7 +80,7 @@ describe('ore-qr-code', () => {
     it('renders the error part and emits error on capacity overflow', async () => {
       const errors: unknown[] = [];
       fixture = await mount('ore-qr-code', { attrs: { value: 'x' } });
-      fixture.element.addEventListener('error', (e) => errors.push((e as CustomEvent).detail));
+      fixture.element.addEventListener('error', (e: Event) => errors.push((e as CustomEvent).detail));
       fixture.element.setAttribute('value', 'a'.repeat(3000));
       await new Promise((r) => setTimeout(r));
 

@@ -12,6 +12,7 @@ export default defineConfig(
       'src/array/index': resolve(__dirname, 'src/array/index.ts'),
       'src/async/index': resolve(__dirname, 'src/async/index.ts'),
       'src/cache/index': resolve(__dirname, 'src/cache/index.ts'),
+      'src/encoding/index': resolve(__dirname, 'src/encoding/index.ts'),
       'src/function/index': resolve(__dirname, 'src/function/index.ts'),
       'src/guards/index': resolve(__dirname, 'src/guards/index.ts'),
       'src/index': resolve(__dirname, 'src/index.ts'),

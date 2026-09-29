@@ -67,7 +67,7 @@ A value returned by `runStream()` can be consumed once. Consumption begins with 
 
 ### Handle stricter worker failures
 
-Malformed responses, unexpected task chunks, worker `error`, and `messageerror` events reject active work with `FamiliarRuntimeError` and replace the slot. Task/stream registration mismatches now return a deterministic worker error instead of hanging. `onSlotError` failures cannot prevent task settlement.
+Malformed responses, unexpected task chunks, worker `error`, and `messageerror` events reject active work with `FamiliarRuntimeError` and replace the slot. Task/stream registration mismatches now return a deterministic worker error instead of hanging. Unhandled worker runtime errors are reported through `tap()` instead of an `onSlotError` callback, and a throwing tap handler cannot prevent task settlement.
 
 ### NodeNext declarations and stable errors
 

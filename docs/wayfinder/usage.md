@@ -9,6 +9,35 @@ description: Router setup, middleware, data loading, nested routes, and state pa
 Start with the [Overview](./index.md), then use this page for the day-to-day API.
 :::
 
+## Mirror a State Machine into the URL
+
+A stepped flow's URL should name the step the domain is on — shareable, reload-safe, and never ahead of the truth. `createPhaseMirror` wires a `Router` to the domain phase as a ripple `Readable`, replacing (never pushing) so back exits the flow.
+
+```ts
+import { createPhaseMirror } from '@vielzeug/wayfinder';
+import { signal } from '@vielzeug/ripple';
+
+const currentPhase = signal<'story' | 'preparing' | 'fight' | null>(null);
+const subjectId = signal<string | null>(null);
+
+const mirror = createPhaseMirror({
+  canRevisit: (current, target) => current === 'fight' && target === 'preparing',
+  currentPhase,
+  detailRoute: 'easyPathDetail',
+  phases: ['story', 'preparing', 'fight'],
+  phaseRoute: 'easyPathPhase',
+  requestRevisit: (phase) => openConfirmDialog(phase),
+  router,
+  subjectId,
+});
+
+mirror.routePhase.value; // the phase segment of the current route, or null
+mirror.phaseHref('preparing'); // anchor href for a tracker link
+mirror.dispose(); // stop mirroring
+```
+
+The consumer supplies reactivity; the mirror never writes history. A Vue app bridges its reactive getters into ripple signals and disposes the mirror with its component scope.
+
 ## Basic Usage
 
 Create a deterministic router with memory history, wait for startup, and navigate by route name.
@@ -357,6 +386,8 @@ router.isActive('users');
 router.isActive('users', { exact: true });
 ```
 
+Render anchors with `router.href()`: it returns the address-bar form of a route, so hash-history deployments get `#`-prefixed links that plain `url()` strings cannot provide.
+
 `isActive(name)` reads the current router snapshot and is useful for parent navigation items.
 
 ## Match a Path Without Navigating
@@ -650,17 +681,18 @@ Use Ward inside Wayfinder middleware to guard protected routes.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
-import { createWard } from '@vielzeug/ward';
+import { allow, createWard } from '@vielzeug/ward';
 
 type User = { id: string; roles: string[] };
 
-const ward = createWard([{ role: 'admin', resource: 'settings', action: 'view', effect: 'allow' }]);
+const ward = createWard([allow<'view', 'settings'>('admin', 'settings', ['view'])]);
 
 const router = createRouter({
   middleware: [
     (ctx, next) => {
       const user: User = getSessionUser();
-      if (!ward.can(user, 'settings', 'view')) return ctx.navigate({ path: '/login' }, { replace: true });
+      const decision = ward.decide({ action: 'view', principal: user, resource: 'settings' });
+      if (decision.effect !== 'allow') return ctx.navigate({ path: '/login' }, { replace: true });
       return next();
     },
   ],

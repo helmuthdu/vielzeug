@@ -1,13 +1,10 @@
+import { sleep } from '@vielzeug/arsenal';
 import { createCourier } from '@vielzeug/courier';
 import { crmData, networkStatus } from './store';
 import type { CrmData, Opportunity } from './types';
 
-function wait(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
 async function mockFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  await wait(100 + Math.round(Math.random() * 300));
+  await sleep(100 + Math.round(Math.random() * 300));
   const rawUrl = typeof input === 'string' ? input : input instanceof URL ? input.pathname : input.url;
   const path = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
   if (networkStatus.value === 'offline') throw new TypeError('Simulated network offline');

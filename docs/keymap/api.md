@@ -14,6 +14,8 @@ description: Complete API reference for @vielzeug/keymap bindings, chords, parsi
 | `createKeymap()` | Create shortcut manager from an ordered binding array | Sync | `dispose()` is terminal |
 | `findShortcutConflicts()` | Find duplicate and prefix paths | Sync | Invalid non-empty input throws |
 | `formatShortcut()` | Format shortcut labels | Sync | Invalid input returns `''` |
+| `matchKey()` | Match an event against one shortcut pattern | Sync | Unparseable pattern returns `false`; chord patterns never match |
+| `detectModKey()` | Resolve platform primary modifier | Sync | Returns `ctrl` without `navigator` |
 | `tap()` | Observe chord lifecycle, matches, and disposal | Sync | Observer failures are swallowed |
 | `Binding` | Per-binding config type (id, shortcut, handler, trigger, when, preventDefault, stopPropagation) | — | Reusing an `id` replaces its binding |
 
@@ -33,15 +35,16 @@ Use the parser subpath if you're building keyboard-aware config validators, cust
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `KeymapError` | Base Keymap error | Sync | Includes parse and lifecycle errors |
+| `KeymapError` | Base Keymap error | Sync | Includes parse, config, and lifecycle errors |
+| `KeymapConfigError` | Invalid `createKeymap` option | Sync | Thrown for a non-positive `chordTimeout` |
 | `KeymapParseError` | Strict parser error | Sync | `parseStep()` never throws it |
 
 ## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/keymap` | Root entry point for `createKeymap`, `formatShortcut`, `findShortcutConflicts`, errors, and public types. |
-| `@vielzeug/keymap/parse` | Parser internals subpath for custom tooling: `parseShortcut`, `parseStep`, `matchStep`, `canonicalizeShortcut`, `detectModKey`. |
+| `@vielzeug/keymap` | Root entry point for `createKeymap`, `formatShortcut`, `findShortcutConflicts`, `matchKey`, `detectModKey`, errors, and public types. |
+| `@vielzeug/keymap/parse` | Parser internals subpath for custom tooling: `parseShortcut`, `parseStep`, `matchStep`, `matchKey`, `canonicalizeShortcut`, `detectModKey`. |
 
 ## Core Manager
 
@@ -269,6 +272,31 @@ matchStep(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }), step); // t
 
 ---
 
+### `matchKey()`
+
+```ts
+function matchKey(event: KeyboardEvent, pattern: string, modKey?: 'ctrl' | 'meta'): boolean;
+```
+
+Matches a keyboard event against a single shortcut pattern such as `'ArrowDown'`, `'esc'`, `'mod+k'`, or `'shift+Home'`. Aliases and `mod` resolve through the same parser `createKeymap` uses, and modifier state must match exactly: `'ArrowDown'` does not match Ctrl+ArrowDown. Exported from both the root entry point and `@vielzeug/keymap/parse`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `event` | `KeyboardEvent` | Event to match. Missing runtime `key` returns `false`. |
+| `pattern` | `string` | One shortcut step. Unparseable patterns and multi-step chords return `false` (never throws). |
+| `modKey` | `'ctrl' \| 'meta'` | Optional. Resolution for `mod`; defaults to `detectModKey()`. |
+
+**Returns:** `true` only when key and all modifier states match.
+
+```ts
+import { matchKey } from '@vielzeug/keymap';
+
+if (matchKey(event, 'mod+k')) openPalette();
+if (matchKey(event, 'shift+Home')) selectToStart(event);
+```
+
+---
+
 ### `detectModKey()`
 
 ```ts
@@ -318,6 +346,7 @@ interface KeymapOptions {
 ```
 
 - `when`: Guard function called for all bindings. When combined with per-binding `when` guards, both must return `true` for the handler to fire (AND composition). Global guard is checked first.
+- `chordTimeout`: Must be a positive finite number; `createKeymap()` throws `KeymapConfigError` otherwise. Defaults to `1000`.
 
 ### `KeymapEvent`
 
@@ -407,4 +436,5 @@ interface ConflictOptions {
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
 | `KeymapError` | Lifecycle operation after disposal | Use `instanceof KeymapError` to narrow Keymap errors. |
+| `KeymapConfigError` | `createKeymap()` receives an invalid option | Extends `KeymapError`. Thrown for a non-positive or non-finite `chordTimeout`. |
 | `KeymapParseError` | Strict shortcut parser receives invalid input | Extends `KeymapError`. |

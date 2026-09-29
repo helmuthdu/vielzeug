@@ -170,7 +170,7 @@ test.describe('Layout', () => {
       const drawer = sidebar?.shadowRoot?.querySelector('nav');
       const shell = document.getElementById('shell');
 
-      if (!sidebar?.hasAttribute('data-mobile-open') || !drawer || !shell) return false;
+      if (!sidebar?.hasAttribute('data-drawer-open') || !drawer || !shell) return false;
 
       return drawer.getBoundingClientRect().left >= shell.getBoundingClientRect().left;
     });

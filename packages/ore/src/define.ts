@@ -29,11 +29,14 @@ import { ORE_ERRORS, OreApiError } from './errors';
  *   },
  * });
  * ```
+ *
+ * Returns the registered class, so callers keep a handle for `instanceof` or
+ * subclassing without a follow-up `customElements.get(tag)` cast.
  */
 export function define<Props extends Record<string, unknown> = Record<never, never>>(
   tag: string,
   definition: ComponentDefinition<Props>,
-): void {
+): CustomElementConstructor {
   if (!tag) throw new OreApiError(ORE_ERRORS.defineRequiresTag);
   if (customElements.get(tag)) throw new OreApiError(ORE_ERRORS.defineDuplicate(tag));
 
@@ -42,4 +45,6 @@ export function define<Props extends Record<string, unknown> = Record<never, nev
   // Registration is intentionally the sole global side effect of define().
   Object.defineProperty(ComponentClass, 'name', { value: tag });
   customElements.define(tag, ComponentClass);
+
+  return ComponentClass;
 }

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { KeymapConfigError } from '../errors';
 import { createKeymap } from '../keymap';
 import type { KeymapEvent } from '../types';
 import { FakeTarget, makeEvent, mockHandler } from './_fixtures';
@@ -721,33 +722,19 @@ describe('createKeymap', () => {
   });
 
   describe('numeric option validation', () => {
-    it('clamps a non-positive chordTimeout to the default and warns', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      createKeymap([], { chordTimeout: -5 });
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        '[@vielzeug/keymap] chordTimeout must be a positive finite number; received -5. Using default of 1000ms.',
+    it('throws on a non-positive chordTimeout', () => {
+      expect(() => createKeymap([], { chordTimeout: -5 })).toThrow(KeymapConfigError);
+      expect(() => createKeymap([], { chordTimeout: -5 })).toThrow(
+        'chordTimeout must be a positive finite number; received -5.',
       );
-      warnSpy.mockRestore();
     });
 
-    it('clamps a non-finite chordTimeout to the default and warns', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      createKeymap([], { chordTimeout: NaN });
-
-      expect(warnSpy).toHaveBeenCalledOnce();
-      warnSpy.mockRestore();
+    it('throws on a non-finite chordTimeout', () => {
+      expect(() => createKeymap([], { chordTimeout: NaN })).toThrow(KeymapConfigError);
     });
 
-    it('does not warn for a valid chordTimeout', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      createKeymap([], { chordTimeout: 250 });
-
-      expect(warnSpy).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
+    it('accepts a valid chordTimeout', () => {
+      expect(() => createKeymap([], { chordTimeout: 250 })).not.toThrow();
     });
   });
 });

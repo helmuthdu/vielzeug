@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ScrollConfigurationError } from '../errors';
+import { ScrollConfigError } from '../errors';
 import { createMeasurementCache, createVirtualizer, DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN } from '../virtualizer';
 import { flushMicrotasks, makeContainer, makeWindow } from './test-utils';
 
@@ -29,7 +29,7 @@ describe('createVirtualizer – normalization', () => {
       { count: 1, overscan: 'bad' as never },
       { count: 1, scrollEndDelay: -1 },
     ]) {
-      expect(() => createVirtualizer(el, options)).toThrow(ScrollConfigurationError);
+      expect(() => createVirtualizer(el, options)).toThrow(ScrollConfigError);
     }
   });
 
@@ -510,7 +510,7 @@ describe('createVirtualizer – update', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
 
-    expect(() => v.update({ count: 10, gap: -1 })).toThrow(ScrollConfigurationError);
+    expect(() => v.update({ count: 10, gap: -1 })).toThrow(ScrollConfigError);
     expect(v.count).toBe(5);
     expect(v.totalSize).toBe(100);
     v.dispose();
@@ -1058,6 +1058,46 @@ describe('createVirtualizer – isAtEnd', () => {
   });
 });
 
+// ─── remeasure ────────────────────────────────────────────────────────────────
+
+describe('remeasure', () => {
+  it('recomputes the window after a hidden container becomes visible', () => {
+    // Simulate a v-show container: created while display:none (zero viewport),
+    // then shown. No resize event fires for the none→visible transition.
+    const el = makeContainer({ clientHeight: 0 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20 });
+
+    expect(v.items.length).toBe(0);
+
+    Object.defineProperty(el, 'clientHeight', { configurable: true, get: () => 100 });
+    v.remeasure();
+
+    expect(v.items.length).toBeGreaterThan(0);
+    v.dispose();
+  });
+
+  it('re-reads the scroll offset from the DOM', () => {
+    const el = makeContainer({ clientHeight: 100, scrollTop: 0 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20, overscan: 0 });
+
+    // Move the DOM without dispatching a scroll event (e.g. restored by the browser).
+    Object.defineProperty(el, 'scrollTop', { configurable: true, get: () => 200 });
+    v.remeasure();
+
+    expect(v.items[0]?.index).toBe(10);
+    expect(v.scrollOffset).toBe(200);
+    v.dispose();
+  });
+
+  it('is a no-op after dispose', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 10, estimateSize: 20 });
+
+    v.dispose();
+    expect(() => v.remeasure()).not.toThrow();
+  });
+});
+
 // ─── createMeasurementCache ───────────────────────────────────────────────────
 
 describe('createMeasurementCache', () => {
@@ -1107,7 +1147,7 @@ describe('createVirtualizer – Infinity estimate guard', () => {
   it('rejects a static estimateSize above the supported maximum', () => {
     const el = makeContainer({ clientHeight: 200 });
 
-    expect(() => createVirtualizer(el, { count: 3, estimateSize: 2e7 })).toThrow(ScrollConfigurationError);
+    expect(() => createVirtualizer(el, { count: 3, estimateSize: 2e7 })).toThrow(ScrollConfigError);
   });
 });
 

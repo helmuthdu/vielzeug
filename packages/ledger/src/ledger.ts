@@ -1,6 +1,6 @@
 import {
   LedgerCancelledError,
-  LedgerConfigurationError,
+  LedgerConfigError,
   LedgerDisposedError,
   LedgerError,
   LedgerExecutionError,
@@ -12,9 +12,9 @@ import type {
   Ledger,
   LedgerCallOptions,
   LedgerOptions,
-  LedgerReadable,
   LedgerState,
   ReversibleCommand,
+  Subscribable,
   Unsubscribe,
 } from './types';
 
@@ -33,24 +33,20 @@ type Operation = {
   started: boolean;
 };
 
-class StateStore<T> implements LedgerReadable<T> {
-  private currentValue: T;
+class StateStore<T> implements Subscribable<T> {
+  private current: T;
   private readonly listeners = new Set<() => void>();
 
   constructor(initial: T) {
-    this.currentValue = initial;
+    this.current = initial;
   }
 
-  get value(): T {
-    return this.currentValue;
-  }
-
-  peek(): T {
-    return this.currentValue;
+  getSnapshot(): T {
+    return this.current;
   }
 
   set(next: T): void {
-    this.currentValue = next;
+    this.current = next;
 
     for (const listener of [...this.listeners]) {
       try {
@@ -113,24 +109,22 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
   const { maxHistory = 100 } = options;
 
   if (!Number.isSafeInteger(maxHistory) || maxHistory < 0) {
-    throw new LedgerConfigurationError('maxHistory must be a non-negative safe integer');
+    throw new LedgerConfigError('maxHistory must be a non-negative safe integer');
   }
 
-  const state = new StateStore<LedgerState<TMeta>>(
-    snapshotState({ accepting: true, queued: 0, redo: [], running: 0, undo: [] }),
-  );
+  const state = new StateStore<LedgerState<TMeta>>(snapshotState({ queued: 0, redo: [], running: 0, undo: [] }));
   const commandStore = new WeakMap<HistoryEntry<TMeta>, StoredCommand<TMeta>>();
   const disposalController = new AbortController();
-  const idleWaiters = new Set<() => void>();
+  const idleWaiters = new Set<{ readonly reject: (reason?: unknown) => void; readonly resolve: () => void }>();
   const operations = new Set<Operation>();
   let disposed = false;
   let queue = Promise.resolve();
 
   function updateState(update: (current: LedgerState<TMeta>) => LedgerState<TMeta>): void {
-    state.set(snapshotState(update(state.value)));
+    state.set(snapshotState(update(state.getSnapshot())));
 
-    if (state.value.queued === 0 && state.value.running === 0) {
-      for (const resolve of idleWaiters) resolve();
+    if (state.getSnapshot().queued === 0 && state.getSnapshot().running === 0) {
+      for (const waiter of idleWaiters) waiter.resolve();
       idleWaiters.clear();
     }
   }
@@ -228,7 +222,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
   }
 
   async function runUndo(context: CommandContext): Promise<void> {
-    const entry = state.value.undo[state.value.undo.length - 1];
+    const entry = state.getSnapshot().undo[state.getSnapshot().undo.length - 1];
 
     if (!entry) return;
 
@@ -252,7 +246,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
   }
 
   async function runRedo(context: CommandContext): Promise<void> {
-    const entry = state.value.redo[state.value.redo.length - 1];
+    const entry = state.getSnapshot().redo[state.getSnapshot().redo.length - 1];
 
     if (!entry) return;
 
@@ -277,6 +271,10 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
 
   return {
     clear(): Promise<void> {
+      if (state.getSnapshot().undo.length === 0 && state.getSnapshot().redo.length === 0) {
+        return disposed ? Promise.reject(operationError('clear', true)) : Promise.resolve();
+      }
+
       return enqueue('clear', undefined, async () => {
         updateState((current) => ({ ...current, redo: [], undo: [] }));
       });
@@ -296,7 +294,10 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
 
       for (const operation of queued) settle(operation, operationError('operation', true));
 
-      updateState((current) => ({ ...current, accepting: false, queued: 0, redo: [], undo: [] }));
+      for (const waiter of idleWaiters) waiter.reject(operationError('whenIdle', true));
+      idleWaiters.clear();
+
+      updateState((current) => ({ ...current, queued: 0, redo: [], undo: [] }));
     },
 
     get disposed(): boolean {
@@ -307,6 +308,22 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
       const snapshot = snapshotCommand(command);
 
       return enqueue('do', callOptions?.signal, (context) => runDo(snapshot, context));
+    },
+
+    record(command: ReversibleCommand<TMeta>): void {
+      if (disposed) throw new LedgerDisposedError('Cannot call record() on a disposed ledger.');
+
+      const snapshot = snapshotCommand(command);
+      updateState((current) => {
+        if (maxHistory === 0) return { ...current, redo: [] };
+
+        const undo = [...current.undo, snapshot.entry];
+
+        if (undo.length > maxHistory) undo.shift();
+
+        return { ...current, redo: [], undo };
+      });
+      commandStore.set(snapshot.entry, snapshot);
     },
 
     redo(callOptions?: LedgerCallOptions): Promise<void> {
@@ -326,9 +343,11 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
     },
 
     whenIdle(): Promise<void> {
-      if (state.value.queued === 0 && state.value.running === 0) return Promise.resolve();
+      if (state.getSnapshot().queued === 0 && state.getSnapshot().running === 0) {
+        return disposed ? Promise.reject(operationError('whenIdle', true)) : Promise.resolve();
+      }
 
-      return new Promise((resolve) => idleWaiters.add(resolve));
+      return new Promise<void>((resolve, reject) => idleWaiters.add({ reject, resolve }));
     },
   };
 }

@@ -26,10 +26,21 @@ const UNSET = Symbol('ripple.unset');
 
 type Dependency = ReactiveNode<unknown>;
 
-type ObserverNode = {
+/** Anything that wants to hear that a dependency changed — the only member a producer may call. */
+type Dependent = {
+  onDependencyChanged(): void;
+};
+
+/** A subscribe() listener sink: enqueued as a unit so two subscriptions sharing one
+ *  callback each fire per flush, while one subscription never fires twice. */
+type ListenerSink = Dependent & {
+  readonly listener: () => void;
+};
+
+/** A dependency-collecting observer (computed or effect). Plain listener sinks need less. */
+type ObserverNode = Dependent & {
   collecting?: Set<Dependency>;
   readonly dependencies: Set<Dependency>;
-  onDependencyChanged(): void;
 };
 
 type Owned = {
@@ -39,7 +50,7 @@ type Owned = {
 
 abstract class ReactiveNode<T> {
   readonly [REACTIVE] = true;
-  readonly dependents = new Set<ObserverNode>();
+  readonly dependents = new Set<Dependent>();
   readonly name: string | undefined;
   protected readonly runtime: ReactiveRuntime;
 
@@ -55,14 +66,16 @@ abstract class ReactiveNode<T> {
     this.runtime.assertActive();
     this.peek();
 
-    const observer: ObserverNode = {
-      dependencies: new Set(),
-      onDependencyChanged: () => this.runtime.enqueueListener(listener),
+    // A listener sink never collects dependencies, so it is a bare dependent —
+    // no dependency bookkeeping is allocated per subscription.
+    const sink: ListenerSink = {
+      listener,
+      onDependencyChanged: () => this.runtime.enqueueListener(sink),
     };
 
-    this.dependents.add(observer);
+    this.dependents.add(sink);
 
-    return () => this.dependents.delete(observer);
+    return () => this.dependents.delete(sink);
   }
 
   protected notify(): void {
@@ -258,7 +271,6 @@ class EffectNode implements ObserverNode, EffectHandle {
   private isDisposed = false;
   private ownershipScope: ScopeNode | undefined;
   private runScope: ScopeNode | undefined;
-  private scheduled = false;
   private readonly callback: () => Cleanup | undefined;
   private readonly options: EffectOptions | undefined;
   private readonly runtime: ReactiveRuntime;
@@ -283,19 +295,6 @@ class EffectNode implements ObserverNode, EffectHandle {
 
   onDependencyChanged(): void {
     if (this.isDisposed) return;
-
-    if (this.options?.scheduler === 'microtask') {
-      if (this.scheduled) return;
-
-      this.scheduled = true;
-      queueMicrotask(() => {
-        this.scheduled = false;
-
-        if (!this.isDisposed) this.runtime.enqueue(this);
-      });
-
-      return;
-    }
 
     this.runtime.enqueue(this);
   }
@@ -371,7 +370,7 @@ export class ReactiveRuntime {
   private flushDepth = 0;
   private flushing = false;
   private readonly pending = new Set<EffectNode>();
-  private readonly listeners = new Set<() => void>();
+  private readonly listeners = new Set<ListenerSink>();
   private readonly rootScope: ScopeNode;
   private readonly tappers = new Set<(event: RippleEvent) => void>();
   private readonly errorPolicy: RippleErrorPolicy;
@@ -554,8 +553,8 @@ export class ReactiveRuntime {
     if (this.flushDepth === 0) this.flush();
   }
 
-  enqueueListener(listener: () => void): void {
-    this.listeners.add(listener);
+  enqueueListener(sink: ListenerSink): void {
+    this.listeners.add(sink);
 
     if (this.flushDepth === 0) this.flush();
   }
@@ -651,9 +650,9 @@ export class ReactiveRuntime {
 
         for (const effect of effects) effect.run();
 
-        for (const listener of listeners) {
+        for (const sink of listeners) {
           try {
-            listener();
+            sink.listener();
           } catch (error) {
             this.report(error, { kind: 'listener' });
           }

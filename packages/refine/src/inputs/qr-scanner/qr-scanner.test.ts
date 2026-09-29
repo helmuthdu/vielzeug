@@ -32,13 +32,13 @@ function fakeScanner(behavior: FakeBehavior = {}): QrScanner & { start: ReturnTy
       setStatus('scanning');
       if (behavior.scanValue !== undefined) {
         for (const handler of [...handlers]) handler({ value: behavior.scanValue });
-        setStatus('stopped');
+        setStatus('idle');
       }
     }),
     get status() {
       return status;
     },
-    stop: vi.fn(() => setStatus('stopped')),
+    stop: vi.fn(() => setStatus('idle')),
     tap: (handler: (event: SigilEvent) => void) => {
       taps.add(handler);
       return () => taps.delete(handler);
@@ -158,7 +158,7 @@ describe('ore-qr-scanner', () => {
       const mounted = await mountScanner({ startError: new SigilPermissionError('Camera permission denied') });
       fixture = mounted.fixture;
       const errors: unknown[] = [];
-      fixture.element.addEventListener('error', (e) => errors.push((e as CustomEvent).detail.error));
+      fixture.element.addEventListener('error', (e: Event) => errors.push((e as CustomEvent).detail.error));
 
       fixture.element.setAttribute('active', '');
       await tick();

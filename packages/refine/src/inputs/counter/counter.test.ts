@@ -55,6 +55,13 @@ describe('ore-counter', () => {
       expect(fixture.element.getAttribute('size')).toBe('lg');
     });
 
+    it('reflects the variant attribute on the host', async () => {
+      fixture = await mount('ore-counter', { attrs: { variant: 'frost' } });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('variant')).toBe('frost');
+    });
+
     it('renders the hint attribute and hides it when absent', async () => {
       fixture = await mount('ore-counter', { attrs: { hint: 'Pay for actions' } });
       await fixture.flush();

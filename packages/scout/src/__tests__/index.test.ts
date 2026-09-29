@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ScoutConfigurationError, ScoutDisposedError, ScoutError } from '../errors';
+import { ScoutConfigError, ScoutDisposedError, ScoutError } from '../errors';
 import { createIndex } from '../scout-index';
 
 type User = { age: number; email: string; name: string };
@@ -26,8 +26,8 @@ describe('createIndex', () => {
     expect(index.size).toBe(0);
   });
 
-  test('throws ScoutConfigurationError when fields is empty', () => {
-    expect(() => createIndex(USERS, { fields: [] })).toThrow(ScoutConfigurationError);
+  test('throws ScoutConfigError when fields is empty', () => {
+    expect(() => createIndex(USERS, { fields: [] })).toThrow(ScoutConfigError);
   });
 });
 
@@ -253,8 +253,8 @@ describe('ScoutIndex.search', () => {
   test('negative limits are rejected', () => {
     const index = createIndex(USERS, { fields: ['name'] });
 
-    expect(() => index.search('', { limit: -1 })).toThrow(ScoutConfigurationError);
-    expect(() => createIndex(USERS, { fields: ['name'], limit: -5 })).toThrow(ScoutConfigurationError);
+    expect(() => index.search('', { limit: -1 })).toThrow(ScoutConfigError);
+    expect(() => createIndex(USERS, { fields: ['name'], limit: -5 })).toThrow(ScoutConfigError);
   });
 
   test('non-ASCII scripts are searchable (CJK, Cyrillic, accented Latin)', () => {
@@ -564,7 +564,7 @@ describe('configuration validation', () => {
     [{ fields: ['name'], minQueryLength: 0 }, 'minQueryLength'],
     [{ fields: ['name'], minQueryLength: Number.POSITIVE_INFINITY }, 'minQueryLength'],
   ] as Array<[Record<string, unknown>, string]>)('rejects invalid index %s configuration', (options) => {
-    expect(() => createIndex([{ name: 'Alice' }], options as never)).toThrow(ScoutConfigurationError);
+    expect(() => createIndex([{ name: 'Alice' }], options as never)).toThrow(ScoutConfigError);
   });
 
   test.each([
@@ -574,7 +574,7 @@ describe('configuration validation', () => {
   ] as Array<[Record<string, unknown>, string]>)('rejects invalid per-search %s override', (options) => {
     const index = createIndex([{ name: 'Alice' }], { fields: ['name'] });
 
-    expect(() => index.search('alice', options as never)).toThrow(ScoutConfigurationError);
+    expect(() => index.search('alice', options as never)).toThrow(ScoutConfigError);
   });
 });
 
@@ -614,17 +614,17 @@ describe('ScoutError — named subclasses', () => {
   it('each subclass is instanceof ScoutError and Error', () => {
     expect(new ScoutDisposedError('disposed')).toBeInstanceOf(ScoutError);
     expect(new ScoutDisposedError('disposed')).toBeInstanceOf(Error);
-    expect(new ScoutConfigurationError('index')).toBeInstanceOf(ScoutError);
+    expect(new ScoutConfigError('index')).toBeInstanceOf(ScoutError);
   });
 
   it('each subclass has the correct .name', () => {
     expect(new ScoutDisposedError('').name).toBe('ScoutDisposedError');
-    expect(new ScoutConfigurationError('').name).toBe('ScoutConfigurationError');
+    expect(new ScoutConfigError('').name).toBe('ScoutConfigError');
   });
 
   it('preserves the cause via ErrorOptions', () => {
     const cause = new Error('underlying failure');
-    const err = new ScoutConfigurationError('wrapped', { cause });
+    const err = new ScoutConfigError('wrapped', { cause });
 
     expect(err.cause).toBe(cause);
   });

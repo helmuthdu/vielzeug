@@ -5,7 +5,7 @@ package: wayfinder
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createHashHistory, createMemoryHistory, redirectTo, WayfinderError, WayfinderApiError, WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError]
+exports: [createRouter, createBrowserHistory, createHashHistory, createMemoryHistory, redirectTo, WayfinderError, WayfinderApiError, WayfinderConfigError, WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -123,6 +123,7 @@ router.dispose();
 - `data()` — Receives cancellation through `AbortSignal` for in-flight loaders.
 - `beforeLeave()` — Blocks route exits before history changes.
 - `match()` / `load()` — Inspect routes synchronously or load detached route data without navigation.
+- `url()` / `href()` — Build base-aware URLs and anchor-ready hrefs for every history driver.
 - `preload()` — Warms and reuses loader results for the next matching client navigation.
 - `createViewRegistry()` — Resolves exhaustive typed route views with an explicit not-found fallback.
 - `scroll` / `viewTransition` — Coordinate browser effects at the navigation commit boundary.

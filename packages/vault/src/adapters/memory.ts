@@ -1,10 +1,21 @@
-import { buildKeyValueStore, type StorageBackend } from '../adapter-core';
+import {
+  assertBatchTables,
+  batchScopeGuard,
+  buildDocumentStore,
+  buildOperations,
+  type StorageBackend,
+} from '../adapter-core';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import { isExpired, parseStored, type StoredRecord } from '../ttl';
-import type { AnySchema, KeyValueVaultStore, MemoryStoreOptions, RecordOf } from '../types';
+import type { AnySchema, DocumentVaultStore, MemoryStoreOptions, RecordOf } from '../types';
 
-/** Memory uses tagged Map keys so numeric and string primary keys never collide. */
-export function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>): KeyValueVaultStore<S> {
+/**
+ * Creates an in-memory document store. Memory uses tagged Map keys so numeric and string
+ * primary keys never collide. `batch()` snapshots the declared tables and restores them when
+ * the callback throws; because memory writes never await real I/O, the rollback is exact as
+ * long as the callback does not interleave external writes between its `await`s.
+ */
+export function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>): DocumentVaultStore<S> {
   const { schema } = options;
   const tables = new Map(Object.keys(schema).map((table) => [table, new Map<string, StoredRecord<unknown>>()]));
   const getTable = (table: string): Map<string, StoredRecord<unknown>> => tables.get(table)!;
@@ -81,5 +92,35 @@ export function createMemory<S extends AnySchema>(options: MemoryStoreOptions<S>
     },
   };
 
-  return buildKeyValueStore(schema, core, options);
+  return buildDocumentStore(schema, core, {
+    ...options,
+    createBatch: (deps) => async (declaredTables, fn) => {
+      assertBatchTables(declaredTables);
+
+      const snapshots = new Map(declaredTables.map((tableName) => [tableName, new Map(getTable(tableName))]));
+      const dirty = new Set<keyof S & string>();
+      const tx = buildOperations(
+        schema,
+        core,
+        (table) => {
+          // Record the dirty table; observers are notified once at commit, not per operation.
+          dirty.add(table);
+        },
+        deps.validate,
+        batchScopeGuard(declaredTables),
+      );
+
+      try {
+        const result = await fn(tx);
+
+        for (const table of dirty) deps.notifyMutation(table);
+
+        return result;
+      } catch (error) {
+        for (const [tableName, snapshot] of snapshots) tables.set(tableName, snapshot);
+
+        throw error;
+      }
+    },
+  });
 }

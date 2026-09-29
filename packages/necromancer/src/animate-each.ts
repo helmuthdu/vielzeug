@@ -1,8 +1,8 @@
 import { uniqueElements } from './_elements';
 import { createAnimationGroup } from './_handle';
-import { withStaggeredDelay } from './_motion';
 import { animate } from './animate';
 import { NecromancerConfigError } from './errors';
+import { withStaggeredDelay } from './motion';
 import type { AnimateEachOptions, AnimationGroup, AnimationHandle, KeyframeFactory, Keyframes } from './types';
 
 function validateStagger(stagger: number): void {

@@ -1,6 +1,6 @@
 import { createAnimationHandle } from './_handle';
-import { resolveAnimationOptions, shouldReduceMotion } from './_motion';
 import { NecromancerUnsupportedError } from './errors';
+import { resolveAnimationOptions, shouldReduceMotion } from './motion';
 import type { AnimateOptions, AnimationHandle, Keyframes } from './types';
 
 /**

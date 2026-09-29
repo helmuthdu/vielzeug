@@ -9,6 +9,9 @@ exports:
     createKeymap,
     findShortcutConflicts,
     formatShortcut,
+    matchKey,
+    detectModKey,
+    KeymapConfigError,
     KeymapError,
     KeymapParseError,
   ]
@@ -111,7 +114,7 @@ map.dispose();
 - `tap()` — observe chord progress, timeout, matches, and disposal without changing behavior
 - `modKey` option — explicit platform override for SSR and cross-platform tests
 - `formatShortcut()` — platform-aware display (`⇧⌘P` on Mac, `Ctrl+Shift+P` elsewhere)
-- `@vielzeug/keymap/parse` subpath — `parseShortcut()`, `parseStep()`, `matchStep()`, `canonicalizeShortcut()`, `detectModKey()` for custom tooling
+- `@vielzeug/keymap/parse` subpath — `parseShortcut()`, `parseStep()`, `matchStep()`, `matchKey()`, `canonicalizeShortcut()`, `detectModKey()` for custom tooling
 - `listBindings()` — snapshot all active bindings (id, shortcut, trigger, preventDefault, stopPropagation) for palette UIs
 - `findShortcutConflicts()` — detect prefix/duplicate conflicts before binding a user-customized shortcut
 - Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations

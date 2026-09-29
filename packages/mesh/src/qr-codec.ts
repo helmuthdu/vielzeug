@@ -1,33 +1,29 @@
 import { base45ToBytes, bytesToBase45 } from './_base45';
-import { base64UrlToBytes } from './_base64';
 import { compactSdp, restoreSdp } from './_sdp';
-import { meshCodec, parsePairingPayload } from './codec';
+import { isRecord, meshCodec, parsePairingPayload } from './codec';
 import { MeshPairingError, MeshUnsupportedError } from './errors';
 import type { MeshAnswer, MeshInvitation } from './types';
+
+interface QrCodec {
+  decode(text: string): Promise<MeshInvitation | MeshAnswer>;
+  encode(payload: MeshInvitation | MeshAnswer): Promise<string>;
+}
 
 /**
  * QR-friendly async codec. `encode` emits `"mq2."` payloads: the SDP is
  * reduced to the fields the remote needs (see `_sdp.ts`), the JSON is
  * deflate-raw compressed (`CompressionStream`), and the bytes are base45 —
  * an alphabet inside the QR alphanumeric charset, so encoders use ~5.5
- * bits/char instead of 8. Roughly half the QR modules of `mq1.` on realistic
- * SDP payloads.
+ * bits/char instead of 8.
  *
- * `decode` accepts `"mq2."`, `"mq1."` (deflate + base64url), and plain
- * `meshCodec` output — a guest can paste or scan interchangeably.
+ * `decode` accepts `"mq2."` and plain `meshCodec` output — a guest can paste
+ * or scan interchangeably.
  *
  * CompressionStream is required; feature-detected at call time so importing is
  * always safe.
  */
 
-const PREFIX = 'mq1.';
 const PREFIX_V2 = 'mq2.';
-
-/** Async variant of {@link MeshCodec} — compression APIs are stream-based. */
-export interface MeshAsyncCodec {
-  decode(text: string): Promise<MeshInvitation | MeshAnswer>;
-  encode(payload: MeshInvitation | MeshAnswer): Promise<string>;
-}
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -75,11 +71,7 @@ async function pump(
   return out;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-export const meshQrCodec: MeshAsyncCodec = {
+export const meshQrCodec: QrCodec = {
   async decode(text) {
     const trimmed = text.trim();
     if (trimmed.startsWith(PREFIX_V2)) {
@@ -95,19 +87,8 @@ export const meshQrCodec: MeshAsyncCodec = {
       if (isRecord(parsed)) parsed = { ...parsed, sdp: restoreSdp(parsed.sdp) };
       return parsePairingPayload(parsed);
     }
-    if (!trimmed.startsWith(PREFIX)) {
-      // Plain meshCodec output — paste and scan stay interchangeable.
-      return meshCodec.decode(trimmed);
-    }
-    let parsed: unknown;
-    try {
-      const compressed = base64UrlToBytes(trimmed.slice(PREFIX.length));
-      parsed = JSON.parse(decoder.decode(await pump(compressed, decompressionStream('deflate-raw'))));
-    } catch (cause) {
-      if (cause instanceof MeshUnsupportedError) throw cause;
-      throw new MeshPairingError('Malformed pairing payload', { cause });
-    }
-    return parsePairingPayload(parsed);
+    // Plain meshCodec output — paste and scan stay interchangeable.
+    return meshCodec.decode(trimmed);
   },
   async encode(payload) {
     const compact = compactSdp(payload.sdp);

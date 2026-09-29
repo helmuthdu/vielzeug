@@ -25,7 +25,7 @@ export type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
  *
  * Option chain: `AnimateOptions` -> `AnimateEachOptions` (+`stagger`) -> `LayoutAnimationOptions`
  * (+`elements`). Each layer's implementation module strips only the field it added before
- * forwarding the rest down (see `animate-each.ts`, `layout.ts`, and `_motion.ts`'s
+ * forwarding the rest down (see `animate-each.ts`, `layout.ts`, and `motion.ts`'s
  * `resolveAnimationOptions()`, which is the last stop and strips `motion`/`signal`).
  */
 export type AnimateOptions = KeyframeAnimationOptions & {

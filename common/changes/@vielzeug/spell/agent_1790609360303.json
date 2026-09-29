@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add tolerate() to accept and strip removed record fields",
+      "packageName": "@vielzeug/spell",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

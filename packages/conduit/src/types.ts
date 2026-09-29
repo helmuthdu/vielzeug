@@ -1,21 +1,15 @@
 declare const tokenBrand: unique symbol;
-declare const scopeBrand: unique symbol;
 
 export type Token<T = unknown> = symbol & { readonly [tokenBrand]: T };
-export type ScopeToken = symbol & { readonly [scopeBrand]: true };
 
 export function token<T>(description: string): Token<T> {
   return Symbol(description) as Token<T>;
 }
 
-export function scope(name: string): ScopeToken {
-  return Symbol(name) as ScopeToken;
-}
-
 export const disposalSignalToken = token<AbortSignal>('Conduit disposal signal');
 
-/** Singleton results are cached on the registering container; transient results belong to the requesting container; a `ScopeToken` caches on the matching child scope. */
-export type Lifetime = 'singleton' | 'transient' | ScopeToken;
+/** Singleton results are cached on the registering container; transient results belong to the requesting container. */
+export type Lifetime = 'singleton' | 'transient';
 
 export type InferTokens<T extends readonly Token<unknown>[]> = {
   [K in keyof T]: T[K] extends Token<infer Value> ? Value : never;
@@ -48,6 +42,14 @@ export type Provider<T = unknown, Dependencies extends readonly Token<unknown>[]
   | ValueProvider<T>
   | FactoryProvider<T, Dependencies>;
 
+/**
+ * Type-erased provider for the heterogeneous lists accepted by
+ * `createContainer()` and `createScope()`. Providers are invariant in their
+ * value type, so erasure needs `any` at this one boundary; registration
+ * re-validates every provider at runtime.
+ */
+export type AnyProvider = Provider<any, any>;
+
 export function valueProvider<T>(token: Token<T>, value: NoInfer<T>, options: ValueOptions<T> = {}): ValueProvider<T> {
   return Object.freeze({ ...options, token, value });
 }
@@ -73,11 +75,18 @@ export type InferServices<M extends ServiceMap> = {
   readonly [K in keyof M]: M[K] extends Token<infer Value> ? Value : never;
 };
 
+export type CreateScopeOptions = Readonly<{
+  name?: string;
+  providers?: readonly AnyProvider[];
+}>;
+
 export interface Container {
-  createScope(
-    scope?: ScopeToken,
-    options?: { readonly name?: string; readonly providers?: readonly Provider<any, any>[] },
-  ): Container;
+  /**
+   * Create a child container that inherits parent registrations. Providers
+   * registered on the child are local to it, which is how request-scoped
+   * values are spelled: one child per request.
+   */
+  createScope(options?: CreateScopeOptions): Container;
   readonly disposalSignal: AbortSignal;
   dispose(): Promise<void>;
   readonly disposed: boolean;

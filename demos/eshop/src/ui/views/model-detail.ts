@@ -12,12 +12,14 @@ import '../components/share-build-dialog';
 import '../components/animated-price';
 import '../components/model-card';
 
+import { shouldReduceMotion } from '@vielzeug/necromancer';
 import { define, html, prop, when } from '@vielzeug/ore';
+import { eventFieldValue } from '@vielzeug/refine';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { buildConfigurationUrl } from '../../core/build-url';
 import { compareModelIds, savedModelIds } from '../../core/cart-store';
 import { getModelBySlug, modelsSignal } from '../../core/catalog';
-import { controlValue } from '../../core/control-value';
+
 import { currentCurrency, displayAmount, displayAmountToUsd, formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
 import { addToCart, toggleCompare, toggleSavedModel } from '../../core/history';
@@ -164,7 +166,7 @@ define<ModelConfiguratorProps>('model-configurator', {
         const scrollerRect = paintScroller.getBoundingClientRect();
         const controlRect = control.getBoundingClientRect();
         paintScroller.scrollTo({
-          behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          behavior: shouldReduceMotion('system') ? 'auto' : 'smooth',
           left:
             paintScroller.scrollLeft +
             controlRect.left -
@@ -179,7 +181,7 @@ define<ModelConfiguratorProps>('model-configurator', {
     };
 
     function onTrimChange(event: Event): void {
-      const nextTrimId = controlValue(event);
+      const nextTrimId = eventFieldValue(event);
 
       if (!nextTrimId || !model().trims.some((trim) => trim.id === nextTrimId)) return;
 
@@ -200,7 +202,7 @@ define<ModelConfiguratorProps>('model-configurator', {
     }
 
     function onWheelChange(event: Event): void {
-      const next = controlValue(event);
+      const next = eventFieldValue(event);
 
       if (!next || !model().wheels.some((wheel) => wheel.id === next)) return;
 
@@ -236,7 +238,7 @@ define<ModelConfiguratorProps>('model-configurator', {
 
       section.focus({ preventScroll: true });
       section.scrollIntoView({
-        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        behavior: shouldReduceMotion('system') ? 'auto' : 'smooth',
         block: 'center',
       });
     }
@@ -544,7 +546,7 @@ define<ModelConfiguratorProps>('model-configurator', {
               max=${() => financeMaximumDisplay.value}
               value=${() => financeDownPaymentDisplay.value}
               @input=${(event: Event) => {
-                const next = Math.max(0, Math.min(financeMaximumDisplay.value, Number(controlValue(event)) || 0));
+                const next = Math.max(0, Math.min(financeMaximumDisplay.value, Number(eventFieldValue(event)) || 0));
 
                 financeDownPaymentEdited.value = true;
                 financeDownPaymentUsd.value = displayAmountToUsd(next.toFixed(2));
@@ -554,7 +556,7 @@ define<ModelConfiguratorProps>('model-configurator', {
               options=${FINANCE_TERM_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
               value=${() => String(financeTermMonths.value)}
               @change=${(event: Event) => {
-                const next = Number(controlValue(event));
+                const next = Number(eventFieldValue(event));
 
                 if (FINANCE_TERM_OPTIONS.includes(next)) financeTermMonths.value = next;
               }}></ore-select>

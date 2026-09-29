@@ -1,8 +1,8 @@
+import { shouldReduceMotion } from '@vielzeug/necromancer';
 import { define, getHost, html, onCleanup, onMounted, prop } from '@vielzeug/ore';
 import { effect } from '@vielzeug/ripple';
 
 import { formatPrice } from '../../core/currency';
-import { prefersReducedMotion } from '../../core/motion';
 
 const TWEEN_DURATION_MS = 400;
 
@@ -49,7 +49,7 @@ define<AnimatedPriceProps>('animated-price', {
 
         cancelAnimationFrame(raf);
 
-        if (displayed === null || prefersReducedMotion()) {
+        if (displayed === null || shouldReduceMotion('system')) {
           displayed = target;
           render(target);
 

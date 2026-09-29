@@ -56,6 +56,8 @@ export function createHashHistory(options: HashHistoryOptions = {}): HistoryDriv
     back() {
       window.history.back();
     },
+    /** Anchor-ready form of an internal URL: the hash driver stores routes behind `#`. */
+    href: destination,
     get location() {
       return location();
     },
@@ -71,6 +73,16 @@ export function createHashHistory(options: HashHistoryOptions = {}): HistoryDriv
       window.history.replaceState(state, '', destination(url));
     },
   };
+}
+
+/**
+ * Picks the history driver for a deployment base path: a site at the origin root
+ * (`'/'`) gets real History-API paths; an app deployed under a sub-path
+ * (`import.meta.env.BASE_URL` like `'/demos/primal/'`) gets the hash driver, so
+ * deep links survive a static host that cannot rewrite the base path to the app.
+ */
+export function createHistoryForBase(base: string): HistoryDriver {
+  return base === '/' ? createBrowserHistory() : createHashHistory({ base });
 }
 
 type MemoryLocation = { hash: string; pathname: string; search: string; state: unknown };

@@ -1,14 +1,11 @@
 export const roleHierarchyExample = {
   code: `import { createWard } from '@vielzeug/ward'
 
-// Simulate role hierarchy via condition callbacks
-const hasRole = (role: string) => ({ principal }: { principal?: { roles: readonly string[] } | null }) =>
-  principal?.roles.includes(role) ?? false
-
+// Roles are declarative data on each rule — no condition callbacks needed
 const ward = createWard([
   { action: 'read',   resource: 'posts', effect: 'allow' },
-  { action: 'update', resource: 'posts', effect: 'allow', condition: hasRole('editor') },
-  { action: 'delete', resource: 'posts', effect: 'allow', condition: hasRole('admin') },
+  { action: 'update', resource: 'posts', effect: 'allow', roles: ['editor'] },
+  { action: 'delete', resource: 'posts', effect: 'allow', roles: ['admin'] },
 ])
 
 const editor = { id: 'u1', roles: ['editor'] }

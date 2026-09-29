@@ -64,7 +64,8 @@ ripple.batch(() => {
 
 Ripple propagates every synchronous write before flushing effects. Each flush pass runs effects queued at its
 start before direct `subscribe()` listeners queued at its start. Work queued by either runs in a later pass.
-Effects using `scheduler: 'microtask'` join a later microtask and coalesce writes made before that task runs.
+Effects coalesce writes made inside the same synchronous flush: a `batch()` (or any writes during a flush) produces a single effect run.
+Each `subscribe()` registration fires once per flush, even when several subscriptions share one callback function.
 
 ```ts
 const count = ripple.signal(0);
@@ -72,14 +73,13 @@ const log: string[] = [];
 
 ripple.effect(() => log.push(`effect: ${count.value}`));
 count.subscribe(() => log.push(`listener: ${count.value}`));
-ripple.effect(() => log.push(`deferred: ${count.value}`), { scheduler: 'microtask' });
 
 log.length = 0; // Ignore synchronous creation runs.
-count.value = 1;
-console.log(log); // ['effect: 1', 'listener: 1']
-
-await Promise.resolve();
-console.log(log); // ['effect: 1', 'listener: 1', 'deferred: 1']
+ripple.batch(() => {
+  count.value = 1;
+  count.value = 2;
+});
+console.log(log); // ['effect: 2', 'listener: 2']
 ```
 
 ## Ownership with Scopes
@@ -104,7 +104,7 @@ Disposed owned nodes detach from their parent immediately, so long-lived graphs 
 
 ## Watch Selected Values
 
-Use `watch()` for one selected output. Reactive reads made only inside its callback are untracked. `{ once: true }` disposes after the first callback invocation even when that callback throws. Use `effect()` when every callback read should be a dependency.
+Use `watch()` for one selected output. Reactive reads made only inside its callback are untracked. For one-shot observation, dispose the returned handle from inside the callback; with `immediate: true` the callback runs before the handle exists, so do the first invocation at the call site. Use `effect()` when every callback read should be a dependency.
 
 ```ts
 const stopWatch = ripple.watch(

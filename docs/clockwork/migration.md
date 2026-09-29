@@ -4,11 +4,11 @@ title: Clockwork Migration
 
 # Clockwork 3.0 Migration
 
-Clockwork 3.0 simplifies machine-failure handling, isolates consumer observers, and hardens compiled definitions and snapshots. The descriptive `MachineSnapshot` name remains public.
+Clockwork 3.0 unifies actor observation behind `tap()`, replaces error codes with error subtypes, and hardens compiled definitions and snapshots. The descriptive `MachineSnapshot` name remains public.
 
-## Remove `ActorErrorDisposition`
+## Replace `onError` with `actor.tap()`
 
-`ActorOptions.onError` no longer returns `'continue'` or `'dispose'`. Reducer, guard, effect, invoke, timer, and transition-limit failures are fail-stop and always dispose the actor after observation.
+`ActorOptions.onError` is gone. Runtime failures are fail-stop: reducer, guard, effect, invoke, timer, and transition-limit failures always dispose the actor after observation. Observation now happens through `actor.tap()`, which also reports transitions, ignored events, and disposal.
 
 ```ts
 // Before
@@ -20,16 +20,35 @@ const actor = machine.createActor({
 });
 
 // After
-const actor = machine.createActor({
-  onError(error, context) {
-    report(error, context);
-  },
+const actor = machine.createActor();
+actor.tap((event) => {
+  if (event.type === 'error') report(event.error, event);
 });
 ```
 
-Subscriber failures are observational rather than machine failures: they are reported through `onError`, remaining subscribers and declared effects continue, and the actor stays active. Errors thrown by `onError` itself are swallowed so observation cannot change synchronous, timer, or invoke behavior.
+Subscriber failures are observational rather than machine failures: they are reported as `error` tap events with `phase: 'subscriber'`, remaining subscribers and declared effects continue, and the actor stays active. Errors thrown by a tap handler are swallowed so observation cannot change synchronous, timer, or invoke behavior.
+
+`maxTransitions` is no longer an actor option. The queued-transition limit is a fixed internal guard against runaway loops.
 
 `actor.can()` applies the fatal transition policy when a guard throws and returns `false` after disposal. The pure `machine.can()` method still throws guard failures directly.
+
+## Narrow errors with subtypes
+
+`ClockworkError` no longer carries a `code` string. It is the base class for three subtypes, so `instanceof` replaces string matching:
+
+```ts
+// Before
+if (error instanceof ClockworkError) {
+  report(error.code, error.details);
+}
+
+// After
+if (error instanceof ClockworkDefinitionError) {
+  report('definition', error.details);
+}
+```
+
+`ClockworkDefinitionError` covers definition validation, `ClockworkSnapshotError` covers snapshot, context, and reducer results, and `ClockworkTransitionLimitError` covers the queued-transition limit.
 
 ## Treat snapshots as immutable values
 
@@ -54,18 +73,6 @@ Delayed transitions accept finite values from `0` through `2,147,483,647` millis
 ## Clockwork 2.0 Migration
 
 Clockwork 2.0 removed the redundant `ClockworkError.is()` type guard. Use `instanceof ClockworkError` to narrow unknown errors.
-
-```ts
-// Before
-if (ClockworkError.is(error)) {
-  report(error.code, error.details);
-}
-
-// After
-if (error instanceof ClockworkError) {
-  report(error.code, error.details);
-}
-```
 
 Malformed runtime events remain ignored. Active actors emit a development warning when input is not an object with a string `type`; valid unhandled events remain silent.
 

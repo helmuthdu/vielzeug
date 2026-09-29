@@ -3,7 +3,7 @@ export const wildcardPermissionsExample = {
 
 // Wildcards match any action or resource
 const ward = createWard([
-  { action: WILDCARD, resource: WILDCARD, effect: 'allow', condition: ({ principal }) => principal?.roles.includes('admin') ?? false },
+  { action: WILDCARD, resource: WILDCARD, effect: 'allow', roles: ['admin'] },
   { action: 'read',   resource: WILDCARD, effect: 'allow' },
   { action: WILDCARD, resource: WILDCARD, effect: 'deny' },
 ])

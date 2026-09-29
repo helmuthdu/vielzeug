@@ -19,7 +19,7 @@ export type EmitFn<T extends Record<string, unknown>> = {
   <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): boolean;
 };
 
-const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false };
+const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: true };
 
 /**
  * Returns a typed `emit()` function bound to the current component's host element.
@@ -31,9 +31,12 @@ const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false 
  * that need to know whether a listener cancelled an event (e.g. to skip a default
  * action) read this return value directly instead of hand-rolling `dispatchEvent`.
  *
- * Events do **not** cross the shadow boundary by default (`composed: false`) — a
- * listener outside the component's shadow root will not observe them. Dispatch a
- * `CustomEvent` with `composed: true` by hand if an event must escape the shadow root.
+ * Events are dispatched `bubbles: true, composed: true` — the same convention as
+ * `ore:error` and native form-control re-dispatches. A listener on the host, an
+ * ancestor, or `document` observes the event even when the component is nested
+ * inside another component's shadow root, so composed events integrate with
+ * document-level and framework (e.g. React synthetic) listeners without an
+ * escape hatch.
  *
  * @example
  * ```ts

@@ -52,13 +52,12 @@ Attribute values support finite numbers, strings, booleans, `null`, arrays, and 
 
 ```ts
 const canPublishOwnPost = predicate.and<Attributes>(
-  predicate.hasRole<Attributes>('editor'),
   predicate.owns<Attributes>('authorId'),
   ({ attributes }) => attributes?.status === 'draft',
 );
 ```
 
-Conditions are synchronous. A thrown error, Promise, or non-boolean result becomes a `WardConditionError` with the original value in `cause`.
+Conditions are synchronous. A thrown error, Promise, or non-boolean result becomes a `WardConditionError` with the original value in `cause`. Role gating does not need a condition — declare `roles` on the rule.
 
 ## Bind a principal
 
@@ -70,10 +69,12 @@ permissions.checkAll([
   { action: 'read', attributes, resource: 'posts' },
   { action: 'update', attributes, resource: 'posts' },
 ]);
-permissions.allowedActions({ attributes, knownActions: ['read', 'update'], resource: 'posts' });
+permissions.allowedActions({ attributes, resource: 'posts' });
 ```
 
 `forPrincipal()` snapshots the principal, roles, and principal attributes. Later caller mutations cannot alter bound decisions.
+
+`allowedActions()` draws from `ward.knownActions` — the exact allow-side actions derived from the compiled rules — and accepts an optional `filter` to narrow the candidates.
 
 ## Observe decisions
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: remove custom serialize/deserialize options; JSON wire format only",
+      "packageName": "@vielzeug/mesh",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

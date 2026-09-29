@@ -4,10 +4,10 @@ import { fileURLToPath } from 'node:url';
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
 import { type DefaultTheme, defineConfig, type UserConfig } from 'vitepress';
-import { buildVielzeugSrcAliases } from '../../scripts/vielzeug-packages';
-import { componentPreviewPlugin } from './plugins/component-preview/index';
-import type { ThemeConfig } from './theme/types';
-import { getPackagesData } from './theme/utils/packageData';
+import { buildVielzeugSrcAliases } from '../../scripts/vielzeug-packages.ts';
+import { componentPreviewPlugin } from './plugins/component-preview/index.ts';
+import type { ThemeConfig } from './theme/types.ts';
+import { getPackagesData } from './theme/utils/packageData.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGES_DIR = resolve(__dirname, '../../packages');
@@ -509,7 +509,7 @@ export default defineConfig({
             { link: '/conduit/usage#basic-usage', text: 'Basic Usage' },
             { link: '/conduit/usage#define-dependencies', text: 'Dependencies' },
             { link: '/conduit/usage#choose-lifetimes', text: 'Lifetimes' },
-            { link: '/conduit/usage#create-named-scopes', text: 'Scopes' },
+            { link: '/conduit/usage#scope-work-to-child-containers', text: 'Child Containers' },
             { link: '/conduit/usage#validate-startup-wiring', text: 'Validation' },
             { link: '/conduit/usage#dispose-resources', text: 'Disposal' },
             { link: '/conduit/usage#testing', text: 'Testing' },
@@ -522,7 +522,7 @@ export default defineConfig({
           items: [
             { link: '/conduit/api#api-overview', text: 'Overview' },
             { link: '/conduit/api#package-entry-point', text: 'Entry Point' },
-            { link: '/conduit/api#tokens-and-scopes', text: 'Tokens and Scopes' },
+            { link: '/conduit/api#tokens', text: 'Tokens' },
             { link: '/conduit/api#container', text: 'Container' },
             { link: '/conduit/api#types', text: 'Types' },
             { link: '/conduit/api#errors', text: 'Errors' },
@@ -535,7 +535,7 @@ export default defineConfig({
             { link: '/conduit/examples/basic-setup', text: 'Basic Setup' },
             { link: '/conduit/examples/lifetimes', text: 'Lifetimes' },
             { link: '/conduit/examples/async-providers', text: 'Async Providers' },
-            { link: '/conduit/examples/named-scopes', text: 'Named Scopes' },
+            { link: '/conduit/examples/child-containers', text: 'Child Containers' },
             { link: '/conduit/examples/dispose-lifecycle', text: 'Disposal' },
             { link: '/conduit/examples/startup-hardening', text: 'Validation' },
           ],
@@ -1063,6 +1063,7 @@ export default defineConfig({
             { link: '/lingua/api#package-entry-point', text: 'Entry Point' },
             { link: '/lingua/api#createtranslator', text: 'createTranslator()' },
             { link: '/lingua/api#createi18n', text: 'createI18n()' },
+            { link: '/lingua/api#createreactivei18n', text: 'createReactiveI18n()' },
             { link: '/lingua/api#validation', text: 'Validation' },
             { link: '/lingua/api#validatecatalog', text: 'validateCatalog()' },
             { link: '/lingua/api#types', text: 'Types' },
@@ -1114,7 +1115,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/mesh/examples/getting-started', text: 'Getting Started' },
+            { link: '/mesh/examples/pair-two-devices', text: 'Pair Two Devices' },
             { link: '/mesh/examples/host-authoritative-command-loop', text: 'Host-Authoritative Command Loop' },
           ],
           link: '/mesh/examples',
@@ -1425,6 +1426,7 @@ export default defineConfig({
             { link: '/pulse/api#scoped-handles', text: 'Scoped Handles' },
             { link: '/pulse/api#types', text: 'Types' },
             { link: '/pulse/api#errors', text: 'Errors' },
+            { link: '/pulse/api#testing-apis', text: 'Testing Utilities' },
           ],
           link: '/pulse/api',
           text: 'API Reference',
@@ -1518,6 +1520,7 @@ export default defineConfig({
                 { link: '/refine/components/card', text: 'Card' },
                 { link: '/refine/components/carousel', text: 'Carousel' },
                 { link: '/refine/components/chat-message', text: 'Chat Message' },
+                { link: '/refine/components/chat-panel', text: 'Chat Panel' },
                 { link: '/refine/components/code-window', text: 'Code Window' },
                 { link: '/refine/components/copy-command', text: 'Copy Command' },
                 { link: '/refine/components/icon', text: 'Icon' },
@@ -1939,7 +1942,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/sigil/examples/getting-started', text: 'Getting Started' },
+            { link: '/sigil/examples/themed-svg-qr-code', text: 'Themed SVG QR Code' },
             { link: '/sigil/examples/pair-two-devices', text: 'Pair Two Devices' },
           ],
           link: '/sigil/examples',
@@ -2003,7 +2006,6 @@ export default defineConfig({
             { link: '/spell/usage#introspection-round-trips-and-json-schema', text: 'Introspection & JSON Schema' },
             { link: '/spell/usage#messages', text: 'Messages' },
             { link: '/spell/usage#working-with-validation-errors', text: 'Validation Errors' },
-            { link: '/spell/usage#schema-traversal-with-walk', text: 'Schema Traversal' },
             { link: '/spell/usage#framework-integration', text: 'Framework Integration' },
             { link: '/spell/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
             { link: '/spell/usage#best-practices', text: 'Best Practices' },
@@ -2033,9 +2035,52 @@ export default defineConfig({
             { link: '/spell/examples/async', text: 'Async Business Rules' },
             { link: '/spell/examples/introspection', text: 'Schema Introspection & Round-Trips' },
             { link: '/spell/examples/unions', text: 'Unions, Intersections & Variants' },
-            { link: '/spell/examples/walk', text: 'Schema Traversal with walk()' },
           ],
           link: '/spell/examples',
+          text: 'Examples',
+        },
+      ],
+      '/tavern/': [
+        { link: '/tavern/', text: 'Overview' },
+        {
+          items: [
+            { link: '/tavern/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/tavern/usage#host-a-subject', text: 'Host a Subject' },
+            { link: '/tavern/usage#join-as-a-guest', text: 'Join as a Guest' },
+            { link: '/tavern/usage#relay-notices', text: 'Relay Notices' },
+            {
+              link: '/tavern/usage#handle-pairing-mistakes',
+              text: 'Pairing Mistakes',
+            },
+            {
+              link: '/tavern/usage#working-with-other-vielzeug-libraries',
+              text: 'Vielzeug Integration',
+            },
+            { link: '/tavern/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/tavern/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/tavern/api#api-overview', text: 'Overview' },
+            { link: '/tavern/api#package-entry-point', text: 'Entry Point' },
+            { link: '/tavern/api#hosttavernoptions', text: 'hostTavern()' },
+            { link: '/tavern/api#jointavernoptions', text: 'joinTavern()' },
+            { link: '/tavern/api#types', text: 'Types' },
+            { link: '/tavern/api#errors', text: 'Errors' },
+          ],
+          link: '/tavern/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            {
+              link: '/tavern/examples/share-state-across-devices',
+              text: 'Share State Across Devices',
+            },
+          ],
+          link: '/tavern/examples',
           text: 'Examples',
         },
       ],
@@ -2111,7 +2156,6 @@ export default defineConfig({
         {
           items: [
             { link: '/vault/examples/crud', text: 'CRUD' },
-            { link: '/vault/examples/querying', text: 'Querying' },
             { link: '/vault/examples/ttl', text: 'TTL and Pruning' },
             { link: '/vault/examples/reactive', text: 'Reactive Tables' },
             { link: '/vault/examples/batch', text: 'Batch Writes' },
@@ -2211,8 +2255,10 @@ export default defineConfig({
             { link: '/wayfinder/api#route-table', text: 'Route Table' },
             { link: '/wayfinder/api#route-definition', text: 'Route Definition' },
             { link: '/wayfinder/api#createbrowserhistory', text: 'createBrowserHistory()' },
+            { link: '/wayfinder/api#createhistoryforbase-base', text: 'createHistoryForBase()' },
             { link: '/wayfinder/api#creatememoryhistoryinitialpath', text: 'createMemoryHistory()' },
             { link: '/wayfinder/api#router', text: 'Router' },
+            { link: '/wayfinder/api#createroutesignals-router', text: 'createRouteSignals()' },
             { link: '/wayfinder/api#redirecttotarget-options', text: 'redirectTo()' },
             { link: '/wayfinder/api#types', text: 'Types' },
             { link: '/wayfinder/api#errors', text: 'Errors' },

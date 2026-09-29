@@ -31,13 +31,13 @@ All `do()`, `undo()`, `redo()`, and `clear()` calls join one submission-order qu
 
 ## Read Atomic State
 
-`state` is a framework-neutral `LedgerReadable`, not a Ripple signal. Read `value` or `peek()`, and subscribe to invalidation callbacks.
+`state` is a framework-neutral `Subscribable`, not a Ripple signal. Read `getSnapshot()`, and subscribe to invalidation callbacks.
 
 ```ts
 function renderHistory(): void {
-  const { accepting, queued, redo, running, undo } = ledger.state.value;
-  undoButton.disabled = undo.length === 0 || !accepting;
-  redoButton.disabled = redo.length === 0 || !accepting;
+  const { queued, redo, running, undo } = ledger.state.getSnapshot();
+  undoButton.disabled = undo.length === 0 || ledger.disposed;
+  redoButton.disabled = redo.length === 0 || ledger.disposed;
   spinner.hidden = queued + running === 0;
 }
 
@@ -63,7 +63,7 @@ await ledger.do({
   revert: () => { form.email = previous; },
 });
 
-console.log(ledger.state.value.undo.at(-1));
+console.log(ledger.state.getSnapshot().undo.at(-1));
 ```
 
 Ledger snapshots command callbacks, label, and metadata references when `do()` is submitted. Later mutation of the command object does not replace the captured callbacks.
@@ -131,6 +131,27 @@ await operation.catch(handleHistoryFailure);
 
 If active user code ignores cancellation and finishes, Ledger rejects with `LedgerCancelledError` and does not record or move history. It does not compensate partial effects automatically, so command implementations must check or forward `context.signal` before committing changes.
 
+## Record Externally Executed Work
+
+When a synchronous store owns its writes, execute first and record the reversible entry afterwards: `undo()` calls the recorded `revert`, `redo()` calls the recorded `apply` — so `apply` must be able to re-apply the effect.
+
+```ts
+const previous = item.name;
+
+item.name = next; // the store's own synchronous write
+ledger.record({
+  apply: () => {
+    item.name = next;
+  },
+  label: 'rename item',
+  revert: () => {
+    item.name = previous;
+  },
+});
+```
+
+Recording is synchronous and shares `do()`'s bookkeeping: it clears redo history and evicts the oldest entry beyond `maxHistory`.
+
 ## Limit and Clear History
 
 `maxHistory` defaults to `100` and accepts non-negative safe integers. Successful commands beyond the cap evict the oldest undo entries. `0` executes commands without retaining undo or redo history.
@@ -155,7 +176,7 @@ await operation.catch(handleHistoryFailure);
 await idle;
 ```
 
-Disposal is permanent and idempotent. It immediately sets `accepting: false`, clears history, aborts active contexts, and rejects queued work with `LedgerDisposedError`. Active operations settle cooperatively; `whenIdle()` waits for them. Work that never settles can keep `whenIdle()` pending.
+Disposal is permanent and idempotent. It clears history, aborts active contexts, rejects queued work with `LedgerDisposedError`, and rejects pending `whenIdle()` waiters. Read `disposed` to detect it. Active operations settle cooperatively; `whenIdle()` waits for them. Work that never settles can keep `whenIdle()` pending.
 
 ## Framework Integration
 
@@ -171,8 +192,8 @@ export function UndoStatus() {
   const ledger = useMemo(() => createLedger(), []);
   const state = useSyncExternalStore(
     (notify) => ledger.state.subscribe(notify),
-    () => ledger.state.value,
-    () => ledger.state.value,
+    () => ledger.state.getSnapshot(),
+    () => ledger.state.getSnapshot(),
   );
 
   useEffect(() => () => ledger.dispose(), [ledger]);
@@ -185,8 +206,8 @@ import { onUnmounted, shallowRef } from 'vue';
 import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
-const state = shallowRef(ledger.state.value);
-const stop = ledger.state.subscribe(() => { state.value = ledger.state.value; });
+const state = shallowRef(ledger.state.getSnapshot());
+const stop = ledger.state.subscribe(() => { state.value = ledger.state.getSnapshot(); });
 
 onUnmounted(() => {
   stop();
@@ -199,8 +220,8 @@ import { signal } from '@vielzeug/ripple';
 import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
-const state = signal(ledger.state.value);
-const stop = ledger.state.subscribe(() => { state.value = ledger.state.value; });
+const state = signal(ledger.state.getSnapshot());
+const stop = ledger.state.subscribe(() => { state.value = ledger.state.getSnapshot(); });
 
 function dispose(): void {
   stop();

@@ -1,3 +1,5 @@
+import { backoff } from '@vielzeug/arsenal';
+
 /**
  * Create a child `AbortController` that aborts as soon as `parent` does.
  * Handles the case where `parent` is already aborted at call time — a plain
@@ -51,7 +53,5 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
  * @internal
  */
 export function defaultReconnectDelay(attempt: number, maxMs = 30_000): number {
-  const base = Math.min(1000 * 2 ** attempt, maxMs);
-
-  return Math.random() * base;
+  return Math.random() * backoff(attempt, maxMs);
 }

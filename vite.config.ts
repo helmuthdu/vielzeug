@@ -112,6 +112,9 @@ export const getConfig = (
         output: {
           preserveModules,
           ...(preserveModules && { preserveModulesRoot: resolve(__dirname, 'src') }),
+          // keepNames preserves class names so `this.name = new.target.name`
+          // error classes report correct names in shipped bundles.
+          minify: { compress: { keepNames: { class: true, function: true } }, mangle: { keepNames: true } },
         },
       },
       sourcemap: true,
@@ -160,7 +163,9 @@ export const getBundleConfig = (__dirname: string, options: BundleOptions) => {
         ...(external?.length ? { external } : {}),
         output: {
           ...(Object.keys(globals).length ? { globals } : {}),
-          minify: true,
+          // keepNames preserves class names so `this.name = new.target.name`
+          // error classes report correct names in shipped bundles.
+          minify: { compress: { keepNames: { class: true, function: true } }, mangle: { keepNames: true } },
         },
       },
       sourcemap: true,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ScrollConfigurationError } from '../errors';
+import { ScrollConfigError } from '../errors';
 import { createGridVirtualizer } from '../grid-virtualizer';
 import { flushMicrotasks, makeContainer } from './test-utils';
 
@@ -15,10 +15,10 @@ describe('createGridVirtualizer – configuration', () => {
     const el = makeGrid();
 
     expect(() => createGridVirtualizer(el, { colCount: 1, estimateRowSize: 20, rowCount: -1 })).toThrow(
-      ScrollConfigurationError,
+      ScrollConfigError,
     );
     expect(() => createGridVirtualizer(el, { colCount: 1, colGap: -1, estimateRowSize: 20, rowCount: 1 })).toThrow(
-      ScrollConfigurationError,
+      ScrollConfigError,
     );
   });
 });

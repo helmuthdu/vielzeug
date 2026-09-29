@@ -8,7 +8,7 @@ export class ScrollError extends Error {
 }
 
 /** Thrown when a virtualizer receives an invalid static configuration. */
-export class ScrollConfigurationError extends ScrollError {}
+export class ScrollConfigError extends ScrollError {}
 
 /** Thrown when a virtual-list index is out of bounds. */
 export class ScrollRangeError extends ScrollError {}

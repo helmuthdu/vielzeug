@@ -245,6 +245,12 @@
       "projectFolder": "packages/sigil",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/tavern",
+      "projectFolder": "packages/tavern",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

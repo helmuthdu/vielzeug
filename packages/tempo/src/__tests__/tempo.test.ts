@@ -14,6 +14,7 @@ import {
   formatRange,
   formatRangeParts,
   formatRelative,
+  formatTimer,
   formatZoned,
   humanize,
   inTimeZone,
@@ -390,6 +391,43 @@ describe('parseDuration / formatDuration', () => {
 
   it('formats a zero duration', () => {
     expect(formatDuration('PT0S')).toMatch(/^0/);
+  });
+});
+
+describe('formatTimer', () => {
+  it('formats minutes and seconds under an hour', () => {
+    expect(formatTimer('PT47M12S')).toBe('47:12');
+    expect(formatTimer('PT5M')).toBe('5:00');
+    expect(formatTimer('PT0S')).toBe('0:00');
+  });
+
+  it('formats hours once the duration reaches an hour', () => {
+    expect(formatTimer('PT1H2M35S')).toBe('1:02:35');
+    expect(formatTimer({ hours: 25, minutes: 1, seconds: 2 })).toBe('25:01:02');
+  });
+
+  it('formats milliseconds input by truncating sub-second parts', () => {
+    expect(formatTimer({ milliseconds: 3_753_000 })).toBe('1:02:33');
+    expect(formatTimer({ milliseconds: 5_999 })).toBe('0:05');
+  });
+
+  it('clamps negative durations to zero', () => {
+    expect(formatTimer({ seconds: -90 })).toBe('0:00');
+  });
+
+  it('folds days into hours as 24-hour days', () => {
+    expect(formatTimer({ days: 1, hours: 2, minutes: 3, seconds: 4 })).toBe('26:03:04');
+  });
+
+  it('always renders the hours part when requested', () => {
+    expect(formatTimer('PT5M', { hours: 'always' })).toBe('0:05:00');
+    expect(formatTimer('PT47M12S', { hours: 'always' })).toBe('0:47:12');
+  });
+
+  it('rejects durations larger than days', () => {
+    expect(() => formatTimer('P1W')).toThrow(TempoInvalidInputError);
+    expect(() => formatTimer({ months: 1 })).toThrow(TempoInvalidInputError);
+    expect(() => formatTimer({ years: 1 })).toThrow(TempoInvalidInputError);
   });
 });
 

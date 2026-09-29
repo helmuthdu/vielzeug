@@ -9,7 +9,7 @@ exports:
     createIndex,
     createReactiveSearch,
     createSearch,
-    ScoutConfigurationError,
+    ScoutConfigError,
     ScoutDisposedError,
     ScoutError,
     findMatchRanges,

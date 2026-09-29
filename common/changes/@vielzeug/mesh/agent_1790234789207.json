@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Drop legacy mq1 QR pairing decode; mq2 and plain meshCodec payloads remain",
+      "packageName": "@vielzeug/mesh",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

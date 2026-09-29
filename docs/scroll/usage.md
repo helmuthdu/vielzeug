@@ -297,7 +297,7 @@ console.log(virt.scrollOffset);
 
 ## Updating Options
 
-When data or render strategy changes, call `update()` with one or more option fields. Updates apply atomically and trigger re-render when needed. Counts, gaps, and overscan must be finite non-negative integers; numeric size estimates must be finite positive values; offsets and `scrollEndDelay` must be finite non-negative numbers. Invalid constructor or `update()` values throw `ScrollConfigurationError` before any change applies.
+When data or render strategy changes, call `update()` with one or more option fields. Updates apply atomically and trigger re-render when needed. Counts, gaps, and overscan must be finite non-negative integers; numeric size estimates must be finite positive values; offsets and `scrollEndDelay` must be finite non-negative numbers. Invalid constructor or `update()` values throw `ScrollConfigError` before any change applies.
 
 Runtime layout data stays resilient: estimator callbacks that throw or return invalid sizes fall back to the default estimate, stale measurements are ignored, and out-of-range navigation clamps or no-ops.
 
@@ -530,27 +530,31 @@ function remount(nextScrollContainerEl: HTMLElement) {
 
 ## Keyboard Navigation
 
-Enable keyboard-based scrolling with the `keyboardScroll` option. Users can navigate lists using Arrow keys, Page Up/Down, Home, and End.
+Scroll ships no built-in key handler — keyboard scrolling is navigation policy, and the virtualizer already exposes everything it needs: `scrollToIndex()`. Compose it with your own focus tracking, or with `matchKey` from `@vielzeug/keymap` for one key vocabulary across the app:
 
 ```ts
-const virt = createVirtualizer(scrollEl, {
-  count: 1000,
-  estimateSize: 36,
-  keyboardScroll: true, // Enable keyboard navigation
-  onChange: render,
+import { createVirtualizer } from '@vielzeug/scroll';
+import { matchKey } from '@vielzeug/keymap';
+
+let focusedIndex = 0;
+
+scrollEl.addEventListener('keydown', (event) => {
+  if (matchKey(event, 'ArrowDown')) focusedIndex = Math.min(focusedIndex + 1, count - 1);
+  else if (matchKey(event, 'ArrowUp')) focusedIndex = Math.max(focusedIndex - 1, 0);
+  else if (matchKey(event, 'Home')) focusedIndex = 0;
+  else if (matchKey(event, 'End')) focusedIndex = count - 1;
+  else return;
+
+  event.preventDefault();
+  virt.scrollToIndex(focusedIndex, { align: 'auto' });
 });
 ```
 
-**Supported keys:**
-- **Arrow Up/Down** (or Left/Right for horizontal lists) — Scroll by one estimated item height
-- **Page Up/Down** — Scroll by ~80% of viewport height
-- **Home** — Jump to the start of the list
-- **End** — Jump to the end of the list
-
 **Requirements:**
-- The scroll container (or a descendant) must have keyboard focus for events to fire
-- Works with all factories: `createVirtualizer`, `createDomVirtualList`, `createGroupedVirtualizer`, `createGridVirtualizer`
-- Arrow key step size is automatically calculated from your `estimateSize` (or `estimateRowSize`/`estimateColSize` for grids)
+- The scroll container (or a descendant) must have keyboard focus for events to fire — give it `tabindex="0"`
+- `align: 'auto'` scrolls only when the item is outside the visible area
+
+See the [Keyboard Navigation example](./examples/keyboard-navigation.md) for the full pattern with focus highlighting.
 
 ## Auto-Measurement
 

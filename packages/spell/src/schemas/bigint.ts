@@ -1,17 +1,10 @@
 import { warn } from '../_dev';
-import type { CheckContext, MessageFn, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 
-export class BigIntSchema<Input = bigint, Mode extends SchemaMode = 'sync'> extends Schema<bigint, Input, Mode> {
+export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   protected override get _kind(): string {
     return 'bigint';
-  }
-
-  override checkAsync(
-    this: BigIntSchema<Input, 'sync'>,
-    fn: (value: bigint, ctx: CheckContext) => Promise<ValidateResult>,
-  ): BigIntSchema<Input, 'async'> {
-    return this._addCheck(fn, true) as unknown as BigIntSchema<Input, 'async'>;
   }
 
   constructor() {
@@ -110,12 +103,6 @@ export class BigIntSchema<Input = bigint, Mode extends SchemaMode = 'sync'> exte
         { step },
       );
     });
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    if (visitor.bigint) return visitor.bigint(this);
-
-    return super._walk(visitor);
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

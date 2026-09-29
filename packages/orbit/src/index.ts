@@ -27,7 +27,7 @@ export { limitShift, shift } from './middleware/shift';
 export type { SizeOptions } from './middleware/size';
 export { size } from './middleware/size';
 // Overflow helpers
-export { detectOverflow, getClippingAncestorRect } from './overflow';
+export { detectOverflow, getBoundaryRect, getClippingAncestorRect } from './overflow';
 // Preset types (functions live on the @vielzeug/orbit/presets sub-path)
 export type { PositioningPreset, PresetOptions } from './presets';
 // Types

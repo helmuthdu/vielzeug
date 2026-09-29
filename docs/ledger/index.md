@@ -4,7 +4,7 @@ description: Serialized reversible command history with cancellation ownership a
 package: ledger
 category: utilities
 keywords: [undo, redo, history, commands, async, reactive, ripple]
-exports: [compose, createLedger, LedgerError, LedgerCancelledError, LedgerConfigurationError, LedgerDisposedError, LedgerExecutionError, LedgerRollbackError]
+exports: [compose, createLedger, LedgerError, LedgerCancelledError, LedgerConfigError, LedgerDisposedError, LedgerExecutionError, LedgerRollbackError]
 related: [ripple, keymap, forge, vault]
 environments: [browser, node, ssr, deno]
 ---
@@ -35,7 +35,7 @@ await ledger.undo();
 | Reversible history | Manual arrays | <ore-icon name="check" size="16"></ore-icon> |
 | Serialized async work | Manual queue | <ore-icon name="check" size="16"></ore-icon> |
 | Queue cancellation | Manual ownership | Abort-aware lifecycle |
-| Framework-neutral state | Manual events | Structural `LedgerReadable<LedgerState>` |
+| Framework-neutral state | Manual events | Structural `Subscribable<LedgerState>` |
 | Composition | Custom transaction code | `compose()` |
 
 <div class="decision-callout">
@@ -81,7 +81,7 @@ await ledger.do({
 });
 
 await ledger.undo();
-console.log(ledger.state.value.undo.length); // 0
+console.log(ledger.state.getSnapshot().undo.length); // 0
 ledger.dispose();
 ```
 

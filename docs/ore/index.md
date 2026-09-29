@@ -5,7 +5,7 @@ package: ore
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, refine, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, unsafeHtml, useField, createId, OreError, OreApiError, OreInternalError, OreLifecycleError, AttributeBindings, BindOptions]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, unsafeHtml, useField, createId, OreError, OreApiError, OreInternalError, OreLifecycleError, AttributeBindings, BindOptions, MaybeReactive]
 environments: [browser]
 ---
 

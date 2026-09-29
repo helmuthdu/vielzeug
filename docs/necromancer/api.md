@@ -12,6 +12,7 @@ description: API reference for @vielzeug/necromancer animation ownership, groups
 | `animate()` | Animate one element | Sync | Omitted timing fields use native WAAPI behavior |
 | `animateEach()` | Animate a unique element group | Sync | Non-zero `stagger` needs numeric `delay` |
 | `captureLayout()` | Capture positions and create a one-shot FLIP transition | Sync | Capture before changing layout |
+| `shouldReduceMotion()` | Report whether a motion mode reduces visible movement | Sync | `'system'` reads `prefers-reduced-motion`; false without `matchMedia` |
 | `NecromancerError` | Base package error | Sync | Use `instanceof NecromancerError` to narrow unknown errors |
 
 ## Package Entry Point
@@ -82,6 +83,20 @@ const group = animateEach(document.querySelectorAll<HTMLElement>('.item'), [{ op
   stagger: 30,
 });
 await group.results;
+```
+
+### `shouldReduceMotion()`
+
+```ts
+function shouldReduceMotion(mode: MotionMode): boolean;
+```
+
+Reports whether the requested motion preference reduces visible movement — the same check `animate()` applies internally, exposed so hand-rolled effects (scroll behavior, tweens) stay consistent with it. `'full'` is always `false`, `'reduced'` is always `true`, and `'system'` reads the `prefers-reduced-motion` media query (`false` where `matchMedia` is unavailable).
+
+```ts
+import { shouldReduceMotion } from '@vielzeug/necromancer';
+
+element.scrollIntoView({ behavior: shouldReduceMotion('system') ? 'auto' : 'smooth' });
 ```
 
 ## Layout Functions

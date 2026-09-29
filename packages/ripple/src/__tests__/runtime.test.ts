@@ -129,6 +129,40 @@ describe('ripple graph', () => {
     ripple.dispose();
   });
 
+  it('fires each subscription once per flush even when they share one callback', () => {
+    const ripple = createRipple();
+    const first = ripple.signal(0);
+    const second = ripple.signal(0);
+    let calls = 0;
+    const listener = () => {
+      calls++;
+    };
+
+    const stopFirst = first.subscribe(listener);
+    const stopSecond = second.subscribe(listener);
+
+    ripple.batch(() => {
+      first.value = 1;
+      second.value = 1;
+    });
+
+    expect(calls).toBe(2);
+
+    // One subscription whose signal is written twice in a batch still fires once.
+    calls = 0;
+
+    ripple.batch(() => {
+      first.value = 2;
+      first.value = 3;
+    });
+
+    expect(calls).toBe(1);
+
+    stopFirst();
+    stopSecond();
+    ripple.dispose();
+  });
+
   it('runs listeners before effects queued by earlier effects in same flush', () => {
     const ripple = createRipple();
     const source = ripple.signal(0);
@@ -154,40 +188,35 @@ describe('ripple graph', () => {
     ripple.dispose();
   });
 
-  it('coalesces microtask effects after synchronous writes', async () => {
+  it('coalesces writes made inside a batch into one effect run', () => {
     const ripple = createRipple();
     const count = ripple.signal(0);
     const values: number[] = [];
 
-    ripple.effect(
-      () => {
-        values.push(count.value);
-      },
-      { scheduler: 'microtask' },
-    );
-    count.value = 1;
-    count.value = 2;
+    ripple.effect(() => {
+      values.push(count.value);
+    });
+    ripple.batch(() => {
+      count.value = 1;
+      count.value = 2;
+    });
 
-    expect(values).toEqual([0]);
-    await Promise.resolve();
     expect(values).toEqual([0, 2]);
     ripple.dispose();
   });
 
-  it('does not run a queued microtask effect after disposal', async () => {
+  it('does not run a disposed effect when a pending write flushes', () => {
     const ripple = createRipple();
     const count = ripple.signal(0);
     const values: number[] = [];
-    const stop = ripple.effect(
-      () => {
-        values.push(count.value);
-      },
-      { scheduler: 'microtask' },
-    );
+    const stop = ripple.effect(() => {
+      values.push(count.value);
+    });
 
-    count.value = 1;
-    stop.dispose();
-    await Promise.resolve();
+    ripple.batch(() => {
+      count.value = 1;
+      stop.dispose();
+    });
 
     expect(values).toEqual([0]);
     ripple.dispose();
@@ -371,18 +400,38 @@ describe('ripple graph', () => {
 });
 
 describe('bound helpers', () => {
-  it('watches explicit source with immediate and once options', () => {
+  it('watches explicit source with the immediate option', () => {
     const ripple = createRipple();
     const count = ripple.signal(1);
     const values: Array<[number, number | undefined]> = [];
-    const stop = ripple.watch(count, (value, previous) => values.push([value, previous]), {
-      immediate: true,
-      once: true,
+    const stop = ripple.watch(count, (value, previous) => values.push([value, previous]), { immediate: true });
+
+    count.value = 2;
+    count.value = 3;
+    stop.dispose();
+    count.value = 4;
+
+    expect(values).toEqual([
+      [1, undefined],
+      [2, 1],
+      [3, 2],
+    ]);
+    ripple.dispose();
+  });
+
+  it('supports caller-managed one-shot watching via the returned handle', () => {
+    const ripple = createRipple();
+    const count = ripple.signal(1);
+    const values: number[] = [];
+    const stop = ripple.watch(count, (value) => {
+      values.push(value);
+      stop.dispose();
     });
 
     count.value = 2;
+    count.value = 3;
 
-    expect(values).toEqual([[1, undefined]]);
+    expect(values).toEqual([2]);
     expect(stop.disposed).toBe(true);
     ripple.dispose();
   });

@@ -104,9 +104,17 @@ export type ActorErrorContext<State extends string, Event extends MachineEvent> 
   readonly state: State;
 };
 
-export type ActorOptions<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
-  readonly maxTransitions?: number;
-  readonly onError?: (error: unknown, context: ActorErrorContext<State, Event>) => void;
+/** Observation event delivered to {@link Actor.tap} handlers. */
+export type ActorTapEvent<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> =
+  | (ActorErrorContext<State, Event> & { readonly error: unknown; readonly type: 'error' })
+  | {
+      readonly event: Event | undefined;
+      readonly snapshot: MachineSnapshot<State, Context>;
+      readonly type: 'transition' | 'ignored';
+    }
+  | { readonly type: 'dispose' };
+
+export type ActorOptions<State extends string, Context extends Record<string, unknown>> = {
   readonly snapshot?: MachineSnapshot<State, Context>;
 };
 
@@ -119,11 +127,19 @@ export type Actor<State extends string, Context extends Record<string, unknown>,
   send(event: Event): void;
   readonly snapshot: MachineSnapshot<State, Context>;
   subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
+  /**
+   * Observe actor lifecycle without affecting machine behavior.
+   * Handler errors are swallowed. Returns an unsubscribe function.
+   */
+  tap(
+    handler: (event: ActorTapEvent<State, Context, Event>) => void,
+    options?: { readonly signal?: AbortSignal },
+  ): () => void;
 };
 
 export type Machine<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   can(snapshot: MachineSnapshot<State, Context>, event: Event): boolean;
-  createActor(options?: ActorOptions<State, Context, Event>): Actor<State, Context, Event>;
+  createActor(options?: ActorOptions<State, Context>): Actor<State, Context, Event>;
   readonly initialSnapshot: MachineSnapshot<State, Context>;
   transition(snapshot: MachineSnapshot<State, Context>, event: Event): TransitionResult<State, Context>;
 };

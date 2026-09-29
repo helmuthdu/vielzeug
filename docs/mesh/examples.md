@@ -5,5 +5,5 @@ description: Practical examples and recipes for @vielzeug/mesh.
 
 ## Examples
 
-- [Getting Started](./examples/getting-started.md)
+- [Pair Two Devices](./examples/pair-two-devices.md)
 - [Host-Authoritative Command Loop](./examples/host-authoritative-command-loop.md)

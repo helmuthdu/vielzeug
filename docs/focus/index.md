@@ -3,8 +3,8 @@ title: Focus — Navigation and restoration
 description: Framework-neutral list navigation and focus restoration primitives.
 package: focus
 category: input
-keywords: [focus, roving, keyboard, accessibility, list navigation]
-exports: [createListNavigation, captureFocus, restoreFocus]
+keywords: [focus, roving, keyboard, accessibility, list navigation, grid navigation]
+exports: [createListNavigation, createGridNavigation, captureFocus, restoreFocus, rescueFocus]
 related: [refine, keymap, ore]
 environments: [browser]
 ---
@@ -35,6 +35,7 @@ list.addEventListener('keydown', (event) => {
 | Bundle size | n/a | <PackageInfo package="focus" type="size" /> |
 | Zero dependencies | n/a | <ore-icon name="check" size="16"></ore-icon> |
 | RTL mirroring | Manual | Built in |
+| Grid navigation | Flat only | `createGridNavigation()` |
 | Typeahead | Manual | Optional via `typeahead` |
 | Focus restoration | Manual capture | `captureFocus()` / `restoreFocus()` |
 
@@ -87,10 +88,11 @@ container.removeEventListener('keydown', onKeydown);
 <div class="features-grid">
 
 - `createListNavigation()` — pure composite navigation with explicit handled/change results
+- `createGridNavigation()` — two-dimensional arrow-key navigation with fixed or measured columns
 - Orientation and direction support — vertical/horizontal/both with LTR/RTL defaults
 - Dynamic item queries — disabled filtering and loop control
 - Optional typeahead — label-based navigation in key-driven lists
-- `captureFocus()` and `restoreFocus()` — explicit return-focus helpers
+- `captureFocus()`, `restoreFocus()`, and `rescueFocus()` — explicit return-focus and unmount-rescue helpers
 
 </div>
 

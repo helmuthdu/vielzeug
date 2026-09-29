@@ -1,4 +1,4 @@
-import { buildKeyValueStore, type StorageBackend } from '../adapter-core';
+import { buildVaultStore, type StorageBackend } from '../adapter-core';
 import { decodeRecord, encodeRecord } from '../codec';
 import { VaultError, VaultQuotaError } from '../errors';
 import {
@@ -16,11 +16,6 @@ const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REA
 
 type WebStorageOptions<S extends AnySchema> = DurableStoreOptions<S> & {
   name: string;
-  /**
-   * Called when localStorage/sessionStorage quota is exceeded on a write.
-   * Return `'ignore'` to silently drop the write, or `'throw'` (default) to rethrow the error.
-   */
-  onQuotaExceeded?: (table: keyof S, error: VaultQuotaError) => 'ignore' | 'throw';
 };
 
 function createWebStorageAdapter<S extends AnySchema>(
@@ -29,7 +24,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     storageLabel: string;
   },
 ): KeyValueVaultStore<S> {
-  const { getStorage, name, onQuotaExceeded, schema, storageLabel, codecs } = options;
+  const { getStorage, name, schema, storageLabel, codecs } = options;
 
   if (!codecs) {
     throw new VaultError(`${storageLabel} requires codecs for durable persistence`);
@@ -59,18 +54,12 @@ function createWebStorageAdapter<S extends AnySchema>(
     return cached;
   };
 
-  const writeItem = (table: keyof S, storageKey: string, value: unknown): void => {
+  const writeItem = (storageKey: string, value: unknown): void => {
     try {
       storage().setItem(storageKey, JSON.stringify(value));
     } catch (error) {
       if (error instanceof DOMException && QUOTA_ERROR_NAMES.has(error.name)) {
-        const wrappedError = new VaultQuotaError(`${storageLabel} quota exceeded while writing record`, {
-          cause: error,
-        });
-
-        if (onQuotaExceeded?.(table, wrappedError) === 'ignore') return;
-
-        throw wrappedError;
+        throw new VaultQuotaError(`${storageLabel} quota exceeded while writing record`, { cause: error });
       }
 
       throw error;
@@ -232,7 +221,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
       const encoded = encodeRecord(codecs[table], value);
 
-      writeItem(table, storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
+      writeItem(storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
       ownedKeys.add(storageKey);
     },
 
@@ -243,13 +232,13 @@ function createWebStorageAdapter<S extends AnySchema>(
         const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
         const encoded = encodeRecord(codecs[table], value);
 
-        writeItem(table, storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
+        writeItem(storageKey, expiresAt === undefined ? { value: encoded } : { expiresAt, value: encoded });
         ownedKeys.add(storageKey);
       }
     },
   };
 
-  return buildKeyValueStore(schema, core, {
+  return buildVaultStore(schema, core, {
     codecs,
     onCrossTabMessage(notify) {
       if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {

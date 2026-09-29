@@ -37,6 +37,7 @@ Jump to the packages most relevant to your work.
 | Accessible overlays, menus, or list widgets     | [Focus](/focus/) → [Refine](#refine)                          |
 | Swipe interactions and touch-first UI            | [Gesture](/gesture/) → [Refine](#refine) → [Dnd](/dnd/)       |
 | Test fixtures or mock data                       | [Illusionist](/illusionist/) → [Coins](/coins/) → [Tempo](/tempo/) |
+| A table or couch app with shared state           | [Tavern](/tavern/) → [Mesh](/mesh/) → [Ripple](#ripple)         |
 
 ## Core
 
@@ -256,7 +257,7 @@ Composable push streams with explicit buffering and adapters for Vielzeug primit
 
 ```typescript
 import { debounce, filter, map, pipe } from '@vielzeug/flux';
-import { createChannel } from '@vielzeug/flux/subjects';
+import { createChannel } from '@vielzeug/flux';
 
 const subject = createChannel<string>();
 
@@ -274,25 +275,27 @@ subject.send('hello'); // after 300 ms: hello
 
 ### Ward
 
-Role-based access control — typed permissions, wildcard patterns, and composable predicates.
+Role-based access control — ordered rules, declarative roles, wildcard patterns, and composable predicates.
 
 ```typescript
-import { createWard, owns } from '@vielzeug/ward';
+import { allow, createWard, predicate, WILDCARD } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'admin', resource: 'posts', action: '*', effect: 'allow' },
-  { role: 'user', resource: 'posts', action: 'create', effect: 'allow' },
-  { role: 'user', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
+  allow('admin', 'posts', [WILDCARD]),
+  allow('user', 'posts', ['create']),
+  allow('user', 'posts', ['update'], { when: predicate.owns('authorId') }),
 ]);
 
-if (!ward.can(currentUser, 'posts', 'delete')) throw new ForbiddenError();
+if (ward.decide({ action: 'delete', principal: currentUser, resource: 'posts' }).effect !== 'allow') {
+  throw new ForbiddenError();
+}
 ```
 
 [Ward docs →](/ward/)
 
 ### Conduit
 
-Lightweight dependency injection — singletons, transient instances, factories, and named scopes.
+Lightweight dependency injection — singletons, transient instances, factories, and child containers.
 
 ```typescript
 import { createContainer, token } from '@vielzeug/conduit';
@@ -333,6 +336,9 @@ const api = await container.resolve(ApiToken);
 | **[Tempo](/tempo/)**             | Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting            |
 | **[Coins](/coins/)**             | Bigint-based monetary arithmetic with currency formatting and rounding policies                    |
 | **[Assay](/assay/)**             | Framework-agnostic DOM testing primitives — scoped queries, event dispatch, and async waiting      |
+| **[Mesh](/mesh/)**               | Backendless P2P WebRTC sessions with manual pairing — invitation/answer codes, typed protocols      |
+| **[Sigil](/sigil/)**             | SVG QR code generation and camera scanning with a unified result shape                            |
+| **[Tavern](/tavern/)**           | Table session replication over mesh — one host owns the state, guests mirror and forward commands |
 
 ## Packages That Work Well Together
 
@@ -364,6 +370,8 @@ const api = await container.resolve(ApiToken);
 | **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values — bind directly to UI templates       |
 | **Illusionist + Coins**     | `commerce.price()` and `finance.amount()` return coins `Money` — format, add, or allocate directly          |
 | **Illusionist + Tempo**     | `date.past()` / `future()` / `recent()` return tempo `Temporal.ZonedDateTime` — shift, compare, or format   |
+| **Tavern + Ledger**         | Commands applied through the tavern host table land in the ledger — remote actions get undo like local ones |
+| **Tavern + Herald**         | Use a Herald bus as the notice stream tavern relays — typed keys cross the wire, each client translates     |
 | **Postmaster + Courier**    | Wrap Courier mutations in Postmaster jobs so writes survive reloads and retry on network failure            |
 
 ## Philosophy

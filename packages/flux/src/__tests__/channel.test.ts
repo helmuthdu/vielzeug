@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createChannel } from '../subjects';
+import { createChannel } from '../index';
 
 describe('createChannel()', () => {
   it('multicasts through a read-only stream', () => {

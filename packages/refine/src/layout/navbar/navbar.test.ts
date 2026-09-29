@@ -200,13 +200,13 @@ describe('ore-navbar', () => {
   it('shows mobile toggle and controls external sidebar when mobile-sidebar is set', async () => {
     const originalMatchMedia = window.matchMedia;
     const sidebar = document.createElement('ore-sidebar') as HTMLElement & {
-      toggleMobile?: () => void;
+      toggleDrawer?: () => void;
     };
 
     sidebar.id = 'external-sidebar';
-    sidebar.toggleMobile = vi.fn(() => {
-      sidebar.toggleAttribute('data-mobile-open');
-      sidebar.dispatchEvent(new CustomEvent('mobile-open-change'));
+    sidebar.toggleDrawer = vi.fn(() => {
+      sidebar.toggleAttribute('data-drawer-open');
+      sidebar.dispatchEvent(new CustomEvent('drawer-change'));
     });
     document.body.append(sidebar);
 
@@ -229,7 +229,7 @@ describe('ore-navbar', () => {
       fireClick(btn!);
       await fixture.flush();
 
-      expect(sidebar.toggleMobile).toHaveBeenCalledTimes(1);
+      expect(sidebar.toggleDrawer).toHaveBeenCalledTimes(1);
       expect(btn?.getAttribute('aria-expanded')).toBe('true');
     } finally {
       sidebar.remove();

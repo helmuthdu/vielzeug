@@ -38,6 +38,11 @@
       "import": "./dist/cache/index.js",
       "require": "./dist/cache/index.cjs"
     },
+    "./encoding": {
+      "types": "./dist/encoding/index.d.ts",
+      "import": "./dist/encoding/index.js",
+      "require": "./dist/encoding/index.cjs"
+    },
     "./function": {
       "types": "./dist/function/index.d.ts",
       "import": "./dist/function/index.js",
@@ -80,6 +85,9 @@
       "cache": [
         "dist/cache/index.d.ts"
       ],
+      "encoding": [
+        "dist/encoding/index.d.ts"
+      ],
       "function": [
         "dist/function/index.d.ts"
       ],
@@ -118,9 +126,9 @@
     "verify:exports": "node ./scripts/sync-exports.mjs --check"
   },
   "devDependencies": {
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.2",
     "typescript": "^6.0.3",
-    "vite": "^8.2.2",
-    "vitest": "^5.0.0"
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   }
 }

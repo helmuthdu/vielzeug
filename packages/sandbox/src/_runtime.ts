@@ -25,6 +25,7 @@ export function createSandbox<State extends object = Record<string, unknown>>(
   const channel = createChannel();
   const styles: Record<string, string> = { ...normalized.styles };
   const listeners = new Set<(message: SandboxMessage) => void>();
+  const pendingState: Partial<State> = {};
   const controller = new AbortController();
   let iframe: HTMLIFrameElement | null = null;
   let disposed = false;
@@ -88,6 +89,7 @@ export function createSandbox<State extends object = Record<string, unknown>>(
       case MSG_READY:
         supersedePendingRender();
         bridgeReady = true;
+        flushPendingState();
         break;
       case MSG_RESIZE:
         if (typeof event.data.height === 'number' && Number.isFinite(event.data.height) && event.data.height >= 0) {
@@ -182,6 +184,12 @@ export function createSandbox<State extends object = Record<string, unknown>>(
     iframe?.contentWindow?.postMessage(envelope(currentBootstrap(), message), '*');
   }
 
+  function flushPendingState(): void {
+    if (!bridgeReady || !iframe?.contentWindow || Object.keys(pendingState).length === 0) return;
+
+    send({ record: { ...pendingState }, type: MSG_STATE_UPDATE_ALL });
+  }
+
   function setState(update: Partial<State>): void {
     if (disposed) {
       warn('setState() called on a disposed sandbox.');
@@ -189,15 +197,11 @@ export function createSandbox<State extends object = Record<string, unknown>>(
       return;
     }
 
-    if (!iframe?.contentWindow) {
-      warn('setState() called before render() — sandbox has no document yet.');
+    Object.assign(pendingState, update);
 
-      return;
+    if (bridgeReady && iframe?.contentWindow && Object.keys(update).length > 0) {
+      send({ record: update, type: MSG_STATE_UPDATE_ALL });
     }
-
-    if (!bridgeReady) warn('setState() called before ready — state updates may be lost. Await render() first.');
-
-    if (Object.keys(update).length > 0) send({ record: update, type: MSG_STATE_UPDATE_ALL });
   }
 
   function replaceBody(html: string): void {

@@ -81,6 +81,21 @@ export const restoreFocus = (target: FocusTarget, options: RestoreFocusOptions =
   return focusAndVerify(fallback, options.preventScroll);
 };
 
+/**
+ * Hands focus to `target` when focus has been lost to the document body — the state left
+ * behind when the focused element unmounts mid-swap (browsing a dialog, paging a list),
+ * where keydown would never reach a handler and every shortcut dies. Returns `true` when
+ * focus was rescued; `false` when focus is already on a real element or the target cannot
+ * take focus (the `fallback` option of {@link RestoreFocusOptions} still applies).
+ */
+export const rescueFocus = (target: FocusTarget, options: RestoreFocusOptions = {}): boolean => {
+  const active = getDeepActiveElement(document);
+
+  if (active && active !== document.body) return false;
+
+  return restoreFocus(target, options);
+};
+
 export const captureFocus = (options: CaptureFocusOptions = {}): FocusRestorer => {
   let captured = getDeepActiveElement(document) as FocusableElement | null;
   let available = !options.signal?.aborted;

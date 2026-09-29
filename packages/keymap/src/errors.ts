@@ -9,3 +9,6 @@ export class KeymapError extends Error {
 
 /** Thrown when a shortcut string cannot be parsed — ambiguous or invalid key step. */
 export class KeymapParseError extends KeymapError {}
+
+/** Thrown when keymap configuration is invalid, such as a non-positive `chordTimeout`. */
+export class KeymapConfigError extends KeymapError {}

@@ -28,7 +28,7 @@ const second = await container.resolve(Transient);
 
 ### Pitfalls
 
-Singletons cache successful values on the registering container; failed attempts may retry. Transients belong to the requesting container for disposal. A singleton cannot depend on transient or scoped factories.
+Singletons cache successful values on the registering container; failed attempts may retry. Transients belong to the requesting container for disposal. A singleton cannot depend on a transient factory.
 
 ### Related
 

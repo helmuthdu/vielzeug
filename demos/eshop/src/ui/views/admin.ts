@@ -6,12 +6,13 @@ import '@vielzeug/refine/icon';
 import '@vielzeug/refine/checkbox';
 
 import { define, each, html, onCleanup, onMounted, ref, when } from '@vielzeug/ore';
+import { eventFieldValue } from '@vielzeug/refine';
 import type { BarChartConfig, ChartHandle } from '@vielzeug/prism';
 import { createBarChart } from '@vielzeug/prism';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { canAccessAdmin } from '../../core/auth';
 import { getReportService } from '../../core/container';
-import { controlValue } from '../../core/control-value';
+
 import { formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
 import { formatOrderStatus, formatShortDate } from '../../core/format';
@@ -106,12 +107,12 @@ define('admin-view', {
     });
 
     const onSearch = (event: Event): void => {
-      searchSignal.value = controlValue(event) ?? '';
+      searchSignal.value = eventFieldValue(event) ?? '';
       pageSignal.value = 1;
     };
 
     const onStatusChange = (order: Order, event: Event): void => {
-      const status = controlValue(event);
+      const status = eventFieldValue(event);
 
       if (status && isOrderStatus(status)) void attemptUpdateOrderStatus(order, status);
     };
@@ -175,7 +176,7 @@ define('admin-view', {
               options=${statusOptions}
               value=${() => bulkStatus.value}
               @change=${(event: Event) => {
-                const status = controlValue(event);
+                const status = eventFieldValue(event);
 
                 if (status && isOrderStatus(status)) bulkStatus.value = status;
               }}></ore-select>

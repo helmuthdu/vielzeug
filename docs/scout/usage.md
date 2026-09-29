@@ -90,7 +90,7 @@ index.search('日本語'); // matches the first document
 
 ### Limiting results
 
-Pass `limit`, `threshold`, and `minQueryLength` in options to control result count and quality. `limit` must be a finite non-negative integer, `threshold` a finite value in `0..1`, and `minQueryLength` a finite positive integer; invalid values throw `ScoutConfigurationError`.
+Pass `limit`, `threshold`, and `minQueryLength` in options to control result count and quality. `limit` must be a finite non-negative integer, `threshold` a finite value in `0..1`, and `minQueryLength` a finite positive integer; invalid values throw `ScoutConfigError`.
 
 ```ts
 // At most 10 results, minimum overlap score 0.3
@@ -318,6 +318,26 @@ const nameMatch = result.matches.find(m => m.field === 'name');
 const parts = highlight(result.item.name, nameMatch?.ranges ?? []);
 ```
 
+## Searchable Reference Lists
+
+A glossary or compendium mixes entry kinds and needs direct-match ranking above fuzzy hits. Rank with `rankEntries`, render keyword links with `splitPattern`, and highlight the typed query with `findMatchRanges` + `highlight`.
+
+```ts
+import { dedupeEntries, escapeRegExp, findMatchRanges, highlight, rankEntries, splitPattern } from '@vielzeug/scout';
+
+const keywordPattern = new RegExp(`(${keywords.map((k) => escapeRegExp(k.name)).join('|')})`, 'g');
+const results = rankEntries(entries, query, { fuzzyIds: fuzzyIndexIds });
+
+for (const entry of results) {
+  for (const segment of splitPattern(entry.text, keywordPattern)) {
+    if (segment.matched) renderKeywordLink(segment.text);
+    else for (const part of highlight(segment.text, findMatchRanges(segment.text, query))) renderMark(part);
+  }
+}
+```
+
+Dedupe merged catalogs with `dedupeEntries` before ranking so alias rows do not shadow their originals.
+
 ## Debug Logging
 
 Use `tap()` for typed runtime observation without affecting search behavior:
@@ -327,18 +347,14 @@ import { createIndex, createSearch } from '@vielzeug/scout';
 
 const search = createSearch(index, { debounce: 150 });
 const stop = search.tap((event) => {
-  if (event.type === 'state-change') {
-    console.debug(event.snapshot.query, event.snapshot.isSearching, event.snapshot.results.length);
-  } else {
-    console.debug('disposed');
-  }
+  console.debug(event.snapshot.query, event.snapshot.isSearching, event.snapshot.results.length);
 });
 
 search.setQuery('alice');
 stop();
 ```
 
-Tapper errors are swallowed. Use `subscribe()` instead when application state must update after each snapshot commit.
+`tap()` emits only `state-change`; observe disposal through `disposed` or `disposalSignal`. Tapper errors are swallowed. Use `subscribe()` instead when application state must update after each snapshot commit.
 
 ::: warning Development logging
 `query` carries the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.

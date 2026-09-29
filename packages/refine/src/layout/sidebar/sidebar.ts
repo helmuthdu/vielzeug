@@ -1,3 +1,4 @@
+import { captureFocus, type FocusRestorer } from '@vielzeug/focus';
 import {
   bind,
   createContext,
@@ -16,8 +17,10 @@ import { computed, fromSubscribable, type Readable, signal, watch } from '@vielz
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 import '../../content/icon/icon';
+import { createBackgroundLock } from '../../overlay/shared/background-lock';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
 import { computeSafeRel } from '../../utils';
+import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
 import sidebarStyles from './sidebar.css?inline';
 import groupStyles from './sidebar-group.css?inline';
 import itemStyles from './sidebar-item.css?inline';
@@ -26,7 +29,7 @@ import itemStyles from './sidebar-item.css?inline';
 
 type SidebarVariant = 'floating' | 'inset';
 type SidebarCollapseSource = 'api' | 'responsive' | 'toggle';
-type SidebarMobileSource = 'api' | 'responsive' | 'toggle';
+type DrawerSource = 'api' | 'responsive' | 'toggle';
 type SidebarMode = 'bottom-nav' | 'collapsed' | 'default';
 
 type BottomNavItem = {
@@ -38,54 +41,12 @@ type BottomNavItem = {
   source: HTMLElement;
 };
 
-const parseMaxWidthPx = (query: string | undefined): number | undefined => {
-  const value = String(query ?? '').trim();
-
-  if (!value) return undefined;
-
-  const match = /max-width\s*:\s*([0-9]+(?:\.[0-9]+)?)px/i.exec(value);
-
-  if (!match) return undefined;
-
-  const parsed = Number.parseFloat(match[1]);
-
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
-
-const resolveContainerElement = (el: HTMLElement): HTMLElement | null => {
-  let container = el.parentElement;
-
-  while (container?.tagName.toLowerCase() === 'ore-grid-item') {
-    container = container.parentElement;
-  }
-
-  return container;
-};
-
-const readContainerWidth = (el: HTMLElement): number => {
-  const parentWidth = resolveContainerElement(el)?.clientWidth ?? 0;
-
-  if (parentWidth > 0) return parentWidth;
-
-  return el.offsetWidth;
-};
-
-const deepActiveElement = (): HTMLElement | null => {
-  let active = document.activeElement as HTMLElement | null;
-
-  while (active?.shadowRoot?.activeElement instanceof HTMLElement) {
-    active = active.shadowRoot.activeElement;
-  }
-
-  return active;
-};
-
 /** Context provided by `ore-sidebar` to its `ore-sidebar-group` and `ore-sidebar-item` children. */
 export type SidebarContext = {
-  closeMobile: () => void;
+  closeDrawer: () => void;
   closeOnSelect: Readable<boolean>;
   collapsed: Readable<boolean>;
-  mobileOpen: Readable<boolean>;
+  drawerOpen: Readable<boolean>;
   mode: Readable<SidebarMode>;
   variant: Readable<SidebarVariant | undefined>;
 };
@@ -98,23 +59,23 @@ export const SIDEBAR_CTX = createContext<SidebarContext>('SidebarContext');
 /** ore-sidebar element interface */
 export type SidebarElement = HTMLElement &
   OreSidebarProps & {
-    /** Close the drawer in bottom-nav mode. */
-    closeMobile(): void;
-    /** Open the drawer in bottom-nav mode. */
-    openMobile(): void;
+    /** Close the drawer. */
+    closeDrawer(): void;
+    /** Open the drawer. */
+    openDrawer(): void;
     /** Set collapsed state imperatively. */
     setCollapsed(next: boolean): void;
     /** Toggle between collapsed and expanded. */
     toggle(): void;
-    /** Toggle the drawer in bottom-nav mode. */
-    toggleMobile(): void;
+    /** Toggle the drawer. */
+    toggleDrawer(): void;
   };
 
 /** Sidebar component properties */
 
 export type OreSidebarEvents = {
   'collapsed-change': { collapsed: boolean; source: SidebarCollapseSource };
-  'mobile-open-change': { open: boolean; source: SidebarMobileSource };
+  'drawer-change': { open: boolean; source: DrawerSource };
 };
 
 export type OreSidebarGroupEvents = {
@@ -122,7 +83,7 @@ export type OreSidebarGroupEvents = {
 };
 
 export type OreSidebarProps = {
-  /** CSS media query that switches the sidebar to bottom navigation mode */
+  /** CSS media query that switches the sidebar to bottom navigation + drawer mode */
   'bottom-nav-at'?: string;
   'close-on-select'?: boolean;
   /** Controlled collapsed state */
@@ -134,6 +95,10 @@ export type OreSidebarProps = {
   'container-breakpoints'?: boolean;
   /** Initial collapsed state in uncontrolled mode */
   'default-collapsed'?: boolean;
+  /** Drawer-only mode: no inline panel and no bottom bar, just the navbar/API-driven drawer. */
+  drawer?: boolean;
+  /** Accessible label for the backdrop close control. */
+  'drawer-close-label'?: string;
   'expand-label'?: string;
   /**
    * Accessible label for the navigation landmark.
@@ -141,7 +106,6 @@ export type OreSidebarProps = {
    * @default 'Sidebar navigation'
    */
   label?: string;
-  'mobile-close-label'?: string;
   /**
    * CSS media query that, when it matches, automatically collapses the sidebar.
    * Unset by default — no automatic collapse.
@@ -162,11 +126,12 @@ export type OreSidebarProps = {
  * @attr {boolean} collapsed - Controlled collapsed state
  * @attr {boolean} default-collapsed - Initial collapsed state for uncontrolled sidebars
  * @attr {boolean} collapsible - Show the collapse toggle button
+ * @attr {boolean} drawer - Drawer-only mode: no inline panel and no bottom bar, just the navbar/API-driven drawer
  * @attr {string} variant - Visual variant: 'floating' | 'inset'
  * @attr {string} label - Accessible aria-label for the nav landmark
  *
  * @fires collapsed-change - Fired when collapsed state changes. detail: { collapsed: boolean; source: string }
- * @fires mobile-open-change - Fired when mobile overlay open state changes. detail: { open: boolean; source: string }
+ * @fires drawer-change - Fired when the drawer open state changes. detail: { open: boolean; source: string }
  *
  * @slot header - Branding or logo content above the nav
  * @slot - Navigation content (ore-sidebar-group / ore-sidebar-item)
@@ -174,10 +139,11 @@ export type OreSidebarProps = {
  *
  * @cssprop --sidebar-width - Expanded sidebar width (default: 16rem)
  * @cssprop --sidebar-collapsed-width - Collapsed sidebar width (default: 3.5rem)
+ * @cssprop --sidebar-drawer-width - Drawer panel width (default: min(--sidebar-width, 85vw))
  * @cssprop --sidebar-bg - Sidebar background color
  * @cssprop --sidebar-border-color - Border color
  *
- * @part mobile-backdrop - Backdrop shown for mobile overlays.
+ * @part drawer-backdrop - Backdrop shown behind the open drawer.
  * @part nav - Navigation container.
  * @part header - Header container.
  * @part toggle-btn - Shadow part for the `toggle-btn` element.
@@ -217,9 +183,10 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     collapsible: prop.bool(false),
     'container-breakpoints': prop.bool(false),
     'default-collapsed': prop.bool(false),
+    drawer: prop.bool(false),
+    'drawer-close-label': prop.string('Close sidebar'),
     'expand-label': prop.string('Expand sidebar'),
     label: prop.string('Sidebar navigation'),
-    'mobile-close-label': prop.string('Close sidebar'),
     responsive: prop.string(),
     variant: prop.string<SidebarVariant>(),
   },
@@ -235,7 +202,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     const isControlled = signal(el.hasAttribute('collapsed'));
     const collapsedState = signal(isControlled.value ? el.hasAttribute('collapsed') : props['default-collapsed'].value);
     const isBottomNav = signal(false);
-    const isMobileOpen = signal(false);
+    const isDrawerOpen = signal(false);
     const bottomNavItems = signal<BottomNavItem[]>([]);
     const responsiveMediaMatches = signal(false);
     const responsiveSizeMatches = signal(false);
@@ -245,7 +212,8 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     const bottomNavSizeMatches = signal(false);
     const bottomNavMaxWidthPx = signal<number | undefined>(parseMaxWidthPx(props['bottom-nav-at'].value));
     const isPreviewMode = signal(false);
-    let focusReturnTarget: HTMLElement | null = null;
+    const bgLock = createBackgroundLock();
+    let restoreDrawerFocus: FocusRestorer | null = null;
 
     const isCollapsed = () => collapsedState.value;
     const mode = computed<SidebarMode>(() => {
@@ -263,15 +231,15 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         ? bottomNavSizeMatches.value
         : bottomNavMediaMatches.value || bottomNavSizeMatches.value;
 
-      // If the mobile drawer is currently open, stay in bottom-nav mode
+      // If the drawer is currently open, stay in bottom-nav mode
       // regardless of the responsive match. This prevents the drawer from
       // disappearing mid-animation or if forced open via the API on desktop.
-      if (!isMobileOpen.value) {
+      if (!isDrawerOpen.value) {
         isBottomNav.value = bottomMatched;
       }
 
-      if (!bottomMatched && !isMobileOpen.value) {
-        setMobileOpen(false, 'responsive');
+      if (!bottomMatched && !isDrawerOpen.value) {
+        setDrawerOpen(false, 'responsive');
       }
 
       if (hasResponsiveQuery.value) {
@@ -280,6 +248,12 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     };
 
     const readBottomNavItems = () => {
+      if (props.drawer.value) {
+        bottomNavItems.value = [];
+
+        return;
+      }
+
       const directItems = slots
         .elements()
         .value.filter(
@@ -312,10 +286,10 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     };
 
     provide(SIDEBAR_CTX, {
-      closeMobile: () => setMobileOpen(false, 'toggle'),
+      closeDrawer: () => setDrawerOpen(false, 'toggle'),
       closeOnSelect: props['close-on-select'],
       collapsed: computed(() => !isBottomNav.value && collapsedState.value) as Readable<boolean>,
-      mobileOpen: computed(() => isBottomNav.value && isMobileOpen.value) as Readable<boolean>,
+      drawerOpen: computed(() => isDrawerOpen.value) as Readable<boolean>,
       mode: mode as Readable<SidebarMode>,
       variant: props.variant,
     });
@@ -330,39 +304,41 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       emit('collapsed-change', { collapsed: next, source });
     };
 
-    const setMobileOpen = (next: boolean, source: SidebarMobileSource) => {
+    const setDrawerOpen = (next: boolean, source: DrawerSource) => {
       const open = Boolean(next);
 
-      if (open && !isBottomNav.value) {
+      // Outside drawer-only mode, opening the drawer forces the sidebar out of its inline
+      // panel into the overlay presentation until the drawer closes again.
+      if (open && !isBottomNav.value && !props.drawer.value) {
         isBottomNav.value = true;
       }
 
-      if (!isBottomNav.value && !open) {
-        if (isMobileOpen.value) {
-          isMobileOpen.value = false;
-        }
+      if (isDrawerOpen.value === open) return;
 
-        return;
+      if (open) {
+        restoreDrawerFocus = captureFocus();
+        // Inert the background where the DOM structure allows (see createBackgroundLock) and
+        // refocus the panel whenever focus escapes the sidebar — together these keep Tab and
+        // Escape working on the open drawer even in apps where the page shares one wrapper
+        // element and the background cannot be inerted.
+        bgLock.lock(el);
       }
 
-      if (isMobileOpen.value === open) return;
-
-      if (open) focusReturnTarget = deepActiveElement();
-
-      isMobileOpen.value = open;
+      isDrawerOpen.value = open;
 
       // If closing, re-evaluate responsive state to potentially exit forced bottom-nav mode
       if (!open) {
+        bgLock.unlock();
         applyResponsiveState();
         queueMicrotask(() => {
-          if (focusReturnTarget?.isConnected) focusReturnTarget.focus();
-          focusReturnTarget = null;
+          restoreDrawerFocus?.();
+          restoreDrawerFocus = null;
         });
       } else {
         queueMicrotask(() => el.shadowRoot?.querySelector<HTMLElement>('nav')?.focus());
       }
 
-      emit('mobile-open-change', { open, source });
+      emit('drawer-change', { open, source });
     };
 
     const doToggle = () => {
@@ -373,16 +349,16 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
     sidebarEl.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
     sidebarEl.toggle = doToggle;
-    sidebarEl.openMobile = () => setMobileOpen(true, 'api');
-    sidebarEl.closeMobile = () => setMobileOpen(false, 'api');
-    sidebarEl.toggleMobile = () => setMobileOpen(!isMobileOpen.value, 'toggle');
+    sidebarEl.openDrawer = () => setDrawerOpen(true, 'api');
+    sidebarEl.closeDrawer = () => setDrawerOpen(false, 'api');
+    sidebarEl.toggleDrawer = () => setDrawerOpen(!isDrawerOpen.value, 'toggle');
 
     bind({
       attr: {
         'data-bottom-nav': () => (isBottomNav.value ? true : undefined),
         'data-collapsed': () => (isCollapsed() && !isBottomNav.value ? true : undefined),
+        'data-drawer-open': () => (isDrawerOpen.value ? true : undefined),
         'data-has-logo': () => (hasLogo() ? true : undefined),
-        'data-mobile-open': () => (isBottomNav.value && isMobileOpen.value ? true : undefined),
         'data-preview-mode': () => (isPreviewMode.value ? true : undefined),
       },
     });
@@ -418,12 +394,28 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         attributes: true,
       });
       const closeOnEscape = (event: KeyboardEvent) => {
-        if (event.key !== 'Escape' || !isMobileOpen.value) return;
+        if (event.key !== 'Escape' || !isDrawerOpen.value) return;
 
         event.preventDefault();
-        setMobileOpen(false, 'toggle');
+        setDrawerOpen(false, 'toggle');
       };
       el.addEventListener('keydown', closeOnEscape);
+
+      // Focus containment: createBackgroundLock inertes background siblings, but apps that wrap
+      // the whole page in one root element (so nothing can be inerted) still let Tab walk out of
+      // the open drawer — and once focus is outside the host, its Escape handler is unreachable.
+      // Pull focus back to the panel whenever it lands outside the sidebar. focusin is composed,
+      // so its target is retargeted to this host for focus inside the shadow root.
+      const keepFocusInDrawer = (event: FocusEvent) => {
+        if (!isDrawerOpen.value) return;
+
+        const target = event.target;
+
+        if (target instanceof Node && (el === target || el.contains(target))) return;
+
+        el.shadowRoot?.querySelector<HTMLElement>('nav')?.focus();
+      };
+      document.addEventListener('focusin', keepFocusInDrawer);
 
       watch(
         props.responsive,
@@ -531,6 +523,11 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         },
         { immediate: true },
       );
+
+      watch(props.drawer, () => {
+        applyResponsiveState();
+        readBottomNavItems();
+      });
 
       const stopResizeEffect =
         typeof ResizeObserver === 'function'
@@ -646,6 +643,8 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         observer.disconnect();
         nestedItemsObserver.disconnect();
         el.removeEventListener('keydown', closeOnEscape);
+        document.removeEventListener('focusin', keepFocusInDrawer);
+        bgLock.unlock();
         mediaCleanup?.();
         bottomNavCleanup?.();
         stopResizeEffect?.dispose();
@@ -660,18 +659,18 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
     return html`
       <button
-        class="mobile-backdrop"
-        part="mobile-backdrop"
+        class="drawer-backdrop"
+        part="drawer-backdrop"
         type="button"
-        aria-label="${props['mobile-close-label']}"
-        ?hidden=${() => !isBottomNav.value || !isMobileOpen.value}
-        @click=${() => setMobileOpen(false, 'toggle')}></button>
+        aria-label="${props['drawer-close-label']}"
+        ?hidden=${() => !isDrawerOpen.value}
+        @click=${() => setDrawerOpen(false, 'toggle')}></button>
       <nav
         aria-label="${props.label}"
-        aria-hidden=${() => (isBottomNav.value && !isMobileOpen.value ? 'true' : null)}
+        aria-hidden=${() => ((isBottomNav.value || props.drawer.value) && !isDrawerOpen.value ? 'true' : null)}
         part="nav"
         tabindex="-1"
-        ?inert=${() => isBottomNav.value && !isMobileOpen.value}>
+        ?inert=${() => (isBottomNav.value || props.drawer.value) && !isDrawerOpen.value}>
         <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
           <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
             <slot name="logo"></slot>
@@ -801,7 +800,7 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
     bind({
       attr: {
         'sidebar-bottom-nav': () =>
-          sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.mobileOpen.value ? true : undefined,
+          sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.drawerOpen.value ? true : undefined,
         'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
       },
     });
@@ -947,7 +946,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
     bind({
       attr: {
         'sidebar-bottom-nav': () =>
-          sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.mobileOpen.value ? true : undefined,
+          sidebarCtx?.mode.value === 'bottom-nav' && !sidebarCtx?.drawerOpen.value ? true : undefined,
         'sidebar-collapsed': () => (sidebarCtx?.collapsed.value ? true : undefined),
       },
     });
@@ -956,11 +955,11 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
 
     // Prevent reverse tabnapping: auto-inject noopener + noreferrer for _blank links.
     const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
-    const closeMobileOnSelect = (event: MouseEvent) => {
-      if (!sidebarCtx?.closeOnSelect.value || !sidebarCtx.mobileOpen.value) return;
+    const closeDrawerOnSelect = (event: MouseEvent) => {
+      if (!sidebarCtx?.closeOnSelect.value || !sidebarCtx.drawerOpen.value) return;
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
-      queueMicrotask(sidebarCtx.closeMobile);
+      queueMicrotask(sidebarCtx.closeDrawer);
     };
 
     const renderItemContent = () => html`
@@ -985,7 +984,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
               target="${props.target}"
               aria-label="${props.label}"
               aria-current="${() => (props.active.value ? 'page' : null)}"
-              @click=${closeMobileOnSelect}>
+              @click=${closeDrawerOnSelect}>
               ${renderItemContent()}
             </a>
           `;
@@ -1013,7 +1012,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
             ?disabled="${props.disabled}"
             aria-label="${props.label}"
             aria-current="${() => (props.active.value ? 'page' : null)}"
-            @click=${closeMobileOnSelect}>
+            @click=${closeDrawerOnSelect}>
             ${renderItemContent()}
           </button>
         `;

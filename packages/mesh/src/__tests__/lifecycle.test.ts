@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { MeshConnectionError, MeshDisposedError } from '../errors';
+import { MeshConnectionError, MeshDisposedError, MeshPairingError } from '../errors';
 import { createMeshGuest } from '../guest';
 import { createMeshHost } from '../host';
-import type { MeshEvent, MeshPeerEvent, MeshStatus } from '../types';
+import type { MeshEvent, MeshStatus } from '../types';
 import { createFakeRtc } from './_fixtures';
 import { pairNodes, type TestProtocol } from './_pair';
 
@@ -42,37 +42,42 @@ describe('status transitions', () => {
 });
 
 describe('peer lifecycle', () => {
-  it('emits joined on both sides when the channel opens', async () => {
+  it('emits peer-joined with the live peer on both sides when the channel opens', async () => {
     const fx = createFakeRtc();
     const host = createMeshHost<TestProtocol>({ rtc: fx.rtc });
     const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
     const hostEvents: MeshEvent[] = [];
     const guestEvents: MeshEvent[] = [];
-    const peerEvents: MeshPeerEvent[] = [];
     host.tap((e) => hostEvents.push(e));
     guest.tap((e) => guestEvents.push(e));
-    host.onPeer((e) => peerEvents.push(e));
 
     const answer = await guest.acceptInvitation(await host.createInvitation());
     await host.acceptAnswer(answer);
     await vi.waitFor(() => expect(guest.status).toBe('connected'));
 
     const peerId = answer.peer.id;
-    expect(hostEvents).toContainEqual({ peerId, type: 'peer-joined' });
-    expect(guestEvents.some((e) => e.type === 'peer-joined')).toBe(true);
-    expect(peerEvents).toContainEqual({ peer: expect.objectContaining({ id: peerId }), type: 'joined' });
+    expect(hostEvents).toContainEqual({ peer: expect.objectContaining({ id: peerId }), type: 'peer-joined' });
+    // The guest knows the host by the invitation's session id.
+    expect(guestEvents).toContainEqual({
+      peer: expect.objectContaining({ id: guest.host!.id, role: 'host' }),
+      type: 'peer-joined',
+    });
   });
 
   it('kick disconnects the guest and reports the reason', async () => {
     const { host, guest, peerId } = await pairNodes();
-    const peerEvents: MeshPeerEvent[] = [];
-    host.onPeer((e) => peerEvents.push(e));
+    const events: MeshEvent[] = [];
+    host.tap((e) => events.push(e));
 
     host.kick(peerId, 'bye');
     await vi.waitFor(() => expect(guest.status).toBe('disconnected'));
 
     expect(host.peers.has(peerId)).toBe(false);
-    expect(peerEvents).toContainEqual({ peer: expect.objectContaining({ id: peerId }), reason: 'bye', type: 'left' });
+    expect(events).toContainEqual({
+      peer: expect.objectContaining({ id: peerId }),
+      reason: 'bye',
+      type: 'peer-left',
+    });
     expect(() => host.send(peerId, 'pong', { n: 1 })).toThrow(MeshConnectionError);
   });
 
@@ -84,8 +89,40 @@ describe('peer lifecycle', () => {
     fx.closeChannel(0);
     await vi.waitFor(() => expect(guest.status).toBe('disconnected'));
 
-    expect(events.some((e) => e.type === 'peer-left' && e.peerId === peerId)).toBe(true);
+    expect(events.some((e) => e.type === 'peer-left' && e.peer.id === peerId)).toBe(true);
     expect(host.status).toBe('disconnected');
+  });
+
+  it('rejects a second guest presenting an already-connected peer id', async () => {
+    const fx = createFakeRtc();
+    const { host, guest, peerId } = await pairNodes({}, {}, fx);
+    const guest2 = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const answer = await guest2.acceptInvitation(await host.createInvitation());
+
+    await expect(host.acceptAnswer({ ...answer, peer: { id: peerId } })).rejects.toBeInstanceOf(MeshPairingError);
+    // The first peer survives the rejected collision.
+    expect(host.peers.get(peerId)?.status).toBe('connected');
+    expect(guest.status).toBe('connected');
+  });
+
+  it('re-pairs on the same guest node after the host peer failed', async () => {
+    const fx = createFakeRtc();
+    const host = createMeshHost<TestProtocol>({ rtc: fx.rtc });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const received: number[] = [];
+    guest.on('pong', (m) => received.push(m.payload.n));
+
+    const first = await host.acceptAnswer(await guest.acceptInvitation(await host.createInvitation()));
+    await vi.waitFor(() => expect(guest.status).toBe('connected'));
+    host.kick(first.id, 'rotate');
+    await vi.waitFor(() => expect(guest.status).toBe('disconnected'));
+
+    const second = await host.acceptAnswer(await guest.acceptInvitation(await host.createInvitation()));
+    await vi.waitFor(() => expect(guest.status).toBe('connected'));
+    expect(second.id).not.toBe(first.id);
+
+    host.send(second.id, 'pong', { n: 9 });
+    await vi.waitFor(() => expect(received).toEqual([9]));
   });
 
   it('sends to an unknown peer throw MeshConnectionError', async () => {

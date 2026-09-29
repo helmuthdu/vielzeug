@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: RetryResult renamed to RequeueResult",
+      "packageName": "@vielzeug/postmaster",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/postmaster"
+}

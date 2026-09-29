@@ -1,5 +1,13 @@
 export { toFilterPredicate, toSearchMatcher } from './adapters';
-export { ScoutConfigurationError, ScoutDisposedError, ScoutError } from './errors';
+export {
+  dedupeEntries,
+  escapeRegExp,
+  type RankableEntry,
+  rankEntries,
+  type SplitSegment,
+  splitPattern,
+} from './entries';
+export { ScoutConfigError, ScoutDisposedError, ScoutError } from './errors';
 export { findMatchRanges, highlight, highlightField } from './highlight';
 export type { ReactiveSearch } from './reactive';
 export { createReactiveSearch, createSearch } from './reactive';

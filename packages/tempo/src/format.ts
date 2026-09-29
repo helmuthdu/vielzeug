@@ -10,6 +10,7 @@ import type {
   RelativeTimeInput,
   TimeDiffResult,
   TimeInput,
+  TimerFormatOptions,
   TimeZoneOptions,
 } from './types';
 
@@ -412,6 +413,46 @@ export function formatDuration(input: string | Temporal.DurationLike, options: D
   if (formatter) return formatter.format(duration);
 
   return buildDurationFallback(duration);
+}
+
+/**
+ * Formats a duration as a stopwatch-style clock: `47:12` under an hour, `1:02:35` from an
+ * hour up. Deterministic and locale-independent — unlike {@link formatDuration}, which
+ * produces localized prose. Sub-second parts are truncated, negative durations clamp to
+ * zero, and `days` fold into hours as 24-hour days.
+ *
+ * @example
+ * ```ts
+ * formatTimer('PT47M12S') // '47:12'
+ * formatTimer({ milliseconds: 3753000 }) // '1:02:33'
+ * formatTimer('PT5M', { hours: 'always' }) // '0:05:00'
+ * ```
+ */
+export function formatTimer(input: string | Temporal.DurationLike, options: TimerFormatOptions = {}): string {
+  const duration = parseDuration(input);
+
+  if (duration.weeks || duration.months || duration.years) {
+    fail(`Timer format accepts at most day-level durations, got: "${duration.toString()}".`, TempoInvalidInputError);
+  }
+
+  const totalSeconds = Math.max(
+    0,
+    Math.floor(
+      duration.days * 86_400 +
+        duration.hours * 3_600 +
+        duration.minutes * 60 +
+        duration.seconds +
+        duration.milliseconds / 1000,
+    ),
+  );
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const hours = Math.floor(totalSeconds / 3_600);
+  const mmss = `${minutes}:${String(seconds).padStart(2, '0')}`;
+
+  if (hours === 0 && options.hours !== 'always') return mmss;
+
+  return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 /**

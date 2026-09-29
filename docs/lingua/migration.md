@@ -112,3 +112,28 @@ new Intl.NumberFormat(i18n.locale, { style: 'currency', currency: 'USD' }).forma
 `TranslationState` version changed from `3` to `4`. Re-serialize server state before hydrating clients with the new API.
 
 Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the full catalog, translator, and i18n contracts.
+
+---
+
+# Lingua 3.1 Migration
+
+Lingua 3.1 resets serialized-state versioning and narrows `catalogKeys()` to catalogs only.
+
+## State version is 1
+
+`TranslationState` is versioned `1` — numbering restarts instead of continuing the i18nit counter. `createI18n({ state })` rejects any other version with `LinguaInvalidStateError`. Re-serialize server state with the new build before hydrating.
+
+## Catalog keys from an instance
+
+`catalogKeys()` no longer accepts an `I18n` instance. Pass the current locale catalog explicitly:
+
+```ts
+// Before
+const allKeys = catalogKeys(i18n);
+
+// After
+const state = i18n.serialize();
+const allKeys = catalogKeys(state.catalogs[state.locale]);
+```
+
+Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the full catalog, translator, and i18n contracts.

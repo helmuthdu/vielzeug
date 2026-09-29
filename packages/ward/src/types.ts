@@ -39,6 +39,12 @@ export type WardRule<
   condition?: WardCondition<TAttributes>;
   effect: 'allow' | 'deny';
   resource: WardPattern<TResource>;
+  /**
+   * Roles this rule applies to, evaluated beside action, resource, and
+   * attributes. `ANONYMOUS` matches a null principal, `WILDCARD` matches any
+   * authenticated principal. Omit to match every principal.
+   */
+  roles?: readonly string[];
 }>;
 
 type MatchedWardDecision<
@@ -82,23 +88,6 @@ export type BoundWardDecisionInput<
   TAttributes extends WardAttributes = WardAttributes,
 > = Omit<WardDecisionInput<TAction, TResource, TAttributes>, 'principal'>;
 
-export type WardAllowedActionsInput<
-  TAction extends string = string,
-  TResource extends string = string,
-  TAttributes extends WardAttributes = WardAttributes,
-> = Readonly<{
-  attributes?: TAttributes;
-  knownActions: readonly TAction[];
-  principal?: Principal;
-  resource: TResource;
-}>;
-
-export type BoundWardAllowedActionsInput<
-  TAction extends string = string,
-  TResource extends string = string,
-  TAttributes extends WardAttributes = WardAttributes,
-> = Omit<WardAllowedActionsInput<TAction, TResource, TAttributes>, 'principal'>;
-
 export type WardEvent<
   TAction extends string = string,
   TResource extends string = string,
@@ -113,20 +102,25 @@ export type BoundWard<
   TAction extends string = string,
   TResource extends string = string,
   TAttributes extends WardAttributes = WardAttributes,
-> = {
-  allowedActions(input: BoundWardAllowedActionsInput<TAction, TResource, TAttributes>): TAction[];
-  checkAll(
-    inputs: readonly BoundWardDecisionInput<TAction, TResource, TAttributes>[],
-  ): WardDecision<TAction, TResource, TAttributes>[];
-  decide(input: BoundWardDecisionInput<TAction, TResource, TAttributes>): WardDecision<TAction, TResource, TAttributes>;
-};
+> = Pick<Ward<TAction, TResource, TAttributes>, 'allowedActions' | 'checkAll' | 'decide'>;
 
 export type Ward<
   TAction extends string = string,
   TResource extends string = string,
   TAttributes extends WardAttributes = WardAttributes,
 > = {
-  allowedActions(input: WardAllowedActionsInput<TAction, TResource, TAttributes>): TAction[];
+  /**
+   * The actions this ward's rule set can ever allow, in declaration order.
+   * Derived from the compiled rules; exact (non-pattern) actions only, since
+   * wildcard actions have no enumerable value.
+   */
+  readonly knownActions: readonly TAction[];
+  /** Actions the input is allowed to perform, drawn from {@link Ward.knownActions} unless filtered. */
+  allowedActions(
+    input: Omit<WardDecisionInput<TAction, TResource, TAttributes>, 'action'> & {
+      filter?: readonly TAction[];
+    },
+  ): TAction[];
   checkAll(
     inputs: readonly WardDecisionInput<TAction, TResource, TAttributes>[],
   ): WardDecision<TAction, TResource, TAttributes>[];

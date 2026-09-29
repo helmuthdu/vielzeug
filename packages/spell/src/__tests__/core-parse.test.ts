@@ -46,20 +46,6 @@ describe('safeParse and safeParseAsync', () => {
 });
 
 describe('sync/async schema mismatch guardrails', () => {
-  class AsyncOnlySchema extends Schema<string> {
-    protected override _parse() {
-      return Promise.resolve({ data: 'x', issues: [], typeOk: true });
-    }
-  }
-
-  it('parse() throws a clear error when the schema resolves asynchronously', () => {
-    expect(() => new AsyncOnlySchema().parse('x')).toThrow('Use parseAsync() instead');
-  });
-
-  it('_parseFullSync() throws a clear error when a nested schema resolves asynchronously', () => {
-    expect(() => new AsyncOnlySchema()._parseFullSync('x')).toThrow('received an async schema');
-  });
-
   it('sync parse() throws when a custom type validator returns a Promise', () => {
     const schema = new Schema(async () => null);
 

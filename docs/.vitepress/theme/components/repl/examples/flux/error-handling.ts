@@ -16,7 +16,7 @@ const source = stream((sink) => {
   sink.complete()
 })
 
-toArray(pipe(source, retry({ attempts: 2 })), { maxItems: 1 })
+toArray(pipe(source, retry({ times: 2 })), { maxItems: 1 })
   .then((values) => console.log('result:', values))
   .catch(console.error)`,
   name: 'Error Handling',

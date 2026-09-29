@@ -187,7 +187,7 @@ for (const entry of deadLettered) {
 }
 
 // Retry a dead-letter job back into the queue.
-await postmaster.retry(entry.id);
+await postmaster.requeue(entry.id);
 
 // Or remove it permanently.
 await postmaster.remove(entry.id);

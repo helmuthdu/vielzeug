@@ -4,7 +4,7 @@ import { describe, expect, test } from 'vitest';
 
 import * as core from '../index';
 import * as idb from '../indexeddb';
-import { createIndexedDB, defineMigration } from '../indexeddb';
+import { createIndexedDB } from '../indexeddb';
 import { createLocalStorage } from '../local-storage';
 import { createMemory } from '../memory';
 import { createSessionStorage } from '../session-storage';
@@ -13,7 +13,6 @@ import { createSQLite } from '../sqlite';
 
 type PackageManifest = {
   exports: Record<string, unknown>;
-  typesVersions: Record<string, Record<string, readonly string[]>>;
 };
 
 describe('adapter entry points', () => {
@@ -34,7 +33,6 @@ describe('adapter entry points', () => {
     expect(createMemory).toBeTypeOf('function');
     expect(createSessionStorage).toBeTypeOf('function');
     expect(createSQLite).toBeTypeOf('function');
-    expect(defineMigration).toBeTypeOf('function');
   });
 
   test('does not export removed type aliases from adapter entry points', () => {
@@ -62,13 +60,6 @@ describe('adapter entry points', () => {
       './memory',
       './session-storage',
       './sqlite',
-    ]);
-    expect(Object.keys(manifest.typesVersions['*'] ?? {}).sort()).toEqual([
-      'indexeddb',
-      'local-storage',
-      'memory',
-      'session-storage',
-      'sqlite',
     ]);
   });
 });

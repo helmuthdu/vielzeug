@@ -18,52 +18,48 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = resolve(__dirname, '../src');
 
-// ── Known mixin emission sets ────────────────────────────────────────────────
-// Hand-derived from `src/styles/mixins/*.css.ts` — kept in sync manually since mixins change
-// rarely. Mixins not listed here (including any future addition) fall through to the
-// "unrecognized → skip the whole component" path below, so an out-of-date table only ever
-// produces false negatives, never false positives.
+// ── Mixin emission sets, derived from the mixin sources ──────────────────────
+// Every `export const <name> = ...` in `src/styles/mixins/*.css.ts` is scanned for the `--_*`
+// custom properties its CSS declares, so a new or edited mixin is covered the moment it lands —
+// no hand-maintained table to fall out of date. `sizeVariantMixin` is excluded: its emissions
+// depend on the config argument each call site passes, handled by `resolveSizeVariantEmissions`.
 
-const STATIC_EMISSIONS = {
-  coarsePointerMixin: ['--_touch-target', '--_font-size', '--_gap', '--_height', '--_size', '--_icon-size', '--_padding'],
-  colorThemeMixin: [
-    '--_theme-base',
-    '--_theme-content',
-    '--_theme-contrast',
-    '--_theme-focus',
-    '--_theme-backdrop',
-    '--_theme-border',
-    '--_theme-shadow',
-    '--_theme-halo',
-  ],
-  disabledLoadingMixin: [],
-  disabledStateMixin: [],
-  elevationMixin: ['--_shadow'],
-  fieldVariantMixin: ['--_bg', '--_border-color'],
-  forcedColorsFocusMixin: [],
-  forcedColorsFormControlMixin: [],
-  forcedColorsMixin: [],
-  frostVariantMixin: [],
-  loadingStateMixin: [],
-  paddingMixin: ['--_padding'],
-  rainbowEffectMixin: [],
-  reducedMotionMixin: ['--_motion-transition', '--_motion-animation'],
-  roundedVariantMixin: ['--_radius'],
-  shineEffectMixin: ['--_shine-color'],
-  srOnlyMixin: [],
-  tableBaseMixin: [
-    '--_bg',
-    '--_border-color',
-    '--_radius',
-    '--_header-bg',
-    '--_accent',
-    '--_row-hover-bg',
-    '--_stripe-bg',
-    '--_cell-padding-x',
-    '--_cell-padding-y',
-    '--_font-size',
-  ],
-};
+const MIXIN_DIR = join(SRC_DIR, 'styles', 'mixins');
+
+/**
+ * Top-level `--_*` declarations inside each exported mixin's own source range. Scoped per export
+ * (from its `export const` up to the next one) so one mixin's declarations can't be attributed to
+ * a neighbour in the same file.
+ */
+function deriveMixinEmissions() {
+  const emissions = {};
+
+  for (const entry of readdirSync(MIXIN_DIR)) {
+    if (!entry.endsWith('.css.ts')) continue;
+
+    const source = readFileSync(join(MIXIN_DIR, entry), 'utf8');
+    const exports = [...source.matchAll(/^export const ([A-Za-z0-9_]+)\s*=/gm)];
+
+    exports.forEach((match, index) => {
+      const name = match[1];
+
+      if (name === 'sizeVariantMixin') return;
+
+      const body = source.slice(match.index, index + 1 < exports.length ? exports[index + 1].index : source.length);
+      const declared = new Set();
+      const declPattern = /(?:^|[;{}\n])\s*(--_[\w-]+)\s*:/g;
+      let declMatch;
+
+      while ((declMatch = declPattern.exec(body))) declared.add(declMatch[1]);
+
+      emissions[name] = [...declared];
+    });
+  }
+
+  return emissions;
+}
+
+const STATIC_EMISSIONS = deriveMixinEmissions();
 
 // `sizeVariantMixin(config?)` always emits these three regardless of config (see
 // `configToBlock`'s unconditional defaults), plus whatever extra keys the config supplies.

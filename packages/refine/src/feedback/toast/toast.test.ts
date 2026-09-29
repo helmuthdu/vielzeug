@@ -3,10 +3,9 @@ import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import { createToastService } from './toast';
 
-const completeExit = async (fixture: Fixture<HTMLElement>, flush: () => Promise<void>) => {
-  fixture
-    .query<HTMLElement>('.toast-inner.exiting')
-    ?.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true }));
+const completeExit = async (flush: () => Promise<void>) => {
+  // Exits finalize on a timeout (exit duration + buffer), not a transition event.
+  await delay(400);
   await flush();
 };
 
@@ -63,7 +62,7 @@ describe('ore-toast', () => {
     await fixture.flush();
     expect(fixture.query('.toast-inner.exiting')).toBeTruthy();
 
-    await completeExit(fixture, fixture.flush);
+    await completeExit(fixture.flush);
 
     expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
     expect(dismissed).toHaveBeenCalledOnce();
@@ -75,9 +74,26 @@ describe('ore-toast', () => {
 
     fireClick(getCloseButton(fixture)!);
     await fixture.flush();
-    await completeExit(fixture, fixture.flush);
+    await completeExit(fixture.flush);
 
     expect(fixture.query('ore-alert')).toBeNull();
+  });
+
+  it('styles snackbar entries as inverted compact bars with text-style actions', async () => {
+    service.add({ actions: [{ label: 'Undo' }], duration: 0, message: 'Damage +1', snackbar: true });
+    service.add({ actions: [{ label: 'Undo' }], duration: 0, message: 'Saved' });
+    await fixture.flush();
+
+    const inners = [...(fixture.element.shadowRoot?.querySelectorAll<HTMLElement>('.toast-inner') ?? [])];
+    const [snack, standard] = inners;
+
+    expect(snack.classList.contains('snackbar')).toBe(true);
+    expect(standard.classList.contains('snackbar')).toBe(false);
+    expect(snack.getAttribute('style')).toContain('var(--rounded-sm)');
+    expect(snack.querySelector('ore-alert')?.getAttribute('variant')).toBe('flat');
+    expect(standard.querySelector('ore-alert')?.getAttribute('variant')).toBe('solid');
+    expect(snack.querySelector('ore-button')?.getAttribute('variant')).toBe('ghost');
+    expect(standard.querySelector('ore-button')?.getAttribute('variant')).toBe('flat');
   });
 
   it('evicts the oldest notification when the scoped service max is reached', async () => {
@@ -114,7 +130,7 @@ describe('ore-toast', () => {
 
     await delay(80);
 
-    await completeExit(fixture, fixture.flush);
+    await completeExit(fixture.flush);
     expect(fixture.query('ore-alert')).toBeNull();
   });
 
@@ -130,8 +146,6 @@ describe('ore-toast', () => {
 
     const wrapper = fixture.query<HTMLElement>(`[data-toast-id="${id}"]`)!;
 
-    const inner = wrapper.querySelector<HTMLElement>('.toast-inner')!;
-
     const swipeEventInit = {
       bubbles: true,
       composed: true,
@@ -143,8 +157,7 @@ describe('ore-toast', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { ...swipeEventInit, clientX: 0 }));
     wrapper.dispatchEvent(new PointerEvent('pointermove', { ...swipeEventInit, clientX: 300 }));
     wrapper.dispatchEvent(new PointerEvent('pointerup', { ...swipeEventInit, clientX: 300 }));
-    inner.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true, propertyName: 'transform' }));
-    await fixture.flush();
+    await completeExit(fixture.flush);
 
     expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
 
@@ -245,6 +258,151 @@ describe('ore-toast', () => {
     expect(fixture.query(`[data-toast-id="${persistent}"] .toast-inner.exiting`)).toBeNull();
   });
 
+  it('applies later max attribute changes to the store', async () => {
+    service.add({ duration: 0, message: 'One' });
+
+    await fixture.flush();
+    await fixture.attr('max', '1');
+
+    service.add({ duration: 0, message: 'Two' });
+    await fixture.flush();
+
+    expect(fixture.query('.toast-inner.exiting')).toBeTruthy();
+    expect(fixture.queryAll('.toast-wrapper')).toHaveLength(2);
+  });
+
+  it('exposes transitions through tap with unsubscribe and dispose events', async () => {
+    const events: string[] = [];
+    const unsubscribe = service.tap((event) => {
+      events.push(event.type);
+    });
+
+    const id = service.add({ duration: 0, message: 'Tracked' });
+
+    await fixture.flush();
+
+    service.dismiss(id);
+    await completeExit(fixture.flush);
+
+    unsubscribe();
+    service.dispose();
+    await fixture.flush();
+
+    expect(events).toEqual(['add', 'dismiss']);
+  });
+
+  it('swallows tap handler errors and keeps observing', async () => {
+    service.tap(() => {
+      throw new Error('observer crashed');
+    });
+
+    expect(() => service.add({ duration: 0, message: 'Still works' })).not.toThrow();
+  });
+
+  it('dismisses the newest dismissible toast on document Escape', async () => {
+    const staying = service.add({ dismissible: false, duration: 0, message: 'Stay' });
+    const newest = service.add({ duration: 0, message: 'Dismiss me' });
+
+    await fixture.flush();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+    await fixture.flush();
+
+    expect(fixture.query(`[data-toast-id="${newest}"] .toast-inner.exiting`)).toBeTruthy();
+    expect(fixture.query(`[data-toast-id="${staying}"] .toast-inner.exiting`)).toBeNull();
+  });
+
+  it('replaces a live entry with the same message instead of stacking', async () => {
+    const first = service.add({ duration: 0, message: 'Saved' });
+
+    await fixture.flush();
+
+    const second = service.add({ duration: 0, message: 'Saved', replace: true });
+    service.add({ duration: 0, message: 'Saved' });
+
+    await fixture.flush();
+
+    expect(second).toBe(first);
+    expect(fixture.element.shadowRoot?.querySelectorAll('.toast-wrapper')).toHaveLength(2);
+  });
+
+  it('keeps unspecified fields when updating an entry', async () => {
+    const id = service.add({ duration: 4000, message: 'First' });
+
+    await fixture.flush();
+
+    service.update(id, { message: 'Second' });
+    await fixture.flush();
+
+    const progress = fixture.query<HTMLElement>(`[data-toast-id="${id}"] .toast-progress`);
+
+    expect(fixture.query(`[data-toast-id="${id}"]`)?.textContent).toContain('Second');
+    expect(progress?.hidden).toBe(false);
+    expect(progress?.style.getPropertyValue('--_toast-duration')).toBe('4000ms');
+  });
+
+  it('persists action toasts by default', async () => {
+    const id = service.add({ actions: [{ label: 'Undo' }], message: 'Done' });
+
+    await fixture.flush();
+
+    expect(fixture.query(`[data-toast-id="${id}"] .toast-progress`)?.hidden).toBe(true);
+  });
+
+  it('restores focus to the previously focused element when a focused toast is removed', async () => {
+    // Buttons in real apps sit inside custom elements' shadow roots; document-level
+    // focus targets retarget to the host, which is not itself focusable.
+    const host = document.createElement('div');
+    const root = host.attachShadow({ mode: 'open' });
+    const trigger = document.createElement('button');
+
+    root.append(trigger);
+    fixture.element.parentElement!.append(host);
+    trigger.focus();
+
+    service.add({ duration: 0, message: 'Closable' });
+
+    await fixture.flush();
+
+    const close = getCloseButton(fixture)!;
+
+    close.focus();
+    await fixture.flush();
+    expect(document.activeElement).not.toBe(host);
+
+    close.click();
+    await completeExit(fixture.flush);
+
+    expect(root.activeElement).toBe(trigger);
+    host.remove();
+  });
+
+  it('pauses timers while a top-layer dialog covers the toasts', async () => {
+    const dialog = document.createElement('dialog');
+
+    document.body.append(dialog);
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+    dialog.dispatchEvent(new Event('toggle'));
+    await fixture.flush();
+
+    service.add({ duration: 80, message: 'Behind modal' });
+    await fixture.flush();
+    await delay(180);
+
+    // Paused, not dismissed: still present and not exiting.
+    expect(fixture.query('ore-alert')).toBeTruthy();
+    expect(fixture.query('.toast-inner.exiting')).toBeNull();
+
+    if (typeof dialog.close === 'function') dialog.close();
+    else dialog.removeAttribute('open');
+    dialog.dispatchEvent(new Event('toggle'));
+    await completeExit(fixture.flush);
+
+    expect(fixture.query('ore-alert')).toBeNull();
+    dialog.remove();
+  });
+
   it('shows an auto-dismiss progress bar only for timed notifications', async () => {
     const timed = service.add({ duration: 4000, message: 'Timed' });
     const persistent = service.add({ duration: 0, message: 'Persistent' });
@@ -342,6 +500,26 @@ describe('createToastService', () => {
 
     expect(host.getAttribute('max')).toBe('3');
     expect(host.getAttribute('position')).toBe('top-left');
+  });
+
+  it('applies configuration live after the host exists', async () => {
+    const service = createToastService(container);
+    const fixture = await mount('ore-toast', { container });
+
+    service.add({ duration: 0, message: 'First' });
+    await fixture.flush();
+
+    service.configure({ max: 1, position: 'top-left' });
+    await fixture.flush();
+
+    expect(fixture.element.getAttribute('position')).toBe('top-left');
+
+    service.add({ duration: 0, message: 'Second' });
+    await fixture.flush();
+
+    // max=1 evicts the oldest live notification when the next one arrives.
+    expect(fixture.query('.toast-inner.exiting')).toBeTruthy();
+    fixture.dispose();
   });
 
   it('cleans up timers and subscriptions when disposed', async () => {

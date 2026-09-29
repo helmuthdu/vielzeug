@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: typed FocusError/FocusConfigError replace RangeError; keymap-backed navigation",
+      "packageName": "@vielzeug/focus",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/focus"
+}

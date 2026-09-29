@@ -3,30 +3,23 @@
  * applied directly to the component's host element or any target element.
  */
 
-import { isReactive, type Readable } from '@vielzeug/ripple';
+import { isReactive } from '@vielzeug/ripple';
 
 import { getHost, tryRegisterCleanup, watchEffect } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
-import { listen, resolveMaybeReactive, sanitizeCssToken, setAttr, toKebab } from './utils/dom';
+import { listen, type MaybeReactive, resolveMaybeReactive, sanitizeCssToken, setAttr, toKebab } from './utils/dom';
 
 /**
  * Describes a reactive or static host binding value.
  */
-export type HostBindingValue =
-  | (() => string | number | boolean | null | undefined)
-  | Readable<string | number | boolean | null | undefined>
-  | string
-  | number
-  | boolean
-  | null
-  | undefined;
+export type HostBindingValue = MaybeReactive<string | number | boolean | null | undefined>;
 
 /**
  * Configuration for host attribute bindings.
  */
 export type AttributeBindings = Record<string, HostBindingValue>;
 
-type HostClassBindingValue = Readable<boolean> | (() => boolean) | boolean;
+type HostClassBindingValue = MaybeReactive<boolean>;
 // Bivariant callback allows consumers to use narrower event types.
 type HostEventListener = { bivarianceHack(event: Event): void }['bivarianceHack'];
 

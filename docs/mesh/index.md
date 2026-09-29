@@ -126,7 +126,7 @@ try {
 - **Typed protocol** — declare `toHost`/`toGuest` maps once; `send`, `on`, and `broadcast` stay type-checked.
 - **Manual pairing** — invitation/answer exchange over copy/paste or `navigator.share`; proof of possession, TTL, and an `approvePeer` hook.
 - **`tap` observability** — status transitions, ICE state, byte counts, and rejections without affecting behavior.
-- **`peers`, `onPeer`, `kick`** — host-side peer inventory and lifecycle.
+- **`peers` + `kick`** — host-side peer inventory and removal; join/leave arrive as `tap` events carrying the live peer.
 - **Injectable `rtc`** — every WebRTC object comes from a factory, so tests run fully in memory.
 
 </div>

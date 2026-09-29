@@ -124,7 +124,7 @@ type NavigationDecision =
 
 // ─── Router class ─────────────────────────────────────────────────────────────
 
-class Router<TRoutes extends RouteTable> {
+class Router<TRoutes extends RouteTable = RouteTable> {
   readonly #base: string;
   readonly #globalMiddleware: readonly Middleware[];
   readonly #globalCoerceSearch?: CoerceSearchFn;
@@ -315,6 +315,22 @@ class Router<TRoutes extends RouteTable> {
     const route = getRouteByName(name, this.#routesByName);
 
     return buildUrl(this.#base, route.path, params, query);
+  }
+
+  /**
+   * Build an anchor-ready href for a named route — the address-bar form for the configured
+   * history driver. `url()` returns the router-internal path; under `createHashHistory`
+   * the same route lives behind `#`, and `href()` returns that form for `<a>` elements.
+   */
+  href<Name extends RouteName<TRoutes>>(
+    name: Name,
+    params?: PathParams<RoutePathByName<TRoutes, Name>>,
+    query?: ResolvedQueryParams,
+  ): string {
+    const route = getRouteByName(name, this.#routesByName);
+    const url = buildUrl(this.#base, route.path, params, query);
+
+    return this.#history.href?.(url) ?? url;
   }
 
   /** Returns true when the current location matches the named route by prefix (default) or exactly. */
@@ -604,9 +620,17 @@ class Router<TRoutes extends RouteTable> {
   // ─── Private: listener notification ──────────────────────────────────────
 
   #notifyListeners(): void {
-    this.#listeners.forEach((listener) => {
-      listener(this.#currentState);
-    });
+    for (const listener of [...this.#listeners]) {
+      try {
+        listener(this.#currentState);
+      } catch (error) {
+        // A throwing subscriber must not abort the rest of the notify pass or
+        // corrupt navigation state; surface it as an unhandled error instead.
+        queueMicrotask(() => {
+          throw error;
+        });
+      }
+    }
   }
 
   // ─── Private: data loaders ────────────────────────────────────────────────

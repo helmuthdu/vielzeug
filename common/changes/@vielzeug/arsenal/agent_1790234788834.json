@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Expose taskPool, waitFor, cache, and memo from the root barrel",
+      "packageName": "@vielzeug/arsenal",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/arsenal"
+}

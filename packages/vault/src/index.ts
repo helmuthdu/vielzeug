@@ -1,16 +1,5 @@
-export {
-  count,
-  deleteMany,
-  getMany,
-  has,
-  isEmpty,
-  keys,
-  update,
-  upsert,
-} from './adapter-core';
 export { VaultDisposedError, VaultError, VaultMigrationError, VaultQuotaError, VaultScopeError } from './errors';
-export type { QueryBuilder } from './query';
-export { isExpired, ttl } from './ttl';
+export { ttl } from './ttl';
 export type {
   AnySchema,
   CodecInput,

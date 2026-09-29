@@ -11,11 +11,10 @@ export {
 } from './errors';
 export { createMeshGuest } from './guest';
 export { createMeshHost } from './host';
-export { type MeshAsyncCodec, meshQrCodec } from './qr-codec';
+export { meshQrCodec } from './qr-codec';
 export type {
   MeshAnswer,
   MeshChannelOptions,
-  MeshCodec,
   MeshEvent,
   MeshGuest,
   MeshGuestOptions,
@@ -27,7 +26,6 @@ export type {
   MeshNode,
   MeshOptions,
   MeshPeer,
-  MeshPeerEvent,
   MeshPeerInfo,
   MeshProtocol,
   MeshRtcEvent,

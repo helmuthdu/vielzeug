@@ -13,7 +13,7 @@ exports:
     createGroupedVirtualizer,
     createGridVirtualizer,
     createMeasurementCache,
-    ScrollConfigurationError,
+    ScrollConfigError,
     ScrollError,
     ScrollRangeError,
     DEFAULT_ESTIMATE_SIZE,
@@ -138,7 +138,7 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
 - **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
 - **External-store state** — use `getSnapshot()` and `subscribe()` directly or bridge into Ripple and framework stores
-- **Keyboard navigation** — enable `keyboardScroll` for Arrow/Page/Home/End key support
+- **Keyboard navigation** — compose it from `scrollToIndex()` and `@vielzeug/keymap` instead of a built-in key handler
 - **Auto-measurement** — enable `autoMeasure` to automatically measure visible items via `ResizeObserver`
 - **DOM adapter** — `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
@@ -151,7 +151,7 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Scroll anchor** — viewport position is preserved visually when `estimateSize` changes via `update()`
 - **Prepend support** — `prepend()` adds items at the top while keeping the viewport visually stable
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
-- `ScrollConfigurationError` — Rejects malformed static configuration before listeners attach or updates apply
+- `ScrollConfigError` — Rejects malformed static configuration before listeners attach or updates apply
 
 </div>
 

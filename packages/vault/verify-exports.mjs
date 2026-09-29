@@ -21,7 +21,10 @@ for (const [vault, memory] of modulePairs) {
   });
 
   await store.put('users', { id: 1, name: 'Ada' });
-  if ((await store.query('users').equals('name', 'Ada').count()) !== 1) throw new Error('query export mismatch');
+
+  const users = await store.getAll('users');
+
+  if (users.filter((user) => user.name === 'Ada').length !== 1) throw new Error('store export mismatch');
 
   await store.dispose();
   try {

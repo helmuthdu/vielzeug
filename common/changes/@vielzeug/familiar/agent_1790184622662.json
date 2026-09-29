@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: replace TaskQueue/RunningStream with PoolSlot-based pool; tap events",
+      "packageName": "@vielzeug/familiar",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/familiar"
+}

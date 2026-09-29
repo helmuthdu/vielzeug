@@ -12,11 +12,11 @@ import {
 
 import { invariant, ORE_ERRORS, OreApiError, OreLifecycleError, reportRuntimeError } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../template/result';
-import { removeNodes, runAll } from '../utils/dom';
+import { type MaybeReactive, removeNodes, runAll } from '../utils/dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MaybeReactiveArray<T> = Readable<T[]> | (() => T[]) | T[];
+type MaybeReactiveArray<T> = MaybeReactive<T[]>;
 type ItemKey = number | string;
 
 type ItemEntry<T> = {

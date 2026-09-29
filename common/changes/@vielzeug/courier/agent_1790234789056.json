@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add CourierConfigError for invalid request configs (GET/HEAD body, raw + schema)",
+      "packageName": "@vielzeug/courier",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/courier"
+}

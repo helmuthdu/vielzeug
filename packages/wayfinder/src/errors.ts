@@ -14,7 +14,10 @@ export class WayfinderDisposedError extends WayfinderError {
   }
 }
 
-/** Thrown when a route or path definition is malformed. */
+/** Thrown when a route or path definition is malformed at `createRouter()` time. */
+export class WayfinderConfigError extends WayfinderError {}
+
+/** Thrown when a route or path is malformed at navigation time (unknown name, missing param). */
 export class WayfinderRouteError extends WayfinderError {}
 
 /** Thrown when the router detects an infinite redirect loop. */

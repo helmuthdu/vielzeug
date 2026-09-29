@@ -78,7 +78,7 @@ schema.is(value);                       // value is Output
 schema.assert(value, label?);           // assertion
 ```
 
-`parse()`, `safeParse()`, `is()`, and `assert()` are available on synchronous schemas. Calling `checkAsync()` returns an async-only schema, where TypeScript exposes only `parseAsync()` and `safeParseAsync()`. That async-only mode propagates through compositional schemas when a child is asynchronous.
+`parse()`, `safeParse()`, `is()`, and `assert()` run synchronous parsing. When a schema — or any schema nested inside it — carries an async check added with `checkAsync()`, the synchronous methods throw at runtime with "cannot evaluate async checks"; use `parseAsync()` or `safeParseAsync()` instead. Async checks compose at any nesting depth, so `s.object({ tags: s.array(s.string().checkAsync(fn)) })` parses correctly through `parseAsync()`.
 
 UI adapters that accept `AnySchema` cannot call `safeParse()` on it — the structural surface type omits it. Type adapter parameters against `SyncParsable` instead:
 
@@ -90,7 +90,7 @@ function spellValidator(schema: SyncParsable<unknown>) {
 }
 ```
 
-The shape is structural, so an async-only schema is assignable to `SyncParsable`; calling `safeParse()` on one returns a failed result ("parse() cannot evaluate async checks"). When the mode is not statically known, narrow with `InferSchemaMode` and use `safeParseAsync()` for async members.
+The shape is structural, so a schema with async checks is assignable to `SyncParsable`; calling `safeParse()` on one returns a failed result ("parse() cannot evaluate async checks"). When async checks may be present, use `safeParseAsync()` instead.
 
 ## Custom Checks
 
@@ -130,6 +130,16 @@ s.string().label('User name');
 ```
 
 `default()`, `catch()`, preprocessors, transforms, and checks are runtime behavior. They cannot become portable definitions.
+
+## `tolerate()`
+
+Wraps an object schema so records saved by older schema versions still parse: the named keys are accepted and stripped instead of failing `invalid_keys`. The parsed output never contains the tolerated keys.
+
+```ts
+const Person = tolerate(s.object({ name: s.string() }), 'address');
+```
+
+The implementation is a preprocessor on the wrapped schema: non-object input reaches the wrapped schema untouched, declared fields keep their validation, and unknown keys outside the tolerated set still fail.
 
 ## Definitions and JSON Schema
 
@@ -334,10 +344,6 @@ type SchemaDescriptor = BaseDescriptor &
 
 type JsonSchema = Record<string, unknown>;
 ```
-
-### Schema traversal
-
-`SchemaWalker<R>` is the visitor type accepted by `schema.walk()`. Handlers are optional and correspond to schema kinds; composite handlers also receive their walked children. Use `unknown` as the fallback handler.
 
 ### Error helpers
 

@@ -1,9 +1,16 @@
-import { warn } from './_dev';
 import { drawFormatInfo, drawVersionInfo } from './_format';
 import { applyMask, penaltyScore } from './_mask';
 import { createGrid, drawFunctionPatterns, placeData } from './_matrix';
 import { ecCodewords } from './_reed-solomon';
-import { buildDataCodewords, detectMode, segmentBits } from './_segments';
+import {
+  buildDataCodewords,
+  detectMode,
+  payloadFromBytes,
+  payloadFromText,
+  payloadLength,
+  type QrPayload,
+  segmentBits,
+} from './_segments';
 import {
   ALPHANUMERIC_CHARSET,
   CHAR_COUNT_BITS,
@@ -49,12 +56,23 @@ function capacityFor(version: number, level: QrErrorCorrection, mode: QrMode): n
   }
 }
 
-/** Smallest version ≥ minVersion whose data area fits the segment. */
-function pickVersion(data: string, mode: QrMode, level: QrErrorCorrection, minVersion: number): number {
-  for (let v = minVersion; v <= MAX_VERSION; v++)
-    if (segmentBits(data, mode, v) <= dataCodewords(v, level) * 8) return v;
-  // Nothing fits — the caller reports against v40.
-  return -1;
+/** Smallest version ≥ minVersion whose data area fits the segment, or `null`. */
+function pickVersion(payload: QrPayload, level: QrErrorCorrection, minVersion: number): number | null {
+  for (let v = minVersion; v <= MAX_VERSION; v++) if (segmentBits(payload, v) <= dataCodewords(v, level) * 8) return v;
+  return null;
+}
+
+/** The capacity error for a payload that does not fit at `version`. */
+function capacityError(payload: QrPayload, level: QrErrorCorrection, version: number): SigilCapacityError {
+  const length = payloadLength(payload);
+  const max = capacityFor(version, level, payload.mode);
+  const unit = payload.mode === 'byte' ? 'bytes' : 'chars';
+  return new SigilCapacityError(
+    `Input of ${length} ${unit} exceeds QR capacity (${max} ${unit} at version ${version}-${level})`,
+    length,
+    max,
+    version,
+  );
 }
 
 /** Split data codewords into EC blocks and interleave data + EC (§7.6). */
@@ -86,61 +104,48 @@ function interleaveBlocks(data: readonly number[], version: number, level: QrErr
   return out;
 }
 
-function freezeMatrix(grid: readonly (readonly boolean[])[], meta: Omit<QrMatrix, 'modules' | 'get'>): QrMatrix {
+function freezeMatrix(grid: readonly (readonly boolean[])[], meta: Omit<QrMatrix, 'get'>): QrMatrix {
   const modules = grid.map((row) => Object.freeze([...row]));
   Object.freeze(modules);
   return Object.freeze({
     ...meta,
     get: (x: number, y: number) => (x >= 0 && y >= 0 && x < meta.size && y < meta.size ? modules[y][x] : false),
-    modules,
   });
 }
 
 /**
  * Encode `data` into a QR Model 2 symbol. Pure and synchronous.
- * Byte mode is UTF-8 without an ECI header — the industry-standard assumption.
+ * Strings pick the most compact mode; `Uint8Array` is raw binary and always
+ * byte mode, encoded as-is — no UTF-8 round-trip. Byte mode is UTF-8 without
+ * an ECI header for string input — the industry-standard assumption.
  */
 export function encodeQr(data: string | Uint8Array, options: QrEncodeOptions = {}): QrMatrix {
   checkOptions(options);
-  const text = typeof data === 'string' ? data : new TextDecoder().decode(data);
-  if (text.length === 0) throw new SigilOptionError('Cannot encode an empty input');
+  if (data.length === 0) throw new SigilOptionError('Cannot encode an empty input');
 
   const level = options.errorCorrection ?? 'M';
-  const mode = options.mode ?? detectMode(text);
-  if (mode !== 'byte' && detectMode(text) !== mode && !isModeCompatible(text, mode))
+  if (typeof data !== 'string' && options.mode !== undefined && options.mode !== 'byte')
+    throw new SigilOptionError('Uint8Array input can only be encoded in byte mode');
+  const mode = options.mode ?? (typeof data === 'string' ? detectMode(data) : 'byte');
+  if (typeof data === 'string' && !isModeCompatible(data, mode))
     throw new SigilOptionError(`Input cannot be encoded in ${mode} mode`);
+  const payload = typeof data === 'string' ? payloadFromText(data, mode) : payloadFromBytes(data);
 
-  const version = options.version ?? pickVersion(text, mode, level, options.minVersion ?? 1);
-  if (version === -1 || segmentBits(text, mode, version) > dataCodewords(version, level) * 8) {
-    const bytes = new TextEncoder().encode(text).length;
-    const max = capacityFor(options.version ?? MAX_VERSION, level, mode);
-    throw new SigilCapacityError(
-      `Input of ${bytes} bytes exceeds QR capacity (${max} ${mode === 'byte' ? 'bytes' : 'chars'} ` +
-        `at version ${options.version ?? MAX_VERSION}-${level})`,
-      bytes,
-      max,
-      options.version ?? MAX_VERSION,
-    );
-  }
+  const version = options.version ?? pickVersion(payload, level, options.minVersion ?? 1);
+  if (version === null || segmentBits(payload, version) > dataCodewords(version, level) * 8)
+    throw capacityError(payload, level, options.version ?? MAX_VERSION);
 
-  const used = segmentBits(text, mode, version);
-  const capacity = dataCodewords(version, level) * 8;
-  if (used / capacity > 0.9 && options.version === undefined)
-    warn(
-      `Payload uses ${Math.round((used / capacity) * 100)}% of version ${version}-${level} ` +
-        `capacity; a slightly longer input will bump the QR size`,
-    );
-
-  const codewords = interleaveBlocks(buildDataCodewords(text, mode, version, level), version, level);
+  const codewords = interleaveBlocks(buildDataCodewords(payload, version, level), version, level);
   const grid = createGrid(matrixSize(version));
   drawFunctionPatterns(grid, version);
   placeData(grid, codewords);
 
-  // Try every mask (or the forced one), keep the lowest penalty.
+  // Try every mask (or the forced one), keep the lowest penalty. Each candidate
+  // is undone by the idempotent XOR, and the final drawFormatInfo below rewrites
+  // every format module, so candidates never leak into each other.
   const candidates = options.mask !== undefined ? [options.mask] : [0, 1, 2, 3, 4, 5, 6, 7];
   let bestMask = candidates[0];
   let bestScore = Number.POSITIVE_INFINITY;
-  let bestModules: boolean[][] | null = null;
   for (const m of candidates) {
     applyMask(grid, m);
     drawFormatInfo(grid, level, m);
@@ -148,14 +153,13 @@ export function encodeQr(data: string | Uint8Array, options: QrEncodeOptions = {
     if (score < bestScore) {
       bestScore = score;
       bestMask = m;
-      bestModules = grid.modules.map((row) => [...row]);
     }
     applyMask(grid, m); // undo
-    // Clear format info for the next candidate (function flags stay set).
-    if (m !== candidates[candidates.length - 1]) clearFormat(grid);
   }
 
-  grid.modules = bestModules as boolean[][];
+  // The grid is unmasked again — draw the winning candidate once, finally.
+  applyMask(grid, bestMask);
+  drawFormatInfo(grid, level, bestMask);
   drawVersionInfo(grid, version);
 
   return freezeMatrix(grid.modules, {
@@ -172,21 +176,6 @@ function isModeCompatible(text: string, mode: QrMode): boolean {
   if (mode === 'numeric') return /^\d+$/.test(text);
   if (mode === 'alphanumeric') return [...text].every((ch) => ALPHANUMERIC_CHARSET.includes(ch));
   return true;
-}
-
-/** Un-mark and un-draw format modules so the next mask candidate starts clean. */
-function clearFormat(grid: ReturnType<typeof createGrid>): void {
-  const size = grid.size;
-  const cells: Array<readonly [number, number]> = [];
-  for (let i = 0; i <= 8; i++) {
-    if (i !== 6) {
-      cells.push([8, i], [i, 8]);
-    }
-  }
-  for (let i = 0; i < 8; i++) cells.push([size - 1 - i, 8]);
-  for (let i = 0; i < 7; i++) cells.push([8, size - 1 - i]);
-  cells.push([8, size - 8]);
-  for (const [x, y] of cells) grid.modules[y][x] = false;
 }
 
 /** Max characters/bytes encodable at (version, level, mode). */

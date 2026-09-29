@@ -1,6 +1,6 @@
 import { computed, type Readable } from '@vielzeug/ripple';
 
-import { resolveMaybeReactive } from '../utils/dom';
+import { type MaybeReactive, resolveMaybeReactive } from '../utils/dom';
 
 /**
  * Produces a reactive string of class names from an object map.
@@ -18,7 +18,7 @@ import { resolveMaybeReactive } from '../utils/dom';
  * html`<div class="${classMap({ active: isActive, hidden: () => !isVisible.value })}"></div>`
  * ```
  */
-export const classMap = (map: Record<string, (() => boolean) | Readable<boolean> | boolean>): Readable<string> => {
+export const classMap = (map: Record<string, MaybeReactive<boolean>>): Readable<string> => {
   return computed(() =>
     Object.entries(map)
       .filter(([, v]) => resolveMaybeReactive(v))

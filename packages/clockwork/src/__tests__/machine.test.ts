@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { type ClockworkError, defineMachine, type Machine, type MachineConfig } from '../index.js';
+import {
+  ClockworkDefinitionError,
+  ClockworkSnapshotError,
+  ClockworkTransitionLimitError,
+  defineMachine,
+  type Machine,
+  type MachineConfig,
+} from '../index.js';
 
 const flush = async (): Promise<void> => {
   await Promise.resolve();
@@ -101,9 +108,7 @@ describe('defineMachine', () => {
         states: { idle: {} },
       } as unknown as MachineConfig<'idle', Context, Event>;
 
-      expect(() => defineMachine<Context, Event>()(definition)).toThrow(
-        expect.objectContaining({ code: 'INVALID_CONTEXT' }),
-      );
+      expect(() => defineMachine<Context, Event>()(definition)).toThrow(ClockworkDefinitionError);
     }
   });
 
@@ -123,7 +128,7 @@ describe('defineMachine', () => {
       });
 
       expect(() => machine.createActor({ snapshot: { context: context as Context, state: 'idle' } })).toThrow(
-        expect.objectContaining({ code: 'INVALID_CONTEXT' }),
+        ClockworkSnapshotError,
       );
     }
 
@@ -133,25 +138,23 @@ describe('defineMachine', () => {
       states: { idle: { on: { GO: { reduce: () => [] as unknown as Context, target: 'idle' } } } },
     });
 
-    expect(() => machine.transition(machine.initialSnapshot, { type: 'GO' })).toThrow(
-      expect.objectContaining({ code: 'INVALID_CONTEXT' }),
-    );
+    expect(() => machine.transition(machine.initialSnapshot, { type: 'GO' })).toThrow(ClockworkSnapshotError);
   });
 
   it.each([
-    [{ initial: 'idle', states: { idle: { entry: [true] } } }, 'INVALID_EFFECT'],
-    [{ initial: 'idle', states: { idle: { on: { GO: { guard: true, target: 'idle' } } } } }, 'INVALID_TRANSITION'],
-    [{ initial: 'idle', states: { idle: { on: { GO: { reduce: true, target: 'idle' } } } } }, 'INVALID_TRANSITION'],
-    [{ initial: 'idle', states: { idle: { invoke: [{ src: true }] } } }, 'INVALID_INVOKE'],
-    [{ initial: 'idle', states: { idle: { after: [{ delay: -1, target: 'idle' }] } } }, 'INVALID_AFTER_DELAY'],
-    [{ initial: 'idle', states: { idle: { on: { GO: [] } } } }, 'INVALID_TRANSITION'],
-    [{ initial: 'idle', states: { idle: { initial: 'child', states: { child: {} } } } }, 'INVALID_DEFINITION'],
-  ])('retains stable diagnostics for invalid definitions', (definition, code) => {
+    [{ initial: 'idle', states: { idle: { entry: [true] } } }],
+    [{ initial: 'idle', states: { idle: { on: { GO: { guard: true, target: 'idle' } } } } }],
+    [{ initial: 'idle', states: { idle: { on: { GO: { reduce: true, target: 'idle' } } } } }],
+    [{ initial: 'idle', states: { idle: { invoke: [{ src: true }] } } }],
+    [{ initial: 'idle', states: { idle: { after: [{ delay: -1, target: 'idle' }] } } }],
+    [{ initial: 'idle', states: { idle: { on: { GO: [] } } } }],
+    [{ initial: 'idle', states: { idle: { initial: 'child', states: { child: {} } } } }],
+  ])('rejects invalid definitions with ClockworkDefinitionError', (definition) => {
     expect(() =>
       defineMachine<Record<string, never>, { readonly type: string }>()(
         definition as unknown as MachineConfig<'idle', Record<string, never>, { readonly type: string }>,
       ),
-    ).toThrow(expect.objectContaining({ code }));
+    ).toThrow(ClockworkDefinitionError);
   });
 
   it('rejects array-backed definitions and delays beyond the platform timer limit', () => {
@@ -162,16 +165,14 @@ describe('defineMachine', () => {
       Event
     >;
 
-    expect(() => defineMachine<Record<string, never>, Event>()(statesArray)).toThrow(
-      expect.objectContaining({ code: 'INVALID_DEFINITION' }),
-    );
+    expect(() => defineMachine<Record<string, never>, Event>()(statesArray)).toThrow(ClockworkDefinitionError);
     expect(() =>
       defineMachine<Record<string, never>, Event>()({
         context: {},
         initial: 'idle',
         states: { idle: { after: [{ delay: 2_147_483_648, target: 'idle' }] } },
       }),
-    ).toThrow(expect.objectContaining({ code: 'INVALID_AFTER_DELAY' }));
+    ).toThrow(ClockworkDefinitionError);
   });
 
   it('snapshots invoke definitions during compilation', async () => {
@@ -203,7 +204,7 @@ describe('defineMachine', () => {
     expect(Object.isFrozen(machine.initialSnapshot.context)).toBe(true);
     expect(() =>
       machine.transition({ context: null as unknown as Context, state: 'idle' }, { type: 'UNKNOWN' }),
-    ).toThrow(expect.objectContaining({ code: 'INVALID_CONTEXT' }));
+    ).toThrow(ClockworkSnapshotError);
   });
 
   it('treats prototype-colliding state labels and event types as ordinary map keys', () => {
@@ -327,7 +328,10 @@ describe('actors', () => {
         },
       },
     });
-    const actor = machine.createActor({ onError: (_error, context) => phases.push(context.phase) });
+    const actor = machine.createActor();
+    actor.tap((event) => {
+      if (event.type === 'error') phases.push(event.phase);
+    });
 
     expect(actor.can({ type: 'GO' })).toBe(false);
     expect(phases).toEqual(['transition']);
@@ -486,8 +490,9 @@ describe('actors', () => {
         ready: { entry: [() => calls.push('entry')] },
       },
     });
-    const actor = machine.createActor({
-      onError: (error, context) => errors.push(`${context.phase}:${(error as Error).message}`),
+    const actor = machine.createActor();
+    actor.tap((event) => {
+      if (event.type === 'error') errors.push(`${event.phase}:${(event.error as Error).message}`);
     });
 
     actor.subscribe(() => {
@@ -534,7 +539,10 @@ describe('actors', () => {
         invoking: { invoke: [{ src: () => Promise.reject(new Error('invoke')) }] },
       },
     });
-    const actor = machine.createActor({ onError: (_error, context) => observed.push(context.phase) });
+    const actor = machine.createActor();
+    actor.tap((event) => {
+      if (event.type === 'error') observed.push(event.phase);
+    });
 
     actor.send({ type });
     await flush();
@@ -565,15 +573,15 @@ describe('actors', () => {
       },
     });
 
-    const observed = machine.createActor({ onError: () => undefined });
+    const observed = machine.createActor();
+    observed.tap(() => undefined);
 
     observed.send({ type: 'GO' });
     expect(observed.disposed).toBe(true);
 
-    const actor = machine.createActor({
-      onError: () => {
-        throw new Error('handler');
-      },
+    const actor = machine.createActor();
+    actor.tap(() => {
+      throw new Error('handler');
     });
 
     expect(() => actor.send({ type: 'GO' })).not.toThrow();
@@ -598,10 +606,9 @@ describe('actors', () => {
         },
       },
     });
-    const actor = machine.createActor({
-      onError: () => {
-        throw new Error('observer');
-      },
+    const actor = machine.createActor();
+    actor.tap(() => {
+      throw new Error('observer');
     });
 
     await flush();
@@ -628,25 +635,67 @@ describe('actors', () => {
     expect(actor.snapshot.state).toBe('loading');
   });
 
-  it('reports queued transition limits through the observation callback', () => {
+  it('disposes through a tap-observed error when queued transitions exceed the fixed limit', () => {
     type Event = { readonly type: 'GO' };
 
-    const errors: string[] = [];
+    const errors: unknown[] = [];
     const machine = defineMachine<Record<string, never>, Event>()({
       context: {},
       initial: 'idle',
       states: { idle: { on: { GO: { effects: [({ send }) => send({ type: 'GO' })], target: 'idle' } } } },
     });
-    const actor = machine.createActor({
-      maxTransitions: 2,
-      onError: (error) => {
-        errors.push((error as ClockworkError).code);
-      },
+    const actor = machine.createActor();
+    actor.tap((event) => {
+      if (event.type === 'error') errors.push(event.error);
     });
 
     actor.send({ type: 'GO' });
-    expect(errors).toEqual(['INVALID_TRANSITION_LIMIT']);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(ClockworkTransitionLimitError);
     expect(actor.disposed).toBe(true);
+  });
+});
+
+describe('actor.tap', () => {
+  it('observes transition, ignored, and dispose events and honors signal and unsubscribe', () => {
+    type Event = { readonly type: 'GO' };
+
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: { idle: { on: { GO: { target: 'ready' } } }, ready: {} },
+    });
+    const actor = machine.createActor();
+    const events: string[] = [];
+    const signal = new AbortController().signal;
+    const stop = actor.tap((event) => events.push(event.type), { signal });
+    actor.tap((event) => events.push(`second:${event.type}`));
+
+    actor.send({ type: 'GO' });
+    actor.send({ type: 'GO' });
+    stop();
+    actor.dispose();
+
+    expect(events).toEqual(['transition', 'second:transition', 'ignored', 'second:ignored', 'second:dispose']);
+  });
+
+  it('detaches tappers on dispose', () => {
+    type Event = { readonly type: 'GO' };
+
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: { idle: { on: { GO: { target: 'ready' } } }, ready: {} },
+    });
+    const actor = machine.createActor();
+    const handler = vi.fn();
+    actor.tap(handler);
+
+    actor.dispose();
+    actor.dispose();
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ type: 'dispose' });
   });
 });
 

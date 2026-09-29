@@ -1,20 +1,6 @@
-import type {
-  AnySchema,
-  CheckContext,
-  InferInput,
-  InferOutput,
-  InferSchemaMode,
-  Issue,
-  MergeSchemaModes,
-  ParseContext,
-  ParseValue,
-  SchemaDescriptor,
-  SchemaMode,
-  SchemaWalker,
-  ValidateResult,
-} from '../core';
+import type { AnySchema, InferInput, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
+import { ErrorCode, prependIssuePath, Schema } from '../core';
 
 export type TupleSchemas = readonly [AnySchema, ...AnySchema[]];
 export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null> = R extends AnySchema
@@ -24,23 +10,15 @@ type InferTupleInput<T extends TupleSchemas, R extends AnySchema | null = null> 
   ? readonly [...{ [K in keyof T]: InferInput<T[K]> }, ...InferInput<R>[]]
   : { readonly [K in keyof T]: InferInput<T[K]> };
 
-export class TupleSchema<
-  T extends TupleSchemas,
-  R extends AnySchema | null = null,
-  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number] | Exclude<R, null>>>,
-> extends Schema<InferTuple<T, R>, InferTupleInput<T, R>, Mode> {
+export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = null> extends Schema<
+  InferTuple<T, R>,
+  InferTupleInput<T, R>
+> {
   readonly items: T;
   readonly restSchema: R;
 
   protected override get _kind(): string {
     return 'tuple';
-  }
-
-  override checkAsync(
-    this: TupleSchema<T, R, 'sync'>,
-    fn: (value: InferTuple<T, R>, ctx: CheckContext) => Promise<ValidateResult>,
-  ): TupleSchema<T, R, 'async'> {
-    return this._addCheck(fn, true) as unknown as TupleSchema<T, R, 'async'>;
   }
 
   constructor(items: T, restSchema: R = null as R) {
@@ -49,12 +27,8 @@ export class TupleSchema<
     this.restSchema = restSchema;
   }
 
-  rest<U extends AnySchema>(schema: U): TupleSchema<T, U, MergeSchemaModes<Mode | InferSchemaMode<U>>> {
-    return this._copyStateTo(new TupleSchema(this.items, schema)) as unknown as TupleSchema<
-      T,
-      U,
-      MergeSchemaModes<Mode | InferSchemaMode<U>>
-    >;
+  rest<U extends AnySchema>(schema: U): TupleSchema<T, U> {
+    return this._copyStateTo(new TupleSchema(this.items, schema)) as unknown as TupleSchema<T, U>;
   }
 
   private _guardTupleInput(
@@ -136,67 +110,56 @@ export class TupleSchema<
     return { data: output, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferTuple<T, R>> {
-    const c = ctx ?? _makeCtx();
+  protected override async _parseAsync(value: unknown, ctx: ParseContext): Promise<ParseValue> {
+    if (!Array.isArray(value)) {
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.tuple.type(), path: [] }],
+        typeOk: false,
+      };
+    }
 
-    return this._withCatchAsync(async () => {
-      const prepared = this._prepareInput(value);
+    const guarded = this._guardTupleInput(value, ctx);
 
-      if (prepared.skip) return prepared.value as unknown as InferTuple<T, R>;
+    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
-      const raw = prepared.value;
+    const tupleValue = guarded.value;
+    const issues: Issue[] = [];
+    const output: unknown[] = [];
 
-      if (!Array.isArray(raw)) {
-        throw new SpellValidationError([{ code: ErrorCode.invalid_type, message: c.messages.tuple.type(), path: [] }]);
+    const fixedResults = await Promise.all(this.items.map((schema, i) => schema._parseFullAsync(tupleValue[i], ctx)));
+
+    for (let i = 0; i < fixedResults.length; i++) {
+      const result = fixedResults[i];
+
+      if (result.issues.length === 0) {
+        output.push(result.data);
+      } else {
+        issues.push(...prependIssuePath(result.issues, i));
+        output.push(tupleValue[i]);
       }
+    }
 
-      const guarded = this._guardTupleInput(raw, c);
+    const rest = this.restSchema;
 
-      if (!guarded.ok) throw new SpellValidationError(guarded.issues);
+    if (rest !== null) {
+      const restItems = tupleValue.slice(this.items.length);
+      const restResults = await Promise.all(restItems.map((item) => rest._parseFullAsync(item, ctx)));
 
-      const tupleValue = guarded.value;
-      const issues: Issue[] = [];
-      const output: unknown[] = [];
-
-      const fixedResults = await Promise.all(this.items.map((schema, i) => schema._parseFullAsync(tupleValue[i], c)));
-
-      for (let i = 0; i < fixedResults.length; i++) {
-        const result = fixedResults[i];
+      for (let i = 0; i < restResults.length; i++) {
+        const result = restResults[i];
+        const idx = this.items.length + i;
 
         if (result.issues.length === 0) {
           output.push(result.data);
         } else {
-          issues.push(...prependIssuePath(result.issues, i));
-          output.push(tupleValue[i]);
+          issues.push(...prependIssuePath(result.issues, idx));
+          output.push(tupleValue[idx]);
         }
       }
+    }
 
-      const rest = this.restSchema;
-
-      if (rest !== null) {
-        const restItems = tupleValue.slice(this.items.length);
-        const restResults = await Promise.all(restItems.map((item) => rest._parseFullAsync(item, c)));
-
-        for (let i = 0; i < restResults.length; i++) {
-          const result = restResults[i];
-          const idx = this.items.length + i;
-
-          if (result.issues.length === 0) {
-            output.push(result.data);
-          } else {
-            issues.push(...prependIssuePath(result.issues, idx));
-            output.push(tupleValue[idx]);
-          }
-        }
-      }
-
-      const validationIssues = await this._runValidatorsAsync(output, c);
-      const allIssues = [...issues, ...validationIssues];
-
-      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
-
-      return this._runPostprocessors(output) as InferTuple<T, R>;
-    });
+    return { data: output, issues, typeOk: true };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
@@ -206,14 +169,5 @@ export class TupleSchema<
       kind: 'tuple',
       rest: this.restSchema !== null ? this.restSchema.definition() : null,
     };
-  }
-
-  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
-    const items = this.items.map((s) => s.walk(visitor));
-    const rest = this.restSchema !== null ? this.restSchema.walk(visitor) : null;
-
-    if (visitor.tuple) return visitor.tuple(this, items, rest);
-
-    return super._walk(visitor);
   }
 }

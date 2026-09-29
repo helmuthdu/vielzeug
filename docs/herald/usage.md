@@ -29,14 +29,13 @@ stop();
 
 ## Own Subscription Lifetimes
 
-Keep the returned unsubscribe function or bind a subscription to an `AbortSignal`. `once()` and `{ once: true }` unsubscribe before invoking the listener.
+Keep the returned unsubscribe function or bind a subscription to an `AbortSignal`. `once()` unsubscribes before invoking the listener.
 
 ```ts
 const controller = new AbortController();
 
 bus.on('cart:updated', renderCart, { signal: controller.signal });
 bus.once('user:logout', clearSession);
-bus.on('user:logout', clearSession, { once: true });
 
 controller.abort();
 ```
@@ -55,11 +54,11 @@ const stop = bus.onAny((event, payload) => {
 stop();
 ```
 
-Pass `{ once: true }` to stop after the first event of any type. `wildcardCount()` reports wildcard listeners separately from `listenerCount()`.
+`wildcardCount()` reports wildcard listeners separately from `listenerCount()`.
 
 ## Await One Event
 
-`wait()` resolves on the next matching event. `waitAny()` requires at least two keys and returns a discriminated union.
+`wait()` resolves on the next matching event. `waitAny()` accepts one or more keys and returns a discriminated union.
 
 ```ts
 const cart = await bus.wait('cart:updated', { signal: AbortSignal.timeout(5_000) });

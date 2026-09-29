@@ -143,8 +143,3 @@ export function activityBuckets(data: CrmData, asOf: Date | string = new Date(),
     return { count: counts.get(date) ?? 0, date };
   });
 }
-
-export const openPipelineValue = openPipeline;
-export const weightedPipelineValue = weightedPipeline;
-export const conversionRate = conversion;
-export const activityBuckets84Days = activityBuckets;

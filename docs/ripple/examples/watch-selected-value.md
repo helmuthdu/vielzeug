@@ -32,7 +32,7 @@ ripple.dispose();
 ### Pitfalls
 
 - Reactive reads made only inside the callback are untracked; use `effect()` when all callback reads should become dependencies.
-- `once` disposes after the first callback invocation, including a callback that throws.
+- For one-shot observation, dispose the returned handle from inside the callback; with `immediate: true` the callback runs before the handle exists, so do the first invocation at the call site.
 - Supply `equals` when selection needs custom equality.
 
 ### Related

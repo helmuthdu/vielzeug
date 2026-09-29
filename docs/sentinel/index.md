@@ -1,11 +1,11 @@
 ---
 title: Sentinel — Subscribable environment snapshots
-description: Subscribable browser and DOM snapshots for viewport, network, media query, element size, and intersection state.
+description: Subscribable browser and DOM snapshots for viewport, network, media query, element size, intersection state, and screen wake lock.
 package: sentinel
 category: Environment
-keywords: [subscribable, browser, viewport, network, media-query, resize-observer, intersection-observer]
+keywords: [subscribable, browser, viewport, network, media-query, resize-observer, intersection-observer, wake-lock, screen, fullscreen]
 related: [ripple, ore, focus, gesture]
-exports: [createViewport, createNetwork, createMediaQuery, createElementSize, createIntersection, SentinelError, SentinelUnavailableError, Sentinel]
+exports: [createViewport, createNetwork, createMediaQuery, createElementSize, createIntersection, createWakeLock, createFullscreen, SentinelError, SentinelUnavailableError, Sentinel]
 environments: [browser]
 ---
 
@@ -121,6 +121,8 @@ const stopObserving = observeViewport();
 - `createMediaQuery()` — Observe one media query.
 - `createElementSize()` — Read content-box dimensions from `ResizeObserver`.
 - `createIntersection()` — Track normalized intersection state.
+- `createWakeLock()` — Prevent the screen from sleeping during active use.
+- `createFullscreen()` — Track and drive document fullscreen state.
 - `dispose()` — Release owned browser observers and listeners.
 - `SentinelOptions.signal` — Abort several Sentinels through one external lifetime.
 

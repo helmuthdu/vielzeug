@@ -243,6 +243,30 @@ select.options = [
 ];
 ```
 
+## Option Icons
+
+Render leading icon(s) next to an option's label. For native options, use `data-icon`; for JavaScript options, use `icon`. Icons are decorative and hidden from assistive technology.
+
+Icon values containing a path separator (`/`) or starting with `data:` are treated as image URLs and rendered as `<img>` — useful for custom artwork (country flags, game resources). Anything else is resolved as a lucide icon name.
+
+An option can carry several icons: pass an array to the JS `icon` property, or a space-separated list to `data-icon` (safe because neither lucide names nor URLs contain spaces).
+
+```html
+<ore-select label="Payment">
+  <option value="exact" data-icon="/resources/fire.svg">Spend Fire ×1</option>
+  <option value="mixed" data-icon="/resources/blood.svg /resources/bones.svg">Spend Blood + Bones</option>
+</ore-select>
+```
+
+```js
+select.options = [
+  { value: 'exact', label: 'Spend Fire ×1', icon: '/resources/fire.svg' },
+  { value: 'mixed', label: 'Spend Blood + Bones', icon: ['/resources/blood.svg', '/resources/bones.svg'] },
+];
+```
+
+Icons inherit the option's state color — muted by default, the theme color when the option is selected. In single-select mode the selected option's icon(s) also appear in the trigger before the value text.
+
 ## In a Form
 
 `ore-select` is form-associated. Read the value via `FormData` or a `change` event. Supply a placeholder `<option value="">…</option>` when the field is not pre-selected.

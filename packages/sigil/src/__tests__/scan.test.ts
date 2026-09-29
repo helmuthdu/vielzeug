@@ -91,7 +91,7 @@ describe('createQrScanner', () => {
     await s.start();
     await vi.advanceTimersByTimeAsync(250);
     expect(results.map((r) => r.value)).toEqual(['found']);
-    expect(s.status).toBe('stopped'); // once=true stopped the stream
+    expect(s.status).toBe('idle'); // once=true released the camera
     s.dispose();
   });
 
@@ -177,10 +177,57 @@ describe('createQrScanner', () => {
     const s = scanner({ mediaDevices: fakeMedia(stream) });
     await s.start();
     s.stop();
-    expect(s.status).toBe('stopped');
+    expect(s.status).toBe('idle');
     expect(stream.getTracks()[0].stop).toHaveBeenCalled();
     expect(s.disposed).toBe(false);
     s.dispose();
+  });
+
+  it('stop() during getUserMedia releases the stream that arrives late', async () => {
+    let resolveMedia: ((stream: MediaStream) => void) | undefined;
+    const media = { getUserMedia: vi.fn(() => new Promise<MediaStream>((resolve) => (resolveMedia = resolve))) };
+    const s = scanner({ mediaDevices: media });
+    const starting = s.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(s.status).toBe('starting');
+    s.stop();
+    const late = fakeStream();
+    resolveMedia?.(late);
+    await starting;
+    expect(s.status).toBe('idle');
+    expect(late.getTracks()[0].stop).toHaveBeenCalled();
+    s.dispose();
+  });
+
+  it('dispose() during getUserMedia keeps the scanner disposed and stops late tracks', async () => {
+    let resolveMedia: ((stream: MediaStream) => void) | undefined;
+    const media = { getUserMedia: vi.fn(() => new Promise<MediaStream>((resolve) => (resolveMedia = resolve))) };
+    const s = scanner({ mediaDevices: media });
+    const starting = s.start();
+    await vi.advanceTimersByTimeAsync(0);
+    s.dispose();
+    const late = fakeStream();
+    resolveMedia?.(late);
+    await starting;
+    expect(s.status).toBe('disposed');
+    expect(late.getTracks()[0].stop).toHaveBeenCalled();
+  });
+
+  it('constructing without BarcodeDetector leaves no unobserved rejection', async () => {
+    const rejections: unknown[] = [];
+    const onRejection = (reason: unknown): void => {
+      rejections.push(reason);
+    };
+    process.on('unhandledRejection', onRejection);
+    try {
+      const s = createQrScanner({ mediaDevices: fakeMedia(), video: video() });
+      await vi.advanceTimersByTimeAsync(10);
+      s.dispose();
+      await vi.advanceTimersByTimeAsync(10);
+    } finally {
+      process.off('unhandledRejection', onRejection);
+    }
+    expect(rejections).toEqual([]);
   });
 
   it('dispose() stops tracks, aborts the signal, and emits dispose', async () => {

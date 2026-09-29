@@ -19,7 +19,7 @@ await increment()
 await increment()
 await increment()
 console.log('after increments:', counter)
-console.log('undo entries:', ledger.state.value.undo.length)
+console.log('undo entries:', ledger.state.getSnapshot().undo.length)
 
 await ledger.undo()
 console.log('after undo:', counter)

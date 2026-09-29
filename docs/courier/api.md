@@ -266,6 +266,7 @@ type PrefetchConfig<P extends string = string, T = unknown> = Omit<
 | `CourierAbortError` | Caller or client cancellation | `method`, `url`, `cause` |
 | `CourierSchemaValidationError` | Response schema fails | `data`, `cause` |
 | `CourierParseError` | Response body cannot parse | — |
+| `CourierConfigError` | Invalid request config (GET/HEAD body, raw + schema) | — |
 | `CourierDisposedError` | Work starts after disposal | — |
 
 Errors thrown directly by custom middleware are preserved rather than reclassified.

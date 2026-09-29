@@ -1,7 +1,43 @@
 ---
-title: Ward 3.0 Migration
-description: Migrate to Ward's immutable ordered decision model and typed attributes.
+title: Ward Migration
+description: Migrate to Ward's immutable ordered decision model, declarative roles, and typed attributes.
 ---
+
+# Ward 3.1 Migration
+
+## Roles are declarative data
+
+`WardRule` gains a first-class `roles?: readonly string[]` field, evaluated beside action, resource, and attributes. `allow()` and `deny()` store the role list as data instead of compiling it into a `condition` closure, so `ward.rules` stays serializable and loggable end-to-end.
+
+```ts
+// Before — roles hidden inside a condition closure
+{ action: 'read', resource: 'posts', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('editor') ?? false }
+
+// After — roles as data
+{ action: 'read', resource: 'posts', effect: 'allow', roles: ['editor'] }
+```
+
+`ANONYMOUS` matches a null principal and `WILDCARD` matches any authenticated principal, exactly as before. `predicate.hasRole()` is removed — declare `roles` on the rule instead. `condition` remains for checks roles cannot express, such as `predicate.owns()`.
+
+## `allowedActions()` derives its candidates
+
+`ward.knownActions` lists the exact allow-side actions derived from the compiled rules, so call sites no longer pass a `knownActions` array that can go stale.
+
+```ts
+// Before
+ward.allowedActions({ knownActions: ['read', 'update', 'delete'], principal, resource: 'posts' });
+
+// After
+ward.allowedActions({ principal, resource: 'posts' });
+// optionally narrow the candidates:
+ward.allowedActions({ filter: ['read', 'update'], principal, resource: 'posts' });
+```
+
+`WardAllowedActionsInput` and `BoundWardAllowedActionsInput` are removed, and `BoundWard` is now `Pick<Ward, 'allowedActions' | 'checkAll' | 'decide'>`.
+
+## `patternCovers()` is removed
+
+Ward does no conflict detection, so the coverage helper had no production callers. `matchesPattern()` remains.
 
 # Ward 3.0 Migration
 

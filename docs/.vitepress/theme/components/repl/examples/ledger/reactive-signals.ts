@@ -4,7 +4,7 @@ export const reactiveSignalsExample = {
 const ledger = createLedger({ maxHistory: 5 })
 const snapshots = []
 const stop = ledger.state.subscribe(() => {
-  snapshots.push(ledger.state.value)
+  snapshots.push(ledger.state.getSnapshot())
 })
 let value = 0
 
@@ -17,11 +17,11 @@ for (const label of ['Increase', 'Increase again']) {
   })
 }
 
-console.log('undo labels:', ledger.state.value.undo.map(entry => entry.label))
-console.log('queued/running:', ledger.state.value.queued, ledger.state.value.running)
+console.log('undo labels:', ledger.state.getSnapshot().undo.map(entry => entry.label))
+console.log('queued/running:', ledger.state.getSnapshot().queued, ledger.state.getSnapshot().running)
 
 await ledger.clear()
-console.log('undo entries after clear:', ledger.state.value.undo.length)
+console.log('undo entries after clear:', ledger.state.getSnapshot().undo.length)
 console.log('state replacements:', snapshots.length)
 stop()
 ledger.dispose()`,

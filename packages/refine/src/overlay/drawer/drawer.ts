@@ -14,7 +14,7 @@ import {
 } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
-import type { OverlayOpenChangeDetail } from '../../core';
+import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
 import '../../content/icon/icon';
 import { coarsePointerMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
@@ -29,9 +29,6 @@ type DrawerSwipeConfig = {
   closingDistance: (distance: number) => number;
   translate: (distance: number) => string;
 };
-
-const parseOptionalBool = (value: string | null): boolean | undefined =>
-  value == null ? undefined : value === '' || value === 'true';
 
 const drawerSwipeConfig: Record<DrawerPlacement, DrawerSwipeConfig> = {
   bottom: {
@@ -305,7 +302,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     // Overlay State Management
     // ────────────────────────────────────────────────────────────────
 
-    const { closeWithAnimation, handleCancel, overlay, requestClose, watchOpenProp } = useDialogControl({
+    const { closeWithAnimation, mount, overlay, requestClose } = useDialogControl({
       beforeOpen: (dialog) => {
         // Clear any inline drag styles from a previous swipe-close so the CSS
         // entry animation starts from the correct base state.
@@ -375,12 +372,12 @@ define<OreDrawerProps>(DRAWER_TAG, {
       };
 
       // ────────────────────────────────────────────────────────────
-      // Event Handlers: Cancel, Backdrop Click
+      // Event Handlers: Backdrop Click
       // ────────────────────────────────────────────────────────────
-      // `handleCancel` (Escape via the native `cancel` event) is provided by
-      // `useDialogControl` above — drawer only needs its own backdrop-click
-      // handler since it has swipe-to-dismiss logic the shared dialog helper
-      // doesn't know about.
+      // `mount()` registers the open-prop watcher and the shared native
+      // `close`/`cancel` handling (Escape). Drawer registers only its own
+      // backdrop-click handler on top, since swipe-to-dismiss adds guards the
+      // shared `handleBackdropClick` doesn't know about.
 
       const handleBackdropClick = (e: MouseEvent) => {
         if (props.persistent.value) return;
@@ -392,9 +389,8 @@ define<OreDrawerProps>(DRAWER_TAG, {
         requestClose('outsideClick');
       };
 
-      watchOpenProp();
+      mount();
 
-      onEvent(dialog, 'cancel', handleCancel);
       onEvent(dialog, 'click', handleBackdropClick);
 
       // Drag-to-close handlers — scoped to the handle element only so interactions

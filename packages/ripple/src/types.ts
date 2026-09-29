@@ -14,7 +14,6 @@ export type ComputedOptions<T> = {
 
 export type EffectOptions = {
   name?: string;
-  scheduler?: 'microtask' | 'sync';
 };
 
 export interface Readable<T> {

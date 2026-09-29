@@ -4,6 +4,11 @@ import { type Fixture, mount } from '@vielzeug/ore/testing';
 describe('ore-dialog', () => {
   let fixture: Fixture<HTMLElement>;
 
+  // jsdom has no Web Animations API, so the exit wait's transition filter needs a CSSTransition
+  // global to instanceof against. Installed file-wide: teardown-time closes can schedule exit
+  // waits whose microtasks outlive any single test's cleanup.
+  const FakeCSSTransition = class {};
+
   beforeAll(async () => {
     if (!HTMLDialogElement.prototype.showModal) {
       HTMLDialogElement.prototype.showModal = function () {
@@ -17,6 +22,8 @@ describe('ore-dialog', () => {
         this.dispatchEvent(new Event('close'));
       };
     }
+
+    (globalThis as typeof globalThis & { CSSTransition?: unknown }).CSSTransition ??= FakeCSSTransition;
 
     await import('./dialog');
   });
@@ -123,6 +130,44 @@ describe('ore-dialog', () => {
 
       expect(handler).toHaveBeenCalled();
       expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'programmatic' });
+    });
+
+    it('a reopen during the exit transition cancels the close and keeps the dialog open', async () => {
+      fixture = await mount('ore-dialog', { attrs: { open: '' } });
+      const dialog = fixture.query('dialog') as HTMLDialogElement;
+      const panel = dialog.querySelector('.panel') as HTMLElement;
+      const closeHandler = vi.fn();
+      fixture.element.addEventListener('open-change', closeHandler);
+
+      // A controllable "transition" lets the test hold the exit animation open.
+      let finishTransition: () => void = () => {};
+      const pending = new FakeCSSTransition() as unknown as { finished: Promise<unknown> };
+      pending.finished = new Promise((resolve) => {
+        finishTransition = resolve;
+      });
+      panel.getAnimations = () => [pending as unknown as Animation];
+
+      fixture.element.removeAttribute('open');
+      await fixture.flush();
+
+      // The exit is pending: the native dialog stays open while the closing class runs.
+      expect(dialog.hasAttribute('open')).toBe(true);
+      expect(dialog.classList.contains('closing')).toBe(true);
+      expect(closeHandler).not.toHaveBeenCalled();
+
+      // Reopening mid-exit cancels the pending close — the open prop is authoritative.
+      fixture.element.setAttribute('open', '');
+      await fixture.flush();
+
+      expect(dialog.hasAttribute('open')).toBe(true);
+      expect(dialog.classList.contains('closing')).toBe(false);
+
+      // Even when the held transition settles afterwards, the cancelled close stays inert.
+      finishTransition();
+      await fixture.flush();
+
+      expect(dialog.hasAttribute('open')).toBe(true);
+      expect(closeHandler).not.toHaveBeenCalled();
     });
 
     it('fires open-change when dismiss button clicked', async () => {

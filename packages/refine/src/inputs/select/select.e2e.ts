@@ -84,4 +84,46 @@ test.describe('Layout', () => {
     expect(metrics.truncated).toBe(false);
     expect(metrics.right).toBeLessThanOrEqual(metrics.viewportWidth);
   });
+
+  // Regression: the positioner used to shift the panel fully inside the boundary for its
+  // natural (unclamped) width, then clamped the width afterwards — landing the panel far
+  // left of its trigger whenever the natural width exceeded a clipping ancestor. The clamp
+  // must happen before `shift` so the panel only shifts for the width it renders at.
+  test('dropdown in a clipping container stays aligned with its trigger after width clamping', async ({
+    page,
+    refinePage,
+  }) => {
+    await refinePage.mountComponent(
+      '<div id="box" style="width:420px;overflow:auto">' +
+        '<ore-select id="clipped" fullwidth label="Payment">' +
+        '<option value="exact">Spend Fire ×1 (2 available)</option>' +
+        '<option value="mixed">Spend Blood ×1 (2 available) + Bones ×1 (5 available) + Scales ×1</option>' +
+        '</ore-select>' +
+        '</div>',
+    );
+
+    await page.locator('#clipped').click();
+    await expect(page.getByRole('option', { name: /Spend Blood/ })).toBeVisible();
+
+    const metrics = await page.evaluate(() => {
+      const select = document.getElementById('clipped') as HTMLElement & { shadowRoot: ShadowRoot };
+      const dropdown = select.shadowRoot.querySelector('.dropdown') as HTMLElement;
+      const trigger = select.shadowRoot.querySelector('ore-input.trigger') as HTMLElement;
+      const box = document.getElementById('box') as HTMLElement;
+      const dr = dropdown.getBoundingClientRect();
+      const tr = trigger.getBoundingClientRect();
+
+      return {
+        boxRight: box.getBoundingClientRect().right,
+        dropdownLeft: dr.left,
+        dropdownRight: dr.right,
+        triggerLeft: tr.left,
+      };
+    });
+
+    // Clamped to the container width, the panel needs at most a few px of shift to fit —
+    // not the full overflow of its wider natural width.
+    expect(metrics.dropdownLeft).toBeGreaterThan(metrics.triggerLeft - 16);
+    expect(metrics.dropdownRight).toBeLessThanOrEqual(metrics.boxRight);
+  });
 });

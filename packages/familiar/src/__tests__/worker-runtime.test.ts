@@ -1,6 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { PROTOCOL_VERSION } from '../protocol';
 import {
   createStreamWorker,
   createWorker,
@@ -10,7 +8,8 @@ import {
   FamiliarTaskError,
   FamiliarTerminatedError,
   runBatch,
-} from '../worker';
+} from '../index';
+import { PROTOCOL_VERSION } from '../protocol';
 
 class WorkerMock {
   static instances: WorkerMock[] = [];
@@ -204,12 +203,13 @@ describe('createWorker', () => {
     await expect(Promise.all([running, queued, waiting, urgent])).resolves.toEqual([1, 2, 3, 4]);
   });
 
-  it('settles worker errors before isolating onSlotError failures', async () => {
-    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const pool = createWorker<number, number>('worker.js', {
-      onSlotError: () => {
-        throw new Error('observer failed');
-      },
+  it('taps worker errors and swallows throwing tap handlers', async () => {
+    const pool = createWorker<number, number>('worker.js');
+    const errors: unknown[] = [];
+    pool.tap((event) => {
+      if (event.type === 'worker-error') errors.push(event.error);
+
+      throw new Error('observer failed');
     });
     const task = pool.run(1);
     const occupied = worker();
@@ -218,8 +218,7 @@ describe('createWorker', () => {
 
     await expect(task).rejects.toBeInstanceOf(FamiliarRuntimeError);
     expect(occupied.terminated).toBe(true);
-    expect(warning).toHaveBeenCalledOnce();
-    warning.mockRestore();
+    expect(errors).toHaveLength(1);
   });
 
   it('rejects malformed and undecodable worker responses', async () => {

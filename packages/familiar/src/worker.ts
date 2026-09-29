@@ -1,26 +1,3 @@
-export type { BatchOptions } from './_pool.js';
-export { runBatch } from './_pool.js';
-export {
-  FamiliarError,
-  FamiliarInvalidOptionsError,
-  FamiliarQueueFullError,
-  FamiliarRuntimeError,
-  FamiliarTaskError,
-  FamiliarTerminatedError,
-  FamiliarTimeoutError,
-} from './errors.js';
-export type {
-  DrainOptions,
-  PoolBase,
-  RunOptions,
-  StreamWorkerPool,
-  WorkerOptions,
-  WorkerPool,
-  WorkerStats,
-  WorkerStatus,
-} from './types.js';
-
-import { warn } from './_dev.js';
 import { createPool } from './_pool.js';
 import { MAX_CONCURRENCY, validateTimeout } from './_pool-core.js';
 import { createStreamPool, type StreamSlot } from './_stream-pool.js';
@@ -40,7 +17,6 @@ type ResolvedOptions = {
   concurrency: number;
   maxQueue: number | undefined;
   onFull: 'reject' | 'wait';
-  onSlotError: WorkerOptions['onSlotError'];
   timeout: number | undefined;
 };
 
@@ -53,13 +29,13 @@ type Pending<TOutput> = {
   timer?: ReturnType<typeof setTimeout>;
 };
 
-export type RunningStream<TChunk> = {
+type RunningStream<TChunk> = {
   done: Promise<void>;
   iterable: AsyncIterable<TChunk>;
 };
 
 function resolveOptions(options: WorkerOptions = {}): ResolvedOptions {
-  const { concurrency = 1, maxQueue, onFull = 'reject', onSlotError, timeout } = options;
+  const { concurrency = 1, maxQueue, onFull = 'reject', timeout } = options;
   const resolvedConcurrency =
     concurrency === 'auto'
       ? Math.min(MAX_CONCURRENCY, Math.max(1, globalThis.navigator?.hardwareConcurrency ?? 1))
@@ -79,7 +55,7 @@ function resolveOptions(options: WorkerOptions = {}): ResolvedOptions {
 
   validateTimeout(timeout);
 
-  return { concurrency: resolvedConcurrency, maxQueue, onFull, onSlotError, timeout };
+  return { concurrency: resolvedConcurrency, maxQueue, onFull, timeout };
 }
 
 function isWorkerResponse<TOutput>(value: unknown): value is WorkerResponse<TOutput> {
@@ -117,16 +93,17 @@ function responseError(error: SerializedError): FamiliarRuntimeError | FamiliarT
 }
 
 class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot<TInput, TOutput> {
-  readonly #onSlotError: WorkerOptions['onSlotError'];
   readonly #url: URL | string;
   #disposed = false;
   #pending: Pending<TOutput> | undefined;
   #taskId = 0;
   #worker: Worker | undefined;
 
-  constructor(url: URL | string, onSlotError: WorkerOptions['onSlotError']) {
+  /** Wired by the pool factory to report unhandled worker runtime errors through `tap()`. */
+  notify: ((error: FamiliarRuntimeError) => void) | undefined = undefined;
+
+  constructor(url: URL | string) {
     this.#url = url;
-    this.#onSlotError = onSlotError;
   }
 
   cancel(reason: unknown): void {
@@ -276,12 +253,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
 
     this.#stopWorker();
     this.#settlePending('reject', error);
-
-    try {
-      this.#onSlotError?.(error);
-    } catch {
-      warn('onSlotError callback failed; Familiar continued replacing the failed worker slot.');
-    }
+    this.notify?.(error);
   }
 
   #onMessage(message: unknown): void {
@@ -328,7 +300,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput>, StreamSlot
 
 function slots<TInput, TOutput>(url: URL | string, options: ResolvedOptions): Slot<TInput, TOutput>[] {
   const resolvedUrl = typeof url === 'string' ? url : url.href;
-  return Array.from({ length: options.concurrency }, () => new Slot<TInput, TOutput>(resolvedUrl, options.onSlotError));
+  return Array.from({ length: options.concurrency }, () => new Slot<TInput, TOutput>(resolvedUrl));
 }
 
 /** Create a pool backed by an ES module worker registered with exposeTask(). */
@@ -339,7 +311,6 @@ export function createWorker<TInput, TOutput>(
   const resolved = resolveOptions(options);
 
   return createPool(slots<TInput, TOutput>(url, resolved), {
-    concurrency: resolved.concurrency,
     defaultTimeout: resolved.timeout,
     maxQueue: resolved.maxQueue,
     onFull: resolved.onFull,
@@ -354,7 +325,6 @@ export function createStreamWorker<TInput, TChunk>(
   const resolved = resolveOptions(options);
 
   return createStreamPool(slots<TInput, TChunk>(url, resolved), {
-    concurrency: resolved.concurrency,
     defaultTimeout: resolved.timeout,
     maxQueue: resolved.maxQueue,
     onFull: resolved.onFull,

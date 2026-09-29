@@ -67,6 +67,7 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
   let stream: MediaStream | null = null;
   let timer: ReturnType<typeof setInterval> | null = null;
   let busy = false;
+  let detector: Promise<QrDetector> | undefined;
 
   const emit = (event: SigilEvent): void => {
     if (tappers.size === 0) return;
@@ -85,6 +86,10 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
     emit({ status: next, type: 'status-change' });
   };
 
+  // Read through a function: status changes across awaits via closures, and a
+  // direct read would be narrowed to the pre-await value by the compiler.
+  const isStarting = (): boolean => status === 'starting';
+
   const stopTracks = (): void => {
     if (timer !== null) {
       clearInterval(timer);
@@ -100,7 +105,20 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
   const fail = (error: SigilError): void => {
     emit({ error, type: 'error' });
     stopTracks();
-    setStatus('stopped');
+    setStatus('idle');
+  };
+
+  // Created on first start() so a missing BarcodeDetector never rejects a
+  // promise nobody awaits (construction must stay side-effect-free).
+  const getDetector = (): Promise<QrDetector> => {
+    detector ??= (async () => {
+      if (options.detector) return options.detector;
+      const ctor = barcodeDetector();
+      if (typeof ctor !== 'function')
+        throw new SigilUnsupportedError('BarcodeDetector is not available in this environment');
+      return new ctor({ formats: ['qr_code'] });
+    })();
+    return detector;
   };
 
   const tick = async (): Promise<void> => {
@@ -117,8 +135,8 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
     busy = true;
     const started = Date.now();
     try {
-      const detector = await detectorPromise;
-      const results = await detector.detect(video);
+      const qrDetector = await getDetector();
+      const results = await qrDetector.detect(video);
       const first = results[0];
       if (first) {
         const result: QrScanResult = { cornerPoints: first.cornerPoints, value: first.rawValue };
@@ -126,7 +144,7 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
         for (const handler of [...handlers]) handler(result);
         if (once) {
           stopTracks();
-          setStatus('stopped');
+          setStatus('idle');
         }
       }
     } catch (error) {
@@ -135,14 +153,6 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
       busy = false;
     }
   };
-
-  const detectorPromise: Promise<QrDetector> = Promise.resolve().then(() => {
-    if (options.detector) return options.detector;
-    const ctor = barcodeDetector();
-    if (typeof ctor !== 'function')
-      throw new SigilUnsupportedError('BarcodeDetector is not available in this environment');
-    return new ctor({ formats: ['qr_code'] });
-  });
 
   const api: QrScanner = {
     get disposalSignal() {
@@ -171,20 +181,30 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
       if (!media || typeof media.getUserMedia !== 'function')
         throw new SigilUnsupportedError('getUserMedia is not available in this environment');
       // Surface a missing detector at start() (not construction) per contract.
-      await detectorPromise;
+      await getDetector();
       options.signal?.throwIfAborted();
       setStatus('starting');
+      let newStream: MediaStream;
       try {
-        stream = await media.getUserMedia({ video: options.constraints ?? { facingMode: 'environment' } });
+        newStream = await media.getUserMedia({ video: options.constraints ?? { facingMode: 'environment' } });
       } catch (error) {
         setStatus('idle');
         if (error instanceof DOMException && error.name === 'NotAllowedError')
           throw new SigilPermissionError('Camera permission denied', { cause: error });
         throw error instanceof Error ? error : new SigilError('Camera request failed', { cause: error });
       }
-      options.signal?.throwIfAborted();
+      // stop()/dispose() during the permission prompt must not resurrect the scanner.
+      if (!isStarting()) {
+        for (const track of newStream.getTracks()) track.stop();
+        return;
+      }
+      stream = newStream;
       options.video.srcObject = stream;
       await options.video.play().catch(() => {});
+      if (!isStarting()) {
+        stopTracks();
+        return;
+      }
       setStatus('scanning');
       timer = setInterval(() => void tick(), intervalMs);
       void tick();
@@ -195,7 +215,7 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
     stop() {
       if (status === 'disposed') return;
       stopTracks();
-      setStatus(status === 'idle' ? 'idle' : 'stopped');
+      setStatus('idle');
     },
     tap(handler, tapOptions) {
       if (status === 'disposed') return () => {};
@@ -209,6 +229,13 @@ export function createQrScanner(options: QrScannerOptions): QrScanner {
     },
   };
 
-  options.signal?.addEventListener('abort', () => api.stop(), { once: true });
+  if (options.signal) {
+    const onAbort = (): void => api.stop();
+    options.signal.addEventListener('abort', onAbort, { once: true });
+    // A long-lived signal must not retain the scanner past dispose().
+    disposal.signal.addEventListener('abort', () => options.signal?.removeEventListener('abort', onAbort), {
+      once: true,
+    });
+  }
   return api;
 }

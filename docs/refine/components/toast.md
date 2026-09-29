@@ -239,7 +239,24 @@ drawerToast.success('Saved inside the drawer');
 drawerToast.dispose();
 ```
 
-Services created with the same root share one store. Different roots are isolated. `configure()` must be called before the first notification, and controls the lazily-created host only.
+Services created with the same root share one store. Different roots are isolated.
+
+`configure()` applies immediately: position writes the host attribute, and max reaches the store through the host's own `max` watch. Calling it before the first notification simply configures the host that gets created lazily.
+
+## Observing transitions
+
+`tap()` exposes add, dismiss, and dispose transitions as a side channel — for analytics, logging, or syncing notifications to storage. Handler errors are swallowed; observation never affects toast behavior.
+
+```ts
+import { toast } from '@vielzeug/refine/toast';
+
+const stop = toast.tap((event) => {
+  if (event.type === 'add') console.log('shown', event.id);
+  if (event.type === 'dismiss') console.log('removed', event.id);
+});
+
+stop(); // detach
+```
 
 ## Declarative host
 
@@ -252,7 +269,7 @@ Use attributes to set a host's placement and notification limit:
 | Attribute  | Default          | Description                          |
 | ---------- | ---------------- | ------------------------------------ |
 | `position` | `bottom-right`   | `top-*` or `bottom-*` list anchor    |
-| `max`      | `5`              | Maximum live notifications per scope  |
+| `max`      | `5`              | Maximum live notifications per scope — attribute changes apply live |
 
 ## Notification options
 
@@ -274,17 +291,42 @@ toast.add({
 | `color`       | `primary`   | Alert colour theme                                                |
 | `heading`     | —           | Alert heading                                                     |
 | `variant`     | `solid`     | `solid`, `flat`, or `bordered`                                   |
-| `duration`    | `5000`      | Auto-dismiss delay in milliseconds; `0` keeps it visible         |
+| `duration`    | `5000`; `0` for action toasts | Auto-dismiss delay in milliseconds; `0` keeps it visible. Entries carrying `actions` persist until dismissed by default — keyboard and screen-reader users reach toasts last in tab order, so a timed expiry would expire the choice unseen |
 | `dismissible` | `true`      | Shows the close button                                            |
-| `actions`     | —           | Buttons (flat by default) that run `onClick` then dismiss         |
+| `snackbar`    | `false`     | Material-style compact bar: inverted neutral surface, single-row padding, text-style actions; overrides `variant` |
+| `actions`     | —           | Buttons (flat by default, ghost when `snackbar`) that run `onClick` then dismiss |
+| `replace`     | `false`     | Replace a live entry with the same message instead of stacking a duplicate |
 | `urgency`     | derived     | `polite` or `assertive`; errors are assertive by default          |
 | `onDismiss`   | —           | Called after the exit animation completes                         |
+
+`toast.update(id, changes)` patches only the provided fields — omitted ones leave the entry (and its timer) unchanged.
+
+### Snackbar
+
+Set `snackbar: true` for small, transient confirmations — a Material-style bar on an inverted
+surface (dark chip in light themes, light chip in dark themes) with single-row padding and a
+flat text action. The bar sizes to its content up to the host's width cap, staying flush with
+the position's anchored edge. With an action it persists until dismissed (the default for
+action toasts), and on phones the action stacks below a wrapped message:
+
+```ts
+toast.add({
+  actions: [{ label: 'Undo', onClick: undo }],
+  horizontal: true,
+  message: 'Damage +1',
+  snackbar: true,
+});
+```
 
 ## Behavior and accessibility
 
 Notifications render as a vertical list anchored to the host position — newest nearest the anchored edge — so every notification stays readable and reachable with a pointer, touch, or keyboard. Each notification is announced once through the host's polite or assertive live region; the embedded alert itself carries no live-region semantics.
 
-Timed notifications show a thin progress bar along the bottom edge. Hovering or focusing the list pauses auto-dismiss timers and the bar; leaving resumes the remaining duration. Users can dismiss closable notifications with the close button, the <kbd>Escape</kbd> key while the notification has focus, or a horizontal swipe. Notifications fade and slide in and out; both transitions honour `prefers-reduced-motion`, which also hides the progress bar. On narrow viewports (≤ 480px) notifications span the full width above the safe-area inset.
+Timed notifications show a thin progress bar along the bottom edge. Hovering or focusing the list pauses auto-dismiss timers and the bar; leaving resumes the remaining duration. Timers also pause while a top-layer surface (an open dialog, fullscreen) covers the toasts — the user cannot interact with them, so choices never expire unseen.
+
+Users can dismiss closable notifications with the close button, a horizontal swipe, or the <kbd>Escape</kbd> key. Escape dismisses the notification holding focus; pressed anywhere else it dismisses the newest dismissible notification, unless an open top-layer surface owns the key. When a removed notification held focus, focus returns to the element focused before it, so keyboard users keep their place instead of restarting from the document top.
+
+Notifications fade and slide in and out; both transitions honour `prefers-reduced-motion`, which also hides the progress bar. Removal happens on a fixed store-owned timeout (~250ms after dismissal), so a themed `--toast-exit-duration` beyond the default 200ms is clipped. On narrow viewports (≤ 480px) notifications span the full width above the safe-area inset, and horizontal snackbars stack their action below a wrapped message.
 
 Flat and bordered notifications use an opaque surface (`--toast-bg`) tinted with the notification colour so they never blend into the page beneath them. Multiple notifications exit independently, and all timers and subscriptions are cleaned up when a scoped service is disposed.
 
@@ -295,6 +337,10 @@ Flat and bordered notifications use an opaque surface (`--toast-bg`) tinted with
 | `--toast-max-width`                                                               | Notification width cap (full width on phones)        | `400px`                                 |
 | `--toast-gap`                                                                     | Gap between notifications                            | `var(--size-2)`                         |
 | `--toast-bg`                                                                      | Opaque surface for flat and bordered notifications   | Tinted `var(--color-contrast-50)`       |
+| `--toast-snackbar-bg`                                                             | Snackbar surface                                     | `var(--color-contrast-900)`             |
+| `--toast-snackbar-color`                                                          | Snackbar text colour                                 | `var(--color-contrast-100)`             |
+| `--toast-snackbar-padding`                                                        | Snackbar padding                                     | `var(--size-2) var(--size-4)`           |
+| `--toast-snackbar-shadow`                                                          | Snackbar elevation shadow                            | `var(--shadow-lg)`                      |
 | `--toast-shadow`                                                                  | Elevation shadow                                     | `var(--shadow-xl)`                      |
 | `--toast-enter-duration` / `--toast-exit-duration`                                | Motion durations                                     | `var(--duration-200)`                   |
 | `--toast-progress-height`                                                         | Height of the auto-dismiss progress bar              | `3px`                                   |

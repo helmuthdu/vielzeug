@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix union schema inference: schema-only branches keep concrete output types instead of degrading to unknown",
+      "packageName": "@vielzeug/spell",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}
