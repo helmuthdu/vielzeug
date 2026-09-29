@@ -2,8 +2,7 @@ import { type AnimationGroup, animateEach } from '@vielzeug/necromancer';
 import { define, each, html, onCleanup, onMounted, prop, ref } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 import { now, Temporal } from '@vielzeug/tempo';
-import { t } from '../../core/i18n';
-import { locale } from '../../core/i18n';
+import { locale, t } from '../../core/i18n';
 import type { Activity } from '../../core/types';
 
 const BUCKET_COUNT = 84;

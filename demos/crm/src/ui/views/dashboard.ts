@@ -14,7 +14,7 @@ import { createBarChart, createLineChart } from '@vielzeug/prism';
 import { computed, effect } from '@vielzeug/ripple';
 import { can } from '../../core/auth';
 import { formatAmount, formatDate } from '../../core/format';
-import { t } from '../../core/i18n';
+import { locale, t } from '../../core/i18n';
 import { router } from '../../core/router';
 import {
   activityBuckets,
@@ -27,7 +27,6 @@ import {
   weightedPipeline,
   wonValue,
 } from '../../core/selectors';
-import { locale } from '../../core/i18n';
 import { crmData, currentUser } from '../../core/store';
 import { openRecordDrawer } from '../components/record-drawer';
 

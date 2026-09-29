@@ -1,4 +1,4 @@
-import { createHistoryForBase, createRouteSignals, createRouter } from '@vielzeug/wayfinder';
+import { createHistoryForBase, createRouter, createRouteSignals } from '@vielzeug/wayfinder';
 
 export type RouteNames =
   | 'admin'

@@ -13,7 +13,7 @@ import { define, each, html, prop, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { can } from '../../core/auth';
 import { formatAmount, formatDate, formatRelativeDate } from '../../core/format';
-import { t } from '../../core/i18n';
+import { locale, t } from '../../core/i18n';
 import { router } from '../../core/router';
 import {
   companyActivities,
@@ -22,7 +22,6 @@ import {
   companyLeads,
   companyOpportunities,
 } from '../../core/selectors';
-import { locale } from '../../core/i18n';
 import { crmData } from '../../core/store';
 import { openRecordDialog } from '../components/record-dialog';
 import { openRecordDrawer } from '../components/record-drawer';

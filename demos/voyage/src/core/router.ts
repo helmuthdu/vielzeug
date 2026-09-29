@@ -1,5 +1,5 @@
 import { computed } from '@vielzeug/ripple';
-import { createHistoryForBase, createRouteSignals, createRouter, type RouteViewName } from '@vielzeug/wayfinder';
+import { createHistoryForBase, createRouter, createRouteSignals, type RouteViewName } from '@vielzeug/wayfinder';
 
 export type RouteName = RouteViewName<typeof routes>;
 

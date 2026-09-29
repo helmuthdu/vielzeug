@@ -1,9 +1,8 @@
 import '@vielzeug/refine/chat-panel';
 
 import { define, getHost, html, onMounted, ref } from '@vielzeug/ore';
+import type { ChatPanelElement, OreChatPanelMessage, OreChatPanelSuggestion } from '@vielzeug/refine/chat-panel';
 import { signal } from '@vielzeug/ripple';
-
-import { type ChatPanelElement, type OreChatPanelMessage, type OreChatPanelSuggestion } from '@vielzeug/refine/chat-panel';
 
 import type { RouteName } from '../../core/router';
 import { navigateDynamic } from '../navigation';
@@ -120,7 +119,12 @@ define(TRAVEL_SUPPORT_CHAT_TAG, {
         sender: message.sender,
         text: message.text,
         ...(message.action
-          ? { action: { label: message.action.label, payload: { params: message.action.params, route: message.action.route } } }
+          ? {
+              action: {
+                label: message.action.label,
+                payload: { params: message.action.params, route: message.action.route },
+              },
+            }
           : {}),
       }));
 
@@ -134,7 +138,9 @@ define(TRAVEL_SUPPORT_CHAT_TAG, {
     };
 
     const onAction = (event: Event): void => {
-      const { params, route } = (event as CustomEvent<{ payload: { params?: Record<string, string>; route: RouteName } }>).detail.payload;
+      const { params, route } = (
+        event as CustomEvent<{ payload: { params?: Record<string, string>; route: RouteName } }>
+      ).detail.payload;
       panel.value?.hide();
       navigateDynamic(route, params);
     };

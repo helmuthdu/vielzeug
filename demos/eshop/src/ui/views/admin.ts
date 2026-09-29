@@ -6,9 +6,9 @@ import '@vielzeug/refine/icon';
 import '@vielzeug/refine/checkbox';
 
 import { define, each, html, onCleanup, onMounted, ref, when } from '@vielzeug/ore';
-import { eventFieldValue } from '@vielzeug/refine';
 import type { BarChartConfig, ChartHandle } from '@vielzeug/prism';
 import { createBarChart } from '@vielzeug/prism';
+import { eventFieldValue } from '@vielzeug/refine';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { canAccessAdmin } from '../../core/auth';
 import { getReportService } from '../../core/container';

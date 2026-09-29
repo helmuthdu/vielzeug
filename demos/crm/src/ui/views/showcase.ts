@@ -4,9 +4,8 @@ import '@vielzeug/refine/input';
 import { define, each, html, onCleanup, onMounted, ref } from '@vielzeug/ore';
 import { effect, signal } from '@vielzeug/ripple';
 import { createSandbox, type SandboxHandle } from '@vielzeug/sandbox';
-import { t } from '../../core/i18n';
+import { locale, t } from '../../core/i18n';
 import { crmIndex } from '../../core/search';
-import { locale } from '../../core/i18n';
 import { crmData, regenerateDemoData } from '../../core/store';
 import { countContactsByTitle } from '../../core/worker-tasks';
 

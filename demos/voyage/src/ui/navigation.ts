@@ -1,5 +1,5 @@
 import type { NamedNavigationTarget, PathParams, RoutePathByName } from '@vielzeug/wayfinder';
-import { activeRouteQuery, type RouteName, type routes, router } from '../core/router';
+import { activeRouteQuery, type RouteName, router, type routes } from '../core/router';
 
 type VoyageRoutes = typeof routes;
 

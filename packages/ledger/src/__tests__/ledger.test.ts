@@ -356,16 +356,11 @@ describe('record', () => {
 
   it('clears the redo stack like do()', async () => {
     const ledger = createLedger();
-    let value = 0;
 
     ledger.record({
-      apply: () => {
-        value = 1;
-      },
+      apply: vi.fn(),
       label: 'first',
-      revert: () => {
-        value = 0;
-      },
+      revert: vi.fn(),
     });
     await ledger.undo();
     ledger.record({
