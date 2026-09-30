@@ -1,8 +1,6 @@
 import { define, getHost, html, inject, onCleanup, prop, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 import { createCheckable, lifecycleSignal } from '../../core';
-import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
-import '../../content/icon/icon';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -11,12 +9,14 @@ import {
   forcedColorsFormControlMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
 import { applyCheckableBinding } from '../shared/field-binding';
 import { defineFieldChecked, dispatchNativeFieldEvent, setFieldChecked } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './checkbox.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 export type OreCheckboxEvents = {
   change: Event;
   input: Event;

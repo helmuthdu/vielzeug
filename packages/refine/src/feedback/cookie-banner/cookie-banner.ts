@@ -2,11 +2,18 @@ import { createId, define, each, getHost, html, prop, useEmit, when } from '@vie
 import { signal, watch } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';
-import '../../inputs/button/button';
-import '../../inputs/checkbox/checkbox';
+
+// The child components this banner renders. The bare-import form is not enough:
+// the per-entry library build drops side-effect-only imports between entry
+// modules, so these re-export the tags as bindings — the bundler keeps the
+// module link, and importing `@vielzeug/refine/cookie-banner` registers
+// ore-button and ore-checkbox on its own.
+
 import { eventFieldChecked } from '../../inputs/shared/native-field-event';
 import componentStyles from './cookie-banner.css?inline';
 
+export { BUTTON_TAG } from '../../inputs/button/button';
+export { CHECKBOX_TAG } from '../../inputs/checkbox/checkbox';
 /** A consent category offered as an opt-in checkbox. `id` is the key the `decide` detail is built from. */
 export type OreCookieBannerCategory = { description?: string; id: string; label: string };
 

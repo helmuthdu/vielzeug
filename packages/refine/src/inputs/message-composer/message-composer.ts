@@ -42,11 +42,12 @@ import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
-import '../../content/icon/icon';
-import '../button/button';
+
 import componentStyles from './message-composer.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 export type { SendShortcut } from '../../core';
+export { BUTTON_TAG } from '../button/button';
 
 const DEFAULT_SEND_LABEL = 'Send message';
 const SEND_ICON = 'arrow-up';

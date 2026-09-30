@@ -1,14 +1,12 @@
 import { define, getHost, html, inject, onMounted, prop, ref, useEmit, watchEffect } from '@vielzeug/ore';
-
-import type { ComponentSize, VisualVariant } from '../../types';
-
-import '../../content/icon/icon';
 import { elementDirection } from '../../core/direction';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin } from '../../styles';
+import type { ComponentSize, VisualVariant } from '../../types';
 import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 /** Accordion item component properties */
 
 export type OreAccordionItemEvents = {

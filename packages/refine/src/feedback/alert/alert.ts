@@ -1,8 +1,4 @@
 import { define, getHost, html, prop, useEmit, useSlots } from '@vielzeug/ore';
-
-import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
-
-import '../../content/icon/icon';
 import { awaitExit } from '../../overlay/shared/await-exit';
 import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
@@ -13,8 +9,10 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './alert.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 export type OreAlertEvents = {
   dismiss: { originalEvent: MouseEvent };
 };

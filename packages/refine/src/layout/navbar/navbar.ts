@@ -14,10 +14,6 @@ import {
 } from '@vielzeug/ore';
 import { computed, fromSubscribable, type Readable, signal, untrack, watch } from '@vielzeug/ripple';
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
-
-import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
-
-import '../../content/icon/icon';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -26,9 +22,12 @@ import {
   reducedMotionMixin,
   roundedVariantMixin,
 } from '../../styles';
+import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 import { computeSafeRel } from '../../utils';
 import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
 import navbarStyles from './navbar.css?inline';
+
+export { ICON_TAG } from '../../content/icon/icon';
 
 const listen = <E extends Event = Event>(
   el: EventTarget | null | undefined,
@@ -135,6 +134,8 @@ export type OreNavbarProps = {
 
 /** Navbar item properties */
 export type OreNavbarItemProps = {
+  /** Accessible name for icon-only items, forwarded to the internal button or anchor */
+  ariaLabel?: string;
   /** Whether this item represents the current page */
   active?: boolean;
   /** Whether this item is disabled */
@@ -777,6 +778,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
  *
  * @element ore-navbar-item
  *
+ * @attr {string} aria-label - Accessible name for icon-only items, forwarded to the internal control
  * @attr {boolean} active - Marks item as the current active route
  * @attr {boolean} disabled - Disables interaction
  * @attr {string} href - Link URL; renders as `<a>` when set
@@ -805,6 +807,7 @@ export const NAVBAR_ITEM_TAG = 'ore-navbar-item' as const;
 define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
   props: {
     active: prop.bool(false),
+    ariaLabel: prop.string(),
     disabled: prop.bool(false),
     href: prop.string(),
     'icon-only': prop.bool(false),
@@ -859,6 +862,7 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
               href="${props.href}"
               rel="${effectiveRel}"
               target="${props.target}"
+              aria-label="${() => props.ariaLabel.value ?? null}"
               aria-current="${() => (props.active.value ? 'page' : null)}"
               @click=${closeMobileMenuIfOpen}>
               ${renderItemContent()}
@@ -868,12 +872,22 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
 
         if (props.disabled.value) {
           return html`
-            <div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div>
+            <div
+              class="item"
+              part="item"
+              tabindex="-1"
+              aria-label="${() => props.ariaLabel.value ?? null}"
+              aria-disabled="true">${renderItemContent()}</div>
           `;
         }
 
         return html`
-          <button class="item" part="item" type="button" @click=${closeMobileMenuIfOpen}>${renderItemContent()}</button>
+          <button
+            class="item"
+            part="item"
+            type="button"
+            aria-label="${() => props.ariaLabel.value ?? null}"
+            @click=${closeMobileMenuIfOpen}>${renderItemContent()}</button>
         `;
       }}
     `;

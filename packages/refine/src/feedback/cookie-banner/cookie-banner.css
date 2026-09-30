@@ -110,15 +110,24 @@
     justify-content: flex-end;
   }
 
-  /* Narrow viewports with room to spare: actions stack full-width (the primary
-     lands in the thumb zone), paddings tighten, and the category panel keeps its
-     own scroll. Short landscape viewports keep the row layout — a three-row
-     button stack would crowd out the content. */
-  @media ((width <= 640px) and (height > 480px)) {
+  /* Narrow viewports: tighter rhythm — the card padding, section gaps and the
+     nested panel padding compound (a box in a box), so each steps down one
+     token to hand more of the small screen back to the page beneath. */
+  @media (width <= 640px) {
     .banner {
-      padding: var(--size-4);
+      gap: var(--size-2);
+      padding: var(--size-3);
     }
 
+    .categories {
+      padding: var(--size-1) var(--size-2);
+    }
+  }
+
+  /* Narrow viewports with room to spare: actions stack full-width (the primary
+     lands in the thumb zone). Short landscape viewports keep the row layout —
+     a three-row button stack would crowd out the content. */
+  @media ((width <= 640px) and (height > 480px)) {
     .actions {
       flex-direction: column;
       align-items: stretch;

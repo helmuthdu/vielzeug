@@ -17,8 +17,6 @@ import {
 } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
-import '../../content/icon/icon';
-import '../../feedback/progress/progress';
 import { bindRefCallback, createInteraction } from '../../core';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared';
 import {
@@ -33,6 +31,8 @@ import {
 import componentStyles from './file-input.css?inline';
 import { createFileQueue, type FileUploadFn, formatBytes } from './file-input-upload';
 
+export { ICON_TAG } from '../../content/icon/icon';
+export { PROGRESS_TAG } from '../../feedback/progress/progress';
 export type { FileUploadFn, FileUploadState, FileUploadStatus } from './file-input-upload';
 
 const isImageFile = (file: File): boolean => file.type.startsWith('image/');

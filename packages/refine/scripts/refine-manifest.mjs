@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -334,11 +334,86 @@ export function verifyComponentExports() {
 }
 
 function printUsageAndExit() {
-  processRef?.stderr.write('Usage: node ./scripts/refine-manifest.mjs <check-exports|sync-exports>\n');
+  processRef?.stderr.write('Usage: node ./scripts/refine-manifest.mjs <check-exports|sync-exports|check-cross-entry>\n');
 
   if (processRef) {
     processRef.exitCode = 1;
   }
+}
+
+/**
+ * Guards the built dist against a Rolldown chunking behavior: with `preserveModules` and
+ * multiple entries, side-effect-only imports *between entry modules* are silently dropped,
+ * so a component sub-path that bare-imports another component (`import '../icon/icon';`)
+ * ships without registering that child — it only works when the app happens to import the
+ * child elsewhere. The fix (see any composite component's source) is a TAG re-export
+ * (`export { ICON_TAG } from '../icon/icon';`) — bindings survive cross-entry chunking.
+ *
+ * This check fails on either regression:
+ * - a bare import of a component entry remaining in `src/` (would silently drop again), or
+ * - a TAG re-export whose link did not survive into the matching `dist/` file.
+ *
+ * Run after `vite build` (the dist output must exist); wired into refine's `build` script.
+ */
+function verifyCrossEntryLinks() {
+  const srcDir = join(packageRoot, 'src');
+  const distDir = join(packageRoot, 'dist');
+
+  const walk = function* walk(dir) {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+
+      if (statSync(full).isDirectory()) {
+        if (entry === '__tests__' || entry === 'testing') continue;
+
+        yield* walk(full);
+      } else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts') && !entry.endsWith('.e2e.ts')) {
+        yield full;
+      }
+    }
+  };
+
+  const entryDistSpec = new Map(componentManifest.map(({ name, source }) => [resolve(packageRoot, source), `./${name}.js`]));
+  const distSpecFor = (sourceFile) =>
+    entryDistSpec.get(sourceFile.replace(/\.ts$/, '')) ??
+    `./${relative(srcDir, sourceFile).replace(/\\/g, '/').replace(/\.ts$/, '')}.js`;
+
+  const failures = [];
+
+  for (const file of walk(srcDir)) {
+    const source = readFileSync(file, 'utf8');
+    const distFile = join(distDir, distSpecFor(file).replace(/^\.\//, ''));
+
+    // Side-effect-only imports of component entries are the regression this
+    // check exists for — they must all be TAG re-exports by now.
+    for (const match of source.matchAll(/^import\s+['"](\.[^'"]+)['"];?\s*(?:\/\/.*)?$/gm)) {
+      const target = `${resolve(dirname(file), match[1])}`;
+
+      if (entryDistSpec.has(target)) {
+        failures.push(`bare entry import: ${relative(srcDir, file)} -> ${match[1]} (convert to a TAG re-export)`);
+      }
+    }
+
+    // Orphan barrels (category index.ts files) are not reachable from any build
+    // entry, so no dist file exists for them — only built modules are verified.
+    if (!existsSync(distFile)) continue;
+
+    for (const match of source.matchAll(/^export \{ (\w+_TAG) \} from '([^']+)';/gm)) {
+      const [, tag, specifier] = match;
+      const childDistSpec = distSpecFor(`${resolve(dirname(file), specifier)}.ts`);
+      const dist = readFileSync(distFile, 'utf8');
+
+      if (!dist.includes(childDistSpec)) {
+        failures.push(`missing dist link: ${relative(srcDir, file)} -> ${childDistSpec} (${tag})`);
+      }
+    }
+  }
+
+  if (failures.length) {
+    throw new Error(`Cross-entry registration links broken:\n${failures.join('\n')}`);
+  }
+
+  return { count: componentManifest.length };
 }
 
 if (import.meta.url === new URL(processRef?.argv[1] ?? '', 'file:').href) {
@@ -356,6 +431,10 @@ if (import.meta.url === new URL(processRef?.argv[1] ?? '', 'file:').href) {
         ? `Synced refine component exports in package.json.\n`
         : `Refine package exports already in sync for ${count} components.\n`,
     );
+  } else if (command === 'check-cross-entry') {
+    const { count } = verifyCrossEntryLinks();
+
+    processRef?.stdout.write(`refine cross-entry registration links verified for ${count} component entries.\n`);
   } else {
     printUsageAndExit();
   }

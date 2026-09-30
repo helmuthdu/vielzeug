@@ -3,9 +3,10 @@ import { computed, watch } from '@vielzeug/ripple';
 
 import { announce } from '../../core';
 import { reducedMotionMixin } from '../../styles';
-import '../icon/icon';
+
 import componentStyles from './chat-message.css?inline';
 
+export { ICON_TAG } from '../icon/icon';
 export type ChatMessageSender = 'assistant' | 'system' | 'user';
 export type ChatMessageStatus = 'error' | 'sending' | 'sent';
 

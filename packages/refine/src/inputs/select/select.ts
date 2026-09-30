@@ -4,14 +4,15 @@ import { computed, effect, signal, watch } from '@vielzeug/ripple';
 import type { OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
 import { createChoiceField, createListboxDropdown, lifecycleSignal } from '../../core';
 import type { SelectableFieldProps } from '../../shared';
-import type { VisualVariant } from '../../types';
-import '../../feedback/chip/chip';
-import '../../content/icon/icon';
-import '../input/input';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
+import type { VisualVariant } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './select.css?inline';
+
+export { ICON_TAG } from '../../content/icon/icon';
+export { CHIP_TAG } from '../../feedback/chip/chip';
+export { INPUT_TAG } from '../input/input';
 
 // ── Types ─────────────────────────────────────────────────────────────
 

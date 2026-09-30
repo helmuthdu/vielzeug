@@ -3,14 +3,15 @@ import { watch } from '@vielzeug/ripple';
 
 import type { DialogCloseReason, OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
 import { reducedMotionMixin } from '../../styles';
-import '../../feedback/chip/chip';
-import '../../inputs/button/button';
-import '../../inputs/message-composer/message-composer';
-import '../avatar/avatar';
-import '../chat-message/chat-message';
-import '../icon/icon';
+
 import componentStyles from './chat-panel.css?inline';
 
+export { CHIP_TAG } from '../../feedback/chip/chip';
+export { BUTTON_TAG } from '../../inputs/button/button';
+export { MESSAGE_COMPOSER_TAG } from '../../inputs/message-composer/message-composer';
+export { AVATAR_TAG } from '../avatar/avatar';
+export { CHAT_MESSAGE_TAG } from '../chat-message/chat-message';
+export { ICON_TAG } from '../icon/icon';
 /** Who authored a panel message. */
 export type OreChatPanelSender = 'assistant' | 'user';
 

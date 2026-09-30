@@ -552,6 +552,18 @@ describe('ore-navbar-item', () => {
     expect(fixture.query('button.item')).toBeTruthy();
   });
 
+  it('forwards aria-label to the internal control for icon-only items', async () => {
+    fixture = await mount('ore-navbar-item', { attrs: { 'aria-label': 'Audio player', 'icon-only': '' } });
+
+    expect(fixture.query('button.item')?.getAttribute('aria-label')).toBe('Audio player');
+  });
+
+  it('forwards aria-label to the internal anchor', async () => {
+    fixture = await mount('ore-navbar-item', { attrs: { 'aria-label': 'Audio player', href: '/audio' } });
+
+    expect(fixture.query('a.item')?.getAttribute('aria-label')).toBe('Audio player');
+  });
+
   it('renders non-interactive item when disabled', async () => {
     fixture = await mount('ore-navbar-item', { attrs: { disabled: '', href: '/dashboard' } });
 

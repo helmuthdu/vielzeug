@@ -14,12 +14,7 @@ import {
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { warn } from '../../_dev';
-import '../../content/icon/icon';
-import '../../inputs/button/button';
-import '../../inputs/checkbox/checkbox';
-import '../../inputs/combobox/combobox';
-import '../../inputs/select/select';
-import '../../overlay/popover/popover';
+
 import { disablableBundle, loadableBundle } from '../../shared';
 import { tableBaseMixin } from '../../styles';
 import componentStyles from './datagrid.css?inline';
@@ -38,9 +33,16 @@ import {
 } from './datagrid-model';
 import { createGridNav, type GridNavHandle } from './datagrid-nav';
 
+export { ICON_TAG } from '../../content/icon/icon';
+export { BUTTON_TAG } from '../../inputs/button/button';
+export { CHECKBOX_TAG } from '../../inputs/checkbox/checkbox';
+export { COMBOBOX_OPTION_TAG } from '../../inputs/combobox/combobox';
+export { SELECT_TAG } from '../../inputs/select/select';
+export { POPOVER_TAG } from '../../overlay/popover/popover';
+export { COLUMN_TAG } from './datagrid-column';
+
 type SortMode = 'client' | 'server';
 
-export { COLUMN_TAG } from './datagrid-column';
 export type { DataGridLabels } from './datagrid-labels';
 export type { DataGridColumn, DataGridView, FilterOperator, FilterOption } from './datagrid-model';
 

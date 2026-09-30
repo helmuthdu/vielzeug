@@ -1,10 +1,11 @@
-import '../alert/alert';
 import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 import { define, each, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { reducedMotionMixin } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
+
+export { ALERT_TAG } from '../alert/alert';
 
 /**
  * The single exit budget: removal happens this many milliseconds (plus a small buffer)

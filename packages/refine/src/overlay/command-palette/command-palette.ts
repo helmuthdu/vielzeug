@@ -2,15 +2,16 @@ import { createKeymap } from '@vielzeug/keymap';
 import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
-import '../../content/keyboard-key/keyboard-key';
+
 import { announce, createListControl, lifecycleSignal, parseOptionalBool } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
+import componentStyles from './command-palette.css?inline';
 import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
 import { buildRows, filterItems, normalizeItem, parseSlottedItems, splitShortcutKeys } from './command-palette-items';
-import '../../content/icon/icon';
-import componentStyles from './command-palette.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
+export { KEYBOARD_SHORTCUT_TAG } from '../../content/keyboard-key/keyboard-key';
 export type { OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
 
 /**

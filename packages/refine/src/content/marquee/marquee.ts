@@ -3,10 +3,10 @@ import { watch } from '@vielzeug/ripple';
 
 import type { ThemeColor } from '../../types';
 
-import '../icon/icon';
-import '../../inputs/button/button';
 import componentStyles from './marquee.css?inline';
 
+export { BUTTON_TAG } from '../../inputs/button/button';
+export { ICON_TAG } from '../icon/icon';
 export type MarqueeDirection = 'left' | 'right';
 
 export type OreMarqueeProps = {

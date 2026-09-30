@@ -13,10 +13,11 @@ import {
 import { roundableBundle } from '../../shared';
 import { roundedVariantMixin } from '../../styles';
 import type { ComponentSize, RoundedSize } from '../../types';
-import '../../content/icon/icon';
-import '../button/button';
+
 import componentStyles from './qr-scanner.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
+export { BUTTON_TAG } from '../button/button';
 /** Testing hook — inject a fake `createQrScanner` without touching globals. */
 export type QrScannerFactory = (options: QrScannerOptions) => QrScanner;
 

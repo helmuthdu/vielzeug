@@ -14,8 +14,6 @@ import {
 import { computed } from '@vielzeug/ripple';
 import { bindRefCallback, createAutoResize, createTextField, lifecycleSignal } from '../../core';
 import type { TextFieldProps } from '../../shared';
-import type { VisualVariant } from '../../types';
-import '../../content/icon/icon';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -27,11 +25,13 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { VisualVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
 import componentStyles from './textarea.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 /** Textarea component properties */
 
 export type OreTextareaEvents = {

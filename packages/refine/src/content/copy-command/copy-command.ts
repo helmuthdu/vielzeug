@@ -2,9 +2,10 @@ import { define, html, onCleanup, prop, useEmit, useSlots } from '@vielzeug/ore'
 import { computed, signal } from '@vielzeug/ripple';
 import { srOnlyMixin } from '../../styles';
 import type { ComponentSize, RoundedSize } from '../../types';
-import '../icon/icon';
+
 import componentStyles from './copy-command.css?inline';
 
+export { ICON_TAG } from '../icon/icon';
 /** Copy command component properties */
 export type OreCopyCommandProps = {
   /** Border radius size */

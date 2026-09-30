@@ -1,14 +1,14 @@
 import { bind, createId, define, getHost, html, prop, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { createErrorHelperState, createSliderControl } from '../../core';
-import type { ComponentSize, ThemeColor } from '../../types';
-import '../../content/icon/icon';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, ThemeColor } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './rating.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 export type OreRatingEvents = {
   change: Event;
   input: Event;

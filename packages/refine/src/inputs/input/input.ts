@@ -3,8 +3,6 @@ import { computed, signal } from '@vielzeug/ripple';
 import { bindRefCallback, createTextField, lifecycleSignal } from '../../core';
 import type { TextFieldProps } from '../../shared';
 import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
-import type { InputType, VisualVariant } from '../../types';
-import '../../content/icon/icon';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -15,11 +13,13 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { InputType, VisualVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderStatusIcon } from '../shared/templates';
 import componentStyles from './input.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 /** Input component properties */
 
 export type OreInputEvents = {

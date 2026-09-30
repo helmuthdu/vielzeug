@@ -2,14 +2,14 @@ import { clamp } from '@vielzeug/arsenal';
 import { bind, define, getHost, html, onElement, prop, ref, watchEffect } from '@vielzeug/ore';
 import { computed, watch as rippleWatch, signal } from '@vielzeug/ripple';
 import { createSpinnerControl } from '../../core';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
-import '../../content/icon/icon';
-import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledLoadingMixin } from '../../styles';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './number-input.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
+export { INPUT_TAG } from '../input/input';
 export type OreNumberInputEvents = {
   change: Event;
   input: InputEvent;

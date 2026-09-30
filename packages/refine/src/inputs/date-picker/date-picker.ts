@@ -11,13 +11,14 @@ import {
   toIsoString,
 } from '../../core';
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../shared';
-import '../../content/icon/icon';
-import '../input/input';
+
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './date-picker.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
+export { INPUT_TAG } from '../input/input';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type OreDatePickerEvents = {

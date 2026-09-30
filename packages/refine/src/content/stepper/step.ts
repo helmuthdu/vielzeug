@@ -1,14 +1,12 @@
 import { bind, define, getHost, html, inject, prop, useSlots, watchEffect } from '@vielzeug/ore';
-
-import type { ComponentSize, ThemeColor } from '../../types';
-
-import '../icon/icon';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
+import type { ComponentSize, ThemeColor } from '../../types';
 import { isStepNavigable } from './_is-step-navigable';
 import stepStyles from './step.css?inline';
 import { STEPPER_CTX } from './stepper';
 
+export { ICON_TAG } from '../icon/icon';
 export type OreStepProps = {
   /**
    * Theme color. Inherited from the parent `ore-stepper` when nested inside one (overrides

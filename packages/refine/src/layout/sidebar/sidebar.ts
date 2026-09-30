@@ -16,7 +16,6 @@ import {
 import { computed, fromSubscribable, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 
-import '../../content/icon/icon';
 import { createBackgroundLock } from '../../overlay/shared/background-lock';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
 import { computeSafeRel } from '../../utils';
@@ -24,6 +23,8 @@ import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '..
 import sidebarStyles from './sidebar.css?inline';
 import groupStyles from './sidebar-group.css?inline';
 import itemStyles from './sidebar-item.css?inline';
+
+export { ICON_TAG } from '../../content/icon/icon';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 

@@ -15,10 +15,12 @@ import {
 import { signal } from '@vielzeug/ripple';
 
 import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
-import '../../content/icon/icon';
+
 import { coarsePointerMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import styles from './drawer.css?inline';
+
+export { ICON_TAG } from '../../content/icon/icon';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
 type DrawerSize = 'sm' | 'lg' | 'full';

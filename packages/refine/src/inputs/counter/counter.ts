@@ -1,8 +1,6 @@
 import { bind, createId, define, getHost, html, onCleanup, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createSpinnerControl } from '../../core';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
-import '../../content/icon/icon';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -11,8 +9,10 @@ import {
   frostVariantMixin,
   reducedMotionMixin,
 } from '../../styles';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import componentStyles from './counter.css?inline';
 
+export { ICON_TAG } from '../../content/icon/icon';
 export type OreCounterChangeDetail = {
   /** Difference between the new and the previous value */
   delta: number;

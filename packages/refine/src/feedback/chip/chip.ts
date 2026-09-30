@@ -1,9 +1,5 @@
 import { bind, define, html, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
-
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
-
-import '../../content/icon/icon';
 import {
   colorThemeMixin,
   disabledStateMixin,
@@ -12,10 +8,13 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 // ============================================
 // Styles
 // ============================================
 import componentStyles from './chip.css?inline';
+
+export { ICON_TAG } from '../../content/icon/icon';
 
 // ============================================
 // Types

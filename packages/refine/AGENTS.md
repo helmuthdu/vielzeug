@@ -9,6 +9,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 - **Per-component sub-path exports are generated, not hand-edited.** The `exports` map in `package.json` is driven by `scripts/refine-manifest.mjs`:
   - `pnpm --filter @vielzeug/refine run sync:exports` regenerates the export map after adding/renaming/moving a component.
   - `check:manifest` runs in `build` and fails if exports are out of sync — run `sync:exports` to fix.
+- **A component that renders another component must TAG re-export it, never bare-import it.** The per-entry library build (Rolldown, `preserveModules`, 72+ entries) silently drops side-effect-only imports *between entry modules*, so `import '../icon/icon';` ships a sub-path that never registers its child. Write `export { ICON_TAG } from '../icon/icon';` instead — bindings survive cross-entry chunking, so importing the parent registers the child. Same-directory absorbed modules (`carousel-slide`, `datagrid-column`) are *not* entries and bare-import fine. `check:cross-entry` runs in `build` and fails on both regressions: a bare entry import in `src/`, or a re-export whose link did not survive into `dist/`.
 - Build also emits a Custom Elements Manifest (`dist/custom-elements.json`) via `analyze`, and copies `src/styles/*.css` to `dist/styles`. CSS ships through the `./styles*` exports.
 - `sideEffects` is set for `dist/*.js`, `dist/*.cjs`, and `dist/styles/**` — keep new side-effectful entry points covered.
 - `src/_dev.ts` is private — never re-export.

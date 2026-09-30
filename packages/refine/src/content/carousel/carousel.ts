@@ -1,17 +1,14 @@
 import { createPanGesture } from '@vielzeug/gesture';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
-
-import type { ThemeColor } from '../../types';
-
-import '../../content/icon/icon';
-import '../../feedback/progress/progress';
 import { announce, createListControl, lifecycleSignal } from '../../core';
+import type { ThemeColor } from '../../types';
 import componentStyles from './carousel.css?inline';
 import './carousel-slide';
 
+export { ICON_TAG } from '../../content/icon/icon';
+export { PROGRESS_TAG } from '../../feedback/progress/progress';
 export { CAROUSEL_SLIDE_TAG } from './carousel-slide';
-
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type CarouselOrientation = 'horizontal' | 'vertical';

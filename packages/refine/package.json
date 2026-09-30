@@ -454,6 +454,9 @@
       "frameworks/vue": [
         "dist/frameworks/vue.d.ts"
       ],
+      "icon-lucide": [
+        "dist/icon-lucide.d.ts"
+      ],
       "accordion": [
         "dist/disclosure/accordion/accordion.d.ts"
       ],
@@ -682,11 +685,12 @@
   ],
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
-    "build": "pnpm --silent run check:theme && pnpm --silent run check:manifest && pnpm --silent run check:css-contract && vite build && pnpm --silent run build:bundle && cp -r src/styles/*.css dist/styles && pnpm --silent run build:types && pnpm --silent run analyze && pnpm --silent run gen:framework-types",
+    "build": "pnpm --silent run check:theme && pnpm --silent run check:manifest && pnpm --silent run check:css-contract && vite build && pnpm --silent run check:cross-entry && pnpm --silent run build:bundle && cp -r src/styles/*.css dist/styles && pnpm --silent run build:types && pnpm --silent run analyze && pnpm --silent run gen:framework-types",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:bundle:watch": "vite build --watch --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "check:css-contract": "node ./scripts/check-css-contract.mjs",
+    "check:cross-entry": "node ./scripts/refine-manifest.mjs check-cross-entry",
     "check:manifest": "node ./scripts/refine-manifest.mjs check-exports",
     "check:theme": "node ./scripts/theme-tokens.mjs check",
     "dev": "vite",

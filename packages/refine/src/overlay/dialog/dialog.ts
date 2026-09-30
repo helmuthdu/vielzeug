@@ -4,8 +4,10 @@ import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
 import { coarsePointerMixin, roundedVariantMixin } from '../../styles';
 import type { PaddingSize, RoundedSize } from '../../types';
 import { useDialogControl } from '../shared/use-dialog';
-import '../../content/icon/icon';
+
 import componentStyles from './dialog.css?inline';
+
+export { ICON_TAG } from '../../content/icon/icon';
 
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 type DialogBackdrop = 'opaque' | 'blur' | 'transparent';

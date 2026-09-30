@@ -1,13 +1,11 @@
 import { define, html, prop } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
-
-import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
-
-import '../icon/icon';
 import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './avatar.css?inline';
 
+export { ICON_TAG } from '../icon/icon';
 export type AvatarStatus = 'online' | 'offline' | 'busy' | 'away';
 
 const STATUS_LABELS: Record<AvatarStatus, string> = {

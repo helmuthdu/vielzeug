@@ -23,6 +23,7 @@ import {
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
+import componentStyles from './combobox.css?inline';
 import type {
   ComboboxOptionInput,
   ComboboxOptionItem,
@@ -31,10 +32,9 @@ import type {
   OreComboboxProps,
 } from './combobox.types';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
-import '../../feedback/chip/chip';
-import '../input/input';
-import componentStyles from './combobox.css?inline';
 
+export { CHIP_TAG } from '../../feedback/chip/chip';
+export { INPUT_TAG } from '../input/input';
 export type {
   ComboboxOptionInput,
   OreComboboxEvents,
