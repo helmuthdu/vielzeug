@@ -1,0 +1,153 @@
+@layer refine.base {
+  :host {
+    --_banner-width: var(--cookie-banner-width, min(560px, calc(100vw - var(--size-8))));
+    --_banner-inset: var(--cookie-banner-inset, var(--size-4));
+    --_banner-z-index: var(--cookie-banner-z-index, var(--z-modal));
+    --_categories-max-height: var(--cookie-banner-categories-max-height, 16rem);
+    --_dock-bottom: max(var(--_banner-inset), env(safe-area-inset-bottom, 0px));
+    --_dock-top: max(var(--_banner-inset), env(safe-area-inset-top, 0px));
+
+    position: fixed;
+    inset-inline: var(--_banner-inset);
+    z-index: var(--_banner-z-index);
+    display: block;
+    max-width: var(--_banner-width);
+    margin-inline: auto;
+  }
+
+  :host([hidden]) {
+    display: none;
+  }
+
+  :host([position='top']) {
+    top: var(--_dock-top);
+  }
+
+  :host(:not([position='top'])) {
+    bottom: var(--_dock-bottom);
+  }
+
+  /* Single column: heading, policy text, scrollable category panel, actions.
+     The same structure serves one category or ten — only the panel scrolls. */
+  .banner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-3);
+    padding: var(--size-4) var(--size-5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--color-contrast-50);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--rounded-lg);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* The card must fit between its docked edge and the opposite viewport edge,
+     so a large --cookie-banner-inset (e.g. above a bottom nav) shrinks it. */
+  :host(:not([position='top'])) .banner {
+    max-height: calc(100dvh - var(--_dock-bottom) - var(--size-4));
+  }
+
+  :host([position='top']) .banner {
+    max-height: calc(100dvh - var(--_dock-top) - var(--size-4));
+  }
+
+  .heading {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-normal);
+  }
+
+  .text {
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+  }
+
+  .text ::slotted(a) {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+
+  /* The category panel scrolls internally past the threshold, so the banner
+     never grows past the viewport regardless of how many categories there are. */
+  .categories {
+    display: flex;
+    flex-direction: column;
+    max-height: var(--_categories-max-height);
+    padding: var(--size-2) var(--size-3);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--color-contrast-100);
+    border: 1px solid var(--color-divider);
+    border-radius: var(--rounded-sm);
+  }
+
+  .category-row {
+    display: flex;
+    flex-direction: column;
+    padding-block: var(--size-1);
+  }
+
+  .category-row + .category-row {
+    border-top: 1px solid var(--color-divider);
+  }
+
+  /* Category descriptions arrive as the checkbox's helper text (aria-describedby-
+     wired); sized up to --text-sm because they carry the consent decision's
+     substance, and recolored to --text-muted — the checkbox's default helper mix
+     measures 3.77:1 on the sunken panel, below AA. */
+  .category-row ore-checkbox::part(helper-text) {
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--text-muted);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    justify-content: flex-end;
+  }
+
+  /* Narrow viewports with room to spare: actions stack full-width (the primary
+     lands in the thumb zone), paddings tighten, and the category panel keeps its
+     own scroll. Short landscape viewports keep the row layout — a three-row
+     button stack would crowd out the content. */
+  @media ((width <= 640px) and (height > 480px)) {
+    .banner {
+      padding: var(--size-4);
+    }
+
+    .actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .actions ore-button {
+      width: 100%;
+    }
+  }
+
+  :host(:not([position='top'])) .banner {
+    animation: var(--_motion-animation, ore-cookie-banner-rise var(--transition-slow) both);
+  }
+
+  :host([position='top']) .banner {
+    animation: var(--_motion-animation, ore-cookie-banner-drop var(--transition-slow) both);
+  }
+
+  @keyframes ore-cookie-banner-rise {
+    from {
+      opacity: 0;
+      transform: translateY(var(--size-4));
+    }
+  }
+
+  @keyframes ore-cookie-banner-drop {
+    from {
+      opacity: 0;
+      transform: translateY(calc(var(--size-4) * -1));
+    }
+  }
+}

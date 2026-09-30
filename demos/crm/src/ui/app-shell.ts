@@ -3,6 +3,7 @@ import '@vielzeug/refine/button';
 import '@vielzeug/refine/command-palette';
 import '@vielzeug/refine/grid';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/icon-lucide';
 import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/popover';
 import '@vielzeug/refine/radio';

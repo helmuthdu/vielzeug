@@ -1,6 +1,7 @@
 import '@vielzeug/refine/accordion';
 import '@vielzeug/refine/accordion-item';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/icon-lucide';
 import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/navigation-menu';
 import '@vielzeug/refine/skeleton';

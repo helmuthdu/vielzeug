@@ -1,11 +1,13 @@
 import { bind, define, html, prop, ref, watchEffect, when } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-import * as lucideModule from 'lucide';
 
 import { warn } from '../../_dev';
+import { type IconNode, resolveIcon } from '../../core/icon-registry';
+import '../../core/icons';
 import styles from './icon.css?inline';
 
-export type IconNode = Array<[string, Record<string, string | number | undefined>]>;
+export { registerIcons } from '../../core/icon-registry';
+export type { IconNode };
 
 const DEFAULT_SIZE = 16;
 const DEFAULT_STROKE_WIDTH = 2;
@@ -43,29 +45,6 @@ const ALLOWED_SVG_TAGS = new Set([
 const ATTR_KEY_RE = /^[a-zA-Z][a-zA-Z0-9:_-]*$/;
 const BLOCKED_ATTR_RE = /^(on|xlink:|xml:|href$)/i;
 
-// Sync registry seeded from lucide at module load; extend at any time via registerIcons()
-const registry = new Map<string, IconNode>(
-  Object.entries((lucideModule as unknown as { icons: Record<string, IconNode> }).icons),
-);
-
-/**
- * Register additional icons (or override existing ones) by name.
- * Keys may be kebab-case or PascalCase — both are accepted by `ore-icon`.
- */
-export function registerIcons(icons: Record<string, IconNode>): void {
-  for (const [name, node] of Object.entries(icons)) {
-    registry.set(name, node);
-  }
-}
-
-const toPascalCase = (value: string): string =>
-  value
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
-    .join('');
-
 const parseSize = (value: string | null): number | string => {
   if (value == null || value === '') return DEFAULT_SIZE;
 
@@ -74,14 +53,13 @@ const parseSize = (value: string | null): number | string => {
   return Number.isFinite(n) && n > 0 && /^\d+(\.\d+)?$/.test(value.trim()) ? n : value;
 };
 
-const resolveIcon = (name: string): IconNode | undefined => registry.get(name) ?? registry.get(toPascalCase(name));
-
 /**
  * Builds an allowlisted SVG child element via `createElementNS` — real DOM construction, not
  * HTML-string parsing, so this never touches Ore's `unsafeHtml()` directive (and its "unsanitized
- * HTML" dev warning) at all. `iconNode` entries come from the bundled Lucide icon set or
- * `registerIcons()` (a developer/build-time API, never runtime user input), but the tag/attr
- * allowlist stays as defense in depth regardless of where the data originated.
+ * HTML" dev warning) at all. `iconNode` entries come from a registered icon set (refine's own,
+ * `registerIcons()`, or `@vielzeug/refine/icon-lucide`) — a developer/build-time API, never runtime
+ * user input — but the tag/attr allowlist stays as defense in depth regardless of where the data
+ * originated.
  */
 const createSvgChild = (tag: string, attrs: Record<string, string | number | undefined>): SVGElement | null => {
   if (!ALLOWED_SVG_TAGS.has(tag)) return null;
@@ -105,7 +83,7 @@ export type OreIconProps = {
   absoluteStrokeWidth?: boolean;
   /** Accessible text label. Decorative icons should omit this. */
   label?: string;
-  /** Lucide icon name, e.g. `search` or `chevron-right` */
+  /** Lucide icon name, e.g. `search` or `chevron-right`; resolves from the registered set */
   name?: string;
   /** Icon width/height in px by default. Accepts CSS lengths. */
   size?: number | string;
@@ -118,9 +96,13 @@ export type OreIconProps = {
 /**
  * Icon wrapper for consistent Lucide rendering across Block.
  *
+ * Names resolve from a synchronous registry: refine's own component icons are
+ * always registered; apps register their set with `registerIcons()` or import
+ * `@vielzeug/refine/icon-lucide` for the complete library.
+ *
  * @element ore-icon
  *
- * @attr {string} name - Lucide icon name, e.g. `search` or `chevron-right`
+ * @attr {string} name - Lucide icon name, e.g. `search` or `chevron-right`, resolved from the registered set
  * @attr {number|string} size - Width/height (default: 16)
  * @attr {number} stroke-width - SVG stroke width (default: 2)
  * @attr {boolean} absolute-stroke-width - Keep stroke width visually stable across icon sizes

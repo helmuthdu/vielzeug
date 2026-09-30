@@ -1504,6 +1504,7 @@ export default defineConfig({
                 { link: '/refine/components/async', text: 'Async' },
                 { link: '/refine/components/badge', text: 'Badge' },
                 { link: '/refine/components/chip', text: 'Chip' },
+                { link: '/refine/components/cookie-banner', text: 'Cookie Banner' },
                 { link: '/refine/components/password-strength', text: 'Password Strength' },
                 { link: '/refine/components/progress', text: 'Progress' },
                 { link: '/refine/components/skeleton', text: 'Skeleton' },

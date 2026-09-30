@@ -121,4 +121,15 @@ describe('ore-icon', () => {
       expect(fixture.element.shadowRoot?.querySelector('svg path')?.getAttribute('d')).toBe('M0 0h24v24H0z');
     });
   });
+
+  describe('icon-lucide', () => {
+    it('registers the complete Lucide set beyond the built-in component icons', async () => {
+      await import('../../icon-lucide');
+
+      // atom is outside the icons refine's own components render.
+      fixture = await mount('ore-icon', { attrs: { name: 'atom' } });
+
+      expect(fixture.element.shadowRoot?.querySelector('svg')).toBeTruthy();
+    });
+  });
 });

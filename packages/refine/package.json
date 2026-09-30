@@ -74,6 +74,11 @@
     "./frameworks/vue": {
       "types": "./dist/frameworks/vue.d.ts"
     },
+    "./icon-lucide": {
+      "import": "./dist/icon-lucide.js",
+      "require": "./dist/icon-lucide.cjs",
+      "types": "./dist/icon-lucide.d.ts"
+    },
     "./accordion": {
       "import": "./dist/accordion.js",
       "require": "./dist/accordion.cjs",
@@ -183,6 +188,11 @@
       "import": "./dist/command-palette.js",
       "require": "./dist/command-palette.cjs",
       "types": "./dist/overlay/command-palette/command-palette.d.ts"
+    },
+    "./cookie-banner": {
+      "import": "./dist/cookie-banner.js",
+      "require": "./dist/cookie-banner.cjs",
+      "types": "./dist/feedback/cookie-banner/cookie-banner.d.ts"
     },
     "./copy-command": {
       "import": "./dist/copy-command.js",
@@ -510,6 +520,9 @@
       "command-palette": [
         "dist/overlay/command-palette/command-palette.d.ts"
       ],
+      "cookie-banner": [
+        "dist/feedback/cookie-banner/cookie-banner.d.ts"
+      ],
       "copy-command": [
         "dist/content/copy-command/copy-command.d.ts"
       ],
@@ -662,7 +675,10 @@
   "sideEffects": [
     "./dist/*.js",
     "./dist/*.cjs",
-    "./dist/styles/**"
+    "./dist/core/*.js",
+    "./dist/core/*.cjs",
+    "./dist/styles/**",
+    "./src/core/icons.ts"
   ],
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",

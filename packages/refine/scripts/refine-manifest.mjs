@@ -130,6 +130,7 @@ const staticExportKeys = new Set([
   './frameworks/react',
   './frameworks/vue',
   './theme',
+  './icon-lucide',
 ]);
 
 const staticCssExports = {
@@ -177,6 +178,11 @@ const staticJsExports = {
     require: './dist/theme.cjs',
     types: './dist/theme.d.ts',
   },
+  './icon-lucide': {
+    import: './dist/icon-lucide.js',
+    require: './dist/icon-lucide.cjs',
+    types: './dist/icon-lucide.d.ts',
+  },
 };
 
 export const customElementsManifestConfig = {
@@ -221,6 +227,7 @@ export function getRefineLibraryEntries(rootDir) {
   return Object.fromEntries([
     ['index', resolve(rootDir, './src/index')],
     ['theme', resolve(rootDir, './src/theme')],
+    ['icon-lucide', resolve(rootDir, './src/icon-lucide')],
     ...componentManifest.map(({ name, source }) => [name, resolve(rootDir, source)]),
   ]);
 }

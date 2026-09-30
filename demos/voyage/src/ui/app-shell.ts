@@ -1,5 +1,6 @@
 import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/icon-lucide';
 import { define, html, ref } from '@vielzeug/ore';
 import { effect } from '@vielzeug/ripple';
 import { travelerProfile } from '../core/preferences';

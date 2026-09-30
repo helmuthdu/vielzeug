@@ -7,15 +7,37 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Accessibility', () => {
-  // Known a11y gap: axe reports aria-toggle-field-name on the shadow <input> because the label
-  // element is in light DOM and axe cannot pierce the shadow boundary to compute the accessible
-  // name via the label-via-slot association. This is a real bug to fix in ore-checkbox.
-  test.fail('labeled checkbox accessible name reaches shadow input (known a11y gap)', async ({ page, refinePage }) => {
-    await refinePage.mountComponent('<ore-checkbox label="Accept terms and conditions"></ore-checkbox>');
+  // The slot is the labeling API (`@slot - Checkbox label text`): the host's
+  // `aria-labelledby` points at the shadow `.label` span, which projects the
+  // slotted text. axe's flat-tree traversal resolves this correctly — a `label`
+  // attribute is not a prop and renders nothing, so mounting that way produces
+  // an unnamed checkbox (the source of a long-misread "known gap" here).
+  test('slot-labelled checkbox passes a11y checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-checkbox>Accept terms and conditions</ore-checkbox>');
 
     const results = await axeCheck(page);
 
-    // When fixed, violations should be empty
     expect(results.violations).toEqual([]);
+  });
+
+  test('helper text is linked to the checkbox via aria-describedby', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-checkbox helper="Required for the site to work">Essential</ore-checkbox>');
+    await page.waitForTimeout(100);
+
+    const wiring = await page.locator('ore-checkbox').evaluate((element) => {
+      const host = element as HTMLElement;
+      const describedBy = host.getAttribute('aria-describedby');
+      const helper = host.shadowRoot?.querySelector<HTMLElement>('.helper-text');
+      return {
+        describedBy,
+        helperId: helper?.id,
+        helperText: helper?.textContent?.trim(),
+        helperVisible: helper ? !helper.hasAttribute('hidden') : false,
+      };
+    });
+
+    expect(wiring.describedBy).toBe(wiring.helperId);
+    expect(wiring.helperVisible).toBe(true);
+    expect(wiring.helperText).toBe('Required for the site to work');
   });
 });

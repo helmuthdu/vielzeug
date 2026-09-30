@@ -43,6 +43,11 @@ import type { OreAlertEvents, OreAlertProps } from '../feedback/alert/alert';
 import type { OreAsyncEvents, OreAsyncProps } from '../feedback/async/async';
 import type { OreBadgeProps } from '../feedback/badge/badge';
 import type { OreChipEvents, OreChipProps } from '../feedback/chip/chip';
+import type {
+  CookieBannerElement,
+  OreCookieBannerEvents,
+  OreCookieBannerProps,
+} from '../feedback/cookie-banner/cookie-banner';
 import type { OrePasswordStrengthProps } from '../feedback/password-strength/password-strength';
 import type { OreProgressProps } from '../feedback/progress/progress';
 import type { OreSkeletonProps } from '../feedback/skeleton/skeleton';
@@ -135,6 +140,7 @@ export interface RefineElementMap {
   'ore-combobox-option': HTMLElement & OreComboboxOptionProps;
   'ore-command-palette': HTMLElement & OreCommandPaletteProps & AddEventListeners<OreCommandPaletteEvents>;
   'ore-command-palette-item': HTMLElement & CommandPaletteItemInput;
+  'ore-cookie-banner': CookieBannerElement & OreCookieBannerProps & AddEventListeners<OreCookieBannerEvents>;
   'ore-copy-command': HTMLElement & OreCopyCommandProps & AddEventListeners<OreCopyCommandEvents>;
   'ore-counter': HTMLElement & OreCounterProps & AddEventListeners<OreCounterEvents>;
   'ore-datagrid': HTMLElement & OreDataGridProps & AddEventListeners<OreDataGridEvents>;
