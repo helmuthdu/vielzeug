@@ -52,27 +52,50 @@ export function formatShortcut(shortcut: string, modKey: 'ctrl' | 'meta' = detec
     return '';
   }
 
+  return formatShortcutParts(shortcut, modKey)
+    .map((step) => step.join(modKey === 'meta' ? '' : '+'))
+    .join(' ');
+}
+
+/**
+ * Formats a shortcut into keycap-sized segments: one array per step (a chord has several
+ * steps), one label per keycap — Mac modifier symbols are their own keycaps, other
+ * platforms get whole-word labels (`['Ctrl', 'Shift', 'P']`).
+ *
+ * Made for keycap UIs that need the pieces `formatShortcut` joins into one string, so
+ * "press ⌘ together with Z" can render as two keycaps while the flat form stays "⌘Z".
+ *
+ * @example
+ * formatShortcutParts('mod+z', 'meta') // [['⌘', 'Z']]
+ * formatShortcutParts('mod+shift+z', 'ctrl') // [['Ctrl', 'Shift', 'Z']]
+ * formatShortcutParts('g h', 'ctrl') // [['G'], ['H']]
+ */
+export function formatShortcutParts(shortcut: string, modKey: 'ctrl' | 'meta' = detectModKey()): string[][] {
+  if (!shortcut.trim()) {
+    warn(`formatShortcutParts() received an empty shortcut string: "${shortcut}"`);
+
+    return [];
+  }
+
   let steps: ReturnType<typeof parseShortcut>;
 
   try {
     steps = parseShortcut(shortcut, modKey);
   } catch {
-    warn(`formatShortcut() received an invalid shortcut: "${shortcut}"`);
+    warn(`formatShortcutParts() received an invalid shortcut: "${shortcut}"`);
 
-    return '';
+    return [];
   }
 
   const isMac = modKey === 'meta';
 
-  return steps
-    .map((step) => {
-      const modParts = MOD_ORDER.filter((m) => step.modifiers.has(m)).map((m) =>
-        isMac ? MOD_SYMBOLS_MAC[m] : MOD_LABELS_OTHER[m],
-      );
+  return steps.map((step) => {
+    const modParts = MOD_ORDER.filter((m) => step.modifiers.has(m)).map((m) =>
+      isMac ? MOD_SYMBOLS_MAC[m] : MOD_LABELS_OTHER[m],
+    );
 
-      const keyLabel = KEY_SYMBOLS[step.key] ?? step.key.toUpperCase();
+    const keyLabel = KEY_SYMBOLS[step.key] ?? step.key.toUpperCase();
 
-      return isMac ? `${modParts.join('')}${keyLabel}` : [...modParts, keyLabel].join('+');
-    })
-    .join(' ');
+    return [...modParts, keyLabel];
+  });
 }

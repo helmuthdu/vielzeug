@@ -57,6 +57,10 @@ export type OreAccordionItemProps = {
  * @cssprop --accordion-item-body - Body font size
  * @cssprop --accordion-item-details-padding - Summary/header padding
  * @cssprop --accordion-item-summary-padding - Content padding
+ * @cssprop --accordion-item-row-duration - Expand/collapse row transition duration (default 200ms)
+ * @cssprop --accordion-item-fade-duration - Content fade duration (default 200ms)
+ * @cssprop --accordion-item-fade-delay - Content fade delay after the row starts (default 60ms)
+ * @cssprop --accordion-item-collapse-delay - Delay before the row collapses after the close fade (default 120ms)
  *
  * @part item - Item root element.
  * @part summary - Summary trigger row.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { formatShortcut } from '../format';
+import { formatShortcut, formatShortcutParts } from '../format';
 
 describe('formatShortcut', () => {
   describe('Mac style (modKey: meta)', () => {
@@ -99,5 +99,47 @@ describe('formatShortcut', () => {
 
       warnSpy.mockRestore();
     });
+  });
+});
+
+describe('formatShortcutParts', () => {
+  it('splits Mac modifiers into their own keycaps', () => {
+    expect(formatShortcutParts('mod+z', 'meta')).toEqual([['⌘', 'Z']]);
+    expect(formatShortcutParts('mod+shift+z', 'meta')).toEqual([['⇧', '⌘', 'Z']]);
+  });
+
+  it('keeps whole-word labels as keycaps on other platforms', () => {
+    expect(formatShortcutParts('mod+z', 'ctrl')).toEqual([['Ctrl', 'Z']]);
+    expect(formatShortcutParts('mod+shift+z', 'ctrl')).toEqual([['Ctrl', 'Shift', 'Z']]);
+  });
+
+  it('returns one array per chord step', () => {
+    expect(formatShortcutParts('g h', 'ctrl')).toEqual([['G'], ['H']]);
+    expect(formatShortcutParts('ctrl+k ctrl+s', 'meta')).toEqual([
+      ['⌃', 'K'],
+      ['⌃', 'S'],
+    ]);
+  });
+
+  it('joins back to the flat form', () => {
+    expect(
+      formatShortcutParts('mod+shift+p', 'meta')
+        .map((step) => step.join(''))
+        .join(' '),
+    ).toBe(formatShortcut('mod+shift+p', 'meta'));
+    expect(
+      formatShortcutParts('mod+shift+p', 'ctrl')
+        .map((step) => step.join('+'))
+        .join(' '),
+    ).toBe(formatShortcut('mod+shift+p', 'ctrl'));
+  });
+
+  it('returns empty array and warns for invalid shortcut', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(formatShortcutParts('ctrl+', 'meta')).toEqual([]);
+    expect(warnSpy).toHaveBeenCalledOnce();
+
+    warnSpy.mockRestore();
   });
 });

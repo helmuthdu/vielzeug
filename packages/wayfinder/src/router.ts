@@ -843,6 +843,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
         // Apply global coerceSearch to the unmatched location so notFound handlers
         // receive typed query params, consistent with matched-route behaviour.
         let nfResolvedQuery: ResolvedQueryParams = currentLocation.query;
+        let notified = false;
 
         if (this.#globalCoerceSearch) {
           try {
@@ -886,6 +887,15 @@ class Router<TRoutes extends RouteTable = RouteTable> {
                   hasDataError = true;
                 },
               );
+
+              if (!isCurrent()) return;
+
+              // Swap and scroll while the view transition is still open: the new view renders
+              // and the scroll resets before the new-state capture, so neither change lands
+              // as an uncovered jump after the animation ends.
+              notified = true;
+              this.#notifyListeners();
+              this.#applyScroll(this.#currentState, previousState);
             },
             (error) =>
               isRouterErrorCarrier(error) || (hasDataError && error === dataError)
@@ -903,7 +913,8 @@ class Router<TRoutes extends RouteTable = RouteTable> {
 
           throw error;
         } finally {
-          if (isCurrent() && committed) {
+          // Abort and error paths skip the in-run swap above; they still settle here.
+          if (isCurrent() && committed && !notified) {
             this.#notifyListeners();
             this.#applyScroll(this.#currentState, previousState);
           }
@@ -934,6 +945,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
     let dataError: unknown;
     let hasDataError = false;
     let terminalRan = false;
+    let notified = false;
 
     const run = async (): Promise<void> => {
       if (!isCurrent()) return;
@@ -957,6 +969,15 @@ class Router<TRoutes extends RouteTable = RouteTable> {
             dataError = error;
             hasDataError = true;
           });
+
+          if (!isCurrent()) return;
+
+          // Swap and scroll while the view transition is still open: the new view renders
+          // and the scroll resets before the new-state capture, so neither change lands
+          // as an uncovered jump after the animation ends.
+          notified = true;
+          this.#notifyListeners();
+          this.#applyScroll(this.#currentState, previousState);
         },
         (error) =>
           isRouterErrorCarrier(error) || (hasDataError && error === dataError)
@@ -974,7 +995,8 @@ class Router<TRoutes extends RouteTable = RouteTable> {
 
       throw error;
     } finally {
-      if (isCurrent() && committed) {
+      // Abort and error paths skip the in-run swap above; they still settle here.
+      if (isCurrent() && committed && !notified) {
         this.#notifyListeners();
         this.#applyScroll(this.#currentState, previousState);
       }

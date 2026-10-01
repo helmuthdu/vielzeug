@@ -7,6 +7,10 @@
     --accordion-details-radius: var(--rounded-lg);
     --accordion-item-transition: var(--transition-normal);
     --accordion-item-expand-easing: var(--ease-spring);
+    --accordion-item-row-duration: 200ms;
+    --accordion-item-fade-duration: 200ms;
+    --accordion-item-fade-delay: 60ms;
+    --accordion-item-collapse-delay: 120ms;
     display: block;
     color: var(--accordion-item-body-color, var(--text-color-body));
   }
@@ -81,7 +85,8 @@
     border-inline: 1px solid var(--accordion-item-border-color);
     border-bottom: 1px solid var(--accordion-item-border-color);
     border-radius: var(--accordion-summary-radius);
-    transition: grid-template-rows 200ms var(--accordion-item-expand-easing, var(--ease-spring));
+    transition: grid-template-rows var(--accordion-item-row-duration)
+      var(--accordion-item-expand-easing, var(--ease-spring));
   }
 
   details[open] .content-wrapper {
@@ -94,8 +99,8 @@
     opacity: 1;
     transform: translateY(0);
     transition:
-      opacity 200ms 60ms var(--ease-spring),
-      transform 200ms 60ms var(--ease-spring);
+      opacity var(--accordion-item-fade-duration) var(--accordion-item-fade-delay) var(--ease-spring),
+      transform var(--accordion-item-fade-duration) var(--accordion-item-fade-delay) var(--ease-spring);
   }
 
   /* Opening: set from-state with no transition — transition fires on base rule when class is removed */
@@ -117,7 +122,8 @@
   /* Keep row expanded while closing animation plays */
   details.closing .content-wrapper {
     grid-template-rows: 1fr;
-    transition: grid-template-rows 200ms 120ms var(--accordion-item-expand-easing, var(--ease-spring));
+    transition: grid-template-rows var(--accordion-item-row-duration) var(--accordion-item-collapse-delay)
+      var(--accordion-item-expand-easing, var(--ease-spring));
   }
 }
 
@@ -261,7 +267,7 @@
 
     margin-inline-start: auto;
     transform: rotate(-90deg);
-    transition: transform 200ms var(--ease-spring);
+    transition: transform var(--accordion-item-row-duration) var(--ease-spring);
   }
 
   details[open] .chevron {

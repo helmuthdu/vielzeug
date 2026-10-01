@@ -78,6 +78,11 @@ export function createPhaseMirror<Phase extends string>(options: PhaseMirrorOpti
       () => {
         const id = options.subjectId.value;
         const phase = options.currentPhase.value;
+        // The URL names a different subject of the same flow — a cross-instance navigation.
+        // Canonicalizing it here would stomp the arrival onto this mirror's own subject;
+        // the arriving view's own mirror takes over from here.
+        const urlSubjectId = routeParams.value.id;
+        if (typeof urlSubjectId === 'string' && urlSubjectId !== id) return;
         if (routeName.value === options.detailRoute && id && phase) goToPhase(phase);
       },
       { immediate: true },

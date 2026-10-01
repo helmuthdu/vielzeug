@@ -70,6 +70,9 @@ export type FileUploadFn = (
 
 // ── Queue ─────────────────────────────────────────────────────────────────────
 
+/** Why a file never made it into the queue: wrong type for `accept`, or over `max-size`. */
+export type FileRejectReason = 'size' | 'type';
+
 export type FileQueueOptions = {
   accept: Readable<string | undefined>;
   disabled: Readable<boolean>;
@@ -79,6 +82,12 @@ export type FileQueueOptions = {
   maxSize: Readable<number>;
   multiple: Readable<boolean>;
   onChange: (files: File[], originalEvent?: Event) => void;
+  /**
+   * Called with the files an `addFiles` call refused — nothing was added for them — so the
+   * consumer can say so instead of the pick failing silently. `files[i]` pairs with
+   * `reasons[i]`.
+   */
+  onReject?: (files: File[], reasons: FileRejectReason[], originalEvent?: Event) => void;
   onRemove: (file: File, files: File[], originalEvent?: Event) => void;
   onUploadError: (file: File, error: unknown) => void;
   onUploadProgress: (file: File, loaded: number, total: number) => void;
@@ -240,12 +249,30 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
     const acceptList = parseAccept(options.accept.value);
     const maxSize = options.maxSize.value;
 
-    incoming = incoming.filter((f) => matchesAccept(f, acceptList) && isFileSizeAllowed(f, maxSize));
+    // Validation failures are reported, never swallowed: a pick the queue refuses must be
+    // heard by the consumer, or the interaction reads as if nothing happened.
+    const accepted: File[] = [];
+    const rejectedFiles: File[] = [];
+    const rejectReasons: FileRejectReason[] = [];
+
+    for (const file of incoming) {
+      if (!matchesAccept(file, acceptList)) {
+        rejectedFiles.push(file);
+        rejectReasons.push('type');
+      } else if (!isFileSizeAllowed(file, maxSize)) {
+        rejectedFiles.push(file);
+        rejectReasons.push('size');
+      } else {
+        accepted.push(file);
+      }
+    }
+
+    if (rejectedFiles.length) options.onReject?.(rejectedFiles, rejectReasons, originalEvent);
 
     let updated: File[] = isMultiple ? [...files.value] : [];
     const added: File[] = [];
 
-    for (const f of incoming) {
+    for (const f of accepted) {
       if (!updated.includes(f)) {
         updated.push(f);
         added.push(f);

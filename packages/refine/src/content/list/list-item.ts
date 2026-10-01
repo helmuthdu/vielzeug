@@ -79,6 +79,10 @@ const actionSlot = (side: ListItemRevealSide): 'actions-left' | 'actions-right' 
  * the item, or open a different item's panel. Reverse-swiping an already-open item is not
  * supported — see `ore-list`'s docs for the reasoning.
  *
+ * On hover-capable fine pointers, a hovered row peeks a few pixels of its first action panel
+ * (`--list-item-peek`, a fraction of the panel width) so the swipe affordance is discoverable
+ * without a gesture; touch discovers the swipe natively.
+ *
  * @element ore-list-item
  *
  * @attr {boolean} actionable - Enable pointer and Enter/Space activation with button semantics
@@ -102,6 +106,7 @@ const actionSlot = (side: ListItemRevealSide): 'actions-left' | 'actions-right' 
  * @slot actions-right - Buttons revealed by swiping left (or focusing into this slot)
  *
  * @cssprop --list-item-actions-width - Width of each action panel (default 6rem)
+ * @cssprop --list-item-peek - Hover-peek distance as a fraction of the action panel width (default 0.08; 0 disables the peek)
  * @cssprop --list-item-bg - Row background color
  * @cssprop --list-item-hover-bg - Row background on hover
  * @cssprop --list-item-selected-bg - Row background when selected
@@ -250,6 +255,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
       attr: {
         'aria-disabled': () => (props.disabled.value ? 'true' : null),
         'aria-selected': () => (isSelectable.value ? String(isSelected.value) : null),
+        'data-peek': () => (hasActions('left') ? 'left' : hasActions('right') ? 'right' : undefined),
         'data-two-line': () => (hasDescription.value ? true : undefined),
         role: () => (isSelectable.value ? 'option' : 'listitem'),
       },

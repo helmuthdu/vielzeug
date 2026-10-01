@@ -29,11 +29,16 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import componentStyles from './file-input.css?inline';
-import { createFileQueue, type FileUploadFn, formatBytes } from './file-input-upload';
+import { createFileQueue, type FileRejectReason, type FileUploadFn, formatBytes } from './file-input-upload';
 
 export { ICON_TAG } from '../../content/icon/icon';
 export { PROGRESS_TAG } from '../../feedback/progress/progress';
-export type { FileUploadFn, FileUploadState, FileUploadStatus } from './file-input-upload';
+export type {
+  FileRejectReason,
+  FileUploadFn,
+  FileUploadState,
+  FileUploadStatus,
+} from './file-input-upload';
 
 const isImageFile = (file: File): boolean => file.type.startsWith('image/');
 
@@ -41,12 +46,22 @@ const isImageFile = (file: File): boolean => file.type.startsWith('image/');
 export type OreFileInputProps = {
   /** Accepted file types (comma-separated, e.g. '.jpg, .png, image/*') */
   accept?: string;
+  /** Action half of the dropzone line; pairs with `dropzone-label` (default 'click to browse') */
+  'browse-label'?: string;
   /** Theme color tint */
   color?: string;
   /** Disabled state */
   disabled?: boolean;
   /** Error message text */
   error?: string;
+  /** Dropzone line while a drag is active (default 'Release to upload') */
+  'dropzone-active-label'?: string;
+  /** Drops the auto-generated accept/max hint and prints this instead */
+  'dropzone-hint'?: string;
+  /** Main half of the dropzone line; pairs with `browse-label` (default 'Drop files here or') */
+  'dropzone-label'?: string;
+  /** Accessible name of the selected-files list (default 'Selected files') */
+  'files-label'?: string;
   /**
    * Render selected files as a grid of image thumbnails/previews instead of the default
    * single-column list. Non-image files fall back to a generic file icon in the same grid.
@@ -91,6 +106,11 @@ export type OreFileInputEvents = {
   change: { files: File[]; originalEvent?: Event; value: File[] };
   /** Emitted when a specific file is removed */
   remove: { file: File; files: File[]; originalEvent?: Event; value: File[] };
+  /**
+   * Emitted when files fail `accept`/`max-size` validation — nothing was added for them, so
+   * this is the only signal the pick was refused. `files[i]` pairs with `reasons[i]`.
+   */
+  reject: { files: File[]; originalEvent?: Event; reasons: FileRejectReason[] };
   /** Emitted when `upload` rejects for a file (after a fresh attempt or a retry) */
   'upload-error': { error: unknown; file: File };
   /** Emitted whenever `upload`'s `onProgress` reports new bytes for a file */
@@ -116,9 +136,15 @@ export type OreFileInputEvents = {
  * @attr {boolean} disabled - Disable interaction
  * @attr {string} error - Show an error state/message
  * @attr {string} helper - Provide helper context below the dropzone
+ * @attr {string} browse-label - Action half of the dropzone line (default 'click to browse')
+ * @attr {string} dropzone-label - Main half of the dropzone line (default 'Drop files here or')
+ * @attr {string} dropzone-active-label - Dropzone line while a drag is active (default 'Release to upload')
+ * @attr {string} dropzone-hint - Replace the auto-generated accept/max-size hint with this text
+ * @attr {string} files-label - Accessible name of the selected-files list (default 'Selected files')
  *
  * @fires change - detail: { files: File[], value: File[] }
  * @fires remove - detail: { file: File, files: File[] }
+ * @fires reject - detail: { files: File[], reasons: ('size' | 'type')[] } — nothing was added
  * @fires upload-progress - detail: { file: File, loaded: number, total: number }
  * @fires upload-success - detail: { file: File }
  * @fires upload-error - detail: { file: File, error: unknown }
@@ -172,9 +198,14 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
   formAssociated: true,
   props: {
     accept: prop.string(),
+    'browse-label': prop.string('click to browse'),
     color: prop.string(),
     disabled: prop.bool(false),
+    'dropzone-active-label': prop.string('Release to upload'),
+    'dropzone-hint': prop.string(),
+    'dropzone-label': prop.string('Drop files here or'),
     error: prop.string(),
+    'files-label': prop.string('Selected files'),
     gallery: prop.bool(false),
     helper: prop.string(),
     label: prop.string(),
@@ -215,6 +246,8 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
       multiple: computed(() => Boolean(props.multiple.value)),
       onChange: (changedFiles, originalEvent) =>
         emit('change', { files: changedFiles, originalEvent, value: changedFiles }),
+      onReject: (rejectedFiles, reasons, originalEvent) =>
+        emit('reject', { files: rejectedFiles, originalEvent, reasons }),
       onRemove: (file, remainingFiles, originalEvent) =>
         emit('remove', { file, files: remainingFiles, originalEvent, value: remainingFiles }),
       onUploadError: (file, error) => emit('upload-error', { error, file }),
@@ -269,6 +302,11 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     const dropzoneRef = ref<HTMLDivElement>();
     const inputRef = ref<HTMLInputElement>();
     const hintText = computed(() => {
+      // A set hint replaces the auto summary wholesale — the caller owns the whole line
+      // (localized, formatted, or intentionally omitted detail).
+      const override = props['dropzone-hint'].value;
+      if (override) return override;
+
       const parts: string[] = [];
 
       if (props.accept.value) {
@@ -453,15 +491,15 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
             ${when(
               () => isDragging.value,
               () => html`
-                <span class="dropzone-title dropzone-title-active">Release to upload</span>
+                <span class="dropzone-title dropzone-title-active">${props['dropzone-active-label']}</span>
               `,
             )}
             ${when(
               () => !isDragging.value,
               () => html`
                 <span class="dropzone-title">
-                  Drop files here or
-                  <u>click to browse</u>
+                  ${props['dropzone-label']}
+                  <u>${props['browse-label']}</u>
                 </span>
               `,
             )}
@@ -472,7 +510,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
           class="${() => (props.gallery.value ? 'file-grid' : 'file-list')}"
           part="${() => (props.gallery.value ? 'gallery' : null)}"
           role="list"
-          aria-label="Selected files"
+          aria-label="${props['files-label']}"
           ?hidden=${() => queue.files.value.length === 0}>
           ${() =>
             queue.files.value.map((file: File) =>

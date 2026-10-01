@@ -201,6 +201,65 @@ test.describe('Swipe actions', () => {
     expect(buttonLeft).toBeLessThan(itemRight);
   });
 
+  // Hover-peek discoverability: a hovered row slides a few pixels toward its first populated
+  // action panel so the swipe affordance is visible without a gesture. The peek is the
+  // `--_swipe-x` *fallback* — a real reveal (attribute, focus-within, drag) always wins.
+  test('hovering a row with actions peeks its first panel, and recedes on mouse-out', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-list style="width:300px">' +
+        '<ore-list-item id="item">Newsletter<button slot="actions-left" id="act">Turn</button></ore-list-item>' +
+        '</ore-list>',
+    );
+    await page.waitForSelector('ore-list-item');
+
+    const rowX = () =>
+      page.evaluate(() => {
+        const item = document.getElementById('item') as HTMLElement & { shadowRoot: ShadowRoot };
+        const row = item.shadowRoot.querySelector('.row') as HTMLElement;
+        return row.getBoundingClientRect().x;
+      });
+
+    await page.locator('#item').hover();
+    await page.waitForTimeout(250);
+    const peeked = await rowX();
+
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(250);
+    const rested = await rowX();
+
+    expect(peeked - rested).toBeGreaterThan(1);
+    // A fraction of the panel width (0.08 × 96px ≈ 7.7px) — far from a full reveal.
+    expect(peeked - rested).toBeLessThan(10);
+  });
+
+  test('a revealed row does not peek on hover — the real state wins over the fallback', async ({
+    page,
+    refinePage,
+  }) => {
+    await refinePage.mountComponent(
+      '<ore-list style="width:300px">' +
+        '<ore-list-item id="item" revealed="left">Newsletter<button slot="actions-left" id="act">Turn</button></ore-list-item>' +
+        '</ore-list>',
+    );
+    await page.waitForSelector('ore-list-item[revealed="left"]');
+
+    await page.locator('#item').hover();
+    await page.waitForTimeout(250);
+
+    const { shift, panelWidth } = await page.evaluate(() => {
+      const item = document.getElementById('item') as HTMLElement & { shadowRoot: ShadowRoot };
+      const row = item.shadowRoot.querySelector('.row') as HTMLElement;
+      const panel = item.shadowRoot.querySelector('.actions-left') as HTMLElement;
+      return {
+        panelWidth: panel.getBoundingClientRect().width,
+        shift: row.getBoundingClientRect().x - item.getBoundingClientRect().x,
+      };
+    });
+
+    // Fully revealed: the row sits a whole panel width to the right, not a peek fraction.
+    expect(shift).toBeGreaterThanOrEqual(panelWidth - 1);
+  });
+
   // Asserts the *visible* `[part="button"]` surface, not `ore-button`'s own light-DOM host box —
   // stretching the host alone (a plain `::slotted(*) { height: 100% }`, which this suite's own
   // earlier revision relied on) leaves the size preset's fixed-height inner surface floating,

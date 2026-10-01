@@ -149,6 +149,12 @@ the slot's own first element (so a real action button's own click handler runs) 
 `confirm`; the panel closes on its own afterward. The row and action panel tint slightly once the
 drag is close to that point, as a heads-up before it fires.
 
+On hover-capable fine pointers, a hovered row peeks a few pixels of its first populated action
+panel so the swipe affordance is discoverable without a gesture — touch discovers the swipe
+natively. The peek distance is `--list-item-peek`, a fraction of the panel width (default
+`0.08`; `0` disables it), and it never competes with a real state: it applies only while no
+panel is revealed, no slotted action is focused, and no drag is in progress.
+
 <ComponentPreview vertical>
 
 ```html

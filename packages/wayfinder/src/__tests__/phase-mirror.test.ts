@@ -62,6 +62,31 @@ describe('createPhaseMirror', () => {
     mirror.dispose();
   });
 
+  it('does not canonicalize a cross-instance detail navigation onto its own subject', () => {
+    const currentPhase = signal<Phase | null>('done');
+    const subjectId = signal<string | null>('7');
+    const { navigations, router } = fakeRouter('/jobs/7/done', 'jobPhase', { id: '7', phase: 'done' });
+
+    const mirror = createPhaseMirror<Phase>({
+      canRevisit: () => false,
+      currentPhase,
+      detailRoute: 'jobDetail',
+      phaseRoute: 'jobPhase',
+      phases: PHASES,
+      requestRevisit: () => {},
+      router,
+      subjectId,
+    });
+    expect(navigations).toHaveLength(0);
+
+    // Navigating to another subject of the same flow while this mirror still holds subject 7:
+    // the arrival must stay put — its own mirror canonicalizes it once it mounts.
+    void router.navigate({ name: 'jobDetail', params: { id: '8' } });
+
+    expect(navigations).toEqual([{ name: 'jobDetail', params: { id: '8' }, replace: undefined }]);
+    mirror.dispose();
+  });
+
   it('pushes a domain phase change onto the URL with replace', () => {
     const currentPhase = signal<Phase | null>('draft');
     const subjectId = signal<string | null>('7');

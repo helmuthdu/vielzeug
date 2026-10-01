@@ -34,7 +34,7 @@
     outline: none;
     background: var(--list-item-bg, var(--color-canvas));
     border: none;
-    transform: translateX(calc(var(--_swipe-x, 0) * var(--_actions-width)));
+    transform: translateX(calc(var(--_swipe-x, var(--_peek-x, 0)) * var(--_actions-width)));
     transition: var(--_motion-transition, transform var(--transition-fast), background var(--transition-fast));
   }
 
@@ -136,12 +136,12 @@
 
   .actions-left {
     left: 0;
-    transform: translateX(calc((var(--_swipe-x, 0) - 1) * 100%));
+    transform: translateX(calc((var(--_swipe-x, var(--_peek-x, 0)) - 1) * 100%));
   }
 
   .actions-right {
     right: 0;
-    transform: translateX(calc((var(--_swipe-x, 0) + 1) * 100%));
+    transform: translateX(calc((var(--_swipe-x, var(--_peek-x, 0)) + 1) * 100%));
   }
 
   /* `:host(:has(...))` (`:has()` as `:host()`'s functional argument) is invalid — `:host()`
@@ -179,5 +179,24 @@
   :host([data-confirming]) .actions-left,
   :host([data-confirming]) .actions-right {
     filter: saturate(1.4) brightness(0.94);
+  }
+
+  /* ========================================
+       Hover peek — the swipe affordance
+       ======================================== */
+
+  /* A hovered row peeks a few pixels of its first action panel so the swipe affordance is
+     discoverable without a gesture. `--_peek-x` is only consumed while `--_swipe-x` is unset
+     (not revealed, not dragging, no slotted action focused), so the peek can never fight the
+     real states — it is the fallback, not a competitor. Fine pointers only: touch discovers
+     the gesture natively, and `hover` media guards hybrid devices. */
+  @media (hover: hover) and (pointer: fine) {
+    :host([data-peek='left']:hover:not([revealed])) {
+      --_peek-x: var(--list-item-peek, 0.08);
+    }
+
+    :host([data-peek='right']:hover:not([revealed])) {
+      --_peek-x: calc(var(--list-item-peek, 0.08) * -1);
+    }
   }
 }

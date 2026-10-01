@@ -307,6 +307,89 @@ describe('ore-file-input', () => {
 
       expect(clickSpy).toHaveBeenCalledTimes(1);
     });
+
+    it('dispatches reject with per-file reasons and adds nothing for refused files', async () => {
+      fixture = await mount('ore-file-input', {
+        attrs: { accept: '.json,application/json', 'max-size': '10', multiple: '' },
+      });
+
+      const changeHandler = vi.fn();
+      const rejectHandler = vi.fn();
+
+      fixture.element.addEventListener('change', changeHandler);
+      fixture.element.addEventListener('reject', rejectHandler);
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const wrongType = new File(['not json'], 'notes.txt', { type: 'text/plain' });
+      const tooBig = new File(['x'.repeat(20)], 'backup.json', { type: 'application/json' });
+      const valid = new File(['{}'], 'backup.json', { type: 'application/json' });
+
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: { 0: wrongType, 1: tooBig, 2: valid, item: (i: number) => [wrongType, tooBig, valid][i]!, length: 3 },
+      });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(rejectHandler).toHaveBeenCalledTimes(1);
+
+      const detail = (rejectHandler.mock.calls[0][0] as CustomEvent).detail;
+
+      expect(detail.files).toEqual([wrongType, tooBig]);
+      expect(detail.reasons).toEqual(['type', 'size']);
+      expect(detail.originalEvent).toBeDefined();
+
+      // The refused pick still reports the queue state — with only the accepted file.
+      expect(changeHandler).toHaveBeenCalledTimes(1);
+      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.files).toEqual([valid]);
+    });
+  });
+
+  describe('Localization', () => {
+    it('renders the default dropzone line', async () => {
+      fixture = await mount('ore-file-input');
+
+      expect(fixture.query('.dropzone-title')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Drop files here or click to browse',
+      );
+    });
+
+    it('renders the provided dropzone labels', async () => {
+      fixture = await mount('ore-file-input', {
+        attrs: {
+          'browse-label': 'zum Auswählen klicken',
+          'dropzone-label': 'Dateien hierher ziehen oder',
+        },
+      });
+
+      expect(fixture.query('.dropzone-title')?.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+        'Dateien hierher ziehen oder zum Auswählen klicken',
+      );
+    });
+
+    it('replaces the auto hint with dropzone-hint when set', async () => {
+      fixture = await mount('ore-file-input', {
+        attrs: { accept: '.json', 'dropzone-hint': 'JSON-Backup · max 5 MB' },
+      });
+
+      expect(fixture.query('.dropzone-hint')?.textContent?.trim()).toBe('JSON-Backup · max 5 MB');
+    });
+
+    it('names the selected-files list with files-label', async () => {
+      fixture = await mount('ore-file-input', { attrs: { 'files-label': 'Ausgewählte Dateien' } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const file = new File(['{}'], 'backup.json', { type: 'application/json' });
+
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: { 0: file, item: () => file, length: 1 },
+      });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await new Promise((r) => setTimeout(r, 10));
+      expect(fixture.query('[role="list"]')?.getAttribute('aria-label')).toBe('Ausgewählte Dateien');
+    });
   });
 });
 

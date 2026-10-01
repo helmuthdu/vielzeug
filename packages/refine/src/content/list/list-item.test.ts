@@ -54,6 +54,22 @@ describe('ore-list-item', () => {
       await fixture.flush();
       expect(leading.hasAttribute('hidden')).toBe(true);
     });
+
+    it('marks which action panel a hover should peek — the first populated side', async () => {
+      fixture = await mount('ore-list-item', { html: 'Inbox' });
+      expect(fixture.element.hasAttribute('data-peek')).toBe(false);
+
+      fixture = await mount('ore-list-item', { html: 'Inbox<button slot="actions-left">Turn</button>' });
+      expect(fixture.element.getAttribute('data-peek')).toBe('left');
+
+      fixture = await mount('ore-list-item', { html: 'Inbox<button slot="actions-right">Delete</button>' });
+      expect(fixture.element.getAttribute('data-peek')).toBe('right');
+
+      fixture = await mount('ore-list-item', {
+        html: 'Inbox<button slot="actions-left">Turn</button><button slot="actions-right">Delete</button>',
+      });
+      expect(fixture.element.getAttribute('data-peek')).toBe('left');
+    });
   });
 
   describe('Props', () => {
