@@ -1,0 +1,112 @@
+{
+  "awakened": {
+    "conclusions": [
+      {
+        "id": "conclusion",
+        "paragraphs": [
+          "You lie down on the ground, drop your weapons, unfasten the straps of your armor, now soaked in blood, and turn your eyes to the sky, which begins to clear.",
+          "You have been taught that hunters are nothing without their battle gear. But today it was not your weapons that gave you the courage you needed, it was not the bones in your armor or the iron of the blades that made you rise to the occasion of battle. It was desire that filled your lungs, the pains and defeats that you had learned to endure. Today, your weapons have been broken, your armor shattered, but your souls have become invincible. Where hunters fell, heroes arose.",
+          "Cries of liberation and joyful laughter can be heard echoing around the battlefield. You hug your comrades, kneel on the ground, and raise your arms skyward in triumph. A few steps away from humanity's jubilation, the smoking carcass of the Dragon is still lying there, prone on the battlefield. Its gaze is fixed for eternity in an empty expression, unable to convey any motion.",
+          "With slow, limping steps you approach the monstrous corpse, attracted by the light that still emanates from its breast.",
+          "At chest height, the monster's scaly armor has been torn open, and you can clearly see its still-beating heart, divided into three anatomically distinct parts. They beat in unison, but the rhythm is getting slower and more worn out.",
+          "\"Are you thinking what I'm thinking?\" the Commander asks from behind you.",
+          "She was also compelled to visit the corpse, seduced by the power of the Dragon. At that moment, Nael and the Keeper also arrive.",
+          "\"The Indomitable in my visions took power from the other Dragons by devouring their hearts,\" the latter says, thoughtfully.",
+          "\"Could we take its power for ourselves?\" you ask, as your pulses suddenly quicken.",
+          "\"Such power in the hands of a human being would be dangerous,\" Nael reflects, \"but we could divide it... Recreate the balance that was there in the past.\"",
+          "\"If we were to take it, ultimately, where could it lead us?\" asks the Keeper.",
+          "You stand there, for a long time, giddy at the thought of such power."
+        ],
+        "summary": "Discarding your broken armor and weapons, you approached the Dragon's carcass, drawn to its still-beating, three-part heart. The Commander, Nael, and the Keeper joined you. Recalling the Indomitable's heart-devouring, you asked if they could take its power. Nael warned of the danger, suggesting division for balance. The Keeper questioned the consequences. You contemplated the immense power.",
+        "title": "Conclusion"
+      },
+      {
+        "condition": {
+          "achievement": "The Voice of Woltyar"
+        },
+        "id": "if-you-have-the-voice-of-woltyar",
+        "paragraphs": [
+          "The Commander looks at you and sees in you the same desire that is blazing within her. She approaches the heart of the Dragon, extends her Arkeum hand, then retracts her fingers and squeezes them into her fist.",
+          "\"Imagine what we could do if we possessed such power. For too long we have fled, we have been victims... I can see it written in the tired and hungry face of my hunters!\" the Commander says passionately.",
+          "You notice many others are gathering around to listen to the Commander's words.",
+          "\"Now we can finally begin a new era: our era!\"",
+          "Even the Keeper, despite his concern, seems to see a unique opportunity for Alborea",
+          "\"Thyrea would have no more secrets hidden from our gaze..\" he murmurs to himself, \"and mankind would become the guardian of the Power.",
+          "\"The Voice of the Dragon can tame the nature on Thyrea... Can you imagine what that would mean? We would dominate the island's monsters, we could shape the mountains to become our homes, we could move the tides and calm the winds to sail the seas,\" continues the Commander.",
+          "\"We would have the opportunity to start again,\" Nael tells you, \"and we would have the strength to create a just, harmonious world, according to our rules,\" he concludes, full of hope.",
+          "As those words are said, in the eyes of your comrades, you see the desire to lay claim to their strength. You feel that a new civilization of humankind - the Dragon Slayers - is preparing to be born and take flight. Along with the other hunters, you gather around your leaders: Noatar, Reja, and Nael prepare to devour the monster's heart and welcome its power into themselves.",
+          "An imposing red sun rises in the sky, its rays filtering through the dawn sky to illuminate the primordial ceremony of power transfer. In an atmosphere of blood and glory, you watch excitedly as the first spark of humankind's fire ignites - it is the foundation of a new era."
+        ],
+        "summary": "Gathered around a slain Dragon's heart, the Commander, the Keeper, and their allies are consumed by the temptation to claim its power and reshape Thyrea to humanity's will. As the leaders prepare to consume the heart, a new era: the age of the Dragon Slayers: is born.",
+        "title": "If You Have the Voice of Woltyar"
+      },
+      {
+        "condition": {
+          "unlessAchievement": "The Voice of Woltyar"
+        },
+        "id": "otherwise",
+        "paragraphs": [
+          "You get closer and closer to the heart of the Dragon. As you stare at its rhythmic beating, you taste blood in your mouth, and you recollect your companions' cries, the sound of their bones breaking in the monster's claws.",
+          "\"What is the purpose of such terrifying power?\" you ask.",
+          "That violent compulsion, that ferociousness you felt growing within you when you were in the heat of battle, you understand that it cannot define who you truly are.",
+          "\"We are still human beings\" you think, \"it is not the Voice of the Dragon that we must follow and give heed to, but that of our brothers and sisters, our comrades.\"",
+          "Reja looks at you and notices your faces marked with wounds and the look of exhaustion in your eyes, tired of supporting the weight of the power and the violence it entails. You exchange a nod of understanding, without the need for words. At that moment, other hunters approach the body of the Dragon with a mesmerized look in their eyes. The Commander takes the initiative and stretches out her hand, putting it between them and the beast's still-beating heart.",
+          "\"Do we want to go from prey to predator?\" she asks the men and women around her. \"That is not who we are... This is power that does not belong to us. That Voice we have all hea will make us aggressive... It will end up dividing us, pitting against one another,\" the Commander warns.",
+          "Behind you, the bright sun rises in a clear sky, driving t clouds away.",
+          "\"On the contrary, what we want is a world in which we c be united, where we no longer need to take up weapons, wh there are no fierce, bloodthirsty mouths to feed, and wh we can be truly human,\" exclaims Reja throwing her sp to the ground. \"To attain all this, the power of the Dragon m be extinguished along with the monster it has spawned,\" concludes.",
+          "At that moment, the blood-soaked images that were imprinted in your mind disappear, and your eyes see the w imagined by Reja, where humankind is free and welcomed by warm embrace of nature. You seek your comrades' gazes: it over. A new day has begun."
+        ],
+        "summary": "Standing over the Dragon's beating heart, the group resists the temptation of its power. The Commander steps forward and convinces the hunters that claiming it would only breed aggression and division. Together, they choose to destroy it, and with it, the cycle of violence: embracing a future of unity and peace instead.",
+        "title": "Otherwise"
+      }
+    ],
+    "introduction": {
+      "id": "introduction",
+      "paragraphs": [
+        "A surreal twilight shrouds the lands of Thyrea. The sun hides behind the dark mantle of the storm and turns its back on the world, which remains cloaked in a ghostly blanket, suspended between light and shadow. With your gaze fixed upon the wall of black clouds in front of you, you advance at a determined pace, along with the other teams of hunters chosen to face the Dragon. Flanking the marching expedition, you count four large war machines advancing on the rocky terrain. Reja is walking at the head of the group, as if she intends to face the Dragon alone. You are following immediately behind her, with your hands firmly gripping your weapons. There is something both enchanting and terrifying about the Commander - you find her gaze unsettling; it transmits a newfound ferocity.",
+        "\"I feel the storm spreading in the sky... Its Voice is everywhere, in the cutting air, in the trembling earth,\" the Commander tells you without turning around. It wants to devour everything\" she adds.",
+        "In the tormented skies of Thyrea, the outline of drawings and figures belonging to an ancestral age seem to take shape, The lightning bolts stretch like serpents of fire, and their light reveals the depth of the clouds above you. As you walk beneath the thick blanket of the storm, you notice faint electric shocks running up and down the Commander's arm.",
+        "\"I will hold back the storm and command the ballista attack,\" she reminds you. \"You know what to do... Do not give any ground,\" she orders.",
+        "You watch her climb on top of a large rock sticking out of a chasm in the earth that looks like an open wound. You climb up after her and from this new vantage point, you see it: majestic and terrifying, the Dragon appears as a patch of shadow even darker than the night.",
+        "\"What is that light?\" you ask aloud in amazement.",
+        "\"It’s heart,\" Reja replies.",
+        "Like a drum growing in intensity, you see the beast's heart beating and causing the entire sky to shake. A roar, and then another, a tremor that makes you shiver and from which it is impossible to escape - its luminous heart glows with a perennial fire that feeds the storm. The time has come. The Commander turns her back on the monster and challenges you with her eyes to keep your nerve.",
+        "\"Look into the eyes of your comrades, observe the fate that unites us in this struggle. Our destiny is not written in the stars, but in the flame that burns in our hearts and souls.\".",
+        "Reja points the tip of her spear at the Dragon.",
+        "\"You look at it and you see an indomitable, invincible force.",
+        "Then, she stares at each of you, one by one. \"But I see that same strength in your eyes! It has powerful claws, and you have your swords; it has its armor, and you have your comrade's shield!\"",
+        "Her words vibrate in the air.",
+        "\"The Dragon tests us as hunters and as human beings. You are right to be afraid today. Embrace that feeling, turn it into a weapon that fuels your strength!\"",
+        "All the weapons of Alborea are raised in unison.",
+        "\"We will sweep away this monstrous night!\" she cries, pointing her spear at the dark sky, \"Tomorrow, the sun will rise again, marking a new dawn for mankind!\"",
+        "You raise your chins and look for the monster's fiery gaze. The wind blows through the straps of your armor and crashes onto your skin. A voice from within you gives you encouragement and gets louder with every breath: you are ready to fight."
+      ],
+      "summary": "A stormy twilight sets the stage for the final battle. The hunters, led by a transformed Reja, advance towards the Dragon. Reja feels the storm's \"Voice\" and orders the hunters to hold their ground. From a high vantage point, they see the Dragon's luminous, beating heart shaking the sky. Reja gives a rousing speech, urging the hunters to embrace fear as strength and declaring their intention to defeat the Dragon and bring a new dawn.",
+      "title": "Introduction"
+    },
+    "vision": {
+      "id": "blood vision",
+      "paragraphs": [
+        "I immediately want more. Under my ecstatic gaze, my round features become sharper and the shape of my hand begins to change into something that had never been seen before.",
+        "At the same time, a part of my being starts to tear away and gets thinner and thinner within me. The Nocturne stares at me wide-eyed and incredulous, but I do not stop. I smell the intoxicating scent of the power contained in its heart, right there, in front of me. With a sneer, I sink my sharp, scale-covered fingers into its chest. Not to give my power, but to take the creature's.",
+        "Slowly, as the hunger increases within me, I feel something leaving my being, like a memory that vanishes and suddenly becomes elusive.",
+        "The spark of humanity, overwhelmed by this new desire for power, flees from my body and plunges into the inky obscurity that unites everything and devours everything.",
+        "At that moment, I, Noatar, suddenly feel in danger. The feeling that grips me is so vivid...",
+        "I manage to resist it. I try with all my might to get out of the vision. As I leave, making my way through the interwoven threads of Thyrea's power, I can still see below me, getting smaller and smaller, the image of the Dragon devouring its first prey."
+      ],
+      "summary": "A surge of desire transformed me. As the Nocturne watched, I plunged my fingers into its heart, driven by the scent of power. A part of me faded, my humanity fleeing into darkness. I, Noatar, felt danger and fought to escape the vision, retreating through Thyrea's power, seeing the Dragon devouring its first prey below.",
+      "title": "Blood Vision"
+    }
+  },
+  "lanternBearer": {
+    "id": "lantern bearer",
+    "paragraphs": [
+      "The bleeding carcass on the ground in front of me is still convulsing in death throes. The heady feeling of battle tempts me and pushes me closer to claim my trophy. My gaze lingers on the creature's chest, where its still-beating heart is slowly dying. Is it my right to possess its power and add its strength to mine?.",
+      "I kneel down and, with some confusion, approach its exposed flesh, butI find a hand with long, black, tapered claws positioned between me and my prey. I turn around and I am astonished to find the face of the woman with the lantern, very close to mine. Her eyes look askance at me from behind her pointed bone helmet. They are pools of darkness in which I seethe reflection of my face, horribly deformed by my lust for power.",
+      "\"I don't want to lose myself\"",
+      "I think. Without using her voice, the woman manages to common cate with me. I understand what her gaze and her silence mean; she seems so strange and so familiar at the same time. Then she hands me her lantern,and the light seems to caress my frightened soul with sweetness and serenity. At that moment, I clearly feel that the purest form of humanity resides within me. It is a power that wants to be given rather than taken away, an ever-growing light - the more it is shared, the further it can illuminate."
+    ],
+    "summary": "Tempted to claim a fallen creature's power, you are stopped by the mysterious lantern woman, whose silent gaze reflects their own greed back at them. Her light reminds them that true strength lies in giving, not taking.",
+    "title": "Lantern Bearer"
+  }
+}

@@ -1,0 +1,1091 @@
+[
+  {
+    "element": "horn",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_horn/horn_bigjaws_1.webp",
+        "id": "forge-anyone-big-jaws-l1",
+        "level": 1,
+        "text": "When the monster turns to your sector, you may exhaust this card to deal 2 damage for each aggro card in your discard pile."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "file": "forge_horn/horn_bigjaws_2.webp",
+        "id": "forge-anyone-big-jaws-l2",
+        "level": 2,
+        "text": "When the monster turns to your sector, you may exhaust this card to deal 4 damage for each aggro card in your discard pile."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "file": "forge_horn/horn_bigjaws_3.webp",
+        "id": "forge-anyone-big-jaws-l3",
+        "level": 3,
+        "text": "When the monster turns to your sector, you may exhaust this card to deal 6 damage for each aggro card in your discard pile."
+      }
+    ],
+    "name": "Big Jaws"
+  },
+  {
+    "element": "venom",
+    "levels": [
+      {
+        "cost": {
+          "scales": 2
+        },
+        "file": "forge_venon/venon_blackspin_1.webp",
+        "id": "forge-anyone-blackspin-l1",
+        "level": 1,
+        "text": "When you empty your deck, you may reveal a [dodge] from your hand to deal 4 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_blackspin_2.webp",
+        "id": "forge-anyone-blackspin-l2",
+        "level": 2,
+        "text": "When you empty your deck, deal 5 damage for each [dodge] in your hand."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_blackspin_3.webp",
+        "id": "forge-anyone-blackspin-l3",
+        "level": 3,
+        "text": "When you empty your deck, deal 7 damage for each [dodge] in your hand. If this inflicts a wound, inflict vulnerable."
+      }
+    ],
+    "name": "Blackspin"
+  },
+  {
+    "element": "venom",
+    "levels": [
+      {
+        "cost": {
+          "blood": 2
+        },
+        "file": "forge_venon/venon_bloodseeker_1.webp",
+        "id": "forge-anyone-bloodseeker-l1",
+        "level": 1,
+        "text": "When you avoid attrition damage, deal 1 damage for each [attack] in your discard pile."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_bloodseeker_2.webp",
+        "id": "forge-anyone-bloodseeker-l2",
+        "level": 2,
+        "text": "When you avoid attrition damage, deal 2 damage for each [attack] in your discard pile."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "file": "forge_venon/venon_bloodseeker_3.webp",
+        "id": "forge-anyone-bloodseeker-l3",
+        "level": 3,
+        "text": "When you avoid attrition damage, deal 3 damage for each [attack] in your discard pile."
+      }
+    ],
+    "name": "Bloodseeker"
+  },
+  {
+    "element": "feather",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_boomerang_1.webp",
+        "id": "forge-anyone-boomerang-l1",
+        "level": 1,
+        "text": "At the end of your action phase, if the first and last cards in your sequence are [dodge], deal 1 damage for each card in your sequence."
+      },
+      {
+        "cost": {
+          "zima": 2
+        },
+        "file": "forge_feather/feather_boomerang_2.webp",
+        "id": "forge-anyone-boomerang-l2",
+        "level": 2,
+        "text": "At the end of your action phase, if the first and last cards in your sequence are [dodge], deal 2 damage for each card in your sequence."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_boomerang_3.webp",
+        "id": "forge-anyone-boomerang-l3",
+        "level": 3,
+        "text": "At the end of your action phase, if the first and last cards in your sequence are [dodge], deal 3 damage for each card in your sequence."
+      }
+    ],
+    "name": "Boomerang"
+  },
+  {
+    "element": "coral",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_water/water_coraltrident_1.webp",
+        "id": "forge-anyone-coral-trident-l1",
+        "level": 1,
+        "text": "Your action cards are considered to have an additional stamina icon for the purpose of riding checks."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "file": "forge_water/water_coraltrident_2.webp",
+        "id": "forge-anyone-coral-trident-l2",
+        "level": 2,
+        "text": "When you deal damage to the monster through a riding check, increase that damage by 4.\nYour action cards are considered to have an additional stamina icon for the purpose of riding checks."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_coraltrident_3.webp",
+        "id": "forge-anyone-coral-trident-l3",
+        "level": 3,
+        "text": "When you deal damage to the monster through a riding check, increase that damage by 7.\nYour action cards are considered to have an additional stamina icon for the purpose of riding checks."
+      }
+    ],
+    "name": "Coral Trident"
+  },
+  {
+    "element": "crystal",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_crystal/crystal_crystalspear_1.webp",
+        "id": "forge-anyone-crystal-spear-l1",
+        "level": 1,
+        "text": "Start: If you have [maneuver][maneuver][maneuver] in your hand, you may discard one of those cards to deal 6 damage."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_crystal/crystal_crystal_spear_2.webp",
+        "id": "forge-anyone-crystal-spear-l2",
+        "level": 2,
+        "text": "Start: If you have [maneuver][maneuver][maneuver] in your hand, you may discard one of those cards to deal 9 damage. If this inflicts a wound, inflict vulnerable."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_crystal/crystal_crystalspear_3.webp",
+        "id": "forge-anyone-crystal-spear-l3",
+        "level": 3,
+        "text": "Start: If you have [maneuver][maneuver][maneuver] in your hand, you may discard one of those cards to deal 12 damage. If this inflicts a wound, inflict vulnerable."
+      }
+    ],
+    "name": "Crystal Spear"
+  },
+  {
+    "element": "thunder",
+    "levels": [
+      {
+        "cost": {
+          "blood": 2
+        },
+        "file": "forge_thunder/thunder_electricdagger_1.webp",
+        "id": "forge-anyone-electric-dagger-l1",
+        "level": 1,
+        "text": "When you avoid attrition damage, you may choose and discard a behavior card in play. If you do, replenish its behavior slot with the top card of the behavior deck."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "file": "forge_thunder/thunder_electricdagger_2.webp",
+        "id": "forge-anyone-electric-dagger-l2",
+        "level": 2,
+        "text": "When you avoid attrition damage, deal 4 damage. Then you may choose and discard a behavior card in play. If you do, replenish its behavior slot with the top card of the behavior deck."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "file": "forge_thunder/thunder_electricdagger_3.webp",
+        "id": "forge-anyone-electric-dagger-l3",
+        "level": 3,
+        "text": "When you avoid attrition damage, deal 4 damage for each [defensive] in your sequence. Then you may choose and discard a behavior card in play. If you do, replenish its behavior slot with the top card of the behavior deck."
+      }
+    ],
+    "name": "Electric Dagger"
+  },
+  {
+    "element": "thunder",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "zima": 1
+        },
+        "file": "forge_thunder/thunder_electricwhip_1.webp",
+        "id": "forge-anyone-electric-whip-l1",
+        "level": 1,
+        "text": "When a behavior card is revealed, you may discard a [maneuver] from your hand to increase its boost cost by 1."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "zima": 1
+        },
+        "file": "forge_thunder/thunder_electricwhip_2.webp",
+        "id": "forge-anyone-electric-whip-l2",
+        "level": 2,
+        "text": "When a behavior card is revealed, you may discard a [maneuver] from your hand to increase its boost cost by 1. If you do, deal 3 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "zima": 1
+        },
+        "file": "forge_thunder/thunder_electricwhip_3.webp",
+        "id": "forge-anyone-electric-whip-l3",
+        "level": 3,
+        "text": "When a behavior card is revealed, you may discard a [maneuver] from your hand to increase its boost cost by 1. If you do, deal 3 damage for each [maneuver] in your discard pile."
+      }
+    ],
+    "name": "Electric Whip"
+  },
+  {
+    "element": "metal",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_metal/metal_explosive_1.webp",
+        "id": "forge-anyone-explosive-l1",
+        "level": 1,
+        "text": "Start: You may exhaust this card to deal 5 damage. If this inflicts a wound, confuse the monster."
+      },
+      {
+        "cost": {
+          "iride": 2
+        },
+        "file": "forge_metal/metal_explosive_2.webp",
+        "id": "forge-anyone-explosive-l2",
+        "level": 2,
+        "text": "Start: You may exhaust this card to deal 10 damage. If this inflicts a wound, stun andconfuse the monster."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "file": "forge_metal/metal_explosive_3.webp",
+        "id": "forge-anyone-explosive-l3",
+        "level": 3,
+        "text": "Start: You may exhaust this card to deal 15 damage. If this inflicts a wound, stun andconfuse the monster."
+      }
+    ],
+    "name": "Explosive"
+  },
+  {
+    "element": "feather",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_featheredcoat_1.webp",
+        "id": "forge-anyone-feathered-coat-l1",
+        "level": 1,
+        "text": "When you move, if you are not the aggro player, you may reveal a [dodge] from your hand to ignore the movement cost."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_feather/feather_featheredcoat_2.webp",
+        "id": "forge-anyone-feathered-coat-l2",
+        "level": 2,
+        "text": "When you move, you may reveal a [dodge] from your hand to ignore the movement cost."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_featheredcoat_3.webp",
+        "id": "forge-anyone-feathered-coat-l3",
+        "level": 3,
+        "text": "When you move, you may reveal a [dodge] from your hand to ignore the movement cost.\nWhen you would trigger a behavior card with the front reaction, you may reveal [dodge][dodge] from your hand. If you do, discard that behavior card instead and replenish its behavior slot (max: 1 per round)."
+      }
+    ],
+    "name": "Feathered Coat"
+  },
+  {
+    "element": "ice",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_frozenboots_1.webp",
+        "id": "forge-anyone-frozen-boots-l1",
+        "level": 1,
+        "text": "Ignore the effects of water and ice terrains."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "iride": 1
+        },
+        "file": "forge_ice/ice_frozenboots_2.webp",
+        "id": "forge-anyone-frozen-boots-l2",
+        "level": 2,
+        "text": "Ignore the effects of water, ice and sand terrains."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_frozenboots_3.webp",
+        "id": "forge-anyone-frozen-boots-l3",
+        "level": 3,
+        "text": "Ignore the effects of water, ice, sand and swamp terrains."
+      }
+    ],
+    "name": "Frozen boots"
+  },
+  {
+    "element": "coral",
+    "levels": [
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_gauntletofshell_blade_1.webp",
+        "id": "forge-anyone-gauntlet-of-shell-blade-l1",
+        "level": 1,
+        "text": "When you avoid attrition damage, add the top card of your discard pile to your hand. If that card is [attack], deal 3 damage"
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_gauntletof_shellblade_2.webp",
+        "id": "forge-anyone-gauntlet-of-shell-blade-l2",
+        "level": 2,
+        "text": "When you avoid attrition damage, add the top card of your discard pile to your hand. If that card is [attack], deal 5 damage"
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_gauntletof_shellblade_3.webp",
+        "id": "forge-anyone-gauntlet-of-shell-blade-l3",
+        "level": 3,
+        "text": "When you avoid attrition damage, add the top card of your discard pile to your hand. If that card is [offensive], deal 7 damage"
+      }
+    ],
+    "name": "Gauntlet of Shell Blade"
+  },
+  {
+    "element": "metal",
+    "levels": [
+      {
+        "cost": {
+          "iride": 2
+        },
+        "file": "forge_metal/metal_irongreaves_1.webp",
+        "id": "forge-anyone-iron-greaves-l1",
+        "level": 1,
+        "text": "Your health value is increased by 2.\nWhen you are KO'd, exhaust this card."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "file": "forge_metal/metal_irongreaves_2.webp",
+        "id": "forge-anyone-iron-greaves-l2",
+        "level": 2,
+        "text": "Your health value is increased by 4.\nWhen you are KO'd, exhaust this card."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_metal/metal_irongreaves_3.webp",
+        "id": "forge-anyone-iron-greaves-l3",
+        "level": 3,
+        "text": "Your health value is increased by 6.\nWhen you are KO'd, exhaust this card."
+      }
+    ],
+    "name": "Iron Greaves"
+  },
+  {
+    "element": "fire",
+    "levels": [
+      {
+        "cost": {
+          "scales": 2
+        },
+        "counters": true,
+        "file": "forge_fire/fire_lavabuckler_1.webp",
+        "id": "forge-anyone-lava-buckler-l1",
+        "level": 1,
+        "text": "Setup: Place 2 counters on this card.\nWhen you would suffer attrition damage, you may remove a counter from Lava Buckler and discard the top card of your deck. If that card is [defensive], prevent that damage"
+      },
+      {
+        "cost": {
+          "blood": 2
+        },
+        "counters": true,
+        "file": "forge_fire/fire_lavabuckler_2.webp",
+        "id": "forge-anyone-lava-buckler-l2",
+        "level": 2,
+        "text": "Setup: Place 2 counters on this card.\nWhen you would suffer damage, you may remove a counter from Lava Buckler and discard the top card of your deck. If that card is [defensive], prevent that damage"
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "counters": true,
+        "file": "forge_fire/fire_lavabuckler_3.webp",
+        "id": "forge-anyone-lava-buckler-l3",
+        "level": 3,
+        "text": "Setup: Place 2 counters on this card.\nWhen you would suffer damage, you may remove a counter from Lava Buckler. If you do, discard a card either from your hand or from the top of your deck. If that card is [defensive], prevent that damage"
+      }
+    ],
+    "name": "Lava Buckler"
+  },
+  {
+    "element": "crystal",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "file": "forge_crystal/crystal_shimmeringboots_1.webp",
+        "id": "forge-anyone-shimmering-boots-l1",
+        "level": 1,
+        "text": "When you move, you may name a color and then discard the top card of your deck. If that card matches the color named, ignore the movement cost."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "file": "forge_crystal/crystal_shimmeringboots_2.webp",
+        "id": "forge-anyone-shimmering-boots-l2",
+        "level": 2,
+        "text": "Action: Move (max: once per turn).\nWhen you move, you may name a color and then discard the top card of your deck. If that card matches the color named, ignore the movement cost."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "file": "forge_crystal/crystal_shimmering_boots_3.webp",
+        "id": "forge-anyone-shimmering-boots-l3",
+        "level": 3,
+        "text": "Action: Move (max: once per turn).\nWhen you move, you may name a color and then discard up to 2 cards from the top of your deck. If at least one of the cards matches the color named, ignore the movement cost."
+      }
+    ],
+    "name": "Shimmering Boots"
+  },
+  {
+    "element": "horn",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_horn/horn_skeletalspear_1.webp",
+        "id": "forge-anyone-skeletal-spear-l1",
+        "level": 1,
+        "text": "When a behavior card is revealed, you may exhaust this card if you are in front sector. If you do, deal 7 damage and cancel the effects of that behavior card."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "file": "forge_horn/horn_skeletalspear_2.webp",
+        "id": "forge-anyone-skeletal-spear-l2",
+        "level": 2,
+        "text": "When a behavior card is revealed, you may exhaust this card if you are in front sector. If you do, deal 15 damage and cancel the effects of that behavior card."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "file": "forge_horn/horn_skeletalspear_3.webp",
+        "id": "forge-anyone-skeletal-spear-l3",
+        "level": 3,
+        "text": "When a behavior card is revealed, you may exhaust this card if you are in front sector. If you do, deal 20 damage and cancel the effects of that behavior card."
+      }
+    ],
+    "name": "Skeletal Spear"
+  },
+  {
+    "element": "fire",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_fire/fire_woltyargauntlet_1.webp",
+        "id": "forge-anyone-woltyar-gauntlet-l1",
+        "level": 1,
+        "text": "[attack]: If you paid with a [offensive], increase the damage the attack deals by 2."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_fire/fire_woltyargauntlet_2.webp",
+        "id": "forge-anyone-woltyar-gauntlet-l2",
+        "level": 2,
+        "text": "[attack]: If you paid with a [offensive], increase the damage the attack deals by 4."
+      },
+      {
+        "cost": {
+          "scales": 2
+        },
+        "file": "forge_fire/fire_woltyargauntlet_3.webp",
+        "id": "forge-anyone-woltyar-gauntlet-l3",
+        "level": 3,
+        "text": "[attack]: If you paid with a [offensive], increase the damage the attack deals by 6."
+      }
+    ],
+    "name": "Woltyar Gauntlet"
+  },
+  {
+    "element": "ice",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_wristbow_1.webp",
+        "id": "forge-anyone-wristbow-l1",
+        "level": 1,
+        "text": "[defensive]: If you paid with [maneuver], deal 1 damage."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_wristbow_2.webp",
+        "id": "forge-anyone-wristbow-l2",
+        "level": 2,
+        "text": "[defensive]: If you paid with [maneuver], deal 2 damage."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_wristbow_3.webp",
+        "id": "forge-anyone-wristbow-l3",
+        "level": 3,
+        "text": "[defensive]: If you paid with [maneuver], deal 3 damage."
+      }
+    ],
+    "name": "Wristbow"
+  },
+  {
+    "card": 1,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_01.webp",
+        "id": "reward-anyone-oculus-l1",
+        "level": 1,
+        "text": "Action: Look at the top card of the behavior deck (max: once per turn)."
+      }
+    ],
+    "name": "Oculus",
+    "reward": true
+  },
+  {
+    "card": 3,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "counters": true,
+        "file": "rewards/item_03.webp",
+        "id": "reward-anyone-tome-of-creatures-l2",
+        "level": 2,
+        "text": "Setup: Place 3 counters on this card.\nStart/Action: You may remove a counter from this card to look at a behavior card in play."
+      }
+    ],
+    "name": "Tome of Creatures",
+    "reward": true
+  },
+  {
+    "card": 4,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_04.webp",
+        "id": "reward-anyone-novilunium-l2",
+        "level": 2,
+        "text": "Start: If you are threatened, recycle 1.\nWhen you play a [dodge] as the first card in your sequence, choose another player. That player searches their discard pile for a card of their choice and shuffles it into their deck."
+      }
+    ],
+    "name": "Novilunium",
+    "reward": true
+  },
+  {
+    "card": 5,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_05.webp",
+        "id": "reward-anyone-tempest-glare-l2",
+        "level": 2,
+        "text": "When a behavior card is revealed and you are in the front sector, you may exhaust this card to cancel the effects of that behavior card and inflict blind."
+      }
+    ],
+    "name": "Tempest Glare",
+    "reward": true
+  },
+  {
+    "card": 6,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_06.webp",
+        "id": "reward-anyone-skeletal-web-l3",
+        "level": 3,
+        "text": "When the monster turns to your sector, you may exhaust this card and reveal [attack] from your hand to remove all struggle."
+      }
+    ],
+    "name": "Skeletal Web",
+    "reward": true
+  },
+  {
+    "card": 8,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_08.webp",
+        "id": "reward-anyone-primordial-spine-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen the monster would unleash, you may discard [attack] from your hand to prevent it. If you do, remove struggle until the monster has 2 struggle."
+      }
+    ],
+    "name": "Primordial Spine",
+    "reward": true
+  },
+  {
+    "card": 9,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_09.webp",
+        "id": "reward-anyone-tempest-horn-l3",
+        "level": 3,
+        "text": "Legendary.\nAt the start of the round, you may exhaust this card. If you do, skip your consume phase this round and choose one instead: All players draw 1; or remove 2 struggle."
+      }
+    ],
+    "name": "Tempest Horn",
+    "reward": true
+  },
+  {
+    "card": 10,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_10.webp",
+        "id": "reward-anyone-amber-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you play the first [parry] in your sequence, draw 1."
+      }
+    ],
+    "name": "Amber",
+    "reward": true
+  },
+  {
+    "card": 11,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_11.webp",
+        "id": "reward-anyone-umbral-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you play the first [maneuver] in your sequence, draw 1."
+      }
+    ],
+    "name": "Umbral",
+    "reward": true
+  },
+  {
+    "card": 12,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_12.webp",
+        "id": "reward-anyone-vermilion-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you play the first [attack] in your sequence, increase the damage that attack deals by 5."
+      }
+    ],
+    "name": "Vermilion",
+    "reward": true
+  },
+  {
+    "card": 13,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_13.webp",
+        "id": "reward-anyone-emerald-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you play the first [dodge] in your sequence, draw 1."
+      }
+    ],
+    "name": "Emerald",
+    "reward": true
+  },
+  {
+    "card": 14,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_14.webp",
+        "id": "reward-anyone-tidebringer-l3",
+        "level": 3,
+        "text": "At the start of another player's turn, you may discard a [maneuver] from your hand. If you do, that player recycles 1 and the monster immediately turns to your sector."
+      }
+    ],
+    "name": "Tidebringer",
+    "reward": true
+  },
+  {
+    "card": 15,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_15.webp",
+        "id": "reward-anyone-coral-visage-l3",
+        "level": 3,
+        "text": "Legendary.\nEach turn, you can perform a revive action without paying any stamina cost.\nStart: Search your discard pile for a card of your choice and shuffle that card into your deck."
+      }
+    ],
+    "name": "Coral Visage",
+    "reward": true
+  },
+  {
+    "card": 17,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_17.webp",
+        "id": "reward-anyone-obsidian-scythe-l3",
+        "level": 3,
+        "text": "[attack]: If you paid with a [attack], deal 7 damage."
+      }
+    ],
+    "name": "Obsidian Scythe",
+    "reward": true
+  },
+  {
+    "card": 18,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_18.webp",
+        "id": "reward-anyone-arkeum-ring-red-l3",
+        "level": 3,
+        "text": "When the monster suffers a wound, search your deck for a [attack] and add it to your hand. Then shuffle your deck."
+      }
+    ],
+    "name": "Arkeum Ring (Red)",
+    "reward": true
+  },
+  {
+    "card": 19,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_19.webp",
+        "id": "reward-anyone-arkeum-ring-blue-l3",
+        "level": 3,
+        "text": "When the monster suffers a wound, search your deck for a [maneuver] and add it to your hand. Then shuffle your deck."
+      }
+    ],
+    "name": "Arkeum Ring (Blue)",
+    "reward": true
+  },
+  {
+    "card": 20,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_20.webp",
+        "id": "reward-anyone-arkeum-ring-green-l3",
+        "level": 3,
+        "text": "When the monster suffers a wound, search your deck for a [dodge] and add it to your hand. Then shuffle your deck."
+      }
+    ],
+    "name": "Arkeum Ring (Green)",
+    "reward": true
+  },
+  {
+    "card": 21,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_21.webp",
+        "id": "reward-anyone-arkeum-ring-yellow-l3",
+        "level": 3,
+        "text": "When the monster suffers a wound, search your deck for a [parry] and add it to your hand. Then shuffle your deck."
+      }
+    ],
+    "name": "Arkeum Ring (Yellow)",
+    "reward": true
+  },
+  {
+    "card": 22,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_22.webp",
+        "id": "reward-anyone-indomitable-shield-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you would place a deplete token on your armor or helm card, you may exhaust this card instead."
+      }
+    ],
+    "name": "Indomitable Shield",
+    "reward": true
+  },
+  {
+    "card": 23,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_23.webp",
+        "id": "reward-anyone-flaming-pendant-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you would play the first card in your sequence, you may suffer damage equal to its stamina cost. If you do, play that card without paying its stamina cost."
+      }
+    ],
+    "name": "Flaming Pendant",
+    "reward": true
+  },
+  {
+    "card": 26,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_26.webp",
+        "id": "reward-anyone-resolve-l3",
+        "level": 3,
+        "text": "Legendary.\nReduce the stamina cost of the first [dodge] you play each turn by 1."
+      }
+    ],
+    "name": "Resolve",
+    "reward": true
+  },
+  {
+    "card": 27,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_27.webp",
+        "id": "reward-anyone-valor-l3",
+        "level": 3,
+        "text": "Legendary.\nReduce the stamina cost of the first [maneuver] you play each turn by 1."
+      }
+    ],
+    "name": "Valor",
+    "reward": true
+  },
+  {
+    "card": 28,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_28.webp",
+        "id": "reward-anyone-fury-l3",
+        "level": 3,
+        "text": "Legendary.\nReduce the stamina cost of the first [attack] you play each turn by 1."
+      }
+    ],
+    "name": "Fury",
+    "reward": true
+  },
+  {
+    "card": 29,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_29.webp",
+        "id": "reward-anyone-zeal-l3",
+        "level": 3,
+        "text": "Legendary.\nReduce the stamina cost of the first [parry] you play each turn by 1."
+      }
+    ],
+    "name": "Zeal",
+    "reward": true
+  },
+  {
+    "card": 30,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_30.webp",
+        "id": "reward-anyone-dagger-heart-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you suffer attrition damage, deal 3 damage for each card in your sequence."
+      }
+    ],
+    "name": "Dagger Heart",
+    "reward": true
+  },
+  {
+    "card": 31,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_31.webp",
+        "id": "reward-anyone-serpent-belt-l3",
+        "level": 3,
+        "text": "[attack]: If you paid with a [attack], increase the damage the attack deals by 5."
+      }
+    ],
+    "name": "Serpent Belt",
+    "reward": true
+  },
+  {
+    "card": 32,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_32.webp",
+        "id": "reward-anyone-void-stare-l3",
+        "level": 3,
+        "text": "Legendary.\nWhile your health is critical, reduce any damage you suffer by 1."
+      }
+    ],
+    "name": "Void Stare",
+    "reward": true
+  },
+  {
+    "card": 34,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "counters": true,
+        "file": "rewards/item_34.webp",
+        "id": "reward-anyone-ancestors-gift-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Place 3 counters on Ancestors’ Gift.\nAction: Remove a counter from this card to draw 1."
+      }
+    ],
+    "name": "Ancestors’ Gift",
+    "reward": true
+  },
+  {
+    "card": 36,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "counters": true,
+        "file": "rewards/item_36.webp",
+        "id": "reward-anyone-northern-star-l3",
+        "level": 3,
+        "text": "Setup: Place 2 counters on Northern Star.\nWhen you would suffer attrition damage, you may exile the top card of your deck to prevent that damage. If you do, remove a counter from Northern Star."
+      }
+    ],
+    "name": "Northern Star",
+    "reward": true
+  },
+  {
+    "card": 37,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_37.webp",
+        "id": "reward-anyone-ice-l3",
+        "level": 3,
+        "text": "When you avoid attrition damage, you may exile a card from your hand to deal damage equal to your weapon level for each card in your sequence."
+      }
+    ],
+    "name": "Ice",
+    "reward": true
+  }
+]

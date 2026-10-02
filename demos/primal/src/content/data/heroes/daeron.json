@@ -1,0 +1,644 @@
+{
+  "starter": [
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-aggressive-charge-s",
+      "name": "Aggressive Charge",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist. Berserker.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-battle-cry-s",
+      "name": "Battle Cry",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Berserker. Resilience",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-counterstike-s",
+      "name": "Counterstrike",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "↓[attack]: Increase the damage the Attack deals by 3[weapon].",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-deflecting-blade-s",
+      "name": "Deflecting Blade",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Search your deck for a card with slash and add it to your hand. Then reshuffle your deck.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-double-slash-s",
+      "name": "Double Slash",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "If the next card you play in your sequence is a [attack], reduce its stamina cost by 1",
+      "trait": "Slash"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-dragon-dash-s",
+      "name": "Dragon Dash",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "[mastery]: reduce the stamina cost of the next card you play by 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-dragon-strike-s",
+      "name": "Dragon Strike",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Assist. \n[parry]↓: Draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-empty-fade-s",
+      "name": "Empty Fade",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "You may play a card with slash as the next card in your sequence without paying its stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-endurance-s",
+      "name": "Endurance",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Draw 1.\n[mastery]: Draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-engage-s",
+      "name": "Engage",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Choose another player in your sector or an adjacent sector to Draw 1",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-evasive-step-s",
+      "name": "Evasive Step",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Search your deck for a [attack] and add it to your hand. Then reshuffle your deck",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-guardian-blade-s",
+      "name": "Guardian Blade",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "At the end of your action phase, choose another player to draw 1 for each Aggro symbol in your sequnce (max: draw 3)",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-heavy-clash-s",
+      "name": "Heavy Clash",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "Assist.\nRemove 1 struggle token.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-jumping-slice-s",
+      "name": "Jumping Slice",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Assist.\nIf you paid with a [maneuver], increase the damage this attack deals by 3[weapon]",
+      "trait": "Slash"
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-massive-strike-s",
+      "name": "Massive Strike",
+      "staminaCost": 4,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "Finisher.\nYou can only play this card after a [attack]. Increase the damage this attack deals by 5[weapon].",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": "You can't use vulnerable on the same attack",
+      "id": "hero-daeron-precise-strike-s",
+      "name": "Precise Strike",
+      "staminaCost": 3,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "This attack inflicts vulnerable",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-pressing-strike-s",
+      "name": "Pressing Strike",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Draw 2.",
+      "trait": "Slash"
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-quick-attack-s",
+      "name": "Quick Attack",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "When you discard this card from your hand, deal your base weapon damage.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-reactive-guard-s",
+      "name": "Reactive Guard",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Resilience.\n↓[attack]: Draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "Reduce the stamina cost of all [attack] you play by 1."
+      },
+      "id": "hero-daeron-relentless-assault-s",
+      "name": "Relentless Assault",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 2,
+        "text": "[attack][attack]: Place a counter on this card."
+      }
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-retrat-s",
+      "name": "Retreat",
+      "staminaCost": 2,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "Draw 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-slash-to-the-flank-s",
+      "name": "Slash to the Flank",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "If you are in a flank sector, you may play a [attack] as the next card in your sequence without paying its stamina cost.",
+      "trait": "Slash"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-swift-dodge-s",
+      "name": "Swift Dodge",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Reduce the stamina cost of the next card you play by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-daeron-thwart-s",
+      "name": "Thwart",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Maneuver",
+      "text": "When another player removes struggle, you may discard this card from your hand to double the amount of struggle removed. Then the active player Draws 1 card.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-daeron-voice-of-the-dragon-s",
+      "name": "Voice of the dragon",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Assist. Resilience.\nReduce the stamina cost of each [attack] you play in this turn by 1.",
+      "trait": null
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-balanced-defense-a1",
+        "name": "Balanced Defense",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Reduce the stamina cost of the next card you play by 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-lateral-move-a1",
+        "name": "Lateral Move",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Assist.\nWhile this is the top card of your discard pile, reduce the stamina cost of your movements to 0.",
+        "trait": null
+      }
+    ],
+    "A2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-feral-desire-a2",
+        "name": "Feral Desire",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Search your discard pile for a card with slash and add it to your hand.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "faq": "You can't use vulnerable on the same attack",
+        "id": "hero-daeron-lacerate-a2",
+        "name": "Lacerate",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "[parry]↓: This attack inflicts vulnerable.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Start Recycle 2.\n[parry][attack]: Gain a defense token."
+        },
+        "id": "hero-daeron-dragon-guard-a2",
+        "name": "Dragon Guard",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "[parry][attack]: Place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-daeron-blind-rage-b1",
+        "name": "Blind Rage",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Assist.\nIncrease your sequence limit by 1 this turn",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-daeron-wrath-of-blood-b1",
+        "name": "Wrath of Blood",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "If your health is critical, increase the damage this attack deals by 5[weapon]",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-final-breath-b2",
+        "name": "Final Breath",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "If your health is critical, draw up to your hand size limit +1.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-daeron-primal-fury-b2",
+        "name": "Primal Fury",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Berserker.\nDraw 1 or heal 1[weapon]",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When focused: You may heal 1[weapon]\nWhen you enter the berserker state, you may heal 1[weapon].\nYour weapon has +2[weapon] damage"
+        },
+        "id": "hero-daeron-the-berserker-b2",
+        "name": "The Berserker",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "When your health become critical, place a counter on this card."
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-defensive-insight-c1",
+        "name": "Defensive Insight",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Dodge",
+        "text": "Reveal any number of [parry] from your hand and then draw that many cards.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-guardian-c1",
+        "name": "Guardian",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Parry",
+        "text": "At the end of your action phase, return a card from your sequence to your hand.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-daeron-exhausting-defense-c2",
+        "name": "Exhausting Defense",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Remove 1 struggle for each [defensive] in your hand and reduce the stamina cost of the next card you play by 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-sentinel-c2",
+        "name": "Sentinel",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Parry",
+        "text": "Resilience.\n When you or another player in your sector would suffer damage, you may discard this card from your hand. If you do, prevent that damage.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "[parry]: Remove 1 struggle and gain a defense token.\nWhen you suffer damage, you may discard a [parry] from your hand to halve that damage (rounded down)."
+        },
+        "id": "hero-daeron-tenacious-blade-c2",
+        "name": "Tenacious Blade",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "When you suffer damage, you may reveal a [parry] from your hand. If you do, place a counter on this card."
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-blade-reflex-d1",
+        "name": "Blade Reflex",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "While your mastery is focused, ignore the stamina cost of this card.\nAt the end of your action phase, return a card with Slash from your sequence to your hand.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-daeron-rapid-slash-d1",
+        "name": "Rapid Slash",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "Assist.",
+        "trait": "Slash"
+      }
+    ],
+    "D2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-daeron-dragon-descent-d2",
+        "name": "Dragon Descent",
+        "staminaCost": 2,
+        "staminaIcons": 2,
+        "subtype": "Attack",
+        "text": "[attack]↓: Increase the damage this attack deals by 2[weapon] for each other card with Slash in your sequence.",
+        "trait": "Slash"
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-daeron-hurricane-d2",
+        "name": "Hurricane",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Reduce the stamina cost of cards with Slash by 1 until the end of the turn.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Your sequence limit is increased by 1.\nStart: if you have a card with Slash in your hand, search your discard pile for another card with Slash and add it to your hand."
+        },
+        "id": "hero-daeron-slash-storm-d2",
+        "name": "Slash Storm",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "When you play a card, if you have 3 cards with Slash in your sequence, place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-daeron-lateral-jump-e1",
+        "name": "Lateral Jump",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "When you play a [maneuver] in your sequence, you may discard this card from your hand to immediately move without paying any stamina cost.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-daeron-tactical-guard-e1",
+        "name": "Tactical Guard",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Increase the struggle this removes by 1.\nWhile a [defensive] is on top of your discard pile, it counts for the attrition check this turn.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-daeron-blade-surge-e2",
+        "name": "Blade Surge",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "You may play a [maneuver] from your discard pile as the next card in your sequence without paying its stamina cost.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-daeron-momentum-strike-e2",
+        "name": "Momentum Strike",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Increase the damage this attack deals by 1[weapon] for each [maneuver] in your discard pile.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Reduce the stamina cost of all you play by 1.\n[maneuver][maneuver]: Your weapon gets +3 damage until the end of this turn (max: twice per turn)."
+        },
+        "id": "hero-daeron-sword-master-e2",
+        "name": "Sword Master",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "[maneuver]: Place a counter on this card"
+        }
+      }
+    ]
+  }
+}

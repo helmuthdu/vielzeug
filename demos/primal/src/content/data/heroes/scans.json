@@ -1,0 +1,1602 @@
+{
+  "hero-daeron-aggressive-charge-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_aggressivecharge.webp",
+    "artFocused": null
+  },
+  "hero-daeron-balanced-defense-a1": {
+    "art": "hero_great_sword_daeron/great_sword_a1_balanceddefense.webp",
+    "artFocused": null
+  },
+  "hero-daeron-battle-cry-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_battlecry.webp",
+    "artFocused": null
+  },
+  "hero-daeron-blade-reflex-d1": {
+    "art": "hero_great_sword_daeron/great_sword_d1_bladereflex.webp",
+    "artFocused": null
+  },
+  "hero-daeron-blade-surge-e2": {
+    "art": "hero_great_sword_daeron/great_sword_e2_bladesurge.webp",
+    "artFocused": null
+  },
+  "hero-daeron-blind-rage-b1": {
+    "art": "hero_great_sword_daeron/great_sword_b1_blindrage.webp",
+    "artFocused": null
+  },
+  "hero-daeron-counterstike-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_counterstrike.webp",
+    "artFocused": null
+  },
+  "hero-daeron-defensive-insight-c1": {
+    "art": "hero_great_sword_daeron/great_sword_c1_defensiveinsight.webp",
+    "artFocused": null
+  },
+  "hero-daeron-deflecting-blade-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_deflectingblade.webp",
+    "artFocused": null
+  },
+  "hero-daeron-double-slash-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_doubleslash.webp",
+    "artFocused": null
+  },
+  "hero-daeron-dragon-dash-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_dragondash.webp",
+    "artFocused": null
+  },
+  "hero-daeron-dragon-descent-d2": {
+    "art": "hero_great_sword_daeron/great_sword_d2_dragondescent.webp",
+    "artFocused": null
+  },
+  "hero-daeron-dragon-guard-a2": {
+    "art": "hero_great_sword_daeron/great_sword_mua_dragonguard.webp",
+    "artFocused": "hero_great_sword_daeron/great_sword_mfa_dragonguard.webp"
+  },
+  "hero-daeron-dragon-strike-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_dragonstrike.webp",
+    "artFocused": null
+  },
+  "hero-daeron-empty-fade-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_emptyfade.webp",
+    "artFocused": null
+  },
+  "hero-daeron-endurance-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_endurance.webp",
+    "artFocused": null
+  },
+  "hero-daeron-engage-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_engage.webp",
+    "artFocused": null
+  },
+  "hero-daeron-evasive-step-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_evasivestep.webp",
+    "artFocused": null
+  },
+  "hero-daeron-exhausting-defense-c2": {
+    "art": "hero_great_sword_daeron/great_sword_c2_exhaustingdefense.webp",
+    "artFocused": null
+  },
+  "hero-daeron-feral-desire-a2": {
+    "art": "hero_great_sword_daeron/great_sword_a2_feraldesire.webp",
+    "artFocused": null
+  },
+  "hero-daeron-final-breath-b2": {
+    "art": "hero_great_sword_daeron/great_sword_b2_finalbreath.webp",
+    "artFocused": null
+  },
+  "hero-daeron-guardian-blade-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_guardianblade.webp",
+    "artFocused": null
+  },
+  "hero-daeron-guardian-c1": {
+    "art": "hero_great_sword_daeron/great_sword_c1_guardian.webp",
+    "artFocused": null
+  },
+  "hero-daeron-heavy-clash-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_heavyclash.webp",
+    "artFocused": null
+  },
+  "hero-daeron-hurricane-d2": {
+    "art": "hero_great_sword_daeron/great_sword_d2_hurricane.webp",
+    "artFocused": null
+  },
+  "hero-daeron-jumping-slice-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_jumpingslice.webp",
+    "artFocused": null
+  },
+  "hero-daeron-lacerate-a2": {
+    "art": "hero_great_sword_daeron/great_sword_a2_lacerate.webp",
+    "artFocused": null
+  },
+  "hero-daeron-lateral-jump-e1": {
+    "art": "hero_great_sword_daeron/great_sword_e1_lateraljump.webp",
+    "artFocused": null
+  },
+  "hero-daeron-lateral-move-a1": {
+    "art": "hero_great_sword_daeron/great_sword_a1_lateralmove.webp",
+    "artFocused": null
+  },
+  "hero-daeron-massive-strike-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_massivestrike.webp",
+    "artFocused": null
+  },
+  "hero-daeron-momentum-strike-e2": {
+    "art": "hero_great_sword_daeron/great_sword_e2_momentumstrike.webp",
+    "artFocused": null
+  },
+  "hero-daeron-precise-strike-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_precisestrike.webp",
+    "artFocused": null
+  },
+  "hero-daeron-pressing-strike-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_pressingstrike.webp",
+    "artFocused": null
+  },
+  "hero-daeron-primal-fury-b2": {
+    "art": "hero_great_sword_daeron/great_sword_b2_primalfury.webp",
+    "artFocused": null
+  },
+  "hero-daeron-quick-attack-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_quickattack.webp",
+    "artFocused": null
+  },
+  "hero-daeron-rapid-slash-d1": {
+    "art": "hero_great_sword_daeron/great_sword_d1_rapidslash.webp",
+    "artFocused": null
+  },
+  "hero-daeron-reactive-guard-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_reactiveguard.webp",
+    "artFocused": null
+  },
+  "hero-daeron-relentless-assault-s": {
+    "art": "hero_great_sword_daeron/great_sword_mus_relentlessassault.webp",
+    "artFocused": "hero_great_sword_daeron/great_sword_mfs_relentlessassault.webp"
+  },
+  "hero-daeron-retrat-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_retreat.webp",
+    "artFocused": null
+  },
+  "hero-daeron-sentinel-c2": {
+    "art": "hero_great_sword_daeron/great_sword_c2_sentinel.webp",
+    "artFocused": null
+  },
+  "hero-daeron-slash-storm-d2": {
+    "art": "hero_great_sword_daeron/great_sword_mud_slashstorm.webp",
+    "artFocused": "hero_great_sword_daeron/great_sword_mfd_slashstorm.webp"
+  },
+  "hero-daeron-slash-to-the-flank-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_slashtotheflank.webp",
+    "artFocused": null
+  },
+  "hero-daeron-swift-dodge-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_swiftdodge.webp",
+    "artFocused": null
+  },
+  "hero-daeron-sword-master-e2": {
+    "art": "hero_great_sword_daeron/great_sword_mue_swordmaster.webp",
+    "artFocused": "hero_great_sword_daeron/great_sword_mfe_swordmaster.webp"
+  },
+  "hero-daeron-tactical-guard-e1": {
+    "art": "hero_great_sword_daeron/great_sword_e1_tacticalguard.webp",
+    "artFocused": null
+  },
+  "hero-daeron-tenacious-blade-c2": {
+    "art": "hero_great_sword_daeron/great_sword_muc_tenaciousblade.webp",
+    "artFocused": "hero_great_sword_daeron/great_sword_mfc_tenaciousblade.webp"
+  },
+  "hero-daeron-the-berserker-b2": {
+    "art": "hero_great_sword_daeron/great_sword_mub_theberserker.webp",
+    "artFocused": "hero_great_sword_daeron/great_sword_mfb_theberserker.webp"
+  },
+  "hero-daeron-thwart-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_thwart.webp",
+    "artFocused": null
+  },
+  "hero-daeron-voice-of-the-dragon-s": {
+    "art": "hero_great_sword_daeron/great_sword_s_voiceofthedragon.webp",
+    "artFocused": null
+  },
+  "hero-daeron-wrath-of-blood-b1": {
+    "art": "hero_great_sword_daeron/great_sword_b1_wrathofblood.webp",
+    "artFocused": null
+  },
+  "hero-drusk-accentedblow-s": {
+    "art": "hero_drum_drusk/drum_s_accentedblow.webp",
+    "artFocused": null
+  },
+  "hero-drusk-attackpulse-b1": {
+    "art": "hero_drum_drusk/drum_b1_attackpulse.webp",
+    "artFocused": null
+  },
+  "hero-drusk-awakenedfury-s": {
+    "art": "hero_drum_drusk/drum_s_awakenedfury.webp",
+    "artFocused": null
+  },
+  "hero-drusk-backbeat-s": {
+    "art": "hero_drum_drusk/drum_s_backbeat.webp",
+    "artFocused": null
+  },
+  "hero-drusk-bloodchant-a1": {
+    "art": "hero_drum_drusk/drum_a1_bloodchant.webp",
+    "artFocused": null
+  },
+  "hero-drusk-break-d1": {
+    "art": "hero_drum_drusk/drum_d1_break.webp",
+    "artFocused": null
+  },
+  "hero-drusk-calloftheprimordials-s": {
+    "art": "hero_drum_drusk/drum_s_calloftheprimordials.webp",
+    "artFocused": null
+  },
+  "hero-drusk-celestialsong-a2": {
+    "art": "hero_drum_drusk/drum_a2_celestialsong.webp",
+    "artFocused": null
+  },
+  "hero-drusk-chantofexhaustion-d2": {
+    "art": "hero_drum_drusk/drum_mud_chantofexhaustion.webp",
+    "artFocused": "hero_drum_drusk/drum_mfd_chantofexhaustion.webp"
+  },
+  "hero-drusk-chantofpain-a2": {
+    "art": "hero_drum_drusk/drum_mua_chantofpain.webp",
+    "artFocused": "hero_drum_drusk/drum_mfa_chantofpain.webp"
+  },
+  "hero-drusk-chantofstrength-b2": {
+    "art": "hero_drum_drusk/drum_mub_chantofstrength.webp",
+    "artFocused": "hero_drum_drusk/drum_mfb_chantofstrength.webp"
+  },
+  "hero-drusk-crescendo-s": {
+    "art": "hero_drum_drusk/drum_s_crescendo.webp",
+    "artFocused": null
+  },
+  "hero-drusk-defensivepulse-s": {
+    "art": "hero_drum_drusk/drum_s_defensivepulse.webp",
+    "artFocused": null
+  },
+  "hero-drusk-destructiveresonance-e1": {
+    "art": "hero_drum_drusk/drum_e1_destructiveresonance.webp",
+    "artFocused": null
+  },
+  "hero-drusk-dragofdoom-b2": {
+    "art": "hero_drum_drusk/drum_b2_dragofdoom.webp",
+    "artFocused": null
+  },
+  "hero-drusk-drivingrhythm-s": {
+    "art": "hero_drum_drusk/drum_s_drivingrhythm.webp",
+    "artFocused": null
+  },
+  "hero-drusk-drumsofvengeance-s": {
+    "art": "hero_drum_drusk/drum_s_drumsofvengeance.webp",
+    "artFocused": null
+  },
+  "hero-drusk-drumsofwar-b2": {
+    "art": "hero_drum_drusk/drum_b2_drumsofwar.webp",
+    "artFocused": null
+  },
+  "hero-drusk-drumstep-c2": {
+    "art": "hero_drum_drusk/drum_c2_drumstep.webp",
+    "artFocused": null
+  },
+  "hero-drusk-echoes-of-suffering-a2": {
+    "art": "hero_drum_drusk/drum_a2_echoesofsuffering.webp",
+    "artFocused": null
+  },
+  "hero-drusk-echoesoftheancient-e2": {
+    "art": "hero_drum_drusk/drum_e2_echoesoftheancient.webp",
+    "artFocused": null
+  },
+  "hero-drusk-echoingstrength-s": {
+    "art": "hero_drum_drusk/drum_s_echoingstrength.webp",
+    "artFocused": null
+  },
+  "hero-drusk-echoofprotection-c2": {
+    "art": "hero_drum_drusk/drum_muc_echoofprotection.webp",
+    "artFocused": "hero_drum_drusk/drum_mfc_echoofprotection.webp"
+  },
+  "hero-drusk-echoofresilience-s": {
+    "art": "hero_drum_drusk/drum_s_echoofresilience.webp",
+    "artFocused": null
+  },
+  "hero-drusk-exhaustingbeat-s": {
+    "art": "hero_drum_drusk/drum_s_exhaustingbeat.webp",
+    "artFocused": null
+  },
+  "hero-drusk-ghostnote-s": {
+    "art": "hero_drum_drusk/drum_s_ghostnote.webp",
+    "artFocused": null
+  },
+  "hero-drusk-huntingpulse-s": {
+    "art": "hero_drum_drusk/drum_s_huntingpulse.webp",
+    "artFocused": null
+  },
+  "hero-drusk-hymnofrefuge-s": {
+    "art": "hero_drum_drusk/drum_s_hymnofrefuge.webp",
+    "artFocused": null
+  },
+  "hero-drusk-indomitable-b1": {
+    "art": "hero_drum_drusk/drum_b1_indomitablescall.webp",
+    "artFocused": null
+  },
+  "hero-drusk-indomitable-march-c2": {
+    "art": "hero_drum_drusk/drum_c2_indomitablemarch.webp",
+    "artFocused": null
+  },
+  "hero-drusk-invocation-s": {
+    "art": "hero_drum_drusk/drum_s_invocation.webp",
+    "artFocused": null
+  },
+  "hero-drusk-jarringblow-d2": {
+    "art": "hero_drum_drusk/drum_d2_jarringblow.webp",
+    "artFocused": null
+  },
+  "hero-drusk-pulsebreaker-e2": {
+    "art": "hero_drum_drusk/drum_e2_pulsebreaker.webp",
+    "artFocused": null
+  },
+  "hero-drusk-pulseofthewild-e2": {
+    "art": "hero_drum_drusk/drum_mue_pulseofthewild.webp",
+    "artFocused": "hero_drum_drusk/drum_mfe_pulseofthewild.webp"
+  },
+  "hero-drusk-resonantcall-s": {
+    "art": "hero_drum_drusk/drum_s_resonantcall.webp",
+    "artFocused": null
+  },
+  "hero-drusk-resoundingstrike-s": {
+    "art": "hero_drum_drusk/drum_s_resoundingstrike.webp",
+    "artFocused": null
+  },
+  "hero-drusk-reverberum-s": {
+    "art": "hero_drum_drusk/drum_s_reverberum.webp",
+    "artFocused": null
+  },
+  "hero-drusk-rhythmicaction-s": {
+    "art": "hero_drum_drusk/drum_s_rhythmicaction.webp",
+    "artFocused": null
+  },
+  "hero-drusk-rhythmicinsight-s": {
+    "art": "hero_drum_drusk/drum_s_rhythmicinsight.webp",
+    "artFocused": null
+  },
+  "hero-drusk-rhythmicsmash-s": {
+    "art": "hero_drum_drusk/drum_s_rhythmicsmash.webp",
+    "artFocused": null
+  },
+  "hero-drusk-rhythmicstrike-e1": {
+    "art": "hero_drum_drusk/drum_e1_rhythmicstrike.webp",
+    "artFocused": null
+  },
+  "hero-drusk-risingflow-d2": {
+    "art": "hero_drum_drusk/drum_d2_risingflow.webp",
+    "artFocused": null
+  },
+  "hero-drusk-rousingrhythm-c1": {
+    "art": "hero_drum_drusk/drum_c1_rousingrhythm.webp",
+    "artFocused": null
+  },
+  "hero-drusk-soundshield-s": {
+    "art": "hero_drum_drusk/drum_s_soundshield.webp",
+    "artFocused": null
+  },
+  "hero-drusk-stunning-roll-d1": {
+    "art": "hero_drum_drusk/drum_d1_stunningroll.webp",
+    "artFocused": null
+  },
+  "hero-drusk-sunderingimpact-s": {
+    "art": "hero_drum_drusk/drum_s_sunderingimpact.webp",
+    "artFocused": null
+  },
+  "hero-drusk-thundering-drum-s": {
+    "art": "hero_drum_drusk/drum_mus_thunderingdrum.webp",
+    "artFocused": "hero_drum_drusk/drum_mfs_thunderingdrum.webp"
+  },
+  "hero-drusk-voiceoftheprimordials-a1": {
+    "art": "hero_drum_drusk/drum_a1_voiceoftheprimordials.webp",
+    "artFocused": null
+  },
+  "hero-drusk-warbeat-c1": {
+    "art": "hero_drum_drusk/drum_c1_warbeat.webp",
+    "artFocused": null
+  },
+  "hero-drusk-warchant-s": {
+    "art": "hero_drum_drusk/drum_s_warchant.webp",
+    "artFocused": null
+  },
+  "hero-heleren-ballistic-defense-e2": {
+    "art": "hero_gunbow_heleren/gunbow_mue_ballisticdefense.webp",
+    "artFocused": "hero_gunbow_heleren/gunbow_mfe_ballisticdefense.webp"
+  },
+  "hero-heleren-barrage-of-bullets-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_barrageofbullets.webp",
+    "artFocused": null
+  },
+  "hero-heleren-barrel-roll-c2": {
+    "art": "hero_gunbow_heleren/gunbow_c2_barrelroll.webp",
+    "artFocused": null
+  },
+  "hero-heleren-blinding-fre-b2": {
+    "art": "hero_gunbow_heleren/gunbow_b2_blindingfire.webp",
+    "artFocused": null
+  },
+  "hero-heleren-bombardment-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_bombardment.webp",
+    "artFocused": null
+  },
+  "hero-heleren-breath-control-c1": {
+    "art": "hero_gunbow_heleren/gunbow_c1_breathcontrol.webp",
+    "artFocused": null
+  },
+  "hero-heleren-bullet-surge-b1": {
+    "art": "hero_gunbow_heleren/gunbow_b1_bulletsurge.webp",
+    "artFocused": null
+  },
+  "hero-heleren-camouflage-e1": {
+    "art": "hero_gunbow_heleren/gunbow_e1_camouflage.webp",
+    "artFocused": null
+  },
+  "hero-heleren-cannonball-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_cannonball.webp",
+    "artFocused": null
+  },
+  "hero-heleren-cooldown-c1": {
+    "art": "hero_gunbow_heleren/gunbow_c1_cooldown.webp",
+    "artFocused": null
+  },
+  "hero-heleren-counter-measure-e2": {
+    "art": "hero_gunbow_heleren/gunbow_e2_countermeasure.webp",
+    "artFocused": null
+  },
+  "hero-heleren-cover-fire-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_coverfire.webp",
+    "artFocused": null
+  },
+  "hero-heleren-cycle-of-bullets-d1": {
+    "art": "hero_gunbow_heleren/gunbow_d1_cycleofbullets.webp",
+    "artFocused": null
+  },
+  "hero-heleren-diversion-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_diversion.webp",
+    "artFocused": null
+  },
+  "hero-heleren-exertion-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_exertion.webp",
+    "artFocused": null
+  },
+  "hero-heleren-explosive-shot-e2": {
+    "art": "hero_gunbow_heleren/gunbow_e2_explosiveshot.webp",
+    "artFocused": null
+  },
+  "hero-heleren-fire-cascade-d1": {
+    "art": "hero_gunbow_heleren/gunbow_d1_firecascade.webp",
+    "artFocused": null
+  },
+  "hero-heleren-gunfire-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_gunfire.webp",
+    "artFocused": null
+  },
+  "hero-heleren-hail-of-bullets-b2": {
+    "art": "hero_gunbow_heleren/gunbow_mub_hailofbullets.webp",
+    "artFocused": "hero_gunbow_heleren/gunbow_mfb_hailofbullets.webp"
+  },
+  "hero-heleren-haul-of-bullets-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_haulofbullets.webp",
+    "artFocused": null
+  },
+  "hero-heleren-heat-a2": {
+    "art": "hero_gunbow_heleren/gunbow_mua_heat.webp",
+    "artFocused": "hero_gunbow_heleren/gunbow_mfa_heat.webp"
+  },
+  "hero-heleren-infallible-aim-d2": {
+    "art": "hero_gunbow_heleren/gunbow_d2_infallibleaim.webp",
+    "artFocused": null
+  },
+  "hero-heleren-line-of-fire-c2": {
+    "art": "hero_gunbow_heleren/gunbow_c2_lineoffire.webp",
+    "artFocused": null
+  },
+  "hero-heleren-long-range-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_longrange.webp",
+    "artFocused": null
+  },
+  "hero-heleren-negation-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_negation.webp",
+    "artFocused": null
+  },
+  "hero-heleren-not-this-tome-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_notthistime.webp",
+    "artFocused": null
+  },
+  "hero-heleren-precision-reload-s": {
+    "art": "hero_gunbow_heleren/gunbow_mus_precisionreload.webp",
+    "artFocused": "hero_gunbow_heleren/gunbow_mfs_precisionreload.webp"
+  },
+  "hero-heleren-pressing-shot-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_pressingshot.webp",
+    "artFocused": null
+  },
+  "hero-heleren-prompt-answer-d2": {
+    "art": "hero_gunbow_heleren/gunbow_d2_promptanswer.webp",
+    "artFocused": null
+  },
+  "hero-heleren-prompt-jump-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_promptjump.webp",
+    "artFocused": null
+  },
+  "hero-heleren-prompt-reflexes-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_promptreflexes.webp",
+    "artFocused": null
+  },
+  "hero-heleren-quick-reload-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_quickreload.webp",
+    "artFocused": null
+  },
+  "hero-heleren-quick-shot-a1": {
+    "art": "hero_gunbow_heleren/gunbow_a1_quickshot.webp",
+    "artFocused": null
+  },
+  "hero-heleren-ranged-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_ranged.webp",
+    "artFocused": null
+  },
+  "hero-heleren-rapid-fire-c2": {
+    "art": "hero_gunbow_heleren/gunbow_muc_rapidfire.webp",
+    "artFocused": "hero_gunbow_heleren/gunbow_mfc_rapidfire.webp"
+  },
+  "hero-heleren-rapid-ignition-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_rapidignition.webp",
+    "artFocused": null
+  },
+  "hero-heleren-ready-to-shine-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_readytoshine.webp",
+    "artFocused": null
+  },
+  "hero-heleren-recharging-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_recharging.webp",
+    "artFocused": null
+  },
+  "hero-heleren-replenishment-a2": {
+    "art": "hero_gunbow_heleren/gunbow_a2_replenishment.webp",
+    "artFocused": null
+  },
+  "hero-heleren-repositioning-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_repositioning.webp",
+    "artFocused": null
+  },
+  "hero-heleren-strafing-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_strafing.webp",
+    "artFocused": null
+  },
+  "hero-heleren-strategic-support-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_strategicsupport.webp",
+    "artFocused": null
+  },
+  "hero-heleren-suppressive-fire-b1": {
+    "art": "hero_gunbow_heleren/gunbow_b1_suppressivefire.webp",
+    "artFocused": null
+  },
+  "hero-heleren-swift-deflection-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_swiftdeflection.webp",
+    "artFocused": null
+  },
+  "hero-heleren-swift-reload-e1": {
+    "art": "hero_gunbow_heleren/gunbow_e1_swiftreload.webp",
+    "artFocused": null
+  },
+  "hero-heleren-tactical-reload-s": {
+    "art": "hero_gunbow_heleren/gunbow_s_tacticalreload.webp",
+    "artFocused": null
+  },
+  "hero-heleren-target-acquisition-a1": {
+    "art": "hero_gunbow_heleren/gunbow_a1_targetacquisition.webp",
+    "artFocused": null
+  },
+  "hero-heleren-the-huntress-mark-d2": {
+    "art": "hero_gunbow_heleren/gunbow_mud_thehuntressmark.webp",
+    "artFocused": "hero_gunbow_heleren/gunbow_mfd_thehuntressmark.webp"
+  },
+  "hero-heleren-thunderous-shot-b2": {
+    "art": "hero_gunbow_heleren/gunbow_b2_thunderousshot.webp",
+    "artFocused": null
+  },
+  "hero-heleren-vanguard-a2": {
+    "art": "hero_gunbow_heleren/gunbow_a2_vanguard.webp",
+    "artFocused": null
+  },
+  "hero-karah-airblade-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_airblade.webp",
+    "artFocused": null
+  },
+  "hero-karah-backstab-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_backstab.webp",
+    "artFocused": null
+  },
+  "hero-karah-blade-charge-e2": {
+    "art": "hero_dual_blade_karah/dual_blade_e2_bladecharge.webp",
+    "artFocused": null
+  },
+  "hero-karah-blade-of-vengeance-e2": {
+    "art": "hero_dual_blade_karah/dual_blade_mue_bladeofvengeance.webp",
+    "artFocused": "hero_dual_blade_karah/dual_blade_mfe_bladeofvengeance.webp"
+  },
+  "hero-karah-blade-rush-e1": {
+    "art": "hero_dual_blade_karah/dual_blade_e1_bladerush.webp",
+    "artFocused": null
+  },
+  "hero-karah-crescent-strike-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_crescentstrike.webp",
+    "artFocused": null
+  },
+  "hero-karah-cross-over-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_crossover.webp",
+    "artFocused": null
+  },
+  "hero-karah-cut-through-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_cutthrough.webp",
+    "artFocused": null
+  },
+  "hero-karah-dance-step-b1": {
+    "art": "hero_dual_blade_karah/dual_blade_b1_dancestep.webp",
+    "artFocused": null
+  },
+  "hero-karah-dancing-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_dancing.webp",
+    "artFocused": null
+  },
+  "hero-karah-dancing-shield-c2": {
+    "art": "hero_dual_blade_karah/dual_blade_c2_dancingshield.webp",
+    "artFocused": null
+  },
+  "hero-karah-deny-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_deny.webp",
+    "artFocused": null
+  },
+  "hero-karah-disengage-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_disengage.webp",
+    "artFocused": null
+  },
+  "hero-karah-divert-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_divert.webp",
+    "artFocused": null
+  },
+  "hero-karah-double-edge-a2": {
+    "art": "hero_dual_blade_karah/dual_blade_mua_doubleedge.webp",
+    "artFocused": "hero_dual_blade_karah/dual_blade_mfa_doubleedge.webp"
+  },
+  "hero-karah-double-strike-c2": {
+    "art": "hero_dual_blade_karah/dual_blade_c2_doublestrike.webp",
+    "artFocused": null
+  },
+  "hero-karah-echoing-blades-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_echoingblades.webp",
+    "artFocused": null
+  },
+  "hero-karah-endless-strike-b1": {
+    "art": "hero_dual_blade_karah/dual_blade_b1_endlessstrike.webp",
+    "artFocused": null
+  },
+  "hero-karah-evasive-dance-d1": {
+    "art": "hero_dual_blade_karah/dual_blade_d1_evasivedance.webp",
+    "artFocused": null
+  },
+  "hero-karah-fade-d1": {
+    "art": "hero_dual_blade_karah/dual_blade_d1_fade.webp",
+    "artFocused": null
+  },
+  "hero-karah-fighting-spirit-e2": {
+    "art": "hero_dual_blade_karah/dual_blade_e2_fightingspirit.webp",
+    "artFocused": null
+  },
+  "hero-karah-finesse-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_finesse.webp",
+    "artFocused": null
+  },
+  "hero-karah-halfmoon-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_halfmoon.webp",
+    "artFocused": null
+  },
+  "hero-karah-iron-hedge-e1": {
+    "art": "hero_dual_blade_karah/dual_blade_e1_ironhedge.webp",
+    "artFocused": null
+  },
+  "hero-karah-lightning-strike-a2": {
+    "art": "hero_dual_blade_karah/dual_blade_a2_lightningstrike.webp",
+    "artFocused": null
+  },
+  "hero-karah-maelstorm-b2": {
+    "art": "hero_dual_blade_karah/dual_blade_b2_maelstrom.webp",
+    "artFocused": null
+  },
+  "hero-karah-master-of-elusion-d2": {
+    "art": "hero_dual_blade_karah/dual_blade_mud_masterofelusion.webp",
+    "artFocused": "hero_dual_blade_karah/dual_blade_mfd_masterofelusion.webp"
+  },
+  "hero-karah-natural-agility-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_naturalagility.webp",
+    "artFocused": null
+  },
+  "hero-karah-offensive-attitude-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_offensiveattitude.webp",
+    "artFocused": null
+  },
+  "hero-karah-outweigh-b2": {
+    "art": "hero_dual_blade_karah/dual_blade_b2_outweigh.webp",
+    "artFocused": null
+  },
+  "hero-karah-overture-a2": {
+    "art": "hero_dual_blade_karah/dual_blade_a2_overture.webp",
+    "artFocused": null
+  },
+  "hero-karah-perfection-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_perfection.webp",
+    "artFocused": null
+  },
+  "hero-karah-piercing-dash-s": {
+    "art": "hero_dual_blade_karah/dual_blade_mus_piercingdash.webp",
+    "artFocused": "hero_dual_blade_karah/dual_blade_mfs_piercingdash.webp"
+  },
+  "hero-karah-piercing-strike-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_piercingstrike.webp",
+    "artFocused": null
+  },
+  "hero-karah-reactive-defense-c1": {
+    "art": "hero_dual_blade_karah/dual_blade_c1_reactivedefense.webp",
+    "artFocused": null
+  },
+  "hero-karah-returning-blade-a1": {
+    "art": "hero_dual_blade_karah/dual_blade_a1_returningblade.webp",
+    "artFocused": null
+  },
+  "hero-karah-rising-moon-d2": {
+    "art": "hero_dual_blade_karah/dual_blade_d2_risingmoon.webp",
+    "artFocused": null
+  },
+  "hero-karah-run-through-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_runthrough.webp",
+    "artFocused": null
+  },
+  "hero-karah-scythe-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_scythe.webp",
+    "artFocused": null
+  },
+  "hero-karah-shadow-step-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_shadowstep.webp",
+    "artFocused": null
+  },
+  "hero-karah-shadowstrike-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_shadowstrike.webp",
+    "artFocused": null
+  },
+  "hero-karah-slice-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_slice.webp",
+    "artFocused": null
+  },
+  "hero-karah-spinning-c1": {
+    "art": "hero_dual_blade_karah/dual_blade_c1_spinning.webp",
+    "artFocused": null
+  },
+  "hero-karah-swing-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_swing.webp",
+    "artFocused": null
+  },
+  "hero-karah-the-dancer-c2": {
+    "art": "hero_dual_blade_karah/dual_blade_muc_thedancer.webp",
+    "artFocused": "hero_dual_blade_karah/dual_blade_mfc_thedancer.webp"
+  },
+  "hero-karah-twin-blades-a1": {
+    "art": "hero_dual_blade_karah/dual_blade_a1_twinblades.webp",
+    "artFocused": null
+  },
+  "hero-karah-twist-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_twist.webp",
+    "artFocused": null
+  },
+  "hero-karah-unseen-d2": {
+    "art": "hero_dual_blade_karah/dual_blade_d2_unseen.webp",
+    "artFocused": null
+  },
+  "hero-karah-unstoppable-b2": {
+    "art": "hero_dual_blade_karah/dual_blade_mub_unstoppable.webp",
+    "artFocused": "hero_dual_blade_karah/dual_blade_mfb_unstoppable.webp"
+  },
+  "hero-karah-wall-of-blades-s": {
+    "art": "hero_dual_blade_karah/dual_blade_s_wallofblades.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-aggro-strike-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_aggrostrike.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-agility-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_agility.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-anticipate-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_anticipate.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-assistence-b2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_b2_assistance.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-attack-plan-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_attackplan.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-bastion-e2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_mue_bastion.webp",
+    "artFocused": "hero_sword_and_shield_ljonar/sword_and_shield_mfe_bastion.webp"
+  },
+  "hero-ljonar-battle-trance-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_battletrance.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-beyond-limits-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_beyondlimits.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-bulwark-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_bulwark.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-concetrated-attack-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_concentratedattack.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-coordinated-attack-b1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_b1_coordinatedattack.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-counterattack-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_counterattack.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-drawn-to-danger-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_drawntodanger.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-eye-of-the-storm-b2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_b2_eyeofthestorm.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-feint-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_feint.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-fierce-guard-d2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_mud_fierceguard.webp",
+    "artFocused": "hero_sword_and_shield_ljonar/sword_and_shield_mfd_fierceguard.webp"
+  },
+  "hero-ljonar-golden-opportunity-c2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_c2_goldenopportunity.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-guardian-shield-e2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_e2_guardianshield.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-immolate-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_immolate.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-last-breath-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_lastbreath.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-mastery-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_mus_shieldmaster.webp",
+    "artFocused": "hero_sword_and_shield_ljonar/sword_and_shield_mfs_shieldmaster.webp"
+  },
+  "hero-ljonar-mettle-a1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_a1_mettle.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-momentum-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_momentum.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-monstrous-effort-a2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_a2_monstrouseffort.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-outflank-c2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_c2_outflank.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-over-here-d1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_d1_overhere.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-perseverance-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_perseverance.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-pulsating-fury-e1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_e1_pulsatingfury.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-push-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_push.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-rally-c1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_c1_rally.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-rapid-dash-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_rapiddash.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-retribution-a2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_a2_retribution.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-sacrifice-d1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_d1_sacrifice.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-shield-block-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_shieldblock.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-shield-dance-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_shielddance.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-shield-of-support-b2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_mub_shieldofsupport.webp",
+    "artFocused": "hero_sword_and_shield_ljonar/sword_and_shield_mfb_shieldofsupport.webp"
+  },
+  "hero-ljonar-shield-smash-d2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_d2_shieldsmash.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-shield-strike-d2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_d2_shieldstrike.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-shield-wall-e2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_e2_shieldwall.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-shielded-strike-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_shieldedstrike.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-snare-e1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_e1_snare.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-stamina-surge-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_staminasurge.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-surround-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_surround.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-tactical-evade-b1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_b1_tacticalevade.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-tactician-c2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_muc_tactician.webp",
+    "artFocused": "hero_sword_and_shield_ljonar/sword_and_shield_mfc_tactician.webp"
+  },
+  "hero-ljonar-teamwork-c1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_c1_teamwork.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-tempered-pain-a1": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_a1_temperedpain.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-tempo-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_tempo.webp",
+    "artFocused": null
+  },
+  "hero-ljonar-unbreakable-a2": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_mua_unbreakable.webp",
+    "artFocused": "hero_sword_and_shield_ljonar/sword_and_shield_mfa_unbreakable.webp"
+  },
+  "hero-ljonar-undaunted-charge-s": {
+    "art": "hero_sword_and_shield_ljonar/sword_and_shield_s_undauntedcharge.webp",
+    "artFocused": null
+  },
+  "hero-mirah-accurate-shot-s": {
+    "art": "hero_bow_mirah/bow_s_accurateshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-adrenaline-shot-s": {
+    "art": "hero_bow_mirah/bow_s_adrenalineshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-arobatics-s": {
+    "art": "hero_bow_mirah/bow_s_acrobatics.webp",
+    "artFocused": null
+  },
+  "hero-mirah-arrow-switch-a1": {
+    "art": "hero_bow_mirah/bow_a1_arrowsnatch.webp",
+    "artFocused": null
+  },
+  "hero-mirah-backflip-s": {
+    "art": "hero_bow_mirah/bow_s_backflip.webp",
+    "artFocused": null
+  },
+  "hero-mirah-blinding-shot-s": {
+    "art": "hero_bow_mirah/bow_s_blindingshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-bouncing-shot-s": {
+    "art": "hero_bow_mirah/bow_s_bouncingshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-burst-b2": {
+    "art": "hero_bow_mirah/bow_mub_burst.webp",
+    "artFocused": "hero_bow_mirah/bow_mfb_burst.webp"
+  },
+  "hero-mirah-combined-assault-c2": {
+    "art": "hero_bow_mirah/bow_c2_combinedassault.webp",
+    "artFocused": null
+  },
+  "hero-mirah-cover-fire-s": {
+    "art": "hero_bow_mirah/bow_s_coverfire.webp",
+    "artFocused": null
+  },
+  "hero-mirah-dancing-arrow-a2": {
+    "art": "hero_bow_mirah/bow_a2_dancingarrow.webp",
+    "artFocused": null
+  },
+  "hero-mirah-deadly-aim-d2": {
+    "art": "hero_bow_mirah/bow_mud_deadlyaim.webp",
+    "artFocused": "hero_bow_mirah/bow_mfd_deadlyaim.webp"
+  },
+  "hero-mirah-deadly-shot-s": {
+    "art": "hero_bow_mirah/bow_s_deadlyshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-decoy-s": {
+    "art": "hero_bow_mirah/bow_s_decoy.webp",
+    "artFocused": null
+  },
+  "hero-mirah-double-shot-a1": {
+    "art": "hero_bow_mirah/bow_a1_doubleshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-evasion-s": {
+    "art": "hero_bow_mirah/bow_s_evasion.webp",
+    "artFocused": null
+  },
+  "hero-mirah-exhausting-shot-e2": {
+    "art": "hero_bow_mirah/bow_mue_exhaustingshot.webp",
+    "artFocused": "hero_bow_mirah/bow_mfe_exhaustingshot.webp"
+  },
+  "hero-mirah-final-reckoning-e1": {
+    "art": "hero_bow_mirah/bow_e1_finalreckoning.webp",
+    "artFocused": null
+  },
+  "hero-mirah-flash-arrow-a2": {
+    "art": "hero_bow_mirah/bow_a2_flasharrow.webp",
+    "artFocused": null
+  },
+  "hero-mirah-graceful-defense-s": {
+    "art": "hero_bow_mirah/bow_s_gracefuldefense.webp",
+    "artFocused": null
+  },
+  "hero-mirah-hail-of-arrows-d2": {
+    "art": "hero_bow_mirah/bow_d2_hailofarrows.webp",
+    "artFocused": null
+  },
+  "hero-mirah-heavy-arrow-s": {
+    "art": "hero_bow_mirah/bow_s_heavyarrow.webp",
+    "artFocused": null
+  },
+  "hero-mirah-infinite-blast-b2": {
+    "art": "hero_bow_mirah/bow_b2_infiniteblast.webp",
+    "artFocused": null
+  },
+  "hero-mirah-intuiton-s": {
+    "art": "hero_bow_mirah/bow_s_intuition.webp",
+    "artFocused": null
+  },
+  "hero-mirah-lateral-jump-e1": {
+    "art": "hero_bow_mirah/bow_e1_lateraljump.webp",
+    "artFocused": null
+  },
+  "hero-mirah-lightning-escape-s": {
+    "art": "hero_bow_mirah/bow_s_lightningescape.webp",
+    "artFocused": null
+  },
+  "hero-mirah-long-range-s": {
+    "art": "hero_bow_mirah/bow_s_longrange.webp",
+    "artFocused": null
+  },
+  "hero-mirah-midair-shot-c1": {
+    "art": "hero_bow_mirah/bow_c1_midairshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-open-target-d1": {
+    "art": "hero_bow_mirah/bow_d1_opentarget.webp",
+    "artFocused": null
+  },
+  "hero-mirah-paralyzing-arrow-e2": {
+    "art": "hero_bow_mirah/bow_e2_paralyzingarrow.webp",
+    "artFocused": null
+  },
+  "hero-mirah-persistence-d1": {
+    "art": "hero_bow_mirah/bow_d1_persistence.webp",
+    "artFocused": null
+  },
+  "hero-mirah-precision-draw-s": {
+    "art": "hero_bow_mirah/bow_s_precisiondraw.webp",
+    "artFocused": null
+  },
+  "hero-mirah-precision-shot-c2": {
+    "art": "hero_bow_mirah/bow_c2_precisionshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-prompt-reflexes-s": {
+    "art": "hero_bow_mirah/bow_s_promptreflexes.webp",
+    "artFocused": null
+  },
+  "hero-mirah-ranged-position-s": {
+    "art": "hero_bow_mirah/bow_s_rangedposition.webp",
+    "artFocused": null
+  },
+  "hero-mirah-rapid-burst-s": {
+    "art": "hero_bow_mirah/bow_s_rapidburst.webp",
+    "artFocused": null
+  },
+  "hero-mirah-refill-the-quiver-b1": {
+    "art": "hero_bow_mirah/bow_b1_refillthequiver.webp",
+    "artFocused": null
+  },
+  "hero-mirah-retreat-shot-d2": {
+    "art": "hero_bow_mirah/bow_d2_retreatshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-second-chance-b2": {
+    "art": "hero_bow_mirah/bow_b2_secondchance.webp",
+    "artFocused": null
+  },
+  "hero-mirah-sharp-shot-s": {
+    "art": "hero_bow_mirah/bow_s_sharpshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-shielded-position-e2": {
+    "art": "hero_bow_mirah/bow_e2_shieldedposition.webp",
+    "artFocused": null
+  },
+  "hero-mirah-silent-arrow-s": {
+    "art": "hero_bow_mirah/bow_s_silentarrow.webp",
+    "artFocused": null
+  },
+  "hero-mirah-sneaky-glide-s": {
+    "art": "hero_bow_mirah/bow_s_sneakyglide.webp",
+    "artFocused": null
+  },
+  "hero-mirah-storm-of-arrows-a2": {
+    "art": "hero_bow_mirah/bow_mua_stormofarrows.webp",
+    "artFocused": "hero_bow_mirah/bow_mfa_stormofarrows.webp"
+  },
+  "hero-mirah-swift-deflection-s": {
+    "art": "hero_bow_mirah/bow_s_swiftdeflection.webp",
+    "artFocused": null
+  },
+  "hero-mirah-take-aim-c1": {
+    "art": "hero_bow_mirah/bow_c1_takeaim.webp",
+    "artFocused": null
+  },
+  "hero-mirah-targeted-shot-s": {
+    "art": "hero_bow_mirah/bow_s_targetedshot.webp",
+    "artFocused": null
+  },
+  "hero-mirah-the-silencer-c2": {
+    "art": "hero_bow_mirah/bow_muc_thesilencer.webp",
+    "artFocused": "hero_bow_mirah/bow_mfc_thesilencer.webp"
+  },
+  "hero-mirah-ultimate-shot-s": {
+    "art": "hero_bow_mirah/bow_mus_ultimateshot.webp",
+    "artFocused": "hero_bow_mirah/bow_mfs_ultimateshot.webp"
+  },
+  "hero-mirah-waiting-game-b1": {
+    "art": "hero_bow_mirah/bow_b1_waitinggame.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-adaptive-defense-b1": {
+    "art": "hero_hammer_thoreg/hammer_b1_adaptivedefense.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-adreanlina-rush-a2": {
+    "art": "hero_hammer_thoreg/hammer_a2_adrenalinerush.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-blood-rush-d2": {
+    "art": "hero_hammer_thoreg/hammer_mud_bloodrush.webp",
+    "artFocused": "hero_hammer_thoreg/hammer_mfd_bloodrush.webp"
+  },
+  "hero-thoreg-bludgeon-s": {
+    "art": "hero_hammer_thoreg/hammer_s_bludgeon.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-call-of-the-dragon-d1": {
+    "art": "hero_hammer_thoreg/hammer_d1_callofthedragon.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-charge-s": {
+    "art": "hero_hammer_thoreg/hammer_s_charge.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-chase-e1": {
+    "art": "hero_hammer_thoreg/hammer_e1_chase.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-concussion-s": {
+    "art": "hero_hammer_thoreg/hammer_s_concussion.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-confrontation-c2": {
+    "art": "hero_hammer_thoreg/hammer_c2_confrontation.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-dashing-blow-a2": {
+    "art": "hero_hammer_thoreg/hammer_a2_dashingblow.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-decisive-effort-s": {
+    "art": "hero_hammer_thoreg/hammer_s_decisiveeffort.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-deep-breath-e2": {
+    "art": "hero_hammer_thoreg/hammer_e2_deepbreath.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-devastating-strenght-a2": {
+    "art": "hero_hammer_thoreg/hammer_mua_devastatingstrength.webp",
+    "artFocused": "hero_hammer_thoreg/hammer_mfa_devastatingstrength.webp"
+  },
+  "hero-thoreg-disruption-s": {
+    "art": "hero_hammer_thoreg/hammer_s_disruption.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-dragon-bane-b2": {
+    "art": "hero_hammer_thoreg/hammer_b2_dragonbane.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-dragon-tamer-c2": {
+    "art": "hero_hammer_thoreg/hammer_muc_dragontamer.webp",
+    "artFocused": "hero_hammer_thoreg/hammer_mfc_dragontamer.webp"
+  },
+  "hero-thoreg-endeavour-s": {
+    "art": "hero_hammer_thoreg/hammer_s_endeavour.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-enrage-s": {
+    "art": "hero_hammer_thoreg/hammer_s_enrage.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-evasive-action-s": {
+    "art": "hero_hammer_thoreg/hammer_s_evasiveaction.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-exhausting-strike-s": {
+    "art": "hero_hammer_thoreg/hammer_s_exhaustingstrike.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-for-alborea-d2": {
+    "art": "hero_hammer_thoreg/hammer_d2_foralborea.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-frontal-assault-s": {
+    "art": "hero_hammer_thoreg/hammer_s_frontalassault.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-grace-c1": {
+    "art": "hero_hammer_thoreg/hammer_c1_grace.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-hammer-knight-b2": {
+    "art": "hero_hammer_thoreg/hammer_mub_hammerknight.webp",
+    "artFocused": "hero_hammer_thoreg/hammer_mfb_hammerknight.webp"
+  },
+  "hero-thoreg-heavy-smash-s": {
+    "art": "hero_hammer_thoreg/hammer_s_heavysmash.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-impressive-strike-a1": {
+    "art": "hero_hammer_thoreg/hammer_a1_impressivestrike.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-impulse-d1": {
+    "art": "hero_hammer_thoreg/hammer_d1_impulse.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-iron-will-s": {
+    "art": "hero_hammer_thoreg/hammer_s_ironwill.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-ironblast-s": {
+    "art": "hero_hammer_thoreg/hammer_s_ironblast.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-judgement-c1": {
+    "art": "hero_hammer_thoreg/hammer_c1_judgement.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-knockout-s": {
+    "art": "hero_hammer_thoreg/hammer_s_knockout.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-leverage-s": {
+    "art": "hero_hammer_thoreg/hammer_s_leverage.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-limitless-stamina-e1": {
+    "art": "hero_hammer_thoreg/hammer_e1_limitlessstamina.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-massive-blow-s": {
+    "art": "hero_hammer_thoreg/hammer_mus_massiveblow.webp",
+    "artFocused": "hero_hammer_thoreg/hammer_mfs_massiveblow.webp"
+  },
+  "hero-thoreg-mighty-strain-s": {
+    "art": "hero_hammer_thoreg/hammer_s_mightystrain.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-overdrive-e2": {
+    "art": "hero_hammer_thoreg/hammer_mue_overdrive.webp",
+    "artFocused": "hero_hammer_thoreg/hammer_mfe_overdrive.webp"
+  },
+  "hero-thoreg-perseverance-s": {
+    "art": "hero_hammer_thoreg/hammer_s_perseverance.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-rapid-blow-s": {
+    "art": "hero_hammer_thoreg/hammer_s_rapidblow.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-rumbling-impact-b1": {
+    "art": "hero_hammer_thoreg/hammer_b1_rumblingimpact.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-sharp-reflexes-s": {
+    "art": "hero_hammer_thoreg/hammer_s_sharpreflexes.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-skull-crasher-b2": {
+    "art": "hero_hammer_thoreg/hammer_b2_skullcrusher.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-sledgehamer-s": {
+    "art": "hero_hammer_thoreg/hammer_s_sledgehammer.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-stamina-boost-s": {
+    "art": "hero_hammer_thoreg/hammer_s_staminaboost.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-step-back-a1": {
+    "art": "hero_hammer_thoreg/hammer_a1_stepback.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-stormstrike-e2": {
+    "art": "hero_hammer_thoreg/hammer_e2_stormstrike.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-tackle-s": {
+    "art": "hero_hammer_thoreg/hammer_s_tackle.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-tear-down-d2": {
+    "art": "hero_hammer_thoreg/hammer_d2_teardown.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-tenacity-s": {
+    "art": "hero_hammer_thoreg/hammer_s_tenacity.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-thunderous-voice-c2": {
+    "art": "hero_hammer_thoreg/hammer_c2_thunderousvoice.webp",
+    "artFocused": null
+  },
+  "hero-thoreg-whirlwind-s": {
+    "art": "hero_hammer_thoreg/hammer_s_whirlwind.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-agilestep-s": {
+    "art": "hero_spear_zaraya/spear_s_agilestep.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-backlash-s": {
+    "art": "hero_spear_zaraya/spear_s_backlash.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-blindingstrike-s": {
+    "art": "hero_spear_zaraya/spear_s_blindingstrike.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-chasingblow-c1": {
+    "art": "hero_spear_zaraya/spear_c1_chasingblow.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-dashingleap-s": {
+    "art": "hero_spear_zaraya/spear_s_dashingleap.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-defyingdanger-s": {
+    "art": "hero_spear_zaraya/spear_s_defyingdanger.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-dodgersedge-s": {
+    "art": "hero_spear_zaraya/spear_s_dodgersedge.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-elusivemaneuver-s": {
+    "art": "hero_spear_zaraya/spear_s_elusivemaneuver.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-endlessdance-b2": {
+    "art": "hero_spear_zaraya/spear_b2_endlessdance.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-escape-s": {
+    "art": "hero_spear_zaraya/spear_s_escape.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-flankingdance-s": {
+    "art": "hero_spear_zaraya/spear_s_flankingdance.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-flankingstrike-s": {
+    "art": "hero_spear_zaraya/spear_s_flankingstrike.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-flankpiercer-c1": {
+    "art": "hero_spear_zaraya/spear_c1_flankpiercer.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-focuseddefense-s": {
+    "art": "hero_spear_zaraya/spear_s_focuseddefense.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-gracefulfeint-b1": {
+    "art": "hero_spear_zaraya/spear_b1_gracefulfeint.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-gracefulstride-s": {
+    "art": "hero_spear_zaraya/spear_s_gracefulstride.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-guardian-a2": {
+    "art": "hero_spear_zaraya/spear_a2_guardiansreclaim.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-guardian-e2": {
+    "art": "hero_spear_zaraya/spear_e2_guardiansrevenge.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-guardian-s": {
+    "art": "hero_spear_zaraya/spear_mus_guardian.webp",
+    "artFocused": "hero_spear_zaraya/spear_mfs_guardian.webp"
+  },
+  "hero-zaraya-guardiansreach-s": {
+    "art": "hero_spear_zaraya/spear_s_guardiansreach.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-guidedcharge-s": {
+    "art": "hero_spear_zaraya/spear_s_guidedcharge.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-longreach-s": {
+    "art": "hero_spear_zaraya/spear_s_longreach.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-mastereddefense-a1": {
+    "art": "hero_spear_zaraya/spear_a1_mastereddefense.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-masteredsteps-e1": {
+    "art": "hero_spear_zaraya/spear_e1_masteredsteps.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-piercemaster-c2": {
+    "art": "hero_spear_zaraya/spear_muc_piercemaster.webp",
+    "artFocused": "hero_spear_zaraya/spear_mfc_piercemaster.webp"
+  },
+  "hero-zaraya-piercingcycle-d2": {
+    "art": "hero_spear_zaraya/spear_d2_piercingcycle.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-piercingmomentum-b2": {
+    "art": "hero_spear_zaraya/spear_b2_piercingmomentum.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-piercingthrow-c2": {
+    "art": "hero_spear_zaraya/spear_c2_piercingthrow.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-precisestep-s": {
+    "art": "hero_spear_zaraya/spear_s_precisestep.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-quickstrike-a1": {
+    "art": "hero_spear_zaraya/spear_a1_quickstrike.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-ragingspear-a2": {
+    "art": "hero_spear_zaraya/spear_mua_ragingspear.webp",
+    "artFocused": "hero_spear_zaraya/spear_mfa_ragingspear.webp"
+  },
+  "hero-zaraya-regroup-s": {
+    "art": "hero_spear_zaraya/spear_s_regroup.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-sentinelslunge-s": {
+    "art": "hero_spear_zaraya/spear_s_sentinelslunge.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-serpentine-strike-e2": {
+    "art": "hero_spear_zaraya/spear_e2_serpentinestrike.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-sharpangle-s": {
+    "art": "hero_spear_zaraya/spear_c2_sharpangle.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-sharpcontrol-d1": {
+    "art": "hero_spear_zaraya/spear_d1_sharpcontrol.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-sidesweep-s": {
+    "art": "hero_spear_zaraya/spear_s_sidesweep.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-speardance-e2": {
+    "art": "hero_spear_zaraya/spear_mue_speardance.webp",
+    "artFocused": "hero_spear_zaraya/spear_mfe_speardance.webp"
+  },
+  "hero-zaraya-strikeopportunity-e1": {
+    "art": "hero_spear_zaraya/spear_e1_strikeopportunity.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-strikingweakness-s": {
+    "art": "hero_spear_zaraya/spear_s_strikingweakness.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-suddendash-s": {
+    "art": "hero_spear_zaraya/spear_s_suddendash.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-synergystrike-d2": {
+    "art": "hero_spear_zaraya/spear_d2_synergystrike.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-tacticaldance-b1": {
+    "art": "hero_spear_zaraya/spear_b1_tacticaldance.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-tornado-b2": {
+    "art": "hero_spear_zaraya/spear_mub_tornado.webp",
+    "artFocused": "hero_spear_zaraya/spear_mfb_tornado.webp"
+  },
+  "hero-zaraya-twirlingassault-d1": {
+    "art": "hero_spear_zaraya/spear_d1_twirlingassault.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-vanguard-d2": {
+    "art": "hero_spear_zaraya/spear_mud_vanguard.webp",
+    "artFocused": "hero_spear_zaraya/spear_mfd_vanguard.webp"
+  },
+  "hero-zaraya-vigilantguard-s": {
+    "art": "hero_spear_zaraya/spear_s_vigilantguard.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-waitingstrike-s": {
+    "art": "hero_spear_zaraya/spear_s_waitingstrike.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-ward-s": {
+    "art": "hero_spear_zaraya/spear_s_ward.webp",
+    "artFocused": null
+  },
+  "hero-zaraya-whirlingspear-a2": {
+    "art": "hero_spear_zaraya/spear_a2_whirlingspear.webp",
+    "artFocused": null
+  }
+}

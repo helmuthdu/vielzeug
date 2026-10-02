@@ -1,0 +1,619 @@
+{
+  "starter": [
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-agilestep-s",
+      "name": "Agile Step",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Assist.\nLook at the top 2 cards of your deck. Discard any cards among them with reclaim.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-backlash-s",
+      "name": "Backlash",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Guard.\nWhen you discard this card from your hand, you may draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-blindingstrike-s",
+      "name": "Blinding Strike",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Increase the damage this attack deals by 2.\n[attack]: If you moved during your action phase this turn, inflict blind.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-dashingleap-s",
+      "name": "Dashing Leap",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist.\nYou may immediately move without paying any stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-defyingdanger-s",
+      "name": "Defying Danger",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Guard\nIf you avoid attrition damage this turn, remove 1 struggle.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-dodgersedge-s",
+      "name": "Dodger's Edge",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "[dodge]: Draw 1 for each card with guard in your discard pile (max: draw 3).",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-elusivemaneuver-s",
+      "name": "Elusive Maneuver",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Draw 1.\nIf you paid with a [dodge], draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-escape-s",
+      "name": "Escape",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Assist.\nYou may immediately move without paying any stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-flankingdance-s",
+      "name": "Flanking Dance",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "When you discard this card from your hand to generate stamina for a movement, deal your weapon damage.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-flankingstrike-s",
+      "name": "Flanking Strike",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Guard.\nIf you are in a flank sector, deal your weapon damage.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-focuseddefense-s",
+      "name": "Focused Defense",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Draw 1.\nIf you have a [aggro] in your sequence, draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-gracefulstride-s",
+      "name": "Graceful Stride",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "If you are in a flank sector, remove 1 struggle.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "When you guard a player, deal your base weapon damage or draw 1."
+      },
+      "id": "hero-zaraya-guardian-s",
+      "name": "Guardian",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 2,
+        "text": "When you guard a player, place a counter on this card."
+      }
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-guardiansreach-s",
+      "name": "Guardian's Reach",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "Guard.\nWhen a behavior card is revealed, you may discard this card from your hand to cancel the effects of that card.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-guidedcharge-s",
+      "name": "Guided Charge",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Reclaim: [parry][parry].\nYou may immediately move without paying any stamina cost. Then, choose another player in your sector to deal their weapon damage.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-longreach-s",
+      "name": "Long Reach",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Guard.\nThis card counts as a [dodge] for the attrition check.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-precisestep-s",
+      "name": "Precise Step",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Increase the damage the attack deals\nby 2.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-regroup-s",
+      "name": "Regroup",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Opening: Choose a player in your sector\nor in an adjacent one to draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-sentinelslunge-s",
+      "name": "Sentinel's Lunge",
+      "staminaCost": 3,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Reclaim: [dodge][dodge].\nIncrease the damage this attack deals\nby 1 for each card with guard in your discard\npile (max: +5).",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-sidesweep-s",
+      "name": "Side Sweep",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Reclaim: [parry][parry].\nIf you are in the flank sector, increase the struggle this maneuver removes by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-strikingweakness-s",
+      "name": "Striking Weakness",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "If you paid with a [dodge], inflict vulnerable.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-suddendash-s",
+      "name": "Sudden Dash",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Guard.\nYou may immediately move without\npaying any stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-vigilantguard-s",
+      "name": "Vigilant Guard",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Guard.\nWhile this card is on top of your discard pile, it counts as a [dodge] for any other player's attrition check.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-zaraya-waitingstrike-s",
+      "name": "Waiting Strike",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Reclaim: [dodge][dodge].\nIf you are in a flank sector, increase the damage this attack deals by [weapon]. If you are in the rear sector instead, increase the damage this attack deals by 3[weapon].",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-zaraya-ward-s",
+      "name": "Ward",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Guard.\nYou and another player in your sector draw 1.",
+      "trait": null
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-mastereddefense-a1",
+        "name": "Mastered Defense",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Assist.\nReduce the stamina cost of the next [offensive] you play this turn by 1.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-quickstrike-a1",
+        "name": "Quick Strike",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Reclaim: [dodge][dodge].\n",
+        "trait": null
+      }
+    ],
+    "A2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-guardian-a2",
+        "name": "Guardian's Reclaim",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Reclaim: [parry][parry].\nThis card counts as a [dodge] or [parry] for reclaim abilities",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-whirlingspear-a2",
+        "name": "Whirling Spear",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Attack",
+        "text": "Reclaim: [dodge][dodge].\nIncrease the damage this attack deals by [weapon] for each [aggro] in your sequence.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Your sequence limit is increased by 1.\nWhen you reclaim a card, deal [weapon] damage ignoring the monster's shield."
+        },
+        "id": "hero-zaraya-ragingspear-a2",
+        "name": "Raging Spear",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "When you reclaim a card, place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-gracefulfeint-b1",
+        "name": "Graceful Feint",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "You may immediately move without paying any stamina cost. Then, another player in your sector adds the top card of their discard pile to their hand.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-tacticaldance-b1",
+        "name": "Tactical Dance",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Reclaim: [parry][parry].\nYou may immediately move without paying any stamina cost. Then, choose a player in your sector to draw 1.",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-endlessdance-b2",
+        "name": "Endless Dance",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Dodge",
+        "text": "Draw 1.\n For the rest of your action phase, remove 1 struggle each time you move,",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-piercingmomentum-b2",
+        "name": "Piercing Momentum",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "If you moved this turn, this card counts as a [maneuver] for increasing your pierce level.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When you move, draw 1 and then discard a card from your hand.\n*Action*: You may turn the monster to your sector. If you do, discard a behavior card in play and replenish its behavior slot with the top card of the behavior deck (max: once per turn)."
+        },
+        "id": "hero-zaraya-tornado-b2",
+        "name": "Tornado",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "When you move, place a counter on this card."
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-chasingblow-c1",
+        "name": "Chasing Blow",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Guard. Reclaim:",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-flankpiercer-c1",
+        "name": "Flank Piercer",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "If you are in a flank sector, deal X damage,\nwhere X equals your current pierce level.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-piercingthrow-c2",
+        "name": "Piercing Throw",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Finisher.\nIf your pierce level is 3 or higher, increase\nthe damage this attack deals by 3.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-sharpangle-s",
+        "name": "Sharp Angle",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "If you are in a flank sector, increase your pierce\nlevel by 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Your piercing damage is increased by 5[weapon]. When you deal your piercing damage, search your discard pile for a [maneuver] and add it to your hand. [maneuver][attack]: Increase your pierce level by 1."
+        },
+        "id": "hero-zaraya-piercemaster-c2",
+        "name": "Pierce Master",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "[maneuver][attack]: Place a counter on this card."
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-sharpcontrol-d1",
+        "name": "Sharp Control",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "If you are in the rear sector, increase the struggle this maneuver removes by 2.",
+        "trait": "Assist"
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-twirlingassault-d1",
+        "name": "Twirling Assault",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "[aggro][next]: You may play the top card of your discard pile as the next card in your sequence without paying its stamina cost.",
+        "trait": null
+      }
+    ],
+    "D2": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-piercingcycle-d2",
+        "name": "Piercing Cycle",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Remove an amount of struggle equal to your current pierce level.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-synergystrike-d2",
+        "name": "Synergy Strike",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Assist.\nChoose a player in the opposite sector. Increase the damage this attack deals by 2[weapon] for each [attack] in that player's hand.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "While you are the aggro player, you may play a [attack] even if the monster side is protected.\n*When you play a* [aggro], if that card is a [defensive] draw 1, if it is a [offensive] deal [weapon] damage."
+        },
+        "id": "hero-zaraya-vanguard-d2",
+        "name": "Vanguard",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "When you play a [aggro] as the first card in your sequence, place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-masteredsteps-e1",
+        "name": "Mastered Steps",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "This card is considered to be both [dodge] and [parry]",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-zaraya-strikeopportunity-e1",
+        "name": "Strike Opportunity",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "While this card is on top of your discard pile,\nyour weapon has +2 damage.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-guardian-e2",
+        "name": "Guardian's Revenge",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Guard.\nDeal 2[weapon] damage for each [offensive] in your sequence.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-zaraya-serpentine-strike-e2",
+        "name": "Serpentine Strike",
+        "staminaCost": 3,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Draw 2.\nIf you moved this turn, reduce the stamina cost of this card by 2.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Your sequence limit is increased by 1.\n[dodge][attack]: Draw 1 and increase the damage the attack deals by 2[weapon].\n [parry][maneuver]: Remove 2 struggle."
+        },
+        "id": "hero-zaraya-speardance-e2",
+        "name": "Spear Dance",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "[offensive][offensive]: Place a counter on this card."
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,643 @@
+{
+  "starter": [
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-barrage-of-bullets-s",
+      "name": "Barrage of Bullets",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Spend any number of bullets to increase the damage this attack deals by 2[weapon] for each bullet spent this way",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-bombardment-s",
+      "name": "Bombardment",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "You may spend a bullet. If you do, confuse the monster or increase the struggle this maneuver removes by 2.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-cannonball-s",
+      "name": "Cannonball",
+      "staminaCost": 4,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "You may spend 3 bullets. If you do, stun the monster and increase the damage this attack deals by 4[weapon].\nAnother player can generate stamina to help you pay for this card.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-cover-fire-s",
+      "name": "Cover Fire",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Assist.\nWhen another player would suffer attrition damage, you may discard this card from your hand to prevent that damage.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-diversion-s",
+      "name": "Diversion",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Choose another player to draw 1.\nYou may spend a bullet. If you do, that player draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-exertion-s",
+      "name": "Exertion",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When you discard this card to generate stamina for a [attack], it generates 2 stamina.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-gunfire-s",
+      "name": "Gunfire",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "You may spend a bullet to increase the damage this attack deals by 3[weapon].",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-haul-of-bullets-s",
+      "name": "Haul of Bullets",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Draw X where X is your bullet track level.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-long-range-s",
+      "name": "Long Range",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "The next [attack] you play in your sequence gains stealth.\nWhile this card is the top card of your discard pile, prevent any attrition damage you would suffer.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-negation-s",
+      "name": "Negation",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "When a behavior card is revealed, you may discard this card from your hand and spend a bullet in order to cancel the effects of that card.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-not-this-tome-s",
+      "name": "Not This Time",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "When you reveal an attrition card, you may reveal this card from your hand and spend a bullet in order to gain a defense token (max: 1 per turn).",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "When you reload, search your deck or discard pile for [attack] and add it to your hand. If you searched your deck, reshuffle it."
+      },
+      "id": "hero-heleren-precision-reload-s",
+      "name": "Precision Reload",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 2,
+        "text": "When you reload, place a counter on this card."
+      }
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-pressing-shot-s",
+      "name": "Pressing Shot",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Draw 1. If your bullet track level is 1 or higher, draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-prompt-jump-s",
+      "name": "Prompt Jump",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "When you would suffer damage, you may discard this card from your hand to prevent that damage.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-prompt-reflexes-s",
+      "name": "Prompt Reflexes",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-quick-reload-s",
+      "name": "Quick Reload",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "Reload 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-ranged-s",
+      "name": "Ranged",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Assist.\nWhile this card is the top card of your discard pile, it counts as a [dodge] in your sequence for the attrition check.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-rapid-ignition-s",
+      "name": "Rapid ignition",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "You may spend a bullet to search your discard pile for a [attack] and place it on top of your deck",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-ready-to-shine-s",
+      "name": "Ready to Shine!",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Discard any number of cards from your hand and then draw until you have 3.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-recharging-s",
+      "name": "Recharging",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist.\nReload 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-repositioning-s",
+      "name": "Repositioning",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "[mastery]: You may shuffle all [attack] from your discard pile into your deck.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-heleren-strafing-s",
+      "name": "Strafing",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist.\nYou may spend a bullet to deal 3[weapon] damage.\nIf you do, you may immediately move without paying any stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-strategic-support-s",
+      "name": "Strategic Support",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "You may choose a player to discard a [offensive] from their hand. If they do, you reload 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-swift-deflection-s",
+      "name": "Swift Deflection",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When you discard this card from your hand, draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-heleren-tactical-reload-s",
+      "name": "Tactical Reload",
+      "staminaCost": 2,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "Reload 3.",
+      "trait": null
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-heleren-quick-shot-a1",
+        "name": "Quick Shot",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "When you discard this card from your hand, reload 1 or deal your base weapon damage.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-heleren-target-acquisition-a1",
+        "name": "Target Acquisition",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Assist.\nSearch your deck for a [offensive] and add it to your hand. Then reshuffle your deck.",
+        "trait": null
+      }
+    ],
+    "A2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-heleren-replenishment-a2",
+        "name": "Replenishment",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "At the end of your action phase, reload X where X is the number of bullets you spent this turn.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-heleren-vanguard-a2",
+        "name": "Vanguard",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "You may reveal a [maneuver] from your hand.\nIf you do, draw 2.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Your weapon has +5[weapon] damage.\n[attack]: Spend 2 bullets or lose focus after the attack."
+        },
+        "id": "hero-heleren-heat-a2",
+        "name": "Heat",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "At the end of your action phase, you may discard a [maneuver] from your hand. If you do, place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-heleren-bullet-surge-b1",
+        "name": "Bullet Surge",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "[maneuver]↓: Spend any number of bullets. If you do, choose a player to draw 1 for each bullet spent this way.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-heleren-suppressive-fire-b1",
+        "name": "Suppressive Fire",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Assist.\nReduce the stamina cost of the next card you play by 1.",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-heleren-blinding-fre-b2",
+        "name": "Blinding Fire",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "You may spend 2 bullets to inflit blind.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-heleren-thunderous-shot-b2",
+        "name": "Thunderous Shot",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Spend any number of bullets. For each bullet spent this way, draw 1 and increase the struggle this maneuver removes by 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "At the end of your turn, if you spent 2 or more bullets this turn, deal 5[weapon] damage."
+        },
+        "id": "hero-heleren-hail-of-bullets-b2",
+        "name": "Hail of Bullets",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "At the end of your turn, if you spent 2 or more bullets this turn, place a counter on this card."
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-heleren-breath-control-c1",
+        "name": "Breath control",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Search your discard pile for a [attack] and place it on top of your deck.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-heleren-cooldown-c1",
+        "name": "Cooldown",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Search your discard pile for up to 2 [attack] and shuffle them into your deck.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-heleren-barrel-roll-c2",
+        "name": "Barrel Roll",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Draw 3 and then discard 2 cards from your hand.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-heleren-line-of-fire-c2",
+        "name": "Line of Fire",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Assist.\nAt the start of your movement phase, if you have 7 cards or more in your hand, you may reveal this card from your hand. If you do, your weapon gets +3 damage until the end of the turn.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Start: Draw 1 or reload 1."
+        },
+        "id": "hero-heleren-rapid-fire-c2",
+        "name": "Rapid Fire",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "When you draw a [attack] during your action phase, you may reveal it to place a counter on this card."
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-heleren-cycle-of-bullets-d1",
+        "name": "Cycle of Bullets",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Parry",
+        "text": "When you discard this card to generate stamina for a [attack], reload 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-heleren-fire-cascade-d1",
+        "name": "Fire Cascade",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Reclaim: [attack][attack].",
+        "trait": null
+      }
+    ],
+    "D2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-heleren-infallible-aim-d2",
+        "name": "Infallible Aim",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "Your weapon gets +3 damage until the end of this turn. If your bullet track level is 3, your weapon gets +5 damage instead.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-heleren-prompt-answer-d2",
+        "name": "Prompt Answer",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "When a behavior card is revealed, you may discard this card from your hand to reload 2.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When a behavior card with the reaction you noted is triggered, you may spend 1 bullet. If you do, draw 1 or deal your weapon damage."
+        },
+        "id": "hero-heleren-the-huntress-mark-d2",
+        "name": "The Huntress' Mark",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "When a behavior card is triggered, you may note the triggered reaction to place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-heleren-camouflage-e1",
+        "name": "Camouflage",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Stealth.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-heleren-swift-reload-e1",
+        "name": "Swift Reload",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Assist.\nReload 1. If you another [parry] in your sequence, reload 2 instead.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-heleren-counter-measure-e2",
+        "name": "Counter Measure",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Assist.\nIf you avoid attrition damage this turn, search your discard pile for up 2 cards of your choice and add them to your hand.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-heleren-explosive-shot-e2",
+        "name": "Explosive Shot",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Remove 1 struggle. \nYou may spend 2 bullets. If you do, this attac inflicts vulnerable.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Start: If the bullet track is level 0, reload 1.\nWhen a player in your sector or an adjacent sector would suffer damage, you may spend 1 bullet to prevent that damage (ma: once per turn)"
+        },
+        "id": "hero-heleren-ballistic-defense-e2",
+        "name": "Ballistic Defense",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "[defensive][defensive]: Place a counter on this card."
+        }
+      }
+    ]
+  }
+}

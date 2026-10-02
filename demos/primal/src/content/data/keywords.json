@@ -1,0 +1,794 @@
+[
+  {
+    "id": "acceleration-token",
+    "name": "Acceleration token",
+    "scope": null,
+    "text": "Place on monster board. During Monster Upkeep, monster gains 1 additional struggle per acceleration token."
+  },
+  {
+    "id": "action-ability",
+    "name": "Action: [Ability]",
+    "scope": null,
+    "text": "Resolve as an action during your Action phase."
+  },
+  {
+    "id": "active-player",
+    "name": "Active player",
+    "scope": null,
+    "text": "The player currently playing their turn."
+  },
+  {
+    "id": "adjacent-sector",
+    "name": "Adjacent sector",
+    "scope": null,
+    "text": "Two sectors sharing a common border."
+  },
+  {
+    "id": "aggro-player",
+    "name": "Aggro player",
+    "scope": null,
+    "text": "The player with the aggro token."
+  },
+  {
+    "id": "aim",
+    "name": "Aim",
+    "scope": "Mirah",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "arkeum-tokens",
+    "name": "Arkeum Tokens",
+    "scope": "Hurom",
+    "text": "Protect Hurom from attacks. When you play an attack card in a sector with an Arkeum token, the token prevents damage and is removed. Max 1 per player per sector."
+  },
+  {
+    "id": "assist",
+    "name": "Assist",
+    "scope": null,
+    "text": "During another player's turn, discard a card with Assist to let the active player draw 1. Once per turn per player."
+  },
+  {
+    "id": "attrition-check",
+    "name": "Attrition check",
+    "scope": null,
+    "text": "Reveal top card of attrition deck. Suffer attrition damage unless you have enough defensive cards. If threatened, reveal two cards and use worse outcome."
+  },
+  {
+    "id": "avoid-attrition-damage",
+    "name": "Avoid attrition damage",
+    "scope": null,
+    "text": "Not suffering attrition damage during your Attrition phase."
+  },
+  {
+    "id": "ballista-tokens",
+    "name": "Ballista Tokens",
+    "scope": "The Awakened",
+    "text": "Placed in corners. Activate at end of round as per Artillery Assault objective. Can be loaded (black) or unloaded (grey)."
+  },
+  {
+    "id": "base-weapon-damage",
+    "name": "Base weapon damage",
+    "scope": null,
+    "text": "Printed damage value on your weapon card."
+  },
+  {
+    "id": "battle-dance",
+    "name": "Battle Dance",
+    "scope": "Karah",
+    "text": "When you play consecutive [Attack] cards in sequence, deal damage at 2nd (3×[Weapon Level]), 4th (5×[Weapon Level]), and 6th (7×[Weapon Level]) cards. Max 6 cards counted."
+  },
+  {
+    "id": "behavior-card-in-play",
+    "name": "Behavior card in play",
+    "scope": null,
+    "text": "Occupies a behavior slot on the monster board."
+  },
+  {
+    "id": "berserker",
+    "name": "Berserker",
+    "scope": null,
+    "text": "When you play a card with Berserker, enter berserker state until end of turn. Draw 1 each time you play an attack card while in this state."
+  },
+  {
+    "id": "blank",
+    "name": "Blank",
+    "scope": null,
+    "text": "Treat card as if it had no ability text. Traits still count."
+  },
+  {
+    "id": "bleeding-cards",
+    "name": "Bleeding Cards",
+    "scope": "Xitheros, The Awakened",
+    "text": "Shuffled into action deck. When drawn, discard immediately; Xitheros gains 1 struggle (or The Awakened gains 1 struggle)."
+  },
+  {
+    "id": "blind",
+    "name": "Blind",
+    "scope": null,
+    "text": "Choose a peril card in play. That peril is blank until start of your next turn. Use blind token."
+  },
+  {
+    "id": "bullet",
+    "name": "Bullet",
+    "scope": "Heleren",
+    "text": "Resource tracked on Bullet track. Spend bullets to trigger effects. Reload X to retrieve X bullets."
+  },
+  {
+    "id": "bullet-track-level",
+    "name": "Bullet track level",
+    "scope": null,
+    "text": "Number of bullets currently available (indicated by bullet marker)."
+  },
+  {
+    "id": "burning",
+    "name": "Burning",
+    "scope": null,
+    "text": "Take burning token. Next time you empty your deck, discard burning token and suffer damage equal to weapon level. If already burning, discard top 5 cards of deck instead."
+  },
+  {
+    "id": "cancel-the-effects",
+    "name": "Cancel the effects",
+    "scope": null,
+    "text": "Skip the Reaction step of a behavior card's resolution."
+  },
+  {
+    "id": "captured",
+    "name": "Captured",
+    "scope": null,
+    "text": "Discard hand and sequence, place miniature on monster board, end turn. At start of next turn: place in front sector, draw up to hand size, suffer damage equal to weapon level, discard top 2 cards (if [Attack] discarded, play normally; otherwise skip turn)."
+  },
+  {
+    "id": "chain-color",
+    "name": "Chain [Color]",
+    "scope": null,
+    "text": "Play without paying stamina cost if played after a [Color] card in your sequence."
+  },
+  {
+    "id": "claw",
+    "name": "Claw",
+    "scope": "Kharja",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "confuse",
+    "name": "Confuse",
+    "scope": null,
+    "text": "Place confused token on monster board, turn monster to a sector of your choice. Next boost effect is cancelled. Discard at start of next round."
+  },
+  {
+    "id": "consume-ability",
+    "name": "Consume: [Ability]",
+    "scope": null,
+    "text": "Resolve during Consume phase. Once per player per round. Remove card from game after use."
+  },
+  {
+    "id": "copy",
+    "name": "Copy",
+    "scope": null,
+    "text": "Resolve the copied card's ability as part of the copy effect."
+  },
+  {
+    "id": "counter",
+    "name": "Counter",
+    "scope": null,
+    "text": "Use counter tokens when instructed."
+  },
+  {
+    "id": "critical-health",
+    "name": "Critical health",
+    "scope": null,
+    "text": "Health reduced to half value (rounded down) or less."
+  },
+  {
+    "id": "current-attrition-level",
+    "name": "Current attrition level",
+    "scope": null,
+    "text": "Attrition value of top card of attrition discard pile."
+  },
+  {
+    "id": "dazed",
+    "name": "Dazed",
+    "scope": null,
+    "text": "Take dazed token. Next time you play a [Maneuver] card, discard token and consider that card blank."
+  },
+  {
+    "id": "debility-card",
+    "name": "Debility Card",
+    "scope": "Orouxen",
+    "text": "Clogs deck. Place in sequence at start of Action phase. Counts toward sequence limit. Discard at end of turn like action cards."
+  },
+  {
+    "id": "defense-token",
+    "name": "Defense token",
+    "scope": null,
+    "text": "Counts as a defensive card for attrition check. Discard at end of attrition check."
+  },
+  {
+    "id": "deplete-token",
+    "name": "Deplete token",
+    "scope": null,
+    "text": "Placed on armor/helm when KO'd. Depleted equipment's health points don't count. If both depleted, out of game."
+  },
+  {
+    "id": "disrupt-token",
+    "name": "Disrupt token",
+    "scope": null,
+    "text": "Place on defensive card in sequence during Attrition phase. That card doesn't count for attrition check. Discard at end of Attrition phase."
+  },
+  {
+    "id": "dust-token",
+    "name": "Dust Token",
+    "scope": "Toramat, Dygorax",
+    "text": "At start of Attrition phase, take a disrupt token for each Dust in your sector. Max 2 per sector. Remove all Dust at end of round."
+  },
+  {
+    "id": "empty-deck",
+    "name": "Empty (deck)",
+    "scope": null,
+    "text": "When you draw/discard last card of deck. Suffer fatigue damage, reshuffle discard pile."
+  },
+  {
+    "id": "empty-hand",
+    "name": "Empty (hand)",
+    "scope": null,
+    "text": "Zero cards in hand after playing/discarding."
+  },
+  {
+    "id": "enhancement-ability",
+    "name": "Enhancement: [Ability]",
+    "scope": null,
+    "text": "Resolve along with behavior card's base ability as a modification."
+  },
+  {
+    "id": "escalation",
+    "name": "Escalation",
+    "scope": null,
+    "text": "When behavior deck is empty, reshuffle discard pile and monster gains 1 struggle."
+  },
+  {
+    "id": "escalation-ability",
+    "name": "Escalation: [Ability]",
+    "scope": null,
+    "text": "Trigger when monster escalates."
+  },
+  {
+    "id": "evasion",
+    "name": "Evasion",
+    "scope": "Nagarjas",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "exhaust",
+    "name": "Exhaust",
+    "scope": null,
+    "text": "Place exhausted token. Card is blank for rest of scenario."
+  },
+  {
+    "id": "exile",
+    "name": "Exile",
+    "scope": null,
+    "text": "Put card in exile zone (outside field of play). Interactions only by card abilities."
+  },
+  {
+    "id": "exposed-side",
+    "name": "Exposed side",
+    "scope": null,
+    "text": "Sectors where attack cards can be played. Shown in red on stance card exposure diagram."
+  },
+  {
+    "id": "fatigue-damage",
+    "name": "Fatigue damage",
+    "scope": null,
+    "text": "Damage equal to weapon level when you empty your deck."
+  },
+  {
+    "id": "finisher",
+    "name": "Finisher",
+    "scope": null,
+    "text": "After playing, your Action phase ends."
+  },
+  {
+    "id": "firestorm",
+    "name": "Firestorm",
+    "scope": "Vyraxen",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "first-player",
+    "name": "First player",
+    "scope": null,
+    "text": "Aggro player becomes first player after Monster Upkeep. Takes first player token."
+  },
+  {
+    "id": "frost",
+    "name": "Frost",
+    "scope": "Mamuraak",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "glaciation-track",
+    "name": "Glaciation Track",
+    "scope": "Mamuraak",
+    "text": "Tracks glaciation level. Increase by X spaces when instructed."
+  },
+  {
+    "id": "guard",
+    "name": "Guard",
+    "scope": null,
+    "text": "When another player in your sector or adjacent plays a [Defensive] card, discard a card with Guard to reduce its stamina cost to 0. Once per turn."
+  },
+  {
+    "id": "hand-size-limit",
+    "name": "Hand size limit",
+    "scope": null,
+    "text": "Maximum cards in hand at end of turn (default 5)."
+  },
+  {
+    "id": "hardened",
+    "name": "Hardened",
+    "scope": null,
+    "text": "When monster is hardened: excess damage is not retained; cannot be stunned, confused, or inflicted with Vulnerable."
+  },
+  {
+    "id": "hardening-track",
+    "name": "Hardening Track",
+    "scope": "Toramat, Dygorax",
+    "text": "Tracks hardening level. At level 3, monster becomes Hardened."
+  },
+  {
+    "id": "heal-x",
+    "name": "Heal X",
+    "scope": null,
+    "text": "Remove X damage tokens from your hunter board."
+  },
+  {
+    "id": "health-monster",
+    "name": "Health (Monster)",
+    "scope": null,
+    "text": "Starts at 10. Reduce by 1 per wound. At 0, monster defeated."
+  },
+  {
+    "id": "health-value-health-points-hunter",
+    "name": "Health value/Health points (Hunter)",
+    "scope": null,
+    "text": "Sum of health points of helm and armor cards."
+  },
+  {
+    "id": "immune-to-blind",
+    "name": "Immune to blind",
+    "scope": null,
+    "text": "Cannot be targeted by blind effect."
+  },
+  {
+    "id": "impetus",
+    "name": "Impetus",
+    "scope": "Thoreg",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "infuriate-x-y-z",
+    "name": "Infuriate X/Y/Z",
+    "scope": null,
+    "text": "During Monster Upkeep, monster gains additional struggle based on aggro cards in players' hands."
+  },
+  {
+    "id": "ko-d-ko-token",
+    "name": "KO'd / KO token",
+    "scope": null,
+    "text": "When damage reaches health value. Follow KO steps. While KO'd, cannot be targeted (except Revive)."
+  },
+  {
+    "id": "lava-geyser",
+    "name": "Lava Geyser",
+    "scope": "Taraska",
+    "text": "Discard top card of behavior deck, place fire terrain in sector indicated on Lava diagram."
+  },
+  {
+    "id": "legendary",
+    "name": "Legendary",
+    "scope": null,
+    "text": "Equipment is effective against all monsters regardless of elemental weakness."
+  },
+  {
+    "id": "lose-focus",
+    "name": "Lose focus",
+    "scope": null,
+    "text": "Flip mastery card to unfocused side."
+  },
+  {
+    "id": "move-movement",
+    "name": "Move/Movement",
+    "scope": null,
+    "text": "Place miniature in adjacent sector. Costs 1 stamina unless specified."
+  },
+  {
+    "id": "niz-maraga-biome",
+    "name": "Niz-Maraga Biome",
+    "scope": null,
+    "text": "At round marker advance, all players must recycle a card matching the color shown for current round. If cannot, suffer damage equal to Aggression Level."
+  },
+  {
+    "id": "opening-ability",
+    "name": "Opening: [Ability]",
+    "scope": null,
+    "text": "Triggered only if card is first in sequence."
+  },
+  {
+    "id": "overrun",
+    "name": "Overrun",
+    "scope": null,
+    "text": "Place miniature in opposite sector. Remove threatened status. Not considered movement."
+  },
+  {
+    "id": "paralyzing-spore-cards",
+    "name": "Paralyzing Spore Cards",
+    "scope": "Pazis",
+    "text": "Added to deck. While in hand, cannot move. Discard at end of Action phase."
+  },
+  {
+    "id": "permanent",
+    "name": "Permanent",
+    "scope": null,
+    "text": "Peril/objective cards stay in play until end of scenario. Not affected by Blank."
+  },
+  {
+    "id": "piercing-damage",
+    "name": "Piercing Damage",
+    "scope": "Zaraya",
+    "text": "Special damage value used with Pierce ability."
+  },
+  {
+    "id": "primordial-blood",
+    "name": "Primordial Blood",
+    "scope": "Xitheros",
+    "text": "Special cards obtained in Campaign mode. Discard during crafting to gain 1 element resource."
+  },
+  {
+    "id": "protected-side",
+    "name": "Protected side",
+    "scope": null,
+    "text": "Sectors where attack cards cannot be played. Shown in black on exposure diagram."
+  },
+  {
+    "id": "quick-refresh",
+    "name": "Quick Refresh",
+    "scope": null,
+    "text": "Skip Behavior Refresh during Monster Upkeep. Perform at end of each player turn instead."
+  },
+  {
+    "id": "reaction-icon",
+    "name": "Reaction icon",
+    "scope": null,
+    "text": "Indicates triggering condition for behavior cards."
+  },
+  {
+    "id": "reclaim-condition",
+    "name": "Reclaim: [Condition]",
+    "scope": null,
+    "text": "Search discard pile for card with Reclaim when condition is met. Add to hand."
+  },
+  {
+    "id": "recycle-color",
+    "name": "Recycle [Color]",
+    "scope": null,
+    "text": "Discard X cards of indicated color to draw X."
+  },
+  {
+    "id": "reflexes",
+    "name": "Reflexes",
+    "scope": "Hurom",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "reload-x",
+    "name": "Reload (X)",
+    "scope": null,
+    "text": "Retrieve X bullets. Move bullet marker X spaces right."
+  },
+  {
+    "id": "resilience",
+    "name": "Resilience",
+    "scope": null,
+    "text": "After suffering [Monster Damage], reveal a card with Resilience to draw 1. Once per card per round."
+  },
+  {
+    "id": "resistant",
+    "name": "Resistant",
+    "scope": null,
+    "text": "Do not carry excess damage over to next stance."
+  },
+  {
+    "id": "resonance",
+    "name": "Resonance",
+    "scope": null,
+    "text": "Card trait. Triggers Drusk's Resonate ability."
+  },
+  {
+    "id": "resonate",
+    "name": "Resonate",
+    "scope": "Drusk",
+    "text": "When you play a card with Resonance, resolve its effect twice if previous card also has Resonance."
+  },
+  {
+    "id": "retaliate-color-ability",
+    "name": "Retaliate [Color]: [Ability]",
+    "scope": null,
+    "text": "When you suffer [Monster Damage], reveal [Color] to trigger [Ability]. Once per damage instance."
+  },
+  {
+    "id": "reveal-an-action-card",
+    "name": "Reveal an action card",
+    "scope": null,
+    "text": "Show card to other players without playing it."
+  },
+  {
+    "id": "revive",
+    "name": "Revive",
+    "scope": null,
+    "text": "Action to help KO'd players recover. Pay 2 stamina if in same sector."
+  },
+  {
+    "id": "rhythm",
+    "name": "Rhythm",
+    "scope": "Drusk",
+    "text": "Track values 0–3. Increase by 1 when you discard a card matching top of discard pile. At 3, draw 1 instead. Expend to grant Inspiration bonus."
+  },
+  {
+    "id": "riding-check",
+    "name": "Riding check",
+    "scope": null,
+    "text": "Reveal top card of attrition deck and action deck. If stamina icons ≥ attrition value, deal weapon damage and choose sector; otherwise suffer [Monster Damage] and place in front sector."
+  },
+  {
+    "id": "rise",
+    "name": "Rise",
+    "scope": null,
+    "text": "Discard KO token, draw up to hand size, stand miniature up."
+  },
+  {
+    "id": "rampage",
+    "name": "Rampage",
+    "scope": null,
+    "text": "Behavior cards with rampage icon. Trigger during Rampage step."
+  },
+  {
+    "id": "sequence",
+    "name": "Sequence",
+    "scope": null,
+    "text": "Row of cards played left to right. Standard limit is 5."
+  },
+  {
+    "id": "setup-instructions",
+    "name": "Setup: [Instructions]",
+    "scope": null,
+    "text": "Resolve at beginning of scenario."
+  },
+  {
+    "id": "shield-x",
+    "name": "Shield (X)",
+    "scope": null,
+    "text": "Reduce damage to monster by X per source."
+  },
+  {
+    "id": "slash",
+    "name": "Slash",
+    "scope": "Dareon",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "slow",
+    "name": "Slow",
+    "scope": null,
+    "text": "Place slowed token on monster board. Do not refill behavior slot when resolving behavior card. Remove at end of your turn."
+  },
+  {
+    "id": "source-of-damage",
+    "name": "Source of damage",
+    "scope": null,
+    "text": "Any effect causing damage."
+  },
+  {
+    "id": "stamina-generate-stamina",
+    "name": "Stamina (Generate stamina)",
+    "scope": null,
+    "text": "Discard cards from hand to generate stamina. Each card generates 1 per [Stamina] icon."
+  },
+  {
+    "id": "stamina-stamina-cost",
+    "name": "Stamina (Stamina cost)",
+    "scope": null,
+    "text": "Pay by generating stamina. Printed cost of X means you choose the value."
+  },
+  {
+    "id": "stamina-token",
+    "name": "Stamina token",
+    "scope": null,
+    "text": "Place on hunter board. Discard to generate 1 stamina. Max 1 unless specified."
+  },
+  {
+    "id": "stance-ii-iii-ability",
+    "name": "Stance II/III: [Ability]",
+    "scope": null,
+    "text": "Resolve only if monster is in Stance II or III."
+  },
+  {
+    "id": "standing-player",
+    "name": "Standing player",
+    "scope": null,
+    "text": "Player not currently KO'd."
+  },
+  {
+    "id": "start-ability",
+    "name": "Start: [Ability]",
+    "scope": null,
+    "text": "Triggered at start of your turn."
+  },
+  {
+    "id": "stealth",
+    "name": "Stealth",
+    "scope": null,
+    "text": "Card does not trigger reaction icons containing color or card type icons."
+  },
+  {
+    "id": "strain-token",
+    "name": "Strain token",
+    "scope": null,
+    "text": "Discard all strain tokens when refilling hand; draw one fewer card per token."
+  },
+  {
+    "id": "struggle",
+    "name": "Struggle",
+    "scope": null,
+    "text": "Monster resource. Accumulates during Monster Upkeep. At 3×[Player Count], monster unleashes."
+  },
+  {
+    "id": "stun",
+    "name": "Stun",
+    "scope": null,
+    "text": "Place stun token on behavior card. That card cannot be triggered this round. Choose a player to reveal up to two attack cards and deal weapon damage per card revealed."
+  },
+  {
+    "id": "swarm-card",
+    "name": "Swarm Card",
+    "scope": "Ozew",
+    "text": "While in play, cannot damage Ozew. Damage targets Swarm card instead. Defeat by dealing cumulative damage equal to Ozew's toughness value."
+  },
+  {
+    "id": "target",
+    "name": "Target",
+    "scope": null,
+    "text": "Element directed by game effect."
+  },
+  {
+    "id": "taunt",
+    "name": "Taunt",
+    "scope": null,
+    "text": "Discard a card with Taunt during another player's turn. Active player draws 1, you take aggro token, monster turns to your sector. Once per turn."
+  },
+  {
+    "id": "threatened",
+    "name": "Threatened",
+    "scope": null,
+    "text": "Take threatened token. During attrition check, reveal 2 attrition cards and use worse outcome. Remove by moving."
+  },
+  {
+    "id": "threatened-sector",
+    "name": "Threatened sector",
+    "scope": null,
+    "text": "Includes at least one threatened player."
+  },
+  {
+    "id": "thornvine-tokens",
+    "name": "Thornvine Tokens",
+    "scope": "Hydar",
+    "text": "Increase [Stamina] cost by 1 if in sector with thornvine token."
+  },
+  {
+    "id": "toughness",
+    "name": "Toughness",
+    "scope": null,
+    "text": "Damage needed to inflict a wound. Number on stance card × player count."
+  },
+  {
+    "id": "toxic-fume-tokens",
+    "name": "Toxic Fume Tokens",
+    "scope": "Endless Swamp Biome",
+    "text": "Draw one per player at setup. At start of each round, draw one and place in indicated sector. At end of your turn, if in sector with token, pick one up. At 3 tokens, eliminated."
+  },
+  {
+    "id": "trait",
+    "name": "Trait",
+    "scope": null,
+    "text": "No inherent effect, but card abilities may reference."
+  },
+  {
+    "id": "transformation-token",
+    "name": "Transformation Token",
+    "scope": "Nightmare Biome",
+    "text": "At start of round 4, each player gains one (human side up). Flip to monster side when you play three consecutive offensive cards. Base weapon damage restored to printed value. Cannot assist or receive assists after flipping."
+  },
+  {
+    "id": "unleash",
+    "name": "Unleash",
+    "scope": null,
+    "text": "When monster gains 3×[Player Count] struggle, immediately unleash: all players suffer [Monster Damage], remove struggle tokens until monster has 1."
+  },
+  {
+    "id": "unleash-ability",
+    "name": "Unleash: [Ability]",
+    "scope": null,
+    "text": "Triggered when monster unleashes."
+  },
+  {
+    "id": "unstoppable",
+    "name": "Unstoppable",
+    "scope": null,
+    "text": "When behavior card is triggered, monster gains 1 struggle after resolution."
+  },
+  {
+    "id": "venom-cards",
+    "name": "Venom Cards",
+    "scope": "Hydar, Reikal",
+    "text": "Added to deck. Accumulate in hand. Only way to remove is to use for stamina, but suffer damage equal to weapon level."
+  },
+  {
+    "id": "venomous-serpent-cards",
+    "name": "Venomous Serpent Cards",
+    "scope": "Reikal",
+    "text": "Place next to hunter board. Ability applies only to engaged player. Remove by playing a [Defensive] card in sequence without resolving ability or effect."
+  },
+  {
+    "id": "volley-x",
+    "name": "Volley X",
+    "scope": null,
+    "text": "Discard X cards from top of deck. Deal damage equal to weapon level for each offensive card ([Offensive]) discarded."
+  },
+  {
+    "id": "vulnerable",
+    "name": "Vulnerable",
+    "scope": null,
+    "text": "Place vulnerable token on monster board. Discard to double damage from a single source. Cannot inflict if already vulnerable."
+  },
+  {
+    "id": "water-cycle",
+    "name": "Water Cycle",
+    "scope": "Korowon",
+    "text": "Card trait. No inherent effect."
+  },
+  {
+    "id": "weapon-damage",
+    "name": "Weapon damage",
+    "scope": null,
+    "text": "Printed damage value plus modifiers."
+  },
+  {
+    "id": "weapon-level",
+    "name": "Weapon level",
+    "scope": null,
+    "text": "Shown in top right corner of weapon card."
+  },
+  {
+    "id": "when-focused-ability",
+    "name": "When focused: [Ability]",
+    "scope": null,
+    "text": "Triggered when you focus that mastery card."
+  },
+  {
+    "id": "when-revealed-ability",
+    "name": "When revealed: [Ability]",
+    "scope": null,
+    "text": "Triggered when stance card is revealed."
+  },
+  {
+    "id": "wound-inflict-a-wound-suffer-a-wound",
+    "name": "Wound/Inflict a wound/Suffer a wound",
+    "scope": null,
+    "text": "Reduce monster health by 1. At 0 health, monster defeated."
+  },
+  {
+    "id": "zekath-variants",
+    "name": "Zekath Variants",
+    "scope": "Zekath & Zekalith",
+    "text": "Two variants with unique peril, stance, and behavior cards. Vibration track triggers special peril card replacement. ---"
+  }
+]

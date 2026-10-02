@@ -1,0 +1,4679 @@
+[
+  {
+    "element": "metal",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_great_sword/great_sword_aureanblade_1.webp",
+        "id": "weapon-daeron-aurean-blade-l1",
+        "level": 1,
+        "text": "[attack]: Look at the top card of the attrition deck. You may choose to discard it."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_great_sword/great_sword_aurean_blade_2.webp",
+        "id": "weapon-daeron-aurean-blade-l2",
+        "level": 2,
+        "text": "When the attrition deck is emptied, inflict vulnerable.\n[attack]: Look at the top card of the attrition deck. You may choose to discard it."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_great_sword/great_sword_aureanblade_3.webp",
+        "id": "weapon-daeron-aurean-blade-l3",
+        "level": 3,
+        "text": "When the attrition deck is emptied, inflict vulnerable.\nStart: Look at the top card of the attrition deck. You may choose to discard it."
+      }
+    ],
+    "name": "Aurean Blade"
+  },
+  {
+    "element": "coral",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_bloodreef_1.webp",
+        "id": "weapon-daeron-bloodreef-l1",
+        "level": 1,
+        "text": "Increase your hand size limit by 1."
+      },
+      {
+        "cost": {
+          "zima": 2
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_bloodreef_2.webp",
+        "id": "weapon-daeron-bloodreef-l2",
+        "level": 2,
+        "text": "Increase your hand size limit by 1.\n[maneuver][attack]: Heal 2"
+      },
+      {
+        "cost": {
+          "zima": 2
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_bloodreef_3.webp",
+        "id": "weapon-daeron-bloodreef-l3",
+        "level": 3,
+        "text": "Increase your hand size limit by 1.\n[maneuver][attack]: Heal 3 and remove 1 struggle."
+      }
+    ],
+    "name": "Bloodreef"
+  },
+  {
+    "element": "horn",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_dragonclaw_1.webp",
+        "id": "weapon-daeron-dragon-claw-l1",
+        "level": 1,
+        "text": "When you pay the stamina cost of [attack], you may increase that cost by 1. If you do, increase the damage that attack deals by 3 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_dragonclaw_2.webp",
+        "id": "weapon-daeron-dragon-claw-l2",
+        "level": 2,
+        "text": "When you pay the stamina cost of [attack], you may increase that cost by 1. If you do, increase the damage that attack deals by 6 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_great_sword/great_sword_dragon_claw_3.webp",
+        "id": "weapon-daeron-dragon-claw-l3",
+        "level": 3,
+        "text": "When you pay the stamina cost of [attack], you may increase that cost by 1. If you do, increase the damage that attack deals by 12 (max: once per turn)."
+      }
+    ],
+    "name": "Dragon Claw"
+  },
+  {
+    "element": "fire",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_flametongue_1.webp",
+        "id": "weapon-daeron-flame-tounge-l1",
+        "level": 1,
+        "text": "[attack]: You may suffer 1 damage. If you do, increase the damage the attack deals by 3 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_flametongue_2.webp",
+        "id": "weapon-daeron-flame-tounge-l2",
+        "level": 2,
+        "text": "Start: You may suffer 2 damage. If you do, Flame Tongue gets +4 damage until the end of the turn."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_flame_tongue_3.webp",
+        "id": "weapon-daeron-flame-tounge-l3",
+        "level": 3,
+        "text": "Start: You may suffer 3 damage. If you do, Flame Tongue gets +6 damage until the end of the turn.\nWhen your health becomes critical, search your discard pile for a [attack] and add it to your hand."
+      }
+    ],
+    "name": "Flame Tongue"
+  },
+  {
+    "element": "ice",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_frostblade_1.webp",
+        "id": "weapon-daeron-frostblade-l1",
+        "level": 1,
+        "text": "When you pay the stamina cost of a [maneuver], you may increase that cost by 1. If you do, deal 4 damage."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 3,
+          "maneuver": 7,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_frostblade_2.webp",
+        "id": "weapon-daeron-frostblade-l2",
+        "level": 2,
+        "text": "When you pay the stamina cost of a [maneuver], you may increase that cost by 1. If you do, inflicts slow or deal 6 damage."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 3,
+          "maneuver": 7,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_frostblade_3.webp",
+        "id": "weapon-daeron-frostblade-l3",
+        "level": 3,
+        "text": "When you pay the stamina cost of a [maneuver], you may increase that cost by 1. If you do, inflicts slow and deal 9 damage."
+      }
+    ],
+    "name": "Frostblade"
+  },
+  {
+    "element": "base",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_great_sword/great_sword_greatsword_1.webp",
+        "id": "weapon-daeron-great-sword-l1",
+        "level": 1,
+        "text": "[attack][attack]: Increase the damage the attack deals by 2 and remove 1 struggle."
+      }
+    ],
+    "name": "Great sword"
+  },
+  {
+    "element": "thunder",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_iridiansunder_1.webp",
+        "id": "weapon-daeron-iridian-sunder-l1",
+        "level": 1,
+        "text": "When you empty your deck, Iridian Sunder gets +1 damage (max: 3 times per game)."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_iridiansunder_2.webp",
+        "id": "weapon-daeron-iridian-sunder-l2",
+        "level": 2,
+        "text": "When you empty your deck, Iridian Sunder gets +1 damage (max: 3 times per game).\n[maneuver][attack][attack]: If Iridian Sunder's damage is 8 or more, stun the monster."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_iridiansunder_3.webp",
+        "id": "weapon-daeron-iridian-sunder-l3",
+        "level": 3,
+        "text": "When you empty your deck, Iridian Sunder gets +2 damage (max: 3 times per game).\n[maneuver][attack][attack]: If Iridian Sunder's damage is 11 or more, stun the monster."
+      }
+    ],
+    "name": "Iridian Sunder"
+  },
+  {
+    "element": "venom",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_kobra_1.webp",
+        "id": "weapon-daeron-kobra-l1",
+        "level": 1,
+        "text": "[dodge][maneuver]: Deal 1 damage for each [attack] in your discard pile"
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_kobra_2.webp",
+        "id": "weapon-daeron-kobra-l2",
+        "level": 2,
+        "text": "[dodge][maneuver]: Deal 3 damage for each [attack] in your discard pile"
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_kobra_3.webp",
+        "id": "weapon-daeron-kobra-l3",
+        "level": 3,
+        "text": "[dodge][maneuver]: Deal 5 damage for each [attack] in your discard pile. If this inflicts a wound, inflict vulnerable."
+      }
+    ],
+    "name": "Kobra"
+  },
+  {
+    "element": "crystal",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_shimmerblade_1.webp",
+        "id": "weapon-daeron-shimmerblade-l1",
+        "level": 1,
+        "text": "Start: You may reveal [attack][attack][attack] from your hand to reduce the stamina cost of those cards by 1 until the end of this turn."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_shimmerblade_2.webp",
+        "id": "weapon-daeron-shimmerblade-l2",
+        "level": 2,
+        "text": "Start: You may reveal [attack][attack][attack] from your hand to reduce the stamina cost of those cards by 1 until the end of this turn.\n[attack][attack]: Increase the damage the attack deals by 3."
+      },
+      {
+        "cost": {
+          "scales": 2
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_shimmerblade_3.webp",
+        "id": "weapon-daeron-shimmerblade-l3",
+        "level": 3,
+        "text": "Start/Action: You may reveal [attack][attack][attack] from your hand to reduce the stamina cost of those cards by 1 until the end of this turn (max: once per turn).\n[attack][attack]: Increase the damage the attack deals by 5."
+      }
+    ],
+    "name": "Shimmerblade"
+  },
+  {
+    "element": "feather",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_windblade_1.webp",
+        "id": "weapon-daeron-windblade-l1",
+        "level": 1,
+        "text": "When you play a card with slash, deal 1 damage."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_windblade_2.webp",
+        "id": "weapon-daeron-windblade-l2",
+        "level": 2,
+        "text": "When you play a card with slash, deal 2 damage.\nStart: If the top card of your discard pile has slash, you may add it to your hand."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_great_sword/great_sword_windblade_3.webp",
+        "id": "weapon-daeron-windblade-l3",
+        "level": 3,
+        "text": "When you play a card with slash, deal 3 damage.\nStart: If the top card of your discard pile has slash, you may add it to your hand."
+      }
+    ],
+    "name": "Windblade"
+  },
+  {
+    "element": "ice",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "kobaureo": 1
+        },
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_frozendrum_1.webp",
+        "id": "weapon-drusk-frozendrum-l1",
+        "level": 1,
+        "text": "[rhythm]: Exile the top card of your deck. You may play a card from your exile zone into your sequence this turn."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "iride": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_frozendrum_2.webp",
+        "id": "weapon-drusk-frozendrum-l2",
+        "level": 2,
+        "text": "*Start*: If your rhythm level is 2 or more, you may inflict slow. If you do, reduce your rhythm level to 0.\n[rhythm]: Exile the top card of your deck. You can play a card from your exile zone into your sequence this turn."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_frozendrum_3.webp",
+        "id": "weapon-drusk-frozendrum-l3",
+        "level": 3,
+        "text": "*Start*: If your rhythm level is 2 or more, you may inflict slow. If you do, reduce your rhythm level to 1.\n[rhythm]: Exile the top card of your deck. You can play any cards from your exile zone into your sequence this turn."
+      }
+    ],
+    "name": "Frozen Drum"
+  },
+  {
+    "element": "metal",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_drum/drum_ironheart_1.webp",
+        "id": "weapon-drusk-ironheart-l1",
+        "level": 1,
+        "text": "*At the end of your action phase*, if you have 2 or more cards with resonance in your sequence, choose another player to gain a defense token (max: 1 token per player)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_drum/drum_ironheart_2.webp",
+        "id": "weapon-drusk-ironheart-l2",
+        "level": 2,
+        "text": "*When a card ability resonates*, look at the top 2 cards of the attrition deck and reorder them as you choose.\n*At the end of your action phase*, if you have 2 or more cards with resonance in your sequence, choose another player to gain a defense token (max: 1 token per player)."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_drum/drum_ironheart_3.webp",
+        "id": "weapon-drusk-ironheart-l3",
+        "level": 3,
+        "text": "*When a card ability resonates*, look at the top 3 cards of the attrition deck and reorder them as you choose.\n*At the end of your action phase*, if you have 2 or more cards with resonance in your sequence, choose a player to gain a defense token (max: 1 token per player)."
+      }
+    ],
+    "name": "Ironheart"
+  },
+  {
+    "element": "feather",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_junglebeat_1.webp",
+        "id": "weapon-drusk-junglebeat-l1",
+        "level": 1,
+        "text": "[rhythm]: Choose a player to draw 1. That player may immediately move."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_junglebeat_2.webp",
+        "id": "weapon-drusk-junglebeat-l2",
+        "level": 2,
+        "text": "[rhythm]: Choose a player to draw 1. That player may immediately move without paying any stamina cost"
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_junglebeat_3.webp",
+        "id": "weapon-drusk-junglebeat-l3",
+        "level": 3,
+        "text": "*Start*: You may discard a behavior card in play and replenish its behavior slot with the top card of the behavior deck. If you do, the monster gains an acceleration.\n[rhythm]: Choose a player to draw 1. That player may immediately move without paying any stamina cost."
+      }
+    ],
+    "name": "Junglebeat"
+  },
+  {
+    "element": "fire",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_lavadrum_1.webp",
+        "id": "weapon-drusk-lavadrum-l1",
+        "level": 1,
+        "text": "*When you empty your deck*, Lava Drum gains +1 damage (max 2 times per game). Then, suffer burning if Lava Drum's damage is 4.\n[rhythm]: Discard the top 2 cards of your deck. Add a card with resonance discarded this way to your hand."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_lavadrum_2.webp",
+        "id": "weapon-drusk-lavadrum-l2",
+        "level": 2,
+        "text": "*When you empty your deck*, Lava Drum gets +1 damage (max: 3 times per game). Then, suffer burning if Lava Drum's damage is 6.\n[rhythm]: Discard the top 2 cards of your deck. Add any cards with resonance discarded this way to your hand."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_lavadrum_3.webp",
+        "id": "weapon-drusk-lavadrum-l3",
+        "level": 3,
+        "text": "*When you empty your deck*, Lava Drum gets +1 damage (max: 4 times per game). Then, suffer burning if Lava Drum's damage is 8.\n[rhythm]: Discard the top 3 cards of your deck. Add any cards with resonance discarded this way to your hand."
+      }
+    ],
+    "name": "Lava Drum"
+  },
+  {
+    "element": "coral",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 2,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_maelstrum_1.webp",
+        "id": "weapon-drusk-maelstrum-l1",
+        "level": 1,
+        "text": "[rhythm]: Draw 1 and heal 1."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_maelstrum_2.webp",
+        "id": "weapon-drusk-maelstrum-l2",
+        "level": 2,
+        "text": "*Start*: Recycle [maneuver].\n[rhythm]: Draw 1 and heal 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_maelstrum_3.webp",
+        "id": "weapon-drusk-maelstrum-l3",
+        "level": 3,
+        "text": "*Start*: Recycle [maneuver][maneuver].\n[rhythm]: Draw 1 and heal 2."
+      }
+    ],
+    "name": "Maelstrum"
+  },
+  {
+    "element": "crystal",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 2,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_nocturnedrum_1.webp",
+        "id": "weapon-drusk-nocturnedrum-l1",
+        "level": 1,
+        "text": "[rhythm]: Look at the top card of your deck. If that card has resonance, add it to your hand. Otherwise, you may place it on top of your discard pile or at the bottom of your deck."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_nocturnedrum_2.webp",
+        "id": "weapon-drusk-nocturnedrum-l2",
+        "level": 2,
+        "text": "*Start*: All players look at the top card of their deck. They may place it either on top of their discard pile or at the bottom of their deck. [rhythm]: Look at the top 2 cards of your deck. You may place each card either on top of your discard pile or at the bottom of your deck. If any of them has resonance, you may add it to your hand instead."
+      },
+      {
+        "cost": {
+          "iride": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_nocturnedrum_3.webp",
+        "id": "weapon-drusk-nocturnedrum-l3",
+        "level": 3,
+        "text": "*Start*: All players look at the top card of their deck. They may place it either on top of their discard pile or at the bottom of their deck. [rhythm]: Look at the top 3 cards of your deck. You may place each card either on top of your discard pile or at the bottom of your deck. If any of them has resonance, you may add it to your hand instead."
+      }
+    ],
+    "name": "Nocturne Drum"
+  },
+  {
+    "element": "horn",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_rattlebone_1.webp",
+        "id": "weapon-drusk-rattlebone-l1",
+        "level": 1,
+        "text": "*At the end of your turn*, gain a stamina token if your rhythm level is 2 or higher."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_rattlebone_2.webp",
+        "id": "weapon-drusk-rattlebone-l2",
+        "level": 2,
+        "text": "*Start*: You may discard a card from your hand. If you do, choose a player to gain a stamina token.\n*At the end of your turn*, gain a stamina token if your rhythm level is 2 or higher."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_rattlebone_3.webp",
+        "id": "weapon-drusk-rattlebone-l3",
+        "level": 3,
+        "text": "*Start*: You may discard a card from your hand. If you do, choose a player to gain a stamina token.\n*At the end of your turn*, choose a player to gain a stamina token if your rhythm level is 2 or higher."
+      }
+    ],
+    "name": "Rattlebone"
+  },
+  {
+    "element": "thunder",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": 1,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 4,
+          "parry": 6
+        },
+        "file": "weapon_drum/drum_stormcaller_1.webp",
+        "id": "weapon-drusk-stormcaller-l1",
+        "level": 1,
+        "text": "*When your rhythm level increases*, deal 2 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 4,
+          "parry": 6
+        },
+        "file": "weapon_drum/drum_stormcaller_2.webp",
+        "id": "weapon-drusk-stormcaller-l2",
+        "level": 2,
+        "text": "*When your rhythm level increases*, deal 2 damage.\n[rhythm]: Place a counter on a weapon of your choice. Stormcaller deals +1 damage if there are 2 or more counters on it."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 4,
+          "parry": 6
+        },
+        "file": "weapon_drum/drum_stormcaller_3.webp",
+        "id": "weapon-drusk-stormcaller-l3",
+        "level": 3,
+        "text": "*When your rhythm level increases*, deal 2 damage.\n[rhythm]: Place a counter on a weapon of your choice. Stormcaller deals +2 damage if there are 2 or more counters on it."
+      }
+    ],
+    "name": "Stormcaller"
+  },
+  {
+    "element": "venom",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_vinedrum_1.webp",
+        "id": "weapon-drusk-vinedrum-l1",
+        "level": 1,
+        "text": "[rhythm]: Choose another player to add the top card of their discard pile to their hand."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_vinedrum_2.webp",
+        "id": "weapon-drusk-vinedrum-l2",
+        "level": 2,
+        "text": "*Start*: If the top card of your discard pile is a [dodge], add it to your hand.\n[rhythm]: Choose another player to add the top card of their discard pile to their hand."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_drum/drum_vinedrum_3.webp",
+        "id": "weapon-drusk-vinedrum-l3",
+        "level": 3,
+        "text": "*Start*: If the top card of your discard pile is a [dodge] or [attack], add it to your hand.\n[rhythm]: Choose another player to add the top card of their discard pile to their hand."
+      }
+    ],
+    "name": "Vinedrum"
+  },
+  {
+    "element": "base",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 1,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_drum/drum_wardrum_1.webp",
+        "id": "weapon-drusk-wardrum-l1",
+        "level": 1,
+        "text": "[rhythm]: Draw 1.\n[maneuver][attack]: Increase the damage the attack deals by 1 (max once per turn)."
+      }
+    ],
+    "name": "Wardrum"
+  },
+  {
+    "element": "crystal",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_amethyst_1.webp",
+        "id": "weapon-heleren-amethyst-l1",
+        "level": 1,
+        "text": "Ignite: Reveal the top card of your deck and remove 1 struggle if that card is a [maneuver]"
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "scales": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 7,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_amethyst_2.webp",
+        "id": "weapon-heleren-amethyst-l2",
+        "level": 2,
+        "text": "Ignite: Reveal the top card of your deck and remove 1 struggle if that card is a [offensive]."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "scales": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 7,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_amethyst_3.webp",
+        "id": "weapon-heleren-amethyst-l3",
+        "level": 3,
+        "text": "Ignite: Reveal the top card of your deck and remove 1 struggle if that card is a [offensive]. Then you may add that card to your hand."
+      }
+    ],
+    "name": "Amethyst"
+  },
+  {
+    "element": "thunder",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_electroblast_1.webp",
+        "id": "weapon-heleren-electroblast-l1",
+        "level": 1,
+        "text": "When you play a [maneuver], [parry] or [dodge] in your sequence, place a counter on Electroblast and then suffer 1 damage if it has 5 or more counters.\nIgnite: Deal 1 damage for each counter on Electroblast, then remove all counters."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_electroblast_2.webp",
+        "id": "weapon-heleren-electroblast-l2",
+        "level": 2,
+        "text": "When you play a [maneuver], [parry] or [dodge] in your sequence, place a counter on Electroblast and then suffer 2 damage if it has 5 or more counters.\nIgnite: Deal 2 damage for each counter on Electroblast, then remove all counters."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_electroblast_3.webp",
+        "id": "weapon-heleren-electroblast-l3",
+        "level": 3,
+        "text": "When you play a [maneuver], [parry] or [dodge] in your sequence, place a counter on Electroblast and then suffer 3 damage if it has 5 or more counters.\nIgnite: Deal 3 damage for each counter on Electroblast, then remove all counters."
+      }
+    ],
+    "name": "Electroblast"
+  },
+  {
+    "element": "ice",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_frostgun_1.webp",
+        "id": "weapon-heleren-frostgun-l1",
+        "level": 1,
+        "text": "Ignite: Inflict slow."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 7,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_frostgun_2.webp",
+        "id": "weapon-heleren-frostgun-l2",
+        "level": 2,
+        "text": "Ignite: Inflict slow or add one of your exiled cards to your hand.\n[maneuver]: You may exile a card from your hand to deal 4 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "kobaureo": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 7,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_frostgun_3.webp",
+        "id": "weapon-heleren-frostgun-l3",
+        "level": 3,
+        "text": "Ignite: Inflict slow or add one of your exiled cards to your hand.\n[maneuver]: You may exile a card from your hand to deal 6 damage."
+      }
+    ],
+    "name": "Frost Gun"
+  },
+  {
+    "element": "base",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_gunbow/gunbow_gunbow_1.webp",
+        "id": "weapon-heleren-gunbow-l1",
+        "level": 1,
+        "text": "Ignite: Deal 1 damage."
+      }
+    ],
+    "name": "Gunbow"
+  },
+  {
+    "element": "fire",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_ignis_1.webp",
+        "id": "weapon-heleren-ignis-l1",
+        "level": 1,
+        "text": "Ignite: Place a counter on the behavior discard pile (max: 3 counters).\nEscalation: The monster suffers 1 damage for each counter on the behavior discard pile. Then remove 1 of those counters."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 7,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_ignis_2.webp",
+        "id": "weapon-heleren-ignis-l2",
+        "level": 2,
+        "text": "Ignite: Place a counter on the behavior discard pile (max: 3 counters).\nEscalation: The monster suffers 3 damage for each counter on the behavior discard pile. Then remove 1 of those counters."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 7,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_ignis_3.webp",
+        "id": "weapon-heleren-ignis-l3",
+        "level": 3,
+        "text": "Ignite: Place a counter on the behavior discard pile (max: 3 counters).\nEscalation: The monster suffers 5 damage for each counter on the behavior discard pile. Then remove 1 of those counters."
+      }
+    ],
+    "name": "Ignis"
+  },
+  {
+    "element": "metal",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_mothergun_1.webp",
+        "id": "weapon-heleren-mothergun-l1",
+        "level": 1,
+        "text": "Ignite: Gain a defense token (max: once per round)."
+      },
+      {
+        "cost": {
+          "iride": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_mothergun_2.webp",
+        "id": "weapon-heleren-mothergun-l2",
+        "level": 2,
+        "text": "Ignite: Gain a defense token (max: once per round).\nWhile your mastery is focused, Mothergun has +1 damage."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_mothergun_3.webp",
+        "id": "weapon-heleren-mothergun-l3",
+        "level": 3,
+        "text": "Ignite: Choose a player to gain a defense token (max: 1 token per player).\nWhile your mastery is focused, Mothergun has +1 damage."
+      }
+    ],
+    "name": "Mothergun"
+  },
+  {
+    "element": "coral",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "zima": 2
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_ocean_gun_1.webp",
+        "id": "weapon-heleren-ocean-gun-l1",
+        "level": 1,
+        "text": "Ignite: Recycle 1."
+      },
+      {
+        "cost": {
+          "zima": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_oceangun_2.webp",
+        "id": "weapon-heleren-ocean-gun-l2",
+        "level": 2,
+        "text": "Ignite: Recycle 1.\nWhen you reload, heal 2 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_oceangun_3.webp",
+        "id": "weapon-heleren-ocean-gun-l3",
+        "level": 3,
+        "text": "Ignite: You may draw 1 or recycle 2.\nWhen you reload, heal 3 (max: once per turn)."
+      }
+    ],
+    "name": "Ocean Gun"
+  },
+  {
+    "element": "venom",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_reptile_1.webp",
+        "id": "weapon-heleren-reptile-l1",
+        "level": 1,
+        "text": "Ignite: You may add the top card of your discard pile to your hand."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_reptile_2.webp",
+        "id": "weapon-heleren-reptile-l2",
+        "level": 2,
+        "text": "Ignite: You may add the top card of your discard pile to your hand. If that card is a [maneuver], deal 3 damage."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_gunbow/gunbow_reptile_3.webp",
+        "id": "weapon-heleren-reptile-l3",
+        "level": 3,
+        "text": "Ignite: You may add the top card of your discard pile to your hand. If that card is a [maneuver], deal 6 damage."
+      }
+    ],
+    "name": "Reptile"
+  },
+  {
+    "element": "horn",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_tiger_1.webp",
+        "id": "weapon-heleren-tiger-l1",
+        "level": 1,
+        "text": "Ignite: You may pay 1 stamina to deal 3 damage."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_tiger_2.webp",
+        "id": "weapon-heleren-tiger-l2",
+        "level": 2,
+        "text": "Ignite: You may pay 1 stamina to deal 6 damage.\nWhen you reload, gain a stamina token (max: once per turn)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_gunbow/gunbow_tiger_3.webp",
+        "id": "weapon-heleren-tiger-l3",
+        "level": 3,
+        "text": "Ignite: You may pay 1 stamina to deal 9 damage.\nWhen you reload, gain a stamina token (max: once per turn)."
+      }
+    ],
+    "name": "Tiger"
+  },
+  {
+    "element": "feather",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_winged_cannon_1.webp",
+        "id": "weapon-heleren-winged-cannon-l1",
+        "level": 1,
+        "text": "Ignite: You may immediately move without paying any stamina cost."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_wingedcannon_2.webp",
+        "id": "weapon-heleren-winged-cannon-l2",
+        "level": 2,
+        "text": "Ignite: You may immediately move without paying any stamina cost. If you do move, deal 3 damage."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_wingedcannon_3.webp",
+        "id": "weapon-heleren-winged-cannon-l3",
+        "level": 3,
+        "text": "Start: You may reveal [attack][maneuver][parry][dodge] from your hand to reload 1.\nIgnite: You may immediately move without paying any stamina cost. If you do move, deal 6 damage."
+      }
+    ],
+    "name": "Winged Cannon"
+  },
+  {
+    "element": "horn",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_dancing_bones_1.webp",
+        "id": "weapon-karah-dancing-bones-l1",
+        "level": 1,
+        "text": "When you trigger battle dance, Dancing Bones gets +2 damage until the end of the turn."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_dancing_bones_2.webp",
+        "id": "weapon-karah-dancing-bones-l2",
+        "level": 2,
+        "text": "When you trigger battle dance, Dancing Bones gets +3 damage until the end of the turn."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_dancing_bones_3.webp",
+        "id": "weapon-karah-dancing-bones-l3",
+        "level": 3,
+        "text": "When you trigger battle dance, Dancing Bones gets +4 damage until the end of the turn.\nWhen you chain a card and your mastery is focused, gain a stamina token (max: once per turn)."
+      }
+    ],
+    "name": "Dancing Bones"
+  },
+  {
+    "element": "fire",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_dragonwings_1.webp",
+        "id": "weapon-karah-dragon-wings-l1",
+        "level": 1,
+        "text": "When you empty your deck, Dragon Wings gets +1 damage (max: 4 times per game)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_dragonwings_2.webp",
+        "id": "weapon-karah-dragon-wings-l2",
+        "level": 2,
+        "text": "When you empty your deck, Dragon Wings gets +2 damage (max: 4 times per game)."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_dragonwings_3.webp",
+        "id": "weapon-karah-dragon-wings-l3",
+        "level": 3,
+        "text": "When you empty your deck, Dragon Wings gets +3 damage (max: 4 times per game)."
+      }
+    ],
+    "name": "Dragon Wings"
+  },
+  {
+    "element": "base",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_dual_blade_1.webp",
+        "id": "weapon-karah-dual-blade-l1",
+        "level": 1,
+        "text": "When you trigger battle dance, deal 1 damage"
+      }
+    ],
+    "name": "Dual Blade"
+  },
+  {
+    "element": "ice",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "iride": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_icewings_1.webp",
+        "id": "weapon-karah-ice-wings-l1",
+        "level": 1,
+        "text": "When you overrun the monster, inflicts slow."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_icewings_2.webp",
+        "id": "weapon-karah-ice-wings-l2",
+        "level": 2,
+        "text": "When you overrun the monster, inflicts slow or remove 1 struggle."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_icewings_3.webp",
+        "id": "weapon-karah-ice-wings-l3",
+        "level": 3,
+        "text": "When you overrun the monster, inflicts slow or remove 1 struggle.\nWhen you trigger battle dance, remove 1 struggle."
+      }
+    ],
+    "name": "Ice Wings"
+  },
+  {
+    "element": "metal",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_moonblades_1.webp",
+        "id": "weapon-karah-moonblades-l1",
+        "level": 1,
+        "text": "[maneuver][attack][maneuver]: Deal 1 damage for each [parry] in your discard pile."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_moonblades_2.webp",
+        "id": "weapon-karah-moonblades-l2",
+        "level": 2,
+        "text": "[maneuver][attack][maneuver]: Deal 2 damage for each [parry] in your discard pile."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 3,
+          "maneuver": 5,
+          "parry": 7
+        },
+        "file": "weapon_dual_blade/dual_blade_moonblades_3.webp",
+        "id": "weapon-karah-moonblades-l3",
+        "level": 3,
+        "text": "[maneuver][attack][maneuver]: Deal 3 damage for each [parry] in your discard pile."
+      }
+    ],
+    "name": "Moonblades"
+  },
+  {
+    "element": "crystal",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_shimmeringstar_1.webp",
+        "id": "weapon-karah-shimmering-star-l1",
+        "level": 1,
+        "text": "When another player plays a card in their sequence, you may discard a card of that same color from your hand. If you do, deal your weapon damage (max: once per turn)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_shimmeringstar_2.webp",
+        "id": "weapon-karah-shimmering-star-l2",
+        "level": 2,
+        "text": "When a player plays a card in their sequence, you may discard a card of that same color from your hand (max: once per turn). If you do, deal your weapon damage. If the discarded card is a [attack], draw 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "scales": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_shimmering_star_3.webp",
+        "id": "weapon-karah-shimmering-star-l3",
+        "level": 3,
+        "text": "When a player plays a card in their sequence, you may discard a card of that same color from your hand (max: once per turn). If you do, deal your weapon damage. If the discarded card is a [offensive], draw 1."
+      }
+    ],
+    "name": "Shimmering Star"
+  },
+  {
+    "element": "coral",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_tidalwaves_1.webp",
+        "id": "weapon-karah-tidal-waves-l1",
+        "level": 1,
+        "text": "When you chain a card, recycle 1."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_tidalwaves_2.webp",
+        "id": "weapon-karah-tidal-waves-l2",
+        "level": 2,
+        "text": "When you chain a card, remove 1 struggle or recycle 1."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_dual_blade/dual_blade_tidalwaves_3.webp",
+        "id": "weapon-karah-tidal-waves-l3",
+        "level": 3,
+        "text": "When you chain a card, remove 1 struggle or recycle 1.\nWhen you overrun the monster, heal 3 (max: once per round)."
+      }
+    ],
+    "name": "Tidal Waves"
+  },
+  {
+    "element": "feather",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 3
+        },
+        "file": "weapon_dual_blade/dual_blade_twinblade_1.webp",
+        "id": "weapon-karah-twinblade-l1",
+        "level": 1,
+        "text": "At the end of your action phase, Twinblade gets +1 damage if your sequence includes a card of each color (max: 4 times per game)."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 7,
+          "parry": 3
+        },
+        "file": "weapon_dual_blade/dual_blade_twinblade_2.webp",
+        "id": "weapon-karah-twinblade-l2",
+        "level": 2,
+        "text": "At the end of your action phase, Twinblade gets +2 damage if your sequence includes a card of each color (max: 3 times per game)."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 7,
+          "parry": 3
+        },
+        "file": "weapon_dual_blade/dual_blade_twinblade_3.webp",
+        "id": "weapon-karah-twinblade-l3",
+        "level": 3,
+        "text": "At the end of your action phase, Twinblade gets +3 damage if your sequence includes a card of each color (max: 5 times per game)."
+      }
+    ],
+    "name": "Twinblade"
+  },
+  {
+    "element": "venom",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_vipers_1.webp",
+        "id": "weapon-karah-vipers-l1",
+        "level": 1,
+        "text": "When the monster suffers damage during another player's turn, deal 2 damage if you assisted that player with a [offensive] that turn."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_vipers_2.webp",
+        "id": "weapon-karah-vipers-l2",
+        "level": 2,
+        "text": "When the monster suffers damage during another player's turn, deal 4 damage if you assisted that player with a [offensive] that turn."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_vipers_3.webp",
+        "id": "weapon-karah-vipers-l3",
+        "level": 3,
+        "text": "Setup: Place 4 counters on this card.\nWhen the monster suffers a wound, discard a counter from this card for each [attack] in your discard pile. Vipers gets +1 damage for each counter discarded this way.\nWhen the monster suffers damage during another player's turn, deal 4 damage if you assisted that player with a [offensive] that turn."
+      }
+    ],
+    "name": "Vipers"
+  },
+  {
+    "element": "thunder",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_dual_blade/dual_blade_voltrage_1.webp",
+        "id": "weapon-karah-voltrage-l1",
+        "level": 1,
+        "text": "When you overrun the monster, place a counter on this card. Voltrage has +4 damage for each counter on it.\n[attack]: Remove all counters from Voltrage after you inflict any weapon damage."
+      },
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_dual_blade/dual_blade_voltrage_2.webp",
+        "id": "weapon-karah-voltrage-l2",
+        "level": 2,
+        "text": "When you overrun the monster, place a counter on this card. Voltrage has +6 damage for each counter on it.\n[attack]: Remove all counters from Voltrage after you inflict any weapon damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_dual_blade/dual_blade_voltrage_3.webp",
+        "id": "weapon-karah-voltrage-l3",
+        "level": 3,
+        "text": "When you overrun the monster, place a counter on this card. Voltrage has +8 damage for each counter on it.\n[attack]: Remove all counters from Voltrage after you inflict any weapon damage."
+      }
+    ],
+    "name": "Voltrage"
+  },
+  {
+    "element": "metal",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_brasswall_1.webp",
+        "id": "weapon-ljonar-brass-wall-l1",
+        "level": 1,
+        "text": "Retaliate [maneuver]: Remove 1 struggle."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_brasswall_2.webp",
+        "id": "weapon-ljonar-brass-wall-l2",
+        "level": 2,
+        "text": "Retaliate [parry][maneuver]: Reduce the damage you suffered by 1 and remove 1 struggle.\nWhen another player in your sector would suffer attrition damage, you may suffer that damage instead."
+      },
+      {
+        "cost": {
+          "iride": 2
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_brasswall_3.webp",
+        "id": "weapon-ljonar-brass-wall-l3",
+        "level": 3,
+        "text": "Retaliate [maneuver]: Reduce the damage you suffered by 1 and remove 1 struggle.\nWhen another player in your sector would suffer attrition damage, you may suffer that damage instead."
+      }
+    ],
+    "name": "Brass Wall"
+  },
+  {
+    "element": "crystal",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "zima": 2
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_darkstone_shield_1.webp",
+        "id": "weapon-ljonar-darkstone-shield-l1",
+        "level": 1,
+        "text": "Retaliate [parry]: Reveal the top card of your deck. If that card is a [attack], deal 2 damage."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_darkstoneshield_2.webp",
+        "id": "weapon-ljonar-darkstone-shield-l2",
+        "level": 2,
+        "text": "Retaliate [parry]: Reveal the top card of your deck. If that card is a [attack], deal 2 damage.\nWhen another player would suffer attrition damage, they may reveal a card from their hand. If you are in the front sector, you may reveal a card of that same color from your hand to reduce the attrition damage by 2."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_darkstone_shield_3.webp",
+        "id": "weapon-ljonar-darkstone-shield-l3",
+        "level": 3,
+        "text": "Retaliate [parry]: Reveal the top card of your deck. If that card is a [offensive], deal 3 damage.\nWhen another player would suffer attrition damage, they may reveal a card from their hand. If you are in the front sector, you may reveal a card of that same color from your hand to reduce the attrition damage by 3."
+      }
+    ],
+    "name": "Darkstone Shield"
+  },
+  {
+    "element": "horn",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_hornwall_1.webp",
+        "id": "weapon-ljonar-horn-wall-l1",
+        "level": 1,
+        "text": "You may spend a stamina token to assist other players in your sector instead of discarding a card with the corresponding keyword."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_hornwall_2.webp",
+        "id": "weapon-ljonar-horn-wall-l2",
+        "level": 2,
+        "text": "You may spend a stamina token to assist other players or taunt the monster instead of discarding a card with the corresponding keyword."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 7
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_hornwall_3.webp",
+        "id": "weapon-ljonar-horn-wall-l3",
+        "level": 3,
+        "text": "[parry]: Remove 1 struggle.\nYou may spend a stamina token to assist other players or taunt the monster instead of discarding a card with the corresponding keyword."
+      }
+    ],
+    "name": "Horn Wall"
+  },
+  {
+    "element": "ice",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_icewall_1.webp",
+        "id": "weapon-ljonar-icewall-l1",
+        "level": 1,
+        "text": "Retaliate [parry][maneuver]: inflict slow."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_icewall_2.webp",
+        "id": "weapon-ljonar-icewall-l2",
+        "level": 2,
+        "text": "Retaliate [parry][maneuver]: Deal 2 damage and inflict slow."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_icewall_3.webp",
+        "id": "weapon-ljonar-icewall-l3",
+        "level": 3,
+        "text": "Retaliate [parry][maneuver]: Deal 3 damage and inflict slow.\nWhile the monster is slowed, Icewall has +2 damage."
+      }
+    ],
+    "name": "Icewall"
+  },
+  {
+    "element": "coral",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_ocean_shield_1.webp",
+        "id": "weapon-ljonar-ocean-shield-l1",
+        "level": 1,
+        "text": "[maneuver][attack]: Heal 1 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_ocean_shield_2.webp",
+        "id": "weapon-ljonar-ocean-shield-l2",
+        "level": 2,
+        "text": "[maneuver][attack]: Heal 2 (max: once per turn).\nStart: Search your discard pile for a card of your choice and place it on top of your deck."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_oceanshield_3.webp",
+        "id": "weapon-ljonar-ocean-shield-l3",
+        "level": 3,
+        "text": "[maneuver][attack]: Heal 3 (max: once per turn).\nStart: Search your discard pile for a card of your choice and add it to your hand."
+      }
+    ],
+    "name": "Ocean Shield"
+  },
+  {
+    "element": "venom",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_serpentshield_1.webp",
+        "id": "weapon-ljonar-serpent-shield-l1",
+        "level": 1,
+        "text": "Retaliate [attack]: Deal 1 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_serpentshield_2.webp",
+        "id": "weapon-ljonar-serpent-shield-l2",
+        "level": 2,
+        "text": "Retaliate [attack]: Deal 2 damage.\n[parry][attack]: Increase the damage the attack deals by 1 for each [attack] in your discard pile."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_serpent_shield_3.webp",
+        "id": "weapon-ljonar-serpent-shield-l3",
+        "level": 3,
+        "text": "Retaliate [attack]: Deal 3 damage.\n[parry][attack]: Increase the damage the attack deals by 2 for each [attack] in your discard pile. If this inflicts a wound, remove 2 struggle."
+      }
+    ],
+    "name": "Serpent Shield"
+  },
+  {
+    "element": "feather",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_shard_1.webp",
+        "id": "weapon-ljonar-shard-l1",
+        "level": 1,
+        "text": "When the monsters turns to your sector, draw 1 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_shard_2.webp",
+        "id": "weapon-ljonar-shard-l2",
+        "level": 2,
+        "text": "When another player plays a aggro card in their sequence, you may immediately move witouth pating any stamina cost (max: once per round).\nWhen the monsters turns to your sector, draw 1 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_shard_3.webp",
+        "id": "weapon-ljonar-shard-l3",
+        "level": 3,
+        "text": "When another player plays a aggro card in their sequence, you may immediately move witouth pating any stamina cost (max: once per round).\nWhen the monsters turns to your sector, draw up to your hand size limit (max: once per turn)."
+      }
+    ],
+    "name": "Shard"
+  },
+  {
+    "element": null,
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_sword_and_shield_1.webp",
+        "id": "weapon-ljonar-sword-and-shield-l1",
+        "level": 1,
+        "text": "[parry]: Remove 1 struggle"
+      }
+    ],
+    "name": "Sword and Shield"
+  },
+  {
+    "element": "thunder",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_thundercore_1.webp",
+        "id": "weapon-ljonar-thundercore-l1",
+        "level": 1,
+        "text": "Retaliate [parry]: Place a counter on this card.\n[parry][attack][attack]: Deal 1 damage for each counter on this card. Then discard all counters from this card."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_thundercore_2.webp",
+        "id": "weapon-ljonar-thundercore-l2",
+        "level": 2,
+        "text": "Retaliate [parry]: Place a counter on this card.\n[parry][attack][attack]: Deal 2 damage for each counter on this card. Then discard all counters from this card."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_thundercore_3.webp",
+        "id": "weapon-ljonar-thundercore-l3",
+        "level": 3,
+        "text": "Retaliate [parry]: Place a counter on this card.\n[parry][attack][attack]: Stun the monster and deal 3 damage for each counter on this card. Then discard all counters from this card."
+      }
+    ],
+    "name": "Thundercore"
+  },
+  {
+    "element": "fire",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_volcano_1.webp",
+        "id": "weapon-ljonar-volcano-l1",
+        "level": 1,
+        "text": "When a behavior card is revealed and you are in the front sector, you may suffer damage to cancel the effetcs of that card (max: once per round). If you do, the monster gains 1 struggle."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_volcano_2.webp",
+        "id": "weapon-ljonar-volcano-l2",
+        "level": 2,
+        "text": "Retaliate [dodge][attack]: Deal 3 damage\nWhen a behavior card is revealed and you are in the front sector, you may suffer damage to cancel the effetcs of that card (max: once per round). If you do, the monster gains 1 struggle."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_volcano_3.webp",
+        "id": "weapon-ljonar-volcano-l3",
+        "level": 3,
+        "text": "Retaliate [dodge][attack]: Deal 5 damage\nWhen a behavior card is revealed and you are in the front sector, you may suffer damage to cancel the effetcs of that card (max: once per round). If you do, the monster gains 1 struggle."
+      }
+    ],
+    "name": "Volcano"
+  },
+  {
+    "element": "coral",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_abyss_1.webp",
+        "id": "weapon-mirah-abyss-l1",
+        "level": 1,
+        "text": "When you discard a [attack] from your hand to generate stamina, heal 1 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_abyss_2.webp",
+        "id": "weapon-mirah-abyss-l2",
+        "level": 2,
+        "text": "Start: Recycle 1.\nWhen you discard a [attack] from your hand to generate stamina, heal 2 (max: once per turn)."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_abyss_3.webp",
+        "id": "weapon-mirah-abyss-l3",
+        "level": 3,
+        "text": "Start: Recycle 2.\nWhen you discard a [attack] from your hand to generate stamina, heal 3 (max: once per turn)."
+      }
+    ],
+    "name": "Abyss"
+  },
+  {
+    "element": "feather",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 3
+        },
+        "file": "weapon_bow/bow_airswan_1.webp",
+        "id": "weapon-mirah-airswan-l1",
+        "level": 1,
+        "text": "[maneuver][maneuver]: Draw 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 3
+        },
+        "file": "weapon_bow/bow_airswan_2.webp",
+        "id": "weapon-mirah-airswan-l2",
+        "level": 2,
+        "text": "[maneuver][maneuver]: Draw 1. The card you drew gains stealth until the end of this turn."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 3
+        },
+        "file": "weapon_bow/bow_airswan_3.webp",
+        "id": "weapon-mirah-airswan-l3",
+        "level": 3,
+        "text": "[maneuver][maneuver]: Draw 1. The card you drew gains stealth, and its stamina cost is reduced by 1 until the end of this turn."
+      }
+    ],
+    "name": "Airswan"
+  },
+  {
+    "element": "fire",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_ashbringer_1.webp",
+        "id": "weapon-mirah-ashbringer-l1",
+        "level": 1,
+        "text": "When you discard a [maneuver] from your hand, deal 2 damage."
+      },
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_ashbringer_2.webp",
+        "id": "weapon-mirah-ashbringer-l2",
+        "level": 2,
+        "text": "Start: Volley 1\nWhen you discard a [maneuver] from your hand, deal 3 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_ashbringer_3.webp",
+        "id": "weapon-mirah-ashbringer-l3",
+        "level": 3,
+        "text": "Start: Volley 2\nWhen you discard a [maneuver] from your hand, deal 5 damage."
+      }
+    ],
+    "name": "Ashbringer"
+  },
+  {
+    "element": "crystal",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_deathsparkle_1.webp",
+        "id": "weapon-mirah-death-sparkle-l1",
+        "level": 1,
+        "text": "When you play a card in your sequence, reveal the top card of your deck. If the color of that card matches the one you played, add it to your hand (max: once per turn)."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_deathsparkle_2.webp",
+        "id": "weapon-mirah-death-sparkle-l2",
+        "level": 2,
+        "text": "When you play a card in your sequence, reveal the top card of your deck. If the color of that card matches the one you played, add it to your hand (max: 2 times per turn)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_deathsparkle_3.webp",
+        "id": "weapon-mirah-death-sparkle-l3",
+        "level": 3,
+        "text": "When you play a card in your sequence, reveal the top card of your deck. If the color of that card matches the one you played, add it to your hand (max: 3 times per turn)."
+      }
+    ],
+    "name": "Death Sparkle"
+  },
+  {
+    "element": "base",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_bow/bow_greatbow_1.webp",
+        "id": "weapon-mirah-great-bow-l1",
+        "level": 1,
+        "text": "[attack]: Volley 1"
+      }
+    ],
+    "name": "Great Bow"
+  },
+  {
+    "element": "metal",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_ironbow_1.webp",
+        "id": "weapon-mirah-iron-bow-l1",
+        "level": 1,
+        "text": "[attack][attack]: Increase the damage the attack deals by 3."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_ironbow_2.webp",
+        "id": "weapon-mirah-iron-bow-l2",
+        "level": 2,
+        "text": "[attack][attack]: Gain a defense token and increase the damage the attack deals by 3."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_iron_bow_3.webp",
+        "id": "weapon-mirah-iron-bow-l3",
+        "level": 3,
+        "text": "[attack][attack]: Increase the damage the attack deals by 5.\nYou and the next player in turn order each gain a defense token."
+      }
+    ],
+    "name": "Iron Bow"
+  },
+  {
+    "element": "thunder",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_lightning_bow_1.webp",
+        "id": "weapon-mirah-lightning-bow-l1",
+        "level": 1,
+        "text": "Start: Place a counter on Lightning Bow for each [attack] in your hand.\nAt the end of the round, discard all counters from Lightning Bow and deal 1 damage for each counter discarded."
+      },
+      {
+        "cost": {
+          "iride": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_lightning_bow_2.webp",
+        "id": "weapon-mirah-lightning-bow-l2",
+        "level": 2,
+        "text": "Start: Place a counter on Lightning Bow for each [attack] in your hand.\nAt the end of the round, discard all counters from Lightning Bow and deal 2 damage for each counter discarded."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "zima": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_lightning_bow_3.webp",
+        "id": "weapon-mirah-lightning-bow-l3",
+        "level": 3,
+        "text": "Start: Place a counter on Lightning Bow for each [attack] in your hand.\nAt the end of the round, discard all counters from Lightning Bow and deal 3 damage for each counter discarded."
+      }
+    ],
+    "name": "Lightning Bow"
+  },
+  {
+    "element": "ice",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_northlaw_1.webp",
+        "id": "weapon-mirah-northlaw-l1",
+        "level": 1,
+        "text": "When you pay the stamina cost of a card with aim, you may increase that cost by 1. If you do, inflicts slow."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_northlaw_2.webp",
+        "id": "weapon-mirah-northlaw-l2",
+        "level": 2,
+        "text": "[maneuver][maneuver][maneuver]: Draw 1.\nWhen you pay the stamina cost of a card with aim, you may increase that cost by 1. If you do, inflicts slow."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "kobaureo": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_bow/bow_northlaw_3.webp",
+        "id": "weapon-mirah-northlaw-l3",
+        "level": 3,
+        "text": "[offensive][offensive][offensive]: Draw 1.\nWhen you pay the stamina cost of a card with aim, you may increase that cost by 1. If you do, inflicts slow."
+      }
+    ],
+    "name": "Northlaw"
+  },
+  {
+    "element": "venom",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_spider_needle_1.webp",
+        "id": "weapon-mirah-spider-needle-l1",
+        "level": 1,
+        "text": "Start: Volley 1."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_spiderneedle_2.webp",
+        "id": "weapon-mirah-spider-needle-l2",
+        "level": 2,
+        "text": "Start: Volley 2.\nWhen the monster suffers a wound, deal 2 damage for each [attack] in your discard pile."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_spiderneedle_3.webp",
+        "id": "weapon-mirah-spider-needle-l3",
+        "level": 3,
+        "text": "Start: Volley 3.\nWhen the monster suffers a wound, deal 3 damage for each [attack] in your discard pile."
+      }
+    ],
+    "name": "Spider Needle"
+  },
+  {
+    "element": "horn",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_tuskbow_1.webp",
+        "id": "weapon-mirah-tuskbow-l1",
+        "level": 1,
+        "text": "Increase your hand size limit by 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_tuskbow_2.webp",
+        "id": "weapon-mirah-tuskbow-l2",
+        "level": 2,
+        "text": "Increase your hand size limit by 1.\nStart: Recycle 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_bow/bow_tuskbow_3.webp",
+        "id": "weapon-mirah-tuskbow-l3",
+        "level": 3,
+        "text": "Increase your hand size limit by 1.\nStart: Recycle 2."
+      }
+    ],
+    "name": "Tuskbow"
+  },
+  {
+    "element": "fire",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_burningstone_1.webp",
+        "id": "weapon-thoreg-burning-stone-l1",
+        "level": 1,
+        "text": "[maneuver]: You may discard the top card of your deck. If that card is a [attack], you may add it to your hand."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_burningstone_2.webp",
+        "id": "weapon-thoreg-burning-stone-l2",
+        "level": 2,
+        "text": "[maneuver]: You may discard the top 2 cards of your deck. If you do, you may add any [attack] discarded this way to your hand."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_burningstone_3.webp",
+        "id": "weapon-thoreg-burning-stone-l3",
+        "level": 3,
+        "text": "When you pay the stamina cost of [attack], you may suffer 3 damage to reduce that cost by 2.\n[maneuver]: You may discard the top 2 cards of your deck. If you do, you may add any [attack] discarded this way to your hand."
+      }
+    ],
+    "name": "Burning Stone"
+  },
+  {
+    "element": "venom",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_dragon_bane_1.webp",
+        "id": "weapon-thoreg-dragon-bane-l1",
+        "level": 1,
+        "text": "[dodge][attack]: Increase the damage the attack deals by 1 for each [maneuver] in your discard pile."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_dragon_bane_2.webp",
+        "id": "weapon-thoreg-dragon-bane-l2",
+        "level": 2,
+        "text": "[dodge][attack]: Increase the damage the attack deals by 3 for each [maneuver] in your discard pile."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_dragonbane_3.webp",
+        "id": "weapon-thoreg-dragon-bane-l3",
+        "level": 3,
+        "text": "[dodge][attack]: Increase the damage the attack deals by 5 for each [maneuver] in your discard pile. If this inflicts a wound, stun the monster."
+      }
+    ],
+    "name": "Dragon Bane"
+  },
+  {
+    "element": "feather",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_earthshaker_1.webp",
+        "id": "weapon-thoreg-earthshaker-l1",
+        "level": 1,
+        "text": "Start: If you have 2 cards with impetus in your hand, draw 1."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 4,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_earthshaker_2.webp",
+        "id": "weapon-thoreg-earthshaker-l2",
+        "level": 2,
+        "text": "Start: If you have 2 cards with impetus in your hand, draw 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_earthshaker_3.webp",
+        "id": "weapon-thoreg-earthshaker-l3",
+        "level": 3,
+        "text": "[dodge][parry][attack][maneuver]: Deal 20 damage\nStart: If you have 2 cards with impetus in your hand, draw 1."
+      }
+    ],
+    "name": "Earthshaker"
+  },
+  {
+    "element": "ice",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_froljark_1.webp",
+        "id": "weapon-thoreg-froljark-l1",
+        "level": 1,
+        "text": "When you play a card with impetus, inflicts slow."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_froljark_2.webp",
+        "id": "weapon-thoreg-froljark-l2",
+        "level": 2,
+        "text": "When you play a card with impetus, inflicts slow.\nWhile the monster is slowed, the front side is considered to be exposed."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_froljark_3.webp",
+        "id": "weapon-thoreg-froljark-l3",
+        "level": 3,
+        "text": "When you play a card with impetus, inflicts slow.\nWhile the monster is slowed, the front side is considered to be exposed and Froljark has +2 damage."
+      }
+    ],
+    "name": "Froljark"
+  },
+  {
+    "element": "base",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 2,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_hammer/hammer_hammer_1.webp",
+        "id": "weapon-thoreg-hammer-l1",
+        "level": 1,
+        "text": "[maneuver]: If you are in the front sector, increase the struggle the maneuver removes by 1."
+      }
+    ],
+    "name": "Hammer"
+  },
+  {
+    "element": "crystal",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_radiantstone_1.webp",
+        "id": "weapon-thoreg-radiant-stone-l1",
+        "level": 1,
+        "text": "Start: You may reveal [maneuver][maneuver][maneuver] from your hand to place a counter on your mastery card."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_radiantstone_2.webp",
+        "id": "weapon-thoreg-radiant-stone-l2",
+        "level": 2,
+        "text": "Start: You may reveal [maneuver][maneuver][maneuver] from your hand to place a counter on your mastery card.\nWhile your mastery is focused, Radiant Stone has +1 damage."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_radiant_stone_3.webp",
+        "id": "weapon-thoreg-radiant-stone-l3",
+        "level": 3,
+        "text": "Start: You may reveal [maneuver][maneuver][maneuver] from your hand to place a counter on your mastery card.\nWhile your mastery is focused, Radiant Stone has +2 damage."
+      }
+    ],
+    "name": "Radiant Stone"
+  },
+  {
+    "element": "metal",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_rawstone_1.webp",
+        "id": "weapon-thoreg-rawstone-l1",
+        "level": 1,
+        "text": "When a behavior card is revealed and you are in the front sector, you may increase its boost cost by 1 (max: 1 per round)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_rawstone_2.webp",
+        "id": "weapon-thoreg-rawstone-l2",
+        "level": 2,
+        "text": "When you avoid attrition damage, deal 3 damage.\nWhen a behavior card is revealed and you are in the front sector, you may increase its boost cost by 1 (max: 1 per round)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": 9,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_rawstone_3.webp",
+        "id": "weapon-thoreg-rawstone-l3",
+        "level": 3,
+        "text": "When you avoid attrition damage, deal 5 damage.\nWhen a behavior card is revealed and you are in the front sector, you may increase its boost cost by 2 (max: 1 per round)."
+      }
+    ],
+    "name": "Rawstone"
+  },
+  {
+    "element": "horn",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_shellstone_1.webp",
+        "id": "weapon-thoreg-shellstone-l1",
+        "level": 1,
+        "text": "When you pay the stamina cost of [attack], you may increase the cost by 1 to remove 1 struggle (max: once per turn)."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_shellstone_2.webp",
+        "id": "weapon-thoreg-shellstone-l2",
+        "level": 2,
+        "text": "When you pay the stamina cost of [attack], you may increase the cost by 1 to remove 2 struggle (max: once per turn)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_hammer/hammer_shellstone_3.webp",
+        "id": "weapon-thoreg-shellstone-l3",
+        "level": 3,
+        "text": "When you pay the stamina cost of [attack], you may increase the cost by 1 to remove 2 struggle and confuse the monster (max: once per turn)."
+      }
+    ],
+    "name": "Shellstone"
+  },
+  {
+    "element": "thunder",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "damage": 4,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_skullshock_1.webp",
+        "id": "weapon-thoreg-skullshock-l1",
+        "level": 1,
+        "text": "[attack]: Place a counter on Skullshock (max: 3 counters).\nIf there are already 3 counters on Skullshock, stun the monster and remove all counters from it after the attack."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": 6,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_skullshock_2.webp",
+        "id": "weapon-thoreg-skullshock-l2",
+        "level": 2,
+        "text": "Skullshock has +1 damage for each counter on it.\n[attack]: Place a counter on Skullshock (max: 3 counters).\nIf there are already 3 counters on Skullshock, stun the monster and remove all counters from it after the attack."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": 8,
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 4,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_skullshock_3.webp",
+        "id": "weapon-thoreg-skullshock-l3",
+        "level": 3,
+        "text": "Skullshock has +2 damage for each counter on it.\n[attack]: Place a counter on Skullshock (max: 3 counters).\nIf there are already 3 counters on Skullshock, stun the monster and remove all counters from it after the attack."
+      }
+    ],
+    "name": "Skullshock"
+  },
+  {
+    "element": "coral",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 3,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_thyphoon_1.webp",
+        "id": "weapon-thoreg-thyphoon-l1",
+        "level": 1,
+        "text": "The stamina cost of the first [maneuver] you play each turn is reduced by 1."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": 5,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_thyphoon_2.webp",
+        "id": "weapon-thoreg-thyphoon-l2",
+        "level": 2,
+        "text": "The stamina cost of the first [maneuver] you play each turn is reduced by 1.\nWhile your mastery is focused, the stamina cost of the first [attack] you play each turn is reduced by 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": 7,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_hammer/hammer_thyphoon_3.webp",
+        "id": "weapon-thoreg-thyphoon-l3",
+        "level": 3,
+        "text": "The stamina cost of the first [maneuver] you play each turn is reduced by 1.\nWhile your mastery is focused, the stamina cost of the first [attack] you play each turn is reduced by 2."
+      }
+    ],
+    "name": "Thyphoon"
+  },
+  {
+    "element": "metal",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": [4, 9],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_spear/spear_arkenspike_1.webp",
+        "id": "weapon-zaraya-arkenspike-l1",
+        "level": 1,
+        "text": "*When you avoid attrition damage*, deal 1 damage for each [parry] in your sequence."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": [6, 20],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_spear/spear_arkenspike_2.webp",
+        "id": "weapon-zaraya-arkenspike-l2",
+        "level": 2,
+        "text": "*When you avoid attrition damage*, deal 2 damage for each [parry] in your sequence."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": [8, 30],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 6
+        },
+        "file": "weapon_spear/spear_arkenspike_3.webp",
+        "id": "weapon-zaraya-arkenspike-l3",
+        "level": 3,
+        "text": "While the top card of your discard pile has guard, any [claw] is reduced by 1.\n*When you avoid attrition damage*, deal 3 damage for each [parry] in your sequence."
+      }
+    ],
+    "name": "Arkenspike"
+  },
+  {
+    "element": "horn",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": [4, 12],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_bonepiercer_1.webp",
+        "id": "weapon-zaraya-bonepiercer-l1",
+        "level": 1,
+        "text": "While your pierce level is 2 or higher, your hand size limit is increased by 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "damage": [5, 30],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_bonepiercer_2.webp",
+        "id": "weapon-zaraya-bonepiercer-l2",
+        "level": 2,
+        "text": "Increase your hand size limit by 1.\nWhile you are in the front sector, you may spend [stamina] to guard another player instead of discarding a card with the corresponding keyword."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "damage": [7, 40],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_bonepiercer_3.webp",
+        "id": "weapon-zaraya-bonepiercer-l3",
+        "level": 3,
+        "text": "Increase your hand size limit by 1.\nWhile you are in the front sector, you may spend [stamina] to guard another player instead of discarding a card with the corresponding keyword. If you do, increase your pierce level by 1."
+      }
+    ],
+    "name": "Bonepiercer"
+  },
+  {
+    "element": "venom",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": [3, 12],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_deathspear_1.webp",
+        "id": "weapon-zaraya-deathspear-l1",
+        "level": 1,
+        "text": "*When you discard a card with guard from your hand*, deal 1 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "damage": [5, 25],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_deathspear_2.webp",
+        "id": "weapon-zaraya-deathspear-l2",
+        "level": 2,
+        "text": "*When you discard a card with guard from your hand*, deal 2 damage."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "iride": 1
+        },
+        "damage": [7, 35],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 5,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_deathspear_3.webp",
+        "id": "weapon-zaraya-deathspear-l3",
+        "level": 3,
+        "text": "When you discard a card with guard from your hand, deal 3 damage."
+      }
+    ],
+    "name": "Deathspear"
+  },
+  {
+    "element": "base",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": null,
+        "damage": [2, 9],
+        "deckComposition": {
+          "attack": 6,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_spear/spear_greatspear_1.webp",
+        "id": "weapon-zaraya-greatspear-l1",
+        "level": 1,
+        "text": "*When you move*, deal 1 damage (max once per round)."
+      }
+    ],
+    "name": "Greatspear"
+  },
+  {
+    "element": "feather",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "damage": [3, 9],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_junglefang_1.webp",
+        "id": "weapon-zaraya-junglefang-l1",
+        "level": 1,
+        "text": "*When you move*, deal 1 damage."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": [5, 15],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_junglefang_2.webp",
+        "id": "weapon-zaraya-junglefang-l2",
+        "level": 2,
+        "text": "*When you move*, deal 2 damage. If you are the aggro player, deal 3 damage instead."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": [7, 20],
+        "deckComposition": {
+          "attack": 4,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_junglefang_3.webp",
+        "id": "weapon-zaraya-junglefang-l3",
+        "level": 3,
+        "text": "*When you move*, deal 3 damage. If you are the aggro player, deal 4 damage instead."
+      }
+    ],
+    "name": "Junglefang"
+  },
+  {
+    "element": "fire",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": [4, 12],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_moltenshard_1.webp",
+        "id": "weapon-zaraya-moltenshard-l1",
+        "level": 1,
+        "text": "[attack]: Increase the damage the attack deals by 1 for each other [attack] in your sequence."
+      },
+      {
+        "cost": {
+          "scales": 2
+        },
+        "damage": [5, 25],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_moltenshard_2.webp",
+        "id": "weapon-zaraya-moltenshard-l2",
+        "level": 2,
+        "text": "[attack]: Increase the damage the attack deals by 1 for each other [offensive] in your sequence."
+      },
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": [7, 35],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 6,
+          "maneuver": 6,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_moltenshard_3.webp",
+        "id": "weapon-zaraya-moltenshard-l3",
+        "level": 3,
+        "text": "*Start*: You may discard up to 4 cards from the top of your deck. Moltenshard gains +1 damage for each [attack] discarded this way until the end of this turn. [attack]: Increase the damage the attack deals by 2 for each other [offensive] in your sequence."
+      }
+    ],
+    "name": "Moltenshard"
+  },
+  {
+    "element": "crystal",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": [4, 12],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_starlance_1.webp",
+        "id": "weapon-zaraya-starlance-l1",
+        "level": 1,
+        "text": "*Start*: You may reveal 3 or more cards of the same color from your hand. If you do, increase your pierce level by 1."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": [6, 25],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_starlance_2.webp",
+        "id": "weapon-zaraya-starlance-l2",
+        "level": 2,
+        "text": "*Start*: You may reveal 3 or more cards of the same color from your hand. If you do, increase your pierce level by 1.\n[maneuver][maneuver]: Remove 1 struggle."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "damage": [9, 35],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_starlance_3.webp",
+        "id": "weapon-zaraya-starlance-l3",
+        "level": 3,
+        "text": "*Start*: You may reveal 3 or more cards of the same color from your hand. If you do, increase your pierce level by 1.\n[offensive][offensive]: Remove 1 struggle."
+      }
+    ],
+    "name": "Starlance"
+  },
+  {
+    "element": "thunder",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "damage": [4, 9],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_thunderspike_1.webp",
+        "id": "weapon-zaraya-thunderspike-l1",
+        "level": 1,
+        "text": "*When you move during your action phase*, place a counter on Thunderspike.\n[attack][attack]: If there are 3 or more counters on Thunderspike, increase the damage the attack deals by 2 and then remove all counters."
+      },
+      {
+        "cost": {
+          "blood": 2
+        },
+        "damage": [6, 20],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_thunderspike_2.webp",
+        "id": "weapon-zaraya-thunderspike-l2",
+        "level": 2,
+        "text": "*When you move during your action phase*, place a counter on Thunderspike.\n[attack][attack]: If there are 3 or more counters on Thunderspike, increase the damage the attack deals by 6 and then remove all counters."
+      },
+      {
+        "cost": {
+          "scales": 2
+        },
+        "damage": [8, 30],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_thunderspike_3.webp",
+        "id": "weapon-zaraya-thunderspike-l3",
+        "level": 3,
+        "text": "*When you move during your action phase*, place a counter on Thunderspike.\n[attack][attack]: If there are 3 or more counters on Thunderspike, increase the damage the attack deals by 10 and then remove all counters."
+      }
+    ],
+    "name": "Thunderspike"
+  },
+  {
+    "element": "coral",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "damage": [3, 12],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_spear/spear_tidespear_1.webp",
+        "id": "weapon-zaraya-tidespear-l1",
+        "level": 1,
+        "text": "*When you reclaim a [maneuver]*, heal 1 (max 1 per round)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "damage": [5, 25],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_spear/spear_tidespear_2.webp",
+        "id": "weapon-zaraya-tidespear-l2",
+        "level": 2,
+        "text": "*Action*: Recycle 1.\nWhen you reclaim a [maneuver], heal 1 (max 2 per round)."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "damage": [7, 35],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 4,
+          "maneuver": 6,
+          "parry": 6
+        },
+        "file": "weapon_spear/spear_tidespear_3.webp",
+        "id": "weapon-zaraya-tidespear-l3",
+        "level": 3,
+        "text": "*Action*: Recycle 2.\nWhen you reclaim a [maneuver], heal 1 (max 3 per round)."
+      }
+    ],
+    "name": "Tidespear"
+  },
+  {
+    "element": "ice",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "iride": 1
+        },
+        "damage": [4, 12],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_winterlance_1.webp",
+        "id": "weapon-zaraya-winterlance-l1",
+        "level": 1,
+        "text": "When you play a [maneuver], that card gains \"Opening: Inflict slow\".\n[stamina][stamina]: If the monster is slowed, increase the damage the attack deals by 4."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "kobaureo": 1
+        },
+        "damage": [6, 25],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_winterlance_2.webp",
+        "id": "weapon-zaraya-winterlance-l2",
+        "level": 2,
+        "text": "When you play a [maneuver], that card gains \"Opening: Inflict slow\".\n[maneuver][attack]: If the monster is slowed, increase the damage the attack deals by 6."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "kobaureo": 1
+        },
+        "damage": [9, 35],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 6,
+          "parry": 4
+        },
+        "file": "weapon_spear/spear_winter_lance_3.webp",
+        "id": "weapon-zaraya-winterlance-l3",
+        "level": 3,
+        "text": "*When you play a [maneuver], that card gains \"Opening: Inflict slow\".\n[maneuver][attack]: If the monster is slowed, increase the damage the attack deals by 9."
+      }
+    ],
+    "name": "Winter Lance"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_ancient_sword_3.webp",
+        "id": "weapon-daeron-ancient-sword-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\n[attack]: Deal 5 damage and look at a behavior card in play. If that card is an instinct card associated with the monster you named, you may remove it from the game and replenish its behavior slot."
+      }
+    ],
+    "name": "Ancient Sword"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "daeron",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_great_sword/great_sword_celestial_sword_3.webp",
+        "id": "weapon-daeron-celestial-sword-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, heal 2 or draw 1.\nWhen you enter the berserker state, choose another player in your sector. That player’s weapon gets +2 damage until the end of the round. If the storm level is 6 or more, that weapon gets +4 damage instead."
+      }
+    ],
+    "name": "Celestial Sword"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_ancientdrum_3.webp",
+        "id": "weapon-drusk-ancient-drum-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\n[rhythm]: Choose another player to draw 1 and then look at a behavior card in play. If that card is an instinct card associated with the monster you named, you may remove it from the game and replenish its behavior slot."
+      }
+    ],
+    "name": "Ancient Drum"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "drusk",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_drum/drum_celestialdrum_3.webp",
+        "id": "weapon-drusk-celestial-drum-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, increase your rhythm level by 1.\n[rhythm]: Choose a player to heal 2 and flip a ballista to its loaded state."
+      }
+    ],
+    "name": "Celestial Drum"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_ancientgunbow_3.webp",
+        "id": "weapon-heleren-ancient-gunbow-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\nIgnite: Deal 7 damage and look at a behavior card in play. If that card is an instinct card associated with the monster you named, you may remove that card from the game and replenish its behavior slot."
+      }
+    ],
+    "name": "Ancient Gunbow"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "heleren",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_gunbow/gunbow_celestialgunbow_3.webp",
+        "id": "weapon-heleren-celestial-gunbow-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, heal 2 or draw 1.\nWhen you reload, flip a ballista to its loaded state.\nIgnite: Choose a ballista that targets your sector and immediately activate it (max: once per round)."
+      }
+    ],
+    "name": "Celestial Gunbow"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_ancientblades_3.webp",
+        "id": "weapon-karah-ancient-blades-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\nWhen you overrun the Awakened, deal 7 damage and look at a behavior card in play. If that card is an instinct card associated with the monster you named, you may remove that card from the game and replenish its behavior slot."
+      }
+    ],
+    "name": "Ancient Blades"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "karah",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_dual_blade/dual_blade_celestialblades_3.webp",
+        "id": "weapon-karah-celestial-blades-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, heal 2 or draw 1.\nWhen you trigger battle dance, Celestial Blades gets +X damage until the end of the turn where X is the current stance number."
+      }
+    ],
+    "name": "Celestial Blades"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_ancientshield_3.webp",
+        "id": "weapon-ljonar-ancient-shield-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\nRetaliate [parry]: Deal 3 damage. Then search the behavior discard pile for an instinct card associated with the monster you named. Remove that card from the game."
+      }
+    ],
+    "name": "Ancient Shield"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "ljonar",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_sword_and_shield/sword_and_shield_celestialshield_3.webp",
+        "id": "weapon-ljonar-celestial-shield-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, heal 2 or draw 1.\nWhen the storm level increases, choose a player in your sector to gain a defense token."
+      }
+    ],
+    "name": "Celestial Shield"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_ancient_bow_3.webp",
+        "id": "weapon-mirah-ancient-bow-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\n[attack]: Deal 7 damage and look at a behavior card in play. If that card is an instinct card associated with the monster you named, you may remove it from the game and replenish its behavior slot."
+      }
+    ],
+    "name": "Ancient Bow"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "mirah",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_bow/bow_celestial_bow_3.webp",
+        "id": "weapon-mirah-celestial-bow-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, heal 2 or draw 1.\nWhen a ballista deals damage to the Awakened, perform volley 2.\n[attack]: Choose a ballista and increase the damage it deals this round by 5 (max: once per ballista per round)."
+      }
+    ],
+    "name": "Celestial Bow"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_ancienthammer_3.webp",
+        "id": "weapon-thoreg-ancient-hammer-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\nWhen you stun the Awakened, deal 7 damage and look at a behavior card in play. If that card is an instinct card associated with the monster you named, you may remove it from the game and replenish its behavior slot."
+      }
+    ],
+    "name": "Ancient Hammer"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "thoreg",
+    "levels": [
+      {
+        "cost": null,
+        "damage": 10,
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_hammer/hammer_celestialhammer_3.webp",
+        "id": "weapon-thoreg-celestial-hammer-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, heal 2 or draw 1.\nWhen the storm level increases, confuse the monster. If the storm level is 6 or higher, stun the monster instead."
+      }
+    ],
+    "name": "Celestial Hammer"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": null,
+        "damage": [11, 50],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_ancientspear_3.webp",
+        "id": "weapon-zaraya-ancient-spear-l3",
+        "level": 3,
+        "text": "Legendary.\nSetup: Name a monster from among your campaign trophies.\nWhen you deal your piercing damage, look at a behavior card in play. If that card is an instinct card associated with the monster you named, you may remove it from the game and replenish its behavior slot."
+      }
+    ],
+    "name": "Ancient Spear"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "expansionId": "core",
+    "hunter": "zaraya",
+    "levels": [
+      {
+        "cost": null,
+        "damage": [6, 30],
+        "deckComposition": {
+          "attack": 5,
+          "dodge": 5,
+          "maneuver": 5,
+          "parry": 5
+        },
+        "file": "weapon_spear/spear_celestialspear_3.webp",
+        "id": "weapon-zaraya-celestial-spear-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen a stance card is revealed, heal 2 or draw 1.\nWhen the storm level increases, Celestial Spear gets +1 damage."
+      }
+    ],
+    "name": "Celestial Spear"
+  }
+]

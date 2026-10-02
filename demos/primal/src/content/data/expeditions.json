@@ -1,0 +1,2762 @@
+[
+  {
+    "expansionId": "core",
+    "id": "vyraxen-expedition-1",
+    "monsterId": "vyraxen",
+    "number": 1,
+    "rulebookPage": 67,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "cyricae"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "vyraxen-expedition-2",
+    "monsterId": "vyraxen",
+    "number": 2,
+    "rulebookPage": 67,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "kharja-expedition-1",
+    "monsterId": "kharja",
+    "number": 1,
+    "rulebookPage": 68,
+    "specialRules": ["kharja-damaged-sectors"],
+    "terrain": [
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "kharja-expedition-2",
+    "monsterId": "kharja",
+    "number": 2,
+    "rulebookPage": 68,
+    "specialRules": ["kharja-damaged-sectors"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "cyricae"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "toramat-expedition-1",
+    "monsterId": "toramat",
+    "number": 1,
+    "rulebookPage": 69,
+    "specialRules": [
+      "toramat-behavior-deck-setup",
+      "toramat-dust-tokens",
+      "toramat-special-attrition-cards",
+      "toramat-hardening-track"
+    ],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "toramat-expedition-2",
+    "monsterId": "toramat",
+    "number": 2,
+    "rulebookPage": 70,
+    "specialRules": [
+      "toramat-behavior-deck-setup",
+      "toramat-dust-tokens",
+      "toramat-special-attrition-cards",
+      "toramat-hardening-track"
+    ],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "dygorax-expedition-1",
+    "monsterId": "dygorax",
+    "number": 1,
+    "rulebookPage": 70,
+    "specialRules": ["dygorax-dust-tokens", "dygorax-hardening-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "dygorax-expedition-2",
+    "monsterId": "dygorax",
+    "number": 2,
+    "rulebookPage": 71,
+    "specialRules": ["dygorax-dust-tokens", "dygorax-hardening-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "korowon-expedition-1",
+    "monsterId": "korowon",
+    "number": 1,
+    "rulebookPage": 72,
+    "specialRules": ["korowon-water-cycle"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "korowon-expedition-2",
+    "monsterId": "korowon",
+    "number": 2,
+    "rulebookPage": 72,
+    "specialRules": ["korowon-water-cycle"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "front",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "synaerea"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "orouxen-expedition-1",
+    "monsterId": "orouxen",
+    "number": 1,
+    "rulebookPage": 73,
+    "specialRules": ["orouxen-debility-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "orouxen-expedition-2",
+    "monsterId": "orouxen",
+    "number": 2,
+    "rulebookPage": 73,
+    "specialRules": ["orouxen-debility-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "front",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "felaxir-expedition-1",
+    "monsterId": "felaxir",
+    "number": 1,
+    "rulebookPage": 74,
+    "specialRules": ["felaxir-special-attrition-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "felaxir-expedition-2",
+    "monsterId": "felaxir",
+    "number": 2,
+    "rulebookPage": 74,
+    "specialRules": ["felaxir-special-attrition-cards"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "morkraas-expedition-1",
+    "monsterId": "morkraas",
+    "number": 1,
+    "rulebookPage": 75,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "morkraas-expedition-2",
+    "monsterId": "morkraas",
+    "number": 2,
+    "rulebookPage": 75,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "ozew-expedition-1",
+    "monsterId": "ozew",
+    "number": 1,
+    "rulebookPage": 76,
+    "specialRules": ["ozew-behavior-deck-setup", "ozew-swarm-deck-setup", "ozew-rumble-deck-setup"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "ozew-expedition-2",
+    "monsterId": "ozew",
+    "number": 2,
+    "rulebookPage": 76,
+    "specialRules": ["ozew-behavior-deck-setup", "ozew-swarm-deck-setup", "ozew-rumble-deck-setup"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "jekoros-expedition-1",
+    "monsterId": "jekoros",
+    "number": 1,
+    "rulebookPage": 77,
+    "specialRules": ["jekoros-charge-track", "jekoros-special-attrition-cards"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "jekoros-expedition-2",
+    "monsterId": "jekoros",
+    "number": 2,
+    "rulebookPage": 77,
+    "specialRules": ["jekoros-charge-track", "jekoros-special-attrition-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "hurom-expedition-1",
+    "monsterId": "hurom",
+    "number": 1,
+    "rulebookPage": 78,
+    "specialRules": ["hurom-arkeum-tokens"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "hurom-expedition-2",
+    "monsterId": "hurom",
+    "number": 2,
+    "rulebookPage": 78,
+    "specialRules": ["hurom-arkeum-tokens"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "tarragua-expedition-1",
+    "monsterId": "tarragua",
+    "number": 1,
+    "rulebookPage": 79,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      }
+    ]
+  },
+  {
+    "expansionId": "core",
+    "id": "tarragua-expedition-2",
+    "monsterId": "tarragua",
+    "number": 2,
+    "rulebookPage": 79,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "feather",
+    "id": "pazis-expedition-1",
+    "monsterId": "pazis",
+    "number": 1,
+    "rulebookPage": 4,
+    "specialRules": ["pazis-paralyzing-spore-cards", "pazis-special-behavior-deck-setup"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "jungle-brush"
+      }
+    ]
+  },
+  {
+    "expansionId": "feather",
+    "id": "pazis-expedition-2",
+    "monsterId": "pazis",
+    "number": 2,
+    "rulebookPage": 4,
+    "specialRules": ["pazis-paralyzing-spore-cards", "pazis-special-behavior-deck-setup"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "feather",
+    "id": "nagarjas-expedition-1",
+    "monsterId": "nagarjas",
+    "number": 1,
+    "rulebookPage": 4,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "jungle-brush"
+      }
+    ]
+  },
+  {
+    "expansionId": "feather",
+    "id": "nagarjas-expedition-2",
+    "monsterId": "nagarjas",
+    "number": 2,
+    "rulebookPage": 4,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "front",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "ice",
+    "id": "sirkaaj-expedition-1",
+    "monsterId": "sirkaaj",
+    "number": 1,
+    "rulebookPage": 4,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      }
+    ]
+  },
+  {
+    "expansionId": "ice",
+    "id": "sirkaaj-expedition-2",
+    "monsterId": "sirkaaj",
+    "number": 2,
+    "rulebookPage": 4,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      }
+    ]
+  },
+  {
+    "expansionId": "ice",
+    "id": "mamuraak-expedition-1",
+    "monsterId": "mamuraak",
+    "number": 1,
+    "rulebookPage": 4,
+    "specialRules": ["mamuraak-glaciation-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      }
+    ]
+  },
+  {
+    "expansionId": "ice",
+    "id": "mamuraak-expedition-2",
+    "monsterId": "mamuraak",
+    "number": 2,
+    "rulebookPage": 4,
+    "specialRules": ["mamuraak-glaciation-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      }
+    ]
+  },
+  {
+    "expansionId": "venom",
+    "id": "hydar-expedition-1",
+    "monsterId": "hydar",
+    "number": 1,
+    "rulebookPage": 4,
+    "specialRules": ["hydar-venom-cards", "hydar-thornvine-tokens"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "front",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "venom",
+    "id": "hydar-expedition-2",
+    "monsterId": "hydar",
+    "number": 2,
+    "rulebookPage": 4,
+    "specialRules": ["hydar-venom-cards", "hydar-thornvine-tokens"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "front",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "swamp"
+      }
+    ]
+  },
+  {
+    "expansionId": "venom",
+    "id": "reikal-expedition-1",
+    "monsterId": "reikal",
+    "number": 1,
+    "rulebookPage": 4,
+    "specialRules": ["reikal-venom-cards", "reikal-venomous-serpent-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "swamp"
+      }
+    ]
+  },
+  {
+    "expansionId": "venom",
+    "id": "reikal-expedition-2",
+    "monsterId": "reikal",
+    "number": 2,
+    "rulebookPage": 4,
+    "specialRules": ["reikal-venom-cards", "reikal-venomous-serpent-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "synaerea"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "taraska-expedition-1",
+    "monsterId": "taraska",
+    "number": 1,
+    "rulebookPage": 6,
+    "specialRules": ["taraska-special-attrition-cards", "taraska-lava-diagram"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "taraska-expedition-2",
+    "monsterId": "taraska",
+    "number": 2,
+    "rulebookPage": 6,
+    "specialRules": ["taraska-special-attrition-cards", "taraska-lava-diagram"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "zekath-expedition-1",
+    "monsterId": "zekath",
+    "number": 1,
+    "rulebookPage": 6,
+    "specialRules": ["zekath-special-peril-cards", "zekath-vibration-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "zekath-expedition-2",
+    "monsterId": "zekath",
+    "number": 2,
+    "rulebookPage": 6,
+    "specialRules": ["zekath-special-peril-cards", "zekath-vibration-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "zekalith-expedition-1",
+    "monsterId": "zekalith",
+    "number": 1,
+    "rulebookPage": 6,
+    "specialRules": ["zekalith-special-peril-cards", "zekalith-vibration-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "zekalith-expedition-2",
+    "monsterId": "zekalith",
+    "number": 2,
+    "rulebookPage": 6,
+    "specialRules": ["zekalith-special-peril-cards", "zekalith-vibration-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "xitheros-expedition-1",
+    "monsterId": "xitheros",
+    "number": 1,
+    "rulebookPage": 7,
+    "specialRules": ["xitheros-bleeding-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "front",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "nightmare",
+    "id": "xitheros-expedition-2",
+    "monsterId": "xitheros",
+    "number": 2,
+    "rulebookPage": 7,
+    "specialRules": ["xitheros-bleeding-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "dygorax-biome-endless-swamp-expedition-1",
+    "monsterId": "dygorax",
+    "number": 1,
+    "rulebookPage": 10,
+    "specialRules": ["dygorax-dust-tokens", "dygorax-hardening-track", "endless-swamp-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "dygorax-biome-endless-swamp-expedition-2",
+    "monsterId": "dygorax",
+    "number": 2,
+    "rulebookPage": 10,
+    "specialRules": ["dygorax-dust-tokens", "dygorax-hardening-track", "endless-swamp-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "hydar-biome-nightmare-expedition-1",
+    "monsterId": "hydar",
+    "number": 1,
+    "rulebookPage": 9,
+    "specialRules": ["hydar-venom-cards", "hydar-thornvine-tokens", "nightmare-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "hydar-biome-nightmare-expedition-2",
+    "monsterId": "hydar",
+    "number": 2,
+    "rulebookPage": 9,
+    "specialRules": ["hydar-venom-cards", "hydar-thornvine-tokens", "nightmare-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "brush"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "reikal-biome-nightmare-expedition-1",
+    "monsterId": "reikal",
+    "number": 1,
+    "rulebookPage": 10,
+    "specialRules": ["reikal-venom-cards", "reikal-venomous-serpent-cards", "nightmare-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "fog"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "reikal-biome-nightmare-expedition-2",
+    "monsterId": "reikal",
+    "number": 2,
+    "rulebookPage": 10,
+    "specialRules": ["reikal-venom-cards", "reikal-venomous-serpent-cards", "nightmare-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "swamp"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "swamp"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "hurom-biome-goldarks-expedition-1",
+    "monsterId": "hurom",
+    "number": 1,
+    "rulebookPage": 7,
+    "specialRules": ["hurom-arkeum-tokens", "goldarks-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "hurom-biome-goldarks-expedition-2",
+    "monsterId": "hurom",
+    "number": 2,
+    "rulebookPage": 7,
+    "specialRules": ["hurom-arkeum-tokens", "goldarks-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "ozew-biome-thunder-mountains-expedition-1",
+    "monsterId": "ozew",
+    "number": 1,
+    "rulebookPage": 10,
+    "specialRules": [
+      "ozew-behavior-deck-setup",
+      "ozew-swarm-deck-setup",
+      "ozew-rumble-deck-setup",
+      "thunder-mountains-biome"
+    ],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "brush"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "ozew-biome-thunder-mountains-expedition-2",
+    "monsterId": "ozew",
+    "number": 2,
+    "rulebookPage": 10,
+    "specialRules": [
+      "ozew-behavior-deck-setup",
+      "ozew-swarm-deck-setup",
+      "ozew-rumble-deck-setup",
+      "thunder-mountains-biome"
+    ],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "fog"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "dygorax-biome-niz-maraga-expedition-1",
+    "monsterId": "dygorax",
+    "number": 1,
+    "rulebookPage": 8,
+    "specialRules": ["dygorax-dust-tokens", "dygorax-hardening-track", "niz-maraga-biome"],
+    "terrain": [
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "dygorax-biome-niz-maraga-expedition-2",
+    "monsterId": "dygorax",
+    "number": 2,
+    "rulebookPage": 8,
+    "specialRules": ["dygorax-dust-tokens", "dygorax-hardening-track", "niz-maraga-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "nagarjas-biome-sunset-plains-expedition-1",
+    "monsterId": "nagarjas",
+    "number": 1,
+    "rulebookPage": 10,
+    "specialRules": ["sunset-plains-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "brush"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "nagarjas-biome-sunset-plains-expedition-2",
+    "monsterId": "nagarjas",
+    "number": 2,
+    "rulebookPage": 10,
+    "specialRules": ["sunset-plains-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "mamuraak-biome-frozen-wastes-expedition-1",
+    "monsterId": "mamuraak",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["mamuraak-glaciation-track", "frozen-wastes-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "mamuraak-biome-frozen-wastes-expedition-2",
+    "monsterId": "mamuraak",
+    "number": 2,
+    "rulebookPage": 11,
+    "specialRules": ["mamuraak-glaciation-track", "frozen-wastes-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "taraska-biome-woltyar-expedition-1",
+    "monsterId": "taraska",
+    "number": 1,
+    "rulebookPage": 9,
+    "specialRules": ["taraska-special-attrition-cards", "taraska-lava-diagram", "woltyar-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "taraska-biome-woltyar-expedition-2",
+    "monsterId": "taraska",
+    "number": 2,
+    "rulebookPage": 9,
+    "specialRules": ["taraska-special-attrition-cards", "taraska-lava-diagram", "woltyar-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "fire"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "vyraxen-biome-woltyar-expedition-1",
+    "monsterId": "vyraxen",
+    "number": 1,
+    "rulebookPage": 7,
+    "specialRules": ["woltyar-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "vyraxen-biome-woltyar-expedition-2",
+    "monsterId": "vyraxen",
+    "number": 2,
+    "rulebookPage": 7,
+    "specialRules": ["woltyar-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "fire"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "korowon-biome-flooded-wilds-expedition-1",
+    "monsterId": "korowon",
+    "number": 1,
+    "rulebookPage": 9,
+    "specialRules": ["korowon-water-cycle", "flooded-wilds-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "deep-water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "deep-water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "plateau"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "korowon-biome-flooded-wilds-expedition-2",
+    "monsterId": "korowon",
+    "number": 2,
+    "rulebookPage": 9,
+    "specialRules": ["korowon-water-cycle", "flooded-wilds-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "deep-water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "deep-water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "plateau"
+      }
+    ]
+  },
+  {
+    "expansionId": "mount-havoc",
+    "id": "dygorax-mount-havoc-expedition-1",
+    "monsterId": "dygorax",
+    "number": 1,
+    "rulebookPage": 26,
+    "specialRules": ["dygorax-dust-tokens", "dygorax-hardening-track"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "mount-havoc",
+    "id": "morkraas-mount-havoc-expedition-1",
+    "monsterId": "morkraas",
+    "number": 1,
+    "rulebookPage": 29,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "cyricae"
+      }
+    ]
+  },
+  {
+    "expansionId": "mount-havoc",
+    "id": "orouxen-mount-havoc-expedition-1",
+    "monsterId": "orouxen",
+    "number": 1,
+    "rulebookPage": 29,
+    "specialRules": ["orouxen-debility-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "mount-havoc",
+    "id": "tarragua-mount-havoc-expedition-1",
+    "monsterId": "tarragua",
+    "number": 1,
+    "rulebookPage": 31,
+    "specialRules": [],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "plateau"
+      }
+    ]
+  },
+  {
+    "expansionId": "mount-havoc",
+    "id": "jekoros-mount-havoc-expedition-1",
+    "monsterId": "jekoros",
+    "number": 1,
+    "rulebookPage": 31,
+    "specialRules": ["jekoros-charge-track", "jekoros-special-attrition-cards"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "cyricae"
+      }
+    ]
+  },
+  {
+    "expansionId": "mount-havoc",
+    "id": "kharja-mount-havoc-expedition-1",
+    "monsterId": "kharja",
+    "number": 1,
+    "rulebookPage": 26,
+    "specialRules": ["kharja-damaged-sectors"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "xitheros-biome-sunset-plains-expedition-1",
+    "monsterId": "xitheros",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["xitheros-bleeding-cards", "sunset-plains-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "xitheros-biome-sunset-plains-expedition-2",
+    "monsterId": "xitheros",
+    "number": 2,
+    "rulebookPage": 11,
+    "specialRules": ["xitheros-bleeding-cards", "sunset-plains-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "wildmaw"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "wildmaw"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "zekalith-biome-thunder-mountains-expedition-1",
+    "monsterId": "zekalith",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["zekalith-special-peril-cards", "zekalith-vibration-track", "thunder-mountains-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "fog"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "zekath-biome-thunder-mountains-expedition-1",
+    "monsterId": "zekath",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["zekath-special-peril-cards", "zekath-vibration-track", "thunder-mountains-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "front",
+        "terrainId": "water"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "vyraxen-biome-endless-swamp-expedition-1",
+    "monsterId": "vyraxen",
+    "number": 1,
+    "rulebookPage": 7,
+    "specialRules": ["endless-swamp-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-endless-swamp-nightmare",
+    "id": "vyraxen-biome-endless-swamp-expedition-2",
+    "monsterId": "vyraxen",
+    "number": 2,
+    "rulebookPage": 7,
+    "specialRules": ["endless-swamp-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "tarragua-biome-goldarks-expedition-1",
+    "monsterId": "tarragua",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["goldarks-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "plateau"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "tarragua-biome-goldarks-expedition-2",
+    "monsterId": "tarragua",
+    "number": 2,
+    "rulebookPage": 11,
+    "specialRules": ["goldarks-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "fog"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "jekoros-biome-goldarks-expedition-1",
+    "monsterId": "jekoros",
+    "number": 1,
+    "rulebookPage": 12,
+    "specialRules": ["jekoros-charge-track", "jekoros-special-attrition-cards", "goldarks-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-goldarks-thunder-mountains",
+    "id": "jekoros-biome-goldarks-expedition-2",
+    "monsterId": "jekoros",
+    "number": 2,
+    "rulebookPage": 12,
+    "specialRules": ["jekoros-charge-track", "jekoros-special-attrition-cards", "goldarks-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "toramat-biome-niz-maraga-expedition-1",
+    "monsterId": "toramat",
+    "number": 1,
+    "rulebookPage": 10,
+    "specialRules": [
+      "toramat-behavior-deck-setup",
+      "toramat-dust-tokens",
+      "toramat-special-attrition-cards",
+      "toramat-hardening-track",
+      "niz-maraga-biome"
+    ],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "toramat-biome-niz-maraga-expedition-2",
+    "monsterId": "toramat",
+    "number": 2,
+    "rulebookPage": 10,
+    "specialRules": [
+      "toramat-behavior-deck-setup",
+      "toramat-dust-tokens",
+      "toramat-special-attrition-cards",
+      "toramat-hardening-track",
+      "niz-maraga-biome"
+    ],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "pazis-biome-niz-maraga-expedition-1",
+    "monsterId": "pazis",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["pazis-paralyzing-spore-cards", "pazis-special-behavior-deck-setup", "niz-maraga-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "synaerea"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "brush"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-niz-maraga-sunset-plains",
+    "id": "pazis-biome-niz-maraga-expedition-2",
+    "monsterId": "pazis",
+    "number": 2,
+    "rulebookPage": 11,
+    "specialRules": ["pazis-paralyzing-spore-cards", "pazis-special-behavior-deck-setup", "niz-maraga-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "jungle-brush"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "brush"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "kharja-biome-woltyar-expedition-1",
+    "monsterId": "kharja",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["kharja-damaged-sectors", "woltyar-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "kharja-biome-woltyar-expedition-2",
+    "monsterId": "kharja",
+    "number": 2,
+    "rulebookPage": 11,
+    "specialRules": ["kharja-damaged-sectors", "woltyar-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "fog"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "sirkaaj-biome-frozen-wastes-expedition-1",
+    "monsterId": "sirkaaj",
+    "number": 1,
+    "rulebookPage": 13,
+    "specialRules": ["frozen-wastes-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "front",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-woltyar-frozen-wastes",
+    "id": "sirkaaj-biome-frozen-wastes-expedition-2",
+    "monsterId": "sirkaaj",
+    "number": 2,
+    "rulebookPage": 13,
+    "specialRules": ["frozen-wastes-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "ice"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "ice"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "felaxir-biome-crystal-caves-expedition-1",
+    "monsterId": "felaxir",
+    "number": 1,
+    "rulebookPage": 10,
+    "specialRules": ["felaxir-special-attrition-cards", "crystal-caves-biome"],
+    "terrain": [
+      {
+        "sector": "left-flank",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "water"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "felaxir-biome-crystal-caves-expedition-2",
+    "monsterId": "felaxir",
+    "number": 2,
+    "rulebookPage": 10,
+    "specialRules": ["felaxir-special-attrition-cards", "crystal-caves-biome"],
+    "terrain": [
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "morkraas-biome-crystal-caves-expedition-1",
+    "monsterId": "morkraas",
+    "number": 1,
+    "rulebookPage": 11,
+    "specialRules": ["crystal-caves-biome"],
+    "terrain": [
+      {
+        "sector": "rear",
+        "terrainId": "rock"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "rock"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "morkraas-biome-crystal-caves-expedition-2",
+    "monsterId": "morkraas",
+    "number": 2,
+    "rulebookPage": 11,
+    "specialRules": ["crystal-caves-biome"],
+    "terrain": [
+      {
+        "sector": "rear",
+        "terrainId": "cyricae"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "fog"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "orouxen-biome-flooded-wilds-expedition-1",
+    "monsterId": "orouxen",
+    "number": 1,
+    "rulebookPage": 12,
+    "specialRules": ["orouxen-debility-cards", "flooded-wilds-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "brush"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "deep-water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "baethanis"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "deep-water"
+      }
+    ]
+  },
+  {
+    "expansionId": "biome-crystal-caves-flooded-wilds",
+    "id": "orouxen-biome-flooded-wilds-expedition-2",
+    "monsterId": "orouxen",
+    "number": 2,
+    "rulebookPage": 12,
+    "specialRules": ["orouxen-debility-cards", "flooded-wilds-biome"],
+    "terrain": [
+      {
+        "sector": "front",
+        "terrainId": "plateau"
+      },
+      {
+        "sector": "left-flank",
+        "terrainId": "sand"
+      },
+      {
+        "sector": "rear",
+        "terrainId": "deep-water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "deep-water"
+      },
+      {
+        "sector": "right-flank",
+        "terrainId": "sand"
+      }
+    ]
+  }
+]

@@ -1,0 +1,643 @@
+{
+  "starter": [
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-bludgeon-s",
+      "name": "Bludgeon",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist.\nConfuse the monster.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-charge-s",
+      "name": "Charge",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Choose a player to draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-concussion-s",
+      "name": "Concussion",
+      "staminaCost": 3,
+      "staminaIcons": 3,
+      "subtype": "Maneuver",
+      "text": "Stun the monster.",
+      "trait": "Impetus"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-decisive-effort-s",
+      "name": "Decisive Effort",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "↓[attack]: Increase the damage the Attack deals by 3[weapon].",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-disruption-s",
+      "name": "Disruption",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "When another player plays [attack][attack] in their sequence, you may discard this card from your hand to stun the monster.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-endeavour-s",
+      "name": "Endeavour",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Assist.\nRecycle 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-enrage-s",
+      "name": "Enrage",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Search your deck for a [attack] and add it to your hand. Then reshuffle your deck",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-evasive-action-s",
+      "name": "Evasive Action",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Take a strain token unless your mastery is focused.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-exhausting-strike-s",
+      "name": "Exhausting Strike",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist.\nIncrease the struggle this maneuver removes by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-frontal-assault-s",
+      "name": "Frontal Assault",
+      "staminaCost": 2,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "Choose a player to draw 1. If you are in the front sector, they draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-heavy-smash-s",
+      "name": "Heavy Smash",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Remove 1 struggle.\n[mastery]: remove 3 struggle instead.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-iron-will-s",
+      "name": "Iron Will",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Draw 1.\nIf you paid with a [maneuver], draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": "You can't use vulnerable on the same attack",
+      "id": "hero-thoreg-ironblast-s",
+      "name": "Ironblast",
+      "staminaCost": 3,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Increase the damage this attack deals by 2[weapon].\nOpening: This attack inflicts vulnerable.",
+      "trait": "Impetus"
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-knockout-s",
+      "name": "Knockout",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "[attack]↓: Stun the monster.",
+      "trait": "Impetus"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": "This limit refers to the maximum number of cards you can draw through this card's effect.",
+      "id": "hero-thoreg-leverage-s",
+      "name": "Leverage",
+      "staminaCost": 3,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "Draw cards equal to the current amount of struggle tokens on the monster (max: 5 cards).",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "[maneuver]: Deal 2[weapon] damage.\n[maneuver][attack][attack]: Stun the monster."
+      },
+      "id": "hero-thoreg-massive-blow-s",
+      "name": "Massive Blow",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 2,
+        "text": "When you stun the monster, place a counter on this card."
+      }
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-mighty-strain-s",
+      "name": "Mighty Strain",
+      "staminaCost": 1,
+      "staminaIcons": 3,
+      "subtype": "Dodge",
+      "text": "When you discard this card from your hand, take a strain token.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-perseverance-s",
+      "name": "Perseverance",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-rapid-blow-s",
+      "name": "Rapid Blow",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "When behavior card is revealed, you may discard this card from your hand to cancel the effects of that card.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-sharp-reflexes-s",
+      "name": "Sharp Reflexes",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "When a behavior card is revealed, you may discard this card from your hand to immediately move without paying any stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-sledgehamer-s",
+      "name": "Sledgehammer",
+      "staminaCost": "X",
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "You can only play this card after a [maneuver].\nIncrease the damage this attack deals by X[weapon] (max increase: 7[weapon]).",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-stamina-boost-s",
+      "name": "Stamina Boost",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "Reduce the stamina cost of the next [defensive] card you play in your sequence by 1.\nWhen you discard this card to generate stamina for a [attack] and your mastery is focused, it generates 4 stamina.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-tackle-s",
+      "name": "Tackle",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When another player pays the stamina cost of a card, you may discard this card from your hand. If you do, reduce the stamina cost by 1 and that player's card gain stealth.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-thoreg-tenacity-s",
+      "name": "Tenacity",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "This card does not count towards your hand size limit.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-thoreg-whirlwind-s",
+      "name": "Whirlwind",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Maneuver",
+      "text": "Assist.\n↓[maneuver][attack]: Increase the damage the attack deals by 3[weapon]",
+      "trait": null
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-impressive-strike-a1",
+        "name": "Impressive Strike",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "If you have any strain token, stun or confuse the monster.",
+        "trait": "Impetus"
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-step-back-a1",
+        "name": "Step Back",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Finisher.\nDiscard a strain token.",
+        "trait": null
+      }
+    ],
+    "A2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-adreanlina-rush-a2",
+        "name": "Adrenaline Rush",
+        "staminaCost": "X",
+        "staminaIcons": 2,
+        "subtype": "Parry",
+        "text": "Draw X.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-dashing-blow-a2",
+        "name": "Dashing Blow",
+        "staminaCost": 4,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Increase the damage this attack deals by 5[weapon]. Reduce the stamina cost of this card by 1 for each card with impetus in your discard pile.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Your weapon has +3[weapon] damage.\nAt the end of the round, lose focus."
+        },
+        "id": "hero-thoreg-devastating-strenght-a2",
+        "name": "Devastating Strength",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "Start: You may take a strain token to place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-adaptive-defense-b1",
+        "name": "Adaptive Defense",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "While this card is the top card of your discard pile, it counts as a [parry] in your sequence for the attrition deck.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-rumbling-impact-b1",
+        "name": "Rumbling Impact",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Confuse the monster.\n[mastery]: Increase the damage this attack deals by 1[weapon] for each exposed monster side.",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-dragon-bane-b2",
+        "name": "Dragon Bane",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "Taunt.\nThe monster immediately turns to your sector and your weapon gets +2[weapon] damage until the end of this turn.",
+        "trait": "Impetus"
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-skull-crasher-b2",
+        "name": "Skull Crusher",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "↓[attack]: If you are in the front sector, stun the monster and increase the damage the attack deals by 2[weapon].",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "You can play cards while in the front side, even if it is protected. While you are in the front sector, your weapon has +1[weapon] damage.\nAt the end of your action phase, if you are in the front sector, gain a defense token."
+        },
+        "id": "hero-thoreg-hammer-knight-b2",
+        "name": "Hammer Knight",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "[maneuver][attack]: Place a counter on this card"
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-grace-c1",
+        "name": "Grace",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Reduce the stamina cost of each [maneuver] you play this turn by 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-judgement-c1",
+        "name": "Judgement",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "When a player would suffer attrition damage and you are in the front sector, you may discard this card rom your hand to prevent that damage and remove struggle equal to the current attrition level.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-confrontation-c2",
+        "name": "Confrontation",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Remove 1 struggle . If you are the aggro player, remove 2 struggle instead.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-thunderous-voice-c2",
+        "name": "Thunderous Voice",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Taunt.\nRemove 1 struggle. If you are the aggro player, remove 2 struggle instead.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When a behavior card is revealed and the monster has 1PP or less struggle, you may immediately place your miniature on that behavior card. If you do, cancel the effects of that card and perform a riding check (max: once per round)."
+        },
+        "id": "hero-thoreg-dragon-tamer-c2",
+        "name": "Dragon Tamer",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "When you reduce the monster to 0 struggle, place a counter on this card."
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-call-of-the-dragon-d1",
+        "name": "Call of the dragon",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Draw 1. If your health is critical, draw cards until you have 5 instead.",
+        "trait": "Impetus"
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-impulse-d1",
+        "name": "Impulse",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Search your deck for a card with impetus and add it to your hand. Then reshuffle your deck.",
+        "trait": null
+      }
+    ],
+    "D2": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-for-alborea-d2",
+        "name": "For Alborea!",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Assist.\nDraw 1 for each card with impetus in your discard pile.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-tear-down-d2",
+        "name": "Tear Down",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "If the monster has 0 struggle, increase the damage this attack deals by 5[weapon]. Otherwise, remove 2 struggle.",
+        "trait": "Impetus"
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Increase your hand size limit by 1. Reduce the stamina cost of all cards with impetus you play by 1."
+        },
+        "id": "hero-thoreg-blood-rush-d2",
+        "name": "Blood Rush",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "When the monster suffer a wound, draw 1 and place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-chase-e1",
+        "name": "Chase",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "When you discard this card from your hand to generate stamina, your weapon gets +2[weapon] damage until the end of the turn.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-limitless-stamina-e1",
+        "name": "Limitless Stamina",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Parry",
+        "text": "When you discard this card to generate stamina for a [attack], it generates 4 stamina.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-thoreg-deep-breath-e2",
+        "name": "Deep Breath",
+        "staminaCost": 1,
+        "staminaIcons": 3,
+        "subtype": "Dodge",
+        "text": "Draw 2.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-thoreg-stormstrike-e2",
+        "name": "Stormstrike",
+        "staminaCost": "X",
+        "staminaIcons": 2,
+        "subtype": "Attack",
+        "text": "Finisher.\nIncrease the damage this attack deals by X[weapon] (max increase 7[weapon]). If you pay 6 or more for this card, confuse the monster.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When you discard a card from your hand to generate stamina, that card generates an additional stamina.\nWhen you pay the stamina cost of a [offensive], you may increase that cost by 1. If you do, deal 1[weapon] damage."
+        },
+        "id": "hero-thoreg-overdrive-e2",
+        "name": "Overdrive",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "At the end of your turn, you may take a strain token. If you do, place a counter on this card."
+        }
+      }
+    ]
+  }
+}

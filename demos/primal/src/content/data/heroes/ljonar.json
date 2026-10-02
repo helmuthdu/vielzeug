@@ -1,0 +1,644 @@
+{
+  "starter": [
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-aggro-strike-s",
+      "name": "Aggro Strike",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Assist.\nIncrease the damage this attack deals by 1[weapon] for each aggro icon in your discard pile.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-agility-s",
+      "name": "Agility",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "If you paid with a [maneuver], draw 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-anticipate-s",
+      "name": "Anticipate",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "When you would suffer damage from a behavior card effect, you may discard this card from your hand to prevent that damage.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-attack-plan-s",
+      "name": "Attack Plan",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "Assist.\nWhile this card is the top card of your discard pile, any damage dealt to the monster by any source is increased by 1[weapon]",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-battle-trance-s",
+      "name": "Battle Trance",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "Taunt.\n[mastery]: Draw 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-beyond-limits-s",
+      "name": "Beyond Limits",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Taunt.\nYou may suffer 1[weapon] damage. If you do, increase the damage this attack deals by 2[weapon] and choose a player to draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-bulwark-s",
+      "name": "Bulwark",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Increase the struggle this maneuver removes by 1.\nWhen another player would suffer damage and you are in the front sector, you may discard this card from your hand to prevent that damage. If you do, you and that player draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": "You can't use vulnerable on the same attack",
+      "id": "hero-ljonar-concetrated-attack-s",
+      "name": "Concentrated Attack",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Choose another player. Increase the damage this attack deals by 1[weapon] for [attack] in that player's discard pile. If this attack inflicts a wound, inflict vulnerable.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-counterattack-s",
+      "name": "Counterattack",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Maneuver",
+      "text": "When you suffer damage, you may discard this card from your hand to deal 3[weapon] damage.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-drawn-to-danger-s",
+      "name": "Drawn To Danger",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Taunt.\nIncrease the struggle this maneuver removes by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-feint-s",
+      "name": "Feint",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "When you discard this card from your hand, draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-immolate-s",
+      "name": "Immolate",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Choose another player to draw 1.\nYou may suffer damage. If you do, all other players draw 1 instead.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-last-breath-s",
+      "name": "Last Breath",
+      "staminaCost": 2,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "Resilience.\nDeal damage to the monster equal to the damage you currently sustain.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-momentum-s",
+      "name": "Momentum",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "[parry]↓: Search your discard pile for a [attack] and add it to your hand.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-perseverance-s",
+      "name": "Perseverance",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-push-s",
+      "name": "Push",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Opening: Draw 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-rapid-dash-s",
+      "name": "Rapid Dash",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Taunt.\nWhile this card is the top card of your discard pile, all other players' weapons have +1[weapon] damage.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-shield-block-s",
+      "name": "Shield Block",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When a behavior card is revealed, you may discard this card from your hand to cancel the effects of that behavior card and confuse the monster.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-shield-dance-s",
+      "name": "Shield Dance",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "While your mastery is focused, ignore the stamina cost of this card.\n[parry]↓: Increase the damage this attack deals by 3[weapon].",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "[parry]: Deal 2[weapon] damage.\n[parry][attack]: Increase the amount of damage the attack deals by 3[weapon]"
+      },
+      "id": "hero-ljonar-mastery-s",
+      "name": "Shield Master",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 3,
+        "text": "[parry][attack]: Place a counter on this card."
+      }
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-shielded-strike-s",
+      "name": "Shielded Strike",
+      "staminaCost": 2,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "[parry]↓: Remove 2 struggle.\n[mastery]: Increase the damage this attack deals by 1[weapon] for each [defensive] in your sequence.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-stamina-surge-s",
+      "name": "Stamina Surge",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "When you discard this card to generate stamina for a [attack], it generates 2 stamina.\n[mastery]: reduce the stamina cost of the next card you play in your sequence by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-surround-s",
+      "name": "Surround",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "This maneuver removes 1 struggle for each occupied sector.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-ljonar-tempo-s",
+      "name": "Tempo",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "↓[attack]: Remove 1 struggle.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-ljonar-undaunted-charge-s",
+      "name": "Undaunted Charge",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Remove 2 struggle.\n[mastery]: Confuse the monster. All other players draw 1.",
+      "trait": null
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-mettle-a1",
+        "name": "Mettle",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Dodge",
+        "text": "If your health is critical, this card counts as [dodge][dodge] for the attrition check this turn.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-tempered-pain-a1",
+        "name": "Tempered Pain",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Resilience.\nYou may suffer 1[weapon] damage to draw 1.",
+        "trait": null
+      }
+    ],
+    "A2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-monstrous-effort-a2",
+        "name": "Monstrous effort",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Resilience.\nIf your health is critical, you can play next card in your sequence without paying its stamina cost.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-retribution-a2",
+        "name": "Retribution",
+        "staminaCost": 3,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Increase the damage this attack deals by X where X is the damage you currently sustain.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "faq": "When you are KO'd, you first fully recolve the procedure described on page 29, then you focus your mastery and apply its effects.",
+        "focused": {
+          "text": "When focused: Immediately rise. Your health value is increased by 2[weapon] and your weapon has +2[weapon]."
+        },
+        "id": "hero-ljonar-unbreakable-a2",
+        "name": "Unbreakable",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "When you are KO'd, place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-coordinated-attack-b1",
+        "name": "Coordinated Attack",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Assist.\nChoose a player to draw 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-tactical-evade-b1",
+        "name": "Tactical Evade",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Search your discard pile for a card with assist and add it to your hand.",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-assistence-b2",
+        "name": "Assistance",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Assist.\nWhile this card is in the top of your discard pile, reduce the stamina cost of any other [attack] other players play by 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-eye-of-the-storm-b2",
+        "name": "Eye of the Storm",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Reveal any number of cards with assist from your hand. Then choose another player to draw many cards.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Start: Choose a player in your sector to heal 1[weapon].\nWhen you taunt the monster or assist another player using a [maneuver] then remove 1 struggle, using a [parry] then draw 1, using a [attack] then deal your weapon damage."
+        },
+        "id": "hero-ljonar-shield-of-support-b2",
+        "name": "Shield of Support",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "When you taunt the monster or assist another player, place a counter on this card (max: 1 per round)."
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-rally-c1",
+        "name": "Rally",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Choose a player to draw 1 or immediately move without paying any stamina cost.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-teamwork-c1",
+        "name": "Teamwork",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "While another player is paying the stamina cost of a card, you may discard this card from your hand in order to reduce that cost by 2.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-golden-opportunity-c2",
+        "name": "Golden Opportunity",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Taunt.\nChoose a player to reveal up to 2[attack] from their hand and deal their weapon damage for each card they reveal this way.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-outflank-c2",
+        "name": "Outflank",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "At the start of another player's turn, you may discard this card from your hand. If you do, immediately move without paying any stamina cost.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "While you are in the front sector, cards can be played on all monster sides, even if they are protected.\n[maneuver]: Choose a sector. Players in that sector may draw 1 or immediately move without paying any stamina cost (max: once per turn)"
+        },
+        "id": "hero-ljonar-tactician-c2",
+        "name": "Tactician",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "[maneuver]: Place a counter on this card"
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-over-here-d1",
+        "name": "Over Here!",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Taunt.\nYou may suffer damage. If you do, choose a player to recycle up to 2 cards.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-sacrifice-d1",
+        "name": "Sacrifice",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Assist. Resilience.\nWhen the monster would gain struggle, you may suffer damage and discard this card from your hand to prevent that struggle gain.",
+        "trait": null
+      }
+    ],
+    "D2": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-shield-smash-d2",
+        "name": "Shield Smash",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Deal your wepaon damage.\nYou may choose to suffer damage to deal double that damage instead.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-shield-strike-d2",
+        "name": "Shield strike",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Increase the damage this attack deals by 1[weapon] for each [parry] in your discard pile.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When you trigger retaliate, deal 2[weapon] damage."
+        },
+        "id": "hero-ljonar-fierce-guard-d2",
+        "name": "Fierce Guard",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "When you trigger retaliate, place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-ljonar-pulsating-fury-e1",
+        "name": "Pulsating Fury",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "If you are the aggro player, draw cards equal to the current stance number.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-snare-e1",
+        "name": "Snare",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "If you avoid attrition damage this turn, deal your weapon damage for each [defensive] in your sequence.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-guardian-shield-e2",
+        "name": "Guardian Shield",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "When the monster would unleash, you may discard this card from your hand. If you do and you are in the front sector, prevent that unleash damage (no player suffers damage).",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-ljonar-shield-wall-e2",
+        "name": "Shield Wall",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Assist.\nWhen another player in your sector would suffer damage, if this card is the top card of your discard pile, you may suffer that damage instead.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Increase your hand size limit by 1.\nAt the start of another player's attrition phase, that player gains a defense token if you are in their sector."
+        },
+        "id": "hero-ljonar-bastion-e2",
+        "name": "Bastion",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "When you avoid attrition damage, place a counter on this card."
+        }
+      }
+    ]
+  }
+}

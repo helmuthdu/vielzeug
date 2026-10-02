@@ -1,0 +1,3003 @@
+{
+  "hunts": [
+    {
+      "aggression": 1,
+      "aggressionNote": "Players can choose whether or not to use the Nightmare variant of the monster (adding the Nightmare variant stance cards and any number of the Nightmare behavior cards). This choice affects the total score if they win.",
+      "components": [
+        {
+          "count": 1,
+          "label": "Kharja miniature",
+          "terrainId": null
+        },
+        {
+          "count": 1,
+          "label": "Fire",
+          "terrainId": "fire"
+        },
+        {
+          "count": 1,
+          "label": "Damage token",
+          "terrainId": null
+        }
+      ],
+      "forbiddenElementIds": [],
+      "id": "trial-by-fire",
+      "lore": "Kharja is made of flesh and fire. The flames that rise in its wake twist like damned souls. Do not lose yourself in its hell.",
+      "maxPotionSlots": null,
+      "monsterId": "kharja",
+      "name": "Trial by Fire",
+      "nightmareVariant": "optional",
+      "number": 1,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": 50,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": [],
+      "scoring": {
+        "base": 70,
+        "modifiers": [
+          {
+            "condition": "you complete this Challenge at your 1st try",
+            "kind": "flag",
+            "points": 20,
+            "scope": "victory"
+          },
+          {
+            "condition": "you used the Nightmare variant stance cards",
+            "kind": "flag",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "each Nightmare behavior card you used",
+            "kind": "count",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player has been KO’d",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          }
+        ],
+        "scoredOnDefeat": false
+      },
+      "series": "Primal Challenges 2024",
+      "specialRules": [
+        "Fight surrounded by rivers of lava. The heat at your backs pushes you against the monster. Remove “Keep Your Distance” objective card from the game.",
+        "The air is growing thinner: you’re breathing ash and steam. At the start of the round, each player discards cards equal to the current round number from the top of their deck.",
+        "You are hallucinating from the heat. The flames burning you have faces and long arms that tighten around you. When a player empties their deck, they suffer 1 heat damage. This damage is in addition to the regular fatigue damage and cannot be avoided."
+      ],
+      "terrain": [
+        {
+          "sector": "front",
+          "terrainId": "fire"
+        },
+        {
+          "sector": "front",
+          "terrainId": "damage-token"
+        }
+      ]
+    },
+    {
+      "aggression": 1,
+      "aggressionNote": "Players can choose whether or not to use the Nightmare variant of the monster (adding the Nightmare variant stance cards and any number of the Nightmare behavior cards). This choice affects the total score if they win.",
+      "components": [
+        {
+          "count": 1,
+          "label": "Dygorax miniature",
+          "terrainId": null
+        },
+        {
+          "count": 2,
+          "label": "Sand",
+          "terrainId": "sand"
+        },
+        {
+          "count": 2,
+          "label": "Wildmaw",
+          "terrainId": "wildmaw"
+        }
+      ],
+      "forbiddenElementIds": [],
+      "id": "sandstorm",
+      "lore": "The wind shifts without warning: Dygorax unleashes its wrath from the heavens upon the desert sands. Its storm tears through the hunters, scattering them apart. The dragon brings blood and isolation.",
+      "maxPotionSlots": null,
+      "monsterId": "dygorax",
+      "name": "Sandstorm",
+      "nightmareVariant": "optional",
+      "number": 2,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": null,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": [],
+      "scoring": {
+        "base": 70,
+        "modifiers": [
+          {
+            "condition": "you keep at least 1 sector without any sand terrain",
+            "kind": "flag",
+            "points": 20,
+            "scope": "victory"
+          },
+          {
+            "condition": "you win by round 6",
+            "kind": "flag",
+            "points": 20,
+            "scope": "victory"
+          },
+          {
+            "condition": "you win by round 7",
+            "kind": "flag",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "you used the Nightmare variant stance cards",
+            "kind": "flag",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "each Nightmare behavior card you used",
+            "kind": "count",
+            "points": 5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player has been KO’d",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          }
+        ],
+        "scoredOnDefeat": false
+      },
+      "series": "Primal Challenges 2024",
+      "specialRules": [
+        "The sandstorm reshapes the desert. The dunes take on the form of massive, golden beasts trapping you between their scorching, grainy jaws. At the start of your turn, place a sand terrain in your sector. If there is already a sand terrain in your sector, place a dust token instead (max 2 dust tokens per sector).",
+        "You are utterly alone in the desert. You cannot see your comrades, and their voices are swallowed by the wind. Players in a sector with a sand terrain cannot perform Assist."
+      ],
+      "terrain": [
+        {
+          "sector": "left-flank",
+          "terrainId": "sand"
+        },
+        {
+          "sector": "right-flank",
+          "terrainId": "sand"
+        },
+        {
+          "sector": "rear",
+          "terrainId": "wildmaw"
+        },
+        {
+          "sector": "front",
+          "terrainId": "wildmaw"
+        }
+      ]
+    },
+    {
+      "aggression": 2,
+      "aggressionNote": "Players can choose whether or not to use the Nightmare variant of the monster (adding the Nightmare variant stance cards and any number of the Nightmare behavior cards). This choice affects the total score if they win.",
+      "components": [
+        {
+          "count": 1,
+          "label": "Xitheros miniature",
+          "terrainId": null
+        },
+        {
+          "count": 2,
+          "label": "Thornvine token",
+          "terrainId": null
+        },
+        {
+          "count": 1,
+          "label": "Baethanis",
+          "terrainId": "baethanis"
+        },
+        {
+          "count": 2,
+          "label": "Cyricae",
+          "terrainId": "cyricae"
+        },
+        {
+          "count": 1,
+          "label": "Water",
+          "terrainId": "water"
+        }
+      ],
+      "forbiddenElementIds": [],
+      "id": "hunger",
+      "lore": "In the clearing, Xitheros looms over Hydar, ripping into its chest with blood-soaked fangs. The moment the beast catches your scent, the venomous vines covering the ground coil around your legs, their thorns piercing deep.",
+      "maxPotionSlots": null,
+      "monsterId": "xitheros",
+      "name": "Hunger",
+      "nightmareVariant": "optional",
+      "number": 3,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": null,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": ["nightmare", "venom"],
+      "scoring": {
+        "base": 0,
+        "modifiers": [
+          {
+            "condition": "each wound you dealt to Xitheros",
+            "kind": "count",
+            "points": 10,
+            "scope": "always"
+          },
+          {
+            "condition": "victory if Xitheros remains in stance II",
+            "kind": "flag",
+            "points": 20,
+            "scope": "victory"
+          },
+          {
+            "condition": "victory if you are using the Nightmare variant stance cards",
+            "kind": "flag",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "victory for each Nightmare behavior card you used",
+            "kind": "count",
+            "points": 5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player has been KO’d",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          }
+        ],
+        "scoredOnDefeat": true
+      },
+      "series": "Primal Challenges 2024",
+      "specialRules": [
+        "Your heart pumps blood and poison. Your wounds send Xitheros into a killing frenzy. During player setup, each player takes the Venom cards (with Hydar trophy icon) related to their hunter and shuffles two of them into their deck.",
+        "Hydar is dead, yet its venomous vines live on, answering to a new master. With each wound dealt to Xitheros, a thorned branch shrivels and dies. When a player inflicts a wound to Xitheros, that player may remove a Thornvine token from their sector, if present."
+      ],
+      "terrain": [
+        {
+          "sector": "left-flank",
+          "terrainId": "baethanis"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "water"
+        },
+        {
+          "sector": "right-flank",
+          "terrainId": "cyricae"
+        },
+        {
+          "sector": "rear",
+          "terrainId": "cyricae"
+        },
+        {
+          "sector": "rear",
+          "terrainId": "thornvine-token"
+        },
+        {
+          "sector": "front",
+          "terrainId": "thornvine-token"
+        }
+      ]
+    },
+    {
+      "aggression": 3,
+      "aggressionNote": "For this challenge, players cannot use Ice equipment.",
+      "components": [
+        {
+          "count": 1,
+          "label": "Korowon miniature",
+          "terrainId": null
+        },
+        {
+          "count": 1,
+          "label": "Rock",
+          "terrainId": "rock"
+        },
+        {
+          "count": 2,
+          "label": "Water",
+          "terrainId": "water"
+        },
+        {
+          "count": 1,
+          "label": "Ice",
+          "terrainId": "ice"
+        }
+      ],
+      "forbiddenElementIds": ["ice"],
+      "id": "korowon-stole-christmas",
+      "lore": "The northern seas are silent no more. Korowon has emerged, stealing the season’s cheer and leaving frozen chaos in its wake. The festivities hang in the balance, are you ready to bring the warmth back?",
+      "maxPotionSlots": null,
+      "monsterId": "korowon",
+      "name": "Korowon Stole Christmas!",
+      "nightmareVariant": "none",
+      "number": 4,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": null,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": ["ice"],
+      "scoring": {
+        "base": 70,
+        "modifiers": [
+          {
+            "condition": "no player was captured",
+            "kind": "flag",
+            "points": 20,
+            "scope": "victory"
+          },
+          {
+            "condition": "each remaining round",
+            "kind": "count",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "each exiled card at the end of the game",
+            "kind": "count",
+            "points": 5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player has been KO’d",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          }
+        ],
+        "scoredOnDefeat": false
+      },
+      "series": "Primal Challenges 2024",
+      "specialRules": [
+        "There’s no escape from the creeping frost! At the start of each round, except the first, players must place an Ice terrain in a sector adjacent to one that already has Ice.",
+        "A thick layer of ice shields Korowon, deflecting your strikes. Prevent all damage dealt by the first Attack card each turn.",
+        "Korowon draws life from the cold. Whenever a card is exiled, Korowon heals 3 damage for each card currently exiled."
+      ],
+      "terrain": [
+        {
+          "sector": "front",
+          "terrainId": "rock"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "water"
+        },
+        {
+          "sector": "right-flank",
+          "terrainId": "water"
+        },
+        {
+          "sector": "front",
+          "terrainId": "ice"
+        }
+      ]
+    },
+    {
+      "aggression": 1,
+      "aggressionNote": null,
+      "components": [
+        {
+          "count": 1,
+          "label": "Hydar miniature",
+          "terrainId": null
+        },
+        {
+          "count": 2,
+          "label": "Baethanis",
+          "terrainId": "baethanis"
+        },
+        {
+          "count": null,
+          "label": "Reikal’s Venom cards",
+          "terrainId": null
+        },
+        {
+          "count": null,
+          "label": "Hydar’s Venom cards",
+          "terrainId": null
+        }
+      ],
+      "forbiddenElementIds": [],
+      "id": "jungle-bane",
+      "lore": "A black, toxic haze spreads through the jungle, poisoning you with every breath. Hydar waits beyond the smoke, patient and unfazed, ready to strike the weakened.",
+      "maxPotionSlots": null,
+      "monsterId": "hydar",
+      "name": "Jungle Bane",
+      "nightmareVariant": "none",
+      "number": 5,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": null,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": ["venom"],
+      "scoring": {
+        "base": 0,
+        "modifiers": [
+          {
+            "condition": "each wound you dealt to Hydar",
+            "kind": "count",
+            "points": 10,
+            "scope": "always"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          },
+          {
+            "condition": "each Reikal’s Venom card added during setup",
+            "kind": "count",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player has been KO’d",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          }
+        ],
+        "scoredOnDefeat": true
+      },
+      "series": "Primal Challenges",
+      "specialRules": [
+        "You’ve inhaled a venom that seeps into your lungs and dulls your instincts. Every move feels slower, every choice more costly. During setup, each player shuffles 1 to 3 Reikal’s Venom cards into their deck, depending on the difficulty they want to face. The more venom cards you include, the higher your score will be if you win (see below).",
+        "From the ground rise hardened thorns, twisting toward your feet. Use the Harvesting objective card with the [element symbol] instead of the [standard] version."
+      ],
+      "terrain": [
+        {
+          "sector": "rear",
+          "terrainId": "baethanis"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "baethanis"
+        }
+      ]
+    },
+    {
+      "aggression": 1,
+      "aggressionNote": null,
+      "components": [
+        {
+          "count": 1,
+          "label": "Ozew miniature",
+          "terrainId": null
+        },
+        {
+          "count": 1,
+          "label": "Baethanis",
+          "terrainId": "baethanis"
+        },
+        {
+          "count": 1,
+          "label": "Rock",
+          "terrainId": "rock"
+        },
+        {
+          "count": 1,
+          "label": "Fog",
+          "terrainId": "fog"
+        }
+      ],
+      "forbiddenElementIds": [],
+      "id": "swarm-invasion",
+      "lore": "A black cloud gathers from every corner of the sky, converging to eclipse Ozew’s central light. The monstrous buzzing grows, deafening your ears and clouding your thoughts. The Swarm moves as one, bound to the destructive will of its Queen.",
+      "maxPotionSlots": null,
+      "monsterId": "ozew",
+      "name": "Swarm Invasion",
+      "nightmareVariant": "none",
+      "number": 6,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": null,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": [],
+      "scoring": {
+        "base": 0,
+        "modifiers": [
+          {
+            "condition": "each wound you dealt to Ozew",
+            "kind": "count",
+            "points": 10,
+            "scope": "always"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          },
+          {
+            "condition": "each remaining round on the round track",
+            "kind": "count",
+            "points": 5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each Swarm card defeated during the game",
+            "kind": "count",
+            "points": 3,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player has been KO’d",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          }
+        ],
+        "scoredOnDefeat": true
+      },
+      "series": "Primal Challenges",
+      "specialRules": [
+        "You have no choice, before you reach the Queen, you must face her Swarm. At the start of round 1, reveal 3 cards from the top of the Swarm deck and bring them into play. To increase difficulty and compete for the highest score, players may choose to reveal up to 5 Swarm cards instead. Note: You cannot deal damage to Ozew while a Swarm card is in play; for more information on Swarm cards, see page 97 of the Rulebook."
+      ],
+      "terrain": [
+        {
+          "sector": "left-flank",
+          "terrainId": "baethanis"
+        },
+        {
+          "sector": "right-flank",
+          "terrainId": "rock"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "fog"
+        }
+      ]
+    },
+    {
+      "aggression": 1,
+      "aggressionNote": null,
+      "components": [
+        {
+          "count": 1,
+          "label": "Taraska miniature",
+          "terrainId": null
+        },
+        {
+          "count": 1,
+          "label": "Fire",
+          "terrainId": "fire"
+        },
+        {
+          "count": 1,
+          "label": "Fire (back)",
+          "terrainId": "fire"
+        },
+        {
+          "count": 1,
+          "label": "Rock",
+          "terrainId": "rock"
+        }
+      ],
+      "forbiddenElementIds": [],
+      "id": "fire-beneath-the-mountain",
+      "lore": "Deep beneath the volcano, rivers of fire writhe like living serpents. Lava geysers burst and turn the cavern into a hellish storm of heat and ash.",
+      "maxPotionSlots": null,
+      "monsterId": "taraska",
+      "name": "Fire Beneath the Mountain",
+      "nightmareVariant": "none",
+      "number": 7,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": null,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": ["nightmare"],
+      "scoring": {
+        "base": 30,
+        "modifiers": [
+          {
+            "condition": "each wound you dealt to Taraska",
+            "kind": "count",
+            "points": 10,
+            "scope": "always"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          },
+          {
+            "condition": "each time a player was KO’d",
+            "kind": "count",
+            "points": -10,
+            "scope": "always"
+          }
+        ],
+        "scoredOnDefeat": true
+      },
+      "series": "Primal Challenges",
+      "specialRules": [
+        "Fiery blasts tear through the ground. When a fire terrain is placed on the board, each player in that sector becomes threatened. If that player is already threatened, they suffer 1 damage.",
+        "Taraska’s shell is a bulwark of magma and stone. Players cannot place any counters on the Cracking the Shell objective card during this scenario. Additionally, when you play a card while in a flank sector, the maximum damage the attack can deal, after accounting for the monster’s shield, is 5 (Example: If the attack would deal 9 damage, reduce it to 5)."
+      ],
+      "terrain": [
+        {
+          "sector": "rear",
+          "terrainId": "fire-back"
+        },
+        {
+          "sector": "right-flank",
+          "terrainId": "fire"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "rock"
+        }
+      ]
+    },
+    {
+      "aggression": 3,
+      "aggressionNote": null,
+      "components": [
+        {
+          "count": 1,
+          "label": "Vyraxen miniature",
+          "terrainId": null
+        },
+        {
+          "count": 4,
+          "label": "Ice",
+          "terrainId": "ice"
+        },
+        {
+          "count": 4,
+          "label": "Fire",
+          "terrainId": "fire"
+        },
+        {
+          "count": 4,
+          "label": "Water",
+          "terrainId": "water"
+        },
+        {
+          "count": 4,
+          "label": "Fog",
+          "terrainId": "fog"
+        }
+      ],
+      "forbiddenElementIds": [],
+      "id": "ice-and-fire",
+      "lore": "Once, a man chose the glacier for its tomb. Flesh froze, blood slowed, the heart sealed away rather than swallowed whole. Now the monster has followed the scent across the world, clawing at the frozen grave with its flame, desperate to claim the heart no fire could tame.",
+      "maxPotionSlots": null,
+      "monsterId": "vyraxen",
+      "name": "Ice and Fire",
+      "nightmareVariant": "none",
+      "number": 8,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": null,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": ["ice"],
+      "scoring": {
+        "base": 20,
+        "modifiers": [
+          {
+            "condition": "each wound you dealt to Vyraxen",
+            "kind": "count",
+            "points": 10,
+            "scope": "always"
+          },
+          {
+            "condition": "you win by the end of round 4 (+10 if you win by round 5 instead, or +5 if you win by round 6)",
+            "kind": "flag",
+            "points": 15,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player was KO’d",
+            "kind": "count",
+            "points": -10,
+            "scope": "always"
+          },
+          {
+            "condition": "each time a player consumed an Alemore potion",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          },
+          {
+            "condition": "each fog terrain on the board at the end of the game",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          },
+          {
+            "condition": "each exiled card at the end of the game",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          }
+        ],
+        "scoredOnDefeat": true
+      },
+      "series": "Primal Challenges",
+      "specialRules": [
+        "A dense, hot mist rises as the fire melts the frozen ground. When you place a fire terrain on the board, if there is ice terrain in that sector, turn it into water terrain; if there is water terrain instead, turn it into fog terrain.",
+        "From spine to tail, its scales are tempered by the cold. During setup, remove the Hit the Tail objective card from the game."
+      ],
+      "terrain": [
+        {
+          "sector": "rear",
+          "terrainId": "ice"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "ice"
+        },
+        {
+          "sector": "right-flank",
+          "terrainId": "ice"
+        },
+        {
+          "sector": "front",
+          "terrainId": "ice"
+        }
+      ]
+    },
+    {
+      "aggression": 3,
+      "aggressionNote": "Players can choose whether or not to use the Nightmare variant of the monster (adding the Nightmare variant stance cards and any number of the Nightmare behavior cards). This choice affects the total score if they win.",
+      "components": [
+        {
+          "count": 1,
+          "label": "Mamuraak miniature",
+          "terrainId": null
+        },
+        {
+          "count": 4,
+          "label": "Ice",
+          "terrainId": "ice"
+        }
+      ],
+      "forbiddenElementIds": ["ice"],
+      "id": "herald-of-winter",
+      "lore": "They stared into the void between the stars until the void stared back. Primordial cold, once understood, can never be forgotten. And so, life reveals itself as fleeting warmth… a vibration fated to be frozen.",
+      "maxPotionSlots": 2,
+      "monsterId": "mamuraak",
+      "name": "Herald of Winter",
+      "nightmareVariant": "optional",
+      "number": 9,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": 50,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": ["ice"],
+      "scoring": {
+        "base": 80,
+        "modifiers": [
+          {
+            "condition": "you win by round 5",
+            "kind": "flag",
+            "points": 20,
+            "scope": "victory"
+          },
+          {
+            "condition": "you used the Nightmare variant stance cards",
+            "kind": "flag",
+            "points": 15,
+            "scope": "victory"
+          },
+          {
+            "condition": "each Nightmare behavior card you used",
+            "kind": "count",
+            "points": 5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each exiled card at the end of the game",
+            "kind": "count",
+            "points": -5,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player was KO’d",
+            "kind": "count",
+            "points": -10,
+            "scope": "victory"
+          }
+        ],
+        "scoredOnDefeat": false
+      },
+      "series": "Primal Challenges",
+      "specialRules": [
+        "Against the primordial cold, ice is no longer a weapon. For this challenge, players cannot use Ice equipment.",
+        "Frozen Supplies. Players are limited to a maximum of 2 equippable Potions for this challenge.",
+        "Once the cold claims you, there is no turning back. During setup, remove the “Warm up” objective card from the game."
+      ],
+      "terrain": [
+        {
+          "sector": "rear",
+          "terrainId": "ice"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "ice"
+        },
+        {
+          "sector": "right-flank",
+          "terrainId": "ice"
+        },
+        {
+          "sector": "front",
+          "terrainId": "ice"
+        }
+      ]
+    },
+    {
+      "aggression": 3,
+      "aggressionNote": null,
+      "components": [
+        {
+          "count": 1,
+          "label": "Korowon miniature",
+          "terrainId": null
+        },
+        {
+          "count": 2,
+          "label": "Water",
+          "terrainId": "water"
+        },
+        {
+          "count": 2,
+          "label": "Ice",
+          "terrainId": "ice"
+        },
+        {
+          "count": 1,
+          "label": "Behavior discard pile",
+          "terrainId": null
+        },
+        {
+          "count": 1,
+          "label": "Objective card",
+          "terrainId": null
+        }
+      ],
+      "forbiddenElementIds": ["ice"],
+      "id": "nightmare-before-winterfest",
+      "lore": "At this time of year, the children of Alborea are haunted by the hunters’ tales. In their nightmares, a colossal monster emerges from the ice of the Vintrar to hunt the little ones, stealing away their gifts and the very light of the festivities.",
+      "maxPotionSlots": null,
+      "monsterId": "korowon",
+      "name": "Nightmare before Winterfest",
+      "nightmareVariant": "none",
+      "number": 10,
+      "rankings": [
+        {
+          "minScore": 130,
+          "name": "Dragon Slayer"
+        },
+        {
+          "minScore": 110,
+          "name": "Beast Master"
+        },
+        {
+          "minScore": 90,
+          "name": "Commander"
+        },
+        {
+          "minScore": 80,
+          "name": "Prime Hunter"
+        },
+        {
+          "minScore": 65,
+          "name": "Expert"
+        },
+        {
+          "minScore": 50,
+          "name": "Rookie"
+        }
+      ],
+      "requiredExpansionIds": ["ice"],
+      "scoring": {
+        "base": 20,
+        "modifiers": [
+          {
+            "condition": "each wound you dealt to Korowon",
+            "kind": "count",
+            "points": 10,
+            "scope": "always"
+          },
+          {
+            "condition": "each exiled card at the end of the game",
+            "kind": "count",
+            "points": -5,
+            "scope": "always"
+          },
+          {
+            "condition": "you win by round 5",
+            "kind": "flag",
+            "points": 10,
+            "scope": "victory"
+          },
+          {
+            "condition": "each time a player was KO’d",
+            "kind": "count",
+            "points": -10,
+            "scope": "always"
+          }
+        ],
+        "scoredOnDefeat": true
+      },
+      "series": "Primal Challenges",
+      "specialRules": [
+        "Weapons forged in the cold have no power within a nightmare of pure frost. For this challenge, players cannot use Ice equipment.",
+        "A thick layer of oneiric ice shrouds the monster: the first blow is never real. Prevent all damage dealt by the first Attack card you play each turn.",
+        "The Koromas Behavior Tree. For this challenge, the monster uses extra behavior slots, which vary depending on its current Stance: Stance 1: Korowon has 3 additional behavior slots (for a total of 6). Stance 2: Korowon has 2 additional behavior slots (for a total of 5). Stance 3: The behavior slots return to the standard 3 slots. All additional slots follow the standard rules: they must be filled (and refilled) using cards from the top of the behavior deck. Note: We recommend using the special “Christmas Tree” monster board provided as Print-and-Play, which displays the additional slots for this challenge."
+      ],
+      "terrain": [
+        {
+          "sector": "right-flank",
+          "terrainId": "water"
+        },
+        {
+          "sector": "left-flank",
+          "terrainId": "water"
+        },
+        {
+          "sector": "front",
+          "terrainId": "ice"
+        },
+        {
+          "sector": "rear",
+          "terrainId": "ice"
+        }
+      ]
+    }
+  ],
+  "series": [
+    {
+      "art": "/backgrounds/bg_winds_of_spring.webp",
+      "artPlate": "/backgrounds/bg_winds_of_spring-plate.webp",
+      "expeditionCount": 5,
+      "id": "winds-of-spring",
+      "lore": "For the third time in a few days, the Seekers have reported warm winds rising from the plains. But “Spring” is now only a borrowed word: the cycle of seasons the Celestial Dragon once kept is long lost, and only a misshapen echo remains. In recent weeks I have charted the movements of many creatures, and I no longer have any doubt: they are abandoning their territories. Predators of the peaks descend into the marshes; beasts of the forest venture underground or into the dunes, as if this warm wind were calling them to seek something. A party of hunters has just set out on a long expedition. They will be gone for at least five weeks, and will face those creatures far from their lairs. I watch them depart, and I find myself wondering whether this spring is at work in us as well. Something blooms within us that we do not remember planting.",
+      "maxWoundCards": 3,
+      "monsters": [
+        {
+          "monsterId": "xitheros",
+          "setups": [
+            {
+              "biome": "woltyar",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "synaerea"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "brush"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "frozen-wastes",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "hydar",
+          "setups": [
+            {
+              "biome": "endless-swamp",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "baethanis"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "wildmaw"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "baethanis"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "synaerea"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "deep-water"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "baethanis"
+                }
+              ]
+            },
+            {
+              "biome": "sunset-plains",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "baethanis"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "ozew",
+          "setups": [
+            {
+              "biome": "crystal-caves",
+              "roll": 1,
+              "terrain": []
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "cyricae"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "cyricae"
+                }
+              ]
+            },
+            {
+              "biome": "goldarks",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "fog"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "baethanis"
+                }
+              ]
+            },
+            {
+              "biome": "sunset-plains",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "pazis",
+          "setups": [
+            {
+              "biome": "woltyar",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "jungle-brush"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "synaerea"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "deep-water"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "brush"
+                }
+              ]
+            },
+            {
+              "biome": "crystal-caves",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "cyricae"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "nagarjas",
+          "setups": [
+            {
+              "biome": "frozen-wastes",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "synaerea"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "swamp"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "jungle-brush"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "cyricae"
+                }
+              ]
+            },
+            {
+              "biome": "crystal-caves",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "baethanis"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "reikal",
+          "setups": [
+            {
+              "biome": "crystal-caves",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "cyricae"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "deep-water"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "swamp"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "Winds of Spring",
+      "nightmareVariant": "optional",
+      "number": 11,
+      "recommendedExpansionIds": [
+        "ice",
+        "feather",
+        "venom",
+        "nightmare",
+        "nightmare-2",
+        "biome-endless-swamp-nightmare",
+        "biome-goldarks-thunder-mountains",
+        "biome-niz-maraga-sunset-plains",
+        "biome-woltyar-frozen-wastes",
+        "biome-crystal-caves-flooded-wilds"
+      ],
+      "scoreLevels": {
+        "1": {
+          "base": 10,
+          "modifiers": [
+            {
+              "condition": "if you used the Nightmare variant stance cards",
+              "kind": "flag",
+              "points": 5,
+              "scope": "always"
+            },
+            {
+              "condition": "each Nightmare behavior card you used",
+              "kind": "count",
+              "points": 2,
+              "scope": "always"
+            },
+            {
+              "condition": "each time you’ve been KO’d",
+              "kind": "count",
+              "points": -5,
+              "scope": "always"
+            },
+            {
+              "condition": "each time another player has been KO’d",
+              "kind": "count",
+              "points": -3,
+              "scope": "always"
+            }
+          ]
+        },
+        "2": {
+          "base": 15,
+          "modifiers": [
+            {
+              "condition": "if you used the Nightmare variant stance cards",
+              "kind": "flag",
+              "points": 7,
+              "scope": "always"
+            },
+            {
+              "condition": "each Nightmare behavior card you used",
+              "kind": "count",
+              "points": 4,
+              "scope": "always"
+            },
+            {
+              "condition": "each time you’ve been KO’d",
+              "kind": "count",
+              "points": -7,
+              "scope": "always"
+            },
+            {
+              "condition": "each time another player has been KO’d",
+              "kind": "count",
+              "points": -5,
+              "scope": "always"
+            }
+          ]
+        },
+        "3": {
+          "base": 20,
+          "modifiers": [
+            {
+              "condition": "if you used the Nightmare variant stance cards",
+              "kind": "flag",
+              "points": 10,
+              "scope": "always"
+            },
+            {
+              "condition": "each Nightmare behavior card you used",
+              "kind": "count",
+              "points": 5,
+              "scope": "always"
+            },
+            {
+              "condition": "each time you’ve been KO’d",
+              "kind": "count",
+              "points": -10,
+              "scope": "always"
+            },
+            {
+              "condition": "each time another player has been KO’d",
+              "kind": "count",
+              "points": -8,
+              "scope": "always"
+            }
+          ]
+        }
+      },
+      "series": "Primal Challenges",
+      "startingAggression": 1
+    },
+    {
+      "art": "/backgrounds/bg_winds_of_summer.webp",
+      "artPlate": "/backgrounds/bg_winds_of_summer-plate.webp",
+      "expeditionCount": 5,
+      "id": "winds-of-summer",
+      "lore": "The heat has dried the roots and drained the rivers. Since we founded Alborea, this is the first year the city has gone hungry. The forests here have always given us food in plenty, but this year the wind of summer has come to weigh on the land like the shadow of a dragon. In my hands is the ancient codex I found sealed in a tomb. I turn its pages to the Rite of Summer. The ancients said they had made a pact with Thyrea, and that each year, before summer, they renewed their promise. At winter’s end the whole clan came together and chose its strongest warrior, the one whose hunting had fed them. The warrior stepped forward and offered to give up that strength to Thyrea, for the promise of a summer of plenty. Then a priestess struck the warrior with a gilded dagger and laid the body out in the middle of a clearing, where Thyrea would drink the blood. All through the night the body lay still: the stars too had to see. At dawn the warrior rose, and the whole clan celebrated. They were in harmony with Thyrea again. I close the codex. Perhaps the pact still holds. For years Thyrea has waited on us for a sacrifice, and now the price is higher: when we take the heart of the monster we have killed, we will know it must be offered to the earth, which thirsts and hungers.",
+      "maxWoundCards": 3,
+      "monsters": [
+        {
+          "monsterId": "kharja",
+          "setups": [
+            {
+              "biome": "woltyar",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "wildmaw"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "cyricae"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "cyricae"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "baethanis"
+                }
+              ]
+            },
+            {
+              "biome": "sunset-plains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "frozen-wastes",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "ice"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "ice"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "taraska",
+          "setups": [
+            {
+              "biome": "endless-swamp",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "deep-water"
+                }
+              ]
+            },
+            {
+              "biome": "woltyar",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "goldarks",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "nightmare",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "crystal-caves",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "cyricae"
+                }
+              ]
+            },
+            {
+              "biome": "sunset-plains",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "korowon",
+          "setups": [
+            {
+              "biome": "crystal-caves",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "deep-water"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "crystal-caves",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "sand"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "orouxen",
+          "setups": [
+            {
+              "biome": "woltyar",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "swamp"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "plateau"
+                }
+              ]
+            },
+            {
+              "biome": "flooded-wilds",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "deep-water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "plateau"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "crystal-caves",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "toramat",
+          "setups": [
+            {
+              "biome": "woltyar",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                }
+              ]
+            },
+            {
+              "biome": "endless-swamp",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "wildmaw"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                }
+              ]
+            },
+            {
+              "biome": "crystal-caves",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "baethanis"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                }
+              ]
+            },
+            {
+              "biome": "frozen-wastes",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "ice"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "ice"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "water"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "jungle-brush"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "rock"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "monsterId": "dygorax",
+          "setups": [
+            {
+              "biome": "sunset-plains",
+              "roll": 1,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "sand"
+                }
+              ]
+            },
+            {
+              "biome": "niz-maraga",
+              "roll": 2,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "brush"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "jungle-brush"
+                }
+              ]
+            },
+            {
+              "biome": "thunder-mountains",
+              "roll": 3,
+              "terrain": [
+                {
+                  "sector": "front",
+                  "terrainId": "plateau"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "woltyar",
+              "roll": 4,
+              "terrain": [
+                {
+                  "sector": "rear",
+                  "terrainId": "fire"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "water"
+                },
+                {
+                  "sector": "left-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "rock"
+                }
+              ]
+            },
+            {
+              "biome": "nightmare",
+              "roll": 5,
+              "terrain": [
+                {
+                  "sector": "left-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "right-flank",
+                  "terrainId": "fog"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "sand"
+                },
+                {
+                  "sector": "rear",
+                  "terrainId": "sand"
+                }
+              ]
+            },
+            {
+              "biome": "crystal-caves",
+              "roll": 6,
+              "terrain": [
+                {
+                  "sector": "right-flank",
+                  "terrainId": "rock"
+                },
+                {
+                  "sector": "front",
+                  "terrainId": "rock"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "name": "Winds of Summer",
+      "nightmareVariant": "optional",
+      "number": 12,
+      "recommendedExpansionIds": [
+        "ice",
+        "feather",
+        "venom",
+        "nightmare",
+        "nightmare-2",
+        "biome-endless-swamp-nightmare",
+        "biome-goldarks-thunder-mountains",
+        "biome-niz-maraga-sunset-plains",
+        "biome-woltyar-frozen-wastes",
+        "biome-crystal-caves-flooded-wilds"
+      ],
+      "scoreLevels": {
+        "1": {
+          "base": 10,
+          "modifiers": [
+            {
+              "condition": "if you used the Nightmare variant stance cards",
+              "kind": "flag",
+              "points": 5,
+              "scope": "always"
+            },
+            {
+              "condition": "each Nightmare behavior card you used",
+              "kind": "count",
+              "points": 2,
+              "scope": "always"
+            },
+            {
+              "condition": "each time you’ve been KO’d",
+              "kind": "count",
+              "points": -5,
+              "scope": "always"
+            },
+            {
+              "condition": "each time another player has been KO’d",
+              "kind": "count",
+              "points": -3,
+              "scope": "always"
+            }
+          ]
+        },
+        "2": {
+          "base": 15,
+          "modifiers": [
+            {
+              "condition": "if you used the Nightmare variant stance cards",
+              "kind": "flag",
+              "points": 7,
+              "scope": "always"
+            },
+            {
+              "condition": "each Nightmare behavior card you used",
+              "kind": "count",
+              "points": 4,
+              "scope": "always"
+            },
+            {
+              "condition": "each time you’ve been KO’d",
+              "kind": "count",
+              "points": -7,
+              "scope": "always"
+            },
+            {
+              "condition": "each time another player has been KO’d",
+              "kind": "count",
+              "points": -5,
+              "scope": "always"
+            }
+          ]
+        },
+        "3": {
+          "base": 20,
+          "modifiers": [
+            {
+              "condition": "if you used the Nightmare variant stance cards",
+              "kind": "flag",
+              "points": 10,
+              "scope": "always"
+            },
+            {
+              "condition": "each Nightmare behavior card you used",
+              "kind": "count",
+              "points": 5,
+              "scope": "always"
+            },
+            {
+              "condition": "each time you’ve been KO’d",
+              "kind": "count",
+              "points": -10,
+              "scope": "always"
+            },
+            {
+              "condition": "each time another player has been KO’d",
+              "kind": "count",
+              "points": -8,
+              "scope": "always"
+            }
+          ]
+        }
+      },
+      "series": "Primal Challenges",
+      "startingAggression": 1
+    }
+  ]
+}

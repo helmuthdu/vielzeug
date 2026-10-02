@@ -1,0 +1,393 @@
+[
+  {
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "base_armor.webp",
+        "health": 5,
+        "id": "forge-anyone-base-armor-l1",
+        "level": 1,
+        "text": ""
+      }
+    ],
+    "name": "Base Armor"
+  },
+  {
+    "element": "crystal",
+    "levels": [
+      {
+        "cost": {
+          "iride": 2
+        },
+        "file": "forge_crystal/crystal_crystalarmor_1.webp",
+        "health": 6,
+        "id": "forge-anyone-crystal-armor-l1",
+        "level": 1,
+        "text": "Start: If you have 3 or more cards of the same color in your hand, draw 1."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "file": "forge_crystal/crystal_crystalarmor_2.webp",
+        "health": 11,
+        "id": "forge-anyone-crystal-armor-l2",
+        "level": 2,
+        "text": "Start: If you have 3 or more cards of the same color in your hand, draw 1 and reveal the color of that card. Search your discard pile for a card of that color and shuffle it into your deck."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "file": "forge_crystal/crystal_crystalarmor_3.webp",
+        "health": 18,
+        "id": "forge-anyone-crystal-armor-l3",
+        "level": 3,
+        "text": "Start: If you have 3 or more cards of the same color in your hand, draw 1 and reveal the color of that card. Search your discard pile for a card of that color and place it on top of your deck."
+      }
+    ],
+    "name": "Crystal Armor"
+  },
+  {
+    "element": "ice",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_frostarmor_1.webp",
+        "health": 6,
+        "id": "forge-anyone-frost-armor-l1",
+        "level": 1,
+        "text": "Start: Add an exiled card to your hand or exile the top card of your deck."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_frostarmor_2.webp",
+        "health": 13,
+        "id": "forge-anyone-frost-armor-l2",
+        "level": 2,
+        "text": "Start: Add up to 2 of your exiled cards to your hand or exile the top card of your deck or discard pile."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_frostarmor_3.webp",
+        "health": 18,
+        "id": "forge-anyone-frost-armor-l3",
+        "level": 3,
+        "text": "Start: Add up to 3 of your exiled cards to your hand or exile the top card of your deck or discard pile.\nWhen you focus your mastery, you may exile up to 2 cards from your discard pile."
+      }
+    ],
+    "name": "Frost Armor"
+  },
+  {
+    "element": "metal",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 1,
+          "scales": 1
+        },
+        "file": "forge_metal/metal_ironplate_1.webp",
+        "health": 7,
+        "id": "forge-anyone-iron-plate-l1",
+        "level": 1,
+        "text": "When you reveal the first attrition card during your attrition check, you may pay one stamina to discard that card and reveal another one from the attrition deck."
+      },
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "file": "forge_metal/metal_ironplate_2.webp",
+        "health": 13,
+        "id": "forge-anyone-iron-plate-l2",
+        "level": 2,
+        "text": "When you reveal the first attrition card during your attrition check, you may choose to discard that card and reveal another one from the attrition deck."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "file": "forge_metal/metal_ironplate_3.webp",
+        "health": 17,
+        "id": "forge-anyone-iron-plate-l3",
+        "level": 3,
+        "text": "Remove any attrition damage you suffer by 1.\nWhen you reveal the first attrition card during your attrition check, you may choose to discard that card and reveal another one from the attrition deck."
+      }
+    ],
+    "name": "Iron Plate"
+  },
+  {
+    "element": "venom",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_ironleafarmor_1.webp",
+        "health": 7,
+        "id": "forge-anyone-ironleaf-armor-l1",
+        "level": 1,
+        "text": "When you suffer damage, you may search your discard pile for a [attack] and shuffle it into your deck"
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "file": "forge_venon/venon_ironleafarmor_2.webp",
+        "health": 12,
+        "id": "forge-anyone-ironleaf-armor-l2",
+        "level": 2,
+        "text": "When you suffer damage, you may search your discard pile for a [attack] and place it on top of your deck"
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_ironleafarmor_3.webp",
+        "health": 17,
+        "id": "forge-anyone-ironleaf-armor-l3",
+        "level": 3,
+        "text": "When you suffer damage, you may search your discard pile for a card of your choice and place it on top of your deck"
+      }
+    ],
+    "name": "Ironleaf Armor"
+  },
+  {
+    "element": "fire",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_fire/fire_redscalearmor_1.webp",
+        "health": 6,
+        "id": "forge-anyone-red-scale-armor-l1",
+        "level": 1,
+        "text": "Start: If your healt is critical, draw 1."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_fire/fire_redscalearmor_2.webp",
+        "health": 12,
+        "id": "forge-anyone-red-scale-armor-l2",
+        "level": 2,
+        "text": "Start: You may suffer 1 damage. If your health is critical, or you choose to suffer damage from Red Scale Armor, draw 1."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_fire/fire_redscalearmor_3.webp",
+        "health": 19,
+        "id": "forge-anyone-red-scale-armor-l3",
+        "level": 3,
+        "text": "Start: You may suffer 2 damage. If your health is critical, or you choose to suffer damage from Red Scale Armor, draw 2 and then discard a card from your hand."
+      }
+    ],
+    "name": "Red Scale Armor"
+  },
+  {
+    "element": "coral",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_reefboundplate_1.webp",
+        "health": 7,
+        "id": "forge-anyone-reefbound-plate-l1",
+        "level": 1,
+        "text": "When you inflict a wound, heal 1."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_reefboundplate_2.webp",
+        "health": 12,
+        "id": "forge-anyone-reefbound-plate-l2",
+        "level": 2,
+        "text": "When you inflict a wound, heal 2.\nStart: Search your discard pile for a card of your choice and shuffle it into your deck."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_water/water_reefboundplate_3.webp",
+        "health": 16,
+        "id": "forge-anyone-reefbound-plate-l3",
+        "level": 3,
+        "text": "When you inflict a wound, heal 3.\nStart: Search your discard pile up to 2 cards of your choice and shuffle it into your deck."
+      }
+    ],
+    "name": "Reefbound Plate"
+  },
+  {
+    "element": "horn",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_horn/horn_spinedarmor_1.webp",
+        "health": 5,
+        "id": "forge-anyone-spined-armor-l1",
+        "level": 1,
+        "text": "You can hold up to 2 stamina tokens.\nAt the end of your action phase, gain 2 stamina tokens instead 1 if you have 2 or more cards in your hand."
+      },
+      {
+        "cost": {
+          "bones": 2
+        },
+        "file": "forge_horn/horn_spinedarmor_2.webp",
+        "health": 9,
+        "id": "forge-anyone-spined-armor-l2",
+        "level": 2,
+        "text": "You can hold up to 3 stamina tokens.\nAt the end of your action phase, gain stamina tokens equal to the number of cards in your hand (max: 3 tokens)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_horn/horn_spinedarmor_3.webp",
+        "health": 14,
+        "id": "forge-anyone-spined-armor-l3",
+        "level": 3,
+        "text": "You can hold up to 3 stamina tokens.\nAt the end of your action phase, gain stamina tokens equal to the number of cards in your hand (max: 3 tokens).\nWhen you suffer attrition damage, you may spend one stamina to reduce that damage by 2."
+      }
+    ],
+    "name": "Spined Armor"
+  },
+  {
+    "element": "thunder",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "zima": 1
+        },
+        "file": "forge_thunder/thunder_thunderarmor_1.webp",
+        "health": 6,
+        "id": "forge-anyone-thunder-armor-l1",
+        "level": 1,
+        "text": "When you empty your hand, deal 3 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "file": "forge_thunder/thunder_thunderarmor_2.webp",
+        "health": 11,
+        "id": "forge-anyone-thunder-armor-l2",
+        "level": 2,
+        "text": "When you empty your hand, deal 5 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_thunder/thunder_thunderarmor_3.webp",
+        "health": 16,
+        "id": "forge-anyone-thunder-armor-l3",
+        "level": 3,
+        "text": "When you empty your hand, deal 7 damage."
+      }
+    ],
+    "name": "Thunder Armor"
+  },
+  {
+    "element": "feather",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_totemicplate_1.webp",
+        "health": 6,
+        "id": "forge-anyone-totemic-plate-l1",
+        "level": 1,
+        "text": "At the end of your action phase, you may search the top 3 cards of your discard pile for a [dodge] and add it to your hand."
+      },
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_totemicplate_2.webp",
+        "id": "forge-anyone-totemic-plate-l2",
+        "level": 2,
+        "text": "At the end of your action phase, you may search your discard pile for a [dodge] and add it to your hand."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_totemicplate_3.webp",
+        "health": 15,
+        "id": "forge-anyone-totemic-plate-l3",
+        "level": 3,
+        "text": "Start: You may draw 1 unless you are threatened.\nAt the end of your action phase, you may search your discard pile for a [dodge] and add it to your hand."
+      }
+    ],
+    "name": "Totemic Plate"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_s1_armor.webp",
+        "health": 20,
+        "id": "reward-anyone-ancient-armor-l3",
+        "level": 3,
+        "text": "Legendary.\nReduce any damage you suffer by 1."
+      }
+    ],
+    "name": "Ancient Armor"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_s2_armor.webp",
+        "health": 15,
+        "id": "reward-anyone-celestial-armor-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you would flip the KO token, discard it instead.\nWhen you rise, draw 2 and set the health points of this card to 30."
+      }
+    ],
+    "name": "Celestial Armor"
+  }
+]

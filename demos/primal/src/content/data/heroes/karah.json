@@ -1,0 +1,643 @@
+{
+  "starter": [
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-airblade-s",
+      "name": "Airblade",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Chain [parry].\n↓[maneuver]: Remove 1 struggle",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-backstab-s",
+      "name": "Backstab",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Stealth.\nWhen you overrun the monster, you may discard this card from your hand to deal 4[weapon] damage.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-crescent-strike-s",
+      "name": "Crescent Strike",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Chain [attack].\nIncrease your sequence limit by 1 this turn.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-cross-over-s",
+      "name": "Cross Over",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "When you discard this card from your hand to generate stamina for a movement, you may overrun the monster instead of moving.\nIf you do, remove 1 struggle.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-cut-through-s",
+      "name": "Cut Through",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Maneuver",
+      "text": "You may immediately overrun the monster.\nIf you do, draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-dancing-s",
+      "name": "Dancing",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Draw 1 for each [offensive] in your sequence (max draw: 3).\n[mastery]: Increase your sequence limit by 1 this turn.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-deny-s",
+      "name": "Deny",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When you reveal an attrition card, you may discard this card from your hand to discard that attrition card and reveal another one instead.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-disengage-s",
+      "name": "Disengage",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "When the monster changes orientation, you may discard this card from your hand to draw up to your hand size limit.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-divert-s",
+      "name": "Divert",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "Assist.\nWhen a behavior card is revealed, you may discard this card from your hand to immediately overrun the monster.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-echoing-blades-s",
+      "name": "Echoing Blades",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "↓[offensive]: Draw 2 and then discard a card from your hand.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-finesse-s",
+      "name": "Finesse",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Draw 1.\n[mastery]: Draw 2 instead.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-halfmoon-s",
+      "name": "Halfmoon",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "↓[attack]: Deal your weapon damage and draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-natural-agility-s",
+      "name": "Natural Agility",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Increase your sequence limit by 1 this turn.\n↓[attack]: Draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-offensive-attitude-s",
+      "name": "Offensive Attitude",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When another player plays a [attack] in their sequence, you may discard this card from your hand to search your deck for [attack] and add it to your hand. Then reshuffle your deck.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-perfection-s",
+      "name": "Perfection",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Draw 1. If that card is a [attack], you may play it as the next card in your sequence without paying its stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "When you overrun the monster, deal your base weapon damage or draw 1."
+      },
+      "id": "hero-karah-piercing-dash-s",
+      "name": "Piercing Dash",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 2,
+        "text": "When you overrun the monster, place a counter on this card."
+      }
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-piercing-strike-s",
+      "name": "Piercing Strike",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Chain [dodge].\nYou may immediately overrun the monster.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-run-through-s",
+      "name": "Run Through",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "You may immediately overrun the monster.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-scythe-s",
+      "name": "Scythe",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Assist. Chain [maneuver].\nRemove 1 struggle.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-shadow-step-s",
+      "name": "Shadow Step",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "Reclaim: [attack][attack].\nYou may immediately move without paying any stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-shadowstrike-s",
+      "name": "Shadowstrike",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Your cards gain stealth until the end of the turn.\nWhen you overrun the monster, you may discard this card from your hand to draw 2.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-karah-slice-s",
+      "name": "Slice",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist. Chain [attack]",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-swing-s",
+      "name": "Swing",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Assist.\nIncrease your sequence limit by 1 this turn.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-twist-s",
+      "name": "Twist",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Chain [attack].\nDraw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-karah-wall-of-blades-s",
+      "name": "Wall of Blades",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "If you have 3 cards or more in your sequence, you can play this card without paying its stamina cost.",
+      "trait": null
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-karah-returning-blade-a1",
+        "name": "Returning Blade",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Assist.\nReclaim: [offensive][offensive][offensive]",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-karah-twin-blades-a1",
+        "name": "Twin Blades",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "Chain [maneuver].\nWhen you discard this card from your hand, deal your weapon damage.",
+        "trait": null
+      }
+    ],
+    "A2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-karah-lightning-strike-a2",
+        "name": "Lightning Strike",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "If the top card of your discard pile is a [attack], you may play that card as the next card in your sequence without paying its stamina cost.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-karah-overture-a2",
+        "name": "Overture",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "If you paid with a [attack], draw 3.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When you discard a [offensive] card from your hand, deal 1[weapon] damage. If that card is a [attack], deal 3[weapon] instead."
+        },
+        "id": "hero-karah-double-edge-a2",
+        "name": "Double Edge",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "When you discard a [offensive] card from your hand, place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-karah-dance-step-b1",
+        "name": "Dance Step",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "↓[attack]: Draw 1. If you draw a [attack] this way, draw 1 additional card.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-karah-endless-strike-b1",
+        "name": "Endless Strike",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Assist.\nIncrease your sequence limit by 1 this turn.",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-karah-maelstorm-b2",
+        "name": "Maelstrom",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "[attack][attack]↓: The next time you deal damage through battle dance this turn, double that damage.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-karah-outweigh-b2",
+        "name": "Outweigh",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Increase your sequence limit by 1 this turn.\n[mastery]: Draw 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Prevent any fatigue damage would suffer. \nWhen you trigger battle dance, draw 1 and then discard a card from your hand."
+        },
+        "id": "hero-karah-unstoppable-b2",
+        "name": "Unstoppable",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "When you trigger battle dance, place a counter on this card."
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-karah-reactive-defense-c1",
+        "name": "Reactive Defense",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "When you suffer damage, you may discard this card from your hand to immediately overrun the monster and draw 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-karah-spinning-c1",
+        "name": "Spinning",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Dodge",
+        "text": "Chain [maneuver].\n[attack][attack]↓: Gain a defense token.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-karah-dancing-shield-c2",
+        "name": "Dancing Shield",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Chain [attack].\nThis card counts as [attack] for battle dance and retaliate.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-karah-double-strike-c2",
+        "name": "Double Strike",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "This card counts as [offensive][offensive] for battle dance.\n[mastery]: Draw 1.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When you chain a card, deal 1[weapon] damage. \nIf that card is a [attack], deal 3[weapon] instead"
+        },
+        "id": "hero-karah-the-dancer-c2",
+        "name": "The Dancer",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "When you chain a card, place a counter on this card."
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-karah-evasive-dance-d1",
+        "name": "Evasive Dance",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Search your discard pile for up to 2 [offensive] and shuffle them into your deck.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-karah-fade-d1",
+        "name": "Fade",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Stealth.\n[mastery]: Draw 1 and increase your sequence limit by 1 this turn.",
+        "trait": null
+      }
+    ],
+    "D2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-karah-rising-moon-d2",
+        "name": "Rising Moon",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "You may draw 1 or increase the struggle this maneuver removes by 1.\n[mastery]: Your weapon gets +1[weapon] damage until the end of this turn for each card with stealth in your sequence.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-karah-unseen-d2",
+        "name": "Unseen",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Chain [attack].\nReclaim: Start your turn in the same sector as another player.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Each [offensive] you play gains stealth.\nAt the end of your turn, remove 1 struggle and lose focus."
+        },
+        "id": "hero-karah-master-of-elusion-d2",
+        "name": "Master of Elusion",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "Start: Reveal [dodge][dodge] from your hand to place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-karah-blade-rush-e1",
+        "name": "Blade Rush",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "When you suffer damage, you may discard this card from your hand to immediately overrun the monster and deal 2[weapon] damage.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-karah-iron-hedge-e1",
+        "name": "Iron Hedge",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "When you would suffer damage, you may discard this card from your hand to halve that damage and draw 1.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-karah-blade-charge-e2",
+        "name": "Blade Charge",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Your weapon gets +2 damage until the end of this turn.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-karah-fighting-spirit-e2",
+        "name": "Fighting Spirit",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Parry",
+        "text": "You may suffer monster damage.\nIf you do, draw 2 or remove 2 struggle.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Increase your hand size limit by 1.\nRetaliate [attack][attack]: Deal your weapon damage."
+        },
+        "id": "hero-karah-blade-of-vengeance-e2",
+        "name": "Blade of Vengeance",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "When you suffer damage, reveal [attack][attack] to place a counter on this card."
+        }
+      }
+    ]
+  }
+}

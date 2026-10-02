@@ -1,0 +1,619 @@
+{
+  "starter": [
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-drusk-accentedblow-s",
+      "name": "Accented Blow",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Maneuver",
+      "text": "Assist\nIncrease the damage the attack\ndeals by 2.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-drusk-awakenedfury-s",
+      "name": "Awakened Fury",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Increase your rhythm level by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-backbeat-s",
+      "name": "Backbeat",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "[resonance]: Draw 1.",
+      "trait": "Resonance"
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-drusk-calloftheprimordials-s",
+      "name": "Call of the Primordials",
+      "staminaCost": 2,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "Increase the damage this attack deals by [monster_attack].",
+      "trait": "Resonance"
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-drusk-crescendo-s",
+      "name": "Crescendo",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Assist\nIncrease your rhythm level by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-defensivepulse-s",
+      "name": "Defensive Pulse",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "[resonance]: If you avoid attrition damage this turn,\nchoose another player to gain a defense token.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-drusk-drivingrhythm-s",
+      "name": "Driving Rhythm",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Taunt\n[resonance]: Choose another player to draw 1\nand then discard a card from their hand.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-drusk-drumsofvengeance-s",
+      "name": "Drums of Vengeance",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "When you discard this card from your hand,\nyour weapon gets damage until the end of\nthe round.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-drusk-echoofresilience-s",
+      "name": "Echo of Resilience",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Choose another player to draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-drusk-echoingstrength-s",
+      "name": "Echoing Strength",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "If the monster has 1 struggle or more, choose a player to gain a stamina token.",
+      "trait": "Resonance"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-exhaustingbeat-s",
+      "name": "Exhausting Beat",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When you discard this card from your hand,\nremove 1 struggle.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-drusk-ghostnote-s",
+      "name": "Ghost Note",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Maneuver",
+      "text": "Exile the top card of your deck. You can play\nthat card in your sequence this turn.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-drusk-huntingpulse-s",
+      "name": "Hunting Pulse",
+      "staminaCost": 3,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "Choose a player in an exposed sector. That player deals their base weapon damage\n[focused]: That player deals 2[weapon] additional damage.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-hymnofrefuge-s",
+      "name": "Hymn of Refuge",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "While this card is on top of your discard pile,\nit counts as a [dodge] in your sequence for the\nattrition check.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-invocation-s",
+      "name": "Invocation",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Assist.\nYou may choose a player to immediately move.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-drusk-resonantcall-s",
+      "name": "Resonant Call",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "[resonance]: Search your discard pile for a card with\nresonance and put it on top of your deck.",
+      "trait": "Resonance"
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-drusk-resoundingstrike-s",
+      "name": "Resounding Strike",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "Increase the damage this attack deals by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-reverberum-s",
+      "name": "Reverberum",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Assist\nAt the end of your action phase, increase your\nrhythm level by 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "id": "hero-drusk-rhythmicaction-s",
+      "name": "Rhythmic Action",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "[resonance]: Recycle 1.",
+      "trait": "Resonance"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-rhythmicinsight-s",
+      "name": "Rhythmic Insight",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "When you discard this card from your hand,\nchoose a player to recycle 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-drusk-rhythmicsmash-s",
+      "name": "Rhythmic Smash",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Taunt\nChoose another player.\nYou and that player draw 1.",
+      "trait": "Resonance"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "id": "hero-drusk-soundshield-s",
+      "name": "Sound Shield",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "When another player would suffer attrition\ndamage, you may discard this card from your\nhand to prevent that damage.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "id": "hero-drusk-sunderingimpact-s",
+      "name": "Sundering Impact",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "[resonance]: Remove 1 struggle.",
+      "trait": "Resonance"
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "You may taunt the monster by discarding a card with resonance from your hand.\nStart: If you have a card with resonance in your hand, search your discard pile for another card with resonance and add it to your hand."
+      },
+      "id": "hero-drusk-thundering-drum-s",
+      "name": "Thundering Drum",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 2,
+        "text": "When you play two consecutive cards with resonance in your sequence, place a counter on this card."
+      }
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "id": "hero-drusk-warchant-s",
+      "name": "War Chant",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "If you paid with a [maneuver], choose another player\nto draw 1.",
+      "trait": "Resonance"
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-drusk-bloodchant-a1",
+        "name": "Blood Chant",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Attack",
+        "text": "You may suffer [weapon] damage, If you do, choose another player to heal [weapon]",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-voiceoftheprimordials-a1",
+        "name": "Voice of the Primordials",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Draw 1 and then discard a card from your hand.",
+        "trait": "Resonance"
+      }
+    ],
+    "A2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-drusk-celestialsong-a2",
+        "name": "Celestial Song",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "Choose another player to heal [weapon].\nThat player may heal 2[weapon] instead. If they do, the monster heals all damage it currently sustains and gains an acceleration.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-echoes-of-suffering-a2",
+        "name": "Echoes of Suffering",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "The monster suffers [monster_attack]",
+        "trait": "Resonance"
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Increase your hand size limit by 1.\n*When you suffer damage*, place a counter on this card.\n*Start*: Heal [weapon] and remove all counters from this card. The monster suffers 2[weapon] for each counter removed this way."
+        },
+        "id": "hero-drusk-chantofpain-a2",
+        "name": "Chant of Pain",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 1,
+          "text": "When your health becomes critical, place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-attackpulse-b1",
+        "name": "Attack Pulse",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Choose a player to discard the top 3 cards of their deck. That player adds any [attack] discarded this way to their hand.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-drusk-indomitable-b1",
+        "name": "Indomitable's Call",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "When another player plays a [attack] in their sequence, you may discard this card from your hand. If you do, increase the damage that attack deals by 3[weapon]",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-drusk-dragofdoom-b2",
+        "name": "Drag of Doom",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Remove 2 struggle. All other players discard the top 2 cards of their deck.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-drusk-drumsofwar-b2",
+        "name": "Drums of War",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Taunt.\nWhile this card is on top of your discard pile, all weapons have +[weapon] ye damage.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "*Start*: Increase your rhythm level by 1.\nWhile your rhythm level is 3, your inspiration bonus is increased by 3[weapon]"
+        },
+        "id": "hero-drusk-chantofstrength-b2",
+        "name": "Chant of Strength",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "[rhythm]: Place a counter on this card."
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-drusk-warbeat-c1",
+        "name": "Warbeat",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Taunt\nRemove 1 struggle.",
+        "trait": "Resonance"
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-drusk-rousingrhythm-c1",
+        "name": "Rousing Rhythm",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "When you discard this card from your hand,\nchoose another player to draw 1.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-drumstep-c2",
+        "name": "Drumstep",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Assist.\nSearch your discard pile for a [attack] and reshuffle it back into your deck.",
+        "trait": "Resonance"
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-indomitable-march-c2",
+        "name": "Indomitable March",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Assist.\nYou may reveal [attack][attack] from your hand. If you do, choose a weapon to get +[weapon] damage until the end of this round.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "*When you taunt the monster or assist another player*, draw 1.\n[offensive][offensive]: Remove 1 struggle."
+        },
+        "id": "hero-drusk-echoofprotection-c2",
+        "name": "Echo of Protection",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "[offensive][offensive]: Place a counter on this card."
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-break-d1",
+        "name": "Break",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "When a behavior card is revealed, you may discard this card from your hand. If you do, cancel the effects of that card and choose a player to suffer [weapon]",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-drusk-stunning-roll-d1",
+        "name": "Stunning Roll",
+        "staminaCost": 4,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "Stun the monster.\n[focused]: Reduce the stamina cost to play this card by 1 for each card with _resonance_ in your sequence.",
+        "trait": null
+      }
+    ],
+    "D2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-drusk-jarringblow-d2",
+        "name": "Jarring Blow",
+        "staminaCost": 3,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Discard a behavior card in play and replenish its behavior slot with the top card of the behavior deck. The monster gains 1 struggle.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-drusk-risingflow-d2",
+        "name": "Rising Flow",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Increase your rhythm level by 1.",
+        "trait": "Resonance"
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "While your rhythm level is 3, players ignore any fatigue damage they would suffer.\n*When a behavior card is revealed* and your rhythm level is 2 or higher, you may reduce it to 0. If you do, cancel the effect of that behavior card."
+        },
+        "id": "hero-drusk-chantofexhaustion-d2",
+        "name": "Chant of Exhaustion",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "When you empty your deck, place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-destructiveresonance-e1",
+        "name": "Destructive Resonance",
+        "staminaCost": 2,
+        "staminaIcons": 2,
+        "subtype": "Parry",
+        "text": "[focused]: Deal [weapon] damage for each card with _resonance_ in your discard pile (max: 5[weapon])",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-drusk-rhythmicstrike-e1",
+        "name": "Rhythmic Strike",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Dodge",
+        "text": "When you discard this card from your hand,\nchoose a player to deal their base weapon\ndamage.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-drusk-echoesoftheancient-e2",
+        "name": "Echoes of the Ancient",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Search your discard pile for a card of your choice and put it on top of your deck.",
+        "trait": "Resonance"
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-drusk-pulsebreaker-e2",
+        "name": "Pulse Breaker",
+        "staminaCost": 2,
+        "staminaIcons": 2,
+        "subtype": "Attack",
+        "text": "Taunt.\nCopy the ability of a card with resonance in your discard pile.",
+        "trait": "Resonance"
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "*When you play a card with _resonance_*, deal [weapon] damage. If there are 4 or more cards with _resonance_ in your sequence, deal 2[weapon] instead."
+        },
+        "id": "hero-drusk-pulseofthewild-e2",
+        "name": "Pulse of The Wild",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "*At the end of your action phase*, place a counter on this card for each card with _resonance_ in your sequence."
+        }
+      }
+    ]
+  }
+}

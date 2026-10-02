@@ -1,0 +1,630 @@
+/*
+ * Primal companion theme.
+ *
+ * Refine tokens are overridden in an unlayered :root so every ore-* component shares the
+ * natural, task-focused Hunter's Companion visual language.
+ */
+
+:root {
+  --color-primary-hue: 48deg;
+  --color-primary: oklch(79.01% 0.0795 90.4deg);
+  --color-primary-light: oklch(from var(--color-primary) calc(l + 0.05) calc(c * 0.9) h);
+  --color-primary-lighter: oklch(from var(--color-primary) calc(l + 0.1) calc(c * 0.7) h);
+  --color-primary-dark: oklch(from var(--color-primary) calc(l - 0.16) c h);
+  --color-primary-darker: oklch(from var(--color-primary) calc(l - 0.3) calc(c * 0.85) h);
+  --color-primary-contrast: oklch(25.2% 0 0deg);
+  --color-primary-content: oklch(45.03% 0.067 87.7deg);
+  /* Antique bronze: same brass family as primary gold, but darker and far less
+     saturated. Deliberately away from --color-error (hue 26deg) so secondary
+     actions never read as destructive. */
+  --color-secondary: oklch(55% 0.07 85deg);
+  --color-secondary-contrast: oklch(98% 0.006 85deg);
+  --color-error: oklch(50% 0.18 26deg);
+  --color-success: oklch(48% 0.11 145deg);
+  --color-warning: oklch(58% 0.14 68deg);
+  --color-info: oklch(50% 0.1 230deg);
+
+  --color-contrast-50: oklch(100% 0.008 0deg);
+  --color-contrast-100: oklch(95% 0.012 80deg);
+  --color-contrast-150: oklch(92% 0.015 78deg);
+  --color-contrast-200: oklch(88% 0.02 75deg);
+  --color-contrast-300: oklch(78% 0.028 70deg);
+  --color-contrast-400: oklch(65% 0.035 65deg);
+  --color-contrast-500: oklch(52% 0.035 60deg);
+  --color-contrast-600: oklch(44% 0.034 57deg);
+  --color-contrast-700: oklch(35% 0.03 54deg);
+  --color-contrast-800: oklch(26% 0.025 52deg);
+  --color-contrast-900: oklch(19% 0.02 50deg);
+
+  --font-display: 'Cinzel', serif;
+  --font-heading: 'Marcellus SC', serif;
+  --font-body: 'Inter', sans-serif;
+
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+
+  /* Game tokens. */
+  --p-ink: light-dark(oklch(100% 0 0deg), var(--color-contrast-50));
+  --p-canvas: light-dark(oklch(100% 0 0deg), var(--color-contrast-50));
+  --p-panel: light-dark(oklch(100% 0 0deg), var(--color-contrast-50));
+  --p-panel-raised: light-dark(oklch(100% 0 0deg), var(--color-contrast-50));
+  --p-panel-sunken: light-dark(oklch(97% 0 0deg), var(--color-contrast-100));
+  --p-gold: var(--color-primary-content);
+  --p-gold-dim: oklch(49.32% 0.0499 88.3deg);
+  --p-gold-faint: color-mix(in oklch, var(--color-primary) 14%, transparent);
+  --p-ember: oklch(56% 0.17 40deg);
+  --p-blood: oklch(46% 0.16 25deg);
+  --p-moss: oklch(46% 0.09 140deg);
+  --p-river: oklch(48% 0.1 230deg);
+  --p-pink: light-dark(oklch(55% 0.2 350deg), oklch(78% 0.14 350deg));
+  --p-purple: light-dark(oklch(52% 0.2 300deg), oklch(76% 0.15 300deg));
+  --p-cyan: light-dark(oklch(55% 0.12 200deg), oklch(78% 0.12 200deg));
+  --p-text: var(--text-color-body);
+  --p-text-strong: var(--text-color-heading);
+  --p-text-muted: var(--text-color-tertiary);
+  --p-line: var(--color-divider);
+  --p-line-strong: var(--color-contrast-300);
+  --p-shadow: var(--shadow-2xs);
+  --p-on-dark: oklch(96.15% 0.0098 87.5deg);
+  --p-mask-opaque: oklch(0% 0 0deg);
+  --p-cinematic-ink: oklch(15% 0.02 55deg);
+  --p-overlay-strong: color-mix(in oklch, var(--p-cinematic-ink) 96%, transparent);
+  --p-overlay-medium: color-mix(in oklch, var(--p-cinematic-ink) 75%, transparent);
+  --p-overlay-soft: color-mix(in oklch, var(--p-cinematic-ink) 38%, transparent);
+  --p-narrative-band-start: color-mix(in oklch, var(--p-moss) 36%, var(--p-cinematic-ink));
+  --p-narrative-band-end: color-mix(in oklch, var(--p-gold) 10%, var(--p-cinematic-ink));
+  --p-display: var(--font-display);
+  --p-heading: var(--font-heading);
+  --p-body: var(--font-body);
+  --p-tracking: 0.08em;
+  --p-frame-w: min(1240px, 100% - 2rem);
+  --p-motion: 180ms;
+  --p-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  --color-contrast-50: oklch(17.3% 0 0deg);
+  --color-contrast-100: oklch(20.9% 0 0deg);
+  --color-contrast-150: oklch(24.35% 0 0deg);
+  --color-contrast-200: oklch(28.5% 0 0deg);
+  --color-contrast-300: oklch(37.53% 0 0deg);
+  --color-contrast-400: oklch(49.62% 0 0deg);
+  --color-contrast-500: oklch(65.32% 0.0091 91.5deg);
+  --color-contrast-600: oklch(76.37% 0.0117 89.7deg);
+  --color-contrast-700: oklch(85.15% 0.0114 89.7deg);
+  --color-contrast-800: oklch(91.62% 0.01 87.5deg);
+  --color-contrast-900: oklch(96.15% 0.0098 87.5deg);
+  --p-panel-sunken: oklch(14.84% 0 0deg);
+  --color-error: oklch(68% 0.17 26deg);
+  --color-success: oklch(70% 0.11 145deg);
+  --color-warning: oklch(76% 0.13 72deg);
+  --color-info: oklch(72% 0.1 230deg);
+  --p-gold: oklch(81.34% 0.0775 91.8deg);
+  --p-gold-dim: oklch(76.66% 0.0708 90.9deg);
+  --p-blood: oklch(65% 0.16 28deg);
+  --p-moss: oklch(66% 0.1 140deg);
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --p-motion: 0ms;
+  }
+}
+
+html[data-reduced-motion='true'] {
+  --p-motion: 0ms;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Base                                                                    */
+/* ---------------------------------------------------------------------- */
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+  overflow-x: clip;
+}
+
+body {
+  font-family: var(--p-body);
+  font-size: 1rem;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  color: var(--p-text);
+  background: var(--p-ink);
+  text-rendering: optimizeLegibility;
+}
+
+#app {
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: var(--p-canvas);
+  isolation: isolate;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: var(--p-heading);
+  font-weight: 500;
+  line-height: 1.15;
+  color: var(--p-text-strong);
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--p-gold);
+  text-decoration: none;
+}
+
+a:hover {
+  color: light-dark(var(--color-primary-darker), var(--color-primary-light));
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:where(button, a, [tabindex], ore-button, ore-input, ore-switch, ore-checkbox):focus-visible {
+  outline: 2px solid var(--p-gold);
+  outline-offset: 3px;
+  border-radius: var(--rounded-sm);
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+html[data-theme='dark'] .topbar__brand img,
+html[data-theme='dark'] .mobile-sidebar__brand img,
+html[data-theme='dark'] .menu__logo {
+  /* Paint the logo from the theme itself: the brown artwork is pushed out of the box and the
+     element background: a light-to-dark primary-gold gradient: shows through the logo's own
+     shape as a mask. `--logo` is bound inline per element through the asset() base path. */
+  object-fit: none;
+  object-position: -9999em -9999em;
+  /* Paint the logo from the theme itself: the brown artwork is pushed out of the box and the
+     element background: a light-to-dark primary-gold gradient: shows through the logo's own
+     shape as a mask. `--logo` is bound inline per element through the asset() base path. */
+  background: linear-gradient(
+    180deg,
+    var(--color-primary-light) 0%,
+    var(--color-primary) 45%,
+    var(--color-primary-darker) 100%
+  );
+  filter: none;
+  -webkit-mask: var(--logo, none) center / contain no-repeat;
+  mask: var(--logo, none) center / contain no-repeat;
+}
+
+html[data-theme='dark'] .aggression-mark {
+  filter: invert(1) brightness(1.1) opacity(0.86);
+}
+
+/* The stamina icon is printed near-black, so the dark card-detail facts would swallow it. */
+html[data-theme='dark'] .card-detail__stamina-icon {
+  filter: invert(1) brightness(1.1) opacity(0.86);
+}
+
+html[data-theme='dark'] .result-hero__art {
+  background: color-mix(in oklch, var(--p-panel) 82%, var(--p-canvas));
+}
+
+html[data-theme='dark'] .result-hero__victory-art {
+  opacity: 0.74;
+  filter: grayscale(1) invert(1) contrast(0.9);
+}
+
+html[data-theme='dark'] .result-hero__defeat-art img {
+  opacity: 0.58;
+  filter: grayscale(1) invert(1) sepia(0.35) saturate(0.55) contrast(0.9);
+}
+
+html[data-theme='dark'] .result-emblem__art--defeat {
+  opacity: 0.82;
+  filter: grayscale(1) invert(1) contrast(0.9);
+}
+
+html[data-theme='dark'] .hunter__art {
+  background:
+    radial-gradient(75% 68% at 50% 38%, color-mix(in oklch, var(--p-gold) 14%, transparent), transparent 72%),
+    linear-gradient(180deg, var(--p-panel-raised), var(--p-panel-sunken));
+}
+
+html[data-theme='dark'] .wound-card__art {
+  filter: brightness(1.2);
+}
+
+.hunter-profile__art--daeron,
+.hunter-profile__art--mirah,
+.hunter-profile__art--karah {
+  --hunter-art-portrait-position: center 25%;
+}
+
+.hunter-profile__art--thoreg,
+.hunter-profile__art--ljonar,
+.hunter-profile__art--drusk {
+  --hunter-art-portrait-position: center 10%;
+}
+
+.hunter-profile__art--zaraya {
+  --hunter-art-portrait-position: center 5%;
+}
+
+.hunter-profile__art--heleren {
+  --hunter-art-portrait-position: center -15%;
+}
+
+html[data-theme='dark'] .hunter-filmstrip {
+  --hunter-rail-bg: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--p-panel-sunken) 58%, transparent),
+    color-mix(in oklch, var(--p-panel-sunken) 94%, transparent)
+  );
+  --hunter-rail-color: var(--p-on-dark);
+  --hunter-rail-shadow: inset var(--ring) var(--p-line);
+  --hunter-rail-text-shadow: var(--text-shadow-lg);
+  --hunter-rail-weapon: var(--p-gold-dim);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Helpers kept outside Refine: layout rhythm and a few game-specific marks */
+/* ---------------------------------------------------------------------- */
+
+.display {
+  font-family: var(--p-display);
+  font-weight: 700;
+  color: var(--p-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: var(--text-shadow-sm);
+}
+
+.numeral {
+  font-family: var(--p-heading);
+  font-variant-numeric: tabular-nums;
+  color: var(--p-text-strong);
+}
+
+.frame {
+  width: var(--p-frame-w);
+  margin-inline: auto;
+}
+
+.stack {
+  display: grid;
+  gap: var(--stack-gap, var(--size-5));
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cluster-gap, var(--size-2));
+  align-items: center;
+}
+
+.list-plain {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* Icon rendered as a tinted silhouette from a black SVG. */
+.glyph {
+  display: inline-block;
+  flex: none;
+  width: 1.5em;
+  height: 1.5em;
+  background-color: currentColor;
+  -webkit-mask: var(--glyph) center / contain no-repeat;
+  mask: var(--glyph) center / contain no-repeat;
+}
+
+/* Section title row inside ore-card headers. */
+.card-title {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--p-line);
+}
+
+/* The builds page's filter bar: shared by the local library and the online catalog,
+   so both halves of the page carry the same tools row. */
+.builds__tools {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1.4fr) repeat(3, minmax(9rem, 0.7fr));
+  gap: 0.65rem;
+}
+
+.builds__tools ore-input {
+  --input-radius: var(--rounded-sm);
+}
+
+.builds__tools ore-select {
+  --input-radius: var(--rounded-sm);
+  --input-min-width: 0;
+  --select-radius: var(--rounded-sm);
+  --select-min-width: 0;
+}
+
+/* Stack the tools row on narrow screens, like the forge codex tools. */
+@media (width < 720px) {
+  .builds__tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .builds__tools ore-input {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The result-count row under the tools bar: shared by the local library and the
+   online catalog. */
+.builds__list-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Refine overrides: clear, tactile, and optimized for table-side use     */
+/* ---------------------------------------------------------------------- */
+
+ore-text[variant='overline'] {
+  --text-color: var(--p-gold-dim);
+  --text-letter-spacing: var(--p-tracking);
+  font-family: var(--p-heading);
+  font-weight: 600;
+}
+
+ore-text[variant='heading'] {
+  --text-letter-spacing: -0.02em;
+  font-family: var(--p-heading);
+  font-weight: 500;
+  text-transform: none;
+}
+
+ore-text[variant='heading'][size='xs'] {
+  --text-color: var(--p-gold);
+  --text-letter-spacing: 0.04em;
+}
+
+ore-grid > *,
+ore-grid-item {
+  min-width: 0;
+}
+
+ore-card {
+  --card-radius: var(--rounded-sm);
+  --card-padding: 1.25rem;
+}
+
+ore-card[interactive][aria-pressed='true'],
+ore-card[interactive][aria-checked='true'] {
+  --card-border-color: var(--p-gold);
+  --card-shadow: var(--ring) var(--p-gold), var(--shadow-sm);
+}
+
+ore-card[interactive][disabled] {
+  opacity: 0.4;
+}
+
+/* Horizontal cards use their media slot for emblems and numerals, not cover art. */
+ore-card[orientation='horizontal']::part(media) {
+  flex: none;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.pick__mark {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-family: var(--p-heading);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--p-gold);
+  background: color-mix(in oklch, var(--color-contrast-50) 90%, transparent);
+  border: 1px solid var(--p-line-strong);
+  opacity: 0;
+  transition: opacity var(--p-motion) var(--p-ease);
+}
+
+ore-card[aria-pressed='true'] .pick__mark,
+ore-card[aria-checked='true'] .pick__mark {
+  opacity: 1;
+}
+
+ore-box {
+  --box-radius: var(--rounded-md);
+}
+
+ore-button {
+  font-family: var(--p-body);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+/* Near-square buttons app-wide, except inside attached groups: the group's shadow
+   ::slotted rules own the segmented corner geometry (square seams, rounded ends), and
+   this document rule would otherwise win the cascade and split the group apart. */
+ore-button:not(ore-button-group[attached] *) {
+  --button-radius: var(--rounded-sm);
+}
+
+/* The group's rounded ends carry the same near-square corner, so an attached cluster
+   meets its standalone neighbours at the app radius instead of the framework's. */
+ore-button-group {
+  --group-radius: var(--rounded-sm);
+}
+
+/* Primary is very light gold (L=79%); the framework's auto-derived content/border tokens
+   don't carry enough contrast for bordered/outline variants. Pin them to the game's gold tokens. */
+ore-button:is([variant='bordered'], [variant='outline'], [variant='ghost'], [variant='text'])[color='primary'] {
+  --button-color: light-dark(var(--color-primary-content), var(--p-gold));
+}
+
+ore-button:is([variant='bordered'], [variant='outline'])[color='primary'] {
+  --button-border-color: var(--p-gold-dim);
+}
+
+/* Flat primary: the framework's backdrop at L=93% is nearly invisible against the panel.
+   Use explicit gold-tinted values that read in both themes. */
+ore-button[variant='flat'][color='primary'] {
+  --button-bg: light-dark(oklch(93% 0.015 92), oklch(26% 0.012 92));
+  --button-border-color: light-dark(oklch(80% 0.045 90), oklch(53% 0.028 92));
+  --button-color: light-dark(var(--color-primary-content), color-mix(in oklch, var(--p-gold) 72%, var(--p-on-dark)));
+}
+
+ore-chip {
+  --chip-radius: var(--rounded-sm);
+  --chip-font-size: 0.7rem;
+  --chip-font-weight: 500;
+  font-family: var(--p-body);
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+ore-chip[color='primary']:not([variant='solid']) {
+  --chip-color: light-dark(var(--color-primary-content), var(--p-gold));
+}
+
+ore-chip[color='primary'][variant='outline'] {
+  --chip-border-color: var(--p-gold-dim);
+}
+
+ore-input,
+ore-textarea {
+  --input-radius: var(--rounded-sm);
+}
+
+ore-toast {
+  --toast-snackbar-bg: light-dark(oklch(23% 0.02 52deg), oklch(28% 0.015 55deg));
+  --toast-snackbar-color: oklch(96% 0.008 87deg);
+  font-family: var(--p-body);
+}
+
+ore-dialog {
+  --dialog-radius: var(--rounded-sm);
+}
+
+ore-stats {
+  --stats-radius: var(--rounded-sm);
+  --stats-min-height: 0;
+  --stats-padding: 0.75rem 0.9rem;
+  --stats-value-size: 1.6rem;
+  font-family: var(--p-body);
+}
+
+/* Table-side readability beats truncation: let list rows wrap. */
+ore-list-item::part(title),
+ore-list-item::part(description) {
+  white-space: normal;
+}
+
+ore-carousel {
+  --carousel-bg: transparent;
+  --carousel-radius: var(--rounded-lg);
+}
+
+ore-list {
+  --list-radius: var(--rounded-sm);
+}
+
+ore-list-item {
+  --list-item-bg: transparent;
+}
+
+/* ── Flow utilities ──────────────────────────────────────────────────────────
+   Kept after the element rules: their class selectors must not sit above a later
+   element rule (Biome's descending-specificity guard). */
+
+/* The roster and the board it selects for, in one block-flow context. A sticky element can never
+   leave a grid track, so the docking roster (.hunter-roster) needs this plain block around it :
+   the workspace wrapper is what gives its sticky section room to travel. */
+.party-workspace {
+  display: block;
+}
+
+/* A phase's body in one block-flow context: the same track rule for the phase dock: the flow
+   wrapper spans the phase's sections, so the dock pinned at the viewport's foot can travel
+   while the phase scrolls above it. Margins replace the stack gap the grids used to provide. */
+.phase-flow {
+  display: block;
+}
+
+.phase-flow > * + * {
+  margin-block-start: var(--phase-gap, 1.25rem);
+}
+
+/* View transitions between routes (wayfinder viewTransition). */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: p-fade-out 140ms ease-in both;
+  }
+
+  ::view-transition-new(root) {
+    animation: p-fade-in 220ms ease-out both;
+  }
+}
+
+@keyframes p-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes p-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: last so it wins over every component override above. */
+html[data-reduced-motion='true'] *,
+html[data-reduced-motion='true'] *::before,
+html[data-reduced-motion='true'] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat every component transition */
+  transition-duration: 0.001ms !important;
+  /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat every component animation */
+  animation-duration: 0.001ms !important;
+}

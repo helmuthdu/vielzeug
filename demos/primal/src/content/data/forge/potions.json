@@ -1,0 +1,335 @@
+[
+  {
+    "category": "healing",
+    "levels": [
+      {
+        "cost": {
+          "anyPlants": 2
+        },
+        "file": "herbalist/herbalist_alemore_1.webp",
+        "id": "herbalist-anyone-alemore-l1",
+        "level": 1,
+        "text": "Consume: Choose a player in your sector to heal 2. If the current attrition level (the attrition value of the top card of the attrition discard pile) is 1 or lower, that player heals 4 instead."
+      },
+      {
+        "cost": {
+          "anyPlants": 2
+        },
+        "file": "herbalist/herbalist_alemore_2.webp",
+        "id": "herbalist-anyone-alemore-l2",
+        "level": 2,
+        "text": "Consume: Choose a player in your sector to heal 4. If the current attrition level (the attrition value of the top card of the attrition discard pile) is 1 or lower, that player heals 8 instead."
+      },
+      {
+        "cost": {
+          "anyPlants": 2
+        },
+        "file": "herbalist/herbalist_alemore_3.webp",
+        "id": "herbalist-anyone-alemore-l3",
+        "level": 3,
+        "text": "Consume: Choose a player in your sector to heal 6. If the current attrition level (the attrition value of the top card of the attrition discard pile) is 1 or lower, that player heals 12 instead."
+      }
+    ],
+    "name": "Alemore"
+  },
+  {
+    "category": "utility",
+    "levels": [
+      {
+        "cost": {
+          "anthemon": 1,
+          "tarmaret": 1
+        },
+        "file": "herbalist/herbalist_evok_1.webp",
+        "id": "herbalist-anyone-evok-l1",
+        "level": 1,
+        "text": "Consume: Discard a card from your hand to search your deck for a [defensive] and add it to your hand. Then shuffle your deck."
+      },
+      {
+        "cost": {
+          "anthemon": 1,
+          "tarmaret": 1
+        },
+        "file": "herbalist/herbalist_evok_2.webp",
+        "id": "herbalist-anyone-evok-l2",
+        "level": 2,
+        "text": "Consume: Search your deck for a [defensive] and add it to your hand. Then shuffle your deck."
+      },
+      {
+        "cost": {
+          "anthemon": 1,
+          "tarmaret": 1
+        },
+        "file": "herbalist/herbalist_evok_3.webp",
+        "id": "herbalist-anyone-evok-l3",
+        "level": 3,
+        "text": "Consume: Search your deck for a card of your choice and add it to your hand. Then shuffle your deck. If that card is a [defensive], its stamina cost is reduced by 1 until the end of this turn."
+      }
+    ],
+    "name": "Evok"
+  },
+  {
+    "category": "offense",
+    "levels": [
+      {
+        "cost": {
+          "nillea": 1,
+          "saelicornia": 1
+        },
+        "file": "herbalist/herbalist_hatrox_1.webp",
+        "id": "herbalist-anyone-hatrox-l1",
+        "level": 1,
+        "text": "Consume: Suffer damage equal to your weapon level. Your weapon gets +3 damage until the end of this round."
+      },
+      {
+        "cost": {
+          "nillea": 1,
+          "saelicornia": 1
+        },
+        "file": "herbalist/herbalist_hatrox_2.webp",
+        "id": "herbalist-anyone-hatrox-l2",
+        "level": 2,
+        "text": "Consume: Suffer damage equal to your weapon level. Your weapon gets +6 damage until the end of this round."
+      },
+      {
+        "cost": {
+          "nillea": 1,
+          "saelicornia": 1
+        },
+        "file": "herbalist/herbalist_hatrox_3.webp",
+        "id": "herbalist-anyone-hatrox-l3",
+        "level": 3,
+        "text": "Consume: Suffer damage equal to your weapon level. Your weapon gets +9 damage until the end of this round."
+      }
+    ],
+    "name": "Hatrox"
+  },
+  {
+    "category": "utility",
+    "levels": [
+      {
+        "cost": {
+          "anthemon": 1,
+          "nillea": 1
+        },
+        "file": "herbalist/herbalist_imperia_1.webp",
+        "id": "herbalist-anyone-imperia-l1",
+        "level": 1,
+        "text": "Consume: Suffer damage equal to your weapon level and draw 2."
+      },
+      {
+        "cost": {
+          "anthemon": 1,
+          "nillea": 1
+        },
+        "file": "herbalist/herbalist_imperia_2.webp",
+        "id": "herbalist-anyone-imperia-l2",
+        "level": 2,
+        "text": "Consume: Draw 2."
+      },
+      {
+        "cost": {
+          "anthemon": 1,
+          "nillea": 1
+        },
+        "file": "herbalist/herbalist_imperia_3.webp",
+        "id": "herbalist-anyone-imperia-l3",
+        "level": 3,
+        "text": "Consume: Draw 2 and reduce the stamina cost of the first card you play this round by 1."
+      }
+    ],
+    "name": "Imperia"
+  },
+  {
+    "category": "defense",
+    "levels": [
+      {
+        "cost": {
+          "saelicornia": 1,
+          "tarmaret": 1
+        },
+        "file": "herbalist/herbalist_irden_1.webp",
+        "id": "herbalist-anyone-irden-l1",
+        "level": 1,
+        "text": "Consume: Gain a defense token."
+      },
+      {
+        "cost": {
+          "saelicornia": 1,
+          "tarmaret": 1
+        },
+        "file": "herbalist/herbalist_irden_2.webp",
+        "id": "herbalist-anyone-irden-l2",
+        "level": 2,
+        "text": "Consume: Gain a defense token and reduce the attrition damage you would suffer this round by 1."
+      },
+      {
+        "cost": {
+          "saelicornia": 1,
+          "tarmaret": 1
+        },
+        "file": "herbalist/herbalist_irden_3.webp",
+        "id": "herbalist-anyone-irden-l3",
+        "level": 3,
+        "text": "Consume: Skip the attrition phase this round."
+      }
+    ],
+    "name": "Irden"
+  },
+  {
+    "category": "utility",
+    "levels": [
+      {
+        "cost": {
+          "albalacea": 1,
+          "mellis": 1
+        },
+        "file": "herbalist/herbalist_vydia_1.webp",
+        "id": "herbalist-anyone-vydia-l1",
+        "level": 1,
+        "text": "Consume: Discard a card from your hand to search your deck for a [offensive] and add it to your hand. Then shuffle your deck."
+      },
+      {
+        "cost": {
+          "albalacea": 1,
+          "mellis": 1
+        },
+        "file": "herbalist/herbalist_vydia_2.webp",
+        "id": "herbalist-anyone-vydia-l2",
+        "level": 2,
+        "text": "Consume: Search your deck for a [offensive] and add it to your hand. Then shuffle your deck."
+      },
+      {
+        "cost": {
+          "albalacea": 1,
+          "mellis": 1
+        },
+        "file": "herbalist/herbalist_vydia_3.webp",
+        "id": "herbalist-anyone-vydia-l3",
+        "level": 3,
+        "text": "Consume: Search your deck for a card of your choice and add it to your hand. Then shuffle your deck. If that card is a [offensive], its stamina cost is reduced by 1 until the end of this turn."
+      }
+    ],
+    "name": "Vydia"
+  },
+  {
+    "card": 2,
+    "category": "utility",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_02.webp",
+        "id": "reward-anyone-lumenera-l2",
+        "level": 2,
+        "text": "Consume: All players in your sector search their deck for a card of their choice and add it to their hand. Then those players shuffle their decks."
+      }
+    ],
+    "name": "Lumenera",
+    "reward": true
+  },
+  {
+    "card": 7,
+    "category": "defense",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_07.webp",
+        "id": "reward-anyone-draconis-l3",
+        "level": 3,
+        "text": "Consume: Suffer 3 damage. Behavior cards do not trigger during your next turn in this round."
+      }
+    ],
+    "name": "Draconis",
+    "reward": true
+  },
+  {
+    "card": 16,
+    "category": "utility",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_16.webp",
+        "id": "reward-anyone-focalis-l3",
+        "level": 3,
+        "text": "Consume: Place a counter on your mastery."
+      }
+    ],
+    "name": "Focalis",
+    "reward": true
+  },
+  {
+    "card": 24,
+    "category": "offense",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_24.webp",
+        "id": "reward-anyone-emberax-l3",
+        "level": 3,
+        "text": "Consume: Your weapon gets +5 damage until the end of the round. Prevent any damage you would suffer this round. Then at the start of the next round, you are KO’d."
+      }
+    ],
+    "name": "Emberax",
+    "reward": true
+  },
+  {
+    "card": 25,
+    "category": "utility",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_25.webp",
+        "id": "reward-anyone-netheris-l2",
+        "level": 2,
+        "text": "Consume: Choose a color. Reduce the stamina cost of any cards of that color you play this round by 1."
+      }
+    ],
+    "name": "Netheris",
+    "reward": true
+  },
+  {
+    "card": 33,
+    "category": "healing",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_33.webp",
+        "id": "reward-anyone-vitalis-l3",
+        "level": 3,
+        "text": "Consume: Each time you deal damage this round, heal 2."
+      }
+    ],
+    "name": "Vitalis",
+    "reward": true
+  },
+  {
+    "card": 35,
+    "category": "offense",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_35.webp",
+        "id": "reward-anyone-yndarox-l2",
+        "level": 2,
+        "text": "Consume: Exile a card from your hand. Your weapon gets +3 damage for each of your exiled cards until the end of this round."
+      }
+    ],
+    "name": "Yndarox",
+    "reward": true
+  },
+  {
+    "card": 38,
+    "category": "healing",
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_38.webp",
+        "id": "reward-anyone-celestia-l3",
+        "level": 3,
+        "text": "Consume: If the current attrition level is 1 or lower, heal 15 damage."
+      }
+    ],
+    "name": "Celestia",
+    "reward": true
+  }
+]

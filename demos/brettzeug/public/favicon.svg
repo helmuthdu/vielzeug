@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" style="color-scheme: light dark">
+    <style>
+        .surface { fill: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg)); }
+        .page { fill: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg)); }
+        .primary { fill: light-dark(oklch(56% 0.22 293deg), oklch(72% 0.148 293deg)); }
+        .divider { fill: light-dark(oklch(89% 0.002 264deg), oklch(32% 0.001 250deg)); }
+    </style>
+    <rect class="surface" width="64" height="64" rx="14" />
+    <rect class="page" x="14" y="12" width="26" height="40" rx="3" />
+    <rect class="primary" x="18" y="18" width="18" height="3" rx="1.5" />
+    <rect class="divider" x="18" y="26" width="18" height="2" rx="1" />
+    <rect class="divider" x="18" y="31" width="18" height="2" rx="1" />
+    <rect class="divider" x="18" y="36" width="12" height="2" rx="1" />
+    <circle class="primary" cx="44" cy="42" r="9" />
+    <circle class="page" cx="44" cy="42" r="3.5" />
+</svg>

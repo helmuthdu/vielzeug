@@ -1,0 +1,394 @@
+[
+  {
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "base_helmet.webp",
+        "health": 4,
+        "id": "forge-anyone-base-helm-l1",
+        "level": 1,
+        "text": ""
+      }
+    ],
+    "name": "Base Helm"
+  },
+  {
+    "element": "crystal",
+    "levels": [
+      {
+        "cost": {
+          "iride": 1,
+          "zima": 1
+        },
+        "file": "forge_crystal/crystal_crystalhelm_1.webp",
+        "health": 4,
+        "id": "forge-anyone-crystal-helm-l1",
+        "level": 1,
+        "text": "Start: Look at the top 2 cards of your deck."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "file": "forge_crystal/crystal_crystalhelm_2.webp",
+        "health": 8,
+        "id": "forge-anyone-crystal-helm-l2",
+        "level": 2,
+        "text": "Start: Look at the top 3 cards of your deck and reorder them as you choose."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "scales": 1
+        },
+        "file": "forge_crystal/crystal_crystalhelm_3.webp",
+        "health": 13,
+        "id": "forge-anyone-crystal-helm-l3",
+        "level": 3,
+        "text": "Start: Name a color and then look at the top 3 cards of your deck. You may add one of those cards to your hand if it matches the color named. Return the other cards to the top of your deck in any order."
+      }
+    ],
+    "name": "Crystal Helm"
+  },
+  {
+    "element": "ice",
+    "levels": [
+      {
+        "cost": {
+          "bones": 1,
+          "iride": 1
+        },
+        "file": "forge_ice/ice_frosthelm_1.webp",
+        "health": 4,
+        "id": "forge-anyone-frost-helm-l1",
+        "level": 1,
+        "text": "During the monster upkeep phase, if you are in the front sector, you may reveal a [maneuver] from your hand to reduce the number of struggle the monster gains by 1 (only 1 player can trigger this ability each round)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_ice/ice_frosthelm_2.webp",
+        "health": 9,
+        "id": "forge-anyone-frost-helm-l2",
+        "level": 2,
+        "text": "During the monster upkeep phase, if you are in the front sector, reduce the number of struggle the monster gains by 1 (only 1 player can trigger this ability each round)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "iride": 1
+        },
+        "file": "forge_ice/ice_frosthelm_3.webp",
+        "health": 14,
+        "id": "forge-anyone-frost-helm-l3",
+        "level": 3,
+        "text": "During the monster upkeep phase, reduce the number of struggle the monster gains by 1 (only 1 player can trigger this ability each round)."
+      }
+    ],
+    "name": "Frost Helm"
+  },
+  {
+    "element": "metal",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 2
+        },
+        "file": "forge_metal/metal_ironhelm_1.webp",
+        "health": 5,
+        "id": "forge-anyone-iron-helm-l1",
+        "level": 1,
+        "text": "When you would suffer damage that would knock you down, prevent that damage (max: once per game)."
+      },
+      {
+        "cost": {
+          "iride": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_metal/metal_ironhelm_2.webp",
+        "health": 11,
+        "id": "forge-anyone-iron-helm-l2",
+        "level": 2,
+        "text": "When you would suffer damage that would knock you down, prevent that damage and then draw 1 (max: once per game)."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "file": "forge_metal/metal_ironhelm_3.webp",
+        "health": 15,
+        "id": "forge-anyone-iron-helm-l3",
+        "level": 3,
+        "text": "When you would suffer damage that would knock you down, prevent that damage, draw 1 and deal your weapon damage (max: once per game)."
+      }
+    ],
+    "name": "Iron Helm"
+  },
+  {
+    "element": "venom",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_ironleafhelm_1.webp",
+        "health": 5,
+        "id": "forge-anyone-ironleaf-helm-l1",
+        "level": 1,
+        "text": "When the monster suffers a wound, you may search your discard pile for [attack] and shuffle it into your deck"
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_ironleafhelm_2.webp",
+        "health": 9,
+        "id": "forge-anyone-ironleaf-helm-l2",
+        "level": 2,
+        "text": "When the monster suffers a wound, you may search your discard pile for [offensive] and place it on top of your deck."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_venon/venon_ronleafhelm_3.webp",
+        "health": 13,
+        "id": "forge-anyone-ironleaf-helm-l3",
+        "level": 3,
+        "text": "When the monster suffers a wound, you may search your discard pile for a card of your choice and add it to your hand."
+      }
+    ],
+    "name": "Ironleaf Helm"
+  },
+  {
+    "element": "fire",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_fire/fire_redscalehelm_1.webp",
+        "health": 5,
+        "id": "forge-anyone-red-scale-helm-l1",
+        "level": 1,
+        "text": "Action: Discard the top card of your deck. If that card is [attack], add it to your hand (max: once per turn)."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "bones": 1
+        },
+        "file": "forge_fire/fire_redscalehelm_2.webp",
+        "health": 9,
+        "id": "forge-anyone-red-scale-helm-l2",
+        "level": 2,
+        "text": "Action: Discard the top card of your deck. If that card is [attack], add it to your hand (max: twice per turn)."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_fire/fire_red_scale_helm_3.webp",
+        "health": 15,
+        "id": "forge-anyone-red-scale-helm-l3",
+        "level": 3,
+        "text": "While your health is critical, your weapon has +3 damage.\nAction: Discard the top card of your deck. If that card is [attack], add it to your hand (max: twice per turn)."
+      }
+    ],
+    "name": "Red Scale Helm"
+  },
+  {
+    "element": "coral",
+    "levels": [
+      {
+        "cost": {
+          "scales": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_reefboundhelm_1.webp",
+        "health": 5,
+        "id": "forge-anyone-reefbound-helm-l1",
+        "level": 1,
+        "text": "At the end of your action phase, you may reveal a [maneuver] from your hand. If you do, search your discard pile for a [offensive] and shuffle it into your deck."
+      },
+      {
+        "cost": {
+          "zima": 2
+        },
+        "file": "forge_water/water_reefboundhelm_2.webp",
+        "health": 10,
+        "id": "forge-anyone-reefbound-helm-l2",
+        "level": 2,
+        "text": "At the end of your action phase, you may reveal a [maneuver] from your hand. If you do, you may either heal 2 damage or search your discard pile for a card of your choice and shuffle it into your deck."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_water/water_reefboundhelm_3.webp",
+        "health": 14,
+        "id": "forge-anyone-reefbound-helm-l3",
+        "level": 3,
+        "text": "At the end of your action phase, you may reveal a [maneuver] from your hand. If you do, you may either heal 3 damage or search your discard pile for a card of your choice and place it on top of your deck."
+      }
+    ],
+    "name": "Reefbound Helm"
+  },
+  {
+    "element": "horn",
+    "levels": [
+      {
+        "cost": {
+          "bones": 2
+        },
+        "file": "forge_horn/horn_spined_helm_1.webp",
+        "health": 4,
+        "id": "forge-anyone-spined-helm-l1",
+        "level": 1,
+        "text": "Start: Recycle 1."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_horn/horn_spinedhelm_2.webp",
+        "health": 8,
+        "id": "forge-anyone-spined-helm-l2",
+        "level": 2,
+        "text": "Start: You may discard a card with a printed stamina cost of 2 or higher from your hand. If you do, draw 2."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "kobaureo": 1
+        },
+        "file": "forge_horn/horn_spinedhelm_3.webp",
+        "health": 12,
+        "id": "forge-anyone-spined-helm-l3",
+        "level": 3,
+        "text": "Start: You may discard a stamina token or a card with a printed cost of 2 or higher from your hand. If you do, draw 2."
+      }
+    ],
+    "name": "Spined Helm"
+  },
+  {
+    "element": "thunder",
+    "levels": [
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "file": "forge_thunder/thunder_thunderhelm_1.webp",
+        "health": 4,
+        "id": "forge-anyone-thunder-helm-l1",
+        "level": 1,
+        "text": "When you discard a [attack] from your hand to generate stamina, deal 1 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "scales": 1
+        },
+        "file": "forge_thunder/thunder_thunderhelm_2.webp",
+        "health": 9,
+        "id": "forge-anyone-thunder-helm-l2",
+        "level": 2,
+        "text": "When you discard a [attack] from your hand to generate stamina, deal 2 damage."
+      },
+      {
+        "cost": {
+          "blood": 1,
+          "iride": 1
+        },
+        "file": "forge_thunder/thunder_thunderhelm_3.webp",
+        "health": 15,
+        "id": "forge-anyone-thunder-helm-l3",
+        "level": 3,
+        "text": "When you discard a [attack] from your hand to generate stamina, deal 4 damage."
+      }
+    ],
+    "name": "Thunder Helm"
+  },
+  {
+    "element": "feather",
+    "levels": [
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_totemichelm_1.webp",
+        "health": 5,
+        "id": "forge-anyone-totemic-helm-l1",
+        "level": 1,
+        "text": "While a player in an adjacent sector is paying stamina cost of a card, you may reveal 2 cards of that same color from your hand. If you do, reduce the stamina cost by 1 (max: once per round)."
+      },
+      {
+        "cost": {
+          "bones": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_totemichelm_2.webp",
+        "health": 9,
+        "id": "forge-anyone-totemic-helm-l2",
+        "level": 2,
+        "text": "While another player is paying stamina cost of a card, you may reveal 2 cards of that same color from your hand. If you do, reduce the stamina cost by 1 (max: once per round)."
+      },
+      {
+        "cost": {
+          "kobaureo": 1,
+          "zima": 1
+        },
+        "file": "forge_feather/feather_totemichelm_3.webp",
+        "health": 13,
+        "id": "forge-anyone-totemic-helm-l3",
+        "level": 3,
+        "text": "While another player is paying stamina cost of a card, you may reveal 2 cards of that same color from your hand. If you do, draw 1 and reduce the stamina cost by 1 (max: once per round)."
+      }
+    ],
+    "name": "Totemic Helm"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_s1_helmet.webp",
+        "health": 15,
+        "id": "reward-anyone-ancient-helm-l3",
+        "level": 3,
+        "text": "Legendary.\nAction: Name a monster and look at a behavior card in play. If that card is an instinct card associated with the monster you named, draw 1 and your weapon gets +2 damage until the end of this turn (max: once per turn)."
+      }
+    ],
+    "name": "Ancient Helm"
+  },
+  {
+    "awakenedOnly": true,
+    "element": null,
+    "levels": [
+      {
+        "cost": null,
+        "file": "rewards/item_s2_helmet.webp",
+        "health": 15,
+        "id": "reward-anyone-celestial-helm-l3",
+        "level": 3,
+        "text": "Legendary.\nWhen you would flip the KO token, discard it instead.\nWhen you rise, your weapon gets +3 damage."
+      }
+    ],
+    "name": "Celestial Helm"
+  }
+]

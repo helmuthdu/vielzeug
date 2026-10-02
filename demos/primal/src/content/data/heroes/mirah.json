@@ -1,0 +1,643 @@
+{
+  "starter": [
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-accurate-shot-s",
+      "name": "Accurate Shot",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Assist.",
+      "trait": "Aim"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-arobatics-s",
+      "name": "Acrobatics",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "↓[maneuver]: Draw 3 and then you may immediately move without paying any stamina cost.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-adrenaline-shot-s",
+      "name": "Adrenaline Shot",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "Recycle 1.\n[mastery]: Volley 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-backflip-s",
+      "name": "Backflip",
+      "staminaCost": 0,
+      "staminaIcons": 2,
+      "subtype": "Dodge",
+      "text": "You can only play this card after a [attack].\nThe next time you refill your hand, draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-blinding-shot-s",
+      "name": "Blinding Shot",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Stealth.\nIf the previous card in your sequence has aim, inflict blind.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-bouncing-shot-s",
+      "name": "Bouncing Shot",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "When you discard this card from your hand, perform volley 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-cover-fire-s",
+      "name": "Cover Fire",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Assist.\nWhen another player would suffer attrition damage, you may discard this card from your hand to prevent that damage.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-deadly-shot-s",
+      "name": "Deadly Shot",
+      "staminaCost": 3,
+      "staminaIcons": 2,
+      "subtype": "Attack",
+      "text": "Increase the damage this attack deals by 5[weapon].\n[mastery]: If this attack deals damage, inflict blind.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-decoy-s",
+      "name": "Decoy",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Parry",
+      "text": "Choose a player to draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-evasion-s",
+      "name": "Evasion",
+      "staminaCost": 2,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Draw 2.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-graceful-defense-s",
+      "name": "Graceful Defense",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Reduce the stamina cost of each [defensive] card you play this turn by 1.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-heavy-arrow-s",
+      "name": "Heavy Arrow",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "You may pay 2 stamina to increase the damage this attack deals by 6[weapon]",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-intuiton-s",
+      "name": "Intuition",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When you play a [defensive] card, you may recycle this card from your hand.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-lightning-escape-s",
+      "name": "Lightning Escape",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Search your discard pile for a [dodge] and add it to your hand.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-long-range-s",
+      "name": "Long Range",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "The next [attack] you play in your sequence gains stealth.\nWhile this card is the top card of your discard pile, prevent any attrition damage you would suffer.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-precision-draw-s",
+      "name": "Precision Draw",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Assist.\nAt the start of your turn, if this card is the top card of your discard pile, draw 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-prompt-reflexes-s",
+      "name": "Prompt Reflexes",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "Draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-ranged-position-s",
+      "name": "Ranged Position",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Assist.\nWhile this card is the top card of your discard pile, it counts as a [dodge] in your sequence for the attrition check.",
+      "trait": null
+    },
+    {
+      "aggro": true,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-rapid-burst-s",
+      "name": "Rapid Burst",
+      "staminaCost": 1,
+      "staminaIcons": 2,
+      "subtype": "Maneuver",
+      "text": "Assist.\nVolley 2.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-sharp-shot-s",
+      "name": "Sharp Shot",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "[mastery]: The next time you play a [attack] this turn, deal 2[weapon] damage.",
+      "trait": "Aim"
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-silent-arrow-s",
+      "name": "Silent Arrow",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Attack",
+      "text": "Stealth.\nWhile you are the aggro player, you cannot play this card in your sequence.",
+      "trait": "Aim"
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-sneaky-glide-s",
+      "name": "Sneaky Glide",
+      "staminaCost": 1,
+      "staminaIcons": 1,
+      "subtype": "Dodge",
+      "text": "Recycle 1.\nThe next card you play in your sequence gains stealth.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Defensive",
+      "faq": null,
+      "id": "hero-mirah-swift-deflection-s",
+      "name": "Swift Deflection",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Parry",
+      "text": "When you discard this card from your hand, draw 1.",
+      "trait": null
+    },
+    {
+      "aggro": false,
+      "cardType": "Offensive",
+      "faq": null,
+      "id": "hero-mirah-targeted-shot-s",
+      "name": "Targeted Shot",
+      "staminaCost": 0,
+      "staminaIcons": 1,
+      "subtype": "Maneuver",
+      "text": "[mastery]: The next time you play a [maneuver] this turn, draw 1.",
+      "trait": "Aim"
+    },
+    {
+      "aggro": false,
+      "cardType": "Mastery",
+      "faq": null,
+      "focused": {
+        "text": "Start: Volley 2.\nWhen you empty your deck, deal 5[weapon] damage"
+      },
+      "id": "hero-mirah-ultimate-shot-s",
+      "name": "Ultimate Shot",
+      "staminaCost": null,
+      "staminaIcons": null,
+      "subtype": null,
+      "text": null,
+      "trait": null,
+      "unfocused": {
+        "counters": 1,
+        "text": "When you empty your deck, place a counter on this card."
+      }
+    }
+  ],
+  "upgrades": {
+    "A1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-arrow-switch-a1",
+        "name": "Arrow Snatch",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "When you play a [attack], you may recycle this card from your hand.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-mirah-double-shot-a1",
+        "name": "Double Shot",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "[attack]↓: Increase the damage this attack deals by 3[weapon].",
+        "trait": null
+      }
+    ],
+    "A2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-mirah-dancing-arrow-a2",
+        "name": "Dancing Arrow",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Assist. Volley 2.\nThis card is considered to be both [maneuver] and [attack]",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-flash-arrow-a2",
+        "name": "Flash Arrow",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Discard the top card of your deck. If that card is a [attack], you may play it as the next card in your sequence without paying its stamina cost.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When you deal damage through volley, increase that damage by 1[weapon].\n[attack]: Increase the amount of damage the attack deals by 1[weapon] for each other [attack] in your sequence."
+        },
+        "id": "hero-mirah-storm-of-arrows-a2",
+        "name": "Storm of Arrows",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "[attack][attack]: Place a counter on this card."
+        }
+      }
+    ],
+    "B1": [
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-refill-the-quiver-b1",
+        "name": "Refill the Quiver",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "Shuffle all [attack] from your discard pile into your deck.\n[mastery]: You may shuffle your entire discard pile into your deck instead.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-waiting-game-b1",
+        "name": "Waiting Game",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "At the start of the round, you may reveal this card from your hand to become the last player in player order. If you do, do you may recycle any number of cards.",
+        "trait": null
+      }
+    ],
+    "B2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-mirah-infinite-blast-b2",
+        "name": "Infinite Blast",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Assist.\nRecycle up to three times.",
+        "trait": null
+      },
+      {
+        "aggro": true,
+        "cardType": "Defensive",
+        "id": "hero-mirah-second-chance-b2",
+        "name": "Second Chance",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Discard any number of cards from your hand and then draw up to your hand size limit.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Prevent any fatigue damage you would suffer\nWhen you empty your hand, deal 3[weapon] damage."
+        },
+        "id": "hero-mirah-burst-b2",
+        "name": "Burst",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "When you empty your hand, place a counter on this card."
+        }
+      }
+    ],
+    "C1": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-mirah-midair-shot-c1",
+        "name": "Midair Shot",
+        "staminaCost": 0,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "When you discard this card from your hand, deal your weapon damage.",
+        "trait": "Aim"
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-take-aim-c1",
+        "name": "Take Aim",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Dodge",
+        "text": "Stealth.\nSearch your discard pile for a card with aim and add it to your hand.",
+        "trait": null
+      }
+    ],
+    "C2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-mirah-combined-assault-c2",
+        "name": "Combined Assault",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Recycle 1.\nWhen a player plays [attack][attack], you may discard this card from your hand to inflict blind.",
+        "trait": "Aim"
+      },
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-mirah-precision-shot-c2",
+        "name": "Precision Shot",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Assist. Stealth.\nIncrease the damage this attack deals by 2[weapon] for each card with aim in your discard pile.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When a behavior card is revealed, you may discard a card with aim from your hand to cancel the effects of that behavior card (max: once per round)."
+        },
+        "id": "hero-mirah-the-silencer-c2",
+        "name": "The Silencer",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 2,
+          "text": "When you inflict blind, place a counter on this card."
+        }
+      }
+    ],
+    "D1": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-mirah-open-target-d1",
+        "name": "Open Target",
+        "staminaCost": 1,
+        "staminaIcons": 2,
+        "subtype": "Maneuver",
+        "text": "When you reveal cards from your hand to deal damage as part of a stun resolution, you may reveal this card as if it were [attack][attack]",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-persistence-d1",
+        "name": "Persistence",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "Recycle 1.\nWhen you discard this card from the top of your deck, add it to your hand",
+        "trait": null
+      }
+    ],
+    "D2": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-mirah-hail-of-arrows-d2",
+        "name": "Hail of Arrows",
+        "staminaCost": "X",
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Finisher.\nDiscard X cards from the top of your deck. Deal your base weapon damage for each [offensive] card discarded this way.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-retreat-shot-d2",
+        "name": "Retreat Shot",
+        "staminaCost": 2,
+        "staminaIcons": 2,
+        "subtype": "Dodge",
+        "text": "Perform volley 2 or recycle 1.\nOpening: Prevent any attrition damage you would suffer this turn.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "When focused: Discard the cards underneath Deadly Aim and deal 4[weapon] damage for each [offensive] card discarded this way.\nAt the end of the round, lose focus."
+        },
+        "id": "hero-mirah-deadly-aim-d2",
+        "name": "Deadly Aim",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 3,
+          "text": "When you recycle a card, you may place it face down under this card (max: 1 per round).\nIf you do, place a counter on this card."
+        }
+      }
+    ],
+    "E1": [
+      {
+        "aggro": true,
+        "cardType": "Offensive",
+        "id": "hero-mirah-final-reckoning-e1",
+        "name": "Final Reckoning",
+        "staminaCost": 2,
+        "staminaIcons": 1,
+        "subtype": "Attack",
+        "text": "Finisher.\nRemove 1 struggle and increase the damage this attack deals by 1[weapon] for each [attack] in your discard pile.",
+        "trait": "Aim"
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-lateral-jump-e1",
+        "name": "Lateral Jump",
+        "staminaCost": 0,
+        "staminaIcons": 1,
+        "subtype": "Dodge",
+        "text": "When you play a [maneuver] in your sequence, you may discard this card from your hand to immediately move without paying any stamina cost.",
+        "trait": null
+      }
+    ],
+    "E2": [
+      {
+        "aggro": false,
+        "cardType": "Offensive",
+        "id": "hero-mirah-paralyzing-arrow-e2",
+        "name": "Paralyzing Arrow",
+        "staminaCost": "X",
+        "staminaIcons": 1,
+        "subtype": "Maneuver",
+        "text": "Increase the struggle this maneuver removes by X (max: 5). If you pay 5 for this card, stun the monster.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Defensive",
+        "id": "hero-mirah-shielded-position-e2",
+        "name": "Shielded Position",
+        "staminaCost": 1,
+        "staminaIcons": 1,
+        "subtype": "Parry",
+        "text": "If you suffer attrition damage this turn, reduce that damage by 1[weapon] and remove 1 struggle.",
+        "trait": null
+      },
+      {
+        "aggro": false,
+        "cardType": "Mastery",
+        "focused": {
+          "text": "Increase the struggle your maneuvers removes by 1.\nWhen the monster reaches 0 struggle, you may discard a [attack] from your hand to inflict vulnerable (max: once per round)."
+        },
+        "id": "hero-mirah-exhausting-shot-e2",
+        "name": "Exhausting Shot",
+        "staminaCost": null,
+        "staminaIcons": null,
+        "subtype": null,
+        "text": null,
+        "trait": null,
+        "unfocused": {
+          "counters": 4,
+          "text": "When you play a card with aim, place a counter on this card."
+        }
+      }
+    ]
+  }
+}

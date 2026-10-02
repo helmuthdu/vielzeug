@@ -1,0 +1,86 @@
+[
+  {
+    "group": "color",
+    "id": "attack",
+    "name": "[Attack]",
+    "text": "Attack card (red action card)"
+  },
+  {
+    "group": "color",
+    "id": "maneuver",
+    "name": "[Maneuver]",
+    "text": "Maneuver card (blue action card)"
+  },
+  {
+    "group": "color",
+    "id": "parry",
+    "name": "[Parry]",
+    "text": "Parry card (yellow action card)"
+  },
+  {
+    "group": "color",
+    "id": "dodge",
+    "name": "[Dodge]",
+    "text": "Dodge card (green action card)"
+  },
+  {
+    "group": "color",
+    "id": "offensive",
+    "name": "[Offensive]",
+    "text": "Offensive action card (Maneuver or Attack)"
+  },
+  {
+    "group": "color",
+    "id": "defensive",
+    "name": "[Defensive]",
+    "text": "Defensive action card (Parry or Dodge)"
+  },
+  {
+    "group": "general",
+    "id": "player-count",
+    "name": "[Player Count]",
+    "text": "Number of players who started the scenario"
+  },
+  {
+    "group": "general",
+    "id": "player-count-1",
+    "name": "[Player Count -1]",
+    "text": "Number of players minus one"
+  },
+  {
+    "group": "general",
+    "id": "half-player-count",
+    "name": "[Half Player Count]",
+    "text": "Half the number of players (rounded down)"
+  },
+  {
+    "group": "general",
+    "id": "stamina",
+    "name": "[Stamina]",
+    "text": "Stamina resource"
+  },
+  {
+    "group": "general",
+    "id": "weapon-level",
+    "name": "[Weapon Level]",
+    "text": "Your weapon level"
+  },
+  {
+    "group": "general",
+    "id": "aggro",
+    "name": "[Aggro]",
+    "text": "Aggro card"
+  },
+  {
+    "group": "general",
+    "id": "monster-damage",
+    "name": "[Monster Damage]",
+    "text": "Monster's damage value"
+  },
+  {
+    "group": "general",
+    "id": "monster-damage-2",
+    "name": "[Monster Damage ×2]",
+    "text": "Double the monster's damage"
+  }
+]
