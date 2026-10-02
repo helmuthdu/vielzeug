@@ -1,14 +1,31 @@
+/* Only the size contract stays unlayered: sizeVariantMixin always emits an unlayered :host
+   carrying its md metrics, and unlayered declarations beat every layered rule. This sheet
+   is adopted after the mixin's, so these rules win by source order (the :host defaults,
+   which read the public --badge-* variables) and by specificity (the xs size), while the
+   mixin's sm/md/lg attribute rules still win by specificity over the defaults below. The
+   color contract stays layered — the variant rules must keep beating the base. */
+:host {
+  --_font-size: var(--badge-font-size, var(--text-xs));
+  --_font-weight: var(--badge-font-weight, var(--font-semibold));
+  --_padding-x: var(--badge-padding-x, var(--size-1-5));
+  --_padding-y: var(--badge-padding-y, var(--size-0-5));
+  --_gap: var(--badge-gap, var(--size-1));
+}
+
+/* The one size the shared mixin does not carry. */
+:host([size='xs']) {
+  --_padding-x: var(--size-1);
+  --_padding-y: 0px;
+  --_font-size: var(--text-2xs);
+  --_dot-padding: var(--size-0-5);
+}
+
 @layer refine.base {
   :host {
     --_bg: var(--badge-bg, var(--_theme-backdrop));
     --_color: var(--badge-color, var(--_theme-base));
     --_border-color: var(--badge-border-color, var(--_theme-border));
     --_radius: var(--badge-radius, var(--rounded-lg));
-    --_font-size: var(--badge-font-size, var(--text-xs));
-    --_font-weight: var(--badge-font-weight, var(--font-semibold));
-    --_padding-x: var(--badge-padding-x, var(--size-1-5));
-    --_padding-y: var(--badge-padding-y, var(--size-0-5));
-    --_gap: var(--badge-gap, var(--size-1));
 
     display: inline-flex;
     vertical-align: middle;
@@ -88,15 +105,6 @@
     min-width: unset;
     padding: var(--_dot-padding, var(--size-1));
     line-height: 0;
-  }
-}
-
-@layer refine.sizes {
-  :host([size='xs']) {
-    --_padding-x: var(--size-1);
-    --_padding-y: 0px;
-    --_font-size: var(--text-2xs);
-    --_dot-padding: var(--size-0-5);
   }
 }
 

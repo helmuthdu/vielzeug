@@ -3,17 +3,26 @@ import {
   createMeshHost,
   type MeshAnswer,
   type MeshInvitation,
+  MeshPairingError,
   type MeshPeer,
   type MeshProtocol,
   type MeshRtcFactory,
-  MeshUnsupportedError,
-  meshCodec,
   meshQrCodec,
 } from '@vielzeug/mesh';
 
 import { TavernError, TavernPairingError } from './errors';
 
 export { TavernError, TavernPairingError };
+
+/**
+ * Reclassifies a mesh pairing failure as the tavern-level user mistake it is:
+ * the code the consumer pasted could not be used. The message is preserved and
+ * the original error is chained as `cause`.
+ */
+function toPairingError(error: unknown): TavernPairingError {
+  const message = error instanceof Error ? error.message : 'That code could not be read.';
+  return new TavernPairingError(message, { cause: error });
+}
 
 /**
  * Table sessions over `@vielzeug/mesh`: one host owns the canonical state of a subject, guests
@@ -89,24 +98,6 @@ function parseWireCommand(raw: unknown): { args: unknown[]; id: string; name: st
   return { args, id, name, subjectId };
 }
 
-async function encodePairing(payload: MeshAnswer | MeshInvitation): Promise<string> {
-  try {
-    return await meshQrCodec.encode(payload);
-  } catch {
-    // CompressionStream is unavailable in a few engines — plain codec still works everywhere.
-    return meshCodec.encode(payload);
-  }
-}
-
-async function decodePairing(text: string): Promise<MeshAnswer | MeshInvitation> {
-  try {
-    return await meshQrCodec.decode(text);
-  } catch (error) {
-    if (error instanceof MeshUnsupportedError) return meshCodec.decode(text);
-    throw error;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Host
 // ---------------------------------------------------------------------------
@@ -114,6 +105,8 @@ async function decodePairing(text: string): Promise<MeshAnswer | MeshInvitation>
 export interface TavernHostOptions {
   commands: TavernCommands;
   notices?: TavernNotices;
+  /** Hosting ended — the subject was removed or the host was disposed. Fires exactly once. */
+  onEnded?(): void;
   onPeerJoined?(peer: MeshPeer): void;
   onPeerLeft?(peer: MeshPeer): void;
   onPeersChanged?(peers: MeshPeer[]): void;
@@ -129,11 +122,17 @@ export interface TavernHost {
   acceptAnswerText(text: string): Promise<MeshPeer>;
   /** Produces a single-use invitation code, QR-compact when the environment allows. */
   createInvitationText(): Promise<string>;
+  /** `AbortSignal` aborted when hosting ends. */
+  readonly disposalSignal: AbortSignal;
   /** Stops hosting: closes every channel and detaches all subscriptions. */
   dispose(): void;
+  /** Whether hosting has ended — the subject was removed or `dispose()` ran. */
+  readonly disposed: boolean;
   kick(peerId: string): void;
   /** Relays one local notice to every guest; the serializer decides what crosses. */
   relayNotice(notice: unknown): void;
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
 }
 
 /**
@@ -154,6 +153,17 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
     closed = true;
     for (const off of detach.splice(0)) off();
     host.dispose();
+    options.onEnded?.();
+  };
+
+  /** Reads the snapshot for a broadcast; a throwing read warns instead of crashing the host. */
+  const readSnapshot = (): unknown => {
+    try {
+      return options.subjects.snapshot();
+    } catch (error) {
+      options.onWarning?.(error instanceof Error ? error.message : 'Reading the snapshot failed.');
+      return null;
+    }
   };
 
   /** Coalesces broadcasts on a microtask so bursts of local changes ship one snapshot. */
@@ -163,7 +173,7 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
     queueMicrotask(() => {
       flushScheduled = false;
       if (closed) return;
-      const snapshot = options.subjects.snapshot();
+      const snapshot = readSnapshot();
       if (snapshot !== null && snapshot !== undefined) host.broadcast('snapshot', snapshot);
     });
   };
@@ -201,7 +211,7 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
         options.onPeersChanged?.([...host.peers.values()]);
       }
       if (event.type === 'peer-joined') {
-        const snapshot = options.subjects.snapshot();
+        const snapshot = readSnapshot();
         if (snapshot !== null && snapshot !== undefined) host.send(event.peer.id, 'snapshot', snapshot);
         options.onPeerJoined?.(event.peer);
       }
@@ -212,21 +222,39 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
 
   return {
     acceptAnswerText: async (text: string): Promise<MeshPeer> => {
-      const decoded = await decodePairing(text);
+      let decoded: MeshInvitation | MeshAnswer;
+      try {
+        decoded = await meshQrCodec.decode(text);
+      } catch (error) {
+        throw error instanceof MeshPairingError ? toPairingError(error) : error;
+      }
       if (!('proof' in decoded)) {
         throw new TavernPairingError('That code is an invitation, not a guest answer.');
       }
-      return host.acceptAnswer(decoded);
+      try {
+        return await host.acceptAnswer(decoded);
+      } catch (error) {
+        throw error instanceof MeshPairingError ? toPairingError(error) : error;
+      }
     },
-    createInvitationText: async () => encodePairing(await host.createInvitation()),
+    createInvitationText: async () => meshQrCodec.encode(await host.createInvitation()),
+    get disposalSignal() {
+      return host.disposalSignal;
+    },
     dispose: close,
+    get disposed() {
+      return closed;
+    },
     kick: (peerId: string): void => {
       host.kick(peerId);
     },
     relayNotice: (notice: unknown): void => {
       if (closed) return;
       const wire = options.notices ? options.notices.toWire(notice) : null;
-      if (wire !== null) host.broadcast('notice', wire);
+      if (wire !== null && wire !== undefined) host.broadcast('notice', wire);
+    },
+    [Symbol.dispose]() {
+      close();
     },
   };
 }
@@ -259,13 +287,19 @@ export interface TavernGuestOptions<Mounted> {
 }
 
 export interface TavernGuest {
+  /** `AbortSignal` aborted when the session ends. */
+  readonly disposalSignal: AbortSignal;
   /** Leaves the session and drops the channel. */
   dispose(): void;
+  /** Whether the session has ended — the channel dropped or `dispose()` ran. */
+  readonly disposed: boolean;
   /**
    * Forwards a command to the host. The subject id is the consumer's routing key — the host
    * rejects commands that do not name the subject it is hosting.
    */
   sendCommand(subjectId: string, name: string, args: readonly unknown[]): void;
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
 }
 
 /**
@@ -276,7 +310,12 @@ export interface TavernGuest {
 export async function joinTavern<Mounted>(
   options: TavernGuestOptions<Mounted>,
 ): Promise<{ answerText: string; guest: TavernGuest }> {
-  const decoded = await decodePairing(options.invitationText);
+  let decoded: MeshInvitation | MeshAnswer;
+  try {
+    decoded = await meshQrCodec.decode(options.invitationText);
+  } catch (error) {
+    throw error instanceof MeshPairingError ? toPairingError(error) : error;
+  }
   if (!('secret' in decoded)) {
     throw new TavernPairingError('That code is not a session invitation.');
   }
@@ -315,10 +354,9 @@ export async function joinTavern<Mounted>(
       options.onRejected?.(payload.message || 'The host rejected the action.');
     }),
     guest.tap((event) => {
-      if (event.type !== 'status-change') return;
-      const isHostPeer = event.peerId === null || event.peerId === guest.host?.id;
-      if (!isHostPeer) return;
-      if (event.status === 'failed' && mounted === null) {
+      if (event.type !== 'status-change' && event.type !== 'peer-status-change') return;
+      if (event.type === 'peer-status-change' && event.peerId !== guest.host?.id) return;
+      if (event.status === 'failed' && mounted === null && !ended) {
         options.onFailed?.('The host did not accept the answer in time.');
       }
       if (event.status === 'disconnected' || event.status === 'failed') endSession();
@@ -328,15 +366,30 @@ export async function joinTavern<Mounted>(
     }),
   ];
 
-  const answer = await guest.acceptInvitation(decoded, { name: options.name });
-  return {
-    answerText: await encodePairing(answer),
-    guest: {
-      dispose: endSession,
-      sendCommand: (subjectId: string, name: string, args: readonly unknown[]): void => {
-        if (ended) throw new TavernError('The session has ended.');
-        guest.send('command', { args: [...args], id: commandId(), name, subjectId });
+  try {
+    const answer = await guest.acceptInvitation(decoded, { name: options.name });
+    return {
+      answerText: await meshQrCodec.encode(answer),
+      guest: {
+        get disposalSignal() {
+          return guest.disposalSignal;
+        },
+        dispose: endSession,
+        get disposed() {
+          return ended;
+        },
+        sendCommand: (subjectId: string, name: string, args: readonly unknown[]): void => {
+          if (ended) throw new TavernError('The session has ended.');
+          guest.send('command', { args: [...args], id: commandId(), name, subjectId });
+        },
+        [Symbol.dispose]() {
+          endSession();
+        },
       },
-    },
-  };
+    };
+  } catch (error) {
+    // A failed join must not leave the node and its subscriptions behind.
+    endSession();
+    throw error instanceof MeshPairingError ? toPairingError(error) : error;
+  }
 }

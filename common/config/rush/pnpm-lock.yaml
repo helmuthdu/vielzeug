@@ -535,8 +535,8 @@ importers:
         specifier: workspace:*
         version: link:../tempo
       lucide:
-        specifier: ^1.47.0
-        version: 1.47.0
+        specifier: ^1.48.0
+        version: 1.50.0
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.13.0
@@ -727,6 +727,21 @@ importers:
       '@vielzeug/arsenal':
         specifier: workspace:*
         version: link:../arsenal
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.2
+        version: 26.6.2
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.3.0
+        version: 8.3.0(@types/node@26.6.2)
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@26.6.2)(jsdom@30.1.1)(vite@8.3.0(@types/node@26.6.2))
+
+  ../../packages/tandem:
     devDependencies:
       '@types/node':
         specifier: ^26.6.2
@@ -1601,8 +1616,8 @@ packages:
     resolution: {integrity: sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==}
     engines: {node: 20 || >=22}
 
-  lucide@1.47.0:
-    resolution: {integrity: sha512-gJoVJM5fvpBDGZTvhpJS9IEurz85HbD+wgOlCkXCIw35tHrqTxSdIYUN9sXvs7Aw3NCl67A+nlotNyoU4u7zOQ==}
+  lucide@1.50.0:
+    resolution: {integrity: sha512-9ba3cwifVinKmcmGM+ChiuauzClzxxMxQKDv5hRskbwwlC9wcUpT2QygAfKrehBLbGnbAA0wC1Tc1dDSrwzNJg==}
 
   magic-string@1.2.3:
     resolution: {integrity: sha512-Bpb0W2TbLKOZ7vJnOUnVRGq3WL2p+ISV29M6hYPL1AFCpyKZpdr5ytiXoTSSxRVhg8YW7f65+6gbG8WG6PCa/g==}
@@ -2495,7 +2510,7 @@ snapshots:
 
   lru-cache@11.5.3: {}
 
-  lucide@1.47.0: {}
+  lucide@1.50.0: {}
 
   magic-string@1.2.3:
     dependencies:

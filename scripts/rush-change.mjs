@@ -8,6 +8,9 @@
  * Example:
  *   node scripts/rush-change.mjs orbit patch "fix: stop redundant DOM reads in hot path"
  *
+ * The type only picks the CHANGELOG section the message renders under — versions are CalVer
+ * lockstep trains (see RELEASE.md), so it never affects the version number.
+ *
  * Why not `rush change --bulk`?
  * --bulk writes a change file for every package that has uncommitted changes in the working tree.
  * In a multi-agent worktree environment multiple agents may have unrelated staged changes at the

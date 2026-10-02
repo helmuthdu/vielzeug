@@ -90,6 +90,15 @@ description: Widget API
   );
   write(join(docsDir, 'widget', 'examples.md'), '[Create](./examples/create.md)\n');
   write(
+    join(docsDir, 'widget', 'migration.md'),
+    `---
+title: Widget Migration
+---
+
+# Widget Migration
+`,
+  );
+  write(
     join(docsDir, 'widget', 'examples', 'create.md'),
     `---
 title: Create
@@ -168,11 +177,13 @@ describe('documentation contracts', () => {
     const paths = fixture();
     writeFileSync(join(paths.docsDir, 'widget', 'usage.md'), '## Basic Usage\n');
     rmSync(join(paths.docsDir, 'widget', 'api.md'));
+    rmSync(join(paths.docsDir, 'widget', 'migration.md'));
 
     const diagnostics = validate(paths).diagnostics;
     expect(diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ rule: 'page/missing', file: join(paths.docsDir, 'widget', 'api.md') }),
+        expect.objectContaining({ rule: 'page/missing', file: join(paths.docsDir, 'widget', 'migration.md') }),
         expect.objectContaining({ rule: 'toc/missing', file: join(paths.docsDir, 'widget', 'usage.md') }),
         expect.objectContaining({ rule: 'heading/missing', message: 'Missing required section: Best Practices' }),
       ]),

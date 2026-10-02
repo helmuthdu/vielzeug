@@ -1,18 +1,19 @@
+import { MeshPairingError } from '@vielzeug/mesh';
+import { createFakeRtc } from '@vielzeug/mesh/testing';
 import { describe, expect, it, vi } from 'vitest';
-
-import { createFakeRtc } from '../../../mesh/src/__tests__/_fixtures';
-import { hostTavern, joinTavern, TavernPairingError } from '../index';
+import { hostTavern, joinTavern, TavernError, type TavernNotices, TavernPairingError } from '../index';
 
 interface BookHarness {
   applied: { args: unknown[]; name: string }[];
   guest: Awaited<ReturnType<typeof joinTavern<{ id: string }>>>['guest'];
   host: ReturnType<typeof hostTavern>;
   mounted: unknown[];
+  peerId: string;
 }
 
 /** Hosts a book whose title changes through the `rename` command, plus a guest that mirrors it. */
 async function tavernBook(
-  options: { notices?: Parameters<typeof hostTavern>[0]['notices'] } = {},
+  options: { notices?: TavernNotices; onEnded?(subject: { id: string; title: string }): void } = {},
 ): Promise<BookHarness> {
   const { rtc } = createFakeRtc();
   const applied: { args: unknown[]; name: string }[] = [];
@@ -53,12 +54,13 @@ async function tavernBook(
     },
     name: 'Sam',
     notices: options.notices,
+    onEnded: options.onEnded,
     onJoined: () => undefined,
     rtc,
   });
-  await host.acceptAnswerText(joined.answerText);
+  const peer = await host.acceptAnswerText(joined.answerText);
 
-  return { applied, guest: joined.guest, host, mounted };
+  return { applied, guest: joined.guest, host, mounted, peerId: peer.id };
 }
 
 describe('tavern', () => {
@@ -225,6 +227,135 @@ describe('tavern', () => {
     const invitation = await host.createInvitationText();
     await expect(host.acceptAnswerText(invitation)).rejects.toThrow(TavernPairingError);
 
+    host.dispose();
+  });
+
+  it('wraps a malformed answer code as TavernPairingError with the cause chained', async () => {
+    const { host } = await tavernBook();
+
+    const rejection = await host.acceptAnswerText('not-a-pairing-code').catch((error: unknown) => error);
+    expect(rejection).toBeInstanceOf(TavernPairingError);
+    expect((rejection as TavernPairingError).name).toBe('TavernPairingError');
+    expect((rejection as TavernPairingError).cause).toBeInstanceOf(MeshPairingError);
+
+    host.dispose();
+  });
+
+  it('wraps a malformed invitation code as TavernPairingError', async () => {
+    const { rtc } = createFakeRtc();
+    await expect(
+      joinTavern({ invitationText: 'not-a-pairing-code', mount: () => null, name: 'Sam', rtc }),
+    ).rejects.toBeInstanceOf(TavernPairingError);
+  });
+
+  it('fires host onEnded exactly once when the subject is removed', async () => {
+    const { rtc } = createFakeRtc();
+    let removed: (() => void) | undefined;
+    let ended = 0;
+    const host = hostTavern({
+      commands: { apply: () => undefined, has: () => true },
+      onEnded: () => {
+        ended += 1;
+      },
+      rtc,
+      subjectId: 'book-1',
+      subjects: {
+        onChanged: () => () => undefined,
+        onRemoved: (listener) => {
+          removed = listener;
+          return () => undefined;
+        },
+        snapshot: () => ({ title: 'Draft' }),
+      },
+    });
+
+    removed?.();
+    expect(ended).toBe(1);
+    expect(host.disposed).toBe(true);
+
+    // Dispose again after hosting already ended: onEnded fires exactly once.
+    host.dispose();
+    expect(ended).toBe(1);
+  });
+
+  it('fires host onEnded on explicit dispose', async () => {
+    const { rtc } = createFakeRtc();
+    let ended = 0;
+    const host = hostTavern({
+      commands: { apply: () => undefined, has: () => true },
+      onEnded: () => {
+        ended += 1;
+      },
+      rtc,
+      subjectId: 'book-1',
+      subjects: {
+        onChanged: () => () => undefined,
+        onRemoved: () => () => undefined,
+        snapshot: () => ({ title: 'Draft' }),
+      },
+    });
+
+    host.dispose();
+    expect(ended).toBe(1);
+  });
+
+  it('ends the guest session when the host kicks it', async () => {
+    const ended: string[] = [];
+    const { guest, host, peerId } = await tavernBook({ onEnded: (subject) => ended.push(subject.id) });
+
+    host.kick(peerId);
+    await vi.waitFor(() => expect(guest.disposed).toBe(true));
+    expect(ended).toEqual(['book-1']);
+  });
+
+  it('exposes the disposal surface on both handles', async () => {
+    const { guest, host } = await tavernBook();
+    expect(host.disposed).toBe(false);
+    expect(guest.disposed).toBe(false);
+    expect(host.disposalSignal.aborted).toBe(false);
+    expect(guest.disposalSignal.aborted).toBe(false);
+
+    host[Symbol.dispose]();
+    guest[Symbol.dispose]();
+    expect(host.disposed).toBe(true);
+    expect(guest.disposed).toBe(true);
+    expect(host.disposalSignal.aborted).toBe(true);
+    expect(guest.disposalSignal.aborted).toBe(true);
+  });
+
+  it('throws TavernError when sending a command after the session ended', async () => {
+    const { guest } = await tavernBook();
+    guest.dispose();
+    expect(() => guest.sendCommand('book-1', 'rename', [])).toThrow(TavernError);
+  });
+
+  it('routes a throwing snapshot read to onWarning instead of crashing', async () => {
+    const { rtc } = createFakeRtc();
+    const warnings: string[] = [];
+    const host = hostTavern({
+      commands: { apply: () => undefined, has: () => true },
+      onWarning: (message) => warnings.push(message),
+      rtc,
+      subjectId: 'book-1',
+      subjects: {
+        onChanged: () => () => undefined,
+        onRemoved: () => () => undefined,
+        snapshot: () => {
+          throw new Error('corrupted subject');
+        },
+      },
+    });
+
+    const joined = await joinTavern({
+      invitationText: await host.createInvitationText(),
+      mount: () => null,
+      name: 'Sam',
+      rtc,
+    });
+    await host.acceptAnswerText(joined.answerText);
+
+    // The joining guest's initial snapshot read failed — warned, not thrown.
+    await vi.waitFor(() => expect(warnings).toContain('corrupted subject'));
     host.dispose();
   });
 });

@@ -25,7 +25,6 @@ function fixtureRoot() {
             packageName: '@vielzeug/coins',
             projectFolder: 'packages/coins',
             shouldPublish: true,
-            versionPolicyName: 'vielzeug-packages',
           },
         ],
       },
@@ -90,7 +89,6 @@ describe('planPackage()', () => {
       packageName: '@vielzeug/widget-kit',
       projectFolder: 'packages/widget-kit',
       shouldPublish: true,
-      versionPolicyName: 'vielzeug-packages',
     });
   });
 

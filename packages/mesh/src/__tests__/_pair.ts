@@ -1,7 +1,7 @@
 import { createMeshGuest } from '../guest';
 import { createMeshHost } from '../host';
+import { createFakeRtc, type FakeRtc } from '../testing';
 import type { MeshGuestOptions, MeshHostOptions, MeshProtocol } from '../types';
-import { createFakeRtc, type FakeRtc } from './_fixtures';
 
 export type TestProtocol = MeshProtocol & {
   toHost: { ping: { n: number }; note: string };

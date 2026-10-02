@@ -1051,7 +1051,7 @@ Please ensure:
 
 ### Why Vielzeug instead of [other library]?
 
-Most ecosystem libraries either solve one problem well but don't interoperate, or bundle many solutions behind a single install with coupling you can't opt out of. Vielzeug splits the difference: 35 focused packages with zero external runtime dependencies, each independently versioned and installable, but sharing consistent conventions — disposal via `Symbol.dispose`, structured error hierarchies, dev-only warnings compiled out in production, and ESM + CJS + type declarations on every release. You adopt exactly the pieces you need (`wayfinder` for routing, `forge` for forms, `courier` for HTTP) without pulling in a reactive core, component layer, or build toolchain you didn't ask for.
+Most ecosystem libraries either solve one problem well but don't interoperate, or bundle many solutions behind a single install with coupling you can't opt out of. Vielzeug splits the difference: 35 focused packages with zero external runtime dependencies, each independently installable and released on its own schedule, but sharing consistent conventions — disposal via `Symbol.dispose`, structured error hierarchies, dev-only warnings compiled out in production, and ESM + CJS + type declarations on every release. You adopt exactly the pieces you need (`wayfinder` for routing, `forge` for forms, `courier` for HTTP) without pulling in a reactive core, component layer, or build toolchain you didn't ask for.
 
 ### Can I use individual packages?
 
@@ -1075,7 +1075,7 @@ Inter-package dependencies use `workspace:*` during development and are pinned t
 
 ### What's the versioning strategy?
 
-Packages follow semantic versioning independently. Each package has its own changelog and release cadence — a breaking change in `ward` doesn't force a major bump in `ripple`. Rush changefiles track per-package changes, and the monorepo tooling handles version bumping and publishing.
+CalVer lockstep trains: every package carries the same `YY.MM.N` version — the release train it last shipped on. The number answers *when*, never *how big*; a breaking change rides the next train like any other and says so in that package's changelog and `migration.md`. Packages still release independently in the sense that matters — unchanged packages skip a train and keep their previous version — so a breaking change in `ward` never forces `ripple` to move. Pin exact versions and read each package's `migration.md` when moving between trains.
 
 ### Where can I get help?
 

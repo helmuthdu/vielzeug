@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "split node 'status-change' from per-peer 'peer-status-change' events with a dedicated MeshPeerStatus union, removed the unused MeshNode.id, meshQrCodec.encode now falls back to plain codec output instead of throwing MeshUnsupportedError, host no longer emits misattributed ice-state events for pending invitations, empty answer peer ids rejected, concurrent same-peer-id answers race-guarded, and the in-memory WebRTC fake is now published as the @vielzeug/mesh/testing subpath",
+      "packageName": "@vielzeug/mesh",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

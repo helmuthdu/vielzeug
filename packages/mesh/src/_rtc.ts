@@ -25,12 +25,11 @@ export function normalizeSdp(sdp: string): string {
 }
 
 /**
- * Resolves `'complete'` when ICE gathering finishes, or `'timeout'` after
- * `timeoutMs` — the caller proceeds with whatever candidates were gathered
- * (non-trickle semantics).
+ * Resolves when ICE gathering finishes or after `timeoutMs` — the caller
+ * proceeds with whatever candidates were gathered (non-trickle semantics).
  */
-export function waitIceGathering(pc: RTCPeerConnectionLike, timeoutMs: number): Promise<'complete' | 'timeout'> {
-  if (pc.iceGatheringState === 'complete') return Promise.resolve('complete');
+export function waitIceGathering(pc: RTCPeerConnectionLike, timeoutMs: number): Promise<void> {
+  if (pc.iceGatheringState === 'complete') return Promise.resolve();
   return new Promise((resolve) => {
     const cleanup = () => {
       clearTimeout(timer);
@@ -39,12 +38,12 @@ export function waitIceGathering(pc: RTCPeerConnectionLike, timeoutMs: number): 
     const onChange = () => {
       if (pc.iceGatheringState === 'complete') {
         cleanup();
-        resolve('complete');
+        resolve();
       }
     };
     const timer = setTimeout(() => {
       cleanup();
-      resolve('timeout');
+      resolve();
     }, timeoutMs);
     pc.addEventListener('icegatheringstatechange', onChange);
   });

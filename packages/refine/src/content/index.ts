@@ -44,6 +44,14 @@ export type { OreQrCodeEvents, OreQrCodeProps } from './qr-code/qr-code';
 export { QR_CODE_TAG } from './qr-code/qr-code';
 export type { OreSeparatorProps } from './separator/separator';
 export { SEPARATOR_TAG } from './separator/separator';
+export type {
+  OreSpeechPlayerEvents,
+  OreSpeechPlayerLabels,
+  OreSpeechPlayerProps,
+  SpeechPlayerElement,
+  SpeechPlayerState,
+} from './speech-player/speech-player';
+export { SPEECH_PLAYER_TAG } from './speech-player/speech-player';
 export type { OreStatsProps, StatsTrendDirection, StatsVariant } from './stats/stats';
 export { STATS_TAG } from './stats/stats';
 export type { OreStepProps } from './stepper/step';

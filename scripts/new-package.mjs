@@ -6,7 +6,7 @@
  *   pnpm new:package <name> "<one-sentence description>"
  *
  * Creates `packages/<name>/` (manifest, README, config files, source and test stubs), the
- * four `docs/<name>/` pages plus one recipe that
+ * four `docs/<name>/` pages plus one recipe and an empty `migration.md` that
  * `pnpm validate:docs` requires for every package directory, registers the project in
  * `rush.json`, and refreshes `.agents/reference/packages.md`. Everything the standard package
  * shape needs lives here — if the shape changes, change this script, not a checklist.
@@ -284,6 +284,18 @@ import {} from '${pkg}';
 
 - [Usage Guide](../usage.md)
 `,
+    // Versions are CalVer trains (RELEASE.md); this page is where a breaking change's
+    // migration story lands — one section per break, old code → new code. Empty until
+    // the package's first breaking train.
+    'migration.md': `---
+title: ${title} Migration
+---
+
+# ${title} Migration
+
+No breaking migrations yet. When a train breaks this package's API, document the move here:
+one section per break, with the old call and its replacement.
+`,
   };
 }
 
@@ -307,7 +319,6 @@ export function planPackage(name, description, { root = ROOT } = {}) {
     packageName,
     projectFolder: `packages/${name}`,
     shouldPublish: true,
-    versionPolicyName: rush.projects.find((p) => p.projectFolder === `packages/${TEMPLATE}`)?.versionPolicyName,
   });
 
   const templateManifest = JSON.parse(readFileSync(path.join(root, 'packages', TEMPLATE, 'package.json'), 'utf8'));

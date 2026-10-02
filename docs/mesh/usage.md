@@ -80,14 +80,15 @@ On the guest, the host's `peerId` is the invitation's `sessionId` — the invita
 import { meshQrCodec } from '@vielzeug/mesh';
 import { encodeQr, toSvg } from '@vielzeug/sigil';
 
-// Async — CompressionStream-based. Throws MeshUnsupportedError where streams are missing.
+// Async — deflate + base45 through CompressionStream, with a plain-codec
+// fallback where the stream API is missing.
 const invitationText = await meshQrCodec.encode(await host.createInvitation());
 document.querySelector('#qr').innerHTML = toSvg(encodeQr(invitationText));
 
 const answer = await host.acceptAnswer(await meshQrCodec.decode(scannedAnswerText));
 ```
 
-`encode` throws `MeshUnsupportedError` where `CompressionStream`/`DecompressionStream` are unavailable — keep the plain `meshCodec` paste flow as a fallback. The [sigil pairing recipe](../sigil/examples/pair-two-devices.md) shows the full two-device flow, and `ore-qr-code`/`ore-qr-scanner` (Refine) wrap the rendering and camera sides.
+`encode` falls back to plain `meshCodec` output where `CompressionStream` is unavailable, so it never fails on a missing capability — check for the `mq2.` prefix if you need to know which form you got. `decode` accepts both forms interchangeably and throws `MeshUnsupportedError` only when the text is `mq2.`-compressed but `DecompressionStream` is missing. The [sigil pairing recipe](../sigil/examples/pair-two-devices.md) shows the full two-device flow, and `ore-qr-code`/`ore-qr-scanner` (Refine) wrap the rendering and camera sides.
 
 ## Sending and Receiving
 
@@ -112,7 +113,8 @@ Node `status` moves through `idle → pairing → connecting → connected`, the
 
 ```ts
 host.tap((event) => {
-  if (event.type === 'status-change' && event.peerId === null) console.log('node:', event.status);
+  if (event.type === 'status-change') console.log('node:', event.status);
+  if (event.type === 'peer-status-change') console.log('peer:', event.peerId, event.status);
   if (event.type === 'peer-left') console.log('left:', event.peer.id, event.reason);
 });
 ```
@@ -126,7 +128,7 @@ host.tap((event) => {
 host.kick(peerId, 'bye'); // guest observes 'disconnected'
 ```
 
-`peerId` on a `status-change` event distinguishes node-level (`null`) from per-peer transitions. A guest whose host peer failed or disconnected can re-pair on the same node — call `acceptInvitation` again with a fresh invitation and existing `on`/`tap` listeners keep working.
+`status-change` reports node-level transitions; `peer-status-change` reports a single peer moving between `'connecting' | 'connected' | 'disconnected' | 'failed'`. A guest whose host peer failed or disconnected can re-pair on the same node — call `acceptInvitation` again with a fresh invitation and existing `on`/`tap` listeners keep working.
 
 Dispose nodes deterministically — `dispose()` is idempotent, aborts `disposalSignal`, emits a final `'dispose'` event, and detaches all tappers. Passing an `AbortSignal` option disposes on abort; `using` works too.
 
@@ -135,7 +137,8 @@ Dispose nodes deterministically — `dispose()` is idempotent, aborts `disposalS
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `invitationTtlMs` | `300_000` | How long an unanswered invitation stays valid. |
-| `iceGatheringTimeoutMs` | `5_000` | Caps ICE gathering — on timeout pairing proceeds with the candidates gathered so far. Also bounds the channel-open wait in `acceptAnswer` and the guest's never-opened-channel guard. |
+| `iceGatheringTimeoutMs` | `5_000` | Caps ICE gathering — on timeout pairing proceeds with the candidates gathered so far. |
+| `channelOpenTimeoutMs` | `60_000` | How long `acceptAnswer` and the guest wait for the data channel to open — deliberately generous because it covers the human carry-back of the answer. |
 | `maxMessageBytes` | `65_536` | Serialized message cap, enforced in both directions. |
 
 `acceptAnswer` rejects with `MeshTimeoutError` when the channel never opens; the guest independently marks itself `'failed'` and taps an `'error'` event. Inject `clock` to drive TTLs deterministically in tests.
@@ -152,11 +155,14 @@ Mesh reduces the manual-pairing attack surface but does not remove it:
 
 ## Testing
 
-Every WebRTC object comes from the injectable `rtc` factory — tests pair nodes fully in memory, with no browser. Model a fake on the package's own `src/__tests__/_fixtures.ts`: two peer connections wired through token SDP, with knobs for latency, drops, ICE failure, and stalled open.
+Every WebRTC object comes from the injectable `rtc` factory — tests pair nodes fully in memory, with no browser. `@vielzeug/mesh/testing` ships the in-memory fake the package's own tests use: two peer connections wired through token SDP, with knobs for latency, drops, ICE failure, stalled gathering, and a never-opening channel.
 
 ```ts
-const host = createMeshHost<AppProtocol>({ rtc: fake.rtc, clock: () => now });
-const guest = createMeshGuest<AppProtocol>({ rtc: fake.rtc });
+import { createFakeRtc } from '@vielzeug/mesh/testing';
+
+const fx = createFakeRtc();
+const host = createMeshHost<AppProtocol>({ rtc: fx.rtc, clock: () => now });
+const guest = createMeshGuest<AppProtocol>({ rtc: fx.rtc });
 ```
 
 The [REPL examples](/repl) include a runnable in-memory pairing you can copy as a starting point.
@@ -205,7 +211,7 @@ export function createHost<P extends MeshProtocol>() {
 
 ## Working with Other Vielzeug Libraries
 
-Mesh builds on `@vielzeug/arsenal` for random ids, secrets, and the fallback proof hash — no extra wiring needed. Pair it with `herald` when you want mesh messages to feed an in-process event bus:
+Mesh builds on `@vielzeug/arsenal` for random ids, secrets, and base64url encoding — no extra wiring needed. Pair it with `herald` when you want mesh messages to feed an in-process event bus:
 
 ```ts
 import { createBus } from '@vielzeug/herald';

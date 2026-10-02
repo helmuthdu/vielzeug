@@ -51,6 +51,8 @@ export interface FakeRtc {
   latencyMs: number;
   /** Number of links initiated (one per created offer). */
   readonly linkCount: number;
+  /** Every SDP handed to `setRemoteDescription`, in call order. */
+  readonly remoteSdps: readonly string[];
   readonly rtc: MeshRtcFactory;
   /** Make the next `setLocalDescription` never finish ICE gathering. */
   stallIce(): void;
@@ -59,8 +61,10 @@ export interface FakeRtc {
 }
 
 /**
- * In-memory WebRTC stand-in. Peer connections created from the same fixture
- * wire together through fake SDP tokens — no network, no real ICE.
+ * In-memory WebRTC stand-in for testing mesh nodes without a browser.
+ * Peer connections created from the same fixture wire together through fake
+ * SDP tokens — no network, no real ICE. Pass `fixture.rtc` as the `rtc`
+ * option to `createMeshHost`/`createMeshGuest`.
  */
 export function createFakeRtc(options: { latencyMs?: number } = {}): FakeRtc {
   interface FakeLink {
@@ -74,6 +78,7 @@ export function createFakeRtc(options: { latencyMs?: number } = {}): FakeRtc {
 
   const pendingDeliveries: Array<() => void> = [];
   const links = new Map<string, FakeLink>();
+  const remoteSdps: string[] = [];
   let pcCounter = 0;
   let dropCount = 0;
   let failNextIce = false;
@@ -106,6 +111,9 @@ export function createFakeRtc(options: { latencyMs?: number } = {}): FakeRtc {
     latencyMs: options.latencyMs ?? 0,
     get linkCount() {
       return links.size;
+    },
+    get remoteSdps() {
+      return remoteSdps;
     },
     rtc: {
       createPeerConnection: () => new FakePeerConnection(`pc${++pcCounter}`),
@@ -165,6 +173,8 @@ export function createFakeRtc(options: { latencyMs?: number } = {}): FakeRtc {
     iceConnectionState = 'new';
     iceGatheringState = 'new';
     localDescription: RTCSessionDescriptionLike | null = null;
+    /** Last description received through `setRemoteDescription`, for assertions. */
+    remoteDescription: RTCSessionDescriptionLike | null = null;
     pendingChannel: FakeDataChannel | null = null;
     closed = false;
 
@@ -213,6 +223,8 @@ export function createFakeRtc(options: { latencyMs?: number } = {}): FakeRtc {
     }
 
     setRemoteDescription(description: RTCSessionDescriptionLike): Promise<void> {
+      this.remoteDescription = description;
+      remoteSdps.push(description.sdp ?? '');
       if (description.type === 'offer') {
         const hostToken = /fake-offer:(\w+)/.exec(description.sdp ?? '')?.[1];
         const link = hostToken ? links.get(hostToken) : undefined;

@@ -28,6 +28,7 @@ import { sentinelExamples } from './sentinel';
 import { sigilExamples } from './sigil';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
+import { tandemExamples } from './tandem';
 import { tempoExamples } from './tempo';
 import type { ExampleModule } from './types';
 import { vaultExamples } from './vault';
@@ -65,6 +66,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   sigil: sigilExamples,
   sourcerer: sourcererExamples,
   spell: spellExamples,
+  tandem: tandemExamples,
   tempo: tempoExamples,
   vault: vaultExamples,
   ward: wardExamples,

@@ -48,7 +48,7 @@ try {
 - `RTCPeerConnection` needs a secure context — serve over `https:` or `localhost`, or `createInvitation` fails at the native layer.
 - An invitation is single-use and expires (`invitationTtlMs`, default 5 minutes); `acceptAnswer` then throws `MeshPairingError`.
 - `acceptAnswer` waits for the channel to open — deliver the answer promptly or the guest's open guard marks it `'failed'`.
-- On the guest, inbound `peerId` is the invitation's `sessionId`; it is not the host node's `id`.
+- On the guest, inbound `peerId` is the invitation's `sessionId` — the identity the guest knows its host by.
 
 ### Related
 

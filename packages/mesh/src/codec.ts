@@ -24,6 +24,7 @@ function isAnswer(value: Record<string, unknown>): value is Record<string, unkno
     typeof value.proof === 'string' &&
     isRecord(value.peer) &&
     typeof value.peer.id === 'string' &&
+    value.peer.id !== '' &&
     (value.peer.name === undefined || typeof value.peer.name === 'string') &&
     typeof value.sdp === 'string'
   );

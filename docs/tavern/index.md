@@ -110,7 +110,7 @@ await host.acceptAnswerText(answerText);
 // The guest's commands run through the host's own table.
 guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
 
-// Cleanup: hosting ends for every guest; the guest fires onEnded exactly once.
+// Cleanup — hosting ends for every guest; onEnded fires exactly once on both sides.
 host.dispose();
 guest.dispose();
 ```
@@ -124,8 +124,8 @@ guest.dispose();
 - **`TavernCommands`** — the host's command table: the same object the host's own UI calls, so remote actions cannot bypass validation
 - **`TavernNotices`** — consumer-defined notice serialization: catalog keys cross the wire, each client translates locally
 - **Coalesced snapshots** — bursts of local changes ship one snapshot per microtask, not one per change
-- **`onEnded` fires exactly once** — channel drops and explicit disposal share a single idempotent cleanup path
-- **Typed errors** — `TavernPairingError` separates user-input pairing mistakes from programming errors
+- **`onEnded` fires exactly once** — on both handles: channel drops, subject removal, and explicit disposal share a single idempotent cleanup path
+- **Typed errors** — `TavernPairingError` covers every unusable pasted code with the mesh failure chained as `cause`
 
 </div>
 

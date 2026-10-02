@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: align with CalVer lockstep trains — no code change this train",
+      "packageName": "@vielzeug/orbit",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/orbit"
+}

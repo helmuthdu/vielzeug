@@ -14,25 +14,18 @@ interface QrCodec {
  * reduced to the fields the remote needs (see `_sdp.ts`), the JSON is
  * deflate-raw compressed (`CompressionStream`), and the bytes are base45 —
  * an alphabet inside the QR alphanumeric charset, so encoders use ~5.5
- * bits/char instead of 8.
+ * bits/char instead of 8. Where `CompressionStream` is unavailable it
+ * falls back to plain `meshCodec` output, which `decode` also accepts —
+ * encoding never fails on a missing capability.
  *
  * `decode` accepts `"mq2."` and plain `meshCodec` output — a guest can paste
  * or scan interchangeably.
- *
- * CompressionStream is required; feature-detected at call time so importing is
- * always safe.
  */
 
 const PREFIX_V2 = 'mq2.';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-
-function compressionStream(kind: 'deflate-raw'): CompressionStream {
-  if (typeof globalThis.CompressionStream !== 'function')
-    throw new MeshUnsupportedError('CompressionStream is not available in this environment');
-  return new globalThis.CompressionStream(kind);
-}
 
 function decompressionStream(kind: 'deflate-raw'): DecompressionStream {
   if (typeof globalThis.DecompressionStream !== 'function')
@@ -91,9 +84,11 @@ export const meshQrCodec: QrCodec = {
     return meshCodec.decode(trimmed);
   },
   async encode(payload) {
+    // Missing capability, not a failure: plain output still pairs everywhere.
+    if (typeof globalThis.CompressionStream !== 'function') return meshCodec.encode(payload);
     const compact = compactSdp(payload.sdp);
     const json = encoder.encode(JSON.stringify(compact ? { ...payload, sdp: compact } : payload));
-    const compressed = await pump(json, compressionStream('deflate-raw'));
+    const compressed = await pump(json, new globalThis.CompressionStream('deflate-raw'));
     return PREFIX_V2 + bytesToBase45(compressed);
   },
 };

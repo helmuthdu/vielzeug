@@ -1,0 +1,95 @@
+@layer refine.base {
+  :host {
+    --_gap: var(--speech-player-gap, var(--size-1));
+    --_control-size: var(--speech-player-control-size, var(--size-8));
+    --_icon-color: var(--speech-player-icon-color, var(--text-color-secondary));
+    --_active-color: var(--speech-player-active-color, var(--color-primary));
+    --_hover-bg: var(--speech-player-hover-bg, var(--color-contrast-100));
+
+    display: inline-flex;
+    gap: var(--_gap);
+    align-items: center;
+  }
+
+  :host([hidden]) {
+    display: none;
+  }
+
+  /* ── controls ──────────────────────────────────────────────── */
+
+  .control {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--_control-size);
+    height: var(--_control-size);
+    padding: 0;
+    color: var(--_icon-color);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-full);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .control:hover:not(:disabled) {
+    color: var(--text-color-body);
+    background: var(--_hover-bg);
+  }
+
+  .control:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+
+  .control:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .control[hidden] {
+    display: none;
+  }
+
+  /* The toggle is the invitation — icon and, before the first read, the label. A bare
+     triangle asks nobody. Once engaged the label folds away; the controls are known. */
+  .control--toggle {
+    gap: var(--size-1-5);
+    padding-inline: var(--size-2);
+  }
+
+  .toggle-label {
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+
+  .toggle-label[hidden] {
+    display: none;
+  }
+
+  /* The gauge marks the pace control; the text names its step, and the widest step
+     sets the floor so the row never shifts while cycling. */
+  .control--rate {
+    gap: var(--size-1-5);
+    padding-inline: var(--size-2);
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rate-text {
+    min-width: 5ch;
+    text-align: center;
+  }
+
+  /* While reading, the toggle carries the accent — the control's "now playing" state,
+     distinct from its resting tone without a heavier affordance. */
+  :host([state='playing']) .control--toggle,
+  :host([state='paused']) .control--toggle {
+    color: var(--_active-color);
+  }
+
+  /* .sr-only is provided by the shared srOnlyMixin (see styles: [...] in speech-player.ts) */
+}

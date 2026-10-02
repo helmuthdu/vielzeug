@@ -134,6 +134,31 @@ test.describe('Layout', () => {
     await expect(page.locator('#viewport-navbar')).not.toHaveAttribute('data-mobile');
   });
 
+  test('persistent content stays in the bar through the mobile collapse', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 600, width: 1024 });
+    await refinePage.mountComponent(
+      '<ore-navbar id="pnav" breakpoint="(max-width: 640px)">' +
+        '<span slot="end">Trailing actions</span>' +
+        '<span slot="persistent">Live status</span>' +
+        '</ore-navbar>',
+    );
+
+    const navbar = page.locator('#pnav');
+    await expect(navbar).not.toHaveAttribute('data-mobile');
+    await expect(navbar.locator('[part="end"]')).toBeVisible();
+    await expect(navbar.locator('[part="persistent"]')).toBeVisible();
+
+    await page.setViewportSize({ height: 600, width: 400 });
+    await expect(navbar).toHaveAttribute('data-mobile');
+    await expect(navbar.locator('[part="end"]')).toBeHidden();
+    await expect(navbar.locator('[part="persistent"]')).toBeVisible();
+
+    // The persistent region owns the bar's right edge through the collapse.
+    const bar = await navbar.locator('[part="bar"]').boundingBox();
+    const persistent = await navbar.locator('[part="persistent"]').boundingBox();
+    expect(persistent!.x + persistent!.width).toBeGreaterThan(bar!.x + bar!.width - 60);
+  });
+
   test('mobile sidebar drawer stays within its positioned preview shell', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <div id="shell" style="position:relative;width:360px;height:460px;overflow:hidden;">

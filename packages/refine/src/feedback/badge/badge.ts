@@ -1,5 +1,5 @@
 import { define, html, prop } from '@vielzeug/ore';
-import { computed } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
 import { roundableBundle, themableBundle } from '../../shared';
 import {
   colorThemeMixin,
@@ -113,11 +113,21 @@ define<OreBadgeProps>(BADGE_TAG, {
       return undefined;
     });
 
+    /** True once the default slot carries content — an icon-only badge folds its label region
+     *  away rather than leaving an empty flex child (and its gap) trailing the glyph. */
+    const hasSlottedLabel = signal(false);
+
     return html`
       <span class="badge" part="badge" aria-label="${ariaLabel}">
         <slot name="icon"></slot>
         <span ?hidden="${() => label.value == null}">${label}</span>
-        <span class="badge-label" ?hidden="${() => label.value != null}"><slot></slot></span>
+        <span class="badge-label" ?hidden="${() => label.value != null || !hasSlottedLabel.value}"
+          ><slot
+            @slotchange=${(e: Event) => {
+              hasSlottedLabel.value = (e.target as HTMLSlotElement).assignedNodes().length > 0;
+            }}
+          ></slot
+        ></span>
       </span>
       <slot name="target"></slot>
     `;

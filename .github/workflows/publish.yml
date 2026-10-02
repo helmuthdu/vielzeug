@@ -8,8 +8,8 @@ name: Publish
 # `publish.yml` (not `_publish-one.yml`) as the Trusted Publisher on npmjs.com for every
 # @vielzeug/* package. See `.github/AGENTS.md`.
 #
-#   mode=single   bump + publish one package (needs "package"; it must have a pending change file)
-#   mode=all      bump + publish every package with a pending change file
+#   mode=single   apply the train + publish one package (needs "package"; it must have a pending change file)
+#   mode=all      apply the train + publish every package with a pending change file
 #   mode=missing  publish any version already committed but absent from npm (no version bump)
 
 on:
@@ -89,7 +89,7 @@ jobs:
             fi
             node scripts/release/cli.mjs project "${{ inputs.package }}" > /dev/null
             if ! echo "$PENDING" | tr ' ' '\n' | grep -Fxq "${{ inputs.package }}"; then
-              echo "❌ No pending change file for ${{ inputs.package }}. Run 'rush change', commit it, and re-trigger."
+              echo "❌ No pending change file for ${{ inputs.package }}. Run scripts/rush-change.mjs, commit it, and re-trigger."
               exit 1
             fi
             PACKAGES="${{ inputs.package }}"
@@ -98,9 +98,6 @@ jobs:
           fi
           echo "list=$PACKAGES" >> "$GITHUB_OUTPUT"
           echo "csv=$(echo "$PACKAGES" | tr ' ' ',')" >> "$GITHUB_OUTPUT"
-
-      - name: Record versions before bump
-        run: node scripts/release/cli.mjs versions ${{ steps.packages.outputs.list }} > /tmp/versions-before.txt
 
       - name: Configure Git
         run: |
@@ -112,34 +109,39 @@ jobs:
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
 
-      # `rush publish --apply` stages the whole tree (`git add ':/*'`) into the bump commit, so
-      # anything a build wrote to a tracked file would land on main unreviewed and `[skip ci]`.
+      # A release train must land on a tree the build didn't dirty — anything a build wrote
+      # to a tracked file is a bug worth stopping for, not something to fold into the
+      # train commit (which stages only manifests, changelogs, and change files).
       - name: Require a clean tree after build
         run: git diff --quiet || { git status --short; echo "❌ Build modified tracked files."; exit 1; }
 
-      # `rush publish --apply` has no per-package filter; for mode=single the CLI isolates the
-      # target's change file(s) first — see scripts/release/rush-publish-apply.mjs.
-      - name: Apply version bump
+      # Applies the CalVer train: every manifest stamped `YY.MM.N`, changelog entries for
+      # packages with pending change files, those files consumed, one commit. mode=single
+      # scopes the changelog and consumption to the target package — see
+      # scripts/release/apply-train.mjs. A dry run still stamps and commits locally (the
+      # publish matrix is planned from the stamped versions) but never pushes — the push
+      # step is gated on inputs.dry-run.
+      - name: Apply release train
         run: node scripts/release/cli.mjs apply ${{ inputs.mode == 'single' && inputs.package || '' }}
 
       - name: Verify packed consumer contracts
         run: pnpm verify:packed -- --package=${{ steps.packages.outputs.csv }}
 
-      - name: Push version bump commit
+      - name: Push train commit
         if: ${{ !inputs.dry-run }}
         run: |
           for attempt in 1 2 3; do
             git fetch origin main
             git rebase origin/main
             if git push origin HEAD:main; then
-              echo "✅ Pushed version bump to main"
+              echo "✅ Pushed release train to main"
               break
             fi
             [ "$attempt" -eq 3 ] && { echo "❌ Push failed after 3 attempts"; exit 1; }
             echo "🔄 Retry ${attempt}/3..."
           done
 
-      # The commit each publish job checks out and tags: the pushed bump commit, so tags and
+      # The commit each publish job checks out and tags: the pushed train commit, so tags and
       # release notes point at the CHANGELOG that includes this version.
       - name: Record release commit
         id: head
@@ -151,7 +153,7 @@ jobs:
           fi
 
       # Only what `npm pack` needs beyond the checkout: build output (codex also ships its
-      # generated `data/`) plus the manifests and changelogs rush just bumped (a dry run never
+      # generated `data/`) plus the manifests and changelogs the train just stamped (a dry run never
       # pushes them, so the checkout won't have them).
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -164,11 +166,11 @@ jobs:
             packages/*/CHANGELOG.json
           retention-days: 1
 
-      # Drops anything rush left unbumped or already on npm *before* the matrix is built, so the
-      # Actions UI only shows real publish jobs.
+      # Drops packages already on npm *before* the matrix is built, so the Actions UI only
+      # shows real publish jobs.
       - id: plan
         run: |
-          PLAN=$(node scripts/release/cli.mjs plan --before-file=/tmp/versions-before.txt ${{ steps.packages.outputs.list }})
+          PLAN=$(node scripts/release/cli.mjs plan ${{ steps.packages.outputs.list }})
           echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
           [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 

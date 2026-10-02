@@ -141,56 +141,26 @@ describe('defineMachine', () => {
     expect(() => machine.transition(machine.initialSnapshot, { type: 'GO' })).toThrow(ClockworkSnapshotError);
   });
 
-  it.each([
-    [{ initial: 'idle', states: { idle: { entry: [true] } } }],
-    [{ initial: 'idle', states: { idle: { on: { GO: { guard: true, target: 'idle' } } } } }],
-    [{ initial: 'idle', states: { idle: { on: { GO: { reduce: true, target: 'idle' } } } } }],
-    [{ initial: 'idle', states: { idle: { invoke: [{ src: true }] } } }],
-    [{ initial: 'idle', states: { idle: { after: [{ delay: -1, target: 'idle' }] } } }],
-    [{ initial: 'idle', states: { idle: { on: { GO: [] } } } }],
-    [{ initial: 'idle', states: { idle: { initial: 'child', states: { child: {} } } } }],
-  ])('rejects invalid definitions with ClockworkDefinitionError', (definition) => {
-    expect(() =>
-      defineMachine<Record<string, never>, { readonly type: string }>()(
-        definition as unknown as MachineConfig<'idle', Record<string, never>, { readonly type: string }>,
-      ),
-    ).toThrow(ClockworkDefinitionError);
-  });
-
-  it('rejects array-backed definitions and delays beyond the platform timer limit', () => {
+  it('rejects the definition footguns types cannot express', () => {
     type Event = { readonly type: 'GO' };
-    const statesArray = { context: {}, initial: '0', states: [{}] } as unknown as MachineConfig<
-      '0',
-      Record<string, never>,
-      Event
-    >;
 
-    expect(() => defineMachine<Record<string, never>, Event>()(statesArray)).toThrow(ClockworkDefinitionError);
+    for (const delay of [-1, Number.POSITIVE_INFINITY, 2_147_483_648]) {
+      expect(() =>
+        defineMachine<Record<string, never>, Event>()({
+          context: {},
+          initial: 'idle',
+          states: { idle: { after: [{ delay, target: 'idle' }] } },
+        }),
+      ).toThrow(ClockworkDefinitionError);
+    }
+
     expect(() =>
       defineMachine<Record<string, never>, Event>()({
         context: {},
         initial: 'idle',
-        states: { idle: { after: [{ delay: 2_147_483_648, target: 'idle' }] } },
+        states: { idle: { on: { GO: [] } } },
       }),
     ).toThrow(ClockworkDefinitionError);
-  });
-
-  it('snapshots invoke definitions during compilation', async () => {
-    type Event = { readonly type: 'DONE' };
-    const calls: string[] = [];
-    const invoke = { src: () => void calls.push('original') };
-    const machine = defineMachine<Record<string, never>, Event>()({
-      context: {},
-      initial: 'loading',
-      states: { loading: { invoke: [invoke] } },
-    });
-
-    invoke.src = () => void calls.push('replacement');
-    const actor = machine.createActor();
-    await flush();
-
-    expect(calls).toEqual(['original']);
-    actor.dispose();
   });
 
   it('validates context and freezes snapshots for ignored transitions', () => {

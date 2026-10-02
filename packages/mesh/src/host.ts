@@ -44,7 +44,7 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
   const iceGatheringTimeoutMs = options.iceGatheringTimeoutMs ?? DEFAULT_ICE_GATHERING_TIMEOUT_MS;
   const channelInit = { label: 'mesh', ordered: true, ...options.channel };
 
-  const core = createNodeCore(randomId(options.random), options.signal);
+  const core = createNodeCore(options.signal);
   const messenger = createMessenger({
     clock,
     emitTap: core.emitTap,
@@ -83,7 +83,7 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
   function setPeerStatus(peer: PeerRecord, status: PeerRecord['status']): void {
     if (peer.status === status) return;
     peer.status = status;
-    core.emitTap({ peerId: peer.id, status, type: 'status-change' });
+    core.emitTap({ peerId: peer.id, status, type: 'peer-status-change' });
     recomputeStatus();
   }
 
@@ -93,7 +93,7 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
     peer.status = failed ? 'failed' : 'disconnected';
     peer.pc?.close();
     peer.dc?.close();
-    core.emitTap({ peerId: peer.id, status: peer.status, type: 'status-change' });
+    core.emitTap({ peerId: peer.id, status: peer.status, type: 'peer-status-change' });
     core.emitTap({ peer: peer.publicPeer, reason, type: 'peer-left' });
     if (!failed) sawPeer = true;
     sawFailure = sawFailure || failed;
@@ -141,6 +141,7 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
       core.ensureLive();
 
       if (answer?.v !== 1) throw new MeshPairingError('Unsupported answer version');
+      if (!answer.peer?.id) throw new MeshPairingError('Answer is missing a peer id');
       const invitation = pending.get(answer.sessionId);
       if (!invitation) throw new MeshPairingError('Unknown or expired session');
       if (invitation.answered) throw new MeshPairingError('Invitation already answered');
@@ -159,6 +160,10 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
         throw new MeshPairingError(`Peer "${answer.peer.id}" rejected by host`);
       }
       core.emitTap({ peerId: answer.peer.id, type: 'peer-approved' });
+
+      // Re-check after the proof/approval awaits: concurrent answers for
+      // different sessions could both have passed the check above.
+      if (peers.has(answer.peer.id)) throw new MeshPairingError(`Peer "${answer.peer.id}" is already connected`);
 
       invitation.answered = true;
       pending.delete(answer.sessionId);
@@ -216,11 +221,6 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
       const secret = bytesToBase64Url(randomBytes(32, options.random));
       const expiresAt = clock() + invitationTtlMs;
 
-      pc.addEventListener('iceconnectionstatechange', () => {
-        if (core.disposed) return;
-        core.emitTap({ peerId: sessionId, state: pc.iceConnectionState, type: 'ice-state' });
-      });
-
       try {
         await pc.setLocalDescription(await pc.createOffer());
         await waitIceGathering(pc, iceGatheringTimeoutMs);
@@ -260,16 +260,12 @@ export function createMeshHost<P extends MeshProtocol>(options: MeshHostOptions 
       for (const peer of peers.values()) {
         peer.dc?.close();
         peer.pc?.close();
-        peer.status = 'disposed';
       }
       peers.clear();
       messenger.clear();
     },
     get disposed() {
       return core.disposed;
-    },
-    get id() {
-      return core.id;
     },
 
     kick(peerId, reason) {

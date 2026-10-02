@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { MeshPayloadError } from '../errors';
 import { createMeshGuest } from '../guest';
+import { createFakeRtc } from '../testing';
 import type { MeshEvent, MeshInbound } from '../types';
-import { createFakeRtc } from './_fixtures';
 import { pairNodes, type TestProtocol } from './_pair';
 
 describe('messaging', () => {

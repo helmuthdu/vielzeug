@@ -112,14 +112,16 @@
   .navbar-logo[hidden],
   .navbar-start[hidden],
   .navbar-center[hidden],
-  .navbar-end[hidden] {
+  .navbar-end[hidden],
+  .navbar-persistent[hidden] {
     display: none;
   }
 
   .navbar-logo,
   .navbar-start,
   .navbar-center,
-  .navbar-end {
+  .navbar-end,
+  .navbar-persistent {
     display: flex;
     align-items: center;
     min-width: 0;
@@ -146,6 +148,24 @@
   .navbar-end {
     flex: 0 0 auto;
     gap: var(--size-1);
+    margin-inline-start: auto;
+  }
+
+  /* The persistent region stays in the bar through the mobile collapse; it owns the
+     right edge whenever the end region is not there to claim it. */
+  .navbar-persistent {
+    flex: 0 0 auto;
+    gap: var(--size-1);
+    margin-inline-start: auto;
+  }
+
+  .navbar-end:not([hidden]) + .navbar-persistent {
+    margin-inline-start: var(--size-1);
+  }
+
+  /* The mobile collapse hides the end region with display, not the hidden attribute —
+     reclaim the right edge for the persistent region there. */
+  :host([data-mobile]) .navbar-persistent {
     margin-inline-start: auto;
   }
 

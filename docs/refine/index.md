@@ -77,6 +77,7 @@ exports:
     ore-sidebar-item,
     ore-skeleton,
     ore-slider,
+    ore-speech-player,
     ore-stats,
     ore-step,
     ore-stepper,

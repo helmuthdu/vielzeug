@@ -99,7 +99,7 @@ Diátaxis role: **Navigation only**. No prose next to links — titles must be s
 
 ## `migration.md` — Breaking Migration Guide
 
-Create this page whenever a package has a breaking public API release. Keep migration guidance out of `usage.md`, `api.md`, and recipes so current-version documentation stays focused. Model the page on `docs/arsenal/migration.md`: name the target major version in frontmatter and heading, organize it by removed or changed contract, and show concise Before/After code for every migration path. Link it from the package overview's Documentation section.
+Every package carries this page (the validator requires it); `new-package.mjs` scaffolds it empty. Versions are CalVer trains (`YY.MM.N`, see `RELEASE.md`), so there is no "major version" to name — a breaking change rides the next train and its story lands here. Keep migration guidance out of `usage.md`, `api.md`, and recipes so current-version documentation stays focused. Model the page on `docs/arsenal/migration.md`: one section per removed or changed contract, and concise Before/After code for every migration path. Link it from the package overview's Documentation section.
 
 ## `examples/<slug>.md` — Individual Recipes
 
@@ -117,6 +117,6 @@ Required structure: `## <Recipe Name>` then, in order, `### Problem` (1–3 sent
 - [ ] All code blocks use the current API; no references to removed APIs
 - [ ] Comparison table, decision callout, and See Also reasons are factual and specific
 - [ ] `usage.md` ends with Best Practices; `api.md` overview covers every primary export
-- [ ] Breaking releases have a standalone `migration.md` linked from the package overview
+- [ ] Breaking trains have their migration documented in the package's `migration.md`, linked from the overview
 - [ ] Sidebar config (`docs/.vitepress/config.ts`) updated if examples were added or removed
 - [ ] If `src/_dev.ts` exists, `@security` JSDoc tags are present on messages carrying user-supplied data

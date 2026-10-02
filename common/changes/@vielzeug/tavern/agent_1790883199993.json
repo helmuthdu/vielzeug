@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Pairing-code handling simplified: meshQrCodec owns the CompressionStream fallback, so tavern calls it directly instead of wrapping both codecs in try/catch",
+      "packageName": "@vielzeug/tavern",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tavern"
+}

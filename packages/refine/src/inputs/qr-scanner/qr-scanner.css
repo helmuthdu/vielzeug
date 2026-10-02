@@ -16,11 +16,14 @@
     /* --_size resolves here (not :host) so it can see the inline --_size-px set on this element. */
     --_size: var(--qr-scanner-size, var(--_size-px, 280px));
 
-    display: inline-flex;
+    display: flex;
     flex-direction: column;
     gap: var(--size-2);
     align-items: center;
     max-width: 100%;
+    /* Block-level with auto margins, so a stretched host centers the stage instead
+       of packing it to the leading edge. */
+    margin-inline: auto;
   }
 
   .stage {

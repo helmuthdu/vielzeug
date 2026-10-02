@@ -1,10 +1,18 @@
 @layer refine.base {
   :host {
+    /* Pass this select's width floor down to the ore-input trigger. Without this, the
+       trigger keeps the input's own 12rem floor, so a select sized below it (via
+       `--select-min-width` or a constraining flex/grid track) renders a trigger wider
+       than its host — overflowing it, clipped by whatever ancestor hides overflow. */
+    --input-min-width: var(--select-min-width, 12rem);
     display: inline-block;
     min-width: var(--select-min-width, 12rem);
   }
 
   :host([fullwidth]) {
+    /* Full width means the trigger fills the host exactly — keep the input floor from
+       holding it above a container narrower than the 12rem default. */
+    --input-min-width: 0;
     display: block;
     width: 100%;
     min-width: 0;

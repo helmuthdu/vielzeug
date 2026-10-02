@@ -35,7 +35,7 @@ guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
 
 ## Host a Subject
 
-The host validates every guest command through the command table and broadcasts the snapshot on every local change — coalesced on a microtask, so bursts of changes ship one snapshot, not many.
+The host validates every guest command through the command table and broadcasts the snapshot on every local change — coalesced on a microtask, so bursts of changes ship one snapshot, not many. `onEnded` fires exactly once when hosting ends, whether the subject was removed or the host was disposed — reset your session UI there instead of intercepting your own `onRemoved` seam.
 
 ```ts
 import { hostTavern } from '@vielzeug/tavern';
@@ -45,6 +45,7 @@ const host = hostTavern({
     apply: (name, args) => myStore.apply(name, args),
     has: (name) => name in myStore,
   },
+  onEnded: () => updateSessionUi(), // hosting ended — subject removed or disposed
   onPeersChanged: (peers) => updatePeerList(peers),
   onPeerJoined: (peer) => toast(`${peer.name ?? 'A guest'} joined`),
   onPeerLeft: (peer) => toast(`${peer.name ?? 'A guest'} left`),
@@ -110,7 +111,7 @@ host.relayNotice(localNotice);
 
 ## Handle Pairing Mistakes
 
-`acceptAnswerText` throws `TavernPairingError` when the pasted code is the wrong kind (an invitation instead of an answer) or the payload is unrecognized. Catch it to show a helpful message instead of a raw error.
+Every user-input pairing failure surfaces as `TavernPairingError` from both `acceptAnswerText` and `joinTavern` — a garbage code, the wrong code kind, an expired invitation, or an answer the host refuses. Catch it to show a helpful message instead of a raw error; the underlying mesh failure is chained as `cause` when you need it.
 
 ```ts
 import { hostTavern, TavernPairingError } from '@vielzeug/tavern';
@@ -147,7 +148,8 @@ Pair `@vielzeug/ledger` on the host to give the commands tavern applies an undo 
 
 - Keep the command table the same object the host's own UI calls, so guest actions cannot bypass local validation.
 - Return `null` from `snapshot` while the subject is missing — the broadcast simply skips.
+- Reset host-side session UI in `onEnded` — it fires exactly once for subject removal and explicit disposal alike, so you never need to double-wire your own `onRemoved` seam.
 - Treat notices as catalog keys, not prose — each client translates locally.
 - Guard against notice echo if a tab can both host and guest — one boolean in `toWire` is sufficient.
-- Dispose guests and hosts when their screen unmounts; channels also clean up on disconnect through `onEnded`, which fires exactly once.
-- Catch `TavernPairingError` separately from other errors — it means the user pasted the wrong code, not that something is broken.
+- Dispose guests and hosts when their screen unmounts; channels also clean up on disconnect through `onEnded`, which fires exactly once on both sides.
+- Catch `TavernPairingError` separately from other errors — it means the pasted code could not be used, not that something is broken.

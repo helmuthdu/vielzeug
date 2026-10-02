@@ -74,7 +74,7 @@ await guestScanner.start();
 ### Pitfalls
 
 - `meshQrCodec.encode`/`decode` are **async** (streams-based compression) — awaiting them inside render code is a common source of `[object Promise]` payloads.
-- `CompressionStream`/`DecompressionStream` exist in modern browsers and Node 18+, but not everywhere — `encode` throws `MeshUnsupportedError` where they are missing. Keep the plain `meshCodec` paste flow as fallback; `decode` already accepts both formats.
+- `CompressionStream`/`DecompressionStream` exist in modern browsers and Node 18+, but not everywhere — `meshQrCodec.encode` falls back to plain `meshCodec` output where `CompressionStream` is missing, and `decode` accepts both formats.
 - Camera scanning requires a secure context (`https` or `localhost`) and permission — always wire the `error` event so a denial surfaces instead of a dead UI.
 - The answer QR changes per attempt (fresh session id) — re-render on every new `createInvitation`/`acceptInvitation` call, don't cache the image.
 - Scanned strings are untrusted: `meshQrCodec.decode` validates shape and throws `MeshPairingError` on corrupt input — catch it before calling `acceptAnswer`.

@@ -4,7 +4,7 @@ title: Clockwork Migration
 
 # Clockwork 3.0 Migration
 
-Clockwork 3.0 unifies actor observation behind `tap()`, replaces error codes with error subtypes, and hardens compiled definitions and snapshots. The descriptive `MachineSnapshot` name remains public.
+Clockwork 3.0 unifies actor observation behind `tap()`, replaces error codes with error subtypes, and hardens definitions and snapshots. The descriptive `MachineSnapshot` name remains public.
 
 ## Replace `onError` with `actor.tap()`
 
@@ -66,9 +66,9 @@ Pure `transition()` and `can()` validate snapshot context even when an event is 
 
 ## Definition and timer validation
 
-Machine definitions, state maps, state nodes, transitions, and invokes must be plain or null-prototype records rather than arrays or class instances. Invoke callback references are snapshotted during compilation, matching transitions and delayed transitions.
+Machine definitions are trusted as typed: targets, callback shapes, and state keys are compiler-checked in the typed definition, and runtime state and event lookups are own-property guarded, so prototype-colliding names such as `__proto__` or `constructor` never read as declared. `defineMachine()` rejects only what types cannot express — a timer `delay` outside `0` through `2,147,483,647` milliseconds (larger values overflow platform timers and fire immediately), an empty transition array, and a `context` that is not a plain record.
 
-Delayed transitions accept finite values from `0` through `2,147,483,647` milliseconds. Larger values now fail definition validation instead of overflowing platform timers.
+Early 3.x releases also re-validated definition structure at runtime; that pass is gone. Definitions that only typechecked through `as unknown as` casts now fail at runtime use with the underlying `TypeError` instead of a definition-time error.
 
 ## Clockwork 2.0 Migration
 

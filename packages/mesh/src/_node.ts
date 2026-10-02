@@ -6,6 +6,7 @@ import type {
   MeshEvent,
   MeshInbound,
   MeshPeer,
+  MeshPeerStatus,
   MeshStatus,
   RTCDataChannelLike,
   RTCPeerConnectionLike,
@@ -20,7 +21,6 @@ export interface NodeCore {
   disposed: boolean;
   emitTap(event: MeshEvent): void;
   ensureLive(): void;
-  readonly id: string;
   /** Emits the final status-change + dispose events, clears tappers, aborts. */
   markDisposed(): void;
   setStatus(next: MeshStatus): void;
@@ -28,7 +28,7 @@ export interface NodeCore {
   tap(handler: Tapper, options?: { readonly signal?: AbortSignal }): Unsubscribe;
 }
 
-export function createNodeCore(id: string, signal?: AbortSignal): NodeCore {
+export function createNodeCore(signal?: AbortSignal): NodeCore {
   const tappers = tapper<MeshEvent>();
   const disposalCtrl = new AbortController();
 
@@ -43,13 +43,12 @@ export function createNodeCore(id: string, signal?: AbortSignal): NodeCore {
     ensureLive() {
       if (core.disposed) throw new MeshDisposedError();
     },
-    id,
 
     markDisposed() {
       if (core.disposed) return;
       core.disposed = true;
       core.status = 'disposed';
-      core.emitTap({ peerId: null, status: 'disposed', type: 'status-change' });
+      core.emitTap({ status: 'disposed', type: 'status-change' });
       core.emitTap({ type: 'dispose' });
       tappers.clear();
       disposalCtrl.abort();
@@ -58,7 +57,7 @@ export function createNodeCore(id: string, signal?: AbortSignal): NodeCore {
     setStatus(next) {
       if (core.disposed || core.status === next) return;
       core.status = next;
-      core.emitTap({ peerId: null, status: next, type: 'status-change' });
+      core.emitTap({ status: next, type: 'status-change' });
     },
     status: 'idle',
 
@@ -90,7 +89,7 @@ export interface PeerRecord {
   pc: RTCPeerConnectionLike | null;
   readonly publicPeer: MeshPeer;
   readonly role: 'host' | 'guest';
-  status: MeshStatus;
+  status: MeshPeerStatus;
 }
 
 export function createPeerRecord(id: string, name: string | undefined, role: 'host' | 'guest'): PeerRecord {

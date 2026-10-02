@@ -1,8 +1,12 @@
 /**
  * Publish every public @vielzeug/* package whose current package.json version isn't on npm
- * yet. A one-off backfill for versions that were bumped and merged but never made it to the
- * registry (e.g. a prior release run failed after the version-bump commit but before
- * publish) — normal releases go through publish.yml's mode=single / mode=all instead.
+ * yet AND has a CHANGELOG entry — the changelog-entry rule is what keeps CalVer lockstep
+ * stamping from republishing every unchanged package: a stamp without an entry means the
+ * package didn't ride that train, so there is nothing to publish even though the manifest
+ * version is absent from the registry. A one-off backfill for versions that were bumped and
+ * merged but never made it to the registry (e.g. a prior release run failed after the
+ * version-bump commit but before publish) — normal releases go through publish.yml's
+ * mode=single / mode=all instead.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -31,6 +35,15 @@ export function listPublishablePackages(root = repoRoot) {
   return packages;
 }
 
+/** True when the package's CHANGELOG.json records its current manifest version. */
+export function hasChangelogEntry(root, { folder, version }) {
+  const file = path.join(root, folder, 'CHANGELOG.json');
+  if (!existsSync(file)) return false;
+
+  const log = JSON.parse(readFileSync(file, 'utf8'));
+  return (log.entries ?? []).some((entry) => entry.version === version);
+}
+
 export async function listMissingPackages(root = repoRoot, { checkVersion = versionExists, progress = () => {} } = {}) {
   const missing = [];
   const packages = listPublishablePackages(root);
@@ -38,6 +51,7 @@ export async function listMissingPackages(root = repoRoot, { checkVersion = vers
   for (const [index, pkg] of packages.entries()) {
     progress({ current: index + 1, name: pkg.name, total: packages.length, version: pkg.version });
     if (await checkVersion(pkg.name, pkg.version)) continue;
+    if (!hasChangelogEntry(root, pkg)) continue; // lockstep stamp, no changelog entry — not on this train
 
     missing.push(pkg);
   }

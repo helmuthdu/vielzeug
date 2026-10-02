@@ -27,6 +27,7 @@ export type {
   MeshOptions,
   MeshPeer,
   MeshPeerInfo,
+  MeshPeerStatus,
   MeshProtocol,
   MeshRtcEvent,
   MeshRtcFactory,

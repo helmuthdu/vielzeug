@@ -1,23 +1,67 @@
 import { tapper } from '@vielzeug/arsenal';
-import { isContextRecord } from './_context.js';
 import { warn } from './_dev.js';
-import { type CompiledAfter, type CompiledMachine, type CompiledState, compileDefinition } from './definition.js';
-import { ClockworkSnapshotError, ClockworkTransitionLimitError } from './errors.js';
+import { ClockworkDefinitionError, ClockworkSnapshotError, ClockworkTransitionLimitError } from './errors.js';
 import type {
   Actor,
   ActorErrorContext,
   ActorOptions,
   ActorTapEvent,
+  After,
   Effect,
+  EventType,
   Machine,
   MachineConfig,
   MachineEvent,
   MachineSnapshot,
+  StateNode,
   TransitionResult,
 } from './types.js';
 
+const MAX_TIMER_MS = 2_147_483_647;
+const MAX_TRANSITIONS = 1_000;
+
+const isContextRecord = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return prototype === null || prototype === Object.prototype;
+};
+
+/** Fails fast on the definition footguns the type system cannot express: out-of-range
+ *  timer delays (platform timers fire immediately above 2^31 ms), empty transition
+ *  arrays, and a context that is not a plain record. Everything else — declared
+ *  targets, callback shapes, state keys — is compiler-checked in the typed definition. */
+const assertDefinition = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
+  definition: MachineConfig<State, Context, Event>,
+): void => {
+  const context = (definition as { readonly context?: Context }).context;
+
+  if (context !== undefined && !isContextRecord(context)) {
+    throw new ClockworkDefinitionError('machine context must be a non-array object record', {});
+  }
+
+  for (const [state, node] of Object.entries(definition.states) as [string, StateNode<State, Context, Event>][]) {
+    for (const [type, input] of Object.entries(node.on ?? {})) {
+      if (Array.isArray(input) && input.length === 0) {
+        throw new ClockworkDefinitionError('a transition array must not be empty', { state, type });
+      }
+    }
+
+    for (const [index, after] of (node.after ?? []).entries()) {
+      if (!Number.isFinite(after.delay) || after.delay < 0 || after.delay > MAX_TIMER_MS) {
+        throw new ClockworkDefinitionError(`state "${state}" after delay must be between 0 and ${MAX_TIMER_MS}`, {
+          delay: after.delay,
+          index,
+          state,
+        });
+      }
+    }
+  }
+};
+
 type InternalEvent<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
-  readonly after: CompiledAfter<State, Context, Event>;
+  readonly after: After<State, Context, Event>;
   readonly kind: 'after';
 };
 
@@ -25,6 +69,9 @@ type RuntimeEvent<State extends string, Context extends Record<string, unknown>,
   | { readonly event: Event; readonly kind: 'event' }
   | InternalEvent<State, Context, Event>;
 
+/** A transition or delayed transition selected for execution. The reducer's event
+ *  parameter is whatever the selector matched — the event for a user transition,
+ *  `undefined` for a timer — which the declared per-type signatures cannot express. */
 type ExecutableTransition<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly effects?: readonly Effect<Context, Event>[];
   readonly reduce?: (args: { readonly context: Readonly<Context>; readonly event: Event | undefined }) => Context;
@@ -62,64 +109,55 @@ const invalidSnapshot = (state: unknown): never => {
   throw new ClockworkSnapshotError(`snapshot state "${String(state)}" is not declared`, { state });
 };
 
-const isMachineEvent = (event: unknown): event is MachineEvent => {
-  try {
-    return typeof event === 'object' && event !== null && typeof (event as { type?: unknown }).type === 'string';
-  } catch {
-    return false;
-  }
-};
+const isMachineEvent = (event: unknown): event is MachineEvent =>
+  typeof event === 'object' && event !== null && typeof (event as { type?: unknown }).type === 'string';
 
-const stateNode = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
-  machine: CompiledMachine<State, Context, Event>,
+/** Reads a declared state node. The own-property guard keeps prototype keys such as
+ *  `constructor` or `__proto__` from reading as declared states. */
+const nodeFor = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
+  definition: MachineConfig<State, Context, Event>,
   state: State,
-): CompiledState<State, Context, Event> => machine.states.get(state) ?? invalidSnapshot(state);
+) => (Object.hasOwn(definition.states, state) ? definition.states[state] : invalidSnapshot(state));
 
 const assertSnapshot = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
-  machine: CompiledMachine<State, Context, Event>,
+  definition: MachineConfig<State, Context, Event>,
   snapshot: MachineSnapshot<State, Context>,
 ): void => {
   if (!isContextRecord(snapshot.context)) {
     throw new ClockworkSnapshotError('snapshot context must be a non-array object record', {});
   }
 
-  stateNode(machine, snapshot.state);
+  nodeFor(definition, snapshot.state);
 };
 
 const selectTransition = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
-  machine: CompiledMachine<State, Context, Event>,
+  definition: MachineConfig<State, Context, Event>,
   snapshot: MachineSnapshot<State, Context>,
   runtimeEvent: RuntimeEvent<State, Context, Event>,
 ): SelectedTransition<State, Context, Event> | undefined => {
-  assertSnapshot(machine, snapshot);
-  const state = stateNode(machine, snapshot.state);
+  assertSnapshot(definition, snapshot);
+  const node = nodeFor(definition, snapshot.state);
 
   if (runtimeEvent.kind === 'after') {
-    if (!state.after.includes(runtimeEvent.after)) return undefined;
+    if (!node.after || !node.after.includes(runtimeEvent.after)) return undefined;
 
-    const { definition } = runtimeEvent.after;
-
-    if (!definition.guard || definition.guard({ context: snapshot.context, event: undefined })) {
-      return { event: undefined, transition: definition as ExecutableTransition<State, Context, Event> };
+    if (!runtimeEvent.after.guard || runtimeEvent.after.guard({ context: snapshot.context, event: undefined })) {
+      return { event: undefined, transition: runtimeEvent.after as ExecutableTransition<State, Context, Event> };
     }
 
     return undefined;
   }
 
-  const candidates = state.on.get(runtimeEvent.event.type);
+  const on = node.on;
 
-  if (!candidates) return undefined;
+  if (!on || !Object.hasOwn(on, runtimeEvent.event.type)) return undefined;
+
+  const input = on[runtimeEvent.event.type as EventType<Event>];
+  const candidates = Array.isArray(input) ? input : [input];
 
   for (const candidate of candidates) {
-    const guard = candidate.guard as
-      | ((args: { readonly context: Readonly<Context>; readonly event: Event }) => boolean)
-      | undefined;
-
-    if (!guard || guard({ context: snapshot.context, event: runtimeEvent.event })) {
-      return {
-        event: runtimeEvent.event,
-        transition: candidate as unknown as ExecutableTransition<State, Context, Event>,
-      };
+    if (!candidate.guard || candidate.guard({ context: snapshot.context, event: runtimeEvent.event })) {
+      return { event: runtimeEvent.event, transition: candidate as ExecutableTransition<State, Context, Event> };
     }
   }
 
@@ -127,11 +165,11 @@ const selectTransition = <State extends string, Context extends Record<string, u
 };
 
 const transition = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
-  machine: CompiledMachine<State, Context, Event>,
+  definition: MachineConfig<State, Context, Event>,
   snapshot: MachineSnapshot<State, Context>,
   runtimeEvent: RuntimeEvent<State, Context, Event>,
 ): TransitionOutcome<State, Context, Event> => {
-  const selected = selectTransition(machine, snapshot, runtimeEvent);
+  const selected = selectTransition(definition, snapshot, runtimeEvent);
 
   if (!selected) {
     return {
@@ -140,10 +178,9 @@ const transition = <State extends string, Context extends Record<string, unknown
     };
   }
 
-  const reducer = selected.transition.reduce as
-    | ((args: { readonly context: Readonly<Context>; readonly event: Event | undefined }) => Context)
-    | undefined;
-  const nextContext = reducer ? reducer({ context: snapshot.context, event: selected.event }) : snapshot.context;
+  const nextContext = selected.transition.reduce
+    ? selected.transition.reduce({ context: snapshot.context, event: selected.event })
+    : snapshot.context;
 
   if (!isContextRecord(nextContext)) {
     throw new ClockworkSnapshotError('a reducer must return a non-array object record', {
@@ -159,21 +196,19 @@ const transition = <State extends string, Context extends Record<string, unknown
 };
 
 const canTransition = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
-  machine: CompiledMachine<State, Context, Event>,
+  definition: MachineConfig<State, Context, Event>,
   snapshot: MachineSnapshot<State, Context>,
   event: Event,
-): boolean => selectTransition(machine, snapshot, { event, kind: 'event' }) !== undefined;
-
-const MAX_TRANSITIONS = 1_000;
+): boolean => selectTransition(definition, snapshot, { event, kind: 'event' }) !== undefined;
 
 const createActor = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
-  machine: CompiledMachine<State, Context, Event>,
+  definition: MachineConfig<State, Context, Event>,
   initialSnapshot: MachineSnapshot<State, Context>,
   options: ActorOptions<State, Context> = {},
 ): Actor<State, Context, Event> => {
   const restored = options.snapshot ?? initialSnapshot;
 
-  assertSnapshot(machine, restored);
+  assertSnapshot(definition, restored);
   let current = createSnapshot(restored.state, restored.context as Context);
 
   const listeners = new Set<(snapshot: MachineSnapshot<State, Context>) => void>();
@@ -258,18 +293,18 @@ const createActor = <State extends string, Context extends Record<string, unknow
   };
 
   const establishStateResources = (state: State, event: Event | undefined): void => {
-    const node = stateNode(machine, state);
+    const node = nodeFor(definition, state);
 
-    for (const after of node.after) {
+    for (const after of node.after ?? []) {
       const timer = setTimeout(() => {
         timers.delete(timer);
         run({ after, kind: 'after' });
-      }, after.definition.delay);
+      }, after.delay);
 
       timers.add(timer);
     }
 
-    for (const invoke of node.invoke) {
+    for (const invoke of node.invoke ?? []) {
       const controller = new AbortController();
 
       invokes.add(controller);
@@ -327,7 +362,7 @@ const createActor = <State extends string, Context extends Record<string, unknow
     let outcome: TransitionOutcome<State, Context, Event>;
 
     try {
-      outcome = transition(machine, current, runtimeEvent);
+      outcome = transition(definition, current, runtimeEvent);
     } catch (error) {
       fail(error, {
         event: runtimeEvent.kind === 'event' ? runtimeEvent.event : undefined,
@@ -343,16 +378,16 @@ const createActor = <State extends string, Context extends Record<string, unknow
       return;
     }
 
-    const source = stateNode(machine, previous.state);
+    const source = nodeFor(definition, previous.state);
 
     current = outcome.result.snapshot;
     tappers.emit({ event: outcome.event, snapshot: current, type: 'transition' });
     cancelStateResources();
     establishStateResources(current.state, outcome.event);
     notify(outcome.event);
-    runEffects(source.exit, previous.state, outcome.event);
+    runEffects(source.exit ?? [], previous.state, outcome.event);
     runEffects(outcome.transition.effects ?? [], previous.state, outcome.event);
-    runEffects(stateNode(machine, current.state).entry, current.state, outcome.event);
+    runEffects(nodeFor(definition, current.state).entry ?? [], current.state, outcome.event);
   };
 
   const flush = (): void => {
@@ -382,7 +417,7 @@ const createActor = <State extends string, Context extends Record<string, unknow
   establishStateResources(current.state, undefined);
 
   if (!options.snapshot) {
-    runEffects(stateNode(machine, current.state).entry, current.state, undefined);
+    runEffects(nodeFor(definition, current.state).entry ?? [], current.state, undefined);
   }
 
   return {
@@ -395,7 +430,7 @@ const createActor = <State extends string, Context extends Record<string, unknow
           return false;
         }
 
-        return canTransition(machine, current, event);
+        return canTransition(definition, current, event);
       } catch (error) {
         fail(error, { event, phase: 'transition', state: current.state });
         return false;
@@ -432,13 +467,14 @@ const createActor = <State extends string, Context extends Record<string, unknow
 export const defineMachine =
   <Context extends Record<string, unknown> = Record<string, never>, Event extends MachineEvent = MachineEvent>() =>
   <State extends string>(definition: MachineConfig<State, Context, Event>): Machine<State, Context, Event> => {
-    const compiled = compileDefinition(definition);
-    const initialSnapshot = createSnapshot(compiled.initial, compiled.context);
+    assertDefinition(definition);
+    const context = (definition as { readonly context?: Context }).context ?? ({} as Context);
+    const initialSnapshot = createSnapshot(definition.initial, context);
 
     return {
-      can: (snapshot, event) => canTransition(compiled, snapshot, event),
-      createActor: (options) => createActor(compiled, initialSnapshot, options),
+      can: (snapshot, event) => canTransition(definition, snapshot, event),
+      createActor: (options) => createActor(definition, initialSnapshot, options),
       initialSnapshot,
-      transition: (snapshot, event) => transition(compiled, snapshot, { event, kind: 'event' }).result,
+      transition: (snapshot, event) => transition(definition, snapshot, { event, kind: 'event' }).result,
     };
   };

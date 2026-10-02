@@ -29,6 +29,7 @@ import type { OreMarqueeProps } from '../content/marquee/marquee';
 import type { OrePaginationEvents, OrePaginationProps } from '../content/pagination/pagination';
 import type { OreQrCodeEvents, OreQrCodeProps } from '../content/qr-code/qr-code';
 import type { OreSeparatorProps } from '../content/separator/separator';
+import type { OreSpeechPlayerEvents, SpeechPlayerElement } from '../content/speech-player/speech-player';
 import type { OreStatsProps } from '../content/stats/stats';
 import type { OreStepProps } from '../content/stepper/step';
 import type { OreStepperEvents, OreStepperProps } from '../content/stepper/stepper';
@@ -188,6 +189,7 @@ export interface RefineElementMap {
   'ore-sidebar-item': HTMLElement & OreSidebarItemProps;
   'ore-skeleton': HTMLElement & OreSkeletonProps;
   'ore-slider': HTMLElement & OreSliderProps & FormValidityMethods & AddEventListeners<OreSliderEvents>;
+  'ore-speech-player': SpeechPlayerElement & AddEventListeners<OreSpeechPlayerEvents>;
   'ore-stats': HTMLElement & OreStatsProps;
   'ore-step': HTMLElement & OreStepProps;
   'ore-stepper': HTMLElement & OreStepperProps & AddEventListeners<OreStepperEvents>;

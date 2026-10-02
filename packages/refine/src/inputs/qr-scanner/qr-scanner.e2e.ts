@@ -23,6 +23,16 @@ test.describe('Layout', () => {
     expect(box!.width).toBeCloseTo(160, 0);
     expect(box!.height).toBeCloseTo(160, 0);
   });
+
+  test('stage centers within a stretched host', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-qr-scanner id="wide" style="width: 400px"></ore-qr-scanner>');
+
+    const stage = page.locator('#wide').locator('[part="stage"]');
+    const stageBox = await stage.boundingBox();
+    const hostBox = await page.locator('#wide').boundingBox();
+
+    expect(Math.round(stageBox!.x + stageBox!.width / 2 - (hostBox!.x + hostBox!.width / 2))).toBe(0);
+  });
 });
 
 test.describe('Accessibility', () => {

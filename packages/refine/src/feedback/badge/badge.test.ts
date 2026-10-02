@@ -23,6 +23,21 @@ describe('ore-badge', () => {
 
       expect(fixture.element.textContent?.trim()).toBe('Label');
     });
+
+    it('folds the label region away when only an icon is slotted', async () => {
+      fixture = await mount('ore-badge', { html: '<i slot="icon"></i>' });
+      // slotchange arrives as a task after the mount flush settles it.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(fixture.query('.badge-label')?.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('keeps the label region for slotted text', async () => {
+      fixture = await mount('ore-badge', { html: 'Label' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(fixture.query('.badge-label')?.hasAttribute('hidden')).toBe(false);
+    });
   });
 
   describe('Count', () => {

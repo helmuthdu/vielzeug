@@ -41,6 +41,11 @@
       "require": "./dist/theme.cjs",
       "types": "./dist/theme.d.ts"
     },
+    "./icon-lucide": {
+      "import": "./dist/icon-lucide.js",
+      "require": "./dist/icon-lucide.cjs",
+      "types": "./dist/icon-lucide.d.ts"
+    },
     "./styles/animation.css": {
       "import": "./dist/styles/animation.css",
       "default": "./dist/styles/animation.css"
@@ -73,11 +78,6 @@
     },
     "./frameworks/vue": {
       "types": "./dist/frameworks/vue.d.ts"
-    },
-    "./icon-lucide": {
-      "import": "./dist/icon-lucide.js",
-      "require": "./dist/icon-lucide.cjs",
-      "types": "./dist/icon-lucide.d.ts"
     },
     "./accordion": {
       "import": "./dist/accordion.js",
@@ -369,6 +369,11 @@
       "require": "./dist/slider.cjs",
       "types": "./dist/inputs/slider/slider.d.ts"
     },
+    "./speech-player": {
+      "import": "./dist/speech-player.js",
+      "require": "./dist/speech-player.cjs",
+      "types": "./dist/content/speech-player/speech-player.d.ts"
+    },
     "./stats": {
       "import": "./dist/stats.js",
       "require": "./dist/stats.cjs",
@@ -445,6 +450,9 @@
       "theme": [
         "dist/theme.d.ts"
       ],
+      "icon-lucide": [
+        "dist/icon-lucide.d.ts"
+      ],
       "frameworks/elements": [
         "dist/frameworks/elements.d.ts"
       ],
@@ -453,9 +461,6 @@
       ],
       "frameworks/vue": [
         "dist/frameworks/vue.d.ts"
-      ],
-      "icon-lucide": [
-        "dist/icon-lucide.d.ts"
       ],
       "accordion": [
         "dist/disclosure/accordion/accordion.d.ts"
@@ -631,6 +636,9 @@
       "slider": [
         "dist/inputs/slider/slider.d.ts"
       ],
+      "speech-player": [
+        "dist/content/speech-player/speech-player.d.ts"
+      ],
       "stats": [
         "dist/content/stats/stats.d.ts"
       ],
@@ -715,7 +723,7 @@
     "@vielzeug/sentinel": "workspace:*",
     "@vielzeug/sigil": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
-    "lucide": "^1.47.0"
+    "lucide": "^1.48.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

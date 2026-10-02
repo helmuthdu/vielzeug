@@ -1,6 +1,7 @@
 /**
- * Diff each changed package's current version against its pre-bump snapshot and drop anything
- * already on npm, producing the plan publish.yml turns directly into a matrix.
+ * The publish plan publish.yml turns directly into a matrix: every named package whose
+ * current version is not yet on npm. Callers pass the packages with pending change files
+ * (the train's riders), so the plan is "riders not already published".
  *
  * Filtering "already published" here — once, before the matrix is built — rather than inside
  * each matrix job keeps the matrix itself an accurate list of real work: no phantom "skipped"
@@ -10,16 +11,11 @@
 import { versionExists } from './npm-version-exists.mjs';
 import { findProject } from './rush-project.mjs';
 
-export async function planReleases(
-  packageNames,
-  versionsBefore,
-  { checkVersion = versionExists, resolve = findProject } = {},
-) {
+export async function planReleases(packageNames, { checkVersion = versionExists, resolve = findProject } = {}) {
   const plan = [];
 
   for (const pkg of packageNames) {
     const { folder, version } = resolve(pkg);
-    if (versionsBefore[pkg] === version) continue; // change file present but rush didn't bump it
     if (await checkVersion(pkg, version)) continue; // already published
     plan.push({ folder, package: pkg, version });
   }

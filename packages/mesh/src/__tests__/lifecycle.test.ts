@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { MeshConnectionError, MeshDisposedError, MeshPairingError } from '../errors';
 import { createMeshGuest } from '../guest';
 import { createMeshHost } from '../host';
+import { createFakeRtc } from '../testing';
 import type { MeshEvent, MeshStatus } from '../types';
-import { createFakeRtc } from './_fixtures';
 import { pairNodes, type TestProtocol } from './_pair';
 
 function statuses(events: MeshEvent[]): MeshStatus[] {
-  return events.flatMap((e) => (e.type === 'status-change' && e.peerId === null ? [e.status] : []));
+  return events.flatMap((e) => (e.type === 'status-change' ? [e.status] : []));
 }
 
 describe('status transitions', () => {
@@ -128,6 +128,29 @@ describe('peer lifecycle', () => {
   it('sends to an unknown peer throw MeshConnectionError', async () => {
     const { host } = await pairNodes();
     expect(() => host.send('nobody', 'pong', { n: 1 })).toThrow(MeshConnectionError);
+  });
+
+  it('keys every ice-state event by a real peer id', async () => {
+    const fx = createFakeRtc();
+    const { host, guest, peerId } = await pairNodes({}, {}, fx);
+    const hostEvents: MeshEvent[] = [];
+    const guestEvents: MeshEvent[] = [];
+    host.tap((e) => hostEvents.push(e));
+    guest.tap((e) => guestEvents.push(e));
+
+    fx.closeChannel(0);
+    await vi.waitFor(() => expect(guest.status).toBe('disconnected'));
+
+    const hostIce = hostEvents.filter((e) => e.type === 'ice-state');
+    const guestIce = guestEvents.filter((e) => e.type === 'ice-state');
+    expect(hostIce.length).toBeGreaterThan(0);
+    expect(guestIce.length).toBeGreaterThan(0);
+    for (const event of hostIce) {
+      if (event.type === 'ice-state') expect(event.peerId).toBe(peerId);
+    }
+    for (const event of guestIce) {
+      if (event.type === 'ice-state') expect(event.peerId).toBe(guest.host!.id);
+    }
   });
 });
 

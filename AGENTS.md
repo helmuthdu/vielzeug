@@ -89,16 +89,18 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 
 ## Toolchain and workflow facts
 
-- Node 22 (`.nvmrc` for CI, `.tool-versions` for asdf — keep both on the same major), pnpm (`package.json#packageManager`, one root workspace for `packages/*` and `demos/*`), Rush (`rush.json`, `common/`; publishing and change files only — it uses its own pinned pnpm), Vitest, Biome, VitePress.
+- Node 22 (`.nvmrc` for CI, `.tool-versions` for asdf — keep both on the same major), pnpm (`package.json#packageManager`, one root workspace for `packages/*` and `demos/*`), Rush (`rush.json`, `common/`; workspace install/build and change-file verification — version application is CalVer lockstep trains via `scripts/release/`, see `RELEASE.md`; it uses its own pinned pnpm), Vitest, Biome, VitePress.
+- Versioning: CalVer lockstep trains — `YY.MM.N`, the same number for every package. See `RELEASE.md`.
 - Worktrees: `pnpm worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction; the script checks live manifests.
-- Change files: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`.
-- Conventional commits: `feat(courier): add retry logic`. `fix` → patch, `feat` → minor, `feat!` or any breaking change → major.
+- Change files: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`. The type picks the changelog section only; it never affects the version.
+- Conventional commits: `feat(courier): add retry logic`. A breaking change rides the next train like any other — describe it in the changelog entry and the package's `docs/<name>/migration.md`.
 - AI metadata: edit `.agents/` sources directly, run `pnpm gen:ai-data` when the package table must change, then `pnpm check:ai-data`. Generated blocks are outputs, not editing surfaces.
 
 ## Repository layout
 
 | Path                  | Purpose                                                        |
 | --------------------- | -------------------------------------------------------------- |
+| `RELEASE.md`          | CalVer train versioning and release policy                    |
 | `packages/<name>/`    | Independent published packages                                 |
 | `docs/<name>/`        | Package documentation and recipes (VitePress)                  |
 | `demos/`              | Integration demos                                              |

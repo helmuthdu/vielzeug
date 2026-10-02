@@ -29,7 +29,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
   const channelOpenTimeoutMs = options.channelOpenTimeoutMs ?? DEFAULT_CHANNEL_OPEN_TIMEOUT_MS;
   const iceGatheringTimeoutMs = options.iceGatheringTimeoutMs ?? DEFAULT_ICE_GATHERING_TIMEOUT_MS;
 
-  const core = createNodeCore(randomId(options.random), options.signal);
+  const core = createNodeCore(options.signal);
   const messenger = createMessenger({
     clock,
     emitTap: core.emitTap,
@@ -39,6 +39,9 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
 
   let hostPeer: PeerRecord | null = null;
   let openTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const openTimeoutError = (): MeshTimeoutError =>
+    new MeshTimeoutError(`Timed out waiting ${channelOpenTimeoutMs}ms for the data channel to open`);
 
   function failPeer(peer: PeerRecord, error: MeshError): void {
     // Ignore events from a superseded peer after re-pairing replaced hostPeer.
@@ -54,7 +57,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       peer.dc?.close();
       peer.pc?.close();
     }, 0);
-    core.emitTap({ peerId: peer.id, status: 'failed', type: 'status-change' });
+    core.emitTap({ peerId: peer.id, status: 'failed', type: 'peer-status-change' });
     core.emitTap({ error, type: 'error' });
     core.emitTap({ peer: peer.publicPeer, reason: error.message, type: 'peer-left' });
     core.setStatus('failed');
@@ -65,7 +68,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     if (peer.status === 'disconnected' || peer.status === 'failed') return;
     peer.status = 'disconnected';
     peer.pc?.close();
-    core.emitTap({ peerId: peer.id, status: 'disconnected', type: 'status-change' });
+    core.emitTap({ peerId: peer.id, status: 'disconnected', type: 'peer-status-change' });
     core.emitTap({ peer: peer.publicPeer, reason, type: 'peer-left' });
     core.setStatus('disconnected');
   }
@@ -80,7 +83,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
         openTimer = null;
       }
       peer.status = 'connected';
-      core.emitTap({ peerId: peer.id, status: 'connected', type: 'status-change' });
+      core.emitTap({ peerId: peer.id, status: 'connected', type: 'peer-status-change' });
       core.emitTap({ peer: peer.publicPeer, type: 'peer-joined' });
       core.setStatus('connected');
     });
@@ -93,9 +96,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       if (peer.status === 'connecting')
         failPeer(
           peer,
-          openTimer
-            ? new MeshTimeoutError('Timed out waiting for the data channel to open')
-            : new MeshConnectionError('channel closed before opening', peer.id),
+          openTimer ? openTimeoutError() : new MeshConnectionError('channel closed before opening', peer.id),
         );
       else disconnectPeer(peer, 'channel closed');
     });
@@ -104,10 +105,12 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       failPeer(peer, new MeshConnectionError('channel error', peer.id));
     });
 
+    // The ice-state emission lives on the pairing-scoped listener above; this
+    // one owns channel-lifecycle transitions only, so each ICE change emits
+    // exactly one ice-state event.
     pc.addEventListener('iceconnectionstatechange', () => {
       if (core.disposed) return;
       const state = pc.iceConnectionState;
-      core.emitTap({ peerId: peer.id, state, type: 'ice-state' });
       if (state === 'failed' || state === 'closed') {
         failPeer(peer, new MeshConnectionError(`ice ${state}`, peer.id));
       } else if (state === 'disconnected' && peer.status === 'connected') {
@@ -207,7 +210,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       // the human carry-back of the answer, not just machine negotiation.
       openTimer = setTimeout(() => {
         if (hostPeer?.status === 'connecting') {
-          failPeer(hostPeer, new MeshTimeoutError('Timed out waiting for the data channel to open'));
+          failPeer(hostPeer, openTimeoutError());
         }
       }, channelOpenTimeoutMs);
 
@@ -233,7 +236,6 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       if (hostPeer) {
         hostPeer.dc?.close();
         hostPeer.pc?.close();
-        hostPeer.status = 'disposed';
       }
       messenger.clear();
     },
@@ -242,9 +244,6 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     },
     get host(): MeshPeer | null {
       return hostPeer?.publicPeer ?? null;
-    },
-    get id() {
-      return core.id;
     },
 
     on(type, handler) {

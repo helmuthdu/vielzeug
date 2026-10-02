@@ -112,7 +112,7 @@ actor.send({ type: 'INC' });
 
 <div class="features-grid">
 
-- **`defineMachine()`** — validates and compiles one flat machine definition.
+- **`defineMachine()`** — defines one flat, typed machine and rejects the footguns types cannot express.
 - **`machine.transition()`** — evaluates a transition without actor runtime work.
 - **`machine.createActor()`** — creates isolated, disposable runtime ownership.
 - **`reduce`** — returns a replacement context from a transition.

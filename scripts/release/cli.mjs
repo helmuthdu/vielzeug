@@ -13,9 +13,10 @@
  * Subcommands:
  *   changed-packages                        list packages with a pending change file
  *   project <pkg>                           print folder=/version= for one package
- *   versions <pkg...>                       print pkg=version for each package (pre-bump snapshot)
- *   apply [pkg]                             apply pending rush version bump(s)
- *   plan --before-file=<path> <pkg...>      print a JSON publish plan (for a matrix)
+ *   apply [pkg]                             apply pending change files as a CalVer lockstep
+ *                                            train: stamp every manifest, changelog changed
+ *                                            packages, consume their change files, commit
+ *   plan <pkg...>                           print a JSON publish plan (for a matrix)
  *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag + release one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
  *   tag-release <pkg> <version> <folder>    tag + GitHub release only — no `npm publish` (the
@@ -36,7 +37,7 @@
  * Token instead — see `scripts/release/local-publish.mjs`.
  */
 
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync } from 'node:fs';
 
 import { isMain, parseArgs } from '../lib/cli.mjs';
 import { publishPackage } from './npm-publish.mjs';
@@ -44,18 +45,9 @@ import { versionExists } from './npm-version-exists.mjs';
 import { publishMissing, summaryMarkdown } from './publish-missing.mjs';
 import { planTagReleases } from './release-only-plan.mjs';
 import { planReleases } from './release-plan.mjs';
-import { applyVersionBump, listChangedPackageNames } from './rush-publish-apply.mjs';
+import { applyTrain, listChangedPackageNames } from './apply-train.mjs';
 import { findProject, listProjectNames } from './rush-project.mjs';
 import { tagAndRelease } from './tag-and-release.mjs';
-
-function parseVersionsBeforeFile(filePath) {
-  const versions = {};
-  for (const line of readFileSync(filePath, 'utf8').split('\n')) {
-    const [pkg, version] = line.split('=');
-    if (pkg && version) versions[pkg] = version.trim();
-  }
-  return versions;
-}
 
 async function main(argv) {
   const { flags, positionals } = parseArgs(argv);
@@ -66,7 +58,7 @@ async function main(argv) {
     case 'changed-packages': {
       const packages = listChangedPackageNames();
       if (packages.length === 0) {
-        throw new Error("No pending change files found. Run 'rush change' for each package, commit, then re-trigger.");
+        throw new Error('No pending change files found. Write one with scripts/rush-change.mjs, commit, then re-trigger.');
       }
       console.log(packages.join(' '));
       return;
@@ -81,21 +73,17 @@ async function main(argv) {
       return;
     }
 
-    case 'versions': {
-      for (const pkg of args) console.log(`${pkg}=${findProject(pkg).version}`);
-      return;
-    }
-
     case 'apply': {
       const [pkg] = args;
-      applyVersionBump(pkg);
+      const { changedPackages, train } = applyTrain(pkg, { dryRun });
+      console.log(
+        `${dryRun ? '[dry-run] would apply' : 'Applied'} release train ${train} — changelog for: ${changedPackages.join(', ')}`,
+      );
       return;
     }
 
     case 'plan': {
-      if (!flags['before-file']) throw new Error('Usage: plan --before-file=<path> <pkg...>');
-      const versionsBefore = parseVersionsBeforeFile(flags['before-file']);
-      const plan = await planReleases(args, versionsBefore);
+      const plan = await planReleases(args);
       console.log(JSON.stringify(plan));
       return;
     }

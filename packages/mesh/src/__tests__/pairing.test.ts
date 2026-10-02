@@ -3,8 +3,8 @@ import { meshCodec } from '../codec';
 import { MeshPairingError } from '../errors';
 import { createMeshGuest } from '../guest';
 import { createMeshHost } from '../host';
+import { createFakeRtc } from '../testing';
 import type { MeshEvent, MeshInvitation } from '../types';
-import { createFakeRtc } from './_fixtures';
 import { pairNodes, type TestProtocol } from './_pair';
 
 describe('createInvitation', () => {
@@ -121,6 +121,50 @@ describe('pairing round-trip', () => {
     };
     await expect(guest.acceptInvitation(invitation)).rejects.toBeInstanceOf(MeshPairingError);
   });
+
+  it('rejects an answer with an empty peer id', async () => {
+    const fx = createFakeRtc();
+    const host = createMeshHost<TestProtocol>({ rtc: fx.rtc });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const answer = await guest.acceptInvitation(await host.createInvitation());
+
+    await expect(host.acceptAnswer({ ...answer, peer: { id: '' } })).rejects.toBeInstanceOf(MeshPairingError);
+  });
+
+  it('admits only one of two concurrent answers claiming the same peer id', async () => {
+    const fx = createFakeRtc();
+    const host = createMeshHost<TestProtocol>({ rtc: fx.rtc });
+    const guestA = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const guestB = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+    const answerA = await guestA.acceptInvitation(await host.createInvitation());
+    const answerB = await guestB.acceptInvitation(await host.createInvitation());
+
+    const results = await Promise.allSettled([
+      host.acceptAnswer(answerA),
+      host.acceptAnswer({ ...answerB, peer: { id: answerA.peer.id } }),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(MeshPairingError);
+    expect(host.peers.size).toBe(1);
+  });
+
+  it('restores CRLF line endings before setRemoteDescription on both sides', async () => {
+    const fx = createFakeRtc();
+    const host = createMeshHost<TestProtocol>({ rtc: fx.rtc });
+    const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
+
+    // Textareas and clipboards strip CR — pairing must survive LF-only SDP.
+    const invitation = await host.createInvitation();
+    const answer = await guest.acceptInvitation({ ...invitation, sdp: `${invitation.sdp}\nextra\n` });
+
+    expect(fx.remoteSdps[0]).toBe(`${invitation.sdp}\r\nextra\r\n`);
+    await host.acceptAnswer(answer);
+    expect(fx.remoteSdps[1]?.endsWith('\r\n')).toBe(true);
+  });
 });
 
 describe('meshCodec', () => {
@@ -147,6 +191,11 @@ describe('meshCodec', () => {
 
   it('rejects an unsupported version', () => {
     const text = meshCodec.encode({ peer: { id: 'x' }, proof: 'p', sdp: 's', sessionId: 'y', v: 2 } as never);
+    expect(() => meshCodec.decode(text)).toThrow(MeshPairingError);
+  });
+
+  it('rejects an answer payload with an empty peer id', () => {
+    const text = meshCodec.encode({ peer: { id: '' }, proof: 'p', sdp: 's', sessionId: 'y', v: 1 });
     expect(() => meshCodec.decode(text)).toThrow(MeshPairingError);
   });
 });

@@ -168,13 +168,16 @@ export type MeshGuestOptions = MeshOptions;
 
 // ─── Peers and status ────────────────────────────────────────────────────────
 
-/** Lifecycle state of a mesh node or peer. */
+/** Lifecycle state of a mesh node. */
 export type MeshStatus = 'idle' | 'pairing' | 'connecting' | 'connected' | 'disconnected' | 'failed' | 'disposed';
+
+/** Lifecycle state of a single remote peer. */
+export type MeshPeerStatus = 'connecting' | 'connected' | 'disconnected' | 'failed';
 
 /** A remote peer as observed by this node. */
 export interface MeshPeer extends MeshPeerInfo {
   readonly role: 'host' | 'guest';
-  readonly status: MeshStatus;
+  readonly status: MeshPeerStatus;
 }
 
 // ─── Messaging ───────────────────────────────────────────────────────────────
@@ -197,7 +200,8 @@ export type Unsubscribe = () => void;
  * Subscribe via `node.tap(handler)` — handler errors are swallowed.
  */
 export type MeshEvent =
-  | { readonly type: 'status-change'; readonly peerId: string | null; readonly status: MeshStatus }
+  | { readonly type: 'status-change'; readonly status: MeshStatus }
+  | { readonly type: 'peer-status-change'; readonly peerId: string; readonly status: MeshPeerStatus }
   | { readonly type: 'invitation-created' | 'invitation-expired'; readonly sessionId: string }
   | { readonly type: 'peer-approved' | 'peer-rejected'; readonly peerId: string }
   | { readonly type: 'peer-joined'; readonly peer: MeshPeer }
@@ -227,8 +231,6 @@ export interface MeshNode {
   dispose(): void;
   /** Whether the node has been permanently disposed. */
   readonly disposed: boolean;
-  /** This node's peer id. */
-  readonly id: string;
   /** Current node status. */
   readonly status: MeshStatus;
   /**

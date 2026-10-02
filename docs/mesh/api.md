@@ -12,7 +12,7 @@ description: Public API of @vielzeug/mesh.
 | `createMeshHost` | Host-authoritative session node; pairs one `RTCPeerConnection` per guest | Sync | `createInvitation`/`acceptAnswer` are async; calls after `dispose()` throw `MeshDisposedError` |
 | `createMeshGuest` | Guest node that pairs with one host | Sync | Second `acceptInvitation` throws `MeshPairingError` |
 | `meshCodec` | base64url encode/decode for pairing payloads | Sync | `decode` throws `MeshPairingError` on malformed text or wrong `v` |
-| `meshQrCodec` | deflate-raw + base64url codec for QR-sized payloads | Async | `encode` throws `MeshUnsupportedError` without `CompressionStream` |
+| `meshQrCodec` | deflate-raw + base45 codec for QR-sized payloads | Async | Falls back to plain `meshCodec` output where `CompressionStream` is missing |
 | `MeshProtocol` | Declares the `toHost`/`toGuest` message maps | — | Extend it; the maps themselves stay plain records |
 | `MeshError` | Base class for all mesh errors | — | `instanceof MeshError` catches every mesh-originated error |
 
@@ -40,7 +40,8 @@ Returns a host node in status `'idle'`. Creating it never touches WebRTC — the
 | `channel` | `MeshChannelOptions` | `{ ordered: true, label: 'mesh' }` | Data-channel init mapped to `RTCDataChannelInit`. |
 | `maxMessageBytes` | `number` | `65_536` | Serialized message cap, both directions. |
 | `invitationTtlMs` | `number` | `300_000` | Invitation validity window. |
-| `iceGatheringTimeoutMs` | `number` | `5_000` | ICE gathering cap; also bounds the channel-open wait. |
+| `iceGatheringTimeoutMs` | `number` | `5_000` | ICE gathering cap; pairing proceeds with gathered candidates on timeout. |
+| `channelOpenTimeoutMs` | `number` | `60_000` | Channel-open wait in `acceptAnswer` and on the guest — generous to cover the human carry-back of the answer. |
 | `rtc` | `MeshRtcFactory` | `globalThis.RTCPeerConnection` | Injection point for tests and non-browser runtimes. |
 | `clock` | `() => number` | `Date.now` | TTLs and message timestamps. |
 | `random` | `RandomSource` | `crypto.getRandomValues` | Ids and secrets. |
@@ -106,7 +107,6 @@ const answer = await guest.acceptInvitation(meshCodec.decode(invitationText), { 
 
 | Member | Signature | Purpose |
 | --- | --- | --- |
-| `id` | `string` | This node's id. |
 | `status` | `MeshStatus` | Current lifecycle state. |
 | `disposed` | `boolean` | Whether the node is permanently disposed. |
 | `disposalSignal` | `AbortSignal` | Aborted by `dispose()`. |
@@ -140,14 +140,14 @@ const meshQrCodec: {
 };
 ```
 
-QR-oriented variant: deflate-raw compresses the JSON payload, then base45-encodes it with an `mq2.` prefix. `decode` accepts both `mq2.*` and plain `meshCodec` output, so camera scans and paste fallbacks share one path.
+QR-oriented variant: deflate-raw compresses the JSON payload, then base45-encodes it with an `mq2.` prefix. `encode` falls back to plain `meshCodec` output where `CompressionStream` is unavailable, so it never fails on a missing capability. `decode` accepts both `mq2.*` and plain `meshCodec` output, so camera scans and paste fallbacks share one path.
 
 ```ts
 const invitationText = await meshQrCodec.encode(await host.createInvitation()); // "mq2.…"
 const answer = await host.acceptAnswer(await meshQrCodec.decode(scannedText));
 ```
 
-`encode` throws `MeshUnsupportedError` where `CompressionStream` is missing; `decode` throws `MeshPairingError` on corrupt base64/deflate/JSON and `MeshUnsupportedError` where `DecompressionStream` is missing.
+`encode` never throws for a missing capability — it falls back to plain `meshCodec` output where `CompressionStream` is unavailable. `decode` throws `MeshPairingError` on corrupt base45/deflate/JSON and `MeshUnsupportedError` only when the text is `mq2.`-compressed but `DecompressionStream` is missing.
 
 ## Types
 
@@ -188,13 +188,15 @@ interface MeshAnswer {
 ```ts
 type MeshStatus = 'idle' | 'pairing' | 'connecting' | 'connected' | 'disconnected' | 'failed' | 'disposed';
 
+type MeshPeerStatus = 'connecting' | 'connected' | 'disconnected' | 'failed';
+
 interface MeshPeerInfo {
   readonly id: string;
   readonly name?: string;
 }
 
 interface MeshPeer extends MeshPeerInfo {
-  readonly status: MeshStatus;
+  readonly status: MeshPeerStatus;
   readonly role: 'host' | 'guest';
 }
 
@@ -212,7 +214,8 @@ type Unsubscribe = () => void;
 
 ```ts
 type MeshEvent =
-  | { readonly type: 'status-change'; readonly peerId: string | null; readonly status: MeshStatus }
+  | { readonly type: 'status-change'; readonly status: MeshStatus }
+  | { readonly type: 'peer-status-change'; readonly peerId: string; readonly status: MeshPeerStatus }
   | { readonly type: 'invitation-created' | 'invitation-expired'; readonly sessionId: string }
   | { readonly type: 'peer-approved' | 'peer-rejected'; readonly peerId: string }
   | { readonly type: 'peer-joined'; readonly peer: MeshPeer }
@@ -224,7 +227,7 @@ type MeshEvent =
   | { readonly type: 'dispose' };
 ```
 
-`peerId: null` on `'status-change'` marks a node-level transition; a string marks a per-peer one.
+`status-change` reports node-level transitions; `peer-status-change` reports one peer's transition and always names a peer id that exists in `peers` (or `guest.host`).
 
 ### Options
 
@@ -311,4 +314,4 @@ interface MeshRtcEvent {
 | `MeshPayloadError` | Outbound message over `maxMessageBytes` or unserializable | — |
 | `MeshTimeoutError` | Channel-open wait exceeded | — |
 | `MeshDisposedError` | Any method called after `dispose()` | — |
-| `MeshUnsupportedError` | No `RTCPeerConnection` in the environment and no `rtc` injected — raised at first use, never at import | — |
+| `MeshUnsupportedError` | No `RTCPeerConnection` in the environment and no `rtc` injected (raised at first use, never at import), or `meshQrCodec.decode` given `mq2.` text without `DecompressionStream` | — |

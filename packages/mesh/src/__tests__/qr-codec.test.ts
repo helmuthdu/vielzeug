@@ -115,12 +115,14 @@ describe('meshQrCodec', () => {
     await expect(meshQrCodec.decode(`mq2.${bytesToBase45(compressed)}`)).rejects.toBeInstanceOf(MeshPairingError);
   });
 
-  it('throws MeshUnsupportedError when CompressionStream is missing', async () => {
+  it('falls back to plain meshCodec output when CompressionStream is missing', async () => {
     const original = globalThis.CompressionStream;
     // @ts-expect-error deliberate removal for the test
     delete globalThis.CompressionStream;
     try {
-      await expect(meshQrCodec.encode(invitation)).rejects.toBeInstanceOf(MeshUnsupportedError);
+      const text = await meshQrCodec.encode(invitation);
+      expect(text).toBe(meshCodec.encode(invitation));
+      expect(await meshQrCodec.decode(text)).toEqual(invitation);
     } finally {
       globalThis.CompressionStream = original;
     }

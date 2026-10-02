@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add ore-speech-player, a text-to-speech control over the Web Speech API",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

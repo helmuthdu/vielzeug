@@ -9,19 +9,19 @@ description: Reference for Clockwork machine definitions, actors, and types.
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `defineMachine()` | Compile a typed flat machine definition | Sync | Call the generic factory before supplying the definition |
+| `defineMachine()` | Define a typed flat machine | Sync | Call the generic factory before supplying the definition |
 | `Machine.transition()` | Resolve a pure next snapshot | Sync | Does not run effects, invokes, or timers |
 | `Machine.createActor()` | Create a runtime owner | Sync | Fresh and restored actors have different entry behavior |
 | `Actor.send()` | Dispatch an event | Sync | Returns `void`; re-entrant events queue internally |
 | `Actor.subscribe()` | Observe committed snapshots | Sync | Observes only; it does not trace sends or errors |
 | `Actor.tap()` | Observe transitions, ignores, errors, disposal | Sync | Handler errors are swallowed; it cannot control disposition |
-| `ClockworkError` | Report definition and snapshot validation failures | Sync | Narrow with the error subtypes, not message text |
+| `ClockworkError` | Report definition, snapshot, and transition-limit failures | Sync | Narrow with the error subtypes, not message text |
 
 ## Package Entry Points
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/clockwork` | Machine compiler, actor runtime, errors, and types |
+| `@vielzeug/clockwork` | Machine factory, actor runtime, errors, and types |
 
 ## Exported Surface
 
@@ -52,7 +52,7 @@ function defineMachine<
 >(): <State extends string>(definition: MachineConfig<State, Context, Event>) => Machine<State, Context, Event>;
 ```
 
-Returns a factory that validates and compiles a typed flat machine definition. Definitions and their structural entries must be ordinary or null-prototype records, not arrays or class instances. Context follows the same record rule; omit it only when the context type has no keys. Compilation snapshots invoke and transition callback references.
+Returns a factory that accepts a typed flat machine definition. The definition is trusted as typed: targets, callback shapes, and state keys are compiler-checked. `defineMachine()` rejects only what types cannot express — timer delays outside `0..2,147,483,647` ms, empty transition arrays, and a context that is not a plain record (arrays, `null`, and class instances fail). Omit `context` only when the context type has no keys.
 
 The curried signature is required so TypeScript can infer `State` from the `states` object while you explicitly provide `Context` and `Event`. TypeScript does not support partial type argument inference, so the state-key union cannot be inferred in a single non-curried call when the context and event generics are explicit.
 
@@ -71,7 +71,7 @@ const machine = defineMachine<Record<string, never>, Event>()({
 });
 ```
 
-Throws `ClockworkError` when a definition has an invalid context, initial state, target, transition, effect, invoke, or timer delay.
+Throws `ClockworkDefinitionError` when a definition carries a timer delay outside the platform range, an empty transition array, or a context that is not a plain record.
 
 ---
 
@@ -81,7 +81,7 @@ Throws `ClockworkError` when a definition has an invalid context, initial state,
 subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
 ```
 
-Subscribes to future committed actor snapshots. It does not run immediately; read `actor.snapshot` for the initial value. Returns an unsubscribe function. Subscriber failures are reported through `onError` without stopping remaining subscribers, declared effects, or the actor.
+Subscribes to future committed actor snapshots. It does not run immediately; read `actor.snapshot` for the initial value. Returns an unsubscribe function. Subscriber failures are reported through `tap()` as `error` events with `phase: 'subscriber'` without stopping remaining subscribers, declared effects, or the actor.
 
 **Example:**
 
@@ -308,7 +308,7 @@ type Machine<State extends string, Context extends Record<string, unknown>, Even
 };
 ```
 
-A compiled, reusable machine. Its transition lookup is map-based, so unknown or poison event names such as `__proto__` are safely ignored when no transition exists.
+A reusable machine. Its state and event lookups are own-property guarded, so unknown or prototype-colliding names such as `__proto__` or `constructor` are safely ignored when no transition exists.
 
 ## Errors
 
@@ -318,7 +318,7 @@ A compiled, reusable machine. Its transition lookup is map-based, so unknown or 
 
 | Subtype | Raised when |
 | --- | --- |
-| `ClockworkDefinitionError` | `defineMachine()` rejects an invalid definition (states, transitions, effects, invokes, delays, targets) |
+| `ClockworkDefinitionError` | `defineMachine()` rejects a definition footgun types cannot express: a timer delay outside `0..2,147,483,647` ms, an empty transition array, or a context that is not a plain record |
 | `ClockworkSnapshotError` | A snapshot, its context, or a reducer result is not a plain object record, or names an undeclared state |
 | `ClockworkTransitionLimitError` | An actor exceeds the fixed queued-transition limit and disposes itself |
 

@@ -1,15 +1,11 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../npm-publish.mjs', () => ({ publishPackage: vi.fn() }));
 vi.mock('../npm-version-exists.mjs', () => ({ versionExists: vi.fn() }));
 vi.mock('../publish-missing.mjs', () => ({ publishMissing: vi.fn(), summaryMarkdown: vi.fn(() => '## summary') }));
 vi.mock('../release-only-plan.mjs', () => ({ planTagReleases: vi.fn() }));
 vi.mock('../release-plan.mjs', () => ({ planReleases: vi.fn() }));
-vi.mock('../rush-publish-apply.mjs', () => ({ applyVersionBump: vi.fn(), listChangedPackageNames: vi.fn() }));
+vi.mock('../apply-train.mjs', () => ({ applyTrain: vi.fn(() => ({ changedPackages: [], train: '26.10.0' })), listChangedPackageNames: vi.fn() }));
 vi.mock('../rush-project.mjs', () => ({ findProject: vi.fn(), listProjectNames: vi.fn() }));
 vi.mock('../tag-and-release.mjs', () => ({ tagAndRelease: vi.fn() }));
 
@@ -18,7 +14,7 @@ const { versionExists } = await import('../npm-version-exists.mjs');
 const { publishMissing } = await import('../publish-missing.mjs');
 const { planTagReleases } = await import('../release-only-plan.mjs');
 const { planReleases } = await import('../release-plan.mjs');
-const { applyVersionBump, listChangedPackageNames } = await import('../rush-publish-apply.mjs');
+const { applyTrain, listChangedPackageNames } = await import('../apply-train.mjs');
 const { findProject, listProjectNames } = await import('../rush-project.mjs');
 const { tagAndRelease } = await import('../tag-and-release.mjs');
 const { main } = await import('../cli.mjs');
@@ -61,41 +57,37 @@ describe('project', () => {
 });
 
 describe('apply', () => {
-  it('delegates to applyVersionBump with the given package', async () => {
+  it('delegates to applyTrain with the given package', async () => {
     await main(['apply', '@vielzeug/ore']);
-    expect(applyVersionBump).toHaveBeenCalledWith('@vielzeug/ore');
+    expect(applyTrain).toHaveBeenCalledWith('@vielzeug/ore', { dryRun: false });
   });
 
-  it('delegates with undefined for a bulk apply', async () => {
+  it('delegates with undefined for a bulk train', async () => {
     await main(['apply']);
-    expect(applyVersionBump).toHaveBeenCalledWith(undefined);
+    expect(applyTrain).toHaveBeenCalledWith(undefined, { dryRun: false });
+  });
+
+  it('forwards DRY_RUN=1 so a dry run never stamps, changelogs, or commits', async () => {
+    process.env.DRY_RUN = '1';
+    try {
+      await main(['apply']);
+      expect(applyTrain).toHaveBeenCalledWith(undefined, { dryRun: true });
+    } finally {
+      delete process.env.DRY_RUN;
+    }
   });
 });
 
 describe('plan', () => {
-  let beforeFile;
-
-  beforeEach(() => {
-    beforeFile = path.join(mkdtempSync(path.join(tmpdir(), 'cli-plan-test-')), 'versions-before.txt');
-    writeFileSync(beforeFile, '@vielzeug/ore=1.0.0\n@vielzeug/orbit=2.0.0\n');
-  });
-
-  afterEach(() => {
-    rmSync(path.dirname(beforeFile), { recursive: true, force: true });
-  });
-
-  it('parses the before-file and prints the plan as JSON', async () => {
-    planReleases.mockResolvedValue([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '1.1.0' }]);
+  it('prints the plan as JSON for the named packages', async () => {
+    planReleases.mockResolvedValue([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '26.10.0' }]);
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await main(['plan', `--before-file=${beforeFile}`, '@vielzeug/ore', '@vielzeug/orbit']);
+    await main(['plan', '@vielzeug/ore', '@vielzeug/orbit']);
 
-    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit'], {
-      '@vielzeug/orbit': '2.0.0',
-      '@vielzeug/ore': '1.0.0',
-    });
+    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit']);
     expect(log).toHaveBeenCalledWith(
-      JSON.stringify([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '1.1.0' }]),
+      JSON.stringify([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '26.10.0' }]),
     );
   });
 });

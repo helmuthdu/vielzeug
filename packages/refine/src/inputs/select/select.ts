@@ -117,6 +117,7 @@ export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'frost'
  *
  * @cssprop --select-bg - Background
  * @cssprop --select-border-color - Border color
+ * @cssprop --select-min-width - Minimum width of the select; the trigger floors at it too, so the control never renders wider than its host
  * @cssprop --select-radius - Border radius
  * @cssprop --select-padding - Padding
  * @cssprop --select-font-size - Font size

@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { MeshTimeoutError } from '../errors';
 import { createMeshGuest } from '../guest';
 import { createMeshHost } from '../host';
+import { createFakeRtc } from '../testing';
 import type { MeshEvent } from '../types';
-import { createFakeRtc } from './_fixtures';
 import { pairNodes, type TestProtocol } from './_pair';
 
 describe('timeouts', () => {

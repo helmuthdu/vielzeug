@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { listMissingPackages, listPublishablePackages, publishMissing, summaryMarkdown } from '../publish-missing.mjs';
+import { listMissingPackages, listPublishablePackages, hasChangelogEntry, publishMissing, summaryMarkdown } from '../publish-missing.mjs';
 
 let root;
 
@@ -17,6 +17,12 @@ function makePackage(root, slug, pkgJson) {
   const dir = path.join(root, 'packages', slug);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkgJson));
+  // Every release stamps a changelog entry for the version it ships — the backfill
+  // candidate rule mirrors that (see hasChangelogEntry).
+  writeFileSync(
+    path.join(dir, 'CHANGELOG.json'),
+    JSON.stringify({ entries: [{ version: pkgJson.version }], name: pkgJson.name }),
+  );
 }
 
 function makeRepo(packages) {
@@ -51,6 +57,29 @@ describe('publishMissing()', () => {
     await expect(listMissingPackages(repo, { checkVersion: async (name) => name === '@vielzeug/ore' })).resolves.toEqual([
       { folder: 'packages/orbit', name: '@vielzeug/orbit', version: '2.0.0' },
     ]);
+  });
+
+  it('skips lockstep-stamped packages whose changelog has no entry for the current version', async () => {
+    const repo = makeRepo([
+      { json: { name: '@vielzeug/ore', version: '26.10.0' }, slug: 'ore' },
+      { json: { name: '@vielzeug/orbit', version: '26.10.0' }, slug: 'orbit' },
+    ]);
+    // Both are stamped 26.10.0 and absent from npm, but only orbit actually rode the train.
+    writeFileSync(
+      path.join(repo, 'packages', 'ore', 'CHANGELOG.json'),
+      JSON.stringify({ entries: [{ version: '26.9.0' }], name: '@vielzeug/ore' }),
+    );
+
+    await expect(listMissingPackages(repo, { checkVersion: async () => false })).resolves.toEqual([
+      { folder: 'packages/orbit', name: '@vielzeug/orbit', version: '26.10.0' },
+    ]);
+  });
+
+  it('treats a missing CHANGELOG.json as no entry (a never-released package)', () => {
+    const repo = makeRepo([{ json: { name: '@vielzeug/tandem', version: '0.1.0' }, slug: 'tandem' }]);
+    rmSync(path.join(repo, 'packages', 'tandem', 'CHANGELOG.json'));
+
+    expect(hasChangelogEntry(repo, { folder: 'packages/tandem', version: '0.1.0' })).toBe(false);
   });
 
   it('does not load packed verification when no packages are missing', async () => {

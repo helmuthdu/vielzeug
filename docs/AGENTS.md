@@ -5,6 +5,7 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 ## Local contracts
 
 - Each `docs/<name>/` has the four standard pages: `index.md` (Explanation), `usage.md` (How-to), `api.md` (Reference), `examples.md` + `examples/*.md` (How-to). Follow `.agents/reference/docs-template.md` for required frontmatter and section order.
+- Each `docs/<name>/` also carries `migration.md` — the breaking-change contract for a CalVer train (one section per break, old code → new code; see `RELEASE.md`). `new-package.mjs` scaffolds it empty; a breaking change fills it in the same commit as the change file.
 - REPL wiring lives in `docs/.vitepress/theme/components/repl/`:
   - `examples/<name>/` — hand-authored example modules (the only content authors write by hand), registered in the matching `index.ts`.
   - `execution/` — the sandbox execution engine (Monaco loading + TS transpile, `@vielzeug/sandbox`-based iframe execution, import rewriting, output formatting). Pure logic here is unit-tested under `execution/__tests__/`.

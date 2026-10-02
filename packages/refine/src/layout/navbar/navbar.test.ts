@@ -72,6 +72,22 @@ describe('ore-navbar', () => {
     expect(fixture.query('[part="mobile-menu"]')?.hasAttribute('hidden')).toBe(true);
   });
 
+  it('hides the persistent region until it receives content', async () => {
+    fixture = await mount('ore-navbar', {
+      html: '<span slot="end">Search controls</span>',
+    });
+
+    expect(fixture.query('[part="persistent"]')?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('shows the persistent region for slotted content', async () => {
+    fixture = await mount('ore-navbar', {
+      html: '<span slot="persistent">Live session</span>',
+    });
+
+    expect(fixture.query('[part="persistent"]')?.hasAttribute('hidden')).toBe(false);
+  });
+
   it('keeps mobile toggle hidden when no mobile-menu slot is present', async () => {
     const originalMatchMedia = window.matchMedia;
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMeshHost } from '../host';
+import { createFakeRtc } from '../testing';
 import type { MeshEvent } from '../types';
-import { createFakeRtc } from './_fixtures';
 import type { TestProtocol } from './_pair';
 import { pairNodes } from './_pair';
 

@@ -181,6 +181,7 @@ export type OreNavbarItemProps = {
  * @slot start - Content rendered in the left/start region
  * @slot - Center navigation content rendered between the start and end regions
  * @slot end - Content rendered in the right/end region
+ * @slot persistent - Trailing content that stays in the bar through the mobile collapse (global actions and status icons)
  * @slot mobile-menu - Controls and links rendered inside the mobile overflow panel
  *
  * @cssprop --navbar-height - Navbar bar height
@@ -203,6 +204,7 @@ export type OreNavbarItemProps = {
  * @part start - Leading action/content region
  * @part center - Center content region
  * @part end - Trailing action/content region
+ * @part persistent - Trailing region that survives the mobile collapse
  * @part mobile-toggle - Mobile menu toggle button
  * @part mobile-menu - Mobile overflow panel
  * @part item-icon - Leading icon inside navbar items
@@ -247,6 +249,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const hasStart = slots.has('start');
     const hasCenter = slots.has();
     const hasEnd = slots.has('end');
+    const hasPersistent = slots.has('persistent');
     const mobileMenuElements = slots.elements('mobile-menu');
     const hasMobileMenu = signal(false);
     const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
@@ -723,6 +726,10 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 
           <div class="navbar-end" part="end" ?hidden=${() => !hasEnd.value}>
             <slot name="end"></slot>
+          </div>
+
+          <div class="navbar-persistent" part="persistent" ?hidden=${() => !hasPersistent.value}>
+            <slot name="persistent"></slot>
           </div>
 
           <button

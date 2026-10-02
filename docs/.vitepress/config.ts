@@ -878,7 +878,10 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
-      '/guide/': [{ link: '/guide/', text: 'Getting Started' }],
+      '/guide/': [
+        { link: '/guide/', text: 'Getting Started' },
+        { link: '/guide/versioning', text: 'Versioning' },
+      ],
       '/herald/': [
         { link: '/herald/', text: 'Overview' },
         { link: '/herald/migration', text: 'Migration' },
@@ -2038,6 +2041,53 @@ export default defineConfig({
             { link: '/spell/examples/unions', text: 'Unions, Intersections & Variants' },
           ],
           link: '/spell/examples',
+          text: 'Examples',
+        },
+      ],
+      '/tandem/': [
+        { link: '/tandem/', text: 'Overview' },
+        {
+          items: [
+            { link: '/tandem/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/tandem/usage#track-dirty-records-with-revs', text: 'Rev Baselines' },
+            { link: '/tandem/usage#propagate-deletions-with-tombstones', text: 'Tombstones' },
+            { link: '/tandem/usage#batch-changes-and-flush', text: 'Batching & Flush' },
+            { link: '/tandem/usage#reconcile-a-rejected-push', text: 'Reconciliation' },
+            { link: '/tandem/usage#observe-with-tap', text: 'Events' },
+            { link: '/tandem/usage#lifecycle-and-disposal', text: 'Lifecycle' },
+            { link: '/tandem/usage#testing', text: 'Testing' },
+            { link: '/tandem/usage#framework-integration', text: 'Framework Integration' },
+            {
+              link: '/tandem/usage#working-with-other-vielzeug-libraries',
+              text: 'Vielzeug Integration',
+            },
+            { link: '/tandem/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/tandem/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/tandem/api#api-overview', text: 'Overview' },
+            { link: '/tandem/api#package-entry-point', text: 'Entry Point' },
+            { link: '/tandem/api#factories', text: 'Factories' },
+            { link: '/tandem/api#contracts', text: 'Contracts' },
+            { link: '/tandem/api#events', text: 'Events' },
+            { link: '/tandem/api#types', text: 'Types' },
+          ],
+          link: '/tandem/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/tandem/examples/sync-a-vault-store', text: 'Sync a Vault Store' },
+            {
+              link: '/tandem/examples/keep-deletions-from-resurrecting',
+              text: 'Keep Deletions from Resurrecting',
+            },
+            { link: '/tandem/examples/switch-accounts-safely', text: 'Switch Accounts Safely' },
+          ],
+          link: '/tandem/examples',
           text: 'Examples',
         },
       ],

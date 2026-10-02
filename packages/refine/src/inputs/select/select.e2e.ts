@@ -126,4 +126,35 @@ test.describe('Layout', () => {
     expect(metrics.dropdownLeft).toBeGreaterThan(metrics.triggerLeft - 16);
     expect(metrics.dropdownRight).toBeLessThanOrEqual(metrics.boxRight);
   });
+
+  // Regression: `--select-min-width` and `fullwidth` sized the host only — the inner
+  // ore-input kept its own 12rem floor, so a select constrained below 12rem rendered a
+  // trigger wider than its host, overflowing (and clipped by) the host's container. The
+  // host must pass its width floor down so the control never renders wider than its host.
+  test('a select narrower than the 12rem input floor renders a trigger that matches its host', async ({
+    page,
+    refinePage,
+  }) => {
+    await refinePage.mountComponent(
+      '<div style="width:110px"><ore-select id="full" fullwidth label="Build"><option value="a">Alpha</option></ore-select></div>' +
+        '<ore-select id="floored" style="--select-min-width:0;width:110px" label="Build"><option value="a">Alpha</option></ore-select>',
+    );
+
+    const metrics = await page.evaluate(() => {
+      const measure = (id: string) => {
+        const select = document.getElementById(id) as HTMLElement & { shadowRoot: ShadowRoot };
+        const trigger = select.shadowRoot.querySelector('ore-input.trigger') as HTMLElement;
+
+        return { host: select.getBoundingClientRect().width, trigger: trigger.getBoundingClientRect().width };
+      };
+
+      return { floored: measure('floored'), full: measure('full') };
+    });
+
+    // Both hosts sit below the 192px input floor, and each trigger matches its host exactly.
+    expect(metrics.full.host).toBeLessThan(192);
+    expect(metrics.floored.host).toBeLessThan(192);
+    expect(Math.abs(metrics.full.trigger - metrics.full.host)).toBeLessThanOrEqual(1);
+    expect(Math.abs(metrics.floored.trigger - metrics.floored.host)).toBeLessThanOrEqual(1);
+  });
 });

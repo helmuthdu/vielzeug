@@ -41,6 +41,7 @@ Generated from `packages/*/package.json` by `pnpm gen:ai-data`. Edit manifests, 
 | `@vielzeug/sigil` | QR code generation and scanning — pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning | — | — | — |
 | `@vielzeug/sourcerer` | Reactive collection sources with local, page, cursor, and infinite pagination | `arsenal` | — | — |
 | `@vielzeug/spell` | Zero-dependency schema validation with Standard Schema interoperability | `arsenal` | — | — |
+| `@vielzeug/tandem` | Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes | — | — | — |
 | `@vielzeug/tavern` | Table sessions over mesh — host-owned state replication with guest command forwarding | `mesh` | — | — |
 | `@vielzeug/tempo` | Temporal-powered date utilities | — | — | — |
 | `@vielzeug/vault` | Adapter-free typed storage core with focused browser and SQLite subpaths | — | — | — |

@@ -238,7 +238,7 @@ Clockwork has flat state IDs. Prefer explicit states such as `editingDraft` and 
 
 ## SSR
 
-Reuse a compiled machine definition, but create and dispose an actor per request. Never share an actor across concurrent requests.
+Reuse one machine definition, but create and dispose an actor per request. Never share an actor across concurrent requests.
 
 ## Testing
 

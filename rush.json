@@ -15,242 +15,207 @@
     {
       "packageName": "@vielzeug/refine",
       "projectFolder": "packages/refine",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/ore",
       "projectFolder": "packages/ore",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/vault",
       "projectFolder": "packages/vault",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/herald",
       "projectFolder": "packages/herald",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/illusionist",
       "projectFolder": "packages/illusionist",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/courier",
       "projectFolder": "packages/courier",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/orbit",
       "projectFolder": "packages/orbit",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/prism",
       "projectFolder": "packages/prism",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/forge",
       "projectFolder": "packages/forge",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/lingua",
       "projectFolder": "packages/lingua",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/rune",
       "projectFolder": "packages/rune",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/ward",
       "projectFolder": "packages/ward",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/wayfinder",
       "projectFolder": "packages/wayfinder",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/ripple",
       "projectFolder": "packages/ripple",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/sourcerer",
       "projectFolder": "packages/sourcerer",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/sentinel",
       "projectFolder": "packages/sentinel",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/postmaster",
       "projectFolder": "packages/postmaster",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/arsenal",
       "projectFolder": "packages/arsenal",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/coins",
       "projectFolder": "packages/coins",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/tempo",
       "projectFolder": "packages/tempo",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/spell",
       "projectFolder": "packages/spell",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/conduit",
       "projectFolder": "packages/conduit",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/familiar",
       "projectFolder": "packages/familiar",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/scroll",
       "projectFolder": "packages/scroll",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/dnd",
       "projectFolder": "packages/dnd",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/focus",
       "projectFolder": "packages/focus",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/gesture",
       "projectFolder": "packages/gesture",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/codex",
       "projectFolder": "packages/codex",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/clockwork",
       "projectFolder": "packages/clockwork",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/pulse",
       "projectFolder": "packages/pulse",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/flux",
       "projectFolder": "packages/flux",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/scout",
       "projectFolder": "packages/scout",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/keymap",
       "projectFolder": "packages/keymap",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/ledger",
       "projectFolder": "packages/ledger",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/sandbox",
       "projectFolder": "packages/sandbox",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/assay",
       "projectFolder": "packages/assay",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/necromancer",
       "projectFolder": "packages/necromancer",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/mesh",
       "projectFolder": "packages/mesh",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/sigil",
       "projectFolder": "packages/sigil",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
     },
     {
       "packageName": "@vielzeug/tavern",
       "projectFolder": "packages/tavern",
-      "shouldPublish": true,
-      "versionPolicyName": "vielzeug-packages"
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@vielzeug/tandem",
+      "projectFolder": "packages/tandem",
+      "shouldPublish": true
     }
   ],
   "repository": {
