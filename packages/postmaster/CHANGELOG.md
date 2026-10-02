@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/postmaster
 
-This log was last generated on Wed, 23 Sep 2026 06:05:22 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Minor changes
+
+- feat: RetryResult renamed to RequeueResult
+- Make RetryPolicy.shouldRetry optional; default retries any error until maxAttempts
 ## 3.0.3
 Wed, 23 Sep 2026 06:05:22 GMT
 

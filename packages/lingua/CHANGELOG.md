@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/lingua
 
-This log was last generated on Wed, 09 Sep 2026 22:15:14 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Minor changes
+
+- Greenfield refactor: catalogKeys is catalog-only (no I18n overload), unserializable formatter options bypass the cache, shared isDev flag, TranslationState version reset to 1
+- Add /ripple createReactiveI18n binding translations to ripple signals
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT
 

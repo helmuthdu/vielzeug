@@ -1,7 +1,16 @@
 # Change Log - @vielzeug/wayfinder
 
-This log was last generated on Fri, 11 Sep 2026 11:19:30 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Minor changes
+
+- feat: path validation throws WayfinderConfigError; subscriber isolation
+- feat: add router.href
+- Add createPhaseMirror — two-way phase routing for stepped flows
+- Add createRouteSignals and createHistoryForBase so apps stop re-implementing route signal wiring and base-aware history setup
 ## 3.1.0
 Fri, 11 Sep 2026 11:19:30 GMT
 

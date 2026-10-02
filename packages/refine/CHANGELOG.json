@@ -2,6 +2,72 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Adapt ore-qr-scanner to sigil 4-state scanner status",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Unify overlay positioning on createDropdownPositioner (popover/tooltip gain RTL, containing-block correction, autoUpdate; menu data-placement now set); extract shared calendar grid keyboard navigation; collapse useDialogControl mount API to mount(); derive check-css-contract mixin emissions from sources; extract datagrid labels; rename layer.css to layers.css",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat: toast snackbar mode",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add ore-chat-panel overlay component (transcript, suggestions, message actions, composer, Escape/focus handling) with docs and tests; add eventFieldValue/eventFieldChecked helpers and theme controller; raise message-composer counter contrast to WCAG AA",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add ore-cookie-banner consent component",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-icon no longer bundles the full Lucide set: names resolve from a registry holding only refine's own component icons. Apps register their icons via registerIcons() or import '@vielzeug/refine/icon-lucide' for the complete library.",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "add ore-speech-player, a text-to-speech control over the Web Speech API",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(refine): speech player sentence progress, speed control, resume position, and error state",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "set box-sizing on the inner input so select triggers and search fields keep equal heights inside shadow roots",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Load testing fixtures in IIFE dependency order (Sentinel after Arsenal, Focus after Keymap) so bundles no longer capture undefined globals; hoist parseOptionalBool to core and the container-measure helpers to a private layout module; narrow useFloatingTrigger offset/slot to single callables",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Composite component sub-paths now register their child components: the per-entry library build silently dropped side-effect-only imports between entry modules, so importing e.g. @vielzeug/refine/cookie-banner shipped without registering ore-button/ore-checkbox. Children are TAG re-exports now (bindings survive cross-entry chunking), guarded by check:cross-entry in build",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ]
+      },
+      "date": "Fri, 02 Oct 2026 18:01:51 GMT",
+      "tag": "@vielzeug/refine_v26.10.0",
+      "version": "26.10.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `3.0.1`"

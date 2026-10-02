@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat: remove per-category subpath exports; root entry only",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ]
+      },
+      "date": "Fri, 02 Oct 2026 18:01:51 GMT",
+      "tag": "@vielzeug/illusionist_v26.10.0",
+      "version": "26.10.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `3.0.0`"

@@ -1,0 +1,31 @@
+{
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(tavern): initial release — host-owned session replication over mesh",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Host sessions are now observable end-to-end: onEnded fires exactly once on both handles (subject removal and explicit disposal), handles expose disposed/disposalSignal/Symbol.dispose per the disposal contract, every unusable pasted code rejects with cause-chained TavernPairingError (mesh errors no longer leak across the boundary), failed joins tear down their node, onFailed no longer double-fires, a throwing snapshot read routes through onWarning, and error classes follow the repo template with correct names",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Pairing-code handling simplified: meshQrCodec owns the CompressionStream fallback, so tavern calls it directly instead of wrapping both codecs in try/catch",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ]
+      },
+      "date": "Fri, 02 Oct 2026 18:01:51 GMT",
+      "tag": "@vielzeug/tavern_v26.10.0",
+      "version": "26.10.0"
+    }
+  ],
+  "name": "@vielzeug/tavern"
+}

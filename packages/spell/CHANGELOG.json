@@ -2,6 +2,32 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat: remove SchemaMode walker surface (schemaMode, InferSchemaMode, MergeSchemaModes)",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add tolerate() to accept and strip removed record fields",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix union schema inference: schema-only branches keep concrete output types instead of degrading to unknown",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ]
+      },
+      "date": "Fri, 02 Oct 2026 18:01:51 GMT",
+      "tag": "@vielzeug/spell_v26.10.0",
+      "version": "26.10.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

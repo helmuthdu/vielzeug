@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/dnd",
-  "version": "3.0.0",
+  "version": "26.10.0",
   "description": "Drag-and-drop — drop zones and sortable lists",
   "repository": {
     "type": "git",

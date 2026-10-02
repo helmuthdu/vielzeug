@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/forge",
-  "version": "3.1.2",
+  "version": "26.10.0",
   "description": "Typed form state, validation, submission",
   "repository": {
     "type": "git",

@@ -1,7 +1,17 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Wed, 23 Sep 2026 03:47:55 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Minor changes
+
+- feat: drop advanced MCP server entry and internal catalog types
+
+### Patches
+
+- chore(codex): refresh bundled docs data
 ## 3.1.1
 Wed, 23 Sep 2026 03:47:55 GMT
 

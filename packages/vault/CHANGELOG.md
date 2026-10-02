@@ -1,7 +1,15 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Wed, 23 Sep 2026 06:05:22 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Minor changes
+
+- feat: remove free adapter helper functions; use bound adapter methods
+- createMemory returns a DocumentVaultStore with batch() and iterate()
+- greenfield refactor: single buildOperations core, remove query()/defineMigration/isExpired/onQuotaExceeded, SQLite storage format v2
 ## 3.0.3
 Wed, 23 Sep 2026 06:05:22 GMT
 

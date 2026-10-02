@@ -4,6 +4,20 @@
       "comments": {
         "minor": [
           {
+            "author": "agent@vielzeug",
+            "comment": "Greenfield refactor: raw-byte Uint8Array encoding, 4-state scanner lifecycle, single-fit capacity path, get()-only QrMatrix",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ]
+      },
+      "date": "Fri, 02 Oct 2026 18:01:51 GMT",
+      "tag": "@vielzeug/sigil_v26.10.0",
+      "version": "26.10.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "Add @vielzeug/sigil: QR code generation and BarcodeDetector scanning",
             "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"

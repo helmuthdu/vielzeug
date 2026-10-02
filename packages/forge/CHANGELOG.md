@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Wed, 23 Sep 2026 06:05:22 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Patches
+
+- fix: unify error naming on new.target.name
 ## 3.1.2
 Wed, 23 Sep 2026 06:05:22 GMT
 

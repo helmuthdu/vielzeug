@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/coins",
-  "version": "3.0.0",
+  "version": "26.10.0",
   "description": "Currency formatting and exchange utilities for monetary arithmetic",
   "repository": {
     "type": "git",

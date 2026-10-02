@@ -1,7 +1,18 @@
 # Change Log - @vielzeug/spell
 
-This log was last generated on Wed, 23 Sep 2026 03:47:55 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Minor changes
+
+- feat: remove SchemaMode walker surface (schemaMode, InferSchemaMode, MergeSchemaModes)
+- Add tolerate() to accept and strip removed record fields
+
+### Patches
+
+- Fix union schema inference: schema-only branches keep concrete output types instead of degrading to unknown
 ## 3.1.1
 Wed, 23 Sep 2026 03:47:55 GMT
 

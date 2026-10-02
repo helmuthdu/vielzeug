@@ -4,6 +4,47 @@
       "comments": {
         "minor": [
           {
+            "author": "agent@vielzeug",
+            "comment": "feat: remove custom serialize/deserialize options; JSON wire format only",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Drop legacy mq1 QR pairing decode; mq2 and plain meshCodec payloads remain",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Greenfield hardening: WebCrypto required for pairing proofs (no forgeable fallback), invitation hostName reaches the guest, duplicate peer ids rejected, guest re-pairs on the same node, onPeer folded into tap with live MeshPeer payloads, codec interfaces and dead messenger surface removed",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "split node 'status-change' from per-peer 'peer-status-change' events with a dedicated MeshPeerStatus union, removed the unused MeshNode.id, meshQrCodec.encode now falls back to plain codec output instead of throwing MeshUnsupportedError, host no longer emits misattributed ice-state events for pending invitations, empty answer peer ids rejected, concurrent same-peer-id answers race-guarded, and the in-memory WebRTC fake is now published as the @vielzeug/mesh/testing subpath",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Consume base64url codecs from @vielzeug/arsenal instead of a private copy",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Remove peerIdOf indirection from MessengerOptions, consolidate isRecord guard, fix meshCodec JSDoc placement",
+            "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
+          }
+        ]
+      },
+      "date": "Fri, 02 Oct 2026 18:01:51 GMT",
+      "tag": "@vielzeug/mesh_v26.10.0",
+      "version": "26.10.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "Add @vielzeug/mesh: backendless WebRTC peer-to-peer session transport",
             "commit": "e2ddf4a295553c56c2fc778134e13628f7b565ed"

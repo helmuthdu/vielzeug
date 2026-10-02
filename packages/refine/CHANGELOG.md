@@ -1,7 +1,26 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 23 Sep 2026 03:47:55 GMT and should not be manually modified.
+This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
 
+## 26.10.0
+Fri, 02 Oct 2026 18:01:51 GMT
+
+### Minor changes
+
+- Adapt ore-qr-scanner to sigil 4-state scanner status
+- Unify overlay positioning on createDropdownPositioner (popover/tooltip gain RTL, containing-block correction, autoUpdate; menu data-placement now set); extract shared calendar grid keyboard navigation; collapse useDialogControl mount API to mount(); derive check-css-contract mixin emissions from sources; extract datagrid labels; rename layer.css to layers.css
+- feat: toast snackbar mode
+- Add ore-chat-panel overlay component (transcript, suggestions, message actions, composer, Escape/focus handling) with docs and tests; add eventFieldValue/eventFieldChecked helpers and theme controller; raise message-composer counter contrast to WCAG AA
+- Add ore-cookie-banner consent component
+- ore-icon no longer bundles the full Lucide set: names resolve from a registry holding only refine's own component icons. Apps register their icons via registerIcons() or import '@vielzeug/refine/icon-lucide' for the complete library.
+- add ore-speech-player, a text-to-speech control over the Web Speech API
+- feat(refine): speech player sentence progress, speed control, resume position, and error state
+
+### Patches
+
+- set box-sizing on the inner input so select triggers and search fields keep equal heights inside shadow roots
+- Load testing fixtures in IIFE dependency order (Sentinel after Arsenal, Focus after Keymap) so bundles no longer capture undefined globals; hoist parseOptionalBool to core and the container-measure helpers to a private layout module; narrow useFloatingTrigger offset/slot to single callables
+- Composite component sub-paths now register their child components: the per-entry library build silently dropped side-effect-only imports between entry modules, so importing e.g. @vielzeug/refine/cookie-banner shipped without registering ore-button/ore-checkbox. Children are TAG re-exports now (bindings survive cross-entry chunking), guarded by check:cross-entry in build
 ## 3.3.1
 Wed, 23 Sep 2026 03:47:55 GMT
 
