@@ -133,29 +133,29 @@ describe('href()', () => {
 
   it('hash-prefixes the route behind the driver base under createHashHistory', async () => {
     const router = createRouter({
-      base: '/demos/d&d/',
-      history: createHashHistory({ base: '/demos/d&d/' }),
+      base: '/demos/voyage/',
+      history: createHashHistory({ base: '/demos/voyage/' }),
       routes: { home: { path: '/' }, user: { path: '/users/:id' } },
     });
 
     await settle();
 
-    expect(router.url('user', { id: '42' })).toBe('/demos/d&d/users/42');
-    expect(router.href('user', { id: '42' })).toBe('/demos/d&d/#/users/42');
-    expect(router.href('home')).toBe('/demos/d&d/#/');
+    expect(router.url('user', { id: '42' })).toBe('/demos/voyage/users/42');
+    expect(router.href('user', { id: '42' })).toBe('/demos/voyage/#/users/42');
+    expect(router.href('home')).toBe('/demos/voyage/#/');
     router.dispose();
   });
 
   it('keeps query strings inside the hash-prefixed form', async () => {
     const router = createRouter({
-      base: '/demos/d&d/',
-      history: createHashHistory({ base: '/demos/d&d/' }),
+      base: '/demos/voyage/',
+      history: createHashHistory({ base: '/demos/voyage/' }),
       routes: { home: { path: '/' }, search: { path: '/search' } },
     });
 
     await settle();
 
-    expect(router.href('search', undefined, { page: 2 })).toBe('/demos/d&d/#/search?page=2');
+    expect(router.href('search', undefined, { page: 2 })).toBe('/demos/voyage/#/search?page=2');
     router.dispose();
   });
 });
