@@ -191,7 +191,13 @@ define<OreButtonProps>(BUTTON_TAG, {
       },
     });
 
-    const buttonContent = html`
+    // A factory, not a shared result: ore's static embed moves a result's
+    // fragment children into place, consuming it. The link/button switch below
+    // re-renders whenever `href` arrives or is removed at runtime (ore
+    // templates set interpolated attributes after upgrade, so the first render
+    // is usually the span branch), and a shared instance would render empty on
+    // every switch after the first.
+    const buttonContent = () => html`
       <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
       <slot name="prefix"></slot>
       <span class="content" part="content"><slot></slot></span>
@@ -214,11 +220,11 @@ define<OreButtonProps>(BUTTON_TAG, {
                 rel="${effectiveRel}"
                 target="${props.target}"
                 @click="${handleClick}">
-                ${buttonContent}
+                ${buttonContent()}
               </a>
             `
           : html`
-              <span part="button" role="presentation" @click="${handleClick}">${buttonContent}</span>
+              <span part="button" role="presentation" @click="${handleClick}">${buttonContent()}</span>
             `}
     `;
   },

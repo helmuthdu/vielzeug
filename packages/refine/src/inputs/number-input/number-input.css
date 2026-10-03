@@ -5,8 +5,8 @@
      that default and forced this one field to shrink-wrap while every sibling field stretched to
      match the column, e.g. in a 2-column form grid.
      `min-width` is different: every field above sets the same `12rem` floor (each via its own
-     `--<field>-min-width` custom property) so that a row of mixed field types: this one included
-: doesn't shrink-wrap to noticeably different widths purely because their *content* (a typed
+    `--<field>-min-width` custom property) so a row of mixed field types, including this one,
+    doesn't shrink-wrap to noticeably different widths purely because their *content* (a typed
      number vs. a selected option's label vs. free text) happens to differ. */
   :host {
     display: inline-flex;

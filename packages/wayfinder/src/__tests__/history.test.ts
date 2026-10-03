@@ -178,10 +178,10 @@ describe('createHistoryForBase', () => {
   });
 
   it('uses the hash driver under a deployment base', () => {
-    const history = createHistoryForBase('/demos/primal/');
+    const history = createHistoryForBase('/demos/d&d/');
 
-    history.push('/demos/primal/settings', null);
+    history.push('/demos/d&d/settings', null);
 
-    expect(mockHistory.pushState).toHaveBeenCalledWith(null, '', '/demos/primal/#/settings');
+    expect(mockHistory.pushState).toHaveBeenCalledWith(null, '', '/demos/d&d/#/settings');
   });
 });

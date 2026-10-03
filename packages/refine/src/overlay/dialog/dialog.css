@@ -197,7 +197,7 @@
   }
 
   .close:focus-visible {
-    outline: var(--border-2) solid var(--color-focus);
+    outline: var(--focus-ring);
     outline-offset: var(--border-2);
   }
 

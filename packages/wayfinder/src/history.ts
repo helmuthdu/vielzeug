@@ -78,7 +78,7 @@ export function createHashHistory(options: HashHistoryOptions = {}): HistoryDriv
 /**
  * Picks the history driver for a deployment base path: a site at the origin root
  * (`'/'`) gets real History-API paths; an app deployed under a sub-path
- * (`import.meta.env.BASE_URL` like `'/demos/primal/'`) gets the hash driver, so
+ * (`import.meta.env.BASE_URL` like `'/demos/d&d/'`) gets the hash driver, so
  * deep links survive a static host that cannot rewrite the base path to the app.
  */
 export function createHistoryForBase(base: string): HistoryDriver {

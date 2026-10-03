@@ -6,10 +6,9 @@
     --_cell-radius: var(--otp-cell-radius, var(--rounded-lg));
     --_cell-border: var(--otp-cell-border, var(--border));
 
-    /* --_bg/--_border-color (not --_cell-*-prefixed, unlike the rest of this component's tokens)
-: this is the shared name `fieldVariantMixin` reads/writes, matching `ore-input`/`ore-
-       textarea`/`ore-message-composer`. Public override is still `--otp-cell-bg`/`--otp-cell-
-       border-color` either way. */
+    /* --_bg/--_border-color are shared names used by `fieldVariantMixin`, unlike this
+       component's other `--_cell-*` tokens. The public overrides remain
+       `--otp-cell-bg` and `--otp-cell-border-color`. */
     --_border-color: var(--otp-cell-border-color, var(--color-contrast-300));
     --_bg: var(--otp-cell-bg, var(--color-canvas));
     --_cell-focus-border: var(--otp-cell-focus-border, var(--_theme-base, var(--color-contrast-700)));

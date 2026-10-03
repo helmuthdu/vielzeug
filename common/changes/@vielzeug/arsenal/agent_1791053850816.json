@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Clarify assertion and array example documentation",
+      "packageName": "@vielzeug/arsenal",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/arsenal"
+}

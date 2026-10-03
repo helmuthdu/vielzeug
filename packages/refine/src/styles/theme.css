@@ -184,9 +184,9 @@
        Custom properties store any token soup, so the declaration itself never
        errored, but every consumer substituting it into an actual `box-shadow`
        got an unparseable value and silently computed to `none` in spec-compliant
-       browsers. Fixed by keeping offset/blur outside and wrapping only the color
-: offset/blur are identical between light and dark here anyway, only the
-       alpha differs. */
+      browsers. Fixed by keeping offset/blur outside and wrapping only the color.
+      Offset and blur are identical between light and dark here; only the
+      alpha differs. */
     --shadow-2xs: 0 1px 2px light-dark(rgb(0 0 0 / 3%), rgb(0 0 0 / 20%));
     --shadow-xs: 0 2px 4px light-dark(rgb(0 0 0 / 3%), rgb(0 0 0 / 22%));
     --shadow-sm: 0 4px 10px -1px light-dark(rgb(0 0 0 / 5%), rgb(0 0 0 / 28%));
@@ -339,6 +339,14 @@
     --overlay-enter-translate-y-up: 4px; /* bottom-anchored overlays slide up from */
     --overlay-enter-scale: 0.97; /* slight scale-in for menus / panels */
     --overlay-enter-scale-dialog: 0.96; /* slightly more pronounced for dialogs */
+
+    /* Focus ring: the outline shorthand consumed by :focus-visible rules
+       across navbar, sidebar, list-item, drawer, and navigation-menu. Those
+       rules write `outline: var(--focus-ring)` (with their own
+       `outline-offset`), so this must be a full outline shorthand, not a
+       color. Matches the `var(--border-2) solid var(--color-primary)` ring
+       the button/card/tab focus styles already use. */
+    --focus-ring: var(--border-2) solid var(--color-primary);
 
     /* ── theme-tokens:generated:begin: run `pnpm run sync:theme`, do not hand-edit ── */
     /* ── Contrast scale: Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */

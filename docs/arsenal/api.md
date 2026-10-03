@@ -142,8 +142,8 @@ URL-safe base64 (`base64url`) codecs without `btoa`/`Buffer`, so the same code r
 ```ts
 import { base64UrlToBytes, base64UrlToText, bytesToBase64Url, textToBase64Url, utf8Bytes } from '@vielzeug/arsenal';
 
-textToBase64Url('{"build":"daeron"}'); // never contains '+', '/', or '='
-base64UrlToText(textToBase64Url('Primal: The Awakening')); // round-trips any UTF-8 text
+textToBase64Url('{"build":"hero"}'); // never contains '+', '/', or '='
+base64UrlToText(textToBase64Url('League of Legends')); // round-trips any UTF-8 text
 bytesToBase64Url(Uint8Array.from([0, 1, 250])); // byte-level codec for binary payloads
 base64UrlToBytes(code); // throws on characters outside the alphabet
 utf8Bytes('Hunter äöü'); // 11: byte length of a UTF-8 string

@@ -1,9 +1,9 @@
 /* ore-table: shadow DOM (proxy/mirror).
  *
  * Shadow tree (managed by table.ts):
- *   :host                  display:block: token host (tableBaseMixin)
- *   └─ .scroll-container   overflow:auto: sticky / max-height context
- *       └─ table           display:table: native table semantics
+ *   :host (display:block): token host (tableBaseMixin)
+ *   └─ .scroll-container (overflow:auto): sticky / max-height context
+ *       └─ table (display:table): native table semantics
  *           ├─ caption: optional caption bar
  *           ├─ thead: rows built from ore-tr[head]
  *           ├─ tbody: rows built from plain ore-tr

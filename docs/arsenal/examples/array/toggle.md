@@ -16,7 +16,7 @@ Use `toggle(array, item, selector?, options?)` to return a new array with the it
 ```ts
 import { toggle } from '@vielzeug/arsenal';
 
-toggle(['ts', 'node', 'vue'], 'ts'); // ['node', 'vue']: removed
+toggle(['ts', 'node', 'vue'], 'ts'); // ['node', 'vue']: 'ts' removed
 toggle(['ts', 'node', 'vue'], 'react'); // ['ts', 'node', 'vue', 'react']: added
 ```
 

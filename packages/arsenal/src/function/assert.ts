@@ -10,6 +10,7 @@
  *
  * @param condition - The boolean condition to assert.
  * @param [message] - Error message (default: `'Assertion failed'`).
+ * @param [options] - Optional assertion configuration.
  * @param [options.type] - Error class to throw (default: `Error`).
  * @throws {Error} If `condition` is false.
  */

@@ -399,7 +399,7 @@ onUnmounted(() => {
               <template v-if="!prefersReducedMotion">
                 <g v-for="(e, i) in electrons" :key="i">
                   <circle
-                    fill="#f0eeff" 
+                    fill="#f0eeff"
                     v-for="(pt, t) in e.tail"
                     :key="t"
                     :cx="pt.x"
@@ -511,7 +511,7 @@ onUnmounted(() => {
             <div class="why-card-icon"><ore-icon name="plug" size="20"></ore-icon></div>
             <ore-text as="h4" class="why-card-title" weight="semibold" >Built to work together</ore-text>
             <ore-text as="p" class="why-card-desc" color="muted" size="sm" >
-              Validation schemas plug into form fields. Signals drive UI templates. No adapter layer, no boilerplate :
+              Validation schemas plug into form fields. Signals drive UI templates, with no adapter layer or boilerplate.
               just packages that know about each other.
             </ore-text>
           </ore-card>
@@ -650,22 +650,19 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
               <li class="codex-cap">
                 <ore-icon name="search" size="14"></ore-icon>
                 <span>
-                  <strong>search-packages</strong>
-: find the right package by keyword across docs and exports
+                  <strong>search-packages</strong>: find the right package by keyword across docs and exports
                 </span>
               </li>
               <li class="codex-cap">
                 <ore-icon name="book-open" size="14"></ore-icon>
                 <span>
-                  <strong>get-docs</strong>
-: fetch any package's index, API, usage, or examples page
+                  <strong>get-docs</strong>: fetch any package's index, API, usage, or examples page
                 </span>
               </li>
               <li class="codex-cap">
                 <ore-icon name="layers" size="14"></ore-icon>
                 <span>
-                  <strong>get-component</strong>
-: full Refine component CEM: attributes, slots, CSS parts, events
+                  <strong>get-component</strong>: full Refine component CEM: attributes, slots, CSS parts, events
                 </span>
               </li>
             </ul>
@@ -696,8 +693,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
                   <span class="chat-role">assistant</span>
                   <span class="chat-text">
                     Use
-                    <code>debounce(fn, wait)</code>
-: returns a version of
+                    <code>debounce(fn, wait)</code>: returns a version of
                     <code>fn</code>
                     that delays invoking until
                     <code>wait</code>

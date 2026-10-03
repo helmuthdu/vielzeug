@@ -61,7 +61,7 @@ api.info('request', { method: 'GET', path });
 | Structured log entry | <ore-icon name="check" size="16"></ore-icon> `LogEntry` type    | Partial                                               | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="x" size="16"></ore-icon>     |
 | Lazy bindings        | <ore-icon name="check" size="16"></ore-icon> `lazy(fn)`         | <ore-icon name="x" size="16"></ore-icon>                | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>     |
 | Styled output        | <ore-icon name="check" size="16"></ore-icon> CSS badges         | Text only                                             | Text only                                          | Manual                                     |
-| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon> (15+)          | <ore-icon name="x" size="16"></ore-icon> (5+)        | N/A                                        |
+| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon> (15+)          | <ore-icon name="x" size="16"></ore-icon> (5+)        | N/A |
 
 <div class="decision-callout">
 

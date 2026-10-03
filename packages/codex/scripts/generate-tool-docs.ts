@@ -2,8 +2,7 @@
 // .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
 /**
  * Regenerates the tool tables in docs/codex/tools.md from the real tool registries instead of a
- * hand-maintained table. The two used to drift (a removed tool stayed listed, a renamed one
- * `node --experimental-strip-types`, unlike a bundler or `tsc` itself, does not rewrite those
+ * hand-maintained table: the two used to drift (a removed tool stayed listed, a renamed one
  * kept its old name) with nothing catching it.
  *
  * Run explicitly (`pnpm gen:tool-docs`) after a build, not as part of `build` or `prepare:data`: `src/tools/*.ts`

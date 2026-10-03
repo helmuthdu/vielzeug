@@ -34,3 +34,33 @@ test.describe('Interaction', () => {
     expect(isExpanded).toBe(true);
   });
 });
+
+test.describe('Keyboard focus', () => {
+  test('keeps the summary focus halo visible', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<button id="before">Before</button>' +
+        '<ore-accordion-item id="item1">' +
+        '<span slot="header">Game library</span>' +
+        '</ore-accordion-item>',
+    );
+
+    await page.locator('#before').focus();
+    await page.keyboard.press('Tab');
+
+    const focusStyles = await page.locator('#item1').evaluate((el) => {
+      const shadow = (el as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot;
+      const details = shadow.querySelector('details') as HTMLElement;
+      const summary = shadow.querySelector('summary') as HTMLElement;
+
+      return {
+        detailsOverflow: getComputedStyle(details).overflow,
+        focusVisible: summary.matches(':focus-visible'),
+        outline: getComputedStyle(summary).outline,
+      };
+    });
+
+    expect(focusStyles.focusVisible).toBe(true);
+    expect(focusStyles.detailsOverflow).toBe('visible');
+    expect(focusStyles.outline).toContain('solid');
+  });
+});

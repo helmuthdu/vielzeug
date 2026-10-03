@@ -246,7 +246,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
    *
    * @example
    * const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
-   * Form.partialDefaults(); // { role: 'viewer' }: name is omitted
+   * Form.partialDefaults(); // { role: 'viewer' }; name is omitted
    */
   partialDefaults(): Partial<InferObject<T>> {
     const result: Record<string, unknown> = {};

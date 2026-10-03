@@ -395,17 +395,17 @@
 
 @layer refine.variants {
   :host([variant='flat']) {
-    --_navbar-bg: color-mix(in oklch, var(--color-canvas) 88%, transparent);
+    --_navbar-bg: var(--navbar-bg, color-mix(in oklch, var(--color-canvas) 88%, transparent));
     --_navbar-shadow: none;
   }
 
   :host([variant='bordered']) {
-    --_navbar-bg: var(--color-canvas);
+    --_navbar-bg: var(--navbar-bg, var(--color-canvas));
     --_navbar-border-color: color-mix(in oklch, var(--color-contrast-500) 32%, transparent);
   }
 
   :host([variant='outline']) {
-    --_navbar-bg: transparent;
+    --_navbar-bg: var(--navbar-bg, transparent);
     --_navbar-shadow: none;
     --_navbar-border-color: color-mix(in oklch, var(--color-contrast-500) 40%, transparent);
   }

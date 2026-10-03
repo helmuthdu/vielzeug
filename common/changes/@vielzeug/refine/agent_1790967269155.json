@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(button): keep slotted content when href is set after upgrade",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

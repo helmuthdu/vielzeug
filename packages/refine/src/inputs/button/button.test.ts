@@ -336,6 +336,34 @@ describe('ore-button', () => {
       expect(fixture.query('a[part="button"]')).toBeFalsy();
     });
 
+    it('keeps slotted content when href arrives after upgrade', async () => {
+      // Ore templates set interpolated attributes after the element upgrades,
+      // so the first render is the span branch and the anchor branch renders on
+      // the later switch. A shared (non-factory) content result would render an
+      // empty anchor here.
+      fixture = await mount('ore-button', { html: 'Let’s talk' });
+
+      fixture.element.setAttribute('href', '/late');
+      await new Promise<void>((r) => setTimeout(r, 10));
+
+      const anchor = fixture.query('a[part="button"]');
+      expect(anchor).toBeTruthy();
+      expect(anchor?.querySelector('.content')).toBeTruthy();
+      expect(fixture.element.textContent).toContain('Let’s talk');
+    });
+
+    it('keeps slotted content across repeated href toggles', async () => {
+      fixture = await mount('ore-button', { html: 'Toggle me' });
+
+      for (const href of ['/a', null, '/b', null, '/c']) {
+        if (href === null) fixture.element.removeAttribute('href');
+        else fixture.element.setAttribute('href', href);
+        await new Promise<void>((r) => setTimeout(r, 10));
+        const part = fixture.query('[part="button"]');
+        expect(part?.querySelector('.content'), `href=${String(href)}`).toBeTruthy();
+      }
+    });
+
     it('internal anchor element reflects the href prop', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/about' } });
 

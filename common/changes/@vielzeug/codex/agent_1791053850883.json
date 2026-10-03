@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Refresh tool documentation output",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

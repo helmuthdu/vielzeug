@@ -17,7 +17,6 @@
 
   details {
     width: 100%;
-    overflow: hidden;
     border-radius: var(--accordion-item-radius);
   }
 
