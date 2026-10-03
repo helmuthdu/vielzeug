@@ -6,7 +6,7 @@ inputs:
     description: Run rush install after cache restore (installs each package's workspace deps)
     default: 'true'
   root-install:
-    description: Run pnpm install for the root workspace (packages/*, demos/*, repo tooling): not managed by Rush
+    description: Run pnpm install for the root workspace (packages/*, demos/*, repo tooling), which Rush does not manage
     default: 'true'
   trusted-publishing:
     description: Prepare npm for Trusted Publishing (OIDC). Only jobs that run `npm publish` need this.

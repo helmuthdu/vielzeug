@@ -24,7 +24,7 @@ on:
         required: true
         type: string
       ref:
-        description: Commit to check out and tag: the version-bump commit prepare pushed
+        description: Commit to check out and tag, usually the version-bump commit prepared and pushed by the release workflow
         required: true
         type: string
       version:
