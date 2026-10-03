@@ -1,6 +1,6 @@
 @layer refine.base {
   /* `--_gap` / `--_padding` / `--_font-size` are intentionally not emitted by any mixin in this
-     component's own `styles` array — they're inherited from the parent `ore-list`'s
+     component's own `styles` array: they're inherited from the parent `ore-list`'s
      `sizeVariantMixin(LIST_SIZE_PRESET)` call the same way `ore-menu-item` inherits
      `--_gap`/`--_font-size` from `ore-menu` (see `LIST_SIZE_PRESET`'s doc comment). The
      `var(..., fallback)` defaults below cover standalone use outside an `ore-list`. */
@@ -122,12 +122,12 @@
     transition: var(--_motion-transition, transform var(--transition-fast));
   }
 
-  /* A single slotted action button fills the whole revealed panel — the common case (one big
+  /* A single slotted action button fills the whole revealed panel: the common case (one big
      tappable target, e.g. a full-height "Delete" button) rather than a small icon-sized hit area.
      This stretches the slotted element's own light-DOM box, which is enough for plain elements
      (a native <button>, an <a>, ...). It is NOT enough on its own for `ore-button`: its visible
      surface is an inner `[part="button"]` with a fixed height from its size preset, independent
-     of its own host box size — pass `fullheight` on the `ore-button` itself too (see its own
+     of its own host box size: pass `fullheight` on the `ore-button` itself too (see its own
      `fullheight` prop) to actually fill this panel edge-to-edge. */
   .actions ::slotted(*) {
     flex: 1;
@@ -144,7 +144,7 @@
     transform: translateX(calc((var(--_swipe-x, var(--_peek-x, 0)) + 1) * 100%));
   }
 
-  /* `:host(:has(...))` (`:has()` as `:host()`'s functional argument) is invalid — `:host()`
+  /* `:host(:has(...))` (`:has()` as `:host()`'s functional argument) is invalid: `:host()`
      only accepts a compound selector and doesn't accept `:has()` inside it. The plain `:host`
      pseudo-class chained directly with `:has()` (no parentheses) is the valid form. Kept as
      separate rules (not grouped via a comma with the `[revealed]` rules) so a selector list
@@ -174,7 +174,7 @@
   }
 
   /* Feedback that the drag has passed into "swipe all the way through" territory (close to
-     CONFIRM_THRESHOLD) — set by list-item.ts's onMove once past ~85% of that distance, cleared
+     CONFIRM_THRESHOLD): set by list-item.ts's onMove once past ~85% of that distance, cleared
      on release/cancel/commit. Visual-only; the confirm itself fires from JS regardless of CSS. */
   :host([data-confirming]) .actions-left,
   :host([data-confirming]) .actions-right {
@@ -182,13 +182,13 @@
   }
 
   /* ========================================
-       Hover peek — the swipe affordance
+       Hover peek: the swipe affordance
        ======================================== */
 
   /* A hovered row peeks a few pixels of its first action panel so the swipe affordance is
      discoverable without a gesture. `--_peek-x` is only consumed while `--_swipe-x` is unset
      (not revealed, not dragging, no slotted action focused), so the peek can never fight the
-     real states — it is the fallback, not a competitor. Fine pointers only: touch discovers
+     real states: it is the fallback, not a competitor. Fine pointers only: touch discovers
      the gesture natively, and `hover` media guards hybrid devices. */
   @media (hover: hover) and (pointer: fine) {
     :host([data-peek='left']:hover:not([revealed])) {

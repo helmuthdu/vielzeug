@@ -1,5 +1,5 @@
 ---
-title: Tavern — Usage Guide
+title: 'Tavern: Usage Guide'
 description: How to use @vielzeug/tavern.
 ---
 
@@ -35,7 +35,7 @@ guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
 
 ## Host a Subject
 
-The host validates every guest command through the command table and broadcasts the snapshot on every local change — coalesced on a microtask, so bursts of changes ship one snapshot, not many. `onEnded` fires exactly once when hosting ends, whether the subject was removed or the host was disposed — reset your session UI there instead of intercepting your own `onRemoved` seam.
+The host validates every guest command through the command table and broadcasts the snapshot on every local change: coalesced on a microtask, so bursts of changes ship one snapshot, not many. `onEnded` fires exactly once when hosting ends, whether the subject was removed or the host was disposed: reset your session UI there instead of intercepting your own `onRemoved` seam.
 
 ```ts
 import { hostTavern } from '@vielzeug/tavern';
@@ -45,7 +45,7 @@ const host = hostTavern({
     apply: (name, args) => myStore.apply(name, args),
     has: (name) => name in myStore,
   },
-  onEnded: () => updateSessionUi(), // hosting ended — subject removed or disposed
+  onEnded: () => updateSessionUi(), // hosting ended: subject removed or disposed
   onPeersChanged: (peers) => updatePeerList(peers),
   onPeerJoined: (peer) => toast(`${peer.name ?? 'A guest'} joined`),
   onPeerLeft: (peer) => toast(`${peer.name ?? 'A guest'} left`),
@@ -65,7 +65,7 @@ await host.acceptAnswerText(answerCode);
 // Kick a peer; the guest observes a disconnect and fires onEnded.
 host.kick(peerId);
 
-host.dispose(); // stop hosting — every guest disconnects
+host.dispose(); // stop hosting: every guest disconnects
 ```
 
 ## Join as a Guest
@@ -89,11 +89,11 @@ guest.sendCommand('doc-1', 'rename', ['New name']);
 guest.dispose(); // leave; onEnded fires with the mounted subject exactly once
 ```
 
-The snapshot arrives as parsed JSON — `mount` receives `unknown` and should validate before trusting it. Returning `null` ignores the snapshot; returning the mounted value fires `onJoined` (first time only) and passes it to `onEnded` when the session ends.
+The snapshot arrives as parsed JSON: `mount` receives `unknown` and should validate before trusting it. Returning `null` ignores the snapshot; returning the mounted value fires `onJoined` (first time only) and passes it to `onEnded` when the session ends.
 
 ## Relay Notices
 
-Give both sides a notice seam — catalog keys rather than prose, so each client translates locally — and the host relays its own notices to every guest.
+Give both sides a notice seam: catalog keys rather than prose, so each client translates locally, and the host relays its own notices to every guest.
 
 ```ts
 import type { TavernNotices } from '@vielzeug/tavern';
@@ -107,11 +107,11 @@ const notices: TavernNotices = {
 host.relayNotice(localNotice);
 ```
 
-**Echo guard**: a tab that both hosts and guests must prevent re-broadcasting a wire-originated notice back to its own guests. One boolean set during `fromWire` and checked in `toWire` is sufficient — the consumer owns this because only they know their local event system.
+**Echo guard**: a tab that both hosts and guests must prevent re-broadcasting a wire-originated notice back to its own guests. One boolean set during `fromWire` and checked in `toWire` is sufficient: the consumer owns this because only they know their local event system.
 
 ## Handle Pairing Mistakes
 
-Every user-input pairing failure surfaces as `TavernPairingError` from both `acceptAnswerText` and `joinTavern` — a garbage code, the wrong code kind, an expired invitation, or an answer the host refuses. Catch it to show a helpful message instead of a raw error; the underlying mesh failure is chained as `cause` when you need it.
+Every user-input pairing failure surfaces as `TavernPairingError` from both `acceptAnswerText` and `joinTavern`: a garbage code, the wrong code kind, an expired invitation, or an answer the host refuses. Catch it to show a helpful message instead of a raw error; the underlying mesh failure is chained as `cause` when you need it.
 
 ```ts
 import { hostTavern, TavernPairingError } from '@vielzeug/tavern';
@@ -129,7 +129,7 @@ try {
 
 ## Working with Other Vielzeug Libraries
 
-Tavern builds on `@vielzeug/mesh` for the WebRTC transport, pairing codes, and QR-optimized codecs. You do not interact with mesh directly — tavern owns the protocol — but the `rtc` option accepts a `MeshRtcFactory` for testing or non-browser runtimes, and the peer and status types in callbacks are mesh types.
+Tavern builds on `@vielzeug/mesh` for the WebRTC transport, pairing codes, and QR-optimized codecs. You do not interact with mesh directly: tavern owns the protocol, but the `rtc` option accepts a `MeshRtcFactory` for testing or non-browser runtimes, and the peer and status types in callbacks are mesh types.
 
 ```ts
 import type { MeshRtcFactory } from '@vielzeug/mesh';
@@ -142,14 +142,14 @@ const host = hostTavern({
 });
 ```
 
-Pair `@vielzeug/ledger` on the host to give the commands tavern applies an undo history — commands applied through the table land in the ledger like local ones.
+Pair `@vielzeug/ledger` on the host to give the commands tavern applies an undo history: commands applied through the table land in the ledger like local ones.
 
 ## Best Practices
 
 - Keep the command table the same object the host's own UI calls, so guest actions cannot bypass local validation.
-- Return `null` from `snapshot` while the subject is missing — the broadcast simply skips.
-- Reset host-side session UI in `onEnded` — it fires exactly once for subject removal and explicit disposal alike, so you never need to double-wire your own `onRemoved` seam.
-- Treat notices as catalog keys, not prose — each client translates locally.
-- Guard against notice echo if a tab can both host and guest — one boolean in `toWire` is sufficient.
+- Return `null` from `snapshot` while the subject is missing: the broadcast simply skips.
+- Reset host-side session UI in `onEnded`: it fires exactly once for subject removal and explicit disposal alike, so you never need to double-wire your own `onRemoved` seam.
+- Treat notices as catalog keys, not prose: each client translates locally.
+- Guard against notice echo if a tab can both host and guest: one boolean in `toWire` is sufficient.
 - Dispose guests and hosts when their screen unmounts; channels also clean up on disconnect through `onEnded`, which fires exactly once on both sides.
-- Catch `TavernPairingError` separately from other errors — it means the pasted code could not be used, not that something is broken.
+- Catch `TavernPairingError` separately from other errors: it means the pasted code could not be used, not that something is broken.

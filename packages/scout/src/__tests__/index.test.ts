@@ -167,7 +167,7 @@ describe('ScoutIndex.search', () => {
 
   // Regression: a short (>= minQueryLength, so trigram-scored) query that's a clean prefix of a
   // much longer field value used to score *below* the default 0.2 threshold under the old
-  // Sørensen–Dice formula purely because of the length mismatch, disappearing from results —
+  // Sørensen–Dice formula purely because of the length mismatch, disappearing from results :
   // then reappearing once the user typed enough extra characters to shrink that mismatch. E.g.
   // "fin" vs "Finalize Q3 budget report" scored ~0.14 under Dice (below threshold); "fina"
   // scored exactly 0.2 (borderline). The overlap coefficient scores purely on how much of the
@@ -182,7 +182,7 @@ describe('ScoutIndex.search', () => {
     expect(results.find((r) => r.item.title === 'Finalize Q3 budget report')?.score).toBeGreaterThanOrEqual(0.2);
   });
 
-  test('does not lose the match as more characters are typed — no "3 chars hides it, 4 shows it" cliff', () => {
+  test('does not lose the match as more characters are typed: no "3 chars hides it, 4 shows it" cliff', () => {
     const items = [{ title: 'Finalize Q3 budget report' }];
     const index = createIndex(items, { fields: ['title'] });
 
@@ -196,7 +196,7 @@ describe('ScoutIndex.search', () => {
   });
 
   // Regression: two unrelated 4-character codes that merely end the same way (both round
-  // hundreds) used to both score 0.25 — a single shared boundary trigram (`"00 "`) was enough to
+  // hundreds) used to both score 0.25: a single shared boundary trigram (`"00 "`) was enough to
   // clear the default 0.2 threshold, so searching for one code surfaced every other code sharing
   // that ending too. A real fuzzy match shares *several* trigrams, not exactly one.
   test('a single shared boundary trigram does not count as a match', () => {
@@ -288,7 +288,7 @@ describe('ScoutIndex.add', () => {
     expect(results[0].item).toBe(item);
   });
 
-  test('add() is idempotent — same reference added twice stays at size 1', () => {
+  test('add() is idempotent: same reference added twice stays at size 1', () => {
     const item: User = { age: 20, email: 'x@x.com', name: 'Unique' };
     const index = createIndex<User>([], { fields: ['name'] });
 
@@ -578,7 +578,7 @@ describe('configuration validation', () => {
   });
 });
 
-describe('tokenization — punctuation handling', () => {
+describe('tokenization: punctuation handling', () => {
   test('hyphenated field values are searchable by each part', () => {
     const items = [{ sku: 'WGT-001' }, { sku: 'GAD-002' }];
     const index = createIndex(items, { fields: ['sku'] });
@@ -610,7 +610,7 @@ describe('tokenization — punctuation handling', () => {
   });
 });
 
-describe('ScoutError — named subclasses', () => {
+describe('ScoutError: named subclasses', () => {
   it('each subclass is instanceof ScoutError and Error', () => {
     expect(new ScoutDisposedError('disposed')).toBeInstanceOf(ScoutError);
     expect(new ScoutDisposedError('disposed')).toBeInstanceOf(Error);

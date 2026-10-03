@@ -1,7 +1,7 @@
 // .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
 /**
  * Extracts REPL example metadata + code from docs/.vitepress/theme/components/repl/examples/<slug>/
- * via the TypeScript compiler API (no dynamic import / execution of repo code at build time —
+ * via the TypeScript compiler API (no dynamic import / execution of repo code at build time :
  * mirrors the AST-only approach in scripts/generate-repl-registry.ts).
  *
  * Each package's examples/<slug>/index.ts re-exports a `<slug>Examples` object literal mapping

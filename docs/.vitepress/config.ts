@@ -38,7 +38,7 @@ const makePackageSidebarsCollapsible = (sidebar: DefaultTheme.SidebarMulti): Def
 };
 
 // ---------------------------------------------------------------------------
-// llms.txt + llms-full.txt — copy pre-generated files from codex data/
+// llms.txt + llms-full.txt: copy pre-generated files from codex data/
 // ---------------------------------------------------------------------------
 
 function copyLlmsTxt(siteConfig: { outDir: string }): void {
@@ -2355,8 +2355,8 @@ export default defineConfig({
     resolve: {
       // Every `@vielzeug/<name>` package is aliased to its `src/` directory (instead of the
       // published `dist`) so editing package source is reflected immediately in `docs:dev`
-      // without a build step. Derived from the `packages/` directory listing — see
-      // scripts/vielzeug-packages.ts — instead of a hand-maintained list.
+      // without a build step. Derived from the `packages/` directory listing: see
+      // scripts/vielzeug-packages.ts, instead of a hand-maintained list.
       alias: [
         { find: '@vielzeug/prism/theme', replacement: resolve(PACKAGES_DIR, 'prism/src/theme/prism.css') },
         ...Object.entries(buildVielzeugSrcAliases(PACKAGES_DIR)).map(([find, replacement]) => ({ find, replacement })),

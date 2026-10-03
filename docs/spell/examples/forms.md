@@ -1,5 +1,5 @@
 ---
-title: 'Spell Examples — Form-Safe Parsing'
+title: 'Spell Examples: Form-Safe Parsing'
 description: 'Use spell schemas to turn browser-like form values into typed application input.'
 ---
 

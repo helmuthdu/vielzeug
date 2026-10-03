@@ -12,7 +12,7 @@ const registry = new Map<string, IconNode>();
 
 /**
  * Register icons (or override existing ones) by name. Keys may be kebab-case or
- * PascalCase — both resolve.
+ * PascalCase: both resolve.
  */
 export function registerIcons(icons: Record<string, IconNode>): void {
   for (const [name, node] of Object.entries(icons)) {

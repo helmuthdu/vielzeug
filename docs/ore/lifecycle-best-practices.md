@@ -1,5 +1,5 @@
 ---
-title: Ore — Lifecycle Best Practices
+title: 'Ore: Lifecycle Best Practices'
 description: Practical lifecycle patterns for setup, cleanup, refs, and host wiring in Ore.
 ---
 

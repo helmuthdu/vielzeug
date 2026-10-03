@@ -1,5 +1,5 @@
 ---
-title: Conduit Examples — Basic Setup
+title: 'Conduit Examples: Basic Setup'
 description: Register static dependencies with Conduit.
 ---
 

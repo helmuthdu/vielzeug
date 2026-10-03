@@ -9,7 +9,7 @@ export class DndError extends Error {
 
 /** Thrown when a sortable action is called with an invalid scope not created by `createSortableScope()`. */
 export class DndScopeError extends DndError {
-  constructor(message = 'Invalid scope — use createSortableScope() to create scopes.') {
+  constructor(message = 'Invalid scope: use createSortableScope() to create scopes.') {
     super(message);
   }
 }

@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Raw Path Targets'
+title: 'Wayfinder Examples: Raw Path Targets'
 description: 'Raw path targets example for @vielzeug/wayfinder.'
 ---
 

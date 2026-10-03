@@ -28,7 +28,7 @@ export function toSearchMatcher<T>(
 /**
  * Returns a predicate that returns `true` for items matching `query` in the given index.
  *
- * The predicate is computed once at call time — call `toFilterPredicate` again if the
+ * The predicate is computed once at call time: call `toFilterPredicate` again if the
  * query or corpus changes.
  *
  * Compatible with `Array.filter`, `vault`'s `query.filter()`, or any predicate pipeline.

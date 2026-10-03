@@ -5,7 +5,7 @@
         "patch": [
           {
             "author": "agent@vielzeug",
-            "comment": "chore: align with CalVer lockstep trains — no code change this train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
           }
         ]

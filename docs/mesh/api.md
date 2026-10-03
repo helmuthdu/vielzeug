@@ -1,5 +1,5 @@
 ---
-title: Mesh — API Reference
+title: 'Mesh: API Reference'
 description: Public API of @vielzeug/mesh.
 ---
 
@@ -13,8 +13,8 @@ description: Public API of @vielzeug/mesh.
 | `createMeshGuest` | Guest node that pairs with one host | Sync | Second `acceptInvitation` throws `MeshPairingError` |
 | `meshCodec` | base64url encode/decode for pairing payloads | Sync | `decode` throws `MeshPairingError` on malformed text or wrong `v` |
 | `meshQrCodec` | deflate-raw + base45 codec for QR-sized payloads | Async | Falls back to plain `meshCodec` output where `CompressionStream` is missing |
-| `MeshProtocol` | Declares the `toHost`/`toGuest` message maps | — | Extend it; the maps themselves stay plain records |
-| `MeshError` | Base class for all mesh errors | — | `instanceof MeshError` catches every mesh-originated error |
+| `MeshProtocol` | Declares the `toHost`/`toGuest` message maps | N/A | Extend it; the maps themselves stay plain records |
+| `MeshError` | Base class for all mesh errors | N/A | `instanceof MeshError` catches every mesh-originated error |
 
 ## Package Entry Point
 
@@ -30,7 +30,7 @@ description: Public API of @vielzeug/mesh.
 function createMeshHost<P extends MeshProtocol>(options?: MeshHostOptions): MeshHost<P>;
 ```
 
-Returns a host node in status `'idle'`. Creating it never touches WebRTC — the first `createInvitation()` does.
+Returns a host node in status `'idle'`. Creating it never touches WebRTC: the first `createInvitation()` does.
 
 #### Options (`MeshHostOptions`)
 
@@ -41,11 +41,11 @@ Returns a host node in status `'idle'`. Creating it never touches WebRTC — the
 | `maxMessageBytes` | `number` | `65_536` | Serialized message cap, both directions. |
 | `invitationTtlMs` | `number` | `300_000` | Invitation validity window. |
 | `iceGatheringTimeoutMs` | `number` | `5_000` | ICE gathering cap; pairing proceeds with gathered candidates on timeout. |
-| `channelOpenTimeoutMs` | `number` | `60_000` | Channel-open wait in `acceptAnswer` and on the guest — generous to cover the human carry-back of the answer. |
+| `channelOpenTimeoutMs` | `number` | `60_000` | Channel-open wait in `acceptAnswer` and on the guest: generous to cover the human carry-back of the answer. |
 | `rtc` | `MeshRtcFactory` | `globalThis.RTCPeerConnection` | Injection point for tests and non-browser runtimes. |
 | `clock` | `() => number` | `Date.now` | TTLs and message timestamps. |
 | `random` | `RandomSource` | `crypto.getRandomValues` | Ids and secrets. |
-| `signal` | `AbortSignal` | — | Disposes the node on abort. |
+| `signal` | `AbortSignal` | N/A | Disposes the node on abort. |
 | `approvePeer` | `(peer: MeshPeerInfo) => boolean \| Promise<boolean>` | approve | Runs after proof verification; `false` rejects with `MeshPairingError`. |
 
 #### Example
@@ -65,7 +65,7 @@ const invitation = await host.createInvitation();
 function createMeshGuest<P extends MeshProtocol>(options?: MeshGuestOptions): MeshGuest<P>;
 ```
 
-Returns a guest node in status `'idle'`. `MeshGuestOptions` is `MeshOptions` — the shared option table above without `approvePeer`.
+Returns a guest node in status `'idle'`. `MeshGuestOptions` is `MeshOptions`: the shared option table above without `approvePeer`.
 
 #### Example
 
@@ -82,7 +82,7 @@ const answer = await guest.acceptInvitation(meshCodec.decode(invitationText), { 
 
 | Member | Signature | Purpose |
 | --- | --- | --- |
-| `createInvitation` | `(meta?: { name?: string }) => Promise<MeshInvitation>` | Single-use invitation for one guest; repeatable — one per guest. `meta.name` becomes this host's peer name on the guest side. |
+| `createInvitation` | `(meta?: { name?: string }) => Promise<MeshInvitation>` | Single-use invitation for one guest; repeatable: one per guest. `meta.name` becomes this host's peer name on the guest side. |
 | `acceptAnswer` | `(answer: MeshAnswer) => Promise<MeshPeer>` | Verifies proof + approval, then resolves once the channel opens. Rejects `MeshPairingError` (unknown/expired/duplicate session, duplicate peer id, proof mismatch, refusal) or `MeshTimeoutError`. |
 | `peers` | `ReadonlyMap<string, MeshPeer>` | Live peer inventory keyed by peer id. |
 | `send` | `<K extends keyof P['toGuest'] & string>(peerId: string, type: K, payload: P['toGuest'][K]) => void` | Typed unicast; throws `MeshConnectionError` for unknown/unconnected peers, `MeshPayloadError` over the cap. |
@@ -147,7 +147,7 @@ const invitationText = await meshQrCodec.encode(await host.createInvitation()); 
 const answer = await host.acceptAnswer(await meshQrCodec.decode(scannedText));
 ```
 
-`encode` never throws for a missing capability — it falls back to plain `meshCodec` output where `CompressionStream` is unavailable. `decode` throws `MeshPairingError` on corrupt base45/deflate/JSON and `MeshUnsupportedError` only when the text is `mq2.`-compressed but `DecompressionStream` is missing.
+`encode` never throws for a missing capability: it falls back to plain `meshCodec` output where `CompressionStream` is unavailable. `decode` throws `MeshPairingError` on corrupt base45/deflate/JSON and `MeshUnsupportedError` only when the text is `mq2.`-compressed but `DecompressionStream` is missing.
 
 ## Types
 
@@ -259,7 +259,7 @@ type MeshGuestOptions = MeshOptions;
 
 ### WebRTC injection
 
-Minimal structural subsets — the surface mesh actually calls, no more. Implement them over `wrtc` or a test double to run outside a browser.
+Minimal structural subsets: the surface mesh actually calls, no more. Implement them over `wrtc` or a test double to run outside a browser.
 
 ```ts
 interface MeshRtcFactory {
@@ -308,10 +308,10 @@ interface MeshRtcEvent {
 
 | Class | Thrown when | Notable properties |
 | --- | --- | --- |
-| `MeshError` | Base class — never thrown directly | `instanceof MeshError` catches all mesh errors |
-| `MeshPairingError` | Malformed/expired/unknown invitation or answer, proof mismatch, duplicate answer, `approvePeer` refusal, codec `decode` failure | — |
+| `MeshError` | Base class: never thrown directly | `instanceof MeshError` catches all mesh errors |
+| `MeshPairingError` | Malformed/expired/unknown invitation or answer, proof mismatch, duplicate answer, `approvePeer` refusal, codec `decode` failure | N/A |
 | `MeshConnectionError` | ICE/DTLS failure, channel closed, send to unknown/unconnected peer, offer/answer creation failure | `peerId: string \| null` |
-| `MeshPayloadError` | Outbound message over `maxMessageBytes` or unserializable | — |
-| `MeshTimeoutError` | Channel-open wait exceeded | — |
-| `MeshDisposedError` | Any method called after `dispose()` | — |
-| `MeshUnsupportedError` | No `RTCPeerConnection` in the environment and no `rtc` injected (raised at first use, never at import), or `meshQrCodec.decode` given `mq2.` text without `DecompressionStream` | — |
+| `MeshPayloadError` | Outbound message over `maxMessageBytes` or unserializable | N/A |
+| `MeshTimeoutError` | Channel-open wait exceeded | N/A |
+| `MeshDisposedError` | Any method called after `dispose()` | N/A |
+| `MeshUnsupportedError` | No `RTCPeerConnection` in the environment and no `rtc` injected (raised at first use, never at import), or `meshQrCodec.decode` given `mq2.` text without `DecompressionStream` | N/A |

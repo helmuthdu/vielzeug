@@ -1,5 +1,5 @@
 ---
-title: 'Flux Examples — Debounced Search Input'
+title: 'Flux Examples: Debounced Search Input'
 description: 'Debounce input events and retain only latest search result stream.'
 ---
 

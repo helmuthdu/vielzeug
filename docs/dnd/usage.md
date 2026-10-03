@@ -1,5 +1,5 @@
 ---
-title: Dnd — Usage Guide
+title: 'Dnd: Usage Guide'
 description: Drop zones, sortable lists, explicit connected scopes, keyboard sorting, and cleanup patterns with Dnd.
 ---
 
@@ -75,7 +75,7 @@ createDropZone({
 const options = { disabled: false, element: dropEl, onDrop: handleFiles };
 const zone = createDropZone(options);
 
-// options.disabled is read live on each event — mutate to toggle:
+// options.disabled is read live on each event: mutate to toggle:
 options.disabled = isReadOnly;
 ```
 
@@ -202,7 +202,7 @@ createSortable({
 
 Focus an item and use arrow keys to move it. `Home` and `End` move to the boundary positions.
 
-When an item is already at the first or last position, the boundary key press is not consumed — the browser handles it normally (for example, scrolling the page). Only keys that actually move an item call `preventDefault`. Arrow keys from buttons, links, form fields, and editable descendants remain native unless that descendant matches the configured drag handle. Wire `onInteraction` to an application live region for screen-reader announcements.
+When an item is already at the first or last position, the boundary key press is not consumed: the browser handles it normally (for example, scrolling the page). Only keys that actually move an item call `preventDefault`. Arrow keys from buttons, links, form fields, and editable descendants remain native unless that descendant matches the configured drag handle. Wire `onInteraction` to an application live region for screen-reader announcements.
 
 ### Connected lists
 
@@ -293,7 +293,7 @@ const options: SortableOptions = {
 };
 const sortable = createSortable(options);
 
-// options.disabled is read live on each event — mutate to toggle:
+// options.disabled is read live on each event: mutate to toggle:
 options.disabled = isLocked;
 ```
 
@@ -378,7 +378,7 @@ If `saveOrder()` triggers a render that replaces list items, call `layout?.anima
 
 ### Optimistic updates and rollback
 
-The `onReorder` event carries `before`, `after`, and `item`. Application history owns rollback — use `before` to record an undo entry.
+The `onReorder` event carries `before`, `after`, and `item`. Application history owns rollback: use `before` to record an undo entry.
 
 ```ts
 const history: Array<{ before: readonly string[] }> = [];
@@ -583,11 +583,11 @@ Keep direct manipulation separate from drag-and-drop semantics. Use Gesture for 
 
 ## Best Practices
 
-- Attach `createDropZone` and `createSortable` after the container element is in the DOM — use `onMounted` in component frameworks.
+- Attach `createDropZone` and `createSortable` after the container element is in the DOM: use `onMounted` in component frameworks.
 - Call `.dispose()` in the cleanup phase of your framework (useEffect return, onUnmounted, onDestroy) to prevent memory leaks.
-- Use `data-sort-id` attributes that match your data's identity field — do not use DOM index as an identifier.
+- Use `data-sort-id` attributes that match your data's identity field: do not use DOM index as an identifier.
 - Prefer `applyReorder()` over manual array splicing, and guarantee unique backing keys; duplicates throw `DndError` rather than dropping data.
 - Use `createSortableScope()` only when items should genuinely move between containers.
 - Use drag handles (`.handle` selector) when the full item surface area conflicts with other interactions such as text selection.
-- Test keyboard reordering explicitly — Dnd sets `tabindex` on items and supports arrow keys by default.
+- Test keyboard reordering explicitly: Dnd sets `tabindex` on items and supports arrow keys by default.
 - Enable `touch: true` only on scopes that own touch-sortable lists.

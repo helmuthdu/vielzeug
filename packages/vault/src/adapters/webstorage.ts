@@ -249,7 +249,7 @@ function createWebStorageAdapter<S extends AnySchema>(
         if (event.storageArea && event.storageArea !== resolvedStorage) return;
 
         if (event.key === null) {
-          // storage.clear() from another tab — all keys are gone; purge ownedKeys
+          // storage.clear() from another tab: all keys are gone; purge ownedKeys
           ownedKeys.clear();
 
           for (const table of Object.keys(schema)) {

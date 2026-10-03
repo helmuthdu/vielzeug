@@ -1,5 +1,5 @@
 ---
-title: Conduit — Examples
+title: 'Conduit: Examples'
 description: Immutable provider array recipes.
 ---
 

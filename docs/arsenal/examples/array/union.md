@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — union'
+title: 'Arsenal Examples: union'
 description: 'union example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'union example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to merge two arrays and deduplicate — for example combining two tag lists without duplicates.
+You need to merge two arrays and deduplicate: for example combining two tag lists without duplicates.
 
 ### Solution
 

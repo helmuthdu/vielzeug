@@ -68,12 +68,12 @@ function addressLabel(order: Order): string {
 function downloadOrderSummary(order: Order): void {
   const pricing = order.pricing;
   const lines = [
-    'Vielzeug Motors — Order summary',
+    'Vielzeug Motors: Order summary',
     `Order ${orderNumber(order.id)}`,
     `Placed: ${formatLongDate(order.placedAt)}`,
     `Status: ${formatOrderStatus(order.status)}`,
     '',
-    ...order.items.map((item) => `${item.modelName} × ${item.quantity} — ${formatPrice(item.breakdown.subtotal)}`),
+    ...order.items.map((item) => `${item.modelName} × ${item.quantity}: ${formatPrice(item.breakdown.subtotal)}`),
     '',
     `Subtotal: ${formatPrice(pricing.subtotal)}`,
     ...(Number(pricing.discount) > 0 ? [`Discount: -${formatPrice(pricing.discount)}`] : []),

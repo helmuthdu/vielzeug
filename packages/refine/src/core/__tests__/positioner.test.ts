@@ -22,7 +22,7 @@ function mockRect(el: HTMLElement, rect: Partial<DOMRect>): void {
 
 /**
  * `floating`'s rect reflects whatever `style.left`/`style.top` was last written, offset by
- * `driftX`/`driftY` (default `0`) — jsdom doesn't lay out `position: fixed` for real, so without
+ * `driftX`/`driftY` (default `0`): jsdom doesn't lay out `position: fixed` for real, so without
  * this the positioner's own measure-after-write self-correction step (see `positioner.ts`) would
  * treat every unmocked coordinate as "wrong" and double up the just-written offset. A non-zero
  * drift simulates the real-world case that correction step exists for: some ancestor making the
@@ -48,7 +48,7 @@ function mockDynamicFloatingRect(floating: HTMLElement, { driftX = 0, driftY = 0
 /**
  * Simulates a floating element mid-entrance-transition: `getBoundingClientRect()` reflects the
  * just-written `style.left`/`style.top` plus `ownTransformOffsetY`, *unless* `style.transform`
- * has been explicitly neutralized to `'none'` — mirroring how a real `transform: translateY(...)`
+ * has been explicitly neutralized to `'none'`: mirroring how a real `transform: translateY(...)`
  * (dropdowns/popovers here all use one, driven by `[data-open]` + `@starting-style`, still
  * reflecting its starting offset for a moment right at open) affects `getBoundingClientRect()`
  * until something clears it.
@@ -268,7 +268,7 @@ describe('RTL placement mirroring (via getDir)', () => {
 // inside a dialog whose panel has a permanent (visually-identity) `transform`, silently
 // mispositioned once `left`/`top` got resolved against that panel's box instead of the
 // viewport `computePosition()` assumed. Detecting the trapping ancestor analytically and
-// pre-subtracting its rect (via orbit's `getContainingBlock()`) turned out to be unreliable —
+// pre-subtracting its rect (via orbit's `getContainingBlock()`) turned out to be unreliable :
 // some elements in the exact same subtree needed the correction and some didn't. These tests
 // pin down the measure-after-write correction that replaced it instead.
 
@@ -366,7 +366,7 @@ describe('width matching', () => {
 
 describe('containing-block self-correction', () => {
   it('leaves the written position alone when the browser rendered it exactly where asked', () => {
-    const { cleanup, floating, reference } = makeElements(); // no drift — the common case
+    const { cleanup, floating, reference } = makeElements(); // no drift: the common case
 
     const pos = createDropdownPositioner({
       getFloating: () => floating,
@@ -422,7 +422,7 @@ describe('containing-block self-correction', () => {
   // Regression test for a real bug this measurement approach introduced: `ore-select`'s own
   // dropdown-open entrance transition (`transform: translateY(...)` driven by `[data-open]` +
   // `@starting-style`) was being misread as a permanent ancestor-driven mismatch and baked in as
-  // a lasting offset — meaning every dropdown opened slightly mispositioned relative to its
+  // a lasting offset: meaning every dropdown opened slightly mispositioned relative to its
   // options, which is exactly the kind of drift that makes clicks land on the wrong element.
   it("does not mistake the floating element's own entrance-transition transform for an ancestor-driven mismatch", () => {
     const reference = document.createElement('button');
@@ -432,7 +432,7 @@ describe('containing-block self-correction', () => {
     document.body.appendChild(reference);
     document.body.appendChild(floating);
     mockRect(reference, { height: 20, width: 100, x: 100, y: 50 });
-    // Own entrance-transition offset only — no ancestor-driven drift at all.
+    // Own entrance-transition offset only: no ancestor-driven drift at all.
     mockOwnTransformDrift(floating, -4);
 
     const pos = createDropdownPositioner({
@@ -443,7 +443,7 @@ describe('containing-block self-correction', () => {
 
     pos.update();
 
-    // reference: y=50, height=20 → intended top = 70. Must stay exactly 70 — the own-transform
+    // reference: y=50, height=20 → intended top = 70. Must stay exactly 70: the own-transform
     // offset must be neutralized for the measurement, not corrected for as if it were real drift.
     expect(floating.style.top).toBe('70px');
 

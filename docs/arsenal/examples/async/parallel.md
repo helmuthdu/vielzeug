@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — parallel'
+title: 'Arsenal Examples: parallel'
 description: 'parallel example for @vielzeug/arsenal.'
 ---
 
@@ -31,14 +31,14 @@ const results = await parallel(
 ```ts
 import { parallel } from '@vielzeug/arsenal/async';
 
-// All tasks start simultaneously — equivalent to Promise.all with a map
+// All tasks start simultaneously: equivalent to Promise.all with a map
 const all = await parallel([1, 2, 3], async (n) => n * 2);
 // [2, 4, 6]
 ```
 
 ### Pitfalls
 
-- Without `limit`, all items start concurrently — set `limit` explicitly for large arrays.
+- Without `limit`, all items start concurrently: set `limit` explicitly for large arrays.
 - If any task throws, the whole call rejects. Wrap individual tasks in `attempt` if you need partial failures.
 - Results are in input order, not completion order.
 

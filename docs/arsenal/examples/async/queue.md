@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — taskPool'
+title: 'Arsenal Examples: taskPool'
 description: 'taskPool example for @vielzeug/arsenal.'
 ---
 

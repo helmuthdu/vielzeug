@@ -43,7 +43,7 @@ function fixedDurationToMilliseconds(input: FixedDuration): number {
   }
 
   // Fixed-length units only (months/years rejected above), so the sum is exact
-  // without a relativeTo reference — Duration.total() would need a magic base date.
+  // without a relativeTo reference: Duration.total() would need a magic base date.
   return (
     duration.weeks * MILLIS.week +
     duration.days * MILLIS.day +

@@ -24,7 +24,7 @@ function replayCapacity<T>(options: ChannelOptions<T>): number {
 
   if (hasInitial && capacity === 0) {
     throw new RangeError(
-      'Channel replay cannot be 0 when initial is provided — the initial value would be immediately dropped',
+      'Channel replay cannot be 0 when initial is provided: the initial value would be immediately dropped',
     );
   }
 
@@ -42,7 +42,7 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
 
   const source = stream<T>((sink) => {
     // Disposed channels complete new subscribers immediately without replaying
-    // retained values — a late subscriber never observes stale state.
+    // retained values: a late subscriber never observes stale state.
     if (controller.signal.aborted) {
       sink.complete();
 

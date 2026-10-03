@@ -7,7 +7,7 @@ import type { Catalog, Locale, MessageKey, PluralOptions, TranslateOptions } fro
 export interface ReactiveI18n<C extends Catalog> {
   /** The underlying instance for imperative work (`setLocale`, `load`, disposal). */
   readonly i18n: I18n<C>;
-  /** Reactive locale — reading it inside a computed/template registers the dependency. */
+  /** Reactive locale: reading it inside a computed/template registers the dependency. */
   readonly locale: Readable<Locale>;
   /** Translate a text or plural key; re-evaluates whenever the locale changes. */
   translate(key: MessageKey<C>, options?: TranslateOptions | PluralOptions): string;

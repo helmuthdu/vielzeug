@@ -1,7 +1,7 @@
 export const functionRunAllExample = {
   code: `import { runAll } from '@vielzeug/arsenal/function'
 
-// Run every teardown function — collect errors instead of stopping on first failure
+// Run every teardown function: collect errors instead of stopping on first failure
 const log = []
 
 const teardowns = [
@@ -18,7 +18,7 @@ try {
   console.log('still ran:', log)  // ['cleanup C', 'cleanup B', 'cleanup A']
 }
 
-// Without failures — just runs all in order
+// Without failures: just runs all in order
 const steps = []
 runAll([() => steps.push(1), () => steps.push(2), () => steps.push(3)])
 console.log('steps:', steps)  // [1, 2, 3]`,

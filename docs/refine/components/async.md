@@ -1,5 +1,5 @@
 ---
-title: Async — Refine
+title: 'Async: Refine'
 description: Composable async data state wrapper for loading, empty, error, and success UI.
 ---
 
@@ -249,16 +249,16 @@ Use the `loading` slot to render a table-shaped skeleton that matches the real t
 | ------------------- | ------------- | ------------------------ | --------------------------------------------- |
 | `status`            | `AsyncStatus` | `'success'`              | Current data-fetch status                     |
 | `empty-label`       | `string`      | `'No content yet'`       | Heading for the built-in empty state          |
-| `empty-description` | `string`      | —                        | Description below the empty-state heading     |
+| `empty-description` | `string`      | N/A | Description below the empty-state heading     |
 | `error-label`       | `string`      | `'Something went wrong'` | Heading for the built-in error state          |
-| `error-description` | `string`      | —                        | Description below the error-state heading     |
+| `error-description` | `string`      | N/A | Description below the error-state heading     |
 | `retryable`         | `boolean`     | `false`                  | Show retry button in the built-in error state |
 
 ## Events
 
 | Event   | Detail | Description                                     |
 | ------- | ------ | ----------------------------------------------- |
-| `retry` | —      | Fired when the built-in retry button is clicked |
+| `retry` | N/A | Fired when the built-in retry button is clicked |
 
 ## Slots
 

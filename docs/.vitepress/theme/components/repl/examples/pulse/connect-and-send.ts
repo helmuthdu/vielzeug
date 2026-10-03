@@ -11,7 +11,7 @@ pulse.tap((event) => {
   if (event.type === 'error') console.log('transport error:', event.error.message)
 })
 
-// Subscribe before connecting — listeners are synchronous
+// Subscribe before connecting: listeners are synchronous
 const unsub = pulse.on('chat:message', ({ from, text }) => {
   console.log('[' + from + '] ' + text)
 })

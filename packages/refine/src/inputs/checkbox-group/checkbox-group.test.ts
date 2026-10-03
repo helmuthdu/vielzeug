@@ -200,7 +200,7 @@ describe('ore-checkbox-group', () => {
       expect(getCheckboxes()[1].hasAttribute('checked')).toBe(true);
     });
 
-    it('keeps the `values` attribute synchronously current inside a `change` listener — no flush required', async () => {
+    it('keeps the `values` attribute synchronously current inside a `change` listener: no flush required', async () => {
       fixture = await mount('ore-checkbox-group', {
         attrs: { values: 'a' },
         html: checkboxHtml,
@@ -217,7 +217,7 @@ describe('ore-checkbox-group', () => {
       fireClick(getCheckboxes()[1]!);
 
       // Pins the reactive `bind({ attr: { values } })` write to run synchronously with the
-      // selection change, not on a later microtask/flush — the attribute is a public part of
+      // selection change, not on a later microtask/flush: the attribute is a public part of
       // the component's contract (see the `values` prop doc comment), and a consumer's own
       // `change` listener is exactly where they'd read it.
       expect(valuesDuringChange).toBe('a,b');

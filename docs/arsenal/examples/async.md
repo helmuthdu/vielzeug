@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Async Examples
+title: 'Arsenal: Async Examples'
 description: Async utility examples for Arsenal.
 ---
 

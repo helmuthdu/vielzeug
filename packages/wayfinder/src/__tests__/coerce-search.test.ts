@@ -1,5 +1,5 @@
 /**
- * coerceSearch — per-route query string coercion.
+ * coerceSearch: per-route query string coercion.
  */
 import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
@@ -96,7 +96,7 @@ describe('coerceSearch', () => {
 
     const query = router.getSnapshot().location.query;
 
-    // Both attacker-controlled keys must be readable, own, plain-object-safe properties —
+    // Both attacker-controlled keys must be readable, own, plain-object-safe properties :
     // not have hijacked query's actual prototype (which would make Array.isArray(query) true,
     // drop the keys from Object.keys(), etc).
     expect(Object.getPrototypeOf(query)).toBe(Object.prototype);

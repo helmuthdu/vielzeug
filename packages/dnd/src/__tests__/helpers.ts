@@ -68,7 +68,7 @@ export function endDrag(el: HTMLElement, dropEffect: DataTransfer['dropEffect'] 
 }
 
 export function makeClipboardEvent(files: File[]): Event {
-  // Use a plain Event — the handler only accesses e.clipboardData?.files,
+  // Use a plain Event: the handler only accesses e.clipboardData?.files,
   // which we patch in. Avoids ClipboardEvent/DataTransfer availability gaps in jsdom.
   const event = new Event('paste', { bubbles: true, cancelable: true });
 

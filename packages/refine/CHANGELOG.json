@@ -355,7 +355,7 @@
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: navbar stuck in mobile mode after resizing back to desktop — untrack breakpoint watch callback to prevent mediaMatches from becoming a dependency that triggers effect re-run and disposes the MediaQueryList listener",
+            "comment": "fix: navbar stuck in mobile mode after resizing back to desktop: untrack breakpoint watch callback to prevent mediaMatches from becoming a dependency that triggers effect re-run and disposes the MediaQueryList listener",
             "commit": "2ee1436d2103c5f2e697f8768a06e708531ffa12"
           }
         ]
@@ -719,14 +719,14 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor(refine): adopt @vielzeug/assay in @vielzeug/refine/testing — queryInShadow/queryAllInShadow/queryPart/getSlotted/nextTick/wait are now re-exported from assay instead of duplicated (same names, same behavior). dispatchPointer() is removed — use fire.pointer* from @vielzeug/ore/testing (which re-exports assay's dispatchers) instead. The unused keyEvent() helper is also removed — use fire.keyDown/fire.keyboard, which construct and dispatch in one call. Also updates to @vielzeug/ore's renamed resetStableIdCounter() and testing/flush()'s removed FLUSH_DEEP option",
+            "comment": "refactor(refine): adopt @vielzeug/assay in @vielzeug/refine/testing: queryInShadow/queryAllInShadow/queryPart/getSlotted/nextTick/wait are now re-exported from assay instead of duplicated (same names, same behavior). dispatchPointer() is removed: use fire.pointer* from @vielzeug/ore/testing (which re-exports assay's dispatchers) instead. The unused keyEvent() helper is also removed: use fire.keyDown/fire.keyboard, which construct and dispatch in one call. Also updates to @vielzeug/ore's renamed resetStableIdCounter() and testing/flush()'s removed FLUSH_DEEP option",
             "commit": "3247d636f24fe6f86a4f04ad0ee4ca0c896f2b49"
           }
         ],
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix(refine): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies — fixes @vielzeug/keymap missing from the tree-shakeable build's externals (was being silently inlined into refine's own dist instead of staying external) and removes a dead @vielzeug/scroll entry from the bundle config (never imported, not a dependency)",
+            "comment": "fix(refine): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies: fixes @vielzeug/keymap missing from the tree-shakeable build's externals (was being silently inlined into refine's own dist instead of staying external) and removes a dead @vielzeug/scroll entry from the bundle config (never imported, not a dependency)",
             "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
           }
         ]
@@ -874,7 +874,7 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: ore-navbar's mobile toggle button and menu panel now respect their own hidden state — :host([data-mobile]) .mobile-toggle set display:inline-flex unconditionally (an author-stylesheet rule, which always wins over the UA stylesheet's [hidden]{display:none} regardless of specificity), so the button stayed visibly clickable even when the component's own logic correctly decided to hide it (no mobile-menu slot content, no mobile-sidebar target) — clicking toggled a panel that stayed hidden too, doing nothing visible. Also: ore-navbar-item now closes the mobile menu on click (via a new closeMobileMenu on NavbarContext) — previously stayed open after navigating",
+            "comment": "fix: ore-navbar's mobile toggle button and menu panel now respect their own hidden state: :host([data-mobile]) .mobile-toggle set display:inline-flex unconditionally (an author-stylesheet rule, which always wins over the UA stylesheet's [hidden]{display:none} regardless of specificity), so the button stayed visibly clickable even when the component's own logic correctly decided to hide it (no mobile-menu slot content, no mobile-sidebar target): clicking toggled a panel that stayed hidden too, doing nothing visible. Also: ore-navbar-item now closes the mobile menu on click (via a new closeMobileMenu on NavbarContext): previously stayed open after navigating",
             "commit": "5c0eca263e5fb15928eb37bbbe34f21c732aad86"
           }
         ]
@@ -888,19 +888,19 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "feat: ore-input, ore-number-input, ore-combobox, and ore-date-picker now set a 12rem min-width on their :host (matching ore-select/ore-textarea's existing convention, each via its own --<field>-min-width custom property), and ore-number-input's inner ore-input now stretches (flex:1) to fill its own host's width instead of just its min-width — form fields of different types placed side by side (e.g. in a 2-column grid) no longer render at visibly different widths purely because their content differs",
+            "comment": "feat: ore-input, ore-number-input, ore-combobox, and ore-date-picker now set a 12rem min-width on their :host (matching ore-select/ore-textarea's existing convention, each via its own --<field>-min-width custom property), and ore-number-input's inner ore-input now stretches (flex:1) to fill its own host's width instead of just its min-width: form fields of different types placed side by side (e.g. in a 2-column grid) no longer render at visibly different widths purely because their content differs",
             "commit": "2b5bf8e273f0ee701c7679e9fd639db7e810d6d2"
           }
         ],
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: ore-select's and ore-date-picker's inner ore-input trigger now stretches (width:100%) to fill the host's own width — :host is display:inline-block on both, which unlike a flex/grid container with stretch alignment never stretches its children on its own, so the trigger stayed shrink-wrapped to its own 12rem minimum even when the host itself had already been stretched wider by an ancestor grid/flex track, rendering visibly narrower than a same-width sibling field (e.g. ore-number-input, whose inner field already stretches via flex:1)",
+            "comment": "fix: ore-select's and ore-date-picker's inner ore-input trigger now stretches (width:100%) to fill the host's own width: :host is display:inline-block on both, which unlike a flex/grid container with stretch alignment never stretches its children on its own, so the trigger stayed shrink-wrapped to its own 12rem minimum even when the host itself had already been stretched wider by an ancestor grid/flex track, rendering visibly narrower than a same-width sibling field (e.g. ore-number-input, whose inner field already stretches via flex:1)",
             "commit": "339759b864e7daeabfc020155009fa668fdfd583"
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: ore-toast now registers ore-alert internally — toast.ts renders <ore-alert> in its own template but never imported alert.ts, so any consumer that imported only @vielzeug/refine/toast (without separately importing @vielzeug/refine/alert) got an undefined custom element rendering as unstyled plain text instead of a styled alert",
+            "comment": "fix: ore-toast now registers ore-alert internally: toast.ts renders <ore-alert> in its own template but never imported alert.ts, so any consumer that imported only @vielzeug/refine/toast (without separately importing @vielzeug/refine/alert) got an undefined custom element rendering as unstyled plain text instead of a styled alert",
             "commit": "ce10af44ab54fbaf81418250df39b355df29ea6e"
           }
         ]
@@ -929,12 +929,12 @@
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: dropdown-style overlays (select, combobox, menu, date-picker) now auto-detect the nearest clipping ancestor as their flip/shift boundary (via orbit's getClippingAncestorRect) instead of only the page viewport, fixing ore-date-picker's calendar overhanging a dialog. Also self-corrects any residual position:fixed containing-block mismatch by measuring the actual rendered rect and compensating — analytically pre-detecting the trapping ancestor turned out to misposition ore-select's dropdown, which isn't affected by the same ancestor the calendar is. The measurement neutralizes the floating element's own entrance-transition transform first, so it isn't misread as a permanent mismatch and baked into the position — that misread was making ore-select's options unclickable (dropdown appeared correctly placed but closed immediately on option click)",
+            "comment": "fix: dropdown-style overlays (select, combobox, menu, date-picker) now auto-detect the nearest clipping ancestor as their flip/shift boundary (via orbit's getClippingAncestorRect) instead of only the page viewport, fixing ore-date-picker's calendar overhanging a dialog. Also self-corrects any residual position:fixed containing-block mismatch by measuring the actual rendered rect and compensating: analytically pre-detecting the trapping ancestor turned out to misposition ore-select's dropdown, which isn't affected by the same ancestor the calendar is. The measurement neutralizes the floating element's own entrance-transition transform first, so it isn't misread as a permanent mismatch and baked into the position, that misread was making ore-select's options unclickable (dropdown appeared correctly placed but closed immediately on option click)",
             "commit": "5b91b5dc46898dbe8f224011f3043c14144deec8"
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: ore-dialog/ore-drawer no longer mistake a same-named bubbling event from a nested field for their own native close/cancel — selecting an option in an ore-select/ore-combobox dropdown nested in a dialog was closing the whole dialog instead of just that field's dropdown, because slot-assignment-based event-path computation crosses into a projecting shadow tree regardless of the originating event's own composed flag",
+            "comment": "fix: ore-dialog/ore-drawer no longer mistake a same-named bubbling event from a nested field for their own native close/cancel: selecting an option in an ore-select/ore-combobox dropdown nested in a dialog was closing the whole dialog instead of just that field's dropdown, because slot-assignment-based event-path computation crosses into a projecting shadow tree regardless of the originating event's own composed flag",
             "commit": "5b91b5dc46898dbe8f224011f3043c14144deec8"
           }
         ]
@@ -1049,7 +1049,7 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "feat(command-palette): add ore-command-palette + ore-command-palette-item — searchable, keyboard-driven command list built on refine headless primitives (native <dialog>, createListControl) and @vielzeug/keymap for the global open shortcut",
+            "comment": "feat(command-palette): add ore-command-palette + ore-command-palette-item: searchable, keyboard-driven command list built on refine headless primitives (native <dialog>, createListControl) and @vielzeug/keymap for the global open shortcut",
             "commit": "65ba6e2293ec6f8b2e57eb3b31ca8a2b0a4a6b84"
           }
         ],
@@ -1061,7 +1061,7 @@
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: externalize @vielzeug/ore/directives, /forms, /observers (mapped to the same Ore global) in the IIFE bundle — previously only the bare @vielzeug/ore specifier was externalized, so Rollup silently inlined a second copy of ore's module graph into refine.iife.js, and any lifecycle hook (getHost, onMounted, etc.) resolved through it always threw 'outside setup'. Fixes broken docs component previews for every component using useField/when/live/raw/styleMap/resizeObserver/intersectionObserver.",
+            "comment": "fix: externalize @vielzeug/ore/directives, /forms, /observers (mapped to the same Ore global) in the IIFE bundle: previously only the bare @vielzeug/ore specifier was externalized, so Rollup silently inlined a second copy of ore's module graph into refine.iife.js, and any lifecycle hook (getHost, onMounted, etc.) resolved through it always threw 'outside setup'. Fixes broken docs component previews for every component using useField/when/live/raw/styleMap/resizeObserver/intersectionObserver.",
             "commit": "8db093de02785883722ea70fbf1bf00aff87c723"
           }
         ]

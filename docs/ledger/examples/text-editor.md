@@ -1,5 +1,5 @@
 ---
-title: 'Ledger Examples — Text Editor History'
+title: 'Ledger Examples: Text Editor History'
 description: 'Record debounced reversible text edits with @vielzeug/ledger.'
 ---
 

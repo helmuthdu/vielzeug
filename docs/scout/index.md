@@ -1,5 +1,5 @@
 ---
-title: Scout — Fast fuzzy search for TypeScript
+title: 'Scout: Fast fuzzy search for TypeScript'
 description: Trigram-indexed fuzzy search with per-field weights, match highlighting, and an optional reactive layer.
 package: scout
 category: utilities
@@ -29,7 +29,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Scout?
 
-Arsenal's `fuzzy` / `fuzzyFilter` helpers perform pairwise Levenshtein distance — O(n·m) per item per query. For ≤200 items they are fine. For 500–100k items with real-time keystrokes, you need an index.
+Arsenal's `fuzzy` / `fuzzyFilter` helpers perform pairwise Levenshtein distance: O(n·m) per item per query. For ≤200 items they are fine. For 500–100k items with real-time keystrokes, you need an index.
 
 Scout builds a **trigram inverted index** at construction time. Query time scores only items sharing a trigram with the query; broad queries can still approach O(n), while selective queries avoid scoring the whole corpus.
 
@@ -106,18 +106,18 @@ console.log(results[0]?.item.name); // Ada Lovelace
 
 <div class="features-grid">
 
-- `createIndex()` — Trigram inverted index; construction O(corpus × field_length), query O(candidates)
-- Per-field weights — Promote `name` matches over secondary fields; finite positive weights and custom `stringify` functions supported
-- `createReactiveSearch()` — Index + reactive `SearchState` in one call; `.index` for incremental mutations
-- `createSearch()` — Reactive search state backed by an existing `ScoutIndex`; share one index across many states
-- `highlight()` / `highlightField()` — Split field text into `HighlightPart[]` fragments for styled rendering
-- `findMatchRanges()` — Compute match ranges for custom display strings (truncated previews, formatted values)
-- `toSearchMatcher()` — Matcher adapter for filtering in-memory collections with a `ScoutIndex`
-- `toFilterPredicate()` — Snapshot `(item: T) => boolean` predicate for `Array.filter` or vault queries
-- `setItems()` — Reconcile a refreshed corpus by reference, preserve incoming order, and notify once
-- Incremental updates — `add()` / `remove()` / `reindex()` patch individual items in O(field_length)
-- `onMutate()` — Subscribe to index mutations; powers `createSearch()`'s reactivity and bulk reconciliation
-- `segmentWords()` — Split unsegmented-script text (CJK, Thai, ...) into words via native `Intl.Segmenter`
+- `createIndex()`: Trigram inverted index; construction O(corpus × field_length), query O(candidates)
+- Per-field weights: Promote `name` matches over secondary fields; finite positive weights and custom `stringify` functions supported
+- `createReactiveSearch()`: Index + reactive `SearchState` in one call; `.index` for incremental mutations
+- `createSearch()`: Reactive search state backed by an existing `ScoutIndex`; share one index across many states
+- `highlight()` / `highlightField()`: Split field text into `HighlightPart[]` fragments for styled rendering
+- `findMatchRanges()`: Compute match ranges for custom display strings (truncated previews, formatted values)
+- `toSearchMatcher()`: Matcher adapter for filtering in-memory collections with a `ScoutIndex`
+- `toFilterPredicate()`: Snapshot `(item: T) => boolean` predicate for `Array.filter` or vault queries
+- `setItems()`: Reconcile a refreshed corpus by reference, preserve incoming order, and notify once
+- Incremental updates: `add()` / `remove()` / `reindex()` patch individual items in O(field_length)
+- `onMutate()`: Subscribe to index mutations; powers `createSearch()`'s reactivity and bulk reconciliation
+- `segmentWords()`: Split unsegmented-script text (CJK, Thai, ...) into words via native `Intl.Segmenter`
 
 </div>
 
@@ -136,10 +136,10 @@ console.log(results[0]?.item.name); // Ada Lovelace
 
 <div class="see-also">
 
-- [Arsenal](/arsenal/) — Use `fuzzyFilter` for ad-hoc filtering of small lists (< 200 items) without building an index
-- [Ripple](/ripple/) — bridge a complete Scout `SearchState` with `fromSubscribable()` when composing a larger reactive graph
-- [Sourcerer](/sourcerer/) — use a `ScoutIndex` matcher to filter in-memory collections alongside remote sources
-- [Vault](/vault/) — `toFilterPredicate()` wraps a one-time Scout query as a vault-compatible `filter()` predicate
+- [Arsenal](/arsenal/): Use `fuzzyFilter` for ad-hoc filtering of small lists (< 200 items) without building an index
+- [Ripple](/ripple/): bridge a complete Scout `SearchState` with `fromSubscribable()` when composing a larger reactive graph
+- [Sourcerer](/sourcerer/): use a `ScoutIndex` matcher to filter in-memory collections alongside remote sources
+- [Vault](/vault/): `toFilterPredicate()` wraps a one-time Scout query as a vault-compatible `filter()` predicate
 
 </div>
 

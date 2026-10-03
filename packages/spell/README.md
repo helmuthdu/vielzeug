@@ -31,7 +31,7 @@ if (result.success) {
   const user: User = result.data;
   console.log(user.id); // 42
 
-  // Assertion form — narrows type, throws SpellValidationError on failure
+  // Assertion form: narrows type, throws SpellValidationError on failure
   UserSchema.assert(result.data, 'user');
 } else {
   const { fieldErrors, formErrors } = result.error.flattenFirst();
@@ -49,4 +49,4 @@ if (result.success) {
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

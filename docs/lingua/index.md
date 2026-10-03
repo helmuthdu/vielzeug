@@ -1,5 +1,5 @@
 ---
-title: Lingua — Explicit localization for TypeScript
+title: 'Lingua: Explicit localization for TypeScript'
 description: Framework-neutral locale catalogs, typed translations, and explicit plural messages.
 package: lingua
 category: i18n

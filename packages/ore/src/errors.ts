@@ -1,7 +1,7 @@
 import { error as logError } from './_dev';
 
 // ─── Error policy ─────────────────────────────────────────────────────────────
-// One rule for the whole package — decide by whose code failed and whether it
+// One rule for the whole package: decide by whose code failed and whether it
 // can continue, never ad hoc per call site:
 //
 //   API misuse (wrong arguments, hook outside setup, duplicate define)
@@ -30,7 +30,7 @@ export class OreError extends Error {
 export class OreApiError extends OreError {}
 
 /**
- * Thrown when an internal invariant fails — e.g. compiled template metadata no
+ * Thrown when an internal invariant fails: e.g. compiled template metadata no
  * longer matching the DOM it was cloned from. Distinct from `OreApiError`: this
  * is never the caller's fault, it signals a bug in ore itself. See `invariant()`.
  */
@@ -38,10 +38,10 @@ export class OreInternalError extends OreError {}
 
 /**
  * The phase in which a component error occurred.
- * - `'setup'` — synchronous setup() threw
- * - `'mounted'` — an onMounted callback threw
- * - `'form-reset'` — an onFormReset callback threw
- * - `'each-reconcile'` — `each()` failed to reconcile a list update (e.g. duplicate keys)
+ * - `'setup'`: synchronous setup() threw
+ * - `'mounted'`: an onMounted callback threw
+ * - `'form-reset'`: an onFormReset callback threw
+ * - `'each-reconcile'`: `each()` failed to reconcile a list update (e.g. duplicate keys)
  */
 export type OreErrorPhase = 'each-reconcile' | 'form-reset' | 'mounted' | 'setup';
 
@@ -63,7 +63,7 @@ export class OreLifecycleError extends OreError {
 /**
  * Report a runtime error via the ore:error event and console.
  *
- * `target` only needs to be an `EventTarget` (not specifically an `HTMLElement`) — component
+ * `target` only needs to be an `EventTarget` (not specifically an `HTMLElement`): component
  * lifecycle errors dispatch on the host element, but non-lifecycle failures (e.g. `each()`
  * reconciliation, which has no single "component" to attribute the error to) dispatch on
  * whatever live DOM node is available, such as the directive's own anchor `Comment`. Either way
@@ -71,7 +71,7 @@ export class OreLifecycleError extends OreError {
  * `document`/`window` observes every report regardless of where it originated.
  *
  * The console log (via `_dev.ts`'s `error()`) is still dev-gated like the rest of the package's
- * console diagnostics, but the `ore:error` DOM event dispatch below is **not** — it fires in
+ * console diagnostics, but the `ore:error` DOM event dispatch below is **not**: it fires in
  * every build, so consumers always have a way to observe runtime failures programmatically even
  * when console output is stripped in production.
  */
@@ -91,7 +91,7 @@ export function reportRuntimeError(error: OreLifecycleError, target: EventTarget
 
 export const ORE_ERRORS = {
   asyncSetupUnsupported: 'setup() must return an HTMLResult or null; use reactive state for asynchronous work',
-  defineDuplicate: (tag: string): string => `define('${tag}') called twice — custom element already registered`,
+  defineDuplicate: (tag: string): string => `define('${tag}') called twice: custom element already registered`,
   defineFieldRequiresFormAssociated: (tag: string): string =>
     `useField() requires define('${tag}', { formAssociated: true })`,
   defineRequiresTag: 'define() requires a tag name',
@@ -102,8 +102,8 @@ export const ORE_ERRORS = {
   invariantViolated: (message: string): string => `invariant violated: ${message}`,
   lifecycleOutsideSetup: 'Lifecycle hooks must be called during component setup',
   listenNullTarget: (eventName: string): string =>
-    `listen() called with a null/undefined target for event "${eventName}" — listener not attached`,
-  propInvalidReflect: 'Structured props cannot use reflect:true — use prop.json() with reflect:false',
+    `listen() called with a null/undefined target for event "${eventName}": listener not attached`,
+  propInvalidReflect: 'Structured props cannot use reflect:true: use prop.json() with reflect:false',
   templateInterpolationInTag:
     'html`...`: interpolations inside a tag must be named attributes, boolean attributes, events, or refs',
   useFieldAlreadyCalled: (tag: string): string =>
@@ -112,13 +112,13 @@ export const ORE_ERRORS = {
 } as const;
 
 /**
- * Assert an internal invariant that must always hold — e.g. compiled template
+ * Assert an internal invariant that must always hold: e.g. compiled template
  * metadata staying in sync with the DOM it was cloned from. A failed invariant
  * means a bug in ore itself, never user input, so it throws `OreInternalError`
  * unconditionally (every build, never gated like `_dev.ts`'s `warn()`).
  *
  * Narrowing caveat: `asserts condition` only narrows the exact expression
- * passed in. Assign to a local `const` first — `invariant(el.parentNode, msg)`
+ * passed in. Assign to a local `const` first: `invariant(el.parentNode, msg)`
  * does not narrow later reads of `el.parentNode`.
  */
 export function invariant(condition: unknown, message: string): asserts condition {

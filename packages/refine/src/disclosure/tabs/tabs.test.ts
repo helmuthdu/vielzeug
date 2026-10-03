@@ -154,8 +154,8 @@ describe('ore-tabs', () => {
     it('links each tab to its panel and back via cross-shadow-root ARIA reflection', async () => {
       // aria-controls / aria-labelledby cross a shadow-tree boundary here (tab-item's <button>
       // is in tab-item's own shadow root; the matching <div role="tabpanel"> is in tab-panel's).
-      // Plain IDREF attributes cannot resolve across that boundary — see
-      // core/aria-reflection.ts — so this must be asserted via the element-reflection API
+      // Plain IDREF attributes cannot resolve across that boundary: see
+      // core/aria-reflection.ts, so this must be asserted via the element-reflection API
       // (or its jsdom-unsupported attribute fallback), not by comparing id strings.
       fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
       await fixture.flush();

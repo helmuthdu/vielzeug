@@ -63,10 +63,10 @@ describe('ore-stepper', () => {
 
     // Regression: `mount()`'s `innerHTML` assignment parses every child before the stepper
     // itself ever connects, so `ore-stepper` always sees its full child list the first time it
-    // reads it — that's the *one* mounting pattern this bug doesn't reproduce under. A browser
+    // reads it, that's the *one* mounting pattern this bug doesn't reproduce under. A browser
     // parsing `<ore-stepper><ore-step>...` with both tags already `customElements.define()`d
     // (true of any consumer whose bundler/module loader registers components before rendering
-    // markup — e.g. every sandboxed live-preview iframe, since it explicitly registers custom
+    // markup: e.g. every sandboxed live-preview iframe, since it explicitly registers custom
     // elements first specifically so they upgrade as their tags are parsed) upgrades each
     // element as its own tag is reached, so `ore-stepper` provides its context to the *first*
     // `ore-step` while the rest of its siblings don't exist in the light DOM yet. Rebuilding
@@ -108,7 +108,7 @@ describe('ore-stepper', () => {
   // ─── State Propagation ────────────────────────────────────────────────────────
   //
   // These attributes are now derived by each ore-step from ore-stepper's context (see
-  // stepper.ts's module doc comment) rather than pushed onto every child imperatively — the
+  // stepper.ts's module doc comment) rather than pushed onto every child imperatively: the
   // resulting DOM contract asserted below is unchanged.
 
   describe('State Propagation', () => {
@@ -268,7 +268,7 @@ describe('ore-stepper', () => {
 
     // Regression: the first step's `completed` attribute (and the connector styling that
     // depends on it) used to go permanently stale after it had been `current` at least once
-    // and then moved past — a later click that should mark it completed again would silently
+    // and then moved past: a later click that should mark it completed again would silently
     // leave it with neither `current` nor `completed`. Cycling back onto (and away from) the
     // first step, then re-selecting a later one, exercises exactly that path.
     it('re-marks an earlier step completed after it was current and selection moves past it again', async () => {

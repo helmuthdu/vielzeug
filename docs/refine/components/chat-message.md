@@ -1,6 +1,6 @@
 # Chat Message
 
-A single message bubble for chat and conversation UIs — sender-aware alignment, an optional avatar slot, delivery status (sending/sent/error with retry), and a streaming cursor for assistant replies still generating. Content is provided via the default slot, so any markdown-to-HTML rendering stays your choice — `ore-chat-message` doesn't parse or sanitize content itself.
+A single message bubble for chat and conversation UIs: sender-aware alignment, an optional avatar slot, delivery status (sending/sent/error with retry), and a streaming cursor for assistant replies still generating. Content is provided via the default slot, so any markdown-to-HTML rendering stays your choice: `ore-chat-message` doesn't parse or sanitize content itself.
 
 ## Basic Usage
 
@@ -34,7 +34,7 @@ Pass an `ore-avatar` (or any element) into the `avatar` slot, and a display `nam
 
 ## Timestamp
 
-Pass an ISO 8601 `timestamp` — it renders as a localized short time inside a semantic `<time>` element.
+Pass an ISO 8601 `timestamp`: it renders as a localized short time inside a semantic `<time>` element.
 
 <ComponentPreview vertical>
 
@@ -46,7 +46,7 @@ Pass an ISO 8601 `timestamp` — it renders as a localized short time inside a s
 
 ## Delivery Status
 
-Set `status` on outgoing messages to show an inline indicator: a spinner while `sending`, a checkmark once `sent`, or an error icon with an automatic **Retry** action and error text for `error`. A failed send is also announced to screen readers — including a retry that fails again with a *different* `error` message, even without leaving `status="error"` in between.
+Set `status` on outgoing messages to show an inline indicator: a spinner while `sending`, a checkmark once `sent`, or an error icon with an automatic **Retry** action and error text for `error`. A failed send is also announced to screen readers: including a retry that fails again with a *different* `error` message, even without leaving `status="error"` in between.
 
 <ComponentPreview vertical>
 
@@ -70,7 +70,7 @@ Set `status` on outgoing messages to show an inline indicator: a spinner while `
 
 ## Streaming Responses
 
-Set `streaming` while an assistant reply is still generating — it appends a blinking cursor after the current content. Update the slotted content as new tokens arrive; remove `streaming` once the response completes.
+Set `streaming` while an assistant reply is still generating: it appends a blinking cursor after the current content. Update the slotted content as new tokens arrive; remove `streaming` once the response completes.
 
 <ComponentPreview vertical>
 
@@ -93,7 +93,7 @@ Set `streaming` while an assistant reply is still generating — it appends a bl
 
 </ComponentPreview>
 
-Pair this with [`ore-typing-indicator`](./typing-indicator.md) for the moment *before* the first token arrives — the indicator represents "composing a reply," while `streaming` represents "reply is arriving."
+Pair this with [`ore-typing-indicator`](./typing-indicator.md) for the moment *before* the first token arrives: the indicator represents "composing a reply," while `streaming` represents "reply is arriving."
 
 ## Actions
 
@@ -119,7 +119,7 @@ Use the `actions` slot for per-message controls such as copy, regenerate, or fee
 
 ## Building a Conversation List
 
-`ore-chat-message` renders a single message — pair it with [`@vielzeug/scroll`](/scroll/)'s `stickToBottom` option to auto-follow new messages while the user is at the bottom of the conversation:
+`ore-chat-message` renders a single message: pair it with [`@vielzeug/scroll`](/scroll/)'s `stickToBottom` option to auto-follow new messages while the user is at the bottom of the conversation:
 
 ```ts
 import { createDomVirtualList } from '@vielzeug/scroll';
@@ -146,7 +146,7 @@ const chat = createDomVirtualList({
 chat.setItems(messages);
 ```
 
-Pair the list with [`ore-message-composer`](./message-composer.md) for the input row — it handles the send gesture (Enter to send, Shift+Enter for a newline) and clears itself after each `send`.
+Pair the list with [`ore-message-composer`](./message-composer.md) for the input row: it handles the send gesture (Enter to send, Shift+Enter for a newline) and clears itself after each `send`.
 
 ## API Reference
 
@@ -154,11 +154,11 @@ Pair the list with [`ore-message-composer`](./message-composer.md) for the input
 
 | Attribute   | Type                                    | Default    | Description                                                                 |
 | ----------- | ---------------------------------------- | ---------- | ---------------------------------------------------------------------------- |
-| `sender`    | `'user' \| 'assistant' \| 'system'`      | `'assistant'` | Who sent the message — controls alignment and bubble styling               |
-| `name`      | `string`                                 | —          | Display name shown above the bubble (falls back to "You"/"Assistant"/"System" in the accessible label) |
-| `timestamp` | `string`                                 | —          | ISO 8601 timestamp, rendered as a localized short time                     |
-| `status`    | `'sending' \| 'sent' \| 'error'`         | —          | Delivery status indicator; `'error'` also shows a retry action and error text |
-| `error`     | `string`                                 | —          | Error detail shown beneath the bubble when `status="error"`                |
+| `sender`    | `'user' \| 'assistant' \| 'system'`      | `'assistant'` | Who sent the message: controls alignment and bubble styling               |
+| `name`      | `string`                                 | N/A | Display name shown above the bubble (falls back to "You"/"Assistant"/"System" in the accessible label) |
+| `timestamp` | `string`                                 | N/A | ISO 8601 timestamp, rendered as a localized short time                     |
+| `status`    | `'sending' \| 'sent' \| 'error'`         | N/A | Delivery status indicator; `'error'` also shows a retry action and error text |
+| `error`     | `string`                                 | N/A | Error detail shown beneath the bubble when `status="error"`                |
 | `streaming` | `boolean`                                | `false`    | Append a blinking cursor after the content                                 |
 
 ### Events
@@ -188,12 +188,12 @@ Pair the list with [`ore-message-composer`](./message-composer.md) for the input
 
 ## Accessibility
 
-Each message bubble carries `role="article"` with an `aria-label` describing who sent it (e.g. "Message from You", or "Message from Alex" when `name` is set) — screen reader users navigating by landmark or region get a clear boundary between messages without depending on visual alignment.
+Each message bubble carries `role="article"` with an `aria-label` describing who sent it (e.g. "Message from You", or "Message from Alex" when `name` is set): screen reader users navigating by landmark or region get a clear boundary between messages without depending on visual alignment.
 
-A failed send (`status="error"`) is announced once via an assertive live region in addition to the always-visible error text and retry button, so the failure isn't silently missed by screen reader users who aren't focused on the message at the moment it fails. The streaming cursor is `aria-hidden`, since it's a purely visual "still typing" cue — screen readers announce new content as it's added to the slot, independent of the cursor.
+A failed send (`status="error"`) is announced once via an assertive live region in addition to the always-visible error text and retry button, so the failure isn't silently missed by screen reader users who aren't focused on the message at the moment it fails. The streaming cursor is `aria-hidden`, since it's a purely visual "still typing" cue: screen readers announce new content as it's added to the slot, independent of the cursor.
 
 Place `ore-chat-message` elements inside a container with `role="log"` (or `aria-live="polite"`) to have new messages announced automatically as a conversation progresses; the message component itself only handles the per-message semantics.
 
 ### A note on the default slot
 
-`ore-chat-message` trims the default slot's leading/trailing whitespace-only text nodes in place, once per slot assignment (on connect, and again on `slotchange`) — pretty-printed HTML's indentation would otherwise render as blank lines, since the bubble preserves line breaks for genuine multi-paragraph replies. This mutates those specific text nodes directly; it never touches text appended afterward (e.g. `el.textContent += token` while streaming), only the nodes present when the slot was assigned.
+`ore-chat-message` trims the default slot's leading/trailing whitespace-only text nodes in place, once per slot assignment (on connect, and again on `slotchange`): pretty-printed HTML's indentation would otherwise render as blank lines, since the bubble preserves line breaks for genuine multi-paragraph replies. This mutates those specific text nodes directly; it never touches text appended afterward (e.g. `el.textContent += token` while streaming), only the nodes present when the slot was assigned.

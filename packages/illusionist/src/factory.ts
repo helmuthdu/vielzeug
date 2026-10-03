@@ -43,7 +43,7 @@ export type Illusionist = {
  *
  * const illusion = createIllusion({ seed: 12345, locale: en });
  *
- * illusion.person.fullName();    // deterministic — same seed → same result
+ * illusion.person.fullName();    // deterministic: same seed → same result
  * illusion.internet.email();
  * illusion.commerce.price();
  * ```

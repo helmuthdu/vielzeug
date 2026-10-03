@@ -60,7 +60,7 @@ function htmlTemplate(component: CemDeclaration, scenario: string): string {
     .map((slot) => `  <span slot="${escapeHtml(slot.name)}">${escapeHtml(slot.description ?? slot.name)}</span>`);
   const body = slots.length > 0 ? `\n${slots.join('\n')}\n` : '\n  Content\n';
 
-  const comment = scenario ? `<!-- ${scenario.replaceAll('--', '—')} -->\n` : '';
+  const comment = scenario ? `<!-- ${scenario.replaceAll('--', ':')} -->\n` : '';
 
   return `${comment}<${name}${attributes.length ? `\n  ${attributes.join('\n  ')}` : ''}>${body}</${name}>`;
 }

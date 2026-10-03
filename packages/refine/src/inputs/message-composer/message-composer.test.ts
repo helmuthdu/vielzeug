@@ -195,8 +195,8 @@ describe('ore-message-composer', () => {
       getTextarea(fixture).blur();
       fireClick(getSendButton(fixture));
 
-      // preventDefault() means "skip the default clear + refocus" — both halves, not just the
-      // clear — so focus should land wherever the click itself left it, not get yanked back.
+      // preventDefault() means "skip the default clear + refocus": both halves, not just the
+      // clear, so focus should land wherever the click itself left it, not get yanked back.
       expect(fixture.shadow?.activeElement).not.toBe(getTextarea(fixture));
     });
 
@@ -365,7 +365,7 @@ describe('ore-message-composer', () => {
       expect(statusIcon?.querySelector('ore-icon[name="alert-circle"]')).toBeTruthy();
     });
 
-    it('keeps the field editable (not disabled) while loading — only sends are blocked', async () => {
+    it('keeps the field editable (not disabled) while loading: only sends are blocked', async () => {
       fixture = await mount('ore-message-composer', { attrs: { loading: true } });
 
       expect(fixture.element.hasAttribute('loading')).toBe(true);
@@ -393,7 +393,7 @@ describe('ore-message-composer', () => {
 
   // ─── Variants ─────────────────────────────────────────────────────────────────
   // Same five-value set as ore-textarea (solid/flat/bordered/outline/ghost), not a bespoke
-  // boolean — see message-composer.css.
+  // boolean: see message-composer.css.
 
   describe('Variants', () => {
     const variants = ['solid', 'flat', 'bordered', 'outline', 'ghost'] as const;

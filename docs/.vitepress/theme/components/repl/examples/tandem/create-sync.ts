@@ -47,8 +47,8 @@ for (let i = 1; i <= 3; i++) {
 }
 
 await new Promise((r) => setTimeout(r, 120))
-console.log('pushes:', server.length) // 2 — one flush for three edits
-console.log('pushed rev:', server.at(-1).records[0].record.rev) // 3 — one upload carries all of them
+console.log('pushes:', server.length) // 2: one flush for three edits
+console.log('pushed rev:', server.at(-1).records[0].record.rev) // 3: one upload carries all of them
 sync.dispose()`,
   name: 'createSync - Batched Pushes',
 };

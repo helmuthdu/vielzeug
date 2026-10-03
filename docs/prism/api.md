@@ -1,5 +1,5 @@
 ---
-title: Prism — API Reference
+title: 'Prism: API Reference'
 description: Complete chart, scale, theme, handle, configuration, and error contracts for @vielzeug/prism.
 ---
 
@@ -184,8 +184,8 @@ function linearScale(config: LinearScaleConfig): Scale<number>;
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `domain` | `[number, number]` | — | Input extent |
-| `range` | `[number, number]` | — | Output extent |
+| `domain` | `[number, number]` | N/A | Input extent |
+| `range` | `[number, number]` | N/A | Output extent |
 | `clamp` | `boolean` | `false` | Clamp mapped and inverted values |
 | `nice` | `boolean` | `true` | Expand the domain to rounded boundaries |
 
@@ -208,8 +208,8 @@ function timeScale(config: TimeScaleConfig): Scale<Date>;
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `domain` | `[Date, Date]` | — | Input date extent |
-| `range` | `[number, number]` | — | Output extent |
+| `domain` | `[Date, Date]` | N/A | Input date extent |
+| `range` | `[number, number]` | N/A | Output extent |
 | `nice` | `boolean` | `true` | Expand the domain to rounded interval boundaries |
 
 **Returns:** `Scale<Date>`.
@@ -233,8 +233,8 @@ function bandScale(config: BandScaleConfig): BandScale;
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `domain` | `string[]` | — | Ordered categories |
-| `range` | `[number, number]` | — | Output extent |
+| `domain` | `string[]` | N/A | Ordered categories |
+| `range` | `[number, number]` | N/A | Output extent |
 | `padding` | `number` | `0.1` | Inner gap ratio |
 | `paddingOuter` | `number` | `padding` | Outer gap ratio |
 

@@ -1,5 +1,5 @@
 ---
-title: 'Prism Examples — Render Compact Charts'
+title: 'Prism Examples: Render Compact Charts'
 description: Render and update pie charts and sparklines in constrained layouts.
 ---
 

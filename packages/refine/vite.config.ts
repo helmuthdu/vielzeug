@@ -13,13 +13,13 @@ const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record
   .process?.env;
 const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_FILE_ERROR_BASE_FOLDER !== undefined;
 
-// Derived from package.json instead of hand-listed — the hand-listed version had silently
+// Derived from package.json instead of hand-listed: the hand-listed version had silently
 // drifted (missing '@vielzeug/keymap', a real dependency), which meant keymap was getting
 // inlined into refine's own dist instead of staying external. readWorkspaceDeps() can't drift
 // the same way because it reads the one place a dependency is actually declared.
 const refineExternals = readWorkspaceDeps(__dirname);
 
-// Rollup/Rolldown's `external` matches array-of-strings entries by exact equality only — it
+// Rollup/Rolldown's `external` matches array-of-strings entries by exact equality only: it
 // does NOT treat them as prefixes. Keep the prefix check so the retained
 // `@vielzeug/ore/testing` subpath stays external rather than being bundled into Refine.
 // package's own dist instead of staying external. That silently creates a second, private copy
@@ -27,7 +27,7 @@ const refineExternals = readWorkspaceDeps(__dirname);
 // breaks the moment a consumer app also imports `@vielzeug/ore` directly: refine's own
 // `useField()`/`getHost()` calls see an empty context and throw "Lifecycle hooks must be called
 // during component setup". Match subpaths explicitly so every import of an externalized package
-// — whatever its subpath — resolves to the same shared module instance as the consumer's.
+//: whatever its subpath: resolves to the same shared module instance as the consumer's.
 const isRefineExternal = (id: string): boolean => refineExternals.some((dep) => id === dep || id.startsWith(`${dep}/`));
 
 export default defineConfig(

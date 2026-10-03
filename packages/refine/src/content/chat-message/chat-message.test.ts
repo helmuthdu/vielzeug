@@ -22,7 +22,7 @@ describe('ore-chat-message', () => {
 
     it('trims leading/trailing whitespace from pretty-printed slotted HTML', async () => {
       // Regression: `.content` uses `white-space: pre-wrap` to preserve intentional line
-      // breaks in long replies — but that also rendered the newline + indentation from
+      // breaks in long replies, but that also rendered the newline + indentation from
       // pretty-printed markup (`<ore-chat-message>\n  Hello\n</ore-chat-message>`) as visible
       // blank lines around the text, looking like oversized bubble padding.
       fixture = await mount('ore-chat-message', { html: '\n  It\u2019s sunny and 22\u00b0C in Lisbon.\n' });
@@ -41,11 +41,11 @@ describe('ore-chat-message', () => {
     it('trims leading whitespace even when a named-slotted avatar splits the default slot into two text nodes', async () => {
       // Regression: a named-slotted sibling between the opening tag and the message text
       // (e.g. `<ore-avatar slot="avatar">`) splits the light DOM into *two* default-slot
-      // text nodes — text nodes can't target a named slot, so the run before the avatar and
+      // text nodes: text nodes can't target a named slot, so the run before the avatar and
       // the run after it are assigned separately. The old trim only touched
       // `assignedNodes()[0]` (the empty whitespace-only run before the avatar) and never
       // reached the leading indentation on the *second* node, where the real text actually
-      // starts — leaving a blank line above the text inside the bubble.
+      // starts: leaving a blank line above the text inside the bubble.
       fixture = await mount('ore-chat-message', {
         attrs: { name: 'Assistant' },
         html: '\n  <span slot="avatar">A</span>\n  Here is the summary.\n',
@@ -61,7 +61,7 @@ describe('ore-chat-message', () => {
     it('scopes the `pre-wrap` white-space handling to the slot, not `.content`', async () => {
       // Regression: `.content`'s own shadow-template whitespace (the newline + indentation
       // between `<slot>` and the cursor `<span>` in this template) rendered as real blank
-      // lines when `white-space: pre-wrap` sat on `.content` itself — confirmed by measuring
+      // lines when `white-space: pre-wrap` sat on `.content` itself: confirmed by measuring
       // rendered box height in a real browser (jsdom has no layout engine, so this test only
       // guards the structural fix: `pre-wrap` must live on the slot, scoped by this class,
       // not on `.content`, which needs normal whitespace collapsing for its own template gaps).
@@ -90,20 +90,20 @@ describe('ore-chat-message', () => {
       expect(fixture.query('.name')?.textContent?.trim()).toBe('Alex');
     });
 
-    // Regression, verified in a real browser (not testable in jsdom — see below): `.name`,
+    // Regression, verified in a real browser (not testable in jsdom: see below): `.name`,
     // `.meta`, and `.actions` used a smaller inline padding than `.bubble`, so their text
-    // sat noticeably left of the bubble's own text instead of lining up with it — most
+    // sat noticeably left of the bubble's own text instead of lining up with it: most
     // visible with an avatar + name together. Fixed by matching all three to `.bubble`'s
     // inline padding. Confirmed via `getBoundingClientRect` in headless Chrome that the
     // name/meta/actions text and the bubble's own text now share the same left edge.
     //
     // No jsdom test for this: `getComputedStyle` doesn't resolve `var()` through an adopted
-    // stylesheet (false positive — passes identically whether the bug is present or not),
+    // stylesheet (false positive: passes identically whether the bug is present or not),
     // and jsdom's CSS parser doesn't support `@layer` at all, silently dropping the entire
     // ruleset that wraps every rule in this file, so even reading declared values back out
     // of the parsed CSSOM isn't possible either. Layout-dependent checks like this are
-    // explicitly out of this package's automated test scope — see `packages/refine/AGENTS.md`.
-    // This exact class of bug (and two siblings — bubble stretch, phantom blank lines) is
+    // explicitly out of this package's automated test scope: see `packages/refine/AGENTS.md`.
+    // This exact class of bug (and two siblings: bubble stretch, phantom blank lines) is
     // covered instead by chat-message.e2e.ts in a real browser.
 
     it('hides the name element when no name is set', async () => {
@@ -207,7 +207,7 @@ describe('ore-chat-message', () => {
     const assertiveRegion = () => document.querySelector('[data-block-announcer="assertive"]');
 
     it('announces a failed send once', async () => {
-      // `announce()` requires a genuine reactive transition — mount already in `status="error"`
+      // `announce()` requires a genuine reactive transition: mount already in `status="error"`
       // has no "before" state to transition from, so set it after mount instead.
       fixture = await mount('ore-chat-message');
 
@@ -220,7 +220,7 @@ describe('ore-chat-message', () => {
     });
 
     it('does not announce for non-error statuses', async () => {
-      // The assertive region is a shared singleton across the whole document (by design —
+      // The assertive region is a shared singleton across the whole document (by design :
       // see `core/announcer.ts`), so this asserts "unchanged by this mount" rather than
       // "empty", since an earlier test in this file may have already written to it.
       const before = assertiveRegion()?.textContent;

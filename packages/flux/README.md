@@ -34,4 +34,4 @@ console.log(await toArray(values, { maxItems: 3 })); // [0, 2, 4]
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

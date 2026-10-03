@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Form Validation'
+title: 'Clockwork Examples: Form Validation'
 description: 'Store submitted fields through replacement context and guard workflow advancement.'
 ---
 

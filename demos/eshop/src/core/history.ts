@@ -5,7 +5,7 @@ import { t } from './i18n';
 import type { CartItem, Configuration } from './types';
 
 /**
- * Direct cart/compare/saved mutations — every view calls into this module rather than writing to
+ * Direct cart/compare/saved mutations: every view calls into this module rather than writing to
  * `cart-store.ts`'s signals itself. The cart exposes a visible, time-limited removal recovery action
  * through `restoreCartItem`; it does not retain a hidden document-style undo history.
  */

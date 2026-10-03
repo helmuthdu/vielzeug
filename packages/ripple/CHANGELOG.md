@@ -46,7 +46,7 @@ Wed, 19 Aug 2026 06:57:36 GMT
 
 ### Patches
 
-- fix: computed nodes recover from first-run derivation failures — collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers
+- fix: computed nodes recover from first-run derivation failures: collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers
 
 ## 2.2.1
 Sun, 16 Aug 2026 09:15:39 GMT
@@ -67,7 +67,7 @@ Mon, 10 Aug 2026 21:21:35 GMT
 
 ### Minor changes
 
-- refactor: make isolated graph disposal terminal — writes, subscriptions, graph factories, and batch/untrack now throw RippleDisposedRuntimeError after dispose; Ripple exposes disposed
+- refactor: make isolated graph disposal terminal: writes, subscriptions, graph factories, and batch/untrack now throw RippleDisposedRuntimeError after dispose; Ripple exposes disposed
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

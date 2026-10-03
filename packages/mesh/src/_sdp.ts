@@ -91,7 +91,7 @@ export function compactSdp(sdp: string): CompactSdp | null {
  * Canonical signing form: the compact serialization when the SDP is
  * recognizable, else the raw text. `compactSdp` is lossless over the fields
  * it keeps, so the rebuilt `mq2.` SDP canonicalizes identically to the
- * original — a proof computed over one verifies against the other.
+ * original: a proof computed over one verifies against the other.
  */
 export function canonicalSdp(sdp: string): string {
   const compact = compactSdp(sdp);

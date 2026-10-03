@@ -1,5 +1,5 @@
 ---
-title: Conduit Examples — Validation
+title: 'Conduit Examples: Validation'
 description: Validate static Conduit dependency wiring at construction.
 ---
 
@@ -11,7 +11,7 @@ Detect missing registrations and cycles before application services receive traf
 
 ### Solution
 
-`createContainer` validates the full provider graph at construction — malformed providers, duplicate local tokens, missing dependencies, cycles, and captive singleton dependencies all fail fast.
+`createContainer` validates the full provider graph at construction: malformed providers, duplicate local tokens, missing dependencies, cycles, and captive singleton dependencies all fail fast.
 
 ```ts
 try {

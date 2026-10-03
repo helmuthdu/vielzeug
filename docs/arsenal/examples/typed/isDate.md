@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isDate'
+title: 'Arsenal Examples: isDate'
 description: 'isDate example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isDate example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to check whether a value is a `Date` instance — for example validating serialized form inputs before date math.
+You need to check whether a value is a `Date` instance: for example validating serialized form inputs before date math.
 
 ### Solution
 

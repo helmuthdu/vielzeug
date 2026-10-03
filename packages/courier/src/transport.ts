@@ -4,15 +4,15 @@ import { CourierError, classifyRequestError } from './errors.js';
  * Immutable request context passed through the middleware pipeline.
  *
  * **Never mutate `init` or `headers` directly.** Use `ctx.withHeaders(updates)` to
- * produce a new context with merged headers — this is the safe, idiomatic pattern
+ * produce a new context with merged headers: this is the safe, idiomatic pattern
  * for middleware that needs to add or override headers.
  *
  * @example
  * ```ts
- * // Correct — returns a new context
+ * // Correct: returns a new context
  * return next(ctx.withHeaders({ authorization: `Bearer ${token}` }));
  *
- * // Wrong — mutates shared state, risks stomping other middleware
+ * // Wrong: mutates shared state, risks stomping other middleware
  * ctx.init.headers = { ...ctx.init.headers, authorization: `Bearer ${token}` };
  * ```
  */
@@ -100,7 +100,7 @@ export function buildTimeoutSignal(timeoutMs: number, external?: AbortSignal | n
 
 /**
  * Shared transport core: immutable middleware pipeline, header defaults, AbortController lifecycle.
- * HTTP requests build on this. Middleware is fixed at construction — there is no runtime `use()`.
+ * HTTP requests build on this. Middleware is fixed at construction: there is no runtime `use()`.
  */
 export function createTransportCore(opts: TransportOptions = {}) {
   const {

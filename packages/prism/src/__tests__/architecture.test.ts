@@ -159,7 +159,7 @@ describe('crosshair', () => {
       value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
     });
 
-    // margin.left=50, so raw area-local x = clientX - marginLeft = 300 - 50 = 250 —
+    // margin.left=50, so raw area-local x = clientX - marginLeft = 300 - 50 = 250 :
     // roughly midway between the two data points (area-local x=0 and x=530), which
     // snap:true would instead round to the nearer datum (x=0).
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 }));
@@ -197,7 +197,7 @@ describe('crosshair', () => {
     chart.dispose();
   });
 
-  it('marks the crosshair group as aria-hidden (B15 — decorative)', () => {
+  it('marks the crosshair group as aria-hidden (B15: decorative)', () => {
     const chart = createLineChart(container, {
       crosshair: true,
       series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
@@ -258,9 +258,9 @@ describe('crosshair', () => {
   });
 });
 
-// ─── decorative sub-elements — aria-hidden (B15) ───────────────────────────────
+// ─── decorative sub-elements: aria-hidden (B15) ───────────────────────────────
 
-describe('decorative sub-elements — aria-hidden (B15)', () => {
+describe('decorative sub-elements: aria-hidden (B15)', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -289,9 +289,9 @@ describe('decorative sub-elements — aria-hidden (B15)', () => {
   });
 });
 
-// ─── tooltip — ARIA live region (B14) ───────────────────────────────────────────
+// ─── tooltip: ARIA live region (B14) ───────────────────────────────────────────
 
-describe('tooltip — ARIA live region (B14)', () => {
+describe('tooltip: ARIA live region (B14)', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -470,9 +470,9 @@ describe('null-object tooltip/legend', () => {
   });
 });
 
-// ─── pie chart — scaffold lifecycle ──────────────────────────────────────────
+// ─── pie chart: scaffold lifecycle ──────────────────────────────────────────
 
-describe('createPieChart — scaffold lifecycle', () => {
+describe('createPieChart: scaffold lifecycle', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -526,7 +526,7 @@ describe('createPieChart — scaffold lifecycle', () => {
 
 // ─── crosshair DOM leak regression ───────────────────────────────────────────
 
-describe('crosshair — no DOM leak on update', () => {
+describe('crosshair: no DOM leak on update', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -582,9 +582,9 @@ describe('crosshair — no DOM leak on update', () => {
   });
 });
 
-// ─── buildXScale / buildYScale — empty input ─────────────────────────────────
+// ─── buildXScale / buildYScale: empty input ─────────────────────────────────
 
-describe('buildXScale / buildYScale — empty arrays', () => {
+describe('buildXScale / buildYScale: empty arrays', () => {
   it('buildXScale([]) returns a valid scale without Infinity domain', () => {
     const scale = buildXScale([], 300);
 
@@ -601,9 +601,9 @@ describe('buildXScale / buildYScale — empty arrays', () => {
   });
 });
 
-// ─── tooltip — custom render ──────────────────────────────────────────────────
+// ─── tooltip: custom render ──────────────────────────────────────────────────
 
-describe('tooltip — custom render function', () => {
+describe('tooltip: custom render function', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -649,9 +649,9 @@ describe('tooltip — custom render function', () => {
   });
 });
 
-// ─── axis — right and top positions ──────────────────────────────────────────
+// ─── axis: right and top positions ──────────────────────────────────────────
 
-describe('axis — right and top positions', () => {
+describe('axis: right and top positions', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -703,9 +703,9 @@ describe('axis — right and top positions', () => {
   });
 });
 
-// ─── sparkline — interaction cleanup ─────────────────────────────────────────
+// ─── sparkline: interaction cleanup ─────────────────────────────────────────
 
-describe('createSparkline — interaction cleanup', () => {
+describe('createSparkline: interaction cleanup', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -831,7 +831,7 @@ describe('TooltipConfig.render', () => {
 
 // ─── Datum.key type contract ──────────────────────────────────────────────────
 
-describe('createLineChart — Datum.key type contract', () => {
+describe('createLineChart: Datum.key type contract', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -881,9 +881,9 @@ describe('createLineChart — Datum.key type contract', () => {
   });
 });
 
-// ─── axis — label (title) rendering ──────────────────────────────────────────
+// ─── axis: label (title) rendering ──────────────────────────────────────────
 
-describe('AxisConfig.label — axis title rendering', () => {
+describe('AxisConfig.label: axis title rendering', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -946,9 +946,9 @@ describe('AxisConfig.label — axis title rendering', () => {
   });
 });
 
-// ─── tooltip — isConnected guard ─────────────────────────────────────────────
+// ─── tooltip: isConnected guard ─────────────────────────────────────────────
 
-describe('createTooltip — isConnected guard', () => {
+describe('createTooltip: isConnected guard', () => {
   it('show() does not throw when container is detached from DOM', () => {
     const container = document.createElement('div');
     const tooltip = createTooltip(container, true);

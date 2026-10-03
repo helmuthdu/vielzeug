@@ -1,5 +1,5 @@
 ---
-title: Assay — Framework-agnostic DOM testing primitives
+title: 'Assay: Framework-agnostic DOM testing primitives'
 description: Scoped DOM queries, exact event dispatch, and cancellable async waiting for browser tests.
 package: assay
 category: testing
@@ -130,8 +130,8 @@ await waitUntil(() => view.queryByText('Saved') !== null);
 
 <div class="see-also">
 
-- [Ore](/ore/) — component authoring and test fixtures that pair with Assay DOM helpers.
-- [Refine](/refine/) — accessible components with component-specific test assertions.
+- [Ore](/ore/): component authoring and test fixtures that pair with Assay DOM helpers.
+- [Refine](/refine/): accessible components with component-specific test assertions.
 
 </div>
 

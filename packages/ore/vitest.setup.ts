@@ -15,7 +15,7 @@ globalThis.window.URL.createObjectURL = vi.fn();
 // axe-core targets real browsers. Under jsdom there is no CSS box model and
 // `getComputedStyle` is a stub, so rules that depend on layout, geometry, or
 // computed colour produce false positives/negatives. Disable those here so the
-// structural/ARIA/name/role checks jsdom CAN evaluate stay reliable — ore's a11y
+// structural/ARIA/name/role checks jsdom CAN evaluate stay reliable: ore's a11y
 // contract (see AGENTS.md) is limited to that structural plumbing, not full
 // pattern correctness, so this is the complete set of checks it needs.
 const JSDOM_UNRELIABLE_RULES: Record<string, { enabled: false }> = {
@@ -83,5 +83,5 @@ if (typeof window.matchMedia !== 'function') {
 
 // ElementInternals/FormData/`<form>.reset()` jsdom gaps (setValidity, checkValidity, the
 // checkValidity/reportValidity host mixin, FormData collection, formResetCallback dispatch) are
-// polyfilled by `install()` above, via `installFormInternalsPolyfill()` — see that function's
+// polyfilled by `install()` above, via `installFormInternalsPolyfill()`: see that function's
 // doc comment for why this lives in `@vielzeug/ore/testing` rather than here.

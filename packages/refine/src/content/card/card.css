@@ -84,7 +84,7 @@
 }
 
 @layer refine.variants {
-  /* Default — bordered card with shadow */
+  /* Default: bordered card with shadow */
   :host(:not([variant], [color])) {
     --_shadow: var(--card-shadow, var(--shadow-sm));
   }
@@ -94,7 +94,7 @@
     box-shadow: var(--_shadow);
   }
 
-  /* Default + color — tinted backdrop */
+  /* Default + color: tinted backdrop */
   :host(:not([variant])[color]) {
     --_bg: var(--card-bg, var(--_theme-backdrop));
     --_border-color: var(--card-border-color, var(--_theme-border));
@@ -109,7 +109,7 @@
     --_border-color: var(--card-border-color, var(--_theme-focus));
   }
 
-  /* Solid — fully filled with theme color */
+  /* Solid: fully filled with theme color */
   :host([variant='solid']) {
     --_bg: var(--card-bg, var(--_theme-base));
     --_color: var(--card-color, var(--_theme-contrast));
@@ -122,7 +122,7 @@
     box-shadow: var(--_shadow);
   }
 
-  /* Flat — tinted backdrop, subtle border */
+  /* Flat: tinted backdrop, subtle border */
   :host([variant='flat']) {
     --_border-color: var(--card-border-color, color-mix(in oklch, var(--_theme-border) 50%, transparent));
   }
@@ -182,12 +182,12 @@
 
   /* `:active` bubbles to every ancestor of whatever element is actually being pressed, so
      without the `:not(:has(...))` guard, pressing a nested interactive descendant (a swatch
-     button, a slotted `<ore-button>`, a link, etc. — kept in sync with card.ts's
+     button, a slotted `<ore-button>`, a link, etc.: kept in sync with card.ts's
      `INTERACTIVE_DESCENDANT_SELECTOR`) would *also* visually "press" the whole card even though
      `handleClick` already ignores the click for activation purposes. `:host(:has(...))`
-     (`:has()` as `:host()`'s functional argument) is invalid — `:host()` only accepts a compound
+     (`:has()` as `:host()`'s functional argument) is invalid: `:host()` only accepts a compound
      selector and doesn't accept `:has()` inside it, so the bare `:host` pseudo-class chained
-     directly with the rest (no parentheses around it) is used instead — same reasoning as
+     directly with the rest (no parentheses around it) is used instead: same reasoning as
      list-item.css's identical `:host:has(...)` rules. */
   :host[interactive]:not([disabled]):active:not(
     :has(

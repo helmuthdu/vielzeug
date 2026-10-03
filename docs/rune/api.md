@@ -1,5 +1,5 @@
 ---
-title: Rune — API Reference
+title: 'Rune: API Reference'
 description: API reference for @vielzeug/rune exports, logger methods, configuration types, and transport factories.
 ---
 
@@ -12,7 +12,7 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 | `createLogger()`     | Create an isolated `Logger` instance             | Sync           | Omitting `transports` defaults to `consoleTransport()`       |
 | `lazy(fn)`           | Defer a binding value past the level check       | Sync           | Factory runs on every emit, not once                         |
 | `isLevelEnabled()`   | Utility: test whether a level passes a threshold | Sync           | `'off'` always returns `false`                               |
-| `PRIORITY`           | Numeric priority table backing `isLevelEnabled()`| —              | Lower number = more verbose                                  |
+| `PRIORITY`           | Numeric priority table backing `isLevelEnabled()`| N/A | Lower number = more verbose                                  |
 | `resolveTheme()`     | Merge a partial theme onto the default           | Sync           | Returns a fully-populated `ResolvedTheme`                    |
 | `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry        |
 | `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                  |
@@ -25,7 +25,7 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 
 | Import           | Purpose                                                  |
 | ---------------- | -------------------------------------------------------- |
-| `@vielzeug/rune` | All exports — logger, transport factories, `lazy`, types |
+| `@vielzeug/rune` | All exports: logger, transport factories, `lazy`, types |
 
 ## createLogger(initial?, options?)
 
@@ -37,12 +37,12 @@ createLogger(options?: RuneOptions): Logger
 ```
 
 - `string` shorthand sets namespace: `createLogger('api')` or `createLogger('api', { logLevel: 'warn' })`.
-- Each call produces a fully independent instance — no shared mutable state.
+- Each call produces a fully independent instance: no shared mutable state.
 - Default transport is `consoleTransport()` when `transports` is omitted.
 
-> **Note — disposed loggers:** after `dispose()` is called, all log methods (`debug`, `info`, `warn`, `error`, `fatal`), `time()`, and `group()` / `groupCollapsed()` silently no-op. The `fn` callback in `group()` still runs — only the group header is suppressed.
+> **Note: disposed loggers:** after `dispose()` is called, all log methods (`debug`, `info`, `warn`, `error`, `fatal`), `time()`, and `group()` / `groupCollapsed()` silently no-op. The `fn` callback in `group()` still runs: only the group header is suppressed.
 
-> **Note — fault isolation:** if middleware throws, that entry is dropped; if a transport throws synchronously, sibling transports still run. Asynchronous delivery failures belong to the transport and should be observed through options such as `remoteTransport({ onError })`.
+> **Note: fault isolation:** if middleware throws, that entry is dropped; if a transport throws synchronously, sibling transports still run. Asynchronous delivery failures belong to the transport and should be observed through options such as `remoteTransport({ onError })`.
 
 **Returns:** `Logger`
 
@@ -162,8 +162,8 @@ Writes styled output to the browser console (CSS badges) or Node terminal (plain
 | `timestamp` | `boolean`                | `true`    | Include `HH:MM:SS.mmm`                              |
 | `ansi`      | `boolean`                | auto      | Force ANSI color codes on/off (Node only)           |
 | `format`    | `'json' \| 'raw'`        | `'raw'`   | Context serialization: `'json'` uses JSON.stringify |
-| `inspectFn` | `(v: unknown) => string` | —         | Custom object formatter (e.g. `util.inspect`)       |
-| `theme`     | `ConsoleTheme`           | —         | Override default badge colours for this transport   |
+| `inspectFn` | `(v: unknown) => string` | N/A | Custom object formatter (e.g. `util.inspect`)       |
+| `theme`     | `ConsoleTheme`           | N/A | Override default badge colours for this transport   |
 
 **Returns:** `Transport`
 
@@ -193,7 +193,7 @@ Each line is a flat JSON object with `level`, `time` (ISO), and optional `ns`, `
 | `level`  | `LogLevel`                     | `'debug'`        | Minimum level                                                                          |
 | `output` | `(line: string) => void`       | `process.stdout` | Custom output sink                                                                     |
 | `safe`   | `boolean`                      | `false`          | Replace circular references with `'[Circular]'` instead of throwing                    |
-| `fields` | `{ level?, msg?, ns?, time? }` | —                | Custom output field names for aggregator compatibility (e.g. `'severity'` for Datadog) |
+| `fields` | `{ level?, msg?, ns?, time? }` | N/A | Custom output field names for aggregator compatibility (e.g. `'severity'` for Datadog) |
 
 **Returns:** `Transport`
 
@@ -244,7 +244,7 @@ batchTransport(options: BatchTransportOptions): BatchHandle
 | Option         | Type                                          | Default   | Description                         |
 | -------------- | --------------------------------------------- | --------- | ----------------------------------- |
 | `onFlush`      | `(entries) => void \| Promise<void>`          | required  | Serialized batch delivery           |
-| `onFlushError` | `(entries, error) => void`                    | —         | Delivery failure observer           |
+| `onFlushError` | `(entries, error) => void`                    | N/A | Delivery failure observer           |
 | `interval`     | `number`                                      | `5000`    | Flush interval in milliseconds      |
 | `maxSize`      | `number`                                      | `50`      | Entries that trigger an early flush |
 | `maxBuffer`    | `number`                                      | unbounded | Hard in-memory limit                |
@@ -328,7 +328,7 @@ isLevelEnabled('debug', 'off'); // false
 resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme
 ```
 
-Deep-merges a partial `ConsoleTheme` override onto `DEFAULT_THEME`. Returns a fully-populated `ResolvedTheme` where every level and every field is present. Used internally by `consoleTransport()` — call directly when building a custom transport that needs to honour theme overrides.
+Deep-merges a partial `ConsoleTheme` override onto `DEFAULT_THEME`. Returns a fully-populated `ResolvedTheme` where every level and every field is present. Used internally by `consoleTransport()`: call directly when building a custom transport that needs to honour theme overrides.
 
 ```ts
 import { resolveTheme } from '@vielzeug/rune';
@@ -347,7 +347,7 @@ The built-in badge and namespace colour definitions used by `consoleTransport()`
 PRIORITY: Record<LogLevel, number>
 ```
 
-Numeric priority for each level (`debug: 0`, `info: 1`, `warn: 2`, `error: 3`, `fatal: 4`, `off: 5`) — lower is more verbose. Exported for transport authors building custom level-comparison logic; `isLevelEnabled()` is built directly on top of it.
+Numeric priority for each level (`debug: 0`, `info: 1`, `warn: 2`, `error: 3`, `fatal: 4`, `off: 5`): lower is more verbose. Exported for transport authors building custom level-comparison logic; `isLevelEnabled()` is built directly on top of it.
 
 ## Types
 
@@ -357,11 +357,11 @@ Numeric priority for each level (`debug: 0`, `info: 1`, `warn: 2`, `error: 3`, `
 
 ### LogLevel
 
-`LogType | 'off'` — threshold order: `debug < info < warn < error < fatal < off`
+`LogType | 'off'`: threshold order: `debug < info < warn < error < fatal < off`
 
 ### Bindings
 
-`Record<string, unknown>` — Key-value context pinned via `withBindings()` or passed per-call.
+`Record<string, unknown>`: Key-value context pinned via `withBindings()` or passed per-call.
 
 ### LogEntry
 
@@ -369,7 +369,7 @@ The structured record produced by every log call and dispatched to all transport
 
 | Field       | Type                 | Description                                                              |
 | ----------- | -------------------- | ------------------------------------------------------------------------ |
-| `data`      | `Readonly<Bindings>` | Merged result of pinned bindings and per-call context — already resolved |
+| `data`      | `Readonly<Bindings>` | Merged result of pinned bindings and per-call context: already resolved |
 | `level`     | `LogType`            | Log level                                                                |
 | `message`   | `string?`            | Log message                                                              |
 | `namespace` | `string`             | Effective namespace at time of call                                      |
@@ -394,7 +394,7 @@ type ConsoleThemeEntry = {
 };
 ```
 
-Per-level style definition for the console transport. All fields are optional when providing a level override — unspecified fields fall back to the default theme.
+Per-level style definition for the console transport. All fields are optional when providing a level override: unspecified fields fall back to the default theme.
 
 ### ConsoleTheme
 
@@ -402,11 +402,11 @@ Per-level style definition for the console transport. All fields are optional wh
 type ConsoleTheme = Partial<Record<LogType | 'group' | 'ns', Partial<ConsoleThemeEntry>>>;
 ```
 
-Partial theme overrides merged on top of the default theme. Each level entry is also partial — only specify the fields you want to change.
+Partial theme overrides merged on top of the default theme. Each level entry is also partial: only specify the fields you want to change.
 
 ### ResolvedTheme
 
-`Record<LogType | 'group' | 'ns', ConsoleThemeEntry>` — fully resolved theme with all fields populated.
+`Record<LogType | 'group' | 'ns', ConsoleThemeEntry>`: fully resolved theme with all fields populated.
 
 ### RuneOptions
 
@@ -473,8 +473,8 @@ type Logger = {
 | `timestamp` | `boolean`                | `true`    | Include `HH:MM:SS.mmm`                              |
 | `ansi`      | `boolean`                | auto      | Force ANSI color codes on/off (Node only)           |
 | `format`    | `'json' \| 'raw'`        | `'raw'`   | Context serialization: `'json'` uses JSON.stringify |
-| `inspectFn` | `(v: unknown) => string` | —         | Custom object formatter (e.g. `util.inspect`)       |
-| `theme`     | `ConsoleTheme`           | —         | Override default badge colours for this transport   |
+| `inspectFn` | `(v: unknown) => string` | N/A | Custom object formatter (e.g. `util.inspect`)       |
+| `theme`     | `ConsoleTheme`           | N/A | Override default badge colours for this transport   |
 
 ### JsonTransportOptions
 
@@ -483,7 +483,7 @@ type Logger = {
 | `level`  | `LogLevel`                     | `'debug'`        | Minimum level                                                       |
 | `output` | `(line: string) => void`       | `process.stdout` | Custom output sink                                                  |
 | `safe`   | `boolean`                      | `false`          | Replace circular references with `'[Circular]'` instead of throwing |
-| `fields` | `{ level?, msg?, ns?, time? }` | —                | Custom output field names (e.g. `level: 'severity'` for Datadog)    |
+| `fields` | `{ level?, msg?, ns?, time? }` | N/A | Custom output field names (e.g. `level: 'severity'` for Datadog)    |
 
 ### LogMiddleware
 
@@ -562,4 +562,4 @@ Depth-limited subtrees are replaced entirely so sensitive values are never forwa
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
 | `RuneError` | Base class for all rune-originated errors | `instanceof RuneError` narrows all Rune errors |
-| `RuneConfigError` | Logger or transport configured with invalid options | — |
+| `RuneConfigError` | Logger or transport configured with invalid options | N/A |

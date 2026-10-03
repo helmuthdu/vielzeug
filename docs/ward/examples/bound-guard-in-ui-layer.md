@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Bound UI Permissions'
+title: 'Ward Examples: Bound UI Permissions'
 description: 'Bind an immutable principal for repeated UI permission checks.'
 ---
 

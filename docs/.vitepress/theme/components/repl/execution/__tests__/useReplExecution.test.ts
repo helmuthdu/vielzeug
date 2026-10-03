@@ -177,9 +177,9 @@ describe('useReplExecution', () => {
       await runPromise;
 
       execution.cancel();
-      helpers.fireReady(); // the reset render becoming ready — bumps to a new generation
+      helpers.fireReady(); // the reset render becoming ready: bumps to a new generation
 
-      // Tagged with the superseded (first) render's generation — @vielzeug/sandbox itself
+      // Tagged with the superseded (first) render's generation: @vielzeug/sandbox itself
       // drops this before it reaches handleMessage().
       window.dispatchEvent(
         new MessageEvent('message', {

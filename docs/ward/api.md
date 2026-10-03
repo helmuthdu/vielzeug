@@ -1,5 +1,5 @@
 ---
-title: Ward — API Reference
+title: 'Ward: API Reference'
 description: Ordered authorization rules, typed decisions, immutable policies, and observability.
 ---
 
@@ -91,7 +91,7 @@ predicate.or<Attributes>(...conditions)
 predicate.not<Attributes>(condition)
 ```
 
-Returns typed `WardCondition` functions. `owns()` accepts only a string key from the selected attribute type. Role checks do not need a predicate — declare `roles` on the rule instead.
+Returns typed `WardCondition` functions. `owns()` accepts only a string key from the selected attribute type. Role checks do not need a predicate: declare `roles` on the rule instead.
 
 ---
 

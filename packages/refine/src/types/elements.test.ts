@@ -4,12 +4,12 @@ import type { FormValidityMethods } from '../shared';
 import type { RefineElementMap } from './elements';
 
 // `elements.d.ts` augments `HTMLElementTagNameMap` under `skipLibCheck: true` (the root
-// tsconfig), which exempts `.d.ts` files from having their own contents verified — a typo, a
+// tsconfig), which exempts `.d.ts` files from having their own contents verified: a typo, a
 // missing intersection member, or (as happened before this file existed) a completely
 // unimported/unresolvable type name there would compile forever without error. This file is a
 // regular `.ts` module (skipLibCheck doesn't apply to it), so these `expectTypeOf` assertions
 // are the only thing that actually catches that class of drift.
-describe('HTMLElementTagNameMap — form-associated element type coverage', () => {
+describe('HTMLElementTagNameMap: form-associated element type coverage', () => {
   it('every formAssociated: true component exposes FormValidityMethods on its ambient element type', () => {
     expectTypeOf<HTMLElementTagNameMap['ore-checkbox']>().toMatchTypeOf<FormValidityMethods>();
     expectTypeOf<HTMLElementTagNameMap['ore-checkbox-group']>().toMatchTypeOf<FormValidityMethods>();

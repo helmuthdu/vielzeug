@@ -107,7 +107,7 @@ export function normalizePackageManifest(manifest) {
   // so inject it centrally here instead of repeating it in 32+ hand-maintained package.json
   // files. Root and demo manifests are private (never published), so they don't need it.
   // Always overwrite for @vielzeug/* so the URL stays in sync with the provenance expectation
-  // (no `.git` suffix — npm compares it verbatim against the GitHub Actions OIDC claim).
+  // (no `.git` suffix: npm compares it verbatim against the GitHub Actions OIDC claim).
   const repository =
     manifest.name?.startsWith('@vielzeug/')
       ? {

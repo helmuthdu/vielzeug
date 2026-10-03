@@ -8,18 +8,18 @@ import type { OrderStatus } from '../../core/types';
 
 /**
  * The happy-path sequence a placed order moves through. The design brief's own timeline also
- * lists a distinct "Ready for Pickup" stage between shipping and delivered — this app's
+ * lists a distinct "Ready for Pickup" stage between shipping and delivered: this app's
  * `OrderStatus` (see `core/types.ts`) doesn't model that as its own state (no pickup-vs-delivery
  * status split exists in the mock order API), so it's folded into `in-transit` here rather than
  * inventing a status the rest of the app never sets. `cancelled` isn't a step on this line at
- * all — it's a terminal state that interrupts the sequence, rendered as its own note instead.
+ * all: it's a terminal state that interrupts the sequence, rendered as its own note instead.
  */
 const TIMELINE_STATUSES: OrderStatus[] = ['placed', 'processing', 'in-transit', 'delivered'];
 
 export type OrderTimelineProps = { status: OrderStatus };
 
 /**
- * `<order-timeline>` — light-DOM (`shadow: false`), styled via `styles/app.css`'s
+ * `<order-timeline>`: light-DOM (`shadow: false`), styled via `styles/app.css`'s
  * `.order-timeline*` rules, which share their track/marker/label rules with
  * `ui/views/checkout.ts`'s `.checkout-stepper` (see that file's stepper for the in-progress
  * equivalent of this read-only, already-placed-order view).

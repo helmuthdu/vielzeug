@@ -1,5 +1,5 @@
 ---
-title: Illusionist — Examples
+title: 'Illusionist: Examples'
 description: Practical examples and recipes for @vielzeug/illusionist.
 ---
 

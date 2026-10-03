@@ -1,5 +1,5 @@
 ---
-title: Tempo — Examples
+title: 'Tempo: Examples'
 description: Practical examples and recipes for tempo.
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — linspace'
+title: 'Arsenal Examples: linspace'
 description: 'linspace example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'linspace example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need an evenly-spaced sequence of numbers between two bounds — for example generating chart tick marks or interpolation samples.
+You need an evenly-spaced sequence of numbers between two bounds: for example generating chart tick marks or interpolation samples.
 
 ### Solution
 

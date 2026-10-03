@@ -67,7 +67,7 @@ type SyncFn<T extends Fn> = ReturnType<T> extends Promise<unknown> ? never : T;
  * The returned function exposes `.clear()` and `.invalidate(...args)` methods.
  *
  * **Do not pass async functions.** `memo` caches the raw `Promise` object, not
- * the resolved value — subsequent calls return the same stale Promise. Use
+ * the resolved value: subsequent calls return the same stale Promise. Use
  * `cache.getOrLoad` for async caching with TTL and load deduplication.
  *
  * @example

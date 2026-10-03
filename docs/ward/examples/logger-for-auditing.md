@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Auditing Decisions'
+title: 'Ward Examples: Auditing Decisions'
 description: 'Observe Ward decisions without changing authorization behavior.'
 ---
 

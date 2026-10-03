@@ -273,8 +273,8 @@ Prevent interaction with specific items.
 
 ## Accessibility
 
-The accordion component follows WAI-ARIA Accordion Pattern best practices. It is built with native `<details>` and `<summary>` elements, providing progressive enhancement — the component works without JavaScript. Keyboard navigation is fully supported: `Enter` and `Space` toggle expansion, and `Tab` moves focus between accordion items.
+The accordion component follows WAI-ARIA Accordion Pattern best practices. It is built with native `<details>` and `<summary>` elements, providing progressive enhancement: the component works without JavaScript. Keyboard navigation is fully supported: `Enter` and `Space` toggle expansion, and `Tab` moves focus between accordion items.
 
-Content height transitions via `grid-template-rows: 0fr → 1fr` — no JavaScript height calculations and no layout thrashing. The transition respects `prefers-reduced-motion` and plays only when the user hasn't opted out of animations. The speed can be overridden with `--accordion-item-transition`.
+Content height transitions via `grid-template-rows: 0fr → 1fr`: no JavaScript height calculations and no layout thrashing. The transition respects `prefers-reduced-motion` and plays only when the user hasn't opted out of animations. The speed can be overridden with `--accordion-item-transition`.
 
 Avoid hiding critical information in a collapsed state, and avoid nesting accordions more than one or two levels deep.

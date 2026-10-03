@@ -19,7 +19,7 @@ import type { Catalog, MessageKey } from './types';
  *  const keys = catalogKeys(messages); // ['nav.home', 'nav.settings']
  *  const navKeys = catalogKeys(messages.nav); // ['home', 'settings']
  *
- *  // From an i18n instance — read the current locale's catalog first
+ *  // From an i18n instance: read the current locale's catalog first
  *  const i18n = createI18n({ catalogs: { en: messages }, locale: 'en' });
  *  const state = i18n.serialize();
  *  const allKeys = catalogKeys(state.catalogs[state.locale]);

@@ -1,5 +1,5 @@
 ---
-title: 'Tempo Examples — Locale Formatting'
+title: 'Tempo Examples: Locale Formatting'
 description: 'Format explicit Temporal instants with Intl locale and timeZone options.'
 ---
 

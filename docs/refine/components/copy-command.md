@@ -1,6 +1,6 @@
 # Copy Command
 
-A styled, copy-to-clipboard command display component. Shows a command string in a monospace code block with a copy button. Clicking it copies the value to the clipboard, shows a transient check-mark confirmation, and emits a `copy` event. Optionally accepts extra controls in a `suffix` slot — useful for pairing a "next package" cycle button alongside the command.
+A styled, copy-to-clipboard command display component. Shows a command string in a monospace code block with a copy button. Clicking it copies the value to the clipboard, shows a transient check-mark confirmation, and emits a `copy` event. Optionally accepts extra controls in a `suffix` slot: useful for pairing a "next package" cycle button alongside the command.
 
 ## Variants
 
@@ -30,7 +30,7 @@ Transparent background with a pronounced border. Ideal on light backgrounds wher
 
 ### Ghost
 
-No background or border until hovered. Minimal visual footprint — good inside cards or panels.
+No background or border until hovered. Minimal visual footprint: good inside cards or panels.
 
 <ComponentPreview center vertical>
 
@@ -76,13 +76,13 @@ Use the `rounded` attribute to match your surrounding UI radius:
 
 </ComponentPreview>
 
-Do not mix `--copy-command-radius` and `rounded` — the CSS property takes precedence over the attribute.
+Do not mix `--copy-command-radius` and `rounded`: the CSS property takes precedence over the attribute.
 
 ## With a Suffix Slot
 
 Add any element to the `suffix` slot. It is separated by a divider that inherits the component's border color.
 
-The most common use is a "cycle" button that switches between multiple commands without losing the copy button's position. Keep suffix slot controls lightweight — the slot is visually grouped with the copy button and should feel like a single unit. Suffix slot content is part of the light DOM and must carry its own accessible labels (e.g. `aria-label="Show next package"`).
+The most common use is a "cycle" button that switches between multiple commands without losing the copy button's position. Keep suffix slot controls lightweight: the slot is visually grouped with the copy button and should feel like a single unit. Suffix slot content is part of the light DOM and must carry its own accessible labels (e.g. `aria-label="Show next package"`).
 
 <ComponentPreview center vertical>
 
@@ -203,4 +203,4 @@ ore-copy-command::part(copy-icon) {
 
 ## Accessibility
 
-The inner `<button>` carries an `aria-label` that includes the command value (`Copy: <value>`). After a successful copy the label updates to `"Copied!"` for 2 seconds. A `role="status"` live region inside the shadow DOM announces `"Copied to clipboard."` to screen readers immediately after a successful copy, so assistive technology does not miss the state change even when focus remains on the button. The copy icon is marked `aria-hidden="true"` and is supplementary to the button label — the label alone is the accessible name. Set a descriptive `value` — the attribute is also used as the button's accessible name. Avoid placing a long, multi-line command in `value` — the command text is single-line and will truncate; use a `<ore-code-window>` instead for multi-line content.
+The inner `<button>` carries an `aria-label` that includes the command value (`Copy: <value>`). After a successful copy the label updates to `"Copied!"` for 2 seconds. A `role="status"` live region inside the shadow DOM announces `"Copied to clipboard."` to screen readers immediately after a successful copy, so assistive technology does not miss the state change even when focus remains on the button. The copy icon is marked `aria-hidden="true"` and is supplementary to the button label: the label alone is the accessible name. Set a descriptive `value`: the attribute is also used as the button's accessible name. Avoid placing a long, multi-line command in `value`: the command text is single-line and will truncate; use a `<ore-code-window>` instead for multi-line content.

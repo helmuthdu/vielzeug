@@ -171,7 +171,7 @@ describe('s.object()', () => {
   });
 });
 
-describe('object — field-level transforms', () => {
+describe('object: field-level transforms', () => {
   it('trim() on a string field preserves the trimmed value in output', () => {
     const schema = s.object({ name: s.string().trim() });
 
@@ -274,7 +274,7 @@ describe('ObjectSchema.extend() preserves relaxed mode', () => {
 });
 
 describe('ObjectSchema.relaxed() preserves fluent chain', () => {
-  it('allows .pick() after .relaxed() — confirms .pick() is callable', () => {
+  it('allows .pick() after .relaxed(): confirms .pick() is callable', () => {
     const schema = s.object({ a: s.string(), b: s.number() }).relaxed();
     const picked = schema.pick('a');
 
@@ -470,7 +470,7 @@ describe('ObjectSchema shape-transform methods preserve metadata', () => {
     expect(schema.extend({ b: s.number() }).description).toBe('My object');
   });
 
-  it('omit() preserves nullable — parse(null) returns null', () => {
+  it('omit() preserves nullable: parse(null) returns null', () => {
     const schema = s.object({ a: s.string(), b: s.number() }).omit('a').nullable();
 
     expect(schema.parse(null)).toBeNull();

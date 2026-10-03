@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — contains'
+title: 'Arsenal Examples: contains'
 description: 'contains example for @vielzeug/arsenal.'
 ---
 
@@ -25,7 +25,7 @@ contains(users, { id: 2 }, (u) => u.id); // true
 
 ### Pitfalls
 
-- Without a selector, uses deep equality — may be slower for large objects. Use a selector for performance when comparing by key.
+- Without a selector, uses deep equality: may be slower for large objects. Use a selector for performance when comparing by key.
 
 ### Related
 

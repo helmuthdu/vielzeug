@@ -127,7 +127,7 @@ Add prefix or suffix content like icons or clear buttons using slots.
 
 ### Integrated Label
 
-Use the `label` attribute to render an inset label inside the input field, creating a modern Material Design-style floating label effect. Always provide a label via the `label` attribute, `aria-label`, or an associated `<label>` element — do not rely on placeholder text as a label replacement, as placeholders disappear on input.
+Use the `label` attribute to render an inset label inside the input field, creating a modern Material Design-style floating label effect. Always provide a label via the `label` attribute, `aria-label`, or an associated `<label>` element: do not rely on placeholder text as a label replacement, as placeholders disappear on input.
 
 <ComponentPreview center>
 
@@ -304,4 +304,4 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 
 ## Accessibility
 
-The input component follows WCAG 2.1 Level AA standards. Pressing `Tab` moves focus to the input, and native input behavior applies (e.g., Enter to commit). Proper ARIA states are reflected for disabled, required, and readonly conditions. Labels are associated via `aria-label` or `<label>` elements — always provide one through the `label` attribute, an explicit `aria-label`, or an associated `<label>` element. Use semantic colors (`success`, `error`, `warning`) to convey validation states alongside text, not color alone.
+The input component follows WCAG 2.1 Level AA standards. Pressing `Tab` moves focus to the input, and native input behavior applies (e.g., Enter to commit). Proper ARIA states are reflected for disabled, required, and readonly conditions. Labels are associated via `aria-label` or `<label>` elements: always provide one through the `label` attribute, an explicit `aria-label`, or an associated `<label>` element. Use semantic colors (`success`, `error`, `warning`) to convey validation states alongside text, not color alone.

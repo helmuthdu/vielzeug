@@ -1,4 +1,4 @@
-// Public API — all exports for @vielzeug/prism
+// Public API: all exports for @vielzeug/prism
 
 export type { EasingFn } from './animation/easing';
 // Chart factories

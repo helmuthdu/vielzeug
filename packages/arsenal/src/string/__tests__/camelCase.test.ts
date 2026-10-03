@@ -57,7 +57,7 @@ describe('camelCase', () => {
     expect(camelCase('123-hello-world')).toBe('123HelloWorld');
   });
 
-  it('preserves accented and non-Latin letters instead of stripping them — regression', () => {
+  it('preserves accented and non-Latin letters instead of stripping them: regression', () => {
     expect(camelCase('café bar')).toBe('caféBar');
     expect(camelCase('日本語 test')).toBe('日本語Test');
   });

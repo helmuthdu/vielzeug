@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Infinite Scroll (Load More)'
+title: 'Scroll Examples: Infinite Scroll (Load More)'
 description: 'Infinite Scroll (Load More) examples for scroll.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Infinite Scroll (Load More) examples for scroll.'
 
 ### Problem
 
-The full dataset is too large to load at once. As the user scrolls near the bottom, the next page should be fetched and appended — extending the list without remounting it.
+The full dataset is too large to load at once. As the user scrolls near the bottom, the next page should be fetched and appended: extending the list without remounting it.
 
 ### Solution
 

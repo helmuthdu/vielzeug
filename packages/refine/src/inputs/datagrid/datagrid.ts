@@ -48,7 +48,7 @@ export type { DataGridColumn, DataGridView, FilterOperator, FilterOption } from 
 
 /**
  * Returns the Lucide icon name for a column's sort state.
- * Pure function — no closure dependency on the grid model.
+ * Pure function: no closure dependency on the grid model.
  */
 export function sortIconName(state: SortState, key: string): string {
   if (state.key !== key || state.direction === 'none') return 'chevrons-up-down';
@@ -58,7 +58,7 @@ export function sortIconName(state: SortState, key: string): string {
 
 /**
  * Returns the WAI-ARIA `aria-sort` value for a column.
- * Pure function — independently unit-testable.
+ * Pure function: independently unit-testable.
  */
 export function ariaSortValue(state: SortState, key: string): 'ascending' | 'descending' | 'none' {
   if (state.key !== key || state.direction === 'none') return 'none';
@@ -160,7 +160,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
    */
   pageSizeOptions?: number[];
   /**
-   * Row data. Pass as a JS property — not serialisable to an HTML attribute.
+   * Row data. Pass as a JS property: not serialisable to an HTML attribute.
    * @example
    * ```js
    * grid.rows = [{ id: '1', name: 'Alice', email: 'alice@example.com' }];
@@ -190,7 +190,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   sortMode?: SortMode;
   /**
    * A reactive data source from `@vielzeug/sourcerer` (or any compatible object).
-   * When set, the source drives row data, pagination, and search — the `rows` prop is ignored.
+   * When set, the source drives row data, pagination, and search: the `rows` prop is ignored.
    * Client-side sort and filter are bypassed; update source params from grid events externally.
    * @example
    * ```js
@@ -290,7 +290,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
 /**
  * Minimal structural interface for a reactive data source accepted by `ore-datagrid`.
  *
- * Any page-shaped `@vielzeug/sourcerer` source satisfies this interface automatically — no direct
+ * Any page-shaped `@vielzeug/sourcerer` source satisfies this interface automatically: no direct
  * sourcerer import is required in refine.
  *
  * When `source` is set on the grid:
@@ -373,7 +373,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     const isDisabled = computed(() => props.disabled.value === true);
     const selectionMode = computed(() => props.selectionMode.value ?? 'none');
 
-    // ── Row expansion (hoisted — needed by checkOffset + effectiveColCount) ──
+    // ── Row expansion (hoisted: needed by checkOffset + effectiveColCount) ──
     const expandedKeys = signal(new Set<string>());
 
     // resolvedColumns is declared further below; this callback is lazy and only
@@ -447,7 +447,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       const id = item.id;
 
       if (id == null) {
-        warn('ore-datagrid: row missing `id` — keys will collide. Provide `getRowKey` or add a unique `id` field.');
+        warn('ore-datagrid: row missing `id`: keys will collide. Provide `getRowKey` or add a unique `id` field.');
 
         return `__missing_${Math.random().toString(36).slice(2)}`;
       }
@@ -777,7 +777,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       emit('row-expand', { expanded, key });
     };
 
-    // ── Keyboard cell navigation (roving tabindex — extracted to datagrid-nav.ts) ──
+    // ── Keyboard cell navigation (roving tabindex: extracted to datagrid-nav.ts) ──
     // navHandle is initialised with a real sentinel signal so the first render
     // produces correct tabindex values (row=0, col=0 → '0') before onMounted.
     // onMounted replaces it with the live handle from createGridNav.

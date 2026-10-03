@@ -1,5 +1,5 @@
 ---
-title: 'Vault Examples — Reactive Tables'
+title: 'Vault Examples: Reactive Tables'
 description: React to a table's current and future snapshots with observe().
 ---
 

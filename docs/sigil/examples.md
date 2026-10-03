@@ -1,5 +1,5 @@
 ---
-title: Sigil — Examples
+title: 'Sigil: Examples'
 description: Practical examples and recipes for @vielzeug/sigil.
 ---
 

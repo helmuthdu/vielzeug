@@ -259,7 +259,7 @@ describe('ore-number-input', () => {
   describe('Form Integration', () => {
     // Regression coverage for the "stale form value" bug: number-input used to write
     // directly to the raw <input>.value DOM property on commit, never updating
-    // ore-input's own reactive `value` prop — the one thing its ElementInternals-based
+    // ore-input's own reactive `value` prop: the one thing its ElementInternals-based
     // form participation actually keys off. Asserting on ore-input's own `.value`
     // property (not just number-input's host attribute) is what pins this down.
     it('updates the inner ore-input value when committed via the increment button', async () => {

@@ -119,9 +119,9 @@ export interface Virtualizer extends ScrollStore<VirtualizerState> {
   readonly disposed: boolean;
   invalidate: () => void;
   /**
-   * `true` when scrolled to (or within `threshold` px of) the end — the bottom edge in
+   * `true` when scrolled to (or within `threshold` px of) the end: the bottom edge in
    * vertical mode, the trailing edge in horizontal mode. Check this **before** appending
-   * items to decide whether to auto-follow them (e.g. a chat "stick to bottom" pattern) —
+   * items to decide whether to auto-follow them (e.g. a chat "stick to bottom" pattern) :
    * `createDomVirtualList`'s `stickToBottom` option does exactly this. Default `threshold`: `0`.
    */
   isAtEnd: (threshold?: number) => boolean;
@@ -229,7 +229,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   const ax = createAxis1D(count, (i) => measuredByKey.get(getItemKey(i)) ?? estimateFn(i), gap);
 
-  // F6: Scroll anchor — prevents viewport jump when items above fold are measured.
+  // F6: Scroll anchor: prevents viewport jump when items above fold are measured.
   let anchorIndex = -1;
   let anchorDistanceFromTop = 0;
 
@@ -276,7 +276,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       overscan.end,
     );
 
-    // Sticky recomputes on every scroll pixel — bypass dedup in that case.
+    // Sticky recomputes on every scroll pixel: bypass dedup in that case.
     const stickyScrolled = stickyFn !== null && scrollOffset !== prevScrollOffset;
     const rangeChanged = !ax.isDedupSame(renderStart, renderEnd);
 
@@ -388,7 +388,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     }
   }
 
-  /** R6: Single-item convenience — delegates to measureBatch. */
+  /** R6: Single-item convenience: delegates to measureBatch. */
   function measure(index: number, size: number): void {
     measureBatch([{ index, size }]);
   }

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — debounce'
+title: 'Arsenal Examples: debounce'
 description: 'debounce example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'debounce example for @vielzeug/arsenal.'
 
 ### Problem
 
-A function is being called too frequently — for example on every keypress — and you want to delay execution until the input settles.
+A function is being called too frequently: for example on every keypress, and you want to delay execution until the input settles.
 
 ### Solution
 
@@ -34,7 +34,7 @@ onSearch.pending(); // boolean
 
 ### Pitfalls
 
-- Create the debounced function once and reuse it — creating a new instance on every render defeats the purpose.
+- Create the debounced function once and reuse it: creating a new instance on every render defeats the purpose.
 - `.flush()` does nothing if there is no pending call.
 
 ### Related

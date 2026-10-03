@@ -158,7 +158,7 @@ Fri, 03 Jul 2026 06:00:47 GMT
 
 ### Minor changes
 
-- chore(forge): remove stale adapters — use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)
+- chore(forge): remove stale adapters: use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)
 - feat(forge): decompose createForm() into cohesive internal modules, eliminate all as-unknown-as casts, add opt-in /devtools sub-path and fields.list() API; fix broken /validators export path
 
 ### Patches

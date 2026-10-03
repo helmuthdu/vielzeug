@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — tap'
+title: 'Arsenal Examples: tap'
 description: 'tap example for @vielzeug/arsenal.'
 ---
 

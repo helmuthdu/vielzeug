@@ -11,7 +11,7 @@
 
   .steps {
     /* Spacing between steps comes from each ore-step's own `padding-inline-start` /
-       `padding-block-start` (see step.css), not a flex `gap` here — that lets each step's
+       `padding-block-start` (see step.css), not a flex `gap` here, that lets each step's
        connector line be drawn from its own edge to its own indicator using the exact same
        length it was given room for, with no separate gap value to keep in sync by hand. */
     display: flex;

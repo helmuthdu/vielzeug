@@ -1,5 +1,5 @@
 /**
- * notFound option — fallback route when no path matches.
+ * notFound option: fallback route when no path matches.
  */
 import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';

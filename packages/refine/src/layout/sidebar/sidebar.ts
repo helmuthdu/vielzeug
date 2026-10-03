@@ -109,7 +109,7 @@ export type OreSidebarProps = {
   label?: string;
   /**
    * CSS media query that, when it matches, automatically collapses the sidebar.
-   * Unset by default — no automatic collapse.
+   * Unset by default: no automatic collapse.
    * @example 'responsive="(max-width: 768px)"'
    */
   responsive?: string;
@@ -118,7 +118,7 @@ export type OreSidebarProps = {
 };
 
 /**
- * `ore-sidebar` — A collapsible navigation sidebar with group and item support.
+ * `ore-sidebar`: A collapsible navigation sidebar with group and item support.
  *
  * @element ore-sidebar
  * @element ore-sidebar-group - Labelled group of navigation items
@@ -319,7 +319,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       if (open) {
         restoreDrawerFocus = captureFocus();
         // Inert the background where the DOM structure allows (see createBackgroundLock) and
-        // refocus the panel whenever focus escapes the sidebar — together these keep Tab and
+        // refocus the panel whenever focus escapes the sidebar: together these keep Tab and
         // Escape working on the open drawer even in apps where the page shares one wrapper
         // element and the background cannot be inerted.
         bgLock.lock(el);
@@ -404,7 +404,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
       // Focus containment: createBackgroundLock inertes background siblings, but apps that wrap
       // the whole page in one root element (so nothing can be inerted) still let Tab walk out of
-      // the open drawer — and once focus is outside the host, its Escape handler is unreachable.
+      // the open drawer, and once focus is outside the host, its Escape handler is unreachable.
       // Pull focus back to the panel whenever it lands outside the sidebar. focusin is composed,
       // so its target is retargeted to this host for focus inside the shadow root.
       const keepFocusInDrawer = (event: FocusEvent) => {
@@ -759,7 +759,7 @@ export type OreSidebarGroupProps = {
 };
 
 /**
- * `ore-sidebar-group` — A labelled section within `ore-sidebar`.
+ * `ore-sidebar-group`: A labelled section within `ore-sidebar`.
  *
  * @element ore-sidebar-group
  *
@@ -866,7 +866,7 @@ export type OreSidebarItemProps = {
   'bottom-nav-label'?: string;
   /** Whether this item is disabled */
   disabled?: boolean;
-  /** Navigation href — renders an `<a>` when set, otherwise a `<button>` */
+  /** Navigation href: renders an `<a>` when set, otherwise a `<button>` */
   href?: string;
   label?: string;
   /**
@@ -882,7 +882,7 @@ export type OreSidebarItemProps = {
 };
 
 /**
- * `ore-sidebar-item` — An individual navigation item in a `ore-sidebar`.
+ * `ore-sidebar-item`: An individual navigation item in a `ore-sidebar`.
  *
  * Renders as an `<a>` when `href` is provided, otherwise as a `<button>`.
  * Marks the active page via `aria-current="page"` when the `active` attribute is set.

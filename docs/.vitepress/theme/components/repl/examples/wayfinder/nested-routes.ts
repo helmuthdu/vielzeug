@@ -35,5 +35,5 @@ await router.navigate({ name: 'blogPost', params: { id: '123' } })
 console.log('blog data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
 
 router.dispose()`,
-  name: 'Nested Routes — Children and Index Routes',
+  name: 'Nested Routes: Children and Index Routes',
 };

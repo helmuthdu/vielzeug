@@ -8,12 +8,12 @@
  *
  * Resolves the `vitest` binary through real Node module resolution instead of assuming
  * `node_modules/.bin/vitest` exists at a fixed path (that assumption breaks under some pnpm
- * hoisting/linker configurations) — see `resolveVitestBin()` below for exactly how and why.
+ * hoisting/linker configurations): see `resolveVitestBin()` below for exactly how and why.
  *
  * Runs `vitest` against `vitest.repl.config.ts` as its own subprocess rather than as a 4th
  * entry in the root `vitest.config.ts` `projects` array: that array runs on every `pnpm test`,
  * and this config's `include` is only meaningful once `REPL_TMP_DIR` points at real generated
- * files — folding it in would add a real (if small) per-run cost to every test run in the repo
+ * files: folding it in would add a real (if small) per-run cost to every test run in the repo
  * for a check that's already its own separate CI/local step.
  */
 
@@ -60,7 +60,7 @@ export function resolvePackageFilter(packageFlag: unknown): string | null {
   return packageFlag;
 }
 
-/** Builds this example's snippet + vitest test file contents. Pure — no filesystem access —
+/** Builds this example's snippet + vitest test file contents. Pure: no filesystem access :
  * so the tricky bit (jsdom pragma, conditional fake-indexeddb import, escaping the test name)
  * is unit-testable without writing anything to disk. */
 export function buildExampleFiles(pkg: string, key: string, example: ExampleModule) {
@@ -73,7 +73,7 @@ export function buildExampleFiles(pkg: string, key: string, example: ExampleModu
     needsIndexedDb ? `import 'fake-indexeddb/auto';` : null,
     `import { test } from 'vitest';`,
     ``,
-    `test(${JSON.stringify(`${pkg} / ${key} — ${example.name}`)}, async () => {`,
+    `test(${JSON.stringify(`${pkg} / ${key}: ${example.name}`)}, async () => {`,
     `  await import('./${id}.snippet.ts');`,
     `});`,
   ]
@@ -97,7 +97,7 @@ export function discoverPackages(examplesDir: string, filterPackage: string | nu
 
 /** Resolves the real `vitest` binary path via Node's own module resolution (see header comment
  * for why not a hardcoded `node_modules/.bin/vitest` path). Uses `require.resolve` rather than
- * `import.meta.resolve` — the latter isn't reliably supported by `jiti` (this repo's `.ts`
+ * `import.meta.resolve`: the latter isn't reliably supported by `jiti` (this repo's `.ts`
  * script loader), which this file itself runs under (`pnpm validate:repl`). */
 export function resolveVitestBin(): string {
   const packageJsonPath = require.resolve('vitest/package.json');

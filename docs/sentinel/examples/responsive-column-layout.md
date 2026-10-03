@@ -1,5 +1,5 @@
 ---
-title: 'Sentinel Examples — Responsive Column Layout'
+title: 'Sentinel Examples: Responsive Column Layout'
 description: Set grid columns from a container's measured content-box width.
 ---
 

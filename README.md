@@ -18,12 +18,12 @@
 
 **Vielzeug** (German for "many tools") is a curated ecosystem of zero-dependency, tree-shakeable TypeScript packages. Each one solves a focused problem and ships as ESM + CJS with full type declarations.
 
-- ✅ **Type-Safe** — built with TypeScript from the ground up, strict mode throughout
-- ✅ **Zero Dependencies** — no external runtime deps; inter-package deps only
-- ✅ **Framework Agnostic** — works with React, Vue, Svelte, Angular, or vanilla JS
-- ✅ **Tree-Shakeable** — import only what you need, pay only for what you use
-- ✅ **Well-Tested** — comprehensive vitest coverage on every package
-- ✅ **Production Ready** — battle-tested in real-world applications
+- ✅ **Type-Safe**: built with TypeScript from the ground up, strict mode throughout
+- ✅ **Zero Dependencies**: no external runtime deps; inter-package deps only
+- ✅ **Framework Agnostic**: works with React, Vue, Svelte, Angular, or vanilla JS
+- ✅ **Tree-Shakeable**: import only what you need, pay only for what you use
+- ✅ **Well-Tested**: comprehensive vitest coverage on every package
+- ✅ **Production Ready**: battle-tested in real-world applications
 
 ---
 
@@ -76,8 +76,8 @@ pnpm add @vielzeug/refine
 
 **Key Features:**
 
-- Drop-in accessible components — button, input, select, checkbox, accordion, tooltip, and more
-- Framework-agnostic — plain custom elements, no framework required
+- Drop-in accessible components: button, input, select, checkbox, accordion, tooltip, and more
+- Framework-agnostic: plain custom elements, no framework required
 - Full theming via CSS custom properties
 - Tree-shakeable per-component imports (`@vielzeug/refine/button`, `@vielzeug/refine/input`, …)
 
@@ -154,7 +154,7 @@ pnpm add @vielzeug/spell
 
 **Key Features:**
 
-- Fluent schema API — `s.object()`, `s.string()`, `s.number()`, `s.array()`, and more
+- Fluent schema API: `s.object()`, `s.string()`, `s.number()`, `s.array()`, and more
 - Precise input/output typing with `InferInput<T>` and `Infer<T>`
 - Async validation, custom refinements, and transforms
 - Comprehensive error handling with `messagesAt()` (14 KB min / 2.8 KB gz)
@@ -230,7 +230,7 @@ pnpm add @vielzeug/pulse @vielzeug/ripple
 
 **Key Features:**
 
-- Typed event maps — payload types inferred from the event key
+- Typed event maps: payload types inferred from the event key
 - Channel multiplexing and room management
 - Reactive `status`, `latency`, and presence signals via `@vielzeug/ripple`
 - Auto-reconnect with configurable backoff and heartbeat (ping/pong) support
@@ -349,7 +349,7 @@ pnpm add @vielzeug/rune
 
 - Log levels (`debug` → `error`) with priority-based filtering
 - `scope(name)` and `child()` for isolated namespaced loggers
-- Browser CSS badge styling — `symbol`, `icon`, or `text` variants
+- Browser CSS badge styling: `symbol`, `icon`, or `text` variants
 - Non-blocking remote handler (Sentry, Datadog, custom endpoint)
 - `time/timeEnd`, `table`, `group`, `assert` backed by native console APIs (6.8 KB min / 2.7 KB gz)
 
@@ -367,10 +367,10 @@ pnpm add @vielzeug/keymap
 
 **Key Features:**
 
-- `createKeymap()` — bind handlers to shortcuts with chord sequence support (e.g. `Ctrl+K Ctrl+S`)
+- `createKeymap()`: bind handlers to shortcuts with chord sequence support (e.g. `Ctrl+K Ctrl+S`)
 - `createKeymapLayer()` for context-scoped bindings that override the base layer
 - `formatShortcut()` and `parseShortcut()` utilities for display and programmatic use
-- Platform-aware modifier detection (`detectModKey`) — `Meta` on macOS, `Ctrl` elsewhere
+- Platform-aware modifier detection (`detectModKey`): `Meta` on macOS, `Ctrl` elsewhere
 - Disposable bindings with `using` cleanup
 
 [📖 Documentation](https://vielzeug.dev/keymap/) • [Examples](https://vielzeug.dev/keymap/examples)
@@ -407,7 +407,7 @@ pnpm add @vielzeug/herald
 
 **Key Features:**
 
-- Fully typed event maps — payload types inferred from the event key
+- Fully typed event maps: payload types inferred from the event key
 - `once()` for single-fire subscriptions
 - `onError` and `onDispatch` hooks for logging and error handling
 - `dispose()` for clean teardown; `createTestBus()` helper for testing
@@ -427,11 +427,11 @@ pnpm add @vielzeug/familiar
 
 **Key Features:**
 
-- `createWorker(url)` — typed pool backed by an ES module worker
-- `exposeTask()` / `exposeStream()` — one versioned worker protocol
+- `createWorker(url)`: typed pool backed by an ES module worker
+- `exposeTask()` / `exposeStream()`: one versioned worker protocol
 - Timeout and `AbortSignal` cancellation for waiting, queued, and active work
-- `batch()` and `createTaskGroup()` — task-pool composition helpers
-- `createTestWorker()` — faithful in-process task-pool testing
+- `batch()` and `createTaskGroup()`: task-pool composition helpers
+- `createTestWorker()`: faithful in-process task-pool testing
 - No third-party runtime dependencies
 
 [📖 Documentation](https://vielzeug.dev/familiar/) • [Examples](https://vielzeug.dev/familiar/examples)
@@ -468,7 +468,7 @@ pnpm add @vielzeug/ledger
 
 **Key Features:**
 
-- `createLedger()` — apply, undo, and redo typed `ReversibleCommand` objects
+- `createLedger()`: apply, undo, and redo typed `ReversibleCommand` objects
 - `compose()` groups multiple commands into one undoable unit
 - Exported `LedgerReadable` state contract for framework adapters
 - Configurable history limit and abort-aware asynchronous operations
@@ -520,7 +520,7 @@ pnpm add @vielzeug/necromancer
 
 ### [@vielzeug/prism](packages/prism) – Responsive SVG Charts
 
-Responsive SVG charts with explicit typed updates — line, bar, area, pie, and sparkline charts.
+Responsive SVG charts with explicit typed updates: line, bar, area, pie, and sparkline charts.
 
 ```bash
 pnpm add @vielzeug/prism
@@ -529,7 +529,7 @@ pnpm add @vielzeug/prism
 **Key Features:**
 
 - `createLineChart()`, `createBarChart()`, `createAreaChart()`, `createPieChart()`, `createSparkline()`
-- Signal-driven reactivity via `@vielzeug/ripple` — data updates re-render automatically
+- Signal-driven reactivity via `@vielzeug/ripple`: data updates re-render automatically
 - Built-in scales: `linearScale()`, `bandScale()`, `timeScale()`
 - Tooltips, crosshairs, legends, and axis configuration
 - Theming via CSS custom properties and `setTheme()`
@@ -549,8 +549,8 @@ pnpm add @vielzeug/sandbox
 
 **Key Features:**
 
-- `createSandbox()` — mount a sandboxed iframe in any container element
-- `sandbox.render(html)` — atomically replace the iframe document; generation-stamped to drop stale messages
+- `createSandbox()`: mount a sandboxed iframe in any container element
+- `sandbox.render(html)`: atomically replace the iframe document; generation-stamped to drop stale messages
 - Typed `onMessage` subscription with `SandboxMessage` discriminated union
 - `buildDocument()` and `buildCsp()` helpers for constructing sandboxed HTML with a strict CSP
 - `createSandboxTestHelpers()` for unit-testing consumers without real iframe infrastructure
@@ -569,7 +569,7 @@ pnpm add @vielzeug/scout
 
 **Key Features:**
 
-- `createIndex()` — build a trigram-indexed search index from any array of objects
+- `createIndex()`: build a trigram-indexed search index from any array of objects
 - `createSearch()` and `createReactiveSearch()` for debounced live filtering through atomic external-store snapshots
 - Per-field boost weights and configurable score threshold
 - `highlight()` and `highlightField()` for match range extraction and rendering helpers
@@ -659,7 +659,7 @@ pnpm add @vielzeug/tempo
 
 ### [@vielzeug/coins](packages/coins) – Monetary Arithmetic
 
-Bigint-based monetary arithmetic with formatting, exchange, and allocation — no IEEE-754 rounding surprises.
+Bigint-based monetary arithmetic with formatting, exchange, and allocation: no IEEE-754 rounding surprises.
 
 ```bash
 pnpm add @vielzeug/coins
@@ -690,7 +690,7 @@ pnpm add @vielzeug/arsenal
 - 75+ utilities fully typed with TypeScript inference
 - Selector-based and multi-field sorting with `sort()`
 - Fuzzy search with `search()`, deep diff with `diff()`, deep merge, pruning, and more
-- Tree-shakeable by design — 0.1–0.5 KB per utility, zero dependencies
+- Tree-shakeable by design: 0.1–0.5 KB per utility, zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/arsenal/) • [Examples](https://vielzeug.dev/arsenal/examples)
 
@@ -720,7 +720,7 @@ pnpm add @vielzeug/codex
 
 ### [@vielzeug/assay](packages/assay) – DOM Testing Primitives
 
-Framework-agnostic DOM testing primitives — scoped queries, synchronous event dispatch, and deterministic async waiting.
+Framework-agnostic DOM testing primitives: scoped queries, synchronous event dispatch, and deterministic async waiting.
 
 ```bash
 pnpm add -D @vielzeug/assay
@@ -728,10 +728,10 @@ pnpm add -D @vielzeug/assay
 
 **Key Features:**
 
-- `within()` — scoped `query`/`queryAll`/`queryByText`/`queryByTestId` and shadow-DOM-aware `queryInShadow`/`queryPart`
+- `within()`: scoped `query`/`queryAll`/`queryByText`/`queryByTestId` and shadow-DOM-aware `queryInShadow`/`queryPart`
 - Named exact event dispatchers such as `fireClick()`, `fireInput()`, and `fireKeyDown()`
-- `waitUntil()`/`retry()`/`waitForEvent()` — cancellable async waiting with typed timeout errors
-- Zero dependencies, no coupling to any UI framework — used by `@vielzeug/ore/testing` and Refine's internal test suite
+- `waitUntil()`/`retry()`/`waitForEvent()`: cancellable async waiting with typed timeout errors
+- Zero dependencies, no coupling to any UI framework: used by `@vielzeug/ore/testing` and Refine's internal test suite
 
 [📖 Documentation](https://vielzeug.dev/assay/) • [Examples](https://vielzeug.dev/assay/examples)
 
@@ -739,7 +739,7 @@ pnpm add -D @vielzeug/assay
 
 ### [@vielzeug/illusionist](packages/illusionist) – Fake Data Generator
 
-Typed, deterministic, locale-aware fake data generator with a seeded PRNG — person, internet, commerce, date, finance, location, lorem, and system categories.
+Typed, deterministic, locale-aware fake data generator with a seeded PRNG: person, internet, commerce, date, finance, location, lorem, and system categories.
 
 ```bash
 pnpm add @vielzeug/illusionist
@@ -747,7 +747,7 @@ pnpm add @vielzeug/illusionist
 
 **Key Features:**
 
-- `createIllusion({ seed, locale })` — deterministic output from a single seeded random source
+- `createIllusion({ seed, locale })`: deterministic output from a single seeded random source
 - Eight categories: `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, `system`
 - Locale-aware (`en`, `de`) with custom locale support via `IllusionistLocale` type
 - Returns `Money` (coins) and `Temporal.ZonedDateTime` (tempo) for cross-package compatibility
@@ -759,7 +759,7 @@ pnpm add @vielzeug/illusionist
 
 ### [@vielzeug/mesh](packages/mesh) – Backendless P2P Sessions
 
-WebRTC data-channel sessions with manual pairing — invitation/answer codes delivered out-of-band (QR, copy/paste), no signaling server required.
+WebRTC data-channel sessions with manual pairing: invitation/answer codes delivered out-of-band (QR, copy/paste), no signaling server required.
 
 ```bash
 pnpm add @vielzeug/mesh
@@ -767,10 +767,10 @@ pnpm add @vielzeug/mesh
 
 **Key Features:**
 
-- `createMeshHost` / `createMeshGuest` — host-authoritative sessions with typed protocol maps
+- `createMeshHost` / `createMeshGuest`: host-authoritative sessions with typed protocol maps
 - HMAC-SHA-256 invitation proofs; `approvePeer` hook for host-side authorization
 - `meshCodec` (base64url) and `meshQrCodec` (deflate + base45, QR-alphanumeric charset) pairing codecs
-- Structural WebRTC types — inject an `rtc` factory for tests and non-browser runtimes
+- Structural WebRTC types: inject an `rtc` factory for tests and non-browser runtimes
 - Typed message envelope with per-peer LRU deduplication and `maxMessageBytes` frame cap
 - `Symbol.dispose`, `AbortSignal` disposal, and `tap()` observability
 
@@ -788,9 +788,9 @@ pnpm add @vielzeug/sigil
 
 **Key Features:**
 
-- `createQrCode` — pure SVG output, no canvas dependency
+- `createQrCode`: pure SVG output, no canvas dependency
 - Error-correction levels, quiet zone, and module sizing options
-- `createQrScanner` — camera-based scanning with `BarcodeDetector` fallback
+- `createQrScanner`: camera-based scanning with `BarcodeDetector` fallback
 - Zero dependencies, framework-agnostic
 
 [📖 Documentation](https://vielzeug.dev/sigil/) • [Examples](https://vielzeug.dev/sigil/examples)
@@ -807,10 +807,10 @@ pnpm add @vielzeug/tavern
 
 **Key Features:**
 
-- `hostTavern` / `joinTavern` — host one subject, join as a guest, paired through mesh's invitation/answer codes
-- The host's command table is the same object the host's own UI calls — remote actions cannot bypass validation
+- `hostTavern` / `joinTavern`: host one subject, join as a guest, paired through mesh's invitation/answer codes
+- The host's command table is the same object the host's own UI calls: remote actions cannot bypass validation
 - Snapshot broadcasting coalesced on a microtask: bursts of local changes ship one snapshot
-- `TavernNotices` — consumer-defined notice serialization; catalog keys cross the wire, each client translates locally
+- `TavernNotices`: consumer-defined notice serialization; catalog keys cross the wire, each client translates locally
 - `onEnded` fires exactly once whether the channel drops or the guest disposes
 - Typed errors: `TavernPairingError` separates pasted-the-wrong-code from programming errors
 
@@ -948,8 +948,8 @@ vielzeug/
 ### Scripts
 
 ```bash
-pnpm setup          # Rush install — install all dependencies
-pnpm build          # Rush build — build all packages
+pnpm setup          # Rush install: install all dependencies
+pnpm build          # Rush build: build all packages
 pnpm test           # Run all tests (vitest)
 pnpm lint           # Check code with Biome
 pnpm fix            # Apply Biome safe fixes
@@ -976,12 +976,12 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/dnd`          | **9.7 KB**                   | **3.7 KB**     | 0            |
 | `@vielzeug/familiar`     | **11.3 KB**                  | **4.2 KB**     | 0            |
 | `@vielzeug/flux`         | **12.9 KB**                  | **3.6 KB**     | 1\*          |
-| `@vielzeug/focus`        | —                            | —              | 0            |
+| `@vielzeug/focus`        | N/A | N/A | 0            |
 | `@vielzeug/forge`        | **17.9 KB**                  | **5.6 KB**     | 0            |
-| `@vielzeug/gesture`      | —                            | —              | 0            |
+| `@vielzeug/gesture`      | N/A | N/A | 0            |
 | `@vielzeug/herald`       | **6.0 KB**                   | **2.4 KB**     | 0            |
-| `@vielzeug/keymap`       | —                            | —              | 0            |
-| `@vielzeug/ledger`       | —                            | —              | 0            |
+| `@vielzeug/keymap`       | N/A | N/A | 0            |
+| `@vielzeug/ledger`       | N/A | N/A | 0            |
 | `@vielzeug/lingua`       | **9.1 KB**                   | **3.7 KB**     | 0            |
 | `@vielzeug/necromancer`        | **3.2 KB**                   | **1.5 KB**     | 0            |
 | `@vielzeug/orbit`        | **12.7 KB**                  | **4.8 KB**     | 0            |
@@ -989,8 +989,8 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/pulse`        | **13.4 KB**                  | **4.6 KB**     | 1\*          |
 | `@vielzeug/ripple`       | **16.3 KB**                  | **5.4 KB**     | 0            |
 | `@vielzeug/rune`         | **7.8 KB**                   | **3.4 KB**     | 0            |
-| `@vielzeug/sandbox`      | —                            | —              | 0            |
-| `@vielzeug/scout`        | —                            | —              | 0            |
+| `@vielzeug/sandbox`      | N/A | N/A | 0            |
+| `@vielzeug/scout`        | N/A | N/A | 0            |
 | `@vielzeug/scroll`       | **18.3 KB**                  | **6.2 KB**     | 0            |
 | `@vielzeug/refine`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
 | `@vielzeug/sourcerer`    | **8.5 KB**                   | **2.6 KB**     | 1\*          |
@@ -1000,13 +1000,13 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/ward`         | **7.1 KB**                   | **2.6 KB**     | 0            |
 | `@vielzeug/wayfinder`    | **16.3 KB**                  | **5.9 KB**     | 0            |
 
-\* Only depends on other `@vielzeug` packages. `arsenal` is tree-shakeable — individual utilities average 0.1–0.8 KB each. `refine` is designed for per-component imports; the full bundle is ~453 KB / 95 KB.
+\* Only depends on other `@vielzeug` packages. `arsenal` is tree-shakeable: individual utilities average 0.1–0.8 KB each. `refine` is designed for per-component imports; the full bundle is ~453 KB / 95 KB.
 
 ---
 
 ## 🌐 Browser & Runtime Support
 
-- **Browsers**: All modern browsers (Chrome, Firefox, Safari, Edge — Baseline 2023+)
+- **Browsers**: All modern browsers (Chrome, Firefox, Safari, Edge: Baseline 2023+)
 - **Node.js**: v22.0.0 or higher
 - **TypeScript**: v6.0.0 or higher
 - **Module formats**: ESM + CJS, with full `.d.ts` declarations
@@ -1051,11 +1051,11 @@ Please ensure:
 
 ### Why Vielzeug instead of [other library]?
 
-Most ecosystem libraries either solve one problem well but don't interoperate, or bundle many solutions behind a single install with coupling you can't opt out of. Vielzeug splits the difference: 35 focused packages with zero external runtime dependencies, each independently installable and released on its own schedule, but sharing consistent conventions — disposal via `Symbol.dispose`, structured error hierarchies, dev-only warnings compiled out in production, and ESM + CJS + type declarations on every release. You adopt exactly the pieces you need (`wayfinder` for routing, `forge` for forms, `courier` for HTTP) without pulling in a reactive core, component layer, or build toolchain you didn't ask for.
+Most ecosystem libraries either solve one problem well but don't interoperate, or bundle many solutions behind a single install with coupling you can't opt out of. Vielzeug splits the difference: 35 focused packages with zero external runtime dependencies, each independently installable and released on its own schedule, but sharing consistent conventions: disposal via `Symbol.dispose`, structured error hierarchies, dev-only warnings compiled out in production, and ESM + CJS + type declarations on every release. You adopt exactly the pieces you need (`wayfinder` for routing, `forge` for forms, `courier` for HTTP) without pulling in a reactive core, component layer, or build toolchain you didn't ask for.
 
 ### Can I use individual packages?
 
-Yes — every package is independent. Install only what you need; there are no required peer dependencies outside the `@vielzeug` family. Inter-package dependencies (e.g. `forge` uses `ripple` for reactivity) are resolved within the `@vielzeug` namespace, so you never end up with conflicting versions of a third-party library.
+Yes: every package is independent. Install only what you need; there are no required peer dependencies outside the `@vielzeug` family. Inter-package dependencies (e.g. `forge` uses `ripple` for reactivity) are resolved within the `@vielzeug` namespace, so you never end up with conflicting versions of a third-party library.
 
 ### Is it production-ready?
 
@@ -1067,15 +1067,15 @@ Every package is tree-shakeable and ships as ESM + CJS with full type declaratio
 
 ### Do I need a specific framework?
 
-No. Vielzeug is framework-agnostic — works with React, Vue, Svelte, Angular, or vanilla JS. Packages like `ripple` (signals) and `forge` (forms) integrate with any rendering layer. The `ore` and `refine` packages provide web components for component-oriented apps, but they're optional, not required.
+No. Vielzeug is framework-agnostic: works with React, Vue, Svelte, Angular, or vanilla JS. Packages like `ripple` (signals) and `forge` (forms) integrate with any rendering layer. The `ore` and `refine` packages provide web components for component-oriented apps, but they're optional, not required.
 
 ### How are dependencies handled between packages?
 
-Inter-package dependencies use `workspace:*` during development and are pinned to exact versions on publish. No package depends on anything outside `@vielzeug` at runtime. This means a single `@vielzeug/courier` install pulls only `@vielzeug` packages — never a transitive third-party dependency you didn't vet.
+Inter-package dependencies use `workspace:*` during development and are pinned to exact versions on publish. No package depends on anything outside `@vielzeug` at runtime. This means a single `@vielzeug/courier` install pulls only `@vielzeug` packages: never a transitive third-party dependency you didn't vet.
 
 ### What's the versioning strategy?
 
-CalVer lockstep trains: every package carries the same `YY.MM.N` version — the release train it last shipped on. The number answers *when*, never *how big*; a breaking change rides the next train like any other and says so in that package's changelog and `migration.md`. Packages still release independently in the sense that matters — unchanged packages skip a train and keep their previous version — so a breaking change in `ward` never forces `ripple` to move. Pin exact versions and read each package's `migration.md` when moving between trains.
+CalVer lockstep trains: every package carries the same `YY.MM.N` version: the release train it last shipped on. The number answers *when*, never *how big*; a breaking change rides the next train like any other and says so in that package's changelog and `migration.md`. Packages still release independently in the sense that matters: unchanged packages skip a train and keep their previous version, so a breaking change in `ward` never forces `ripple` to move. Pin exact versions and read each package's `migration.md` when moving between trains.
 
 ### Where can I get help?
 

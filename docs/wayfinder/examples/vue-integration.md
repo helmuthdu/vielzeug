@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Vue 3 Integration'
+title: 'Wayfinder Examples: Vue 3 Integration'
 description: 'Vue 3 integration example for @vielzeug/wayfinder.'
 ---
 
@@ -40,7 +40,7 @@ export function useRouter() {
 ```
 
 ```vue
-<!-- RouterView.vue — map route names to components in your adapter layer -->
+<!-- RouterView.vue: map route names to components in your adapter layer -->
 <script setup lang="ts">
 import { computed } from 'vue';
 

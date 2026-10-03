@@ -61,7 +61,7 @@ Listen for changes:
 
 ## Readonly
 
-Use `readonly` to display a rating without allowing user interaction — useful for showing review scores. Prefer `readonly` over `disabled` when showing an existing score the user cannot change, as `readonly` keeps the element in the reading order.
+Use `readonly` to display a rating without allowing user interaction: useful for showing review scores. Prefer `readonly` over `disabled` when showing an existing score the user cannot change, as `readonly` keeps the element in the reading order.
 
 <ComponentPreview center>
 
@@ -97,7 +97,7 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 
 ## Sparkle Effect
 
-When a user selects a star, a burst of particle sparks radiates from the chosen star. The animation uses the current filled color and respects `prefers-reduced-motion` — particles are hidden entirely when the user has requested reduced motion.
+When a user selects a star, a burst of particle sparks radiates from the chosen star. The animation uses the current filled color and respects `prefers-reduced-motion`: particles are hidden entirely when the user has requested reduced motion.
 
 ## API Reference
 
@@ -111,11 +111,11 @@ When a user selects a star, a burst of particle sparks radiates from the chosen 
 | `solid`    | `boolean`                                                                 | `false`    | Fills selected stars instead of outline-only |
 | `disabled` | `boolean`                                                                 | `false`    | Disables the rating input                    |
 | `label`    | `string`                                                                  | `'Rating'` | Accessible label for the rating group. Always provide a meaningful value (e.g. `"Product rating"`) so screen readers announce the context. |
-| `name`     | `string`                                                                  | —          | Form field name                              |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Star highlight color                         |
+| `name`     | `string`                                                                  | N/A | Form field name                              |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Star highlight color                         |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Star size                                    |
-| `helper`   | `string`                                                                  | —          | Helper text shown below the stars            |
-| `error`    | `string`                                                                  | —          | Error message shown below the stars (renders with `role="alert"` and takes precedence over `helper`) |
+| `helper`   | `string`                                                                  | N/A | Helper text shown below the stars            |
+| `error`    | `string`                                                                  | N/A | Error message shown below the stars (renders with `role="alert"` and takes precedence over `helper`) |
 
 ### Events
 
@@ -152,4 +152,4 @@ In `forced-colors` environments unfilled stars use `ButtonText` and filled stars
 
 ## Related Components
 
-- [Slider](./slider) — drag-based numeric value picker
+- [Slider](./slider): drag-based numeric value picker

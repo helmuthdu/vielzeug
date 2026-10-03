@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — sleep'
+title: 'Arsenal Examples: sleep'
 description: 'sleep example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'sleep example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need a cancellable async delay — for example adding a minimum display time for a loading spinner or spacing retries.
+You need a cancellable async delay: for example adding a minimum display time for a loading spinner or spacing retries.
 
 ### Solution
 
@@ -31,8 +31,8 @@ try {
 
 ### Pitfalls
 
-- Without a signal, `sleep` is not cancellable — the promise will always resolve after `ms` ms.
-- The rejection value when aborted is an `AbortError` — check with `isAbortError`.
+- Without a signal, `sleep` is not cancellable: the promise will always resolve after `ms` ms.
+- The rejection value when aborted is an `AbortError`: check with `isAbortError`.
 
 ### Related
 

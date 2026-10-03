@@ -201,7 +201,7 @@ Mon, 10 Aug 2026 16:04:45 GMT
 
 ### Minor changes
 
-- feat(codex): migrate to @modelcontextprotocol/server 2.0.0 (2026-07-28 spec) — replaces @modelcontextprotocol/sdk; stateless per-request HTTP host via createMcpHandler() over a Node/Fetch bridge, tools/list and tools/call registered via string-literal setRequestHandler(), MethodNotFound now thrown as ProtocolError(METHOD_NOT_FOUND, ...); wire behavior for tool list/call unchanged
+- feat(codex): migrate to @modelcontextprotocol/server 2.0.0 (2026-07-28 spec): replaces @modelcontextprotocol/sdk; stateless per-request HTTP host via createMcpHandler() over a Node/Fetch bridge, tools/list and tools/call registered via string-literal setRequestHandler(), MethodNotFound now thrown as ProtocolError(METHOD_NOT_FOUND, ...); wire behavior for tool list/call unchanged
 
 ## 2.0.2
 Mon, 10 Aug 2026 15:11:23 GMT

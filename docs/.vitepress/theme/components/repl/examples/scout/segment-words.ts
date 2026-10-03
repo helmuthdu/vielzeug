@@ -1,7 +1,7 @@
 export const segmentWordsExample = {
   code: `import { createIndex, segmentWords } from '@vielzeug/scout'
 
-// CJK text has no spaces between words — segmentWords() inserts them via the
+// CJK text has no spaces between words: segmentWords() inserts them via the
 // runtime's native Intl.Segmenter, so word-boundary features work like they do for Latin text
 const docs = [
   { id: 1, title: '日本語を勉強しています' },

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — words'
+title: 'Arsenal Examples: words'
 description: 'words example for @vielzeug/arsenal.'
 ---
 

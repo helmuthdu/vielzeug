@@ -1,5 +1,5 @@
 ---
-title: 'Tempo Examples — Date Ranges and Recurrence'
+title: 'Tempo Examples: Date Ranges and Recurrence'
 description: 'Generate validated lazy date ranges and recurring zoned values.'
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: Herald — Typed event bus for TypeScript
+title: 'Herald: Typed event bus for TypeScript'
 description: Typed synchronous event delivery with wildcard subscriptions, one-shot waits, tracing, and AbortSignal lifecycle.
 package: herald
 category: events
@@ -96,14 +96,14 @@ bus.dispose();
 
 <div class="features-grid">
 
-- `on()` / `once()` — typed subscriptions with explicit teardown
-- `onAny()` — cross-cutting event observation
-- `tap()` — observe bus activity for logging and diagnostics
-- `wait()` / `waitAny()` — one-shot async coordination
-- `listenerCount()` / `wildcardCount()` / `eventNames()` — listener inspection
-- `error` tap events — isolate listener failures without interrupting delivery
-- `AbortSignal` — subscription, wait, tap, and disposal ownership
-- `createTestBus()` — emitted-payload recording for tests
+- `on()` / `once()`: typed subscriptions with explicit teardown
+- `onAny()`: cross-cutting event observation
+- `tap()`: observe bus activity for logging and diagnostics
+- `wait()` / `waitAny()`: one-shot async coordination
+- `listenerCount()` / `wildcardCount()` / `eventNames()`: listener inspection
+- `error` tap events: isolate listener failures without interrupting delivery
+- `AbortSignal`: subscription, wait, tap, and disposal ownership
+- `createTestBus()`: emitted-payload recording for tests
 
 </div>
 
@@ -122,9 +122,9 @@ bus.dispose();
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — retained reactive state.
-- [Wayfinder](/wayfinder/) — route lifecycle events.
-- [Familiar](/familiar/) — worker completion events.
+- [Ripple](/ripple/): retained reactive state.
+- [Wayfinder](/wayfinder/): route lifecycle events.
+- [Familiar](/familiar/): worker completion events.
 
 </div>
 

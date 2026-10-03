@@ -22,7 +22,7 @@ document.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true })
 document.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }))
 
 // Gotcha: a single-key binding sharing a chord's first step always wins immediately,
-// making the longer chord unreachable — findShortcutConflicts() catches this up front.
+// making the longer chord unreachable: findShortcutConflicts() catches this up front.
 console.log('Would ctrl+k (alone) conflict with the chord above?')
 console.log(findShortcutConflicts('ctrl+k', map.listBindings()))
 

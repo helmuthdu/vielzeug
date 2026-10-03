@@ -286,7 +286,7 @@ describe('createDropZone', () => {
       const element = document.createElement('div');
       let isDisabled = false;
 
-      // disabled is static bool — we test that dragleave resets when later disabled
+      // disabled is static bool: we test that dragleave resets when later disabled
       const zone = createDropZone({ disabled: isDisabled, element });
 
       element.dispatchEvent(makeDragEvent('dragenter'));
@@ -296,7 +296,7 @@ describe('createDropZone', () => {
       isDisabled = true;
       void isDisabled; // suppress unused var warning
 
-      // dragleave fires — counter must still decrement
+      // dragleave fires: counter must still decrement
       element.dispatchEvent(makeDragEvent('dragleave'));
 
       expect(zone.hovered).toBe(false);
@@ -322,7 +322,7 @@ describe('createDropZone', () => {
   });
 
   describe('disabled live-read', () => {
-    it('reads disabled live — a drop after options.disabled is set to true is ignored', async () => {
+    it('reads disabled live: a drop after options.disabled is set to true is ignored', async () => {
       const element = document.createElement('div');
       const onDrop = vi.fn();
       const options = { disabled: false as boolean, element, onDrop };
@@ -338,7 +338,7 @@ describe('createDropZone', () => {
       zone.dispose();
     });
 
-    it('reads disabled live — a drop when options.disabled is false proceeds normally', async () => {
+    it('reads disabled live: a drop when options.disabled is false proceeds normally', async () => {
       const element = document.createElement('div');
       const onDrop = vi.fn();
       const options = { disabled: true as boolean, element, onDrop };
@@ -434,7 +434,7 @@ describe('createDropZone', () => {
 
       zone.dispose();
 
-      // After dispose, events should have no effect — capture call counts *after* dispose
+      // After dispose, events should have no effect: capture call counts *after* dispose
       const dropCallsBefore = onDrop.mock.calls.length;
       const hoverCallsBefore = onHoverChange.mock.calls.length;
 
@@ -847,7 +847,7 @@ describe('createDropZone', () => {
       expect(zone.disposed).toBe(true);
     });
 
-    it('dispose() is idempotent — second call is a no-op', () => {
+    it('dispose() is idempotent: second call is a no-op', () => {
       const element = document.createElement('div');
       const zone = createDropZone({ element });
 

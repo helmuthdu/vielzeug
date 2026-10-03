@@ -1,5 +1,5 @@
 /**
- * template/instantiator.ts — Template instantiation and the `html` tagged literal.
+ * template/instantiator.ts: Template instantiation and the `html` tagged literal.
  *
  * Responsibilities:
  * - Clone a compiled static template and wire up live bindings.
@@ -102,7 +102,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       }
 
       if (typeof value === 'function' || isReactive(value)) {
-        // Always use the html binding for reactive values — it handles both text
+        // Always use the html binding for reactive values: it handles both text
         // values and HTMLResult values, preventing silent "[object Object]"
         // corruption when a signal's runtime type changes from null/string to HTMLResult.
         const sig =

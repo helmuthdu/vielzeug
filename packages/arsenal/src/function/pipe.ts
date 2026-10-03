@@ -11,7 +11,7 @@ type LastReturnType<T extends readonly Fn[]> = T extends [...unknown[], infer La
  * Pipes multiple functions into a single function. It starts from the leftmost function and proceeds to the right.
  *
  * The TypeScript overload captures the input type from the first function and the output type from the last.
- * Intermediate steps are typed as `unknown` at the call site — TypeScript cannot infer a safe chain across
+ * Intermediate steps are typed as `unknown` at the call site: TypeScript cannot infer a safe chain across
  * heterogeneous function signatures without explicit overloads for every arity.
  *
  * `pipe()` with no arguments returns an identity function `<T>(x: T) => T`.

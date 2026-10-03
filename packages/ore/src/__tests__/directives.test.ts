@@ -32,7 +32,7 @@ describe('Directive: each()', () => {
     expect(items[0].textContent).toBe('1');
 
     // Structural a11y check: each() inserts/reorders real DOM nodes around
-    // comment anchors — must not corrupt list semantics (see AGENTS.md § Accessibility testing).
+    // comment anchors: must not corrupt list semantics (see AGENTS.md § Accessibility testing).
     const results = await axeCheck(element);
 
     expect(results.violations).toHaveLength(0);
@@ -532,7 +532,7 @@ describe('Directive: each()', () => {
       expect.stringContaining('each-reconcile'),
       expect.objectContaining({ message: expect.stringContaining('duplicate key') }),
     );
-    // ore:error fires unconditionally (not gated by dev/prod) — this is the signal a consumer
+    // ore:error fires unconditionally (not gated by dev/prod): this is the signal a consumer
     // is meant to observe in production, where the console log above is stripped.
     expect(oreErrorHandler).toHaveBeenCalledTimes(1);
     expect(oreErrorHandler.mock.calls[0]?.[0].detail.phase).toBe('each-reconcile');
@@ -720,7 +720,7 @@ describe('Directive: styleMap()', () => {
 
     const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
 
-    // Semicolons stripped — injection neutralised
+    // Semicolons stripped: injection neutralised
     expect(style).not.toContain(';display:none');
     expect(style).toContain('color:red display:none');
   });
@@ -747,7 +747,7 @@ describe('Directive: styleMap()', () => {
 
     const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
 
-    // Key has semicolons stripped — only valid CSS property remains
+    // Key has semicolons stripped: only valid CSS property remains
     expect(style).not.toContain('; background');
     expect(style).toContain('color background:red');
   });
@@ -796,7 +796,7 @@ describe('Directive: classMap()', () => {
 
     const cls = query('div')?.getAttribute('class') ?? '';
 
-    // Spaces stripped — no extra token injected
+    // Spaces stripped: no extra token injected
     expect(cls).toBe('foobar');
   });
 });
@@ -829,7 +829,7 @@ describe('Directive: when()', () => {
     expect(query('.on')).toBeNull();
   });
 
-  it('tears down and remounts cleanly across rapid, repeated toggles — no leftover nodes accumulate', async () => {
+  it('tears down and remounts cleanly across rapid, repeated toggles: no leftover nodes accumulate', async () => {
     const enabled = signal(true);
     let onMountCount = 0;
     let offMountCount = 0;
@@ -862,7 +862,7 @@ describe('Directive: when()', () => {
       enabled.value = !enabled.value;
       await flush();
 
-      // Exactly one branch's node present at any point — never both, never zero.
+      // Exactly one branch's node present at any point: never both, never zero.
       expect(queryAll('.on, .off')).toHaveLength(1);
     }
 

@@ -12,7 +12,7 @@ const router = createRouter({
   notFound: {},
 })
 
-// React to every state change — the router notifies on navigate and load.
+// React to every state change: the router notifies on navigate and load.
 router.subscribe((state) => {
   const leaf = state.matches.at(-1)
   if (state.status === 'idle') {
@@ -30,5 +30,5 @@ console.log('Current pathname:', router.getSnapshot().location.pathname)
 console.log('Params:', router.getSnapshot().matches.at(-1)?.params)
 
 router.dispose()`,
-  name: 'Basic Routing — Route State and Navigation',
+  name: 'Basic Routing: Route State and Navigation',
 };

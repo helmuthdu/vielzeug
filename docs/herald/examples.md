@@ -1,5 +1,5 @@
 ---
-title: Herald — Examples
+title: 'Herald: Examples'
 description: Recipes for typed delivery, waits, lifecycle ownership, diagnostics, bridging, and testing.
 ---
 

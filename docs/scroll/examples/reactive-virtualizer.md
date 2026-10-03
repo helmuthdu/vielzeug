@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Reactive Virtualizer'
+title: 'Scroll Examples: Reactive Virtualizer'
 description: 'Bridge Scroll external-store state into a @vielzeug/ripple reactive graph.'
 ---
 

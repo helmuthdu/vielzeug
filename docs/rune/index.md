@@ -1,5 +1,5 @@
 ---
-title: Rune — Structured logging for TypeScript
+title: 'Rune: Structured logging for TypeScript'
 description: Browser/Node logger with levels, namespaces, pluggable transports, lazy bindings, and timing helpers.
 package: rune
 category: logging
@@ -34,11 +34,11 @@ environments: [browser, node, ssr, deno]
 Plain `console.log` lacks structure: no log levels, no namespacing, no remote delivery, no way to silence logs in production.
 
 ```ts
-// Before — manual approach
+// Before: manual approach
 const path = '/users';
 console.log(`[api] GET ${path}`);
 
-// After — Rune
+// After: Rune
 import { consoleTransport, createLogger, jsonTransport } from '@vielzeug/rune';
 
 const api = createLogger({
@@ -118,18 +118,18 @@ console.log(users);
 <div class="features-grid">
 
 - Level filtering (`debug` to `off`) with `enabled()` checks, including `fatal` above `error`
-- Immutable config after construction — use `child()` or `withBindings()` to scope
+- Immutable config after construction: use `child()` or `withBindings()` to scope
 - Message-first, context-first, and Error-first log calls for application code and adapters
-- `Error` values are auto-serialized to `{ message, name, stack }` — survives JSON.stringify
-- Pinned context bindings via `withBindings({ requestId })` — fields on every line
-- Lazy bindings via `lazy(fn)` — expensive computations gated behind the level check
+- `Error` values are auto-serialized to `{ message, name, stack }`: survives JSON.stringify
+- Pinned context bindings via `withBindings({ requestId })`: fields on every line
+- Lazy bindings via `lazy(fn)`: expensive computations gated behind the level check
 - Namespaced child loggers via `createLogger('name')` or `logger.child({ namespace })`
 - Pluggable transport pipeline: console, JSON, remote, batching, sampling, and fail-closed redaction
 - Immutable middleware transforms and filters applied before every transport
 - Structured `time()` wrapper: emits the label as message with `{ duration_ms }` in context
 - `group()` and `groupCollapsed()` wrappers that auto-close on throw/reject
-- `LogEntry.data` — single merged flat object for transports; no manual merging needed
-- Zero dependencies — <PackageInfo package="rune" type="size" /> gzipped
+- `LogEntry.data`: single merged flat object for transports; no manual merging needed
+- Zero dependencies: <PackageInfo package="rune" type="size" /> gzipped
 
 </div>
 
@@ -148,9 +148,9 @@ console.log(users);
 
 <div class="see-also">
 
-- [Courier](/courier/) — HTTP client with built-in request/response interception; pipe Rune as a transport to log every API call with structured context
-- [Herald](/herald/) — typed event bus; emit log-level change or flush events across modules without coupling loggers directly
-- [Familiar](/familiar/) — Web Worker pool; use Rune inside task functions to surface structured worker-side logs back to the main thread
+- [Courier](/courier/): HTTP client with built-in request/response interception; pipe Rune as a transport to log every API call with structured context
+- [Herald](/herald/): typed event bus; emit log-level change or flush events across modules without coupling loggers directly
+- [Familiar](/familiar/): Web Worker pool; use Rune inside task functions to surface structured worker-side logs back to the main thread
 
 </div>
 

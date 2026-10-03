@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isDefined'
+title: 'Arsenal Examples: isDefined'
 description: 'isDefined example for @vielzeug/arsenal.'
 ---
 
@@ -23,7 +23,7 @@ const numbers: number[] = values.filter(isDefined);
 
 ### Pitfalls
 
-- Allows `null` through — use `isNil` to exclude both `null` and `undefined`.
+- Allows `null` through: use `isNil` to exclude both `null` and `undefined`.
 
 ### Related
 

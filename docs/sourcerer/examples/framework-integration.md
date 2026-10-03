@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — Framework Integration'
+title: 'Sourcerer Examples: Framework Integration'
 description: 'Subscribe to page source state from a React component.'
 ---
 

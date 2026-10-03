@@ -1,5 +1,5 @@
 ---
-title: Familiar — API Reference
+title: 'Familiar: API Reference'
 description: API reference for module-worker pools and worker-side protocol registration.
 ---
 
@@ -297,9 +297,9 @@ type StreamHandler<TInput, TChunk> = (input: TInput) => AsyncIterable<TChunk> | 
 | Error | Trigger | Notable property |
 | --- | --- | --- |
 | `FamiliarError` | Base class for all Familiar errors | Use `instanceof FamiliarError` to narrow |
-| `FamiliarInvalidOptionsError` | Invalid factory or test options | — |
+| `FamiliarInvalidOptionsError` | Invalid factory or test options | N/A |
 | `FamiliarQueueFullError` | Queue limit reached with `onFull: 'reject'` | `maxQueue` |
 | `FamiliarTaskError` | Worker handler throws or payload cannot clone | `cause` |
 | `FamiliarTimeoutError` | Task or drain deadline expires | `timeoutMs` |
-| `FamiliarTerminatedError` | Pool is disposed or draining | — |
+| `FamiliarTerminatedError` | Pool is disposed or draining | N/A |
 | `FamiliarRuntimeError` | Worker API or worker process fails | `cause` |

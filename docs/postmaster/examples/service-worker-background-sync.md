@@ -1,5 +1,5 @@
 ---
-title: 'Postmaster Examples — Service Worker Background Sync'
+title: 'Postmaster Examples: Service Worker Background Sync'
 description: Drive Postmaster flush from a Background Sync event so jobs attempt delivery while the page is closed.
 ---
 
@@ -11,10 +11,10 @@ Jobs must attempt delivery while the page is closed, but Postmaster has no built
 
 ### Solution
 
-Use `flush()` inside a `sync` event handler — the application owns the service worker lifecycle. Postmaster does not ship the adapter; the recipe below is application code.
+Use `flush()` inside a `sync` event handler: the application owns the service worker lifecycle. Postmaster does not ship the adapter; the recipe below is application code.
 
 ```ts
-// sw.ts — bundled as your service worker entry
+// sw.ts: bundled as your service worker entry
 import { createPostmaster, defineJobs } from '@vielzeug/postmaster';
 import { createIndexedDbPostmasterStore } from '@vielzeug/postmaster/indexeddb';
 
@@ -80,4 +80,4 @@ if ('serviceWorker' in navigator && 'SyncManager' in window) {
 
 - [Resume When Network Returns](./resume-when-network-returns.md)
 - [Delayed Eligibility](./delayed-eligibility.md)
-- [API Reference — flush()](../api.md#flush)
+- [API Reference: flush()](../api.md#flush)

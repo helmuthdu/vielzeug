@@ -185,7 +185,7 @@ describe('ore-file-input', () => {
       expect(createObjectURLSpy).toHaveBeenCalled();
       expect(img?.src).toBe('blob:mock-url');
       createObjectURLSpy.mockRestore();
-      // Decorative — the name is already shown in the visible `.file-card-name` caption.
+      // Decorative: the name is already shown in the visible `.file-card-name` caption.
       expect(img?.getAttribute('alt')).toBe('');
     });
 
@@ -339,7 +339,7 @@ describe('ore-file-input', () => {
       expect(detail.reasons).toEqual(['type', 'size']);
       expect(detail.originalEvent).toBeDefined();
 
-      // The refused pick still reports the queue state — with only the accepted file.
+      // The refused pick still reports the queue state: with only the accepted file.
       expect(changeHandler).toHaveBeenCalledTimes(1);
       expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.files).toEqual([valid]);
     });
@@ -642,7 +642,7 @@ describe('ore-file-input accessibility', () => {
     it('shows a success card with a checkmark and file metadata, with a working Replace action (Signal 04)', async () => {
       const upload = vi.fn(() => Promise.resolve());
 
-      // Replace is only offered in `multiple` mode — in single-file mode the dropzone itself
+      // Replace is only offered in `multiple` mode: in single-file mode the dropzone itself
       // already re-picks-and-replaces the one file, so a second "Replace" affordance would be
       // redundant (see the analysis this refactor implements).
       fixture = await mount('ore-file-input', { attrs: { multiple: '' }, props: { upload } });
@@ -724,7 +724,7 @@ describe('ore-file-input accessibility', () => {
       expect(fixture.query('.file-name')?.textContent).toBe('keep.txt');
     });
 
-    it('ignores remove/retry while disabled — a disabled input is fully non-interactive, not just unable to add files', async () => {
+    it('ignores remove/retry while disabled: a disabled input is fully non-interactive, not just unable to add files', async () => {
       const upload = vi.fn(() => Promise.reject(new Error('boom')));
 
       fixture = await mount('ore-file-input', { props: { upload } });

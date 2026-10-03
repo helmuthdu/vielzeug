@@ -1,5 +1,5 @@
 ---
-title: 'Herald Examples — Awaiting a one-time event'
+title: 'Herald Examples: Awaiting a one-time event'
 description: 'Awaiting a one-time event example for @vielzeug/herald.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Awaiting a one-time event example for @vielzeug/herald.'
 
 ### Problem
 
-You need to wait for a single event to fire before continuing — without polling, without a callback, and without coupling the waiting code to the emitting code directly.
+You need to wait for a single event to fire before continuing: without polling, without a callback, and without coupling the waiting code to the emitting code directly.
 
 ### Solution
 
@@ -29,7 +29,7 @@ function onAuthSuccess(user: User) {
 
 ### Pitfalls
 
-- If the event fires before `wait()` is called, `wait()` hangs forever — there is no replay buffer. Ensure the emitter always fires after the listener is registered.
+- If the event fires before `wait()` is called, `wait()` hangs forever: there is no replay buffer. Ensure the emitter always fires after the listener is registered.
 - Calling `wait()` in a loop without awaiting creates multiple concurrent pending waits that all resolve with the same first emission. Await each one sequentially.
 - If the bus is disposed before the event fires, `wait()` rejects with `BusDisposedError`. Always handle this rejection in async code that awaits events on a scoped bus.
 

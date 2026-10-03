@@ -1,6 +1,6 @@
 /**
  * Computes the greatest common divisor of two integers using the Euclidean algorithm.
- * The sign of the inputs is ignored — the result is always non-negative.
+ * The sign of the inputs is ignored: the result is always non-negative.
  *
  * @example
  * ```ts

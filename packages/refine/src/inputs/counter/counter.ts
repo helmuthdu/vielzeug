@@ -61,7 +61,7 @@ export const COUNTER_HOLD_REPEAT_MS = 120;
 /**
  * A large-target tally control for counting things at a glance: `−` / value / `+` with an
  * optional icon, label and hint. Designed for touch and arm's-length use (tabletop trackers,
- * inventories, scoreboards) rather than typed form entry — use `ore-number-input` for that.
+ * inventories, scoreboards) rather than typed form entry: use `ore-number-input` for that.
  *
  * Holding any button auto-repeats. The value is announced through a live region and is
  * keyboard-operable as a spinbutton (Arrow keys, Home/End, Page Up/Down). Set `quick-steps` to add an

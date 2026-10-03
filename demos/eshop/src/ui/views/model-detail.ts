@@ -29,7 +29,7 @@ import { activeRouteQuery, router } from '../../core/router';
 import type { Configuration, FeatureKey, Model } from '../../core/types';
 import { openShareBuildDialog } from '../components/share-build-dialog';
 
-/** Icon per feature-card key (`model.features.*` in `core/i18n.ts` owns the label text) —
+/** Icon per feature-card key (`model.features.*` in `core/i18n.ts` owns the label text) :
  * lucide names bundled through `@vielzeug/refine`'s own icon set. */
 const FEATURE_ICON: Record<FeatureKey, string> = {
   adaptiveCruise: 'gauge',
@@ -41,8 +41,8 @@ const FEATURE_ICON: Record<FeatureKey, string> = {
   wirelessCharging: 'battery-charging',
 };
 
-/** A flat 4.9% APR / 60-month default — the same terms `checkout-payment`'s financing radio
- * defaults to — so the PDP's "as low as" figure and the number a shopper actually commits to at
+/** A flat 4.9% APR / 60-month default: the same terms `checkout-payment`'s financing radio
+ * defaults to, so the PDP's "as low as" figure and the number a shopper actually commits to at
  * checkout don't disagree without a reason. */
 const FINANCE_DEFAULT_APR = 4.9;
 const FINANCE_TERM_OPTIONS = [36, 48, 60, 72];
@@ -52,10 +52,10 @@ const RELATED_MODEL_LIMIT = 4;
 type ModelConfiguratorProps = { model: Model | undefined };
 
 /**
- * The configurator. Local, non-`ledger`-tracked draft state — trim/color/wheel/package picks
+ * The configurator. Local, non-`ledger`-tracked draft state: trim/color/wheel/package picks
  * are transient page state until "Add to cart" commits them, mirroring how demos/crm never
  * wraps its task-dialog draft in the app's undo/redo ledger either (see core/history.ts's
- * module comment). Defined once at module scope with a `model` data prop — NOT dynamically
+ * module comment). Defined once at module scope with a `model` data prop: NOT dynamically
  * per-model, which would try to re-register the same custom element tag on a repeat visit.
  */
 define<ModelConfiguratorProps>('model-configurator', {
@@ -109,10 +109,10 @@ define<ModelConfiguratorProps>('model-configurator', {
       model().availability === 'coming-soon' ? t('model.notifyMe') : t('common.addToCart'),
     );
     const trimOptions = computed(() =>
-      model().trims.map((t) => ({ label: `${t.name} — ${formatPrice(t.priceDelta)}`, value: t.id })),
+      model().trims.map((t) => ({ label: `${t.name}: ${formatPrice(t.priceDelta)}`, value: t.id })),
     );
     const wheelOptions = computed(() =>
-      model().wheels.map((w) => ({ label: `${w.name} — ${formatPrice(w.priceDelta)}`, value: w.id })),
+      model().wheels.map((w) => ({ label: `${w.name}: ${formatPrice(w.priceDelta)}`, value: w.id })),
     );
 
     const financeDownPaymentUsd = signal((Number.parseFloat(model().basePrice) * 0.1).toFixed(2));
@@ -265,7 +265,7 @@ define<ModelConfiguratorProps>('model-configurator', {
     return html`
       <div class="configurator__product-builder">
         <!-- The name/tagline caption is pinned inside the hero's own bottom-left corner (see
-           .configurator__intro in app.css) rather than sitting in a separate block underneath —
+           .configurator__intro in app.css) rather than sitting in a separate block underneath :
            the hero photo is the reason a shopper is here, and the caption reads as part of that
            product shot instead of a second, competing headline below it. -->
         <div class="configurator__hero">
@@ -347,7 +347,7 @@ define<ModelConfiguratorProps>('model-configurator', {
                   (option) => html`
                     <label
                       class="swatch-control"
-                      aria-label=${() => `${option.name} — ${formatOptionPrice(option.priceDelta)}`}>
+                      aria-label=${() => `${option.name}: ${formatOptionPrice(option.priceDelta)}`}>
                       <input
                         class="swatch-control__input"
                         type="radio"
@@ -509,7 +509,7 @@ define<ModelConfiguratorProps>('model-configurator', {
               @change=${onPackagesChange}>
               ${optionalPackages.value.map(
                 (p) => html`
-                  <ore-checkbox value=${p.id}>${p.name} — ${formatPrice(p.priceDelta)}</ore-checkbox>
+                  <ore-checkbox value=${p.id}>${p.name}: ${formatPrice(p.priceDelta)}</ore-checkbox>
                   <p class="configurator__package-option">${p.description}</p>
                 `,
               )}
@@ -626,7 +626,7 @@ define<ModelConfiguratorProps>('model-configurator', {
 
       ${when(
         // A single match reads as a broken/unfinished layout (one narrow card adrift in an
-        // otherwise-empty row) rather than a deliberate "just one other option" state — the
+        // otherwise-empty row) rather than a deliberate "just one other option" state: the
         // rail only earns its section once there's an actual set to browse.
         () => relatedModels.value.length >= 2,
         () => html`
@@ -654,7 +654,7 @@ define<ModelConfiguratorProps>('model-configurator', {
   shadow: false,
 });
 
-/** Renders the "no such model" dead end — a mistyped/shared/bookmarked configurator URL — as
+/** Renders the "no such model" dead end: a mistyped/shared/bookmarked configurator URL: as
  * a real empty state (heading, message, a way back to the catalog) instead of one bare, unstyled
  * sentence with no escape route. Built imperatively rather than through `define()`/`html` since
  * it's a one-shot render with no reactive state of its own. */

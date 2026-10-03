@@ -1,19 +1,19 @@
 @layer refine.base {
-  /* No explicit `width` here, on purpose — matches every other field's own `:host` (`ore-input`,
+  /* No explicit `width` here, on purpose: matches every other field's own `:host` (`ore-input`,
      `ore-select`, `ore-combobox`, `ore-date-picker`). A grid/flex item with `width: auto` (the
      default) stretches to fill its track by default; the old `width: fit-content` here overrode
      that default and forced this one field to shrink-wrap while every sibling field stretched to
      match the column, e.g. in a 2-column form grid.
      `min-width` is different: every field above sets the same `12rem` floor (each via its own
-     `--<field>-min-width` custom property) so that a row of mixed field types — this one included
-     — doesn't shrink-wrap to noticeably different widths purely because their *content* (a typed
+     `--<field>-min-width` custom property) so that a row of mixed field types: this one included
+: doesn't shrink-wrap to noticeably different widths purely because their *content* (a typed
      number vs. a selected option's label vs. free text) happens to differ. */
   :host {
     display: inline-flex;
     min-width: var(--number-input-min-width, 12rem);
   }
 
-  /* Explicit opt-in still forces full width outside a stretching grid/flex context — same
+  /* Explicit opt-in still forces full width outside a stretching grid/flex context: same
      convention as ore-input's own :host([fullwidth]). The floor drops so the field follows a
      track narrower than 12rem instead of overflowing it. */
   :host([fullwidth]) {
@@ -22,7 +22,7 @@
   }
 
   /* The inner `ore-input` (class="field", see number-input.ts) is a flex item of this `:host`'s
-     own `inline-flex` box — without `flex: 1` it only ever grows to its own `min-width` (12rem)
+     own `inline-flex` box: without `flex: 1` it only ever grows to its own `min-width` (12rem)
      and no further, leaving this component visibly narrower than its host once the host itself
      stretches to fill a wider grid/flex track (e.g. next to a full-width sibling field). `flex: 1`
      lets it grow to match; its own `min-width` (inherited from `ore-input`'s `:host`) still holds
@@ -36,7 +36,7 @@
     text-align: center;
   }
 
-  /* Stepper buttons — slotted into ore-input's own prefix/suffix, so they render inside its
+  /* Stepper buttons: slotted into ore-input's own prefix/suffix, so they render inside its
      bordered box like its built-in clear/password-toggle buttons, not as separate controls. */
   button[part='decrement-btn'],
   button[part='increment-btn'] {
@@ -85,19 +85,19 @@
 }
 
 /* ========================================
-     Disabled State — intentionally unlayered
+     Disabled State: intentionally unlayered
      ======================================== */
 
 /*
  * `disabledStateMixin` (passed directly in `styles:`, not via `fieldMixins`) dims
  * `:host([disabled])` with `opacity: 0.5` as bare, unlayered CSS. Cascade layers always lose to
  * unlayered rules regardless of source order or specificity, so overriding that from inside any
- * `@layer` block in this file would be a no-op — this has to stay unlayered too, to actually win.
+ * `@layer` block in this file would be a no-op: this has to stay unlayered too, to actually win.
  * See `ore-input`'s `input.css` for the same pattern.
  *
  * The visible surface here is entirely the inner `ore-input`'s own `.field` (already fixed to a
  * grayscale look, not opacity) plus these slotted stepper buttons (muted via `:disabled` above,
- * also not opacity) — so this host itself needs no compensating background/color, just dropping
+ * also not opacity), so this host itself needs no compensating background/color, just dropping
  * the blanket opacity that would otherwise wash out both of those over again.
  */
 :host([disabled]) {

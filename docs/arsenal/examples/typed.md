@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Typed Predicate Examples
+title: 'Arsenal: Typed Predicate Examples'
 description: Typed predicate examples for Arsenal.
 ---
 

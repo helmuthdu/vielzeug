@@ -56,7 +56,7 @@ export function isIp(v: string): boolean {
     });
   }
 
-  // IPv6 — rely on URL parser
+  // IPv6: rely on URL parser
   try {
     new URL(`http://[${v}]/`);
 

@@ -1,10 +1,10 @@
 /* ========================================================================
-   Vielzeug Motors demo — global layout + brand styles
+   Vielzeug Motors demo: global layout + brand styles
    Built on top of @vielzeug/refine theme tokens. Modeled on real OEM
    configurator retail sites (Mercedes-Benz Store, BMW's Neuwagensuche): a
    bright, neutral canvas, restrained color spent only on links/CTAs/selection
    states, small (2–4px) corner radii, and calm, mostly-static product
-   presentation — not a dark "showroom stage" or a saturated brand palette.
+   presentation: not a dark "showroom stage" or a saturated brand palette.
    ======================================================================== */
 
 :root {
@@ -16,19 +16,19 @@
   --font-display: 'Jost', 'Avenir Next', 'Helvetica Neue', sans-serif;
   --font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* Shared easing for this app's own transitions (swatches, hover states) — fast start, no
+  /* Shared easing for this app's own transitions (swatches, hover states): fast start, no
      overshoot, matches the skill's "ease-out-quart/quint" motion guidance. */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --radius-control: var(--rounded-md);
   --radius-surface: var(--rounded-xl);
 
-  /* `.app-footer`'s own fixed-dark palette — deliberately NOT `--color-contrast-*` (those flip
+  /* `.app-footer`'s own fixed-dark palette: deliberately NOT `--color-contrast-*` (those flip
      via `light-dark()` with the app's own light/dark theme toggle in Settings). A footer that
      stays a dark plinth regardless of the shopper's theme choice is the same pattern every
      reference OEM site uses (Mercedes-Benz Store, BMW's Neuwagensuche): one deliberately dark
      band at the very bottom, independent of the rest of the page. `--footer-bg`'s 9% lightness
      is deliberately well below `--color-contrast-50`'s own *dark-mode* value (`oklch(17% ...)`,
-     theme.css) — an earlier 18% sat almost exactly on top of it, so the footer band all but
+     theme.css): an earlier 18% sat almost exactly on top of it, so the footer band all but
      disappeared into the page canvas whenever the shopper switched to dark mode in Settings;
      9% keeps it reading as a distinct, deliberately darker plinth in both themes. */
   --footer-bg: oklch(9% 0.006 var(--color-primary-hue));
@@ -104,11 +104,11 @@ body {
   border-radius: var(--rounded-full);
 }
 
-/* Fixed to the viewport height (not `min-height`) — `.app-main` below is the one scrolling
+/* Fixed to the viewport height (not `min-height`): `.app-main` below is the one scrolling
    region. A `min-height` shell lets its content grow past the viewport and pushes scrolling onto
    `document`/`body` instead, which silently defeats `.app-main`'s own `overflow: auto` and any
    `position: sticky` element inside it (sticky resolves against the nearest ancestor that
-   actually scrolls, not the visually-scrolling one) — exactly the bug that broke
+   actually scrolls, not the visually-scrolling one): exactly the bug that broke
    `.configurator__sticky-bar` until this was fixed. */
 .app-shell {
   display: flex;
@@ -116,7 +116,7 @@ body {
   height: 100dvh;
 }
 
-/* The scroll container only — full-bleed edge to edge, so a full-width child (`.app-footer`)
+/* The scroll container only: full-bleed edge to edge, so a full-width child (`.app-footer`)
    can paint corner to corner. `.app-content` below carries the max-width/centering/padding that
    used to live here, wrapping only the per-route view. */
 .app-main {
@@ -136,11 +136,11 @@ body {
   margin: 0 auto;
 }
 
-/* Pinned to the bottom of `.app-main` via `margin-top: auto` on its flex column — the standard
+/* Pinned to the bottom of `.app-main` via `margin-top: auto` on its flex column: the standard
    sticky-footer trick, so the footer sits right after the page content once it's tall enough to
    scroll, or sinks to the bottom of the viewport on short pages (Settings, an empty cart)
    instead of leaving a dead gap beneath it. Full-bleed (background spans the whole scroll
-   container, not just `.app-content`'s column) — `.app-footer__inner` below re-applies
+   container, not just `.app-content`'s column): `.app-footer__inner` below re-applies
    `.app-content`'s own max-width/padding so the footer's columns line up with the page content
    above it, without the dark band itself stopping short of the viewport edges. */
 .route-error {
@@ -216,7 +216,7 @@ body {
   gap: var(--size-2);
 }
 
-/* Plain-text nav, not `ore-button` — a footer link list reads as a set of destinations, not a
+/* Plain-text nav, not `ore-button`: a footer link list reads as a set of destinations, not a
    row of actions, and full button chrome (padding/border/background) here would look heavier
    than every reference OEM footer this demo's own design brief is modeled on. */
 .app-footer__link {
@@ -2225,15 +2225,15 @@ ore-grid-item:has(> model-card) {
 /* ── Configurator ──────────────────────────────────────────────────────── */
 
 /* `container-type: inline-size` makes `.configurator` itself the query container the
-   `@container` rule below measures — deliberately matching what `ore-navbar`'s own mobile
+   `@container` rule below measures: deliberately matching what `ore-navbar`'s own mobile
    detection measures for `.configurator__sticky-bar` (its nearest non-`ore-grid-item` ancestor,
    resolved via `resolveContainerElement()`), which is *this* element. A `@media (width <= …)`
    viewport query here was measuring something different: the navbar collapses to its mobile
    mode off its container's width, not the viewport's, and `.app-content`'s own padding makes
-   that container narrower than the viewport — around 45px narrower at this app's current spacing.
+   that container narrower than the viewport: around 45px narrower at this app's current spacing.
    That gap was enough for the navbar to flip into mobile mode (hiding the spec sheet, running
    total, and "Add to cart") at viewport widths still comfortably above a `768px` viewport media
-   query's threshold, with no fallback yet visible to replace it — a real dead zone confirmed live
+   query's threshold, with no fallback yet visible to replace it: a real dead zone confirmed live
    between roughly 769–844px viewport width. Querying the same container the navbar measures
    closes that gap structurally instead of chasing the exact pixel offset. */
 .configurator {
@@ -2243,7 +2243,7 @@ ore-grid-item:has(> model-card) {
   container-type: inline-size;
 }
 
-/* Full width (`grid-column: 1 / -1`) — the photo is the reason a shopper opened this page.
+/* Full width (`grid-column: 1 / -1`): the photo is the reason a shopper opened this page.
    `.configurator__intro` is nested inside it (not a sibling underneath) and pinned to the bottom
    left corner, the same caption placement the reference OEM hero shots (Mercedes-Benz Store,
    BMW's Neuwagensuche) use over a product photo instead of a plain line of text below it. */
@@ -2264,7 +2264,7 @@ ore-grid-item:has(> model-card) {
   height: clamp(280px, 42vw, 560px);
 }
 
-/* A corner-anchored radial scrim, not a full-width gradient bar — it only needs to guarantee the
+/* A corner-anchored radial scrim, not a full-width gradient bar: it only needs to guarantee the
    caption's own contrast against whatever paint color happens to sit behind it, not dim the
    photo generally. Sized/positioned off the caption's own box, so it travels with the text
    instead of needing separate tuning. */
@@ -2558,7 +2558,7 @@ ore-grid-item:has(> model-card) {
   border: 0;
 }
 
-/* The Paint picker is a required, primary configurator decision — at 28px (fine-pointer size)
+/* The Paint picker is a required, primary configurator decision: at 28px (fine-pointer size)
    it falls short of the 44px touch-target minimum for the coarse pointers (touch) that make up
    most mobile traffic. `pointer: coarse` (not a viewport-width breakpoint): a touchscreen
    laptop at desktop width has the same thumb/finger precision problem a phone does. */
@@ -2666,7 +2666,7 @@ ore-grid-item:has(> model-card) {
 }
 
 /* `animated-price` gates its hand-rolled tween on `shouldReduceMotion('system')` from
-   `@vielzeug/necromancer` —
+   `@vielzeug/necromancer` :
    this CSS-only hover transform can't reach that JS check, so it needs its own media query to
    honor the same preference. */
 @media (prefers-reduced-motion: reduce) {
@@ -2784,7 +2784,7 @@ ore-grid-item:has(> model-card) {
   font-weight: 500;
 }
 
-/* `--color-contrast-200` — one step deeper than `.feature-card`'s own `--color-contrast-100` —
+/* `--color-contrast-200`: one step deeper than `.feature-card`'s own `--color-contrast-100` :
    so this row is a visibly different surface, not the same gray box the feature grid just used. */
 .configurator__finance,
 .configurator__breakdown {
@@ -2912,7 +2912,7 @@ ore-grid-item:has(> model-card) {
   color: var(--color-primary);
 }
 
-/* Stacked, not a side-by-side row — down payment, term, and the monthly estimate are read in
+/* Stacked, not a side-by-side row: down payment, term, and the monthly estimate are read in
    that order (input, input, result), and a vertical stack keeps each control full-width and
    scannable instead of three cramped columns competing for the panel's width. */
 .finance-calculator {
@@ -2937,7 +2937,7 @@ ore-grid-item:has(> model-card) {
   font-variant-numeric: tabular-nums;
 }
 
-/* `ore-number-input`'s stepper buttons default to a fine-pointer-sized 24px — same touch-target
+/* `ore-number-input`'s stepper buttons default to a fine-pointer-sized 24px: same touch-target
    gap as the paint swatches above, fixed the same way via the parts refine exposes for exactly
    this (`decrement-btn`/`increment-btn`), no change to the shared component needed. */
 @media (pointer: coarse) {
@@ -3536,7 +3536,7 @@ ore-grid-item:has(> model-card) {
 .admin__orders {
   display: grid;
 
-  /* `min(320px, 100%)` instead of a bare `320px` floor — keeps the card grid from forcing
+  /* `min(320px, 100%)` instead of a bare `320px` floor: keeps the card grid from forcing
      horizontal overflow on narrow phones (~360px viewport minus this page's own inline padding
      leaves less than 320px of content width) while still preferring 320px+ columns everywhere
      else. */
@@ -4724,10 +4724,10 @@ ore-grid-item:has(> model-card) {
 }
 
 @media (width <= 900px) {
-  /* `minmax(0, 1fr)`, not bare `1fr` — a bare `1fr` track's automatic minimum width is
+  /* `minmax(0, 1fr)`, not bare `1fr`: a bare `1fr` track's automatic minimum width is
      content-based (`auto`), so `.related-models`' horizontal-scroll row (fixed 260px cards,
-     `overflow-x: auto`) was forcing this *whole* single-column track — and everything else
-     inside it, including the price breakdown and its buttons — to grow to the cards' combined
+     `overflow-x: auto`) was forcing this *whole* single-column track, and everything else
+     inside it, including the price breakdown and its buttons: to grow to the cards' combined
      width instead of the viewport's. `overflow: auto` alone doesn't stop a descendant's
      max-content size from propagating up through a grid track; only zeroing the track's own
      minimum does. Verified live: this was the exact cause of `.configurator__breakdown`
@@ -5003,7 +5003,7 @@ ore-grid-item:has(> model-card) {
    configurator's mobile bar takes over at the same width the desktop sticky bar's spec sheet
    would otherwise start getting cramped. */
 
-/* Matches `ore-navbar`'s own default `breakpoint` prop `(max-width: 768px)` — but as a
+/* Matches `ore-navbar`'s own default `breakpoint` prop `(max-width: 768px)`, but as a
    `@container` query against `.configurator` (see its own comment above), not a viewport
    `@media` query, since that's what the navbar itself actually measures for this instance. */
 @container (width <= 640px) {

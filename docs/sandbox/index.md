@@ -1,6 +1,6 @@
 ---
-title: Sandbox — Sandboxed iframe runtime
-description: Isolated iframe runtime with a typed state bridge and explicit message trust boundary for safe execution of untrusted HTML — component previews, playgrounds, plugin sandboxes, and more.
+title: 'Sandbox: Sandboxed iframe runtime'
+description: 'Isolated iframe runtime with a typed state bridge and explicit message trust boundary for safe execution of untrusted HTML: component previews, playgrounds, plugin sandboxes, and more.'
 package: sandbox
 category: ui-primitives
 keywords: [sandbox, iframe, isolation, playground, csp, postmessage, security, components]
@@ -25,7 +25,7 @@ environments: [browser]
 
 ## Why Sandbox?
 
-Running untrusted HTML in the main window is unsafe — arbitrary code can access the DOM, cookies, and user data. Sandbox creates an isolated `<iframe sandbox="allow-scripts">` that receives content over a typed state bridge and explicit message trust boundary. The sandbox cannot reach the host page.
+Running untrusted HTML in the main window is unsafe: arbitrary code can access the DOM, cookies, and user data. Sandbox creates an isolated `<iframe sandbox="allow-scripts">` that receives content over a typed state bridge and explicit message trust boundary. The sandbox cannot reach the host page.
 
 ```ts
 // Before
@@ -38,12 +38,12 @@ await sandbox.render(untrustedHtml);
 
 Common use cases:
 
-- **Component previews** — render isolated HTML/CSS examples in documentation or design tools
-- **Code playgrounds** — execute user-provided code with full error forwarding and state injection
-- **Plugin sandboxes** — host third-party or user-authored plugin UI without granting host access
-- **User-generated content** — display untrusted HTML (emails, form output, external widgets) safely
-- **Widget embedding** — wrap third-party widgets with strict CSP and bidirectional messaging
-- **AI-generated UI** — render LLM-produced HTML components with guaranteed isolation
+- **Component previews**: render isolated HTML/CSS examples in documentation or design tools
+- **Code playgrounds**: execute user-provided code with full error forwarding and state injection
+- **Plugin sandboxes**: host third-party or user-authored plugin UI without granting host access
+- **User-generated content**: display untrusted HTML (emails, form output, external widgets) safely
+- **Widget embedding**: wrap third-party widgets with strict CSP and bidirectional messaging
+- **AI-generated UI**: render LLM-produced HTML components with guaranteed isolation
 
 | Feature                    | Raw `<iframe>`                               | Sandbox                                       |
 | -------------------------- | -------------------------------------------- | --------------------------------------------- |
@@ -58,7 +58,7 @@ Common use cases:
 
 **Use Sandbox when** you need to render untrusted or user-provided HTML in the browser with iframe isolation, CSP enforcement, and explicit host/sandbox messaging.
 
-**Consider a raw `<iframe>` when** you only need to embed a known third-party URL — Sandbox is for programmatic `srcdoc` content, not URL-based embedding.
+**Consider a raw `<iframe>` when** you only need to embed a known third-party URL: Sandbox is for programmatic `srcdoc` content, not URL-based embedding.
 
 </div>
 
@@ -108,18 +108,18 @@ try {
 
 <div class="features-grid">
 
-- `createSandbox<State>()` — Creates an isolated `<iframe sandbox="allow-scripts">` with typed outbound state
-- `render(html)` — Creates or replaces the document and resolves when its bridge reports ready
-- `setState(update)` — Pushes one or more typed state values in one message
-- `replaceBody(html)` — Updates streamed body content without resetting head scripts and styles
-- `updateStyle(id, css)` — Patches a named style without replacing the document
-- `SandboxMessage` — Keeps sandbox-controlled custom details typed as `unknown` on the host
-- `SandboxBridge<State, Events>` — Types authored sandbox-side state subscriptions and event emission
-- `readyTimeout` — Rejects blocked document initialization with `SandboxTimeoutError`
-- Strict CSP — Uses `default-src 'none'` and blocks network requests by default
-- Error forwarding — Installs before user scripts and forwards uncaught errors and rejections
-- Stale-message protection — Rejects messages from superseded render generations
-- Disposable — Supports `dispose()`, `disposalSignal`, and `[Symbol.dispose]`
+- `createSandbox<State>()`: Creates an isolated `<iframe sandbox="allow-scripts">` with typed outbound state
+- `render(html)`: Creates or replaces the document and resolves when its bridge reports ready
+- `setState(update)`: Pushes one or more typed state values in one message
+- `replaceBody(html)`: Updates streamed body content without resetting head scripts and styles
+- `updateStyle(id, css)`: Patches a named style without replacing the document
+- `SandboxMessage`: Keeps sandbox-controlled custom details typed as `unknown` on the host
+- `SandboxBridge<State, Events>`: Types authored sandbox-side state subscriptions and event emission
+- `readyTimeout`: Rejects blocked document initialization with `SandboxTimeoutError`
+- Strict CSP: Uses `default-src 'none'` and blocks network requests by default
+- Error forwarding: Installs before user scripts and forwards uncaught errors and rejections
+- Stale-message protection: Rejects messages from superseded render generations
+- Disposable: Supports `dispose()`, `disposalSignal`, and `[Symbol.dispose]`
 
 </div>
 
@@ -138,8 +138,8 @@ try {
 
 <div class="see-also">
 
-- [Codex](/codex/) — MCP server with `generate-sandbox-document` and `get-state-bridge-spec` tools; generates document templates for use with Sandbox
-- [Refine](/refine/) — Web component library; renders correctly inside the sandbox via `<script>` injection and `allowedScriptOrigins`
+- [Codex](/codex/): MCP server with `generate-sandbox-document` and `get-state-bridge-spec` tools; generates document templates for use with Sandbox
+- [Refine](/refine/): Web component library; renders correctly inside the sandbox via `<script>` injection and `allowedScriptOrigins`
 
 </div>
 

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — dropLast'
+title: 'Arsenal Examples: dropLast'
 description: 'dropLast example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'dropLast example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to remove the last N items from an array — for example trimming a trailing sentinel or removing the most-recent log entries.
+You need to remove the last N items from an array: for example trimming a trailing sentinel or removing the most-recent log entries.
 
 ### Solution
 

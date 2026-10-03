@@ -37,11 +37,11 @@ import type { Address, DeliveryMethod, FinancingTerms, Order, PaymentMethod, Tra
 import { openShareBuildDialog } from '../components/share-build-dialog';
 
 // ---------------------------------------------------------------------------
-// Module-scoped checkout session state — committed step data persists across step
+// Module-scoped checkout session state: committed step data persists across step
 // navigations within one checkout flow, mirroring `checkoutMachine`'s own module-level
 // singleton (core/checkout-machine.ts). Deliberately NOT ripple signals: each step is a
 // fresh render on every navigation (see ui/app-shell.ts's `renderView()`), so plain reads
-// at construction time are all that's needed — no cross-render reactivity required.
+// at construction time are all that's needed: no cross-render reactivity required.
 // ---------------------------------------------------------------------------
 
 let committedShipping: Address | null = null;
@@ -68,10 +68,10 @@ const shippingForm = createForm<Address>({
 
 /**
  * Wayfinder's `navigate()` is typed as a discriminated union keyed by the literal route name so
- * each route's own param shape is checked at the call site — exactly what every direct
+ * each route's own param shape is checked at the call site: exactly what every direct
  * `router.navigate({ name: 'modelLanding', params: { slug } })` call elsewhere in this app relies
  * on. This helper deliberately takes the general `RouteNames` union (so every checkout step can
- * share one `goto()`), which the discriminated union can't narrow from — the cast documents that
+ * share one `goto()`), which the discriminated union can't narrow from: the cast documents that
  * trade-off instead of silently widening `router.navigate`'s own public signature.
  */
 function goto(name: RouteNames, params?: Record<string, string>): void {
@@ -86,7 +86,7 @@ function notifyAndRedirect(messageKey: string, target: RouteNames): false {
 }
 
 /**
- * Step-entry guards — each checkout step calls the ones it depends on at the very top of its own
+ * Step-entry guards: each checkout step calls the ones it depends on at the very top of its own
  * `setup()`, before reading any committed data. Without these, loading a step directly (a
  * bookmark, browser back/forward, or a mid-flow refresh) rendered a step with silently-missing
  * data instead of explaining what happened; see the app's own critique notes on this flow.
@@ -103,7 +103,7 @@ function ensurePaymentCommitted(): boolean {
   return committedPayment !== null || notifyAndRedirect('checkout.errors.missingPayment', 'checkoutPayment');
 }
 
-/** Resolves a trade-in-adjusted grand total — reads `committedTradeIn` (a plain module var, not a
+/** Resolves a trade-in-adjusted grand total: reads `committedTradeIn` (a plain module var, not a
  * signal) alongside the reactive cart summary, so every call site stays reactive to cart changes
  * while the trade-in credit itself is a fixed value for the rest of this checkout session. */
 function displayTotal(): string {
@@ -112,7 +112,7 @@ function displayTotal(): string {
     : cartSummary.value.total;
 }
 
-// ── Progress stepper — shared by all four steps below ───────────────────────
+// ── Progress stepper: shared by all four steps below ───────────────────────
 
 const STEP_ORDER: CheckoutStep[] = ['shipping', 'payment', 'review', 'confirmed'];
 const STEP_LABEL_KEYS: Record<CheckoutStep, string> = {
@@ -123,7 +123,7 @@ const STEP_LABEL_KEYS: Record<CheckoutStep, string> = {
 };
 
 /**
- * A "Vehicle" node is prepended and always rendered `done` — every step below only renders once
+ * A "Vehicle" node is prepended and always rendered `done`: every step below only renders once
  * `ensureCartNotEmpty()` has already passed, so the cart is never actually empty by the time a
  * shopper sees this. Plain, non-reactive markup: like the rest of this checkout flow, each step
  * is a fresh render per navigation (see the module comment above), so there's no need for this to
@@ -158,7 +158,7 @@ function checkoutStepper(current: CheckoutStep) {
 
 // ── Step: Shipping ───────────────────────────────────────────────────────────
 
-const DEALER_OPTIONS = DEALERS.map((d) => ({ label: `${d.name} — ${d.city}`, value: d.id }));
+const DEALER_OPTIONS = DEALERS.map((d) => ({ label: `${d.name}: ${d.city}`, value: d.id }));
 
 function isDeliveryMethod(value: string): value is DeliveryMethod {
   return value === 'delivery' || value === 'pickup';
@@ -402,7 +402,7 @@ define('checkout-payment', {
             </div>
             <div class="checkout-tradein__photos">
               <ore-icon name="camera" size="18" aria-hidden="true"></ore-icon>
-              <span>${() => t('checkout.tradeIn.photosLabel')} — ${() => t('checkout.tradeIn.photosHint')}</span>
+              <span>${() => t('checkout.tradeIn.photosLabel')}: ${() => t('checkout.tradeIn.photosHint')}</span>
             </div>
           `,
         )}
@@ -522,7 +522,7 @@ define('checkout-review', {
           <ore-chip size="sm" variant="flat">
             ${() =>
               committedDelivery?.method === 'pickup'
-                ? `${t('checkout.delivery.methodPickup')} — ${dealer?.name ?? ''}`
+                ? `${t('checkout.delivery.methodPickup')}: ${dealer?.name ?? ''}`
                 : t('checkout.delivery.methodDelivery')}
           </ore-chip>
         `,
@@ -621,7 +621,7 @@ define('checkout-confirmation', {
           <p>
             ${() =>
               order?.deliveryMethod === 'pickup'
-                ? `${t('checkout.delivery.methodPickup')} — ${dealer?.name ?? ''}`
+                ? `${t('checkout.delivery.methodPickup')}: ${dealer?.name ?? ''}`
                 : t('checkout.delivery.methodDelivery')}
           </p>
           ${when(

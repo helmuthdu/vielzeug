@@ -4,7 +4,7 @@ import { createFocusManager, type DialogCloseReason, lifecycleSignal, type Overl
 import { awaitExit } from './await-exit';
 import { createBackgroundLock } from './background-lock';
 
-// Invoker Commands API — not yet in lib.dom.d.ts
+// Invoker Commands API: not yet in lib.dom.d.ts
 interface CommandEvent extends Event {
   command: string;
 }
@@ -36,13 +36,13 @@ export type UseDialogOptions = {
     options?: AddEventListenerOptions,
   ) => void;
   /**
-   * Called after the native `close` event fires — after background unlock,
+   * Called after the native `close` event fires: after background unlock,
    * isOpen reset, and focus restore. Use to emit component events.
    */
   onNativeClose?: (reason: DialogCloseReason) => void;
   /** Called by the overlay on open. Use to emit events. */
   onOpen?: (reason: OverlayOpenReason) => void;
-  /** Open prop from the component — drives programmatic open/close via watch. */
+  /** Open prop from the component: drives programmatic open/close via watch. */
   openProp: Readable<boolean | undefined>;
   /**
    * Called by the overlay when closing. Orchestrates the close animation.
@@ -56,8 +56,8 @@ export type UseDialogHandle = {
   closeWithAnimation: () => void;
   /**
    * Standard backdrop-click-to-close handler. Callers wire it themselves
-   * (`onEvent(dialog, 'click', handleBackdropClick)`) because some overlays — e.g. drawer's
-   * swipe-to-dismiss — need a backdrop handler with extra guards, so it is deliberately not
+   * (`onEvent(dialog, 'click', handleBackdropClick)`) because some overlays: e.g. drawer's
+   * swipe-to-dismiss: need a backdrop handler with extra guards, so it is deliberately not
    * registered by `mount()`.
    */
   handleBackdropClick: (e: MouseEvent) => void;
@@ -65,10 +65,10 @@ export type UseDialogHandle = {
   /**
    * Registers the open-prop watcher and the standard native `close`/`cancel` listeners on the
    * dialog element (Escape closes via the native `cancel` event). Call inside `onMounted()`.
-   * Backdrop-click-to-close is intentionally left to the caller — see `handleBackdropClick`.
+   * Backdrop-click-to-close is intentionally left to the caller: see `handleBackdropClick`.
    */
   mount: () => void;
-  /** The modal dialog controller — open/close/toggle/dispose. */
+  /** The modal dialog controller: open/close/toggle/dispose. */
   overlay: ModalDialogController;
   /**
    * Dispatch `close-request`; if allowed, call `overlay.close()`.
@@ -136,7 +136,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
       settled = true;
       dialog.close();
-      // Do NOT remove 'closing' here — removing it while the native ::backdrop is
+      // Do NOT remove 'closing' here: removing it while the native ::backdrop is
       // still held in the top layer by the 'overlay allow-discrete' transition
       // would revert its opacity to 1 and cause a visible flash. The class is
       // cleaned up at the start of the next open cycle (see setOpen below).
@@ -184,7 +184,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
       if (dialog?.open) {
         // A reopen that arrives while the exit animation is still running cancels
-        // the pending close and keeps the dialog open — the open prop is
+        // the pending close and keeps the dialog open: the open prop is
         // authoritative, so a quick close→reopen cycle must not end with the
         // native dialog closed while the prop still says open.
         cancelExit();
@@ -224,7 +224,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     overlay.close(reason);
   };
 
-  // Invoker Commands API — allows declarative open/close from outside the component:
+  // Invoker Commands API: allows declarative open/close from outside the component:
   //   <button commandfor="ore-dialog-id" command="show-modal">Open</button>
   //   <button commandfor="ore-dialog-id" command="close">Close</button>
   options.host.addEventListener(
@@ -240,7 +240,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
   // The native `<dialog>` element auto-closes on Escape via its own close-watcher, which
   // dispatches a cancelable `cancel` event before `close`. Suppressing/redirecting that is the
-  // spec-correct hook — relying on `keydown`'s `preventDefault()` to stop the close-watcher is
+  // spec-correct hook: relying on `keydown`'s `preventDefault()` to stop the close-watcher is
   // implementation-specific, not guaranteed across browsers.
   const handleCancel = (e: Event): void => {
     // See `handleNativeClose`'s comment: guard against a same-named bubbling event from a
@@ -263,11 +263,11 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   // ── Internal native close handler ─────────────────────────────────────────
   // `e.target` must be checked against the native `<dialog>` itself, the same way
   // `handleBackdropClick` already does: a bubbling `close`-named event fired by *any* descendant
-  // component reaches this listener too — regardless of that event's own `composed` flag, since
+  // component reaches this listener too: regardless of that event's own `composed` flag, since
   // slot-assignment-based event-path computation (a slotted descendant's "parent" is the `<slot>`
   // projecting it) isn't gated by `composed` the way crossing back out of a shadow root is. Some
   // fields nested here (`ore-select`, `ore-combobox`, …) emit their own public `close` event when
-  // *their* dropdown closes — without this check, selecting an option in one of those closes this
+  // *their* dropdown closes: without this check, selecting an option in one of those closes this
   // dialog too, misreading the field's own event as this dialog's native close.
   const handleNativeClose = (e?: Event): void => {
     if (e && e.target !== options.dialogRef.value) return;

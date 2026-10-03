@@ -1,5 +1,5 @@
 ---
-title: Clockwork — API Reference
+title: 'Clockwork: API Reference'
 description: Reference for Clockwork machine definitions, actors, and types.
 ---
 
@@ -52,7 +52,7 @@ function defineMachine<
 >(): <State extends string>(definition: MachineConfig<State, Context, Event>) => Machine<State, Context, Event>;
 ```
 
-Returns a factory that accepts a typed flat machine definition. The definition is trusted as typed: targets, callback shapes, and state keys are compiler-checked. `defineMachine()` rejects only what types cannot express — timer delays outside `0..2,147,483,647` ms, empty transition arrays, and a context that is not a plain record (arrays, `null`, and class instances fail). Omit `context` only when the context type has no keys.
+Returns a factory that accepts a typed flat machine definition. The definition is trusted as typed: targets, callback shapes, and state keys are compiler-checked. `defineMachine()` rejects only what types cannot express: timer delays outside `0..2,147,483,647` ms, empty transition arrays, and a context that is not a plain record (arrays, `null`, and class instances fail). Omit `context` only when the context type has no keys.
 
 The curried signature is required so TypeScript can infer `State` from the `states` object while you explicitly provide `Context` and `Event`. TypeScript does not support partial type argument inference, so the state-key union cannot be inferred in a single non-curried call when the context and event generics are explicit.
 

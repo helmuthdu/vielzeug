@@ -3,7 +3,7 @@ import { MeshPairingError } from './errors';
 /**
  * Base45 (RFC 9285): two bytes → three chars, one leftover byte → two chars.
  * The alphabet sits inside the QR alphanumeric charset, so QR encoders can use
- * alphanumeric mode (~5.5 bits/char) instead of byte mode — about a third
+ * alphanumeric mode (~5.5 bits/char) instead of byte mode: about a third
  * denser than base64 for the same payload.
  */
 

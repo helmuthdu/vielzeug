@@ -140,7 +140,7 @@ describe('animate', () => {
 
     const element = document.createElement('div');
 
-    element.animate([]); // native animation Necromancer does not own — recorded as calls[0]
+    element.animate([]); // native animation Necromancer does not own: recorded as calls[0]
     const first = animate(element, []); // calls[1]
     const second = animate(element, []); // calls[2]
 

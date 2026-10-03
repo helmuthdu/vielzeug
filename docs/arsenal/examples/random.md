@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Random Examples
+title: 'Arsenal: Random Examples'
 description: Random utility examples for Arsenal.
 ---
 

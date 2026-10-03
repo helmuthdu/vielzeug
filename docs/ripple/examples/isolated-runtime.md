@@ -1,5 +1,5 @@
 ---
-title: 'Ripple Examples — Isolated Graph'
+title: 'Ripple Examples: Isolated Graph'
 description: 'Create request-scoped reactive state without global hooks.'
 ---
 

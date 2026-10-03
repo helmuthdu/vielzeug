@@ -73,7 +73,7 @@ const resolve = <V>(value: MaybeGetter<V> | undefined, fallback: V): V =>
  * Keyboard navigation over a two-dimensional grid of items: horizontal arrows step one
  * item, vertical arrows step one row (the column count), Home/End jump to the ends.
  *
- * Unlike `createListNavigation`, items are not skipped when disabled — skipping in two
+ * Unlike `createListNavigation`, items are not skipped when disabled: skipping in two
  * dimensions would break row alignment. Focus (or otherwise activate) the item reported
  * by the returned change; `handleKeydown` calls `preventDefault()` for every recognized
  * key so unhandled arrows never scroll the page.

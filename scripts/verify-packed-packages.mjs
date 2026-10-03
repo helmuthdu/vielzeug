@@ -145,7 +145,7 @@ if (isMain(import.meta.url)) {
   const targets = requested.includes('all') ? [...projectMap().keys()] : requested;
 
   verifyPackedPackages(targets, { progress: console.log }).then(
-    () => console.log(`OK — packed consumer verification passed for ${targets.join(', ')}.`),
+    () => console.log(`OK: packed consumer verification passed for ${targets.join(', ')}.`),
     (error) => {
       console.error(error);
       process.exitCode = 1;

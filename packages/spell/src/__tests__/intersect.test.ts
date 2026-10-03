@@ -63,7 +63,7 @@ describe('s.intersect()', () => {
   });
 });
 
-describe('s.intersect() — async', () => {
+describe('s.intersect(): async', () => {
   it('runs async refinements on all branches', async () => {
     const a = s.string().checkAsync(async (s) => s.length >= 3 || 'Too short');
     const b = s.string().checkAsync(async (s) => s.length <= 10 || 'Too long');
@@ -93,7 +93,7 @@ describe('s.intersect() — async', () => {
     }
   });
 
-  it('async: partial branch failure — output from succeeding branches only (B1 regression)', async () => {
+  it('async: partial branch failure: output from succeeding branches only (B1 regression)', async () => {
     const A = s.object({ a: s.string() }).relaxed();
     const B = s.object({ b: s.number() }).relaxed();
     const schema = s.intersect(A, B);

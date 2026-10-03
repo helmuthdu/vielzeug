@@ -126,7 +126,7 @@ export type PulseOptions = {
 
 /**
  * Runtime events emitted by {@link Pulse.tap}.
- * Subscribe via `pulse.tap(handler)` — handler errors are swallowed.
+ * Subscribe via `pulse.tap(handler)`: handler errors are swallowed.
  */
 export type PulseEvent =
   | { readonly status: PulseStatus; readonly type: 'status-change' }
@@ -161,7 +161,7 @@ export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extend
    * Returns an unsubscribe function. The handler is auto-removed on `dispose()`.
    */
   on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
-  /** Subscribe once — auto-removes after first invocation. */
+  /** Subscribe once: auto-removes after first invocation. */
   once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
   /**
    * Send a typed message to the server, scoped to this channel.
@@ -270,7 +270,7 @@ export type Pulse<S extends PulseSchema = PulseSchema> = {
    * The same handler can be registered multiple times independently.
    */
   on<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
-  /** Subscribe once — auto-removes after first invocation. */
+  /** Subscribe once: auto-removes after first invocation. */
   once<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
 
   // ── Rooms ──────────────────────────────────────────────────────────────────

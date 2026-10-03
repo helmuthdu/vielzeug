@@ -1,5 +1,5 @@
 ---
-title: Courier — HTTP client
+title: 'Courier: HTTP client'
 description: A framework-neutral HTTP client with explicit cached reads, prefetching, immutable middleware, typed paths, and structured errors.
 package: courier
 category: http
@@ -50,7 +50,7 @@ const user = await courier.get<User>('/users/{id}', { params: { id: userId } });
 
 <div class="decision-callout">
 
-**Use Courier when** one client should own typed HTTP, explicit cached GETs and prefetching, immutable middleware, and structured errors — while a separate state layer owns observable queries and mutations.
+**Use Courier when** one client should own typed HTTP, explicit cached GETs and prefetching, immutable middleware, and structured errors, while a separate state layer owns observable queries and mutations.
 
 **Consider ky when** you only need a compact fetch wrapper. **Consider ofetch when** you want a bundled fetch utility with its own retry and caching conventions.
 
@@ -100,16 +100,16 @@ try {
 
 <div class="features-grid">
 
-- **`createCourier()`** — one lifecycle, immutable middleware pipeline, header defaults, and cancellation boundary.
-- **`request()`** — one contract for every HTTP method; pass `method` in the config.
-- **Cached `get()`** — opt in with a structured key and optional per-read TTL; successful parsed values share bounded storage and in-flight work.
-- **`prefetch()`** — await cache warming while request failures remain observable through `tap()`.
-- **`invalidateCache()` / `clearCache()`** — invalidate structured key prefixes without query state.
-- **`get()` / `post()` / `put()` / `patch()` / `delete()`** — conveniences for standard methods.
-- **`withBearerAuth()` / `withRequestId()` / `withLogging()`** — composable middleware configured at construction.
-- **`tap()`** — signal-owned structured transport observation.
-- **Error taxonomy** — HTTP, network, timeout, abort, parse, and schema failures are distinct, actionable classes.
-- **`cancelAll()` / `dispose()`** — abort active requests and tear down the transport.
+- **`createCourier()`**: one lifecycle, immutable middleware pipeline, header defaults, and cancellation boundary.
+- **`request()`**: one contract for every HTTP method; pass `method` in the config.
+- **Cached `get()`**: opt in with a structured key and optional per-read TTL; successful parsed values share bounded storage and in-flight work.
+- **`prefetch()`**: await cache warming while request failures remain observable through `tap()`.
+- **`invalidateCache()` / `clearCache()`**: invalidate structured key prefixes without query state.
+- **`get()` / `post()` / `put()` / `patch()` / `delete()`**: conveniences for standard methods.
+- **`withBearerAuth()` / `withRequestId()` / `withLogging()`**: composable middleware configured at construction.
+- **`tap()`**: signal-owned structured transport observation.
+- **Error taxonomy**: HTTP, network, timeout, abort, parse, and schema failures are distinct, actionable classes.
+- **`cancelAll()` / `dispose()`**: abort active requests and tear down the transport.
 
 </div>
 
@@ -128,9 +128,9 @@ try {
 
 <div class="see-also">
 
-- [Flux](/flux/) — composes async streams; pair with Courier transport calls in the owning state layer.
-- [Spell](/spell/) — validates parsed HTTP payloads through Courier's `schema` option.
-- [Postmaster](/postmaster/) — coordinates durable delivery of Courier requests through a job outbox.
+- [Flux](/flux/): composes async streams; pair with Courier transport calls in the owning state layer.
+- [Spell](/spell/): validates parsed HTTP payloads through Courier's `schema` option.
+- [Postmaster](/postmaster/): coordinates durable delivery of Courier requests through a job outbox.
 
 </div>
 

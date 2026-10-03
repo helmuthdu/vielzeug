@@ -41,7 +41,7 @@ import {
 } from '../validators';
 
 // ---------------------------------------------------------------------------
-// validators.ts — type guards and range helpers
+// validators.ts: type guards and range helpers
 // ---------------------------------------------------------------------------
 
 describe('isString', () => {
@@ -208,7 +208,7 @@ describe('hasMaxLength', () => {
 });
 
 // ---------------------------------------------------------------------------
-// formats.ts — standalone format validators
+// formats.ts: standalone format validators
 // ---------------------------------------------------------------------------
 
 describe('isEmail', () => {

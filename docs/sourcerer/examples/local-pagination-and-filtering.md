@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — Local Pagination and Filtering'
+title: 'Sourcerer Examples: Local Pagination and Filtering'
 description: 'Filter and paginate an in-memory collection with typed params.'
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: Necromancer — API Reference
+title: 'Necromancer: API Reference'
 description: API reference for @vielzeug/necromancer animation ownership, groups, reduced motion, and FLIP transitions.
 ---
 
@@ -91,7 +91,7 @@ await group.results;
 function shouldReduceMotion(mode: MotionMode): boolean;
 ```
 
-Reports whether the requested motion preference reduces visible movement — the same check `animate()` applies internally, exposed so hand-rolled effects (scroll behavior, tweens) stay consistent with it. `'full'` is always `false`, `'reduced'` is always `true`, and `'system'` reads the `prefers-reduced-motion` media query (`false` where `matchMedia` is unavailable).
+Reports whether the requested motion preference reduces visible movement: the same check `animate()` applies internally, exposed so hand-rolled effects (scroll behavior, tweens) stay consistent with it. `'full'` is always `false`, `'reduced'` is always `true`, and `'system'` reads the `prefers-reduced-motion` media query (`false` where `matchMedia` is unavailable).
 
 ```ts
 import { shouldReduceMotion } from '@vielzeug/necromancer';

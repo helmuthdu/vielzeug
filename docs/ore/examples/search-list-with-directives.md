@@ -1,5 +1,5 @@
 ---
-title: 'Ore Examples — Search List with Directives'
+title: 'Ore Examples: Search List with Directives'
 description: 'Search List with Directives example for @vielzeug/ore.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Search List with Directives example for @vielzeug/ore.'
 
 ### Problem
 
-You have a list that should filter as the user types into an input — binding the input value to a signal and conditionally rendering list items based on that signal.
+You have a list that should filter as the user types into an input: binding the input value to a signal and conditionally rendering list items based on that signal.
 
 ### Solution
 
@@ -47,12 +47,12 @@ define('search-list', {
 
 ### Pitfalls
 
-- `each()` takes positional arguments `(source, key, render, fallback?)` — not an options object `{ key, render }`. Passing an object will fail silently.
+- `each()` takes positional arguments `(source, key, render, fallback?)`: not an options object `{ key, render }`. Passing an object will fail silently.
 - Mutating an array in place (`list.push(item)`) does not trigger re-render. Assign a new array reference: `items.value = [...items.value, item]`.
 - Using array index as the key (`(_, i) => i`) works for static lists but causes DOM reuse bugs when items are reordered or removed. Prefer stable IDs.
 
 ### Related
 
-- [Scroll — Virtual lists](/scroll/) for rendering large filtered datasets efficiently
-- [Ripple — Computed signals](/ripple/) for the `computed()` used to derive the filtered list
+- [Scroll: Virtual lists](/scroll/) for rendering large filtered datasets efficiently
+- [Ripple: Computed signals](/ripple/) for the `computed()` used to derive the filtered list
 - [Counter Component](./counter-component.md)

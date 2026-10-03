@@ -13,7 +13,7 @@ db.disposalSignal.addEventListener('abort', () => clearInterval(pruneInterval))
 
 // Write a session that expires in 1 ms
 await db.put('sessions', { token: 'FAKE-TOKEN-ONE', user: 1 }, ttl.ms(1))
-await db.put('sessions', { token: 'FAKE-TOKEN-TWO', user: 2 }) // no TTL — permanent
+await db.put('sessions', { token: 'FAKE-TOKEN-TWO', user: 2 }) // no TTL: permanent
 
 console.log('before prune:', await db.count('sessions')) // 2 (lazy eviction: both exist physically)
 
@@ -24,5 +24,5 @@ console.log('pruned:', pruned.sessions) // 1 (the expired session)
 console.log('after prune:', await db.count('sessions')) // 1
 
 await db.dispose()`,
-  name: 'TTL — pruneExpired with disposalSignal',
+  name: 'TTL: pruneExpired with disposalSignal',
 };

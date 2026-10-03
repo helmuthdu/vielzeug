@@ -1,5 +1,5 @@
 ---
-title: 'Necromancer Examples — Animate on Mount'
+title: 'Necromancer Examples: Animate on Mount'
 description: 'Animate a mounted DOM element with @vielzeug/necromancer.'
 ---
 

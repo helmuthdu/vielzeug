@@ -100,7 +100,7 @@ describe('applyTrain()', () => {
 
     expect(result).toEqual({ changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'], train: '26.10.0' });
 
-    // Every manifest carries the train — lockstep.
+    // Every manifest carries the train: lockstep.
     for (const slug of ['ore', 'orbit']) {
       expect(JSON.parse(readFileSync(path.join(repo, 'packages', slug, 'package.json'), 'utf8')).version).toBe('26.10.0');
     }
@@ -139,7 +139,7 @@ describe('applyTrain()', () => {
     expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(false);
     expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json'))).toBe(true);
 
-    // The sibling is stamped (a train is repo-wide) but gets no changelog entry —
+    // The sibling is stamped (a train is repo-wide) but gets no changelog entry :
     // publish-missing's changelog-entry rule keeps it from ever publishing this train.
     expect(JSON.parse(readFileSync(path.join(repo, 'packages', 'orbit', 'package.json'), 'utf8')).version).toBe('26.10.0');
     expect(readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.md'), 'utf8')).not.toContain('## 26.10.0');

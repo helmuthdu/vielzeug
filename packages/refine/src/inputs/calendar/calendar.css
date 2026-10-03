@@ -142,7 +142,7 @@
     min-height: calc(7 * var(--size-10) + 6 * var(--size-0-5));
   }
 
-  /* role="row" wrappers exist for ARIA grid structure only — `display: contents`
+  /* role="row" wrappers exist for ARIA grid structure only: `display: contents`
      removes them from layout so their children still participate directly in the
      parent's CSS grid tracks. */
   .cal-grid [role='row'] {
@@ -239,7 +239,7 @@
 
   .cal-grid-months,
   .cal-grid-years {
-    /* 4-column grid — same width as cal-grid-days, natural height. */
+    /* 4-column grid: same width as cal-grid-days, natural height. */
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--size-1);
@@ -347,7 +347,7 @@
     background: color-mix(in oklch, var(--_day-selected-bg) 6%, transparent);
   }
 
-  /* Selected day — circle around the number only */
+  /* Selected day: circle around the number only */
   :host([expanded]) .cal-cell-day[data-selected] {
     color: inherit;
     background: transparent;
@@ -370,7 +370,7 @@
     border-radius: var(--rounded-full);
   }
 
-  /* Today — circle in accent colour */
+  /* Today: circle in accent colour */
   :host([expanded]) .cal-cell-day[data-today] {
     font-weight: inherit;
     color: inherit;
@@ -393,7 +393,7 @@
     border-radius: var(--rounded-full);
   }
 
-  /* When both today AND selected — selected wins */
+  /* When both today AND selected: selected wins */
   :host([expanded]) .cal-cell-day[data-today][data-selected]::before {
     background: var(--_day-selected-bg);
   }
@@ -422,7 +422,7 @@
     color: var(--color-contrast-500);
   }
 
-  /* Dots are hidden in expanded mode — pills take over */
+  /* Dots are hidden in expanded mode: pills take over */
   :host([expanded]) .cal-dots {
     display: none;
   }

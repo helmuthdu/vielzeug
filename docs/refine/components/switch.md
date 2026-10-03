@@ -64,7 +64,7 @@ Prevent interaction and reduce opacity for unavailable options.
 
 ### Form Integration
 
-Switches work seamlessly with forms using name and value attributes. Use switches for instant actions that take effect immediately — when changes require a save/submit action, use a checkbox instead.
+Switches work seamlessly with forms using name and value attributes. Use switches for instant actions that take effect immediately, when changes require a save/submit action, use a checkbox instead.
 
 <ComponentPreview center>
 
@@ -217,4 +217,4 @@ The switch component follows WCAG 2.1 Level AA standards.
 
 The component uses `role="switch"` with `aria-checked` reflecting the on/off state (`"true"` or `"false"`). `aria-labelledby` links the label; `aria-describedby` links helper and error text. `aria-disabled` reflects the disabled state. A minimum 44 × 44 px touch target is enforced for mobile usability.
 
-Keyboard navigation is fully supported: `Space` and `Enter` toggle the switch, and `Tab` moves focus to and from the control. Always provide a visible text label — use clear labels that describe what the switch controls; if a switch must be icon-only, supply an `aria-label` so screen readers can announce the purpose.
+Keyboard navigation is fully supported: `Space` and `Enter` toggle the switch, and `Tab` moves focus to and from the control. Always provide a visible text label: use clear labels that describe what the switch controls; if a switch must be icon-only, supply an `aria-label` so screen readers can announce the purpose.

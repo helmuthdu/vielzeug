@@ -11,7 +11,7 @@ import axe from 'axe-core';
 // computed colour produce false positives/negatives. We disable those here so
 // the structural/ARIA/name/role checks that jsdom CAN evaluate stay reliable.
 // The disabled rules (colour contrast, target size, …) must be verified in a
-// real browser or by manual/visual review — not asserted in these tests.
+// real browser or by manual/visual review: not asserted in these tests.
 const JSDOM_UNRELIABLE_RULES: Record<string, { enabled: false }> = {
   'color-contrast': { enabled: false },
   'color-contrast-enhanced': { enabled: false },
@@ -53,7 +53,7 @@ install(afterEach, { formInternals: true });
 
 const consoleError = globalThis.console.error;
 const consoleWarn = globalThis.console.warn;
-// ore-async intentionally renders no named slots when status="idle" — the E10
+// ore-async intentionally renders no named slots when status="idle": the E10
 // warning is expected and harmless in that state.
 const isKnownAsyncSlotWarning = (args: unknown[]) =>
   args.some((arg) => typeof arg === 'string' && arg.includes('[ore:E10]') && arg.includes('<ore-async>'));
@@ -70,7 +70,7 @@ globalThis.console.warn = (...args: unknown[]) => {
   consoleWarn(...args);
 };
 
-// jsdom defines TouchEvent but not the Touch constructor — add a minimal polyfill
+// jsdom defines TouchEvent but not the Touch constructor: add a minimal polyfill
 if (typeof Touch === 'undefined') {
   (globalThis as any).Touch = class Touch {
     identifier: number;
@@ -116,7 +116,7 @@ if (typeof Touch === 'undefined') {
   };
 }
 
-// jsdom does not implement scrollIntoView — stub it to avoid unhandled errors
+// jsdom does not implement scrollIntoView: stub it to avoid unhandled errors
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
@@ -126,7 +126,7 @@ if (!Element.prototype.scrollTo) {
   (Element.prototype as any).scrollTo = () => {};
 }
 
-// jsdom does not implement ResizeObserver — stub it so layout components can load
+// jsdom does not implement ResizeObserver: stub it so layout components can load
 if (typeof ResizeObserver === 'undefined') {
   (globalThis as any).ResizeObserver = class ResizeObserver {
     observe() {}
@@ -138,7 +138,7 @@ if (typeof ResizeObserver === 'undefined') {
 globalThis.window.URL.createObjectURL = vi.fn();
 globalThis.window.URL.revokeObjectURL = vi.fn();
 
-// jsdom does not implement IntersectionObserver — stub it
+// jsdom does not implement IntersectionObserver: stub it
 if (typeof IntersectionObserver === 'undefined') {
   (globalThis as any).IntersectionObserver = class IntersectionObserver {
     observe() {}

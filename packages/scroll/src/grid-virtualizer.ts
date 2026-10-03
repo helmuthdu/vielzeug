@@ -28,7 +28,7 @@ export type { VirtualItem };
 export interface GridVirtualizerState {
   /**
    * Visible column descriptors.
-   * Callers form the cross-product `rows × cols` as needed — no O(r×c) Cell
+   * Callers form the cross-product `rows × cols` as needed: no O(r×c) Cell
    * allocation per scroll tick (R8).
    */
   readonly cols: VirtualItem[];
@@ -183,7 +183,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     toNonNegativeInt(options.colGap ?? 0),
   );
 
-  // R4: Single coordinated flush flag — prevents two separate microtasks.
+  // R4: Single coordinated flush flag: prevents two separate microtasks.
   let pendingBatchBuild = false;
 
   // ─── Clamping ──────────────────────────────────────────────────────────────
@@ -258,7 +258,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       });
     }
 
-    // R8: Build rows[] and cols[] separately — no cross-product VirtualCell[].
+    // R8: Build rows[] and cols[] separately: no cross-product VirtualCell[].
     const nextRows: VirtualItem[] = [];
 
     for (let r = renderFirstRow; r <= renderLastRow; r++) {

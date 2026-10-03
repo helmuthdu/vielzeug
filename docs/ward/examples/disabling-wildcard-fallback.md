@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Wildcard Exceptions'
+title: 'Ward Examples: Wildcard Exceptions'
 description: 'Override a broad wildcard policy through rule order.'
 ---
 

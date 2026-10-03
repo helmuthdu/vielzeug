@@ -36,7 +36,7 @@ export function anyOf<T>(...predicates: Predicate<T>[]): Predicate<T> {
  * Returns a predicate that is `true` when none of the provided predicates match.
  * With a single predicate this is equivalent to logical NOT.
  *
- * With zero predicates, returns `true` for all values (nothing fails — vacuous truth).
+ * With zero predicates, returns `true` for all values (nothing fails: vacuous truth).
  *
  * @example
  * ```ts

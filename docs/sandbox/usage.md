@@ -1,5 +1,5 @@
 ---
-title: Sandbox — Usage Guide
+title: 'Sandbox: Usage Guide'
 description: Render untrusted HTML, push typed state, receive sandbox messages, update live content, and manage iframe lifecycle.
 ---
 

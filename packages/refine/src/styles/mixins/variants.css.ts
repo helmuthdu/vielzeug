@@ -8,7 +8,7 @@ import { css } from '@vielzeug/ore';
  * theme-aware colors, halo shadows, and elevation support.
  *
  * @param selector - CSS selector for the element, matched against the
- *   component's actual shadow DOM markup (e.g., '.card', '.field') — a bare
+ *   component's actual shadow DOM markup (e.g., '.card', '.field'): a bare
  *   word like 'button' is a TYPE selector for a literal `<button>` tag, not
  *   a part/class selector. Use `'[part="button"]'` for components whose root
  *   is a `<span part="button">`/`<a part="button">` (e.g. ore-button, which

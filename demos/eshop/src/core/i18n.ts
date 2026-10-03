@@ -99,7 +99,7 @@ const messages = {
         title: 'Lieferoption',
       },
       errors: {
-        emptyCart: 'Ihr Warenkorb ist leer — fügen Sie ein Modell hinzu, bevor Sie zur Kasse gehen.',
+        emptyCart: 'Ihr Warenkorb ist leer: fügen Sie ein Modell hinzu, bevor Sie zur Kasse gehen.',
         missingDealer: 'Bitte wählen Sie einen Händler für die Abholung aus.',
         missingPayment: 'Bitte wählen Sie zuerst eine Zahlungsart.',
         missingShipping: 'Bitte bestätigen Sie zuerst Ihre Lieferadresse.',
@@ -114,7 +114,7 @@ const messages = {
         termOption: '{months} Monate',
         title: 'Zahlung',
         verificationCode: 'Bestätigungscode',
-        verificationError: 'Der Code stimmt nicht überein — versuchen Sie 123456 für dieses Demo.',
+        verificationError: 'Der Code stimmt nicht überein: versuchen Sie 123456 für dieses Demo.',
         verificationHint: 'Geben Sie den an Ihr Telefon gesendeten 6-stelligen Code ein (Demo: 123456).',
       },
       review: {
@@ -248,7 +248,7 @@ const messages = {
       embedBuild: 'Konfiguration einbetten',
       estimatedDelivery: 'Voraussichtliche Lieferung',
       notFound:
-        'Diese Bestellung konnte nicht gefunden werden — sie wurde möglicherweise bereits in einem anderen Tab bestätigt.',
+        'Diese Bestellung konnte nicht gefunden werden: sie wurde möglicherweise bereits in einem anderen Tab bestätigt.',
       orderNumber: 'Bestellnummer',
       shareBuild: 'Konfiguration teilen',
       title: 'Bestellung bestätigt',
@@ -256,12 +256,12 @@ const messages = {
     footer: {
       accountHeading: 'Konto',
       blurb:
-        'Vielzeug Motors ist eine Demo-Storefront, die das @vielzeug-Toolkit-Ökosystem vorstellt — kein echtes Autohaus.',
+        'Vielzeug Motors ist eine Demo-Storefront, die das @vielzeug-Toolkit-Ökosystem vorstellt: kein echtes Autohaus.',
       copyright: '© {year} Vielzeug Motors. Alle Rechte vorbehalten.',
       disclaimer: 'Nur zu Demonstrationszwecken erstellt. Keine echten Fahrzeuge, Preise oder Bestellungen.',
       shopHeading: 'Modelle',
       supportHeading: 'Hilfe',
-      tagline: 'Präzisionstechnik — bis vor Ihre Haustür geliefert.',
+      tagline: 'Präzisionstechnik: bis vor Ihre Haustür geliefert.',
     },
     model: {
       availability: {
@@ -307,7 +307,7 @@ const messages = {
       packages: 'Pakete',
       packagesChanged: '{count} Zusatzpaket(e) ausgewählt.',
       packagesTooltip:
-        'Optionale Ausstattungspakete — in Ihrer Ausstattungslinie bereits enthaltene Pakete sind oben als Chips aufgeführt.',
+        'Optionale Ausstattungspakete: in Ihrer Ausstattungslinie bereits enthaltene Pakete sind oben als Chips aufgeführt.',
       priceBreakdown: 'Preisaufschlüsselung',
       priceDetails: 'Preisdetails',
       priceDisclaimer: 'Enthält geschätzte Steuern. Zulassung, Lieferung und Händlergebühren sind nicht enthalten.',
@@ -320,7 +320,7 @@ const messages = {
       selectedPaintWithPrice: 'Lackierung: {name} +{price}',
       selectTrim: 'Ausstattungslinie',
       selectTrimTooltip:
-        'Eine Ausstattungslinie legt das Serienausstattungsniveau fest — der Preis enthält alles, was angezeigt wird. „AS“ steht für die sportlichere Vielzeug-Sport-Linie.',
+        'Eine Ausstattungslinie legt das Serienausstattungsniveau fest: der Preis enthält alles, was angezeigt wird. „AS“ steht für die sportlichere Vielzeug-Sport-Linie.',
       selectWheels: 'Räder',
       specs: 'Technische Daten',
       standardWithBuild: 'Serienausstattung dieser Konfiguration',
@@ -374,7 +374,7 @@ const messages = {
       viewConfigurations: 'Ausstattungen ansehen',
       viewSpecs: 'Technische Daten ansehen',
       welcome:
-        'Ich helfe Ihnen, den {name} kennenzulernen — ohne Verkaufsdruck. Fragen Sie nach Platz, Fahrgefühl, Effizienz oder Besitz.',
+        'Ich helfe Ihnen, den {name} kennenzulernen: ohne Verkaufsdruck. Fragen Sie nach Platz, Fahrgefühl, Effizienz oder Besitz.',
     },
     modelLanding: {
       availability: 'Bestellstatus',
@@ -633,7 +633,7 @@ const messages = {
         noPermissionPlace: 'Sie sind nicht berechtigt, eine Bestellung aufzugeben.',
         noPermissionUpdate: 'Sie sind nicht berechtigt, diese Bestellung zu aktualisieren.',
         placeError: 'Ihre Bestellung konnte nicht aufgegeben werden. Bitte versuchen Sie es erneut.',
-        placeSuccess: 'Bestellung aufgegeben — vielen Dank!',
+        placeSuccess: 'Bestellung aufgegeben: vielen Dank!',
         updateError: 'Die Bestellung konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.',
         updateSuccess: 'Bestellung als „{status}“ markiert.',
       },
@@ -814,7 +814,7 @@ const messages = {
         title: 'Delivery',
       },
       errors: {
-        emptyCart: 'Your cart is empty — add a model before checking out.',
+        emptyCart: 'Your cart is empty: add a model before checking out.',
         missingDealer: 'Please choose a dealer for pickup.',
         missingPayment: 'Please choose a payment method first.',
         missingShipping: 'Please confirm your shipping details first.',
@@ -829,7 +829,7 @@ const messages = {
         termOption: '{months} months',
         title: 'Payment',
         verificationCode: 'Verification code',
-        verificationError: "That code doesn't match — try 123456 for this demo.",
+        verificationError: "That code doesn't match: try 123456 for this demo.",
         verificationHint: 'Enter the 6-digit code sent to your phone (demo: 123456).',
       },
       review: {
@@ -962,7 +962,7 @@ const messages = {
       copyBuildLink: 'Copy build link',
       embedBuild: 'Embed this build',
       estimatedDelivery: 'Estimated delivery',
-      notFound: "We couldn't find that order — it may have already been confirmed in another tab.",
+      notFound: "We couldn't find that order: it may have already been confirmed in another tab.",
       orderNumber: 'Order number',
       shareBuild: 'Share this build',
       title: 'Order confirmed',
@@ -970,7 +970,7 @@ const messages = {
     footer: {
       accountHeading: 'Account',
       blurb:
-        'Vielzeug Motors is a demo storefront built to showcase the @vielzeug toolkit ecosystem — not a real dealership.',
+        'Vielzeug Motors is a demo storefront built to showcase the @vielzeug toolkit ecosystem: not a real dealership.',
       copyright: '© {year} Vielzeug Motors. All rights reserved.',
       disclaimer: 'Built for demonstration purposes only. No real vehicles, prices, or orders.',
       shopHeading: 'Shop',
@@ -1000,7 +1000,7 @@ const messages = {
       },
       finance: {
         apr: '{apr}% APR',
-        disclaimer: 'Estimate only — actual rate depends on credit approval and lender terms.',
+        disclaimer: 'Estimate only: actual rate depends on credit approval and lender terms.',
         downPayment: 'Down payment ({currency})',
         downPaymentAdjusted: 'Down payment adjusted to the new vehicle total.',
         monthlyEstimate: 'Estimated monthly payment',
@@ -1021,7 +1021,7 @@ const messages = {
       packages: 'Packages',
       packagesChanged: '{count} extra package(s) selected.',
       packagesTooltip:
-        'Optional equipment bundles — packages already included with your chosen trim are listed above as chips.',
+        'Optional equipment bundles: packages already included with your chosen trim are listed above as chips.',
       priceBreakdown: 'Price breakdown',
       priceDetails: 'Price details',
       priceDisclaimer: 'Includes estimated tax. Excludes registration, delivery, and dealer fees.',
@@ -1034,7 +1034,7 @@ const messages = {
       selectedPaintWithPrice: 'Paint: {name} +{price}',
       selectTrim: 'Trim',
       selectTrimTooltip:
-        'A trim is a predefined equipment level for this model — pricing includes everything shown. "AS" denotes the sportier Vielzeug Sport line.',
+        'A trim is a predefined equipment level for this model: pricing includes everything shown. "AS" denotes the sportier Vielzeug Sport line.',
       selectWheels: 'Wheels',
       specs: 'Specifications',
       standardWithBuild: 'Standard with this build',
@@ -1343,7 +1343,7 @@ const messages = {
         noPermissionPlace: 'You do not have permission to place an order.',
         noPermissionUpdate: 'You do not have permission to update this order.',
         placeError: 'Failed to place your order. Please try again.',
-        placeSuccess: 'Order placed — thank you!',
+        placeSuccess: 'Order placed: thank you!',
         updateError: 'Failed to update the order. Please try again.',
         updateSuccess: 'Order marked as "{status}".',
       },
@@ -1449,7 +1449,7 @@ export function setLocale(locale: 'de' | 'en'): Promise<void> {
   return i18n.setLocale(locale);
 }
 
-/** Reactive locale — reading it inside a computed/template registers the dependency. */
+/** Reactive locale: reading it inside a computed/template registers the dependency. */
 export const currentLocale = computed<'de' | 'en'>(() => (reactive.locale.value === 'de' ? 'de' : 'en'));
 
 /**

@@ -44,7 +44,7 @@ import type { LibraryEntry } from './repl/registry.generated';
 // ============================================================================
 
 // Every library carries `categories` (arsenal is hand-curated into topical groups; every
-// other library gets a single "Exports" bucket — see generate-repl-registry.ts) so this
+// other library gets a single "Exports" bucket: see generate-repl-registry.ts) so this
 // component never needs to special-case "is this arsenal?" the way it used to.
 const props = defineProps<{
   library: LibraryEntry;

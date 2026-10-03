@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — countBy'
+title: 'Arsenal Examples: countBy'
 description: 'countBy example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'countBy example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have a collection and need to count occurrences grouped by a computed key — for example tallying users by role.
+You have a collection and need to count occurrences grouped by a computed key: for example tallying users by role.
 
 ### Solution
 

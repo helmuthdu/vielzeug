@@ -66,7 +66,7 @@ export function computePosition(
 
   devOnly(() => {
     if (rects.floating.width === 0 && rects.floating.height === 0) {
-      warn('computePosition: floating element has zero dimensions — is it hidden or detached from the DOM?');
+      warn('computePosition: floating element has zero dimensions: is it hidden or detached from the DOM?');
     }
 
     const pos = getComputedStyle(floating).position;

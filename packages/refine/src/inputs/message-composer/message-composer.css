@@ -1,13 +1,13 @@
 /*
  * Unlike the first version of this component, the field here is a plain `<textarea>` owned
- * directly by this stylesheet — not a nested `ore-textarea` with its own chrome suppressed via
+ * directly by this stylesheet: not a nested `ore-textarea` with its own chrome suppressed via
  * `::part()` overrides. There is exactly one implementation of "what the field looks like" to
  * maintain (this file), not two.
  */
 @layer refine.base {
   :host {
     /* --_bg/--_border-color are set per-variant in @layer refine.variants below (every host
-       matches exactly one variant rule, including the implicit "no attribute" default) — no
+       matches exactly one variant rule, including the implicit "no attribute" default): no
        fallback needed here. --_padding/--_font-size/--_gap are set per-size by
        sizeVariantMixin(MESSAGE_COMPOSER_SIZE_PRESET) (see message-composer.ts's `styles`); this
        is the `--message-composer-padding` public-override fallback for the "md" tier, matching
@@ -45,7 +45,7 @@
       box-shadow var(--transition-fast);
   }
 
-  /* `flat` excluded — it gets its own theme-tinted hover/focus recipe below instead of the
+  /* `flat` excluded: it gets its own theme-tinted hover/focus recipe below instead of the
      plain canvas-background one every other variant shares (mirrors `ore-textarea`). */
   :host(:not([disabled], [variant='bordered'], [variant='flat'])) .composer:hover {
     border-color: var(--color-contrast-400);
@@ -60,7 +60,7 @@
   }
 
   /* ========================================
-       Status Icon (error/success — never color alone)
+       Status Icon (error/success: never color alone)
        ======================================== */
 
   .status-icon {
@@ -92,7 +92,7 @@
     width: 100%;
     min-width: 0;
 
-    /* Floor so an inline `height` from auto-resize (JS, set on `<textarea>` directly — see
+    /* Floor so an inline `height` from auto-resize (JS, set on `<textarea>` directly: see
        auto-resize.ts) can never visually collapse the field below one line, e.g. before the
        first `scrollHeight` read has actually happened. `ore-textarea` has the equivalent
        `--_min-height` for the same reason. */
@@ -162,17 +162,17 @@
 /*
  * The solid/flat/bordered/outline/ghost variant switch (previously `@layer refine.variants`
  * here) now lives in `fieldVariantMixin({ container: '.composer', text: '.field', tokenPrefix:
- * 'message-composer' })` in `message-composer.ts`'s `styles` array — shared with `ore-input`/
+ * 'message-composer' })` in `message-composer.ts`'s `styles` array: shared with `ore-input`/
  * `ore-textarea` instead of hand-duplicated across all three (see the mixin's own doc comment
  * for what it covers and why).
  */
 
 /*
- * Focus/error/success `box-shadow` on `.composer` — kept in `refine.variants` (alongside
+ * Focus/error/success `box-shadow` on `.composer`: kept in `refine.variants` (alongside
  * `fieldVariantMixin`'s rest-state `box-shadow` for solid/outline/ghost) rather than
  * `refine.base`, so normal specificity decides the winner. Cascade layers beat specificity
  * outright, so a `refine.base` box-shadow here always lost to every variant's unconditional
- * rest-state `box-shadow`, focused/error/success or not — the same bug class fixed for
+ * rest-state `box-shadow`, focused/error/success or not: the same bug class fixed for
  * `ore-otp-input`'s focus ring.
  */
 @layer refine.variants {
@@ -195,7 +195,7 @@
 }
 
 /* ========================================
-     Disabled / Loading overrides — intentionally unlayered
+     Disabled / Loading overrides: intentionally unlayered
      ======================================== */
 
 /*
@@ -203,10 +203,10 @@
  * unlayered `opacity: 0.5` plus `pointer-events: none` on every direct child (this component's
  * template root is a single `.composer` div, so that means the whole card). Cascade layers always
  * lose to unlayered rules regardless of source order or specificity, so these overrides have to
- * stay unlayered too, to actually win — see `ore-input`'s `input.css` for the same pattern.
+ * stay unlayered too, to actually win: see `ore-input`'s `input.css` for the same pattern.
  *
  * `loading` here documents itself as "blocks further sends... without disabling editing" (see
- * the `loading` prop's own doc comment) — the send button already disables itself via
+ * the `loading` prop's own doc comment): the send button already disables itself via
  * `composer.canSend`. Inheriting the generic mixin's `[loading]` treatment silently broke that:
  * `pointer-events: none` on `.composer` cascades (it's an inherited property) to the `<textarea>`
  * itself, blocking typing during every in-flight send. `:not([disabled])` keeps a real `disabled`

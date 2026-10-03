@@ -1,7 +1,7 @@
 // .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
 /**
  * Extracts exported declaration text from a package's src/index.ts (and everything it
- * re-exports via `export * from './x'`, followed recursively — most vielzeug packages are
+ * re-exports via `export * from './x'`, followed recursively: most vielzeug packages are
  * one-function-per-file barrels, so the real declarations rarely live in index.ts itself),
  * keyed by exported name. Bundled once at generate time so `get-type-signature` is an O(1)
  * map lookup instead of a per-request scan.

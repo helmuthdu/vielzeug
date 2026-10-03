@@ -16,7 +16,7 @@ import type { HTMLResult } from './template/result';
 import { loadStylesheet } from './utils/css';
 
 // ─── Component phases ─────────────────────────────────────────────────────────
-// Internal to BaseElement — the only state machine in the package.
+// Internal to BaseElement: the only state machine in the package.
 
 const ComponentPhase = {
   SETUP_DONE: 'setup_done',
@@ -30,9 +30,9 @@ type ComponentPhase = (typeof ComponentPhase)[keyof typeof ComponentPhase];
 // ─── Internal component state ─────────────────────────────────────────────────
 
 type ComponentState = {
-  /** Registered via `onFormReset()` — persists across mount callbacks, unlike `mountCallbacks`. */
+  /** Registered via `onFormReset()`: persists across mount callbacks, unlike `mountCallbacks`. */
   formResetCallbacks: OnFormResetCallback[];
-  /** Incremented on every disconnect — invalidates queued mount callbacks. */
+  /** Incremented on every disconnect: invalidates queued mount callbacks. */
   generation: number;
   mountCallbacks: OnMountedCallback[];
   phase: ComponentPhase;
@@ -72,7 +72,7 @@ const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
  * Why this lives on the class instead of a standalone pure reducer: every
  * transition here is triggered by running actual user code (`def.setup()`,
  * `onMounted` callbacks) inside a reactive `scope.run()` + `runWithContext()`
- * — there is no meaningful "decide the next phase" step that can be separated
+ *: there is no meaningful "decide the next phase" step that can be separated
  * from "run the side-effecting thing that produces the phase change" without
  * introducing a data-only effect-description layer that this package has no
  * other use for. That's why the methods below stay as direct, readable
@@ -142,7 +142,7 @@ export class BaseElement extends HTMLElement {
   }
 
   /**
-   * Native form-association lifecycle callback — the browser calls this on every
+   * Native form-association lifecycle callback: the browser calls this on every
    * `formAssociated: true` element inside a `<form>` when that form is reset.
    * Runs every `onFormReset()` callback registered during `setup()`.
    */
@@ -250,7 +250,7 @@ export class BaseElement extends HTMLElement {
     if (this._component.mountCallbacks.length === 0) return;
 
     const capturedGeneration = this._component.generation;
-    // Tracked as pending work for the duration of this microtask — ended in a `finally`
+    // Tracked as pending work for the duration of this microtask: ended in a `finally`
     // so a thrown callback (already caught per-callback below, but defensive here too)
     // never leaves the counter stuck above zero. See runtime.ts's beginPendingWork().
     const endWork = beginPendingWork();
@@ -261,7 +261,7 @@ export class BaseElement extends HTMLElement {
 
         // Snapshot callbacks so in-loop registrations don't extend this iteration.
         // Nested onMounted registrations are appended to `batch` and run in the same
-        // microtask — no recursive scheduling. Index-based loop because the array
+        // microtask: no recursive scheduling. Index-based loop because the array
         // grows as nested callbacks are discovered.
         const batch = this._component.mountCallbacks.splice(0);
 

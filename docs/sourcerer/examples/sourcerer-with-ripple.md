@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — Reactive Controls with Ripple'
+title: 'Sourcerer Examples: Reactive Controls with Ripple'
 description: 'Project page source state into Ripple signals.'
 ---
 

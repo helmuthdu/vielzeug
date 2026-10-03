@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — uniq'
+title: 'Arsenal Examples: uniq'
 description: 'uniq example for @vielzeug/arsenal.'
 ---
 
@@ -30,7 +30,7 @@ uniq(users, (u) => u.id);
 
 ### Pitfalls
 
-- Without a selector, uses deep equality — use a selector for object arrays to avoid expensive deep comparisons.
+- Without a selector, uses deep equality: use a selector for object arrays to avoid expensive deep comparisons.
 - First occurrence wins when duplicates are found.
 
 ### Related

@@ -60,7 +60,7 @@ Wed, 19 Aug 2026 09:25:42 GMT
 
 ### Patches
 
-- fix: provide() now registers onCleanup to delete its key from the context registry on disconnect — prevents stale context keys leaking to descendants across reconnect and eliminates spurious 'key already provided' dev warnings when setup() runs again on the same element
+- fix: provide() now registers onCleanup to delete its key from the context registry on disconnect: prevents stale context keys leaking to descendants across reconnect and eliminates spurious 'key already provided' dev warnings when setup() runs again on the same element
 
 ## 2.0.8
 Wed, 19 Aug 2026 06:57:36 GMT
@@ -169,12 +169,12 @@ Wed, 08 Jul 2026 09:22:31 GMT
 
 ### Minor changes
 
-- chore: remove SetupContextBag — setup(props) takes only props; lifecycle hooks (onMounted/onCleanup/onEvent/onElement/watchEffect), host bindings (bind/aria), context (inject/injectStrict/provide), and per-instance factories (useEmit/useSlots/getHost) are now free functions imported from @vielzeug/ore. Form helpers (useField/createFormContext) moved to @vielzeug/ore/forms. define()/ComponentDefinition dropped the Emits/SlotNames generics in favor of useEmit<Emits>()/useSlots<SlotNames>().
-- refactor: consolidate lifecycle-guard errors, dedupe bind()/aria() attribute writing, remove each() dev-time keyFn probe, add axeCheck test helper, and harden internal invariants (compiled-template lookups, anchor parentNode) via a new OreInternalError. BREAKING: html`` now throws OreApiError immediately for an invalid dynamic tag name in every build (previously warned and skipped only the one slot) — matches each()'s duplicate-key guard, which already always throws.
+- chore: remove SetupContextBag: setup(props) takes only props; lifecycle hooks (onMounted/onCleanup/onEvent/onElement/watchEffect), host bindings (bind/aria), context (inject/injectStrict/provide), and per-instance factories (useEmit/useSlots/getHost) are now free functions imported from @vielzeug/ore. Form helpers (useField/createFormContext) moved to @vielzeug/ore/forms. define()/ComponentDefinition dropped the Emits/SlotNames generics in favor of useEmit<Emits>()/useSlots<SlotNames>().
+- refactor: consolidate lifecycle-guard errors, dedupe bind()/aria() attribute writing, remove each() dev-time keyFn probe, add axeCheck test helper, and harden internal invariants (compiled-template lookups, anchor parentNode) via a new OreInternalError. BREAKING: html`` now throws OreApiError immediately for an invalid dynamic tag name in every build (previously warned and skipped only the one slot): matches each()'s duplicate-key guard, which already always throws.
 
 ### Patches
 
-- fix: add an IIFE-only aggregate entry (src/iife.ts) merging directives/forms/observers onto window.Ore — without it, downstream IIFE consumers that don't externalize every ore sub-path inline a second, disconnected copy of ore's runtime state
+- fix: add an IIFE-only aggregate entry (src/iife.ts) merging directives/forms/observers onto window.Ore: without it, downstream IIFE consumers that don't externalize every ore sub-path inline a second, disconnected copy of ore's runtime state
 
 ## 1.0.5
 Tue, 07 Jul 2026 09:20:39 GMT

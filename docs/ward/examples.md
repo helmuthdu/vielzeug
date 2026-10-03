@@ -1,5 +1,5 @@
 ---
-title: Ward — Examples
+title: 'Ward: Examples'
 description: Practical examples and recipes for ward.
 ---
 

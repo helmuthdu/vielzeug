@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Explain a Decision'
+title: 'Ward Examples: Explain a Decision'
 description: 'Use deterministic decision reasons to diagnose policy order.'
 ---
 

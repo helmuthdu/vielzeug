@@ -1,5 +1,5 @@
 ---
-title: Forge — Usage Guide
+title: 'Forge: Usage Guide'
 description: Build, validate, submit, bind, and persist typed forms with Forge.
 ---
 
@@ -33,7 +33,7 @@ form.patch({ email: 'ada@example.com' }); // siblings keep their values
 
 ## Hold domain-model classes
 
-Forge values must be plain JSON-safe data. When your app stores class instances (models, DTOs with behavior), pass `normalize: toPlainValues` once at `createForm`; it runs before validation at every write boundary — init, `set`, `patch`, `reset`, and nested `field().set` — so a reset with fresh models behaves like init.
+Forge values must be plain JSON-safe data. When your app stores class instances (models, DTOs with behavior), pass `normalize: toPlainValues` once at `createForm`; it runs before validation at every write boundary: init, `set`, `patch`, `reset`, and nested `field().set`, so a reset with fresh models behaves like init.
 
 ```ts
 import { createForm, toPlainValues } from '@vielzeug/forge';
@@ -170,7 +170,7 @@ export function useFormState<T extends Record<string, unknown>>(form: Form<T>) {
 }
 ```
 
-When the component is the form's sole owner, create it in a ref and skip explicit disposal — writes on a disposed form throw `ForgeDisposedError`, which is what a StrictMode double-mount hits when effect cleanup disposes a ref-held form that survives the remount. Garbage collection reclaims a sole-subscriber form; dispose explicitly only when external subscribers or in-flight work need teardown.
+When the component is the form's sole owner, create it in a ref and skip explicit disposal: writes on a disposed form throw `ForgeDisposedError`, which is what a StrictMode double-mount hits when effect cleanup disposes a ref-held form that survives the remount. Garbage collection reclaims a sole-subscriber form; dispose explicitly only when external subscribers or in-flight work need teardown.
 
 ```ts [Vue]
 import { onUnmounted, shallowRef } from 'vue';

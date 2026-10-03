@@ -85,7 +85,7 @@ Renders a spinner and blocks interaction during async operations.
 
 ## Icons
 
-Use `prefix` and `suffix` slots to add icons alongside text. For icon-only buttons, use `icon-only` with a `label` attribute — the label is set as `aria-label` and is required for accessibility.
+Use `prefix` and `suffix` slots to add icons alongside text. For icon-only buttons, use `icon-only` with a `label` attribute: the label is set as `aria-label` and is required for accessibility.
 
 <ComponentPreview center>
 
@@ -136,7 +136,7 @@ The `rounded` attribute sets the border radius from the theme scale. Used withou
 
 ## Full Height
 
-`fullheight` fills the button's own container height instead of its size preset's fixed height —
+`fullheight` fills the button's own container height instead of its size preset's fixed height :
 useful when the button itself is the whole tappable surface of a space it doesn't otherwise
 control the size of, such as a swipe-revealed row action in [`ore-list-item`](./list.md)'s
 `actions-left`/`actions-right` slots.
@@ -179,7 +179,7 @@ The `effect` attribute adds an animated border. Both effects pause automatically
 
 ### Rainbow
 
-An Okabe-Ito colorblind-safe color sweep — good for highlighting a primary call-to-action.
+An Okabe-Ito colorblind-safe color sweep: good for highlighting a primary call-to-action.
 
 <ComponentPreview center>
 
@@ -240,7 +240,7 @@ A neon comet that sweeps the border using the button's own `color` token.
 
 ### Attached
 
-Removes spacing and connects buttons with shared borders — use for segmented controls.
+Removes spacing and connects buttons with shared borders: use for segmented controls.
 
 <ComponentPreview center>
 
@@ -290,20 +290,20 @@ Removes spacing and connects buttons with shared borders — use for segmented c
 | Attribute   | Type                                                                            | Default    | Description                                                                 |
 | ----------- | ------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
 | `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`  | Visual style                                                                |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | —          | Semantic color; uncolored neutral when omitted                              |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A | Semantic color; uncolored neutral when omitted                              |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                          | `'md'`     | Button size                                                                 |
 | `type`      | `'button' \| 'submit' \| 'reset'`                                               | `'button'` | HTML button type for form association                                       |
 | `disabled`  | `boolean`                                                                       | `false`    | Disables the button                                                         |
 | `loading`   | `boolean`                                                                       | `false`    | Shows spinner; also disables interaction                                    |
-| `effect`    | `'shine' \| 'rainbow'`                                                          | —          | Animated border effect                                                      |
-| `icon-only` | `boolean`                                                                       | `false`    | Square aspect ratio, no padding — pair with `label`                         |
-| `label`     | `string`                                                                        | —          | Sets the accessible label — required for icon-only buttons                   |
+| `effect`    | `'shine' \| 'rainbow'`                                                          | N/A | Animated border effect                                                      |
+| `icon-only` | `boolean`                                                                       | `false`    | Square aspect ratio, no padding: pair with `label`                         |
+| `label`     | `string`                                                                        | N/A | Sets the accessible label: required for icon-only buttons                   |
 | `fullwidth` | `boolean`                                                                       | `false`    | Expands to full container width                                             |
 | `fullheight` | `boolean`                                                                      | `false`    | Expands to full container height (see [List's swipe actions](./list.md))    |
-| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`          | —          | Border radius; omit value or use `'full'` for pill shape                    |
-| `href`      | `string`                                                                        | —          | Renders a native, focusable `<a>` internally                                 |
-| `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —          | Link target (requires `href`)                                               |
-| `rel`       | `string`                                                                        | —          | Link `rel` attribute (requires `href`)                                      |
+| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`          | N/A | Border radius; omit value or use `'full'` for pill shape                    |
+| `href`      | `string`                                                                        | N/A | Renders a native, focusable `<a>` internally                                 |
+| `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | N/A | Link target (requires `href`)                                               |
+| `rel`       | `string`                                                                        | N/A | Link `rel` attribute (requires `href`)                                      |
 
 ### `ore-button-group` Attributes
 
@@ -312,10 +312,10 @@ Removes spacing and connects buttons with shared borders — use for segmented c
 | `orientation` | `'horizontal' \| 'vertical'`                                                    | `'horizontal'` | Layout direction                                 |
 | `attached`    | `boolean`                                                                       | `false`        | Removes spacing and connects buttons with borders|
 | `fullwidth`   | `boolean`                                                                       | `false`        | Buttons expand equally to fill container         |
-| `label`       | `string`                                                                        | —              | `aria-label` for the group container             |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                          | —              | Propagated to all child buttons                  |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | —              | Propagated to all child buttons                  |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | —              | Propagated to all child buttons                  |
+| `label`       | `string`                                                                        | N/A | `aria-label` for the group container             |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                          | N/A | Propagated to all child buttons                  |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | N/A | Propagated to all child buttons                  |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A | Propagated to all child buttons                  |
 
 ### Slots
 
@@ -365,8 +365,8 @@ Removes spacing and connects buttons with shared borders — use for segmented c
 | `--button-color`                     | Text color                                                   | Variant-dependent   |
 | `--button-border`                    | Border width                                                 | `var(--border)`     |
 | `--button-border-color`              | Border color                                                 | Variant-dependent   |
-| `--button-border-top`                | Top border width (used by attached groups)                   | —                   |
-| `--button-border-start`              | Inline-start border width (used by attached groups)          | —                   |
+| `--button-border-top`                | Top border width (used by attached groups)                   | N/A |
+| `--button-border-start`              | Inline-start border width (used by attached groups)          | N/A |
 | `--button-radius`                    | Border radius                                                | `var(--rounded-lg)` |
 | `--button-padding`                   | Inner padding                                                | Size-dependent      |
 | `--button-gap`                       | Gap between icon and text                                    | Size-dependent      |
@@ -387,6 +387,6 @@ Removes spacing and connects buttons with shared borders — use for segmented c
 
 **Screen readers:** The button role and label are announced automatically. `aria-disabled` is set when disabled; `aria-busy` when loading.
 
-**Icon-only buttons:** The `label` attribute is required — it becomes the `aria-label`. Without it, screen readers have nothing to announce.
+**Icon-only buttons:** The `label` attribute is required: it becomes the `aria-label`. Without it, screen readers have nothing to announce.
 
 **Button groups:** The container gets `role="group"` automatically. Set the `label` attribute on the group when the purpose isn't clear from the button labels alone (e.g., `label="Text alignment"`).

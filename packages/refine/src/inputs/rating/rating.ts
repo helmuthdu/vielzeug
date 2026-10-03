@@ -20,7 +20,7 @@ export type OreRatingProps = {
   color?: ThemeColor;
   /** Disable interaction */
   disabled?: boolean;
-  /** Error message — marks the field as invalid (fallback when the `error` slot is empty) */
+  /** Error message: marks the field as invalid (fallback when the `error` slot is empty) */
   error?: string;
   /** Helper text displayed below the stars (fallback when the `helper` slot is empty) */
   helper?: string;

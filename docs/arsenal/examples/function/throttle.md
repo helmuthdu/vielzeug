@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — throttle'
+title: 'Arsenal Examples: throttle'
 description: 'throttle example for @vielzeug/arsenal.'
 ---
 
@@ -34,7 +34,7 @@ editor.on('change', save); // saves at most once per second, after the last chan
 
 ### Pitfalls
 
-- Like `debounce`, create the throttled function once and reuse it — a new instance resets the timer.
+- Like `debounce`, create the throttled function once and reuse it: a new instance resets the timer.
 
 ### Related
 

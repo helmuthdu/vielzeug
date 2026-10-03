@@ -93,7 +93,7 @@ document.querySelectorAll('ore-chip[mode="selectable"]').forEach((chip) => {
 
 ## Action
 
-Set `mode="action"` to make the chip behave like a button — it fires a `click` event but holds no internal state. Use it for quick actions, command triggers, or suggestion pills. Supply `aria-label` for icon-only action chips.
+Set `mode="action"` to make the chip behave like a button: it fires a `click` event but holds no internal state. Use it for quick actions, command triggers, or suggestion pills. Supply `aria-label` for icon-only action chips.
 
 <ComponentPreview center>
 
@@ -212,16 +212,16 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 
 | Attribute         | Type                                                                      | Default    | Description                                                      |
 | ----------------- | ------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
-| `aria-label`      | `string`                                                                  | —          | Accessible label for icon-only chips and custom action text      |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Color theme                                                      |
+| `aria-label`      | `string`                                                                  | N/A | Accessible label for icon-only chips and custom action text      |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme                                                      |
 | `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | `'solid'`  | Visual style variant                                             |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Chip size                                                        |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | —          | Border radius override                                           |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A | Border radius override                                           |
 | `mode`            | `'static' \| 'removable' \| 'selectable' \| 'action'`                     | `'static'` | Interaction mode                                                 |
 | `layout`          | `'inline' \| 'stacked'`                                                   | `'inline'` | `stacked` places the icon above a wrapping label (tile)          |
 | `disabled`        | `boolean`                                                                 | `false`    | Disable the chip (remove button becomes non-functional)          |
-| `value`           | `string`                                                                  | —          | Value passed in the `remove`, `change`, and `click` event detail |
-| `checked`         | `boolean`                                                                 | —          | Controlled checked state for selectable chips                    |
+| `value`           | `string`                                                                  | N/A | Value passed in the `remove`, `change`, and `click` event detail |
+| `checked`         | `boolean`                                                                 | N/A | Controlled checked state for selectable chips                    |
 | `default-checked` | `boolean`                                                                 | `false`    | Initial checked state in uncontrolled selectable mode            |
 
 ### Slots

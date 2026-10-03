@@ -53,7 +53,7 @@ describe('runLocalPublish()', () => {
     expect(publish).toHaveBeenCalledWith(undefined, { dryRun: true, interactive: true, otp: undefined });
   });
 
-  it('always runs interactively — shares this terminal with npm for browser-trust flows', async () => {
+  it('always runs interactively: shares this terminal with npm for browser-trust flows', async () => {
     await runLocalPublish({ build, checkAuth, confirmFn, publish });
     expect(publish).toHaveBeenCalledWith(undefined, { dryRun: false, interactive: true, otp: undefined });
   });

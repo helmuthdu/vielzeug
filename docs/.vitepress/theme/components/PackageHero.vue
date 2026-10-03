@@ -39,7 +39,7 @@ const environmentLabels = computed(() =>
 
 const packageName = computed(() => {
   const title: string = frontmatter.value.title || props.package;
-  return title.replace(/\s*[—–-].*$/, '').trim();
+  return title.replace(/\s*(?:\u2014|–|-|:).*$/, '').trim();
 });
 const packageScope = computed(() => `@vielzeug/${props.package}`);
 const installCommand = computed(() => `pnpm add ${packageScope.value}`);

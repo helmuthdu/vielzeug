@@ -64,7 +64,7 @@ Set `pressed` directly on `ore-keyboard-key` only when displaying one independen
 | Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
 | `size` | `'sm' \| 'lg'` | `'sm'` | Compact hint or large key-state display |
-| `symbol` | `string` | — | Decorative notation shown in the large key's upper corner |
+| `symbol` | `string` | N/A | Decorative notation shown in the large key's upper corner |
 | `pressed` | `boolean` | `false` | Shows the key in its pressed visual state |
 
 **`ore-keyboard-key` Slots and Parts**
@@ -79,8 +79,8 @@ Set `pressed` directly on `ore-keyboard-key` only when displaying one independen
 | Surface | Name | Type | Default | Description |
 | --- | --- | --- | --- | --- |
 | Attribute | `pressed` | `boolean` | `false` | Draws one pressed surround around every grouped key |
-| Slot | (default) | — | — | Keyboard keys in shortcut order |
-| Part | `shortcut` | — | — | Grouping surface around the slotted keys |
+| Slot | (default) | N/A | N/A | Keyboard keys in shortcut order |
+| Part | `shortcut` | N/A | N/A | Grouping surface around the slotted keys |
 
 **CSS Custom Properties**
 

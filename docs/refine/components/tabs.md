@@ -6,7 +6,7 @@ A flexible tabs component for organizing content into switchable panels. Keyboar
 
 #### Solid (Default)
 
-Pill-style tabs in a rounded container — clean and contained.
+Pill-style tabs in a rounded container: clean and contained.
 
 <ComponentPreview>
 
@@ -25,7 +25,7 @@ Pill-style tabs in a rounded container — clean and contained.
 
 #### Flat
 
-Tabs and panel share a single container background — they read as one unified block. Use `variant="flat"` when tabs need to feel visually connected to the panel content below them.
+Tabs and panel share a single container background: they read as one unified block. Use `variant="flat"` when tabs need to feel visually connected to the panel content below them.
 
 <ComponentPreview>
 
@@ -63,7 +63,7 @@ Tabs that visually connect to their panel with a shared border. Use `variant="bo
 
 #### Ghost
 
-Open tabs with a filled active pill — no container border, floats freely.
+Open tabs with a filled active pill: no container border, floats freely.
 
 <ComponentPreview>
 
@@ -105,7 +105,7 @@ Use frost for floating navigation over content or imagery, and avoid placing it 
 
 ## Colors
 
-Set `color` on `ore-tabs` to apply a theme color — it propagates automatically to all tab items. The color drives the active pill fill on `ghost`, the focus ring on all variants, and the indicator line on future `underline`-style usage.
+Set `color` on `ore-tabs` to apply a theme color: it propagates automatically to all tab items. The color drives the active pill fill on `ghost`, the focus ring on all variants, and the indicator line on future `underline`-style usage.
 
 <ComponentPreview vertical>
 
@@ -364,11 +364,11 @@ Disabled tabs are skipped during keyboard navigation.
 
 | Attribute     | Type                                                                      | Default        | Description                                                           |
 | ------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------- |
-| `value`       | `string`                                                                  | —              | Value of the currently selected tab                                   |
+| `value`       | `string`                                                                  | N/A | Value of the currently selected tab                                   |
 | `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                         |
 | `density`     | `'default' \| 'compact'`                                                    | `'default'`    | Spatial density; compact renders a 24px tab control                   |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color propagated to all tab items                               |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color propagated to all tab items                               |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                             |
 | `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms |
 
@@ -389,7 +389,7 @@ Disabled tabs are skipped during keyboard navigation.
 
 | Attribute  | Type                                                                      | Default   | Description                                                     |
 | ---------- | ------------------------------------------------------------------------- | --------- | --------------------------------------------------------------- |
-| `value`    | `string`                                                                  | —         | **Required.** Must match the corresponding `ore-tab-panel` value |
+| `value`    | `string`                                                                  | N/A | **Required.** Must match the corresponding `ore-tab-panel` value |
 | `active`   | `boolean`                                                                 | `false`   | Whether this tab is selected (managed by `ore-tabs`)             |
 | `disabled` | `boolean`                                                                 | `false`   | Prevents the tab from being selected                            |
 | `density`  | `'default' \| 'compact'`                                                   | inherited | Inherited from parent `ore-tabs`                                |
@@ -409,7 +409,7 @@ Disabled tabs are skipped during keyboard navigation.
 
 | Attribute | Type      | Default | Description                                                     |
 | --------- | --------- | ------- | --------------------------------------------------------------- |
-| `value`   | `string`  | —       | **Required.** Must match the corresponding `ore-tab-item` value  |
+| `value`   | `string`  | N/A | **Required.** Must match the corresponding `ore-tab-item` value  |
 | `active`  | `boolean` | `false` | Whether this panel is visible (managed by `ore-tabs`)            |
 | `lazy`    | `boolean` | `false` | Defer rendering slot content until the panel is first activated |
 
@@ -435,4 +435,4 @@ Disabled tabs are skipped during keyboard navigation.
 
 The tabs component follows the WAI-ARIA Tabs Pattern best practices. The tab list has `role="tablist"`. Each tab has `role="tab"` with `aria-selected` and `aria-controls` pointing to its panel. Each panel has `role="tabpanel"` with `aria-labelledby` pointing to its tab. Disabled tabs have `aria-disabled="true"`.
 
-`ArrowRight` / `ArrowLeft` navigate between tabs; `Home` / `End` jump to first / last. Disabled tabs are skipped during keyboard navigation. Avoid nesting tabs inside tabs as it creates confusing navigation hierarchies. Do not use tabs to represent sequential steps; use a stepper component for linear flows. Limit to 5–7 tabs at most — consider a sidebar navigation for larger sets of sections.
+`ArrowRight` / `ArrowLeft` navigate between tabs; `Home` / `End` jump to first / last. Disabled tabs are skipped during keyboard navigation. Avoid nesting tabs inside tabs as it creates confusing navigation hierarchies. Do not use tabs to represent sequential steps; use a stepper component for linear flows. Limit to 5–7 tabs at most: consider a sidebar navigation for larger sets of sections.

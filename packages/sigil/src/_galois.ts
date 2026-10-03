@@ -25,7 +25,7 @@ export function gfMultiply(a: number, b: number): number {
   return a === 0 || b === 0 ? 0 : EXP[LOG[a] + LOG[b]];
 }
 
-/** `αⁱ` — the i-th power of the generator. `i` may exceed 254 (wraps). */
+/** `αⁱ`: the i-th power of the generator. `i` may exceed 254 (wraps). */
 export function gfExp(i: number): number {
   return EXP[i % 255];
 }

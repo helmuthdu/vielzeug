@@ -21,7 +21,7 @@ import componentStyles from './button.css?inline';
 
 export const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'text', 'frost'] as const;
 
-/** Visual variant for ore-button — derived from BUTTON_VARIANTS for a single source of truth. */
+/** Visual variant for ore-button: derived from BUTTON_VARIANTS for a single source of truth. */
 export type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
 
 /** Animated border effect for ore-button. */
@@ -36,7 +36,7 @@ export type OreButtonProps = {
   /** Animated border effect: 'shine' (color-aware neon sweep) or 'rainbow' */
   effect?: ButtonEffect;
   /**
-   * Full height button (100% of container) — the inner `[part="button"]` fills its host's
+   * Full height button (100% of container): the inner `[part="button"]` fills its host's
    * height instead of the size preset's fixed height. Useful when the button itself is the
    * whole tappable surface of a container it doesn't otherwise control the size of (e.g. a
    * swipe-revealed row action in `ore-list-item`'s `actions-left`/`actions-right` slots).
@@ -48,7 +48,7 @@ export type OreButtonProps = {
   href?: string;
   /** Icon-only mode (square aspect ratio, no padding) */
   iconOnly?: boolean;
-  /** Accessible label for the inner button — required for icon-only buttons */
+  /** Accessible label for the inner button: required for icon-only buttons */
   label?: string;
   /** Show loading state with spinner */
   loading?: boolean;
@@ -140,7 +140,7 @@ define<OreButtonProps>(BUTTON_TAG, {
 
     const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
 
-    // isLink and effectiveRel are computed from signals — correct even if href changes at runtime.
+    // isLink and effectiveRel are computed from signals: correct even if href changes at runtime.
     const { effectiveRel, isLink } = useLinkProps(props.href, props.rel, props.target);
 
     // Form association: relay submit/reset clicks to the associated form.
@@ -159,7 +159,7 @@ define<OreButtonProps>(BUTTON_TAG, {
         return;
       }
 
-      // Link mode renders a real <a href> below — the browser handles left/middle/ctrl-click
+      // Link mode renders a real <a href> below: the browser handles left/middle/ctrl-click
       // navigation, target, and rel natively. No manual window.open/location.href needed.
       useFormAction(() => (isLink.value ? null : formField.internals.form), props.type, isDisabled, el)(e);
     };

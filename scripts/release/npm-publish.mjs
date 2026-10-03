@@ -1,12 +1,12 @@
 /**
  * Pack and publish the package in the given folder, retrying with backoff on registry
- * write conflicts (npm E409 — "a previous publish is still processing").
+ * write conflicts (npm E409: "a previous publish is still processing").
  *
- * This is the single place `npm publish` is invoked from CI — every release path (single
+ * This is the single place `npm publish` is invoked from CI: every release path (single
  * package, bulk matrix, missing-version backfill) goes through this module.
  *
  * Deliberately does NOT try to pattern-match npm's stderr to guess a friendlier error message
- * (E404 vs ENEEDAUTH vs auth misconfiguration) — that guesswork breaks silently whenever npm
+ * (E404 vs ENEEDAUTH vs auth misconfiguration), that guesswork breaks silently whenever npm
  * changes its wording and hides the real, already-clear npm error. Non-conflict failures are
  * surfaced as-is.
  *
@@ -15,46 +15,46 @@
  * No `NPM_TOKEN` secret exists. Publishing relies entirely on npm's Trusted Publishing (OIDC):
  * npm CLI >= 11.5.1 auto-exchanges the GitHub Actions job's OIDC identity for a short-lived
  * publish token, provided a Trusted Publisher is registered on npmjs.com for that package, this
- * repo, and the triggering workflow filename (`publish.yml`; see `.github/AGENTS.md`) — and
+ * repo, and the triggering workflow filename (`publish.yml`; see `.github/AGENTS.md`), and
  * provided the caller job has `permissions: id-token: write`.
  *
  * The workflows never write an `.npmrc` auth line for this. `actions/setup-node`'s
  * `registry-url` input always fills `${NODE_AUTH_TOKEN}` with a dummy placeholder value when no
- * token is given (actions/setup-node#1440) — npm reads that non-empty-but-garbage value as "a
+ * token is given (actions/setup-node#1440): npm reads that non-empty-but-garbage value as "a
  * credential is configured" and skips OIDC entirely, publishing unauthenticated. The fix isn't
  * clearing the placeholder afterwards (an empty `_authToken=` line still counts as "configured"
  * and produces `ENEEDAUTH` instead); it's never calling `actions/setup-node` with `registry-url`
- * at all. The repo-root `.npmrc`'s plain `registry=` line is all npm needs — Node/npm themselves
+ * at all. The repo-root `.npmrc`'s plain `registry=` line is all npm needs: Node/npm themselves
  * come from `.github/actions/setup`, which only sets `node-version-file`, never `registry-url`.
  *
  * ## EOTP / browser-trust prompts when running this outside CI
  *
  * A browser/password `npm login` session with 2FA-for-writes enabled needs a fresh step-up
- * auth on *every* `npm publish` call — either a typed OTP (TOTP authenticator accounts) or npm
+ * auth on *every* `npm publish` call: either a typed OTP (TOTP authenticator accounts) or npm
  * opening a browser tab to approve the device (WebAuthn/passkey accounts). The `otp` option
- * below only covers the first kind, and only for a one-or-two-package manual run — a TOTP code
+ * below only covers the first kind, and only for a one-or-two-package manual run: a TOTP code
  * expires in ~30s, so it doesn't scale. For bulk local publishing, use an npm Automation token
- * or a Granular Access Token instead of a browser-login session — both are designed by npm to
+ * or a Granular Access Token instead of a browser-login session: both are designed by npm to
  * publish without any step-up prompt even with 2FA-for-writes enabled. See
  * `scripts/release/local-publish.mjs` for the exact setup.
  *
  * The WebAuthn/browser-trust flow specifically requires npm's own subprocess to see a real
- * TTY on stdout to decide it's safe to open a browser and wait for the approval — `run()`
+ * TTY on stdout to decide it's safe to open a browser and wait for the approval: `run()`
  * (see `scripts/lib/cli.mjs`) captures output through plain OS pipes by default (needed so CI
  * can parse E409 conflicts and this module never has to guess at npm's error wording), which
  * looks like a non-interactive context to npm and makes it fail straight to `EOTP` instead of
  * opening a browser. Pass `interactive: true` (only meaningful for a human at a real terminal,
  * e.g. `local-publish.mjs`) to run the publish step with inherited stdio instead, so npm
- * shares the caller's actual terminal and can do the browser-trust dance — the tradeoff is no
+ * shares the caller's actual terminal and can do the browser-trust dance: the tradeoff is no
  * captured output for that call, so no automatic E409 retry; just re-run by hand on a conflict.
  *
  * ## Workspace protocol dependencies
  *
- * `npm pack` has no idea what a `workspace:*` dependency specifier means — it would otherwise
+ * `npm pack` has no idea what a `workspace:*` dependency specifier means: it would otherwise
  * pack that literal string straight into the published tarball's package.json, breaking every
  * consumer that installs the result outside this monorepo. `packPublishedPackage()` writes
  * resolved ranges into an isolated staging manifest before packing, leaving working files intact
- * — see `resolve-workspace-deps.mjs` for the conversion rules.
+ *: see `resolve-workspace-deps.mjs` for the conversion rules.
  */
 
 import path from 'node:path';
@@ -93,12 +93,12 @@ export async function publishPackage(
     const publishArgs = ['publish', packed.tarballPath, '--access', 'public', ...(otp ? [`--otp=${otp}`] : [])];
 
     if (dryRun) {
-      console.log(`[dry-run] packed ${path.basename(packed.tarballPath)} — would run \`npm publish --access public\``);
+      console.log(`[dry-run] packed ${path.basename(packed.tarballPath)}: would run \`npm publish --access public\``);
       return;
     }
 
     if (interactive) {
-      // No captured output here (stdio is inherited, not piped) — so no E409 retry loop either;
+      // No captured output here (stdio is inherited, not piped), so no E409 retry loop either;
       // npm's own prompts (including a browser-trust tab) go straight to the real terminal.
       run('npm', publishArgs, { cwd: folder, inherit: true });
       return;
@@ -118,7 +118,7 @@ export async function publishPackage(
         }
 
         const delay = RETRY_DELAYS_MS[attempt];
-        console.error(`   registry conflict (E409) — retrying in ${delay / 1000}s...`);
+        console.error(`   registry conflict (E409): retrying in ${delay / 1000}s...`);
         await sleep(delay);
       }
     }

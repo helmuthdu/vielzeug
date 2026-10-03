@@ -30,12 +30,12 @@ interface PaletteItem {
 }
 
 /**
- * Two distinct nav tiers, not one flat row — real configurator retail sites (this app's own
+ * Two distinct nav tiers, not one flat row: real configurator retail sites (this app's own
  * design brief cites Mercedes-Benz Store, BMW's Neuwagensuche) separate "what you're shopping
  * for" (browse) from "your account" (utility: cart, orders, admin, search, account/settings).
  * `BROWSE_ITEMS` renders in the navbar's center slot on desktop; utility actions render
  * icon-only in the `end` slot. Both re-render in full (icon + visible label) inside the
- * `mobile-menu` slot — `ore-navbar` hides `start`/center/`end` entirely below its breakpoint and
+ * `mobile-menu` slot: `ore-navbar` hides `start`/center/`end` entirely below its breakpoint and
  * only shows content placed in `mobile-menu`, so anything missing from there is simply
  * unreachable on a phone.
  */
@@ -84,7 +84,7 @@ function buildStaticItems(): PaletteItem[] {
 
 function itemsForQuery(query: string): PaletteItem[] {
   // Reading `currentUser.value` registers it as a dependency of the `paletteItems` computed
-  // below (transitively, via `buildStaticItems()`'s `canAccessAdmin()` call) — without this,
+  // below (transitively, via `buildStaticItems()`'s `canAccessAdmin()` call): without this,
   // switching roles in Settings wouldn't refresh the palette's admin entry until the next
   // search keystroke actually changed `paletteQuery`.
   void currentUser.value;
@@ -194,7 +194,7 @@ function renderMobileModelNavigation() {
   `;
 }
 
-/** Browse nav item — identical markup reused for the desktop center slot and the mobile-menu. */
+/** Browse nav item: identical markup reused for the desktop center slot and the mobile-menu. */
 function renderBrowseItem(item: BrowseItem) {
   return html`
     <ore-navbar-item ?active=${() => activeRoute.value === item.route} @click=${() => activateBrowseItem(item)}>
@@ -210,7 +210,7 @@ function renderBrowseItem(item: BrowseItem) {
 }
 
 /**
- * Utility action — `compact` renders icon-only (desktop `end` slot, name conveyed via
+ * Utility action: `compact` renders icon-only (desktop `end` slot, name conveyed via
  * `aria-label`); non-compact renders icon + visible label (mobile-menu, where every item needs
  * to be self-explanatory without a hover tooltip).
  */
@@ -238,7 +238,7 @@ function renderUtilityAction(action: UtilityAction, compact: boolean) {
   `;
 }
 
-/** Account entry — folds "Settings" into a visible account affordance (name + icon) instead of
+/** Account entry: folds "Settings" into a visible account affordance (name + icon) instead of
  * a plain "Settings" label with no identity signal, matching how every retail site surfaces
  * account/role state next to cart rather than burying it inside a settings page. */
 function renderAccountItem(compact: boolean) {
@@ -259,10 +259,10 @@ function renderAccountItem(compact: boolean) {
   `;
 }
 
-/** A single footer link — same shape regardless of which destination it opens. */
+/** A single footer link: same shape regardless of which destination it opens. */
 type FooterLink = { activate: () => void; labelKey: string };
 
-/** Footer "Shop" column — the same browse destinations `BROWSE_ITEMS` exposes in the navbar,
+/** Footer "Shop" column: the same browse destinations `BROWSE_ITEMS` exposes in the navbar,
  * repeated here because a footer is the other place shoppers instinctively look for site-wide
  * navigation once they've scrolled past the header, not a second, different set of routes. */
 const FOOTER_SHOP_LINKS: FooterLink[] = [
@@ -344,7 +344,7 @@ define('app-shell', {
       paletteOpen.value = true;
     };
 
-    // Search is a utility action alongside cart/orders/admin, not a separately-styled button —
+    // Search is a utility action alongside cart/orders/admin, not a separately-styled button :
     // one shape for every icon-triggered action in the navbar's utility tier.
     const utilityActions = computed<UtilityAction[]>(() => {
       const actions: UtilityAction[] = [
@@ -379,7 +379,7 @@ define('app-shell', {
       return actions;
     });
 
-    // Footer "Account" column — always the same three destinations, no admin branch (the
+    // Footer "Account" column: always the same three destinations, no admin branch (the
     // footer's own "Support" column below is where the conditional admin link lives instead, so
     // "Account" stays a stable, always-three-item list).
     const footerAccountLinks: FooterLink[] = [
@@ -388,7 +388,7 @@ define('app-shell', {
       { activate: () => void router.navigate({ name: 'settings' }), labelKey: 'nav.settings' },
     ];
 
-    // Footer "Support" column — reuses the same `openPalette`/admin-gating logic as the navbar's
+    // Footer "Support" column: reuses the same `openPalette`/admin-gating logic as the navbar's
     // own utility tier above, just surfaced a second time for shoppers who scrolled past it.
     const footerSupportLinks = (): FooterLink[] => {
       const links: FooterLink[] = [{ activate: openPalette, labelKey: 'common.search' }];
@@ -399,8 +399,8 @@ define('app-shell', {
       return links;
     };
 
-    // `scrollRef` is `.app-main` itself — the actual scroll container (see styles/app.css's
-    // `.app-shell`/`.app-main` comment) — while `viewRef` is the swappable content node nested
+    // `scrollRef` is `.app-main` itself: the actual scroll container (see styles/app.css's
+    // `.app-shell`/`.app-main` comment), while `viewRef` is the swappable content node nested
     // inside it, alongside the persistent `.app-footer` below. Splitting the two means route
     // changes only ever wipe the view, never the footer sitting after it.
     const scrollRef = ref<HTMLElement>();

@@ -103,7 +103,7 @@ define<OreCopyCommandProps>(COPY_COMMAND_TAG, {
         copyFailed.value = false;
         emit('copy', { value: text });
       } catch {
-        // Clipboard access denied or unavailable (e.g. insecure context) — surface it instead of failing silently
+        // Clipboard access denied or unavailable (e.g. insecure context): surface it instead of failing silently
         copied.value = false;
         copyFailed.value = true;
       }
@@ -119,7 +119,7 @@ define<OreCopyCommandProps>(COPY_COMMAND_TAG, {
     const btnLabel = computed(() => {
       if (copied.value) return 'Copied!';
 
-      if (copyFailed.value) return 'Copy failed — press to try again';
+      if (copyFailed.value) return 'Copy failed: press to try again';
 
       return `Copy: ${props.value.value ?? ''}`;
     });

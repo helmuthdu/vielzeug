@@ -88,8 +88,8 @@ By default the separator is decorative (`aria-hidden="true"`). Set `decorative="
 | ------------- | ------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------- |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Direction of the divider line                                           |
 | `decorative`  | `boolean`                                                                 | `true`         | When `true`, sets `aria-hidden`. Set to `false` for semantic separators |
-| `label`       | `string`                                                                  | —              | Optional text centered on the separator line                            |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color for the line                                                |
+| `label`       | `string`                                                                  | N/A | Optional text centered on the separator line                            |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for the line                                                |
 
 ### CSS Custom Properties
 
@@ -101,4 +101,4 @@ By default the separator is decorative (`aria-hidden="true"`). Set `decorative="
 
 ## Accessibility
 
-By default, `ore-separator` is decorative and rendered with `aria-hidden="true"`, so screen readers skip it entirely. When the separator carries structural meaning — for example, dividing distinct regions of a page — set `decorative="false"` and provide an `aria-label` to describe the separation. This switches the element to `role="separator"`, making it visible to assistive technology.
+By default, `ore-separator` is decorative and rendered with `aria-hidden="true"`, so screen readers skip it entirely. When the separator carries structural meaning: for example, dividing distinct regions of a page: set `decorative="false"` and provide an `aria-label` to describe the separation. This switches the element to `role="separator"`, making it visible to assistive technology.

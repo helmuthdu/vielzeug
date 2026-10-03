@@ -1,5 +1,5 @@
 ---
-title: Conduit — Dependency Injection for TypeScript
+title: 'Conduit: Dependency Injection for TypeScript'
 description: Dependency-first asynchronous dependency injection with typed tokens, child-container scoping, startup validation, and deterministic disposal.
 package: conduit
 category: infrastructure
@@ -109,9 +109,9 @@ await container.dispose();
 
 <div class="see-also">
 
-- [Courier](/courier/) — inject HTTP clients into application services.
-- [Vault](/vault/) — inject persistence adapters with scoped ownership.
-- [Rune](/rune/) — provide application logging services.
+- [Courier](/courier/): inject HTTP clients into application services.
+- [Vault](/vault/): inject persistence adapters with scoped ownership.
+- [Rune](/rune/): provide application logging services.
 
 </div>
 

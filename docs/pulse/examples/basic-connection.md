@@ -1,5 +1,5 @@
 ---
-title: 'Pulse Examples — Basic Connection'
+title: 'Pulse Examples: Basic Connection'
 description: 'Explicit connection lifecycle example for @vielzeug/pulse.'
 ---
 

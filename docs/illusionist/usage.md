@@ -1,5 +1,5 @@
 ---
-title: Illusionist — Usage Guide
+title: 'Illusionist: Usage Guide'
 description: Generate deterministic, locale-aware fake data with Illusionist.
 ---
 
@@ -39,7 +39,7 @@ a.person.fullName() === b.person.fullName(); // true
 const c = createIllusion({ seed: 'my-test-suite', locale: en });
 const d = createIllusion({ seed: 'my-test-suite', locale: en });
 
-c.internet.email() === d.internet.email(); // true — string seeds are hashed
+c.internet.email() === d.internet.email(); // true: string seeds are hashed
 ```
 
 Omit the seed for cryptographic randomness backed by `crypto.getRandomValues`. Output is then non-deterministic and unsuitable for snapshots.
@@ -84,7 +84,7 @@ const german = createIllusion({ locale: de });
 
 ### Custom Locales
 
-The shipped `en` and `de` objects are just plain data that `satisfies IllusionistLocale`. Build your own the same way — import the type, assemble the `person` and `location` datasets, and pass the result to `createIllusion`. No registration step; the factory accepts any object that matches the shape.
+The shipped `en` and `de` objects are just plain data that `satisfies IllusionistLocale`. Build your own the same way: import the type, assemble the `person` and `location` datasets, and pass the result to `createIllusion`. No registration step; the factory accepts any object that matches the shape.
 
 ```ts
 import { createIllusion, type IllusionistLocale } from '@vielzeug/illusionist';
@@ -119,7 +119,7 @@ illusion.person.jobTitle();    // 'marketing ingénieur'
 
 `date.weekday()` and `date.month()` currently ship English and German name arrays only; a custom locale code falls through to the English set. For other languages, format a generated `Temporal` date with `@vielzeug/tempo`'s `format()` and your own `Intl.DateTimeFormat` options.
 
-Use `satisfies IllusionistLocale` instead of a bare type annotation to get error locality — TypeScript points at the offending field rather than the whole object.
+Use `satisfies IllusionistLocale` instead of a bare type annotation to get error locality: TypeScript points at the offending field rather than the whole object.
 
 ## Category Overview
 
@@ -162,8 +162,8 @@ console.log(formatZonedDateTimeISO(orderDate));
 - Create one instance per test case so each test starts from a known random state.
 - Treat instances as ordinary stateful values; they own no resources and require no cleanup.
 - Fix the locale at creation time; create a new instance to switch locales rather than mixing.
-- Use string seeds for named test suites — they are self-documenting and hash to a stable number.
+- Use string seeds for named test suites: they are self-documenting and hash to a stable number.
 - Combine `person`, `internet`, and `location` to build internally consistent mock entities.
-- Treat `Money` and `Temporal` return values as first-class — pass them to coins and tempo functions directly.
+- Treat `Money` and `Temporal` return values as first-class: pass them to coins and tempo functions directly.
 - Avoid sharing a single instance across concurrent async tasks; each call advances the shared random source.
 - `system.uuid()` uses `crypto.randomUUID()`, not the seeded source. Do not use it in deterministic fixtures or snapshot tests.

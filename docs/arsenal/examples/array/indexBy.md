@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — indexBy'
+title: 'Arsenal Examples: indexBy'
 description: 'indexBy example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'indexBy example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have an array and need O(1) lookup by a unique key — for example building an id-to-object map from an API response.
+You have an array and need O(1) lookup by a unique key: for example building an id-to-object map from an API response.
 
 ### Solution
 
@@ -29,7 +29,7 @@ byId[2]; // { id: 2, name: 'Bob' }
 ### Pitfalls
 
 - If multiple items share the same key, the last one wins.
-- Keys are always coerced to strings — numeric ids become string keys in the record.
+- Keys are always coerced to strings: numeric ids become string keys in the record.
 
 ### Related
 

@@ -1,5 +1,5 @@
 ---
-title: Spell — Examples
+title: 'Spell: Examples'
 description: Practical examples and recipes for spell.
 ---
 

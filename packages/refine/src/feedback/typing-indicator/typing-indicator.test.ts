@@ -73,7 +73,7 @@ describe('ore-typing-indicator', () => {
       expect(fixture.query('.dots')?.getAttribute('aria-hidden')).toBe('true');
     });
 
-    it('has no visible live region in its own shadow tree — the label is announced, not rendered', async () => {
+    it('has no visible live region in its own shadow tree: the label is announced, not rendered', async () => {
       fixture = await mount('ore-typing-indicator');
 
       expect(fixture.query('[role="status"]')).toBeFalsy();

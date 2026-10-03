@@ -63,7 +63,7 @@ describe('random', () => {
 
   it('does not enforce the documented "integer" contract for fractional bounds', () => {
     // min/max are not validated as integers, so the `min` offset carries its fractional
-    // part straight into the result — the JSDoc's "random integer" promise does not hold here.
+    // part straight into the result: the JSDoc's "random integer" promise does not hold here.
     const result = random(1.5, 1.9);
 
     expect([1.5, 2.5]).toContain(result);

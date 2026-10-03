@@ -232,7 +232,7 @@ Add images, videos, or custom content at the top of the card (or left side in ho
 
 ### Actions Slot
 
-Separate slot for action buttons with automatic layout. If the card needs inner actions, place buttons or links in the `actions` slot — nested interactive elements do not trigger card activation.
+Separate slot for action buttons with automatic layout. If the card needs inner actions, place buttons or links in the `actions` slot: nested interactive elements do not trigger card activation.
 
 <ComponentPreview center>
 
@@ -443,11 +443,11 @@ Perfect for compact layouts and list views:
 
 | Attribute     | Type                                                                      | Default | Description                                |
 | ------------- | ------------------------------------------------------------------------- | ------- | ------------------------------------------ |
-| `variant`     | `'solid' \| 'flat' \| 'frost'`                                 | —       | Visual style variant                       |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Color theme for the card                   |
-| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | —       | Internal padding size                      |
-| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | —       | Shadow elevation level (0=none, 5=maximum) |
-| `orientation` | `'horizontal'`                                                            | —       | Side-by-side media + content layout        |
+| `variant`     | `'solid' \| 'flat' \| 'frost'`                                 | N/A | Visual style variant                       |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme for the card                   |
+| `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | N/A | Internal padding size                      |
+| `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | N/A | Shadow elevation level (0=none, 5=maximum) |
+| `orientation` | `'horizontal'`                                                            | N/A | Side-by-side media + content layout        |
 | `interactive` | `boolean`                                                                 | `false` | Enable hover/active states and activation  |
 | `disabled`    | `boolean`                                                                 | `false` | Disable card interaction                   |
 | `loading`     | `boolean`                                                                 | `false` | Show animated loading bar at the top       |
@@ -466,7 +466,7 @@ Perfect for compact layouts and list views:
 
 | Event      | Detail                                                                             | Description                                     |
 | ---------- | ---------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `click`    | —                                                                                  | Native browser click (always available)         |
+| `click`    | N/A | Native browser click (always available)         |
 | `activate` | `{ trigger: 'pointer' \| 'keyboard', originalEvent: MouseEvent \| KeyboardEvent }` | Emitted when an `interactive` card is activated |
 
 ### CSS Custom Properties

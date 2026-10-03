@@ -1,6 +1,6 @@
 # @vielzeug/dnd
 
-> Drag-and-drop — drop zones and sortable lists
+> Drag-and-drop: drop zones and sortable lists
 
 ## Installation
 
@@ -16,7 +16,7 @@ yarn add @vielzeug/dnd
 import { createDropZone } from '@vielzeug/dnd/drop';
 import { createSortable, createSortableScope } from '@vielzeug/dnd/sortable';
 
-// Drop zone — with async validation and clipboard paste support
+// Drop zone: with async validation and clipboard paste support
 using zone = createDropZone({
   element: document.getElementById('dropzone')!,
   accept: ['image/*', '.pdf'],
@@ -31,7 +31,7 @@ using zone = createDropZone({
   },
 });
 
-// Connected sortable lists — one scope owns cross-list moves and touch input
+// Connected sortable lists: one scope owns cross-list moves and touch input
 using scope = createSortableScope({
   onMove: ({ itemId, sourceIds, targetIds }) => saveMove(itemId, sourceIds, targetIds),
   touch: true,
@@ -59,4 +59,4 @@ using sortable = createSortable({
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

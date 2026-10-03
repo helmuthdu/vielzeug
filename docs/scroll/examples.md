@@ -1,5 +1,5 @@
 ---
-title: Scroll — Examples
+title: 'Scroll: Examples'
 description: Practical examples and recipes for scroll.
 ---
 

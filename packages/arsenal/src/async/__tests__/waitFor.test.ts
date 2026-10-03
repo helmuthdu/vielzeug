@@ -40,7 +40,7 @@ describe('waitFor', () => {
     await expect(waitFor(async () => true, { interval: 10 })).resolves.toBeUndefined();
   });
 
-  it('rejects promptly when signal aborts during sleep interval — regression B4', async () => {
+  it('rejects promptly when signal aborts during sleep interval: regression B4', async () => {
     const ac = new AbortController();
     let _polls = 0;
 

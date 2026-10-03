@@ -1,5 +1,5 @@
 ---
-title: Gesture — API Reference
+title: 'Gesture: API Reference'
 description: API reference for two-dimensional drag and one-axis pan recognition.
 ---
 
@@ -252,11 +252,11 @@ type PanGesture = DragGesture;
 | `axis` | `'x'` | Pan only; fixed value or getter sampled when each interaction starts |
 | `disabled` | `false` | Fixed value or getter; blocks starts and cancels active recognition on the next matching pointer event |
 | `pointerCapture` | `true` | Best-effort capture after activation; document tracking continues when capture is disabled or fails |
-| `shouldStart` | — | Admission predicate evaluated for the primary pointer before tracking starts |
-| `signal` | — | Disposes the handle when the external owner aborts |
-| `onStart` | — | Runs once on the activating movement |
-| `onMove` | — | Runs on the activating movement and each later matching movement |
-| `onEnd` | — | Runs once for active release or cancellation; pending interactions end without callbacks |
+| `shouldStart` | N/A | Admission predicate evaluated for the primary pointer before tracking starts |
+| `signal` | N/A | Disposes the handle when the external owner aborts |
+| `onStart` | N/A | Runs once on the activating movement |
+| `onMove` | N/A | Runs on the activating movement and each later matching movement |
+| `onEnd` | N/A | Runs once for active release or cancellation; pending interactions end without callbacks |
 
 Options and callback details are readonly. Fixed callbacks and capture policy are snapshotted at construction. Function-valued `axis` and `disabled` options remain dynamic.
 

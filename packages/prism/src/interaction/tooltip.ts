@@ -22,7 +22,7 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
   el.style.pointerEvents = 'none';
   el.style.top = '0';
   el.style.left = '0';
-  // Non-modal status text — announced by assistive tech whenever content/hide state changes.
+  // Non-modal status text: announced by assistive tech whenever content/hide state changes.
   el.setAttribute('role', 'status');
   el.setAttribute('aria-live', 'polite');
   container.appendChild(el);

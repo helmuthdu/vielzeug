@@ -304,7 +304,7 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
     sizeVariantMixin({}),
     forcedColorsFocusMixin('.cell'),
     componentStyles,
-    // Must come after `componentStyles` — see `ore-input`'s identical ordering note for why.
+    // Must come after `componentStyles`: see `ore-input`'s identical ordering note for why.
     fieldVariantMixin({ accentVar: '--_cell-focus-border', container: '.cell', tokenPrefix: 'otp-cell' }),
   ],
 });

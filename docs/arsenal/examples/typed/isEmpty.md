@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isEmpty'
+title: 'Arsenal Examples: isEmpty'
 description: 'isEmpty example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isEmpty example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need a single guard for all "has no content" states — empty string, empty array, empty object, empty `Map`, or empty `Set`.
+You need a single guard for all "has no content" states: empty string, empty array, empty object, empty `Map`, or empty `Set`.
 
 ### Solution
 

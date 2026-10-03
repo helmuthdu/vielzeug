@@ -122,7 +122,7 @@ define<OreRadioProps>(RADIO_TAG, {
       direction: () => elementDirection(el),
       getItems: () => getRadioGroup(),
       // 'both' accepts every arrow key regardless of the group's visual layout (radio groups
-      // may render horizontally or vertically via CSS) — RTL mirroring of Left/Right still
+      // may render horizontally or vertically via CSS): RTL mirroring of Left/Right still
       // applies via `direction` since nav.ts's default keymap covers 'both' too.
       loop: true,
       onNavigate: ({ event, item }) => {

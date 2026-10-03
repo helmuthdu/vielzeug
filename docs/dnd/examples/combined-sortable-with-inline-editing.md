@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — Combined: sortable with inline editing'
+title: 'Dnd Examples: Combined: sortable with inline editing'
 description: 'Combined sortable with inline editing example for @vielzeug/dnd.'
 ---
 

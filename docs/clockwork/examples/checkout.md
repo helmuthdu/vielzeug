@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Shopping Cart Checkout'
+title: 'Clockwork Examples: Shopping Cart Checkout'
 description: 'Keep checkout state in reducers and persistence at the actor boundary.'
 ---
 

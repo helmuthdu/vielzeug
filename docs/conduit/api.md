@@ -1,5 +1,5 @@
 ---
-title: Conduit — API Reference
+title: 'Conduit: API Reference'
 description: Reference for Conduit tokens, immutable provider arrays, dependency-first factories, child containers, composition-root resolution, and lifecycle disposal.
 ---
 
@@ -38,7 +38,7 @@ Tokens are unique symbols. Descriptions exist only for diagnostics. `disposalSig
 createContainer(providers: readonly Provider[], options?: { name?: string }): Container
 ```
 
-`providers` is an immutable array of value and factory providers. Construction validates the entire graph — duplicate tokens, missing dependencies, circular factory tuples, and singletons depending on transient factories all fail fast.
+`providers` is an immutable array of value and factory providers. Construction validates the entire graph: duplicate tokens, missing dependencies, circular factory tuples, and singletons depending on transient factories all fail fast.
 
 ### Providers
 
@@ -109,7 +109,7 @@ Singleton resolutions deduplicate concurrent callers and cache successful values
 container.createScope(options?: { name?: string; providers?: readonly AnyProvider[] }): Container
 ```
 
-A child container inherits parent registrations. Immutable local providers may shadow parent registrations for request or test overrides — this is how request-scoped values are spelled: one child per request, disposed when the request ends. Disposing a parent also disposes active children.
+A child container inherits parent registrations. Immutable local providers may shadow parent registrations for request or test overrides: this is how request-scoped values are spelled: one child per request, disposed when the request ends. Disposing a parent also disposes active children.
 
 ### dispose
 
@@ -152,9 +152,9 @@ interface Container {
 
 ## Errors
 
-- `ConduitError` — base class; use `instanceof ConduitError` to narrow package errors.
-- `ConduitProviderNotFoundError` — dependency has no registration.
-- `ConduitCircularDependencyError` — static factory tuple graph contains a cycle.
-- `ConduitDuplicateRegistrationError` — token registered twice in one container.
-- `ConduitDisposedError` — operation attempted after disposal began.
-- `ConduitDisposeError` — one or more cleanup hooks failed.
+- `ConduitError`: base class; use `instanceof ConduitError` to narrow package errors.
+- `ConduitProviderNotFoundError`: dependency has no registration.
+- `ConduitCircularDependencyError`: static factory tuple graph contains a cycle.
+- `ConduitDuplicateRegistrationError`: token registered twice in one container.
+- `ConduitDisposedError`: operation attempted after disposal began.
+- `ConduitDisposeError`: one or more cleanup hooks failed.

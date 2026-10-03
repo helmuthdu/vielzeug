@@ -1,6 +1,6 @@
 ---
-title: Sandbox — Examples
-description: Recipes for common Sandbox use cases — component previews, user script sandboxes, and embedded widgets.
+title: 'Sandbox: Examples'
+description: 'Recipes for common Sandbox use cases: component previews, user script sandboxes, and embedded widgets.'
 ---
 
 ## Examples

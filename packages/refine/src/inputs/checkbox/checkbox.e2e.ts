@@ -1,15 +1,15 @@
 /**
- * Real-browser accessibility check for `ore-checkbox` — a real axe scan against the rendered
+ * Real-browser accessibility check for `ore-checkbox`: a real axe scan against the rendered
  * shadow DOM. Complements `checkbox.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Accessibility', () => {
   // The slot is the labeling API (`@slot - Checkbox label text`): the host's
   // `aria-labelledby` points at the shadow `.label` span, which projects the
-  // slotted text. axe's flat-tree traversal resolves this correctly — a `label`
+  // slotted text. axe's flat-tree traversal resolves this correctly: a `label`
   // attribute is not a prop and renders nothing, so mounting that way produces
   // an unnamed checkbox (the source of a long-misread "known gap" here).
   test('slot-labelled checkbox passes a11y checks', async ({ page, refinePage }) => {

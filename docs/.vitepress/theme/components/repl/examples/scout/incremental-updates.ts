@@ -9,10 +9,10 @@ const products = [
 
 const index = createIndex(products, { fields: ['title'] })
 
-// onMutate() fires after changed add()/remove()/reindex()/setItems() operations —
+// onMutate() fires after changed add()/remove()/reindex()/setItems() operations :
 // not on no-ops like removing an item that isn't indexed
 const unsubscribe = index.onMutate(() => {
-  console.log(\`  (index changed — now \${index.size} items)\`)
+  console.log(\`  (index changed: now \${index.size} items)\`)
 })
 
 console.log('Search "keyboard":', index.search('keyboard').map(r => r.item.title))
@@ -21,12 +21,12 @@ console.log('Search "keyboard":', index.search('keyboard').map(r => r.item.title
 index.add({ id: 4, title: 'Gaming Keyboard', price: 120 })
 console.log('After add():', index.search('keyboard').map(r => r.item.title))
 
-// Re-index a mutated item — reference equality, so mutate in place first
+// Re-index a mutated item: reference equality, so mutate in place first
 products[0].title = 'Wireless Trackball'
 index.reindex(products[0])
 console.log('After reindex():', index.search('trackball').map(r => r.item.title))
 
-// Reconcile a refreshed corpus in one mutation — removes missing references,
+// Reconcile a refreshed corpus in one mutation: removes missing references,
 // adds new ones, reindexes retained values, and preserves this incoming order
 index.setItems([products[0], { id: 4, title: 'Portable SSD', price: 95 }])
 console.log('After setItems():', index.items.map(item => item.title))

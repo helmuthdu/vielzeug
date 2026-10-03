@@ -302,7 +302,7 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
 
     room<K extends keyof RoomMap<S> & string>(name: K, opts?: RoomOptions): RoomScope<RoomMap<S>[K]> {
       if (disposed) throw new PulseDisposedError();
-      // Always create with presence machinery — the type-level RoomScope<R> narrows
+      // Always create with presence machinery: the type-level RoomScope<R> narrows
       // the public surface so plain rooms don't expose presence members.
       return rooms.createScope(name, true, opts) as RoomScope<RoomMap<S>[K]>;
     },

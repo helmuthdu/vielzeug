@@ -145,7 +145,7 @@ describe('coerce.string()', () => {
   });
 });
 
-describe('string format validators — params.format', () => {
+describe('string format validators: params.format', () => {
   it('email() includes params.format = "email"', () => {
     const result = s.string().email().safeParse('bad');
 
@@ -197,7 +197,7 @@ describe('string format validators — params.format', () => {
   });
 });
 
-describe('string pattern validators — params', () => {
+describe('string pattern validators: params', () => {
   it('startsWith() includes params.prefix', () => {
     const result = s.string().startsWith('foo').safeParse('bar');
 

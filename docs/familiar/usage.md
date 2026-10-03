@@ -1,5 +1,5 @@
 ---
-title: Familiar — Usage Guide
+title: 'Familiar: Usage Guide'
 description: Run task and stream module workers with bounded concurrency, cancellation, and test parity.
 ---
 

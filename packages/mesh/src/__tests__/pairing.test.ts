@@ -157,7 +157,7 @@ describe('pairing round-trip', () => {
     const host = createMeshHost<TestProtocol>({ rtc: fx.rtc });
     const guest = createMeshGuest<TestProtocol>({ rtc: fx.rtc });
 
-    // Textareas and clipboards strip CR — pairing must survive LF-only SDP.
+    // Textareas and clipboards strip CR: pairing must survive LF-only SDP.
     const invitation = await host.createInvitation();
     const answer = await guest.acceptInvitation({ ...invitation, sdp: `${invitation.sdp}\nextra\n` });
 

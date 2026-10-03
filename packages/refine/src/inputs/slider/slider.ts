@@ -39,7 +39,7 @@ export type OreSliderProps = {
   color?: ThemeColor;
   /** Disable interaction */
   disabled?: boolean;
-  /** Error message — marks the field as invalid (fallback when the `error` slot is empty) */
+  /** Error message: marks the field as invalid (fallback when the `error` slot is empty) */
   error?: string;
   /** Range mode: lower bound */
   from?: number | string;
@@ -145,7 +145,7 @@ define<OreSliderProps>(SLIDER_TAG, {
     const el = getHost();
     const slots = useSlots();
 
-    // Treat `range` as static — determined at first render
+    // Treat `range` as static: determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
     const sliderControl = createSliderControl({

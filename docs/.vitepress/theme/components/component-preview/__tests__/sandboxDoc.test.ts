@@ -25,7 +25,7 @@ describe('buildSandboxDoc()', () => {
     expect(fragment).toContain('<div dir="rtl" style="display: contents"><ore-button>Click</ore-button></div>');
   });
 
-  it('does not add an extra flex item — the wrapper is display:contents, not display:block', () => {
+  it('does not add an extra flex item: the wrapper is display:contents, not display:block', () => {
     const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '<span></span>', vertical: false });
 
     expect(fragment).toContain('display: contents');
@@ -108,12 +108,12 @@ describe('buildSandboxDoc()', () => {
   // The sandbox iframe auto-resizes to document.body's border-box height (never
   // includes box-shadow spread), so a downward-offset halo/glow effect (e.g.
   // ore-button's hover/active box-shadow) got hard-clipped at the iframe's
-  // bottom edge with zero room to render into — invisible only inside the
+  // bottom edge with zero room to render into: invisible only inside the
   // preview, visible everywhere else on the page. Padding must stay symmetric.
-  it('gives body equal padding on every side — no lopsided padding-bottom: 0', () => {
+  it('gives body equal padding on every side: no lopsided padding-bottom: 0', () => {
     const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '', vertical: false });
     // Two rules mention `body` (a shared `html, body { ... }` reset plus this
-    // one) — anchor on `display: flex` to grab the flex-layout rule specifically.
+    // one): anchor on `display: flex` to grab the flex-layout rule specifically.
     const bodyRuleMatch = fragment.match(/body\s*\{\s*display:\s*flex[^}]*\}/);
 
     expect(bodyRuleMatch).not.toBeNull();

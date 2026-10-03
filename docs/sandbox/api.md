@@ -1,5 +1,5 @@
 ---
-title: Sandbox — API Reference
+title: 'Sandbox: API Reference'
 description: API reference for the @vielzeug/sandbox managed iframe runtime, bridge, errors, and testing utilities.
 ---
 

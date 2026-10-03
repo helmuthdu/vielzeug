@@ -80,7 +80,7 @@ describe('LocalStorage adapter', () => {
       snapshots.push(rows);
     });
 
-    await Promise.resolve(); // consume initial snapshot (has 'Alice' — put above)
+    await Promise.resolve(); // consume initial snapshot (has 'Alice': put above)
 
     window.localStorage.clear();
     window.dispatchEvent(new StorageEvent('storage', { key: null }));
@@ -94,7 +94,7 @@ describe('LocalStorage adapter', () => {
 
   test('corrupted entries are removed lazily on read', async () => {
     // Simulate a corrupted entry from a *previous session* by writing it
-    // before creating a fresh adapter — initOwnedKeys() will see it on startup.
+    // before creating a fresh adapter: initOwnedKeys() will see it on startup.
     window.localStorage.setItem('LS\x00users\x0099', 'not valid json {{{');
     db = createLocalStorage({ codecs, name: 'LS', schema: userSchema });
 
@@ -157,7 +157,7 @@ describe('LocalStorage adapter', () => {
 
     vi.advanceTimersByTime(2000); // Alice is now expired
 
-    // Attempt to delete both — Alice is expired, Bob is live
+    // Attempt to delete both: Alice is expired, Bob is live
     const deleted = await db.deleteMany('users', [1, 2]);
 
     vi.useRealTimers();
@@ -171,7 +171,7 @@ describe('LocalStorage adapter', () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
     // Simulate a cross-tab write to a key that matches the db prefix but uses a table
-    // not in our schema — should be ignored by the StorageEvent handler.
+    // not in our schema: should be ignored by the StorageEvent handler.
     const fakeKey = 'LS\x00phantom\x0042';
 
     window.localStorage.setItem(fakeKey, JSON.stringify({ value: { id: 42 } }));
@@ -184,7 +184,7 @@ describe('LocalStorage adapter', () => {
 
     await Promise.resolve();
 
-    // Our schema only has 'users' — phantom table key must not be tracked
+    // Our schema only has 'users': phantom table key must not be tracked
     expect(await db.count('users')).toBe(1);
     // Cross-tab write to phantom table must not trigger a users observer
   });

@@ -1,5 +1,5 @@
 ---
-title: 'Rune Examples — Timing and Grouping'
+title: 'Rune Examples: Timing and Grouping'
 description: 'Timing and Grouping example for @vielzeug/rune.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Timing and Grouping example for @vielzeug/rune.'
 
 ### Problem
 
-You need to measure how long a code block takes and group the related log entries so they are easy to correlate in output — without sprinkling `Date.now()` calls across the codebase.
+You need to measure how long a code block takes and group the related log entries so they are easy to correlate in output: without sprinkling `Date.now()` calls across the codebase.
 
 ### Solution
 
@@ -35,7 +35,7 @@ console.log(result);
 ### Pitfalls
 
 - `time()` always emits at `debug` level with the label as the log message and `{ duration_ms }` in context. If `logLevel` is above `debug`, the timer still runs but no entry is emitted. Set `logLevel: 'debug'` when capturing timing data.
-- `time()` measures wall-clock time via `performance.now()`. For async functions, it covers total elapsed time including I/O wait — not CPU time. Long I/O waits will inflate the result.
+- `time()` measures wall-clock time via `performance.now()`. For async functions, it covers total elapsed time including I/O wait: not CPU time. Long I/O waits will inflate the result.
 - `group()` and `groupCollapsed()` call `console.group`/`console.groupEnd` regardless of which transport is configured. They are visual wrappers for the console; other transports (JSON) receive entries as normal flat events with no grouping semantics.
 - When `logLevel` is `'off'`, the group wrapper is bypassed entirely but the callback still executes.
 

@@ -1,5 +1,5 @@
 ---
-title: Conduit — Usage Guide
+title: 'Conduit: Usage Guide'
 description: Register an immutable provider array, resolve a typed service object at composition roots, scope work to child containers, and dispose owned resources.
 ---
 

@@ -110,10 +110,10 @@ Presence is now a property of room scopes, not channel scopes. Use `pulse.room(n
 ### 5. `PulsePresenceError` removed
 
 Room join failures now use standard error types:
-- `PulseConnectionError` — transport close before confirmation.
-- `PulseRoomTimeoutError` — join timeout (new).
-- `PulseAbortError` — join aborted via AbortSignal.
-- `PulseDisposedError` — instance disposed before confirmation.
+- `PulseConnectionError`: transport close before confirmation.
+- `PulseRoomTimeoutError`: join timeout (new).
+- `PulseAbortError`: join aborted via AbortSignal.
+- `PulseDisposedError`: instance disposed before confirmation.
 
 ### 6. `pulse.rooms` tracks confirmed memberships
 
@@ -153,7 +153,7 @@ lobby.updatePresence({ name: 'Ada' }); // typed
 
 // announcements has no presence → RoomScopeBase
 const announcements = pulse.room('announcements');
-// announcements.updatePresence — TypeScript error
+// announcements.updatePresence: TypeScript error
 ```
 
 ## Migration checklist

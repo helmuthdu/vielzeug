@@ -1,5 +1,5 @@
 ---
-title: 'Codex Examples — Listing Packages'
+title: 'Codex Examples: Listing Packages'
 description: 'Listing packages example for @vielzeug/codex.'
 ---
 
@@ -45,7 +45,7 @@ Use `get-package` with `packageSlug` to fetch one entry by slug. Returns a `Pack
 
 ### Pitfalls
 
-- The result never includes `docs` content, `apiSource`, or example `code` — call `get-docs`, `get-source`, or `get-example` separately.
+- The result never includes `docs` content, `apiSource`, or example `code`: call `get-docs`, `get-source`, or `get-example` separately.
 - For `get-package`, an unknown `packageSlug` returns `isError: true` with available slugs listed. Check before retrying.
 - `availableDocPages` and `exampleIds` vary per package; always check them before calling `get-docs` or `get-example` with a specific page or id.
 
@@ -53,6 +53,6 @@ Use `get-package` with `packageSlug` to fetch one entry by slug. Returns a `Pack
 
 - [Searching Packages](./searching-packages.md)
 - [Reading Docs](./reading-docs.md)
-- [API Reference — list-packages](../api.md#list-packages)
-- [API Reference — get-package](../api.md#get-package)
-- [API Reference — list-examples](../api.md#list-examples)
+- [API Reference: list-packages](../api.md#list-packages)
+- [API Reference: get-package](../api.md#get-package)
+- [API Reference: list-examples](../api.md#list-examples)

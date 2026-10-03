@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — groupBy'
+title: 'Arsenal Examples: groupBy'
 description: 'groupBy example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'groupBy example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have a flat array and need to group items into buckets by a computed key — for example grouping transactions by category.
+You have a flat array and need to group items into buckets by a computed key: for example grouping transactions by category.
 
 ### Solution
 

@@ -1,5 +1,5 @@
 ---
-title: 'Scout Examples — Sourcerer Integration'
+title: 'Scout Examples: Sourcerer Integration'
 description: 'Use toSearchMatcher to filter in-memory collections with a ScoutIndex.'
 ---
 

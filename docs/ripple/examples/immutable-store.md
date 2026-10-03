@@ -1,5 +1,5 @@
 ---
-title: 'Ripple Examples — Immutable State'
+title: 'Ripple Examples: Immutable State'
 description: Update one replacement-based object value through signal.update().
 ---
 

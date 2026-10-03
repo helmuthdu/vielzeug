@@ -20,7 +20,7 @@ export type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
  * string `delay`/`duration`, etc.) reaches `element.animate()` unchanged unless reduced motion
  * normalizes timing. Callers already
  * fluent in the Web Animations API bring that knowledge here directly, instead of learning
- * a second, smaller timing vocabulary — the option chain below only ever *adds* ownership
+ * a second, smaller timing vocabulary: the option chain below only ever *adds* ownership
  * fields on top, never narrows what's already native.
  *
  * Option chain: `AnimateOptions` -> `AnimateEachOptions` (+`stagger`) -> `LayoutAnimationOptions`

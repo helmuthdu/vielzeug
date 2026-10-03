@@ -28,7 +28,7 @@ const getDeepActiveElement = (rootDocument: Document): Element | null => {
 
 const isConnected = (target: FocusableElement): boolean => {
   // `isConnected` pierces shadow boundaries (shadow-including root is the document);
-  // `ownerDocument.contains` does NOT — it would reject elements inside shadow roots.
+  // `ownerDocument.contains` does NOT: it would reject elements inside shadow roots.
   return target.isConnected;
 };
 
@@ -82,7 +82,7 @@ export const restoreFocus = (target: FocusTarget, options: RestoreFocusOptions =
 };
 
 /**
- * Hands focus to `target` when focus has been lost to the document body — the state left
+ * Hands focus to `target` when focus has been lost to the document body: the state left
  * behind when the focused element unmounts mid-swap (browsing a dialog, paging a list),
  * where keydown would never reach a handler and every shortcut dies. Returns `true` when
  * focus was rescued; `false` when focus is already on a real element or the target cannot

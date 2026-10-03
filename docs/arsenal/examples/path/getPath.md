@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — getPath'
+title: 'Arsenal Examples: getPath'
 description: 'getPath example for @vielzeug/arsenal.'
 ---
 

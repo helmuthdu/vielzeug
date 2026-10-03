@@ -1,5 +1,5 @@
 ---
-title: Codex — Examples
+title: 'Codex: Examples'
 description: Practical MCP tool-call examples for package discovery, docs lookup, and Refine component queries.
 ---
 

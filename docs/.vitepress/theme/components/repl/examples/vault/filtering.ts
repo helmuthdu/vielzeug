@@ -22,7 +22,7 @@ await db.putAll('products', [
   { id: 5, name: 'Monitor', price: 399, category: 'electronics', inStock: true },
 ])
 
-// getAll() returns a plain array — compose with standard array operations
+// getAll() returns a plain array: compose with standard array operations
 const all = await db.getAll('products')
 const electronics = all
   .filter((product) => product.category === 'electronics' && product.inStock)
@@ -48,5 +48,5 @@ const cheapest = (await db.getAll('products')).sort((a, b) => a.price - b.price)
 console.log('Cheapest:', cheapest?.name, cheapest?.price)
 
 console.log('Remaining count:', await db.count('products'))`,
-  name: 'Filtering — getAll composition, pagination, and deletion',
+  name: 'Filtering: getAll composition, pagination, and deletion',
 };

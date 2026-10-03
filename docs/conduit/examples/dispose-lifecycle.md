@@ -1,5 +1,5 @@
 ---
-title: Conduit Examples — Disposal
+title: 'Conduit Examples: Disposal'
 description: Dispose dependency-owned resources safely.
 ---
 

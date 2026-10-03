@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Standardize package text punctuation",
+      "packageName": "@vielzeug/orbit",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/orbit"
+}

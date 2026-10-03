@@ -8,7 +8,7 @@ import { warn } from '../_dev';
 import { ORE_ERRORS } from '../errors';
 
 /**
- * A value that may be a plain value, a reactive signal, or a getter function —
+ * A value that may be a plain value, a reactive signal, or a getter function :
  * the shape `when()`, `each()`, `classMap()`, and `bind()` accept.
  * Exported so consumers can annotate their own composable parameters with it.
  */
@@ -16,7 +16,7 @@ export type MaybeReactive<T> = T | Readable<T> | (() => T);
 
 /**
  * Resolves a value that may be a plain value, a getter function, or a reactive
- * signal — the one shared three-way branch used by `classMap`/`styleMap`/`bind()`.
+ * signal: the one shared three-way branch used by `classMap`/`styleMap`/`bind()`.
  */
 export const resolveMaybeReactive = <T>(value: MaybeReactive<T>): T =>
   typeof value === 'function' ? (value as () => T)() : isReactive(value) ? value.value : value;
@@ -41,19 +41,19 @@ export const removeNodes = (nodes: Node[]): void => {
 };
 
 /**
- * Tracks "whatever is currently rendered in one spot" — a list of live DOM nodes plus the
+ * Tracks "whatever is currently rendered in one spot": a list of live DOM nodes plus the
  * cleanup functions that were registered while mounting them. `clear()` tears both down and
  * resets to empty, ready for the next render.
  *
  * Every directive/binding that swaps its rendered content when a reactive source changes
  * (`when()`, `unsafeHtml()`, `each()`'s empty-list fallback, `applyHtmlBinding()`) needs exactly this
- * bookkeeping — this is the one shared implementation instead of four independently-maintained
+ * bookkeeping: this is the one shared implementation instead of four independently-maintained
  * `currentNodes`/`currentCleanups` variable pairs.
  */
 export type ReplaceableSlot = {
   /** Tears down every registered cleanup and removes every tracked node, then resets to empty. */
   clear(): void;
-  /** Currently tracked nodes — read after mounting to know what's live. */
+  /** Currently tracked nodes: read after mounting to know what's live. */
   readonly nodes: Node[];
   /** Pass as the `registerCleanup` callback to whatever mounts the next render. */
   registerCleanup(fn: () => void): void;
@@ -89,7 +89,7 @@ export const createReplaceableSlot = (): ReplaceableSlot => {
  * checked for dangerous schemes before being set.
  *
  * `srcdoc` is deliberately excluded: it holds raw HTML (not a URL), so scheme
- * checking doesn't apply — it's blocked unconditionally below, alongside `on*`.
+ * checking doesn't apply: it's blocked unconditionally below, alongside `on*`.
  */
 const URL_ATTRS = new Set([
   'action',
@@ -120,7 +120,7 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 
   if (/^on[a-z]/i.test(name)) {
     warn(
-      `Blocked setAttribute("${name}", ...) — inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
+      `Blocked setAttribute("${name}", ...): inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
     );
     el.removeAttribute(name);
 
@@ -129,7 +129,7 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 
   if (lowerName === 'srcdoc') {
     warn(
-      `Blocked setAttribute("srcdoc", ...) — "srcdoc" holds raw HTML, not a URL, and is not supported via attribute binding. Sanitize untrusted content, then use unsafeHtml() if HTML injection is required.`,
+      `Blocked setAttribute("srcdoc", ...): "srcdoc" holds raw HTML, not a URL, and is not supported via attribute binding. Sanitize untrusted content, then use unsafeHtml() if HTML injection is required.`,
     );
     el.removeAttribute(name);
 

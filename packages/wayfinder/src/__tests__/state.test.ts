@@ -1,5 +1,5 @@
 /**
- * Router state — error status, historyState in location, and error reporting
+ * Router state: error status, historyState in location, and error reporting
  * via the onError callback.
  */
 import { createMemoryHistory, createRouter } from '../';

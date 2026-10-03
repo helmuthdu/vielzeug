@@ -183,7 +183,7 @@ describe('createPieChart', () => {
     const cancelSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
     const chart = createPieChart(container, { data: DATA, transition: { duration: 500 } });
 
-    // The pie's enter transition (duration: 500) schedules a rAF loop synchronously —
+    // The pie's enter transition (duration: 500) schedules a rAF loop synchronously :
     // dispose() while it's still in flight must cancel it, not just avoid throwing.
     expect(() => chart.dispose()).not.toThrow();
     expect(cancelSpy).toHaveBeenCalled();

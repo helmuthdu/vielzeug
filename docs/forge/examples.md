@@ -1,5 +1,5 @@
 ---
-title: Forge — Examples
+title: 'Forge: Examples'
 description: Practical immutable form recipes.
 ---
 

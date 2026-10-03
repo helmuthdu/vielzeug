@@ -24,7 +24,7 @@ export interface QrEncodeOptions {
 /** An encoded QR symbol: a square matrix of dark/light modules. */
 export interface QrMatrix {
   readonly errorCorrection: QrErrorCorrection;
-  /** Module color at (`x`, `y`) — `true` = dark, `false` outside bounds. */
+  /** Module color at (`x`, `y`): `true` = dark, `false` outside bounds. */
   get(x: number, y: number): boolean;
   readonly mask: number;
   readonly mode: QrMode;
@@ -65,7 +65,7 @@ export interface QrScanResult {
   readonly value: string;
 }
 
-/** Injected QR detector — matches the native `BarcodeDetector` shape. */
+/** Injected QR detector: matches the native `BarcodeDetector` shape. */
 export interface QrDetector {
   detect(
     source: ImageBitmapSource,

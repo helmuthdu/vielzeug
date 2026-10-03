@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — take'
+title: 'Arsenal Examples: take'
 description: 'take example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'take example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need the first N items of an array — for example showing a preview or implementing a "top 5" list.
+You need the first N items of an array: for example showing a preview or implementing a "top 5" list.
 
 ### Solution
 
@@ -23,7 +23,7 @@ take([1, 2, 3], 10); // [1, 2, 3]
 
 ### Pitfalls
 
-- When `n` exceeds the array length, returns the full array — no error.
+- When `n` exceeds the array length, returns the full array: no error.
 
 ### Related
 

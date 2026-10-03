@@ -2,7 +2,7 @@
  * Look up a Rush project's folder and current package.json version by package name.
  *
  * Centralizes what used to be three slightly-different `node -e "require('./rush.json')..."`
- * one-liners inline in release workflow YAML — including one that threw an unhelpful
+ * one-liners inline in release workflow YAML: including one that threw an unhelpful
  * `Cannot read properties of undefined` on a typo'd package name instead of a clear error.
  */
 

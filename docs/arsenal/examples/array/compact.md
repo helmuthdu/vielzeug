@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — compact'
+title: 'Arsenal Examples: compact'
 description: 'compact example for @vielzeug/arsenal.'
 ---
 

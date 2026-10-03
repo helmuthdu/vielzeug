@@ -36,7 +36,7 @@ host.dispose();
 guest.dispose();
 ```
 
-Pairing payloads travel out-of-band — copy/paste, `navigator.share`, or any channel you control. `RTCPeerConnection` requires a secure context (`https:` or `localhost`).
+Pairing payloads travel out-of-band: copy/paste, `navigator.share`, or any channel you control. `RTCPeerConnection` requires a secure context (`https:` or `localhost`).
 
 ## Documentation
 
@@ -47,4 +47,4 @@ Pairing payloads travel out-of-band — copy/paste, `navigator.share`, or any ch
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

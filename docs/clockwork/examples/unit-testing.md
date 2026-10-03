@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Pure Transition Testing'
+title: 'Clockwork Examples: Pure Transition Testing'
 description: 'Test guards and reducers without an actor runtime.'
 ---
 

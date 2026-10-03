@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isEqual'
+title: 'Arsenal Examples: isEqual'
 description: 'isEqual example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isEqual example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need deep equality between two values — for example change-detection, deduplication, or memoization key comparison.
+You need deep equality between two values: for example change-detection, deduplication, or memoization key comparison.
 
 ### Solution
 
@@ -29,13 +29,13 @@ isEqual({ a: 1 }, { a: 2 }); // false
 import { isEqual } from '@vielzeug/arsenal';
 
 const arr = [1, 2, 3];
-isEqual({ arr }, { arr }, { depth: 'shallow' }); // true — same reference
-isEqual([1, 2], [1, 2], { depth: 'shallow' }); // false — different references
+isEqual({ arr }, { arr }, { depth: 'shallow' }); // true: same reference
+isEqual([1, 2], [1, 2], { depth: 'shallow' }); // false: different references
 ```
 
 ### Pitfalls
 
-- Deep equality is recursive — avoid on very large graphs without memoization.
+- Deep equality is recursive: avoid on very large graphs without memoization.
 - Handles circular references, `Date`, `Map`, and `Set`.
 
 ### Related

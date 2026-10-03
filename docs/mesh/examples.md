@@ -1,5 +1,5 @@
 ---
-title: Mesh — Examples
+title: 'Mesh: Examples'
 description: Practical examples and recipes for @vielzeug/mesh.
 ---
 

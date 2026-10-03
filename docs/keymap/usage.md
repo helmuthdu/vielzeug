@@ -1,5 +1,5 @@
 ---
-title: Keymap — Usage Guide
+title: 'Keymap: Usage Guide'
 description: Bind keyboard shortcuts, chords, event-aware guards, and target-local listeners with @vielzeug/keymap.
 ---
 
@@ -85,8 +85,8 @@ const map = createKeymap([
 
 Each binding controls `preventDefault` and `stopPropagation` independently:
 
-- `preventDefault` defaults to `true` — completed shortcuts and matched chord prefixes suppress browser defaults.
-- `stopPropagation` defaults to `false` — events continue bubbling unless explicitly stopped.
+- `preventDefault` defaults to `true`: completed shortcuts and matched chord prefixes suppress browser defaults.
+- `stopPropagation` defaults to `false`: events continue bubbling unless explicitly stopped.
 
 Set `preventDefault: false` for shortcuts that must coexist with native controls (e.g. developer tools, accessibility features).
 
@@ -235,7 +235,7 @@ const step = parseStep('ctrl+k', 'ctrl');
 const isMatch = matchStep(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }), steps[0]);
 ```
 
-`matchKey()` and `detectModKey()` are also exported from the root entry point. For a one-off check against a pattern string, prefer `matchKey()` — it parses and matches in one call and returns `false` instead of throwing:
+`matchKey()` and `detectModKey()` are also exported from the root entry point. For a one-off check against a pattern string, prefer `matchKey()`: it parses and matches in one call and returns `false` instead of throwing:
 
 ```ts
 import { matchKey } from '@vielzeug/keymap';

@@ -1,6 +1,6 @@
 # @vielzeug/assay
 
-> Framework-agnostic DOM testing primitives — scoped queries, event dispatch, async waiting
+> Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting
 
 ## Installation
 
@@ -35,4 +35,4 @@ await eventually(() => expect(view.get('.status').textContent).toBe('Saved'), {
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

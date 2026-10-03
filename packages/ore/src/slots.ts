@@ -1,8 +1,8 @@
 /**
  * Slot observation and reactive slot signals.
  *
- * `slots.has(name?)`: Signal<boolean> — whether a named slot has assigned elements.
- * `slots.elements(name?)`: Signal<Element[]> — assigned elements for a slot (flattened).
+ * `slots.has(name?)`: Signal<boolean>: whether a named slot has assigned elements.
+ * `slots.elements(name?)`: Signal<Element[]>: assigned elements for a slot (flattened).
  */
 
 import { type Readable, type Signal, signal } from '@vielzeug/ripple';
@@ -129,7 +129,7 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   // Single init pass, run after the first render: binds slots already present
   // (pre-upgrade markup and template-rendered ones alike) and starts observation
   // for slots inserted later. The observer must stay connected for the component's
-  // lifetime — it is the only way to detect a *first* <slot> appearing dynamically
+  // lifetime: it is the only way to detect a *first* <slot> appearing dynamically
   // (e.g. a when() branch that renders a slot), so it cannot be disconnected when
   // the bound-slot count drops to zero.
   const initSlots = (): undefined => {
@@ -167,7 +167,7 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
     slotSignals.clear();
 
     // The element instance survives disconnect/reconnect (custom elements aren't recreated),
-    // but this registry's observer/listeners are torn down above — drop the cache entry so a
+    // but this registry's observer/listeners are torn down above: drop the cache entry so a
     // subsequent reconnect's setup() rebuilds a live registry instead of reusing a dead one.
     slotsByElement.delete(host);
   });
@@ -178,18 +178,18 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   };
 };
 
-// Keyed by the host element, not the ephemeral `RuntimeContext` — `onMounted()` callbacks each
+// Keyed by the host element, not the ephemeral `RuntimeContext`: `onMounted()` callbacks each
 // run with their own freshly-created context object (see base-element.ts's
 // `_scheduleMountCallbacks`), so keying this on `RuntimeContext` would silently create a second,
 // independent registry (a second `MutationObserver`, a second signal set) every time `useSlots()`
-// was called from inside `onMounted()` rather than directly in `setup()` — a real bug the
+// was called from inside `onMounted()` rather than directly in `setup()`: a real bug the
 // "one registry per instance" doc comment below never actually held for that (common) case.
-/** One slot registry per component instance — reused across repeated `useSlots()` calls. */
+/** One slot registry per component instance: reused across repeated `useSlots()` calls. */
 const slotsByElement = new WeakMap<HTMLElement, ComponentSlots<string>>();
 
 /**
  * Returns reactive slot presence / element signals for the current component.
- * Safe to call multiple times during `setup()` — the underlying slot registry
+ * Safe to call multiple times during `setup()`: the underlying slot registry
  * (MutationObserver + `slotchange` listeners) is created once per instance.
  *
  * Pass a `SlotNames` type parameter for typed slot names:

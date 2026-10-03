@@ -45,7 +45,7 @@ export function base64UrlToText(text: string): string {
   return decoder.decode(base64UrlToBytes(text));
 }
 
-/** Byte length of a UTF-8 string — used for `maxMessageBytes` checks. */
+/** Byte length of a UTF-8 string: used for `maxMessageBytes` checks. */
 export function utf8Bytes(text: string): number {
   return encoder.encode(text).length;
 }

@@ -1,7 +1,7 @@
 export const roleHierarchyExample = {
   code: `import { createWard } from '@vielzeug/ward'
 
-// Roles are declarative data on each rule — no condition callbacks needed
+// Roles are declarative data on each rule: no condition callbacks needed
 const ward = createWard([
   { action: 'read',   resource: 'posts', effect: 'allow' },
   { action: 'update', resource: 'posts', effect: 'allow', roles: ['editor'] },

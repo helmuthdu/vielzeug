@@ -7,7 +7,7 @@
  * - Different types (e.g. array vs object) return `false`.
  *
  * Uses `Object.is` for the primitive comparison, so `shallowEqual(NaN, NaN)` is `true` and
- * `shallowEqual(0, -0)` is `false` — the opposite of `isEqual`, which uses `===` and treats
+ * `shallowEqual(0, -0)` is `false`: the opposite of `isEqual`, which uses `===` and treats
  * `NaN` as never equal to itself and `-0` as equal to `0`.
  *
  * For recursive deep equality, use `isEqual`.
@@ -15,8 +15,8 @@
  * @example
  * ```ts
  * const inner = { x: 1 };
- * shallowEqual({ a: inner }, { a: inner }); // true  — same reference
- * shallowEqual({ a: { x: 1 } }, { a: { x: 1 } }); // false — different refs
+ * shallowEqual({ a: inner }, { a: inner }); // true: same reference
+ * shallowEqual({ a: { x: 1 } }, { a: { x: 1 } }); // false: different refs
  * shallowEqual([1, 2, 3], [1, 2, 3]); // true
  * shallowEqual(1, 1); // true
  * ```

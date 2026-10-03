@@ -4,7 +4,7 @@ import type { BandScaleConfig } from './types';
 
 export function bandScale(config: BandScaleConfig): BandScale {
   // Every method below closes over `config`/these helpers directly instead of reading
-  // `this` — the returned object stays fully functional when destructured, e.g.
+  // `this`: the returned object stays fully functional when destructured, e.g.
   // `const { map } = bandScale(cfg)`.
   const getDomain = (): string[] => config.domain;
   const getRange = (): [number, number] => config.range;

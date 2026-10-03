@@ -1,5 +1,5 @@
 /**
- * match() / load() — synchronous route inspection and SSR URL resolution without side effects.
+ * match() / load(): synchronous route inspection and SSR URL resolution without side effects.
  */
 import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';

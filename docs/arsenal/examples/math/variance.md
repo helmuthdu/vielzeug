@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — variance'
+title: 'Arsenal Examples: variance'
 description: 'variance example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'variance example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need the variance of a dataset — the squared average deviation from the mean.
+You need the variance of a dataset: the squared average deviation from the mean.
 
 ### Solution
 

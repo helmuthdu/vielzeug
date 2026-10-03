@@ -1,5 +1,5 @@
 /**
- * @vielzeug/prism — debug utilities for chart visualisation.
+ * @vielzeug/prism: debug utilities for chart visualisation.
  *
  * Import from the dedicated sub-path so debug code is tree-shaken from
  * production bundles:

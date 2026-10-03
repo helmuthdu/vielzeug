@@ -8,7 +8,7 @@ export type FieldVariantMixinOptions = {
    * border`, which isn't theme-color-driven the same way).
    */
   accentVar?: string;
-  /** Selector for the element that gets the variant's background/border/shadow — the visual "box". */
+  /** Selector for the element that gets the variant's background/border/shadow: the visual "box". */
   container: string;
   /**
    * Selector for the text-bearing element the `bordered` variant tints to the theme color.
@@ -23,26 +23,26 @@ export type FieldVariantMixinOptions = {
 
 /**
  * The `solid`/`flat`/`bordered`/`outline`/`ghost` variant switch shared by every text-entry
- * field component (`ore-input`, `ore-textarea`, `ore-message-composer`, `ore-otp-input`) —
+ * field component (`ore-input`, `ore-textarea`, `ore-message-composer`, `ore-otp-input`) :
  * previously hand-duplicated across them, mostly identically but not quite: this version also
  * uniformly adds a `:not([disabled])` guard to the `flat` variant's hover/focus rules (only
  * `ore-message-composer` had it) and the `bordered` variant's text/placeholder/caret tint
- * (`ore-input`/`ore-otp-input` were missing pieces of it) — clearly-unintentional per-component
+ * (`ore-input`/`ore-otp-input` were missing pieces of it): clearly-unintentional per-component
  * gaps, not deliberate differences, so this mixin converges on the more complete behavior for
  * every consumer rather than picking one component's version arbitrarily.
  *
- * Deliberately does **not** touch `:focus-within` box-shadow for `solid`/`outline`/`ghost` —
+ * Deliberately does **not** touch `:focus-within` box-shadow for `solid`/`outline`/`ghost` :
  * every current consumer already covers that with its own single `:host(:not([disabled],
  * [variant='flat'], ...)) ${container}:focus-within` catch-all in its *own* base layer, so a
  * copy here would be pure redundancy for them, and actively wrong for `ore-otp-input`: its
  * `.cell` is the focusable element itself (not a wrapper), so `:focus-within` matches on every
  * keystroke, and it already renders its own bespoke ring (colored by `accentVar`, not
- * `--_theme-shadow`) uniformly across all variants in its base layer — this mixin adding a
+ * `--_theme-shadow`) uniformly across all variants in its base layer: this mixin adding a
  * second, generic one would fight it depending on layer/rule order.
  *
  * Each component keeps its own `:host(:not([variant], ...)) ${container}:hover/:focus-within`
  * base-state rules and any variant beyond this shared set (e.g. `ore-input`'s extra `'text'`
- * variant) in its own stylesheet — this mixin only covers the five variants every consumer has
+ * variant) in its own stylesheet: this mixin only covers the five variants every consumer has
  * in common.
  *
  * @example
@@ -126,9 +126,9 @@ export const fieldVariantMixin = ({
       color: var(--${tokenPrefix}-placeholder-color, color-mix(in oklch, var(--_theme-base) 45%, transparent));
     }
 
-    /* Outline — border always visible, so unlike the other variants it can't lean on a
+    /* Outline: border always visible, so unlike the other variants it can't lean on a
        per-component \`:host{}\` base fallback for \`--_border-color\` that may or may not exist
-       (\`ore-message-composer\` has none — every other rule here sets both custom properties, so
+       (\`ore-message-composer\` has none: every other rule here sets both custom properties, so
        its base layer omits a default on the assumption that always holds). Set explicitly. */
     :host([variant='outline']) {
       --_bg: var(--${tokenPrefix}-bg, transparent);

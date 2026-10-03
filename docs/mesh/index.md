@@ -1,5 +1,5 @@
 ---
-title: Mesh — Backendless peer-to-peer sessions
+title: 'Mesh: Backendless peer-to-peer sessions'
 description: "Backendless peer-to-peer session transport over WebRTC data channels with manual pairing and host-authoritative star topology"
 package: mesh
 category: webrtc
@@ -15,7 +15,7 @@ environments: [browser, node]
 
 ## Why Mesh?
 
-Browsers cannot discover peers on a LAN, so sharing live state between nearby devices has always meant running a server. Mesh pairs devices out-of-band — copy/paste, `navigator.share`, or QR via `meshQrCodec` — and then moves typed messages directly over a WebRTC data channel with no backend involved.
+Browsers cannot discover peers on a LAN, so sharing live state between nearby devices has always meant running a server. Mesh pairs devices out-of-band: copy/paste, `navigator.share`, or QR via `meshQrCodec`, and then moves typed messages directly over a WebRTC data channel with no backend involved.
 
 ```ts
 // Before
@@ -23,7 +23,7 @@ const pc = new RTCPeerConnection();
 const dc = pc.createDataChannel('sync');
 await pc.setLocalDescription(await pc.createOffer());
 // …wait for ICE, hand the SDP to the other device, wire expiry, timeouts,
-// message framing, and dedupe yourself — per guest
+// message framing, and dedupe yourself: per guest
 
 // After
 const host = createMeshHost<AppProtocol>();
@@ -44,7 +44,7 @@ host.send(peer.id, 'snapshot', { rev: 1 });
 
 <div class="decision-callout">
 
-**Use Mesh when** a small group of devices on one network must exchange live state and you cannot — or do not want to — run a server.
+**Use Mesh when** a small group of devices on one network must exchange live state and you cannot, or do not want to: run a server.
 
 **Consider `pulse` when** you have a backend anyway, need internet-wide reach, or want server-managed rooms and presence.
 
@@ -54,11 +54,11 @@ host.send(peer.id, 'snapshot', { rev: 1 });
 
 Mesh is deliberately small. It does **not** provide:
 
-- Automatic LAN discovery — every pairing is an explicit out-of-band exchange.
-- Guest-to-guest relay — guests only ever talk to the host.
-- Reconnection across page reloads — a reload destroys the `RTCPeerConnection`; the consumer re-pairs and re-associates the stable `peerId`.
-- CRDTs or conflict resolution — payload semantics are yours.
-- TURN — there is no guarantee peers connect off-LAN.
+- Automatic LAN discovery: every pairing is an explicit out-of-band exchange.
+- Guest-to-guest relay: guests only ever talk to the host.
+- Reconnection across page reloads: a reload destroys the `RTCPeerConnection`; the consumer re-pairs and re-associates the stable `peerId`.
+- CRDTs or conflict resolution: payload semantics are yours.
+- TURN: there is no guarantee peers connect off-LAN.
 - Persistence, or any UI.
 
 Two operational caveats matter in practice: the host page must stay open for the session to live, and client-isolated Wi-Fi, VPNs, or strict firewalls can block even same-LAN pairing.
@@ -120,14 +120,14 @@ try {
 
 <div class="features-grid">
 
-- **`createMeshHost`** — host-authoritative star sessions; one `RTCPeerConnection` per guest.
-- **`createMeshGuest`** — single-host guest node with its own lifecycle.
-- **`meshCodec`** — compact base64url encoding for pairing payloads; pure and replaceable.
-- **Typed protocol** — declare `toHost`/`toGuest` maps once; `send`, `on`, and `broadcast` stay type-checked.
-- **Manual pairing** — invitation/answer exchange over copy/paste or `navigator.share`; proof of possession, TTL, and an `approvePeer` hook.
-- **`tap` observability** — status transitions, ICE state, byte counts, and rejections without affecting behavior.
-- **`peers` + `kick`** — host-side peer inventory and removal; join/leave arrive as `tap` events carrying the live peer.
-- **Injectable `rtc`** — every WebRTC object comes from a factory, so tests run fully in memory; `@vielzeug/mesh/testing` ships the in-memory fake.
+- **`createMeshHost`**: host-authoritative star sessions; one `RTCPeerConnection` per guest.
+- **`createMeshGuest`**: single-host guest node with its own lifecycle.
+- **`meshCodec`**: compact base64url encoding for pairing payloads; pure and replaceable.
+- **Typed protocol**: declare `toHost`/`toGuest` maps once; `send`, `on`, and `broadcast` stay type-checked.
+- **Manual pairing**: invitation/answer exchange over copy/paste or `navigator.share`; proof of possession, TTL, and an `approvePeer` hook.
+- **`tap` observability**: status transitions, ICE state, byte counts, and rejections without affecting behavior.
+- **`peers` + `kick`**: host-side peer inventory and removal; join/leave arrive as `tap` events carrying the live peer.
+- **Injectable `rtc`**: every WebRTC object comes from a factory, so tests run fully in memory; `@vielzeug/mesh/testing` ships the in-memory fake.
 
 </div>
 
@@ -145,9 +145,9 @@ try {
 
 <div class="see-also">
 
-- [Pulse](/pulse/) — typed WebSocket sessions when a server is available.
-- [Arsenal](/arsenal/) — the utilities Mesh builds on for ids, randomness, and hashing.
-- [Herald](/herald/) — in-process event bus for wiring mesh messages into your app.
+- [Pulse](/pulse/): typed WebSocket sessions when a server is available.
+- [Arsenal](/arsenal/): the utilities Mesh builds on for ids, randomness, and hashing.
+- [Herald](/herald/): in-process event bus for wiring mesh messages into your app.
 
 </div>
 

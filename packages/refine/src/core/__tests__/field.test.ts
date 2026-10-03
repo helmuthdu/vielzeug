@@ -395,13 +395,13 @@ describe('field controls', () => {
       );
 
       // Before any selection, `value` hasn't been contaminated by the selection-driven attribute
-      // reflection yet — an async-loaded default arriving after mount is still legitimate.
+      // reflection yet: an async-loaded default arriving after mount is still legitimate.
       value.value = 'gamma';
       handle.reset();
       expect(handle.selectedValues.value).toEqual(['gamma']);
     });
 
-    it('reset() freezes the target at the first selection — later changes to `value` stop moving it', async () => {
+    it('reset() freezes the target at the first selection: later changes to `value` stop moving it', async () => {
       let handle!: ReturnType<typeof createChoiceField>;
       const value = signal('alpha');
 
@@ -420,9 +420,9 @@ describe('field controls', () => {
         { componentOptions: { formAssociated: true } },
       );
 
-      handle.selectValue('beta'); // first selection — freezes the reset target at 'alpha'
+      handle.selectValue('beta'); // first selection: freezes the reset target at 'alpha'
 
-      // Unlike `createTextField`, this does *not* move the reset target — `ore-radio-group`/
+      // Unlike `createTextField`, this does *not* move the reset target: `ore-radio-group`/
       // `ore-checkbox-group` rewrite `value` on every selection (via the host attribute
       // reflection), so it can't double as "the default to revert to" anymore.
       value.value = 'gamma';
@@ -545,7 +545,7 @@ describe('field controls', () => {
     });
 
     it('does not attach focus listener when onFocus is omitted', async () => {
-      // Should not throw — absence of onFocus is a valid case.
+      // Should not throw: absence of onFocus is a valid case.
       const fixture = await mount(() => {
         const tf = createTextField({ prefix: 'test', signal: new AbortController().signal, value: signal('') });
 
@@ -713,7 +713,7 @@ describe('field controls', () => {
     });
   });
 
-  describe('createField() — hasLabel override', () => {
+  describe('createField(): hasLabel override', () => {
     it('uses hasLabel signal to override label visibility when provided', async () => {
       let handle!: ReturnType<typeof createTextField>;
       const hasLabel = signal(true);
@@ -799,7 +799,7 @@ describe('field controls', () => {
 
       expect(handle.value.value).toBe('initial');
 
-      // Abort the lifecycle — disposes the watcher
+      // Abort the lifecycle: disposes the watcher
       controller.abort();
 
       // External value changes should no longer sync into the local handle
@@ -902,7 +902,7 @@ describe('field controls', () => {
     });
   });
 
-  describe('createTextField() wire() — double-detach guard', () => {
+  describe('createTextField() wire(): double-detach guard', () => {
     it('calling the returned detach function more than once is a no-op', async () => {
       const changeSpy = vi.fn();
 
@@ -971,12 +971,12 @@ describe('field controls', () => {
       input.value = 'world';
       input.dispatchEvent(new Event('change'));
 
-      // Listener was removed — no call
+      // Listener was removed: no call
       expect(changeSpy).not.toHaveBeenCalled();
     });
   });
 
-  describe('createAssistiveState() — used directly by label-less fields (e.g. ore-message-composer)', () => {
+  describe('createAssistiveState(): used directly by label-less fields (e.g. ore-message-composer)', () => {
     it('exposes error/helper text and describedby/errormessage/invalid without any label state', () => {
       const state = createAssistiveState({ error: signal('Required'), helper: signal('Hint') });
 
@@ -1045,7 +1045,7 @@ describe('field controls', () => {
     });
   });
 
-  describe('createTextField() — form participation', () => {
+  describe('createTextField(): form participation', () => {
     it('attachFormField() wires triggerValidation to the attached handle, not before', async () => {
       let handle!: ReturnType<typeof createTextField>;
 
@@ -1111,7 +1111,7 @@ describe('field controls', () => {
       expect(handle.validity.value).toBeNull();
     });
 
-    it('validity stays null while readonly, even blank and required — matches native "barred from constraint validation"', async () => {
+    it('validity stays null while readonly, even blank and required: matches native "barred from constraint validation"', async () => {
       let handle!: ReturnType<typeof createTextField>;
       const readonly = signal(true);
 
@@ -1185,7 +1185,7 @@ describe('field controls', () => {
       expect(handle.value.value).toBe('initial');
     });
 
-    it('reset() tracks a `value` option change made *after* creation — matches native defaultValue, not a frozen snapshot', async () => {
+    it('reset() tracks a `value` option change made *after* creation: matches native defaultValue, not a frozen snapshot', async () => {
       let handle!: ReturnType<typeof createTextField>;
       const value = signal('initial');
 
@@ -1207,7 +1207,7 @@ describe('field controls', () => {
       handle.value.value = 'typed by user';
 
       // Programmatically changing the source `value` (e.g. `el.setAttribute('value', ...)`)
-      // moves the reset target — the same contract a real `<input>`'s `defaultValue` has.
+      // moves the reset target: the same contract a real `<input>`'s `defaultValue` has.
       value.value = 'updated-default';
       handle.reset();
       expect(handle.value.value).toBe('updated-default');

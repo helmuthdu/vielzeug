@@ -1,5 +1,5 @@
 ---
-title: 'Sentinel Examples — Monitor Network Condition'
+title: 'Sentinel Examples: Monitor Network Condition'
 description: Display online status and optional effective connection information.
 ---
 

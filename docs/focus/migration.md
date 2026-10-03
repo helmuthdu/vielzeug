@@ -1,5 +1,5 @@
 ---
-title: Focus — Migration
+title: 'Focus: Migration'
 description: Migrate through Focus 3.1 typed configuration errors and Focus 3 pure in-memory list navigation.
 ---
 
@@ -37,7 +37,7 @@ try {
 
 ### Keys match through `@vielzeug/keymap`
 
-Default and custom key tables are matched with `matchKey`, so entries accept shortcut patterns with aliases (`esc`, `space`, `up`) and modifiers (`shift+Home`), and modifier state must match exactly — a plain `ArrowDown` entry no longer fires on Ctrl+ArrowDown, so browser and app chords reach the page.
+Default and custom key tables are matched with `matchKey`, so entries accept shortcut patterns with aliases (`esc`, `space`, `up`) and modifiers (`shift+Home`), and modifier state must match exactly: a plain `ArrowDown` entry no longer fires on Ctrl+ArrowDown, so browser and app chords reach the page.
 
 ## 3.0
 

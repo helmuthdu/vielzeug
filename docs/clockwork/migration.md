@@ -66,7 +66,7 @@ Pure `transition()` and `can()` validate snapshot context even when an event is 
 
 ## Definition and timer validation
 
-Machine definitions are trusted as typed: targets, callback shapes, and state keys are compiler-checked in the typed definition, and runtime state and event lookups are own-property guarded, so prototype-colliding names such as `__proto__` or `constructor` never read as declared. `defineMachine()` rejects only what types cannot express — a timer `delay` outside `0` through `2,147,483,647` milliseconds (larger values overflow platform timers and fire immediately), an empty transition array, and a `context` that is not a plain record.
+Machine definitions are trusted as typed: targets, callback shapes, and state keys are compiler-checked in the typed definition, and runtime state and event lookups are own-property guarded, so prototype-colliding names such as `__proto__` or `constructor` never read as declared. `defineMachine()` rejects only what types cannot express: a timer `delay` outside `0` through `2,147,483,647` milliseconds (larger values overflow platform timers and fire immediately), an empty transition array, and a `context` that is not a plain record.
 
 Early 3.x releases also re-validated definition structure at runtime; that pass is gone. Definitions that only typechecked through `as unknown as` casts now fail at runtime use with the underlying `TypeError` instead of a definition-time error.
 

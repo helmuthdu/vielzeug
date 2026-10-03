@@ -1,5 +1,5 @@
 ---
-title: Scroll — Virtual list engine for TypeScript
+title: 'Scroll: Virtual list engine for TypeScript'
 description: Lightweight, dependency-free virtual list engine with variable heights, sticky headers, grids, and external-store integration.
 package: scroll
 category: ui-performance
@@ -28,10 +28,10 @@ environments: [browser]
 
 ## Why Scroll?
 
-Rendering thousands of items as real DOM nodes freezes the browser. Each node consumes layout, paint, and memory — long lists need to render only what is visible in the viewport.
+Rendering thousands of items as real DOM nodes freezes the browser. Each node consumes layout, paint, and memory: long lists need to render only what is visible in the viewport.
 
 ```ts
-// Before — render all 10 000 items (browser freezes)
+// Before: render all 10 000 items (browser freezes)
 list.replaceChildren();
 items.forEach((item) => {
   const el = document.createElement('div');
@@ -39,7 +39,7 @@ items.forEach((item) => {
   list.appendChild(el); // 10 000 DOM nodes
 });
 
-// After — Scroll (only ~15 visible rows in the DOM at any time)
+// After: Scroll (only ~15 visible rows in the DOM at any time)
 import { createVirtualizer } from '@vielzeug/scroll';
 const virtualizer = createVirtualizer(scrollEl, {
   count: items.length,
@@ -130,34 +130,34 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 
 <div class="features-grid">
 
-- **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
-- **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
-- **Batched measurements** — calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
-- **Stable-key reflow** — call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes
-- **Sticky headers** — mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
-- **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
-- **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
-- **External-store state** — use `getSnapshot()` and `subscribe()` directly or bridge into Ripple and framework stores
-- **Keyboard navigation** — compose it from `scrollToIndex()` and `@vielzeug/keymap` instead of a built-in key handler
-- **Auto-measurement** — enable `autoMeasure` to automatically measure visible items via `ResizeObserver`
-- **DOM adapter** — `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling
-- **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
-- **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; `scrollToRow()`/`scrollToColumn()` for grids; all support `behavior: 'smooth'`
-- **Horizontal + window targets** — supports both element and `window` scrolling, in vertical or horizontal mode
-- **Asymmetric overscan + gap** — tune start/end overscan independently and add inter-item spacing
-- **Atomic updates** — `virt.update(...)` lets you change count, estimator, overscan, and more in one call
-- **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices
-- **Scroll state events** — `onScrollingChange` fires when scrolling starts/stops; `onScrollEnd` fires once scrolling settles (native `scrollend` or debounce fallback); `isScrolling` getter available at any time
-- **Scroll anchor** — viewport position is preserved visually when `estimateSize` changes via `update()`
-- **Prepend support** — `prepend()` adds items at the top while keeping the viewport visually stable
-- **Disposable** — implements `[Symbol.dispose]` for `using` declarations
-- `ScrollConfigError` — Rejects malformed static configuration before listeners attach or updates apply
+- **Framework-agnostic**: callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
+- **Fixed and variable heights**: pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
+- **Batched measurements**: calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
+- **Stable-key reflow**: call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes
+- **Sticky headers**: mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
+- **Grouped sections**: `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
+- **Grid virtualization**: `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
+- **External-store state**: use `getSnapshot()` and `subscribe()` directly or bridge into Ripple and framework stores
+- **Keyboard navigation**: compose it from `scrollToIndex()` and `@vielzeug/keymap` instead of a built-in key handler
+- **Auto-measurement**: enable `autoMeasure` to automatically measure visible items via `ResizeObserver`
+- **DOM adapter**: `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling
+- **Skipped re-renders**: `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
+- **Programmatic scrolling**: `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; `scrollToRow()`/`scrollToColumn()` for grids; all support `behavior: 'smooth'`
+- **Horizontal + window targets**: supports both element and `window` scrolling, in vertical or horizontal mode
+- **Asymmetric overscan + gap**: tune start/end overscan independently and add inter-item spacing
+- **Atomic updates**: `virt.update(...)` lets you change count, estimator, overscan, and more in one call
+- **Clamp-safe**: `scrollToIndex` silently clamps out-of-range indices
+- **Scroll state events**: `onScrollingChange` fires when scrolling starts/stops; `onScrollEnd` fires once scrolling settles (native `scrollend` or debounce fallback); `isScrolling` getter available at any time
+- **Scroll anchor**: viewport position is preserved visually when `estimateSize` changes via `update()`
+- **Prepend support**: `prepend()` adds items at the top while keeping the viewport visually stable
+- **Disposable**: implements `[Symbol.dispose]` for `using` declarations
+- `ScrollConfigError`: Rejects malformed static configuration before listeners attach or updates apply
 
 </div>
 
 ## How It Works
 
-Scroll maintains a prefix-sum offset array. On every scroll event it runs two binary searches — one for the first visible index, one for the last — to determine the render window in O(log n) time. Only the items within that window (plus `overscan` on each side) are passed to `onChange`.
+Scroll maintains a prefix-sum offset array. On every scroll event it runs two binary searches: one for the first visible index, one for the last: to determine the render window in O(log n) time. Only the items within that window (plus `overscan` on each side) are passed to `onChange`.
 
 ```text
 Items:    [0]  [1]  [2]  [3]  [4]  [5]  [6]  ...
@@ -184,9 +184,9 @@ The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()
 
 <div class="see-also">
 
-- [Refine](/refine/) — accessible web components that use Scroll internally for virtualized listboxes and comboboxes
-- [Ore](/ore/) — web-component authoring layer; use with Scroll to build virtualizing custom elements
-- [Dnd](/dnd/) — drag-and-drop engine; combine with Scroll to make sortable virtual lists
+- [Refine](/refine/): accessible web components that use Scroll internally for virtualized listboxes and comboboxes
+- [Ore](/ore/): web-component authoring layer; use with Scroll to build virtualizing custom elements
+- [Dnd](/dnd/): drag-and-drop engine; combine with Scroll to make sortable virtual lists
 
 </div>
 

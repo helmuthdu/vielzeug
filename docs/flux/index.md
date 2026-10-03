@@ -1,5 +1,5 @@
 ---
-title: Flux — Explicit push streams for TypeScript
+title: 'Flux: Explicit push streams for TypeScript'
 description: Reusable push streams with subscription-owned cancellation, bounded buffering, channels, and dependency-free structural bridges.
 package: flux
 category: reactive
@@ -93,14 +93,14 @@ try {
 
 <div class="features-grid">
 
-- `stream()` — define cold reusable work with one teardown function
-- `pipe()` — compose any number of typed operators
-- `Subscription` — own cancellation through `unsubscribe()` or `AbortSignal`
-- `createChannel()` — mutable multicast state with bounded replay
-- `toAsyncIterable()` — explicit capacity and overflow policy for pull consumers
-- `retry()` — retry failures with optional backoff
-- `fromStore()` — bridge snapshot-based state such as Ripple signals or Sourcerer queries
-- `fromSubscribe()` — bridge callback-delivered Herald or Pulse events
+- `stream()`: define cold reusable work with one teardown function
+- `pipe()`: compose any number of typed operators
+- `Subscription`: own cancellation through `unsubscribe()` or `AbortSignal`
+- `createChannel()`: mutable multicast state with bounded replay
+- `toAsyncIterable()`: explicit capacity and overflow policy for pull consumers
+- `retry()`: retry failures with optional backoff
+- `fromStore()`: bridge snapshot-based state such as Ripple signals or Sourcerer queries
+- `fromSubscribe()`: bridge callback-delivered Herald or Pulse events
 
 </div>
 
@@ -119,10 +119,10 @@ try {
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — bridge snapshot state with `fromStore()`.
-- [Courier](/courier/) — compose transport promises with `from()` or custom producers.
-- [Herald](/herald/) — bridge explicit subscriptions with `stream()`.
-- [Pulse](/pulse/) — bridge events with `fromSubscribe()` and presence snapshots with `fromStore()`.
+- [Ripple](/ripple/): bridge snapshot state with `fromStore()`.
+- [Courier](/courier/): compose transport promises with `from()` or custom producers.
+- [Herald](/herald/): bridge explicit subscriptions with `stream()`.
+- [Pulse](/pulse/): bridge events with `fromSubscribe()` and presence snapshots with `fromStore()`.
 
 </div>
 

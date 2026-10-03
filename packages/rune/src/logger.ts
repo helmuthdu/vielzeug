@@ -13,14 +13,14 @@ function serializeError(err: Error): { message: string; name: string; stack?: st
 
 /**
  * Resolve lazy bindings and serialize Errors in a single pass.
- * Always allocates a fresh object — the result is never an alias of the input.
+ * Always allocates a fresh object: the result is never an alias of the input.
  */
 function prepareBindings(bindings: Bindings): Bindings {
   const out: Bindings = {};
 
   for (const [k, v] of Object.entries(bindings)) {
     // Guard against a `__proto__`/`constructor`/`prototype` field name hijacking out's own
-    // prototype via the bracket-assignment accessor — see _prototype.ts.
+    // prototype via the bracket-assignment accessor: see _prototype.ts.
     if (isUnsafeObjectKey(k)) continue;
 
     const resolved = isLazy(v) ? v.factory() : v;
@@ -78,8 +78,8 @@ function joinNamespace(parent: string, child: string): string {
  * Creates an isolated logger instance.
  *
  * Accepts two call signatures:
- * - `createLogger()` / `createLogger(options)` — configure via `RuneOptions`
- * - `createLogger('namespace', options?)` — namespace shorthand + optional options
+ * - `createLogger()` / `createLogger(options)`: configure via `RuneOptions`
+ * - `createLogger('namespace', options?)`: namespace shorthand + optional options
  *
  * Each instance has its own immutable config (logLevel, transports, middleware).
  * To change the log level at runtime, create a new logger or child.

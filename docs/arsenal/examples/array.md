@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Array Examples
+title: 'Arsenal: Array Examples'
 description: Array utility examples for Arsenal.
 ---
 

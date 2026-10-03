@@ -110,14 +110,14 @@ ripple.dispose();
 ## Remove the effect scheduler option (3.2)
 
 `EffectOptions.scheduler` is removed. Effects already coalesce: every write made during a synchronous
-flush — inside `batch()` or during a flush pass — produces a single effect run, so the extra microtask
+flush: inside `batch()` or during a flush pass: produces a single effect run, so the extra microtask
 deferral added a second, redundant queue with no distinct behavior.
 
 ```ts
 // Before
 ripple.effect(() => console.log(count.value), { scheduler: 'microtask' });
 
-// After — batch coalesces the writes instead
+// After: batch coalesces the writes instead
 ripple.effect(() => console.log(count.value));
 ripple.batch(() => {
   count.value = 1;

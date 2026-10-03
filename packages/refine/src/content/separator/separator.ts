@@ -7,7 +7,7 @@ import componentStyles from './separator.css?inline';
 export type OreSeparatorProps = {
   /** Theme color tint */
   color?: ThemeColor;
-  /** Decorative only (default true) — set to false for semantic separators */
+  /** Decorative only (default true): set to false for semantic separators */
   decorative?: boolean;
   /** Optional label text centered on the separator */
   label?: string;

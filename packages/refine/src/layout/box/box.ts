@@ -29,7 +29,7 @@ export type OreBoxProps = {
 };
 
 /**
- * ore-box — A foundational layout primitive with theming support.
+ * ore-box: A foundational layout primitive with theming support.
  *
  * @element ore-box
  *

@@ -8,38 +8,38 @@
 // the same 11 derived sub-tokens (backdrop, content, contrast, lighter,
 // light, dark, darker, focus, border, focus-shadow, halo-shadow). Hand-typing
 // that shape per family means retyping OKLCH lightness/chroma literals up to
-// a dozen times per color — they drift, and nothing catches it. Every
+// a dozen times per color: they drift, and nothing catches it. Every
 // sub-token below is instead derived from ONE authored `base` color via
 // OKLCH relative-color syntax (`oklch(from var(--color-x) ...)`), so tuning a
 // family (or the shared shade-ramp shape) is a one-line data change instead
 // of a multi-line hand edit. `content`/`contrast` stay hand-authored per
 // family (light/dark) because whether a family's base sits above or below
-// the midpoint lightness flips per family and per color-scheme — that can't
+// the midpoint lightness flips per family and per color-scheme, that can't
 // be derived from a shared delta, it's a genuine per-family design decision.
 //
 // `content` and `contrast` both mean "ink painted on top of this family's
 // own filled surface" (checked real consumers: solid/hover/active button
 // states and badge/chip/accordion fills use `contrast`; frost's translucent
-// fill and a few default-text cases use `content`) — `contrast` is just the
+// fill and a few default-text cases use `content`): `contrast` is just the
 // more extreme of the two, for fully-opaque fills vs. `content`'s tinted
 // ones. Both MUST invert in the same direction: if a family's base is dark
 // in a given scheme, both need light ink there; if its base stays bright,
 // both need dark ink there. Never author one to track the page canvas
-// instead of the family's own base — that's what caused info/success/
+// instead of the family's own base, that's what caused info/success/
 // warning's `contrast` to go light-on-light in light mode before this
 // comment was written.
 //
 // All 7 families invert with scheme (dark base in light mode, bright in
 // dark mode) and share the same content/contrast shape (light ink, L97%/
-// L98%, wherever the base is dark) — requested explicitly: buttons/inputs
+// L98%, wherever the base is dark): requested explicitly: buttons/inputs
 // should all read as "light text on a saturated fill" regardless of color,
 // not a mix of light-text and dark-text colors depending on which one.
 //
-// `base` isn't only a fill behind `content`/`contrast` — bordered/outline/
+// `base` isn't only a fill behind `content`/`contrast`: bordered/outline/
 // ghost/text button (and badge/chip/etc.) variants paint `base` ITSELF as
 // the text/border color directly on the page canvas. For that pairing to
 // clear WCAG AA against a near-white canvas, light-mode base needs to be
-// dark enough on its own (roughly L ≤ 56%) — this is a second, independent
+// dark enough on its own (roughly L ≤ 56%): this is a second, independent
 // reason every family's light-mode base sits in the low-to-mid 50s, not
 // just the light-ink-direction one above.
 //
@@ -48,17 +48,17 @@
 // above: colorblind-friendliness from keeping semantic colors at different
 // lightnesses (hue alone still differentiates them, which is how most
 // production design systems handle this) and warning's amber identity
-// (loses saturation/reads as ochre once dark enough for light ink — see
+// (loses saturation/reads as ochre once dark enough for light ink: see
 // warning's own comment). Both are real trade-offs, not non-issues; if the
 // harmony call gets revisited, this is what comes back into play.
 //
 // Every `base`/ink chroma value must also stay inside the sRGB-displayable
-// OKLCH gamut for its own L/H — verify with culori's `displayable()` before
+// OKLCH gamut for its own L/H: verify with culori's `displayable()` before
 // hand-picking a chroma, never eyeball it. The gamut ceiling shrinks fast
 // near L0%/L100% and varies a lot by hue (amber/blue/teal are far narrower
 // than violet/red there), so "some existing family's chroma ratio/number"
 // is not a safe reference point for a different hue or a more extreme L.
-// Getting this wrong doesn't error — it silently renders as a hue-shifted,
+// Getting this wrong doesn't error: it silently renders as a hue-shifted,
 // often near-black-and-red-looking color instead of the intended one (this
 // is exactly what happened to info/success/warning's dark ink at L12-15%,
 // and to warning's L74-84% base, before this comment was written).
@@ -66,7 +66,7 @@
 // Run `pnpm run sync:theme` after editing this file to regenerate the block
 // inside `src/styles/theme.css` between the GENERATED_BEGIN/END markers.
 // `pnpm run check:theme` (wired into `build`) fails if the two have drifted,
-// so the generated block is never hand-edited directly — same contract as
+// so the generated block is never hand-edited directly: same contract as
 // `sync:exports` / `check:manifest` for the export map.
 
 import { execFileSync } from 'node:child_process';
@@ -85,12 +85,12 @@ const THEME_CSS_PATH = join(__dirname, '../src/styles/theme.css');
 const require = createRequire(join(__dirname, '../package.json'));
 const biomeBin = require.resolve('@biomejs/biome/bin/biome');
 
-const GENERATED_BEGIN = '  /* ── theme-tokens:generated:begin — run `pnpm run sync:theme`, do not hand-edit ── */';
+const GENERATED_BEGIN = '  /* ── theme-tokens:generated:begin: run `pnpm run sync:theme`, do not hand-edit ── */';
 const GENERATED_END = '  /* ── theme-tokens:generated:end ── */';
 
 // Shared shape every family's shade ramp derives from its `base` color.
 // Real CSS custom properties (not just generator constants) so consumers can
-// retune the whole ramp at runtime without a rebuild — see `--shade-*` in
+// retune the whole ramp at runtime without a rebuild: see `--shade-*` in
 // the generated output.
 export const SHADE_RAMP = {
   '--shade-lighter-l': '0.3',
@@ -114,11 +114,11 @@ export const SHADE_RAMP = {
   '--shade-halo-glow-soft': '8%',
 };
 
-// 11-step adaptive neutral scale — surfaces (50-400) and text (500-900).
+// 11-step adaptive neutral scale: surfaces (50-400) and text (500-900).
 export const CONTRAST_SCALE = [
   { dark: '17% 0.001 250deg', light: '99% 0.001 264deg', note: 'Canvas, page background', step: 50 },
   { dark: '21% 0.001 250deg', light: '97% 0.001 264deg', note: 'Cards, elevated surfaces', step: 100 },
-  { dark: '23.5% 0.001 250deg', light: '95.5% 0.001 264deg', note: 'Midpoint — chip base, subtle fills', step: 150 },
+  { dark: '23.5% 0.001 250deg', light: '95.5% 0.001 264deg', note: 'Midpoint: chip base, subtle fills', step: 150 },
   { dark: '26% 0.001 250deg', light: '94% 0.001 264deg', note: 'Nested cards, hover states', step: 200 },
   { dark: '32% 0.001 250deg', light: '89% 0.002 264deg', note: 'Borders, dividers', step: 300 },
   { dark: '40% 0.001 250deg', light: '81% 0.002 264deg', note: 'Disabled backgrounds, subtle UI', step: 400 },
@@ -131,12 +131,12 @@ export const CONTRAST_SCALE = [
 
 // One authored `base` (or `baseRaw` for secondary, whose base is a color-mix
 // blend rather than a plain oklch triple) plus two authored ink pairs
-// (`content`, `contrast`) per family. Everything else is derived — see the
+// (`content`, `contrast`) per family. Everything else is derived: see the
 // module doc comment above.
 export const COLOR_FAMILIES = [
   {
     // Reverted a brightened light-mode base (was 64%, briefly): `base`
-    // isn't only a fill behind `content`/`contrast` — bordered/outline/
+    // isn't only a fill behind `content`/`contrast`: bordered/outline/
     // ghost/text button (and badge/chip/etc.) variants paint `base` itself
     // directly as the text/border color on the page canvas. At 64% that
     // pairing was 3.27:1 against canvas (fails AA); tightened to 52% for a
@@ -145,17 +145,17 @@ export const COLOR_FAMILIES = [
     // scheme again instead of matching info/success/warning's direction.
     content: { dark: { c: 0, l: '22%' }, light: { c: 0, l: '99%' } },
     contrast: { dark: { c: 0, l: '13%' }, light: { c: 0, l: '99%' } },
-    description: 'True gray — neutral UI surfaces',
+    description: 'True gray: neutral UI surfaces',
     halo: 'flat', // no glassy highlight in dark mode, unlike the branded colors below
     name: 'neutral',
     base: { dark: '72% 0 250deg', light: '52% 0 264deg' },
   },
   {
     // content = ink on the translucent frost fill, contrast = ink on the
-    // fully opaque solid fill — contrast stays closer to the true extreme.
+    // fully opaque solid fill: contrast stays closer to the true extreme.
     content: { dark: { c: 0.3, l: '22%' }, light: { c: 0.05, l: '97%' } },
     contrast: { dark: { c: 0.3, l: '14%' }, light: { c: 0.045, l: '98%' } },
-    description: 'Periwinkle violet — primary brand color',
+    description: 'Periwinkle violet: primary brand color',
     hueKnob: { name: '--color-primary-hue', value: '293deg' },
     name: 'primary',
     // Dark-mode chroma capped at 0.148 (was 0.2): oklch's displayable sRGB
@@ -168,10 +168,10 @@ export const COLOR_FAMILIES = [
     // there's at least as much AA headroom to soften `content` into.
     content: { dark: { cAbs: 0.002, l: '22%' }, light: { cAbs: 0.0015, l: '97%' } },
     contrast: { dark: { cAbs: 0.003, l: '13%' }, light: { cAbs: 0.002, l: '98%' } },
-    description: 'Ink/charcoal (light) · silver (dark) — auto-derived from --color-primary-hue',
+    description: 'Ink/charcoal (light) · silver (dark): auto-derived from --color-primary-hue',
     name: 'secondary',
     // Near-black (light) / near-white (dark) tinted with 14% of the
-    // primary color (was 7% — barely perceptible). Analogous-color theory:
+    // primary color (was 7%: barely perceptible). Analogous-color theory:
     // mixing a trace of the brand hue into an otherwise-neutral ink reads
     // as "related to" primary rather than clashing with it, without
     // secondary stopping being achromatic-reading ink/charcoal. Not a
@@ -184,7 +184,7 @@ export const COLOR_FAMILIES = [
   },
   {
     // Light-mode base darkened 60%→54% to match neutral/primary/secondary/
-    // error's weight and ink direction (light ink) — requested explicitly
+    // error's weight and ink direction (light ink): requested explicitly
     // twice: buttons/inputs across colors should all read as "light text on
     // a saturated fill" for visual harmony, not a mix of light and dark
     // text depending on color. This drops the lightness-spread-for-
@@ -193,30 +193,30 @@ export const COLOR_FAMILIES = [
     // error from each other, which is how most production design systems
     // (Material, Tailwind, Bootstrap) do it anyway.
     // Light-mode hue shifted 230deg→255deg (cyan-blue → blue): at L~54%,
-    // the sRGB chroma ceiling isn't flat across hue — cyan(230) sits in a
+    // the sRGB chroma ceiling isn't flat across hue: cyan(230) sits in a
     // trough (~0.11), blue(255) is on a rising slope (~0.17), ~55% more
     // headroom for the same AA constraints. This is the same "wrong hue
     // for this lightness reads as muted no matter how you tune it" fix
     // applied to warning, generalized to the whole bright→dark set at
-    // once, per request. Dark mode (L74%) keeps 230deg — its own ceiling
+    // once, per request. Dark mode (L74%) keeps 230deg: its own ceiling
     // there doesn't have the same trough, no reason to change it.
     content: { dark: { cAbs: 0.024, l: '15%' }, light: { cAbs: 0.0122, l: '97%' } },
     contrast: { dark: { cAbs: 0.019, l: '12%' }, light: { cAbs: 0.0081, l: '98%' } },
-    description: 'Blue (light mode) · cyan-blue (dark mode) — informational messages',
+    description: 'Blue (light mode) · cyan-blue (dark mode): informational messages',
     name: 'info',
     base: { dark: '74% 0.133 230deg', light: '54% 0.169 255deg' },
   },
   {
     // Same reasoning as info. Light-mode hue shifted 160deg (teal) →
-    // 137deg (green) — teal is in this lightness's chroma trough (~0.10),
+    // 137deg (green): teal is in this lightness's chroma trough (~0.10),
     // green is near its local peak (~0.14). L nudged 54%→53% too: at
     // 137deg specifically, 54% left content.light's margin thinner
-    // (4.46:1, just under AA) than the other 3 — 53% restores the same
+    // (4.46:1, just under AA) than the other 3: 53% restores the same
     // ~4.5-4.9 margin band as info/error/warning. Dark mode (L78%, 160deg)
     // unchanged.
     content: { dark: { cAbs: 0.027, l: '15%' }, light: { cAbs: 0.0494, l: '97%' } },
     contrast: { dark: { cAbs: 0.022, l: '12%' }, light: { cAbs: 0.0323, l: '98%' } },
-    description: 'Green (light mode) · teal (dark mode) — positive outcomes & confirmations',
+    description: 'Green (light mode) · teal (dark mode): positive outcomes & confirmations',
     name: 'success',
     base: { dark: '78% 0.14 160deg', light: '53% 0.145 137deg' },
   },
@@ -224,31 +224,31 @@ export const COLOR_FAMILIES = [
     // Same reasoning as info/success, with one honest caveat: warning's
     // hue family (yellow, ~65-100deg) sits in this lightness's chroma
     // TROUGH no matter which yellow-ish hue you pick (checked the whole
-    // range) — yellow's own chroma peaks at high L (dark mode's 84% base
+    // range): yellow's own chroma peaks at high L (dark mode's 84% base
     // benefits from staying at 70deg amber), not at the ~54% light mode
     // needs for AA. 70deg (amber, matching dark mode's own hue) turns out
     // to be at the better edge of that trough anyway (C=0.111 vs. gold's
-    // 95deg at C=0.105) — every other family here got a real "wrong hue
+    // 95deg at C=0.105): every other family here got a real "wrong hue
     // for this L" fix; this one is "least-wrong hue", warning is
     // structurally the least saturated of the 4 at this lightness and
     // that isn't fixable by hue alone.
     content: { dark: { cAbs: 0.026, l: '15%' }, light: { cAbs: 0.0184, l: '97%' } },
     contrast: { dark: { cAbs: 0.021, l: '12%' }, light: { cAbs: 0.0122, l: '98%' } },
-    description: 'Amber — cautionary states & alerts',
+    description: 'Amber: cautionary states & alerts',
     name: 'warning',
     base: { dark: '84% 0.113 70deg', light: '54% 0.111 70deg' },
   },
   {
     // Reverted a brightened light-mode base (was 64%): same bug as
-    // neutral's — `base` is painted directly as bordered/outline/ghost/
+    // neutral's: `base` is painted directly as bordered/outline/ghost/
     // text button text/border color on the page canvas, not just as a fill
     // behind content/contrast. At 64% that pairing was 3.63:1 against
     // canvas (fails AA); back to the original 54% (5.44:1). Same L22/L14
-    // (dark)/L97/L98 (light) shape as primary — error inverts with scheme
+    // (dark)/L97/L98 (light) shape as primary: error inverts with scheme
     // again, like primary/secondary/neutral.
     content: { dark: { cAbs: 0.077, l: '22%' }, light: { cAbs: 0.0125, l: '97%' } },
     contrast: { dark: { cAbs: 0.052, l: '14%' }, light: { cAbs: 0.0088, l: '98%' } },
-    description: 'Vermilion — destructive actions & errors',
+    description: 'Vermilion: destructive actions & errors',
     name: 'error',
     base: { dark: '66% 0.18 29deg', light: '54% 0.2 29deg' },
   },
@@ -260,7 +260,7 @@ const ink = (colorVar, { l, c, cAbs }) =>
 function familyBlock({ name, base, baseRaw, hueKnob, content, contrast, description }) {
   const colorVar = `var(--color-${name})`;
   const title = `${name[0].toUpperCase()}${name.slice(1)}`;
-  const lines = [`    /* ── ${title} — ${description} ── */`];
+  const lines = [`    /* ── ${title}: ${description} ── */`];
 
   if (hueKnob) lines.push(`    ${hueKnob.name}: ${hueKnob.value};`, '');
 
@@ -321,14 +321,14 @@ function generate() {
   const familyLines = COLOR_FAMILIES.map(familyBlock);
 
   return [
-    '    /* ── Contrast scale — Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */',
+    '    /* ── Contrast scale: Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */',
     ...contrastLines,
     '',
     '    --color-canvas: color-mix(in oklch, var(--color-contrast-50) 85%, transparent);',
     '    --color-divider: color-mix(in oklch, var(--color-contrast-300) 85%, transparent);',
     '    --color-contrast: color-mix(in oklch, var(--color-contrast-900) 85%, transparent);',
     '',
-    '    /* ── Shade ramp — shared derivation recipe for every color family below ──── */',
+    '    /* ── Shade ramp: shared derivation recipe for every color family below ──── */',
     '    /* Every family only authors a `base` (+ content/contrast ink pair); every  */',
     '    /* other sub-token is `oklch(from var(--color-x) ...)`, derived from that   */',
     '    /* single base using the deltas below. Tune a family by editing its base;   */',
@@ -336,7 +336,7 @@ function generate() {
     '    /* once, for all 7 families at once. */',
     ...shadeRampLines,
     '',
-    '    /* ── Halo shadows — branded glow per color family ───────────────────────── */',
+    '    /* ── Halo shadows: branded glow per color family ───────────────────────── */',
     ...haloLines,
     '',
     ...familyLines.flatMap((block, i) => (i === 0 ? [block] : ['', block])),
@@ -391,7 +391,7 @@ async function main(command) {
 
   if (command === 'check') {
     if (normalizedGeneratedBlock(source) !== normalizedGeneratedBlock(nextSource)) {
-      console.error('theme.css is out of sync with theme-tokens.mjs — run `pnpm run sync:theme`.');
+      console.error('theme.css is out of sync with theme-tokens.mjs: run `pnpm run sync:theme`.');
       processRef.exit(1);
     }
 

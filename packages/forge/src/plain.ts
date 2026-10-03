@@ -11,7 +11,7 @@ import { toPlainValues as flattenValue } from './core/path.js';
  * `Map`, `Set`, and other keyless built-ins flatten to `{}` (their entries live on the
  * prototype); sparse array slots are dropped, which shifts later indexes; `NaN`, `Infinity`,
  * functions, and circular branches become `undefined`. Normalize model classes, not
- * arbitrary graphs. The type parameter is a convenience cast — the flattened shape differs
+ * arbitrary graphs. The type parameter is a convenience cast: the flattened shape differs
  * from the input type whenever class instances are present.
  *
  * This is a public wrapper so the emitted declaration does not name `@vielzeug/arsenal`

@@ -1,6 +1,6 @@
 // Verifies the WCAG contrast claims theme-tokens.mjs's comments make (e.g.
 // "AA compliant", "AAA compliant") against the literal OKLCH values in the
-// token data — a regression guard for exactly the kind of drift that's easy
+// token data: a regression guard for exactly the kind of drift that's easy
 // to introduce by hand-tuning a family's `base`/`content`/`contrast` numbers
 // and forgetting to re-check legibility.
 //
@@ -20,7 +20,7 @@
 // own filled surface (solid/hover/active button states, badges, chips, and
 // accordion fills use `contrast`; frost's translucent fill uses `content`).
 // This is the exact check that would have caught info/success/warning's
-// `contrast` previously reading as light ink in light mode — a value copied
+// `contrast` previously reading as light ink in light mode: a value copied
 // from the page canvas's own direction instead of derived from these
 // families' own base.
 
@@ -35,12 +35,12 @@ const themeCss = readFileSync(join(import.meta.dirname, '../theme.css'), 'utf-8'
 
 /**
  * The sRGB-displayable OKLCH chroma ceiling shrinks fast near L0%/L100% and
- * varies a lot by hue — a chroma that's safely in-gamut for a mid-lightness
+ * varies a lot by hue: a chroma that's safely in-gamut for a mid-lightness
  * violet can be 2-3x over the ceiling for a near-black amber. Going over
  * doesn't error, it silently renders as a hue-shifted, often
  * near-black-and-red-looking color instead of the intended one (exactly
  * what happened to info/success/warning's dark ink, and to warning's base,
- * before this test existed — see theme-tokens.mjs's module comment).
+ * before this test existed: see theme-tokens.mjs's module comment).
  */
 function expectInGamut(spec: string, label: string) {
   const color = parse(`oklch(${spec})`);
@@ -160,12 +160,12 @@ describe('color family ink (--color-{family}-content / -contrast)', () => {
     }
   });
 
-  // Ink direction (light vs. dark) isn't a pure function of the base's L —
+  // Ink direction (light vs. dark) isn't a pure function of the base's L :
   // a saturated hue at, say, L56% can still read best with light ink, so
   // there's no universal "base L < 50% ⇒ light ink" rule to assert here.
   // What IS a real invariant: `content` and `contrast` are two intensities
   // of the *same* ink for the *same* base, so they must always agree on
-  // which side (light or dark) they're on — this is exactly the check that
+  // which side (light or dark) they're on: this is exactly the check that
   // would have caught info/success/warning's `contrast` disagreeing with
   // `content` before this file's fix.
   it.each(resolvable)('$name content and contrast agree on ink direction, in both color schemes', (family) => {
@@ -187,16 +187,16 @@ describe('color family ink (--color-{family}-content / -contrast)', () => {
   });
 });
 
-// `base` isn't only a fill behind `content`/`contrast` — button.css's
+// `base` isn't only a fill behind `content`/`contrast`: button.css's
 // bordered/outline/ghost/text variants (and badge/chip/etc.) paint `base`
 // itself directly as the text/border color on the page canvas. This is the
 // pairing that regressed when neutral/error's light-mode base was
 // brightened to match info/success/warning's ink direction (base-vs-canvas
-// dropped from ~4.5-5.4:1 to ~3.3-3.6:1, failing AA) — reverted, but only a
+// dropped from ~4.5-5.4:1 to ~3.3-3.6:1, failing AA): reverted, but only a
 // test on the actual pairing prevents it from silently regressing again.
 //
 // All 7 families invert with scheme now (see theme-tokens.mjs's module
-// comment), so this is asserted for every resolvable family — info/
+// comment), so this is asserted for every resolvable family: info/
 // success/warning used to be a known, pre-existing exception here (their
 // base stayed bright, so this pairing was marginal for them); that's no
 // longer true, and the exception was removed rather than left stale.
@@ -218,16 +218,16 @@ describe('base as standalone text/border color (--color-{family}, bordered/outli
 
 // Regression guard for a bug that silently broke every box-shadow-consuming
 // hover/focus/halo effect across the whole component library: `light-dark()`
-// only accepts <color> arguments (CSS Color 5 spec) — `--shadow-2xs` and
+// only accepts <color> arguments (CSS Color 5 spec): `--shadow-2xs` and
 // its siblings used to wrap an *entire* shadow (offset + blur + color) in
 // it instead of just the color. Custom properties store arbitrary token
 // soup, so the declaration itself never errored; the moment a component
 // substituted it into a real `box-shadow`, the value failed to parse and
 // silently computed to `none` in spec-compliant browsers (reproduced with
-// real headless Chrome — jsdom's stubbed getComputedStyle can't catch this
+// real headless Chrome: jsdom's stubbed getComputedStyle can't catch this
 // at all, hence a source-text check here rather than a rendering one).
 // `--halo-shadow-*`/`-focus-shadow` (theme-tokens.mjs-generated) already
-// get this right — light-dark() wraps only rgb()/oklch() colors there —
+// get this right: light-dark() wraps only rgb()/oklch() colors there :
 // this only guards the hand-authored Box Shadows/Inset Shadows block.
 describe('shadow tokens (--shadow-*, --inset-shadow-*)', () => {
   it('light-dark() wraps only a color, never a full shadow (offset/blur/spread)', () => {

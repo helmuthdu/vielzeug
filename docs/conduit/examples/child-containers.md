@@ -1,5 +1,5 @@
 ---
-title: Conduit Examples — Child Containers
+title: 'Conduit Examples: Child Containers'
 description: Own request or job resources with Conduit child containers.
 ---
 

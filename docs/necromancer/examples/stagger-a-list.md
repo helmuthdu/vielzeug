@@ -1,5 +1,5 @@
 ---
-title: 'Necromancer Examples — Stagger a List'
+title: 'Necromancer Examples: Stagger a List'
 description: 'Reveal a list in sequence with @vielzeug/necromancer.'
 ---
 

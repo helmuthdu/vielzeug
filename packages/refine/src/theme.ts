@@ -18,11 +18,11 @@ export interface ThemeControllerOptions {
 
 /**
  * Owns the light/dark/system theme for the document: a reactive preference, the effective
- * (resolved) mode, and the DOM application refine's `styles/theme.css` expects — the `.dark`
+ * (resolved) mode, and the DOM application refine's `styles/theme.css` expects: the `.dark`
  * class plus the `color-scheme` property on the root element, so every `light-dark()` token
  * resolves to the right branch.
  *
- * The controller does NOT persist the preference or expose an accent color — those are consumer
+ * The controller does NOT persist the preference or expose an accent color: those are consumer
  * concerns (wire `watch(controller.preference, save)` for persistence; set `--color-primary-hue`
  * yourself). It only tracks the OS `prefers-color-scheme` while in `system` mode and applies the
  * result.

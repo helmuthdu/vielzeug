@@ -1,5 +1,5 @@
 ---
-title: Usage — Pulse
+title: 'Usage: Pulse'
 description: Practical guide for connecting, sending, subscribing, joining rooms, and managing lifecycle with Pulse.
 package: pulse
 category: websockets
@@ -60,7 +60,7 @@ try {
 }
 ```
 
-`connect()` opens the WebSocket and resolves after session restoration completes. `send()` throws `PulseConnectionError` while disconnected — Pulse never silently drops or buffers application messages.
+`connect()` opens the WebSocket and resolves after session restoration completes. `send()` throws `PulseConnectionError` while disconnected: Pulse never silently drops or buffers application messages.
 
 ## Send and receive root events
 
@@ -269,7 +269,7 @@ presenceEffect.dispose();
 - Await `connect()` before sending; never assume construction opens the transport.
 - Define the full schema at `createPulse()` so named scopes are type-safe without per-call generics.
 - Use `using` declarations for channel and room scopes so disposal is automatic at block exit.
-- Always call `dispose()` when done — it closes the connection, rejects pending joins, and clears listeners.
+- Always call `dispose()` when done: it closes the connection, rejects pending joins, and clears listeners.
 - Call `tap()` to observe lifecycle events; Pulse reports transport and protocol errors there rather than throwing asynchronously.
 - Read `pulse.rooms` for post-reconnect membership; `joined` rejects on transport close.
 - Set a `timeout` on room scopes when the server may never confirm membership.

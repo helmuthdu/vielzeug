@@ -126,7 +126,7 @@ Use native `<optgroup>` elements to create labelled groups. For lists longer tha
 
 ## Multiple Selection
 
-Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `ore-chip` tag inside the trigger field — clicking the × on a chip deselects that value without closing the dropdown. Only use `multiple` for selections where more than one value logically makes sense.
+Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `ore-chip` tag inside the trigger field: clicking the × on a chip deselects that value without closing the dropdown. Only use `multiple` for selections where more than one value logically makes sense.
 
 <ComponentPreview vertical>
 
@@ -247,7 +247,7 @@ select.options = [
 
 Render leading icon(s) next to an option's label. For native options, use `data-icon`; for JavaScript options, use `icon`. Icons are decorative and hidden from assistive technology.
 
-Icon values containing a path separator (`/`) or starting with `data:` are treated as image URLs and rendered as `<img>` — useful for custom artwork (country flags, game resources). Anything else is resolved as a lucide icon name.
+Icon values containing a path separator (`/`) or starting with `data:` are treated as image URLs and rendered as `<img>`: useful for custom artwork (country flags, game resources). Anything else is resolved as a lucide icon name.
 
 An option can carry several icons: pass an array to the JS `icon` property, or a space-separated list to `data-icon` (safe because neither lucide names nor URLs contain spaces).
 
@@ -265,7 +265,7 @@ select.options = [
 ];
 ```
 
-Icons inherit the option's state color — muted by default, the theme color when the option is selected. In single-select mode the selected option's icon(s) also appear in the trigger before the value text.
+Icons inherit the option's state color: muted by default, the theme color when the option is selected. In single-select mode the selected option's icon(s) also appear in the trigger before the value text.
 
 ## In a Form
 
@@ -323,7 +323,7 @@ Icons inherit the option's state color — muted by default, the theme color whe
 | `disabled`        | `boolean`                                                                              | `false`     | Disable the control                        |
 | `required`        | `boolean`                                                                              | `false`     | Mark field as required for form validation |
 | `fullwidth`       | `boolean`                                                                              | `false`     | Expand to full width                       |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | —           | Override border-radius                     |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                             | N/A | Override border-radius                     |
 | `loading`         | `boolean`                                                                              | `false`     | Show loading indicator in the dropdown     |
 
 ### Slots

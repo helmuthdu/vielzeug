@@ -30,7 +30,7 @@ describe('shallowMerge', () => {
     expect(target).toEqual({ a: 1 });
   });
 
-  it('guards against __proto__ prototype pollution — security regression', () => {
+  it('guards against __proto__ prototype pollution: security regression', () => {
     const malicious = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
     const result = shallowMerge({}, malicious);
 

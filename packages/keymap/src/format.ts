@@ -59,7 +59,7 @@ export function formatShortcut(shortcut: string, modKey: 'ctrl' | 'meta' = detec
 
 /**
  * Formats a shortcut into keycap-sized segments: one array per step (a chord has several
- * steps), one label per keycap — Mac modifier symbols are their own keycaps, other
+ * steps), one label per keycap: Mac modifier symbols are their own keycaps, other
  * platforms get whole-word labels (`['Ctrl', 'Shift', 'P']`).
  *
  * Made for keycap UIs that need the pieces `formatShortcut` joins into one string, so

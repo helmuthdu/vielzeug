@@ -1,11 +1,11 @@
 /**
- * isActive() — URL matching against named routes.
+ * isActive(): URL matching against named routes.
  */
 import { createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
-describe('isActive() — prefix matching (default)', () => {
+describe('isActive(): prefix matching (default)', () => {
   it('returns true when the current pathname matches the route prefix', async () => {
     const history = createMemoryHistory('/dashboard/settings');
     const router = createRouter({
@@ -60,7 +60,7 @@ describe('isActive() — prefix matching (default)', () => {
   });
 });
 
-describe('isActive() — exact matching', () => {
+describe('isActive(): exact matching', () => {
   it('returns true when the current pathname exactly matches the route', async () => {
     const history = createMemoryHistory('/about');
     const router = createRouter({
@@ -117,7 +117,7 @@ describe('isActive() — exact matching', () => {
   });
 });
 
-describe('isActive() — base prefix stripping', () => {
+describe('isActive(): base prefix stripping', () => {
   beforeEach(() => resetMocks());
   afterEach(() => disposeRouter());
 

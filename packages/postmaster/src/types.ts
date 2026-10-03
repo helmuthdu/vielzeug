@@ -140,7 +140,7 @@ export interface CreatePostmasterOptions<J extends JobDefinitions> {
  * `availableAt` is the earliest epoch timestamp (ms) at which the job may be
  * claimed. Defaults to the Postmaster clock at enqueue time. Past timestamps
  * remain immediately eligible. Postmaster does not guarantee execution at the
- * requested time — only that the job will not be claimed before it. A live
+ * requested time: only that the job will not be claimed before it. A live
  * processor (`start()` or `flush()`) is required for execution.
  */
 export interface EnqueueOptions {

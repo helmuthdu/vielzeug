@@ -1,5 +1,5 @@
 ---
-title: Orbit — Examples
+title: 'Orbit: Examples'
 description: Worked examples for @vielzeug/orbit.
 ---
 

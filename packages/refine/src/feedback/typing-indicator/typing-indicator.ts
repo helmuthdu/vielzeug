@@ -17,11 +17,11 @@ export type OreTypingIndicatorProps = {
 };
 
 /**
- * Three bouncing dots signaling that the other side of a conversation is composing a reply —
+ * Three bouncing dots signaling that the other side of a conversation is composing a reply :
  * the moment before any content exists. For a message whose content is already streaming in,
  * use `ore-chat-message`'s `streaming` attribute (a blinking cursor) instead.
  *
- * The dots are decorative (`aria-hidden`) — `label` is the entire accessibility contract,
+ * The dots are decorative (`aria-hidden`): `label` is the entire accessibility contract,
  * announced through the shared singleton live region (`core/announcer.ts`) rather than a
  * static `aria-live` element in the template. A live region populated in the same paint as
  * its own insertion is unreliable across browsers/screen readers; routing through the shared

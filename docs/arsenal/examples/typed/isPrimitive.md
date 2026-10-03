@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isPrimitive'
+title: 'Arsenal Examples: isPrimitive'
 description: 'isPrimitive example for @vielzeug/arsenal.'
 ---
 

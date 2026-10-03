@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Debugging Transitions'
+title: 'Clockwork Examples: Debugging Transitions'
 description: 'Observe committed actor snapshots and keep application history without core tracing.'
 ---
 

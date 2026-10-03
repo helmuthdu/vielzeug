@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — tryParseJson'
+title: 'Arsenal Examples: tryParseJson'
 description: 'tryParseJson example for @vielzeug/arsenal.'
 ---
 

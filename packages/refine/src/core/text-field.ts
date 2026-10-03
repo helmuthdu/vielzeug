@@ -21,13 +21,13 @@ export type TextFieldOptions = FieldOptions & {
   onFocus?: (event: FocusEvent) => void;
   onInput?: (event: Event, value: string) => void;
   /**
-   * Bars the field from constraint validation while true — matches the native HTML rule that a
+   * Bars the field from constraint validation while true: matches the native HTML rule that a
    * `readonly` field is never a candidate for constraint validation (a `readonly required`
    * field is always valid, per spec), so `validity`/`validationMessage` don't feed a false
    * `valueMissing` into `useField()` just because a read-only field happens to be blank.
    */
   readonly?: Readable<boolean | undefined>;
-  /** Marks a blank value invalid — feeds `validity`/`validationMessage` (see below). */
+  /** Marks a blank value invalid: feeds `validity`/`validationMessage` (see below). */
   required?: Readable<boolean | undefined>;
   /** Message for the blank+required case. Defaults to `'This field is required.'`. */
   requiredMessage?: Readable<string | undefined>;
@@ -39,7 +39,7 @@ export type TextFieldOptions = FieldOptions & {
 export type TextFieldHandle = FieldHandle & {
   /**
    * Registers the real form field handle (the return value of `useField()`) so that
-   * `triggerValidation()` — called internally on blur/change — can call its
+   * `triggerValidation()`: called internally on blur/change: can call its
    * `reportValidity()`. `useField()` itself needs `value` (below) to exist first, so this
    * is a two-step wiring rather than a constructor option:
    *
@@ -60,14 +60,14 @@ export type TextFieldHandle = FieldHandle & {
   /**
    * Restores the value to whatever the `value` option currently holds (native form
    * `reset()` semantics: a `<input>` reverts to its *current* `value` content attribute,
-   * not a frozen snapshot from element creation — so setting the attribute programmatically
+   * not a frozen snapshot from element creation, so setting the attribute programmatically
    * after mount changes what a later reset reverts to). Wire into `useField({ onReset: tf.reset })`.
    */
   reset: () => void;
   /** Reactive validation message paired with `validity`. Empty string when valid. */
   validationMessage: Readable<string>;
   /**
-   * Reactive `ValidityStateFlags` — `{ valueMissing: true }` while `required` and blank,
+   * Reactive `ValidityStateFlags`: `{ valueMissing: true }` while `required` and blank,
    * `null` (valid) otherwise. Pass straight to `useField({ validity: tf.validity })`.
    */
   validity: Readable<ValidityStateFlags | null>;
@@ -80,7 +80,7 @@ export type TextFieldHandle = FieldHandle & {
    * the signal's controller calls `abort()`. Without a signal the returned
    * `TextFieldDetach` must be called manually.
    *
-   * Safe to call multiple times — each call attaches a fresh set of listeners
+   * Safe to call multiple times: each call attaches a fresh set of listeners
    * and returns a distinct detach function. Calling detach multiple times is
    * a no-op (guarded internally).
    */

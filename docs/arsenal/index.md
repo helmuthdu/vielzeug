@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Utility library for TypeScript
+title: 'Arsenal: Utility library for TypeScript'
 description: Tree-shakeable TypeScript utilities with focused category entry points for arrays, async work, caching, objects, strings, math, and guards.
 package: arsenal
 category: utilities
@@ -115,10 +115,10 @@ console.log(byRole, health, profile);
 
 <div class="see-also">
 
-- [Spell](/spell/) — validate `unknown` JSON data after `tryParseJson`.
-- [Vault](/vault/) — persistent storage; Arsenal cache is in-memory only.
-- [Tempo](/tempo/) — date/time utilities kept outside Arsenal.
-- [Coins](/coins/) — money formatting and currency conversion.
+- [Spell](/spell/): validate `unknown` JSON data after `tryParseJson`.
+- [Vault](/vault/): persistent storage; Arsenal cache is in-memory only.
+- [Tempo](/tempo/): date/time utilities kept outside Arsenal.
+- [Coins](/coins/): money formatting and currency conversion.
 
 </div>
 

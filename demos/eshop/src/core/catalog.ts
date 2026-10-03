@@ -5,7 +5,7 @@ import type { Model } from './types';
 
 // The catalog is immutable, so a single resource load (cached forever by Courier)
 // is enough. `resource()` exposes an `AsyncState` we derive a plain `Readable` from,
-// keeping seed data as the fallback while the fetch is pending or has errored — the
+// keeping seed data as the fallback while the fetch is pending or has errored: the
 // same resilience the old one-shot load had, but with a reactive `AsyncState` core.
 const modelsResource = resource(
   () => null,

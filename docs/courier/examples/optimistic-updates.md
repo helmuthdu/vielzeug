@@ -1,5 +1,5 @@
 ---
-title: 'Courier Examples — Optimistic Updates'
+title: 'Courier Examples: Optimistic Updates'
 description: 'Own optimistic state explicitly while Courier performs the HTTP write.'
 ---
 

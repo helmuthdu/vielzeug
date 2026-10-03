@@ -1,7 +1,7 @@
 export const channelsExample = {
   code: `import { createPulse } from '@vielzeug/pulse'
 
-// Isolated channel namespace — listeners and sends are scoped to 'chat'
+// Isolated channel namespace: listeners and sends are scoped to 'chat'
 const pulse = createPulse('wss://api.example.com/ws')
 const chat = pulse.channel('chat')
 

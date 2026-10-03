@@ -48,7 +48,7 @@ describe('groupBy', () => {
     expect(() => groupBy({} as any, selector)).toThrow(TypeError);
   });
 
-  it('guards against __proto__ prototype pollution — security regression', () => {
+  it('guards against __proto__ prototype pollution: security regression', () => {
     const arr = [{ type: '__proto__' }, { type: 'safe' }];
     const result = groupBy(arr, (item) => item.type);
 

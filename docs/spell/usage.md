@@ -1,5 +1,5 @@
 ---
-title: Spell — Usage Guide
+title: 'Spell: Usage Guide'
 description: Learn how to build schemas, compose wrappers, customize locales, and integrate spell with other Vielzeug packages.
 ---
 
@@ -65,7 +65,7 @@ const Todo = s.object({
 
 Object schemas reject unknown keys by default. Call `.relaxed()` when you need to preserve extra properties.
 
-Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `SpellValidationError` is thrown. Call `.partialDefaults()` when only some fields have defaults — fields without a default are silently omitted instead of throwing.
+Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `SpellValidationError` is thrown. Call `.partialDefaults()` when only some fields have defaults: fields without a default are silently omitted instead of throwing.
 
 ```ts
 const Config = s.object({
@@ -117,7 +117,7 @@ Port.parse('not-a-number'); // 3000
 
 ## Tolerating Removed Fields
 
-When a persisted record shape evolves, records saved by older versions carry keys the current schema no longer declares. `tolerate` accepts and drops exactly the named keys, so one call documents one removed field — no optional placeholder in the schema and no strip step after parsing.
+When a persisted record shape evolves, records saved by older versions carry keys the current schema no longer declares. `tolerate` accepts and drops exactly the named keys, so one call documents one removed field: no optional placeholder in the schema and no strip step after parsing.
 
 ```ts
 import { s, tolerate } from '@vielzeug/spell';
@@ -128,7 +128,7 @@ const Person = tolerate(
 );
 
 const parsed = Person.parse({ name: 'John Doe', address: 'p sherman 42 wallaby way sydney', email: 'johndoe@mail.com' });
-// { name: 'John Doe', email: 'johndoe@mail.com' } — the tolerated key never reaches the output
+// { name: 'John Doe', email: 'johndoe@mail.com' }: the tolerated key never reaches the output
 ```
 
 Fields added to later schema versions do not need `tolerate`: give them `default()` and older records repair on parse.
@@ -157,7 +157,7 @@ const Signup = s.object({ confirm: s.string(), password: s.string() }).check((v,
 });
 ```
 
-`checkAsync()` marks a schema as asynchronous: synchronous parsing throws at runtime instead of accepting an unchecked value, so async checks require `parseAsync()` or `safeParseAsync()`. Async checks compose at any nesting depth — arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches all evaluate nested async checks correctly through `parseAsync()`.
+`checkAsync()` marks a schema as asynchronous: synchronous parsing throws at runtime instead of accepting an unchecked value, so async checks require `parseAsync()` or `safeParseAsync()`. Async checks compose at any nesting depth: arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches all evaluate nested async checks correctly through `parseAsync()`.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -350,7 +350,7 @@ export function SearchPage({ rawParams }: { rawParams: unknown }) {
 
   return (
     <div>
-      {params.q ?? 'All results'} — page {params.page}
+      {params.q ?? 'All results'}: page {params.page}
     </div>
   );
 }

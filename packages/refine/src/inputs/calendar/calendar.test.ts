@@ -411,7 +411,7 @@ describe('ore-calendar', () => {
     it('Home moves focus to the first cell in the same row', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      // 2023-06-10 is a Saturday — row starts on Sunday 2023-06-04
+      // 2023-06-10 is a Saturday: row starts on Sunday 2023-06-04
       const cell = fixture.query('[data-iso="2023-06-10"]') as HTMLElement;
 
       expect(() => fireKeyDown(cell, { key: 'Home' })).not.toThrow();
@@ -420,7 +420,7 @@ describe('ore-calendar', () => {
     it('End moves focus to the last cell in the same row', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      // 2023-06-04 is a Sunday — row ends on Saturday 2023-06-10
+      // 2023-06-04 is a Sunday: row ends on Saturday 2023-06-10
       const cell = fixture.query('[data-iso="2023-06-04"]') as HTMLElement;
 
       expect(() => fireKeyDown(cell, { key: 'End' })).not.toThrow();

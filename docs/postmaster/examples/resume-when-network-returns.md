@@ -1,5 +1,5 @@
 ---
-title: 'Postmaster Examples — Resume When Network Returns'
+title: 'Postmaster Examples: Resume When Network Returns'
 description: Flush the Postmaster outbox when Sentinel reports the network is back online.
 ---
 

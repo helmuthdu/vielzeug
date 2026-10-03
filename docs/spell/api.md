@@ -1,5 +1,5 @@
 ---
-title: Spell — API Reference
+title: 'Spell: API Reference'
 description: Reference for Spell schema builders, parsing, errors, context, and tooling exports.
 ---
 
@@ -78,9 +78,9 @@ schema.is(value);                       // value is Output
 schema.assert(value, label?);           // assertion
 ```
 
-`parse()`, `safeParse()`, `is()`, and `assert()` run synchronous parsing. When a schema — or any schema nested inside it — carries an async check added with `checkAsync()`, the synchronous methods throw at runtime with "cannot evaluate async checks"; use `parseAsync()` or `safeParseAsync()` instead. Async checks compose at any nesting depth, so `s.object({ tags: s.array(s.string().checkAsync(fn)) })` parses correctly through `parseAsync()`.
+`parse()`, `safeParse()`, `is()`, and `assert()` run synchronous parsing. When a schema, or any schema nested inside it: carries an async check added with `checkAsync()`, the synchronous methods throw at runtime with "cannot evaluate async checks"; use `parseAsync()` or `safeParseAsync()` instead. Async checks compose at any nesting depth, so `s.object({ tags: s.array(s.string().checkAsync(fn)) })` parses correctly through `parseAsync()`.
 
-UI adapters that accept `AnySchema` cannot call `safeParse()` on it — the structural surface type omits it. Type adapter parameters against `SyncParsable` instead:
+UI adapters that accept `AnySchema` cannot call `safeParse()` on it: the structural surface type omits it. Type adapter parameters against `SyncParsable` instead:
 
 ```ts
 import type { SyncParsable } from '@vielzeug/spell';
@@ -365,9 +365,9 @@ function joinIssuePath(path: IssuePath | undefined, separator?: string): string;
 
 ## Errors
 
-- `SpellError` — base class. Use `instanceof SpellError` for cross-boundary narrowing.
-- `SpellValidationError` — validation failure with `issues`, `messagesAt()`, `flatten()`, and `flattenFirst()`.
-- `SpellDefinitionError` — schema cannot create portable definition.
+- `SpellError`: base class. Use `instanceof SpellError` for cross-boundary narrowing.
+- `SpellValidationError`: validation failure with `issues`, `messagesAt()`, `flatten()`, and `flattenFirst()`.
+- `SpellDefinitionError`: schema cannot create portable definition.
 
 ```ts
 const result = s.object({ email: s.string().email() }).safeParse({ email: 'invalid' });

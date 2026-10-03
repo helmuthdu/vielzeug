@@ -49,7 +49,7 @@ Use `open` as the controlled state and update it from `open-change`; use `defaul
 <ore-button id="open-full">full</ore-button>
 
 <ore-drawer id="drawer-sm" size="sm" label="Small drawer" dismissible>
-  <p>Compact drawer — ideal for quick-action panels.</p>
+  <p>Compact drawer: ideal for quick-action panels.</p>
 </ore-drawer>
 <ore-drawer id="drawer-md" size="md" label="Medium drawer" dismissible>
   <p>The default size. Suitable for most use cases.</p>
@@ -218,11 +218,11 @@ Use `backdrop` to match dialog behavior:
 
 | Attribute               | Type                                     | Default     | Description                                       |
 | ----------------------- | ---------------------------------------- | ----------- | ------------------------------------------------- |
-| `open`                  | `boolean`                                | —           | Controlled visibility                             |
+| `open`                  | `boolean`                                | N/A | Controlled visibility                             |
 | `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided    |
 | `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                    |
 | `size`                  | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`      | Panel width (or height for top/bottom placements) |
-| `label`                 | `string`                                 | —           | Accessible title shown in the header bar          |
+| `label`                 | `string`                                 | N/A | Accessible title shown in the header bar          |
 | `drag-handle-placement` | `'outside' \| 'inset'`                   | `'outside'` | Position of the swipe drag handle                 |
 | `dismissible`           | `boolean`                                | `true`      | Shows a close (×) button in the header            |
 | `backdrop`              | `'opaque' \| 'blur' \| 'transparent'`    | `'opaque'`  | Backdrop style, matching `ore-dialog`              |
@@ -263,4 +263,4 @@ The panel uses `role="dialog"` with `aria-modal="true"` to signal that content o
 
 ## Related Components
 
-- [Dialog](./dialog) — modal dialog for confirmations and focused tasks
+- [Dialog](./dialog): modal dialog for confirmations and focused tasks

@@ -16,7 +16,7 @@ console.log('deep equal:', isEqual({ a: [1, 2] }, { a: [1, 2] })) // true
 // Shallow equality (one level, uses Object.is so NaN === NaN)
 console.log('shallow equal:', shallowEqual([1, 2, 3], [1, 2, 3])) // true
 
-// Partial deep match — source properties must be present and equal
+// Partial deep match: source properties must be present and equal
 console.log('is match:', isMatch({ a: 1, b: 2, c: 3 }, { a: 1 })) // true
 
 // Predicate combinators with vacuous-truth semantics

@@ -30,7 +30,7 @@ export type OreSelectOptionInput = {
   /** Explanation displayed and announced when the option is disabled. */
   disabledReason?: string;
   group?: string;
-  /** Icon(s) rendered before the option label — lucide name(s) or image URL(s). */
+  /** Icon(s) rendered before the option label: lucide name(s) or image URL(s). */
   icon?: string | string[];
   label?: string;
   value: string;
@@ -53,7 +53,7 @@ type FlatRow =
  */
 const isIconImage = (icon: string): boolean => icon.includes('/') || icon.startsWith('data:');
 
-/** Normalizes an icon value — single name/URL, space-separated list, or array — to icon entries. */
+/** Normalizes an icon value: single name/URL, space-separated list, or array: to icon entries. */
 const normalizeIcons = (icon: string | string[] | undefined): string[] | undefined => {
   const list = Array.isArray(icon) ? icon : icon?.split(' ');
   const icons = list?.map((entry) => entry.trim()).filter(Boolean);

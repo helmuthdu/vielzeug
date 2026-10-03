@@ -1,5 +1,5 @@
 ---
-title: Lingua — Usage Guide
+title: 'Lingua: Usage Guide'
 description: Translate explicit catalogs, load lazy locales, and connect locale snapshots to UI state.
 ---
 
@@ -62,7 +62,7 @@ const statusOptions = statusDefinitions.map(({ labelKey, value }) => ({ label: t
 
 ## Missing Keys and Values
 
-Missing keys and values do not silently echo placeholders by default — Lingua warns in development and returns the key or `{name}`. Control failure behaviour with the `missing` option:
+Missing keys and values do not silently echo placeholders by default: Lingua warns in development and returns the key or `{name}`. Control failure behaviour with the `missing` option:
 
 | `missing` | Behaviour |
 | --- | --- |
@@ -100,7 +100,7 @@ const allKeys = catalogKeys(state.catalogs[state.locale]);
 // ['greeting', 'inbox', 'nav.home', 'nav.settings']
 ```
 
-Pass a raw catalog object to enumerate keys directly. Call `catalogKeys()` on a nested subtree to get exactly the keys in that group — no filtering, no casts.
+Pass a raw catalog object to enumerate keys directly. Call `catalogKeys()` on a nested subtree to get exactly the keys in that group: no filtering, no casts.
 
 ```ts
 import { catalogKeys } from '@vielzeug/lingua';
@@ -226,7 +226,7 @@ const catalog = { inbox: { plural: { one: 'One message', other: '{count} message
 console.log(validateCatalog(catalog, 'en'));
 ```
 
-Use `compareCatalogs()` to catch missing or extra keys across locales — the most common i18n defect. First locale is the base.
+Use `compareCatalogs()` to catch missing or extra keys across locales: the most common i18n defect. First locale is the base.
 
 ```ts
 import { compareCatalogs } from '@vielzeug/lingua/validate';

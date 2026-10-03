@@ -1,5 +1,5 @@
 ---
-title: Coins — Exact Money for TypeScript
+title: 'Coins: Exact Money for TypeScript'
 description: Exact bigint monetary arithmetic with explicit currency definitions, decimal strings, allocation, exchange, formatting, and JSON boundaries.
 package: coins
 category: finance
@@ -101,9 +101,9 @@ console.log(format(total));
 
 <div class="see-also">
 
-- [Vault](/vault/) — persist validated money JSON.
-- [Courier](/courier/) — retrieve exchange-rate data.
-- [Spell](/spell/) — validate external monetary payloads.
+- [Vault](/vault/): persist validated money JSON.
+- [Courier](/courier/): retrieve exchange-rate data.
+- [Spell](/spell/): validate external monetary payloads.
 
 </div>
 

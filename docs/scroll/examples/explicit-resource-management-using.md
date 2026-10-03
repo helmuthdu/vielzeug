@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Explicit Resource Management (`using`)'
+title: 'Scroll Examples: Explicit Resource Management (`using`)'
 description: 'Explicit Resource Management (`using`) examples for scroll.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Explicit Resource Management (`using`) examples for scroll.'
 
 ### Problem
 
-You create a virtualizer inside a function or block scope and want it disposed automatically when the block exits — without a try/finally or a manual `dispose()` call.
+You create a virtualizer inside a function or block scope and want it disposed automatically when the block exits: without a try/finally or a manual `dispose()` call.
 
 ### Solution
 
@@ -29,7 +29,7 @@ function renderList(scrollEl: HTMLElement, rows: string[]) {
 
 ### Pitfalls
 
-- `using` only triggers `[Symbol.dispose]` when the declared variable goes out of scope. If you pass the virtualizer through a function before the `using` block ends, cleanup still happens at scope exit — not at the call site.
+- `using` only triggers `[Symbol.dispose]` when the declared variable goes out of scope. If you pass the virtualizer through a function before the `using` block ends, cleanup still happens at scope exit: not at the call site.
 - TypeScript 5.2+ is required. Without it, the `using` keyword is a syntax error. Check `tsconfig.json` `target` and `lib` before using this pattern.
 - `[Symbol.dispose]` is called synchronously on scope exit. If `dispose()` cancels async scroll animations, those animations may still be running after the `using` block exits.
 

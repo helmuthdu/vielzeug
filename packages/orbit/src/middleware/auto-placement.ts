@@ -6,10 +6,10 @@ export interface AutoPlacementOptions extends DetectOverflowOptions {
   /**
    * Constrains auto-placement to variants with the given alignment.
    *
-   * - `'start'` — evaluates only `top-start`, `right-start`, `bottom-start`, `left-start`.
-   * - `'end'` — evaluates only `top-end`, `right-end`, `bottom-end`, `left-end`.
-   * - `null` — evaluates all 12 variants (4 cardinal + 4 start + 4 end).
-   * - omitted (default) — evaluates the 4 cardinal sides only.
+   * - `'start'`: evaluates only `top-start`, `right-start`, `bottom-start`, `left-start`.
+   * - `'end'`: evaluates only `top-end`, `right-end`, `bottom-end`, `left-end`.
+   * - `null`: evaluates all 12 variants (4 cardinal + 4 start + 4 end).
+   * - omitted (default): evaluates the 4 cardinal sides only.
    */
   alignment?: Alignment | null;
   /**
@@ -46,7 +46,7 @@ export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
     const placements = options.allowedPlacements ?? getDefaultPlacements(options.alignment);
 
     if (placements.length === 0) {
-      warn('autoPlacement: allowedPlacements is empty — no placement will be evaluated.');
+      warn('autoPlacement: allowedPlacements is empty: no placement will be evaluated.');
     }
 
     let bestPlacement = state.placement;

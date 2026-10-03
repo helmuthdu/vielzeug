@@ -9,7 +9,7 @@ export const nativeRtcFactory: MeshRtcFactory = {
   createPeerConnection(config) {
     const Ctor = (globalThis as { RTCPeerConnection?: typeof RTCPeerConnection }).RTCPeerConnection;
     if (!Ctor) {
-      throw new MeshUnsupportedError('WebRTC is unavailable in this environment — inject an `rtc` factory');
+      throw new MeshUnsupportedError('WebRTC is unavailable in this environment: inject an `rtc` factory');
     }
     return new Ctor(config);
   },
@@ -25,7 +25,7 @@ export function normalizeSdp(sdp: string): string {
 }
 
 /**
- * Resolves when ICE gathering finishes or after `timeoutMs` — the caller
+ * Resolves when ICE gathering finishes or after `timeoutMs`: the caller
  * proceeds with whatever candidates were gathered (non-trickle semantics).
  */
 export function waitIceGathering(pc: RTCPeerConnectionLike, timeoutMs: number): Promise<void> {
@@ -51,9 +51,9 @@ export function waitIceGathering(pc: RTCPeerConnectionLike, timeoutMs: number): 
 
 /**
  * Resolves when the data channel opens. Rejects with `MeshTimeoutError` after
- * `timeoutMs` — or when the channel closes while that deadline is still
+ * `timeoutMs`, or when the channel closes while that deadline is still
  * pending, since a peer tearing down a never-opened channel races the same
- * deadline — `MeshConnectionError` when the ICE transport dies first, and
+ * deadline: `MeshConnectionError` when the ICE transport dies first, and
  * `MeshDisposedError` when `disposalSignal` aborts.
  */
 export function waitChannelOpen(

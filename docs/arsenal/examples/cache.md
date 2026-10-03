@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Cache Examples
+title: 'Arsenal: Cache Examples'
 description: Cache utility examples for Arsenal.
 ---
 

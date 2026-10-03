@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Media Player'
+title: 'Clockwork Examples: Media Player'
 description: 'Commit playback state before calling browser media APIs.'
 ---
 

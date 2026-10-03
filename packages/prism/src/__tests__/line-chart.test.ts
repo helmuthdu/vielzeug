@@ -241,7 +241,7 @@ describe('createLineChart', () => {
     await new Promise((r) => requestAnimationFrame(r));
 
     // x=300 falls within the chart area (margin.left=50 .. width-margin.right=580), so this
-    // deterministically hits the series — not a "may or may not fire" hope.
+    // deterministically hits the series: not a "may or may not fire" hope.
     const mouseMove = new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 });
 
     chart.el.dispatchEvent(mouseMove);
@@ -379,7 +379,7 @@ describe('createLineChart', () => {
   });
 
   it('cancels an in-flight line transition on dispose (B9)', async () => {
-    // The first-ever render has no prior `d` to tween from, so it draws synchronously —
+    // The first-ever render has no prior `d` to tween from, so it draws synchronously :
     // an update on an already-mounted chart is what actually schedules the
     // requestAnimationFrame loop the transition (and this cancellation) targets.
     const chart = createLineChart(container, {

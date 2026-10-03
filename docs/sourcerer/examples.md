@@ -1,5 +1,5 @@
 ---
-title: Sourcerer — Examples
+title: 'Sourcerer: Examples'
 description: Recipes for local, page, cursor, infinite, and framework source usage.
 ---
 

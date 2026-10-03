@@ -1,14 +1,14 @@
 /**
  * Single real read of "what's in packages/*, and how does it depend on other @vielzeug/*
- * packages" — extracted after three independent implementations of the same
+ * packages": extracted after three independent implementations of the same
  * readdir-then-parse-each-package.json scan drifted into slightly different shapes
  * (vielzeug-packages.ts wanted names only, sync-ai-data.mjs wanted deps + optional peers,
  * worktree.mjs wanted deps + peers as a Map). One real filesystem read, three thin views over
- * it below — `readPackageManifests()` is the only function that touches the filesystem.
+ * it below: `readPackageManifests()` is the only function that touches the filesystem.
  *
  * `packages.d.mts` next to this file is a hand-written type declaration for
  * vielzeug-packages.ts (see the note in `lib/cli.mjs`'s header for why it's hand-written
- * instead of generated) — update it in the same commit if this file's exported shape changes.
+ * instead of generated): update it in the same commit if this file's exported shape changes.
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
@@ -28,21 +28,21 @@ function unscope(name) {
 /**
  * One entry per `packages/<slug>/package.json` that actually exists and parses, sorted
  * alphabetically by slug. A directory with no `package.json` (a half-scaffolded package) or
- * with unparseable JSON is skipped, not thrown on — this function is on the critical startup
+ * with unparseable JSON is skipped, not thrown on: this function is on the critical startup
  * path of `docs/.vitepress/config.ts` (every `pnpm docs:dev` / `docs:build`, via
  * vielzeug-packages.ts's alias builder) as well as `sync-ai-data.mjs` and `worktree.mjs`'s
  * full-repo scans. In a repo where multiple agents edit different packages concurrently, one
  * contributor's mid-edit syntax error in an unrelated `package.json` must not be able to take
- * down everyone else's dev server or worktree tooling — so this warns loudly (never silently)
+ * down everyone else's dev server or worktree tooling, so this warns loudly (never silently)
  * and keeps going, rather than hard-failing the whole scan over one broken file. A caller that
- * genuinely needs to fail on a *specific* named package's own bad JSON already does — e.g.
+ * genuinely needs to fail on a *specific* named package's own bad JSON already does: e.g.
  * `worktree.mjs`'s `cmdAdd()` throws "No such package" for a slug this function skipped.
  *
  * `name` and `description` are copied verbatim from the manifest (`description` falls back to
  * an empty string) so the generated package reference never needs a second curated source.
  *
  * `dependencies` and `peers` are both already unscoped (`"ripple"`, not `"@vielzeug/ripple"`)
- * and contain only `@vielzeug/*` edges — this monorepo's graph never needs to know about
+ * and contain only `@vielzeug/*` edges: this monorepo's graph never needs to know about
  * `vitest`, `vite`, etc. for any of the three current consumers.
  */
 export function readPackageManifests(packagesDir) {

@@ -20,7 +20,7 @@ type ItemRecord = {
 /**
  * A stateful, indexed search corpus. Created via `createIndex()`.
  *
- * Supports incremental `add()`, `remove()`, and `reindex()` operations — each patches
+ * Supports incremental `add()`, `remove()`, and `reindex()` operations: each patches
  * the trigram index in O(field_length) without a full rebuild.
  */
 export interface ScoutIndex<T> {
@@ -30,8 +30,8 @@ export interface ScoutIndex<T> {
   readonly items: readonly T[];
   /**
    * Subscribes `listener` to be called after every changed `add()` / `remove()` / `reindex()`
-   * / `setItems()` operation. No-ops — e.g. removing an unindexed item or reconciling an
-   * unchanged corpus — do not fire it. Each changed `setItems()` reconciliation fires once.
+   * / `setItems()` operation. No-ops: e.g. removing an unindexed item or reconciling an
+   * unchanged corpus: do not fire it. Each changed `setItems()` reconciliation fires once.
    * Returns an unsubscribe function.
    *
    * Framework-agnostic extension point: `createSearch()` uses this internally to keep
@@ -52,7 +52,7 @@ export interface ScoutIndex<T> {
   /**
    * Monotonically increasing counter, incremented after every changed `add()` / `remove()` /
    * `reindex()` / `setItems()` operation. Use as a cache-busting token when caching search
-   * results outside the index — `toSearchMatcher()` uses it for this purpose.
+   * results outside the index: `toSearchMatcher()` uses it for this purpose.
    */
   readonly revision: number;
   /**
@@ -107,7 +107,7 @@ function resolveFields<T>(defs: ReadonlyArray<FieldDef<T>>): FieldConfig<T>[] {
  * Builds a trigram inverted index over `items` for fast fuzzy search.
  *
  * Construction is O(corpus × field_length). Subsequent `search()` calls are
- * O(candidates) — far faster than per-query Levenshtein for large corpora.
+ * O(candidates): far faster than per-query Levenshtein for large corpora.
  *
  * @example
  * ```ts
@@ -204,7 +204,7 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
 
   /**
    * Performs a full linear scan over all items for short queries.
-   * O(n × field_count) — acceptable for small corpora; consider raising
+   * O(n × field_count): acceptable for small corpora; consider raising
    * `minQueryLength` on large datasets to avoid triggering this path.
    */
   function containmentScan(query: string): Set<T> {
@@ -373,7 +373,7 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
 
       const normalized = tokenize(query);
 
-      // Query had no indexable content (e.g. punctuation-only) — no match, not "match all".
+      // Query had no indexable content (e.g. punctuation-only): no match, not "match all".
       if (!normalized) return [];
 
       const isShort = normalized.length < minQueryLength;

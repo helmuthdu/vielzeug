@@ -1,5 +1,5 @@
 ---
-title: 'Forge Examples — Multi-Step Wizard'
+title: 'Forge Examples: Multi-Step Wizard'
 description: Build wizard screens from focused fields and application-owned navigation.
 ---
 

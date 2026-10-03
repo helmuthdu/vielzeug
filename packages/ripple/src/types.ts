@@ -43,7 +43,7 @@ export interface Scope extends Disposable {
 
 /**
  * Structural contract for external state sources that expose a snapshot and a
- * subscription pair — the same shape React's `useSyncExternalStore` consumes.
+ * subscription pair: the same shape React's `useSyncExternalStore` consumes.
  * Packages can implement this without importing Ripple; `fromSubscribable()`
  * bridges them into a reactive graph.
  */
@@ -67,7 +67,7 @@ export type RippleEvent =
 /**
  * Deterministic error policy for runtime callback, cleanup, and listener
  * failures. Error events are always emitted through `tap()` regardless of
- * policy — this controls only whether failures also rethrow.
+ * policy: this controls only whether failures also rethrow.
  *
  * - `'throw'` (default): rethrows the error asynchronously via `queueMicrotask`.
  * - `'swallow'`: silences rethrow; observe failures only through `tap()`.

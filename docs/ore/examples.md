@@ -1,5 +1,5 @@
 ---
-title: Ore — Examples
+title: 'Ore: Examples'
 description: Practical examples and recipes for ore.
 ---
 

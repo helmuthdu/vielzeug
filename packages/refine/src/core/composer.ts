@@ -4,8 +4,8 @@ import { computed } from '@vielzeug/ripple';
 
 /**
  * Keyboard shortcut that triggers a send:
- * - `'enter'` (default) — Enter sends, Shift+Enter inserts a newline.
- * - `'mod+enter'` — Enter always inserts a newline; Ctrl/Cmd+Enter sends.
+ * - `'enter'` (default): Enter sends, Shift+Enter inserts a newline.
+ * - `'mod+enter'`: Enter always inserts a newline; Ctrl/Cmd+Enter sends.
  */
 export type SendShortcut = 'enter' | 'mod+enter';
 
@@ -22,7 +22,7 @@ export type ComposerControlOptions = {
 export type ComposerControl = {
   /** Whether the current value is non-blank and the control isn't disabled/loading. */
   canSend: Readable<boolean>;
-  /** Wire onto the raw `<textarea>`'s `keydown` — intercepts the resolved send shortcut. */
+  /** Wire onto the raw `<textarea>`'s `keydown`: intercepts the resolved send shortcut. */
   handleKeydown: (event: KeyboardEvent) => void;
   /** `aria-keyshortcuts` value describing the resolved shortcut. */
   keyShortcutsHint: Readable<string>;
@@ -33,7 +33,7 @@ export type ComposerControl = {
 const isBlank = (value: string | undefined): boolean => !value || value.trim() === '';
 
 /**
- * Send-gesture logic for a message/comment composer — decides *when* a send is allowed
+ * Send-gesture logic for a message/comment composer: decides *when* a send is allowed
  * and *whether* a given keydown counts as one. Owns no DOM, value state, or event dispatch;
  * the component wires `handleKeydown`/`send` and decides what a send actually does.
  *
@@ -58,7 +58,7 @@ export const createComposerControl = (options: ComposerControlOptions): Composer
   };
 
   const handleKeydown = (event: KeyboardEvent): void => {
-    // A composing IME candidate selection also fires `Enter` — never treat that as a send.
+    // A composing IME candidate selection also fires `Enter`: never treat that as a send.
     if (event.key !== 'Enter' || event.isComposing) return;
 
     const mode = options.sendShortcut?.value ?? 'enter';

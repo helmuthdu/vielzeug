@@ -1,5 +1,5 @@
 ---
-title: Keymap — API Reference
+title: 'Keymap: API Reference'
 description: Complete API reference for @vielzeug/keymap bindings, chords, parsing, formatting, and lifecycle.
 ---
 
@@ -17,7 +17,7 @@ description: Complete API reference for @vielzeug/keymap bindings, chords, parsi
 | `matchKey()` | Match an event against one shortcut pattern | Sync | Unparseable pattern returns `false`; chord patterns never match |
 | `detectModKey()` | Resolve platform primary modifier | Sync | Returns `ctrl` without `navigator` |
 | `tap()` | Observe chord lifecycle, matches, and disposal | Sync | Observer failures are swallowed |
-| `Binding` | Per-binding config type (id, shortcut, handler, trigger, when, preventDefault, stopPropagation) | — | Reusing an `id` replaces its binding |
+| `Binding` | Per-binding config type (id, shortcut, handler, trigger, when, preventDefault, stopPropagation) | N/A | Reusing an `id` replaces its binding |
 
 ### Parser Subpath (`@vielzeug/keymap/parse`)
 

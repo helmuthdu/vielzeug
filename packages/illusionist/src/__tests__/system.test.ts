@@ -63,7 +63,7 @@ describe('system', () => {
     expect(value).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
   });
 
-  it('uuid() is not deterministic — two calls with the same seed produce different values', () => {
+  it('uuid() is not deterministic: two calls with the same seed produce different values', () => {
     const a = uuid();
     const b = uuid();
 

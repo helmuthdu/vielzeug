@@ -1,5 +1,5 @@
 ---
-title: 'Tandem Examples — Switch Accounts Safely'
+title: 'Tandem Examples: Switch Accounts Safely'
 description: Dispose and restart the scheduler when the signed-in account changes.
 ---
 
@@ -7,7 +7,7 @@ description: Dispose and restart the scheduler when the signed-in account change
 
 ### Problem
 
-The sync baseline is per-account state. If the scheduler keeps running across a sign-out, its next flush pushes the old account's dirty records into the new account's port — and its in-memory baseline no longer matches the storage it reads.
+The sync baseline is per-account state. If the scheduler keeps running across a sign-out, its next flush pushes the old account's dirty records into the new account's port, and its in-memory baseline no longer matches the storage it reads.
 
 ### Solution
 
@@ -34,7 +34,7 @@ async function signOut(): Promise<void> {
   try {
     await sync?.flush(); // deliver this account's last edits before the port dies
   } catch {
-    // the cycle failed — the edits stay dirty in this account's store
+    // the cycle failed: the edits stay dirty in this account's store
     // and push on the next sign-in
   }
   sync?.dispose();
@@ -44,12 +44,12 @@ async function signOut(): Promise<void> {
 
 ### Pitfalls
 
-- Flush before disposing on sign-out — after `dispose()` the scheduler refuses all work, so unsent edits would strand until the next sign-in. Handle the rejection: a failed flush leaves the edits dirty in the account's store, ready for the next sign-in.
+- Flush before disposing on sign-out: after `dispose()` the scheduler refuses all work, so unsent edits would strand until the next sign-in. Handle the rejection: a failed flush leaves the edits dirty in the account's store, ready for the next sign-in.
 - Do not reuse one `SyncState` row across accounts; key it per account database like every other record.
 - Tappers attached with `tap()` are cleared on dispose; re-tap the new handle instead of assuming old subscribers survive.
 
 ### Related
 
-- [API Reference — SyncHandle](../api.md#synchandle-methods)
-- [Usage Guide — Lifecycle and Disposal](../usage.md#lifecycle-and-disposal)
-- [Vault](/vault/) — per-account database names make the store swap atomic.
+- [API Reference: SyncHandle](../api.md#synchandle-methods)
+- [Usage Guide: Lifecycle and Disposal](../usage.md#lifecycle-and-disposal)
+- [Vault](/vault/): per-account database names make the store swap atomic.

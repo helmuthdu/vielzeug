@@ -17,7 +17,7 @@ export default defineConfig({
   testDir: path.join(__dirname, 'src'),
   testMatch: '**/*.e2e.ts',
   use: {
-    // No base URL — tests use page.setContent() with IIFE scripts
+    // No base URL: tests use page.setContent() with IIFE scripts
     headless: true,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',

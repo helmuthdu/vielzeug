@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isError'
+title: 'Arsenal Examples: isError'
 description: 'isError example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isError example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to distinguish `Error` instances from other thrown values — TypeScript `catch` clauses type `err` as `unknown`.
+You need to distinguish `Error` instances from other thrown values: TypeScript `catch` clauses type `err` as `unknown`.
 
 ### Solution
 

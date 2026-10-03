@@ -1,7 +1,7 @@
 export const conflictDetectionExample = {
   code: `import { createKeymap, findShortcutConflicts } from '@vielzeug/keymap'
 
-// findShortcutConflicts() catches unreachable bindings before you register them —
+// findShortcutConflicts() catches unreachable bindings before you register them :
 // useful for a shortcut-customization UI driven by user input.
 const map = createKeymap([
   { id: 'top', shortcut: 'g', handler: () => console.log('go to top') },
@@ -11,7 +11,7 @@ const proposed = 'g g'
 const conflicts = findShortcutConflicts(proposed, map.listBindings())
 
 if (conflicts.length > 0) {
-  console.log(\`"\${proposed}" would never fire — shadowed by an existing binding\`)
+  console.log(\`"\${proposed}" would never fire: shadowed by an existing binding\`)
 } else {
   map.bind({ id: 'bottom', shortcut: proposed, handler: () => console.log('go to bottom') })
 }
@@ -19,7 +19,7 @@ if (conflicts.length > 0) {
 // A shortcut with no relationship to existing bindings reports no conflicts.
 console.log('ctrl+s conflicts:', findShortcutConflicts('ctrl+s', map.listBindings()).length)
 
-// keydown and keyup bindings never conflict — they're matched independently.
+// keydown and keyup bindings never conflict: they're matched independently.
 const withKeyup = createKeymap([
   { id: 'space-up', shortcut: 'space', handler: () => {}, trigger: 'keyup' },
 ])

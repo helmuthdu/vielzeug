@@ -1,5 +1,5 @@
 ---
-title: Ledger — API Reference
+title: 'Ledger: API Reference'
 description: Reference for serialized reversible commands, history state, composition, cancellation, disposal, and errors.
 ---
 
@@ -92,7 +92,7 @@ Applies the final redo entry. Success moves it to the end of undo history. If no
 
 ### `record()`
 
-Appends an already-executed command to undo history synchronously, without running it through the queue. For stores that execute their own writes — typically synchronous, embedded state stores — `undo()` calls the recorded `revert`, and `redo()` calls the recorded `apply`, so `apply` must be able to re-apply the effect. Recording shares `do()`'s bookkeeping: it clears redo history and evicts the oldest entry beyond `maxHistory`. It throws `LedgerDisposedError` on a disposed ledger.
+Appends an already-executed command to undo history synchronously, without running it through the queue. For stores that execute their own writes: typically synchronous, embedded state stores: `undo()` calls the recorded `revert`, and `redo()` calls the recorded `apply`, so `apply` must be able to re-apply the effect. Recording shares `do()`'s bookkeeping: it clears redo history and evicts the oldest entry beyond `maxHistory`. It throws `LedgerDisposedError` on a disposed ledger.
 
 ### `clear()`
 

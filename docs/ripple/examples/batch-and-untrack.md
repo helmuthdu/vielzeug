@@ -1,5 +1,5 @@
 ---
-title: 'Ripple Examples — Batch and Untrack'
+title: 'Ripple Examples: Batch and Untrack'
 description: Coalesce related writes while reading non-reactive context.
 ---
 

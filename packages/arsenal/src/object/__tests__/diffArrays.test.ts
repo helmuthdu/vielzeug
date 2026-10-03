@@ -45,7 +45,7 @@ describe('diffArrays', () => {
     expect(result.removed).toEqual([]);
   });
 
-  it('compareFn receives (before_item, after_item) — correct arg order', () => {
+  it('compareFn receives (before_item, after_item): correct arg order', () => {
     const calls: [number, number][] = [];
 
     diffArrays([1], [2], {

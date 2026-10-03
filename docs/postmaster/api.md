@@ -1,5 +1,5 @@
 ---
-title: Postmaster — API Reference
+title: 'Postmaster: API Reference'
 description: Job definitions, processor, store contracts, events, errors, and entry points for Postmaster.
 ---
 
@@ -38,7 +38,7 @@ Returns the job registry after validating each definition. Rejects invalid versi
 | --- | --- | --- |
 | `jobs` | `J extends JobDefinitions` | Map of job name to definition |
 
-**Returns:** `J` — the same registry, typed for payload inference.
+**Returns:** `J`: the same registry, typed for payload inference.
 
 **Example**
 
@@ -170,7 +170,7 @@ Validates the payload (if `validate` is defined), derives the key, persists the 
 | `payload` | `InferJobPayload<J[K]>` | Job payload (validated if `validate` is defined) |
 | `options.availableAt` | `number` | Earliest epoch timestamp (ms) the job may be claimed. Defaults to the Postmaster clock. Must be a finite non-negative safe integer. |
 
-**Delayed eligibility.** The job persists immediately but cannot be claimed before `availableAt`. Postmaster does not guarantee execution at that time — only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution. Past timestamps remain immediately eligible.
+**Delayed eligibility.** The job persists immediately but cannot be claimed before `availableAt`. Postmaster does not guarantee execution at that time: only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution. Past timestamps remain immediately eligible.
 
 **Example**
 
@@ -186,7 +186,7 @@ await postmaster.enqueue('sendDigest', { userId }, { availableAt: Date.now() + 6
 start(): void;
 ```
 
-Begins background processing. Idempotent — returns immediately and kicks off the pump in the background. Use `flush()` when you need to await completion of all available work.
+Begins background processing. Idempotent: returns immediately and kicks off the pump in the background. Use `flush()` when you need to await completion of all available work.
 
 ---
 
@@ -246,7 +246,7 @@ Deletes a queued or dead-letter job. Returns a discriminated result: `removed`, 
 tap(handler: (event: PostmasterEvent) => void, options?: { signal?: AbortSignal }): () => void;
 ```
 
-Observe runtime events (enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, processor-error, dispose). Handler errors are swallowed — observability never affects processing. Returns an unsubscribe function. Pass `{ signal }` to auto-detach on abort.
+Observe runtime events (enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, processor-error, dispose). Handler errors are swallowed: observability never affects processing. Returns an unsubscribe function. Pass `{ signal }` to auto-detach on abort.
 
 ---
 
@@ -269,7 +269,7 @@ interface EnqueueOptions {
 }
 ```
 
-Options for `enqueue()`. `availableAt` is the earliest epoch timestamp (ms) at which the job may be claimed. Defaults to the Postmaster clock at enqueue time. Past timestamps remain immediately eligible. Postmaster does not guarantee execution at the requested time — only that the job will not be claimed before it. A live processor is required for execution.
+Options for `enqueue()`. `availableAt` is the earliest epoch timestamp (ms) at which the job may be claimed. Defaults to the Postmaster clock at enqueue time. Past timestamps remain immediately eligible. Postmaster does not guarantee execution at the requested time: only that the job will not be claimed before it. A live processor is required for execution.
 
 ---
 
@@ -298,7 +298,7 @@ interface JobDefinition<T> {
 type Validate<T> = ((value: unknown) => T) | { parse(value: unknown): T };
 ```
 
-Accepts either a plain validation function or any object with a `parse(value: unknown): T` method. Spell's `Schema` and `s.object(...)` satisfy this contract directly — no adapter needed.
+Accepts either a plain validation function or any object with a `parse(value: unknown): T` method. Spell's `Schema` and `s.object(...)` satisfy this contract directly: no adapter needed.
 
 ---
 
@@ -443,7 +443,7 @@ interface StoreTx {
 }
 ```
 
-The store exposes transactional primitives. The processor owns all ownership and transition logic — stores implement storage, not the job state machine. `transact` wraps all operations in an atomic transaction. `findClaimable` returns the earliest eligible job (queued with `availableAt <= now`, or running with expired lease). `findNextWake` returns the earliest future wake time across queued and running jobs.
+The store exposes transactional primitives. The processor owns all ownership and transition logic: stores implement storage, not the job state machine. `transact` wraps all operations in an atomic transaction. `findClaimable` returns the earliest eligible job (queued with `availableAt <= now`, or running with expired lease). `findNextWake` returns the earliest future wake time across queued and running jobs.
 
 ---
 

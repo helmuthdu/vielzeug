@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isPromise'
+title: 'Arsenal Examples: isPromise'
 description: 'isPromise example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isPromise example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to check whether a value is a thenable (Promise-like) — for example handling functions that may return either a value or a Promise.
+You need to check whether a value is a thenable (Promise-like): for example handling functions that may return either a value or a Promise.
 
 ### Solution
 
@@ -23,7 +23,7 @@ function normalize<T>(valueOrPromise: T | Promise<T>): Promise<T> {
 
 ### Pitfalls
 
-- Checks for a `.then` method — matches any thenable, not just native `Promise` instances.
+- Checks for a `.then` method: matches any thenable, not just native `Promise` instances.
 
 ### Related
 

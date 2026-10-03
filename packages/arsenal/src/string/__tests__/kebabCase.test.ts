@@ -61,7 +61,7 @@ describe('kebabCase', () => {
     expect(kebabCase('123HelloWorld')).toBe('123-hello-world');
   });
 
-  it('preserves accented letters instead of stripping them — regression', () => {
+  it('preserves accented letters instead of stripping them: regression', () => {
     expect(kebabCase('café bar')).toBe('café-bar');
   });
 });

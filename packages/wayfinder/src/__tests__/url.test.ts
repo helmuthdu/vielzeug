@@ -1,5 +1,5 @@
 /**
- * router.url() — named-route URL construction.
+ * router.url(): named-route URL construction.
  */
 import { createHashHistory, createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
 import { settle } from './test-utils';
@@ -207,7 +207,7 @@ describe('disposalSignal', () => {
     expect(router.disposed).toBe(true);
   });
 
-  it('disposalSignal aborts are idempotent — calling dispose() twice does not re-abort', async () => {
+  it('disposalSignal aborts are idempotent: calling dispose() twice does not re-abort', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({ history, routes: { home: { path: '/' } } });
 
@@ -260,7 +260,7 @@ describe('locals reset per navigation', () => {
     await settle();
     await router.navigate({ path: '/about' });
 
-    // Both navigations must start with an empty locals — not carry over from previous.
+    // Both navigations must start with an empty locals: not carry over from previous.
     expect(localsSnapshots[0]).toEqual({});
     expect(localsSnapshots[1]).toEqual({});
     router.dispose();

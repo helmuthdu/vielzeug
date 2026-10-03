@@ -14,7 +14,7 @@ Assay 3.1 removes surfaces with no consumers outside their own tests.
 
 ### Removed live-region helpers
 
-`queryLiveRegion`, `queryAllLiveRegions`, `waitForLiveRegion`, and `waitForLiveRegionCleared` are removed. jsdom cannot prove assistive-technology speech, so these helpers only asserted DOM attributes and text — query them directly with `within(root).get(...)` and `waitUntil()` instead, or test announcement behavior with browser and assistive-technology tooling.
+`queryLiveRegion`, `queryAllLiveRegions`, `waitForLiveRegion`, and `waitForLiveRegionCleared` are removed. jsdom cannot prove assistive-technology speech, so these helpers only asserted DOM attributes and text: query them directly with `within(root).get(...)` and `waitUntil()` instead, or test announcement behavior with browser and assistive-technology tooling.
 
 ## Assay 3.0
 

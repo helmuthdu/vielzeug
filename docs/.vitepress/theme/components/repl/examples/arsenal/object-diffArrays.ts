@@ -1,13 +1,13 @@
 export const objectDiffArraysExample = {
   code: `import { diffArrays } from '@vielzeug/arsenal/object'
 
-// Default 'set' strategy — order independent
+// Default 'set' strategy: order independent
 const v1 = [1, 2, 3]
 const v2 = [2, 3, 4]
 const setDiff = diffArrays(v1, v2)
 console.log('set diff:', setDiff) // { added: [4], removed: [1] }
 
-// 'lcs' strategy — ordered minimal diff
+// 'lcs' strategy: ordered minimal diff
 const before = [1, 2, 3, 4, 5]
 const after  = [1, 3, 4, 5, 6]
 const lcsDiff = diffArrays(before, after, { strategy: 'lcs' })

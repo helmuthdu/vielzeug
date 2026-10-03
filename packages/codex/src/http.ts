@@ -42,7 +42,7 @@ function close(server: HttpServer): Promise<void> {
 }
 
 /**
- * Builds a Web-standard `Request` from a Node `IncomingMessage` — `createMcpHandler()`'s
+ * Builds a Web-standard `Request` from a Node `IncomingMessage`: `createMcpHandler()`'s
  * `fetch()` face speaks Fetch API objects (2026-07-28's stateless transport is Web-standard
  * `Request`/`Response`, not Node's own `req`/`res` pair), so the loopback host bridges once here.
  */
@@ -89,7 +89,7 @@ export async function startHttpHost(options: HttpHostOptions): Promise<HttpHost>
     throw new CodexError('HTTP host must be a loopback address (127.0.0.1 or ::1).');
   }
   // Stateless by default (SEP-2575): a fresh server instance per request, matching the
-  // spec's "any request can land on any instance" design — codex's tools carry no
+  // spec's "any request can land on any instance" design: codex's tools carry no
   // per-connection state, so a persistent instance buys nothing beyond a small, negligible
   // (13-tool catalog) reconstruction cost per request.
   const factory = () => {

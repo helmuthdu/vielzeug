@@ -25,7 +25,7 @@ describe('ore-text', () => {
     });
   });
 
-  describe('as — ARIA semantics', () => {
+  describe('as: ARIA semantics', () => {
     it.each(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const)(
       'as="%s" sets role="heading" and aria-level on the host',
       async (tag) => {
@@ -68,7 +68,7 @@ describe('ore-text', () => {
     });
   });
 
-  describe('lines — multi-line clamp', () => {
+  describe('lines: multi-line clamp', () => {
     it('sets --_lines CSS variable on the host when lines is provided', async () => {
       fixture = await mount('ore-text', { attrs: { lines: '3' } });
 

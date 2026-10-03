@@ -1,5 +1,5 @@
 ---
-title: Necromancer — Examples
+title: 'Necromancer: Examples'
 description: Practical animation and FLIP layout recipes for @vielzeug/necromancer.
 ---
 

@@ -5,7 +5,7 @@ import { logger } from './logger';
 import type { Order, OrderStatus } from './types';
 
 // ---------------------------------------------------------------------------
-// Tokens — one per dependency contract, resolved through the container instead
+// Tokens: one per dependency contract, resolved through the container instead
 // of imported as bare module singletons. Demonstrates @vielzeug/conduit's DI
 // wiring for the app's admin-only reporting service, which itself composes
 // the api client and logger tokens below.
@@ -93,7 +93,7 @@ export const container = createContainer([
 
 let reportServicePromise: Promise<ReportService> | null = null;
 
-/** Lazily resolves (and caches) the report service — avoids a top-level `await` at module scope. */
+/** Lazily resolves (and caches) the report service: avoids a top-level `await` at module scope. */
 export function getReportService(): Promise<ReportService> {
   reportServicePromise ??= container.resolve(ReportServiceToken);
 

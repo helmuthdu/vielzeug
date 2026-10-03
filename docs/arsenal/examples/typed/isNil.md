@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isNil'
+title: 'Arsenal Examples: isNil'
 description: 'isNil example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isNil example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to check for both `null` and `undefined` in one guard — for example cleaning form values or skipping empty API fields.
+You need to check for both `null` and `undefined` in one guard: for example cleaning form values or skipping empty API fields.
 
 ### Solution
 

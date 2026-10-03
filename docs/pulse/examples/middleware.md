@@ -1,5 +1,5 @@
 ---
-title: 'Pulse Examples — Outgoing Transform'
+title: 'Pulse Examples: Outgoing Transform'
 description: 'Transforming or filtering application messages for @vielzeug/pulse.'
 ---
 

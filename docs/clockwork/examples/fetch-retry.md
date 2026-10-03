@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Fetch with Retry'
+title: 'Clockwork Examples: Fetch with Retry'
 description: 'Limit retries with context, guards, an invoke, and delayed transitions.'
 ---
 

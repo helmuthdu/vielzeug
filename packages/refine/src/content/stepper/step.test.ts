@@ -56,7 +56,7 @@ describe('ore-step', () => {
     });
 
     // Regression: `completed` used to be gated on `!error`, so an error step positioned before
-    // the current one lost the `completed` attribute entirely — breaking the continuous
+    // the current one lost the `completed` attribute entirely: breaking the continuous
     // connector color chain right at that step (step.css colors both connector segments off
     // `:host([completed])`), even though it visually still sits "before" the current step.
     it('still reflects the completed attribute on an error step positioned before the current one', async () => {
@@ -98,7 +98,7 @@ describe('ore-step', () => {
   // ─── Standalone Rendering ─────────────────────────────────────────────────────
   //
   // ore-step is documented as "must be a direct child of ore-stepper", but shouldn't misbehave
-  // if mounted on its own (e.g. in isolation in a design-system playground) — `inject()` returns
+  // if mounted on its own (e.g. in isolation in a design-system playground): `inject()` returns
   // undefined with no parent context, and every context-derived value below has a sane fallback.
 
   describe('Standalone Rendering (no parent ore-stepper)', () => {

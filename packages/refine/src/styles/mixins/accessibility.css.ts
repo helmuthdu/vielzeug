@@ -4,13 +4,13 @@ import { css } from '@vielzeug/ore';
  * Visually-Hidden ("sr-only") Style
  *
  * Single source of truth for the standard visually-hidden-but-accessible
- * clipping technique — hides content visually while keeping it in the
+ * clipping technique: hides content visually while keeping it in the
  * accessibility tree (screen readers, `aria-live` regions).
  *
  * Two forms are exported from the same declarations so component stylesheets
  * and JS-created DOM elements never drift out of sync:
- * - `srOnlyMixin` — a `.sr-only` class for component `styles: [...]` arrays.
- * - `SR_ONLY_INLINE_STYLE` — the equivalent `cssText` string for elements
+ * - `srOnlyMixin`: a `.sr-only` class for component `styles: [...]` arrays.
+ * - `SR_ONLY_INLINE_STYLE`: the equivalent `cssText` string for elements
  *   created outside any component's shadow root (e.g. a live region appended
  *   directly to `document.body`).
  *
@@ -48,7 +48,7 @@ export const srOnlyMixin = css`
  *
  * Under `@media (pointer: coarse)`, promotes the full component one size tier
  * so padding, gap, font-size, height, and icon-size all grow proportionally
- * with the WCAG 44 px touch target — not just the minimum height in isolation:
+ * with the WCAG 44 px touch target: not just the minimum height in isolation:
  *
  * - default / `size="md"` → lg-scale tokens + `--_touch-target: var(--size-11)`
  * - `size="sm"` → md-scale tokens + `--_touch-target: var(--size-11)`

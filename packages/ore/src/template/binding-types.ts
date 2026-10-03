@@ -1,9 +1,9 @@
 /**
- * template/binding-types.ts — Pure type definitions for the template binding system.
+ * template/binding-types.ts: Pure type definitions for the template binding system.
  *
  * All bindings reference actual DOM nodes directly (no UID-based lookup), resolved
  * by path navigation on the cloned template (see compiler.ts / instantiator.ts).
- * Runtime factories and brand guards live in `result.ts` — this module is types only.
+ * Runtime factories and brand guards live in `result.ts`: this module is types only.
  */
 
 import type { Readable } from '@vielzeug/ripple';

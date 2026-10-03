@@ -5,8 +5,8 @@ export type HashOptions = {
    * What to do when a class instance is encountered (an object whose prototype is
    * neither `Object.prototype` nor `null`).
    *
-   * - `'coerce'` (default) — calls `String(value)`.
-   * - `'throw'` — throws an `ArsenalSerializationError`.
+   * - `'coerce'` (default): calls `String(value)`.
+   * - `'throw'`: throws an `ArsenalSerializationError`.
    */
   onClassInstance?: 'coerce' | 'throw';
 };

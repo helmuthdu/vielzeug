@@ -7,7 +7,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Patches
 
-- chore: align with CalVer lockstep trains — no code change this train
+- chore: align with CalVer lockstep trains: no code change this train
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT
 

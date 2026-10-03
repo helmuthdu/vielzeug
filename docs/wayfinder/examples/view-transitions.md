@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — View Transitions'
+title: 'Wayfinder Examples: View Transitions'
 description: 'View transitions example for @vielzeug/wayfinder.'
 ---
 

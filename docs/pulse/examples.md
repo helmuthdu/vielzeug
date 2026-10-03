@@ -1,5 +1,5 @@
 ---
-title: Examples — Pulse
+title: 'Examples: Pulse'
 description: Practical examples for common Pulse usage patterns.
 package: pulse
 category: websockets

@@ -1,5 +1,5 @@
 ---
-title: Prism — Usage Guide
+title: 'Prism: Usage Guide'
 description: Concepts, update patterns, and best practices for responsive SVG charts with @vielzeug/prism.
 ---
 
@@ -33,7 +33,7 @@ chart.dispose();
 <div id="chart" style="width: 100%; height: 300px;"></div>
 ```
 
-Prism observes the container size via `ResizeObserver` and re-renders automatically on resize. If the container has zero dimensions at mount time, a `warn` is emitted in development — ensure the container has layout before calling the chart factory.
+Prism observes the container size via `ResizeObserver` and re-renders automatically on resize. If the container has zero dimensions at mount time, a `warn` is emitted in development: ensure the container has layout before calling the chart factory.
 
 ## Updating Data
 
@@ -241,7 +241,7 @@ const chart = createPieChart(container, {
 | --------- | ------------------------------------------------------- |
 | `'pie'`   | Full circle, no hole                                    |
 | `'donut'` | Full circle with inner hole (~55% of outer by default)  |
-| `'semi'`  | Top-half semicircle with inner hole — useful for gauges |
+| `'semi'`  | Top-half semicircle with inner hole: useful for gauges |
 
 ### Inner Radius
 
@@ -306,7 +306,7 @@ createPieChart(container, {
 
 ## Sparklines
 
-Sparklines are minimal inline charts with no axes, no legend, and no margin — designed to live inline with text or inside table cells.
+Sparklines are minimal inline charts with no axes, no legend, and no margin: designed to live inline with text or inside table cells.
 
 ```ts
 import { createSparkline } from '@vielzeug/prism';
@@ -324,10 +324,10 @@ spark.dispose();
 
 ### Variants
 
-- **`line`** — simple polyline path (default)
-- **`area`** — filled area + line overlay
-- **`bar`** — vertical bar for each data point
-- **`stack`** — horizontal proportional segments; use `StackSegment[]` for `data` with per-segment colors
+- **`line`**: simple polyline path (default)
+- **`area`**: filled area + line overlay
+- **`bar`**: vertical bar for each data point
+- **`stack`**: horizontal proportional segments; use `StackSegment[]` for `data` with per-segment colors
 
 ### Updating Data
 
@@ -342,7 +342,7 @@ spark.update([12, 18, 14, 22, 30]);
 
 ### Event Hooks
 
-Sparklines use simplified hooks — index-based rather than full `ChartEvent`:
+Sparklines use simplified hooks: index-based rather than full `ChartEvent`:
 
 ```ts
 const spark = createSparkline(container, {
@@ -452,11 +452,11 @@ const chart = createLineChart(container, {
 
 `ChartEvent` provides:
 
-- `datum` — the nearest `Datum`
-- `series` — the corresponding `Series` config
-- `originalEvent` — the raw `MouseEvent`
+- `datum`: the nearest `Datum`
+- `series`: the corresponding `Series` config
+- `originalEvent`: the raw `MouseEvent`
 
-> **Pie chart events differ** — `onHover` and `onClick` receive `(slice: PieSliceConfig, index: number)` instead of `ChartEvent`. See [`PieChartConfig`](./api.md#piechartconfig) for details.
+> **Pie chart events differ**: `onHover` and `onClick` receive `(slice: PieSliceConfig, index: number)` instead of `ChartEvent`. See [`PieChartConfig`](./api.md#piechartconfig) for details.
 
 ## Animations
 
@@ -472,7 +472,7 @@ Pass a `transition` config to animate enter and update transitions:
 }
 ```
 
-All chart types use requestAnimationFrame-based interpolation. Bar charts additionally support `stagger` — a per-bar delay that creates a cascade effect on first render.
+All chart types use requestAnimationFrame-based interpolation. Bar charts additionally support `stagger`: a per-bar delay that creates a cascade effect on first render.
 
 ## Theming
 
@@ -497,7 +497,7 @@ setTheme({
 });
 ```
 
-`setTheme` writes to `document.documentElement` style, so it takes precedence over CSS file defaults. Call `resetTheme()` to clear every custom property `setTheme` can set and restore the default theme — useful for a theme-switcher's "reset" action or test teardown:
+`setTheme` writes to `document.documentElement` style, so it takes precedence over CSS file defaults. Call `resetTheme()` to clear every custom property `setTheme` can set and restore the default theme: useful for a theme-switcher's "reset" action or test teardown:
 
 ```ts
 import { resetTheme } from '@vielzeug/prism';
@@ -588,13 +588,13 @@ Calling `dispose()`:
 - Disconnects the `ResizeObserver`
 - Removes the SVG element, tooltip, and legend from the DOM
 - Restores container styles changed for tooltip positioning
-- Is idempotent — safe to call multiple times
+- Is idempotent: safe to call multiple times
 
 Call `update()` only while the handle is active. Updating a disposed chart throws `PrismRenderError`.
 
 ## Responsive Behavior
 
-Charts resize automatically when the container dimensions change. Prism uses `ResizeObserver` internally — no manual `resize()` call is needed.
+Charts resize automatically when the container dimensions change. Prism uses `ResizeObserver` internally: no manual `resize()` call is needed.
 
 ## Devtools
 
@@ -707,9 +707,9 @@ When `a11y` is omitted, every chart is hidden from assistive technology. Always 
 
 ## Best Practices
 
-- Ensure the container element has explicit dimensions before calling a chart factory — `ResizeObserver` needs a non-zero layout size to trigger the first render.
+- Ensure the container element has explicit dimensions before calling a chart factory: `ResizeObserver` needs a non-zero layout size to trigger the first render.
 - Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel transitions, disconnect resize observation, and remove DOM nodes.
 - Call `chart.update(data)` from your application state boundary; Prism does not require or own a state library.
-- Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data — accessibility is a hard requirement, not an optional add-on.
+- Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data: accessibility is a hard requirement, not an optional add-on.
 - Wrap a chart with `debugChart()` from the `/devtools` subpath only in development code paths; it is tree-shaken in production.
-- For SSR, skip chart creation server-side — Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.
+- For SSR, skip chart creation server-side: Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.

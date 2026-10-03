@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — flattenPaths'
+title: 'Arsenal Examples: flattenPaths'
 description: 'flattenPaths example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'flattenPaths example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to convert a nested object into a flat record of dot-notation paths — for example building search indexes or serializing form state.
+You need to convert a nested object into a flat record of dot-notation paths: for example building search indexes or serializing form state.
 
 ### Solution
 

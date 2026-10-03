@@ -5,7 +5,7 @@ export interface CrosshairState {
   hide(): void;
   /**
    * @param announceText Optional text describing the value at the crosshair position,
-   * announced via the crosshair's ARIA live region — used when no tooltip is also shown.
+   * announced via the crosshair's ARIA live region: used when no tooltip is also shown.
    */
   show(x: number, y: number, width: number, height: number, announceText?: string): void;
   /** When `false`, the crosshair follows the raw mouse position instead of snapping to the nearest datum. */
@@ -32,7 +32,7 @@ export function createCrosshair(parent: SVGGElement, config?: CrosshairConfig | 
 
   parent.appendChild(group);
 
-  // Non-modal status region for screen readers — the visual crosshair lines above are
+  // Non-modal status region for screen readers: the visual crosshair lines above are
   // aria-hidden (purely decorative), so the current value is announced here instead.
   // Positioned off-canvas rather than visually hidden via CSS so it works without prism's stylesheet.
   const liveRegion = createSvgElement('text', {

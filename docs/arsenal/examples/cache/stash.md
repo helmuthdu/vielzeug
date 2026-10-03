@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — cache'
+title: 'Arsenal Examples: cache'
 description: 'cache example for @vielzeug/arsenal.'
 ---
 

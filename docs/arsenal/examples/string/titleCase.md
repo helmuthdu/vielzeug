@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — titleCase'
+title: 'Arsenal Examples: titleCase'
 description: 'titleCase example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'titleCase example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to capitalize the first letter of each word in a string — for example formatting display titles from raw data.
+You need to capitalize the first letter of each word in a string: for example formatting display titles from raw data.
 
 ### Solution
 

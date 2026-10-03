@@ -1,10 +1,10 @@
 # Carousel
 
-An accessible, keyboard-navigable carousel and slideshow. Place `<ore-carousel-slide>` children directly inside — no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and four layout variants.
+An accessible, keyboard-navigable carousel and slideshow. Place `<ore-carousel-slide>` children directly inside: no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and four layout variants.
 
 ## Basic Usage
 
-Give the carousel an explicit height and a descriptive `label`. The default variant translates slides in and out horizontally. Always set a descriptive `label` — the default `"Carousel"` is not specific enough for pages with multiple carousels. Give the host an explicit height via `style` or CSS; the `--carousel-min-height` fallback (`240px`) is insufficient for `gallery` and `filmstrip` variants which distribute space flexibly.
+Give the carousel an explicit height and a descriptive `label`. The default variant translates slides in and out horizontally. Always set a descriptive `label`: the default `"Carousel"` is not specific enough for pages with multiple carousels. Give the host an explicit height via `style` or CSS; the `--carousel-min-height` fallback (`240px`) is insufficient for `gallery` and `filmstrip` variants which distribute space flexibly.
 
 <ComponentPreview>
 
@@ -12,15 +12,15 @@ Give the carousel an explicit height and a descriptive `label`. The default vari
 <ore-carousel label="Team highlights" style="height:200px">
   <ore-carousel-slide
     style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:100%">
-    <ore-text color="heading">Slide 1 — Alice</ore-text>
+    <ore-text color="heading">Slide 1: Alice</ore-text>
   </ore-carousel-slide>
   <ore-carousel-slide
     style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:100%">
-    <ore-text color="heading">Slide 2 — Bob</ore-text>
+    <ore-text color="heading">Slide 2: Bob</ore-text>
   </ore-carousel-slide>
   <ore-carousel-slide
     style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:100%">
-    <ore-text color="heading">Slide 3 — Carol</ore-text>
+    <ore-text color="heading">Slide 3: Carol</ore-text>
   </ore-carousel-slide>
 </ore-carousel>
 ```
@@ -33,7 +33,7 @@ Autoplay is **off by default**. Add the `autoplay` attribute to enable timed sli
 
 Use `autoplay-interval` (in milliseconds, default `5000`) to control the delay. Changing `autoplay-interval` at runtime restarts the timer immediately.
 
-Use `autoplay` only for decorative or media carousels (image galleries, hero banners). Omit it for instructional or interactive content. Do not enable `autoplay` on carousels containing forms or interactive controls — the timed advance will move content away from a user mid-interaction.
+Use `autoplay` only for decorative or media carousels (image galleries, hero banners). Omit it for instructional or interactive content. Do not enable `autoplay` on carousels containing forms or interactive controls: the timed advance will move content away from a user mid-interaction.
 
 <ComponentPreview>
 
@@ -58,7 +58,7 @@ Use `autoplay` only for decorative or media carousels (image galleries, hero ban
 
 ## No Loop
 
-By default the carousel wraps: advancing past the last slide returns to the first. Set `loop="false"` to stop at the boundaries — the prev/next buttons disable automatically at the edges. Use `loop="false"` for wizard-style or sequential flows where step order matters.
+By default the carousel wraps: advancing past the last slide returns to the first. Set `loop="false"` to stop at the boundaries: the prev/next buttons disable automatically at the edges. Use `loop="false"` for wizard-style or sequential flows where step order matters.
 
 <ComponentPreview>
 
@@ -207,7 +207,7 @@ The `variant` attribute switches the slide layout and transition style. All vari
 
 ### Fade
 
-Slides crossfade in-place — no lateral movement. Use for image-heavy content where translation motion may be distracting.
+Slides crossfade in-place: no lateral movement. Use for image-heavy content where translation motion may be distracting.
 
 <ComponentPreview>
 
@@ -352,8 +352,8 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 | `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation                                                                                                                     |
 | `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last.                                                                                                                                                                                 |
 | `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; pauses on hover and focus                                                                                                                                                            |
-| `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive — changing it restarts the timer                                                                                                                              |
-| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color for prev/next navigation buttons                                                                                                                                                                    |
+| `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive: changing it restarts the timer                                                                                                                              |
+| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for prev/next navigation buttons                                                                                                                                                                    |
 | `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                                                                                                                                               |
 | `show-indicators`   | `boolean`                                                                 | `true`         | Show indicator dot navigation                                                                                                                                                                                   |
 
@@ -369,7 +369,7 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 | -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `--carousel-bg`                  | `var(--color-canvas)`       | Slide area background                                                                                                                            |
 | `--carousel-radius`              | `var(--rounded-xl)`         | Host border radius                                                                                                                               |
-| `--carousel-min-height`          | `240px`                     | Fallback minimum height — set an explicit height for `filmstrip` and `gallery`                                                                   |
+| `--carousel-min-height`          | `240px`                     | Fallback minimum height: set an explicit height for `filmstrip` and `gallery`                                                                   |
 | `--carousel-transition-duration` | `0.35s`                     | Slide transition duration (`default` and `fade`). Auto-set to `0s` under `prefers-reduced-motion` |
 | `--carousel-dot-bg`              | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                                     |
 | `--carousel-dot-active-bg`       | `var(--color-contrast-700)` | Active indicator fill color                                                                                                                      |
@@ -382,7 +382,7 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 
 | Part         | Element       | Description                                   |
 | ------------ | ------------- | --------------------------------------------- |
-| `track`      | `<div>`       | The slide track — also the `aria-live` region |
+| `track`      | `<div>`       | The slide track: also the `aria-live` region |
 | `controls`   | `<div>`       | Prev/next button wrapper                      |
 | `prev-btn`   | `<ore-button>` | Previous-slide button                         |
 | `next-btn`   | `<ore-button>` | Next-slide button                             |
@@ -390,7 +390,7 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 
 **`ore-carousel-slide`**
 
-A transparent wrapper. It carries `role="group"` and `aria-roledescription="slide"` automatically. No public attributes or properties — all attributes below are set by `ore-carousel` to drive CSS layout and should not be set manually.
+A transparent wrapper. It carries `role="group"` and `aria-roledescription="slide"` automatically. No public attributes or properties: all attributes below are set by `ore-carousel` to drive CSS layout and should not be set manually.
 
 | Attribute              | Set by        | Description                                                                |
 | ---------------------- | ------------- | -------------------------------------------------------------------------- |
@@ -412,5 +412,5 @@ When `autoplay` is on, the timer stops on `focusin` or `pointerenter` so keyboar
 The carousel responds to `prefers-reduced-motion: reduce` automatically: `--carousel-transition-duration` is set to `0s`, eliminating slide translation and fade transitions.
 
 ::: tip Always set `label`
-The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"` — too generic when a page has multiple carousels.
+The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"`: too generic when a page has multiple carousels.
 :::

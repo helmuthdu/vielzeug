@@ -3,27 +3,27 @@
 //
 // Why this exists: multiple agents editing the same checkout race on
 // `.git/index` and can stomp each other's uncommitted files. A worktree per
-// agent (own directory, own index, shared .git/objects) fixes that — but only
+// agent (own directory, own index, shared .git/objects) fixes that, but only
 // makes sense for packages with no @vielzeug/* dependency edge in either
-// direction (including optional peer deps — still a real API contract). Two
+// direction (including optional peer deps: still a real API contract). Two
 // coupled packages (e.g. `ripple` + `ore`) *should* see each other's breaking
 // changes immediately in a shared checkout; isolating them in separate
 // worktrees just defers that collision to merge time, which is worse. See
 // the Worktrees rule in the root AGENTS.md.
 //
 // The dependency graph is computed from packages/*/package.json at run time
-// — not from .agents/reference/packages.md's human-readable table. That table is
+//: not from .agents/reference/packages.md's human-readable table. That table is
 // generated from the same manifests (kept current via `pnpm check:ai-data`),
 // but reading package.json directly here avoids a dependency on that
 // generated-file step ever staying in sync.
 //
-// Worktrees live at .worktrees/<pkg>/ (gitignored), inside the repo — not a
+// Worktrees live at .worktrees/<pkg>/ (gitignored), inside the repo: not a
 // sibling directory. Sibling worktrees are the more common git convention,
 // but a sandboxed agent is typically scoped to the repo root only; a sibling
 // path needs an extra, explicit scope grant. Nesting inside the
 // already-granted workspace has zero extra friction. IMPORTANT: this means
 // `.worktrees/` must stay excluded from every tool that globs the repo
-// recursively (eslint's globalIgnores, notably — nested duplicate source
+// recursively (eslint's globalIgnores, notably: nested duplicate source
 // files under two different tsconfig roots breaks typescript-eslint's
 // project-service auto-detection for the *entire* repo, not just the
 // worktree). Any new recursive glob added to this repo needs the same
@@ -70,7 +70,7 @@ export const isIndependent = (pkgName, graph) => {
 export const formatDep = ({ name, optional }) => (optional ? `${name} (optional)` : name);
 
 // ---------------------------------------------------------------------------
-// Commands — `run` is injectable so tests can assert on invocations without
+// Commands: `run` is injectable so tests can assert on invocations without
 // spawning real git/rush processes.
 // ---------------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ export function cmdAdd(pkgName, { branch, force = false, root = ROOT, run = defa
   const coupling = describeCoupling(pkgName, graph);
   if (!isIndependent(pkgName, graph) && !force) {
     const lines = [
-      `[REFUSED] "${pkgName}" has @vielzeug dependency edges — a worktree would hide breaking changes until merge:`,
+      `[REFUSED] "${pkgName}" has @vielzeug dependency edges: a worktree would hide breaking changes until merge:`,
     ];
     if (coupling.dependsOn.length) lines.push(`  depends on:     ${coupling.dependsOn.map(formatDep).join(', ')}`);
     if (coupling.dependedOnBy.length)
@@ -105,14 +105,14 @@ export function cmdAdd(pkgName, { branch, force = false, root = ROOT, run = defa
   const dir = worktreePath(pkgName, root);
 
   // Clears registrations for worktrees whose directory was deleted by hand
-  // (e.g. `rm -rf .worktrees/<pkg>` instead of `worktree:remove`) — without
+  // (e.g. `rm -rf .worktrees/<pkg>` instead of `worktree:remove`): without
   // this, the next `git worktree add` for the same package fails with
   // "missing but already registered worktree" even though nothing is there.
   run('git', ['worktree', 'prune'], root);
 
   if (existsSync(dir)) {
     throw new Error(
-      `${dir} already exists — remove it first (\`pnpm worktree:remove ${pkgName}\`) or pick a different package`,
+      `${dir} already exists: remove it first (\`pnpm worktree:remove ${pkgName}\`) or pick a different package`,
     );
   }
 
@@ -121,7 +121,7 @@ export function cmdAdd(pkgName, { branch, force = false, root = ROOT, run = defa
     run('git', ['worktree', 'add', dir, '-b', branchName], root);
   } catch (err) {
     // git can create the branch ref before failing the worktree checkout
-    // step (e.g. a race with another `add`) — don't leave that behind.
+    // step (e.g. a race with another `add`): don't leave that behind.
     try {
       run('git', ['branch', '-D', branchName], root);
     } catch {
@@ -144,7 +144,7 @@ export function cmdList({ root = ROOT, run = defaultRun } = {}) {
 export function cmdRemove(pkgName, { root = ROOT, run = defaultRun } = {}) {
   const dir = worktreePath(pkgName, root);
   // No --force: git already refuses to remove a worktree with uncommitted
-  // changes, which is exactly the safety we want here — don't paper over it.
+  // changes, which is exactly the safety we want here: don't paper over it.
   run('git', ['worktree', 'remove', dir], root);
 }
 
@@ -177,7 +177,7 @@ if (isMain(import.meta.url)) {
   try {
     main(process.argv.slice(2));
   } catch (err) {
-    console.error(err); // not err.message — the git-worktree-add failure path wraps a real cause
+    console.error(err); // not err.message: the git-worktree-add failure path wraps a real cause
     process.exitCode = 1;
   }
 }

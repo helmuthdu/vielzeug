@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Page Titles from View Metadata'
+title: 'Wayfinder Examples: Page Titles from View Metadata'
 description: 'Typed page-title metadata example for @vielzeug/wayfinder.'
 ---
 
@@ -39,7 +39,7 @@ const views = router.createViewRegistry(
 
 const applyTitle = (state: ReturnType<typeof router.getSnapshot>) => {
   const view = views.resolve(state);
-  document.title = view ? `${view.title} — My App` : 'My App';
+  document.title = view ? `${view.title}: My App` : 'My App';
 };
 
 await router.ready;

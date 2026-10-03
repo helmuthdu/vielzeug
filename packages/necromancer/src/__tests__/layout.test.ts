@@ -55,7 +55,7 @@ describe('layout animation', () => {
     vi.spyOn(element, 'getBoundingClientRect').mockReturnValue(createRect(0, 0));
 
     // Scale is measured via `offsetWidth`/`offsetHeight`, not `getBoundingClientRect()`'s
-    // width/height — the latter is the rotated bounding box and would distort the ratio
+    // width/height: the latter is the rotated bounding box and would distort the ratio
     // under any transform. jsdom's own `offsetWidth`/`offsetHeight` are always `0`, so tests
     // that exercise scale mock them directly instead of relying on real layout.
     let width = 100;

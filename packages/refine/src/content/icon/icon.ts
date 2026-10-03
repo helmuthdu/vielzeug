@@ -54,11 +54,11 @@ const parseSize = (value: string | null): number | string => {
 };
 
 /**
- * Builds an allowlisted SVG child element via `createElementNS` — real DOM construction, not
+ * Builds an allowlisted SVG child element via `createElementNS`: real DOM construction, not
  * HTML-string parsing, so this never touches Ore's `unsafeHtml()` directive (and its "unsanitized
  * HTML" dev warning) at all. `iconNode` entries come from a registered icon set (refine's own,
- * `registerIcons()`, or `@vielzeug/refine/icon-lucide`) — a developer/build-time API, never runtime
- * user input — but the tag/attr allowlist stays as defense in depth regardless of where the data
+ * `registerIcons()`, or `@vielzeug/refine/icon-lucide`): a developer/build-time API, never runtime
+ * user input, but the tag/attr allowlist stays as defense in depth regardless of where the data
  * originated.
  */
 const createSvgChild = (tag: string, attrs: Record<string, string | number | undefined>): SVGElement | null => {
@@ -160,7 +160,7 @@ define<OreIconProps>(ICON_TAG, {
       return node;
     });
 
-    // Real DOM construction (createElementNS), not the unsafeHtml() directive — see createSvgChild's
+    // Real DOM construction (createElementNS), not the unsafeHtml() directive: see createSvgChild's
     // doc comment. Rebuilds the <svg>'s attributes and children whenever the icon name, size,
     // or presentation props change, or when `svgRef` first attaches (a fresh element mounts
     // every time `when()`'s branch below flips truthy).

@@ -1,5 +1,5 @@
 ---
-title: 'Necromancer Examples — Animate a Reorder'
+title: 'Necromancer Examples: Animate a Reorder'
 description: 'Animate a list reorder with transform-safe positional FLIP in @vielzeug/necromancer.'
 ---
 

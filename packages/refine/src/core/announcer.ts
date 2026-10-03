@@ -4,7 +4,7 @@
 // that live in components where the visible element is hidden or absent.
 //
 // Two visually-hidden live regions are lazily created in the target document's
-// `<body>` — one polite, one assertive. The clear-then-set pattern forces AT to
+// `<body>`: one polite, one assertive. The clear-then-set pattern forces AT to
 // re-read even identical consecutive messages.
 //
 // Behavior is latest-value replacement (debounce), not queueing: rapid
@@ -87,8 +87,8 @@ export type AnnounceOptions = {
    */
   document?: Document;
   /**
-   * `'polite'` — latest-value replacement; does not interrupt ongoing speech.
-   * `'assertive'` — interrupts immediately. Use sparingly; reserve for errors.
+   * `'polite'`: latest-value replacement; does not interrupt ongoing speech.
+   * `'assertive'`: interrupts immediately. Use sparingly; reserve for errors.
    *
    * Default: `'polite'`.
    */
@@ -122,7 +122,7 @@ export const announce = (message: string, options: AnnounceOptions = {}): void =
   if (!region) return;
 
   // Clear immediately so AT registers a content change, then set after a short
-  // delay. This is a debounce window, not a guaranteed speech timing — AT speech
+  // delay. This is a debounce window, not a guaranteed speech timing: AT speech
   // timing varies across browsers and screen readers.
   region.textContent = '';
 

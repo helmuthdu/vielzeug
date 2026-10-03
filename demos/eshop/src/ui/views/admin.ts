@@ -42,7 +42,7 @@ define('admin-view', {
       queueMicrotask(() => void router.navigate({ name: 'catalog' }));
 
       return html`
-        <p>Access denied — redirecting…</p>
+        <p>Access denied: redirecting…</p>
       `;
     }
 
@@ -70,7 +70,7 @@ define('admin-view', {
       STATUS_VALUES.map((status) => ({ label: formatOrderStatus(status), value: status })),
     );
 
-    // Bulk selection — Admin's one data-heavy surface, so a shopper-facing single-row-at-a-time
+    // Bulk selection: Admin's one data-heavy surface, so a shopper-facing single-row-at-a-time
     // status select isn't enough here; `selectedIds` drives both the per-row checkbox and the
     // bulk-apply bar below.
     const selectedIds = signal<Set<string>>(new Set());
@@ -201,7 +201,7 @@ define('admin-view', {
                 </div>
                 <span>${() => formatPrice(o.value.pricing.total)}</span>
               </div>
-              <p class="order-card__meta">${() => `${o.value.userId} — ${formatShortDate(o.value.placedAt)}`}</p>
+              <p class="order-card__meta">${() => `${o.value.userId}: ${formatShortDate(o.value.placedAt)}`}</p>
               <ore-select
                 size="sm"
                 options=${statusOptions}

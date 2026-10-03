@@ -13,13 +13,13 @@ export type OreStepProps = {
    * this value); only takes effect on its own when `ore-step` is rendered standalone.
    */
   color?: ThemeColor;
-  /** Disables this step — it cannot be navigated to and is skipped by keyboard navigation. */
+  /** Disables this step: it cannot be navigated to and is skipped by keyboard navigation. */
   disabled?: boolean;
   /** Marks this step as failed/invalid. Overrides the completed/current indicator visuals. */
   error?: boolean;
   /**
    * Marks this step as optional. Renders a small "(optional)" hint next to the label.
-   * Purely presentational — has no effect on navigation.
+   * Purely presentational: has no effect on navigation.
    */
   optional?: boolean;
   /** Orientation. Inherited from the parent `ore-stepper` when nested inside one. */
@@ -32,7 +32,7 @@ export type OreStepProps = {
 
 /**
  * A single step trigger. Must be placed as a direct child of `ore-stepper`, which provides
- * this step's current/completed/navigable/index/total state via context — those are derived,
+ * this step's current/completed/navigable/index/total state via context: those are derived,
  * read-only attributes on this element, not settable props.
  *
  * @element ore-step
@@ -84,29 +84,29 @@ define<OreStepProps>(STEP_TAG, {
     const stepperCtx = inject(STEPPER_CTX);
 
     // ────────────────────────────────────────────────────────────────
-    // State derived from the parent ore-stepper's context — see stepper.ts's
+    // State derived from the parent ore-stepper's context: see stepper.ts's
     // module doc comment for why this replaced parent-side attribute fan-out.
     // ────────────────────────────────────────────────────────────────
 
-    // Plain functions, not `computed()` — every one of these ultimately reads
+    // Plain functions, not `computed()`: every one of these ultimately reads
     // `stepperCtx.stepValues`/`stepperCtx.currentValue`, which are themselves `computed()`s
     // owned by the parent `ore-stepper`. Wrapping a *child* `computed()` around a *parent*
     // `computed()` (a computed-to-computed dependency crossing a `provide()`/`inject()`
     // boundary) is exactly the shape that surfaced two related bugs: a step's `completed`/
-    // `current` attributes going permanently stale after a few rapid selections, and — worse —
+    // `current` attributes going permanently stale after a few rapid selections, and: worse :
     // a step's entire clickable/static control silently failing to render at all when its
     // `ore-step` tag upgrades before its siblings exist in the light DOM yet (true whenever
     // `ore-step`/`ore-stepper` are already `customElements.define()`d before this markup is
     // parsed, e.g. every sandboxed live-preview iframe). Reading straight through to the
-    // parent's computeds on every call — no intermediate computed layer of our own to go
-    // stale — made both disappear. Cheap enough to not need memoizing (a couple of `indexOf`/
+    // parent's computeds on every call: no intermediate computed layer of our own to go
+    // stale: made both disappear. Cheap enough to not need memoizing (a couple of `indexOf`/
     // comparisons over an already-memoized parent computed).
     const stepIndex = (): number => (stepperCtx ? stepperCtx.stepValues.value.indexOf(props.value.value) : -1);
     const totalSteps = (): number => stepperCtx?.stepValues.value.length ?? 0;
     const currentIndex = (): number =>
       stepperCtx ? stepperCtx.stepValues.value.indexOf(stepperCtx.currentValue.value ?? '') : -1;
     // 1-based, always-sane values for on-screen text (the step number badge, the sr-only
-    // "Step X of Y" label) — falls back to "1 of 1" when rendered standalone with no parent
+    // "Step X of Y" label): falls back to "1 of 1" when rendered standalone with no parent
     // `ore-stepper` to derive a real position from. Kept separate from the `index`/`total`
     // *attributes* below, which correctly reflect nothing at all in that same standalone case.
     const displayIndex = (): number => {
@@ -122,12 +122,12 @@ define<OreStepProps>(STEP_TAG, {
 
       return index >= 0 && index === current;
     };
-    // Purely positional — intentionally NOT gated on `props.error.value`. This also drives the
+    // Purely positional: intentionally NOT gated on `props.error.value`. This also drives the
     // `completed` *attribute* below, which `step.css` uses to color both connector segments
     // either side of the indicator (`:host([completed]) .connector`); every *consumer* of this
     // (the icon choice, the sr-only state label) already checks `error` first and short-circuits
     // before it matters, so folding `!error` in here too would only end up suppressing
-    // `[completed]` on an error step that's before the current one — breaking the connector
+    // `[completed]` on an error step that's before the current one: breaking the connector
     // color chain right at that step instead of just swapping its icon.
     const isCompleted = (): boolean => {
       const index = stepIndex();
@@ -152,7 +152,7 @@ define<OreStepProps>(STEP_TAG, {
     };
     const isDisabled = () => Boolean(props.disabled.value);
 
-    // Purely derived, read-only state — no matching `prop.*` declaration, so `bind()` is the
+    // Purely derived, read-only state: no matching `prop.*` declaration, so `bind()` is the
     // sole writer and can safely reflect `undefined` (removes the attribute) when this step
     // isn't nested inside an `ore-stepper` at all.
     bind({
@@ -170,7 +170,7 @@ define<OreStepProps>(STEP_TAG, {
     });
 
     // `color`/`size`/`orientation` double as regular, independently-settable props (for a step
-    // rendered standalone) *and* stepper-inherited values — mirrors ore-tab-item's handling of
+    // rendered standalone) *and* stepper-inherited values: mirrors ore-tab-item's handling of
     // its own `color`/`size`/`variant` inheritance from `ore-tabs`. Only forcibly overwrite the
     // attribute when a parent context actually exists, so the plain prop reflection is left
     // alone otherwise.

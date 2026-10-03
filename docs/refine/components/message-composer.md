@@ -1,6 +1,6 @@
 # Message Composer
 
-An auto-resizing composer for chat, comment, and reply boxes — a card with an auto-resizing field on top and a toolbar row below it for actions and the send button, the familiar "AI chat input" layout. It handles the send gesture (Enter to send, Shift+Enter for a newline, or a Ctrl/Cmd+Enter alternative), IME-safe composition, and clear-and-refocus after sending.
+An auto-resizing composer for chat, comment, and reply boxes: a card with an auto-resizing field on top and a toolbar row below it for actions and the send button, the familiar "AI chat input" layout. It handles the send gesture (Enter to send, Shift+Enter for a newline, or a Ctrl/Cmd+Enter alternative), IME-safe composition, and clear-and-refocus after sending.
 
 ## Basic Usage
 
@@ -24,7 +24,7 @@ Press **Enter** to send, **Shift+Enter** for a newline, or click the send button
 
 ## Variants
 
-The same five-value `variant` set as [`ore-textarea`](./textarea.md#variants), with the identical hover/focus recipe per variant, applied to the card instead of a bare field — so the composer doesn't read as a special case next to the rest of the field family. `solid` (the default) is a bordered, shadowed card. `flat` is filled and inset-shadowed rather than bordered — reach for it when embedding inside a container that already provides its own border (a dialog, a sidebar panel, an already-bordered chat pane), so the two borders don't double up. `ghost` is fully transparent until hovered or focused — reach for it when the composer should read as part of the surrounding surface rather than its own card. Side by side, `flat`'s filled background is what tells the two apart at rest; `ghost` only gains any background on interaction.
+The same five-value `variant` set as [`ore-textarea`](./textarea.md#variants), with the identical hover/focus recipe per variant, applied to the card instead of a bare field, so the composer doesn't read as a special case next to the rest of the field family. `solid` (the default) is a bordered, shadowed card. `flat` is filled and inset-shadowed rather than bordered: reach for it when embedding inside a container that already provides its own border (a dialog, a sidebar panel, an already-bordered chat pane), so the two borders don't double up. `ghost` is fully transparent until hovered or focused: reach for it when the composer should read as part of the surrounding surface rather than its own card. Side by side, `flat`'s filled background is what tells the two apart at rest; `ghost` only gains any background on interaction.
 
 <ComponentPreview center>
 
@@ -54,7 +54,7 @@ Scales the card's padding along with the field's font size and toolbar gap, the 
 
 ## Send Shortcut
 
-By default Enter sends and Shift+Enter inserts a newline — the same convention as Slack, Discord, and most AI chat UIs. Set `send-shortcut="mod+enter"` to flip that: Enter always inserts a newline, and only Ctrl+Enter (Cmd+Enter on macOS) sends. Use this for longer-form composers (e.g. a multi-paragraph comment box) where accidental sends are more costly than an extra keystroke.
+By default Enter sends and Shift+Enter inserts a newline: the same convention as Slack, Discord, and most AI chat UIs. Set `send-shortcut="mod+enter"` to flip that: Enter always inserts a newline, and only Ctrl+Enter (Cmd+Enter on macOS) sends. Use this for longer-form composers (e.g. a multi-paragraph comment box) where accidental sends are more costly than an extra keystroke.
 
 <ComponentPreview>
 
@@ -69,7 +69,7 @@ By default Enter sends and Shift+Enter inserts a newline — the same convention
 
 ## Attachments and Extra Actions
 
-The field sits on its own row at the top of the card; `prefix` and `suffix` are the two ends of the toolbar row underneath it — `prefix` for actions that come before the send button on the left (e.g. an attach button), `suffix` for actions right before the send button (e.g. an emoji picker trigger). Style slotted content yourself, same as [`ore-input`](./input.md)'s `prefix`/`suffix` slots. See [Rich Toolbar](#rich-toolbar-attachments-mode-model-pickers) below for composing dropdown pickers into the same slots.
+The field sits on its own row at the top of the card; `prefix` and `suffix` are the two ends of the toolbar row underneath it: `prefix` for actions that come before the send button on the left (e.g. an attach button), `suffix` for actions right before the send button (e.g. an emoji picker trigger). Style slotted content yourself, same as [`ore-input`](./input.md)'s `prefix`/`suffix` slots. See [Rich Toolbar](#rich-toolbar-attachments-mode-model-pickers) below for composing dropdown pickers into the same slots.
 
 <ComponentPreview>
 
@@ -94,7 +94,7 @@ The field sits on its own row at the top of the card; `prefix` and `suffix` are 
 
 ## Rich Toolbar: Attachments, Mode & Model Pickers
 
-Both slots accept more than a single icon button — compose in [`ore-menu`](./menu.md) for dropdown pickers (an attach menu, a mode/model selector) alongside plain icon buttons, to build a fuller AI-chat-style toolbar. `ore-menu` accepts any element as its `trigger` slot, so a button showing an icon + label + chevron works the same as an icon-only one.
+Both slots accept more than a single icon button: compose in [`ore-menu`](./menu.md) for dropdown pickers (an attach menu, a mode/model selector) alongside plain icon buttons, to build a fuller AI-chat-style toolbar. `ore-menu` accepts any element as its `trigger` slot, so a button showing an icon + label + chevron works the same as an icon-only one.
 
 <ComponentPreview height="380px">
 
@@ -153,11 +153,11 @@ Both slots accept more than a single icon button — compose in [`ore-menu`](./m
 
 </ComponentPreview>
 
-`placement="top-start"`/`"top-end"` opens each menu upward, which reads better for a composer pinned near the bottom of the viewport (the default `"bottom-start"` would open underneath it). [`ore-menu-item`'s `type="radio"`](./menu.md#radio-items) keeps only one mode/model option checked at a time — listen for `select` on the menu and update the trigger button's own text to reflect the current choice.
+`placement="top-start"`/`"top-end"` opens each menu upward, which reads better for a composer pinned near the bottom of the viewport (the default `"bottom-start"` would open underneath it). [`ore-menu-item`'s `type="radio"`](./menu.md#radio-items) keeps only one mode/model option checked at a time: listen for `select` on the menu and update the trigger button's own text to reflect the current choice.
 
 ## Loading State
 
-Set `loading` while a send is in flight — it shows a spinner on the send button and blocks further sends, without disabling the field (the user can keep typing the next message). Clear `loading` once the request settles.
+Set `loading` while a send is in flight: it shows a spinner on the send button and blocks further sends, without disabling the field (the user can keep typing the next message). Clear `loading` once the request settles.
 
 ```html
 <ore-message-composer id="composer" placeholder="Message…"></ore-message-composer>
@@ -181,7 +181,7 @@ Set `loading` while a send is in flight — it shows a spinner on the send butto
 
 ## Keeping the Draft on a Rejected Send
 
-`send` is cancelable — call `preventDefault()` to keep the current text in the field instead of the default clear-and-refocus, e.g. to reject an empty-after-server-side-trim message or surface a validation error without losing what the user typed.
+`send` is cancelable: call `preventDefault()` to keep the current text in the field instead of the default clear-and-refocus, e.g. to reject an empty-after-server-side-trim message or surface a validation error without losing what the user typed.
 
 ```html
 <ore-message-composer id="composer"></ore-message-composer>
@@ -220,7 +220,7 @@ For a different icon or accessible label on the default button, set `send-icon`/
 <ore-message-composer placeholder="Message…" send-icon="send" send-label="Submit"></ore-message-composer>
 ```
 
-For anything beyond that — a different variant, an extra icon, custom styling — provide a `send` slot to replace the default send button entirely; the composer stops rendering its own button (and `send-icon`/`send-label` stop applying) once anything is slotted there.
+For anything beyond that: a different variant, an extra icon, custom styling: provide a `send` slot to replace the default send button entirely; the composer stops rendering its own button (and `send-icon`/`send-label` stop applying) once anything is slotted there.
 
 ```html
 <ore-message-composer placeholder="Message…">
@@ -264,7 +264,7 @@ Pair `ore-message-composer` with [`ore-chat-message`](./chat-message.md) and [`o
 </script>
 ```
 
-If you're building a Slack/Notion-style inline `/`-command menu anchored under the caret, reach for [`ore-combobox`](./combobox.md) or [`ore-menu`](./menu.md) rather than `ore-command-palette` — the palette is a centered, global `⌘K`-style modal, not an anchored dropdown.
+If you're building a Slack/Notion-style inline `/`-command menu anchored under the caret, reach for [`ore-combobox`](./combobox.md) or [`ore-menu`](./menu.md) rather than `ore-command-palette`: the palette is a centered, global `⌘K`-style modal, not an anchored dropdown.
 
 ## API Reference
 
@@ -272,21 +272,21 @@ If you're building a Slack/Notion-style inline `/`-command menu anchored under t
 
 | Attribute         | Type                          | Default             | Description                                                                                          |
 | ----------------- | ------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------- |
-| `value`           | `string`                       | —                    | Current text value                                                                                     |
-| `placeholder`     | `string`                       | —                    | Placeholder text                                                                                       |
-| `label`           | `string`                       | `'Message'`          | Accessible name for the field — never rendered visually, only as `aria-label`                          |
-| `name`            | `string`                       | —                    | Form field name                                                                                        |
-| `helper`          | `string`                       | —                    | Helper text shown below the field                                                                      |
-| `error`           | `string`                       | —                    | Error message shown below the field                                                                    |
+| `value`           | `string`                       | N/A | Current text value                                                                                     |
+| `placeholder`     | `string`                       | N/A | Placeholder text                                                                                       |
+| `label`           | `string`                       | `'Message'`          | Accessible name for the field: never rendered visually, only as `aria-label`                          |
+| `name`            | `string`                       | N/A | Form field name                                                                                        |
+| `helper`          | `string`                       | N/A | Helper text shown below the field                                                                      |
+| `error`           | `string`                       | N/A | Error message shown below the field                                                                    |
 | `disabled`        | `boolean`                      | `false`              | Disable the whole composer (field, slots, and send action)                                             |
 | `readonly`        | `boolean`                      | `false`              | Read-only mode                                                                                          |
-| `required`        | `boolean`                      | `false`              | Fails constraint validation while blank — a native `<form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` |
+| `required`        | `boolean`                      | `false`              | Fails constraint validation while blank: a native `<form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` |
 | `loading`         | `boolean`                      | `false`              | Blocks further sends (e.g. a send is already in flight) without disabling editing                       |
-| `maxlength`       | `number`                       | —                    | Max character count; shows a counter                                                                   |
+| `maxlength`       | `number`                       | N/A | Max character count; shows a counter                                                                   |
 | `rows`            | `number`                       | `1`                  | Visible rows before auto-resize grows the field                                                        |
-| `color`           | `ThemeColor`                   | —                    | Theme color (card focus ring + default send button color)                                              |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'` | `'solid'` | Visual variant of the card — same set as `ore-textarea`, see [Variants](#variants)         |
-| `size`            | `'sm' \| 'md' \| 'lg'`         | —                    | Component size                                                                                          |
+| `color`           | `ThemeColor`                   | N/A | Theme color (card focus ring + default send button color)                                              |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'` | `'solid'` | Visual variant of the card: same set as `ore-textarea`, see [Variants](#variants)         |
+| `size`            | `'sm' \| 'md' \| 'lg'`         | N/A | Component size                                                                                          |
 | `fullwidth`       | `boolean`                      | `false`              | Stretch the composer to the full width of its container                                                |
 | `send-icon`       | `string`                       | `'arrow-up'`         | Lucide icon name for the default send button                                                            |
 | `send-label`      | `string`                       | `'Send message'`     | Accessible label for the default send button                                                            |
@@ -298,7 +298,7 @@ If you're building a Slack/Notion-style inline `/`-command menu anchored under t
 | Event   | Detail                                          | Description                                                                                 |
 | ------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------- |
 | `input` | `{ value: string; originalEvent: Event }`        | Fired on every keystroke                                                                     |
-| `send`  | `{ value: string; originalEvent: KeyboardEvent \| MouseEvent }` | Fired on a send attempt. Cancelable — `preventDefault()` keeps the current text instead of clearing |
+| `send`  | `{ value: string; originalEvent: KeyboardEvent \| MouseEvent }` | Fired on a send attempt. Cancelable: `preventDefault()` keeps the current text instead of clearing |
 
 ### Slots
 
@@ -324,7 +324,7 @@ If you're building a Slack/Notion-style inline `/`-command menu anchored under t
 | `--message-composer-focus-bg`        | Card background when focused (`flat` variant)              | Variant-dependent            |
 | `--message-composer-focus-border-color` | Card border when focused (`flat` variant)              | Variant-dependent            |
 
-The card owns all of the composer's visual chrome — there's no nested `ore-textarea` whose own background/border/box-shadow needs suppressing, since the `<textarea>` is rendered directly by this component and styled flush inside the card.
+The card owns all of the composer's visual chrome: there's no nested `ore-textarea` whose own background/border/box-shadow needs suppressing, since the `<textarea>` is rendered directly by this component and styled flush inside the card.
 
 ### Parts
 
@@ -341,10 +341,10 @@ The card owns all of the composer's visual chrome — there's no nested `ore-tex
 
 ## Accessibility
 
-The field has no visible `<label>` — chat and comment composers conventionally rely on a placeholder plus surrounding context rather than a labeled form field — so its accessible name comes entirely from `aria-label`, defaulting to `'Message'` and overridable via `label`. `aria-keyshortcuts` on the field always reflects the resolved `send-shortcut`, giving assistive technology a non-visual way to discover Enter-to-send behavior.
+The field has no visible `<label>`: chat and comment composers conventionally rely on a placeholder plus surrounding context rather than a labeled form field, so its accessible name comes entirely from `aria-label`, defaulting to `'Message'` and overridable via `label`. `aria-keyshortcuts` on the field always reflects the resolved `send-shortcut`, giving assistive technology a non-visual way to discover Enter-to-send behavior.
 
-Enter is only ever intercepted for the exact modifier combination that matches the active `send-shortcut` mode — every other keystroke, including Tab and Shift+Enter's newline, passes straight through to the native `<textarea>` untouched. A composing IME candidate selection (e.g. while typing Japanese, Korean, or Chinese) also fires an `Enter` keydown; the composer checks `event.isComposing` so that never triggers an accidental send.
+Enter is only ever intercepted for the exact modifier combination that matches the active `send-shortcut` mode: every other keystroke, including Tab and Shift+Enter's newline, passes straight through to the native `<textarea>` untouched. A composing IME candidate selection (e.g. while typing Japanese, Korean, or Chinese) also fires an `Enter` keydown; the composer checks `event.isComposing` so that never triggers an accidental send.
 
-The send button is a real `ore-button` — proper disabled semantics, `aria-busy` while `loading`, and a visible focus ring — labeled `'Send message'` and disabled whenever the value is blank or the composer is disabled/loading, so assistive technology users get an actually-disabled control rather than a click that silently no-ops. `required`, `error`, `helper`, and the `maxlength` counter (including its live-region announcement) are implemented directly on the field, on the same core primitives and ARIA wiring as [`ore-textarea`](./textarea.md#accessibility).
+The send button is a real `ore-button`: proper disabled semantics, `aria-busy` while `loading`, and a visible focus ring: labeled `'Send message'` and disabled whenever the value is blank or the composer is disabled/loading, so assistive technology users get an actually-disabled control rather than a click that silently no-ops. `required`, `error`, `helper`, and the `maxlength` counter (including its live-region announcement) are implemented directly on the field, on the same core primitives and ARIA wiring as [`ore-textarea`](./textarea.md#accessibility).
 
 `send` is cancelable, so an app can reject a draft (e.g. a profanity filter or rate limit) without the field clearing out from under the user, and without needing any extra composer-specific API to "put the text back."

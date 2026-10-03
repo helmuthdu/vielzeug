@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Ordered Overrides'
+title: 'Ward Examples: Ordered Overrides'
 description: 'Express authorization overrides through rule order.'
 ---
 

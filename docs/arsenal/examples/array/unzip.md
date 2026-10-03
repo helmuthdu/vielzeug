@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — unzip'
+title: 'Arsenal Examples: unzip'
 description: 'unzip example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'unzip example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have an array of tuples and need to transpose it into separate arrays of columns — the inverse of `zip`.
+You have an array of tuples and need to transpose it into separate arrays of columns: the inverse of `zip`.
 
 ### Solution
 

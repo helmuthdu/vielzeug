@@ -1,5 +1,5 @@
 ---
-title: Keymap — Headless keyboard shortcut manager
+title: 'Keymap: Headless keyboard shortcut manager'
 description: Target-local keyboard shortcut manager with chords, event-aware guards, modifier aliases, and terminal disposal.
 package: keymap
 category: app-infrastructure
@@ -106,18 +106,18 @@ map.dispose();
 
 <div class="features-grid">
 
-- `createKeymap()` — Create a keymap from an ordered binding array; mount to any `EventTarget`
-- Chord sequences — `"g g"`, `"ctrl+k ctrl+s"` with configurable timeout (default 1 s)
-- Modifier aliases — `cmd`/`command`/`win` → `meta`; `opt`/`option` → `alt`; `mod` → platform-aware
-- `Binding` objects — each binding has an explicit `id`, `shortcut`, `handler`, and optional `trigger`, `when`, `preventDefault`, `stopPropagation`
-- Per-binding `preventDefault`/`stopPropagation` — safe defaults (`true`/`false`) applied to completed shortcuts and intermediate chord steps
-- `tap()` — observe chord progress, timeout, matches, and disposal without changing behavior
-- `modKey` option — explicit platform override for SSR and cross-platform tests
-- `formatShortcut()` — platform-aware display (`⇧⌘P` on Mac, `Ctrl+Shift+P` elsewhere)
-- `@vielzeug/keymap/parse` subpath — `parseShortcut()`, `parseStep()`, `matchStep()`, `matchKey()`, `canonicalizeShortcut()`, `detectModKey()` for custom tooling
-- `listBindings()` — snapshot all active bindings (id, shortcut, trigger, preventDefault, stopPropagation) for palette UIs
-- `findShortcutConflicts()` — detect prefix/duplicate conflicts before binding a user-customized shortcut
-- Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
+- `createKeymap()`: Create a keymap from an ordered binding array; mount to any `EventTarget`
+- Chord sequences: `"g g"`, `"ctrl+k ctrl+s"` with configurable timeout (default 1 s)
+- Modifier aliases: `cmd`/`command`/`win` → `meta`; `opt`/`option` → `alt`; `mod` → platform-aware
+- `Binding` objects: each binding has an explicit `id`, `shortcut`, `handler`, and optional `trigger`, `when`, `preventDefault`, `stopPropagation`
+- Per-binding `preventDefault`/`stopPropagation`: safe defaults (`true`/`false`) applied to completed shortcuts and intermediate chord steps
+- `tap()`: observe chord progress, timeout, matches, and disposal without changing behavior
+- `modKey` option: explicit platform override for SSR and cross-platform tests
+- `formatShortcut()`: platform-aware display (`⇧⌘P` on Mac, `Ctrl+Shift+P` elsewhere)
+- `@vielzeug/keymap/parse` subpath: `parseShortcut()`, `parseStep()`, `matchStep()`, `matchKey()`, `canonicalizeShortcut()`, `detectModKey()` for custom tooling
+- `listBindings()`: snapshot all active bindings (id, shortcut, trigger, preventDefault, stopPropagation) for palette UIs
+- `findShortcutConflicts()`: detect prefix/duplicate conflicts before binding a user-customized shortcut
+- Disposable: `dispose()` + `[Symbol.dispose]` for `using` declarations
 
 </div>
 
@@ -136,9 +136,9 @@ map.dispose();
 
 <div class="see-also">
 
-- [Herald](/herald/) — Typed event bus; pair with Keymap by publishing shortcut events to a bus instead of calling handlers directly
-- [Refine](/refine/) — `ore-command-palette` uses Keymap internally; register your own shortcuts alongside it
-- [Ore](/ore/) — Attach a keymap inside a `define()` setup function for component-scoped shortcuts
+- [Herald](/herald/): Typed event bus; pair with Keymap by publishing shortcut events to a bus instead of calling handlers directly
+- [Refine](/refine/): `ore-command-palette` uses Keymap internally; register your own shortcuts alongside it
+- [Ore](/ore/): Attach a keymap inside a `define()` setup function for component-scoped shortcuts
 
 </div>
 

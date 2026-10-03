@@ -126,7 +126,7 @@ export function createKeymap(initialBindings: readonly Binding[] = [], options: 
     throw new KeymapConfigError(`chordTimeout must be a positive finite number; received ${chordTimeout}.`);
   }
 
-  // Ordered map keyed by binding id — preserves insertion order and supports
+  // Ordered map keyed by binding id: preserves insertion order and supports
   // duplicate shortcuts with different ids.
   const bindings = new Map<string, ParsedBinding>();
   const mounted = new Map<EventTarget, MountedTarget>();

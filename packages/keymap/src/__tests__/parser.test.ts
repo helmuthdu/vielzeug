@@ -255,7 +255,7 @@ describe('detectModKey', () => {
   });
 });
 
-describe('security — prototype-inherited key handling', () => {
+describe('security: prototype-inherited key handling', () => {
   it('treats __proto__ as a key name (not a modifier)', () => {
     const step = parseStep('ctrl+__proto__', 'ctrl');
 

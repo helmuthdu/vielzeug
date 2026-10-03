@@ -28,9 +28,9 @@ export type OreChatMessageProps = {
   error?: string;
   /** Display name shown above the bubble (falls back to a generic label per `sender`) */
   name?: string;
-  /** Who sent the message — controls alignment and bubble styling */
+  /** Who sent the message: controls alignment and bubble styling */
   sender?: ChatMessageSender;
-  /** Delivery status for outgoing messages — shows an inline indicator and, for `"error"`, a retry action */
+  /** Delivery status for outgoing messages: shows an inline indicator and, for `"error"`, a retry action */
   status?: ChatMessageStatus;
   /** Append a blinking cursor after the content, for a message still streaming in */
   streaming?: boolean;
@@ -39,13 +39,13 @@ export type OreChatMessageProps = {
 };
 
 /**
- * A single message bubble for chat/conversation UIs — sender-aware alignment, an optional
+ * A single message bubble for chat/conversation UIs: sender-aware alignment, an optional
  * avatar slot, delivery status (sending/sent/error with retry), and a streaming cursor for
  * assistant messages still generating. Content is provided via the default slot, so any
  * markdown-to-HTML rendering stays the consumer's choice.
  *
  * The default slot's leading/trailing whitespace-only text nodes are trimmed in place once
- * per slot assignment (mount, and again on `slotchange`) — pretty-printed HTML's
+ * per slot assignment (mount, and again on `slotchange`): pretty-printed HTML's
  * indentation would otherwise render as blank lines, since the bubble preserves line breaks
  * (`white-space: pre-wrap`) for genuine multi-paragraph replies. This mutates those specific
  * text nodes' `textContent` directly; it never touches nodes appended afterward (e.g. by
@@ -133,7 +133,7 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
       () => Boolean(formattedTime.value) || Boolean(props.status.value) || Boolean(props.error.value),
     );
 
-    // Announce delivery failures — the visible retry button and error text are always present
+    // Announce delivery failures: the visible retry button and error text are always present
     // for sighted users, but a failed send is exactly the kind of state change a screen
     // reader user could otherwise miss entirely. Keyed on `error` text too (not just
     // `status`) so a retry that fails again with a *different* reason re-announces even
@@ -157,7 +157,7 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
 
     // ── Trim author-time indentation whitespace from the default slot ──
     // `.content` uses `white-space: pre-wrap` so genuine multi-paragraph replies keep their
-    // line breaks — but that also preserves the leading/trailing newline + indentation from
+    // line breaks, but that also preserves the leading/trailing newline + indentation from
     // pretty-printed HTML (`<ore-chat-message>\n  Hello\n</ore-chat-message>`), rendering as
     // visible blank lines around the text. Trim only the outermost edges once per slot
     // assignment; appending tokens to an existing text node for streaming doesn't re-fire
@@ -165,11 +165,11 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
     //
     // A named-slotted sibling (e.g. `<ore-avatar slot="avatar">` between the opening tag and
     // the message text) splits the default slot's light-DOM text into *multiple* text nodes
-    // — text nodes can't target a named slot, so each run on either side of the element is
+    //: text nodes can't target a named slot, so each run on either side of the element is
     // assigned separately. The "real" content can start on a later node than index 0 (it's
     // still preceded by its own leading indentation), so this walks inward from each end,
     // fully clearing whitespace-only nodes and stopping at the first node with real content
-    // on each side — rather than only touching the very first/last assigned node.
+    // on each side, rather than only touching the very first/last assigned node.
     const contentSlotRef = ref<HTMLSlotElement>();
 
     function trimSlotEdgeWhitespace(): void {

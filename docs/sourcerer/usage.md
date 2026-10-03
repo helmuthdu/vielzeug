@@ -1,5 +1,5 @@
 ---
-title: Sourcerer — Usage Guide
+title: 'Sourcerer: Usage Guide'
 description: Build local, page, cursor, and infinite collection sources.
 ---
 

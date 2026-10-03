@@ -37,7 +37,7 @@ const SIZES: Record<ComponentSize, number> = { lg: 256, md: 192, sm: 128 };
 const cssSize = (size: ComponentSize | number): number => (typeof size === 'number' ? size : (SIZES[size] ?? SIZES.md));
 
 /**
- * Renders a QR code for `value` as inline SVG — themeable via `currentColor`,
+ * Renders a QR code for `value` as inline SVG: themeable via `currentColor`,
  * crisp at any scale, no canvas. On capacity errors the component shows an
  * error state and emits `error` rather than throwing.
  *

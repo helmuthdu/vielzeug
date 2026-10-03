@@ -33,7 +33,7 @@ describe('buildExampleFiles()', () => {
     expect(snippet).toBe('const x = 1;\nconsole.log(x);\n');
     expect(test).toContain("import { test } from 'vitest';");
     expect(test).toContain("await import('./ripple__basic_usage.snippet.ts');");
-    expect(test).toContain('ripple / basic usage — Basic Usage');
+    expect(test).toContain('ripple / basic usage: Basic Usage');
     expect(test).not.toContain('fake-indexeddb');
   });
 
@@ -69,7 +69,7 @@ describe('discoverPackages()', () => {
     root = mkdtempSync(path.join(tmpdir(), 'validate-repl-test-'));
     mkdirSync(path.join(root, 'ripple'));
     mkdirSync(path.join(root, 'orbit'));
-    mkdirSync(path.join(root, '.DS_Store')); // dir, but has a dot — treated like the real file case
+    mkdirSync(path.join(root, '.DS_Store')); // dir, but has a dot: treated like the real file case
 
     expect(discoverPackages(root, null).sort()).toEqual(['orbit', 'ripple']);
   });

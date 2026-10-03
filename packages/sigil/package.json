@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/sigil",
   "version": "26.10.0",
-  "description": "QR code generation and scanning — pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning",
+  "description": "QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

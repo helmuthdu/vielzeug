@@ -1,5 +1,5 @@
 /**
- * renderHook — test composable hooks (lifecycle, reactive state, etc.) in isolation
+ * renderHook: test composable hooks (lifecycle, reactive state, etc.) in isolation
  * without rendering a full component template.
  */
 
@@ -75,7 +75,7 @@ export async function renderHook<D extends PropInputDefs, T>(
 
   // Built via the runtime's own factory, so the harness can never desync from a
   // new required RuntimeContext field. Note: `onFormReset()` registrations land
-  // in this context's formResetCallbacks but are never fired — renderHook has no
+  // in this context's formResetCallbacks but are never fired: renderHook has no
   // ancestor <form>; test form-reset behaviour through mount() instead.
   const ctx = createRuntimeContext(hostEl);
   const { mountCallbacks } = ctx;

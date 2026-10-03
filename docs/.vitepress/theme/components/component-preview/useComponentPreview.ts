@@ -150,7 +150,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     const found = extractCodeFromSlot(slotVNodes);
 
     if (found) {
-      // Inline <script type="module"> blocks are kept — the sandbox iframe navigates via
+      // Inline <script type="module"> blocks are kept: the sandbox iframe navigates via
       // `srcdoc` (a real document parse, see `createSandbox().render()`), so module scripts
       // execute normally there. Stripping them used to silently break every example that
       // wires interactivity between two elements (e.g. password-strength's registration-flow

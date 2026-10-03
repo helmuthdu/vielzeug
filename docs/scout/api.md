@@ -1,6 +1,6 @@
 ---
-title: Scout — API Reference
-description: Complete API reference for @vielzeug/scout — createIndex, createReactiveSearch, createSearch, highlight, highlightField, toSearchMatcher, toFilterPredicate.
+title: 'Scout: API Reference'
+description: 'Complete API reference for @vielzeug/scout: createIndex, createReactiveSearch, createSearch, highlight, highlightField, toSearchMatcher, toFilterPredicate.'
 ---
 
 [[toc]]
@@ -9,7 +9,7 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 
 | Symbol                    | Purpose                                               | Execution mode | Common gotcha                                                 |
 | ------------------------- | ----------------------------------------------------- | -------------- | ------------------------------------------------------------- |
-| `createIndex()`           | Build trigram index from an item array                | Sync           | Index is built at call time — pass all initial items          |
+| `createIndex()`           | Build trigram index from an item array                | Sync           | Index is built at call time: pass all initial items          |
 | `ScoutIndex.search()`     | Query the index, returns scored + highlighted results | Sync           | Empty query returns all items with `score = 1`                |
 | `ScoutIndex.add()`        | Add one item to the index                             | Sync           | No-op if same reference already indexed                       |
 | `ScoutIndex.remove()`     | Remove one item by reference                          | Sync           | No-op for unknown references                                  |
@@ -25,13 +25,13 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `highlightField()`        | Highlight a named field from a `SearchResult`         | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern |
 | `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's local `filter` callback | Sync        | Recomputes cached query matches after index mutation          |
 | `toFilterPredicate()`     | Snapshot predicate from a one-time query              | Sync           | Re-call when query or corpus changes                          |
-| `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter` — not applied inside `tokenize()` itself (see Pitfalls) |
+| `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter`: not applied inside `tokenize()` itself (see Pitfalls) |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/scout` | All exports — index/search/highlighting/adapters, `ScoutConfigError`, `ScoutDisposedError`, `ScoutError`, and all types |
+| `@vielzeug/scout` | All exports: index/search/highlighting/adapters, `ScoutConfigError`, `ScoutDisposedError`, `ScoutError`, and all types |
 
 ---
 
@@ -123,11 +123,11 @@ index.setItems(latestUsers);
 
 ### `.size`
 
-`number` — current number of indexed items.
+`number`: current number of indexed items.
 
 ### `.items`
 
-`readonly T[]` — all indexed items in insertion order. Returns a new array snapshot each call.
+`readonly T[]`: all indexed items in insertion order. Returns a new array snapshot each call.
 
 ```ts
 const all = index.items;
@@ -143,16 +143,16 @@ Subscribes `listener` to run after every changed `add()` / `remove()` / `reindex
 
 ```ts
 const unsubscribe = index.onMutate(() => {
-  console.log(`Index changed — now ${index.size} items`);
+  console.log(`Index changed: now ${index.size} items`);
 });
 
-index.add(newUser); // logs "Index changed — now 6 items"
+index.add(newUser); // logs "Index changed: now 6 items"
 unsubscribe();
 ```
 
 ### `.revision`
 
-`number` — monotonically increasing counter, incremented after every changed `add()` / `remove()` / `reindex()` / `setItems()` operation. Use as a cache-busting token when caching search results outside the index — `toSearchMatcher()` uses it for this purpose.
+`number`: monotonically increasing counter, incremented after every changed `add()` / `remove()` / `reindex()` / `setItems()` operation. Use as a cache-busting token when caching search results outside the index: `toSearchMatcher()` uses it for this purpose.
 
 ---
 
@@ -207,7 +207,7 @@ search.setQuery('ada');
 
 ## `createReactiveSearch(items, options)`
 
-Creates a `ScoutIndex` and a reactive `SearchState` in one call — the shorthand for `createIndex` + `createSearch`. Returns a `ReactiveSearch<T>` which extends `SearchState<T>` with a `.index` property for incremental mutations.
+Creates a `ScoutIndex` and a reactive `SearchState` in one call: the shorthand for `createIndex` + `createSearch`. Returns a `ReactiveSearch<T>` which extends `SearchState<T>` with a `.index` property for incremental mutations.
 
 ```ts
 function createReactiveSearch<T>(
@@ -227,7 +227,7 @@ function createReactiveSearch<T>(
 | `options.limit` | `number` | Finite non-negative integer max results (default `50`). |
 | `options.minQueryLength` | `number` | Finite positive integer min chars before trigram scoring (default `3`). |
 
-**Returns `ReactiveSearch<T>`** — all `SearchState<T>` members plus:
+**Returns `ReactiveSearch<T>`**: all `SearchState<T>` members plus:
 
 | Member | Type | Description |
 | --- | --- | --- |
@@ -358,7 +358,7 @@ function toFilterPredicate<T>(
 ): (item: T) => boolean
 ```
 
-The predicate is a snapshot — re-call `toFilterPredicate` if the query or corpus changes.
+The predicate is a snapshot: re-call `toFilterPredicate` if the query or corpus changes.
 
 ```ts
 import { createIndex, toFilterPredicate } from '@vielzeug/scout';
@@ -374,13 +374,13 @@ const top5 = products.filter(toFilterPredicate(index, 'widget', { limit: 5 }));
 
 ## `segmentWords(text)`
 
-Splits `text` into whitespace-joined word segments using the runtime's native `Intl.Segmenter` — no dependency beyond the platform API. Falls back to returning `text` unchanged where `Intl.Segmenter` isn't available.
+Splits `text` into whitespace-joined word segments using the runtime's native `Intl.Segmenter`: no dependency beyond the platform API. Falls back to returning `text` unchanged where `Intl.Segmenter` isn't available.
 
 ```ts
 function segmentWords(text: string): string
 ```
 
-`tokenize()`'s trigram-based scoring already works on unsegmented scripts (Chinese, Japanese, Thai, ...) without this — trigrams are generated per-character, not per-word. `segmentWords()` is for `findMatchRanges()` / highlighting and the multi-word query semantics on `SearchConstraints`, which assume space-separated words. **Not applied inside `tokenize()` itself** — benchmarked at ~15x slower than the plain regex path for the common whitespace-delimited case, which would regress `createIndex()`'s construction cost for every caller, not just those indexing unsegmented scripts.
+`tokenize()`'s trigram-based scoring already works on unsegmented scripts (Chinese, Japanese, Thai, ...) without this: trigrams are generated per-character, not per-word. `segmentWords()` is for `findMatchRanges()` / highlighting and the multi-word query semantics on `SearchConstraints`, which assume space-separated words. **Not applied inside `tokenize()` itself**: benchmarked at ~15x slower than the plain regex path for the common whitespace-delimited case, which would regress `createIndex()`'s construction cost for every caller, not just those indexing unsegmented scripts.
 
 **Example**
 
@@ -449,7 +449,7 @@ type SearchResult<T> = {
 
 ### `FieldMatch<F>`
 
-Generic over the union of field names — `match.field` is typed to the actual fields of `T`.
+Generic over the union of field names: `match.field` is typed to the actual fields of `T`.
 
 ```ts
 type FieldMatch<F extends string = string> = {
@@ -501,7 +501,7 @@ type SearchState<T> = {
 };
 ```
 
-`subscribe()` observers are notified after the full snapshot commits. An observer error is reported asynchronously after the remaining observers run. `tap()` emits `state-change` only — disposal is observable through `disposed` and `disposalSignal`; tapper errors are swallowed.
+`subscribe()` observers are notified after the full snapshot commits. An observer error is reported asynchronously after the remaining observers run. `tap()` emits `state-change` only: disposal is observable through `disposed` and `disposalSignal`; tapper errors are swallowed.
 
 ### `ReactiveSearch<T>`
 
@@ -534,7 +534,7 @@ class ScoutError extends Error {}
 
 ## Entry Ranking
 
-Reference lists — glossaries, rule compendiums, profile directories — rank and render through the same helpers.
+Reference lists: glossaries, rule compendiums, profile directories: rank and render through the same helpers.
 
 ### `rankEntries(entries, query, options?)`
 
@@ -542,7 +542,7 @@ Orders `RankableEntry` items (`{ id, label, meta, text }`) by how directly they 
 
 ### `dedupeEntries(entries)`
 
-Drops entries whose label and body text are identical to an earlier entry (case-insensitive) — alias rows in merged catalogs.
+Drops entries whose label and body text are identical to an earlier entry (case-insensitive): alias rows in merged catalogs.
 
 ### `splitPattern(text, pattern)`
 
@@ -550,4 +550,4 @@ Splits text on a global regular expression, marking matched pieces (`SplitSegmen
 
 ### `escapeRegExp(value)`
 
-Escapes a literal for embedding in a regular expression — build keyword patterns from display names.
+Escapes a literal for embedding in a regular expression: build keyword patterns from display names.

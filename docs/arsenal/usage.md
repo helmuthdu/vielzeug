@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Usage Guide
+title: 'Arsenal: Usage Guide'
 description: Use Arsenal root utilities for common work and category entry points for specialized collection, async, cache, object, and string behavior.
 ---
 
@@ -153,13 +153,13 @@ random(1, 4, source); // 3
 
 ## Encode Text for URLs and QR Codes
 
-Share codes ride in URLs and QR payloads, where `+`, `/`, and padding `=` break consumers. The base64url codecs are environment-independent — no `btoa`, no `Buffer` — so the same encode/decode pair works in the browser, in workers, and in Node.
+Share codes ride in URLs and QR payloads, where `+`, `/`, and padding `=` break consumers. The base64url codecs are environment-independent: no `btoa`, no `Buffer`, so the same encode/decode pair works in the browser, in workers, and in Node.
 
 ```ts
 import { base64UrlToText, textToBase64Url } from '@vielzeug/arsenal';
 
 const code = textToBase64Url(JSON.stringify({ hunterId: 'daeron', version: 2 }));
-// eyJodW50ZXJJZCI6ImRhZXJvbiIsInZlcnNpb24iOjJ9 — safe in a query string or QR
+// eyJodW50ZXJJZCI6ImRhZXJvbiIsInZlcnNpb24iOjJ9: safe in a query string or QR
 
 const payload = JSON.parse(base64UrlToText(code));
 ```

@@ -345,7 +345,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
 
     e.preventDefault();
 
-    // Evaluate the filter once per drag (on first entry) — the payload is
+    // Evaluate the filter once per drag (on first entry): the payload is
     // constant for the lifetime of a drag operation.
     if (dragCounter === 0) {
       const items = e.dataTransfer?.items;
@@ -371,7 +371,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   };
 
   const handleDragLeave = (_e: DragEvent): void => {
-    // Always decrement to balance the paired dragenter — disabling after enter
+    // Always decrement to balance the paired dragenter: disabling after enter
     // must not leave the counter permanently incremented.
     updateCounter(dragCounter - 1);
   };

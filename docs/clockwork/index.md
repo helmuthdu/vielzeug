@@ -1,5 +1,5 @@
 ---
-title: Clockwork — Typed finite state machines for TypeScript
+title: 'Clockwork: Typed finite state machines for TypeScript'
 description: Framework-neutral typed state machines with pure transitions, actor-owned runtime work, timers, invokes, and explicit effects.
 package: clockwork
 category: state
@@ -112,14 +112,14 @@ actor.send({ type: 'INC' });
 
 <div class="features-grid">
 
-- **`defineMachine()`** — defines one flat, typed machine and rejects the footguns types cannot express.
-- **`machine.transition()`** — evaluates a transition without actor runtime work.
-- **`machine.createActor()`** — creates isolated, disposable runtime ownership.
-- **`reduce`** — returns a replacement context from a transition.
-- **`effects`** — run after commit and stable subscriber notification.
-- **`invoke`** — runs cancellable asynchronous work on state entry.
-- **`after`** — schedules cancellable delayed transitions.
-- **`actor.snapshot`** — exposes the current shallow-frozen state/context value.
+- **`defineMachine()`**: defines one flat, typed machine and rejects the footguns types cannot express.
+- **`machine.transition()`**: evaluates a transition without actor runtime work.
+- **`machine.createActor()`**: creates isolated, disposable runtime ownership.
+- **`reduce`**: returns a replacement context from a transition.
+- **`effects`**: run after commit and stable subscriber notification.
+- **`invoke`**: runs cancellable asynchronous work on state entry.
+- **`after`**: schedules cancellable delayed transitions.
+- **`actor.snapshot`**: exposes the current shallow-frozen state/context value.
 
 </div>
 
@@ -138,9 +138,9 @@ actor.send({ type: 'INC' });
 
 <div class="see-also">
 
-- [Herald](/herald/) — publish events between independent actors without coupling machine definitions.
-- [Ripple](/ripple/) — bridge actor snapshots into a reactive graph when you need fine-grained rendering.
-- [Ward](/ward/) — call authorization predicates from transition guards.
+- [Herald](/herald/): publish events between independent actors without coupling machine definitions.
+- [Ripple](/ripple/): bridge actor snapshots into a reactive graph when you need fine-grained rendering.
+- [Ward](/ward/): call authorization predicates from transition guards.
 
 </div>
 

@@ -44,7 +44,7 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
   'auto-resize'?: boolean;
   /**
    * Shows an inline spinner inside the field and forces the inner `<textarea>` into
-   * `disabled` for the duration — use while an async validation/submission request
+   * `disabled` for the duration: use while an async validation/submission request
    * is in flight to prevent double-submits.
    */
   loading?: boolean;
@@ -163,7 +163,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
 
     const textareaRef = ref<HTMLTextAreaElement>();
     const autoResize = createAutoResize({ enabled: props['auto-resize'] });
-    // `loading` behaves like a temporary `disabled` — see ore-input's identical computation.
+    // `loading` behaves like a temporary `disabled`: see ore-input's identical computation.
     const isDisabled = computed(() => props.disabled.value || props.loading.value);
 
     const abortSignal = lifecycleSignal(onCleanup);
@@ -253,7 +253,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
       attr: {
         error: errorAttr(errorText),
         size: props.size,
-        // Reflects `success` only once `error` is confirmed empty — keeps the two host
+        // Reflects `success` only once `error` is confirmed empty: keeps the two host
         // attributes mutually exclusive even if a consumer sets both props at once.
         success: () => (props.success.value && !errorText.value ? true : undefined),
         variant: props.variant,
@@ -300,7 +300,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     sizeVariantMixin(TEXTAREA_SIZE_PRESET),
     forcedColorsFocusMixin('textarea'),
     componentStyles,
-    // Must come after `componentStyles` — see `ore-input`'s identical ordering note for why
+    // Must come after `componentStyles`: see `ore-input`'s identical ordering note for why
     // (`@layer` precedence is fixed by which layer name is *first* referenced across this whole
     // array; `componentStyles` establishes `refine.base`, which this mixin's `refine.variants`
     // rules need to win over).

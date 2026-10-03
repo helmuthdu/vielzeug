@@ -5,9 +5,9 @@
 
 ## Rule strength
 
-- **MUST** — required unless user explicitly approves an exception.
-- **SHOULD** — default; deviate only when the local design is clearer and rationale is evident from code.
-- **MAY** — optional pattern.
+- **MUST**: required unless user explicitly approves an exception.
+- **SHOULD**: default; deviate only when the local design is clearer and rationale is evident from code.
+- **MAY**: optional pattern.
 
 ## Non-negotiables
 
@@ -103,7 +103,7 @@ Use private `src/_dev.ts` for development-only validation. Never mix it with con
 | `error(msg, ...args)` | Recoverable internal error with context |
 | `devOnly(fn)`         | Multi-step development-only logic       |
 
-### Runtime observability — `tap()`
+### Runtime observability: `tap()`
 
 Packages with runtime behavior (events, decisions, state transitions, background work) expose side-channel observation via a `tap()` method on the instance. This replaces per-package `debug<Noun>()` factories, `logger` options, and `onError` callbacks.
 
@@ -114,21 +114,21 @@ interface Tappable<Events extends { readonly type: string }> {
 ```
 
 - **MUST:** Name the method `tap()`. Never `trace()`, `observe()`, `onAny()`, or `subscribe()` for generic runtime observation.
-- **MUST:** Handler receives a single typed event object — a discriminated union with a `type` field. Never positional `(event, payload)` args.
+- **MUST:** Handler receives a single typed event object: a discriminated union with a `type` field. Never positional `(event, payload)` args.
 - **MUST:** Return an unsubscribe function (`() => void`).
-- **MUST:** Accept optional `{ signal?: AbortSignal }` — auto-detach when signal aborts.
-- **MUST:** Swallow handler errors — observability must not affect package behavior.
+- **MUST:** Accept optional `{ signal?: AbortSignal }`: auto-detach when signal aborts.
+- **MUST:** Swallow handler errors: observability must not affect package behavior.
 - **MUST:** Zero overhead when no handlers registered (`if (tappers.size === 0) return` guard before emission).
 - **MUST:** Export the event union type from `src/index.ts` as `<Pkg>Event` (e.g. `HeraldEvent`, `WardEvent`).
 - **MUST NOT:** Provide a default logger. Consumer provides the handler.
 - **MUST NOT:** Add `tap()` to packages without runtime observability (pure functions, simple state).
-- **SHOULD:** Tie tapper lifetime to `disposalSignal` — clear all tappers on dispose.
+- **SHOULD:** Tie tapper lifetime to `disposalSignal`: clear all tappers on dispose.
 - **SHOULD:** Emit a `{ type: 'dispose' }` event before clearing tappers, so observers can clean up.
 - **SHOULD:** `tap()` after dispose returns a no-op unsubscribe. Packages with an explicit `DisposedError` class may throw instead for consistency with their other methods.
 
 To find current implementers, search for `tap(` in `packages/*/src`; do not maintain a list here.
 
-Rune integration (no adapter needed — rune's context-first `LogMethod` overload matches `(event, label)`):
+Rune integration (no adapter needed: rune's context-first `LogMethod` overload matches `(event, label)`):
 
 ```ts
 import { createLogger } from '@vielzeug/rune';
@@ -162,8 +162,8 @@ Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-p
 
 ## Reference packages
 
-- `spell` — small focused API, errors, types, and central tests.
-- `arsenal` — tree-shakeable helper categories and barrel exports.
-- `ripple` — disposal, async lifecycle, and devtools patterns.
-- `ore` — DOM-output boundaries and accessibility testing.
-- `codex` — CLI behavior, generated data, and bundled documentation.
+- `spell`: small focused API, errors, types, and central tests.
+- `arsenal`: tree-shakeable helper categories and barrel exports.
+- `ripple`: disposal, async lifecycle, and devtools patterns.
+- `ore`: DOM-output boundaries and accessibility testing.
+- `codex`: CLI behavior, generated data, and bundled documentation.

@@ -155,7 +155,7 @@ describe('ore-dialog', () => {
       expect(dialog.classList.contains('closing')).toBe(true);
       expect(closeHandler).not.toHaveBeenCalled();
 
-      // Reopening mid-exit cancels the pending close — the open prop is authoritative.
+      // Reopening mid-exit cancels the pending close: the open prop is authoritative.
       fixture.element.setAttribute('open', '');
       await fixture.flush();
 
@@ -246,13 +246,13 @@ describe('ore-dialog', () => {
 
     // Regression test: a bubbling `close`-named event dispatched by a *slotted descendant*
     // (e.g. `ore-select` firing its own public `close` event when its dropdown closes) reaches
-    // this dialog's native-close listener via slot-assignment-based event-path computation —
+    // this dialog's native-close listener via slot-assignment-based event-path computation :
     // which isn't gated by that event's own `composed` flag, only the reverse (shadow → host)
     // direction is. Without checking `e.target`, selecting an option in any dropdown field
     // nested in a dialog closes the whole dialog instead of just that field's own dropdown.
     //
     // Note: the descendant's event still bubbles to `fixture.element`'s *own* `close` listener
-    // regardless of this fix — that's normal, expected DOM bubbling to the host element, not the
+    // regardless of this fix, that's normal, expected DOM bubbling to the host element, not the
     // bug. The bug (and what this asserts) is `useDialogControl`'s *internal* native-close
     // handler mistaking it for the dialog's own native close and tearing down its open state.
     it('does not tear down open state when a slotted descendant fires its own bubbling close-named event', async () => {
@@ -261,7 +261,7 @@ describe('ore-dialog', () => {
         html: '<div id="descendant-field"></div>',
       });
 
-      // Light-DOM (slotted) content — not queryable via `fixture.query()`, which is scoped to the
+      // Light-DOM (slotted) content: not queryable via `fixture.query()`, which is scoped to the
       // shadow root. Query the host element's own light DOM directly instead.
       fixture.element
         .querySelector('#descendant-field')

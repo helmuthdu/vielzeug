@@ -162,7 +162,7 @@ function pruneExpiredInStore(store: IDBObjectStore): Promise<number> {
 }
 
 /**
- * Cursor state machine — a single discriminated union replaces five boolean/nullable variables.
+ * Cursor state machine: a single discriminated union replaces five boolean/nullable variables.
  * Transitions: idle → waiting (next() before cursor fires) | buffered (cursor fires first) | done | error
  */
 type CursorState<T> =
@@ -175,11 +175,11 @@ type CursorState<T> =
 /**
  * F1: True cursor-based iteration for IndexedDB.
  * Yields live records one-by-one using an IDB cursor, avoiding materializing the full table.
- * This is memory-efficient for large tables — the cursor walks the store incrementally.
+ * This is memory-efficient for large tables: the cursor walks the store incrementally.
  *
  * Design: the cursor is opened *synchronously* in [Symbol.asyncIterator]() so that event
  * handlers are wired immediately (no queueMicrotask races). The cursor is advanced *eagerly*
- * before yielding — this keeps the IDB readonly transaction alive between consumer awaits,
+ * before yielding: this keeps the IDB readonly transaction alive between consumer awaits,
  * because IDB auto-commits when there are no pending requests.
  */
 function iterateStoreWithCursor<T extends object>(

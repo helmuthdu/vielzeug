@@ -4,12 +4,12 @@ import { s } from '../index';
 // description setter (fluent)
 // ---------------------------------------------------------------------------
 
-describe('describe(string) — setter', () => {
+describe('describe(string): setter', () => {
   it('attaches a description to the schema', () => {
     expect(s.string().label('A label').definition()).toMatchObject({ description: 'A label', kind: 'string' });
   });
 
-  it('is immutable — does not mutate the original', () => {
+  it('is immutable: does not mutate the original', () => {
     const base = s.string();
 
     base.label('side-effect label');
@@ -36,7 +36,7 @@ describe('describe(string) — setter', () => {
 // Primitive kinds
 // ---------------------------------------------------------------------------
 
-describe('describe() — primitive kinds', () => {
+describe('describe(): primitive kinds', () => {
   it('string', () => expect(s.string().definition()).toMatchObject({ kind: 'string' }));
   it('number', () => expect(s.number().definition()).toMatchObject({ kind: 'number' }));
   it('boolean', () => expect(s.boolean().definition()).toMatchObject({ kind: 'boolean' }));
@@ -56,7 +56,7 @@ describe('describe() — primitive kinds', () => {
 // String constraints
 // ---------------------------------------------------------------------------
 
-describe('describe() — string constraints', () => {
+describe('describe(): string constraints', () => {
   it('min sets minLength', () => {
     expect(s.string().min(3).definition()).toMatchObject({ kind: 'string', minLength: 3 });
   });
@@ -120,7 +120,7 @@ describe('describe() — string constraints', () => {
 // Number constraints
 // ---------------------------------------------------------------------------
 
-describe('describe() — number constraints', () => {
+describe('describe(): number constraints', () => {
   it('min sets minimum', () => {
     expect(s.number().min(0).definition()).toMatchObject({ kind: 'number', minimum: 0 });
   });
@@ -158,7 +158,7 @@ describe('describe() — number constraints', () => {
 // Array constraints
 // ---------------------------------------------------------------------------
 
-describe('describe() — array', () => {
+describe('describe(): array', () => {
   it('includes item descriptor', () => {
     expect(s.array(s.string()).definition()).toMatchObject({ items: { kind: 'string' }, kind: 'array' });
   });
@@ -187,7 +187,7 @@ describe('describe() — array', () => {
 // Object
 // ---------------------------------------------------------------------------
 
-describe('describe() — object', () => {
+describe('describe(): object', () => {
   it('returns field descriptors with strict: true by default', () => {
     expect(s.object({ name: s.string() }).definition()).toMatchObject({
       fields: { name: { kind: 'string' } },
@@ -227,7 +227,7 @@ describe('describe() — object', () => {
 // Tuple
 // ---------------------------------------------------------------------------
 
-describe('describe() — tuple', () => {
+describe('describe(): tuple', () => {
   it('returns item descriptors and rest: null when no rest', () => {
     expect(s.tuple([s.string(), s.number()]).definition()).toMatchObject({
       items: [{ kind: 'string' }, { kind: 'number' }],
@@ -248,7 +248,7 @@ describe('describe() — tuple', () => {
 // Union / Intersect
 // ---------------------------------------------------------------------------
 
-describe('describe() — union', () => {
+describe('describe(): union', () => {
   it('returns branches', () => {
     expect(s.union(s.string(), s.number()).definition()).toMatchObject({
       branches: [{ kind: 'string' }, { kind: 'number' }],
@@ -264,7 +264,7 @@ describe('describe() — union', () => {
   });
 });
 
-describe('describe() — intersect', () => {
+describe('describe(): intersect', () => {
   it('returns branches', () => {
     expect(s.intersect(s.object({ a: s.string() }), s.object({ b: s.number() })).definition()).toMatchObject({
       branches: [{ kind: 'object' }, { kind: 'object' }],
@@ -277,7 +277,7 @@ describe('describe() — intersect', () => {
 // Variant
 // ---------------------------------------------------------------------------
 
-describe('describe() — variant', () => {
+describe('describe(): variant', () => {
   it('returns discriminator and branch descriptors keyed by value', () => {
     const schema = s.discriminatedUnion('type', {
       a: s.object({ type: s.literal('a'), x: s.string() }),
@@ -296,7 +296,7 @@ describe('describe() — variant', () => {
 // Record / Set / Map
 // ---------------------------------------------------------------------------
 
-describe('describe() — record', () => {
+describe('describe(): record', () => {
   it('returns key and value descriptors', () => {
     expect(s.record(s.string(), s.number()).definition()).toMatchObject({
       key: { kind: 'string' },
@@ -306,13 +306,13 @@ describe('describe() — record', () => {
   });
 });
 
-describe('describe() — set', () => {
+describe('describe(): set', () => {
   it('returns item descriptor', () => {
     expect(s.set(s.string()).definition()).toMatchObject({ items: { kind: 'string' }, kind: 'set' });
   });
 });
 
-describe('describe() — map', () => {
+describe('describe(): map', () => {
   it('returns key and value descriptors', () => {
     expect(s.map(s.string(), s.number()).definition()).toMatchObject({
       key: { kind: 'string' },
@@ -326,7 +326,7 @@ describe('describe() — map', () => {
 // Pipe
 // ---------------------------------------------------------------------------
 
-describe('describe() — pipe', () => {
+describe('describe(): pipe', () => {
   it('returns from and to descriptors', () => {
     const schema = s.string().pipe(s.string().min(1));
 
@@ -338,7 +338,7 @@ describe('describe() — pipe', () => {
 // Wrapper schemas (optional / nullable / nullish)
 // ---------------------------------------------------------------------------
 
-describe('describe() — wrapper schemas', () => {
+describe('describe(): wrapper schemas', () => {
   it('optional() sets isOptional, preserves inner kind', () => {
     const d = s.string().optional().definition();
 

@@ -1,5 +1,5 @@
 ---
-title: Arsenal — JSON Examples
+title: 'Arsenal: JSON Examples'
 description: JSON utility examples for Arsenal.
 ---
 

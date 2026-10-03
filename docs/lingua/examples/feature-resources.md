@@ -1,5 +1,5 @@
 ---
-title: 'Lingua Examples — Lazy Locale Catalog'
+title: 'Lingua Examples: Lazy Locale Catalog'
 description: Load a locale catalog only when locale becomes active.
 ---
 

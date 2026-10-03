@@ -247,7 +247,7 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
       checkRTL();
 
       // Re-check when `dir` changes on this element's own ancestor chain (not the whole
-      // document — `elementDirection` only ever looks at `el`'s ancestors, so that's all we
+      // document: `elementDirection` only ever looks at `el`'s ancestors, so that's all we
       // need to watch).
       const observer = new MutationObserver((mutations) => {
         const dirChanged = mutations.some((m) => m.attributeName === 'dir');

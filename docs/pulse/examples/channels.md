@@ -1,5 +1,5 @@
 ---
-title: 'Pulse Examples — Channel Multiplexing'
+title: 'Pulse Examples: Channel Multiplexing'
 description: 'Schema-bound channel scopes for @vielzeug/pulse.'
 ---
 

@@ -115,7 +115,7 @@ function createGateway(initial: TestRecord[] = []) {
     get values(): TestRecord[] {
       return records;
     },
-    /** Replaces a record verbatim — no rev bump, as a cross-device write would. */
+    /** Replaces a record verbatim: no rev bump, as a cross-device write would. */
     write(record: TestRecord): void {
       records = records.map((candidate) => (candidate.id === record.id ? record : candidate));
     },
@@ -223,7 +223,7 @@ describe('pull', () => {
     handle = createSync({ gateway: device.gateway, idleDelayMs: 30, port });
 
     await vi.waitFor(() => expect(device.values.find((record) => record.id === 'a')?.value).toBe(12));
-    // The pulled rev becomes the baseline — nothing is dirty, nothing pushes.
+    // The pulled rev becomes the baseline: nothing is dirty, nothing pushes.
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(pushes).toHaveLength(0);
   });
@@ -307,7 +307,7 @@ describe('pull', () => {
 });
 
 describe('flush', () => {
-  it('runs a full cycle — pull, then push', async () => {
+  it('runs a full cycle: pull, then push', async () => {
     const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
     const { port, pushes, setRemote } = createPort();
     handle = createSync({ gateway: device.gateway, idleDelayMs: 60_000, port });
@@ -360,7 +360,7 @@ describe('failure handling', () => {
     await expect(handle.flush()).rejects.toThrow('conflict: the server is ahead');
     expect(pulls.length).toBeGreaterThanOrEqual(3); // flush pulled, then reconciled
 
-    await handle.flush(); // the retry lands — dirty records survived the failure
+    await handle.flush(); // the retry lands: dirty records survived the failure
     const pushed = pushes.at(-1)!.records.find((entry) => entry.record.id === 'a')!;
     expect(pushed.record.value).toBe(1);
   });
@@ -379,7 +379,7 @@ describe('persistence', () => {
     handle = createSync({ gateway: device.gateway, idleDelayMs: 30, port: second.port });
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    expect(second.pushes).toHaveLength(0); // nothing dirty — the baseline survived
+    expect(second.pushes).toHaveLength(0); // nothing dirty: the baseline survived
   });
 });
 

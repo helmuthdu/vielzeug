@@ -1,5 +1,5 @@
 ---
-title: Refine — Web component library
+title: 'Refine: Web component library'
 description: Accessible, themeable web components built with Ore for framework and vanilla DOM apps.
 package: refine
 category: ui-components
@@ -105,16 +105,16 @@ environments: [browser]
 
 ## Why Refine?
 
-Every project needs UI primitives. Refine provides accessible web components that work natively anywhere HTML is rendered—no framework required.
+Every project needs UI primitives. Refine provides accessible web components that work natively anywhere HTML is rendered, no framework required.
 
 ```html
-<!-- Before — roll your own button with ARIA -->
+<!-- Before: roll your own button with ARIA -->
 <button class="btn btn-primary" role="button" aria-pressed="false" tabindex="0">
   <span class="btn-spinner" aria-hidden="true"></span>
   Save
 </button>
 
-<!-- After — Refine -->
+<!-- After: Refine -->
 <ore-button variant="solid" color="primary" loading>Save</ore-button>
 ```
 
@@ -179,14 +179,14 @@ import '@vielzeug/refine/card';
 
 ### CDN / Vanilla HTML
 
-Use the self-contained IIFE bundle to load Refine directly from a CDN in any HTML page — no build step required:
+Use the self-contained IIFE bundle to load Refine directly from a CDN in any HTML page: no build step required:
 
 ```html
 <!-- 1. Styles -->
 <link rel="stylesheet" href="https://unpkg.com/@vielzeug/refine/dist/styles/fouc.css" />
 <link rel="stylesheet" href="https://unpkg.com/@vielzeug/refine/dist/styles/tokens.css" />
 
-<!-- 2. All components (IIFE — registers global Refine namespace) -->
+<!-- 2. All components (IIFE: registers global Refine namespace) -->
 <script src="https://unpkg.com/@vielzeug/refine/dist/refine.iife.js"></script>
 ```
 
@@ -237,9 +237,9 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 Refine keeps one public package and classifies components by composition level rather than stability. All listed components remain supported and tested.
 
-- **Foundations** — buttons, inputs, selection controls, disclosure, dialogs, menus, tooltips, layout primitives, and feedback indicators. Start here when building an application-specific interface.
-- **Composed patterns** — data grids, command palettes, navigation menus, steppers, calendars, date/time pickers, file inputs, and message composers. These package recurring accessibility and interaction behavior that is costly to rebuild correctly.
-- **Presentation patterns** — cards, chat messages, code windows, stats, marquees, avatars, badges, and skeletons. Use these when their product vocabulary matches the application; prefer foundations when it does not.
+- **Foundations**: buttons, inputs, selection controls, disclosure, dialogs, menus, tooltips, layout primitives, and feedback indicators. Start here when building an application-specific interface.
+- **Composed patterns**: data grids, command palettes, navigation menus, steppers, calendars, date/time pickers, file inputs, and message composers. These package recurring accessibility and interaction behavior that is costly to rebuild correctly.
+- **Presentation patterns**: cards, chat messages, code windows, stats, marquees, avatars, badges, and skeletons. Use these when their product vocabulary matches the application; prefer foundations when it does not.
 
 Classification guides discovery and bundle selection. It is not a reason to remove working components or move them into unstable packages; per-component subpath imports remain the tree-shaking boundary.
 
@@ -247,12 +247,12 @@ Classification guides discovery and bundle selection. It is not a reason to remo
 
 <div class="features-grid">
 
-- **Accessible** — keyboard navigation, ARIA wiring, and focus management across interactive components
-- **Themeable** — global tokens plus component-level CSS custom properties
-- **Framework agnostic** — works anywhere HTML can be rendered
-- **Tree-shakeable** — import only the component entry points you register
-- **Comprehensive surface** — inputs, content, disclosure, feedback, layout, and overlay primitives
-- **Typed framework declarations** — DOM, React, and Vue tags derive from the component property contracts
+- **Accessible**: keyboard navigation, ARIA wiring, and focus management across interactive components
+- **Themeable**: global tokens plus component-level CSS custom properties
+- **Framework agnostic**: works anywhere HTML can be rendered
+- **Tree-shakeable**: import only the component entry points you register
+- **Comprehensive surface**: inputs, content, disclosure, feedback, layout, and overlay primitives
+- **Typed framework declarations**: DOM, React, and Vue tags derive from the component property contracts
 
 </div>
 
@@ -276,10 +276,10 @@ Classification guides discovery and bundle selection. It is not a reason to remo
 
 <div class="see-also">
 
-- [Ore](/ore/) — Web component runtime that powers Refine
-- [Orbit](/orbit/) — Floating UI positioning used in Refine's overlays
-- [Forge](/forge/) — Form state management for use with Refine inputs
-- [Keymap](/keymap/) — Keyboard shortcut manager that powers the command palette's global trigger
+- [Ore](/ore/): Web component runtime that powers Refine
+- [Orbit](/orbit/): Floating UI positioning used in Refine's overlays
+- [Forge](/forge/): Form state management for use with Refine inputs
+- [Keymap](/keymap/): Keyboard shortcut manager that powers the command palette's global trigger
 
 </div>
 

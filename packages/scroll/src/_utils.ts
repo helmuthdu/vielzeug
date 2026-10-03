@@ -94,7 +94,7 @@ export function normalizeOverscan(overscan: Overscan | undefined, defaultVal: nu
 
 /**
  * Create a `ResizeObserver` that reports size changes on `el` via `onSize`, tied to
- * `signal` so it is disconnected automatically when the owning factory disposes —
+ * `signal` so it is disconnected automatically when the owning factory disposes :
  * even if the caller never calls the returned disconnect function.
  */
 export function observeResize(

@@ -37,9 +37,9 @@ describe('adapter entry points', () => {
 
   test('does not export removed type aliases from adapter entry points', () => {
     // Type-only exports are invisible to the `in` operator, so verify at the type level.
-    // @ts-expect-error — IndexedDbVaultStore was removed
+    // @ts-expect-error: IndexedDbVaultStore was removed
     type _NoIdbAlias = typeof idb extends { IndexedDbVaultStore: infer _ } ? true : false;
-    // @ts-expect-error — SQLiteVaultStore was removed
+    // @ts-expect-error: SQLiteVaultStore was removed
     type _NoSqliteAlias = typeof sqlite extends { SQLiteVaultStore: infer _ } ? true : false;
 
     // Runtime check for value exports (factories are real runtime values)

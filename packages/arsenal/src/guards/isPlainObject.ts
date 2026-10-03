@@ -1,5 +1,5 @@
 /**
- * Returns `true` if `value` is a plain object — one with `Object.prototype` or `null` as its
+ * Returns `true` if `value` is a plain object: one with `Object.prototype` or `null` as its
  * prototype. Class instances, `Map`, `Set`, `Array` and other built-ins all return `false`.
  *
  * @example

@@ -126,13 +126,13 @@ export function createMemoryHistory(initialPath = '/'): HistoryDriver {
       stack.splice(cursor + 1);
       stack.push({ hash: p.hash, pathname: p.pathname, search: p.search, state });
       cursor = stack.length - 1;
-      // Silent — mirrors browser pushState semantics. Router drives navigation via #handleRoute directly.
+      // Silent: mirrors browser pushState semantics. Router drives navigation via #handleRoute directly.
     },
     replace(url, state = null) {
       const p = new URL(url, 'http://localhost');
 
       stack[cursor] = { hash: p.hash, pathname: p.pathname, search: p.search, state };
-      // Silent — mirrors browser replaceState semantics.
+      // Silent: mirrors browser replaceState semantics.
     },
   };
 }

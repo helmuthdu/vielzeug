@@ -10,7 +10,7 @@ import type { ContinuousDatum, Scale, TransitionConfig } from '../../types';
 export interface LineRenderOptions {
   color: string;
   curve: 'linear' | 'monotone' | 'step';
-  /** Aborted when the owning chart is disposed — stops the transition's `requestAnimationFrame` loop from rescheduling. */
+  /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
   disposalSignal?: AbortSignal;
   pointRadius: number;
   showPoints: boolean;
@@ -153,10 +153,10 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
 export function computePoints(data: ContinuousDatum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
   if (data.some((d) => d.key == null)) {
     warn(
-      'computePoints: datum.key is null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
+      'computePoints: datum.key is null or undefined: data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
     );
   } else if (data.some((d) => typeof d.key === 'string')) {
-    warn('computePoints: string keys are not supported for line/area charts — use numeric or Date keys.');
+    warn('computePoints: string keys are not supported for line/area charts: use numeric or Date keys.');
   }
 
   return data.map((d) => ({

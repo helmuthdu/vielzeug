@@ -1,5 +1,5 @@
 ---
-title: Ore — Web component authoring with signals
+title: 'Ore: Web component authoring with signals'
 description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, and testing utilities.
 package: ore
 category: ui-primitives
@@ -18,7 +18,7 @@ environments: [browser]
 Ore keeps custom elements functional and signal-driven while giving you direct control over templates, lifecycle hooks, host bindings, and form-associated behavior.
 
 ```ts
-// Before — vanilla custom element boilerplate
+// Before: vanilla custom element boilerplate
 class MyCounter extends HTMLElement {
   #count = 0;
   connectedCallback() {
@@ -35,7 +35,7 @@ class MyCounter extends HTMLElement {
 }
 customElements.define('my-counter', MyCounter);
 
-// After — Ore
+// After: Ore
 import { signal } from '@vielzeug/ripple';
 import { define, html } from '@vielzeug/ore';
 
@@ -122,17 +122,17 @@ define('my-counter', {
 
 <div class="features-grid">
 
-- Signal-first runtime with `signal`, `computed`, `watch`, `batch` from `@vielzeug/ripple` — import them directly
+- Signal-first runtime with `signal`, `computed`, `watch`, `batch` from `@vielzeug/ripple`: import them directly
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
 - Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.data`) or raw `PropDef` objects
 - `setup(props)` takes only props and returns an `HTMLResult` directly: `return html\`...\``
-- Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect` — plain functions imported from `@vielzeug/ore`, called directly from `setup()` or any composable it calls
+- Lifecycle hooks: `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`: plain functions imported from `@vielzeug/ore`, called directly from `setup()` or any composable it calls
 - Directives: `each` (keyed reactive list rendering), `classMap`, `styleMap`, `when`, `live`, `unsafeHtml`
-- Host bindings via `bind({ attr, class, style, on })` — pass `{ target: el }` to bind any off-host element
+- Host bindings via `bind({ attr, class, style, on })`: pass `{ target: el }` to bind any off-host element
 - Reactive ARIA sync via explicit `aria-*` keys in `bind({ attr }, { target })`, with automatic cleanup on disconnect
 - Context via `provide(key, value)` / `inject(key)`; typed emit/slots via `useEmit<Emits>()` / `useSlots<SlotNames>()`
 - Form-associated `useField()` and observer helpers are root exports
-- Testing utilities (`@vielzeug/ore/testing`) — `mount`, `renderHook`, `flush`, `cleanup`
+- Testing utilities (`@vielzeug/ore/testing`): `mount`, `renderHook`, `flush`, `cleanup`
 - Generic testing utilities (scoped queries, named event dispatchers, and async waits) are exported by `@vielzeug/assay`
 
 </div>

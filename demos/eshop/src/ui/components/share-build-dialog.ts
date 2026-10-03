@@ -25,7 +25,7 @@ export function openShareBuildDialog(payload: ShareBuildPayload): void {
 /**
  * Renders the shopper's build inside a sandboxed iframe (`@vielzeug/sandbox`) so the
  * "embed this build" snippet previews exactly what a third-party page would render, fully
- * isolated from this app's own styles/scripts — the same isolation a real dealership site
+ * isolated from this app's own styles/scripts: the same isolation a real dealership site
  * would want before trusting a shopper-generated share link.
  */
 define('share-build-dialog', {

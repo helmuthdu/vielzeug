@@ -2,7 +2,7 @@ import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 const dispatchRowKeydown = (row: Element, key: string): void => {
   // `composed: true` matches a real hardware keydown crossing the `ore-list-item` shadow
-  // boundary up to `ore-list`'s keydown listener — the test-helper `fire`/`user.press`
+  // boundary up to `ore-list`'s keydown listener: the test-helper `fire`/`user.press`
   // shorthands default `composed` to `false`, which never reaches a light-DOM ancestor.
   row.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, composed: true, key }));
 };
@@ -176,7 +176,7 @@ describe('ore-list', () => {
       expect(item.hasAttribute('selected')).toBe(false);
     });
 
-    // `value` is the single source of truth — setting it externally (or programmatically) must
+    // `value` is the single source of truth: setting it externally (or programmatically) must
     // select the matching item without any click ever happening, and without any per-item
     // "selected" attribute for it to have set independently.
     it('setting value programmatically selects the matching item', async () => {
@@ -303,7 +303,7 @@ describe('ore-list', () => {
     });
 
     it('passes axe checks as a selectable listbox', async () => {
-      // role="listbox" needs an accessible name — same as any native listbox/select; ore-list
+      // role="listbox" needs an accessible name: same as any native listbox/select; ore-list
       // has no dedicated `label` prop (matches ore-menu), consumers set `aria-label` directly.
       fixture = await mount('ore-list', {
         attrs: { 'aria-label': 'Folders', selectable: '', value: 'a' },

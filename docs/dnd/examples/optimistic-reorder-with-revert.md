@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — Optimistic reorder with rollback and FLIP animation'
+title: 'Dnd Examples: Optimistic reorder with rollback and FLIP animation'
 description: 'Optimistic reorder, application-owned server rollback, and FLIP animation using onBeforeReorder in @vielzeug/dnd.'
 ---
 
@@ -11,7 +11,7 @@ You want drag-and-drop reordering to feel instant: the UI updates immediately wi
 
 ### Solution
 
-Use `onBeforeReorder` with Necromancer's `captureLayout()` for a FLIP animation. The `onReorder` event carries `{ before, after, item }` — push `before` onto an application-owned history stack so you can roll back on failure:
+Use `onBeforeReorder` with Necromancer's `captureLayout()` for a FLIP animation. The `onReorder` event carries `{ before, after, item }`: push `before` onto an application-owned history stack so you can roll back on failure:
 
 ```html
 <ul id="task-list">
@@ -42,7 +42,7 @@ const listEl = document.getElementById('task-list') as HTMLUListElement;
 const saveTasks = async (_orderedIds: string[]) => undefined;
 let layout: LayoutTransition<HTMLElement> | undefined;
 
-// Application-owned rollback stack — the sortable no longer holds revert state.
+// Application-owned rollback stack: the sortable no longer holds revert state.
 const history: Array<{ before: Task[] }> = [];
 
 const sortable = createSortable({
@@ -104,7 +104,7 @@ function renderList(next: Task[]) {
 
 ### Pitfalls
 
-- Do not roll back after a successful save — only pop the history entry on failure.
+- Do not roll back after a successful save: only pop the history entry on failure.
 - If items are removed from the DOM between `onReorder` and the server response, `renderList` must reconcile the current DOM state before refreshing, then call `sortable.refresh()`.
 - Call `layout.animate()` only after the renderer has committed the new elements. Its keys must be unique and non-empty in both the captured and committed collections.
 

@@ -17,7 +17,7 @@ bus.emit('user:logout')
 bus.emit('user:logout') // once() already removed; no output
 
 unsub()
-bus.emit('user:login', { userId: '2', email: 'bob@example.com' }) // no output — unsubscribed
+bus.emit('user:login', { userId: '2', email: 'bob@example.com' }) // no output: unsubscribed
 
 bus.dispose()`,
   name: 'Basic Bus',

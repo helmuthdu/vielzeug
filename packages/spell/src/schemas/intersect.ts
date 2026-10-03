@@ -25,7 +25,7 @@ function deepMerge(target: unknown, source: unknown): unknown {
   return source;
 }
 
-/** All schemas must pass — intersection semantics. */
+/** All schemas must pass: intersection semantics. */
 export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
   UnionToIntersection<InferOutput<T[number]>>,
   UnionToIntersection<InferInput<T[number]>>

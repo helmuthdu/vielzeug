@@ -41,7 +41,7 @@ function checkOptions(options: QrEncodeOptions): void {
     throw new SigilOptionError(`errorCorrection must be 'L', 'M', 'Q', or 'H'`);
 }
 
-/** Character capacity of (version, level, mode) — the `qrCapacity` core. */
+/** Character capacity of (version, level, mode): the `qrCapacity` core. */
 function capacityFor(version: number, level: QrErrorCorrection, mode: QrMode): number {
   const countBits = CHAR_COUNT_BITS[mode][versionGroup(version)];
   const usable = dataCodewords(version, level) * 8 - 4 - countBits;
@@ -116,8 +116,8 @@ function freezeMatrix(grid: readonly (readonly boolean[])[], meta: Omit<QrMatrix
 /**
  * Encode `data` into a QR Model 2 symbol. Pure and synchronous.
  * Strings pick the most compact mode; `Uint8Array` is raw binary and always
- * byte mode, encoded as-is — no UTF-8 round-trip. Byte mode is UTF-8 without
- * an ECI header for string input — the industry-standard assumption.
+ * byte mode, encoded as-is: no UTF-8 round-trip. Byte mode is UTF-8 without
+ * an ECI header for string input: the industry-standard assumption.
  */
 export function encodeQr(data: string | Uint8Array, options: QrEncodeOptions = {}): QrMatrix {
   checkOptions(options);
@@ -157,7 +157,7 @@ export function encodeQr(data: string | Uint8Array, options: QrEncodeOptions = {
     applyMask(grid, m); // undo
   }
 
-  // The grid is unmasked again — draw the winning candidate once, finally.
+  // The grid is unmasked again: draw the winning candidate once, finally.
   applyMask(grid, bestMask);
   drawFormatInfo(grid, level, bestMask);
   drawVersionInfo(grid, version);

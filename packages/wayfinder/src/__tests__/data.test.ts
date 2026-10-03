@@ -1,5 +1,5 @@
 /**
- * data() loaders — passing results to handlers, context shape, loading state.
+ * data() loaders: passing results to handlers, context shape, loading state.
  */
 import { createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';

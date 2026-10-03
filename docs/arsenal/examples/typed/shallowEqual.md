@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — shallowEqual'
+title: 'Arsenal Examples: shallowEqual'
 description: 'shallowEqual example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'shallowEqual example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to check whether two objects are equal at one level deep — for example comparing previous and next React props to decide whether to re-render.
+You need to check whether two objects are equal at one level deep: for example comparing previous and next React props to decide whether to re-render.
 
 ### Solution
 
@@ -20,11 +20,11 @@ import { shallowEqual } from '@vielzeug/arsenal';
 const prev = { id: 1, name: 'Alice' };
 const next = { id: 1, name: 'Alice' };
 
-shallowEqual(prev, next); // true — same property values
+shallowEqual(prev, next); // true: same property values
 
 const withNested = { id: 1, address: { city: 'Berlin' } };
 const withNestedCopy = { id: 1, address: { city: 'Berlin' } };
-shallowEqual(withNested, withNestedCopy); // false — address is a different reference
+shallowEqual(withNested, withNestedCopy); // false: address is a different reference
 ```
 
 #### Use in memoization / change detection
@@ -39,7 +39,7 @@ function useShallowMemo<T extends object>(value: T, prev: T): T {
 
 ### Pitfalls
 
-- Only compares one level deep — nested objects must be the **same reference** to be considered equal.
+- Only compares one level deep: nested objects must be the **same reference** to be considered equal.
 - Use `isEqual` for deep structural comparison, or `isMatch` for partial structural matching.
 
 ### Related

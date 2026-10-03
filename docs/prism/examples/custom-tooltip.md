@@ -1,5 +1,5 @@
 ---
-title: 'Prism Examples — Render a Custom Tooltip'
+title: 'Prism Examples: Render a Custom Tooltip'
 description: Render safe structured tooltip content without HTML string injection.
 ---
 
@@ -70,4 +70,4 @@ Return a DOM node from `tooltip.render`. Assign dynamic values with `textContent
 
 - [TooltipConfig API](../api.md#axis-interaction-and-transition-configurations)
 - [Create a line chart](./line-chart.md)
-- [Orbit](/orbit/) — tooltip positioning primitives used by Prism
+- [Orbit](/orbit/): tooltip positioning primitives used by Prism

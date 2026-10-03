@@ -481,7 +481,7 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "chore(forge): remove stale adapters — use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)",
+            "comment": "chore(forge): remove stale adapters: use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)",
             "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
           },
           {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ScrollConfigError, ScrollError, ScrollRangeError } from '../errors';
 
-describe('ScrollError — base class', () => {
+describe('ScrollError: base class', () => {
   it('sets .name to the concrete class name', () => {
     expect(new ScrollConfigError('invalid option').name).toBe('ScrollConfigError');
     expect(new ScrollError('boom').name).toBe('ScrollError');
@@ -23,7 +23,7 @@ describe('ScrollError — base class', () => {
   });
 });
 
-describe('ScrollRangeError — subclass', () => {
+describe('ScrollRangeError: subclass', () => {
   it('is an instanceof ScrollError', () => {
     expect(new ScrollRangeError('out of range')).toBeInstanceOf(ScrollError);
   });

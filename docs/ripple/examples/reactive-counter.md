@@ -1,5 +1,5 @@
 ---
-title: 'Ripple Examples — Reactive Counter'
+title: 'Ripple Examples: Reactive Counter'
 description: Derive and observe a counter value in one reactive graph.
 ---
 

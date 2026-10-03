@@ -1,7 +1,7 @@
 export const basicRulesExample = {
   code: `import { WILDCARD, createWard } from '@vielzeug/ward'
 
-// Ordered first-match rules — the first matching rule wins; default deny if none match
+// Ordered first-match rules: the first matching rule wins; default deny if none match
 const ward = createWard([
   { action: WILDCARD, resource: WILDCARD, effect: 'deny', roles: ['blocked'] },
   { action: 'read',   resource: 'posts', effect: 'allow' },

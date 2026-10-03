@@ -1,5 +1,5 @@
 ---
-title: Courier — Examples
+title: 'Courier: Examples'
 description: Practical examples and recipes for courier.
 ---
 

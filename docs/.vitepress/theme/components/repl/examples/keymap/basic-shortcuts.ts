@@ -1,7 +1,7 @@
 export const basicShortcutsExample = {
   code: `import { createKeymap, formatShortcut } from '@vielzeug/keymap'
 
-// Create a keymap — each binding has an explicit id, shortcut, and handler.
+// Create a keymap: each binding has an explicit id, shortcut, and handler.
 // Bindings fire on keydown by default; preventDefault defaults to true.
 const map = createKeymap([
   { id: 'save',   shortcut: 'ctrl+s', handler: () => console.log('save triggered') },

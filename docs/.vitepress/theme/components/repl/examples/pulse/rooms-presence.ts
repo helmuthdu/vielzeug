@@ -29,7 +29,7 @@ try {
   console.log('connection or room operation failed:', err.message)
 }
 
-// Dispose the room scope — sends leave when last scope is released
+// Dispose the room scope: sends leave when last scope is released
 lobby.dispose()
 console.log('rooms after leave:', [...pulse.rooms.getSnapshot()])
 

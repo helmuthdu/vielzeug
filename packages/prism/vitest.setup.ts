@@ -10,7 +10,7 @@ import axe from 'axe-core';
 // computed colour produce false positives/negatives. We disable those here so
 // the structural/ARIA/name/role checks that jsdom CAN evaluate stay reliable.
 // The disabled rules (colour contrast, target size, …) must be verified in a
-// real browser or by manual/visual review — not asserted in these tests.
+// real browser or by manual/visual review: not asserted in these tests.
 const JSDOM_UNRELIABLE_RULES: Record<string, { enabled: false }> = {
   'color-contrast': { enabled: false },
   'color-contrast-enhanced': { enabled: false },

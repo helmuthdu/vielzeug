@@ -80,7 +80,7 @@ Set `loading` while the metric is being fetched. Use `disabled` when a metric is
 <ComponentPreview center>
 
 ```html
-<ore-stats label="Active sessions" value="—" loading></ore-stats>
+<ore-stats label="Active sessions" value="N/A" loading></ore-stats>
 <ore-stats label="Forecast" value="$120k" description="Unavailable for this workspace" disabled></ore-stats>
 ```
 
@@ -98,15 +98,15 @@ Loading cards expose a busy state, while disabled cards expose their unavailable
 
 | Attribute         | Type                                                                      | Default      | Description                                      |
 | ----------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------ |
-| `label`           | `string`                                                                  | —            | Metric label                                     |
-| `value`           | `string`                                                                  | —            | Primary metric value                             |
-| `description`     | `string`                                                                  | —            | Supporting context shown below the metric        |
-| `trend`           | `string`                                                                  | —            | Displayed change or comparison text              |
+| `label`           | `string`                                                                  | N/A | Metric label                                     |
+| `value`           | `string`                                                                  | N/A | Primary metric value                             |
+| `description`     | `string`                                                                  | N/A | Supporting context shown below the metric        |
+| `trend`           | `string`                                                                  | N/A | Displayed change or comparison text              |
 | `trend-direction` | `'up' \| 'down' \| 'neutral'`                                            | `'neutral'`  | Semantic and visual direction of the trend       |
 | `variant`         | `'outlined' \| 'plain' \| 'solid'`                                       | `'outlined'` | Surface treatment                                |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —         | Semantic color theme                             |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Semantic color theme                             |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                   | `'md'`       | Component size                                   |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | —          | Border radius                                    |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'` | N/A | Border radius                                    |
 | `disabled`        | `boolean`                                                                 | `false`      | Marks the metric as unavailable                  |
 | `loading`         | `boolean`                                                                 | `false`      | Shows the loading state                          |
 

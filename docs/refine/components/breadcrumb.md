@@ -100,8 +100,8 @@ Override the default `"Breadcrumb"` landmark label when a page has multiple navi
 
 | Attribute | Type      | Default | Description                                                                     |
 | --------- | --------- | ------- | ------------------------------------------------------------------------------- |
-| `href`    | `string`  | —       | URL the item links to. Omit for non-linked crumbs.                              |
-| `active`  | `boolean` | `false` | Marks this item as the current page (`aria-current="page"`). Disables the link. Always mark the final (current) crumb as `active` — omitting it breaks `aria-current` and confuses screen readers. Only one crumb should carry `aria-current="page"`. |
+| `href`    | `string`  | N/A | URL the item links to. Omit for non-linked crumbs.                              |
+| `active`  | `boolean` | `false` | Marks this item as the current page (`aria-current="page"`). Disables the link. Always mark the final (current) crumb as `active`: omitting it breaks `aria-current` and confuses screen readers. Only one crumb should carry `aria-current="page"`. |
 
 **`ore-breadcrumb-item`** Slots
 
@@ -118,4 +118,4 @@ Override the default `"Breadcrumb"` landmark label when a page has multiple navi
 
 The breadcrumb component follows WAI-ARIA best practices. It renders a `<nav>` element with `aria-label` matching the `label` attribute, serving as a navigation landmark. Items are rendered as `<li>` elements inside an `<ol>`, conveying the sequential structure to screen readers.
 
-The `active` item receives `aria-current="page"` and `aria-disabled="true"` so it is announced as the current location and not activated when clicked. The separator is rendered via CSS `content` (or a hidden `aria-hidden` element) so it is not read aloud. Keep crumb labels short and descriptive — they should match the `<title>` or `<h1>` of the destination page, and provide an `href` on every non-active crumb so keyboard and screen reader users can navigate directly.
+The `active` item receives `aria-current="page"` and `aria-disabled="true"` so it is announced as the current location and not activated when clicked. The separator is rendered via CSS `content` (or a hidden `aria-hidden` element) so it is not read aloud. Keep crumb labels short and descriptive: they should match the `<title>` or `<h1>` of the destination page, and provide an `href` on every non-active crumb so keyboard and screen reader users can navigate directly.

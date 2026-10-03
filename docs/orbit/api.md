@@ -1,5 +1,5 @@
 ---
-title: Orbit — API Reference
+title: 'Orbit: API Reference'
 description: API reference for @vielzeug/orbit positioners, computation, updates, middleware, and optional reactive integration.
 ---
 

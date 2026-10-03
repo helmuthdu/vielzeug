@@ -123,7 +123,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
     async acceptInvitation(invitation, meta) {
       core.ensureLive();
       // A terminal host peer (failed/disconnected) may be replaced by a fresh
-      // pairing on the same node — listeners stay attached and keep working.
+      // pairing on the same node: listeners stay attached and keep working.
       if (hostPeer && hostPeer.status !== 'failed' && hostPeer.status !== 'disconnected') {
         throw new MeshPairingError('Guest is already paired');
       }
@@ -149,7 +149,7 @@ export function createMeshGuest<P extends MeshProtocol>(options: MeshGuestOption
       }
 
       // The invitation carries no host identity beyond an optional display
-      // name — the session id doubles as the host-side peer id for inbound
+      // name: the session id doubles as the host-side peer id for inbound
       // metadata and tap events.
       const peer = createPeerRecord(invitation.sessionId, invitation.hostName, 'host');
       peer.pc = pc;

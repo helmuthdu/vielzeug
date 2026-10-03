@@ -1,5 +1,5 @@
 ---
-title: Assay — API Reference
+title: 'Assay: API Reference'
 description: API reference for @vielzeug/assay queries, event dispatch, and async waiting.
 ---
 

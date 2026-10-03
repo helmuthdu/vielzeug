@@ -157,23 +157,23 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 | Prop              | Type                   | Default        | Description                                                                 |
 | ----------------- | ---------------------- | -------------- | --------------------------------------------------------------------------- |
-| `value`           | `string`               | —              | Selected date in ISO 8601 format (`yyyy-MM-dd`)                             |
-| `min`             | `string`               | —              | Minimum selectable date (`yyyy-MM-dd`, inclusive)                           |
-| `max`             | `string`               | —              | Maximum selectable date (`yyyy-MM-dd`, inclusive)                           |
-| `label`           | `string`               | —              | Visible label                                                               |
+| `value`           | `string`               | N/A | Selected date in ISO 8601 format (`yyyy-MM-dd`)                             |
+| `min`             | `string`               | N/A | Minimum selectable date (`yyyy-MM-dd`, inclusive)                           |
+| `max`             | `string`               | N/A | Maximum selectable date (`yyyy-MM-dd`, inclusive)                           |
+| `label`           | `string`               | N/A | Visible label                                                               |
 | `label-placement` | `'inset' \| 'outside'` | `'inset'`      | Label position                                                              |
-| `placeholder`     | `string`               | —              | Trigger placeholder when no date selected                                   |
-| `name`            | `string`               | —              | Form field name                                                             |
+| `placeholder`     | `string`               | N/A | Trigger placeholder when no date selected                                   |
+| `name`            | `string`               | N/A | Form field name                                                             |
 | `disabled`        | `boolean`              | `false`        | Disable the picker                                                          |
 | `required`        | `boolean`              | `false`        | Mark as required                                                            |
-| `error`           | `string`               | —              | Error message (shown below trigger in error color)                          |
-| `helper`          | `string`               | —              | Helper text (shown below trigger)                                           |
+| `error`           | `string`               | N/A | Error message (shown below trigger in error color)                          |
+| `helper`          | `string`               | N/A | Helper text (shown below trigger)                                           |
 | `locale`          | `string`               | browser locale | BCP 47 locale for day/month names                                           |
-| `weekend-days`    | `string`               | —              | JSON array of day indices to disable (e.g. `"[0,6]"`)                       |
-| `color`           | `string`               | —              | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`) |
+| `weekend-days`    | `string`               | N/A | JSON array of day indices to disable (e.g. `"[0,6]"`)                       |
+| `color`           | `string`               | N/A | Theme color (`primary`, `secondary`, `info`, `success`, `warning`, `error`) |
 | `size`            | `string`               | `'md'`         | Size variant: `sm`, `md`, `lg`                                              |
-| `variant`         | `string`               | —              | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`             |
-| `rounded`         | `string`               | —              | Border radius override                                                      |
+| `variant`         | `string`               | N/A | Visual variant: `flat`, `solid`, `bordered`, `outline`, `ghost`             |
+| `rounded`         | `string`               | N/A | Border radius override                                                      |
 | `fullwidth`       | `boolean`              | `false`        | Expand to full container width                                              |
 
 ### Events
@@ -214,7 +214,7 @@ Keyboard navigation is fully supported: `Escape` closes the calendar from any fo
 
 ## Related
 
-- [Input](./input.md) — plain text input
-- [Number Input](./number-input.md) — numeric spinner
-- [Select](./select.md) — dropdown selection
-- [Form](./form.md) — form context and validation
+- [Input](./input.md): plain text input
+- [Number Input](./number-input.md): numeric spinner
+- [Select](./select.md): dropdown selection
+- [Form](./form.md): form context and validation

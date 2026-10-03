@@ -1,5 +1,5 @@
 ---
-title: Gesture — Pointer movement primitives
+title: 'Gesture: Pointer movement primitives'
 description: Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles.
 package: gesture
 category: input
@@ -97,15 +97,15 @@ window.addEventListener('pagehide', () => pan.dispose(), { once: true });
 
 <div class="features-grid">
 
-- `createDragGesture()` — unrestricted two-dimensional pointer movement tracking
-- `createPanGesture()` — one-axis pointer movement with direction intent recognition
-- `createLongPress()` — hold recognition with slop cancellation and click swallowing
-- Direction locking — activates only when movement favors the configured axis
-- Configurable pointer capture — own the pointer by default or preserve native targeting
-- Configurable `activationDistance` — tune slop for touch density and component needs
-- Consumer-owned policy — completion thresholds, snapping, and outcomes stay in application code
-- Stable completion — one `onEnd` callback for release and cancellation
-- Lifecycle ownership — `dispose()`, `disposed`, `disposalSignal`, optional owner `signal`, and `[Symbol.dispose]()`
+- `createDragGesture()`: unrestricted two-dimensional pointer movement tracking
+- `createPanGesture()`: one-axis pointer movement with direction intent recognition
+- `createLongPress()`: hold recognition with slop cancellation and click swallowing
+- Direction locking: activates only when movement favors the configured axis
+- Configurable pointer capture: own the pointer by default or preserve native targeting
+- Configurable `activationDistance`: tune slop for touch density and component needs
+- Consumer-owned policy: completion thresholds, snapping, and outcomes stay in application code
+- Stable completion: one `onEnd` callback for release and cancellation
+- Lifecycle ownership: `dispose()`, `disposed`, `disposalSignal`, optional owner `signal`, and `[Symbol.dispose]()`
 
 </div>
 
@@ -124,9 +124,9 @@ window.addEventListener('pagehide', () => pan.dispose(), { once: true });
 
 <div class="see-also">
 
-- [Refine](/refine/) — components that use pan recognition for carousel, drawer, toast, and list interactions.
-- [Dnd](/dnd/) — builds touch sorting on `createDragGesture()` and adds files, previews, drop targets, keyboard reordering, and connected-list transactions.
-- [Keymap](/keymap/) — keyboard interaction primitives for complementary input paths.
+- [Refine](/refine/): components that use pan recognition for carousel, drawer, toast, and list interactions.
+- [Dnd](/dnd/): builds touch sorting on `createDragGesture()` and adds files, previews, drop targets, keyboard reordering, and connected-list transactions.
+- [Keymap](/keymap/): keyboard interaction primitives for complementary input paths.
 
 </div>
 

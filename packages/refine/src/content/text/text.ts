@@ -6,7 +6,7 @@ import styles from './text.css?inline';
 export type OreTextProps = {
   /** Text alignment */
   align?: 'left' | 'center' | 'right' | 'justify';
-  /** Semantic HTML element to render as — sets the correct ARIA role/level on the host */
+  /** Semantic HTML element to render as: sets the correct ARIA role/level on the host */
   as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code';
   /** Text color (semantic + theme colors) */
   color?:
@@ -26,7 +26,7 @@ export type OreTextProps = {
   italic?: boolean;
   /** Clamp text to N lines with an ellipsis (multi-line truncation) */
   lines?: number;
-  /** Text size — maps to --text-* tokens for body variants and --heading-* tokens for the heading variant */
+  /** Text size: maps to --text-* tokens for body variants and --heading-* tokens for the heading variant */
   size?: '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   /** Enable single-line text truncation with ellipsis */
   truncate?: boolean;

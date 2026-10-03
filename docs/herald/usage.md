@@ -1,5 +1,5 @@
 ---
-title: Herald — Usage Guide
+title: 'Herald: Usage Guide'
 description: Define typed events, own subscriptions, await one-shot events, trace failures, and test emissions.
 ---
 

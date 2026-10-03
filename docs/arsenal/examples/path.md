@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Path Examples
+title: 'Arsenal: Path Examples'
 description: Path utility examples for Arsenal.
 ---
 

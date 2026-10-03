@@ -57,7 +57,7 @@ describe('dispatchKeyboardAction()', () => {
   });
 
   it('ignores inherited Object.prototype members for crafted key names', () => {
-    // A synthetic event can carry any string as `key` — `keymap['__proto__']` or
+    // A synthetic event can carry any string as `key`: `keymap['__proto__']` or
     // `keymap['constructor']` must never resolve to an inherited prototype member.
     const handled1 = dispatchKeyboardAction(new KeyboardEvent('keydown', { key: '__proto__' }), {
       keymap: { Enter: vi.fn() },

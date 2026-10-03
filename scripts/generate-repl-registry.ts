@@ -1,5 +1,5 @@
 /**
- * Generates docs/.vitepress/theme/components/repl/registry.generated.ts — the single
+ * Generates docs/.vitepress/theme/components/repl/registry.generated.ts: the single
  * source of truth the REPL sidebar, Monaco intellisense, and sandboxed execution engine
  * all read from.
  *
@@ -14,15 +14,15 @@
  *   - dependency load order       <- packages/<name>/vite.bundle.config.ts `external`
  *
  * Curated content that can't be derived (descriptions, arsenal's function categories) lives in
- * `./repl-metadata.ts`, not here — this file owns AST extraction and assembly only.
+ * `./repl-metadata.ts`, not here: this file owns AST extraction and assembly only.
  *
  * Run via `pnpm gen:repl-registry` (wired into docs:dev / docs:build / docs:preview).
- * Requires packages to be built first (`rush build` / `pnpm -r build`) — dist/ must exist.
+ * Requires packages to be built first (`rush build` / `pnpm -r build`): dist/ must exist.
  *
- * Every function below except `main()` is pure or takes its filesystem root as a parameter —
+ * Every function below except `main()` is pure or takes its filesystem root as a parameter :
  * see scripts/__tests__/generate-repl-registry.test.ts. `main()` itself is guarded by the
  * `isMain` check at the bottom so importing this module for tests never writes to disk. That
- * check is inlined rather than imported from `scripts/lib/cli.mjs` — this file has no other
+ * check is inlined rather than imported from `scripts/lib/cli.mjs`: this file has no other
  * use for that module, and importing it just for a one-line, three-token check would mean this
  * `.ts` file's typechecking depends on `lib/cli.d.mts` staying in sync for zero real benefit.
  */
@@ -81,7 +81,7 @@ function readWorkspaceDepsFromPackageJson(pkg: string, packagesDir = PACKAGES_DI
 }
 
 // Reads the object literal passed as the second argument to getBundleConfig(__dirname, {...})
-// via the real AST rather than regexing the file text — every package's vite.bundle.config.ts
+// via the real AST rather than regexing the file text: every package's vite.bundle.config.ts
 // already goes through the same call shape (see root vite.config.ts's getBundleConfig), so
 // this only needs to find one call expression and pull three properties off its object
 // argument. That's more robust to reformatting than pattern-matching the source text, and
@@ -202,7 +202,7 @@ const VALUE_FLAGS =
   ts.SymbolFlags.ValueModule;
 
 // A symbol's `getDeclarations()` for a `const foo = () => ...` export returns the inner
-// `VariableDeclaration` node ("foo: () => void") — the `export`/`declare` modifiers live
+// `VariableDeclaration` node ("foo: () => void"): the `export`/`declare` modifiers live
 // on its grandparent `VariableStatement`. Printing the declarator alone silently drops
 // them, producing invalid ambient syntax ("foo: () => void" with no keyword at all).
 export function toPrintableNode(decl: ts.Node): ts.Node {
@@ -226,7 +226,7 @@ export function normalizeAmbientText(printed: string): string {
   return `${comment}${exported}`;
 }
 
-// The generator's whole premise is "read real build output" — a missing dist/ almost always
+// The generator's whole premise is "read real build output": a missing dist/ almost always
 // means "forgot to build the package," not a bug in this script. A raw ENOENT stack trace
 // doesn't say that; this does.
 export function readDistFile(pkg: string, relativePath: string, packagesDir = PACKAGES_DIR): string {
@@ -248,7 +248,7 @@ export function readDistFile(pkg: string, relativePath: string, packagesDir = PA
 export function extractApi(pkg: string, packagesDir = PACKAGES_DIR): ExtractedApi {
   const entry = join(packagesDir, pkg, 'dist/index.d.ts');
 
-  // Fail fast with a clear message before handing this to the compiler — ts.createProgram()
+  // Fail fast with a clear message before handing this to the compiler: ts.createProgram()
   // would otherwise report a missing entry point through a much less friendly diagnostic.
   if (!existsSync(entry)) {
     maybeBuildPackage(pkg, packagesDir);
@@ -382,7 +382,7 @@ export function buildRegistrySource(packagesDir = PACKAGES_DIR): { output: strin
   const metaByPkg = new Map(packages.map((pkg) => [pkg, readBundleMeta(pkg, packagesDir)]));
 
   // Iterating metaByPkg directly (instead of `packages.map(pkg => metaByPkg.get(pkg)!)`) means
-  // there's no separate lookup that could theoretically miss — a Map entry pair can't need a
+  // there's no separate lookup that could theoretically miss: a Map entry pair can't need a
   // non-null assertion the way a second `.get()` on a related-but-distinct list would.
   const entries = [...metaByPkg].map(([pkg, meta]) => {
     const { typeDeclaration, valueExports } = extractApi(pkg, packagesDir);
@@ -405,7 +405,7 @@ export function buildRegistrySource(packagesDir = PACKAGES_DIR): { output: strin
   });
 
   // Every dependency resolveLoadOrder() found has to actually be one of the packages this
-  // registry generated an entry for — REPLEditor.vue looks dependencies up in the finished
+  // registry generated an entry for: REPLEditor.vue looks dependencies up in the finished
   // registry with a non-null assertion, trusting this file to be internally consistent. Catch
   // a package that externalizes something excluded/missing here, at generation time, instead
   // of as a runtime crash the next time someone picks that library in the REPL.
@@ -439,10 +439,10 @@ export function buildRegistrySource(packagesDir = PACKAGES_DIR): { output: strin
 
   const temporalPolyfillSource = readTemporalPolyfillSource(packagesDir);
 
-  const output = `// AUTO-GENERATED by scripts/generate-repl-registry.ts — do not edit by hand.
+  const output = `// AUTO-GENERATED by scripts/generate-repl-registry.ts: do not edit by hand.
 // Run \`pnpm gen:repl-registry\` to regenerate (also runs automatically before docs:dev /
 // docs:build / docs:preview). Source of truth: each package's dist/index.d.ts,
-// dist/<name>.iife.js, and vite.bundle.config.ts — see the header comment in the
+// dist/<name>.iife.js, and vite.bundle.config.ts: see the header comment in the
 // generator script for why.
 
 export interface LibraryCategory {

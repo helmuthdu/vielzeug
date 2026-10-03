@@ -1,5 +1,5 @@
 ---
-title: 'Ore Examples — Sentinels in onMounted()'
+title: 'Ore Examples: Sentinels in onMounted()'
 description: Observe browser and element state within an Ore component lifecycle.
 ---
 

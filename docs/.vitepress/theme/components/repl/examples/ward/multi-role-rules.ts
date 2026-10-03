@@ -1,7 +1,7 @@
 export const multiRoleRulesExample = {
   code: `import { createWard } from '@vielzeug/ward'
 
-// A rule's roles array matches with OR semantics — any listed role matches
+// A rule's roles array matches with OR semantics: any listed role matches
 const ward = createWard([
   {
     action: 'read',

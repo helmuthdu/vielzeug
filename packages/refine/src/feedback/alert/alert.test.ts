@@ -60,7 +60,7 @@ describe('ore-alert', () => {
     it('has aria-live polite by default', async () => {
       fixture = await mount('ore-alert');
 
-      // role="status" carries implicit aria-live="polite" — no explicit attribute needed
+      // role="status" carries implicit aria-live="polite": no explicit attribute needed
       expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 
@@ -205,7 +205,7 @@ describe('ore-alert accessibility', () => {
     it('uses aria-live polite by default', async () => {
       fixture = await mount('ore-alert');
 
-      // role="status" carries implicit aria-live="polite" — no explicit attribute needed
+      // role="status" carries implicit aria-live="polite": no explicit attribute needed
       expect(fixture.query('[role="status"]')).toBeTruthy();
     });
 

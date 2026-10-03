@@ -1,5 +1,5 @@
 ---
-title: Scroll — Usage Guide
+title: 'Scroll: Usage Guide'
 description: Fixed and variable heights, measurement, programmatic scrolling, and framework integration for Scroll.
 ---
 
@@ -46,11 +46,11 @@ virt.dispose();
 Scroll uses **absolute positioning** for rendered items inside a relative container that stretches to the full list height. Your HTML needs three elements:
 
 ```html
-<!-- 1. Scroll container — has a fixed height and overflow:auto/scroll -->
+<!-- 1. Scroll container: has a fixed height and overflow:auto/scroll -->
 <div class="scroll-container" style="height:400px;overflow:auto;position:relative;">
-  <!-- 2. Spacer — height set to totalSize so the scrollbar is correct -->
+  <!-- 2. Spacer: height set to totalSize so the scrollbar is correct -->
   <div class="spacer" style="position:relative;">
-    <!-- 3. Item container — items positioned absolutely inside here -->
+    <!-- 3. Item container: items positioned absolutely inside here -->
     <div class="items"></div>
   </div>
 </div>
@@ -67,7 +67,7 @@ A common alternative is to make the spacer and item container the same element:
 
 ## DOM Adapter for Dropdowns and Listboxes
 
-If your component already has a dropdown scroll container and a listbox element, use `createDomVirtualList`. It wraps the `Virtualizer` lifecycle and keeps the integration surface small. Items arrive as `VirtualRenderItem<T>` — a `VirtualItem` enriched with a `.data` field. Use `recycle` for efficient DOM node reuse.
+If your component already has a dropdown scroll container and a listbox element, use `createDomVirtualList`. It wraps the `Virtualizer` lifecycle and keeps the integration surface small. Items arrive as `VirtualRenderItem<T>`: a `VirtualItem` enriched with a `.data` field. Use `recycle` for efficient DOM node reuse.
 
 The virtualizer is created lazily on the first non-empty `setItems()` call and destroyed automatically when `setItems([])` is called (clearing list styles in the process).
 
@@ -126,7 +126,7 @@ Use `domVirtualList.invalidate()` to discard all cached measurements.
 
 ## Fixed Heights
 
-Pass a single number to `estimateSize` when all rows are the same height. This is the simplest and most performant case — the offset table never needs to be rebuilt during scrolling.
+Pass a single number to `estimateSize` when all rows are the same height. This is the simplest and most performant case: the offset table never needs to be rebuilt during scrolling.
 
 ```ts
 const virt = createVirtualizer(scrollEl, {
@@ -146,7 +146,7 @@ const virt = createVirtualizer(scrollEl, {
 });
 ```
 
-## Variable Heights — Estimator
+## Variable Heights: Estimator
 
 Pass a **per-index function** to `estimateSize` when rows have predictable but non-uniform heights (e.g. group headers vs. regular rows). The offset table is built once at attach time using these estimates.
 
@@ -160,7 +160,7 @@ const virt = createVirtualizer(scrollEl, {
 });
 ```
 
-## Variable Heights — Measured
+## Variable Heights: Measured
 
 For truly dynamic heights (e.g. text wrapping, embedded images), render items at their estimated size first, then report the actual measured height with `measure()`. Scroll will coalesce all measurement calls within a single microtask tick into one offset rebuild.
 
@@ -195,7 +195,7 @@ const virt = createVirtualizer(scrollEl, {
 `measure(index, height)` is a no-op when the new height matches the current effective height (measured or estimated). It is safe to call on every render without triggering unnecessary rebuilds.
 :::
 
-## Variable Heights — Batch Measurement
+## Variable Heights: Batch Measurement
 
 When a `ResizeObserver` fires with multiple entries at once, use `measureBatch()` to apply all sizes in a single offset rebuild instead of triggering one rebuild per `measure()` call.
 
@@ -226,7 +226,7 @@ for (const item of virt.items) {
 createVirtualizer(scrollEl, {
   count: 1_000,
   estimateSize: 36,
-  overscan: 5, // symmetric shorthand — same as { start: 5, end: 5 } (default: 3)
+  overscan: 5, // symmetric shorthand: same as { start: 5, end: 5 } (default: 3)
   onChange: () => {
     /* ... */
   },
@@ -396,22 +396,22 @@ const chat = createDomVirtualList<Message>({
 
 chat.setItems(messages);
 
-// New message arrives — follows only if the user hasn't scrolled up.
+// New message arrives: follows only if the user hasn't scrolled up.
 socket.on('message', (msg) => {
   messages = [...messages, msg];
   chat.setItems(messages);
 });
 ```
 
-It also follows a **streaming** last message that grows in place (tokens appended to the same message object, array length unchanged) — every `setItems()` call re-checks "was the list at the end before this update?", not just count changes. Build `isAtEnd()` from `createVirtualizer` directly for custom cases (e.g. showing a "jump to latest" button only while scrolled away):
+It also follows a **streaming** last message that grows in place (tokens appended to the same message object, array length unchanged): every `setItems()` call re-checks "was the list at the end before this update?", not just count changes. Build `isAtEnd()` from `createVirtualizer` directly for custom cases (e.g. showing a "jump to latest" button only while scrolled away):
 
 ```ts
 const showJumpButton = !virt.isAtEnd();
 ```
 
-## Infinite Scroll — Loading More at the End
+## Infinite Scroll: Loading More at the End
 
-Use `isAtEnd(threshold)` to fetch the next page as the user nears the bottom. `isAtEnd()` reports scroll position only — it keeps returning `true` while a fetch is in flight — so guard it with your own `loading` flag to avoid firing the same request twice.
+Use `isAtEnd(threshold)` to fetch the next page as the user nears the bottom. `isAtEnd()` reports scroll position only: it keeps returning `true` while a fetch is in flight, so guard it with your own `loading` flag to avoid firing the same request twice.
 
 ```ts
 import { createVirtualizer, type Virtualizer } from '@vielzeug/scroll';
@@ -446,7 +446,7 @@ virt = createVirtualizer(scrollEl, {
 });
 ```
 
-`isAtEnd(200)` fires once the viewport is within 200px of the bottom — tune the threshold to your row height and fetch latency. `loading` is the only guard needed: it's cleared once the new page lands, and `update({ count })` re-triggers `onChange`, which re-checks `isAtEnd()` against the new total on the next scroll.
+`isAtEnd(200)` fires once the viewport is within 200px of the bottom: tune the threshold to your row height and fetch latency. `loading` is the only guard needed: it's cleared once the new page lands, and `update({ count })` re-triggers `onChange`, which re-checks `isAtEnd()` against the new total on the next scroll.
 
 ## Shared Measurement Cache
 
@@ -475,7 +475,7 @@ const previewVirt = createVirtualizer(previewScrollEl, {
 listVirt.measure(0, 72);
 ```
 
-The cache is a plain `Map<VirtualKey, number>` — you can pre-populate it from server data or persist it across sessions.
+The cache is a plain `Map<VirtualKey, number>`: you can pre-populate it from server data or persist it across sessions.
 
 ```ts
 // Pre-populate from server-sent sizes
@@ -485,7 +485,7 @@ for (const { id, height } of serverSizes) cache.set(id, height);
 
 ## Invalidating Measurements
 
-Call `invalidate()` after an event that changes item heights without a data change — for example, a font load, a viewport width change that causes text to reflow, or toggling between a grid and list layout.
+Call `invalidate()` after an event that changes item heights without a data change: for example, a font load, a viewport width change that causes text to reflow, or toggling between a grid and list layout.
 
 ```ts
 document.fonts.ready.then(() => virt.invalidate());
@@ -495,7 +495,7 @@ On variable-height lists, `scrollToIndex()` uses the current estimate/measured c
 
 For same-length updates, call `setItems()` (DOM adapter) or `update()` (core). If the rendered height of rows changed, call `invalidate()` before scrolling again.
 
-## Lifecycle — create and dispose
+## Lifecycle: create and dispose
 
 `createVirtualizer(el, options)` attaches immediately to the provided scroll container. If your container is replaced, dispose the old instance and create a new one.
 
@@ -530,7 +530,7 @@ function remount(nextScrollContainerEl: HTMLElement) {
 
 ## Keyboard Navigation
 
-Scroll ships no built-in key handler — keyboard scrolling is navigation policy, and the virtualizer already exposes everything it needs: `scrollToIndex()`. Compose it with your own focus tracking, or with `matchKey` from `@vielzeug/keymap` for one key vocabulary across the app:
+Scroll ships no built-in key handler: keyboard scrolling is navigation policy, and the virtualizer already exposes everything it needs: `scrollToIndex()`. Compose it with your own focus tracking, or with `matchKey` from `@vielzeug/keymap` for one key vocabulary across the app:
 
 ```ts
 import { createVirtualizer } from '@vielzeug/scroll';
@@ -551,7 +551,7 @@ scrollEl.addEventListener('keydown', (event) => {
 ```
 
 **Requirements:**
-- The scroll container (or a descendant) must have keyboard focus for events to fire — give it `tabindex="0"`
+- The scroll container (or a descendant) must have keyboard focus for events to fire: give it `tabindex="0"`
 - `align: 'auto'` scrolls only when the item is outside the visible area
 
 See the [Keyboard Navigation example](./examples/keyboard-navigation.md) for the full pattern with focus highlighting.
@@ -592,7 +592,7 @@ const virt = createVirtualizer(scrollEl, {
 - User-resizable rows or dynamic content (videos, iframes)
 
 **Performance notes:**
-- Auto-measurement queries the DOM every render cycle — avoid with very large visible windows (100+ items)
+- Auto-measurement queries the DOM every render cycle: avoid with very large visible windows (100+ items)
 - For finer control, use the manual `measureEl()` method instead
 - Enable only on lists with truly variable-height items
 
@@ -832,10 +832,10 @@ class VirtualList extends LitElement {
 ### Pitfalls
 
 - **React:** Putting `rows` in the `useEffect` dependency array causes the virtualizer to be destroyed and recreated on every data update. Only include the scroll element reference. Call `virt.update({ count })` from a separate `useEffect` for data changes.
-- **React:** Use `useLayoutEffect`, not `useEffect`, for the `count`-sync effect. `useEffect` fires after paint — a new `count` can reach the DOM (e.g. via other state derived from `rows`) before `update({ count })` runs, rendering stale or out-of-bounds indices for one frame.
-- **Vue 3:** `ref.value` is `null` inside `setup()` — the DOM doesn't exist yet. Always create the virtualizer inside `onMounted`, not in `setup()`.
-- **Svelte:** In Svelte 5, `$effect` with `bind:this` runs after the DOM is painted. The `bind:this` variable is available when the `$effect` runs — no extra tick needed.
-- **Web Components:** `firstUpdated` fires once after the first render. Use `updated()` for subsequent prop changes — Lit calls it every time `rows` changes.
+- **React:** Use `useLayoutEffect`, not `useEffect`, for the `count`-sync effect. `useEffect` fires after paint: a new `count` can reach the DOM (e.g. via other state derived from `rows`) before `update({ count })` runs, rendering stale or out-of-bounds indices for one frame.
+- **Vue 3:** `ref.value` is `null` inside `setup()`: the DOM doesn't exist yet. Always create the virtualizer inside `onMounted`, not in `setup()`.
+- **Svelte:** In Svelte 5, `$effect` with `bind:this` runs after the DOM is painted. The `bind:this` variable is available when the `$effect` runs: no extra tick needed.
+- **Web Components:** `firstUpdated` fires once after the first render. Use `updated()` for subsequent prop changes: Lit calls it every time `rows` changes.
 
 ## Working with Other Vielzeug Libraries
 
@@ -887,11 +887,11 @@ define('virtual-list', {
 
 ## Best Practices
 
-- Always provide `count` and `estimateSize` as a starting point, even for variable-height lists — measurements refine the estimates.
+- Always provide `count` and `estimateSize` as a starting point, even for variable-height lists: measurements refine the estimates.
 - Call `dispose()` in the framework cleanup callback (useEffect return, onUnmounted, onDestroy) to free resize observers.
 - Use `overscan` to pre-render rows above and below the visible area to reduce blank flicker during fast scrolling.
 - Prefer `scrollToIndex()` with `align: 'start'` for programmatic navigation; use `align: 'center'` for focus management.
-- Use `createDomVirtualList()` for comboboxes, listboxes, and selects — it manages the virtualizer lifecycle and DOM node pooling for you.
+- Use `createDomVirtualList()` for comboboxes, listboxes, and selects: it manages the virtualizer lifecycle and DOM node pooling for you.
 - Invalidate measurements with `invalidate()` when item content changes size (e.g., after expanding an accordion row).
 - For very large lists (>100k items), set a narrower `overscan` to limit DOM node count at any one time.
 - Use `refresh()` when item data or sizes may have changed; it rebuilds the offset table and re-emits.

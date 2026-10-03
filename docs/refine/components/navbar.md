@@ -307,10 +307,10 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `scroll-threshold`      | `number`                                                             | `80`                   | Scroll px threshold for floating+sticky transition                             |
 | `breakpoint`            | `string`                                                             | `'(max-width: 768px)'` | Media query used for mobile mode                                               |
 | `container-breakpoints` | `boolean`                                                            | `false`                | Evaluates parseable `max-width` breakpoints against the navbar container width |
-| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'frost'` | —                      | Surface style variant                                                          |
-| `color`                 | `ThemeColor`                                                         | —                      | Theme color                                                                    |
-| `rounded`               | `RoundedSize`                                                        | —                      | Border radius token                                                            |
-| `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | —                      | Elevation shadow level                                                         |
+| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'frost'` | N/A | Surface style variant                                                          |
+| `color`                 | `ThemeColor`                                                         | N/A | Theme color                                                                    |
+| `rounded`               | `RoundedSize`                                                        | N/A | Border radius token                                                            |
+| `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | N/A | Elevation shadow level                                                         |
 
 When `variant="frost"` has an explicit elevation, that elevation replaces the default frost halo so levels remain visually distinct.
 
@@ -366,11 +366,11 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 
 | Attribute  | Type      | Default | Description                                        |
 | ---------- | --------- | ------- | -------------------------------------------------- |
-| `href`     | `string`  | —       | Link URL (renders anchor when set)                 |
+| `href`     | `string`  | N/A | Link URL (renders anchor when set)                 |
 | `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`) |
 | `disabled` | `boolean` | `false` | Disables interaction                               |
-| `rel`      | `string`  | —       | Link relationship when `href` is set               |
-| `target`   | `string`  | —       | Link target when `href` is set                     |
+| `rel`      | `string`  | N/A | Link relationship when `href` is set               |
+| `target`   | `string`  | N/A | Link target when `href` is set                     |
 
 **`ore-navbar-item` Slots**
 

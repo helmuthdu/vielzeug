@@ -61,7 +61,7 @@ describe('syncedSignal()', () => {
     expect(local.value).toBe('manual');
   });
 
-  it('works without abortSignal — stays synced until caller disposes', () => {
+  it('works without abortSignal: stays synced until caller disposes', () => {
     const source = signal(1);
     const local = syncedSignal(source);
 
@@ -181,7 +181,7 @@ describe('parseStringTriggers()', () => {
     expect(parseStringTriggers(42 as unknown as string, VALID, DEFAULTS)).toEqual(['click']);
   });
 
-  it('coerces boolean true to string "true" which is not a valid trigger — returns defaults', () => {
+  it('coerces boolean true to string "true" which is not a valid trigger: returns defaults', () => {
     expect(parseStringTriggers(true as unknown as string, VALID, DEFAULTS)).toEqual(['click']);
   });
 });

@@ -246,7 +246,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
    *
    * @example
    * const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
-   * Form.partialDefaults(); // { role: 'viewer' }  — name is omitted
+   * Form.partialDefaults(); // { role: 'viewer' }: name is omitted
    */
   partialDefaults(): Partial<InferObject<T>> {
     const result: Record<string, unknown> = {};
@@ -296,7 +296,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
   }
 
   /**
-   * Alias for the default strict mode — rejects unknown keys.
+   * Alias for the default strict mode: rejects unknown keys.
    * Useful after calling `.relaxed()` to return a new strict schema.
    */
   strict(): ObjectSchema<T> {
@@ -308,7 +308,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>, 
    *
    * @example
    * const User = s.object({ id: s.number(), name: s.string() });
-   * User.keyof(); // UnionSchema — validates 'id' | 'name'
+   * User.keyof(); // UnionSchema: validates 'id' | 'name'
    */
   keyof(): UnionSchema<readonly [LiteralSchema<keyof T & string>, ...LiteralSchema<keyof T & string>[]]> {
     const keys = Object.keys(this.shape) as (keyof T & string)[];

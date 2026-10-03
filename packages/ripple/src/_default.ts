@@ -43,7 +43,7 @@ export interface Ripple extends Disposable {
  * Creates one complete reactive graph with its own ownership boundary. All
  * factories on the returned object share its runtime. Use this for tests, SSR
  * requests, embedded applications, or independently disposable features.
- * `dispose()` is terminal — create a new graph for a new lifetime.
+ * `dispose()` is terminal: create a new graph for a new lifetime.
  */
 export const createRipple = (options?: RippleOptions): Ripple => {
   const runtime = new ReactiveRuntime(options);
@@ -73,7 +73,7 @@ export const createRipple = (options?: RippleOptions): Ripple => {
 };
 
 /**
- * The shared default reactive graph — process-lifetime. Root helpers
+ * The shared default reactive graph: process-lifetime. Root helpers
  * (`signal`, `computed`, `effect`, `batch`, `createScope`, `untrack`, `watch`, `resource`, `fromSubscribable`)
  * are re-exported from the package root as bound methods on this single graph
  * instance. Use these only when the application has one graph for its entire

@@ -8,7 +8,7 @@ type BenchEvents = {
 };
 
 // ─── Emit throughput ────────────────────────────────────────────────────────
-// Pre-create buses outside bench fns — measures the emit hot path only.
+// Pre-create buses outside bench fns: measures the emit hot path only.
 
 describe('emit throughput', () => {
   const noListeners = createBus<BenchEvents>();

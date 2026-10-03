@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — range'
+title: 'Arsenal Examples: range'
 description: 'range example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'range example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to generate a sequence of integers without mutation — for example creating index arrays, building pagination controls, or driving `Array.from`.
+You need to generate a sequence of integers without mutation: for example creating index arrays, building pagination controls, or driving `Array.from`.
 
 ### Solution
 

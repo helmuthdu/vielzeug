@@ -1,5 +1,5 @@
 ---
-title: 'Keymap Examples — Global Shortcuts'
+title: 'Keymap Examples: Global Shortcuts'
 description: 'Register document-level hotkeys with state and event-aware guards for @vielzeug/keymap.'
 ---
 
@@ -77,5 +77,5 @@ const editingMap = createKeymap(
 ### Related
 
 - [Vim-style Navigation](./vim-navigation.md)
-- [Keymap Usage Guide — Context Guards](/keymap/usage.md#context-guards)
+- [Keymap Usage Guide: Context Guards](/keymap/usage.md#context-guards)
 - [Keymap API Reference](/keymap/api.md)

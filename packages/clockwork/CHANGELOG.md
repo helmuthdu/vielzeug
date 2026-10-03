@@ -8,7 +8,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 ### Minor changes
 
 - feat: split config errors into Definition/Snapshot/TransitionLimit; tap events
-- refactor: trust typed definitions — remove the runtime definition compiler and its compiled indirection, keep the untypeable footgun checks
+- refactor: trust typed definitions: remove the runtime definition compiler and its compiled indirection, keep the untypeable footgun checks
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT
 

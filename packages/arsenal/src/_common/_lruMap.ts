@@ -1,6 +1,6 @@
 /**
  * A Map subclass that evicts the oldest non-excluded entry when the map exceeds
- * `maxSize`. Iteration order (insertion order) determines LRU — the first key
+ * `maxSize`. Iteration order (insertion order) determines LRU: the first key
  * returned by `keys()` is the oldest.
  *
  * Calling `set` on an existing key refreshes its position (move-to-end).

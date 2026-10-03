@@ -22,7 +22,7 @@ export function isSafePath(key: string): boolean {
 /**
  * Returns `true` if `key` is one of the dangerous own-property names that can be used to
  * pollute `Object.prototype` (`__proto__`, `constructor`, `prototype`). Use this for plain
- * (non-dotted) property keys — e.g. object keys being copied or reassigned. For dotted paths,
+ * (non-dotted) property keys: e.g. object keys being copied or reassigned. For dotted paths,
  * use `isSafePath` instead.
  *
  * @example

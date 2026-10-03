@@ -7,7 +7,7 @@ const baseline = (cursor: string | null = null): SyncState => ({ cursor, revs: {
 /**
  * Drives a {@link SyncPort} against a {@link SyncGateway}. The engine never sees
  * individual commands or record shapes: it reads the device's records, and after a
- * quiet period pushes every record whose `rev` is above the last-synced baseline — a
+ * quiet period pushes every record whose `rev` is above the last-synced baseline: a
  * burst of edits becomes one batched upload instead of one per edit. Every rev
  * comparison is the engine's: the gateway upserts what it is given and tombstones
  * what it deletes. Flushes serialize (one push in flight), fire immediately when
@@ -50,7 +50,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
     const localRevs = new Map(gateway.records().map((envelope) => [key(envelope), envelope.record.rev] as const));
     const entombed = new Set((await gateway.pendingDeletions()).map((d) => `${d.entity}:${d.id}`));
     const deleted = new Set(deletions.map((d) => `${d.entity}:${d.id}`));
-    // Apply only records the server is ahead on — a locally tombstoned id or an id
+    // Apply only records the server is ahead on: a locally tombstoned id or an id
     // deleted in this same pull never resurrects through the apply.
     const ahead = records.filter(
       (envelope) =>
@@ -81,7 +81,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
     if (!records.length && !deletions.length) return;
     await port.push(records, deletions, keepalive ? { keepalive: true } : undefined);
     for (const envelope of records) state.revs[key(envelope)] = envelope.record.rev;
-    // Only the tombstones this push carried — new ones may have landed mid-flight.
+    // Only the tombstones this push carried: new ones may have landed mid-flight.
     await gateway.clearDeletions(deletions);
     await gateway.saveState(state);
     emit({ records: records.length, type: 'push' });
@@ -96,7 +96,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
   };
   const pushJob = (keepalive: boolean) => (): Promise<void> =>
     push(keepalive).catch(async (error: unknown) => {
-      // A rejected push usually means the server moved on — pull to reconcile,
+      // A rejected push usually means the server moved on: pull to reconcile,
       // then surface the failure to whoever is waiting on this job.
       await pull().catch(() => {});
       throw error;
@@ -122,7 +122,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
   doc?.addEventListener('visibilitychange', onVisibility);
   globalThis.addEventListener?.('pagehide', onPageHide);
 
-  // Boot: load the persisted baseline, run one full cycle — pull remote changes,
+  // Boot: load the persisted baseline, run one full cycle: pull remote changes,
   // then push anything created or changed while offline. Later flushes chain onto it.
   void enqueue(async () => {
     if (controller.signal.aborted) return;

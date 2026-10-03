@@ -36,7 +36,7 @@
 
   /* ── Dropdown ────────────────────────────────────────────────────────────── */
 
-  /* `fixed` (not `absolute`) — positioned via JS-computed top/left (see the positioner in
+  /* `fixed` (not `absolute`): positioned via JS-computed top/left (see the positioner in
      time-picker.ts), same as ore-date-picker's own `.calendar`. Laid out relative to the
      viewport, so it never affects any ancestor's box size or scrollable-overflow area. */
   .dropdown {

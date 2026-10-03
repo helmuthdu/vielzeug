@@ -62,7 +62,7 @@ describe('diff', () => {
     expect(result.changed).toEqual({});
   });
 
-  it('guards against __proto__ prototype pollution via changed — security regression', () => {
+  it('guards against __proto__ prototype pollution via changed: security regression', () => {
     const before = JSON.parse('{"__proto__":{"n":1}}') as Record<string, unknown>;
     const after = JSON.parse('{"__proto__":{"n":2}}') as Record<string, unknown>;
     const result = diff(before, after);

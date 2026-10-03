@@ -4,11 +4,11 @@
  *
  * Every `@vielzeug/*` package that depends on another one (`refine` -> `ore`/`ripple`/...,
  * `scroll` -> `ripple`, `orbit`, `prism`, ...) declares that edge as `workspace:*` per
- * `packages/AGENTS.md`'s convention. `workspace:*` is pnpm's local-dependency protocol — it only
+ * `packages/AGENTS.md`'s convention. `workspace:*` is pnpm's local-dependency protocol: it only
  * resolves inside this monorepo's own pnpm workspace, and `pnpm publish`/`pnpm pack` rewrite it
  * to a real version automatically. This repo's publish pipeline calls `npm pack`/`npm publish`
  * directly instead (see `npm-publish.mjs`'s header for why: npm's Trusted Publishing/OIDC has no
- * pnpm equivalent), and plain `npm` has no idea what `workspace:` means — it packs the literal
+ * pnpm equivalent), and plain `npm` has no idea what `workspace:` means: it packs the literal
  * string `"workspace:*"` straight into the published tarball's package.json. Every consumer
  * installing that published package outside this monorepo then fails immediately with e.g.
  * `Workspace not found (@vielzeug/ripple@workspace:*)`. This module is the fix, called from

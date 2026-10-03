@@ -1,5 +1,5 @@
 ---
-title: 'Herald Examples — Handling disposal in async code'
+title: 'Herald Examples: Handling disposal in async code'
 description: 'Handling disposal in async code example for @vielzeug/herald.'
 ---
 
@@ -21,8 +21,8 @@ async function waitForLogin(bus: Bus<AppEvents>) {
     const { userId } = await bus.wait('user:login', { signal: AbortSignal.timeout(10_000) });
     return userId;
   } catch (err) {
-    if (err instanceof BusDisposedError) return null; // bus torn down — graceful exit
-    throw err; // timeout or unexpected error — propagate
+    if (err instanceof BusDisposedError) return null; // bus torn down: graceful exit
+    throw err; // timeout or unexpected error: propagate
   }
 }
 ```

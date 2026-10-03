@@ -39,14 +39,14 @@ For large tables, `iterate()` on document stores and `getAllByIndex()` on Indexe
 
 ## `defineMigration()` removed
 
-Object stores and schema-declared indexes were already created automatically from the schema, so declarative `addTable`/`addIndex` steps were no-ops. Pass a plain `migrate` function to `createIndexedDB()` for the remaining cases — deleting a removed object store or transforming old records:
+Object stores and schema-declared indexes were already created automatically from the schema, so declarative `addTable`/`addIndex` steps were no-ops. Pass a plain `migrate` function to `createIndexedDB()` for the remaining cases: deleting a removed object store or transforming old records:
 
 ```ts
 // Before
 import { defineMigration } from '@vielzeug/vault/indexeddb';
 const migrate = defineMigration([{ field: 'email', table: 'users', type: 'addIndex' }]);
 
-// After — omit it entirely; the schema declares the index and Vault creates it on upgrade.
+// After: omit it entirely; the schema declares the index and Vault creates it on upgrade.
 ```
 
 ## `isExpired()` is no longer a root export
@@ -81,9 +81,9 @@ The unified `VaultStore` interface was split. Memory, LocalStorage, and SessionS
 // Before
 import type { VaultStore } from '@vielzeug/vault';
 
-// After — key-value stores
+// After: key-value stores
 import type { KeyValueVaultStore } from '@vielzeug/vault';
-// After — document stores (IndexedDB, SQLite)
+// After: document stores (IndexedDB, SQLite)
 import type { DocumentVaultStore } from '@vielzeug/vault';
 ```
 
@@ -102,10 +102,10 @@ import type { DocumentVaultStore } from '@vielzeug/vault';
 LocalStorage, SessionStorage, IndexedDB, and SQLite now require `codecs` at construction time. Memory may omit them. A parser schema such as a Spell schema can be passed directly; `validatorCodec()` remains available when an explicit identity-encoding codec is preferred. Custom codecs validate writes by round-tripping `decode(encode(value))` and validate persisted data on decode.
 
 ```ts
-// Before — codecs optional
+// Before: codecs optional
 const store = createLocalStorage({ name: 'app', schema });
 
-// After — codecs required
+// After: codecs required
 import { s } from '@vielzeug/spell';
 
 const UserSchema = s.object({ id: s.number(), name: s.string() });
@@ -147,10 +147,10 @@ Vault 2.5 tightens `table()` type safety and removes dead type aliases. No store
 The `key` parameter of `table()` now requires its field type to extend `VaultKey` (`number | string`). Previously, invalid key types like `boolean` compiled but failed at runtime.
 
 ```ts
-// Before — compiled but threw at runtime
+// Before: compiled but threw at runtime
 const bad = table<{ id: boolean }>('id');
 
-// After — compile-time error: Type 'boolean' is not assignable to 'never'
+// After: compile-time error: Type 'boolean' is not assignable to 'never'
 const bad = table<{ id: boolean }>('id');
 ```
 
@@ -275,7 +275,7 @@ const users = table<User>('id', { indexes: ['email'], defaultTtl: ttl.days(7) })
 
 ## Replace `totalCount()` with `count()`
 
-`count()` now ignores `limit`, `offset`, and `orderBy` — it always returns the full filtered-set size. The separate `totalCount()` method was removed.
+`count()` now ignores `limit`, `offset`, and `orderBy`: it always returns the full filtered-set size. The separate `totalCount()` method was removed.
 
 ```ts
 // Before
@@ -287,7 +287,7 @@ const total = await query.count();
 
 ## Drop the `TtlMs` brand
 
-`ttl.*` helpers now return plain `number`. Remove any `TtlMs` type references — they accept `number` directly.
+`ttl.*` helpers now return plain `number`. Remove any `TtlMs` type references: they accept `number` directly.
 
 ## Move capability types to adapter subpaths
 

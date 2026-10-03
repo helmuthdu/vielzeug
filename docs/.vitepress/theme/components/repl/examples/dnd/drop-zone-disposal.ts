@@ -20,7 +20,7 @@ console.log('zone.disposalSignal.aborted:', zone.disposalSignal.aborted) // fals
 // Use disposalSignal to cancel an in-flight request when the zone is torn down
 const signal = zone.disposalSignal
 signal.addEventListener('abort', () => {
-  console.log('disposalSignal fired — zone was disposed')
+  console.log('disposalSignal fired: zone was disposed')
 })
 
 // Dispose after 2 seconds to demonstrate
@@ -29,9 +29,9 @@ setTimeout(() => {
   console.log('zone.disposed:', zone.disposed)          // true
   console.log('zone.disposalSignal.aborted:', zone.disposalSignal.aborted) // true
 
-  // dispose() is idempotent — calling it again is safe
+  // dispose() is idempotent: calling it again is safe
   zone.dispose()
   console.log('Second dispose() call did not throw')
 }, 2000)`,
-  name: 'DropZone — disposed & disposalSignal',
+  name: 'DropZone: disposed & disposalSignal',
 };

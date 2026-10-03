@@ -1,6 +1,6 @@
 ---
 name: vielzeug
-description: Use when a project depends on any @vielzeug/* package — pick the owning package instead of hand-rolling, and use Refine components, tokens, and theme whenever @vielzeug/refine is installed. Applies to features, fixes, refactors, and UI work in consuming apps.
+description: 'Use when a project depends on any @vielzeug/* package: pick the owning package instead of hand-rolling, and use Refine components, tokens, and theme whenever @vielzeug/refine is installed. Applies to features, fixes, refactors, and UI work in consuming apps.'
 ---
 
 # Vielzeug
@@ -11,7 +11,7 @@ Vielzeug is a set of independent, zero-dependency TypeScript packages published 
 
 1. Read `package.json` (`dependencies`, `devDependencies`, `peerDependencies`) and list every `@vielzeug/*` entry.
 2. Note whether `@vielzeug/refine` is installed. If it is, the **Refine** and **Theme** sections below are mandatory for any UI work.
-3. Read the project's own agent contract (`AGENTS.md`, `.github/copilot-instructions.md`) first — project rules win over this skill.
+3. Read the project's own agent contract (`AGENTS.md`, `.github/copilot-instructions.md`) first: project rules win over this skill.
 
 ## Discover, don't recall
 
@@ -22,12 +22,12 @@ Never guess exports, attributes, events, slots, or token names. Look them up:
 | Which package solves X? | `search-packages`, `list-packages` | the package list below |
 | How do I use package X? | `get-docs` (`index`, `usage`, `api`, `examples`) | `node_modules/@vielzeug/<pkg>/README.md` |
 | Exact signature of an export | `get-type-signature` | `node_modules/@vielzeug/<pkg>/dist/*.d.ts` |
-| Runnable example | `list-examples`, `get-example` | — |
+| Runnable example | `list-examples`, `get-example` | N/A |
 | Which Refine components exist? | `refine-list-components` | `node_modules/@vielzeug/refine/dist/custom-elements.json` |
 | Attributes, properties, events, slots, CSS parts of `ore-*` | `refine-get-component` | same manifest |
 | Available design tokens | `refine-get-tokens` | `node_modules/@vielzeug/refine/dist/styles/tokens.css` |
 | Is my markup valid? | `refine-validate-usage` | compare against the manifest |
-| Blank component scaffold | `refine-generate-template` | — |
+| Blank component scaffold | `refine-generate-template` | N/A |
 
 If the MCP server is not connected, install it with `npx -y @vielzeug/codex` (see `node_modules/@vielzeug/codex/mcp-setup.json`) or use the fallback column.
 
@@ -37,56 +37,56 @@ If a need matches a package below, use that package. Do not reimplement signals,
 
 <!-- GENERATED:skill-packages:BEGIN -->
 
-- `@vielzeug/arsenal` — Non-trivial TypeScript utilities — retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections
-- `@vielzeug/assay` — Framework-agnostic DOM testing primitives — scoped queries, event dispatch, async waiting
-- `@vielzeug/clockwork` — Framework-neutral finite state machines with pure transitions and actors
-- `@vielzeug/coins` — Currency formatting and exchange utilities for monetary arithmetic
-- `@vielzeug/conduit` — Typed dependency injection container
-- `@vielzeug/courier` — Typed HTTP client with bounded structured-key caching, prefetching, immutable middleware, and structured errors
-- `@vielzeug/dnd` — Drag-and-drop — drop zones and sortable lists
-- `@vielzeug/familiar` — Web Worker pool with tasks, timeouts, cancellation
-- `@vielzeug/flux` — Minimal push streams with explicit ownership, bounded buffering, and structural bridges
-- `@vielzeug/focus` — Framework-neutral list navigation and focus restoration primitives
-- `@vielzeug/forge` — Typed form state, validation, submission
-- `@vielzeug/gesture` — Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles
-- `@vielzeug/herald` — Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing
-- `@vielzeug/illusionist` — Typed, deterministic, locale-aware fake data generator with seeded PRNG
-- `@vielzeug/keymap` — Headless keyboard shortcut manager with chord sequences
-- `@vielzeug/ledger` — Serialized reversible command history with atomic framework-neutral state and cancellation ownership
-- `@vielzeug/lingua` — Typed i18n with pluralization and lazy locale loading
-- `@vielzeug/mesh` — Backendless peer-to-peer session transport over WebRTC data channels with manual pairing and host-authoritative star topology
-- `@vielzeug/necromancer` — Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP
-- `@vielzeug/orbit` — Floating UI positioning with lifecycle-owned geometry and middleware
-- `@vielzeug/ore` — Functional web-component authoring on top of ripple
-- `@vielzeug/postmaster` — Typed durable job outbox with leased processing, retries, and dead-letter recovery
-- `@vielzeug/prism` — Responsive SVG charts with explicit updates — line, bar, area, pie, sparkline
-- `@vielzeug/pulse` — Typed WebSocket client with channels, rooms, presence, reconnect
-- `@vielzeug/refine` — Accessible, themeable web components built on ore
-- `@vielzeug/ripple` — Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources
-- `@vielzeug/rune` — Structured scoped logger with remote transport
-- `@vielzeug/sandbox` — Sandboxed iframe runtime with typed postMessage state bridge
-- `@vielzeug/scout` — Trigram fuzzy-search index with highlighting and reactive layer
-- `@vielzeug/scroll` — Virtual list engine for large datasets
-- `@vielzeug/sentinel` — Subscribable snapshots for external browser environment state
-- `@vielzeug/sigil` — QR code generation and scanning — pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning
-- `@vielzeug/sourcerer` — Reactive collection sources with local, page, cursor, and infinite pagination
-- `@vielzeug/spell` — Zero-dependency schema validation with Standard Schema interoperability
-- `@vielzeug/tandem` — Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes
-- `@vielzeug/tavern` — Table sessions over mesh — host-owned state replication with guest command forwarding
-- `@vielzeug/tempo` — Temporal-powered date utilities
-- `@vielzeug/vault` — Adapter-free typed storage core with focused browser and SQLite subpaths
-- `@vielzeug/ward` — Ordered authorization rules with immutable policies and typed decisions
-- `@vielzeug/wayfinder` — Client-side router with middleware and guards
+- `@vielzeug/arsenal`: Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections
+- `@vielzeug/assay`: Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting
+- `@vielzeug/clockwork`: Framework-neutral finite state machines with pure transitions and actors
+- `@vielzeug/coins`: Currency formatting and exchange utilities for monetary arithmetic
+- `@vielzeug/conduit`: Typed dependency injection container
+- `@vielzeug/courier`: Typed HTTP client with bounded structured-key caching, prefetching, immutable middleware, and structured errors
+- `@vielzeug/dnd`: Drag-and-drop: drop zones and sortable lists
+- `@vielzeug/familiar`: Web Worker pool with tasks, timeouts, cancellation
+- `@vielzeug/flux`: Minimal push streams with explicit ownership, bounded buffering, and structural bridges
+- `@vielzeug/focus`: Framework-neutral list navigation and focus restoration primitives
+- `@vielzeug/forge`: Typed form state, validation, submission
+- `@vielzeug/gesture`: Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles
+- `@vielzeug/herald`: Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing
+- `@vielzeug/illusionist`: Typed, deterministic, locale-aware fake data generator with seeded PRNG
+- `@vielzeug/keymap`: Headless keyboard shortcut manager with chord sequences
+- `@vielzeug/ledger`: Serialized reversible command history with atomic framework-neutral state and cancellation ownership
+- `@vielzeug/lingua`: Typed i18n with pluralization and lazy locale loading
+- `@vielzeug/mesh`: Backendless peer-to-peer session transport over WebRTC data channels with manual pairing and host-authoritative star topology
+- `@vielzeug/necromancer`: Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP
+- `@vielzeug/orbit`: Floating UI positioning with lifecycle-owned geometry and middleware
+- `@vielzeug/ore`: Functional web-component authoring on top of ripple
+- `@vielzeug/postmaster`: Typed durable job outbox with leased processing, retries, and dead-letter recovery
+- `@vielzeug/prism`: Responsive SVG charts with explicit updates: line, bar, area, pie, sparkline
+- `@vielzeug/pulse`: Typed WebSocket client with channels, rooms, presence, reconnect
+- `@vielzeug/refine`: Accessible, themeable web components built on ore
+- `@vielzeug/ripple`: Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources
+- `@vielzeug/rune`: Structured scoped logger with remote transport
+- `@vielzeug/sandbox`: Sandboxed iframe runtime with typed postMessage state bridge
+- `@vielzeug/scout`: Trigram fuzzy-search index with highlighting and reactive layer
+- `@vielzeug/scroll`: Virtual list engine for large datasets
+- `@vielzeug/sentinel`: Subscribable snapshots for external browser environment state
+- `@vielzeug/sigil`: QR code generation and scanning: pure matrix encoder, SVG and canvas renderers, native BarcodeDetector scanning
+- `@vielzeug/sourcerer`: Reactive collection sources with local, page, cursor, and infinite pagination
+- `@vielzeug/spell`: Zero-dependency schema validation with Standard Schema interoperability
+- `@vielzeug/tandem`: Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes
+- `@vielzeug/tavern`: Table sessions over mesh: host-owned state replication with guest command forwarding
+- `@vielzeug/tempo`: Temporal-powered date utilities
+- `@vielzeug/vault`: Adapter-free typed storage core with focused browser and SQLite subpaths
+- `@vielzeug/ward`: Ordered authorization rules with immutable policies and typed decisions
+- `@vielzeug/wayfinder`: Client-side router with middleware and guards
 
 <!-- GENERATED:skill-packages:END -->
 
 Common compositions (verify each API with `get-docs` before writing code):
 
-- **State** — `ripple` signals/derived/effects; `clockwork` when state is a finite machine; `ledger` for undo/redo.
-- **Data** — `courier` for HTTP with caching and structured errors; `sourcerer` for paged/cursor/infinite collections; `vault` for storage; `postmaster` for durable jobs; `scout` for fuzzy search; `mesh` for backendless peer sessions on a LAN; `sigil` for QR generation/scanning — prefer `ore-qr-code` / `ore-qr-scanner` when Refine is installed.
-- **Forms** — `forge` for form state, validation, and submission; `spell` for schemas; render fields with Refine inputs when Refine is installed.
-- **App shell** — `wayfinder` routing; `conduit` DI; `herald` events; `lingua` i18n; `rune` logging; `ward` authorization; `keymap` shortcuts.
-- **Dispose** every handle you create (`effect`, subscriptions, clients) when its owner unmounts. Vielzeug APIs return disposables — use them.
+- **State**: `ripple` signals/derived/effects; `clockwork` when state is a finite machine; `ledger` for undo/redo.
+- **Data**: `courier` for HTTP with caching and structured errors; `sourcerer` for paged/cursor/infinite collections; `vault` for storage; `postmaster` for durable jobs; `scout` for fuzzy search; `mesh` for backendless peer sessions on a LAN; `sigil` for QR generation/scanning: prefer `ore-qr-code` / `ore-qr-scanner` when Refine is installed.
+- **Forms**: `forge` for form state, validation, and submission; `spell` for schemas; render fields with Refine inputs when Refine is installed.
+- **App shell**: `wayfinder` routing; `conduit` DI; `herald` events; `lingua` i18n; `rune` logging; `ward` authorization; `keymap` shortcuts.
+- **Dispose** every handle you create (`effect`, subscriptions, clients) when its owner unmounts. Vielzeug APIs return disposables: use them.
 
 ## Refine (when `@vielzeug/refine` is installed)
 
@@ -109,7 +109,7 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 5. **Follow the element contract**: attributes for primitives, JavaScript properties for objects/arrays/callbacks, standard DOM events (read state from `event.target`), named slots for composition. Icon-only controls need an accessible label.
 
-6. **Type the tags** once in a type entry point: `import type {} from '@vielzeug/refine/frameworks/elements'` (or `/react`, `/vue`). Framework wiring (React 18/19, Vue, Svelte, Angular, SSR guards) is documented in the Refine `frameworks` doc — fetch it with `get-docs` before integrating.
+6. **Type the tags** once in a type entry point: `import type {} from '@vielzeug/refine/frameworks/elements'` (or `/react`, `/vue`). Framework wiring (React 18/19, Vue, Svelte, Angular, SSR guards) is documented in the Refine `frameworks` doc: fetch it with `get-docs` before integrating.
 
 7. **Validate** every fragment you write with `refine-validate-usage` before finishing.
 
@@ -128,13 +128,13 @@ Refine is the UI layer. Build interfaces from `ore-*` elements before anything e
 
 Refine covers the widget layer; these cover what it does not. Use them directly only when no `ore-*` element already provides the behavior:
 
-- `prism` — SVG charts (line, bar, area, pie, sparkline) plus `@vielzeug/prism/theme`.
-- `scroll` — virtualized large lists (prefer `ore-datagrid`/`ore-list` for ordinary sizes).
-- `dnd` / `gesture` — sortable lists, drop zones, pointer drag and pan.
-- `necromancer` — Web Animations API primitives and FLIP.
-- `orbit` — floating positioning; reach for `ore-popover`, `ore-tooltip`, `ore-menu` first.
-- `focus` / `keymap` — list navigation, focus restoration, keyboard shortcuts.
-- `ore` — authoring your own custom elements that compose Refine.
+- `prism`: SVG charts (line, bar, area, pie, sparkline) plus `@vielzeug/prism/theme`.
+- `scroll`: virtualized large lists (prefer `ore-datagrid`/`ore-list` for ordinary sizes).
+- `dnd` / `gesture`: sortable lists, drop zones, pointer drag and pan.
+- `necromancer`: Web Animations API primitives and FLIP.
+- `orbit`: floating positioning; reach for `ore-popover`, `ore-tooltip`, `ore-menu` first.
+- `focus` / `keymap`: list navigation, focus restoration, keyboard shortcuts.
+- `ore`: authoring your own custom elements that compose Refine.
 
 ## Anti-patterns
 

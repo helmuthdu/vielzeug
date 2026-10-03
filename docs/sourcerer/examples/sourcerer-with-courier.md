@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — Page Source with Courier'
+title: 'Sourcerer Examples: Page Source with Courier'
 description: 'Use Courier for HTTP transport while Sourcerer owns page state.'
 ---
 

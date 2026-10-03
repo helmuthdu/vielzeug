@@ -143,7 +143,7 @@ export type OreNavbarItemProps = {
   /** Link target URL. Renders an anchor when provided. */
   href?: string;
   /**
-   * Icon-only mode — hides the (empty) label region and switches to compact, symmetric
+   * Icon-only mode: hides the (empty) label region and switches to compact, symmetric
    * padding instead of the icon+label layout's wider horizontal padding. Set this whenever
    * the default slot is intentionally left empty (name conveyed via `aria-label` instead),
    * otherwise the empty label still reserves its inter-element gap and the item ends up
@@ -157,7 +157,7 @@ export type OreNavbarItemProps = {
 };
 
 /**
- * `ore-navbar` — Responsive navigation with sticky/floating modes and a mobile overflow panel.
+ * `ore-navbar`: Responsive navigation with sticky/floating modes and a mobile overflow panel.
  *
  * @element ore-navbar
  * @element ore-navbar-item - Navigation link or button placed in the default or mobile-menu slot
@@ -280,7 +280,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     };
 
     provide(NAVBAR_CTX, {
-      // Wrapped, not passed directly — `closeMobileMenu` (below) isn't defined yet at this point
+      // Wrapped, not passed directly: `closeMobileMenu` (below) isn't defined yet at this point
       // in `setup()`; by the time `ore-navbar-item` actually calls this (a later click), it is.
       closeMobileMenu: () => closeMobileMenu(),
       isMobile: computed(() => isMobile.value) as Readable<boolean>,
@@ -587,7 +587,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
           // its internal `read()`. Without untrack, signals read inside (e.g.
           // `mediaMatches` via `syncMobileMode()`) become dependencies of this watch
           // effect. When the sentinel updates `mediaMatches` on a viewport change, the
-          // effect re-runs — `EffectNode.run()` disposes the previous scope (killing the
+          // effect re-runs: `EffectNode.run()` disposes the previous scope (killing the
           // mediaHandle and its MediaQueryList listener) but the callback is NOT invoked
           // (source unchanged), so no new handle is created. The navbar is then deaf to
           // further MQ changes and stays stuck in mobile mode after resizing back to
@@ -779,7 +779,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 });
 
 /**
- * `ore-navbar-item` — Navigation item for navbar slots.
+ * `ore-navbar-item`: Navigation item for navbar slots.
  *
  * Renders as an anchor when `href` is provided and item is not disabled.
  *
@@ -840,11 +840,11 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
     // Prevent reverse tabnapping: auto-inject noopener + noreferrer for _blank links.
     const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
 
-    // Closes the mobile overflow panel when one of its items is activated — otherwise picking a
+    // Closes the mobile overflow panel when one of its items is activated, otherwise picking a
     // destination (or firing any other action placed in the `mobile-menu` slot) leaves the panel
     // open over the page until the user separately taps the toggle again. Only matters while
     // actually in mobile mode; on desktop `navbarCtx.mobileMenuOpen` is never true to begin with,
-    // so `closeMobileMenu()` (idempotent — see `setMobileMenu`'s equality check) is a no-op there.
+    // so `closeMobileMenu()` (idempotent: see `setMobileMenu`'s equality check) is a no-op there.
     const closeMobileMenuIfOpen = (): void => {
       if (navbarCtx?.mobileMenuOpen.value) navbarCtx.closeMobileMenu();
     };

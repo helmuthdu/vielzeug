@@ -82,7 +82,7 @@ export type OreGridProps = {
 };
 
 /**
- * ore-grid — Flexible grid layout with responsive column control.
+ * ore-grid: Flexible grid layout with responsive column control.
  *
  * Columns are computed in JS and applied as `--_cols` inline, so they respond
  * to the element's own width via ResizeObserver. CSS custom properties

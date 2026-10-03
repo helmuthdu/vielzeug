@@ -219,7 +219,7 @@ describe('ore-cookie-banner', () => {
   });
 
   describe('Focus management', () => {
-    it('moves focus to the dialog card on show() — no action is preselected', async () => {
+    it('moves focus to the dialog card on show(): no action is preselected', async () => {
       fixture = await mount('ore-cookie-banner');
       const banner = fixture.element as CookieBannerElement;
 

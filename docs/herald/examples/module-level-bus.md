@@ -1,5 +1,5 @@
 ---
-title: 'Herald Examples — Module-level bus'
+title: 'Herald Examples: Module-level bus'
 description: 'Module-level bus example for @vielzeug/herald.'
 ---
 
@@ -40,7 +40,7 @@ appBus.on('user:logout', clearCart);
 
 - A module-level bus is a singleton. Calling `dispose()` in a component's teardown disposes it for all modules that imported it. Only dispose when the application shuts down.
 - Circular imports between modules that both import the same bus can cause the bus to be `undefined` during initialization. Keep the bus in a leaf module with no dependencies on the importing modules.
-- The TypeScript event map is erased at runtime. Emitting a misspelled event name does not throw — it simply fires with no listeners. Use the type parameter to catch these at compile time.
+- The TypeScript event map is erased at runtime. Emitting a misspelled event name does not throw: it simply fires with no listeners. Use the type parameter to catch these at compile time.
 
 ### Related
 

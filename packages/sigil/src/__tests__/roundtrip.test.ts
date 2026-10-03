@@ -5,7 +5,7 @@ import type { QrMatrix } from '../types';
 
 /**
  * Decode oracle: rasterize each matrix to an RGBA buffer (dark modules black,
- * quiet zone white) and decode with jsQR — an independent, battle-tested
+ * quiet zone white) and decode with jsQR: an independent, battle-tested
  * decoder. Any placement, masking, or EC transcription error surfaces here.
  */
 
@@ -64,7 +64,7 @@ function makePayloads(): string[] {
     );
   }
   // UTF-8 multibyte payloads.
-  out.push('héllo wörld', '日本語', '✓ done — ünïcode', 'Ñoño');
+  out.push('héllo wörld', '日本語', '✓ done: ünïcode', 'Ñoño');
   // Exact capacity edges for small versions.
   for (const level of ['L', 'M', 'Q', 'H'] as const) {
     out.push('9'.repeat(qrCapacity(1, level, 'numeric')));
@@ -121,7 +121,7 @@ describe('roundtrip', () => {
   });
 
   it('round-trips invalid-UTF-8 bytes without corruption', () => {
-    // 0xFF/0xFE are not valid UTF-8 — a TextDecoder round-trip would turn
+    // 0xFF/0xFE are not valid UTF-8: a TextDecoder round-trip would turn
     // them into U+FFFD replacement characters. Byte mode must carry them as-is.
     const raw = Uint8Array.from([0xff, 0xfe, 0x00, 0x80, 0xc3, 0x28, 0xbf, 0x42]);
     const m = encodeQr(raw);

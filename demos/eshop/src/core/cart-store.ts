@@ -11,7 +11,7 @@ export const savedModelIds = signal<string[]>([]);
 
 export const cartCount = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0));
 
-/** Every cart line's breakdown, scaled by its quantity — `null` entries are dropped (stale model id). */
+/** Every cart line's breakdown, scaled by its quantity: `null` entries are dropped (stale model id). */
 export const cartLineBreakdowns = computed(() =>
   cartItems.value
     .map((item) => {

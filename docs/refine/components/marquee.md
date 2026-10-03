@@ -49,7 +49,7 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 
 | Name             | Type                | Default    | Description                            |
 | ---------------- | ------------------- | ---------- | -------------------------------------- |
-| `color`          | `ThemeColor`        | —          | Theme color for navigation controls    |
+| `color`          | `ThemeColor`        | N/A | Theme color for navigation controls    |
 | `duration`       | `number`            | `20`       | Seconds for one complete ticker cycle  |
 | `direction`      | `'left' \| 'right'` | `'left'`   | Horizontal scroll direction            |
 | `pause-on-hover` | `boolean`           | `false`    | Pauses the animation while hovered     |

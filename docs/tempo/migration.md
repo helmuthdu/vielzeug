@@ -14,10 +14,10 @@ Tempo 3 preserves the timezone-aware arithmetic, comparison, boundary, and seque
 `formatRelative()` no longer approximates months and years from average elapsed seconds. It resolves complete calendar units in the requested or inferred timezone while preserving localized future and past direction.
 
 ```ts
-// Tempo 2 — month and year output used average elapsed seconds
+// Tempo 2: month and year output used average elapsed seconds
 formatRelative(target, { base, locale: 'en-US' });
 
-// Tempo 3 — choose the calendar timezone explicitly
+// Tempo 3: choose the calendar timezone explicitly
 formatRelative(target, {
   base,
   locale: 'en-US',
@@ -32,7 +32,7 @@ When both values are `Instant`, the default calendar timezone is UTC. One `Zoned
 `recurrence()` now requires `interval` to be a positive safe integer and `count` to be a non-negative safe integer. Tempo 2 accepted zero or fractional values, which could repeat timestamps or produce unclear schedules.
 
 ```ts
-// Tempo 2 — accepted but did not describe a valid advancing recurrence
+// Tempo 2: accepted but did not describe a valid advancing recurrence
 recurrence(start, { count: 4, frequency: 'weekly', interval: 0 });
 
 // Tempo 3

@@ -15,7 +15,7 @@ describe('messaging', () => {
     await vi.waitFor(() => expect(received).toHaveLength(1));
 
     expect(received[0]!.payload).toEqual({ n: 1 });
-    // The invitation carries no host identity — the session id is the
+    // The invitation carries no host identity: the session id is the
     // host's peer id as the guest knows it.
     expect(received[0]!.peerId).toBe(guest.host!.id);
     expect(received[0]!.messageId).toBeTruthy();

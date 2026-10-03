@@ -4,10 +4,10 @@
  *
  * @example
  * ```ts
- * // Simple — index field 'name' with default weight 1
+ * // Simple: index field 'name' with default weight 1
  * createIndex(users, { fields: ['name'] });
  *
- * // Weighted — 'name' ranks higher than 'bio'
+ * // Weighted: 'name' ranks higher than 'bio'
  * createIndex(users, { fields: [{ field: 'name', weight: 2 }, { field: 'bio' }] });
  * ```
  */
@@ -98,7 +98,7 @@ export type SearchResult<T> = {
   /** Per-field literal normalized-token ranges for rendering highlighted snippets. Empty for empty or fuzzy-only queries. */
   matches: FieldMatch<keyof T & string>[];
   /**
-   * Weighted overlap-coefficient score in `[0, 1]` — the fraction of the smaller trigram set
+   * Weighted overlap-coefficient score in `[0, 1]`: the fraction of the smaller trigram set
    * (almost always the query) found in the larger one. `1` when every trigram of the smaller
    * set is present in the larger set.
    * `1` when query is empty (all items returned with full score).
@@ -108,7 +108,7 @@ export type SearchResult<T> = {
 
 /**
  * A text fragment produced by `highlight()` or `highlightField()`.
- * `text` is unescaped, original field content — see `highlight()`'s JSDoc before
+ * `text` is unescaped, original field content: see `highlight()`'s JSDoc before
  * rendering it as HTML.
  */
 export type HighlightPart = {

@@ -1,5 +1,5 @@
 ---
-title: Gesture — Usage Guide
+title: 'Gesture: Usage Guide'
 description: Track unrestricted pointer dragging and axis-locked pans with application-owned rendering and completion.
 ---
 
@@ -60,7 +60,7 @@ window.addEventListener('pagehide', () => drag.dispose(), { once: true });
 
 ## Recognize Long Presses
 
-Use `createLongPress()` for hold interactions — the touch counterpart of a keyboard preview key. `onLongPress` receives the originating pointerdown once the hold outlasts `durationMs`:
+Use `createLongPress()` for hold interactions: the touch counterpart of a keyboard preview key. `onLongPress` receives the originating pointerdown once the hold outlasts `durationMs`:
 
 ```ts
 import { createLongPress } from '@vielzeug/gesture';
@@ -77,7 +77,7 @@ const hold = createLongPress(grid, {
 });
 ```
 
-Movement beyond `slopPx` cancels back to a normal press, so scrolling never triggers the hold. The click that follows a fired hold is swallowed through a capture-phase listener on `target` — bind `target` to a stable ancestor of the pressed controls so the swallow precedes their click handlers, and gate `shouldStart` to the elements the hold belongs to.
+Movement beyond `slopPx` cancels back to a normal press, so scrolling never triggers the hold. The click that follows a fired hold is swallowed through a capture-phase listener on `target`: bind `target` to a stable ancestor of the pressed controls so the swallow precedes their click handlers, and gate `shouldStart` to the elements the hold belongs to.
 
 ## Completion Rules
 
@@ -127,7 +127,7 @@ const pan = createPanGesture(row, { axis: 'x', onMove });
 
 ## Pointer Capture
 
-Pointer capture is enabled by default. After axis intent is accepted, Gesture attempts to capture the pointer while continuing to track movement through document-level listeners. Capture failure—for example after target detachment or pointer termination—falls back to document tracking without stranding the session.
+Pointer capture is enabled by default. After axis intent is accepted, Gesture attempts to capture the pointer while continuing to track movement through document-level listeners. Capture failure (for example after target detachment or pointer termination) falls back to document tracking without stranding the session.
 
 Disable capture when nested or newly revealed controls must retain native pointer-up and click targeting:
 

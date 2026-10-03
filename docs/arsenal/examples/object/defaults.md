@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — defaults'
+title: 'Arsenal Examples: defaults'
 description: 'defaults example for @vielzeug/arsenal.'
 ---
 
@@ -23,7 +23,7 @@ const result = defaults(config, { port: 3000, secure: false, retries: 3 });
 
 ### Pitfalls
 
-- Only fills in `undefined` values — `null` and `false` are left unchanged.
+- Only fills in `undefined` values: `null` and `false` are left unchanged.
 - Does not deep-merge nested objects; use `deepMerge` for recursive defaults.
 
 ### Related

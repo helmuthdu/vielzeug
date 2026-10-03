@@ -1,5 +1,5 @@
 ---
-title: Ore — Usage Guide
+title: 'Ore: Usage Guide'
 description: Practical Ore usage patterns for components, props, templates, slots, context, forms, Sentinel integration, and tests.
 ---
 
@@ -27,7 +27,7 @@ define('status-chip', {
 });
 ```
 
-Everything besides `props` — lifecycle hooks, host bindings, context, slots, emit — is a plain function imported from `@vielzeug/ore`, called directly from `setup()` (or a composable it calls):
+Everything besides `props`: lifecycle hooks, host bindings, context, slots, emit: is a plain function imported from `@vielzeug/ore`, called directly from `setup()` (or a composable it calls):
 
 ```ts
 import { define, getHost, html, bind, useEmit, useSlots } from '@vielzeug/ore';
@@ -47,7 +47,7 @@ define('my-widget', {
 
 ## signals and effects
 
-Ore does not re-export ripple primitives — import them directly from `@vielzeug/ripple`.
+Ore does not re-export ripple primitives: import them directly from `@vielzeug/ripple`.
 
 ```ts
 import { batch, computed, effect, signal, watch } from '@vielzeug/ripple';
@@ -189,10 +189,10 @@ define('task-list', {
 
 `each(source, key, render, fallback?)` takes positional arguments:
 
-- **source** — signal, getter, or plain array
-- **key** — function returning a unique string or number per item; number and string keys remain distinct
-- **render** — receives reactive `item` and `index` signals
-- **fallback** — optional, rendered when the list is empty
+- **source**: signal, getter, or plain array
+- **key**: function returning a unique string or number per item; number and string keys remain distinct
+- **render**: receives reactive `item` and `index` signals
+- **fallback**: optional, rendered when the list is empty
 
 ```ts
 each(
@@ -382,7 +382,7 @@ define('count-consumer', {
 });
 ```
 
-`provide()` registers cleanup automatically — context keys are removed from the registry when the providing component disconnects. On reconnect, `setup()` runs fresh and `provide()` re-registers without spurious "overwriting" warnings. Provide a `Readable` (signal/computed) rather than a raw value if descendants need to observe later changes — `inject()` resolves and caches the value once per consumer connection.
+`provide()` registers cleanup automatically: context keys are removed from the registry when the providing component disconnects. On reconnect, `setup()` runs fresh and `provide()` re-registers without spurious "overwriting" warnings. Provide a `Readable` (signal/computed) rather than a raw value if descendants need to observe later changes: `inject()` resolves and caches the value once per consumer connection.
 
 ## form-associated elements
 
@@ -572,13 +572,13 @@ define('signup-form', {
 
 ## Best Practices
 
-- Setup returns `html\`...\`` directly — not a function wrapping the template.
-- Use `watchEffect()` for reactive subscriptions tied to component lifetime — it auto-registers cleanup on disconnect.
+- Setup returns `html\`...\`` directly: not a function wrapping the template.
+- Use `watchEffect()` for reactive subscriptions tied to component lifetime: it auto-registers cleanup on disconnect.
 - Use `onElement(ref, cb)` instead of `onMounted` when the work is tied to a single DOM node.
 - Bind host attributes and classes via `bind()` rather than mutating the element directly.
-- Provide context at the nearest ancestor — avoid global context singletons.
+- Provide context at the nearest ancestor: avoid global context singletons.
 - Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, external subscriptions).
 - Use `live(signal)` for form inputs to prevent clobbering user-in-progress edits.
-- Extract composable helper functions freely — `onMounted`/`onCleanup`/`bind`/... resolve the active component through implicit context, so they work from any function called (transitively) during `setup()`, with no need to pass them in as parameters.
+- Extract composable helper functions freely: `onMounted`/`onCleanup`/`bind`/... resolve the active component through implicit context, so they work from any function called (transitively) during `setup()`, with no need to pass them in as parameters.
 - Test component mounting and lifecycle with `@vielzeug/ore/testing`; import generic DOM events, queries, and waits
   from `@vielzeug/assay`.

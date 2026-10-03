@@ -528,7 +528,7 @@ describe('createGroupedVirtualizer – disposed', () => {
     expect(gv.disposed).toBe(true);
   });
 
-  it('dispose() is idempotent — double-dispose does not throw', () => {
+  it('dispose() is idempotent: double-dispose does not throw', () => {
     const el = makeContainer({ clientHeight: 500 });
     const gv = createGroupedVirtualizer<Item>(el, {
       estimateItemSize: 30,

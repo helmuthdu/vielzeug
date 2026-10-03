@@ -5,7 +5,7 @@
         "patch": [
           {
             "author": "agent@vielzeug",
-            "comment": "chore: align with CalVer lockstep trains — no code change this train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
           }
         ]
@@ -61,7 +61,7 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor: remove RuneError class (never thrown, no subclasses). Remove dead RemoteLogData re-export from transports.ts. Fix detectEnv to remove Vite-specific import.meta.env check — browser defaults to development. Merge resolveBindings + serializeErrors into single prepareBindings pass.",
+            "comment": "refactor: remove RuneError class (never thrown, no subclasses). Remove dead RemoteLogData re-export from transports.ts. Fix detectEnv to remove Vite-specific import.meta.env check: browser defaults to development. Merge resolveBindings + serializeErrors into single prepareBindings pass.",
             "commit": "1aa0a46304ffdd7d3b224946cd69d1382be725ff"
           }
         ]

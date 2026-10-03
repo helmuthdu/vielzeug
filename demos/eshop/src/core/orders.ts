@@ -5,7 +5,7 @@ import type { Order } from './types';
 
 // The current user's order list, driven by a `resource()` whose source reads
 // `currentUser.value.id`. When the user switches, the previous in-flight load is
-// aborted (its `AbortSignal` is cancelled) and a fresh one starts — so a slow
+// aborted (its `AbortSignal` is cancelled) and a fresh one starts, so a slow
 // response for the old user can never overwrite the new user's list. While a refetch
 // is pending we surface the `previous` snapshot so the UI never flashes empty.
 const ordersResource = resource(
@@ -23,7 +23,7 @@ export const ordersSignal = computed<Order[]>(() => {
 export const ordersLoading = computed<boolean>(() => ordersResource.value.status === 'pending');
 
 // Every order across every customer (admin view). Not keyed by user, so the source is
-// a constant — it loads once and is refreshed explicitly via `reload()` after writes.
+// a constant: it loads once and is refreshed explicitly via `reload()` after writes.
 const allOrdersResource = resource(
   () => null,
   (_source, context) => fetchOrdersRequest(undefined, context.signal),

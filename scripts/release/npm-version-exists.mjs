@@ -1,7 +1,7 @@
 /**
  * Check whether an exact `name@version` is already published to npm.
  *
- * Queries the registry directly over HTTPS instead of shelling out to `npm view` — faster
+ * Queries the registry directly over HTTPS instead of shelling out to `npm view`: faster
  * (no subprocess/npm-CLI startup cost) and trivially testable by injecting a fetch stub
  * instead of mocking a subprocess.
  */

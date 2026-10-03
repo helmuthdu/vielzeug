@@ -1,7 +1,7 @@
 import type { ColorOption, Dealer, Model, Order, PackageOption, User, WheelOption } from './types';
 
 // ---------------------------------------------------------------------------
-// Shared option pools — every model draws from the same paint/wheel/package
+// Shared option pools: every model draws from the same paint/wheel/package
 // catalog (like a real configurator would), each model's trims just decide
 // which package ids come standard.
 // ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ export const STANDARD_PACKAGES: PackageOption[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Dealers — pickup destinations for `checkout-shipping`'s delivery-method step. A fixed, static
+// Dealers: pickup destinations for `checkout-shipping`'s delivery-method step. A fixed, static
 // list (no dealer-locator API in this demo), resolved by id via `Order.dealerId`.
 // ---------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ export const DEALERS: Dealer[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Catalog — a fictional lineup under the "Vielzeug Motors" marque (this demo storefront borrows
+// Catalog: a fictional lineup under the "Vielzeug Motors" marque (this demo storefront borrows
 // the monorepo's own project name rather than inventing an unrelated one) spanning the segments
 // a real luxury automaker covers, deliberately using our own trim/sub-brand naming ("AS" =
 // Vielzeug Sport, "Volt" = Vielzeug's EV line) rather than any real manufacturer's model names or
@@ -87,7 +87,7 @@ export const models: Model[] = [
     bodyType: 'sedan',
     colors: colorsStartingWith('polar-white'),
     description:
-      'The entry point into the Vielzeug lineup — a compact executive sedan built for the daily commute without compromising on the marque\u2019s signature ride quality.',
+      'The entry point into the Vielzeug lineup: a compact executive sedan built for the daily commute without compromising on the marque\u2019s signature ride quality.',
     features: ['adaptiveCruise', 'wirelessCharging', 'headUpDisplay'],
     fuelEconomyLPer100Km: 6.8,
     heroHue: 210,
@@ -335,7 +335,7 @@ export const models: Model[] = [
     bodyType: 'suv',
     colors: colorsStartingWith('graphite-grey'),
     description:
-      'The performance flagship of the SUV range, built by Vielzeug Sport — uncompromising power wrapped in everyday usability.',
+      'The performance flagship of the SUV range, built by Vielzeug Sport: uncompromising power wrapped in everyday usability.',
     features: ['matrixLed', 'premiumAudio', 'adaptiveCruise', 'headUpDisplay'],
     fuelEconomyLPer100Km: 12.4,
     heroHue: 355,
@@ -392,7 +392,7 @@ export const models: Model[] = [
     bodyType: 'sedan',
     colors: colorsStartingWith('glacier-silver'),
     description:
-      'Vielzeug\u2019s all-electric sedan, part of the Volt line — silent power with a range built for real journeys.',
+      'Vielzeug\u2019s all-electric sedan, part of the Volt line: silent power with a range built for real journeys.',
     features: ['matrixLed', 'premiumAudio', 'wirelessCharging', 'headUpDisplay'],
     fuelEconomyLPer100Km: null,
     heroHue: 165,
@@ -456,7 +456,7 @@ export const seedUsers: User[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Seed orders — relative to "now" so the admin dashboard's revenue chart
+// Seed orders: relative to "now" so the admin dashboard's revenue chart
 // always has real recent data, regardless of when the demo is loaded.
 // ---------------------------------------------------------------------------
 

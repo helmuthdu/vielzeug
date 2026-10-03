@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Function Examples
+title: 'Arsenal: Function Examples'
 description: Function utility examples for Arsenal.
 ---
 
@@ -40,5 +40,5 @@ const isSpecialAge = anyOf<number>(
   (age) => age === 100,
 );
 
-// noneOf: true when no predicate matches — single predicate equivalent to logical NOT
+// noneOf: true when no predicate matches: single predicate equivalent to logical NOT
 const odds = [1, 2, 3, 4].filter(noneOf((n: number) => n % 2 === 0));

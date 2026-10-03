@@ -9,12 +9,12 @@ console.log('Key:', key1)                // '{"filter":{"role":"admin"},"sort":"
 
 // Handles Date, RegExp, Set, Map, bigint
 console.log(hash(new Date('2024-01-01T00:00:00Z')))  // '[Date:2024-01-01T00:00:00.000Z]'
-console.log(hash(new Set([3, 1, 2])))                // '[Set:1,2,3]' — sorted
-console.log(hash(new Map([['b', 2], ['a', 1]])))     // '[Map:"a"=>1,"b"=>2]' — sorted
+console.log(hash(new Set([3, 1, 2])))                // '[Set:1,2,3]': sorted
+console.log(hash(new Map([['b', 2], ['a', 1]])))     // '[Map:"a"=>1,"b"=>2]': sorted
 console.log(hash(42n))                               // '42n'
 console.log(hash(/foo/gi))                           // '[RegExp:foo/gi]'
 
-// Circular references produce a sentinel — no stack overflow
+// Circular references produce a sentinel: no stack overflow
 const obj = { x: 1 }
 obj.self = obj
 console.log(hash(obj))  // '{"self":[Circular],"x":1}'

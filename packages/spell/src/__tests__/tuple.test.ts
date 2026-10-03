@@ -31,7 +31,7 @@ describe('s.tuple()', () => {
   });
 });
 
-describe('tuple parseAsync — optional / catch', () => {
+describe('tuple parseAsync: optional / catch', () => {
   it('tuple.optional().parseAsync(undefined) returns undefined', async () => {
     expect(await s.tuple([s.string()]).optional().parseAsync(undefined)).toBeUndefined();
   });

@@ -1,5 +1,5 @@
 ---
-title: 'Illusionist Examples — Seeded Test Fixtures'
+title: 'Illusionist Examples: Seeded Test Fixtures'
 description: Use a seeded Illusionist instance to generate reproducible Vitest test fixtures.
 ---
 
@@ -83,13 +83,13 @@ describe('orders', () => {
 
 ### Pitfalls
 
-- Do not share a single instance across tests that run concurrently — each call advances the shared random source and causes cross-test drift.
+- Do not share a single instance across tests that run concurrently: each call advances the shared random source and causes cross-test drift.
 - Create a fresh instance per test when each test must begin from the start of its seed sequence.
 - The same string seed always produces the same sequence. Different strings can theoretically collide because seeds are folded to 32 bits.
 - `system.uuid()` uses `crypto.randomUUID()`, not the seeded source. Do not use it in deterministic fixtures or snapshot tests.
 
 ### Related
 
-- [Usage Guide — Seeded Determinism](../usage.md#seeded-determinism)
-- [API Reference — createIllusion](../api.md#createillusion)
-- [Examples — Snapshot Testing](../examples.md#seeded-test-data-for-snapshot-testing)
+- [Usage Guide: Seeded Determinism](../usage.md#seeded-determinism)
+- [API Reference: createIllusion](../api.md#createillusion)
+- [Examples: Snapshot Testing](../examples.md#seeded-test-data-for-snapshot-testing)

@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Paginated Data Loading'
+title: 'Clockwork Examples: Paginated Data Loading'
 description: 'Represent query workflow state while an invoke loads each page.'
 ---
 

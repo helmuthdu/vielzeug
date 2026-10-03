@@ -4,7 +4,7 @@ import type { Obj } from '../types';
 
 /**
  * Fills in `undefined` properties in `target` with values from `sources`. First source wins
- * — unlike `shallowMerge`, already-set keys are never overwritten.
+ *: unlike `shallowMerge`, already-set keys are never overwritten.
  *
  * @example
  * ```ts

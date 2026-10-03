@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — median'
+title: 'Arsenal Examples: median'
 description: 'median example for @vielzeug/arsenal.'
 ---
 

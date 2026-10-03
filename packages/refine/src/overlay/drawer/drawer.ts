@@ -70,7 +70,7 @@ export type OreDrawerEvents = {
 };
 
 export type OreDrawerProps = {
-  /** Backdrop style — 'opaque' (default), 'blur', or 'transparent' */
+  /** Backdrop style: 'opaque' (default), 'blur', or 'transparent' */
   backdrop?: DrawerBackdrop;
   /** Initial uncontrolled open state. Ignored when `open` is set. */
   'default-open'?: boolean;
@@ -327,7 +327,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
         const panelEl = panelRef.value;
 
         // For swipe-close, keep the panel hidden and off-screen until the next
-        // open cycle — resetting inline styles during native close can produce
+        // open cycle: resetting inline styles during native close can produce
         // a visible frame at the rest position on some browsers.
         if (panelEl && reason !== 'swipe') resetPanelDragStyles(panelEl);
 
@@ -395,7 +395,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
       onEvent(dialog, 'click', handleBackdropClick);
 
-      // Drag-to-close handlers — scoped to the handle element only so interactions
+      // Drag-to-close handlers: scoped to the handle element only so interactions
       // with panel content don't accidentally start a drag.
       const panel = panelRef.value;
       const dragHandleEl = panel?.querySelector<HTMLElement>('[part="drag-handle"]');

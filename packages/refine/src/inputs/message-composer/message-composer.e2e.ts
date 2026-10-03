@@ -1,15 +1,15 @@
 /**
- * Real-browser layout checks for `ore-message-composer` — CSS regressions jsdom can't catch
+ * Real-browser layout checks for `ore-message-composer`: CSS regressions jsdom can't catch
  * (no real box model, `@layer` blocks silently dropped). Complements `message-composer.test.ts`'s
  * jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { expect, test } from '../../testing/fixtures';
 
 test.describe('Layout', () => {
   // Regression coverage for a real bug: `fieldVariantMixin`'s `outline` branch only set `--_bg`,
-  // never `--_border-color` — `ore-input`/`ore-textarea` masked this with an unconditional
+  // never `--_border-color`: `ore-input`/`ore-textarea` masked this with an unconditional
   // `:host{}` base fallback, but `ore-message-composer` has none (its base layer assumes every
   // variant rule sets both custom properties, which was true for every variant except this one),
   // so its outline border silently fell back to an unset custom property instead of matching the
@@ -40,7 +40,7 @@ test.describe('Layout', () => {
 
   // Regression coverage for a related bug: the focus/error/success glow (`box-shadow` on
   // `.composer:focus-within`) lived in `@layer refine.base`, while solid/outline/ghost's
-  // rest-state `box-shadow` (`fieldVariantMixin`) lives in `@layer refine.variants` — cascade
+  // rest-state `box-shadow` (`fieldVariantMixin`) lives in `@layer refine.variants`: cascade
   // layers beat specificity outright, so the glow always lost to the plain rest-state shadow,
   // regardless of focus/error/success. `box-shadow` is transitioned, so read after it settles.
   test('full-width composer stays inside a constrained parent', async ({ page, refinePage }) => {

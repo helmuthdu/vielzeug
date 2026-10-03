@@ -33,7 +33,7 @@ describe('s.record()', () => {
   });
 });
 
-describe('record parseAsync — optional / catch', () => {
+describe('record parseAsync: optional / catch', () => {
   it('record.optional().parseAsync(undefined) returns undefined', async () => {
     expect(await s.record(s.string(), s.number()).optional().parseAsync(undefined)).toBeUndefined();
   });

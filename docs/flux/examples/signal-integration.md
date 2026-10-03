@@ -1,5 +1,5 @@
 ---
-title: 'Flux Examples — Structural State Integration'
+title: 'Flux Examples: Structural State Integration'
 description: 'Bridge subscribable state through Flux operators without package-specific adapters.'
 ---
 

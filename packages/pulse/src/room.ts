@@ -209,7 +209,7 @@ export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
         resolveJoined,
       };
 
-      // Abort handler — rejects joined and auto-disposes
+      // Abort handler: rejects joined and auto-disposes
       const onAbort = (): void => {
         clearTimeout(timeoutId);
         ctrl.abort();

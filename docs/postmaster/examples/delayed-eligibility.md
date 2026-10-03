@@ -1,5 +1,5 @@
 ---
-title: 'Postmaster Examples — Delayed Eligibility'
+title: 'Postmaster Examples: Delayed Eligibility'
 description: Persist a job now but defer its claimability with availableAt.
 ---
 
@@ -7,7 +7,7 @@ description: Persist a job now but defer its claimability with availableAt.
 
 ### Problem
 
-A job must survive reloads but should not run immediately — a digest, reminder, or cooldown. `setTimeout` loses the work on reload; a separate scheduler adds infrastructure.
+A job must survive reloads but should not run immediately: a digest, reminder, or cooldown. `setTimeout` loses the work on reload; a separate scheduler adds infrastructure.
 
 ### Solution
 
@@ -47,12 +47,12 @@ postmaster.start();
 
 ### Pitfalls
 
-- Postmaster does not guarantee execution at `availableAt` — only that the job will not be claimed earlier. A closed browser page or suspended service worker runs the job when a processor is next active.
+- Postmaster does not guarantee execution at `availableAt`: only that the job will not be claimed earlier. A closed browser page or suspended service worker runs the job when a processor is next active.
 - Past timestamps remain immediately eligible; Postmaster does not clamp caller-supplied values.
 - Keep idempotency keys stable. Delayed eligibility changes when a job may be claimed, not how often it may be delivered.
 
 ### Related
 
-- [API Reference — enqueue()](../api.md#enqueue)
+- [API Reference: enqueue()](../api.md#enqueue)
 - [Service Worker Background Sync](./service-worker-background-sync.md)
-- [Usage Guide — Delayed Eligibility](../usage.md#delayed-eligibility)
+- [Usage Guide: Delayed Eligibility](../usage.md#delayed-eligibility)

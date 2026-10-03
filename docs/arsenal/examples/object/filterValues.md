@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — filterValues'
+title: 'Arsenal Examples: filterValues'
 description: 'filterValues example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'filterValues example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to remove entries from an object where the value does not meet a condition — for example stripping null/undefined fields before sending to an API.
+You need to remove entries from an object where the value does not meet a condition: for example stripping null/undefined fields before sending to an API.
 
 ### Solution
 
@@ -23,7 +23,7 @@ filterValues(raw, (v) => v != null);
 
 ### Pitfalls
 
-- Returns a shallow copy — nested values are not cloned.
+- Returns a shallow copy: nested values are not cloned.
 
 ### Related
 

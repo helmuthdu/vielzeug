@@ -1,8 +1,8 @@
 # Command Palette
 
-A searchable, keyboard-driven list of commands presented in a centered modal — the "⌘K" pattern popularized by editors and productivity apps. Built on the native `<dialog>` element for focus trapping, top-layer stacking, and `Escape`-to-close, and on [`@vielzeug/keymap`](/keymap/) for the global shortcut that opens it from anywhere on the page.
+A searchable, keyboard-driven list of commands presented in a centered modal: the "⌘K" pattern popularized by editors and productivity apps. Built on the native `<dialog>` element for focus trapping, top-layer stacking, and `Escape`-to-close, and on [`@vielzeug/keymap`](/keymap/) for the global shortcut that opens it from anywhere on the page.
 
-This is a centered, global modal — not an anchored, inline dropdown. For a Slack/Notion-style `/`-triggered menu that pops up under the caret inside a [`ore-message-composer`](./message-composer.md), reach for [`ore-combobox`](./combobox.md) or [`ore-menu`](./menu.md) instead; keep `ore-command-palette` for a single, page-wide "jump to action" shortcut.
+This is a centered, global modal: not an anchored, inline dropdown. For a Slack/Notion-style `/`-triggered menu that pops up under the caret inside a [`ore-message-composer`](./message-composer.md), reach for [`ore-combobox`](./combobox.md) or [`ore-menu`](./menu.md) instead; keep `ore-command-palette` for a single, page-wide "jump to action" shortcut.
 
 ## Basic Usage
 
@@ -41,7 +41,7 @@ Declare commands with `ore-command-palette-item` elements in the default slot. E
 
 </ComponentPreview>
 
-The global shortcut (`mod+k` by default — `⌘K` on macOS, `Ctrl+K` elsewhere) works as soon as the element is connected. Shortcut hints use [`ore-keyboard-key`](./keyboard-key.md), which is also available for settings screens and key-state displays. Use `open` as the controlled state and update it from `open-change`; use `default-open` only to initialize an uncontrolled palette.
+The global shortcut (`mod+k` by default: `⌘K` on macOS, `Ctrl+K` elsewhere) works as soon as the element is connected. Shortcut hints use [`ore-keyboard-key`](./keyboard-key.md), which is also available for settings screens and key-state displays. Use `open` as the controlled state and update it from `open-change`; use `default-open` only to initialize an uncontrolled palette.
 
 ## Data-Driven Items
 
@@ -128,7 +128,7 @@ Set `disabled` on an item to keep it visible but skip it during keyboard navigat
 
 ## Keeping the Palette Open
 
-By default, selecting an item closes the palette. Set `keep-open-on-select` for commands the user might invoke repeatedly (e.g. inserting several snippets in a row) — the search input is refocused after each selection.
+By default, selecting an item closes the palette. Set `keep-open-on-select` for commands the user might invoke repeatedly (e.g. inserting several snippets in a row): the search input is refocused after each selection.
 
 <ComponentPreview height="480px">
 
@@ -188,7 +188,7 @@ Override the global shortcut with `shortcut`, or set it to an empty string to di
 
 </ComponentPreview>
 
-Set `no-filter` on this pattern once results come back already scoped to the query — otherwise the built-in client-side filter runs again on top of the server response.
+Set `no-filter` on this pattern once results come back already scoped to the query, otherwise the built-in client-side filter runs again on top of the server response.
 
 ## Listening to Events
 
@@ -241,7 +241,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 
 | Attribute              | Type      | Default                        | Description                                                                                        |
 | ---------------------- | --------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `open`                 | `boolean` | —                                | Controlled visibility                                                                               |
+| `open`                 | `boolean` | N/A | Controlled visibility                                                                               |
 | `default-open`         | `boolean` | `false`                          | Initial visibility when `open` is not provided                                                      |
 | `label`                | `string`  | `'Command palette'`              | Accessible label for the dialog                                                                     |
 | `placeholder`          | `string`  | `'Type a command or search…'`   | Placeholder text for the search input                                                               |
@@ -255,7 +255,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 
 | Property | Type                        | Description                                                                     |
 | -------- | --------------------------- | -------------------------------------------------------------------------------- |
-| `items`  | `CommandPaletteItemInput[]` | JS-driven command list — takes precedence over slotted `ore-command-palette-item` elements |
+| `items`  | `CommandPaletteItemInput[]` | JS-driven command list: takes precedence over slotted `ore-command-palette-item` elements |
 
 **`ore-command-palette`** Slots
 
@@ -268,11 +268,11 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | Attribute  | Type      | Default | Description                                             |
 | ---------- | --------- | ------- | -------------------------------------------------------- |
 | `value`    | `string`  | `''`    | Value emitted by the `select` event and matched by search |
-| `label`    | `string`  | —       | Explicit label text; falls back to the element's text content |
-| `group`    | `string`  | —       | Group heading the item is clustered under                |
-| `icon`     | `string`  | —       | Lucide icon name rendered at the start of the row         |
-| `shortcut` | `string`  | —       | Display-only keyboard hint rendered at the end of the row — one `<kbd>` per key, separated with `+` (e.g. `"⌘+S"`). A literal `+` key isn't representable this way — spell it out (e.g. `"Ctrl+Plus"`) |
-| `keywords` | `string`  | —       | Comma-separated extra search terms matched in addition to the label |
+| `label`    | `string`  | N/A | Explicit label text; falls back to the element's text content |
+| `group`    | `string`  | N/A | Group heading the item is clustered under                |
+| `icon`     | `string`  | N/A | Lucide icon name rendered at the start of the row         |
+| `shortcut` | `string`  | N/A | Display-only keyboard hint rendered at the end of the row: one `<kbd>` per key, separated with `+` (e.g. `"⌘+S"`). A literal `+` key isn't representable this way: spell it out (e.g. `"Ctrl+Plus"`) |
+| `keywords` | `string`  | N/A | Comma-separated extra search terms matched in addition to the label |
 | `disabled` | `boolean` | `false` | Excludes the item from keyboard navigation and selection  |
 
 **Events**
@@ -298,10 +298,10 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 
 ## Accessibility
 
-The dialog panel follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/), built on the native `<dialog>` element: `Tab`/`Shift+Tab` trap focus inside the panel, `Escape` closes it, and focus returns to the triggering element on close. The `label` attribute becomes the dialog's `aria-label` — always set one, since the palette has no visible title.
+The dialog panel follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/), built on the native `<dialog>` element: `Tab`/`Shift+Tab` trap focus inside the panel, `Escape` closes it, and focus returns to the triggering element on close. The `label` attribute becomes the dialog's `aria-label`: always set one, since the palette has no visible title.
 
 The search input follows the collapsible listbox pattern: it carries `role="combobox"`, `aria-expanded="true"`, `aria-controls` pointing at the listbox, and a reactive `aria-activedescendant` that tracks the keyboard-focused row. The listbox itself has `role="listbox"`; each command row has `role="option"` with `aria-selected` reflecting keyboard focus and `aria-disabled` for disabled items. Group headings are `role="presentation"` decorative text, not part of the accessibility tree's option count.
 
-`ArrowUp`/`ArrowDown` move focus through enabled items (wrapping at the ends); `Home`/`End` jump to the first/last enabled item; `Enter` selects the focused item — or the first result if none has been focused yet, so pressing `Enter` immediately after typing a query works as expected. Disabled items are skipped entirely by keyboard navigation. On open, the search input receives focus automatically; on close, the query resets so the next open starts from a clean slate.
+`ArrowUp`/`ArrowDown` move focus through enabled items (wrapping at the ends); `Home`/`End` jump to the first/last enabled item; `Enter` selects the focused item, or the first result if none has been focused yet, so pressing `Enter` immediately after typing a query works as expected. Disabled items are skipped entirely by keyboard navigation. On open, the search input receives focus automatically; on close, the query resets so the next open starts from a clean slate.
 
-Because the palette can be summoned from anywhere via its global keyboard shortcut, avoid relying on `shortcut` collisions with other page-level bindings — check for conflicts with [`findShortcutConflicts`](/keymap/api.md#findshortcutconflicts-shortcut-entries-options) if your app registers other global shortcuts.
+Because the palette can be summoned from anywhere via its global keyboard shortcut, avoid relying on `shortcut` collisions with other page-level bindings: check for conflicts with [`findShortcutConflicts`](/keymap/api.md#findshortcutconflicts-shortcut-entries-options) if your app registers other global shortcuts.

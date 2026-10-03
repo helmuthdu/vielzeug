@@ -28,23 +28,23 @@ export type Bindings = Record<string, unknown>;
 
 /**
  * The structured record produced by every log call and dispatched to all transports.
- * `data` is the merged result of pinned bindings and per-call context — transports
+ * `data` is the merged result of pinned bindings and per-call context: transports
  * receive a single flat object and do not need to merge anything themselves.
- * Any `Error` instances — whether from a pinned binding (`bindings`/`withBindings()`) or
- * per-call context — are automatically serialized to `{ message, name, stack }`.
- * **Shallow only** — an `Error` nested inside a plain object (e.g. `{ meta: { err } }`) is left as-is;
+ * Any `Error` instances: whether from a pinned binding (`bindings`/`withBindings()`) or
+ * per-call context: are automatically serialized to `{ message, name, stack }`.
+ * **Shallow only**: an `Error` nested inside a plain object (e.g. `{ meta: { err } }`) is left as-is;
  * only top-level fields of `data` are checked.
  */
 export type LogEntry = {
   /**
    * Merged structured data: pinned bindings overlaid with per-call context.
-   * Already shallow-copied and immutable — do not mutate.
+   * Already shallow-copied and immutable: do not mutate.
    */
   data: Readonly<Bindings>;
   level: LogType;
   message?: string;
   namespace: string;
-  /** Exact moment of the log call — shared across all transports for the same entry. */
+  /** Exact moment of the log call: shared across all transports for the same entry. */
   timestamp: Date;
 };
 
@@ -53,7 +53,7 @@ export type LogEntry = {
 /**
  * A transport receives a log entry and is responsible for its own delivery and formatting.
  * If a transport throws, the logger catches it, reports it via a dev-only warning, and continues
- * dispatching the entry to remaining transports — a single misbehaving transport can never crash
+ * dispatching the entry to remaining transports: a single misbehaving transport can never crash
  * the caller of `log.info()`/etc. or block its siblings.
  */
 export type Transport = (entry: LogEntry) => void;
@@ -206,8 +206,8 @@ export type Logger = {
   /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this logger. */
   readonly disposalSignal: AbortSignal;
   /**
-   * Marks the logger as disposed — all subsequent log calls become no-ops.
-   * Aborts `disposalSignal`. Idempotent — safe to call multiple times.
+   * Marks the logger as disposed: all subsequent log calls become no-ops.
+   * Aborts `disposalSignal`. Idempotent: safe to call multiple times.
    */
   dispose: () => void;
   /** `true` after `dispose()` has been called. */
@@ -251,7 +251,7 @@ export type Logger = {
   warn: LogMethod;
   /**
    * Derive a child logger with additional pinned bindings.
-   * The returned logger is fully independent — disposing it does not affect the parent,
+   * The returned logger is fully independent: disposing it does not affect the parent,
    * and disposing the parent does not affect child loggers.
    */
   withBindings: (bindings: Bindings) => Logger;

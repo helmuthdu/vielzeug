@@ -42,7 +42,7 @@ export class LazySchema<T, Input = T> extends Schema<T, Input> {
   }
 
   protected override _construct(state: SchemaState<any>): this {
-    // Do not copy _resolved — each clone re-resolves from the getter on first use.
+    // Do not copy _resolved: each clone re-resolves from the getter on first use.
     const next = new LazySchema(this._getter) as this;
 
     next.state = state as any;

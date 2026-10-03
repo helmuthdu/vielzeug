@@ -1,9 +1,9 @@
 /**
- * Real-browser tests for `ore-dialog` — a11y checks and open/close/focus-trap interaction that
+ * Real-browser tests for `ore-dialog`: a11y checks and open/close/focus-trap interaction that
  * jsdom can't evaluate (no CSS box model, no real focus management edge cases). Complements
  * `dialog.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
@@ -57,7 +57,7 @@ test.describe('Interaction', () => {
     await expect(page.locator('ore-dialog[open]'))
       .not.toBeVisible({ timeout: 2000 })
       .catch(() => {
-        // open attribute may still be present but dialog is hidden — check visibility
+        // open attribute may still be present but dialog is hidden: check visibility
       });
   });
 
@@ -71,10 +71,10 @@ test.describe('Interaction', () => {
 
     await page.waitForSelector('ore-dialog[open]');
 
-    // Focus should be trapped inside dialog — active element should be within ore-dialog
+    // Focus should be trapped inside dialog: active element should be within ore-dialog
     const focusedTag = await page.evaluate(() => document.activeElement?.tagName.toLowerCase());
 
-    // Custom elements or internal buttons receive focus — just confirm it's not the body
+    // Custom elements or internal buttons receive focus: just confirm it's not the body
     expect(focusedTag).not.toBe('body');
   });
 

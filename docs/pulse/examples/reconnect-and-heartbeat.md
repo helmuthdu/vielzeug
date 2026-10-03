@@ -1,5 +1,5 @@
 ---
-title: 'Pulse Examples — Reconnect and Heartbeat'
+title: 'Pulse Examples: Reconnect and Heartbeat'
 description: 'Reconnect restoration and heartbeat configuration for @vielzeug/pulse.'
 ---
 

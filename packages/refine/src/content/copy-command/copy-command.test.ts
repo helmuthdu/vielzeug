@@ -168,7 +168,7 @@ describe('ore-copy-command', () => {
       const live = fixture.element.shadowRoot?.querySelector('[role="status"]');
 
       expect(icon?.getAttribute('name')).toBe('circle-alert');
-      expect(btn.getAttribute('aria-label')).toBe('Copy failed — press to try again');
+      expect(btn.getAttribute('aria-label')).toBe('Copy failed: press to try again');
       expect(live?.textContent?.trim()).toBe('Copy failed. Select the command text and copy it manually.');
     });
 

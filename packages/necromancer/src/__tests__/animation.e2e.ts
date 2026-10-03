@@ -144,13 +144,13 @@ test('adds FLIP translation without replacing authored transforms or translate',
 
 test('adds FLIP scaling without replacing an authored scale', async ({ page }) => {
   // jsdom cannot render layout, so the unit test suite can only assert the keyframe
-  // strings Necromancer generates — not that a real browser actually composes an
+  // strings Necromancer generates: not that a real browser actually composes an
   // additive `scale` by multiplying (per spec) rather than adding the raw numbers.
   // This test measures the rendered box itself to confirm that composition. No rotation
   // here deliberately: `getBoundingClientRect()`'s width is the rotated, axis-aligned
-  // bounding box, which would distort a direct width comparison — this test isolates
+  // bounding box, which would distort a direct width comparison: this test isolates
   // scale from that (rotation-vs-scale interaction is covered by the layout capture
-  // itself using `offsetWidth`, not `getBoundingClientRect()`, for size — see layout.ts).
+  // itself using `offsetWidth`, not `getBoundingClientRect()`, for size: see layout.ts).
   const outcome = await page.evaluate(() => {
     const necromancer = (window as Window & { Necromancer?: NecromancerRuntime }).Necromancer;
 

@@ -42,7 +42,7 @@ describe('route context', () => {
           data: async () => ({ value: 42 }),
           middleware: [
             async (ctx, next) => {
-              // ctx is RouteContext — data is not present (TypeScript prevents access)
+              // ctx is RouteContext: data is not present (TypeScript prevents access)
               middlewareHasData = 'data' in ctx;
               await next();
             },

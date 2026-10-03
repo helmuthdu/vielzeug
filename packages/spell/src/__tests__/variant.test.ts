@@ -60,7 +60,7 @@ describe('s.discriminatedUnion()', () => {
   });
 });
 
-describe('s.discriminatedUnion() — async', () => {
+describe('s.discriminatedUnion(): async', () => {
   it('optional().parseAsync(undefined) returns undefined', async () => {
     const schema = s.discriminatedUnion('type', { ok: s.object({ msg: s.string() }) }).optional();
 

@@ -2,7 +2,7 @@ import { backoff } from '@vielzeug/arsenal';
 
 /**
  * Create a child `AbortController` that aborts as soon as `parent` does.
- * Handles the case where `parent` is already aborted at call time — a plain
+ * Handles the case where `parent` is already aborted at call time: a plain
  * `addEventListener('abort', ...)` would miss that, since the event already fired.
  *
  * @internal
@@ -21,7 +21,7 @@ export function deriveAbortController(parent: AbortSignal): AbortController {
 
 /**
  * Sleep for `ms` milliseconds, aborting early when the signal fires.
- * Resolves (does not reject) on abort — callers check `signal.aborted`.
+ * Resolves (does not reject) on abort: callers check `signal.aborted`.
  *
  * @internal
  */

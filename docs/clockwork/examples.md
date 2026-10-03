@@ -1,5 +1,5 @@
 ---
-title: Clockwork — Examples
+title: 'Clockwork: Examples'
 description: Practical state machine patterns with pure transitions and actors.
 ---
 

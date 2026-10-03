@@ -1,5 +1,5 @@
 ---
-title: Spell — Schema validation for TypeScript
+title: 'Spell: Schema validation for TypeScript'
 description: Zero-dependency schema validation with explicit async checks, Standard Schema interoperability, and JSON Schema export.
 package: spell
 category: validation
@@ -102,7 +102,7 @@ const User = s
     name: s.string().min(1),
     role: s.enum(['admin', 'editor', 'viewer'] as const),
   })
-  .relaxed(); // allow extra keys — omit for strict-mode (default)
+  .relaxed(); // allow extra keys: omit for strict-mode (default)
 
 type User = Infer<typeof User>;
 
@@ -151,9 +151,9 @@ const user = result.data;
 
 <div class="see-also">
 
-- [Forge](/forge/) — typed form state that uses Spell schemas as its validation layer
-- [Courier](/courier/) — HTTP client for validating request and response payloads at service boundaries
-- [Vault](/vault/) — unified storage API that accepts Spell schemas to type-gate persisted data
+- [Forge](/forge/): typed form state that uses Spell schemas as its validation layer
+- [Courier](/courier/): HTTP client for validating request and response payloads at service boundaries
+- [Vault](/vault/): unified storage API that accepts Spell schemas to type-gate persisted data
 
 </div>
 

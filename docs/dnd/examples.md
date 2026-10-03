@@ -1,5 +1,5 @@
 ---
-title: Dnd — Examples
+title: 'Dnd: Examples'
 description: Practical examples and recipes for dnd.
 ---
 

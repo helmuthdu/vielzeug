@@ -1,5 +1,5 @@
 ---
-title: Vault — Examples
+title: 'Vault: Examples'
 description: Practical Vault examples for browser storage, SQLite, TTL, transactions, observation, and framework integration.
 ---
 

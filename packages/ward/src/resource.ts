@@ -13,13 +13,13 @@ import { WILDCARD } from './constants';
  *             `read:*`  matches `read:own`, `read:all`, etc.
  *
  * @example
- * matchesPattern('*',        'posts:123')  // true  — global wildcard
- * matchesPattern('posts',    'posts')       // true  — exact
- * matchesPattern('posts:*',  'posts:123')  // true  — namespace wildcard
- * matchesPattern('posts:*',  'comments:1') // false — different namespace
- * matchesPattern('posts:42', 'posts:42')   // true  — exact namespaced id
- * matchesPattern('read:*',   'read:own')   // true  — action namespace wildcard
- * matchesPattern('read:*',   'write:all')  // false — different action namespace
+ * matchesPattern('*',        'posts:123')  // true: global wildcard
+ * matchesPattern('posts',    'posts')       // true: exact
+ * matchesPattern('posts:*',  'posts:123')  // true: namespace wildcard
+ * matchesPattern('posts:*',  'comments:1') // false: different namespace
+ * matchesPattern('posts:42', 'posts:42')   // true: exact namespaced id
+ * matchesPattern('read:*',   'read:own')   // true: action namespace wildcard
+ * matchesPattern('read:*',   'write:all')  // false: different action namespace
  */
 export function matchesPattern(pattern: string, value: string): boolean {
   if (pattern === WILDCARD) return true;

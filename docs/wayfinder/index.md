@@ -1,5 +1,5 @@
 ---
-title: Wayfinder — Client-side router for TypeScript
+title: 'Wayfinder: Client-side router for TypeScript'
 description: Framework-agnostic client-side router with typed params, async data loading, middleware, leave guards, and cancellation.
 package: wayfinder
 category: routing
@@ -18,7 +18,7 @@ environments: [browser, node, ssr, deno]
 Managing navigation by hand means scattered `popstate` listeners, duplicated path checks, and no shared abstraction for loading data or blocking navigation. Wayfinder moves all of that into one declarative table.
 
 ```ts
-// Before — manual navigation with popstate
+// Before: manual navigation with popstate
 window.addEventListener('popstate', () => {
   const path = window.location.pathname;
   if (path === '/') renderHome();
@@ -33,7 +33,7 @@ document.querySelectorAll('a[data-route]').forEach((a) => {
   });
 });
 
-// After — with Wayfinder
+// After: with Wayfinder
 import { createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
@@ -117,19 +117,19 @@ router.dispose();
 
 <div class="features-grid">
 
-- `createRouter()` — Compiles named, nested route tables.
-- `navigate()` — Commits route changes after middleware reaches its terminal stage.
-- `ready` — Signals that initial routing has settled.
-- `data()` — Receives cancellation through `AbortSignal` for in-flight loaders.
-- `beforeLeave()` — Blocks route exits before history changes.
-- `match()` / `load()` — Inspect routes synchronously or load detached route data without navigation.
-- `url()` / `href()` — Build base-aware URLs and anchor-ready hrefs for every history driver.
-- `preload()` — Warms and reuses loader results for the next matching client navigation.
-- `createViewRegistry()` — Resolves exhaustive typed route views with an explicit not-found fallback.
-- `scroll` / `viewTransition` — Coordinate browser effects at the navigation commit boundary.
-- `createHashHistory()` — Runs browser routes on static hosts that cannot rewrite deep links.
-- `createMemoryHistory()` — Runs routers in tests and non-browser environments.
-- `subscribe()` — Reactive subscription to navigation state changes.
+- `createRouter()`: Compiles named, nested route tables.
+- `navigate()`: Commits route changes after middleware reaches its terminal stage.
+- `ready`: Signals that initial routing has settled.
+- `data()`: Receives cancellation through `AbortSignal` for in-flight loaders.
+- `beforeLeave()`: Blocks route exits before history changes.
+- `match()` / `load()`: Inspect routes synchronously or load detached route data without navigation.
+- `url()` / `href()`: Build base-aware URLs and anchor-ready hrefs for every history driver.
+- `preload()`: Warms and reuses loader results for the next matching client navigation.
+- `createViewRegistry()`: Resolves exhaustive typed route views with an explicit not-found fallback.
+- `scroll` / `viewTransition`: Coordinate browser effects at the navigation commit boundary.
+- `createHashHistory()`: Runs browser routes on static hosts that cannot rewrite deep links.
+- `createMemoryHistory()`: Runs routers in tests and non-browser environments.
+- `subscribe()`: Reactive subscription to navigation state changes.
 
 </div>
 
@@ -148,9 +148,9 @@ router.dispose();
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — reactive signals; sync router state to a signal for framework-agnostic reactivity
-- [Ward](/ward/) — permission guards; use inside Wayfinder middleware to protect routes
-- [Herald](/herald/) — event bus; dispatch route-change events to decouple navigation side effects
+- [Ripple](/ripple/): reactive signals; sync router state to a signal for framework-agnostic reactivity
+- [Ward](/ward/): permission guards; use inside Wayfinder middleware to protect routes
+- [Herald](/herald/): event bus; dispatch route-change events to decouple navigation side effects
 
 </div>
 

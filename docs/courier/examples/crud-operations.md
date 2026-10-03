@@ -1,5 +1,5 @@
 ---
-title: 'Courier Examples — CRUD Operations'
+title: 'Courier Examples: CRUD Operations'
 description: 'Cached reads and explicit writes with one Courier client.'
 ---
 

@@ -5,7 +5,7 @@
  * @example
  * ```ts
  * lerp(0, 10, 0.5); // 5
- * lerp(0, 10, 1.5); // 15 (extrapolated — t is not clamped)
+ * lerp(0, 10, 1.5); // 15 (extrapolated: t is not clamped)
  * ```
  *
  * @param a - The start value (returned when `t` is `0`).

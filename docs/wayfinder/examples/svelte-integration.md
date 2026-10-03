@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Svelte Integration'
+title: 'Wayfinder Examples: Svelte Integration'
 description: 'Svelte integration example for @vielzeug/wayfinder.'
 ---
 
@@ -40,7 +40,7 @@ export const { isActive, navigate, url } = router;
 ```
 
 ```svelte
-<!-- RouterView.svelte — exhaustive routes and an explicit fallback -->
+<!-- RouterView.svelte: exhaustive routes and an explicit fallback -->
 <script lang="ts">
   import { routerState, views } from './router';
 

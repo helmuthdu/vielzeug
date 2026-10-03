@@ -3,7 +3,7 @@ import { formatPrice } from './currency';
 import type { Model, PriceBreakdown } from './types';
 
 /**
- * Renders a shareable "build summary" card inside a sandboxed iframe (`@vielzeug/sandbox`) — the
+ * Renders a shareable "build summary" card inside a sandboxed iframe (`@vielzeug/sandbox`): the
  * same isolation a real dealership site would want for embeddable/exportable content it doesn't
  * fully control the styling of. Used by `ui/components/share-build-dialog.ts`'s live preview.
  */
@@ -24,7 +24,7 @@ export function createBuildPreview(container: HTMLElement): SandboxHandle {
       .total { display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid #2a2d33; font-weight: 700; }
       `,
     },
-    title: 'Vielzeug Motors — My Build',
+    title: 'Vielzeug Motors: My Build',
   });
 }
 
@@ -36,7 +36,7 @@ export function renderBuildPreview(
 ): Promise<void> {
   return handle.render(`
     <div class="card">
-      <p class="eyebrow">Vielzeug Motors — My Build</p>
+      <p class="eyebrow">Vielzeug Motors: My Build</p>
       <h1>${model.name}</h1>
       <p class="tagline">${model.tagline}</p>
       <dl>

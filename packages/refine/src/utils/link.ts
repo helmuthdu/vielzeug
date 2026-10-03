@@ -44,8 +44,8 @@ export type LinkProps = {
  * Derives computed link state from reactive `href`, `rel`, and `target` signals.
  *
  * Returns:
- * - `isLink` — true when `href` is set (and optionally not disabled)
- * - `effectiveRel` — `rel` merged with security tokens when `target="_blank"`
+ * - `isLink`: true when `href` is set (and optionally not disabled)
+ * - `effectiveRel`: `rel` merged with security tokens when `target="_blank"`
  *
  * @example
  * ```ts

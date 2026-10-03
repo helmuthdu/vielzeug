@@ -1,5 +1,5 @@
 ---
-title: 'Postmaster Examples — Recover Dead-Letter Jobs'
+title: 'Postmaster Examples: Recover Dead-Letter Jobs'
 description: Inspect, retry, and remove jobs that exhausted retries or hit terminal failures.
 ---
 

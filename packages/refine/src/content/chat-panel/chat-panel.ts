@@ -89,7 +89,7 @@ const DEFAULT_INITIALS = 'V';
 const DEFAULT_MAXLENGTH = 240;
 
 /**
- * A self-contained assistant chat surface — the fixed corner window a demo or support
+ * A self-contained assistant chat surface: the fixed corner window a demo or support
  * flow needs: header with title, status, Start over and close; a live-region message
  * transcript built from `ore-chat-message`; suggested questions while the transcript
  * holds only the greeting; and an `ore-message-composer` footer.

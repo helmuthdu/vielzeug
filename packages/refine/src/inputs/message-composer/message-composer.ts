@@ -57,7 +57,7 @@ export type OreMessageComposerEvents = {
   input: InputEvent;
   /**
    * Fired for a send attempt (the resolved `send-shortcut` or the send button) while the
-   * composer isn't blank/disabled/loading. Cancelable — call `preventDefault()` to keep the
+   * composer isn't blank/disabled/loading. Cancelable: call `preventDefault()` to keep the
    * current text in the field instead of the default clear + refocus.
    */
   send: { originalEvent: KeyboardEvent | MouseEvent; value: string };
@@ -77,7 +77,7 @@ export type OreMessageComposerProps = {
   fullwidth?: boolean;
   /** Helper text shown below the field */
   helper?: string;
-  /** Accessible name for the field — never rendered visually, only as `aria-label` */
+  /** Accessible name for the field: never rendered visually, only as `aria-label` */
   label?: string;
   /** Blocks further sends (e.g. a send is already in flight) without disabling editing */
   loading?: boolean;
@@ -108,21 +108,21 @@ export type OreMessageComposerProps = {
   size?: ComponentSize;
   /**
    * Shows an inline green check icon inside the field to confirm the value has
-   * passed validation. Ignored while `error` is set — an error always wins.
+   * passed validation. Ignored while `error` is set: an error always wins.
    */
   success?: boolean;
   /** Current text value */
   value?: string;
-  /** Visual variant of the card — same variant set as `ore-textarea`, applied to the card. */
+  /** Visual variant of the card: same variant set as `ore-textarea`, applied to the card. */
   variant?: Exclude<VisualVariant, 'frost' | 'text'>;
 };
 
 /**
- * A message/comment composer — a card with an auto-resizing field on top and a toolbar row
+ * A message/comment composer: a card with an auto-resizing field on top and a toolbar row
  * below it, built directly on the same core primitives as `ore-textarea` (`createTextField`,
  * `createAutoResize`) rather than composing `ore-textarea` itself. Nesting a fully-styled sibling
  * component and suppressing most of its chrome (as an earlier version of this component did) is
- * a leaky composition — this owns its single `<textarea>` outright, so there's exactly one
+ * a leaky composition: this owns its single `<textarea>` outright, so there's exactly one
  * implementation of the field's appearance to reason about, not two fighting each other.
  *
  * Handles the send gesture (Enter to send, Shift+Enter for a newline, or a Ctrl/Cmd+Enter
@@ -157,7 +157,7 @@ export type OreMessageComposerProps = {
  *
  * @slot prefix - Content at the start of the toolbar row (e.g. an attach menu)
  * @slot suffix - Content at the end of the toolbar row, before the send button (e.g. a model picker)
- * @slot send - Replaces the default send button entirely — the only supported way to customize it
+ * @slot send - Replaces the default send button entirely: the only supported way to customize it
  *
  * @cssprop --message-composer-bg - Card background color
  * @cssprop --message-composer-border-color - Card border color
@@ -268,7 +268,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     function attemptSend(event: KeyboardEvent | MouseEvent): void {
       const notPrevented = emit('send', { originalEvent: event, value: tf.value.value.trim() });
 
-      // `preventDefault()` on `send` means "keep the current text — skip the default clear
+      // `preventDefault()` on `send` means "keep the current text: skip the default clear
       // + refocus" (see the event's own doc comment): both halves of that default are gated on
       // the same condition, not just the clear.
       if (notPrevented && props['clear-on-send'].value !== false) {
@@ -306,7 +306,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
       attr: {
         error: errorAttr(tf.errorText),
         size: props.size,
-        // Reflects `success` only once `error` is confirmed empty — keeps the two host
+        // Reflects `success` only once `error` is confirmed empty: keeps the two host
         // attributes mutually exclusive even if a consumer sets both props at once.
         success: () => (props.success.value && !tf.errorText.value ? true : undefined),
         variant: props.variant,
@@ -374,7 +374,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     forcedColorsFocusMixin('.field'),
     sizeVariantMixin(MESSAGE_COMPOSER_SIZE_PRESET),
     componentStyles,
-    // Must come after `componentStyles` — see `ore-input`'s identical ordering note for why
+    // Must come after `componentStyles`: see `ore-input`'s identical ordering note for why
     // (`@layer` precedence is fixed by which layer name is *first* referenced across this whole
     // array; `componentStyles` establishes `refine.base`, which this mixin's `refine.variants`
     // rules need to win over).

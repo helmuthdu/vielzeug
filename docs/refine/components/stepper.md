@@ -21,7 +21,7 @@ Displays progress through a sequence of logical, numbered steps. Renders a seman
 
 </ComponentPreview>
 
-By default, the stepper is display-only — steps before the current `value` are marked completed, the matching step is marked current, and nothing is clickable. Set `clickable` to let users navigate between steps, and listen for `change`:
+By default, the stepper is display-only: steps before the current `value` are marked completed, the matching step is marked current, and nothing is clickable. Set `clickable` to let users navigate between steps, and listen for `change`:
 
 <ComponentPreview>
 
@@ -46,7 +46,7 @@ By default, the stepper is display-only — steps before the current `value` are
 
 ## Linear Navigation
 
-Add `linear` alongside `clickable` to restrict navigation to completed steps and the current step — steps ahead of the current one render but cannot be clicked or keyboard-focused until the user reaches them.
+Add `linear` alongside `clickable` to restrict navigation to completed steps and the current step: steps ahead of the current one render but cannot be clicked or keyboard-focused until the user reaches them.
 
 <ComponentPreview center>
 
@@ -157,7 +157,7 @@ Mark a step `error` to flag a problem that needs attention, or `disabled` to rem
 
 ## Orientation (Desktop & Mobile)
 
-`orientation="horizontal"` (the default) suits wide desktop layouts. Switch to `orientation="vertical"` for narrow viewports, sidebars, or mobile wizard flows — the connector line moves below each indicator instead of between them.
+`orientation="horizontal"` (the default) suits wide desktop layouts. Switch to `orientation="vertical"` for narrow viewports, sidebars, or mobile wizard flows: the connector line moves below each indicator instead of between them.
 
 <ComponentPreview center>
 
@@ -193,7 +193,7 @@ applyOrientation();
 
 ## Feedback After a Step Completes
 
-`ore-stepper` only handles step navigation — for a transient status message after an async action (e.g. "Shipping details saved"), compose it with `ore-alert` or `ore-toast` alongside the stepper rather than looking for a stepper-owned message prop:
+`ore-stepper` only handles step navigation: for a transient status message after an async action (e.g. "Shipping details saved"), compose it with `ore-alert` or `ore-toast` alongside the stepper rather than looking for a stepper-owned message prop:
 
 ```html
 <ore-stepper id="wizard" value="shipping" clickable>
@@ -222,12 +222,12 @@ applyOrientation();
 
 | Attribute          | Type                                                                      | Default      | Description                                                                             |
 | ------------------ | -------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------- |
-| `value`             | `string`                                                                    | —            | The `value` of the currently active step                                                  |
+| `value`             | `string`                                                                    | N/A | The `value` of the currently active step                                                  |
 | `clickable`         | `boolean`                                                                   | `false`      | Allow clicking/focusing steps to navigate. Off by default (pure progress display)         |
 | `linear`            | `boolean`                                                                   | `false`      | Restrict navigation to completed steps and the current step                               |
-| `disabled`          | `boolean`                                                                   | `false`      | Disables the whole stepper — no step is navigable regardless of `clickable`               |
-| `orientation`       | `'horizontal' \| 'vertical'`                                               | `'horizontal'` | Layout direction — vertical suits mobile/narrow layouts                                  |
-| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`  | —            | Theme color for the current/completed step indicators                                     |
+| `disabled`          | `boolean`                                                                   | `false`      | Disables the whole stepper: no step is navigable regardless of `clickable`               |
+| `orientation`       | `'horizontal' \| 'vertical'`                                               | `'horizontal'` | Layout direction: vertical suits mobile/narrow layouts                                  |
+| `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`  | N/A | Theme color for the current/completed step indicators                                     |
 | `size`              | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`       | Component size                                                                             |
 | `label`             | `string`                                                                    | `'Progress'` | `aria-label` for the nav landmark                                                          |
 
@@ -255,12 +255,12 @@ applyOrientation();
 
 | Attribute   | Type      | Default | Description                                                                    |
 | ----------- | --------- | ------- | -------------------------------------------------------------------------------- |
-| `value`     | `string`  | —       | Unique identifier, matches the parent `ore-stepper`'s `value` attribute (required) |
+| `value`     | `string`  | N/A | Unique identifier, matches the parent `ore-stepper`'s `value` attribute (required) |
 | `disabled`  | `boolean` | `false` | Removes this step from navigation entirely                                       |
 | `error`     | `boolean` | `false` | Marks the step as failed/invalid                                                  |
 | `optional`  | `boolean` | `false` | Renders an "(optional)" hint next to the label                                    |
 
-`current`, `completed`, `navigable`, `index`, and `total` are read-only — derived from this step's position relative to the parent `ore-stepper`'s `value`, `clickable`, and `linear`, and reflected onto this element for CSS/inspection only. `color`, `size`, and `orientation` are also inherited from the parent when nested inside one (overriding any value set directly), but remain independently settable for a standalone `ore-step`.
+`current`, `completed`, `navigable`, `index`, and `total` are read-only: derived from this step's position relative to the parent `ore-stepper`'s `value`, `clickable`, and `linear`, and reflected onto this element for CSS/inspection only. `color`, `size`, and `orientation` are also inherited from the parent when nested inside one (overriding any value set directly), but remain independently settable for a standalone `ore-step`.
 
 **`ore-step`** Slots
 
@@ -274,6 +274,6 @@ applyOrientation();
 
 The stepper renders a `<nav>` landmark (labeled via `label`, default `"Progress"`) containing an `<ol>` of `ore-step` items, conveying sequence to screen readers. The step matching the current `value` receives `aria-current="step"`.
 
-When `clickable` is set, each navigable step renders as a real `<button>` with roving `tabindex` — arrow keys (Left/Right for horizontal, Up/Down for vertical) move focus and immediately activate the target step, `Home`/`End` jump to the first/last navigable step, and `Enter`/`Space` re-activates the focused step. Disabled steps, and — when `linear` is set — steps beyond the current one, are skipped entirely by keyboard navigation and are not clickable. When `clickable` is not set, steps render as static (non-interactive) content for pure progress display.
+When `clickable` is set, each navigable step renders as a real `<button>` with roving `tabindex`: arrow keys (Left/Right for horizontal, Up/Down for vertical) move focus and immediately activate the target step, `Home`/`End` jump to the first/last navigable step, and `Enter`/`Space` re-activates the focused step. Disabled steps, and, when `linear` is set: steps beyond the current one, are skipped entirely by keyboard navigation and are not clickable. When `clickable` is not set, steps render as static (non-interactive) content for pure progress display.
 
 Each step's accessible name includes its position ("Step 2 of 4") and state ("completed", "current step", or "error") via visually-hidden text, in addition to its visible label and description.

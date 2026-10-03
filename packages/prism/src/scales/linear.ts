@@ -36,7 +36,7 @@ function niceRange(min: number, max: number, tickCount: number): [number, number
 
 export function linearScale(config: LinearScaleConfig): Scale<number> {
   // Every method below closes over `config`/these helpers directly instead of reading
-  // `this` — the returned object stays fully functional when destructured, e.g.
+  // `this`: the returned object stays fully functional when destructured, e.g.
   // `const { map } = linearScale(cfg)`.
   const getDomain = (): [number, number] =>
     config.nice === false ? config.domain : niceRange(config.domain[0], config.domain[1], 10);

@@ -2,7 +2,7 @@ import { SigilUnsupportedError } from './errors';
 import type { QrCanvasOptions, QrMatrix } from './types';
 
 /**
- * Canvas rendering — the only DOM-touching output path.
+ * Canvas rendering: the only DOM-touching output path.
  * Resizes the canvas to `(size + 2*margin) * scale` CSS pixels, backing-store
  * scaled by `devicePixelRatio`, and paints one `fillRect` per dark module.
  * Returns the CSS pixel size so callers can size wrappers.

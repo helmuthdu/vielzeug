@@ -98,7 +98,7 @@ describe('createCheckable', () => {
 
       ctrl.toggle(new Event('click'));
       expect(groupToggle).toHaveBeenCalledWith('on', expect.any(Event));
-      // local checked stays false — group owns the state
+      // local checked stays false: group owns the state
       expect(ctrl.checked.value).toBe(false);
     });
   });
@@ -231,7 +231,7 @@ describe('createCheckable', () => {
       const ctrl = createCheckable(options);
 
       // Before any interaction, `options.checked` hasn't been contaminated by the click-driven
-      // attribute reflection yet — an async-loaded default arriving after mount is still a
+      // attribute reflection yet: an async-loaded default arriving after mount is still a
       // legitimate "current default" to resync from, same as `createTextField`.
       checked.value = true;
       expect(ctrl.checked.value).toBe(true);
@@ -240,15 +240,15 @@ describe('createCheckable', () => {
       expect(ctrl.checked.value).toBe(true);
     });
 
-    it('freezes the reset target at the first interaction — later programmatic changes stop moving it', () => {
+    it('freezes the reset target at the first interaction: later programmatic changes stop moving it', () => {
       const checked = signal(false);
       const { options } = makeOptions({ checked });
       const ctrl = createCheckable(options);
 
-      ctrl.toggle(new Event('click')); // first interaction — freezes the reset target at `false`
+      ctrl.toggle(new Event('click')); // first interaction: freezes the reset target at `false`
 
       // Unlike `createTextField`, changing the source option *after* interaction does not move
-      // the reset target — `options.checked` gets rewritten by every click (via the host
+      // the reset target: `options.checked` gets rewritten by every click (via the host
       // attribute reflection), so it can't double as "the default to revert to" anymore.
       checked.value = true;
       expect(ctrl.checked.value).toBe(true);

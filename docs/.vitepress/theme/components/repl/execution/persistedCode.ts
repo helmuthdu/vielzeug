@@ -1,7 +1,7 @@
 /**
  * Wraps localStorage access for the editor's per-library "last edited code" persistence.
  * `localStorage` can throw (Safari private mode, storage quota exceeded, disabled storage
- * in embedded contexts) — every call site used to inline its own try/catch-less call, so a
+ * in embedded contexts): every call site used to inline its own try/catch-less call, so a
  * throw during `resetEditor()`/`clearEditor()` would surface as an unhandled error instead
  * of just... not persisting. Persistence is a nice-to-have here, never worth crashing over.
  */

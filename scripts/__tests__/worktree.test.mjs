@@ -107,9 +107,9 @@ describe('describeCoupling() / isIndependent() / formatDep()', () => {
 });
 
 // Flag parsing itself (--branch=<name>, bare --force) is covered by scripts/lib/__tests__/cli.test.mjs
-// — worktree.mjs's own main() just wires parseArgs()'s output into cmdAdd(), tested below.
+//: worktree.mjs's own main() just wires parseArgs()'s output into cmdAdd(), tested below.
 
-describe('cmdAdd() — dependency-graph gating, with a fake runner (no real git/rush spawned)', () => {
+describe('cmdAdd(): dependency-graph gating, with a fake runner (no real git/rush spawned)', () => {
   function fakeRun() {
     const calls = [];
     const run = (cmd, args, cwd) => calls.push({ args, cmd, cwd });
@@ -178,7 +178,7 @@ describe('cmdAdd() — dependency-graph gating, with a fake runner (no real git/
   });
 });
 
-describe('cmdList() / cmdRemove() — thin wrappers over the injected runner', () => {
+describe('cmdList() / cmdRemove(): thin wrappers over the injected runner', () => {
   it('cmdList runs `git worktree list`', () => {
     const calls = [];
     cmdList({ run: (cmd, args) => calls.push({ args, cmd }) });

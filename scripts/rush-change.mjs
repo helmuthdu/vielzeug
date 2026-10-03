@@ -8,7 +8,7 @@
  * Example:
  *   node scripts/rush-change.mjs orbit patch "fix: stop redundant DOM reads in hot path"
  *
- * The type only picks the CHANGELOG section the message renders under — versions are CalVer
+ * The type only picks the CHANGELOG section the message renders under: versions are CalVer
  * lockstep trains (see RELEASE.md), so it never affects the version number.
  *
  * Why not `rush change --bulk`?
@@ -62,7 +62,7 @@ if (isMain(import.meta.url)) {
       const filepath = writeChangeFile(name, type, message);
       console.log(`Written: ${path.relative(ROOT, filepath)}`);
     } catch (err) {
-      console.error(err); // consistent with every other script's isMain catch — see scripts/AGENTS.md
+      console.error(err); // consistent with every other script's isMain catch: see scripts/AGENTS.md
       process.exitCode = 1;
     }
   }

@@ -11,7 +11,7 @@ import type { Router } from './router';
  * phase route is a revisit request (the consumer owns its confirm dialog) or an impossible
  * jump, which bounces back to the actual phase. The bare detail URL canonicalizes onto the
  * current phase's route, so every arrival is shareable and reload-safe. The state machine
- * stays the sole source of truth — `canRevisit` decides which mismatched routes may ask and
+ * stays the sole source of truth: `canRevisit` decides which mismatched routes may ask and
  * which bounce.
  */
 export interface PhaseMirrorOptions<Phase extends string> {
@@ -25,7 +25,7 @@ export interface PhaseMirrorOptions<Phase extends string> {
   readonly phaseRoute: string;
   /** Valid phase values; the route segment is validated against this list. */
   readonly phases: readonly Phase[];
-  /** Runs the revisit the URL asked for — the consumer owns its confirm dialog and command. */
+  /** Runs the revisit the URL asked for: the consumer owns its confirm dialog and command. */
   readonly requestRevisit: (phase: Phase) => void;
   /**
    * Any wayfinder router instance. The mirror only navigates by route name with runtime-shaped
@@ -37,7 +37,7 @@ export interface PhaseMirrorOptions<Phase extends string> {
 }
 
 export interface PhaseMirror<Phase extends string> {
-  /** Bounces a mismatched phase route back to the domain's actual phase — the dialog cancel path. */
+  /** Bounces a mismatched phase route back to the domain's actual phase: the dialog cancel path. */
   readonly bounceIfMismatched: () => void;
   /** Stops mirroring; the URL keeps whatever the last navigation left behind. */
   readonly dispose: () => void;
@@ -45,7 +45,7 @@ export interface PhaseMirror<Phase extends string> {
   readonly followPhase: (phase: string) => void;
   /** Anchor href for one phase step; `#` while the subject is missing. */
   readonly phaseHref: (phase: string) => string;
-  /** The phases the current phase may legally revisit — the tracker links exactly these. */
+  /** The phases the current phase may legally revisit: the tracker links exactly these. */
   readonly revisitPhases: Readable<readonly Phase[]>;
   /** The phase segment of the current route, when it names a valid phase. */
   readonly routePhase: Readable<Phase | null>;
@@ -78,7 +78,7 @@ export function createPhaseMirror<Phase extends string>(options: PhaseMirrorOpti
       () => {
         const id = options.subjectId.value;
         const phase = options.currentPhase.value;
-        // The URL names a different subject of the same flow — a cross-instance navigation.
+        // The URL names a different subject of the same flow: a cross-instance navigation.
         // Canonicalizing it here would stomp the arrival onto this mirror's own subject;
         // the arriving view's own mirror takes over from here.
         const urlSubjectId = routeParams.value.id;
@@ -95,17 +95,17 @@ export function createPhaseMirror<Phase extends string>(options: PhaseMirrorOpti
     }),
     // URL → domain: a mismatched or invalid phase route revisits (through the consumer's
     // dialog) or bounces. Reacts to the URL itself and to the domain loading (null → value,
-    // which re-checks the mismatch a cold deep link brought in) — never to domain-led changes:
+    // which re-checks the mismatch a cold deep link brought in): never to domain-led changes:
     // an advance or a confirmed revisit swaps the domain before the URL catches up, and reading
     // the not-yet-updated URL as a revisit request would open the dialog on every advance.
     watch(
       () => [routePhase.value, options.currentPhase.value] as const,
       ([phase, current], previous) => {
-        // The user left the stepped flow entirely — the mirror stops following. Ripple
+        // The user left the stepped flow entirely: the mirror stops following. Ripple
         // watchers fire synchronously on route change (before the component unmounts), so
         // a departure reads as "phase vanished" and would bounce back without this guard.
         if (routeName.value !== options.phaseRoute && routeName.value !== options.detailRoute) return;
-        // The URL names a different subject of the same flow — a cross-instance navigation,
+        // The URL names a different subject of the same flow: a cross-instance navigation,
         // not a phase mismatch. The old mirror's component unmounts right after this.
         const urlSubjectId = routeParams.value.id;
         if (typeof urlSubjectId === 'string' && urlSubjectId !== options.subjectId.value) return;

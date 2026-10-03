@@ -18,9 +18,9 @@ sandbox.onMessage((msg) => {
 })
 
 await sandbox.render('<h1>Hello from the sandbox</h1><p>This content runs in an isolated iframe.</p>')
-console.log('Sandbox rendered — ready resolved')
+console.log('Sandbox rendered: ready resolved')
 
 sandbox.dispose()
-console.log('Disposed — disposalSignal aborted?', sandbox.disposalSignal.aborted)`,
+console.log('Disposed: disposalSignal aborted?', sandbox.disposalSignal.aborted)`,
   name: 'Render into an Iframe',
 };

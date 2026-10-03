@@ -91,7 +91,7 @@ const stop = search.tap((event) => {
 
 ## Scout 2.4 Changes
 
-Scout 2.4 removes the `tap()` observability layer from `SearchState` — it duplicated `@vielzeug/ripple` signal subscriptions that were already available via `search.query.subscribe()`, `search.isSearching.subscribe()`, and `search.results.subscribe()`.
+Scout 2.4 removes the `tap()` observability layer from `SearchState`: it duplicated `@vielzeug/ripple` signal subscriptions that were already available via `search.query.subscribe()`, `search.isSearching.subscribe()`, and `search.results.subscribe()`.
 
 Removed exports:
 
@@ -140,13 +140,13 @@ if (err instanceof ScoutError) { ... }
 
 ### Use `index.revision` for cache invalidation
 
-The internal `_index-state` side-channel is removed. `ScoutIndex` now exposes `revision` as a readonly property — a monotonically increasing counter incremented after every changed mutation. Use it directly when caching search results outside the index.
+The internal `_index-state` side-channel is removed. `ScoutIndex` now exposes `revision` as a readonly property: a monotonically increasing counter incremented after every changed mutation. Use it directly when caching search results outside the index.
 
 ```ts
-// Scout 2 — internal side-channel (no public API)
+// Scout 2: internal side-channel (no public API)
 // toSearchMatcher() used a private WeakMap to track index revisions
 
-// Scout 3 — public readonly property
+// Scout 3: public readonly property
 const revision = index.revision;
 ```
 

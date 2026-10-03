@@ -1,9 +1,9 @@
 /**
- * Real-browser tests for `ore-button` — a11y checks and CSS layout regressions that jsdom
+ * Real-browser tests for `ore-button`: a11y checks and CSS layout regressions that jsdom
  * can't evaluate (no CSS box model, `@layer` blocks silently dropped). Complements
  * `button.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

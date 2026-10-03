@@ -1,5 +1,5 @@
 /**
- * Nested route structure — compilation, naming, middleware ordering,
+ * Nested route structure: compilation, naming, middleware ordering,
  * and per-node data loaders.
  */
 import { createMemoryHistory, createRouter } from '../';

@@ -2,7 +2,7 @@
   "name": "vielzeug-voyage-demo",
   "version": "0.0.0",
   "private": true,
-  "description": "Vielzeug Voyage — a fictional travel planning and booking demo built with Refine.",
+  "description": "Vielzeug Voyage: a fictional travel planning and booking demo built with Refine.",
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",

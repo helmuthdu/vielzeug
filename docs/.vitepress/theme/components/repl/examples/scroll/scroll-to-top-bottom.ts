@@ -57,6 +57,6 @@ btnBottom.addEventListener('click', () => {
   virt.scrollToBottom({ behavior: 'smooth' })
 })
 
-console.log(\`✓ \${ITEM_COUNT} rows — use the buttons to jump to top or bottom\`)`,
+console.log(\`✓ \${ITEM_COUNT} rows: use the buttons to jump to top or bottom\`)`,
   name: 'Virtualizer - scrollToTop / scrollToBottom',
 };

@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Counter with Reset'
+title: 'Clockwork Examples: Counter with Reset'
 description: 'Update replacement context through self-transitions.'
 ---
 

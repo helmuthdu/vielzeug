@@ -61,7 +61,7 @@ describe('dispatch()', () => {
 
     const event = handler.mock.calls[0][0] as MouseEvent;
 
-    // Synthetic dispatch never carries the browser's trust flag — behavioral
+    // Synthetic dispatch never carries the browser's trust flag: behavioral
     // confidence belongs to Playwright, not this primitive.
     expect(event.isTrusted).toBe(false);
   });

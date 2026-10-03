@@ -1,5 +1,5 @@
 ---
-title: Familiar — Examples
+title: 'Familiar: Examples'
 description: Module-worker recipes for familiar.
 ---
 

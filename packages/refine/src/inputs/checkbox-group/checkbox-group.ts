@@ -42,7 +42,7 @@ export const CHECKBOX_GROUP_CTX = createContext<CheckboxGroupContext>('CheckboxG
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type OreCheckboxGroupProps = {
-  /** Theme color — propagated to all child ore-checkbox elements */
+  /** Theme color: propagated to all child ore-checkbox elements */
   color?: ThemeColor;
   /** Disable all checkboxes in the group */
   disabled?: boolean;
@@ -58,7 +58,7 @@ export type OreCheckboxGroupProps = {
   orientation?: 'vertical' | 'horizontal';
   /** Mark the group as required */
   required?: boolean;
-  /** Size — propagated to all child ore-checkbox elements */
+  /** Size: propagated to all child ore-checkbox elements */
   size?: ComponentSize;
   /** Comma-separated list of currently checked values */
   values?: string;
@@ -118,7 +118,7 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
     name: prop.string(),
     orientation: prop.string('vertical'),
     required: prop.bool(false),
-    // Not auto-reflected (`reflect: false`) — the derived, interaction-updated selection
+    // Not auto-reflected (`reflect: false`): the derived, interaction-updated selection
     // (`choice.formValue`) is the single writer for this attribute, via `bind()` below;
     // letting `prop.string()`'s own default reflection also write the raw incoming value
     // would leave two effects racing to set the same attribute from different sources.
@@ -240,7 +240,7 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
 
     // Reactive, not a one-off `el.setAttribute()` inside the click handler: the host's `values`
     // attribute must stay in sync with the selection regardless of *why* it changed (a click,
-    // or `reset()` on ancestor form reset — neither of which should need its own copy of this).
+    // or `reset()` on ancestor form reset: neither of which should need its own copy of this).
     bind({ attr: { size: props.size, values: choice.formValue } });
 
     return html`

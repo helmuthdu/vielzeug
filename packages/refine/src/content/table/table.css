@@ -1,14 +1,14 @@
-/* ore-table — shadow DOM (proxy/mirror).
+/* ore-table: shadow DOM (proxy/mirror).
  *
  * Shadow tree (managed by table.ts):
- *   :host                  display:block   — token host (tableBaseMixin)
- *   └─ .scroll-container   overflow:auto   — sticky / max-height context
- *       └─ table           display:table   — native table semantics
- *           ├─ caption                     — optional caption bar
- *           ├─ thead                       — rows built from ore-tr[head]
- *           ├─ tbody                       — rows built from plain ore-tr
- *           └─ tfoot                       — rows built from ore-tr[foot]
- *               └─ tr > th / td            — mirrored from ore-th / ore-td
+ *   :host                  display:block: token host (tableBaseMixin)
+ *   └─ .scroll-container   overflow:auto: sticky / max-height context
+ *       └─ table           display:table: native table semantics
+ *           ├─ caption: optional caption bar
+ *           ├─ thead: rows built from ore-tr[head]
+ *           ├─ tbody: rows built from plain ore-tr
+ *           └─ tfoot: rows built from ore-tr[foot]
+ *               └─ tr > th / td: mirrored from ore-th / ore-td
  *
  * Light DOM (consumer):
  *   <ore-tr head><ore-th>…</ore-th></ore-tr>
@@ -19,7 +19,7 @@
  * table width/collapse, loading state, size variants, fullwidth, bordered,
  * and sticky scroll-container activation.
  * This file handles: caption, section backgrounds, body tr/th/td, and variants.
- * No ::slotted() needed — the shadow tree owns all rendered th/td elements.
+ * No ::slotted() needed: the shadow tree owns all rendered th/td elements.
  */
 
 @layer refine.base {
@@ -128,7 +128,7 @@
     background: var(--table-sticky-header-bg, color-mix(in oklch, var(--_header-bg) 94%, transparent));
 
     /* border-collapse merges the bottom border into the cell below, which
-       scrolls away under the sticky header. Use box-shadow instead — it
+       scrolls away under the sticky header. Use box-shadow instead: it
        travels with the element regardless of border-collapse. */
     box-shadow: inset 0 calc(var(--border) * -1) 0 var(--_border-color);
     backdrop-filter: blur(var(--table-sticky-blur, var(--blur-md))) saturate(140%);

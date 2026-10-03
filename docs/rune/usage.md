@@ -1,5 +1,5 @@
 ---
-title: Rune — Usage Guide
+title: 'Rune: Usage Guide'
 description: Configuration, transports, scoped loggers, lazy bindings, timers, groups, and best practices for Rune.
 ---
 
@@ -122,7 +122,7 @@ const AppLog = log.child({
   // pass transports: [] to disable all, or transports: [...] to replace
 });
 
-// Individual getters — no config snapshot
+// Individual getters: no config snapshot
 console.log(AppLog.logLevel); // 'warn'
 console.log(AppLog.namespace); // 'App'
 console.log(AppLog.transports); // [...]
@@ -227,7 +227,7 @@ const log = createLogger().withBindings({
 });
 
 log.debug('state trace'); // snapshot() only called here
-log.warn('cache miss'); // snapshot() NOT called — warn doesn't need it
+log.warn('cache miss'); // snapshot() NOT called: warn doesn't need it
 ```
 
 Lazy bindings are resolved on every emitted call, not cached:
@@ -296,7 +296,7 @@ await log.groupCollapsed('Job', async () => {
   log.info('Done');
 });
 
-// Gate the group header on a log level — suppresses when logLevel is above 'debug'
+// Gate the group header on a log level: suppresses when logLevel is above 'debug'
 log.group(
   'verbose trace',
   () => {

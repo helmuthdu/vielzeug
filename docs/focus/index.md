@@ -1,5 +1,5 @@
 ---
-title: Focus — Navigation and restoration
+title: 'Focus: Navigation and restoration'
 description: Framework-neutral list navigation and focus restoration primitives.
 package: focus
 category: input
@@ -87,12 +87,12 @@ container.removeEventListener('keydown', onKeydown);
 
 <div class="features-grid">
 
-- `createListNavigation()` — pure composite navigation with explicit handled/change results
-- `createGridNavigation()` — two-dimensional arrow-key navigation with fixed or measured columns
-- Orientation and direction support — vertical/horizontal/both with LTR/RTL defaults
-- Dynamic item queries — disabled filtering and loop control
-- Optional typeahead — label-based navigation in key-driven lists
-- `captureFocus()`, `restoreFocus()`, and `rescueFocus()` — explicit return-focus and unmount-rescue helpers
+- `createListNavigation()`: pure composite navigation with explicit handled/change results
+- `createGridNavigation()`: two-dimensional arrow-key navigation with fixed or measured columns
+- Orientation and direction support: vertical/horizontal/both with LTR/RTL defaults
+- Dynamic item queries: disabled filtering and loop control
+- Optional typeahead: label-based navigation in key-driven lists
+- `captureFocus()`, `restoreFocus()`, and `rescueFocus()`: explicit return-focus and unmount-rescue helpers
 
 </div>
 
@@ -111,9 +111,9 @@ container.removeEventListener('keydown', onKeydown);
 
 <div class="see-also">
 
-- [Refine](/refine/) — component primitives integrating list navigation.
-- [Keymap](/keymap/) — global and scoped keyboard shortcuts.
-- [Ore](/ore/) — lifecycle ownership used by consumer components.
+- [Refine](/refine/): component primitives integrating list navigation.
+- [Keymap](/keymap/): global and scoped keyboard shortcuts.
+- [Ore](/ore/): lifecycle ownership used by consumer components.
 
 </div>
 

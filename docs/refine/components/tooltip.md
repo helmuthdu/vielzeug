@@ -83,7 +83,7 @@ Prefer `variant="light"` on dark backgrounds.
 
 ## Show Delay
 
-Use `delay` (milliseconds) to add a pause before the tooltip shows — useful for dense UIs. A value of `400`–`600`ms works well in action-dense toolbars to avoid visual noise on quick cursor sweeps.
+Use `delay` (milliseconds) to add a pause before the tooltip shows: useful for dense UIs. A value of `400`–`600`ms works well in action-dense toolbars to avoid visual noise on quick cursor sweeps.
 
 <ComponentPreview>
 
@@ -97,7 +97,7 @@ Use `delay` (milliseconds) to add a pause before the tooltip shows — useful fo
 
 ## Rich Content via Slot
 
-For complex tooltip content, use the `content` named slot. Keep tooltip text short — one sentence or a keyboard shortcut label. Do not add interactive elements (buttons, links) inside the tooltip bubble; tooltips are not focusable.
+For complex tooltip content, use the `content` named slot. Keep tooltip text short: one sentence or a keyboard shortcut label. Do not add interactive elements (buttons, links) inside the tooltip bubble; tooltips are not focusable.
 
 <ComponentPreview>
 
@@ -150,11 +150,11 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 | `placement`   | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges)                                                |
 | `trigger`     | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                                                                    |
 | `delay`       | `number`                                 | `0`             | Show delay in milliseconds                                                                          |
-| `close-delay` | `number`                                 | `0`             | Hide delay in milliseconds — useful to keep the tooltip open when moving between trigger and bubble |
-| `open`        | `boolean`                                | —               | Controlled open state; when set, trigger events are ignored                                         |
+| `close-delay` | `number`                                 | `0`             | Hide delay in milliseconds: useful to keep the tooltip open when moving between trigger and bubble |
+| `open`        | `boolean`                                | N/A | Controlled open state; when set, trigger events are ignored                                         |
 | `default-open`| `boolean`                                | `false`         | Initial visibility when `open` is not provided                                                       |
-| `variant`     | `'dark' \| 'light'`                      | —               | Visual style (`dark` appearance is the unset default)                                               |
-| `size`        | `'sm' \| 'md' \| 'lg'`                   | —               | Tooltip bubble size (medium appearance is the unset default)                                        |
+| `variant`     | `'dark' \| 'light'`                      | N/A | Visual style (`dark` appearance is the unset default)                                               |
+| `size`        | `'sm' \| 'md' \| 'lg'`                   | N/A | Tooltip bubble size (medium appearance is the unset default)                                        |
 | `disabled`    | `boolean`                                | `false`         | Disable the tooltip entirely                                                                        |
 
 ### Slots
@@ -180,4 +180,4 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 
 The tooltip component follows WAI-ARIA best practices. The tooltip bubble has `role="tooltip"`, and the trigger element is automatically augmented with `aria-describedby` pointing to the tooltip when the `focus` trigger is active. Pressing `Escape` while a tooltip is visible dismisses it.
 
-Avoid using tooltips to hold essential information — if the user must see it to act, put it in helper text or an alert instead. Use `trigger="focus"` (or `"hover,focus"`) for form field hints so keyboard-only users see them.
+Avoid using tooltips to hold essential information: if the user must see it to act, put it in helper text or an alert instead. Use `trigger="focus"` (or `"hover,focus"`) for form field hints so keyboard-only users see them.

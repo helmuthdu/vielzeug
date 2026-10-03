@@ -1,5 +1,5 @@
 ---
-title: Illusionist — Migration Guide
+title: 'Illusionist: Migration Guide'
 description: Migrate to Illusionist 3 resource-free instances and validated custom random sources.
 ---
 
@@ -11,7 +11,7 @@ Illusionist 3.1 removes the per-category import subpaths. Every category functio
 
 ### Category subpaths removed
 
-`@vielzeug/illusionist/seed`, `/person`, `/internet`, `/commerce`, `/date`, `/finance`, `/location`, `/lorem`, and `/system` are gone. Import from the root instead — the symbols are identical:
+`@vielzeug/illusionist/seed`, `/person`, `/internet`, `/commerce`, `/date`, `/finance`, `/location`, `/lorem`, and `/system` are gone. Import from the root instead: the symbols are identical:
 
 ```ts
 // Before

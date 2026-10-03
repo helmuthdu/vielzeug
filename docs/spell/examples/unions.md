@@ -1,5 +1,5 @@
 ---
-title: 'Spell Examples — Unions, Intersections, and Variants'
+title: 'Spell Examples: Unions, Intersections, and Variants'
 description: 'Compose multiple spell schemas with unions, intersects, and discriminated variants.'
 ---
 

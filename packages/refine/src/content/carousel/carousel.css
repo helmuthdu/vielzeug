@@ -38,7 +38,7 @@
     pointer-events: none;
   }
 
-  /* Controls rendered standalone (no indicators bar) — needs own positioning + backdrop. */
+  /* Controls rendered standalone (no indicators bar): needs own positioning + backdrop. */
   :host > .controls {
     position: absolute;
     inset-block-end: var(--size-3);

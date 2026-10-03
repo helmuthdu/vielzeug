@@ -1,5 +1,5 @@
 ---
-title: 'Ripple Examples — Watch Selected Value'
+title: 'Ripple Examples: Watch Selected Value'
 description: React only when a selected derived value changes.
 ---
 

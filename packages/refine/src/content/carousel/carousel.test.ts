@@ -545,7 +545,7 @@ describe('ore-carousel', () => {
       expect(all[3]?.hasAttribute('data-gallery-visible')).toBe(false);
     });
 
-    it('gallery: at index 0 (first), no wrap-around — only active + next visible', async () => {
+    it('gallery: at index 0 (first), no wrap-around: only active + next visible', async () => {
       const fourSlides = `
         <ore-carousel-slide>S1</ore-carousel-slide>
         <ore-carousel-slide>S2</ore-carousel-slide>
@@ -565,7 +565,7 @@ describe('ore-carousel', () => {
       expect(all[3]?.hasAttribute('data-gallery-visible')).toBe(false);
     });
 
-    it('gallery: at last index, no wrap-around — only prev + active visible', async () => {
+    it('gallery: at last index, no wrap-around: only prev + active visible', async () => {
       const fourSlides = `
         <ore-carousel-slide>S1</ore-carousel-slide>
         <ore-carousel-slide>S2</ore-carousel-slide>
@@ -712,7 +712,7 @@ describe('ore-carousel', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      // Write the same value back — should not trigger a navigation.
+      // Write the same value back: should not trigger a navigation.
       (fixture.element as HTMLElement & { 'slide-index': number })['slide-index'] = 1;
       await fixture.flush();
 

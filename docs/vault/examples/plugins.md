@@ -1,5 +1,5 @@
 ---
-title: 'Vault Examples — Validators and Error Handling'
+title: 'Vault Examples: Validators and Error Handling'
 description: 'Codecs, migration, and error handling patterns for @vielzeug/vault.'
 ---
 
@@ -109,11 +109,11 @@ try {
 
 - Parser schemas validate writes and persisted reads. Transforming codecs validate writes with `decode(encode(value))` and decode persisted values before they enter typed code.
 - IndexedDB codecs must preserve declared index field names and values in encoded objects.
-- The `migrate` callback on IndexedDB runs synchronously inside `onupgradeneeded`. Do not call `await` or open a second transaction inside it — IDB will throw. Errors thrown from `migrate` surface as `VaultMigrationError` on the first operation.
+- The `migrate` callback on IndexedDB runs synchronously inside `onupgradeneeded`. Do not call `await` or open a second transaction inside it: IDB will throw. Errors thrown from `migrate` surface as `VaultMigrationError` on the first operation.
 - A Web Storage write that exceeds the browser quota always rejects with `VaultQuotaError`; the failed write is simply not persisted.
 
 ### Related
 
 - [Reactive Tables](./reactive.md)
 - [Spell](/spell/)
-- [API Reference — Types](/vault/api.md#types)
+- [API Reference: Types](/vault/api.md#types)

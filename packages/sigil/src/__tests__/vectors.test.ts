@@ -8,7 +8,7 @@ import { encodeQr } from '../encode';
  * version 1-Q, alphanumeric) follows the published ISO tutorial math;
  * '01234567' at 1-M exercises numeric mode and its count indicator.
  * Matrix-level correctness is proven end-to-end by the jsQR decode oracle
- * in `roundtrip.test.ts` — here we pin the intermediate codeword stream.
+ * in `roundtrip.test.ts`: here we pin the intermediate codeword stream.
  */
 
 describe('vectors', () => {

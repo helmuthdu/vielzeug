@@ -36,7 +36,7 @@ export const renderHelperRegion = (
 };
 
 /**
- * Inline error/success status icon shown inside a field — identical markup across
+ * Inline error/success status icon shown inside a field: identical markup across
  * `ore-input`, `ore-textarea`, and `ore-message-composer` (previously hand-duplicated in all
  * three, down to the same derived-signal names).
  */
@@ -58,10 +58,10 @@ export const renderStatusIcon = (errorText: Readable<string>) => html`
 `;
 
 /**
- * Character counter + separate helper/error text regions below a field — identical across
+ * Character counter + separate helper/error text regions below a field: identical across
  * `ore-textarea` and `ore-message-composer` (kept out of `ore-input`, which slots its
  * helper/error content and drives its counter off a different data-attribute scheme via its
- * own `char-counter` part — a genuinely different shape, not worth forcing into this one).
+ * own `char-counter` part: a genuinely different shape, not worth forcing into this one).
  */
 export const renderFieldStatusRegion = (tf: {
   assistiveId: string;

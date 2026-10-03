@@ -8,10 +8,10 @@ import { ORE_ERRORS, OreApiError } from './errors';
  * The `setup` function runs for each connection and returns an `HTMLResult`.
  * Disconnecting disposes its state; reconnecting rebuilds it. All reactive
  * behaviour within a connection is expressed through directives inside the
- * template — not by re-evaluating setup itself.
+ * template: not by re-evaluating setup itself.
  *
- * Everything besides `props` — lifecycle hooks, host bindings, context, slots,
- * emit — is a free function imported from `@vielzeug/ore` and called directly
+ * Everything besides `props`: lifecycle hooks, host bindings, context, slots,
+ * emit: is a free function imported from `@vielzeug/ore` and called directly
  * from inside `setup()` (or from a composable it calls):
  *
  * ```ts

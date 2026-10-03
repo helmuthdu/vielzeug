@@ -1,5 +1,5 @@
 ---
-title: Necromancer — Lifecycle-owned DOM animations
+title: 'Necromancer: Lifecycle-owned DOM animations'
 description: Lifecycle-owned Web Animations API primitives for native playback, groups, and additive FLIP transitions.
 package: necromancer
 category: ui
@@ -86,13 +86,13 @@ animation.dispose();
 
 <div class="features-grid">
 
-- `animate()` — Native element animation with lifecycle ownership and direct native access
-- `animateEach()` — Group ownership with stable keyframe factories and `stagger`
-- `captureLayout()` — One-shot FLIP transition with additive `translate` (position) and `scale` (size)
-- `motion` — `'system'` reduced-motion support with explicit reduced outcomes
-- Native timing — Omitted timing fields retain Web Animations API behavior
-- `signal` — Abort a handle from its parent lifecycle
-- `dispose()` — Idempotent cleanup with `[Symbol.dispose]()`
+- `animate()`: Native element animation with lifecycle ownership and direct native access
+- `animateEach()`: Group ownership with stable keyframe factories and `stagger`
+- `captureLayout()`: One-shot FLIP transition with additive `translate` (position) and `scale` (size)
+- `motion`: `'system'` reduced-motion support with explicit reduced outcomes
+- Native timing: Omitted timing fields retain Web Animations API behavior
+- `signal`: Abort a handle from its parent lifecycle
+- `dispose()`: Idempotent cleanup with `[Symbol.dispose]()`
 
 </div>
 
@@ -115,8 +115,8 @@ Necromancer owns explicit WAAPI keyframes. It does not generate CSS keyframes, o
 
 <div class="see-also">
 
-- [Orbit](/orbit/) — Position floating UI before animating its appearance.
-- [Ore](/ore/) — Own Necromancer handles in a custom element's mount and disposal lifecycle.
+- [Orbit](/orbit/): Position floating UI before animating its appearance.
+- [Ore](/ore/): Own Necromancer handles in a custom element's mount and disposal lifecycle.
 </div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

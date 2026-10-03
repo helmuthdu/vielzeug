@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — getPath'
+title: 'Arsenal Examples: getPath'
 description: 'getPath example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'getPath example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to safely read a deeply nested property from an object using a string path — without writing chained optional chaining or try-catch blocks.
+You need to safely read a deeply nested property from an object using a string path: without writing chained optional chaining or try-catch blocks.
 
 ### Solution
 

@@ -1,5 +1,5 @@
 ---
-title: 'Herald Examples — Standalone entry'
+title: 'Herald Examples: Standalone entry'
 description: 'Standalone entry example for @vielzeug/herald.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Standalone entry example for @vielzeug/herald.'
 
 ### Problem
 
-You want the minimal setup to create a bus, emit a typed event, and receive it in a subscriber — the starting point before adding namespacing, disposal, or error handling.
+You want the minimal setup to create a bus, emit a typed event, and receive it in a subscriber: the starting point before adding namespacing, disposal, or error handling.
 
 ### Solution
 
@@ -26,7 +26,7 @@ bus.emit('message', { body: 'ready', id: 'job-1' });
 
 ### Pitfalls
 
-- Calling `emit()` before any listener is registered silently discards the event. There is no event queue — register listeners before emitting.
+- Calling `emit()` before any listener is registered silently discards the event. There is no event queue: register listeners before emitting.
 - `on()` returns an unsubscribe function. Keep it or pass `{ signal }` when subscription lifetime is owned elsewhere.
 - The type parameter on `createBus<T>()` is compile-time only. Emitting an event name not in `T` is a TypeScript error but has no runtime guard.
 

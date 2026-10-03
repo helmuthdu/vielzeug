@@ -1,5 +1,5 @@
 ---
-title: Ward — Usage Guide
+title: 'Ward: Usage Guide'
 description: Define ordered role, wildcard, attribute, and ownership authorization rules.
 ---
 
@@ -57,7 +57,7 @@ const canPublishOwnPost = predicate.and<Attributes>(
 );
 ```
 
-Conditions are synchronous. A thrown error, Promise, or non-boolean result becomes a `WardConditionError` with the original value in `cause`. Role gating does not need a condition — declare `roles` on the rule.
+Conditions are synchronous. A thrown error, Promise, or non-boolean result becomes a `WardConditionError` with the original value in `cause`. Role gating does not need a condition: declare `roles` on the rule.
 
 ## Bind a principal
 
@@ -74,7 +74,7 @@ permissions.allowedActions({ attributes, resource: 'posts' });
 
 `forPrincipal()` snapshots the principal, roles, and principal attributes. Later caller mutations cannot alter bound decisions.
 
-`allowedActions()` draws from `ward.knownActions` — the exact allow-side actions derived from the compiled rules — and accepts an optional `filter` to narrow the candidates.
+`allowedActions()` draws from `ward.knownActions`: the exact allow-side actions derived from the compiled rules, and accepts an optional `filter` to narrow the candidates.
 
 ## Observe decisions
 

@@ -1,5 +1,5 @@
 ---
-title: Necromancer — Usage Guide
+title: 'Necromancer: Usage Guide'
 description: Animate DOM elements, coordinate groups, and create FLIP transitions with @vielzeug/necromancer.
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: Flux — Usage Guide
+title: 'Flux: Usage Guide'
 description: Create streams, compose operators, consume values safely, and bridge Vielzeug primitives.
 ---
 

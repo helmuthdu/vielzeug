@@ -284,7 +284,7 @@ describe('createBarChart', () => {
 
     const bars = chart.el.querySelectorAll('.prism-bar');
 
-    // S1's negative value is clamped to 0 — a zero-height rect, not a crash or NaN.
+    // S1's negative value is clamped to 0: a zero-height rect, not a crash or NaN.
     expect(Number(bars[0].getAttribute('height'))).toBe(0);
     expect(Number(bars[0].getAttribute('height'))).not.toBeNaN();
     chart.dispose();
@@ -378,7 +378,7 @@ describe('createBarChart', () => {
     });
 
     chart.el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 0, clientY: 0 }));
-    // jsdom has no layout so hit test may not fire — verify no throw
+    // jsdom has no layout so hit test may not fire: verify no throw
     chart.dispose();
   });
 

@@ -10,7 +10,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('debounce — trailing (default)', () => {
+describe('debounce: trailing (default)', () => {
   it('does not invoke immediately', () => {
     const fn = vi.fn();
     const d = debounce(fn, 100);
@@ -91,7 +91,7 @@ describe('debounce — trailing (default)', () => {
   });
 });
 
-describe('debounce — leading only', () => {
+describe('debounce: leading only', () => {
   it('invokes immediately on the first call', () => {
     const fn = vi.fn();
     const d = debounce(fn, 100, { leading: true, trailing: false });
@@ -131,7 +131,7 @@ describe('debounce — leading only', () => {
   });
 });
 
-describe('debounce — leading + trailing', () => {
+describe('debounce: leading + trailing', () => {
   it('fires on both the leading and trailing edges', () => {
     const fn = vi.fn();
     const d = debounce(fn, 100, { leading: true, trailing: true });
@@ -158,7 +158,7 @@ describe('debounce — leading + trailing', () => {
     expect(fn).toHaveBeenLastCalledWith('c');
   });
 
-  it('fires exactly once for a single call — regression for the leading+trailing double-fire bug', () => {
+  it('fires exactly once for a single call: regression for the leading+trailing double-fire bug', () => {
     const fn = vi.fn();
     const d = debounce(fn, 100, { leading: true, trailing: true });
 
@@ -170,7 +170,7 @@ describe('debounce — leading + trailing', () => {
   });
 });
 
-describe('debounce — no-op configuration', () => {
+describe('debounce: no-op configuration', () => {
   it('warns when both leading and trailing are false', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 

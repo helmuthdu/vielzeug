@@ -50,7 +50,7 @@ export type ToastItem = {
   /** Called after the toast is fully dismissed and removed. */
   onDismiss?: () => void;
   /**
-   * Replace a live entry carrying the same message instead of stacking a duplicate —
+   * Replace a live entry carrying the same message instead of stacking a duplicate :
    * repeated bursts update the existing notification and restart its timer.
    */
   replace?: boolean;
@@ -396,7 +396,7 @@ export const TOAST_TAG = 'ore-toast' as const;
  * Notifications render as a vertical list (newest nearest the anchored edge)
  * inside polite and assertive live regions. Entries are keyed by id, so store
  * updates (timer pauses, message updates, phase changes) patch the existing
- * DOM instead of re-creating it — focus, in-flight gestures, and CSS
+ * DOM instead of re-creating it: focus, in-flight gestures, and CSS
  * transitions all survive.
  *
  * @element ore-toast
@@ -459,7 +459,7 @@ define<OreToastProps>(TOAST_TAG, {
 
     /** Timers pause while a top-layer surface (an open dialog, fullscreen) covers the
      *  toasts: the user cannot interact with them, so choices must not expire unseen.
-     *  Any open dialog counts — pausing wrongly is safer than expiring a choice the
+     *  Any open dialog counts: pausing wrongly is safer than expiring a choice the
      *  user could not see. `fullscreenElement` is undefined on engines without the API. */
     const syncTopLayer = (): void => {
       const doc = el.ownerDocument;
@@ -473,7 +473,7 @@ define<OreToastProps>(TOAST_TAG, {
     /** Frame budget for the focus-restore re-check; see the restore block in syncControls. */
     let restoreCheckFrames = 0;
 
-    /** The deepest focused element, piercing shadow roots — document-level targets
+    /** The deepest focused element, piercing shadow roots: document-level targets
      *  retarget to their host, and focusing a host without a tabindex is a no-op. */
     const deepActiveElement = (doc: Document): HTMLElement | null => {
       let active = doc.activeElement as HTMLElement | null;
@@ -502,7 +502,7 @@ define<OreToastProps>(TOAST_TAG, {
       focusPaused.value = false;
       // Focusout fires before the next focusin settles; check after the microtask so a
       // move inside the region keeps the tracked wrapper while leaving clears it. Focus
-      // that fell to `<body>` means the focused node was removed — keep the marker so
+      // that fell to `<body>` means the focused node was removed: keep the marker so
       // the restore in syncControls can hand focus back.
       void Promise.resolve().then(() => {
         const doc = el.ownerDocument;
@@ -512,7 +512,7 @@ define<OreToastProps>(TOAST_TAG, {
 
     /** Escape dismisses the newest dismissible toast when nothing inside the toast region
      *  holds focus (the in-region handler owns that case and stops the event) and no
-     *  top-layer surface is open — those own the Escape key. */
+     *  top-layer surface is open: those own the Escape key. */
     const onDocumentKeydown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape' || event.defaultPrevented || modalPaused.value) return;
       if (focusPaused.value) return;
@@ -747,7 +747,7 @@ define<OreToastProps>(TOAST_TAG, {
       const doc = el.ownerDocument;
 
       // The host mounts with the first toast, so pre-toast focus was never tracked by
-      // the document listener — snapshot where focus sits right now (the control that
+      // the document listener: snapshot where focus sits right now (the control that
       // triggered the toast) as the restore target.
       const beforeFirstToast = deepActiveElement(doc);
       lastExternalFocus = beforeFirstToast !== doc.body ? beforeFirstToast : null;

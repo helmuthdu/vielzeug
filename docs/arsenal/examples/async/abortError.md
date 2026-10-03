@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — abortError'
+title: 'Arsenal Examples: abortError'
 description: 'abortError example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'abortError example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to extract an abort reason from a signal or construct a standard `AbortError` `DOMException` — for example propagating cancellation in a custom async helper.
+You need to extract an abort reason from a signal or construct a standard `AbortError` `DOMException`: for example propagating cancellation in a custom async helper.
 
 ### Solution
 

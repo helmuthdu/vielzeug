@@ -24,10 +24,10 @@ export type Debounced<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>
  *
  * @example
  * ```ts
- * // Trailing (default) — fires after input settles
+ * // Trailing (default): fires after input settles
  * const save = debounce(persist, 500);
  *
- * // Leading — fires on the first keystroke, then silences during the window
+ * // Leading: fires on the first keystroke, then silences during the window
  * const submit = debounce(sendRequest, 500, { leading: true, trailing: false });
  * ```
  */
@@ -40,7 +40,7 @@ export function debounce<T extends Fn>(
   const trailing = options.trailing ?? true;
 
   if (!leading && !trailing) {
-    warn('debounce: both `leading` and `trailing` are false — the wrapped function will never be invoked.');
+    warn('debounce: both `leading` and `trailing` are false: the wrapped function will never be invoked.');
   }
 
   let timerId: ReturnType<typeof setTimeout> | undefined;
@@ -76,13 +76,13 @@ export function debounce<T extends Fn>(
       if (leading && !leadingFired) {
         leadingFired = true;
         lastResult = fn(...args) as ReturnType<T>;
-        // Clear args regardless of `trailing` — the leading call already consumed this
+        // Clear args regardless of `trailing`: the leading call already consumed this
         // invocation. The trailing timer below only re-invokes `fn` if a *further* call
         // arrives during the cooldown window and repopulates `lastArgs`.
         lastArgs = undefined;
 
         if (!trailing) {
-          // Leading-only: start cooldown — no trailing call needed
+          // Leading-only: start cooldown: no trailing call needed
           timerId = setTimeout(() => {
             timerId = undefined;
             leadingFired = false;

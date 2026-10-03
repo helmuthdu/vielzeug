@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Multi-Step Wizard with Routing'
+title: 'Clockwork Examples: Multi-Step Wizard with Routing'
 description: 'Synchronize explicit actor state with route changes.'
 ---
 

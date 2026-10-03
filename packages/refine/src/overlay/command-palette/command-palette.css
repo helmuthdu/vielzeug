@@ -15,7 +15,7 @@
   }
 
   /* =====================
-       Native <dialog> resets — see ore-dialog for the full rationale.
+       Native <dialog> resets: see ore-dialog for the full rationale.
        ===================== */
 
   dialog {
@@ -278,7 +278,7 @@
     --keyboard-key-padding-inline: var(--size-1);
   }
 
-  /* Slotted item elements are pure data nodes — never rendered directly. */
+  /* Slotted item elements are pure data nodes: never rendered directly. */
   ::slotted(ore-command-palette-item) {
     display: none;
   }

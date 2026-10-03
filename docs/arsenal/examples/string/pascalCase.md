@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — pascalCase'
+title: 'Arsenal Examples: pascalCase'
 description: 'pascalCase example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'pascalCase example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to convert a string to PascalCase — for example generating component or class names from data.
+You need to convert a string to PascalCase: for example generating component or class names from data.
 
 ### Solution
 

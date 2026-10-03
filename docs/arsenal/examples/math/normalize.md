@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — normalize'
+title: 'Arsenal Examples: normalize'
 description: 'normalize example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'normalize example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to map a value from an arbitrary range into 0–1 — for example computing progress percentages or scaling data for a chart.
+You need to map a value from an arbitrary range into 0–1: for example computing progress percentages or scaling data for a chart.
 
 ### Solution
 
@@ -24,7 +24,7 @@ normalize(50, 25, 75); // 0.5
 ### Pitfalls
 
 - When `min === max`, returns `NaN` (division by zero).
-- Does not clamp output — values outside `[min, max]` produce results outside `[0, 1]`.
+- Does not clamp output: values outside `[min, max]` produce results outside `[0, 1]`.
 
 ### Related
 

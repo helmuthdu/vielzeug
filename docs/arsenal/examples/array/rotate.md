@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — rotate'
+title: 'Arsenal Examples: rotate'
 description: 'rotate example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'rotate example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to shift items in a circular buffer — moving the first item to the end, or rotating a carousel.
+You need to shift items in a circular buffer: moving the first item to the end, or rotating a carousel.
 
 ### Solution
 

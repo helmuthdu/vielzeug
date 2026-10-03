@@ -7,7 +7,7 @@ export interface BarRenderOptions {
   baselineYs?: number[];
   borderRadius: number;
   color: string;
-  /** Aborted when the owning chart is disposed — stops in-flight transitions from rescheduling. */
+  /** Aborted when the owning chart is disposed: stops in-flight transitions from rescheduling. */
   disposalSignal?: AbortSignal;
   horizontal?: boolean;
   seriesCount: number;

@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — Touch-enabled sortable list'
+title: 'Dnd Examples: Touch-enabled sortable list'
 description: 'Touch-enabled sortable list example for @vielzeug/dnd.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Touch-enabled sortable list example for @vielzeug/dnd.'
 
 ### Problem
 
-Your sortable list works with mouse drag but does nothing on touch devices — HTML drag-and-drop has no reliable native touch equivalent, so Dnd uses Gesture's Pointer Event recognizer to drive the drag lifecycle on touch input.
+Your sortable list works with mouse drag but does nothing on touch devices: HTML drag-and-drop has no reliable native touch equivalent, so Dnd uses Gesture's Pointer Event recognizer to drive the drag lifecycle on touch input.
 
 ### Solution
 
@@ -47,4 +47,4 @@ using sortable = createSortable({
 ### Related
 
 - [Sortable list](./sortable-list.md)
-- [Usage guide — Touch Support](../usage.md#touch-support)
+- [Usage guide: Touch Support](../usage.md#touch-support)

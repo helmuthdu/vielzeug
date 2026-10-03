@@ -1,5 +1,5 @@
 /**
- * The icons refine's own components render — chevrons, close marks, spinners,
+ * The icons refine's own components render: chevrons, close marks, spinners,
  * the icons inputs and overlays label themselves with. Imported by `icon.ts`
  * so they resolve wherever `ore-icon` is used. Apps needing more than this set
  * register their own via `registerIcons()` or import `@vielzeug/refine/icon-lucide`

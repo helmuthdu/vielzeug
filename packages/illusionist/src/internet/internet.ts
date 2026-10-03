@@ -83,7 +83,7 @@ export function password(ctx: IllusionistContext, opts: PasswordOptions = {}): s
     const special = pick(SPECIAL_CHARS.split(''), ctx.source) ?? '!';
     const base = `${first}${last}${num}${special}`;
     if (base.length <= length) return base + alphanumeric(length - base.length, ctx.source);
-    // Truncation would cut the special char/number — put them first, then fill from the name.
+    // Truncation would cut the special char/number: put them first, then fill from the name.
     const essential = `${num}${special}`;
     const remaining = length - essential.length;
     const namePart = remaining > 0 ? (first + last).slice(0, remaining) : '';

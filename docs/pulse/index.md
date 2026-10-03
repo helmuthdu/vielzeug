@@ -1,5 +1,5 @@
 ---
-title: Pulse — Typed WebSocket sessions
+title: 'Pulse: Typed WebSocket sessions'
 description: Explicitly connected, typed WebSocket sessions with scoped channels, ref-counted rooms with reactive presence, reconnect restoration, and heartbeat.
 package: pulse
 category: websockets
@@ -145,14 +145,14 @@ pulse.dispose();
 
 <div class="features-grid">
 
-- **`connect()`** — explicit readiness; application messages throw while disconnected.
-- **`channel()`** — named, schema-bound scopes with independent disposal and reference-counted server subscriptions.
-- **`room()`** — named, schema-bound ref-counted room scopes with optional reactive presence. The first scope sends `join`; the last disposal sends `leave`.
-- **`reconnect`** — ordered restoration of channel subscriptions, room memberships, and local presence state.
-- **`transform`** — one synchronous transform or filter for application messages.
-- **`tap()`** — subscribe to lifecycle events (status changes, errors, disposal) via a typed `PulseEvent` stream.
-- **`heartbeat`** — ping/pong liveness detection that uses the same reconnect controller.
-- **`status` and `rooms`** — framework-neutral external stores for transport and confirmed membership state.
+- **`connect()`**: explicit readiness; application messages throw while disconnected.
+- **`channel()`**: named, schema-bound scopes with independent disposal and reference-counted server subscriptions.
+- **`room()`**: named, schema-bound ref-counted room scopes with optional reactive presence. The first scope sends `join`; the last disposal sends `leave`.
+- **`reconnect`**: ordered restoration of channel subscriptions, room memberships, and local presence state.
+- **`transform`**: one synchronous transform or filter for application messages.
+- **`tap()`**: subscribe to lifecycle events (status changes, errors, disposal) via a typed `PulseEvent` stream.
+- **`heartbeat`**: ping/pong liveness detection that uses the same reconnect controller.
+- **`status` and `rooms`**: framework-neutral external stores for transport and confirmed membership state.
 
 </div>
 
@@ -171,10 +171,10 @@ pulse.dispose();
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — bridges Pulse external stores into computed values and effects.
-- [Herald](/herald/) — receives routed Pulse events in an in-process application bus.
-- [Courier](/courier/) — handles request/response traffic alongside a Pulse session.
-- [Clockwork](/clockwork/) — models application-level authentication or session workflows.
+- [Ripple](/ripple/): bridges Pulse external stores into computed values and effects.
+- [Herald](/herald/): receives routed Pulse events in an in-process application bus.
+- [Courier](/courier/): handles request/response traffic alongside a Pulse session.
+- [Clockwork](/clockwork/): models application-level authentication or session workflows.
 
 </div>
 

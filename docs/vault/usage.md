@@ -1,5 +1,5 @@
 ---
-title: Vault — Usage Guide
+title: 'Vault: Usage Guide'
 description: Persist typed browser or SQLite data, observe table snapshots, and use atomic transactions with required durable codecs.
 ---
 

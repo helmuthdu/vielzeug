@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Same-URL Deduplication'
+title: 'Wayfinder Examples: Same-URL Deduplication'
 description: 'Same-URL deduplication example for @vielzeug/wayfinder.'
 ---
 
@@ -27,7 +27,7 @@ const router = createRouter({
 });
 
 await router.navigate({ name: 'feed' });
-await router.navigate({ name: 'feed' }); // no-op — same URL
+await router.navigate({ name: 'feed' }); // no-op: same URL
 await router.navigate({ name: 'feed' }, { force: true }); // re-runs feed data loader
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — prune'
+title: 'Arsenal Examples: prune'
 description: 'prune example for @vielzeug/arsenal.'
 ---
 
@@ -25,8 +25,8 @@ prune([1, null, 2, undefined, 3]);
 
 ### Pitfalls
 
-- `false` and `0` are **kept** — `prune` only removes `null`, `undefined`, and empty strings/collections.
-- Returns a deep copy — the original is not mutated.
+- `false` and `0` are **kept**: `prune` only removes `null`, `undefined`, and empty strings/collections.
+- Returns a deep copy: the original is not mutated.
 
 ### Related
 

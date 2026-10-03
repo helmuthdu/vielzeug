@@ -5,7 +5,7 @@
         "minor": [
           {
             "author": "agent@vielzeug",
-            "comment": "feat(tavern): initial release — host-owned session replication over mesh",
+            "comment": "feat(tavern): initial release: host-owned session replication over mesh",
             "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
           },
           {

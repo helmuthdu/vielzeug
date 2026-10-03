@@ -2,13 +2,13 @@
  * Public component definition types for ore web components.
  * These are the types consumers interact with when calling define().
  *
- * `setup()` takes only `props` and returns its template synchronously — everything else (lifecycle hooks, bindings,
+ * `setup()` takes only `props` and returns its template synchronously: everything else (lifecycle hooks, bindings,
  * context, slots, emit) is a free function imported from `@vielzeug/ore`
  * (see `runtime.ts`, `host-bind.ts`, `aria.ts`, `context.ts`, `slots.ts`,
  * `utils/emit.ts`) and resolved through the implicit "current component"
  * context rather than threaded through a second `setup()` parameter. This
  * keeps `setup()` a plain function you can call composables from. Note:
- * ore's `watchEffect()` is intentionally not named `watch` — `@vielzeug/ripple`
+ * ore's `watchEffect()` is intentionally not named `watch`: `@vielzeug/ripple`
  * already exports a `watch(source, callback)` with different semantics
  * (explicit source + old/new value pair), so reusing the name here would
  * silently shadow it whenever both are imported in the same file.

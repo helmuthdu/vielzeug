@@ -79,8 +79,8 @@ describe('ore-command-palette', () => {
       expect(getRows()[0]?.textContent).toContain('New File');
     });
 
-    it('reads items directly off the host — no <slot> needed in the shadow tree', async () => {
-      // Items are pure data nodes, never projected for display — see `ore-command-palette-item`'s
+    it('reads items directly off the host: no <slot> needed in the shadow tree', async () => {
+      // Items are pure data nodes, never projected for display: see `ore-command-palette-item`'s
       // own doc comment. Reading `el.children` directly (instead of `useSlots()`) means there's
       // no `<slot>` element backing this at all.
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, html: itemsHtml });
@@ -405,7 +405,7 @@ describe('ore-command-palette', () => {
   describe('Edge Cases', () => {
     it('picks up a slotted item label added after slot assignment (parser race)', async () => {
       // Regression: native `slotchange` fires once when an element is first assigned to a
-      // slot — not again when that element's own children mutate afterward. A browser
+      // slot: not again when that element's own children mutate afterward. A browser
       // parsing static, inline HTML can assign the last item to its slot before appending
       // that item's text-node child, permanently caching an empty label unless something
       // else re-parses on the follow-up mutation.

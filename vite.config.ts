@@ -7,20 +7,20 @@ type LibraryEntry = string | Record<string, string>;
 /**
  * Reads the calling package's own `dependencies` + `peerDependencies` from `package.json` next to `__dirname`.
  * Pass the result as `external` to `getConfig()`/`getBundleConfig()` for packages whose
- * externals are exactly "my own workspace dependencies, nothing more" — avoids hand-listing
- * the same `@vielzeug/*` names already in `package.json` a second (and third — `vite.config.ts`
+ * externals are exactly "my own workspace dependencies, nothing more": avoids hand-listing
+ * the same `@vielzeug/*` names already in `package.json` a second (and third: `vite.config.ts`
  * and `vite.bundle.config.ts` each need their own copy today) time.
  *
  * Deliberately NOT a silent default inside `getConfig`/`getBundleConfig`: several packages
  * (e.g. `refine`) need a *function* predicate for `external` (to match `@vielzeug/ore/<subpath>`
  * imports, which Rolldown's array-of-strings `external` only matches by exact equality, not
  * prefix) layered on afterward via `mergeConfig()`. Rolldown's `external` array only accepts
- * plain strings/RegExp per element — auto-populating an array here by default would collide
+ * plain strings/RegExp per element: auto-populating an array here by default would collide
  * with that pattern the moment a package merges in its own function-shaped override. Opt in
  * explicitly per package instead.
  */
 export const readWorkspaceDeps = (__dirname: string): string[] => {
-  // No try/catch — a missing or malformed package.json here is a real configuration error that
+  // No try/catch: a missing or malformed package.json here is a real configuration error that
   // should fail the build loudly. Silently falling back to `[]` would instead produce a build
   // that "succeeds" while inlining every workspace dependency into the package's own output.
   const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8')) as {
@@ -28,7 +28,7 @@ export const readWorkspaceDeps = (__dirname: string): string[] => {
     peerDependencies?: Record<string, string>;
   };
 
-  // Peer deps are external by definition — the consumer installs them, the package
+  // Peer deps are external by definition: the consumer installs them, the package
   // must never inline them (e.g. ore's optional `@vielzeug/assay` peer, used only
   // by its `/testing` sub-path).
   return Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies });
@@ -49,7 +49,7 @@ export type BundleOptions = {
 
 /**
  * Every package's `src/_dev.ts` gates dev warnings behind `globalThis.__<NAME>_PROD__`.
- * The dist build IS the production artifact, so bake the gate in centrally — per-package
+ * The dist build IS the production artifact, so bake the gate in centrally: per-package
  * `define` entries for this were repeatedly forgotten (ore, lingua, courier all shipped
  * with dev warns live in prod before this existed). `verify:prod-gate` asserts no raw
  * gate reference survives into any published artifact.
@@ -66,7 +66,7 @@ export const getConfig = (
   __dirname: string,
   options?: {
     entry?: LibraryEntry;
-    /** Modules to mark as external. Not derived automatically — see `readWorkspaceDeps()`. */
+    /** Modules to mark as external. Not derived automatically: see `readWorkspaceDeps()`. */
     external?: string[];
     name?: string;
     preserveModules?: boolean;
@@ -91,7 +91,7 @@ export const getConfig = (
         entry,
         fileName: (format: string, entryName: string) => {
           // Query-suffixed imports (e.g. `./foo.css?inline`) surface here as an entryName
-          // still carrying the `?inline` suffix — strip it, or the emitted file (and its
+          // still carrying the `?inline` suffix: strip it, or the emitted file (and its
           // sourcemap) end up with a literal "?" in the filename, which GitHub's
           // upload-artifact action (and some filesystems) reject outright.
           const cleanEntryName = entryName.split('?')[0];

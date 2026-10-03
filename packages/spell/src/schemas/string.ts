@@ -507,7 +507,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   /**
-   * **Note:** `trim()` adds a preprocessor. Preprocessors are not serializable —
+   * **Note:** `trim()` adds a preprocessor. Preprocessors are not serializable :
    * `definition()` throws because preprocessors are not serializable.
    */
   trim(): this {
@@ -515,7 +515,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   /**
-   * **Note:** `lowercase()` adds a preprocessor. Preprocessors are not serializable —
+   * **Note:** `lowercase()` adds a preprocessor. Preprocessors are not serializable :
    * `definition()` throws because preprocessors are not serializable.
    */
   lowercase(): this {
@@ -523,7 +523,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
   }
 
   /**
-   * **Note:** `uppercase()` adds a preprocessor. Preprocessors are not serializable —
+   * **Note:** `uppercase()` adds a preprocessor. Preprocessors are not serializable :
    * `definition()` throws because preprocessors are not serializable.
    */
   uppercase(): this {

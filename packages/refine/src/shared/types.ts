@@ -98,7 +98,7 @@ export type BaseFormProps = {
   size?: ComponentSize;
   /**
    * Shows an inline green check icon inside the field to confirm the value has passed
-   * validation. Ignored while `error` is set — an error always wins.
+   * validation. Ignored while `error` is set: an error always wins.
    */
   success?: boolean;
 };

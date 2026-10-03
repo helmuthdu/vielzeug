@@ -1,5 +1,5 @@
 ---
-title: 'Ore Examples — Test Example (@vielzeug/ore/testing)'
+title: 'Ore Examples: Test Example (@vielzeug/ore/testing)'
 description: 'Test Example (@vielzeug/ore/testing) example for @vielzeug/ore.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Test Example (@vielzeug/ore/testing) example for @vielzeug/ore.'
 
 ### Problem
 
-You want to write unit tests for a Ore custom element — rendering it in a test environment, triggering events, and asserting on its DOM output without a real browser.
+You want to write unit tests for a Ore custom element: rendering it in a test environment, triggering events, and asserting on its DOM output without a real browser.
 
 ### Solution
 

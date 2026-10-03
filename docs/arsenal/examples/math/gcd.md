@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — gcd'
+title: 'Arsenal Examples: gcd'
 description: 'gcd example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'gcd example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need the greatest common divisor of two integers — for example simplifying fractions or computing time intervals.
+You need the greatest common divisor of two integers: for example simplifying fractions or computing time intervals.
 
 ### Solution
 

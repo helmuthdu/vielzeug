@@ -245,7 +245,7 @@ Services created with the same root share one store. Different roots are isolate
 
 ## Observing transitions
 
-`tap()` exposes add, dismiss, and dispose transitions as a side channel — for analytics, logging, or syncing notifications to storage. Handler errors are swallowed; observation never affects toast behavior.
+`tap()` exposes add, dismiss, and dispose transitions as a side channel: for analytics, logging, or syncing notifications to storage. Handler errors are swallowed; observation never affects toast behavior.
 
 ```ts
 import { toast } from '@vielzeug/refine/toast';
@@ -269,7 +269,7 @@ Use attributes to set a host's placement and notification limit:
 | Attribute  | Default          | Description                          |
 | ---------- | ---------------- | ------------------------------------ |
 | `position` | `bottom-right`   | `top-*` or `bottom-*` list anchor    |
-| `max`      | `5`              | Maximum live notifications per scope — attribute changes apply live |
+| `max`      | `5`              | Maximum live notifications per scope: attribute changes apply live |
 
 ## Notification options
 
@@ -286,24 +286,24 @@ toast.add({
 
 | Option        | Default     | Description                                                       |
 | ------------- | ----------- | ----------------------------------------------------------------- |
-| `message`     | —           | Required notification text                                        |
+| `message`     | N/A | Required notification text                                        |
 | `id`          | generated   | Stable notification identifier                                    |
 | `color`       | `primary`   | Alert colour theme                                                |
-| `heading`     | —           | Alert heading                                                     |
+| `heading`     | N/A | Alert heading                                                     |
 | `variant`     | `solid`     | `solid`, `flat`, or `bordered`                                   |
-| `duration`    | `5000`; `0` for action toasts | Auto-dismiss delay in milliseconds; `0` keeps it visible. Entries carrying `actions` persist until dismissed by default — keyboard and screen-reader users reach toasts last in tab order, so a timed expiry would expire the choice unseen |
+| `duration`    | `5000`; `0` for action toasts | Auto-dismiss delay in milliseconds; `0` keeps it visible. Entries carrying `actions` persist until dismissed by default: keyboard and screen-reader users reach toasts last in tab order, so a timed expiry would expire the choice unseen |
 | `dismissible` | `true`      | Shows the close button                                            |
 | `snackbar`    | `false`     | Material-style compact bar: inverted neutral surface, single-row padding, text-style actions; overrides `variant` |
-| `actions`     | —           | Buttons (flat by default, ghost when `snackbar`) that run `onClick` then dismiss |
+| `actions`     | N/A | Buttons (flat by default, ghost when `snackbar`) that run `onClick` then dismiss |
 | `replace`     | `false`     | Replace a live entry with the same message instead of stacking a duplicate |
 | `urgency`     | derived     | `polite` or `assertive`; errors are assertive by default          |
-| `onDismiss`   | —           | Called after the exit animation completes                         |
+| `onDismiss`   | N/A | Called after the exit animation completes                         |
 
-`toast.update(id, changes)` patches only the provided fields — omitted ones leave the entry (and its timer) unchanged.
+`toast.update(id, changes)` patches only the provided fields: omitted ones leave the entry (and its timer) unchanged.
 
 ### Snackbar
 
-Set `snackbar: true` for small, transient confirmations — a Material-style bar on an inverted
+Set `snackbar: true` for small, transient confirmations: a Material-style bar on an inverted
 surface (dark chip in light themes, light chip in dark themes) with single-row padding and a
 flat text action. The bar sizes to its content up to the host's width cap, staying flush with
 the position's anchored edge. With an action it persists until dismissed (the default for
@@ -320,9 +320,9 @@ toast.add({
 
 ## Behavior and accessibility
 
-Notifications render as a vertical list anchored to the host position — newest nearest the anchored edge — so every notification stays readable and reachable with a pointer, touch, or keyboard. Each notification is announced once through the host's polite or assertive live region; the embedded alert itself carries no live-region semantics.
+Notifications render as a vertical list anchored to the host position: newest nearest the anchored edge, so every notification stays readable and reachable with a pointer, touch, or keyboard. Each notification is announced once through the host's polite or assertive live region; the embedded alert itself carries no live-region semantics.
 
-Timed notifications show a thin progress bar along the bottom edge. Hovering or focusing the list pauses auto-dismiss timers and the bar; leaving resumes the remaining duration. Timers also pause while a top-layer surface (an open dialog, fullscreen) covers the toasts — the user cannot interact with them, so choices never expire unseen.
+Timed notifications show a thin progress bar along the bottom edge. Hovering or focusing the list pauses auto-dismiss timers and the bar; leaving resumes the remaining duration. Timers also pause while a top-layer surface (an open dialog, fullscreen) covers the toasts: the user cannot interact with them, so choices never expire unseen.
 
 Users can dismiss closable notifications with the close button, a horizontal swipe, or the <kbd>Escape</kbd> key. Escape dismisses the notification holding focus; pressed anywhere else it dismisses the newest dismissible notification, unless an open top-layer surface owns the key. When a removed notification held focus, focus returns to the element focused before it, so keyboard users keep their place instead of restarting from the document top.
 

@@ -1,31 +1,31 @@
-# Releases — CalVer lockstep trains
+# Releases: CalVer lockstep trains
 
-Every `@vielzeug/*` package carries the same version: the release train it last shipped on. The number answers *when*, never *how big* — change size lives in the changelog sections and each package's `docs/<name>/migration.md`, not the version.
+Every `@vielzeug/*` package carries the same version: the release train it last shipped on. The number answers *when*, never *how big*: change size lives in the changelog sections and each package's `docs/<name>/migration.md`, not the version.
 
 ## The version grammar
 
-`YY.MM.N` — the calendar year and month the train shipped in, plus the train revision. `26.10.0` is October 2026's first train; `26.10.1` its second; November starts fresh at `26.11.0`. There is no major/minor judgment to make: a breaking change rides the next train like any other, and says so in the changelog and migration notes.
+`YY.MM.N`: the calendar year and month the train shipped in, plus the train revision. `26.10.0` is October 2026's first train; `26.10.1` its second; November starts fresh at `26.11.0`. There is no major/minor judgment to make: a breaking change rides the next train like any other, and says so in the changelog and migration notes.
 
-This replaces semantic versioning, deliberately. Semver's compat signal was aimed at consumers we don't have — every in-repo consumer (demos, docs, REPL) moves in the same commit as the packages. The compatibility contract for outside consumers is the changelog and `migration.md`, read per train.
+This replaces semantic versioning, deliberately. Semver's compat signal was aimed at consumers we don't have: every in-repo consumer (demos, docs, REPL) moves in the same commit as the packages. The compatibility contract for outside consumers is the changelog and `migration.md`, read per train.
 
 ## Releasing a train
 
 1. Land changes. Every publishable package that changed carries a change file:
    `node scripts/rush-change.mjs <pkg> <patch|minor|major> "<message>"`.
-   The type only picks the changelog section — it never touches the version.
-2. Dispatch the **Publish** workflow (`publish.yml`) with `mode=all` (or `single` for one package). It applies the train — stamps every manifest with the train number, writes changelog entries for packages with pending change files, consumes those files in one commit — then verifies packed packages and publishes and tags each changed package. CI details: `.github/AGENTS.md`.
-3. `mode=missing` backfills any released-but-unpublished version. A package is a candidate only when its CHANGELOG has an entry for its current version — a lockstep stamp alone never republishes an unchanged package.
+   The type only picks the changelog section: it never touches the version.
+2. Dispatch the **Publish** workflow (`publish.yml`) with `mode=all` (or `single` for one package). It applies the train: stamps every manifest with the train number, writes changelog entries for packages with pending change files, consumes those files in one commit: then verifies packed packages and publishes and tags each changed package. CI details: `.github/AGENTS.md`.
+3. `mode=missing` backfills any released-but-unpublished version. A package is a candidate only when its CHANGELOG has an entry for its current version: a lockstep stamp alone never republishes an unchanged package.
 
 `mode=single` still stamps the whole family (a train is repo-wide by definition) but consumes and publishes only the named package; sibling change files survive for their own train.
 
 ## The epoch train
 
-The first CalVer train (`26.10.0`) is an epoch: every publishable package carries a change file, so all 41 publish at the same number and the registry starts the new era uniform. Three of those entries (`orbit`, `prism`, `rune`) are alignment-only — "no code change this train" — the only ceremonial entries the scheme will ever print. From the second train on, the skip rule applies normally: only packages with real change files ride, and npm versions diverge as they should.
+The first CalVer train (`26.10.0`) is an epoch: every publishable package carries a change file, so all 41 publish at the same number and the registry starts the new era uniform. Three of those entries (`orbit`, `prism`, `rune`) are alignment-only: "no code change this train": the only ceremonial entries the scheme will ever print. From the second train on, the skip rule applies normally: only packages with real change files ride, and npm versions diverge as they should.
 
 ## Consequences
 
-- An npm version is "the last train in which that package changed" — unchanged packages simply skip trains, so repo manifests and npm versions legitimately differ between trains.
-- Consumers outside the monorepo should pin exact versions and read the package's `migration.md` when moving between trains. Caret ranges stop at the pre-CalVer history by design — trains you should read about don't flow through `^`.
+- An npm version is "the last train in which that package changed": unchanged packages simply skip trains, so repo manifests and npm versions legitimately differ between trains.
+- Consumers outside the monorepo should pin exact versions and read the package's `migration.md` when moving between trains. Caret ranges stop at the pre-CalVer history by design: trains you should read about don't flow through `^`.
 - The docs site and demos always track `main`, the latest train.
 
 ## Local use

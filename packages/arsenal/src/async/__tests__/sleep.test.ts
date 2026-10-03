@@ -49,7 +49,7 @@ describe('sleep', () => {
     await expect(promise).rejects.toMatchObject({ name: 'AbortError' });
     expect(clearSpy).toHaveBeenCalled();
 
-    // The timer must actually be cleared — advancing past the original delay must not
+    // The timer must actually be cleared: advancing past the original delay must not
     // trigger any further (unobserved) resolution work.
     vi.advanceTimersByTime(1000);
     clearSpy.mockRestore();

@@ -1,5 +1,5 @@
 ---
-title: 'Sandbox Examples — Embedded Widget'
+title: 'Sandbox Examples: Embedded Widget'
 description: Embedded Widget example for @vielzeug/sandbox.
 ---
 
@@ -48,11 +48,11 @@ function mountWidget({ container, widgetScriptUrl, theme, onEvent }: WidgetConfi
     }
   });
 
-  // Render the widget mount point — the injected script initialises on DOMContentLoaded
+  // Render the widget mount point: the injected script initialises on DOMContentLoaded
   sandbox.render('<div id="widget-root"></div>');
 
   return {
-    // Push config changes without re-rendering — widget receives sandbox:state-update
+    // Push config changes without re-rendering: widget receives sandbox:state-update
     setTheme(tokens: Record<string, string>) {
       sandbox.setState({ theme: tokens });
     },
@@ -110,16 +110,16 @@ sandbox.setState({
 
 ### Pitfalls
 
-- **`allowedScriptOrigins` vs `scripts`** — origins in the `scripts` array are automatically added to `script-src`. Use `allowedScriptOrigins` only for origins not covered by `scripts` (e.g. dynamically loaded sub-scripts the widget fetches).
-- **`connect-src 'none'` by default** — the sandbox CSP blocks all network requests. If the widget makes fetch/XHR calls, they will fail silently. There is currently no `allowedConnectOrigins` option — for widgets that need network access, serve them from a URL (regular iframe) instead.
-- **`setState` requires the document to be ready** — call `setState` after `sandbox.render()` resolves. Calling before the bridge initialises will drop the update with a dev warning.
-- **Treat all `custom` message payloads as untrusted** — the widget controls what it emits. Validate before acting on `msg.detail`.
+- **`allowedScriptOrigins` vs `scripts`**: origins in the `scripts` array are automatically added to `script-src`. Use `allowedScriptOrigins` only for origins not covered by `scripts` (e.g. dynamically loaded sub-scripts the widget fetches).
+- **`connect-src 'none'` by default**: the sandbox CSP blocks all network requests. If the widget makes fetch/XHR calls, they will fail silently. There is currently no `allowedConnectOrigins` option: for widgets that need network access, serve them from a URL (regular iframe) instead.
+- **`setState` requires the document to be ready**: call `setState` after `sandbox.render()` resolves. Calling before the bridge initialises will drop the update with a dev warning.
+- **Treat all `custom` message payloads as untrusted**: the widget controls what it emits. Validate before acting on `msg.detail`.
 
 ### Related
 
-- [Usage Guide — Injecting Scripts and Styles](../usage.md#injecting-scripts-and-styles)
-- [Usage Guide — Configuring CSP](../usage.md#configuring-csp)
-- [Usage Guide — Passing State](../usage.md#passing-state)
-- [Usage Guide — Batch State Updates](../usage.md#batch-state-updates)
-- [Usage Guide — Receiving Events from the Sandbox](../usage.md#receiving-events-from-the-sandbox)
-- [API Reference — SandboxOptions](../api.md#sandboxoptions)
+- [Usage Guide: Injecting Scripts and Styles](../usage.md#injecting-scripts-and-styles)
+- [Usage Guide: Configuring CSP](../usage.md#configuring-csp)
+- [Usage Guide: Passing State](../usage.md#passing-state)
+- [Usage Guide: Batch State Updates](../usage.md#batch-state-updates)
+- [Usage Guide: Receiving Events from the Sandbox](../usage.md#receiving-events-from-the-sandbox)
+- [API Reference: SandboxOptions](../api.md#sandboxoptions)

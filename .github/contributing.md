@@ -1,6 +1,6 @@
 # Contributing to Vielzeug
 
-Thanks for your interest in contributing! This guide covers the mechanics of getting a change merged. For engineering conventions (disposal, dev logging, error classes, file layout, package structure) see the root [`AGENTS.md`](../AGENTS.md) and `.agents/conventions.md` — read those before writing code, this file won't repeat them.
+Thanks for your interest in contributing! This guide covers the mechanics of getting a change merged. For engineering conventions (disposal, dev logging, error classes, file layout, package structure) see the root [`AGENTS.md`](../AGENTS.md) and `.agents/conventions.md`: read those before writing code, this file won't repeat them.
 
 ## Table of Contents
 
@@ -17,8 +17,8 @@ Thanks for your interest in contributing! This guide covers the mechanics of get
 ```bash
 git clone https://github.com/YOUR_USERNAME/vielzeug.git
 cd vielzeug
-pnpm setup   # rush install — installs all package dependencies
-pnpm build   # rush build — build every package
+pnpm setup   # rush install: installs all package dependencies
+pnpm build   # rush build: build every package
 pnpm test    # verify the setup works
 ```
 
@@ -33,9 +33,9 @@ pnpm test    # verify the setup works
    git checkout -b fix/<package>-short-description
    ```
 
-3. **Edit code** in `packages/<name>/`. Run `pnpm --filter @vielzeug/<name> fix` (or `pnpm fix` at the root) instead of hand-formatting or hand-sorting imports — Biome owns those safe fixes. Add or update tests in `packages/<name>/src/__tests__/`.
+3. **Edit code** in `packages/<name>/`. Run `pnpm --filter @vielzeug/<name> fix` (or `pnpm fix` at the root) instead of hand-formatting or hand-sorting imports: Biome owns those safe fixes. Add or update tests in `packages/<name>/src/__tests__/`.
 
-4. **Add a change file.** Every PR that touches a package's published output needs one — CI (`rush change --verify`) fails without it:
+4. **Add a change file.** Every PR that touches a package's published output needs one: CI (`rush change --verify`) fails without it:
 
    ```bash
    node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"
@@ -57,17 +57,17 @@ pnpm test    # verify the setup works
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat(courier): add retry logic`, `fix(vault): correct TTL race`, `docs(forge): update validation examples`. Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`.
 - Push your branch and open a PR against `main`; fill out the PR template (summary, related issue, breaking changes, affected packages).
-- The pre-commit hook (lefthook) runs lint + related tests on staged files automatically — a clean `git commit` locally means CI is unlikely to surprise you.
+- The pre-commit hook (lefthook) runs lint + related tests on staged files automatically: a clean `git commit` locally means CI is unlikely to surprise you.
 - Respond to review feedback by pushing more commits to the same branch.
 
 ## Project Layout
 
 ```text
 vielzeug/
-├── packages/<name>/     # each package is self-contained — see .agents/reference/packages.md for the full list
+├── packages/<name>/     # each package is self-contained: see .agents/reference/packages.md for the full list
 │   ├── src/
 │   │   ├── __tests__/   # vitest test files
-│   │   └── index.ts     # public API — all exports defined here
+│   │   └── index.ts     # public API: all exports defined here
 │   ├── package.json
 │   └── vite.config.ts
 └── docs/<name>/         # VitePress documentation for that package
@@ -81,4 +81,4 @@ If you're adding new public API, update the package's docs under `docs/<name>/` 
 - **Found a bug?** [Open an issue](https://github.com/helmuthdu/vielzeug/issues)
 - **Documentation:** [vielzeug.dev](https://vielzeug.dev)
 
-Be respectful and constructive — we're all here to build something great together.
+Be respectful and constructive: we're all here to build something great together.

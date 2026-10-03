@@ -1,5 +1,5 @@
 ---
-title: Arsenal — API Reference
+title: 'Arsenal: API Reference'
 description: Reference for Arsenal root utilities and category entry points.
 ---
 
@@ -143,10 +143,10 @@ URL-safe base64 (`base64url`) codecs without `btoa`/`Buffer`, so the same code r
 import { base64UrlToBytes, base64UrlToText, bytesToBase64Url, textToBase64Url, utf8Bytes } from '@vielzeug/arsenal';
 
 textToBase64Url('{"build":"daeron"}'); // never contains '+', '/', or '='
-base64UrlToText(textToBase64Url('Primal — The Awakening')); // round-trips any UTF-8 text
+base64UrlToText(textToBase64Url('Primal: The Awakening')); // round-trips any UTF-8 text
 bytesToBase64Url(Uint8Array.from([0, 1, 250])); // byte-level codec for binary payloads
 base64UrlToBytes(code); // throws on characters outside the alphabet
-utf8Bytes('Hunter äöü'); // 11 — byte length of a UTF-8 string
+utf8Bytes('Hunter äöü'); // 11: byte length of a UTF-8 string
 ```
 
 ## Object
@@ -210,7 +210,7 @@ allocate(amount: number, ratios: number[] | number): number[]
 allocate(amount: bigint, ratios: number[] | number): bigint[]
 ```
 
-Distributes an amount proportionally across ratios. The indivisible remainder is applied to the last bucket so the sum equals the original amount exactly — critical for financial operations.
+Distributes an amount proportionally across ratios. The indivisible remainder is applied to the last bucket so the sum equals the original amount exactly: critical for financial operations.
 
 ## Types
 
@@ -235,6 +235,6 @@ type CacheOptions = {
 
 ## Errors
 
-- `RangeError` — invalid numeric bounds, capacity, concurrency, or retry count.
-- `TypeError` — invalid value types, unsupported comparison, or required path missing.
-- `ArsenalSerializationError` — memo or hash cannot serialize supplied input.
+- `RangeError`: invalid numeric bounds, capacity, concurrency, or retry count.
+- `TypeError`: invalid value types, unsupported comparison, or required path missing.
+- `ArsenalSerializationError`: memo or hash cannot serialize supplied input.

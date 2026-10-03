@@ -63,7 +63,7 @@ export interface FakeRtc {
 /**
  * In-memory WebRTC stand-in for testing mesh nodes without a browser.
  * Peer connections created from the same fixture wire together through fake
- * SDP tokens — no network, no real ICE. Pass `fixture.rtc` as the `rtc`
+ * SDP tokens: no network, no real ICE. Pass `fixture.rtc` as the `rtc`
  * option to `createMeshHost`/`createMeshGuest`.
  */
 export function createFakeRtc(options: { latencyMs?: number } = {}): FakeRtc {

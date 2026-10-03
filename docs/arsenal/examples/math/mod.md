@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — mod'
+title: 'Arsenal Examples: mod'
 description: 'mod example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'mod example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need a true mathematical modulo that always returns a non-negative result — unlike JavaScript's `%` operator, which can return negative values for negative operands.
+You need a true mathematical modulo that always returns a non-negative result: unlike JavaScript's `%` operator, which can return negative values for negative operands.
 
 ### Solution
 

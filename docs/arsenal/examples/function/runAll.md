@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — runAll'
+title: 'Arsenal Examples: runAll'
 description: 'runAll example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'runAll example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have a list of cleanup or teardown functions and need to run all of them even if some throw — collecting errors rather than stopping at the first failure.
+You have a list of cleanup or teardown functions and need to run all of them even if some throw: collecting errors rather than stopping at the first failure.
 
 ### Solution
 

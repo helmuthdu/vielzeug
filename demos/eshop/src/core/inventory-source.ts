@@ -1,7 +1,7 @@
 import type { Order } from './types';
 
 /**
- * Search predicate for the admin orders table — matches order ID, status, or item model names
+ * Search predicate for the admin orders table: matches order ID, status, or item model names
  * against the given query string.
  */
 export function matchOrder(order: Order, search: string): boolean {

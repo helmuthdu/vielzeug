@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — toggle'
+title: 'Arsenal Examples: toggle'
 description: 'toggle example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'toggle example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have a multi-select list and need to add an item if it's absent or remove it if it's already present — the standard checkbox toggle pattern.
+You have a multi-select list and need to add an item if it's absent or remove it if it's already present: the standard checkbox toggle pattern.
 
 ### Solution
 
@@ -16,8 +16,8 @@ Use `toggle(array, item, selector?, options?)` to return a new array with the it
 ```ts
 import { toggle } from '@vielzeug/arsenal';
 
-toggle(['ts', 'node', 'vue'], 'ts'); // ['node', 'vue']  — removed
-toggle(['ts', 'node', 'vue'], 'react'); // ['ts', 'node', 'vue', 'react'] — added
+toggle(['ts', 'node', 'vue'], 'ts'); // ['node', 'vue']: removed
+toggle(['ts', 'node', 'vue'], 'react'); // ['ts', 'node', 'vue', 'react']: added
 ```
 
 #### With selector for objects
@@ -35,7 +35,7 @@ toggle(tags, { id: 1, name: 'ts' }, (t) => t.id);
 
 ### Pitfalls
 
-- Without a selector, uses deep equality — pass a selector for object arrays.
+- Without a selector, uses deep equality: pass a selector for object arrays.
 
 ### Related
 

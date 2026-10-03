@@ -10,5 +10,5 @@ export class TavernError extends Error {
   }
 }
 
-/** A pairing code the consumer pasted could not be used — a user-input mistake, not a bug. */
+/** A pairing code the consumer pasted could not be used: a user-input mistake, not a bug. */
 export class TavernPairingError extends TavernError {}

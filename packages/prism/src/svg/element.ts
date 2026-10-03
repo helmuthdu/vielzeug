@@ -23,7 +23,7 @@ export function setAttributes(el: SVGElement, attrs: Record<string, number | str
 
     if (typeof value === 'number' && !Number.isFinite(value)) {
       warn(
-        `setAttributes: attribute "${key}" on <${el.tagName}> received a non-finite value (${value}) — check upstream scale/geometry math for invalid input.`,
+        `setAttributes: attribute "${key}" on <${el.tagName}> received a non-finite value (${value}): check upstream scale/geometry math for invalid input.`,
       );
     }
 

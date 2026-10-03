@@ -1,5 +1,5 @@
 ---
-title: 'Vault Examples — CRUD'
+title: 'Vault Examples: CRUD'
 description: 'Create, read, update, and delete records with @vielzeug/vault.'
 ---
 
@@ -34,15 +34,15 @@ const alice = await db.get('users', 1); // User | undefined
 const all = await db.getAll('users'); // User[]
 const total = await db.count('users'); // 3
 const live = await db.has('users', 1); // true
-const empty = await db.isEmpty('users'); // false — table has records
+const empty = await db.isEmpty('users'); // false: table has records
 
-// bulk read — preserves key order; missing keys yield undefined
+// bulk read: preserves key order; missing keys yield undefined
 const [a, missing, c] = await db.getMany('users', [1, 99, 3]);
 
-// partial update — merges fields, keeps the original key
+// partial update: merges fields, keeps the original key
 const updated = await db.update('users', 1, { age: 31 }); // User | undefined
 
-// read-modify-write — callback receives current record or undefined
+// read-modify-write: callback receives current record or undefined
 await db.upsert('users', 99, (existing) => ({
   id: 99,
   name: existing?.name ?? 'Guest',
@@ -59,9 +59,9 @@ await db.clear('users'); // removes all records
 
 ### Pitfalls
 
-- `update()` returns `undefined` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
+- `update()` returns `undefined` when the key does not exist: it does not insert. Use `upsert()` for read-or-insert semantics.
 - `deleteMany()` returns the count of records that actually existed and were deleted, not the length of the keys array. Keys that are not found are silently skipped.
-- `isEmpty(table)` is a convenience shorthand for `(await count(table)) === 0` — useful for seeding default data on first run.
+- `isEmpty(table)` is a convenience shorthand for `(await count(table)) === 0`: useful for seeding default data on first run.
 - `count()` and `getAll()` both return only live records. Expired records can still occupy storage until you prune them.
 - Bound `update()` and `upsert()` are atomic on IndexedDB and SQLite; key-value-store forms are non-atomic under concurrent writers.
 - `putAll()` is not an atomic unit across adapters. Use `batch()` on an IndexedDB or SQLite store when all writes must commit or roll back together.
@@ -71,4 +71,4 @@ await db.clear('users'); // removes all records
 - [Lazy Iteration](./iterate.md)
 - [TTL and Pruning](./ttl.md)
 - [Batch Writes](./batch.md)
-- [Usage Guide — Read and Change Records](/vault/usage.md#read-and-change-records)
+- [Usage Guide: Read and Change Records](/vault/usage.md#read-and-change-records)

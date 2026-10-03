@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — mapValues'
+title: 'Arsenal Examples: mapValues'
 description: 'mapValues example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'mapValues example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to transform every value in an object while keeping the same keys — for example rounding all numeric fields or formatting display values.
+You need to transform every value in an object while keeping the same keys: for example rounding all numeric fields or formatting display values.
 
 ### Solution
 
@@ -23,7 +23,7 @@ mapValues(prices, (v) => Math.round(v * 100) / 100);
 
 ### Pitfalls
 
-- Returns a new object — the original is not mutated.
+- Returns a new object: the original is not mutated.
 
 ### Related
 

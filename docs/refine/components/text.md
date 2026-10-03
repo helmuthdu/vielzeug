@@ -21,18 +21,18 @@ Normal paragraph text with standard line height. The default variant for general
 
 ### Heading
 
-Emphasized text for headings with tighter line height and semibold weight. Defaults to `md` on the heading scale (`--heading-md`, 1.5rem / 24px) — set `size` explicitly to pick a different step.
+Emphasized text for headings with tighter line height and semibold weight. Defaults to `md` on the heading scale (`--heading-md`, 1.5rem / 24px): set `size` explicitly to pick a different step.
 
 ::: info Heading scale vs body scale
 `variant="heading"` maps the `size` attribute to the **heading scale** (`--heading-xs` → `--heading-2xl`) rather than the body text scale. This gives a much wider range: from 0.875rem (xs) all the way to 4rem (2xl). See [Size Options](#size-options) for the full mapping.
 :::
 
-Always set an explicit `size` when using `variant="heading"` to select the correct step from the heading scale — `size="2xl"` on a heading renders at 4rem (64px), not 1.5rem. Pair with `as="h1"`–`as="h6"` to get correct visual hierarchy and document semantics in one attribute set.
+Always set an explicit `size` when using `variant="heading"` to select the correct step from the heading scale: `size="2xl"` on a heading renders at 4rem (64px), not 1.5rem. Pair with `as="h1"`–`as="h6"` to get correct visual hierarchy and document semantics in one attribute set.
 
 <ComponentPreview center vertical>
 
 ```html
-<ore-text variant="heading">Default heading (md — 24px)</ore-text>
+<ore-text variant="heading">Default heading (md: 24px)</ore-text>
 <ore-text variant="heading" size="xs">Heading xs (14px)</ore-text>
 <ore-text variant="heading" size="sm">Heading sm (16px)</ore-text>
 <ore-text variant="heading" size="md">Heading md (24px)</ore-text>
@@ -131,7 +131,7 @@ Choose from 6 size steps. The token scale resolved depends on the active variant
 
 ### Semantic Colors
 
-Use semantic colors to convey meaning and maintain consistency. Do not rely on `color` alone to convey meaning — always pair with a descriptive text label.
+Use semantic colors to convey meaning and maintain consistency. Do not rely on `color` alone to convey meaning: always pair with a descriptive text label.
 
 <ComponentPreview center vertical>
 
@@ -238,7 +238,7 @@ Enable single-line truncation with ellipsis for overflow text. The `truncate` at
 
 ### Line Clamp
 
-Clamp text to a fixed number of lines with an ellipsis — ideal for card descriptions and teasers. Use `lines` for multi-line truncation and `truncate` for single-line. They are mutually exclusive — `lines` takes precedence if both are present.
+Clamp text to a fixed number of lines with an ellipsis: ideal for card descriptions and teasers. Use `lines` for multi-line truncation and `truncate` for single-line. They are mutually exclusive: `lines` takes precedence if both are present.
 
 <ComponentPreview center vertical>
 
@@ -269,20 +269,20 @@ Apply italic styling to text.
 
 ### Semantic HTML Tags
 
-The `as` attribute controls document semantics. Use the `as` attribute to render a semantically correct element (`h1`–`h6`, `p`, `label`, `code`) — especially inside forms, articles, and page headers. For `h1`–`h6`, the component automatically sets `role="heading"` and the correct `aria-level` on the host so screen readers announce the correct heading level without any extra markup. Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
+The `as` attribute controls document semantics. Use the `as` attribute to render a semantically correct element (`h1`–`h6`, `p`, `label`, `code`): especially inside forms, articles, and page headers. For `h1`–`h6`, the component automatically sets `role="heading"` and the correct `aria-level` on the host so screen readers announce the correct heading level without any extra markup. Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
 
 Block elements (`p`, `div`, `h1`–`h6`) render as `display: block`. Inline elements (`span`, `label`, `code`) render as `display: inline`.
 
 <ComponentPreview center vertical>
 
 ```html
-<!-- Block-level — role="heading" + aria-level set automatically -->
+<!-- Block-level: role="heading" + aria-level set automatically -->
 <ore-text as="h1" variant="heading" size="2xl">H1 Heading</ore-text>
 <ore-text as="h2" variant="heading" size="xl">H2 Heading</ore-text>
 <ore-text as="p">Paragraph with proper semantics</ore-text>
 <ore-text as="div">Div container</ore-text>
 
-<!-- Inline — renders as display: inline -->
+<!-- Inline: renders as display: inline -->
 <ore-text as="span">Inline span</ore-text>
 <ore-text as="label">Form label</ore-text>
 <ore-text as="code" variant="code">inline code</ore-text>
@@ -377,15 +377,15 @@ Show file information with truncation using width constraints.
 
 | Attribute  | Type                                                                                                                                                  | Default | Description                                                                                                                |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                                 | —       | Text variant style                                                                                                         |
-| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                                                                                                       | —       | Font size. `variant="heading"` resolves against `--heading-*` tokens; all other variants resolve against `--text-*` tokens |
-| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                                        | —       | Font weight (falls back to variant default, then `normal`)                                                                 |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'tertiary' \| 'disabled' \| 'contrast'` | —       | Text color (falls back to variant default, then `inherit`)                                                                 |
-| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                                          | —       | Text alignment (forces `display: block`)                                                                                   |
-| `truncate` | `boolean`                                                                                                                                             | —       | Single-line truncation with ellipsis                                                                                       |
-| `lines`    | `number`                                                                                                                                              | —       | Clamp to N lines with ellipsis (multi-line truncation)                                                                     |
-| `italic`   | `boolean`                                                                                                                                             | —       | Italic font style                                                                                                          |
-| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                                         | —       | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                      |
+| `variant`  | `'body' \| 'heading' \| 'label' \| 'caption' \| 'overline' \| 'code'`                                                                                 | N/A | Text variant style                                                                                                         |
+| `size`     | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'`                                                                                                       | N/A | Font size. `variant="heading"` resolves against `--heading-*` tokens; all other variants resolve against `--text-*` tokens |
+| `weight`   | `'normal' \| 'medium' \| 'semibold' \| 'bold'`                                                                                                        | N/A | Font weight (falls back to variant default, then `normal`)                                                                 |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error' \| 'heading' \| 'body' \| 'muted' \| 'tertiary' \| 'disabled' \| 'contrast'` | N/A | Text color (falls back to variant default, then `inherit`)                                                                 |
+| `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                                          | N/A | Text alignment (forces `display: block`)                                                                                   |
+| `truncate` | `boolean`                                                                                                                                             | N/A | Single-line truncation with ellipsis                                                                                       |
+| `lines`    | `number`                                                                                                                                              | N/A | Clamp to N lines with ellipsis (multi-line truncation)                                                                     |
+| `italic`   | `boolean`                                                                                                                                             | N/A | Italic font style                                                                                                          |
+| `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                                         | N/A | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                      |
 
 ### Variant Defaults
 

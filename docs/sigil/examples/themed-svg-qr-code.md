@@ -1,5 +1,5 @@
 ---
-title: 'Sigil Examples — Themed SVG QR Code'
+title: 'Sigil Examples: Themed SVG QR Code'
 description: Encode a payload to a themed SVG QR code with @vielzeug/sigil.
 ---
 
@@ -7,7 +7,7 @@ description: Encode a payload to a themed SVG QR code with @vielzeug/sigil.
 
 ### Problem
 
-You need a QR code in the page that follows the current text color and survives dark/light theming — without pulling in a canvas-based QR library or hardcoding colors.
+You need a QR code in the page that follows the current text color and survives dark/light theming: without pulling in a canvas-based QR library or hardcoding colors.
 
 ### Solution
 
@@ -34,7 +34,7 @@ try {
 }
 ```
 
-The container needs no QR-specific CSS — `color` controls the modules:
+The container needs no QR-specific CSS: `color` controls the modules:
 
 ```css
 #qr svg {
@@ -47,12 +47,12 @@ The container needs no QR-specific CSS — `color` controls the modules:
 
 ### Pitfalls
 
-- Injecting `toSvg` output via `innerHTML` is safe for sigil's own output, but never interpolate *untrusted* values into the `label`/color options — they are emitted as raw attribute/CSS text.
-- A payload near capacity produces a dense matrix that cheap scanners struggle with — raise the version (`minVersion`) or lower the error-correction level instead of shrinking the rendered size.
+- Injecting `toSvg` output via `innerHTML` is safe for sigil's own output, but never interpolate *untrusted* values into the `label`/color options: they are emitted as raw attribute/CSS text.
+- A payload near capacity produces a dense matrix that cheap scanners struggle with: raise the version (`minVersion`) or lower the error-correction level instead of shrinking the rendered size.
 - `encodeQr` throws `SigilCapacityError` synchronously; don't wrap it in a promise chain expecting rejection.
 
 ### Related
 
 - [Usage Guide](../usage.md)
 - [Pair Two Devices with QR](./pair-two-devices.md)
-- [ore-qr-code](../../refine/components/qr-code.md) — the wrapped component
+- [ore-qr-code](../../refine/components/qr-code.md): the wrapped component

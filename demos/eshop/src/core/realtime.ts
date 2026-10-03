@@ -45,7 +45,7 @@ class ScriptedWebSocket extends MockWebSocket {
     super.close(code, reason);
   }
 
-  /** Jittered 4–15s re-schedule (not a fixed `setInterval`) — a metronomically exact cadence is
+  /** Jittered 4–15s re-schedule (not a fixed `setInterval`): a metronomically exact cadence is
    * the tell that gives away a scripted "N shoppers configuring" presence count; a randomized
    * gap reads as organic activity instead. */
   #scheduleNextActivity(): void {

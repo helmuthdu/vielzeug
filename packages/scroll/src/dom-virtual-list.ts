@@ -55,7 +55,7 @@ export type StickToBottomOptions = {
   /** Enable/disable the behavior. Default: `true` once this object is provided. */
   enabled?: boolean;
   /**
-   * Distance in pixels from the end still considered "at the end" — the bottom edge in
+   * Distance in pixels from the end still considered "at the end": the bottom edge in
    * vertical mode, the trailing edge in horizontal mode. Default: `48`.
    */
   threshold?: number;
@@ -76,7 +76,7 @@ export type DomVirtualListOptions<T> = {
   scrollElement: HTMLElement | Window;
   /**
    * Auto-scroll to the end after `setItems()` whenever the list was already at (or near) the
-   * end just before the update — the chat "stick to bottom on new message" pattern. Fires on
+   * end just before the update: the chat "stick to bottom on new message" pattern. Fires on
    * *any* update while at the end, not just growth, so it also follows a streaming last
    * item that grows in place without changing `items.length`. Does nothing while the user
    * has scrolled away from the end. Pass `true` for defaults, or an options object.
@@ -91,7 +91,7 @@ export type DomVirtualListOptions<T> = {
  * scrollToOffset, etc.) are accessible directly on the controller without
  * needing to unwrap an inner virtualizer handle.
  *
- * `prepend` and `update` are omitted — use `setItems()` for item updates and
+ * `prepend` and `update` are omitted: use `setItems()` for item updates and
  * there is no direct `prepend` concept in DomVirtualList.
  */
 export type DomVirtualListController<T> = Omit<Virtualizer, 'prepend' | 'update'> & {
@@ -425,7 +425,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     setItems(items) {
       if (disposed) return;
 
-      // Read *before* mutating state — the "was the list already at the end?" check must
+      // Read *before* mutating state: the "was the list already at the end?" check must
       // reflect the pre-update layout, not the one `render()` is about to produce below.
       const stick = resolveStickToBottom();
       const wasAtEnd = stick.enabled && (virtualizer?.isAtEnd(stick.threshold) ?? true);
@@ -451,7 +451,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
       const countChanged = items.length !== virtualizer.count;
 
-      // Only count needs explicit update — estimateSize and getItemKey are
+      // Only count needs explicit update: estimateSize and getItemKey are
       // closures that already reflect the latest currentItems automatically.
       virtualizer.update({ count: items.length });
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Single entrypoint for every release/publish operation CI runs. Workflow YAML only ever
- * calls `node scripts/release/cli.mjs <subcommand> ...` — the actual logic (and all of its
+ * calls `node scripts/release/cli.mjs <subcommand> ...`: the actual logic (and all of its
  * tests) lives in the sibling modules this file imports. One CLI surface instead of N flat
  * scripts is what makes "how do I run a release step locally" a one-command answer instead of
  * "which of these eight files do I need."
@@ -19,7 +19,7 @@
  *   plan <pkg...>                           print a JSON publish plan (for a matrix)
  *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag + release one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
- *   tag-release <pkg> <version> <folder>    tag + GitHub release only — no `npm publish` (the
+ *   tag-release <pkg> <version> <folder>    tag + GitHub release only: no `npm publish` (the
  *                                            version must already exist on npm, e.g. published
  *                                            via `pnpm release:publish-local`)
  *   release-plan                            print a JSON tag+release plan (release.yml's matrix):
@@ -27,14 +27,14 @@
  *                                            current version is on npm but not yet tagged
  *
  * `publish` and `publish-missing` take two flags relevant only when running this locally
- * rather than in CI (CI never needs either — see `npm-publish.mjs` for why):
- *   --otp=<code>    for a TOTP-authenticator account, a one-off retry only — the code expires
+ * rather than in CI (CI never needs either: see `npm-publish.mjs` for why):
+ *   --otp=<code>    for a TOTP-authenticator account, a one-off retry only: the code expires
  *                   in ~30s, so it doesn't scale to publishing many packages in one run.
  *   --interactive   for a WebAuthn/passkey account, where npm opens a browser tab to approve
- *                   the publish instead of asking for a code — requires a real terminal (shares
+ *                   the publish instead of asking for a code: requires a real terminal (shares
  *                   this process's stdio with npm) and disables automatic E409 retry.
  * Either way, for more than one or two packages use an npm Automation token or Granular Access
- * Token instead — see `scripts/release/local-publish.mjs`.
+ * Token instead: see `scripts/release/local-publish.mjs`.
  */
 
 import { appendFileSync } from 'node:fs';
@@ -52,7 +52,7 @@ import { tagAndRelease } from './tag-and-release.mjs';
 async function main(argv) {
   const { flags, positionals } = parseArgs(argv);
   const [command, ...args] = positionals;
-  const dryRun = process.env.DRY_RUN === '1'; // read per-call, not at import time — see scripts/AGENTS.md
+  const dryRun = process.env.DRY_RUN === '1'; // read per-call, not at import time: see scripts/AGENTS.md
 
   switch (command) {
     case 'changed-packages': {
@@ -77,7 +77,7 @@ async function main(argv) {
       const [pkg] = args;
       const { changedPackages, train } = applyTrain(pkg, { dryRun });
       console.log(
-        `${dryRun ? '[dry-run] would apply' : 'Applied'} release train ${train} — changelog for: ${changedPackages.join(', ')}`,
+        `${dryRun ? '[dry-run] would apply' : 'Applied'} release train ${train}: changelog for: ${changedPackages.join(', ')}`,
       );
       return;
     }
@@ -91,7 +91,7 @@ async function main(argv) {
     case 'publish': {
       const [pkg, version, folder] = args;
       if (await versionExists(pkg, version)) {
-        console.log(`⚠️  ${pkg}@${version} already on npm — skipping`);
+        console.log(`⚠️  ${pkg}@${version} already on npm: skipping`);
         return;
       }
       await publishPackage(folder, { dryRun, interactive: Boolean(flags.interactive), otp: flags.otp });
@@ -104,12 +104,12 @@ async function main(argv) {
       const [pkg, version, folder] = args;
       if (!(await versionExists(pkg, version))) {
         throw new Error(
-          `${pkg}@${version} not found on npm — this command only tags and creates a GitHub release for a ` +
+          `${pkg}@${version} not found on npm: this command only tags and creates a GitHub release for a ` +
             `version already published (e.g. via 'pnpm release:publish-local'). Publish it first, then re-run.`,
         );
       }
       tagAndRelease({ dryRun, folder, package: pkg, version });
-      console.log(`✅ Tagged and released ${pkg}@${version} (no npm publish — already on npm)`);
+      console.log(`✅ Tagged and released ${pkg}@${version} (no npm publish: already on npm)`);
       return;
     }
 
@@ -141,7 +141,7 @@ export { main };
 
 if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).catch((error) => {
-    console.error(error); // not error.message — several subcommands wrap a real cause, and this is the terminal fatal-error path
+    console.error(error); // not error.message: several subcommands wrap a real cause, and this is the terminal fatal-error path
     process.exitCode = 1;
   });
 }

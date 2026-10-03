@@ -23,7 +23,7 @@ await courier.mutate({
   invalidateKeys: [['users']],
 });
 
-// After — use explicit cached reads without observable query state.
+// After: use explicit cached reads without observable query state.
 const user = await courier.get('/users/{id}', {
   cache: { key: ['users', 1], ttlMs: 30_000 },
   params: { id: 1 },
@@ -150,7 +150,7 @@ courier.setHeaders({ authorization: 'Bearer token' });
 ### Replace `invalidate()` + `refetchStale()` with `invalidate(prefix, { refetch: true })`
 
 `refetchStale()` is removed. `invalidate()` now accepts an optional `{ refetch: true }` option that refetches
-matching entries in the background — one call instead of two.
+matching entries in the background: one call instead of two.
 
 ```ts
 // Before
@@ -202,7 +202,7 @@ courier.use(withLogging({ logger: (msg) => console.log(msg) }));
 
 ### `CourierError.is()` removed
 
-Use `instanceof CourierError` directly. `CourierHttpError.is(err, status?)` is retained — the status filter is
+Use `instanceof CourierError` directly. `CourierHttpError.is(err, status?)` is retained: the status filter is
 genuinely useful.
 
 ### `QueryKeyAtom` no longer accepts objects
@@ -222,7 +222,7 @@ throwing `SyntaxError`.
 
 ### Replace `debugCourier()` with `withLogging()`
 
-The `@vielzeug/courier/devtools` subpath and `debugCourier()` export are removed. Use `withLogging()` directly — it is the same one-line composition.
+The `@vielzeug/courier/devtools` subpath and `debugCourier()` export are removed. Use `withLogging()` directly: it is the same one-line composition.
 
 ```ts
 // Before
@@ -237,7 +237,7 @@ client.use(withLogging({ logger: (msg) => console.log(msg) }));
 
 ### Update `invalidate()` call sites if passing typed `QueryKey` variables
 
-`invalidate()` now accepts `readonly unknown[]` instead of `QueryKey`. Existing calls with `QueryKey` values still compile — the change is a type widening, not a narrowing. No code changes required unless you were relying on the exact `QueryKey` type for overload resolution.
+`invalidate()` now accepts `readonly unknown[]` instead of `QueryKey`. Existing calls with `QueryKey` values still compile: the change is a type widening, not a narrowing. No code changes required unless you were relying on the exact `QueryKey` type for overload resolution.
 
 ### Consolidate client setup
 

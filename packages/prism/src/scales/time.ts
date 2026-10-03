@@ -55,7 +55,7 @@ function niceDomain(domain: [Date, Date], count: number): [Date, Date] {
 
 export function timeScale(config: TimeScaleConfig): Scale<Date> {
   // Every method below closes over `config`/these helpers directly instead of reading
-  // `this` — the returned object stays fully functional when destructured, e.g.
+  // `this`: the returned object stays fully functional when destructured, e.g.
   // `const { map } = timeScale(cfg)`.
   const getDomain = (): [Date, Date] => (config.nice === false ? config.domain : niceDomain(config.domain, 10));
   const getRange = (): [number, number] => config.range;

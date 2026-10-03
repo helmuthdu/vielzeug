@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — omit'
+title: 'Arsenal Examples: omit'
 description: 'omit example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'omit example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to create a copy of an object with certain keys removed — for example stripping `password` before returning a user record.
+You need to create a copy of an object with certain keys removed: for example stripping `password` before returning a user record.
 
 ### Solution
 
@@ -23,7 +23,7 @@ omit(user, ['password']);
 
 ### Pitfalls
 
-- Returns a shallow copy — nested values are not cloned.
+- Returns a shallow copy: nested values are not cloned.
 - For the inverse (keep a subset of keys), use `pick`.
 
 ### Related

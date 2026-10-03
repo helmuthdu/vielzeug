@@ -1,5 +1,5 @@
 /**
- * createMemoryHistory — in-memory history driver used by the router.
+ * createMemoryHistory: in-memory history driver used by the router.
  */
 import { createBrowserHistory, createHashHistory, createHistoryForBase, createMemoryHistory, createRouter } from '../';
 import { boot, disposeRouter, mockLocation, resetMocks } from './setup';
@@ -26,7 +26,7 @@ describe('createMemoryHistory', () => {
     h.push('/about');
 
     expect(h.location.pathname).toBe('/about');
-    expect(listener).not.toHaveBeenCalled(); // mirrors browser pushState — no popstate event
+    expect(listener).not.toHaveBeenCalled(); // mirrors browser pushState: no popstate event
   });
 
   it('replace updates location silently without stacking a new entry', () => {
@@ -44,7 +44,7 @@ describe('createMemoryHistory', () => {
   it('back() moves to the previous entry and notifies subscribers', () => {
     const h = createMemoryHistory('/');
 
-    h.push('/about'); // silent — stack: [/, /about], cursor=1
+    h.push('/about'); // silent: stack: [/, /about], cursor=1
 
     const listener = vi.fn();
 

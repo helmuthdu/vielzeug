@@ -89,7 +89,7 @@ describe('ore-date-picker', () => {
 
       const trigger = fixture.query('ore-input.trigger');
 
-      // No date selected — value attribute reflects the placeholder text (triggerText fallback),
+      // No date selected: value attribute reflects the placeholder text (triggerText fallback),
       // not a real ISO date. The placeholder attribute is also forwarded.
       expect(trigger?.getAttribute('value')).not.toMatch(/^\d{4}-\d{2}-\d{2}$/);
       expect(trigger?.getAttribute('placeholder')).toBe('Pick date');
@@ -330,7 +330,7 @@ describe('ore-date-picker', () => {
 
       const trigger = fixture.query('ore-input.trigger');
 
-      // Invalid ISO — value attribute should not contain a valid yyyy-MM-dd date
+      // Invalid ISO: value attribute should not contain a valid yyyy-MM-dd date
       expect(trigger?.getAttribute('value') ?? '').not.toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 

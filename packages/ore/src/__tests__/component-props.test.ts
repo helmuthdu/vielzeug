@@ -32,7 +32,7 @@ describe('component props', () => {
     expect(element.hasAttribute('disabled')).toBe(true);
 
     // Structural a11y check: this is the exact scenario AGENTS.md's a11y contract
-    // calls out — a prop-reflection bug that drops/mangles a boolean attribute
+    // calls out: a prop-reflection bug that drops/mangles a boolean attribute
     // (e.g. `disabled`) would silently break every consumer of this primitive.
     const results = await axeCheck(element);
 
@@ -303,7 +303,7 @@ describe('component props', () => {
       expect((element as HTMLElement & { config: { x: number } }).config).toBe(defaultObj);
     });
 
-    it('ignores HTML attribute — keeps default value as-is', async () => {
+    it('ignores HTML attribute: keeps default value as-is', async () => {
       const { element } = await mount(
         (props) => html`
           <div>${() => String(props.config.value)}</div>
@@ -376,7 +376,7 @@ describe('component props', () => {
       expect((element as HTMLElement & { getValue: (() => string) | undefined }).getValue).toBe(defaultFn);
     });
 
-    it('ignores HTML attribute — keeps value as-is', async () => {
+    it('ignores HTML attribute: keeps value as-is', async () => {
       const { element } = await mount(
         (props) => html`
           <div>${() => String(props.getValue.value)}</div>
@@ -493,7 +493,7 @@ describe('component props', () => {
 
   describe('pre-upgrade property values', () => {
     // Frameworks that hydrate/patch server-rendered custom elements (e.g. Vue) may assign
-    // a prop as a plain JS property on the element *before* it upgrades — the browser stashes
+    // a prop as a plain JS property on the element *before* it upgrades: the browser stashes
     // that as an own instance property, which `registerProp` must then adopt. When the
     // assigned value is a string (as it would be for a plain HTML-style attribute such as
     // `size="16"`), it must be routed through the same `parse` the attribute path uses.
@@ -545,7 +545,7 @@ describe('component props', () => {
     it('parses a string assigned via the property setter after the element already upgraded', async () => {
       // Mirrors the other half of the same hydration race: the element auto-upgrades from its
       // SSR attribute *before* the framework's reconciliation pass reaches it, so the property
-      // already exists — the framework then assigns straight through the setter with the vnode's
+      // already exists: the framework then assigns straight through the setter with the vnode's
       // raw (string) prop value instead of calling setAttribute.
       const { element } = await mount(
         (props) => html`

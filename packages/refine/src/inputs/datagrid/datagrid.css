@@ -132,7 +132,7 @@
     padding: var(--size-1) 0 0;
   }
 
-  /* ore-checkbox used for select-all and row checkboxes — label-less, compact */
+  /* ore-checkbox used for select-all and row checkboxes: label-less, compact */
   .dg-check {
     display: inline-flex;
     gap: 0;
@@ -316,7 +316,7 @@
     align-items: center;
   }
 
-  /* ── Shared icon button — used by action bar, search-expand clear, popover header icons ── */
+  /* ── Shared icon button: used by action bar, search-expand clear, popover header icons ── */
 
   .dg-action-divider {
     display: inline-block;

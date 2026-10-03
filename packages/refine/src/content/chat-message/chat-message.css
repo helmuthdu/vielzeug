@@ -80,11 +80,11 @@
   }
 
   /*
-   * `white-space`/`overflow-wrap` live on the slot itself, not `.content` — both are
+   * `white-space`/`overflow-wrap` live on the slot itself, not `.content`: both are
    * inherited properties, and slotted nodes inherit from their point of use (the `<slot>`)
    * per the CSS Scoping spec, so this still reaches the projected text. Scoping it here
-   * (instead of the parent `.content`) keeps `.content`'s own whitespace-only text nodes —
-   * the newline + indentation between `<slot>` and the cursor `<span>` in this template —
+   * (instead of the parent `.content`) keeps `.content`'s own whitespace-only text nodes :
+   * the newline + indentation between `<slot>` and the cursor `<span>` in this template :
    * under normal collapsing rules, so they don't render as extra blank lines. Putting
    * `pre-wrap` on `.content` directly did exactly that: real bug, caught by measuring
    * rendered box height in a real browser.
@@ -127,7 +127,7 @@
     gap: var(--size-1-5);
     align-items: center;
 
-    /* Match `.bubble`'s inline padding — see `.name` above. */
+    /* Match `.bubble`'s inline padding: see `.name` above. */
     padding-inline: var(--size-3-5);
     font-size: var(--text-xs);
     color: var(--color-contrast-400);
@@ -212,7 +212,7 @@
     display: flex;
     gap: var(--size-1);
 
-    /* Match `.bubble`'s inline padding — see `.name` above. */
+    /* Match `.bubble`'s inline padding: see `.name` above. */
     padding-inline: var(--size-3-5);
   }
 

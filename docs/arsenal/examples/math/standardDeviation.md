@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — standardDeviation'
+title: 'Arsenal Examples: standardDeviation'
 description: 'standardDeviation example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'standardDeviation example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need the spread of a dataset — how far values typically deviate from the mean.
+You need the spread of a dataset: how far values typically deviate from the mean.
 
 ### Solution
 

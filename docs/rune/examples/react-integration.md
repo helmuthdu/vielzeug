@@ -1,5 +1,5 @@
 ---
-title: 'Rune Examples — React Integration'
+title: 'Rune Examples: React Integration'
 description: 'React Integration example for @vielzeug/rune.'
 ---
 
@@ -21,7 +21,7 @@ const log = createLogger({ namespace: 'UserProfile' });
 
 export function UserProfile({ userId }: { userId: string }) {
   useEffect(() => {
-    // pin userId once — every call in this effect includes it automatically
+    // pin userId once: every call in this effect includes it automatically
     const scopedLog = log.withBindings({ userId });
     scopedLog.debug('mounted');
 

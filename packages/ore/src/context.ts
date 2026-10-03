@@ -1,5 +1,5 @@
 /**
- * Component context injection API — `inject` / `injectStrict` / `provide` / `createContext`.
+ * Component context injection API: `inject` / `injectStrict` / `provide` / `createContext`.
  *
  * Context values are stored on the providing element via a WeakMap registry and
  * resolved by walking up the DOM tree (including through shadow boundaries).
@@ -31,7 +31,7 @@ const buildAncestorChain = (start: HTMLElement): HTMLElement[] => {
   while (node) {
     if (node instanceof HTMLElement) chain.push(node);
 
-    // A ShadowRoot's parentNode is null — hop to its host to keep walking.
+    // A ShadowRoot's parentNode is null: hop to its host to keep walking.
     node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null);
   }
 
@@ -40,7 +40,7 @@ const buildAncestorChain = (start: HTMLElement): HTMLElement[] => {
 
 /**
  * Register a context value on a specific element.
- * @internal Backs the public `provide()` — do not call directly.
+ * @internal Backs the public `provide()`: do not call directly.
  */
 const provideOnElement = <T>(el: HTMLElement, key: InjectionKey<T>, value: T): void => {
   const map = contextRegistry.get(el) ?? new Map<InjectionKey<unknown>, unknown>();
@@ -50,9 +50,7 @@ const provideOnElement = <T>(el: HTMLElement, key: InjectionKey<T>, value: T): v
   // silently ignored downstream. Provide a `Readable` (signal/computed) instead
   // of a raw value so descendants observe updates through the value itself.
   if (map.has(key)) {
-    warn(
-      `provide(): key already provided on <${el.localName}> — overwriting. Provide a Readable to update it instead.`,
-    );
+    warn(`provide(): key already provided on <${el.localName}>: overwriting. Provide a Readable to update it instead.`);
   }
 
   map.set(key, value);
@@ -64,7 +62,7 @@ const provideOnElement = <T>(el: HTMLElement, key: InjectionKey<T>, value: T): v
  * available to descendant components via `inject(key)`.
  *
  * Provide a `Readable` (signal/computed) rather than a raw value if descendants
- * need to observe later changes — `inject()` resolves and caches the value once
+ * need to observe later changes: `inject()` resolves and caches the value once
  * per consumer, so re-calling `provide()` with a new raw value later is not seen.
  */
 export const provide = <T>(key: InjectionKey<T>, value: T): void => {

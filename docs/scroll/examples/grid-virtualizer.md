@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Grid Virtualizer'
+title: 'Scroll Examples: Grid Virtualizer'
 description: 'Virtualize a two-dimensional grid with independent row and column measurement.'
 ---
 

@@ -209,7 +209,7 @@
   }
 
   /* The bottom tab bar (`.bottom-bar` in sidebar.ts) renders its own promoted-item
-     buttons from the same data — the original <ore-sidebar-item> stays inside the
+     buttons from the same data: the original <ore-sidebar-item> stays inside the
      (visually off-screen while closed) <nav>, so it must be fully hidden here to
      avoid a focusable/AT-visible duplicate of the bottom-bar entry. */
   :host([sidebar-bottom-nav]) {

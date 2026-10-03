@@ -16,7 +16,7 @@ export interface ScaffoldGroups {
 }
 
 /**
- * Clears a cartesian chart's series/grid/axis groups and hides its legend/tooltip/crosshair —
+ * Clears a cartesian chart's series/grid/axis groups and hides its legend/tooltip/crosshair :
  * shared by every cartesian chart factory's "no data" early-return so an update
  * to empty data leaves a fully blank chart, not a half-cleared one.
  */
@@ -39,7 +39,7 @@ export interface ScaffoldContext {
   chartArea: SVGGElement;
   container: HTMLElement;
   dimensions: ChartDimensions;
-  /** Aborted when the chart is disposed — renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
+  /** Aborted when the chart is disposed: renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
   disposalSignal: AbortSignal;
   groups: ScaffoldGroups;
   legend: LegendState | null;
@@ -50,7 +50,7 @@ export interface ScaffoldContext {
 export interface RadialScaffoldContext {
   container: HTMLElement;
   dimensions: ChartDimensions;
-  /** Aborted when the chart is disposed — renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
+  /** Aborted when the chart is disposed: renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
   disposalSignal: AbortSignal;
   legend: LegendState | null;
   svg: SVGSVGElement;
@@ -196,7 +196,7 @@ export function createChartScaffold<TData>(
     (base, tooltip, legend, disposalSignal) => {
       const groups: ScaffoldGroups = {
         // Grid lines are purely decorative relative to the root svg's own role="img"/aria-label.
-        // Axis groups are NOT hidden wholesale — they can contain a meaningful `.prism-axis-title`;
+        // Axis groups are NOT hidden wholesale: they can contain a meaningful `.prism-axis-title`;
         // `renderAxis` marks its own decorative tick lines/labels individually instead.
         grid: createSvgElement('g', { 'aria-hidden': 'true', class: 'prism-grid' }),
         series: createSvgElement('g', { class: 'prism-series' }),

@@ -38,11 +38,11 @@ export type OreInputProps = TextFieldProps<Exclude<VisualVariant, 'frost'>> & {
   inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
   /**
    * Shows an inline spinner inside the field and forces the inner `<input>` into
-   * `disabled` for the duration — use while an async validation/submission request
+   * `disabled` for the duration: use while an async validation/submission request
    * is in flight (e.g. checking username availability) to prevent double-submits.
    */
   loading?: boolean;
-  /** Maximum character length — shows a counter below the input */
+  /** Maximum character length: shows a counter below the input */
   maxlength?: number;
   /** Minimum character length */
   minlength?: number;
@@ -87,7 +87,7 @@ const VALID_INPUT_TYPES = [
  * @attr {string} placeholder - Placeholder text
  * @attr {string} name - Form field name
  * @attr {string} helper - Helper text displayed below the input (fallback when the `helper` slot is empty)
- * @attr {string} error - Error message — marks the field as invalid (fallback when the `error` slot is empty)
+ * @attr {string} error - Error message: marks the field as invalid (fallback when the `error` slot is empty)
  * @attr {boolean} disabled - Disable input interaction
  * @attr {boolean} readonly - Make the input read-only
  * @attr {boolean} required - Mark the field as required
@@ -103,9 +103,9 @@ const VALID_INPUT_TYPES = [
  *
  * @slot prefix - Content before the input (e.g., icons)
  * @slot suffix - Content after the input (e.g., clear button, validation icon)
- * @slot label - Replaces the label text — slotted content takes precedence over the `label` prop
- * @slot helper - Replaces the helper text — slotted content takes precedence over the `helper` prop
- * @slot error - Replaces the error text — slotted content takes precedence over the `error` prop
+ * @slot label - Replaces the label text: slotted content takes precedence over the `label` prop
+ * @slot helper - Replaces the helper text: slotted content takes precedence over the `helper` prop
+ * @slot error - Replaces the error text: slotted content takes precedence over the `error` prop
  *
  * @part wrapper - The input wrapper element
  * @part label - The label element (inset or outside)
@@ -180,7 +180,7 @@ define<OreInputProps>(INPUT_TAG, {
     const inputRef = ref<HTMLInputElement>();
 
     const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
-    // `loading` behaves like a temporary `disabled` — forces the inner <input> out of
+    // `loading` behaves like a temporary `disabled`: forces the inner <input> out of
     // constraint validation and interaction for the duration, layered on top of any real
     // `loading` is layered on top of the consumer's explicit `disabled` prop.
     const isDisabled = computed(() => props.disabled.value || props.loading.value);
@@ -269,7 +269,7 @@ define<OreInputProps>(INPUT_TAG, {
         error: errorAttr(errorText),
         'has-value': () => (fieldValue.value ? true : undefined),
         size: props.size,
-        // Reflects `success` only once `error` is confirmed empty — keeps the two host
+        // Reflects `success` only once `error` is confirmed empty: keeps the two host
         // attributes mutually exclusive even if a consumer sets both props at once.
         success: () => (props.success.value && !errorText.value ? true : undefined),
         variant: props.variant,
@@ -383,12 +383,12 @@ define<OreInputProps>(INPUT_TAG, {
     sizeVariantMixin(FIELD_SIZE_PRESET),
     forcedColorsFocusMixin('input'),
     componentStyles,
-    // Must come after `componentStyles` — `@layer` precedence is fixed by which layer name is
+    // Must come after `componentStyles`: `@layer` precedence is fixed by which layer name is
     // *first* referenced across this whole array, and `componentStyles` is what establishes
     // `refine.base` (the unconditional `--_bg`/`--_border-color` defaults this mixin's
     // `refine.variants` rules need to win over). Placed earlier, `refine.variants` would end up
     // registered as the *lower*-priority layer, and every variant would silently render as the
-    // base default — exactly the bug this ordering fixes.
+    // base default: exactly the bug this ordering fixes.
     fieldVariantMixin({ container: '.field', text: 'input', tokenPrefix: 'input' }),
   ],
 });

@@ -35,7 +35,7 @@ describe('async extras', () => {
   it('memo rejects async functions at the type level', () => {
     const asyncFn = async (value: number) => value * 2;
 
-    // @ts-expect-error — memo() does not accept async functions (returns Promise)
+    // @ts-expect-error: memo() does not accept async functions (returns Promise)
     const memoized = memo(asyncFn);
 
     // At runtime the call succeeds (caches the Promise object), but the type error
@@ -43,7 +43,7 @@ describe('async extras', () => {
     expect(typeof memoized).toBe('function');
   });
 
-  it('abortable: non-aborted signal — resolves with inner value', async () => {
+  it('abortable: non-aborted signal: resolves with inner value', async () => {
     const controller = new AbortController();
 
     await expect(abortable(Promise.resolve('value'), controller.signal)).resolves.toBe('value');

@@ -80,7 +80,7 @@ For production use, prefer an external scorer like zxcvbn and pass the result vi
 
 | Attribute    | Type       | Default              | Description                                                    |
 | ------------ | ---------- | -------------------- | -------------------------------------------------------------- |
-| `value`      | `string`   | —                    | Password string to evaluate with the built-in heuristic        |
+| `value`      | `string`   | N/A | Password string to evaluate with the built-in heuristic        |
 | `score`      | `number`   | `-1`                 | External score override `0..4`; `-1` means use built-in scorer |
 | `show-label` | `boolean`  | `true`               | Show visible textual level feedback below the bar              |
 | `label`      | `string`   | `Password strength`  | Accessible name (`aria-label`) on the meter element            |
@@ -116,6 +116,6 @@ The visible label uses `aria-live="polite"` and `aria-atomic="true"` to announce
 
 ## Related Components
 
-- [Input](./input.md) — collect password values; forward `input` events to the meter.
-- [Progress](./progress.md) — generic determinate and indeterminate process tracking.
-- [Form](./form.md) — compose validated authentication flows.
+- [Input](./input.md): collect password values; forward `input` events to the meter.
+- [Progress](./progress.md): generic determinate and indeterminate process tracking.
+- [Form](./form.md): compose validated authentication flows.

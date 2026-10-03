@@ -51,7 +51,7 @@ Count and weighted allocation reject sparse arrays and more than 100,000 output 
 
 Coins 2.2 removes the global custom currency registry, consolidates construction, and strengthens canonical identity checks. Breaking changes below.
 
-## `defineCurrency` removed — use `currency({ code, minorUnit })`
+## `defineCurrency` removed: use `currency({ code, minorUnit })`
 
 Custom currencies are now local immutable values, not process-global registrations. No hidden mutation, no test leakage, no duplicate-scale conflicts across independent definitions.
 
@@ -65,19 +65,19 @@ import { currency } from '@vielzeug/coins';
 const POINTS = currency({ code: 'PTS', minorUnit: 0 });
 ```
 
-`currency(code)` still resolves built-ins. Two calls with the same definition produce distinct canonical instances that are not interchangeable — no global custom registry exists.
+`currency(code)` still resolves built-ins. Two calls with the same definition produce distinct canonical instances that are not interchangeable: no global custom registry exists.
 
 ### Custom currencies must be shared
 
-Currency equality is reference-based. Two independently created custom currencies with the same code and scale are **not interchangeable** — `add()`, `sum()`, `subtract()`, `compare()`, `clamp()`, and `exchange()` will throw `CurrencyMismatchError` when mixing values created with different instances.
+Currency equality is reference-based. Two independently created custom currencies with the same code and scale are **not interchangeable**: `add()`, `sum()`, `subtract()`, `compare()`, `clamp()`, and `exchange()` will throw `CurrencyMismatchError` when mixing values created with different instances.
 
 ```ts
-// Wrong — two distinct PTS instances
+// Wrong: two distinct PTS instances
 const ptsA = currency({ code: 'PTS', minorUnit: 0 });
 const ptsB = currency({ code: 'PTS', minorUnit: 0 });
 add(money('1', ptsA), money('1', ptsB)); // throws CurrencyMismatchError
 
-// Right — single source of truth
+// Right: single source of truth
 // currencies.ts
 export const PTS = currency({ code: 'PTS', minorUnit: 0 });
 ```
@@ -86,7 +86,7 @@ export const PTS = currency({ code: 'PTS', minorUnit: 0 });
 
 Canonical identity checks (`isMoney`, `isCurrency`, `isExchangeRate`) use an internal `WeakSet` tied to object identity. Values that cross realm boundaries via `structuredClone()`, `postMessage()`, or worker transfer lose canonical status. In current code, re-canonicalize with `decodeMoney()` on the receiving side.
 
-## `withMinor` removed — use `money(amount, currency, { unit: 'minor' })`
+## `withMinor` removed: use `money(amount, currency, { unit: 'minor' })`
 
 One constructor for all money values. BigInt minor-unit construction stays explicit via the `{ unit: 'minor' }` option.
 
@@ -100,7 +100,7 @@ import { money } from '@vielzeug/coins';
 const price = money(1999n, USD, { unit: 'minor' });
 ```
 
-## `resolveBuiltinCurrency` removed — use `currency`
+## `resolveBuiltinCurrency` removed: use `currency`
 
 In Coins 2.2, `parseMoneyJSON` defaulted to `currency` for resolution. Coins 3.0 replaces it with `decodeMoney()`. Custom currencies still require an explicit resolver.
 
@@ -109,7 +109,7 @@ In Coins 2.2, `parseMoneyJSON` defaulted to `currency` for resolution. Coins 3.0
 import { resolveBuiltinCurrency } from '@vielzeug/coins';
 parseMoneyJSON(payload, { currency: resolveBuiltinCurrency });
 
-// Coins 2.2 — default resolver is `currency`
+// Coins 2.2: default resolver is `currency`
 parseMoneyJSON(payload);
 parseMoneyJSON(payload, { currency: (code) => (code === 'TOK' ? tokens : currency(code)) });
 ```
@@ -119,10 +119,10 @@ parseMoneyJSON(payload, { currency: (code) => (code === 'TOK' ? tokens : currenc
 `isMoney` checks membership in the internal canonical set, not structural shape. Forged frozen objects with `bigint` amount and registered currency no longer pass. Use current `decodeMoney()` to validate and canonicalize untrusted plain data.
 
 ```ts
-// Before — structural check accepted forged frozen objects
+// Before: structural check accepted forged frozen objects
 isMoney(Object.freeze({ amount: 1n, currency: USD })); // true
 
-// After — identity check rejects forgeries
+// After: identity check rejects forgeries
 isMoney(Object.freeze({ amount: 1n, currency: USD })); // false
 isMoney(money('1', USD)); // true
 ```
@@ -140,7 +140,7 @@ isExchangeRate(Object.freeze({ ...rate })); // false
 
 ## `clamp` error code changed to `INVALID_RANGE`
 
-Was `INVALID_MONEY`. The value isn't invalid — the bounds relationship is.
+Was `INVALID_MONEY`. The value isn't invalid: the bounds relationship is.
 
 ```ts
 // Before

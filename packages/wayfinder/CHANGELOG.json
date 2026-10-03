@@ -15,7 +15,7 @@
           },
           {
             "author": "agent@vielzeug",
-            "comment": "Add createPhaseMirror — two-way phase routing for stepped flows",
+            "comment": "Add createPhaseMirror: two-way phase routing for stepped flows",
             "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
           },
           {

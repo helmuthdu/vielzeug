@@ -1,6 +1,6 @@
 ---
-title: Tandem — Usage Guide
-description: How to drive offline sync with @vielzeug/tandem — ports, gateways, rev baselines, tombstones, and reconciliation.
+title: 'Tandem: Usage Guide'
+description: 'How to drive offline sync with @vielzeug/tandem: ports, gateways, rev baselines, tombstones, and reconciliation.'
 ---
 
 [[toc]]
@@ -68,11 +68,11 @@ function saveDoc(id: string, patch: Partial<Doc>): void {
 }
 ```
 
-Because the baseline is persisted, dirtiness survives a reload: a record edited while offline is still above the baseline when the app restarts, and the boot sequence pushes it. The engine never asks your gateway to compare revs — ahead, dirty, and deletion precedence are all its decisions.
+Because the baseline is persisted, dirtiness survives a reload: a record edited while offline is still above the baseline when the app restarts, and the boot sequence pushes it. The engine never asks your gateway to compare revs: ahead, dirty, and deletion precedence are all its decisions.
 
 ## Propagate Deletions with Tombstones
 
-A plain pull cannot carry a deletion — the record is gone. Record a tombstone when you delete locally; Tandem pushes it and clears it only once the server acknowledges.
+A plain pull cannot carry a deletion: the record is gone. Record a tombstone when you delete locally; Tandem pushes it and clears it only once the server acknowledges.
 
 ```ts
 function deleteDoc(id: string): void {
@@ -82,7 +82,7 @@ function deleteDoc(id: string): void {
 }
 ```
 
-A remote deletion loses to a local record with unpushed changes: if your local rev is above the baseline, Tandem keeps your edit and pushes it instead of applying the deletion. The guard runs both ways — a pulled record whose id is locally tombstoned, or deleted in the same pull, never applies, so a backend without an incremental cursor cannot resurrect your deletions.
+A remote deletion loses to a local record with unpushed changes: if your local rev is above the baseline, Tandem keeps your edit and pushes it instead of applying the deletion. The guard runs both ways: a pulled record whose id is locally tombstoned, or deleted in the same pull, never applies, so a backend without an incremental cursor cannot resurrect your deletions.
 
 ## Batch Changes and Flush
 
@@ -91,11 +91,11 @@ Call `changed()` on every local write. The engine debounces a burst into one pus
 ```ts
 const sync = createSync({ gateway, idleDelayMs: 1500, port });
 
-// Force a full cycle now — on a save button, or before navigating away.
+// Force a full cycle now: on a save button, or before navigating away.
 try {
   await sync.flush();
 } catch {
-  // the cycle failed — edits stay local and dirty; the next cycle retries them
+  // the cycle failed: edits stay local and dirty; the next cycle retries them
 }
 ```
 
@@ -116,7 +116,7 @@ async push(records, deletions) {
 
 ## Observe with tap()
 
-`tap()` is the observation seam — pushes, pulls, refused records, and warnings. Handler errors are swallowed, so an observer never breaks sync.
+`tap()` is the observation seam: pushes, pulls, refused records, and warnings. Handler errors are swallowed, so an observer never breaks sync.
 
 ```ts
 const unsubscribe = sync.tap((event) => {
@@ -137,7 +137,7 @@ const unsubscribe = sync.tap((event) => {
 
 ## Lifecycle and Disposal
 
-Dispose before switching accounts — the baseline is per-account state and a running scheduler would push into the wrong port.
+Dispose before switching accounts: the baseline is per-account state and a running scheduler would push into the wrong port.
 
 ```ts
 const sync = createSync({ gateway, port });
@@ -209,16 +209,16 @@ useEffect(() => {
 
 ## Working with Other Vielzeug Libraries
 
-- **Vault** — the usual `gateway` backend. Its IndexedDB adapter stores records and the sync-state row; `records()` reads the in-memory mirror, `applyRecords()` writes through the codec.
-- **Postmaster** — complementary, not overlapping. Postmaster guarantees at-least-once delivery of discrete mutations; Tandem keeps whole-record state in step. Apps that need both run them side by side.
-- **Sentinel** — subscribe to `createNetwork()` and call `sync.flush()` when the connection returns; the cycle pulls and pushes, so remote changes land without waiting for the next foreground return.
-- **Ripple** — `store.subscribe(() => sync.changed())` is the idiomatic wiring for a signal-backed store.
+- **Vault**: the usual `gateway` backend. Its IndexedDB adapter stores records and the sync-state row; `records()` reads the in-memory mirror, `applyRecords()` writes through the codec.
+- **Postmaster**: complementary, not overlapping. Postmaster guarantees at-least-once delivery of discrete mutations; Tandem keeps whole-record state in step. Apps that need both run them side by side.
+- **Sentinel**: subscribe to `createNetwork()` and call `sync.flush()` when the connection returns; the cycle pulls and pushes, so remote changes land without waiting for the next foreground return.
+- **Ripple**: `store.subscribe(() => sync.changed())` is the idiomatic wiring for a signal-backed store.
 
 ## Best Practices
 
-- Bump `rev` on every committed write — the whole dirty model depends on it.
+- Bump `rev` on every committed write: the whole dirty model depends on it.
 - Validate remote records in `applyRecords()` and return the ids you refuse; never trust a pulled record.
-- Keep `records()` free of remote session mirrors — it must return only this device's own records.
+- Keep `records()` free of remote session mirrors: it must return only this device's own records.
 - Dispose on account switch; a stale scheduler pushes into the wrong port.
 - Serve `keepalive` pushes with `sendBeacon` or a `keepalive` fetch so they survive tab close.
 - Reject a push on divergence instead of silently overwriting; let the reconcile pull merge.

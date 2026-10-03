@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — diff / diffArrays'
+title: 'Arsenal Examples: diff / diffArrays'
 description: 'diff and diffArrays examples for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'diff and diffArrays examples for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to compute what changed between two object snapshots — for example logging which form fields were modified or building a patch payload for an API.
+You need to compute what changed between two object snapshots: for example logging which form fields were modified or building a patch payload for an API.
 
 ### Solution
 
@@ -59,9 +59,9 @@ diffArrays([{ id: 1 }, { id: 2 }], [{ id: 2 }, { id: 3 }], { compareFn: (a, b) =
 
 ### Pitfalls
 
-- `diff` performs a **shallow** key-level diff — nested object changes are recorded as the whole value pair, not recursively expanded.
+- `diff` performs a **shallow** key-level diff: nested object changes are recorded as the whole value pair, not recursively expanded.
 - Both arguments default to `{}`, so calling `diff(undefined, { a: 1 })` is valid and returns `{ added: ['a'], removed: [], changed: {} }`.
-- `diffArrays` is **order-independent** (set difference) — it does not track element positions.
+- `diffArrays` is **order-independent** (set difference): it does not track element positions.
 
 ### Related
 

@@ -27,16 +27,16 @@ describe('backoff', () => {
     }
   });
 
-  it('negative attempt is clamped to 0 — returns 1000ms', () => {
+  it('negative attempt is clamped to 0: returns 1000ms', () => {
     expect(backoff(-1)).toBe(1000);
     expect(backoff(-100)).toBe(1000);
   });
 
-  it('NaN attempt is treated as 0 — returns 1000ms', () => {
+  it('NaN attempt is treated as 0: returns 1000ms', () => {
     expect(backoff(NaN)).toBe(1000);
   });
 
-  it('float attempt is floored — 1.9 treated as 1', () => {
+  it('float attempt is floored: 1.9 treated as 1', () => {
     expect(backoff(1.9)).toBe(backoff(1));
   });
 });

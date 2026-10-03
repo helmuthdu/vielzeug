@@ -22,7 +22,7 @@ describe('array extras', () => {
     expect(countBy(['a', 'bb', 'c'], (item) => item.length)).toEqual({ '1': 2, '2': 1 });
   });
 
-  it('countBy guards against __proto__ prototype pollution — security regression', () => {
+  it('countBy guards against __proto__ prototype pollution: security regression', () => {
     const result = countBy(['__proto__', 'safe'], (item) => item);
 
     expect(Object.hasOwn(result, '__proto__')).toBe(false);

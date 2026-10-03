@@ -113,7 +113,7 @@ export async function attemptUpdateOrderStatus(order: Order, status: OrderStatus
 
 /**
  * Applies one status to every order in `orders` the current principal is allowed to update, in
- * parallel, then emits a single aggregated toast instead of one per order — Admin's bulk-select
+ * parallel, then emits a single aggregated toast instead of one per order: Admin's bulk-select
  * toolbar action (see `ui/views/admin.ts`). Silently skips orders the current principal can't
  * touch rather than failing the whole batch; returns how many actually updated.
  */
@@ -123,7 +123,7 @@ export async function attemptBulkUpdateOrderStatus(orders: Order[], status: Orde
   if (updatable.length === 0) return 0;
 
   // `allSettled` so a single failed patch can't skip `refreshOrders()` and leave the
-  // UI stale for the patches that did land — the mock server has already mutated for
+  // UI stale for the patches that did land: the mock server has already mutated for
   // those, so we always revalidate and report how many actually succeeded.
   const results = await Promise.allSettled(updatable.map((order) => updateOrderStatusRequest(order.id, status)));
 

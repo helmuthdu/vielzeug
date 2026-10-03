@@ -1,7 +1,7 @@
 /**
  * Test utilities for code that integrates with @vielzeug/sandbox.
  *
- * Import from '@vielzeug/sandbox/testing' — not the main entry point.
+ * Import from '@vielzeug/sandbox/testing': not the main entry point.
  * These helpers encapsulate the postMessage protocol so tests don't
  * need to know internal message shapes.
  */

@@ -1,5 +1,5 @@
 /**
- * template/compiler.ts — HTML template string parser and static template cache.
+ * template/compiler.ts: HTML template string parser and static template cache.
  *
  * Responsibilities:
  * - Parse TemplateStringsArray into slot metadata (slot detection).
@@ -11,7 +11,7 @@ import { ORE_ERRORS, OreApiError } from '../errors';
 
 // ─── Slot kinds ───────────────────────────────────────────────────────────────
 // Const object + derived union, same pattern as `ComponentPhase`
-// in base-element.ts — used here (rather than plain string literals) because the kind
+// in base-element.ts: used here (rather than plain string literals) because the kind
 // crosses a module boundary (compiler.ts produces it, instantiator.ts consumes
 // it): importing `SlotKind` gives autocomplete and a single rename point at the
 // consuming site, where a bare string literal wouldn't.
@@ -101,7 +101,7 @@ const templateCache = new WeakMap<TemplateStringsArray, CompiledStaticTemplate>(
  * `...@click=`, `...?disabled=`. Used together with tag-context
  * tracking (see below) to decide whether a quote immediately before an
  * interpolation is an attribute-value quote (strip it) or a literal text quote
- * (keep it) — previously every adjacent quote was stripped, so both
+ * (keep it): previously every adjacent quote was stripped, so both
  * `` html`"${value}"` `` and prose like `area = "${area}"` lost their quotes.
  */
 const ATTR_VALUE_CONTEXT_RE = /[@?]?[a-zA-Z_][-a-zA-Z0-9_.]*\s*=\s*$/;
@@ -123,7 +123,7 @@ const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
     const lastChar = s[s.length - 1];
 
     // Tag context at the interpolation boundary is determined by all raw string
-    // content up to it — including this string's own text before its final quote
+    // content up to it: including this string's own text before its final quote
     // (last angle bracket wins; attribute values containing '<'/'>' are outside
     // the supported syntax either way).
     for (const ch of s) {
@@ -147,7 +147,7 @@ const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
 /**
  * Attribute names that mark a binding target element, and the comment prefix for
  * node-slot anchors. Namespaced (`data-ore-*` / `ore:N`) so user-authored markup in
- * static template regions can never collide with them — a plain `u` attribute or a
+ * static template regions can never collide with them: a plain `u` attribute or a
  * numeric comment was previously hijacked as a binding marker and stripped.
  */
 const ELEMENT_MARKER_ATTR = 'data-ore-b';

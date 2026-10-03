@@ -2,7 +2,7 @@
 
 A fixed consent banner for cookie and tracker opt-in: a short policy text (default slot, links included), optional per-category opt-in checkboxes, and **Accept all** / **Reject non-essential** / **Save choices** actions.
 
-The banner owns presentation only. **It never stores anything**: listen for `decide`, persist the emitted consent record yourself (`localStorage`, a CMP, your backend), and gate third-party embeds — analytics, video, music — on the stored choice. Call `show()` again to let the user revise their decision from a "Cookie settings" link.
+The banner owns presentation only. **It never stores anything**: listen for `decide`, persist the emitted consent record yourself (`localStorage`, a CMP, your backend), and gate third-party embeds: analytics, video, music: on the stored choice. Call `show()` again to let the user revise their decision from a "Cookie settings" link.
 
 ## Basic Usage
 
@@ -63,7 +63,7 @@ Pass `categories` to offer granular opt-in. Each category renders as a checkbox;
 
 ## Revisiting the Decision
 
-Seed `consent` with the stored record and call `show()` — the checkboxes start from the saved state. `decide` never hides the banner itself, so your code decides when it has been persisted.
+Seed `consent` with the stored record and call `show()`: the checkboxes start from the saved state. `decide` never hides the banner itself, so your code decides when it has been persisted.
 
 ```js
 banner.consent = JSON.parse(localStorage.getItem('consent') ?? '{}');
@@ -91,7 +91,7 @@ The banner docks to the bottom edge by default; `position="top"` docks it to the
 
 ## Localising Labels
 
-Every string the banner renders has an English default. Pass a `labels` object to override any subset — for a German deployment, translate the heading and the three actions; the policy text itself is your slot content.
+Every string the banner renders has an English default. Pass a `labels` object to override any subset: for a German deployment, translate the heading and the three actions; the policy text itself is your slot content.
 
 ```js
 banner.labels = {
@@ -111,7 +111,7 @@ banner.labels = {
 | ---------- | --------------------- | ---------- | ---------------------------------- |
 | `position` | `'bottom' \| 'top'` | `'bottom'` | Viewport edge the banner docks to. |
 
-`categories` and `labels` are JavaScript properties (not attributes) — assign arrays/objects directly.
+`categories` and `labels` are JavaScript properties (not attributes): assign arrays/objects directly.
 
 ### Properties
 
@@ -128,7 +128,7 @@ A category is `{ id: string; label: string; description?: string }`.
 | Method    | Description                                                                        |
 | --------- | ---------------------------------------------------------------------------------- |
 | `show()`  | Reveals the banner and re-seeds the checkboxes from `consent`.                      |
-| `hide()`  | Hides the banner without emitting anything — persistence stays with the consumer.  |
+| `hide()`  | Hides the banner without emitting anything: persistence stays with the consumer.  |
 
 ### Events
 
@@ -156,8 +156,8 @@ A category is `{ id: string; label: string; description?: string }`.
 
 ## Accessibility
 
-The banner is a labelled `role="region"` (named by the heading label), not a modal dialog — it never traps focus, so keyboard users reach the checkboxes and actions in normal tab order. The Essential checkbox is `disabled` and checked, communicating that it is not a choice. The entrance animation is suppressed under `prefers-reduced-motion`.
+The banner is a labelled `role="region"` (named by the heading label), not a modal dialog: it never traps focus, so keyboard users reach the checkboxes and actions in normal tab order. The Essential checkbox is `disabled` and checked, communicating that it is not a choice. The entrance animation is suppressed under `prefers-reduced-motion`.
 
 ::: tip Consent before loading
-Under the EU ePrivacy rules (and Germany's TTDSG §25 in particular), third-party scripts that set non-essential cookies must not load **before** the user opts in. Gate the embed's script injection on the stored record — render the banner first, load the tracker only on `decide` with that category true. "Reject" must be a same-rank, one-click option, which the default action row provides.
+Under the EU ePrivacy rules (and Germany's TTDSG §25 in particular), third-party scripts that set non-essential cookies must not load **before** the user opts in. Gate the embed's script injection on the stored record: render the banner first, load the tracker only on `decide` with that category true. "Reject" must be a same-rank, one-click option, which the default action row provides.
 :::

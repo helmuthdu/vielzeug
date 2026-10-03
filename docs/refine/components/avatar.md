@@ -63,7 +63,7 @@ Control the border-radius with `rounded`. Defaults to `full` (circular).
 
 ## Status Indicator
 
-Add a colored status dot with the `status` attribute. Status indicator dots are visual only — pair them with a contextual label in the surrounding UI when the status is meaningful to assistive technology users.
+Add a colored status dot with the `status` attribute. Status indicator dots are visual only: pair them with a contextual label in the surrounding UI when the status is meaningful to assistive technology users.
 
 <ComponentPreview center>
 
@@ -99,13 +99,13 @@ Use `ore-avatar-group` to stack `ore-avatar` elements in an overlapping row with
 
 | Attribute  | Type                                                                      | Default  | Description                                          |
 | ---------- | ------------------------------------------------------------------------- | -------- | ---------------------------------------------------- |
-| `src`      | `string`                                                                  | —        | Image source URL                                     |
-| `alt`      | `string`                                                                  | —        | Alt text; also used to derive initials automatically |
-| `initials` | `string`                                                                  | —        | Explicit initials (e.g. `"JD"`) when no image loads  |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —        | Theme color for initials background                  |
+| `src`      | `string`                                                                  | N/A | Image source URL                                     |
+| `alt`      | `string`                                                                  | N/A | Alt text; also used to derive initials automatically |
+| `initials` | `string`                                                                  | N/A | Explicit initials (e.g. `"JD"`) when no image loads  |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for initials background                  |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`   | Component size                                       |
 | `rounded`  | `'sm' \| 'md' \| 'lg' \| 'full'`                                          | `'full'` | Border radius                                        |
-| `status`   | `'online' \| 'offline' \| 'busy' \| 'away'`                               | —        | Online presence indicator dot                        |
+| `status`   | `'online' \| 'offline' \| 'busy' \| 'away'`                               | N/A | Online presence indicator dot                        |
 
 **`ore-avatar` CSS Custom Properties**
 
@@ -125,7 +125,7 @@ Use `ore-avatar-group` to stack `ore-avatar` elements in an overlapping row with
 | Attribute | Type     | Default | Description                                                               |
 | --------- | -------- | ------- | ------------------------------------------------------------------------- |
 | `max`     | `number` | `5`     | Maximum visible avatars. Excess avatars are hidden behind a `+N` badge    |
-| `total`   | `number` | —       | Override the count shown in the overflow badge (defaults to hidden count) |
+| `total`   | `number` | N/A | Override the count shown in the overflow badge (defaults to hidden count) |
 
 **`ore-avatar-group` Slots**
 
@@ -147,4 +147,4 @@ Use `ore-avatar-group` to stack `ore-avatar` elements in an overlapping row with
 
 ## Accessibility
 
-The avatar component follows WAI-ARIA best practices. Provide a meaningful `alt` attribute on each `ore-avatar` — it serves as the accessible name and is also used to derive initials automatically. Initials backgrounds are decorative; the `alt` text provides the accessible name for screen readers.
+The avatar component follows WAI-ARIA best practices. Provide a meaningful `alt` attribute on each `ore-avatar`: it serves as the accessible name and is also used to derive initials automatically. Initials backgrounds are decorative; the `alt` text provides the accessible name for screen readers.

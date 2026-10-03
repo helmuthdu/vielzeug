@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Recreate on Remount'
+title: 'Scroll Examples: Recreate on Remount'
 description: 'Recreate on remount examples for scroll.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Recreate on remount examples for scroll.'
 
 ### Problem
 
-The scroll container is recreated at runtime — for example, when a dropdown reopens or a portal remounts. The virtualizer from the previous mount is stale and must be replaced with a fresh instance.
+The scroll container is recreated at runtime: for example, when a dropdown reopens or a portal remounts. The virtualizer from the previous mount is stale and must be replaced with a fresh instance.
 
 ### Solution
 

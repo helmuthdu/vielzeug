@@ -1,5 +1,5 @@
 ---
-title: Sigil — Usage Guide
+title: 'Sigil: Usage Guide'
 description: Encoding modes, capacity checks, SVG/canvas rendering, camera scanning, and testing for @vielzeug/sigil.
 ---
 
@@ -7,7 +7,7 @@ description: Encoding modes, capacity checks, SVG/canvas rendering, camera scann
 
 ## Basic Usage
 
-`encodeQr` produces a `QrMatrix` — a frozen square of dark/light modules. Render it with `toSvg` (string, works anywhere) or `drawToCanvas` (browser).
+`encodeQr` produces a `QrMatrix`: a frozen square of dark/light modules. Render it with `toSvg` (string, works anywhere) or `drawToCanvas` (browser).
 
 ```ts
 import { encodeQr, qrCapacity, toSvg } from '@vielzeug/sigil';
@@ -16,10 +16,10 @@ const matrix = encodeQr('https://vielzeug.dev');
 // Pick the smallest version automatically, or pin one:
 const pinned = encodeQr('https://vielzeug.dev', { version: 5, errorCorrection: 'Q' });
 
-const svg = toSvg(matrix); // inline <svg> string — inject or serialize
+const svg = toSvg(matrix); // inline <svg> string: inject or serialize
 ```
 
-The encoder chooses the most compact mode for the whole input and the smallest version that fits. `mask` is chosen by the lowest ISO penalty score — override it only for test vectors.
+The encoder chooses the most compact mode for the whole input and the smallest version that fits. `mask` is chosen by the lowest ISO penalty score: override it only for test vectors.
 
 ## Encoding Modes and Capacity
 
@@ -31,11 +31,11 @@ Three segment modes cover every payload:
 | `alphanumeric` | `0–9 A-Z space $%*+-./:` | 4,296 chars |
 | `byte` | UTF-8 (no ECI header) | 2,953 bytes |
 
-Mode selection is automatic — `encodeQr('01234567')` uses `numeric`, `'HELLO WORLD'` uses `alphanumeric`, anything else uses `byte`. Force a mode with `mode`, but a forced mode that cannot represent the input throws `SigilOptionError`.
+Mode selection is automatic: `encodeQr('01234567')` uses `numeric`, `'HELLO WORLD'` uses `alphanumeric`, anything else uses `byte`. Force a mode with `mode`, but a forced mode that cannot represent the input throws `SigilOptionError`.
 
-`Uint8Array` input is raw binary: it always encodes in byte mode, byte-for-byte, with no UTF-8 round-trip — invalid UTF-8 (tokens, provisioning payloads) survives intact. Forcing a non-byte mode with binary input throws `SigilOptionError`.
+`Uint8Array` input is raw binary: it always encodes in byte mode, byte-for-byte, with no UTF-8 round-trip: invalid UTF-8 (tokens, provisioning payloads) survives intact. Forcing a non-byte mode with binary input throws `SigilOptionError`.
 
-Check capacity before encoding with `qrCapacity(version, errorCorrection, mode)` — it returns the maximum *bytes* (for `byte` mode) or *characters* the symbol holds:
+Check capacity before encoding with `qrCapacity(version, errorCorrection, mode)`: it returns the maximum *bytes* (for `byte` mode) or *characters* the symbol holds:
 
 ```ts
 import { qrCapacity, SigilCapacityError } from '@vielzeug/sigil';
@@ -51,14 +51,14 @@ try {
 }
 ```
 
-Use `minVersion` to keep a stable symbol size while a payload changes — useful when a layout must not reflow between renders.
+Use `minVersion` to keep a stable symbol size while a payload changes: useful when a layout must not reflow between renders.
 
 ## Error Correction
 
 | Level | Recovery | Trade-off |
 | --- | --- | --- |
 | `L` | ~7% | Smallest matrix |
-| `M` | ~15% | Default — good balance |
+| `M` | ~15% | Default: good balance |
 | `Q` | ~25% | Print, wear |
 | `H` | ~30% | Logos/overlays, dense codes |
 
@@ -66,22 +66,22 @@ Higher levels shrink capacity at the same version. For an overlaid logo, prefer 
 
 ## Rendering
 
-### SVG — `toSvg`
+### SVG: `toSvg`
 
 ```ts
 const svg = toSvg(matrix, {
-  dark: 'currentColor',   // default — inherits text color
+  dark: 'currentColor',   // default: inherits text color
   light: 'transparent',   // default
   margin: 4,              // quiet zone in modules (spec minimum is 4)
-  scale: 1,               // user units per module — prefer scaling via CSS
+  scale: 1,               // user units per module: prefer scaling via CSS
   optimizePath: true,     // merge adjacent modules into one path (default)
   label: 'Pairing code',  // <title> + role="img"
 });
 ```
 
-`optimizePath` merges each row's dark runs into a single `<path>` — orders of magnitude smaller markup. Set `dark`/`light` to CSS variables to theme the code (`dark: 'var(--qr-dark)'`).
+`optimizePath` merges each row's dark runs into a single `<path>`: orders of magnitude smaller markup. Set `dark`/`light` to CSS variables to theme the code (`dark: 'var(--qr-dark)'`).
 
-### Canvas — `drawToCanvas` (browser only)
+### Canvas: `drawToCanvas` (browser only)
 
 ```ts
 const sizePx = drawToCanvas(matrix, canvas, { scale: 8, margin: 4 });
@@ -92,7 +92,7 @@ Use canvas for print, download (`canvas.toBlob`), or compositing. SVG is the bet
 
 ## Scanning (browser only)
 
-Scanning wraps the native `BarcodeDetector`. It is **not** universally available — feature-detect, never assume:
+Scanning wraps the native `BarcodeDetector`. It is **not** universally available: feature-detect, never assume:
 
 | Engine | `BarcodeDetector` | Notes |
 | --- | --- | --- |
@@ -103,8 +103,8 @@ Scanning wraps the native `BarcodeDetector`. It is **not** universally available
 ```ts
 import { createQrScanner, isQrScanSupported, qrScanSupport } from '@vielzeug/sigil';
 
-isQrScanSupported();   // sync — BarcodeDetector constructor exists
-await qrScanSupport(); // async — also verifies 'qr_code' is a supported format
+isQrScanSupported();   // sync: BarcodeDetector constructor exists
+await qrScanSupport(); // async: also verifies 'qr_code' is a supported format
 
 const scanner = createQrScanner({
   video,                                   // <video autoplay playsinline muted>
@@ -118,7 +118,7 @@ scanner.tap((event) => console.debug(event.type)); // status-change, detect, fra
 
 await scanner.start(); // requests camera, attaches stream, starts the loop
 scanner.stop();        // releases the camera, back to 'idle'; start() resumes
-scanner.dispose();     // terminal — releases everything
+scanner.dispose();     // terminal: releases everything
 ```
 
 Statuses are `'idle' | 'starting' | 'scanning' | 'disposed'`. A `stop()` or `dispose()` that lands while the camera permission prompt is pending wins the race: the late stream is released and `start()` resolves without restarting the loop.
@@ -127,7 +127,7 @@ Statuses are `'idle' | 'starting' | 'scanning' | 'disposed'`. A `stop()` or `dis
 
 ### One-shot detection
 
-`detectQr(source)` runs a single pass over any `ImageBitmapSource` — `ImageData`, `Blob`, `VideoFrame`, an `<img>`, or a `<canvas>`:
+`detectQr(source)` runs a single pass over any `ImageBitmapSource`: `ImageData`, `Blob`, `VideoFrame`, an `<img>`, or a `<canvas>`:
 
 ```ts
 import { detectQr } from '@vielzeug/sigil';
@@ -137,7 +137,7 @@ const result = await detectQr(imageBitmap); // → { value, cornerPoints } | nul
 
 ## Testing
 
-Both seams are injectable — never touch globals in tests:
+Both seams are injectable: never touch globals in tests:
 
 ```ts
 import { createQrScanner } from '@vielzeug/sigil';
@@ -153,7 +153,7 @@ For the web components, `ore-qr-scanner` exposes a `scannerFactory` JS property 
 
 ## Framework Integration
 
-Encoding is synchronous and SSR-safe — render `toSvg` output as part of server markup:
+Encoding is synchronous and SSR-safe: render `toSvg` output as part of server markup:
 
 ::: code-group
 
@@ -185,20 +185,20 @@ const svg = computed(() => toSvg(encodeQr(props.value ?? '')));
 
 :::
 
-Scanning needs lifecycle — start in `onMounted`/`onMount`, always `dispose()` in cleanup.
+Scanning needs lifecycle: start in `onMounted`/`onMount`, always `dispose()` in cleanup.
 
 ## Working with Other Vielzeug Libraries
 
-- **Mesh** — `meshQrCodec` compresses WebRTC pairing payloads (offer/answer JSON) to QR-friendly strings. The [Pair Two Devices with QR](./examples/pair-two-devices.md) recipe shows the full flow.
-- **Refine** — prefer `ore-qr-code` / `ore-qr-scanner` over hand-rolled wrappers: they compose sigil with themeable markup, a11y labels, and state handling.
+- **Mesh**: `meshQrCodec` compresses WebRTC pairing payloads (offer/answer JSON) to QR-friendly strings. The [Pair Two Devices with QR](./examples/pair-two-devices.md) recipe shows the full flow.
+- **Refine**: prefer `ore-qr-code` / `ore-qr-scanner` over hand-rolled wrappers: they compose sigil with themeable markup, a11y labels, and state handling.
 
 ## Best Practices
 
 - Pre-validate payloads with `qrCapacity` before surfacing an encode control.
-- Keep the quiet zone — `margin` below 4 risks unreadable codes; never overlay content on it.
+- Keep the quiet zone: `margin` below 4 risks unreadable codes; never overlay content on it.
 - Prefer `toSvg` + `currentColor` for display; reserve `drawToCanvas` for print/download.
 - Feature-detect scanning with `qrScanSupport()` before showing a scan affordance.
-- Always `dispose()` scanners — camera tracks outlive route changes otherwise.
+- Always `dispose()` scanners: camera tracks outlive route changes otherwise.
 - Use `once: false` only when the UX genuinely expects repeated decodes.
-- Treat scanned strings as untrusted input — validate before navigation or pairing.
+- Treat scanned strings as untrusted input: validate before navigation or pairing.
 - Pin `minVersion` in animated/live payloads so the symbol doesn't resize mid-flow.

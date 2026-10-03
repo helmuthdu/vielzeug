@@ -103,7 +103,7 @@
       transform var(--accordion-item-fade-duration) var(--accordion-item-fade-delay) var(--ease-spring);
   }
 
-  /* Opening: set from-state with no transition — transition fires on base rule when class is removed */
+  /* Opening: set from-state with no transition: transition fires on base rule when class is removed */
   details.opening .content-inner {
     opacity: 0;
     transform: translateY(-6px);
@@ -301,7 +301,7 @@
   }
 
   @media (forced-colors: active) {
-    /* Default variant uses a transparent border — ensure a visible border
+    /* Default variant uses a transparent border: ensure a visible border
          renders in HCM so the summary is distinguishable from the body */
     summary {
       border-color: ButtonText;

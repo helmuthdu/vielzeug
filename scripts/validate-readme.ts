@@ -3,7 +3,7 @@
  *
  * Enforces the canonical shape defined in `.agents/reference/readme-template.md`:
  * title, blockquote description equal to `package.json#description`, Installation,
- * Quick Start, optional Features, Documentation, License — and nothing else.
+ * Quick Start, optional Features, Documentation, License, and nothing else.
  *
  * Usage:
  *   pnpm validate:readme
@@ -21,7 +21,7 @@ const ROOT = resolve(__dirname, '..');
 const DEFAULT_PACKAGES_DIR = join(ROOT, 'packages');
 
 const LICENSE_LINE =
-  'MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.';
+  'MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.';
 
 const PERMITTED_HEADINGS = new Set([
   'Installation',

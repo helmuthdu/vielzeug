@@ -12,7 +12,7 @@ yarn add @vielzeug/tandem
 
 ## Quick Start
 
-Tandem drives sync between your storage and your server through two interfaces you implement: a `SyncPort` (the server) and a `SyncGateway` (the device). Records are opaque — the engine reads only `id` and a `rev` write counter.
+Tandem drives sync between your storage and your server through two interfaces you implement: a `SyncPort` (the server) and a `SyncGateway` (the device). Records are opaque: the engine reads only `id` and a `rev` write counter.
 
 ```ts
 import { createSync, type SyncGateway, type SyncPort } from '@vielzeug/tandem';
@@ -36,7 +36,7 @@ const gateway: SyncGateway = {
 };
 
 const sync = createSync({ gateway, port });
-myStore.subscribe(() => sync.changed()); // a local write — the engine batches and pushes
+myStore.subscribe(() => sync.changed()); // a local write: the engine batches and pushes
 await sync.flush(); // pulls remote changes, then pushes dirty records; rejects on failure
 sync.dispose(); // on account switch or teardown
 ```
@@ -50,4 +50,4 @@ sync.dispose(); // on account switch or teardown
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

@@ -1,5 +1,5 @@
 ---
-title: 'Orbit Examples — Custom Middleware'
+title: 'Orbit Examples: Custom Middleware'
 description: 'Custom middleware example for @vielzeug/orbit.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Custom middleware example for @vielzeug/orbit.'
 
 ### Problem
 
-You need positioning behaviour that the built-in middleware does not cover — for example, snapping coordinates to a CSS grid. Custom middleware lets you intercept the positioning pipeline, read the current state, and return adjusted coordinates or extra data.
+You need positioning behaviour that the built-in middleware does not cover: for example, snapping coordinates to a CSS grid. Custom middleware lets you intercept the positioning pipeline, read the current state, and return adjusted coordinates or extra data.
 
 ### Solution
 

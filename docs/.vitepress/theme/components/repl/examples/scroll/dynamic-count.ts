@@ -37,11 +37,11 @@ setTimeout(() => {
   console.log('Updated count:', virtualizer.count)
 }, 300)
 
-// Reorder items with stable keys — refresh() forces rebuild while preserving sizes
+// Reorder items with stable keys: refresh() forces rebuild while preserving sizes
 setTimeout(() => {
   items = [...items].sort(() => Math.random() - 0.5)
   virtualizer.refresh()
-  console.log('Items reordered — refresh() called (sizes preserved by key)')
+  console.log('Items reordered: refresh() called (sizes preserved by key)')
 }, 700)`,
   name: 'Virtualizer - Dynamic Count',
 };

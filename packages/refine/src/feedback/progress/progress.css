@@ -294,7 +294,7 @@
     transform: rotate(-90deg);
   }
 
-  /* Inner overlay — label + title stacked and centered inside the ring */
+  /* Inner overlay: label + title stacked and centered inside the ring */
   .circular-inner {
     position: absolute;
     inset: 0;
@@ -414,7 +414,7 @@
   }
 }
 
-/* Extra indeterminate state overrides — cannot be expressed via CSS variables alone */
+/* Extra indeterminate state overrides: cannot be expressed via CSS variables alone */
 @media (prefers-reduced-motion: reduce) {
   :host([indeterminate]) .fill {
     width: 100%;

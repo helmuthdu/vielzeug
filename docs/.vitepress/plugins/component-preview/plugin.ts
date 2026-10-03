@@ -7,9 +7,9 @@
 // srcdoc iframes have a null origin and cannot load external resources, so all
 // assets are inlined at build time via three virtual modules:
 //
-//   refine-preview:css  — refine's stylesheet with @import rules fully inlined
-//   refine-preview:deps — all IIFE peer deps concatenated in load order
-//   refine-preview:js   — refine's own IIFE bundle
+//   refine-preview:css: refine's stylesheet with @import rules fully inlined
+//   refine-preview:deps: all IIFE peer deps concatenated in load order
+//   refine-preview:js: refine's own IIFE bundle
 //
 // HMR: CSS-only dist changes send a custom WS event (REFINE_CSS_HMR_EVENT)
 // instead of a full page reload. Consumers subscribe via useRefineHmr().
@@ -45,7 +45,7 @@ const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide
 // Load order: each entry must appear after its own dependencies. Each IIFE receives its
 // dependencies as bare globals in its invocation arguments (read from each bundle's own tail,
 // e.g. sentinel's is `})({},Arsenal)`), so an out-of-order entry captures `undefined` for that
-// dependency — silently, because everything here is concatenated into one script where `var`
+// dependency: silently, because everything here is concatenated into one script where `var`
 // hoisting suppresses the ReferenceError. The previous order loaded Sentinel before Arsenal
 // and Focus before Keymap, leaving both with an undefined dependency.
 //   Temporal → Ripple → Arsenal → Keymap → Sigil → Gesture → Sentinel(Arsenal)
@@ -98,7 +98,7 @@ function inlineCss(filePath: string): string {
 export function componentPreviewPlugin(): Plugin {
   return {
     configureServer(server) {
-      // Watch refine's src/styles directly — CSS changes hot-patch live iframes
+      // Watch refine's src/styles directly: CSS changes hot-patch live iframes
       // without any build step (color-mix, oklch, light-dark are natively supported
       // in all modern browsers so lightningcss compilation is not needed in dev).
       server.watcher.add(refineSrcStylesDir);
@@ -131,7 +131,7 @@ export function componentPreviewPlugin(): Plugin {
           return;
         }
 
-        // JS/IIFE dist change — full reload required (custom element re-registration).
+        // JS/IIFE dist change: full reload required (custom element re-registration).
         for (const id of [JS_ID, CSS_ID, DEPS_ID]) {
           const mod = server.moduleGraph.getModuleById(`\0${id}`);
 

@@ -452,7 +452,7 @@ describe('ore-popover accessibility', () => {
     });
   });
 
-  describe('Controlled mode — B2 regression', () => {
+  describe('Controlled mode: B2 regression', () => {
     it('requests open when its trigger is clicked while closed', async () => {
       fixture = await mount('ore-popover', {
         attrs: { open: 'false' },

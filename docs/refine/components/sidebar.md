@@ -165,7 +165,7 @@ Use `ore-sidebar-group` to organize items into labelled sections. Add the `colla
 
 Set `default-open="false"` for uncontrolled groups that start collapsed, or pass `open` to control the group state externally.
 
-Use `ore-sidebar-group` to group semantically related items — it adds a visible label and an implicit `role="list"` on the items container. Avoid setting `active` on more than one item simultaneously, as it breaks `aria-current` semantics.
+Use `ore-sidebar-group` to group semantically related items: it adds a visible label and an implicit `role="list"` on the items container. Avoid setting `active` on more than one item simultaneously, as it breaks `aria-current` semantics.
 
 <ComponentPreview>
 
@@ -275,7 +275,7 @@ Uses the same drawer-inspired panel surface with a stronger floating presentatio
 
 ### Inset
 
-A subtle variant with a slightly tinted background and no visible border or elevated panel shadow — blends naturally into page content areas.
+A subtle variant with a slightly tinted background and no visible border or elevated panel shadow: blends naturally into page content areas.
 
 <ComponentPreview>
 
@@ -343,7 +343,7 @@ Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or bran
 
 ## Disabled Items
 
-Set `disabled` on a `ore-sidebar-item` to prevent interaction. Avoid using `disabled` as a teaching mechanism — if an item is permanently unavailable, remove it from the sidebar instead.
+Set `disabled` on a `ore-sidebar-item` to prevent interaction. Avoid using `disabled` as a teaching mechanism: if an item is permanently unavailable, remove it from the sidebar instead.
 
 <ComponentPreview>
 
@@ -453,17 +453,17 @@ ore-sidebar-item {
 
 | Attribute           | Type      | Default                | Description                                                  |
 | ------------------- | --------- | ---------------------- | ------------------------------------------------------------ |
-| `collapsed`         | `boolean` | —                      | Controlled collapsed state                                   |
+| `collapsed`         | `boolean` | N/A | Controlled collapsed state                                   |
 | `default-collapsed` | `boolean` | `false`                | Initial collapsed state in uncontrolled mode                 |
 | `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
-| `responsive`        | `string`  | —                      | Media query that enables compact (collapsed) sidebar mode    |
-| `bottom-nav-at`     | `string`  | —                      | Media query that switches to mobile bottom-nav + drawer mode |
+| `responsive`        | `string`  | N/A | Media query that enables compact (collapsed) sidebar mode    |
+| `bottom-nav-at`     | `string`  | N/A | Media query that switches to mobile bottom-nav + drawer mode |
 | `close-on-select`   | `boolean` | `false`                | Closes the drawer after primary item activation             |
 | `collapse-label`    | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                    |
 | `expand-label`      | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                      |
 | `drawer`            | `boolean` | `false`                | Drawer-only mode: no inline panel or bottom bar              |
 | `drawer-close-label`| `string`  | `'Close sidebar'`      | Accessible label for the drawer backdrop close control       |
-| `variant`           | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`                    |
+| `variant`           | `string`  | N/A | Visual variant: `'floating'` \| `'inset'`                    |
 | `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
 **`ore-sidebar` Slots**
@@ -519,7 +519,7 @@ ore-sidebar-item {
 | `label`        | `string`  | `''`    | Visible group label text                                  |
 | `collapsible`  | `boolean` | `false` | Adds a toggle button to collapse/expand the group's items |
 | `default-open` | `boolean` | `true`  | Initial open state for uncontrolled collapsible groups    |
-| `open`         | `boolean` | —       | Controlled group open state                               |
+| `open`         | `boolean` | N/A | Controlled group open state                               |
 
 **`ore-sidebar-group` Slots**
 
@@ -540,13 +540,13 @@ ore-sidebar-item {
 
 | Attribute          | Type      | Default | Description                                                |
 | ------------------ | --------- | ------- | ---------------------------------------------------------- |
-| `href`             | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`    |
+| `href`             | `string`  | N/A | URL: renders an `<a>` when set, otherwise a `<button>`    |
 | `active`           | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`) |
 | `bottom-nav`       | `boolean` | `false` | Promotes the item into an explicit mobile bottom-nav set   |
-| `bottom-nav-label` | `string`  | —       | Overrides the item text in its promoted mobile tab         |
+| `bottom-nav-label` | `string`  | N/A | Overrides the item text in its promoted mobile tab         |
 | `disabled`         | `boolean` | `false` | Disables the item and forces button rendering              |
-| `rel`              | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)       |
-| `target`           | `string`  | —       | `target` attribute on the inner `<a>` (link items only)    |
+| `rel`              | `string`  | N/A | `rel` attribute on the inner `<a>` (link items only)       |
+| `target`           | `string`  | N/A | `target` attribute on the inner `<a>` (link items only)    |
 
 **`ore-sidebar-item` Slots**
 
@@ -588,7 +588,7 @@ The `ore-sidebar` element renders a `<nav>` landmark with an `aria-label`. When 
 
 `ore-sidebar-item` sets `aria-current="page"` on the inner `<a>` or `<button>` when `active` is applied. Screen readers announce the item as the current location. Set `active` on the item matching the current URL on every page load, and avoid setting it on more than one item simultaneously.
 
-When the sidebar is collapsed to icon-only mode, the toggle button updates `aria-label` and `aria-expanded` to reflect the current state. Navigation within the sidebar uses native DOM focus order — no roving tabindex — keeping behaviour predictable and compatible with all screen readers.
+When the sidebar is collapsed to icon-only mode, the toggle button updates `aria-label` and `aria-expanded` to reflect the current state. Navigation within the sidebar uses native DOM focus order: no roving tabindex: keeping behaviour predictable and compatible with all screen readers.
 
 ### Keyboard Navigation
 

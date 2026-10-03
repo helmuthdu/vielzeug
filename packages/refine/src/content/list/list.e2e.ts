@@ -1,10 +1,10 @@
 /**
- * Real-browser tests for `ore-list`/`ore-list-item` — a11y checks, swipe-gesture interaction,
+ * Real-browser tests for `ore-list`/`ore-list-item`: a11y checks, swipe-gesture interaction,
  * and CSS layout regressions that jsdom can't evaluate (no CSS box model, no real pointer
  * gestures, `@layer` blocks silently dropped). Complements `list.test.ts`/`list-item.test.ts`'s
  * jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
@@ -45,7 +45,7 @@ test.describe('Accessibility', () => {
   });
 
   // Known a11y gap: axe's nested-interactive rule flags role="option" items that contain a real
-  // focusable descendant (the slotted action button) — combining `selectable` (which puts
+  // focusable descendant (the slotted action button): combining `selectable` (which puts
   // role="option" on the item) with swipe actions on the *same* item is the one combination that
   // triggers it; each feature alone (see the previous test's plain swipe actions, or a selectable
   // list without actions) is clean. This is an inherent WAI-ARIA tension for this exact combo
@@ -112,7 +112,7 @@ test.describe('Selection', () => {
   });
 
   // Manual-activation listbox: arrow keys only move focus (WAI-ARIA APG's "selection does not
-  // follow focus" variant) — Enter/Space on the newly-focused row commits the selection.
+  // follow focus" variant): Enter/Space on the newly-focused row commits the selection.
   test('ArrowDown moves focus to the next item, then Enter selects it', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-list selectable aria-label="Folders">' +
@@ -137,7 +137,7 @@ test.describe('Selection', () => {
 
 test.describe('Swipe actions', () => {
   // `.actions-right` is clipped by `:host { overflow: hidden }` and translated fully off to the
-  // right of the row when closed — `getBoundingClientRect()` still reports the button's own box
+  // right of the row when closed: `getBoundingClientRect()` still reports the button's own box
   // size regardless of clipping, so these assert its *position* relative to the item instead.
   test('a slotted action button sits outside the item bounds until revealed', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
@@ -195,7 +195,7 @@ test.describe('Swipe actions', () => {
       revealedAttr: document.getElementById('item')?.getAttribute('revealed'),
     }));
 
-    // Reveal-on-focus is CSS-only (`:host(:has(.actions-right:focus-within))`) — the `revealed`
+    // Reveal-on-focus is CSS-only (`:host(:has(.actions-right:focus-within))`): the `revealed`
     // attribute (gesture/programmatic state) is deliberately left untouched.
     expect(revealedAttr).toBeNull();
     expect(buttonLeft).toBeLessThan(itemRight);
@@ -203,7 +203,7 @@ test.describe('Swipe actions', () => {
 
   // Hover-peek discoverability: a hovered row slides a few pixels toward its first populated
   // action panel so the swipe affordance is visible without a gesture. The peek is the
-  // `--_swipe-x` *fallback* — a real reveal (attribute, focus-within, drag) always wins.
+  // `--_swipe-x` *fallback*: a real reveal (attribute, focus-within, drag) always wins.
   test('hovering a row with actions peeks its first panel, and recedes on mouse-out', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-list style="width:300px">' +
@@ -228,14 +228,11 @@ test.describe('Swipe actions', () => {
     const rested = await rowX();
 
     expect(peeked - rested).toBeGreaterThan(1);
-    // A fraction of the panel width (0.08 × 96px ≈ 7.7px) — far from a full reveal.
+    // A fraction of the panel width (0.08 × 96px ≈ 7.7px): far from a full reveal.
     expect(peeked - rested).toBeLessThan(10);
   });
 
-  test('a revealed row does not peek on hover — the real state wins over the fallback', async ({
-    page,
-    refinePage,
-  }) => {
+  test('a revealed row does not peek on hover: the real state wins over the fallback', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       '<ore-list style="width:300px">' +
         '<ore-list-item id="item" revealed="left">Newsletter<button slot="actions-left" id="act">Turn</button></ore-list-item>' +
@@ -260,7 +257,7 @@ test.describe('Swipe actions', () => {
     expect(shift).toBeGreaterThanOrEqual(panelWidth - 1);
   });
 
-  // Asserts the *visible* `[part="button"]` surface, not `ore-button`'s own light-DOM host box —
+  // Asserts the *visible* `[part="button"]` surface, not `ore-button`'s own light-DOM host box :
   // stretching the host alone (a plain `::slotted(*) { height: 100% }`, which this suite's own
   // earlier revision relied on) leaves the size preset's fixed-height inner surface floating,
   // centered, inside the now-taller invisible host: the real regression the `fullheight` prop

@@ -1,7 +1,7 @@
 export const gridVirtualizerExample = {
   code: `import { createGridVirtualizer } from '@vielzeug/scroll'
 
-// Two-dimensional grid virtualization — only the visible rows × cols
+// Two-dimensional grid virtualization: only the visible rows × cols
 // cross-product is mounted, independent of total grid size.
 
 const ROW_COUNT = 10_000

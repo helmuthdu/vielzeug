@@ -174,7 +174,7 @@
     display: none;
   }
 
-  /* Horizontal mode: 4-column grid — icon | body | actions | close */
+  /* Horizontal mode: 4-column grid: icon | body | actions | close */
   :host([horizontal]) .alert {
     grid-template-columns: auto 1fr auto auto;
   }
@@ -199,7 +199,7 @@
     align-self: center;
   }
 
-  /* Phones: the horizontal action stacks below a wrapped message — a right-column action
+  /* Phones: the horizontal action stacks below a wrapped message: a right-column action
      crowds multi-line text at narrow widths (Material flips at the same breakpoint). */
   @media (width <= 480px) {
     :host([horizontal]) .alert {
@@ -270,7 +270,7 @@
 }
 
 @layer refine.variants {
-  /* Flat (Default) — canvas background, theme-colored border and text */
+  /* Flat (Default): canvas background, theme-colored border and text */
   :host(:not([variant])),
   :host([variant='flat']) {
     --_bg: var(--alert-bg, var(--color-canvas));
@@ -279,7 +279,7 @@
     --_shadow: var(--alert-shadow, var(--shadow-none));
   }
 
-  /* Solid — fully filled with theme color */
+  /* Solid: fully filled with theme color */
   :host([variant='solid']) {
     --_bg: var(--alert-bg, var(--_theme-base));
     --_color: var(--alert-color, var(--_theme-contrast));
@@ -287,7 +287,7 @@
     --_shadow: var(--alert-shadow, var(--shadow-xs));
   }
 
-  /* Bordered — tinted background with a subtle themed border */
+  /* Bordered: tinted background with a subtle themed border */
   :host([variant='bordered']) {
     --_bg: var(--alert-bg, color-mix(in oklch, var(--_theme-backdrop), var(--color-canvas)));
     --_color: var(--alert-color, var(--_theme-base));

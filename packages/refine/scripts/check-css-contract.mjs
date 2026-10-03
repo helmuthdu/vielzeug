@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Verifies the `--_*` custom-property contract documented in AGENTS.md: these are private
 // variables a component's own stylesheet reads and one of the mixins in its `styles: [...]`
-// array must emit. There's no browser-level error for a mismatch — an unmatched `var(--_foo)`
-// just silently falls back (to its own fallback argument, or to nothing) — so this is the only
+// array must emit. There's no browser-level error for a mismatch: an unmatched `var(--_foo)`
+// just silently falls back (to its own fallback argument, or to nothing), so this is the only
 // thing that catches a typo'd or dropped-mixin `--_*` reference before it ships.
 //
 // Deliberately conservative: a component is skipped entirely (never flagged) whenever any part
-// of its `styles: [...]` array can't be confidently classified — an unrecognized mixin call, a
+// of its `styles: [...]` array can't be confidently classified: an unrecognized mixin call, a
 // spread, a non-literal argument, etc. False negatives (a real gap goes unflagged) are an
 // acceptable cost for a build-blocking check; false positives (flagging a legitimate component)
 // are not, given the check runs across every one of this package's ~65 styled components.
@@ -20,7 +20,7 @@ const SRC_DIR = resolve(__dirname, '../src');
 
 // ── Mixin emission sets, derived from the mixin sources ──────────────────────
 // Every `export const <name> = ...` in `src/styles/mixins/*.css.ts` is scanned for the `--_*`
-// custom properties its CSS declares, so a new or edited mixin is covered the moment it lands —
+// custom properties its CSS declares, so a new or edited mixin is covered the moment it lands :
 // no hand-maintained table to fall out of date. `sizeVariantMixin` is excluded: its emissions
 // depend on the config argument each call site passes, handled by `resolveSizeVariantEmissions`.
 
@@ -129,7 +129,7 @@ function findNamedPreset(name) {
 // ── Bracket-aware helpers ─────────────────────────────────────────────────────
 
 /**
- * Finds every `styles: [ ... ]` array in a source file, scoped one per `define(...)` call — a
+ * Finds every `styles: [ ... ]` array in a source file, scoped one per `define(...)` call: a
  * single file may register more than one custom element (e.g. `menu.ts` defines `ore-menu`,
  * `ore-menu-item`, and `ore-menu-separator`, each with its own independent `styles: [...]`).
  * Returns the raw inner text of each array, in file order.
@@ -228,7 +228,7 @@ function resolveSizeVariantEmissions(entry) {
   const openParen = entry.indexOf('(');
   const closeParen = entry.lastIndexOf(')');
 
-  if (openParen === -1) return SIZE_VARIANT_BASE; // `sizeVariantMixin` with no call — not actually callable, but conservative default.
+  if (openParen === -1) return SIZE_VARIANT_BASE; // `sizeVariantMixin` with no call: not actually callable, but conservative default.
 
   let arg = entry.slice(openParen + 1, closeParen).trim();
 
@@ -242,7 +242,7 @@ function resolveSizeVariantEmissions(entry) {
     arg = preset;
   }
 
-  if (!arg.startsWith('{') || !arg.endsWith('}')) return null; // spread, call expression, etc. — unknown.
+  if (!arg.startsWith('{') || !arg.endsWith('}')) return null; // spread, call expression, etc.: unknown.
 
   const keys = extractObjectKeys(arg);
   const emitted = new Set(SIZE_VARIANT_BASE);
@@ -252,7 +252,7 @@ function resolveSizeVariantEmissions(entry) {
 
     if (key.startsWith('--')) emitted.add(key);
     else if (SIZE_VARIANT_PROP_MAP[key]) emitted.add(SIZE_VARIANT_PROP_MAP[key]);
-    else return null; // unrecognized key — bail rather than risk an incomplete set.
+    else return null; // unrecognized key: bail rather than risk an incomplete set.
   }
 
   return [...emitted];
@@ -261,13 +261,13 @@ function resolveSizeVariantEmissions(entry) {
 /** Classifies one `styles: [...]` array entry. Returns `null` (skip component) when unrecognized. */
 function resolveEntryEmissions(entry, cssImportNames) {
   // Strip a leading `// comment` line (e.g. an ordering-rationale note above a mixin call) before
-  // classifying — the comment isn't part of the expression.
+  // classifying: the comment isn't part of the expression.
   const stripped = entry.replace(/^(?:\/\/[^\n]*\n\s*)+/, '');
   const name = /^[$\w]+/.exec(stripped)?.[0];
 
   if (!name) return null;
 
-  if (cssImportNames.has(name)) return []; // the component's own inline CSS — not a mixin.
+  if (cssImportNames.has(name)) return []; // the component's own inline CSS: not a mixin.
 
   if (name === 'sizeVariantMixin') return resolveSizeVariantEmissions(entry);
 
@@ -280,7 +280,7 @@ function resolveEntryEmissions(entry, cssImportNames) {
  * `--_*` names the component's own `.ts` source sets directly (never touching any mixin or its
  * own CSS): `style: { '--_x': () => ... }` template bindings, `styleMap({ '--_x': ... })`, and
  * `el.style.setProperty('--_x', ...)`. All three are legitimate, common patterns (e.g.
- * `progress.ts`'s ring math, `icon.ts`'s computed size) — collected file-wide since a JS-set
+ * `progress.ts`'s ring math, `icon.ts`'s computed size): collected file-wide since a JS-set
  * property and the CSS reading it are always in the same component file in current usage.
  */
 function findJsSetProperties(source) {
@@ -303,7 +303,7 @@ function resolveArrayEmissions(stylesText, cssImportNames) {
   for (const entry of splitTopLevel(stylesText)) {
     const result = resolveEntryEmissions(entry, cssImportNames);
 
-    if (result === null) return null; // unrecognized entry — skip conservatively.
+    if (result === null) return null; // unrecognized entry: skip conservatively.
 
     for (const name of result) emitted.add(name);
   }
@@ -332,7 +332,7 @@ function checkFile(filePath) {
   const jsSetProperties = findJsSetProperties(source);
 
   // Emissions are unioned across every `styles: [...]` array *in the file*, not scoped to one
-  // custom element — sibling elements defined in the same file legitimately inherit `--_*`
+  // custom element: sibling elements defined in the same file legitimately inherit `--_*`
   // values via CSS custom-property cascade from a sibling's mixin (e.g. `ore-menu-item`'s CSS
   // reads `--_gap`/`--_font-size` that only `ore-menu`'s own `sizeVariantMixin(...)` call emits;
   // see `MENU_SIZE_PRESET`'s doc comment in `shared/size-presets.ts`). Any unrecognized entry in
@@ -359,27 +359,27 @@ function checkFile(filePath) {
     let cssSource;
 
     try {
-      // Strip `/* ... */` comments first — a declaration or read can sit right after one (e.g. a
+      // Strip `/* ... */` comments first: a declaration or read can sit right after one (e.g. a
       // rationale comment block inside `:host { ... }`), which would otherwise break the
       // "preceded by `;`/`{`" check below.
       cssSource = readFileSync(cssPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     } catch {
-      continue; // Can't resolve — skip rather than false-positive.
+      continue; // Can't resolve: skip rather than false-positive.
     }
 
     // A component's own stylesheet may also declare (and consume) a `--_*` variable entirely
     // locally, with no mixin involved (e.g. `card.css` sets its own `--_bg`/`--_border`). That's
-    // a legitimate, self-contained pattern — only flag a read covered by *none* of: a mixin
+    // a legitimate, self-contained pattern: only flag a read covered by *none* of: a mixin
     // emission, a same-file CSS declaration, or a JS-set inline property.
     //
     // KNOWN GAP: cross-*file*, same-directory inheritance (e.g. `list-item.css` reading
     // `--_gap`/`--_font-size`/`--_padding` that only `list.ts`'s own `sizeVariantMixin(...)`
     // call emits, via CSS custom-property cascade from the parent's shadow host into its
-    // light-DOM child — see `MENU_SIZE_PRESET`'s doc comment in `shared/size-presets.ts` for the
-    // same pattern in reverse, within one file) is NOT modeled here — emissions are only unioned
+    // light-DOM child: see `MENU_SIZE_PRESET`'s doc comment in `shared/size-presets.ts` for the
+    // same pattern in reverse, within one file) is NOT modeled here: emissions are only unioned
     // across multiple `define()` blocks *within one file* (`extractStylesArrays`), never across
     // sibling files. Every current cross-file-inherited read happens to carry a `var(x, fallback)`
-    // and is therefore exempted below regardless — this gap is dormant, not fixed. Dropping such
+    // and is therefore exempted below regardless: this gap is dormant, not fixed. Dropping such
     // a fallback (even for a legitimately-inherited, non-broken property) will produce a false
     // positive; if that happens, extend this check to also union sibling `.ts` files' emissions
     // in the same directory rather than assuming the drop is a real typo.
@@ -390,7 +390,7 @@ function checkFile(filePath) {
     while ((declMatch = declPattern.exec(cssSource))) localDeclarations.add(declMatch[1]);
 
     // Only a fallback-less `var(--_x)` is the documented failure mode (AGENTS.md: "falls back
-    // to its own `var(..., fallback)` **or to nothing**") — `var(--_x, someFallback)` is a
+    // to its own `var(..., fallback)` **or to nothing**"): `var(--_x, someFallback)` is a
     // deliberate, self-degrading customization hook, not a broken reference, even when nothing
     // else in the system ever sets `--_x`.
     const readPattern = /var\(\s*(--_[\w-]+)\s*\)/g;

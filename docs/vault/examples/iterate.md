@@ -1,5 +1,5 @@
 ---
-title: 'Vault Examples — IndexedDB Iteration'
+title: 'Vault Examples: IndexedDB Iteration'
 description: Traverse an IndexedDB table with a cursor.
 ---
 

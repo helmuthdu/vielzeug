@@ -1,6 +1,6 @@
 ---
-title: Scout — Examples
-description: Practical examples for @vielzeug/scout — basic search, reactive combobox, and sourcerer integration.
+title: 'Scout: Examples'
+description: 'Practical examples for @vielzeug/scout: basic search, reactive combobox, and sourcerer integration.'
 ---
 
 ## Examples

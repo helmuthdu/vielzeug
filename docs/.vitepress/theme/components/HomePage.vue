@@ -145,7 +145,7 @@ const activeHeroIndex = ref(0);
 const activeHeroPkg = computed(() => heroPackages[activeHeroIndex.value]);
 const activeHeroAnnouncement = computed(
   () =>
-    `Example ${activeHeroIndex.value + 1} of ${heroPackages.length}: ${activeHeroPkg.value.name} — ${activeHeroPkg.value.cmd}`,
+    `Example ${activeHeroIndex.value + 1} of ${heroPackages.length}: ${activeHeroPkg.value.name}: ${activeHeroPkg.value.cmd}`,
 );
 
 const searchQuery = ref('');
@@ -239,7 +239,7 @@ onUnmounted(() => {
             </ore-text>
           </h1>
           <ore-text as="p" class="hero-description" color="muted" size="md" >
-            Pick and compose the tools you need — from routing to charts. Shared conventions, unified architecture, and
+            Pick and compose the tools you need: from routing to charts. Shared conventions, unified architecture, and
             zero dependencies.
           </ore-text>
           <div class="hero-values">
@@ -251,14 +251,14 @@ onUnmounted(() => {
                 Type-safe
               </button>
             </ore-tooltip>
-            <ore-tooltip content="Import individual functions — bundlers include only what you use" placement="top">
+            <ore-tooltip content="Import individual functions: bundlers include only what you use" placement="top">
               <button class="value-item" type="button" >
                 <ore-icon name="scissors" size="16"></ore-icon>
                 Tree-shakeable
               </button>
             </ore-tooltip>
             <ore-tooltip
-              content="No external npm dependencies — only other vielzeug packages where needed"
+              content="No external npm dependencies: only other vielzeug packages where needed"
               placement="top">
               <button class="value-item" type="button" >
                 <ore-icon name="package" size="16"></ore-icon>
@@ -451,7 +451,7 @@ onUnmounted(() => {
             Everything fits. Nothing fights.
           </ore-text>
           <ore-text as="p" class="why-subtitle" color="muted" >
-            {{ packageCount }} packages built as one. Same conventions, same primitives, same release cadence — so you
+            {{ packageCount }} packages built as one. Same conventions, same primitives, same release cadence, so you
             ship, not integrate.
           </ore-text>
         </div>
@@ -472,7 +472,7 @@ onUnmounted(() => {
               1
             </ore-text>
             <ore-text as="p" class="why-stat-label" color="muted" size="sm" >
-              Shared API shape — learn once, use everywhere
+              Shared API shape: learn once, use everywhere
             </ore-text>
           </div>
           <div class="why-stat-divider"></div>
@@ -494,7 +494,7 @@ onUnmounted(() => {
             <ore-text as="p" class="why-card-desc" color="muted" size="sm" >
               Same
               <code>dispose()</code>
-              contract. Same signal shape. Same error format. Learn the pattern once — every new package feels familiar
+              contract. Same signal shape. Same error format. Learn the pattern once: every new package feels familiar
               from line one.
             </ore-text>
           </ore-card>
@@ -511,7 +511,7 @@ onUnmounted(() => {
             <div class="why-card-icon"><ore-icon name="plug" size="20"></ore-icon></div>
             <ore-text as="h4" class="why-card-title" weight="semibold" >Built to work together</ore-text>
             <ore-text as="p" class="why-card-desc" color="muted" size="sm" >
-              Validation schemas plug into form fields. Signals drive UI templates. No adapter layer, no boilerplate —
+              Validation schemas plug into form fields. Signals drive UI templates. No adapter layer, no boilerplate :
               just packages that know about each other.
             </ore-text>
           </ore-card>
@@ -526,7 +526,7 @@ onUnmounted(() => {
           Eliminate entire categories of glue code.
         </ore-text>
         <ore-text align="center" as="p" class="section-subtitle" color="muted" >
-          Each package is standalone — combined, they compose naturally.
+          Each package is standalone: combined, they compose naturally.
         </ore-text>
         <CodeWindow filename="app.ts" lang="ts" >
           <pre
@@ -643,7 +643,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
             <ore-text as="p" class="codex-ai-desc" color="muted" >
               <code class="codex-inline-pkg">@vielzeug/codex</code>
               is an MCP server that bundles the entire documentation, package APIs, and Refine component metadata into a
-              single offline snapshot. Wire it into Claude Desktop, Copilot Chat, or any MCP-compatible client — then
+              single offline snapshot. Wire it into Claude Desktop, Copilot Chat, or any MCP-compatible client: then
               ask anything.
             </ore-text>
             <ul class="codex-caps">
@@ -651,21 +651,21 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
                 <ore-icon name="search" size="14"></ore-icon>
                 <span>
                   <strong>search-packages</strong>
-                  — find the right package by keyword across docs and exports
+: find the right package by keyword across docs and exports
                 </span>
               </li>
               <li class="codex-cap">
                 <ore-icon name="book-open" size="14"></ore-icon>
                 <span>
                   <strong>get-docs</strong>
-                  — fetch any package's index, API, usage, or examples page
+: fetch any package's index, API, usage, or examples page
                 </span>
               </li>
               <li class="codex-cap">
                 <ore-icon name="layers" size="14"></ore-icon>
                 <span>
                   <strong>get-component</strong>
-                  — full Refine component CEM: attributes, slots, CSS parts, events
+: full Refine component CEM: attributes, slots, CSS parts, events
                 </span>
               </li>
             </ul>
@@ -697,7 +697,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
                   <span class="chat-text">
                     Use
                     <code>debounce(fn, wait)</code>
-                    — returns a version of
+: returns a version of
                     <code>fn</code>
                     that delays invoking until
                     <code>wait</code>
@@ -726,7 +726,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
           Everything lives on GitHub.
         </ore-text>
         <ore-text as="p" class="section-subtitle" color="muted" >
-          Bug reports, questions, and contributions — all welcome. Open an issue or start a discussion.
+          Bug reports, questions, and contributions: all welcome. Open an issue or start a discussion.
         </ore-text>
         <div class="community-links">
           <a

@@ -1,5 +1,5 @@
 ---
-title: Ledger — Examples
+title: 'Ledger: Examples'
 description: Recipes for reversible editor and form history with Ledger.
 ---
 

@@ -5,7 +5,7 @@ export const encodeSvgExample = {
 const matrix = encodeQr('https://vielzeug.dev', { errorCorrection: 'M' })
 console.log('version:', matrix.version, '| size:', matrix.size, 'modules | mode:', matrix.mode)
 
-// toSvg returns a complete <svg> string — works in Node (no DOM needed).
+// toSvg returns a complete <svg> string: works in Node (no DOM needed).
 // dark defaults to currentColor so the code themes with CSS.
 const svg = toSvg(matrix, { label: 'Vielzeug link' })
 console.log(svg.slice(0, 120) + '…')

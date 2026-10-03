@@ -22,7 +22,7 @@ let items = [
   { id: 'd', label: 'Delta' },
 ]
 
-// Application-owned rollback stack — the sortable no longer holds revert state.
+// Application-owned rollback stack: the sortable no longer holds revert state.
 const history: Array<{ before: typeof items }> = []
 
 function render() {

@@ -20,7 +20,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Minor changes
 
-- refactor: remove global custom currency registry. Replace defineCurrency() with currency({ code, minorUnit }). Remove withMinor() — use money(amount, currency, { unit: 'minor' }). Remove resolveBuiltinCurrency — parseMoneyJSON defaults to currency(). isMoney/isCurrency/isExchangeRate now use WeakSet canonical identity (rejects forged frozen objects). Add isExchangeRate type guard. Add INVALID_RANGE and INVALID_EXCHANGE_RATE error codes. Fix divide() floor/ceil rounding with negative divisors. Add assertMoney to toJSON. Add roundDivision exhaustiveness default.
+- refactor: remove global custom currency registry. Replace defineCurrency() with currency({ code, minorUnit }). Remove withMinor(): use money(amount, currency, { unit: 'minor' }). Remove resolveBuiltinCurrency: parseMoneyJSON defaults to currency(). isMoney/isCurrency/isExchangeRate now use WeakSet canonical identity (rejects forged frozen objects). Add isExchangeRate type guard. Add INVALID_RANGE and INVALID_EXCHANGE_RATE error codes. Fix divide() floor/ceil rounding with negative divisors. Add assertMoney to toJSON. Add roundDivision exhaustiveness default.
 
 ## 2.1.1
 Wed, 26 Aug 2026 17:29:55 GMT
@@ -55,7 +55,7 @@ Sun, 26 Jul 2026 06:43:54 GMT
 
 ### Patches
 
-- fix(coins): remove dead @vielzeug/arsenal vite external — no longer imported and never declared as a dependency; derive the (now empty) external list via readWorkspaceDeps() instead of a hand-listed array
+- fix(coins): remove dead @vielzeug/arsenal vite external: no longer imported and never declared as a dependency; derive the (now empty) external list via readWorkspaceDeps() instead of a hand-listed array
 
 ## 1.0.4
 Fri, 24 Jul 2026 05:28:41 GMT

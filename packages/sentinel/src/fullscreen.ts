@@ -6,7 +6,7 @@ type FullscreenWindow = Window & { document: Document };
 
 /**
  * A sentinel-backed fullscreen view. `request()` enters fullscreen for an element (default:
- * the document element), `exit()` leaves it, and `toggle()` flips it — all degrade silently
+ * the document element), `exit()` leaves it, and `toggle()` flips it: all degrade silently
  * when the Fullscreen API is missing or the browser refuses (user-activation requirements).
  * Disposing the sentinel exits fullscreen and stops tracking `fullscreenchange`.
  */

@@ -42,7 +42,7 @@
   }
 
   /* Wrap chips + input across rows; suffix stays on same row as input.
-     Only row-gap is set here — column spacing between chips is handled
+     Only row-gap is set here: column spacing between chips is handled
      via margin on ore-chip so the empty prefix slot adds no extra offset
      (which would shift the input rightward vs the inset label). */
   .trigger::part(input-row) {
@@ -56,7 +56,7 @@
        ======================================== */
 
   /* display:contents removes chips-row from the flex layout so chips
-     become direct flex items of input-row — no extra gap before input
+     become direct flex items of input-row: no extra gap before input
      when there are no chips (fixes inset-label alignment). */
   .chips-row {
     display: contents;
@@ -133,7 +133,7 @@
     animation: var(--_motion-animation, spin var(--transition-loader) infinite);
   }
 
-  /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
+  /* Keyframe must live in shadow DOM: @keyframes don't inherit across shadow roots */
   @keyframes spin {
     to {
       transform: rotate(360deg);

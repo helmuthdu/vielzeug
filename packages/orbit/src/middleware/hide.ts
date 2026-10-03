@@ -4,9 +4,9 @@ import type { DetectOverflowOptions, HideData, Middleware } from '../types';
 export interface HideOptions extends DetectOverflowOptions {
   /**
    * Which hidden states to compute.
-   * - `'referenceHidden'` — whether the reference itself is off-screen.
-   * - `'escaped'` — whether the floating element has fully exited the boundary.
-   * - `'both'` (default) — both of the above.
+   * - `'referenceHidden'`: whether the reference itself is off-screen.
+   * - `'escaped'`: whether the floating element has fully exited the boundary.
+   * - `'both'` (default): both of the above.
    */
   strategy?: 'referenceHidden' | 'escaped' | 'both';
 }

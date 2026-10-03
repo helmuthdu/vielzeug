@@ -2,7 +2,7 @@
  * Helpers for accepting raw literal values alongside schema instances in
  * sUnion() and sIntersect() arguments.
  *
- * Moved out of literal.ts — this infrastructure belongs to the combinator
+ * Moved out of literal.ts: this infrastructure belongs to the combinator
  * entry points (s.ts), not to LiteralSchema.
  */
 

@@ -3,7 +3,7 @@
  *
  * jsdom (and most non-browser DOM environments) do not implement `Element.animate()`,
  * so any test that exercises `animate()`, `animateEach()`, or `captureLayout()` needs a
- * substitute. This module has no test-runner import — it works the same under Vitest,
+ * substitute. This module has no test-runner import: it works the same under Vitest,
  * Jest, or any other runner; use your runner's own spy/mock APIs on top if needed.
  */
 

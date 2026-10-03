@@ -74,7 +74,7 @@ export interface AutoUpdateOptions {
  * nearest scrollable ancestor). Used to scope scroll listeners to the minimal
  * set of elements rather than relying on a capture-phase window listener.
  *
- * Walks the flat (rendering) tree via `flatTreeParent` — not light-DOM `parentElement` alone —
+ * Walks the flat (rendering) tree via `flatTreeParent`: not light-DOM `parentElement` alone :
  * so a scroll container that lives inside the shadow tree a component's light-DOM content is
  * *projected into* (e.g. a dialog's own internal scroll region, reached only by crossing its
  * `<slot>`) is still found, instead of silently skipped.
@@ -172,7 +172,7 @@ export function autoUpdate(
     window.addEventListener('scroll', conditionalNotify, { passive: true });
     cleanups.push(() => window.removeEventListener('scroll', conditionalNotify));
   } else {
-    // VirtualReference or observeAncestors: false — capture-phase window listener catches all scrolls.
+    // VirtualReference or observeAncestors: false: capture-phase window listener catches all scrolls.
     const scrollHandler = (e: Event): void => {
       if (e.composedPath().includes(floating)) return;
 

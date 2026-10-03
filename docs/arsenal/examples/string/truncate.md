@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — truncate'
+title: 'Arsenal Examples: truncate'
 description: 'truncate example for @vielzeug/arsenal.'
 ---
 

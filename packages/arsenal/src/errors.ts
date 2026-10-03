@@ -8,7 +8,7 @@ export class ArsenalError extends Error {
 }
 
 /**
- * Thrown when converting a value to or from its serialized form fails — e.g. `memo`'s default
+ * Thrown when converting a value to or from its serialized form fails: e.g. `memo`'s default
  * cache key (`JSON.stringify`) encountering a circular reference, or `hash` encountering an
  * unsupported class instance with `{ onClassInstance: 'throw' }`.
  */

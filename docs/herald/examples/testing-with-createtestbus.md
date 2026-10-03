@@ -1,5 +1,5 @@
 ---
-title: 'Herald Examples — Testing with `createTestBus`'
+title: 'Herald Examples: Testing with `createTestBus`'
 description: 'Testing with `createTestBus` example for @vielzeug/herald.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Testing with `createTestBus` example for @vielzeug/herald.'
 
 ### Problem
 
-You want to write unit tests for code that uses an event bus — asserting that specific events were emitted, in the right order, with the right payloads, without real side effects.
+You want to write unit tests for code that uses an event bus: asserting that specific events were emitted, in the right order, with the right payloads, without real side effects.
 
 ### Solution
 

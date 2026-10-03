@@ -17,7 +17,7 @@ import { isEqual } from '../guards/isEqual';
  */
 
 export function contains<T>(array: readonly T[], value: unknown): boolean {
-  // Fast path: reference / primitive equality via Array.includes — avoids
+  // Fast path: reference / primitive equality via Array.includes: avoids
   // deep-equal traversal for the common case of searching for a scalar.
   if (value === null || value === undefined || typeof value !== 'object') {
     return array.includes(value as T);

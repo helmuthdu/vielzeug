@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — lcm'
+title: 'Arsenal Examples: lcm'
 description: 'lcm example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'lcm example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need the least common multiple of two integers — for example synchronizing repeating intervals.
+You need the least common multiple of two integers: for example synchronizing repeating intervals.
 
 ### Solution
 

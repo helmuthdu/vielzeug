@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — random'
+title: 'Arsenal Examples: random'
 description: 'random example for @vielzeug/arsenal.'
 ---
 

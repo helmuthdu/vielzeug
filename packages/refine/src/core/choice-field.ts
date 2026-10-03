@@ -15,7 +15,7 @@ export type ChoiceChangeDetail = {
 
 export type ChoiceFieldOptions = FieldOptions & {
   multiple?: Readable<boolean | undefined>;
-  /** Marks an empty selection invalid — feeds `validity`/`validationMessage` (see below). */
+  /** Marks an empty selection invalid: feeds `validity`/`validationMessage` (see below). */
   required?: Readable<boolean | undefined>;
   /** Message for the empty-selection+required case. Defaults to `'Please make a selection.'`. */
   requiredMessage?: Readable<string | undefined>;
@@ -45,14 +45,14 @@ export type ChoiceFieldHandle = FieldHandle & {
   /**
    * Toggles `value` in the selection.
    * - **Multiple mode**: adds if absent, removes if present.
-   * - **Single mode**: always selects `value` (acts like `selectValue` — cannot
+   * - **Single mode**: always selects `value` (acts like `selectValue`: cannot
    *   deselect; use `clear()` to reset a single-select field).
    */
   toggleValue: (value: string) => void;
   /** Reactive validation message paired with `validity`. Empty string when valid. */
   validationMessage: Readable<string>;
   /**
-   * Reactive `ValidityStateFlags` — `{ valueMissing: true }` while `required` and no option is
+   * Reactive `ValidityStateFlags`: `{ valueMissing: true }` while `required` and no option is
    * selected, `null` (valid) otherwise. Pass straight to `useField({ validity: choice.validity })`.
    */
   validity: Readable<ValidityStateFlags | null>;
@@ -88,7 +88,7 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
   const dirtyTracker = createDirtyTracker();
 
   // The actual state setter, shared by every mutation path. Deliberately *not* where the dirty
-  // tracker gets marked — `syncFromProp` (below) calls this directly to stay exempt from it,
+  // tracker gets marked: `syncFromProp` (below) calls this directly to stay exempt from it,
   // since mirroring an external prop change is never "the user changed the selection".
   const applyValues = (values: string[]): void => {
     selectedValues.value = normalizeValues(values);

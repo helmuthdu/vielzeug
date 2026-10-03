@@ -1,7 +1,7 @@
 export const basicSetupExample = {
   code: `import { createWard } from '@vielzeug/ward'
 
-// Simple allow/deny rules evaluated in order — first match wins
+// Simple allow/deny rules evaluated in order: first match wins
 const ward = createWard([
   { action: 'read', resource: 'posts', effect: 'allow' },
   { action: 'write', resource: 'posts', effect: 'allow', roles: ['writer'] },

@@ -9,7 +9,7 @@ import { abortError } from './abortError';
  * underlying promise settles first, the returned promise resolves or rejects with its
  * result and the abort listener is removed.
  *
- * The wrapped promise continues running after cancellation — `abortable` only rejects
+ * The wrapped promise continues running after cancellation: `abortable` only rejects
  * the returned promise, it does not stop the underlying work. Pair with `fetch`'s
  * `signal` option for true cancellation.
  *

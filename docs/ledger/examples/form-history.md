@@ -1,5 +1,5 @@
 ---
-title: 'Ledger Examples — Form History'
+title: 'Ledger Examples: Form History'
 description: 'Record reversible form field edits with @vielzeug/ledger.'
 ---
 

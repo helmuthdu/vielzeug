@@ -1,5 +1,5 @@
 /**
- * redirectTo() — middleware helper for programmatic navigation.
+ * redirectTo(): middleware helper for programmatic navigation.
  */
 import { createMemoryHistory, createRouter, redirectTo } from '../';
 import { settle } from './test-utils';

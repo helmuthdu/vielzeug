@@ -4,7 +4,7 @@ import { AssayQueryError } from './errors';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-/** Scoped query helpers for any queryable DOM root — see {@link within}. */
+/** Scoped query helpers for any queryable DOM root: see {@link within}. */
 export interface QueryScope {
   get<E extends Element = Element>(selector: string): E;
   getByTestId<E extends Element = Element>(testId: string): E;
@@ -61,7 +61,7 @@ const queryAllByText = <E extends Element = Element>(root: QueryRoot, text: stri
 
 /**
  * Queries the shadow root of a custom element for a matching CSS selector.
- * Returns `null` if the element has no shadow root or no match is found — safe to call on
+ * Returns `null` if the element has no shadow root or no match is found: safe to call on
  * both open-shadow custom elements and plain elements without checking `shadowRoot` first.
  */
 export function queryInShadow<E extends Element = Element>(host: Element, selector: string): E | null {
@@ -74,7 +74,7 @@ export function queryAllInShadow<E extends Element = Element>(host: Element, sel
 }
 
 /**
- * Queries a shadow DOM element by its CSS `part` attribute — shorthand for
+ * Queries a shadow DOM element by its CSS `part` attribute: shorthand for
  * `queryInShadow(host, '[part="name"]')`.
  *
  * @example
@@ -105,7 +105,7 @@ export function getSlotted<E extends Element = Element>(host: Element, slotName?
 // ─── API ─────────────────────────────────────────────────────────────────────
 
 /**
- * Create query helpers scoped to a DOM root — useful for light DOM and shadow roots.
+ * Create query helpers scoped to a DOM root: useful for light DOM and shadow roots.
  *
  * @example
  * const view = within(fixture.shadow!);

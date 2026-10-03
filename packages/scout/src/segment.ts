@@ -1,9 +1,9 @@
 /**
  * Splits `text` into whitespace-joined word segments using the runtime's native
- * `Intl.Segmenter` — no dependency, no bundle cost beyond this file.
+ * `Intl.Segmenter`: no dependency, no bundle cost beyond this file.
  *
  * `tokenize()`'s trigram-based scoring works on unsegmented scripts (Chinese, Japanese,
- * Thai, ...) without this — trigrams are generated per-character, not per-word — but
+ * Thai, ...) without this: trigrams are generated per-character, not per-word, but
  * `findMatchRanges()` / highlighting and the multi-word query semantics documented on
  * `SearchConstraints` assume space-separated words. Corpora in those scripts benefit from
  * pre-segmenting via a custom `stringify` so word boundaries exist for those features too.
@@ -34,7 +34,7 @@ export function segmentWords(text: string): string {
 }
 
 // Constructing an `Intl.Segmenter` costs roughly as much as a `segment()` call itself
-// (both are called from `stringify`, once per field per item during `createIndex()`) — cache
+// (both are called from `stringify`, once per field per item during `createIndex()`): cache
 // the single stateless instance instead of rebuilding it on every `segmentWords()` call.
 let cachedSegmenter: Intl.Segmenter | null | undefined;
 

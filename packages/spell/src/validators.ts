@@ -1,5 +1,5 @@
 /**
- * Standalone validator functions — zero-dep, tree-shakeable helpers that return
+ * Standalone validator functions: zero-dep, tree-shakeable helpers that return
  * a simple `boolean` (or a typed predicate) without constructing a Schema.
  * Useful in non-schema contexts such as conditional rendering, guards, etc.
  */

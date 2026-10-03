@@ -22,7 +22,7 @@ export const classMap = (map: Record<string, MaybeReactive<boolean>>): Readable<
   return computed(() =>
     Object.entries(map)
       .filter(([, v]) => resolveMaybeReactive(v))
-      // Strip whitespace from each key — spaces would inject extra class tokens.
+      // Strip whitespace from each key: spaces would inject extra class tokens.
       .map(([k]) => k.replace(/\s+/g, ''))
       .filter(Boolean)
       .join(' '),

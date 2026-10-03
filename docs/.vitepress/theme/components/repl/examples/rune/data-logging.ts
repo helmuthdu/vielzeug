@@ -10,8 +10,8 @@ const reqLog = log.withBindings({
   snapshot: lazy(() => ({ n: ++callCount, size: 1024 })),
 })
 
-reqLog.debug('trace')  // snapshot() called — callCount becomes 1
-reqLog.info('step 2') // snapshot() called — callCount becomes 2
+reqLog.debug('trace')  // snapshot() called: callCount becomes 1
+reqLog.info('step 2') // snapshot() called: callCount becomes 2
 
 // Suppress debug: lazy factory is never called
 const quietLog = log.child({ logLevel: 'warn' })

@@ -738,7 +738,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
 
     // Reactively sync combobox-specific ARIA attrs that ore-input doesn't manage.
     // Uses bitInputRef (a signal) as the gate so the effect re-runs when the
-    // inner input mounts — inputEl is a plain variable and would not trigger re-runs.
+    // inner input mounts: inputEl is a plain variable and would not trigger re-runs.
     watch(() => {
       if (!bitInputRef.value) return;
 

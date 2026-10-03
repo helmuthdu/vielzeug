@@ -1,5 +1,5 @@
 ---
-title: Tandem — Examples
+title: 'Tandem: Examples'
 description: Offline sync recipes for two-device editing, deletions, and account switching.
 ---
 

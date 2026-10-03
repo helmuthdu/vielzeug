@@ -126,8 +126,8 @@ describe('getContainingBlock', () => {
   // by a component nested inside e.g. `<ore-dialog>`'s default `<slot>` is a light-DOM
   // *descendant* of the dialog host, several levels below its own light-DOM parent (never a
   // *direct* child of the dialog element). Walking via `parentElement` alone skips straight past
-  // the dialog's shadow root — and everything inside it, including the panel that establishes
-  // the containing block — out into the dialog's own light-DOM ancestors, silently missing it.
+  // the dialog's shadow root, and everything inside it, including the panel that establishes
+  // the containing block: out into the dialog's own light-DOM ancestors, silently missing it.
   it('crosses a <slot> boundary to reach a trapping ancestor inside the projecting shadow tree', () => {
     const dialogHost = document.createElement('div');
 
@@ -143,7 +143,7 @@ describe('getContainingBlock', () => {
 
     panel.appendChild(slot);
 
-    // Light-DOM content of `dialogHost`, several levels deep — not a direct child — mirroring a
+    // Light-DOM content of `dialogHost`, several levels deep: not a direct child: mirroring a
     // form field nested inside a grid inside a dialog's projected body content.
     const formGrid = document.createElement('div');
     const el = document.createElement('div');
@@ -151,7 +151,7 @@ describe('getContainingBlock', () => {
     formGrid.appendChild(el);
     dialogHost.appendChild(formGrid);
 
-    // jsdom doesn't compute slot assignment automatically the way a real browser does —
+    // jsdom doesn't compute slot assignment automatically the way a real browser does :
     // simulate it directly via the same `assignedSlot` property `flatTreeParent` reads.
     Object.defineProperty(formGrid, 'assignedSlot', { value: slot });
 

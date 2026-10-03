@@ -133,7 +133,7 @@ function getDurationFormatter(options: {
 const SECONDS_PER_MINUTE = 60;
 const SECONDS_PER_HOUR = 3_600;
 const SECONDS_PER_DAY = 86_400;
-const SECONDS_PER_WEEK = 604_800; // 7 × 86400 — fixed
+const SECONDS_PER_WEEK = 604_800; // 7 × 86400: fixed
 
 // ─── Relative time helpers ────────────────────────────────────────────────────
 
@@ -417,7 +417,7 @@ export function formatDuration(input: string | Temporal.DurationLike, options: D
 
 /**
  * Formats a duration as a stopwatch-style clock: `47:12` under an hour, `1:02:35` from an
- * hour up. Deterministic and locale-independent — unlike {@link formatDuration}, which
+ * hour up. Deterministic and locale-independent: unlike {@link formatDuration}, which
  * produces localized prose. Sub-second parts are truncated, negative durations clamp to
  * zero, and `days` fold into hours as 24-hour days.
  *
@@ -477,7 +477,7 @@ export function formatParts(input: TimeInput, options: FormatOptions = {}): Intl
  * Uses the singular unit name when value is 1, plural (unit + 's') otherwise.
  *
  * Pass `options.locale` to localize the numeric part via `Intl.NumberFormat`.
- * Unit names remain English — for fully localized output use {@link formatRelative}
+ * Unit names remain English: for fully localized output use {@link formatRelative}
  * or {@link formatDuration} instead.
  *
  * @example

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — zip'
+title: 'Arsenal Examples: zip'
 description: 'zip example for @vielzeug/arsenal.'
 ---
 
@@ -25,7 +25,7 @@ zip([1, 2], ['x', 'y'], [true, false]);
 
 ### Pitfalls
 
-- Output length is the length of the shortest input array — extra elements are dropped.
+- Output length is the length of the shortest input array: extra elements are dropped.
 
 ### Related
 

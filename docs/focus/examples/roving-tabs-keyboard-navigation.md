@@ -1,5 +1,5 @@
 ---
-title: 'Focus Examples — Roving Tabs Keyboard Navigation'
+title: 'Focus Examples: Roving Tabs Keyboard Navigation'
 description: 'Implement roving keyboard navigation for tabs with createListNavigation.'
 ---
 
@@ -81,7 +81,7 @@ function activateTab(tab: HTMLButtonElement): void {
 
 ### Pitfalls
 
-- **Roving tabindex is your responsibility.** Focus returns navigation changes but does not move DOM focus or toggle `tabindex` — call `set(index)` from pointer click handlers so the next Tab keypress lands on the clicked tab, not the previously focused one.
+- **Roving tabindex is your responsibility.** Focus returns navigation changes but does not move DOM focus or toggle `tabindex`: call `set(index)` from pointer click handlers so the next Tab keypress lands on the clicked tab, not the previously focused one.
 - **Keep all tabs in `getItems()` and mark disabled entries with `isItemDisabled`.** Filtering changes index meaning and can desynchronize pointer-driven `set(index)` calls.
 - **Separate focus movement from activation.** Automatic activation (focus → activate) is simpler but hostile to screen-magnifier users who Arrow through tabs to read labels. Default to manual activation on Enter/Space.
 - **Use `set(index)` when focus enters from pointer.** Otherwise the next Arrow key moves from the last keyboard-focused tab, not the clicked one.

@@ -1,5 +1,5 @@
 ---
-title: Sourcerer — Reactive collection sources
+title: 'Sourcerer: Reactive collection sources'
 description: Framework-agnostic local and remote collection state with page, cursor, and infinite pagination.
 package: sourcerer
 category: data
@@ -127,12 +127,12 @@ try {
 
 <div class="features-grid">
 
-- `createLocalSource()` — filters and paginates an in-memory collection synchronously
-- `createPageSource()` — loads numbered pages and exposes direct navigation commands
-- `createCursorSource()` — follows opaque cursors returned by the loader
-- `createInfiniteSource()` — appends pages while preserving loaded items
-- `setParams()` — replaces consumer-owned loader parameters and resets pagination
-- `subscribe()` — publishes complete immutable state replacements
+- `createLocalSource()`: filters and paginates an in-memory collection synchronously
+- `createPageSource()`: loads numbered pages and exposes direct navigation commands
+- `createCursorSource()`: follows opaque cursors returned by the loader
+- `createInfiniteSource()`: appends pages while preserving loaded items
+- `setParams()`: replaces consumer-owned loader parameters and resets pagination
+- `subscribe()`: publishes complete immutable state replacements
 
 </div>
 
@@ -151,10 +151,10 @@ try {
 
 <div class="see-also">
 
-- [Courier](/courier/) — provide HTTP transport, middleware, and structured transport errors inside loaders
-- [Scout](/scout/) — index larger in-memory collections before passing matches to a local source
-- [Ripple](/ripple/) — project source state into reactive computations
-- [Wayfinder](/wayfinder/) — validate and synchronize source parameters with route state
+- [Courier](/courier/): provide HTTP transport, middleware, and structured transport errors inside loaders
+- [Scout](/scout/): index larger in-memory collections before passing matches to a local source
+- [Ripple](/ripple/): project source state into reactive computations
+- [Wayfinder](/wayfinder/): validate and synchronize source parameters with route state
 
 </div>
 

@@ -1,5 +1,5 @@
 ---
-title: Focus — Usage Guide
+title: 'Focus: Usage Guide'
 description: Build keyboard navigation and restore focus across transient browser interfaces.
 ---
 
@@ -105,7 +105,7 @@ grid.addEventListener('keydown', (event) => {
 });
 ```
 
-`columns` resolves on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. Clamping is the default; set `loop: true` to wrap moves around the grid's edges by flat index. Items are never skipped when disabled — skipping in two dimensions would break row alignment.
+`columns` resolves on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. Clamping is the default; set `loop: true` to wrap moves around the grid's edges by flat index. Items are never skipped when disabled: skipping in two dimensions would break row alignment.
 
 ## Restore Focus
 
@@ -135,7 +135,7 @@ restore(); // false
 
 Use `restoreFocus()` directly when the target is already known. Disconnected, disabled, inert, throwing, or non-focusable targets fall through to the lazy fallback.
 
-When the focused element unmounts — browsing a dialog whose swap removes the item that held focus — the browser drops focus to `<body>`, where keydown never reaches a handler. Call `rescueFocus()` after the swap to hand focus to a control that survives it:
+When the focused element unmounts: browsing a dialog whose swap removes the item that held focus: the browser drops focus to `<body>`, where keydown never reaches a handler. Call `rescueFocus()` after the swap to hand focus to a control that survives it:
 
 ```ts
 import { rescueFocus } from '@vielzeug/focus';

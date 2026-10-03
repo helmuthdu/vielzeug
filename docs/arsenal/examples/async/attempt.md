@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — attempt / isOk / isFail'
+title: 'Arsenal Examples: attempt / isOk / isFail'
 description: 'attempt, isOk, isFail example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'attempt, isOk, isFail example for @vielzeug/arsenal.'
 
 ### Problem
 
-You want to call an async function and handle success and failure in one place without try/catch — returning a discriminated union instead of throwing.
+You want to call an async function and handle success and failure in one place without try/catch: returning a discriminated union instead of throwing.
 
 ### Solution
 
@@ -50,7 +50,7 @@ if (!result.ok) {
 
 ### Pitfalls
 
-- `attempt` wraps a single call — it does not retry on failure. Use `retry` for resilient calls and wrap the whole thing in `attempt` if you want a non-throwing result.
+- `attempt` wraps a single call: it does not retry on failure. Use `retry` for resilient calls and wrap the whole thing in `attempt` if you want a non-throwing result.
 - The `error` field is typed as `unknown`; narrow it before accessing properties.
 
 ### Related

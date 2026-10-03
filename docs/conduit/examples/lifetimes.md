@@ -1,5 +1,5 @@
 ---
-title: Conduit Examples — Lifetimes
+title: 'Conduit Examples: Lifetimes'
 description: Choose shared singleton or per-resolution transient factory results.
 ---
 

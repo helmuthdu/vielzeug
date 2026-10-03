@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — average'
+title: 'Arsenal Examples: average'
 description: 'average example for @vielzeug/arsenal.'
 ---
 

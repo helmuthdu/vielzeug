@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — Page Params with URL State'
+title: 'Sourcerer Examples: Page Params with URL State'
 description: 'Validate URL values and load a page source with typed params.'
 ---
 

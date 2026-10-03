@@ -1,5 +1,5 @@
 ---
-title: Scroll — Migration
+title: 'Scroll: Migration'
 description: Migrate through Scroll 3.1 keyboard-handler removal and Scroll 3 framework-neutral external-store contract.
 ---
 
@@ -21,7 +21,7 @@ if (error instanceof ScrollConfigError) {
 }
 ```
 
-The built-in handler hardcoded its own Arrow/Page/Home/End table, ignored modifier keys (Ctrl+ArrowDown scrolled anyway), and called `preventDefault()` unconditionally. Keyboard scrolling is navigation policy: compose it from the public `scrollToIndex()` API and your own key handling — `matchKey` from `@vielzeug/keymap` gives the same aliases and exact modifier semantics as the rest of the app:
+The built-in handler hardcoded its own Arrow/Page/Home/End table, ignored modifier keys (Ctrl+ArrowDown scrolled anyway), and called `preventDefault()` unconditionally. Keyboard scrolling is navigation policy: compose it from the public `scrollToIndex()` API and your own key handling: `matchKey` from `@vielzeug/keymap` gives the same aliases and exact modifier semantics as the rest of the app:
 
 ```ts
 // Before
@@ -141,7 +141,7 @@ Scroll 2 removed `createReactiveVirtualizer()`, `createReactiveGroupedVirtualize
 
 Scroll 2 also added:
 
-- `keyboardScroll?: boolean` (removed in Scroll 3.1 — compose keyboard scrolling from `scrollToIndex()` and your own key handling)
+- `keyboardScroll?: boolean` (removed in Scroll 3.1: compose keyboard scrolling from `scrollToIndex()` and your own key handling)
 - `autoMeasure?: boolean`
 - `dispose()` and `[Symbol.dispose]()` lifecycle consistency
 

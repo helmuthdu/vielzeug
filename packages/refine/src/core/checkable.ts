@@ -22,7 +22,7 @@ export type CheckableOptions = {
   indeterminate?: Readable<boolean | undefined>;
   onToggle?: (payload: CheckableChangePayload) => void;
   prefix?: string;
-  /** Marks an unchecked control invalid — feeds `validity`/`validationMessage` (see below). */
+  /** Marks an unchecked control invalid: feeds `validity`/`validationMessage` (see below). */
   required?: Readable<boolean | undefined>;
   /** Message for the unchecked+required case. Defaults to `'This field is required.'`. */
   requiredMessage?: Readable<string | undefined>;
@@ -48,7 +48,7 @@ export type CheckableHandle = FieldHandle & {
   /** Reactive validation message paired with `validity`. Empty string when valid. */
   validationMessage: Readable<string>;
   /**
-   * Reactive `ValidityStateFlags` — `{ valueMissing: true }` while `required` and unchecked
+   * Reactive `ValidityStateFlags`: `{ valueMissing: true }` while `required` and unchecked
    * (indeterminate counts as unchecked), `null` (valid) otherwise. Pass straight to
    * `useField({ validity: checkable.validity })`.
    */

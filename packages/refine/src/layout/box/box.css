@@ -33,7 +33,7 @@
 }
 
 @layer refine.variants {
-  /* Color theme integration — custom props still take priority */
+  /* Color theme integration: custom props still take priority */
   :host([color]) {
     --_bg: var(--box-bg, var(--_theme-backdrop));
     --_border-color: var(--box-border-color, var(--_theme-border));

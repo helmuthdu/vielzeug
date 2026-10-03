@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — once'
+title: 'Arsenal Examples: once'
 description: 'once example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'once example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need a function to execute at most once — for example initializing a singleton, registering a global listener, or running a migration.
+You need a function to execute at most once: for example initializing a singleton, registering a global listener, or running a migration.
 
 ### Solution
 
@@ -31,7 +31,7 @@ init(); // 'initialized' logged again, returns 42
 
 ### Pitfalls
 
-- The result is memoized after the first call — if `fn` throws, the error is not cached and subsequent calls re-throw.
+- The result is memoized after the first call: if `fn` throws, the error is not cached and subsequent calls re-throw.
 
 ### Related
 

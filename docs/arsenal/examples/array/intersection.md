@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — intersection'
+title: 'Arsenal Examples: intersection'
 description: 'intersection example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'intersection example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have two arrays and need items that appear in both — for example finding common tags or shared permissions.
+You have two arrays and need items that appear in both: for example finding common tags or shared permissions.
 
 ### Solution
 
@@ -27,7 +27,7 @@ intersection(a, b, (u) => u.id);
 
 ### Pitfalls
 
-- Without a selector, uses deep equality — use a selector for objects.
+- Without a selector, uses deep equality: use a selector for objects.
 - Result order follows `source`, not `other`.
 
 ### Related

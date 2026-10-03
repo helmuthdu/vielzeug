@@ -1,5 +1,5 @@
 ---
-title: 'Scout Examples — Reactive Combobox'
+title: 'Scout Examples: Reactive Combobox'
 description: 'Wire an atomic createSearch store to a combobox input with debounce and isSearching state.'
 ---
 
@@ -31,7 +31,7 @@ const index = createIndex(options, {
   fields: [{ field: 'label', weight: 2 }, { field: 'category' }],
 });
 
-// Create reactive search state — results update 150ms after query changes
+// Create reactive search state: results update 150ms after query changes
 const search = createSearch(index, { debounce: 150, limit: 5 });
 
 const render = () => {
@@ -88,15 +88,15 @@ stop();
 ```
 
 ::: warning PII
-`query` carries the literal search query string — avoid logging it in production if queries may contain PII.
+`query` carries the literal search query string: avoid logging it in production if queries may contain PII.
 :::
 
 ### Pitfalls
 
-- Always call `search.dispose()` (or use `using`) — an undisposed `SearchState` retains its index subscription and any pending debounce timer.
-- `debounce: 0` skips the `isSearching` flash entirely — don't rely on it for a loading indicator when using synchronous updates.
-- `search.clear()` throws `ScoutDisposedError` if called after `dispose()` — don't call lifecycle methods after teardown.
-- `index.add()` / `.remove()` / `.reindex()` / `.setItems()` update the snapshot even without a query change — no need to call `setQuery()` again.
+- Always call `search.dispose()` (or use `using`): an undisposed `SearchState` retains its index subscription and any pending debounce timer.
+- `debounce: 0` skips the `isSearching` flash entirely: don't rely on it for a loading indicator when using synchronous updates.
+- `search.clear()` throws `ScoutDisposedError` if called after `dispose()`: don't call lifecycle methods after teardown.
+- `index.add()` / `.remove()` / `.reindex()` / `.setItems()` update the snapshot even without a query change: no need to call `setQuery()` again.
 
 ### Related
 

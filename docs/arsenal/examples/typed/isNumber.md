@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isNumber'
+title: 'Arsenal Examples: isNumber'
 description: 'isNumber example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isNumber example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to guard numeric values from generic inputs — for example validating config values or discriminating a union type.
+You need to guard numeric values from generic inputs: for example validating config values or discriminating a union type.
 
 ### Solution
 
@@ -17,13 +17,13 @@ Use `isNumber(value)` to narrow to `number`.
 import { isNumber } from '@vielzeug/arsenal';
 
 isNumber(42); // true
-isNumber(NaN); // true — NaN is typeof 'number'
+isNumber(NaN); // true: NaN is typeof 'number'
 isNumber('42'); // false
 ```
 
 ### Pitfalls
 
-- `NaN` passes `isNumber` — add `&& !isNaN(value)` if you need to exclude it.
+- `NaN` passes `isNumber`: add `&& !isNaN(value)` if you need to exclude it.
 
 ### Related
 

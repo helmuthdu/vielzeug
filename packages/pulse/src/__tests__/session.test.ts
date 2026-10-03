@@ -138,7 +138,7 @@ describe('createPulse room scopes', () => {
     // Dispose before server confirms
     lobby.dispose();
 
-    // Server confirms join — registry should send leave
+    // Server confirms join: registry should send leave
     socket.receive({ room: 'lobby', type: 'joined' });
 
     expect(frames(socket).filter((f) => f.type === 'leave' && f.room === 'lobby')).toHaveLength(1);
@@ -166,7 +166,7 @@ describe('createPulse room scopes', () => {
     socket.receive({ room: 'lobby', type: 'joined' });
     await lobby.joined;
 
-    // Advance past the timeout — scope must not be auto-released
+    // Advance past the timeout: scope must not be auto-released
     await vi.advanceTimersByTimeAsync(100);
 
     expect(pulse.rooms.getSnapshot()).toEqual(new Set(['lobby']));
@@ -184,7 +184,7 @@ describe('createPulse room scopes', () => {
     ctrl.abort();
     await expect(lobby.joined).rejects.toBeInstanceOf(PulseAbortError);
 
-    // Server confirms join — compensating leave sent
+    // Server confirms join: compensating leave sent
     socket.receive({ room: 'lobby', type: 'joined' });
 
     expect(frames(socket).filter((f) => f.type === 'leave' && f.room === 'lobby')).toHaveLength(1);

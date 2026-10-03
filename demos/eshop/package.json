@@ -2,7 +2,7 @@
   "name": "vielzeug-motors-demo",
   "version": "0.0.0",
   "private": true,
-  "description": "Vielzeug Motors — a fictional luxury car eShop demo showcasing @vielzeug packages working together, built with @vielzeug/refine + @vielzeug/ore.",
+  "description": "Vielzeug Motors: a fictional luxury car eShop demo showcasing @vielzeug packages working together, built with @vielzeug/refine + @vielzeug/ore.",
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",

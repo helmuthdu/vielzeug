@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — React Integration'
+title: 'Wayfinder Examples: React Integration'
 description: 'React integration example for @vielzeug/wayfinder.'
 ---
 
@@ -37,7 +37,7 @@ export function useRouter() {
 ```
 
 ```tsx
-// RouterView.tsx — exhaustive routes and an explicit fallback
+// RouterView.tsx: exhaustive routes and an explicit fallback
 import { router, useRouter } from './router';
 
 const views = router.createViewRegistry(
@@ -86,7 +86,7 @@ export function RouterLink({ children, name }: Props) {
 
 ### Pitfalls
 
-- Never use `useEffect` + `useState` for router state in concurrent mode — it causes tearing between reads and subscription updates.
+- Never use `useEffect` + `useState` for router state in concurrent mode: it causes tearing between reads and subscription updates.
 - Do not create `getSnapshot`, `subscribe`, `navigate`, `url`, or `isActive` inside the hook. They must be stable references at module scope to avoid infinite re-renders.
 
 ### Related

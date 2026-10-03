@@ -1,5 +1,5 @@
 ---
-title: 'Ore Examples — Prop helpers and raw PropsDef'
+title: 'Ore Examples: Prop helpers and raw PropsDef'
 description: 'Prop helpers and raw PropsDef example for @vielzeug/ore.'
 ---
 
@@ -67,6 +67,6 @@ define<{
 
 ### Related
 
-- [Spell — Validation](/spell/) for validating prop values beyond type constraints
+- [Spell: Validation](/spell/) for validating prop values beyond type constraints
 - [Typed props and emits](./typed-props-and-emits.md)
 - [Counter component](./counter-component.md)

@@ -12,7 +12,7 @@ title: Spell Migration
 
 ### Execution-mode generics removed
 
-The third `SchemaMode` type parameter on `Schema` and every schema class, plus the `InferSchemaMode`, `MergeSchemaModes`, and `SchemaMode` types and the `schemaMode` symbol, were removed. `checkAsync()` now returns the same schema type instead of flipping a type-level mode. Synchronous parsing of a schema with async checks throws at runtime (`parse() cannot evaluate async checks`) exactly as before, and async checks now compose correctly at any nesting depth — `s.object({ tags: s.array(s.string().checkAsync(fn)) }).parseAsync(...)` previously failed with "Sync parsing cannot evaluate async checks" and now evaluates the nested check.
+The third `SchemaMode` type parameter on `Schema` and every schema class, plus the `InferSchemaMode`, `MergeSchemaModes`, and `SchemaMode` types and the `schemaMode` symbol, were removed. `checkAsync()` now returns the same schema type instead of flipping a type-level mode. Synchronous parsing of a schema with async checks throws at runtime (`parse() cannot evaluate async checks`) exactly as before, and async checks now compose correctly at any nesting depth: `s.object({ tags: s.array(s.string().checkAsync(fn)) }).parseAsync(...)` previously failed with "Sync parsing cannot evaluate async checks" and now evaluates the nested check.
 
 ## Spell 3.0
 

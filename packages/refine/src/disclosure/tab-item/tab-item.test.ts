@@ -33,9 +33,9 @@ describe('ore-tab-item', () => {
   });
 
   describe('Accessibility', () => {
-    // `aria-controls` is a cross-shadow-root ARIA relationship — set via `ariaControlsElements`
+    // `aria-controls` is a cross-shadow-root ARIA relationship: set via `ariaControlsElements`
     // (or a plain attribute fallback) once a matching `<ore-tab-panel>` is found inside an
-    // ancestor `<ore-tabs>`. See `ore-tabs`'s own integration test for the paired assertion —
+    // ancestor `<ore-tabs>`. See `ore-tabs`'s own integration test for the paired assertion :
     // a standalone `<ore-tab-item>` (no `<ore-tabs>` ancestor) has no peer, so the relationship
     // is correctly absent rather than pointing at a nonexistent element.
     it('has no aria-controls relationship when mounted without an ore-tabs ancestor', async () => {

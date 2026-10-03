@@ -1,5 +1,5 @@
 ---
-title: Tempo — Temporal date and time utilities
+title: 'Tempo: Temporal date and time utilities'
 description: Explicit Temporal parsing, timezone-safe arithmetic, and localized date/time formatting for TypeScript.
 package: tempo
 category: time
@@ -81,15 +81,15 @@ const text = format(reminder, {
 
 <div class="features-grid">
 
-- `parse()` — Requires an explicit ISO target: instant, zoned date-time, plain date-time, or plain date.
-- `toInstant()` / `inTimeZone()` — Convert wall-clock and absolute values with explicit timezone semantics.
-- `shift()` / `difference()` — Apply DST-safe arithmetic across instant, zoned, and wall-clock inputs.
-- `contains()` / `clamp()` — Compare normalized ranges with optional calendar-unit precision.
-- `startOf()` / `endOf()` — Resolve timezone-aware calendar boundaries, including configurable week starts.
-- `dateRange()` / `recurrence()` — Generate validated, lazy zoned calendar sequences.
-- `format()` / `formatRelative()` / `formatDuration()` — Render localized values through `Intl`, including calendar-aware relative months and years.
-- `formatTimer()` — Deterministic stopwatch clocks (`47:12`, `1:02:35`) for elapsed-time UI.
-- `classifyExpiry()` — Classify fixed elapsed-time thresholds without month or year approximation.
+- `parse()`: Requires an explicit ISO target: instant, zoned date-time, plain date-time, or plain date.
+- `toInstant()` / `inTimeZone()`: Convert wall-clock and absolute values with explicit timezone semantics.
+- `shift()` / `difference()`: Apply DST-safe arithmetic across instant, zoned, and wall-clock inputs.
+- `contains()` / `clamp()`: Compare normalized ranges with optional calendar-unit precision.
+- `startOf()` / `endOf()`: Resolve timezone-aware calendar boundaries, including configurable week starts.
+- `dateRange()` / `recurrence()`: Generate validated, lazy zoned calendar sequences.
+- `format()` / `formatRelative()` / `formatDuration()`: Render localized values through `Intl`, including calendar-aware relative months and years.
+- `formatTimer()`: Deterministic stopwatch clocks (`47:12`, `1:02:35`) for elapsed-time UI.
+- `classifyExpiry()`: Classify fixed elapsed-time thresholds without month or year approximation.
 
 </div>
 
@@ -108,8 +108,8 @@ const text = format(reminder, {
 
 <div class="see-also">
 
-- [Rune](/rune/) — format stable Temporal timestamps before writing structured log records.
-- [Vault](/vault/) — derive explicit expiry moments before storing records with TTL policies.
+- [Rune](/rune/): format stable Temporal timestamps before writing structured log records.
+- [Vault](/vault/): derive explicit expiry moments before storing records with TTL policies.
 
 </div>
 

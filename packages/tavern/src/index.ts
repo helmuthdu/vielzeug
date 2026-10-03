@@ -29,7 +29,7 @@ function toPairingError(error: unknown): TavernPairingError {
  * mirror it and forward every command through the host's command table, so guest actions follow
  * exactly the same code path as host actions.
  *
- * The consumer supplies the seams — which commands exist, how subject state is read and mounted,
+ * The consumer supplies the seams, which commands exist, how subject state is read and mounted,
  * how notices cross between the wire and the local UI. Tavern owns the pairing, the protocol,
  * command validation, snapshot broadcasting, notice relaying, and presence.
  */
@@ -44,23 +44,23 @@ export interface TavernCommands {
 
 /**
  * How the host reads and watches the subject it is sharing. All three close over whatever
- * subject state the consumer owns — the host routes by `subjectId`, not by a subject object.
+ * subject state the consumer owns: the host routes by `subjectId`, not by a subject object.
  */
 export interface TavernSubjects {
-  /** Subscribes to local changes of the hosted subject — the re-broadcast trigger. */
+  /** Subscribes to local changes of the hosted subject: the re-broadcast trigger. */
   onChanged(listener: () => void): () => void;
-  /** Subscribes to the hosted subject's removal — hosting ends when it fires. */
+  /** Subscribes to the hosted subject's removal: hosting ends when it fires. */
   onRemoved(listener: () => void): () => void;
   /** Reads the snapshot to broadcast; null while the subject is missing. */
   snapshot(): unknown;
 }
 
 /**
- * Notice relay between host and guests. Notices cross the wire as opaque values — each client
+ * Notice relay between host and guests. Notices cross the wire as opaque values: each client
  * translates locally.
  *
  * **Echo guard**: a tab that both hosts and guests must guard against re-broadcasting a
- * wire-originated notice back to its own guests — `fromWire` emits locally, the host's local
+ * wire-originated notice back to its own guests: `fromWire` emits locally, the host's local
  * subscription picks it up, and without a guard it would loop. The consumer owns this guard
  * because only they know their local event system; one boolean set during `fromWire` and
  * checked in `toWire` is sufficient.
@@ -88,7 +88,7 @@ const DEFAULT_MAX_MESSAGE_BYTES = 512 * 1024;
 
 const commandId = (): string => `cmd-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
 
-/** Runtime guard for the wire command shape — the protocol is Tavern's, so Tavern validates it. */
+/** Runtime guard for the wire command shape: the protocol is Tavern's, so Tavern validates it. */
 function parseWireCommand(raw: unknown): { args: unknown[]; id: string; name: string; subjectId: string } | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const { args, id, name, subjectId } = raw as Record<string, unknown>;
@@ -105,14 +105,14 @@ function parseWireCommand(raw: unknown): { args: unknown[]; id: string; name: st
 export interface TavernHostOptions {
   commands: TavernCommands;
   notices?: TavernNotices;
-  /** Hosting ended — the subject was removed or the host was disposed. Fires exactly once. */
+  /** Hosting ended: the subject was removed or the host was disposed. Fires exactly once. */
   onEnded?(): void;
   onPeerJoined?(peer: MeshPeer): void;
   onPeerLeft?(peer: MeshPeer): void;
   onPeersChanged?(peers: MeshPeer[]): void;
   onWarning?(message: string): void;
   rtc?: MeshRtcFactory;
-  /** The id of the subject being hosted — guest commands targeting anything else reject. */
+  /** The id of the subject being hosted: guest commands targeting anything else reject. */
   subjectId: string;
   subjects: TavernSubjects;
 }
@@ -126,7 +126,7 @@ export interface TavernHost {
   readonly disposalSignal: AbortSignal;
   /** Stops hosting: closes every channel and detaches all subscriptions. */
   dispose(): void;
-  /** Whether hosting has ended — the subject was removed or `dispose()` ran. */
+  /** Whether hosting has ended: the subject was removed or `dispose()` ran. */
   readonly disposed: boolean;
   kick(peerId: string): void;
   /** Relays one local notice to every guest; the serializer decides what crosses. */
@@ -179,8 +179,8 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
   };
 
   /**
-   * Applies a guest command through the command table — the same table the host's own UI
-   * calls — so an unknown name, a foreign subject id or a rule violation is all the host
+   * Applies a guest command through the command table: the same table the host's own UI
+   * calls, so an unknown name, a foreign subject id or a rule violation is all the host
    * can ever reject with.
    */
   const handleGuestCommand = (peerId: string, raw: unknown): void => {
@@ -268,7 +268,7 @@ export interface TavernGuestOptions<Mounted> {
   invitationText: string;
   /**
    * Mounts a received snapshot; the mounted value, or null to ignore. The snapshot arrives
-   * as parsed JSON — validate before trusting it.
+   * as parsed JSON: validate before trusting it.
    */
   mount(snapshot: unknown): Mounted | null;
   /** The guest's display name on the channel. */
@@ -291,10 +291,10 @@ export interface TavernGuest {
   readonly disposalSignal: AbortSignal;
   /** Leaves the session and drops the channel. */
   dispose(): void;
-  /** Whether the session has ended — the channel dropped or `dispose()` ran. */
+  /** Whether the session has ended: the channel dropped or `dispose()` ran. */
   readonly disposed: boolean;
   /**
-   * Forwards a command to the host. The subject id is the consumer's routing key — the host
+   * Forwards a command to the host. The subject id is the consumer's routing key: the host
    * rejects commands that do not name the subject it is hosting.
    */
   sendCommand(subjectId: string, name: string, args: readonly unknown[]): void;
@@ -327,7 +327,7 @@ export async function joinTavern<Mounted>(
   let mounted: Mounted | null = null;
   let ended = false;
 
-  /** Ends the session exactly once — from the channel dropping or an explicit dispose. */
+  /** Ends the session exactly once: from the channel dropping or an explicit dispose. */
   const endSession = (): void => {
     if (ended) return;
     ended = true;

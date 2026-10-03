@@ -26,7 +26,7 @@ const UNSET = Symbol('ripple.unset');
 
 type Dependency = ReactiveNode<unknown>;
 
-/** Anything that wants to hear that a dependency changed — the only member a producer may call. */
+/** Anything that wants to hear that a dependency changed: the only member a producer may call. */
 type Dependent = {
   onDependencyChanged(): void;
 };
@@ -66,7 +66,7 @@ abstract class ReactiveNode<T> {
     this.runtime.assertActive();
     this.peek();
 
-    // A listener sink never collects dependencies, so it is a bare dependent —
+    // A listener sink never collects dependencies, so it is a bare dependent :
     // no dependency bookkeeping is allocated per subscription.
     const sink: ListenerSink = {
       listener,
@@ -442,7 +442,7 @@ export class ReactiveRuntime {
     return this.withObserver(undefined, fn);
   };
 
-  /** Runtime observability — see `Ripple.tap()`. */
+  /** Runtime observability: see `Ripple.tap()`. */
   readonly tap = (handler: (event: RippleEvent) => void, options?: { signal?: AbortSignal }): Unsubscribe => {
     if (this.isDisposed) return () => {};
 
@@ -498,7 +498,7 @@ export class ReactiveRuntime {
 
   collect<T>(observer: ObserverNode, fn: () => T): T {
     // On first run (no prior dependencies), commit partial dependencies even if
-    // derive throws — otherwise the computed would have zero dependencies and never
+    // derive throws, otherwise the computed would have zero dependencies and never
     // be notified when its source changes, permanently stuck until a manual read.
     // On subsequent runs, keep previous dependencies (tested behavior).
     return this.collectWith(observer, fn, observer.dependencies.size === 0);

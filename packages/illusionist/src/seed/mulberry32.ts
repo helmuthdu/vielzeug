@@ -1,7 +1,7 @@
 import type { RandomSource } from '../types';
 
 /**
- * Mulberry32 — a fast, deterministic 32-bit PRNG.
+ * Mulberry32: a fast, deterministic 32-bit PRNG.
  *
  * Not cryptographically secure. Use `createSeed()` without a seed for
  * `crypto.getRandomValues`-backed randomness in security-sensitive contexts.

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — drop'
+title: 'Arsenal Examples: drop'
 description: 'drop example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'drop example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to skip the first N items of an array and work with the rest — for example advancing past a header row or implementing pagination.
+You need to skip the first N items of an array and work with the rest: for example advancing past a header row or implementing pagination.
 
 ### Solution
 

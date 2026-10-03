@@ -1,5 +1,5 @@
 ---
-title: Tandem — Offline-first sync engine
+title: 'Tandem: Offline-first sync engine'
 description: Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes for browser applications.
 package: tandem
 category: sync
@@ -30,7 +30,7 @@ function onSave(record) {
 import { createSync } from '@vielzeug/tandem';
 
 const sync = createSync({ gateway, port, idleDelayMs: 3000 });
-sync.changed(); // a local edit happened — the engine batches and pushes dirty records
+sync.changed(); // a local edit happened: the engine batches and pushes dirty records
 ```
 
 | Feature                              | Tandem                                     | RxSync              | PowerSync            |
@@ -43,7 +43,7 @@ sync.changed(); // a local edit happened — the engine batches and pushes dirty
 
 <div class="decision-callout">
 
-**Use `tandem` when** you already own a local store and a backend and want the sync scheduler — dirty tracking, batching, hide-flows, and conflict reconcile — without adopting a database or a server.
+**Use `tandem` when** you already own a local store and a backend and want the sync scheduler: dirty tracking, batching, hide-flows, and conflict reconcile: without adopting a database or a server.
 
 **Consider `PowerSync` when** you want a managed sync service with its own SQLite client and server component rather than a scheduler over your existing storage.
 
@@ -69,7 +69,7 @@ yarn add @vielzeug/tandem
 
 ## Quick Start
 
-Implement the two seams — a `SyncPort` for the server and a `SyncGateway` for local storage — then start the scheduler. Records are opaque to Tandem; it reads only `id` and `rev`, and every rev comparison is the engine's: the gateway upserts, validates, and tombstones.
+Implement the two seams: a `SyncPort` for the server and a `SyncGateway` for local storage: then start the scheduler. Records are opaque to Tandem; it reads only `id` and `rev`, and every rev comparison is the engine's: the gateway upserts, validates, and tombstones.
 
 ```ts
 import { createSync, type SyncGateway, type SyncPort } from '@vielzeug/tandem';
@@ -96,7 +96,7 @@ const sync = createSync({ gateway, port });
 sync.tap((event) => console.debug('sync', event)); // observe pushes, pulls, warnings
 myStore.subscribe(() => sync.changed()); // a local write happened
 
-// On account switch or teardown — after flushing this account's work:
+// On account switch or teardown: after flushing this account's work:
 await sync.flush();
 sync.dispose();
 ```
@@ -105,15 +105,15 @@ sync.dispose();
 
 <div class="features-grid">
 
-- **`createSync()`** — drives a port against a gateway with a serialized push queue.
-- **`SyncPort`** — the server seam: `pull(since)` and `push(records, deletions)`.
-- **`SyncGateway`** — the storage seam: upserts, tombstones, and the persisted baseline — the engine owns every rev comparison.
-- **`rev` baselines** — a record is dirty exactly when its rev is above the last-synced one, across reloads.
-- **`changed()`** — wire it to your write path; the engine debounces a burst into one push.
-- **`flush()`** — a full cycle on demand: pull remote changes, then push dirty records; rejects on failure.
-- **Hide-flows** — flushes with `keepalive` on `pagehide`/`hidden`, runs a full cycle on return to the foreground.
-- **`tap()`** — typed `TandemEvent`s for pushes, pulls, invalid records, and warnings.
-- **Lifecycle-owned** — `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]`.
+- **`createSync()`**: drives a port against a gateway with a serialized push queue.
+- **`SyncPort`**: the server seam: `pull(since)` and `push(records, deletions)`.
+- **`SyncGateway`**: the storage seam: upserts, tombstones, and the persisted baseline: the engine owns every rev comparison.
+- **`rev` baselines**: a record is dirty exactly when its rev is above the last-synced one, across reloads.
+- **`changed()`**: wire it to your write path; the engine debounces a burst into one push.
+- **`flush()`**: a full cycle on demand: pull remote changes, then push dirty records; rejects on failure.
+- **Hide-flows**: flushes with `keepalive` on `pagehide`/`hidden`, runs a full cycle on return to the foreground.
+- **`tap()`**: typed `TandemEvent`s for pushes, pulls, invalid records, and warnings.
+- **Lifecycle-owned**: `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]`.
 
 </div>
 
@@ -131,10 +131,10 @@ sync.dispose();
 
 <div class="see-also">
 
-- [Vault](/vault/) — the typed storage core most gateways wrap; its IndexedDB adapter is a natural `records()`/`applyRecords()` backend.
-- [Postmaster](/postmaster/) — the durable outbox half of offline sync; pair it with Tandem for at-least-once mutations alongside state sync.
-- [Sentinel](/sentinel/) — subscribable browser state; its network signal can gate when you call `flush()`.
-- [Ripple](/ripple/) — signals and effects; `store.subscribe(() => sync.changed())` is the usual wiring.
+- [Vault](/vault/): the typed storage core most gateways wrap; its IndexedDB adapter is a natural `records()`/`applyRecords()` backend.
+- [Postmaster](/postmaster/): the durable outbox half of offline sync; pair it with Tandem for at-least-once mutations alongside state sync.
+- [Sentinel](/sentinel/): subscribable browser state; its network signal can gate when you call `flush()`.
+- [Ripple](/ripple/): signals and effects; `store.subscribe(() => sync.changed())` is the usual wiring.
 
 </div>
 

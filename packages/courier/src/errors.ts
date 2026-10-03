@@ -120,7 +120,7 @@ export class CourierDisposedError extends CourierError {
 export class CourierParseError extends CourierError {}
 
 /**
- * Thrown when a request configuration is structurally invalid — a GET/HEAD
+ * Thrown when a request configuration is structurally invalid: a GET/HEAD
  * carrying a body, a raw response paired with a schema, or an out-of-range
  * timeout. These are caller bugs fixed by editing code, unlike `CourierParseError`,
  * which reports malformed data arriving over the wire.
@@ -164,7 +164,7 @@ export function classifyRequestError(
 ): CourierNetworkError | CourierTimeoutError | CourierAbortError {
   const message = errorMessage(cause);
 
-  // Signal reason is authoritative — a timed-out signal carries a TimeoutError reason
+  // Signal reason is authoritative: a timed-out signal carries a TimeoutError reason
   // regardless of what error `fetch` actually threw.
   const reasonName = errorName(signal?.reason);
   const causeName = errorName(cause);

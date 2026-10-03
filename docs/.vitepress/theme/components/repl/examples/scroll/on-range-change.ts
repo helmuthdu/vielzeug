@@ -10,12 +10,12 @@ document.body.appendChild(app)
 
 const badge = document.createElement('div')
 badge.style.cssText = 'background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;color:#0369a1;'
-badge.textContent = 'Scroll to the bottom — more items load automatically'
+badge.textContent = 'Scroll to the bottom: more items load automatically'
 app.appendChild(badge)
 
 const rangeEl = document.createElement('div')
 rangeEl.style.cssText = 'font-size:12px;font-weight:600;color:#6b7280;margin-bottom:8px;'
-rangeEl.textContent = 'Visible: —'
+rangeEl.textContent = 'Visible:: '
 app.appendChild(rangeEl)
 
 const container = document.createElement('div')

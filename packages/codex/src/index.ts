@@ -1,5 +1,5 @@
 /**
- * `@vielzeug/codex` — supported public contract.
+ * `@vielzeug/codex`: supported public contract.
  *
  * Exposes the generic catalog, snapshot loader, errors, and server hosts.
  * Refine catalog types and tools live behind `@vielzeug/codex/refine`.

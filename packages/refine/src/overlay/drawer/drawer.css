@@ -263,7 +263,7 @@
     cursor: grabbing;
   }
 
-  /* Horizontal drawers (left/right) — drag handle on the opposite edge */
+  /* Horizontal drawers (left/right): drag handle on the opposite edge */
   :host([placement='left']) .drag-handle,
   :host(:not([placement])) .drag-handle,
   :host([placement='right']) .drag-handle {
@@ -273,18 +273,18 @@
     translate: 0 -50%;
   }
 
-  /* Left drawer — handle on the right (opposite side) */
+  /* Left drawer: handle on the right (opposite side) */
   :host([placement='left']) .drag-handle {
     right: calc(var(--_panel-bleed) * -1);
   }
 
-  /* Right drawer (default) — handle on the left (opposite side) */
+  /* Right drawer (default): handle on the left (opposite side) */
   :host([placement='right']) .drag-handle,
   :host(:not([placement])) .drag-handle {
     left: calc(var(--_panel-bleed) * -1);
   }
 
-  /* Vertical drawers (top/bottom) — drag handle on the opposite edge */
+  /* Vertical drawers (top/bottom): drag handle on the opposite edge */
   :host([placement='top']) .drag-handle,
   :host([placement='bottom']) .drag-handle {
     left: 50%;
@@ -293,12 +293,12 @@
     translate: -50% 0;
   }
 
-  /* Top drawer — handle at bottom (opposite side) */
+  /* Top drawer: handle at bottom (opposite side) */
   :host([placement='top']) .drag-handle {
     bottom: calc(var(--_panel-bleed) * -1);
   }
 
-  /* Bottom drawer — handle at top (opposite side) */
+  /* Bottom drawer: handle at top (opposite side) */
   :host([placement='bottom']) .drag-handle {
     top: calc(var(--_panel-bleed) * -1);
   }
@@ -321,7 +321,7 @@
     top: var(--_drag-handle-inset);
   }
 
-  /* Visual indicator — subtle bar in the center */
+  /* Visual indicator: subtle bar in the center */
   .drag-handle::before {
     position: absolute;
     inset: 50%;

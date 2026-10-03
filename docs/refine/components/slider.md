@@ -2,8 +2,8 @@
 
 A single-thumb or dual-thumb slider for selecting a numeric value or a numeric range. Form-associated with native `<form>` support.
 
-- **Single mode** (default) — one thumb; use `value` and `name` for form integration.
-- **Range mode** (`range` attribute) — two independent thumbs; use `from` and `to` to set bounds.
+- **Single mode** (default): one thumb; use `value` and `name` for form integration.
+- **Range mode** (`range` attribute): two independent thumbs; use `from` and `to` to set bounds.
 
 ## Colors
 
@@ -46,7 +46,7 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 
 </ComponentPreview>
 
-Keep `min`, `max`, and `step` values consistent and predictable. For a small, discrete set of options, prefer `ore-select` or `ore-radio-group` over a slider. When using fractional step values, always provide `value-text` — screen readers announce the raw float verbatim otherwise.
+Keep `min`, `max`, and `step` values consistent and predictable. For a small, discrete set of options, prefer `ore-select` or `ore-radio-group` over a slider. When using fractional step values, always provide `value-text`: screen readers announce the raw float verbatim otherwise.
 
 ## States
 
@@ -96,7 +96,7 @@ document.getElementById('price').addEventListener('change', (e) => {
 
 ## Accessible Labels
 
-Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mode) to give screen readers a readable version of the value — useful when the raw number needs a unit or currency symbol.
+Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mode) to give screen readers a readable version of the value: useful when the raw number needs a unit or currency symbol.
 
 ```html
 <!-- Single mode: announce "75%" instead of "75" -->
@@ -147,14 +147,14 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 | `step`            | `number`                                                                  | `1`     | Value increment/decrement step                                             |
 | `disabled`        | `boolean`                                                                 | `false` | Disable slider interaction                                                 |
 | `fullwidth`       | `boolean`                                                                 | `false` | Expand to full width                                                       |
-| `name`            | `string`                                                                  | —       | Form field name (single mode only)                                         |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Semantic color                                                             |
+| `name`            | `string`                                                                  | N/A | Form field name (single mode only)                                         |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Semantic color                                                             |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Slider size                                                                |
-| `value-text`      | `string`                                                                  | —       | Human-readable ARIA value label for single mode (e.g. `"75%"`)             |
-| `from-value-text` | `string`                                                                  | —       | Human-readable ARIA label for the start thumb in range mode (e.g. `"$20"`) |
-| `to-value-text`   | `string`                                                                  | —       | Human-readable ARIA label for the end thumb in range mode (e.g. `"$80"`)   |
-| `helper`          | `string`                                                                  | —       | Helper text shown below the slider                                        |
-| `error`           | `string`                                                                  | —       | Error message shown below the slider (renders with `role="alert"` and takes precedence over `helper`) |
+| `value-text`      | `string`                                                                  | N/A | Human-readable ARIA value label for single mode (e.g. `"75%"`)             |
+| `from-value-text` | `string`                                                                  | N/A | Human-readable ARIA label for the start thumb in range mode (e.g. `"$20"`) |
+| `to-value-text`   | `string`                                                                  | N/A | Human-readable ARIA label for the end thumb in range mode (e.g. `"$80"`)   |
+| `helper`          | `string`                                                                  | N/A | Helper text shown below the slider                                        |
+| `error`           | `string`                                                                  | N/A | Error message shown below the slider (renders with `role="alert"` and takes precedence over `helper`) |
 
 ### Slots
 
@@ -177,7 +177,7 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ### Events
 
-| Event    | Detail — single mode | Detail — range mode            | Description                |
+| Event    | Detail: single mode | Detail: range mode            | Description                |
 | -------- | -------------------- | ------------------------------ | -------------------------- |
 | `change` | `{ value: number }`  | `{ from: number, to: number }` | Emitted when value changes |
 

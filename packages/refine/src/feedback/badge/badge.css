@@ -3,7 +3,7 @@
    is adopted after the mixin's, so these rules win by source order (the :host defaults,
    which read the public --badge-* variables) and by specificity (the xs size), while the
    mixin's sm/md/lg attribute rules still win by specificity over the defaults below. The
-   color contract stays layered — the variant rules must keep beating the base. */
+   color contract stays layered: the variant rules must keep beating the base. */
 :host {
   --_font-size: var(--badge-font-size, var(--text-xs));
   --_font-weight: var(--badge-font-weight, var(--font-semibold));
@@ -109,7 +109,7 @@
 }
 
 @layer refine.overrides {
-  /* Dot — always force badge background and border regardless of variant */
+  /* Dot: always force badge background and border regardless of variant */
   :host([dot]) {
     --_bg: var(--badge-bg, var(--_theme-base));
     --_border-color: var(--badge-border-color, var(--_theme-base));

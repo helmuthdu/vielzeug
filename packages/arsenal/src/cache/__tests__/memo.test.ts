@@ -50,7 +50,7 @@ describe('memo', () => {
 
     memoizedFn(3); // key 2 should now be evicted (oldest)
 
-    expect(mockFn).toHaveBeenCalledTimes(3); // 1, 2, 3 — key 1 still cached
+    expect(mockFn).toHaveBeenCalledTimes(3); // 1, 2, 3: key 1 still cached
     memoizedFn(1);
     expect(mockFn).toHaveBeenCalledTimes(3); // key 1 still cached
 
@@ -144,7 +144,7 @@ describe('memo', () => {
     expect(memoizedFn.size).toBeLessThanOrEqual(3);
   });
 
-  it('throws RangeError for a non-integer or NaN maxSize — regression for the disabled-eviction bug', () => {
+  it('throws RangeError for a non-integer or NaN maxSize: regression for the disabled-eviction bug', () => {
     expect(() => memo((x: number) => x, { maxSize: Number.NaN })).toThrow(RangeError);
     expect(() => memo((x: number) => x, { maxSize: -1 })).toThrow(RangeError);
     expect(() => memo((x: number) => x, { maxSize: 1.5 })).toThrow(RangeError);
@@ -154,7 +154,7 @@ describe('memo', () => {
     expect(() => memo((x: number) => x, { maxSize: Infinity })).not.toThrow();
   });
 
-  it('does not collide NaN, Infinity, null, and functions on the default key — regression for the key-collision bug', () => {
+  it('does not collide NaN, Infinity, null, and functions on the default key: regression for the key-collision bug', () => {
     const mockFn = vi.fn((value: unknown) => value);
     const memoizedFn = memo(mockFn);
     const fnA = () => 'a';

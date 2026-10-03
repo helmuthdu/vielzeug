@@ -2,7 +2,7 @@
 //
 // Encapsulates the Vite HMR subscription for refine CSS hot-patching.
 // Centralising this here means REFINE_CSS_HMR_EVENT and its payload shape
-// are handled in one place — consumers just pass a callback.
+// are handled in one place: consumers just pass a callback.
 
 import { REFINE_CSS_HMR_EVENT } from '../../../plugins/component-preview/constants';
 

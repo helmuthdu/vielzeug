@@ -175,7 +175,7 @@ describe('parallel', () => {
       );
 
       // Both workers have already synchronously grabbed their first item (and worker B has
-      // already thrown) by this point — release worker A's blocker so it can observe the abort.
+      // already thrown) by this point: release worker A's blocker so it can observe the abort.
       resolveBlocker();
 
       await expect(promise).rejects.toThrow('boom');
@@ -201,7 +201,7 @@ describe('parallel', () => {
 
       await expect(promise).rejects.toThrow('boom');
 
-      // Without abortOnError, subsequent workers are unaffected by an earlier item's failure —
+      // Without abortOnError, subsequent workers are unaffected by an earlier item's failure :
       // this test uses limit: 1 (sequential) so the throw itself stops the single worker's loop,
       // matching pre-existing behavior.
       expect(started).toEqual([1]);

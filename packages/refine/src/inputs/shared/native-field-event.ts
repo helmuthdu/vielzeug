@@ -36,7 +36,7 @@ export const setFieldValue = (host: HTMLElement, value: string): void => {
 /**
  * Reads the `value` off the element an event fired from (`event.currentTarget`), guarding the
  * cast: `undefined` when the target is missing or carries no string `value`. The read-side
- * companion to {@link setFieldValue} — consumers wiring a native `change`/`input` handler to a
+ * companion to {@link setFieldValue}: consumers wiring a native `change`/`input` handler to a
  * field no longer re-derive the `(currentTarget as HTMLElement & { value: string }).value` cast.
  */
 export const eventFieldValue = (event: Event): string | undefined => {

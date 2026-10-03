@@ -7,7 +7,7 @@ const defaultTickFormat = (v: Date | number | string): string =>
   v instanceof Date ? v.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : String(v);
 
 /**
- * Resolves the tick count an axis will render for a given scale/length — shared with
+ * Resolves the tick count an axis will render for a given scale/length: shared with
  * `renderGrid` so gridlines line up with axis ticks. `defaultPosition` must match the
  * one passed to the corresponding `renderAxis` call ('bottom' for xAxis, 'left' for yAxis).
  */
@@ -28,7 +28,7 @@ export function resolveTickCount(config: AxisConfig, length: number, defaultPosi
 }
 
 /**
- * `defaultPosition` is applied when `config.position` is unset — pass `'bottom'` for an
+ * `defaultPosition` is applied when `config.position` is unset: pass `'bottom'` for an
  * xAxis call and `'left'` for a yAxis call so an unconfigured axis renders on its
  * conventional side instead of always defaulting to a horizontal bottom axis.
  */

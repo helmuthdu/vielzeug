@@ -1,5 +1,5 @@
 ---
-title: 'Pulse Examples — Rooms and Presence'
+title: 'Pulse Examples: Rooms and Presence'
 description: 'Reference-counted rooms and reactive presence scopes for @vielzeug/pulse.'
 ---
 

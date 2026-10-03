@@ -124,7 +124,7 @@
   margin-bottom: 24px;
 }
 
-/* Full-bleed homepage — remove VPDoc container constraints */
+/* Full-bleed homepage: remove VPDoc container constraints */
 .VPDoc:has(.home-page) {
   padding: 0;
 }
@@ -156,7 +156,7 @@
   padding: 0;
 }
 
-/* Full-bleed REPL page — IDE fills viewport below navbar */
+/* Full-bleed REPL page: IDE fills viewport below navbar */
 .VPContent:has(#repl-container) {
   padding: 0;
   padding-top: var(--vp-nav-height, 64px);
@@ -170,7 +170,7 @@ body:has(#repl-container) {
 
 /* ── Package doc page improvements ────────────────────── */
 
-/* First h2 after pkg-hero — remove the divider border, it follows a card not prose */
+/* First h2 after pkg-hero: remove the divider border, it follows a card not prose */
 .vp-doc .pkg-hero + h2 {
   padding-top: 0;
   margin-top: var(--size-6);
@@ -282,7 +282,7 @@ body:has(#repl-container) {
   border-bottom: none;
 }
 
-/* Decision callout — Use X when / Consider Y when summary */
+/* Decision callout: Use X when / Consider Y when summary */
 .decision-callout {
   display: flex;
   flex-direction: column;

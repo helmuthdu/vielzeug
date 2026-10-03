@@ -97,7 +97,7 @@
   }
 
   /* ========================================
-       Stacked layout — icon above a wrapping label (tile-like chips)
+       Stacked layout: icon above a wrapping label (tile-like chips)
        ======================================== */
 
   :host([layout='stacked']) {
@@ -164,7 +164,7 @@
 }
 
 @layer refine.variants {
-  /* Solid (Default) — full theme color fill */
+  /* Solid (Default): full theme color fill */
   :host(:not([variant])),
   :host([variant='solid']) {
     --_bg: var(--chip-bg, var(--_theme-base, var(--color-contrast-700)));
@@ -174,7 +174,7 @@
     --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-focus, var(--color-contrast-800)) 85%, black));
   }
 
-  /* Flat — subtle tint */
+  /* Flat: subtle tint */
   :host([variant='flat']) {
     --_bg: var(--chip-bg, color-mix(in oklch, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent));
     --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-800)));
@@ -185,7 +185,7 @@
     --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
-  /* Bordered — backdrop fill with themed border */
+  /* Bordered: backdrop fill with themed border */
   :host([variant='bordered']) {
     --_bg: var(--chip-bg, var(--_theme-backdrop, var(--color-contrast-50)));
     --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
@@ -199,7 +199,7 @@
     --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
-  /* Outline — transparent with colored border */
+  /* Outline: transparent with colored border */
   :host([variant='outline']) {
     --_bg: var(--chip-bg, transparent);
     --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
@@ -212,7 +212,7 @@
     --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
-  /* Ghost — transparent, no border */
+  /* Ghost: transparent, no border */
   :host([variant='ghost']) {
     --_bg: var(--chip-bg, transparent);
     --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
@@ -260,7 +260,7 @@
   }
 
   /* ========================================
-     Hover / Active Feedback — interactive modes
+     Hover / Active Feedback: interactive modes
      ======================================== */
 
   :host(

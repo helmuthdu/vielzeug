@@ -26,9 +26,9 @@ describe('ore-tab-panel', () => {
   });
 
   describe('Accessibility', () => {
-    // `aria-labelledby` is a cross-shadow-root ARIA relationship — set via `ariaLabelledByElements`
+    // `aria-labelledby` is a cross-shadow-root ARIA relationship: set via `ariaLabelledByElements`
     // (or a plain attribute fallback) once a matching `<ore-tab-item>` is found inside an
-    // ancestor `<ore-tabs>`. See `ore-tabs`'s own integration test for the paired assertion —
+    // ancestor `<ore-tabs>`. See `ore-tabs`'s own integration test for the paired assertion :
     // a standalone `<ore-tab-panel>` (no `<ore-tabs>` ancestor) has no peer, so the relationship
     // is correctly absent rather than pointing at a nonexistent element.
     it('has no aria-labelledby relationship when mounted without an ore-tabs ancestor', async () => {

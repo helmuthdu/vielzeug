@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Keyboard Navigation'
+title: 'Scroll Examples: Keyboard Navigation'
 description: 'Keyboard Navigation examples for scroll.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Keyboard Navigation examples for scroll.'
 
 ### Problem
 
-Users should be able to move focus through list items with the arrow keys. The virtualizer must scroll only when the focused item is outside the visible area — not on every keypress.
+Users should be able to move focus through list items with the arrow keys. The virtualizer must scroll only when the focused item is outside the visible area: not on every keypress.
 
 ### Solution
 

@@ -12,7 +12,7 @@ setTimeout(() => bus.emit('theme:change', 'dark'), 80)
 const loginPayload = await bus.wait('user:login')
 console.log('got login:', loginPayload.userId)
 
-// Reset and race two events — whichever fires first wins
+// Reset and race two events: whichever fires first wins
 setTimeout(() => bus.emit('user:login', { userId: '1', email: 'a@b.com' }), 20)
 setTimeout(() => bus.emit('theme:change', 'light'), 60)
 

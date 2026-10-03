@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — escape'
+title: 'Arsenal Examples: escape'
 description: 'escape example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'escape example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to safely insert user-provided text into HTML — converting `&`, `<`, `>`, `"`, and `'` to their HTML entities.
+You need to safely insert user-provided text into HTML: converting `&`, `<`, `>`, `"`, and `'` to their HTML entities.
 
 ### Solution
 
@@ -24,7 +24,7 @@ escape('Alice & Bob'); // 'Alice &amp; Bob'
 
 ### Pitfalls
 
-- Only escapes the five HTML-special characters — does not encode all Unicode characters.
+- Only escapes the five HTML-special characters: does not encode all Unicode characters.
 
 ### Related
 

@@ -1,5 +1,5 @@
 ---
-title: Sentinel — Usage Guide
+title: 'Sentinel: Usage Guide'
 description: Observe browser and DOM state through subscribable snapshots with explicit lifecycles.
 ---
 
@@ -162,7 +162,7 @@ Sentinel follows the standard external-store shape, so reactive libraries can br
 
 ## Prevent Screen Sleep
 
-Use `createWakeLock()` to keep the screen awake during active use — for example, during a game, presentation, or long-running task.
+Use `createWakeLock()` to keep the screen awake during active use: for example, during a game, presentation, or long-running task.
 
 ```ts
 import { createWakeLock } from '@vielzeug/sentinel';
@@ -174,7 +174,7 @@ const unsubscribe = wakeLock.subscribe(() => {
   console.log('Wake lock active:', wakeLock.getSnapshot().active);
 });
 
-// Later — release the lock and dispose
+// Later: release the lock and dispose
 wakeLock.release();
 unsubscribe();
 wakeLock.dispose();
@@ -194,7 +194,7 @@ if (wakeLock.getSnapshot().supported) {
 
 ## Track Fullscreen State
 
-Use `createFullscreen()` to observe and drive document fullscreen state — for example, immersing a board or map view:
+Use `createFullscreen()` to observe and drive document fullscreen state: for example, immersing a board or map view:
 
 ```ts
 import { createFullscreen } from '@vielzeug/sentinel';

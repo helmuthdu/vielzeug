@@ -9,7 +9,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 
 - feat: path validation throws WayfinderConfigError; subscriber isolation
 - feat: add router.href
-- Add createPhaseMirror — two-way phase routing for stepped flows
+- Add createPhaseMirror: two-way phase routing for stepped flows
 - Add createRouteSignals and createHistoryForBase so apps stop re-implementing route signal wiring and base-aware history setup
 ## 3.1.0
 Fri, 11 Sep 2026 11:19:30 GMT

@@ -8,7 +8,7 @@ const api = log.child({ namespace: 'api' })    // 'api'
 const auth = api.child({ namespace: 'auth' })   // 'api.auth'
 const worker = api.child({ namespace: 'worker' }) // 'api.worker'
 
-// Individual getters — no config snapshot
+// Individual getters: no config snapshot
 console.log('root:', log.namespace)   // ''
 console.log('api:', api.namespace)     // 'api'
 console.log('auth:', auth.namespace)   // 'api.auth'

@@ -1,5 +1,5 @@
 ---
-title: Vault — API Reference
+title: 'Vault: API Reference'
 description: Reference for Vault schemas, adapter entry points, storage capabilities, codecs, SQLite drivers, and errors.
 ---
 
@@ -309,7 +309,7 @@ interface DocumentVaultStore<S extends AnySchema> extends KeyValueVaultStore<S> 
 }
 ```
 
-`batch()` runs a scoped atomic callback. `iterate()` lazily yields table records — IndexedDB uses a cursor, SQLite uses keyset pagination. Both are provided by `createIndexedDB()` and `createSQLite()`.
+`batch()` runs a scoped atomic callback. `iterate()` lazily yields table records: IndexedDB uses a cursor, SQLite uses keyset pagination. Both are provided by `createIndexedDB()` and `createSQLite()`.
 
 | Parameter | Description |
 | --- | --- |
@@ -328,7 +328,7 @@ for await (const user of store.iterate('users')) console.log(user);
 
 ## Bound Helpers
 
-Convenience operations are bound to every store and transaction context. For filtering, ordering, and pagination, compose over `getAll()` — it returns a plain array — or use `iterate()` on document stores and `getAllByIndex()` on IndexedDB for declared equality indexes.
+Convenience operations are bound to every store and transaction context. For filtering, ordering, and pagination, compose over `getAll()`: it returns a plain array, or use `iterate()` on document stores and `getAllByIndex()` on IndexedDB for declared equality indexes.
 
 | Helper | Signature | Description |
 | --- | --- | --- |

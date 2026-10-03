@@ -1,5 +1,5 @@
 ---
-title: Wayfinder — Migration
+title: 'Wayfinder: Migration'
 description: Migrate to the narrowed Wayfinder routing core API.
 ---
 
@@ -43,18 +43,18 @@ Wayfinder 3.0 narrows the scope to routing core functionalities: route compilati
 
 ### Removed features
 
-- **`component` field** on route definitions and `RouteMatch` — UI rendering is owned by a typed view registry instead of route matching.
-- **`meta` field** on route definitions and `RouteMatch` — store static UI metadata alongside the component in the view registry.
-- **`lazy` field** on route definitions — store framework-specific lazy component factories in the view registry.
-- **Streaming data loaders** (`AsyncGenerator` return from `data()`, `DataStream` type) — removed. Data loaders return a value or a Promise.
-- **Per-match `status`** on `RouteMatch` — removed. Use the top-level `RouteState.status` instead.
-- **`'streaming'` navigation status** — removed from `NavigationStatus`. Status is now `'idle' | 'loading' | 'error'`.
-- **Error mutation** — the router no longer attaches symbol context to thrown objects. Error context is carried in internal wrappers; the original error identity and `cause` chain are preserved.
+- **`component` field** on route definitions and `RouteMatch`: UI rendering is owned by a typed view registry instead of route matching.
+- **`meta` field** on route definitions and `RouteMatch`: store static UI metadata alongside the component in the view registry.
+- **`lazy` field** on route definitions: store framework-specific lazy component factories in the view registry.
+- **Streaming data loaders** (`AsyncGenerator` return from `data()`, `DataStream` type): removed. Data loaders return a value or a Promise.
+- **Per-match `status`** on `RouteMatch`: removed. Use the top-level `RouteState.status` instead.
+- **`'streaming'` navigation status**: removed from `NavigationStatus`. Status is now `'idle' | 'loading' | 'error'`.
+- **Error mutation**: the router no longer attaches symbol context to thrown objects. Error context is carried in internal wrappers; the original error identity and `cause` chain are preserved.
 
 ### Migrate `component` to adapter-layer mapping
 
 ```ts
-// Before — component on route definition
+// Before: component on route definition
 const routes = {
   home: { component: HomePage, path: '/' },
   settings: { component: SettingsPage, path: '/settings' },
@@ -63,7 +63,7 @@ const Component = state.matches.at(-1)?.component;
 ```
 
 ```ts
-// After — exhaustive route views with an explicit fallback
+// After: exhaustive route views with an explicit fallback
 const routes = {
   home: { path: '/' },
   settings: { path: '/settings' },
@@ -87,7 +87,7 @@ const section = match.meta?.section;
 ```
 
 ```ts
-// After — keep static presentation metadata out of data loading
+// After: keep static presentation metadata out of data loading
 const router = createRouter({ routes: { userDetail: { path: '/users/:id' } } });
 const views = router.createViewRegistry({
   userDetail: { component: UserPage, section: 'users' },
@@ -105,7 +105,7 @@ const routes = {
 ```
 
 ```ts
-// After — keep framework-specific code splitting in the view registry
+// After: keep framework-specific code splitting in the view registry
 const router = createRouter({ routes: { settings: { path: '/settings' } } });
 const views = router.createViewRegistry({
   settings: () => import('./pages/Settings'),
@@ -145,7 +145,7 @@ await router.navigate({ name: 'settings' }, { viewTransition: false });
 ### Migrate streaming data loaders to plain async
 
 ```ts
-// Before — streaming via AsyncGenerator
+// Before: streaming via AsyncGenerator
 data: async function* ({ signal }) {
   const items = [];
   for await (const batch of streamBatches({ signal })) {
@@ -157,7 +157,7 @@ data: async function* ({ signal }) {
 ```
 
 ```ts
-// After — plain async function
+// After: plain async function
 data: async ({ signal }) => {
   const items = [];
   for await (const batch of streamBatches({ signal })) {
@@ -175,7 +175,7 @@ const leafStatus = state.matches.at(-1)?.status;
 ```
 
 ```ts
-// After — use top-level status
+// After: use top-level status
 const status = state.status;
 ```
 
@@ -272,4 +272,4 @@ const requireAuth = async (ctx, next) => {
 - Keep `scroll` and `viewTransition` options at the router navigation boundary.
 - Convert streaming `AsyncGenerator` data loaders to plain `async` functions.
 - Replace per-match `status` reads with top-level `state.status`.
-- Remove `'streaming'` from `NavigationStatus` comparisons — status is now `'idle' | 'loading' | 'error'`.
+- Remove `'streaming'` from `NavigationStatus` comparisons: status is now `'idle' | 'loading' | 'error'`.

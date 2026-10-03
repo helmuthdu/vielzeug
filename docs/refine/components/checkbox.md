@@ -2,8 +2,8 @@
 
 A customizable boolean form control with indeterminate state support, plus a group wrapper for managing multi-selection lists.
 
-- **`ore-checkbox`** — standalone checkbox for a single boolean value.
-- **`ore-checkbox-group`** — form-associated `<fieldset>` wrapper that manages a set of checkboxes, propagates `color`, `size`, and `disabled` to all children, and tracks checked values as a comma-separated `values` string.
+- **`ore-checkbox`**: standalone checkbox for a single boolean value.
+- **`ore-checkbox-group`**: form-associated `<fieldset>` wrapper that manages a set of checkboxes, propagates `color`, `size`, and `disabled` to all children, and tracks checked values as a comma-separated `values` string.
 
 ## Checkbox
 
@@ -79,7 +79,7 @@ Provide contextual feedback directly below the checkbox.
 
 ### Required
 
-Set `required` to fail constraint validation while unchecked — the classic "I agree to the terms" consent checkbox. A native `<form>` blocks submission and `checkValidity()`/`reportValidity()` return `false` until it is checked; resetting the ancestor form restores its initial state.
+Set `required` to fail constraint validation while unchecked: the classic "I agree to the terms" consent checkbox. A native `<form>` blocks submission and `checkValidity()`/`reportValidity()` return `false` until it is checked; resetting the ancestor form restores its initial state.
 
 <ComponentPreview center>
 
@@ -101,7 +101,7 @@ checkbox.addEventListener('change', (e) => {
 
 ## Checkbox Group
 
-`ore-checkbox-group` wraps `ore-checkbox` elements in a `<fieldset>`. Set `values` to a comma-separated string to pre-select options, and set `name` when you want the group to submit with a form. Always provide a meaningful `label` on the group — it is the accessible name read before each option. Do not use `ore-checkbox-group` for mutually exclusive choices — use [`ore-radio-group`](./radio) instead.
+`ore-checkbox-group` wraps `ore-checkbox` elements in a `<fieldset>`. Set `values` to a comma-separated string to pre-select options, and set `name` when you want the group to submit with a form. Always provide a meaningful `label` on the group: it is the accessible name read before each option. Do not use `ore-checkbox-group` for mutually exclusive choices: use [`ore-radio-group`](./radio) instead.
 
 ### Orientation
 
@@ -285,7 +285,7 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
 | `required`      | `boolean`                                                                 | `false` | Require this checkbox to be checked for native-form validation (e.g. a consent checkbox) |
 | `value`         | `string`                                                                  | `'on'`  | Value submitted with the form           |
 | `name`          | `string`                                                                  | `''`    | Form field name                         |
-| `color`         | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Semantic color for the checked state    |
+| `color`         | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Semantic color for the checked state    |
 | `size`          | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Checkbox size                           |
 | `helper`        | `string`                                                                  | `''`    | Helper text displayed below             |
 | `error`         | `string`                                                                  | `''`    | Error message (marks field invalid)     |
@@ -328,12 +328,12 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
 
 | Attribute     | Type                                                                      | Default      | Description                                                  |
 | ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------ |
-| `label`       | `string`                                                                  | `''`         | Legend text — required for accessibility                     |
+| `label`       | `string`                                                                  | `''`         | Legend text: required for accessibility                     |
 | `values`      | `string`                                                                  | `''`         | Comma-separated currently checked values (e.g. `"a,b"`)      |
 | `name`        | `string`                                                                  | `''`         | Form field name                                              |
 | `orientation` | `'vertical' \| 'horizontal'`                                              | `'vertical'` | Layout direction of options                                  |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —            | Color propagated to all child checkboxes                     |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | —            | Size propagated to all child checkboxes                      |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color propagated to all child checkboxes                     |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | N/A | Size propagated to all child checkboxes                      |
 | `disabled`    | `boolean`                                                                 | `false`      | Disable all checkboxes in the group                          |
 | `required`    | `boolean`                                                                 | `false`      | Mark the group as required                                   |
 | `error`       | `string`                                                                  | `''`         | Error message shown below the group (also sets ARIA invalid) |

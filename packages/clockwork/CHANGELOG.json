@@ -10,7 +10,7 @@
           },
           {
             "author": "agent@vielzeug",
-            "comment": "refactor: trust typed definitions — remove the runtime definition compiler and its compiled indirection, keep the untypeable footgun checks",
+            "comment": "refactor: trust typed definitions: remove the runtime definition compiler and its compiled indirection, keep the untypeable footgun checks",
             "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
           }
         ]

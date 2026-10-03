@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Auth Flow with Guards'
+title: 'Clockwork Examples: Auth Flow with Guards'
 description: 'Combine guarded admission with an abortable authentication invoke.'
 ---
 

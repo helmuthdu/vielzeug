@@ -1,5 +1,5 @@
 ---
-title: Focus — Examples
+title: 'Focus: Examples'
 description: Worked examples for @vielzeug/focus.
 ---
 

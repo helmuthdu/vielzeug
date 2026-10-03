@@ -7,7 +7,7 @@ Fri, 02 Oct 2026 18:01:51 GMT
 
 ### Patches
 
-- chore: align with CalVer lockstep trains — no code change this train
+- chore: align with CalVer lockstep trains: no code change this train
 ## 3.0.0
 Wed, 09 Sep 2026 22:15:14 GMT
 
@@ -34,7 +34,7 @@ Sun, 16 Aug 2026 10:35:40 GMT
 
 ### Minor changes
 
-- refactor: remove RuneError class (never thrown, no subclasses). Remove dead RemoteLogData re-export from transports.ts. Fix detectEnv to remove Vite-specific import.meta.env check — browser defaults to development. Merge resolveBindings + serializeErrors into single prepareBindings pass.
+- refactor: remove RuneError class (never thrown, no subclasses). Remove dead RemoteLogData re-export from transports.ts. Fix detectEnv to remove Vite-specific import.meta.env check: browser defaults to development. Merge resolveBindings + serializeErrors into single prepareBindings pass.
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT

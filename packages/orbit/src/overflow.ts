@@ -1,5 +1,5 @@
 /**
- * @vielzeug/orbit — overflow-detection helpers.
+ * @vielzeug/orbit: overflow-detection helpers.
  *
  * Imported by both `core.ts` (for `detectOverflow`) and middleware modules.
  * Middleware should import from here instead of reaching into core internals.
@@ -45,14 +45,14 @@ function intersectRect(a: Rect, b: Rect): Rect {
 
 /**
  * Walks up from `element` (crossing shadow boundaries via the flat tree) collecting every
- * ancestor whose `overflow`/`overflow-x`/`overflow-y` clips content — `hidden`, `clip`, `scroll`,
- * `auto`, or `overlay` — intersecting each one's rect into a running result (the nearest,
+ * ancestor whose `overflow`/`overflow-x`/`overflow-y` clips content: `hidden`, `clip`, `scroll`,
+ * `auto`, or `overlay`: intersecting each one's rect into a running result (the nearest,
  * most-restrictive ancestor wins, same model real CSS clipping uses). Always intersects with the
  * viewport too, so the result never exceeds it even when no clipping ancestor is found.
  *
  * Pass this as `boundary` to `flip`/`shift`/`size` so a floating element nested inside a
- * scrollable region or a dialog panel stays within *that* container — which is what a user
- * actually sees as "the edge" — instead of only avoiding the full page viewport, which the
+ * scrollable region or a dialog panel stays within *that* container, which is what a user
+ * actually sees as "the edge", instead of only avoiding the full page viewport, which the
  * floating element can still be well inside while visibly overhanging a much smaller ancestor.
  *
  * @example

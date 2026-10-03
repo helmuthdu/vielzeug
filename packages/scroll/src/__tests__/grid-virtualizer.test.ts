@@ -257,7 +257,7 @@ describe('createGridVirtualizer – measurement', () => {
     );
     await flushMicrotasks();
 
-    // R4: single coordinated flush — both axes trigger exactly one onChange call
+    // R4: single coordinated flush: both axes trigger exactly one onChange call
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     expect(v.totalHeight).toBe(70 + 90 + 2 * 50);
     expect(v.totalWidth).toBe(100 + 4 * 80);
@@ -580,7 +580,7 @@ describe('createGridVirtualizer – update clears measurement cache', () => {
     // Measure row 0 at 100px
     v.measureRow(0, 100);
 
-    // Wait for microtask flush then update estimateRowSize — cache should clear
+    // Wait for microtask flush then update estimateRowSize: cache should clear
     // and totalHeight should revert to the new estimate
     v.update({ estimateRowSize: 60 });
 
@@ -605,7 +605,7 @@ describe('createGridVirtualizer – update clears measurement cache', () => {
     // Measure col 0 at 200px
     v.measureColumn(0, 200);
 
-    // Update estimateColSize — col measurement cache clears
+    // Update estimateColSize: col measurement cache clears
     v.update({ estimateColSize: 80 });
 
     // Col 0 was 200px but cache is cleared → reverts to 80px estimate

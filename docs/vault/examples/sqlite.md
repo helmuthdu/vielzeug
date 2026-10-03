@@ -1,5 +1,5 @@
 ---
-title: 'Vault Examples — SQLite Transactions and Iteration'
+title: 'Vault Examples: SQLite Transactions and Iteration'
 description: 'Persist and process typed records with an application-owned SQLite connection.'
 ---
 

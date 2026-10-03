@@ -1,5 +1,5 @@
 ---
-title: Refine — API Reference
+title: 'Refine: API Reference'
 description: Published component, stylesheet, framework type, and error entry points for @vielzeug/refine.
 ---
 
@@ -16,7 +16,7 @@ description: Published component, stylesheet, framework type, and error entry po
 | `@vielzeug/refine/frameworks/elements` | Register typed DOM tag mappings | Types only | Import for side effects in TypeScript |
 | `@vielzeug/refine/frameworks/react` | Register typed React JSX elements | Types only | Does not provide runtime wrappers |
 | `@vielzeug/refine/frameworks/vue` | Register typed Vue global components | Types only | Does not install a Vue plugin |
-| `@vielzeug/refine/theme` | `createThemeController()` — light/dark/system document theme | Sync | Does not persist the preference or set an accent color |
+| `@vielzeug/refine/theme` | `createThemeController()`: light/dark/system document theme | Sync | Does not persist the preference or set an accent color |
 | `eventFieldValue()` / `eventFieldChecked()` | Read a form control's value/checked from `event.currentTarget` | Sync | Exported from the package root; guards non-field targets |
 | `RefineError` | Base class for package-defined public errors | Sync | Component configuration warnings do not throw this error |
 
@@ -99,9 +99,9 @@ theme.setPreference('dark');
 theme.dispose();
 ```
 
-Owns the light/dark/system theme for the document: a reactive `preference` signal, the effective `resolved` mode (`'dark' | 'light'` after resolving `system` against the OS), and the DOM application `styles/theme.css` expects — the `.dark` class plus the `color-scheme` property on the root element, so every `light-dark()` token resolves to the right branch. While in `system` mode the controller tracks the OS `prefers-color-scheme` via sentinel's `createMediaQuery`.
+Owns the light/dark/system theme for the document: a reactive `preference` signal, the effective `resolved` mode (`'dark' | 'light'` after resolving `system` against the OS), and the DOM application `styles/theme.css` expects: the `.dark` class plus the `color-scheme` property on the root element, so every `light-dark()` token resolves to the right branch. While in `system` mode the controller tracks the OS `prefers-color-scheme` via sentinel's `createMediaQuery`.
 
-The controller does **not** persist the preference or expose an accent color — those are consumer concerns (wire `watch(controller.preference, save)` for persistence; set `--color-primary-hue` yourself). Options: `initial` (starting preference, default `'system'`), `root` (element carrying the classes, default `document.documentElement`), `target` (window whose `matchMedia` backs `system`). The handle is disposable: `dispose()`, `disposed`, `disposalSignal`, `[Symbol.dispose]`.
+The controller does **not** persist the preference or expose an accent color: those are consumer concerns (wire `watch(controller.preference, save)` for persistence; set `--color-primary-hue` yourself). Options: `initial` (starting preference, default `'system'`), `root` (element carrying the classes, default `document.documentElement`), `target` (window whose `matchMedia` backs `system`). The handle is disposable: `dispose()`, `disposed`, `disposalSignal`, `[Symbol.dispose]`.
 
 ### `eventFieldValue(event)` / `eventFieldChecked(event)`
 
@@ -109,7 +109,7 @@ The controller does **not** persist the preference or expose an accent color —
 import { eventFieldChecked, eventFieldValue } from '@vielzeug/refine';
 
 input.addEventListener('input', (event) => {
-  const value = eventFieldValue(event); // string | undefined — never a blind cast
+  const value = eventFieldValue(event); // string | undefined: never a blind cast
 });
 ```
 

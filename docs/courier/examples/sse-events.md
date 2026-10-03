@@ -1,5 +1,5 @@
 ---
-title: 'Courier Examples — SSE Events'
+title: 'Courier Examples: SSE Events'
 description: 'Consume standard server-sent events alongside Courier.'
 ---
 

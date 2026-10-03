@@ -6,7 +6,7 @@ import { isLevelEnabled } from './types';
 
 /**
  * Per-level style definition for the console transport.
- * All fields are optional when providing a level override — unspecified fields fall back to the default theme.
+ * All fields are optional when providing a level override: unspecified fields fall back to the default theme.
  */
 export type ConsoleThemeEntry = {
   badge: string;
@@ -17,7 +17,7 @@ export type ConsoleThemeEntry = {
 
 /**
  * Partial theme overrides merged on top of the default theme.
- * Each level entry is also partial — only specify the fields you want to change.
+ * Each level entry is also partial: only specify the fields you want to change.
  *
  * @example
  * consoleTransport({ theme: { error: { badge: '✖' } } })
@@ -39,8 +39,8 @@ export type ConsoleTransportOptions = {
   ansi?: boolean;
   /**
    * Object serialization format for Node.js output.
-   * - 'json' — JSON.stringify (machine-readable, fails on circular refs)
-   * - 'raw' — pass the object directly to the console method (default)
+   * - 'json': JSON.stringify (machine-readable, fails on circular refs)
+   * - 'raw': pass the object directly to the console method (default)
    * Default: 'raw'.
    */
   format?: 'json' | 'raw';
@@ -149,7 +149,7 @@ function escapeConsoleFormat(s: string): string {
 /**
  * Builds the Node console prefix string, passed as the first argument to `console.log()`/etc.
  * alongside the payload. `namespace` is escaped because Node's `console.*` methods run the first
- * string argument through `util.format` — an unescaped `%s`/`%d`/`%o`/etc. in a caller-controlled
+ * string argument through `util.format`: an unescaped `%s`/`%d`/`%o`/etc. in a caller-controlled
  * namespace would consume and hide the actual payload arguments that follow (log forging).
  */
 function buildNodePrefix(

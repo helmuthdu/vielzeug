@@ -1,5 +1,5 @@
 export const discriminatedUnionExample = {
-  code: `// s.discriminatedUnion() validates a discriminated union — objects sharing a common tag field.
+  code: `// s.discriminatedUnion() validates a discriminated union: objects sharing a common tag field.
 // Spell automatically injects the discriminator literal into each branch.
 import { s } from '@vielzeug/spell'
 

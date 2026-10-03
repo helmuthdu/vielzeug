@@ -1,5 +1,5 @@
 ---
-title: 'Courier Examples — File Uploads'
+title: 'Courier Examples: File Uploads'
 description: 'Upload multipart forms through Courier.'
 ---
 

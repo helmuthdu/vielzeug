@@ -23,14 +23,14 @@ await db.putAll('logs', [
   { id: 4, level: 'info',  message: 'Request succeeded',    ts: Date.now() },
 ], ttl.hours(1))
 
-// batch() is atomic on IndexedDB — all writes commit or none do
+// batch() is atomic on IndexedDB: all writes commit or none do
 await db.batch(['logs'], async (tx) => {
   await tx.put('logs', { id: 5, level: 'info', message: 'Batch committed', ts: Date.now() })
   await tx.delete('logs', 1)
   await tx.delete('logs', 2)
 })
 
-// iterate() — cursor-based streaming, only on DocumentVaultStore
+// iterate(): cursor-based streaming, only on DocumentVaultStore
 // the full table is never loaded into memory at once
 const messages = []
 for await (const entry of db.iterate('logs')) {
@@ -47,5 +47,5 @@ const pruned = await db.pruneExpired()
 console.log('Pruned:', pruned)
 
 await db.dispose()`,
-  name: 'IndexedDB — Atomic Batch & iterate()',
+  name: 'IndexedDB: Atomic Batch & iterate()',
 };

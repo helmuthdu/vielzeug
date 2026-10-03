@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — memo'
+title: 'Arsenal Examples: memo'
 description: 'memo example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'memo example for @vielzeug/arsenal.'
 
 ### Problem
 
-A pure sync function is called repeatedly with the same arguments and the computation is expensive — you need to cache results without redundant work.
+A pure sync function is called repeatedly with the same arguments and the computation is expensive: you need to cache results without redundant work.
 
 ### Solution
 
@@ -38,7 +38,7 @@ formatLabel({ page: 1, size: 20 }); // computed
 formatLabel({ page: 1, size: 20 }); // cached
 ```
 
-#### Async caching — use cache instead
+#### Async caching: use cache instead
 
 `memo` only accepts **sync** functions. For async caching with TTL and load deduplication:
 
@@ -51,8 +51,8 @@ const user = await userCache.getOrLoad('user:1', () => fetchUser(1));
 
 ### Pitfalls
 
-- `memo` only accepts sync functions — passing an async function is a compile-time error.
-- Pass a `key` function when arguments are objects — without it, arguments are `JSON.stringify`-ed, which may be unstable.
+- `memo` only accepts sync functions: passing an async function is a compile-time error.
+- Pass a `key` function when arguments are objects: without it, arguments are `JSON.stringify`-ed, which may be unstable.
 - There is no TTL option. Use `cache` when time-based expiry is required.
 
 ### Related

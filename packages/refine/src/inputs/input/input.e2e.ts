@@ -1,9 +1,9 @@
 /**
- * Real-browser accessibility checks for `ore-input` — the `color-contrast`/`target-size` rules
- * jsdom can't compute — plus CSS layout regressions jsdom can't catch either (no real box model,
+ * Real-browser accessibility checks for `ore-input`: the `color-contrast`/`target-size` rules
+ * jsdom can't compute: plus CSS layout regressions jsdom can't catch either (no real box model,
  * `@layer` blocks silently dropped). Complements `input.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
@@ -39,7 +39,7 @@ test.describe('Accessibility', () => {
 test.describe('Layout', () => {
   // Regression coverage for a real bug: `fieldVariantMixin`'s `@layer refine.variants` rules
   // were silently losing to `componentStyles`'s `@layer refine.base` defaults when the mixin
-  // was wired into `styles` *before* `componentStyles` — every variant rendered identically to
+  // was wired into `styles` *before* `componentStyles`: every variant rendered identically to
   // the unconditional base background, and jsdom can't catch this since it drops `@layer`
   // entirely (see `input.ts`'s `styles` array ordering comment for the actual fix).
   test('each variant renders a visually distinct field background', async ({ page, refinePage }) => {
@@ -59,14 +59,14 @@ test.describe('Layout', () => {
     }, variants);
 
     // Not every variant needs a unique background (`outline`/`ghost`/`text` are all legitimately
-    // transparent at rest), but they must not *all* collapse to the same value — that's the
+    // transparent at rest), but they must not *all* collapse to the same value, that's the
     // signature of the base layer winning over every variant rule.
     expect(new Set(backgrounds).size).toBeGreaterThan(1);
   });
 
   // Regression coverage for a related bug: the focus/error/success glow (`box-shadow` on
   // `.field:focus-within`) lived in `@layer refine.overrides`, while solid/outline/ghost's
-  // rest-state `box-shadow` (`fieldVariantMixin`) lives in `@layer refine.variants` — cascade
+  // rest-state `box-shadow` (`fieldVariantMixin`) lives in `@layer refine.variants`: cascade
   // layers beat specificity outright, so the glow always lost to the plain rest-state shadow,
   // regardless of focus/error/success. `box-shadow` is transitioned, so read after it settles.
   for (const variant of ['solid', 'outline', 'ghost'] as const) {
@@ -119,7 +119,7 @@ test.describe('Layout', () => {
   }
 
   // Regression coverage for a 2px-height bug: the global preflight `*{box-sizing:border-box}` does
-  // not cross shadow boundaries, so the inner `<input>` fell back to the UA default — border-box
+  // not cross shadow boundaries, so the inner `<input>` fell back to the UA default: border-box
   // for `input[type=search]` but content-box for a plain input (the `ore-select` trigger), whose
   // 1px vertical padding then added 2px to every select next to a search field.
   test('inner input is border-box so search fields and select triggers match height', async ({ page, refinePage }) => {

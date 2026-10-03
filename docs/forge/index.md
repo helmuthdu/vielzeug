@@ -1,5 +1,5 @@
 ---
-title: Forge — Immutable typed form state
+title: 'Forge: Immutable typed form state'
 description: Framework-neutral form and field state with nested handles, flat validation issues, and explicit integration helpers.
 package: forge
 category: state
@@ -59,16 +59,16 @@ pnpm add @vielzeug/forge
 
 <div class="features-grid">
 
-- `createForm()` — deeply readonly form state with structural sharing and cloned dates
-- `field().field()` — typed nested field handles
-- `patch()` — shallow top-level merge without spread casts
-- `normalize` + `toPlainValues()` — hold domain-model classes in form state
+- `createForm()`: deeply readonly form state with structural sharing and cloned dates
+- `field().field()`: typed nested field handles
+- `patch()`: shallow top-level merge without spread casts
+- `normalize` + `toPlainValues()`: hold domain-model classes in form state
 - Flat `{ path, message }` validation issues
 - Explicit `validate()` and `submit()` timing
-- `/dom` — optional element binding
-- `/schema` — validator-agnostic Standard Schema adapter
-- `/persist` — explicit structural store integration
-- `/form-data` — browser submission serialization
+- `/dom`: optional element binding
+- `/schema`: validator-agnostic Standard Schema adapter
+- `/persist`: explicit structural store integration
+- `/form-data`: browser submission serialization
 
 </div>
 
@@ -85,8 +85,8 @@ pnpm add @vielzeug/forge
 
 ## See Also
 
-- [Spell](/spell/) — Standard Schema-compatible validation.
-- [Vault](/vault/) — durable typed storage for drafts.
-- [Assay](/assay/) — DOM test helpers for form interaction.
+- [Spell](/spell/): Standard Schema-compatible validation.
+- [Vault](/vault/): durable typed storage for drafts.
+- [Assay](/assay/): DOM test helpers for form interaction.
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

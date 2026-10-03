@@ -1,4 +1,4 @@
-// Core API — most users only need these
+// Core API: most users only need these
 export type { ConflictOptions } from './conflicts';
 export { findShortcutConflicts } from './conflicts';
 export { KeymapConfigError, KeymapError, KeymapParseError } from './errors';

@@ -12,7 +12,7 @@ console.log('image/* matches report.pdf:', matchesAccept(pdf, ['image/*'])) // f
 
 console.log('--- File extension ---')
 console.log('.pdf matches report.pdf:', matchesAccept(pdf, ['.pdf']))  // true
-console.log('.PDF matches report.pdf:', matchesAccept(pdf, ['.PDF']))  // true — case-insensitive
+console.log('.PDF matches report.pdf:', matchesAccept(pdf, ['.PDF']))  // true: case-insensitive
 console.log('.pdf matches photo.png:', matchesAccept(png, ['.pdf']))   // false
 
 console.log('--- Exact MIME type ---')

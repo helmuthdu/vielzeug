@@ -97,7 +97,7 @@ describe('ward: ordered first-match', () => {
   });
 
   it('first match wins regardless of specificity', () => {
-    // A broad wildcard allow before a narrow deny — first match wins.
+    // A broad wildcard allow before a narrow deny: first match wins.
     const ward = createWard([
       { action: WILDCARD, effect: 'allow', resource: WILDCARD },
       { action: 'read', effect: 'deny', resource: 'posts' },
@@ -106,7 +106,7 @@ describe('ward: ordered first-match', () => {
     expect(allowed(ward, { action: 'read', principal: user('u1', ['admin']), resource: 'posts' })).toBe(true);
   });
 
-  it('a narrow deny before a broad allow — first match wins', () => {
+  it('a narrow deny before a broad allow: first match wins', () => {
     const ward = createWard([
       { action: 'read', effect: 'deny', resource: 'posts' },
       { action: WILDCARD, effect: 'allow', resource: WILDCARD },

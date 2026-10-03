@@ -11,7 +11,7 @@ Lingua 3.0 simplifies the constructor surface to two entry points and adds expli
 | Before | After |
 | --- | --- |
 | `createCatalogTranslator(catalog, { locale })` | `createTranslator(catalog, { locale })` |
-| `createTranslator(catalogs, { locale, fallback })` | Removed — use `createI18n` for multi-locale |
+| `createTranslator(catalogs, { locale, fallback })` | Removed: use `createI18n` for multi-locale |
 | `createTranslationStore({ catalogs, locale })` | `createI18n({ catalogs, locale, loadCatalog? })` |
 | `hydrateTranslationStore(state)` | `createI18n({ state })` |
 | `TranslationStore` / `TranslationSnapshot` | `I18n` / `I18nSnapshot` |
@@ -20,12 +20,12 @@ Lingua 3.0 simplifies the constructor surface to two entry points and adds expli
 | `@vielzeug/lingua/format` (`createFormatter`) | Retained as an optional standalone Intl facade |
 | `TranslationState` version `3` | version `4` |
 | `LinguaMissingResourceError` (2.x) | `LinguaMissingCatalogError` (unchanged from 2.x) |
-| — | `LinguaMissingKeyError`, `LinguaMissingValueError` (new) |
+| N/A | `LinguaMissingKeyError`, `LinguaMissingValueError` (new) |
 
 ## Replace constructor calls
 
 ```ts
-// Before — fixed catalog
+// Before: fixed catalog
 const translator = createCatalogTranslator(catalog, { locale: 'fr' });
 
 // After
@@ -33,10 +33,10 @@ const translator = createTranslator(catalog, { locale: 'fr' });
 ```
 
 ```ts
-// Before — locale-keyed catalogs
+// Before: locale-keyed catalogs
 const translator = createTranslator({ en: enCatalog, fr: frCatalog }, { locale: 'fr', fallback: 'en' });
 
-// After — eager catalogs preserve synchronous translation and fallback
+// After: eager catalogs preserve synchronous translation and fallback
 const i18n = createI18n({
   catalogs: { en: enCatalog, fr: frCatalog },
   locale: 'fr',
@@ -46,7 +46,7 @@ i18n.translate('key');
 ```
 
 ```ts
-// Before — mutable store
+// Before: mutable store
 const i18n = createTranslationStore({ catalogs: { en: enCatalog, fr: async () => frCatalog }, locale: 'en' });
 
 // After
@@ -58,7 +58,7 @@ const i18n = createI18n({
 ```
 
 ```ts
-// Before — hydration
+// Before: hydration
 const client = hydrateTranslationStore(server.serialize());
 
 // After
@@ -121,7 +121,7 @@ Lingua 3.1 resets serialized-state versioning and narrows `catalogKeys()` to cat
 
 ## State version is 1
 
-`TranslationState` is versioned `1` — numbering restarts instead of continuing the i18nit counter. `createI18n({ state })` rejects any other version with `LinguaInvalidStateError`. Re-serialize server state with the new build before hydrating.
+`TranslationState` is versioned `1`: numbering restarts instead of continuing the i18nit counter. `createI18n({ state })` rejects any other version with `LinguaInvalidStateError`. Re-serialize server state with the new build before hydrating.
 
 ## Catalog keys from an instance
 

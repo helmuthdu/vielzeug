@@ -51,9 +51,9 @@ Wed, 19 Aug 2026 06:57:36 GMT
 ### Patches
 
 - fix: query cache cancelAll() now clears entry.promise and entry.controller so a subsequent fetch() starts a fresh request instead of returning the stale rejected promise from the cancelled in-flight fetch; fetchEntry success/rejection handlers guard with entry.promise === promise so a superseded in-flight fetch cannot clobber a newer fetch's cache state
-- fix: courier.dispose() no longer calls queries.clear() explicitly — transport.dispose() triggers the query cache disposal signal listener which sets the disposed flag then clears, avoiding a redundant double-clear and ensuring the disposed flag is set before clear runs
-- refactor: remove duplicate StreamRuntimeConfig type from stream.ts — open() is now generic over P, accepting StreamOptions<P> directly and eliminating all unsafe casts
-- refactor: remove unnecessary RequestInit cast in withLogging interceptor — ctx.init already includes method
+- fix: courier.dispose() no longer calls queries.clear() explicitly: transport.dispose() triggers the query cache disposal signal listener which sets the disposed flag then clears, avoiding a redundant double-clear and ensuring the disposed flag is set before clear runs
+- refactor: remove duplicate StreamRuntimeConfig type from stream.ts: open() is now generic over P, accepting StreamOptions<P> directly and eliminating all unsafe casts
+- refactor: remove unnecessary RequestInit cast in withLogging interceptor: ctx.init already includes method
 
 ## 2.2.0
 Sun, 16 Aug 2026 09:15:39 GMT
@@ -85,7 +85,7 @@ Wed, 05 Aug 2026 16:48:52 GMT
 
 ### Minor changes
 
-- refactor!: mutations start at status 'idle' (isLoading false; previously 'loading' — reset() and aborts also return to 'idle'); MutationOptions.onFinally removed (use onSettled); toSyncStore() removed (mutation.store and observe() are already SyncStore); qc.fetch() returns Promise<T | undefined>; readable()'s onError no longer suppresses terminal errors (notified, then always thrown — catch around the loop for partial-data-then-silence); initialData now seeds the cache even when enabled: false. Feature: queries accept a url source routed through the api client (createQuery({ api }), wired automatically by createCourier); observeMany() accepts select/placeholderData; fetchMany() accepts { settled: true }; error bodies always parse as JSON/text even with binary responseType; query cache GC uses a single retargeted timer
+- refactor!: mutations start at status 'idle' (isLoading false; previously 'loading': reset() and aborts also return to 'idle'); MutationOptions.onFinally removed (use onSettled); toSyncStore() removed (mutation.store and observe() are already SyncStore); qc.fetch() returns Promise<T | undefined>; readable()'s onError no longer suppresses terminal errors (notified, then always thrown: catch around the loop for partial-data-then-silence); initialData now seeds the cache even when enabled: false. Feature: queries accept a url source routed through the api client (createQuery({ api }), wired automatically by createCourier); observeMany() accepts select/placeholderData; fetchMany() accepts { settled: true }; error bodies always parse as JSON/text even with binary responseType; query cache GC uses a single retargeted timer
 
 ## 1.1.5
 Sun, 26 Jul 2026 06:43:54 GMT

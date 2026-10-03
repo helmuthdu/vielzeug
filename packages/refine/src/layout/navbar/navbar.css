@@ -163,7 +163,7 @@
     margin-inline-start: var(--size-1);
   }
 
-  /* The mobile collapse hides the end region with display, not the hidden attribute —
+  /* The mobile collapse hides the end region with display, not the hidden attribute :
      reclaim the right edge for the persistent region there. */
   :host([data-mobile]) .navbar-persistent {
     margin-inline-start: auto;
@@ -217,7 +217,7 @@
     animation: navbar-mobile-in var(--transition-fast) var(--ease-out);
   }
 
-  /* `:not([hidden])` — same reasoning as `.mobile-toggle` above: this panel's own `?hidden=`
+  /* `:not([hidden])`: same reasoning as `.mobile-toggle` above: this panel's own `?hidden=`
      binding (navbar.ts) already covers "not mobile" / "menu closed" / "no mobile-menu content",
      but an unconditional `display: grid` here would still override that `[hidden]` for the "no
      content" case specifically, since author styles always win over the UA stylesheet. */
@@ -243,13 +243,13 @@
     border-radius: 0 0 var(--rounded-md) var(--rounded-md);
   }
 
-  /* `:not([hidden])` matters — the component's own `?hidden=` binding (navbar.ts) hides this
+  /* `:not([hidden])` matters: the component's own `?hidden=` binding (navbar.ts) hides this
      button when there's neither `mobile-menu` slot content nor a `mobile-sidebar` target to
-     toggle. Without it, this rule's `display: inline-flex` — an author-stylesheet declaration —
+     toggle. Without it, this rule's `display: inline-flex`: an author-stylesheet declaration :
      unconditionally overrides the UA stylesheet's `[hidden] { display: none }`, since author
      styles always win over UA styles regardless of selector specificity. That left the button
      visibly clickable while toggling a `mobile-menu-panel` that stays hidden too (its own
-     `?hidden=` binding includes the same "nothing to show" check) — clicking did nothing
+     `?hidden=` binding includes the same "nothing to show" check): clicking did nothing
      visible at all. */
   :host([data-mobile]) .mobile-toggle:not([hidden]) {
     display: inline-flex;
@@ -368,7 +368,7 @@
     white-space: nowrap;
   }
 
-  /* Icon-only items (no visible label — name conveyed via aria-label) hide the empty label
+  /* Icon-only items (no visible label: name conveyed via aria-label) hide the empty label
      region so it stops reserving a `gap` slot next to the icon, and switch to compact,
      symmetric padding instead of the icon+label layout's wider horizontal padding. Without
      this, an icon-only item ends up lopsided: too much horizontal space around the icon plus

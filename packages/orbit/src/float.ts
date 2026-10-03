@@ -28,7 +28,7 @@ function resolveContainingBlock(floating: HTMLElement, strategy: PositionStrateg
   return getContainingBlock(floating);
 }
 
-/** @internal — default apply: sets position, left, top on the floating element. */
+/** @internal: default apply: sets position, left, top on the floating element. */
 export function applyDefault(result: ComputePositionResult, floating: HTMLElement, strategy: PositionStrategy): void {
   floating.style.position = strategy;
   floating.style.left = `${result.x}px`;

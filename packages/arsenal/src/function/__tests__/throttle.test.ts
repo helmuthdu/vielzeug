@@ -10,7 +10,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('throttle — leading only (default)', () => {
+describe('throttle: leading only (default)', () => {
   it('invokes immediately on the first call', () => {
     const fn = vi.fn();
     const t = throttle(fn, 100);
@@ -50,7 +50,7 @@ describe('throttle — leading only (default)', () => {
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it('pending() returns false — leading-only has no queued trailing call', () => {
+  it('pending() returns false: leading-only has no queued trailing call', () => {
     const fn = vi.fn();
     const t = throttle(fn, 100);
 
@@ -67,7 +67,7 @@ describe('throttle — leading only (default)', () => {
   });
 });
 
-describe('throttle — leading: false', () => {
+describe('throttle: leading: false', () => {
   it('does not invoke immediately', () => {
     const fn = vi.fn();
     const t = throttle(fn, 100, { leading: false, trailing: false });
@@ -86,7 +86,7 @@ describe('throttle — leading: false', () => {
   });
 });
 
-describe('throttle — trailing edge', () => {
+describe('throttle: trailing edge', () => {
   it('schedules a trailing call with the last args', () => {
     const fn = vi.fn();
     const t = throttle(fn, 100, { leading: true, trailing: true });

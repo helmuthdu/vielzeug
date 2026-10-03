@@ -34,7 +34,7 @@ type ChipBaseProps = {
   rounded?: RoundedSize | '';
   /** Component size */
   size?: ComponentSize;
-  /** Value associated with this chip — included in emitted event detail */
+  /** Value associated with this chip: included in emitted event detail */
   value?: string;
   /** Visual style variant */
   variant?: Exclude<VisualVariant, 'text'>;
@@ -61,7 +61,7 @@ type SelectableChipProps = {
   mode: Extract<OreChipMode, 'selectable'>;
 };
 
-/** Action chip mode — behaves like a button, fires a click event without maintaining state */
+/** Action chip mode: behaves like a button, fires a click event without maintaining state */
 type ActionChipProps = {
   mode: Extract<OreChipMode, 'action'>;
 };
@@ -93,7 +93,7 @@ export type OreChipProps = ChipBaseProps &
  * @attr {string}  size      - Component size: 'sm' | 'md' | 'lg'
  * @attr {string}  rounded   - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string}  mode      - Interaction mode: 'static' | 'removable' | 'selectable' | 'action'
- * @attr {string}  layout    - Content layout: 'inline' (default) | 'stacked' — stacked places the icon above a wrapping label, for tile-like selectable chips
+ * @attr {string}  layout    - Content layout: 'inline' (default) | 'stacked': stacked places the icon above a wrapping label, for tile-like selectable chips
  * @attr {boolean} disabled  - Disable the chip
  * @attr {string}  value     - Value included in emitted event detail
  * @attr {boolean} checked   - Controlled checked state for selectable chips
@@ -197,7 +197,7 @@ define<OreChipComponentProps>(CHIP_TAG, {
       }
     });
 
-    // Effective checked value — reactive to checked prop changes in controlled mode.
+    // Effective checked value: reactive to checked prop changes in controlled mode.
     const isChecked = computed(() => {
       if (props.mode.value !== 'selectable') return false;
 

@@ -1,7 +1,7 @@
 export const renderStateExample = {
   code: `import { createSandbox } from '@vielzeug/sandbox'
 
-// Push state in bulk, patch content incrementally, and hot-patch styles — all without a full re-render
+// Push state in bulk, patch content incrementally, and hot-patch styles: all without a full re-render
 const container = document.createElement('div')
 document.body.appendChild(container)
 

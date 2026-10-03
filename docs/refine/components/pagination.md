@@ -135,7 +135,7 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 | `siblings`        | `number`                                                                                  | `1`            | Page buttons visible on each side of the current page |
 | `show-first-last` | `boolean`                                                                                 | `false`        | Show first and last page buttons                      |
 | `show-prev-next`  | `boolean`                                                                                 | `false`        | Show previous and next page buttons                   |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`                 | —              | Active page color                                     |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`                 | N/A | Active page color                                     |
 | `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'ghost'`      | Visual style of nav buttons                           |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`         | Component size                                        |
 | `label`           | `string`                                                                                  | `'Pagination'` | `aria-label` for the nav landmark                     |

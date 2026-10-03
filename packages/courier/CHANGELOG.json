@@ -104,17 +104,17 @@
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: courier.dispose() no longer calls queries.clear() explicitly — transport.dispose() triggers the query cache disposal signal listener which sets the disposed flag then clears, avoiding a redundant double-clear and ensuring the disposed flag is set before clear runs",
+            "comment": "fix: courier.dispose() no longer calls queries.clear() explicitly: transport.dispose() triggers the query cache disposal signal listener which sets the disposed flag then clears, avoiding a redundant double-clear and ensuring the disposed flag is set before clear runs",
             "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor: remove duplicate StreamRuntimeConfig type from stream.ts — open() is now generic over P, accepting StreamOptions<P> directly and eliminating all unsafe casts",
+            "comment": "refactor: remove duplicate StreamRuntimeConfig type from stream.ts: open() is now generic over P, accepting StreamOptions<P> directly and eliminating all unsafe casts",
             "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor: remove unnecessary RequestInit cast in withLogging interceptor — ctx.init already includes method",
+            "comment": "refactor: remove unnecessary RequestInit cast in withLogging interceptor: ctx.init already includes method",
             "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
           }
         ]
@@ -192,7 +192,7 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor!: mutations start at status 'idle' (isLoading false; previously 'loading' — reset() and aborts also return to 'idle'); MutationOptions.onFinally removed (use onSettled); toSyncStore() removed (mutation.store and observe() are already SyncStore); qc.fetch() returns Promise<T | undefined>; readable()'s onError no longer suppresses terminal errors (notified, then always thrown — catch around the loop for partial-data-then-silence); initialData now seeds the cache even when enabled: false. Feature: queries accept a url source routed through the api client (createQuery({ api }), wired automatically by createCourier); observeMany() accepts select/placeholderData; fetchMany() accepts { settled: true }; error bodies always parse as JSON/text even with binary responseType; query cache GC uses a single retargeted timer",
+            "comment": "refactor!: mutations start at status 'idle' (isLoading false; previously 'loading': reset() and aborts also return to 'idle'); MutationOptions.onFinally removed (use onSettled); toSyncStore() removed (mutation.store and observe() are already SyncStore); qc.fetch() returns Promise<T | undefined>; readable()'s onError no longer suppresses terminal errors (notified, then always thrown: catch around the loop for partial-data-then-silence); initialData now seeds the cache even when enabled: false. Feature: queries accept a url source routed through the api client (createQuery({ api }), wired automatically by createCourier); observeMany() accepts select/placeholderData; fetchMany() accepts { settled: true }; error bodies always parse as JSON/text even with binary responseType; query cache GC uses a single retargeted timer",
             "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
           }
         ]

@@ -37,7 +37,7 @@ function buildSignal(timeout: number | undefined, signal: AbortSignal | undefine
  *   { times: 3, timeout: 5000 },
  * );
  *
- * // As AttemptResult (never throws) — combine with attempt()
+ * // As AttemptResult (never throws): combine with attempt()
  * const result = await attempt(() => retry(fn, { times: 3 }));
  * ```
  *
@@ -82,6 +82,6 @@ export async function retry<T>(
     }
   }
 
-  /* unreachable — the loop always returns or throws before exhausting all attempts */
+  /* unreachable: the loop always returns or throws before exhausting all attempts */
   return undefined as never;
 }

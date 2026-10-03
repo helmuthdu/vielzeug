@@ -201,7 +201,7 @@
     background: var(--color-error-backdrop, color-mix(in oklch, var(--color-error) 12%, transparent));
   }
 
-  /* Signal 03/04: retry and replace share one neutral-hover treatment — distinct from remove's
+  /* Signal 03/04: retry and replace share one neutral-hover treatment: distinct from remove's
      error-red hover so the destructive action doesn't blend in with the recovery ones. */
   .file-action:hover {
     color: var(--_theme-focus, var(--color-primary));
@@ -299,7 +299,7 @@
     white-space: nowrap;
   }
 
-  /* Signal 04: a small badge over the thumbnail corner — an explicit success/error indicator
+  /* Signal 04: a small badge over the thumbnail corner: an explicit success/error indicator
      next to the visual proof itself, not just a caption line below it. */
   .file-status-badge {
     position: absolute;
@@ -396,7 +396,7 @@
     border-color: var(--_theme-focus, var(--color-primary));
     border-style: solid;
 
-    /* A genuine glow (not the same subtle ring `:focus-visible` uses above) — a soft inner
+    /* A genuine glow (not the same subtle ring `:focus-visible` uses above): a soft inner
        ring plus a wider, brighter halo, so an active drag reads unmistakably differently from
        a merely-focused, idle dropzone. */
     box-shadow:
@@ -421,7 +421,7 @@
     color: var(--color-error);
   }
 
-  /* Signal 03: an in-field icon alongside the border shift — never color alone. */
+  /* Signal 03: an in-field icon alongside the border shift: never color alone. */
   .dropzone-icon[data-status='error'] {
     color: var(--color-error);
   }
@@ -443,7 +443,7 @@
     --_border-color: var(--file-input-border-color, var(--color-contrast-300));
   }
 
-  /* Flat — a near-invisible border, deliberately weaker than bordered's
+  /* Flat: a near-invisible border, deliberately weaker than bordered's
      70%-focus border (matches button.css's flat/bordered split) so the two
      don't read as the same box at a glance. */
   :host([variant='flat']) {
@@ -483,7 +483,7 @@
 
   /* Ghost */
 
-  /* Borderless at rest — only reveals a border on hover (the border-*width* stays reserved via
+  /* Borderless at rest: only reveals a border on hover (the border-*width* stays reserved via
      a transparent color, not `none`, so revealing it on hover never shifts layout). Focus
      already gets its own themed border + glow from the generic `:focus-visible` rule above,
      regardless of variant, so it needs no ghost-specific override here. */
@@ -505,14 +505,14 @@
 }
 
 /* ========================================
-     Disabled State — intentionally unlayered
+     Disabled State: intentionally unlayered
      ======================================== */
 
 /*
  * The shared `disabledLoadingMixin` (pulled in via `fieldMixins`) dims `:host([disabled])`
  * with `opacity: 0.5` as bare, unlayered CSS. Cascade layers always lose to unlayered rules
  * regardless of source order or specificity, so overriding that from inside any `@layer`
- * block in this file (including `refine.overrides`) would be a no-op — this has to stay
+ * block in this file (including `refine.overrides`) would be a no-op: this has to stay
  * unlayered too, to actually win. See `ore-input`'s `input.css` for the same pattern.
  *
  * Per the field-state UX review: opacity-based dimming reads as a washed-out/loading look

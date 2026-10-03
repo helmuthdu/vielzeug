@@ -59,7 +59,7 @@ Set `variant="chat"` for conversation flows. The header shows three traffic-ligh
     </div>
     <div>
       <div style="font-size:0.6875rem;font-family:var(--font-mono);font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-primary);margin-bottom:4px">assistant</div>
-      <span>Use <code>debounce(fn, wait)</code> — returns a debounced version that delays invoking <code>fn</code> until <code>wait</code> ms after the last call.</span>
+      <span>Use <code>debounce(fn, wait)</code>: returns a debounced version that delays invoking <code>fn</code> until <code>wait</code> ms after the last call.</span>
     </div>
   </div>
 </ore-code-window>
@@ -69,7 +69,7 @@ Set `variant="chat"` for conversation flows. The header shows three traffic-ligh
 
 ## Header End Slot
 
-Use `slot="header-end"` to append content to the trailing edge of the header — useful for copy buttons, badges, or status indicators.
+Use `slot="header-end"` to append content to the trailing edge of the header: useful for copy buttons, badges, or status indicators.
 
 <ComponentPreview vertical>
 
@@ -102,14 +102,14 @@ Override `--code-window-body-padding` for a more compact look:
 | ---------- | ------------------ | ----------------- | ----------------------------------------------------------- |
 | `variant`  | `'code' \| 'chat'` | `'code'`          | Switches the header chrome between code and chat mode       |
 | `lang`     | `string`           | `'ts'`            | Language badge text (`variant="code"` only)                 |
-| `filename` | `string`           | —                 | Filename shown next to the badge (`variant="code"` only)    |
+| `filename` | `string`           | N/A | Filename shown next to the badge (`variant="code"` only)    |
 | `title`    | `string`           | `'MCP tool call'` | Label beside the traffic-light dots (`variant="chat"` only) |
 
 ### Slots
 
 | Slot        | Description                                                        |
 | ----------- | ------------------------------------------------------------------ |
-| *(default)* | Main body content — code blocks, conversation turns, or any markup |
+| *(default)* | Main body content: code blocks, conversation turns, or any markup |
 | `header-end`| Content pinned to the trailing edge of the header bar             |
 
 ### CSS Parts
@@ -137,4 +137,4 @@ Override `--code-window-body-padding` for a more compact look:
 
 ## Accessibility
 
-`ore-code-window` is a presentational container with no interactive role. The traffic-light dots in `variant="chat"` carry `aria-hidden="true"` and have no semantic meaning. Use semantic `<pre><code>` markup for code content in the default slot. For conversation flows, ensure each speaker label is readable by screen readers — use visually hidden text or `aria-label` rather than relying solely on color or position.
+`ore-code-window` is a presentational container with no interactive role. The traffic-light dots in `variant="chat"` carry `aria-hidden="true"` and have no semantic meaning. Use semantic `<pre><code>` markup for code content in the default slot. For conversation flows, ensure each speaker label is readable by screen readers: use visually hidden text or `aria-label` rather than relying solely on color or position.

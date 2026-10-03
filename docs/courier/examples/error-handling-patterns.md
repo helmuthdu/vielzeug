@@ -1,5 +1,5 @@
 ---
-title: 'Courier Examples — Error Handling Patterns'
+title: 'Courier Examples: Error Handling Patterns'
 description: 'Handle HTTP, network, timeout, and cancellation failures precisely.'
 ---
 

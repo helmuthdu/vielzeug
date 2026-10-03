@@ -55,9 +55,9 @@ describe('buildSandboxRunHtml', () => {
   });
 
   // Regression test: @vielzeug/sandbox's own bridge script (which defines `window.__sandbox__`)
-  // is appended by buildDocument() *after* the html passed to render() — so anything emitted
+  // is appended by buildDocument() *after* the html passed to render(), so anything emitted
   // here must not depend on `window.__sandbox__` existing yet. See buildSandboxDocument.ts.
-  it('never references window.__sandbox__ directly — emits via postMessage instead', () => {
+  it('never references window.__sandbox__ directly: emits via postMessage instead', () => {
     const html = buildSandboxRunHtml({ code: "console.log('hi')", libraries: [] });
 
     expect(html).not.toContain('__sandbox__');
@@ -80,7 +80,7 @@ describe('buildSandboxRunHtml', () => {
   });
 
   // Regression test: the sandbox iframe has no allow-same-origin, so real
-  // localStorage/sessionStorage throw a SecurityError on access — @vielzeug/vault's
+  // localStorage/sessionStorage throw a SecurityError on access: @vielzeug/vault's
   // webstorage adapter surfaces that as "not available in this environment". The polyfill
   // must be installed before any library script or user code runs.
   it('installs the storage polyfill before any library script or the user code runs', () => {

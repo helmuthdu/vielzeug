@@ -1,5 +1,5 @@
 ---
-title: Ripple — Usage Guide
+title: 'Ripple: Usage Guide'
 description: Build reactive state with one explicit graph boundary.
 ---
 
@@ -159,7 +159,7 @@ routerState.dispose();
 
 ## Load Async Resources
 
-`resource()` starts immediately, tracks its source reads, and aborts the previous loader whenever the source changes or `reload()` is called. It preserves the last successful value—including `undefined`—as `previous` while newer work is pending or fails.
+`resource()` starts immediately, tracks its source reads, and aborts the previous loader whenever the source changes or `reload()` is called. It preserves the last successful value (including `undefined`) as `previous` while newer work is pending or fails.
 
 ```ts
 const userId = ripple.signal('42');
@@ -306,7 +306,7 @@ ripple.dispose();
 
 ### `subscribe()` forces computed evaluation
 
-`Readable.subscribe()` calls `peek()` before registering the listener. For signals this is a no-op, but for computeds it forces `refresh()` — the derivation runs immediately even if no one reads `.value`. This ensures `equals` comparison works on the first dependency change. Avoid subscribing to expensive computeds unless you need their value.
+`Readable.subscribe()` calls `peek()` before registering the listener. For signals this is a no-op, but for computeds it forces `refresh()`: the derivation runs immediately even if no one reads `.value`. This ensures `equals` comparison works on the first dependency change. Avoid subscribing to expensive computeds unless you need their value.
 
 ### Computed first-run failure is recoverable
 

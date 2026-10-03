@@ -1,18 +1,18 @@
 /**
  * Monaco is loaded as a real bundled dependency (see package.json) instead of injecting a
- * `<script>` tag pointing at a CDN at runtime — that gave the REPL a hard runtime
+ * `<script>` tag pointing at a CDN at runtime, that gave the REPL a hard runtime
  * dependency on unpkg being reachable, no offline dev, and an unpinned "whatever unpkg
  * serves today" version. Workers are wired via Vite's documented `?worker` import pattern.
  *
  * Everything Monaco-related is imported dynamically behind `loadMonaco()`'s cached promise
- * rather than statically at module scope — Monaco is large, and the REPL page is the only
+ * rather than statically at module scope: Monaco is large, and the REPL page is the only
  * page in the docs site that needs it. A dynamic import gives Vite an explicit chunk
  * boundary to split it into, regardless of how this module happens to get bundled.
  */
 import type * as Monaco from 'monaco-editor';
 
 // This version of monaco-editor injects its own CSS via JS at runtime (no separate
-// stylesheet to import) — nothing to pull in here beyond the modules below.
+// stylesheet to import): nothing to pull in here beyond the modules below.
 
 let monacoPromise: Promise<typeof Monaco> | null = null;
 
@@ -58,7 +58,7 @@ export function loadMonaco(): Promise<typeof Monaco> {
       },
     };
 
-    // Module stays ESNext (not CommonJS) so emitted JS keeps `import`/`export` syntax —
+    // Module stays ESNext (not CommonJS) so emitted JS keeps `import`/`export` syntax :
     // rewriteVielzeugImports() expects to see real import statements to translate.
     configureTypeScript(monaco);
 
@@ -70,7 +70,7 @@ export function loadMonaco(): Promise<typeof Monaco> {
 
 /**
  * Compiles a TypeScript model's current content to plain JS using Monaco's own TypeScript
- * worker — the real compiler, not a regex approximation of one. Type errors don't block
+ * worker: the real compiler, not a regex approximation of one. Type errors don't block
  * emit (`noEmitOnError` defaults to false): the REPL erases types and runs the result,
  * the same permissive "just run it" behaviour a Babel-style playground would give.
  */

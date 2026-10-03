@@ -42,7 +42,7 @@ export function alphanumeric(length: number, source?: RandomSource): string {
   return result;
 }
 
-/** Generates a random Base58 string (no 0, O, I, l) — used for Bitcoin-style addresses. */
+/** Generates a random Base58 string (no 0, O, I, l): used for Bitcoin-style addresses. */
 export function base58String(length: number, source?: RandomSource): string {
   const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
   let result = '';

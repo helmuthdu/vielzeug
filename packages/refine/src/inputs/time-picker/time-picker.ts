@@ -50,7 +50,7 @@ export type OreTimePickerProps = {
   size?: string;
   /**
    * Shows an inline green check icon inside the field to confirm the value has
-   * passed validation. Ignored while `error` is set — an error always wins.
+   * passed validation. Ignored while `error` is set: an error always wins.
    */
   success?: boolean;
   /** Display format: '12' for AM/PM, '24' for 24-hour (default: '24') */
@@ -218,7 +218,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
 
     // ── Floating position ────────────────────────────────────────────────────
     // Same Orbit-powered positioner ore-date-picker's `.calendar` popup uses (see its own
-    // comment for the full rationale) — `fixed` + computed `top`/`left` instead of a static
+    // comment for the full rationale): `fixed` + computed `top`/`left` instead of a static
     // `position: absolute; top: 100%`, so the dropdown flips/shifts to stay within the nearest
     // clipping ancestor instead of silently overflowing it.
     const triggerRef = ref<HTMLElement>();
@@ -535,7 +535,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
         ref="${dropdownRef}"
         id="${dialogId}"
         role="listbox"
-        aria-label="${() => (props.label.value ? `${props.label.value} — select time` : 'Select time')}"
+        aria-label="${() => (props.label.value ? `${props.label.value}: select time` : 'Select time')}"
         ?data-open="${isOpen}"
         @keydown="${handleDropdownKeydown}">
         <div class="cols-row">

@@ -16,7 +16,7 @@ export type AutoResizeControl = {
  * Grows a `<textarea>`'s height to fit its content, shared by every component that offers
  * auto-resize (`ore-textarea`, `ore-message-composer`) instead of each reimplementing it.
  *
- * Owns only height — manual-resize cursor/direction is a per-component styling concern, not
+ * Owns only height: manual-resize cursor/direction is a per-component styling concern, not
  * shared behavior, so it stays local to whichever component renders a resize handle.
  *
  * @example
@@ -43,7 +43,7 @@ export const createAutoResize = (options: AutoResizeOptions = {}): AutoResizeCon
     el.addEventListener('input', recompute);
 
     // Deferred a frame: right after mount, the browser hasn't necessarily finished laying out
-    // the textarea yet, so a synchronous `scrollHeight` read here can be stale — often reading
+    // the textarea yet, so a synchronous `scrollHeight` read here can be stale: often reading
     // as 0 and collapsing the field until the next real `input` event happens to correct it.
     // `ore-textarea` has always worked around this locally with its own extra `requestAnimationFrame`
     // call; folding the deferral into `wire()` itself means every consumer gets it for free.

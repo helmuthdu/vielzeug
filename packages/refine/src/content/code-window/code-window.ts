@@ -15,8 +15,8 @@ export type OreCodeWindowProps = {
   /** Title string shown beside the traffic-light dots (`variant="chat"` only) */
   title?: string;
   /**
-   * `"code"` (default) — header shows a language badge + filename.
-   * `"chat"` — header shows traffic-light dots + a title.
+   * `"code"` (default): header shows a language badge + filename.
+   * `"chat"`: header shows traffic-light dots + a title.
    */
   variant?: CodeWindowVariant;
 };
@@ -25,8 +25,8 @@ export type OreCodeWindowProps = {
  * A styled window chrome for code blocks and AI/MCP conversation flows.
  *
  * Two variants:
- * - `variant="code"` (default) — language badge + optional filename header.
- * - `variant="chat"` — traffic-light dots + title header.
+ * - `variant="code"` (default): language badge + optional filename header.
+ * - `variant="chat"`: traffic-light dots + title header.
  *
  * @element ore-code-window
  *

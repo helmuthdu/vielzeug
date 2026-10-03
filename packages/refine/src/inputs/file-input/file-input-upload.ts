@@ -27,7 +27,7 @@ const parseAccept = (accept: string | undefined): string[] => (accept ? accept.s
  * (picker-only mode, fully supported) and "not started yet". */
 export type FileUploadStatus = 'error' | 'idle' | 'success' | 'uploading';
 
-/** Per-file upload snapshot. One reactive signal per file — see `createFileQueue` — not one
+/** Per-file upload snapshot. One reactive signal per file: see `createFileQueue`: not one
  * signal holding a map, so a progress tick for one file never invalidates another's bindings. */
 export type FileUploadState = {
   error: string | null;
@@ -50,7 +50,7 @@ const formatEta = (state: FileUploadState): string => {
 };
 
 /**
- * Consumer-supplied transport — this component has no built-in network layer (zero-dependency,
+ * Consumer-supplied transport: this component has no built-in network layer (zero-dependency,
  * transport-agnostic by design, same reasoning as `courier`'s own fetch-wrapping-only stance).
  * This function is the seam between the UI's upload lifecycle (progress, retry, per-file
  * isolation) and however the app actually moves bytes (`fetch`, `XMLHttpRequest`, a presigned S3
@@ -60,7 +60,7 @@ const formatEta = (state: FileUploadState): string => {
  * via `onProgress` before the previous attempt failed (0 on a fresh upload). A transport that
  * supports byte ranges (e.g. an HTTP `Range`/`Content-Range` header, S3 multipart, tus) can use
  * it to genuinely resume from that point; a plain `fetch(url, { body: file })` can ignore it and
- * simply re-send the whole file — the UI still shows a resumed-from-N-bytes experience either
+ * simply re-send the whole file: the UI still shows a resumed-from-N-bytes experience either
  * way, since the file itself was never dropped from memory.
  */
 export type FileUploadFn = (
@@ -83,7 +83,7 @@ export type FileQueueOptions = {
   multiple: Readable<boolean>;
   onChange: (files: File[], originalEvent?: Event) => void;
   /**
-   * Called with the files an `addFiles` call refused — nothing was added for them — so the
+   * Called with the files an `addFiles` call refused: nothing was added for them, so the
    * consumer can say so instead of the pick failing silently. `files[i]` pairs with
    * `reasons[i]`.
    */
@@ -103,7 +103,7 @@ export type FileQueue = {
   removeFile(file: File, originalEvent?: Event): void;
   /** Validates `newFile` (accept/max-size) and, if accepted, swaps it in for `oldFile` in place
    * and starts its upload. Returns whether the replacement was accepted. Also fires `onRemove`
-   * for `oldFile` — a replace is a removal-and-add that happen to land in the same slot, and a
+   * for `oldFile`: a replace is a removal-and-add that happen to land in the same slot, and a
    * consumer listening only for removal (e.g. to clean up a server-side record) still needs to
    * hear that the old file is gone. */
   replaceFile(oldFile: File, newFile: File, originalEvent?: Event): boolean;
@@ -114,7 +114,7 @@ export type FileQueue = {
 };
 
 /**
- * Owns file selection *and* the opt-in upload lifecycle together — they were never really
+ * Owns file selection *and* the opt-in upload lifecycle together: they were never really
  * separable (adding a file starts its upload; removing one must abort it; replacing one is both
  * at once). Independent of `html`/rendering, following the same shape as `datagrid`'s
  * `createDataGridControls` and `combobox`'s `combobox-options.ts`: a factory `file-input.ts`
@@ -150,7 +150,7 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
     s.value = { ...s.value, ...patch };
   }
 
-  // Each file gets its own `AbortController` and its own promise chain — nothing here `await`s
+  // Each file gets its own `AbortController` and its own promise chain: nothing here `await`s
   // another file's upload, so one file's rejection can never block, freeze, or cancel the others.
   function startUpload(file: File, resumeFrom = 0): void {
     if (options.disabled.value) return;
@@ -167,7 +167,7 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
     patchState(file, { error: null, loaded: resumeFrom, speedBps: 0, status: 'uploading', total: file.size });
 
     // Rolling (exponential-moving-average) speed estimate rather than a naive
-    // `loaded / elapsedSinceStart` average — the latter drags heavily behind the file's actual
+    // `loaded / elapsedSinceStart` average: the latter drags heavily behind the file's actual
     // *current* rate right after a slow start or a mid-transfer stall.
     let lastSampleAt = performance.now();
     let lastSampleLoaded = resumeFrom;
@@ -211,7 +211,7 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
       });
   }
 
-  // Resumes from the last byte offset this file actually reached, not from 0 — see
+  // Resumes from the last byte offset this file actually reached, not from 0: see
   // `FileUploadFn`'s doc comment on what "resume" honestly means when the transport is
   // consumer-supplied.
   function retryUpload(file: File): void {
@@ -220,7 +220,7 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
     startUpload(file, fileState(file).loaded);
   }
 
-  // Aborts + drops upload state for any file no longer in `files` — covers plain removal, a
+  // Aborts + drops upload state for any file no longer in `files`: covers plain removal, a
   // non-`multiple` selection replacing the previous file, and `replaceFile()` swapping one File
   // for another. One cleanup path instead of duplicating it at every call site that can shrink
   // `files`.
@@ -322,7 +322,7 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
     return Math.min(100, Math.round((state.loaded / state.total) * 100));
   }
 
-  // Speed + ETA on one line — percent itself is rendered separately (e.g. `<ore-progress>`'s
+  // Speed + ETA on one line: percent itself is rendered separately (e.g. `<ore-progress>`'s
   // own `label`), so this only needs the two metrics that wouldn't otherwise fit there.
   function uploadMetaText(file: File): string {
     const state = fileState(file);

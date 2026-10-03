@@ -12,13 +12,13 @@ interface QrCodec {
 /**
  * QR-friendly async codec. `encode` emits `"mq2."` payloads: the SDP is
  * reduced to the fields the remote needs (see `_sdp.ts`), the JSON is
- * deflate-raw compressed (`CompressionStream`), and the bytes are base45 —
+ * deflate-raw compressed (`CompressionStream`), and the bytes are base45 :
  * an alphabet inside the QR alphanumeric charset, so encoders use ~5.5
  * bits/char instead of 8. Where `CompressionStream` is unavailable it
- * falls back to plain `meshCodec` output, which `decode` also accepts —
+ * falls back to plain `meshCodec` output, which `decode` also accepts :
  * encoding never fails on a missing capability.
  *
- * `decode` accepts `"mq2."` and plain `meshCodec` output — a guest can paste
+ * `decode` accepts `"mq2."` and plain `meshCodec` output: a guest can paste
  * or scan interchangeably.
  */
 
@@ -80,7 +80,7 @@ export const meshQrCodec: QrCodec = {
       if (isRecord(parsed)) parsed = { ...parsed, sdp: restoreSdp(parsed.sdp) };
       return parsePairingPayload(parsed);
     }
-    // Plain meshCodec output — paste and scan stay interchangeable.
+    // Plain meshCodec output: paste and scan stay interchangeable.
     return meshCodec.decode(trimmed);
   },
   async encode(payload) {

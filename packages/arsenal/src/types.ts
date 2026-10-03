@@ -4,7 +4,7 @@ export type Unsubscribe = () => void;
 /**
  * Canonical read-only observable contract: `getSnapshot()` reads current state,
  * `subscribe()` registers a change listener and returns an unsubscribe function.
- * Structural by design — implementations live in other packages (ripple,
+ * Structural by design: implementations live in other packages (ripple,
  * sentinel, wayfinder, ledger) without depending on arsenal at runtime.
  */
 export interface Subscribable<T> {

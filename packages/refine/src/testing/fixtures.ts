@@ -1,5 +1,5 @@
 /**
- * Shared Playwright test fixture for refine e2e specs — the real-browser counterpart to this
+ * Shared Playwright test fixture for refine e2e specs: the real-browser counterpart to this
  * same folder's jsdom `axeCheck()`/ARIA helpers (`index.ts`), just Playwright/Chromium-only
  * instead of jsdom-only. It remains private test infrastructure so every `*.e2e.ts` file's
  * harness lives next to its jsdom equivalent.
@@ -9,10 +9,10 @@
  * mountComponent(html) to render arbitrary HTML inside a styled frame element.
  *
  * e2e specs are co-located next to the component they cover (`<component>.e2e.ts`, matching
- * `<component>.test.ts`'s jsdom co-location) rather than centralized here — this file is just
+ * `<component>.test.ts`'s jsdom co-location) rather than centralized here: this file is just
  * the shared harness/helpers every one of them imports.
  *
- * No dev server is required — all scripts are inlined from the built dist/ outputs.
+ * No dev server is required: all scripts are inlined from the built dist/ outputs.
  */
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -37,7 +37,7 @@ const LUCIDE_UMD = require.resolve('lucide/dist/umd/lucide.js');
 // Topological order: each IIFE bundle receives its dependencies as bare globals in its
 // invocation arguments (e.g. sentinel's tail is `})({},Arsenal)`), so a bundle MUST load
 // after every global it consumes. A violation throws ReferenceError at the argument list,
-// which hoists the bundle's own global to `undefined` instead of defining it — downstream
+// which hoists the bundle's own global to `undefined` instead of defining it: downstream
 // refine then fails deep inside with confusing errors like "Cannot read properties of
 // undefined (reading 'captureFocus')". The graph below is read from each dist bundle's own
 // argument list, not from package.json.
@@ -64,7 +64,7 @@ const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
 // The token stylesheet keeps its imports external so consumers' bundlers can dedupe/split them.
 // Pointing a `<link>` at it via
 // `page.setContent()` fails silently: the page's own origin is `about:blank`, so the `file://`
-// stylesheet (and its own nested `@import`s) is cross-origin and Chromium never applies it —
+// stylesheet (and its own nested `@import`s) is cross-origin and Chromium never applies it :
 // `getComputedStyle()` on anything under `.frame` then sees none of the `--size-*`/`--color-*`
 // tokens every component's CSS falls back through, not even as a loud error. Reading and
 // Concatenating the files directly in the production cascade order
@@ -74,7 +74,7 @@ const STYLES_CSS = ['fouc.css', 'preflight.css', 'theme.css', 'animation.css', '
   .map((name) => readFileSync(path.join(STYLES_DIR, name), 'utf-8'))
   .join('\n');
 
-// Pre-build the script tags string once (expensive — large IIFE bundles)
+// Pre-build the script tags string once (expensive: large IIFE bundles)
 const IIFE_SCRIPT_TAGS = IIFE_ENTRIES.map(({ path: p, shim }) => {
   const content = readFileSync(p, 'utf-8');
   const tag = `<script>${content}</script>`;
@@ -149,7 +149,7 @@ const PAGE_LEVEL_RULES: Record<string, { enabled: false }> = {
 
 /**
  * Runs axe against `selector` (default `.frame`, the component container) with the full
- * wcag2a/wcag2aa/best-practice ruleset — including `color-contrast` and `target-size`, which the
+ * wcag2a/wcag2aa/best-practice ruleset: including `color-contrast` and `target-size`, which the
  * jsdom-based `axeCheck()` in `vitest.setup.ts` must disable (no CSS layout engine there). Shared
  * by every component's `*.e2e.ts` a11y tests so the rule config lives in exactly one place.
  */

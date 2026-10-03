@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — camelCase'
+title: 'Arsenal Examples: camelCase'
 description: 'camelCase example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'camelCase example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to convert a string from any case (snake_case, kebab-case, Title Case) to camelCase — for example normalizing API keys for internal use.
+You need to convert a string from any case (snake_case, kebab-case, Title Case) to camelCase: for example normalizing API keys for internal use.
 
 ### Solution
 

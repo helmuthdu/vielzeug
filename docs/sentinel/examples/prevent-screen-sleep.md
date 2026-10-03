@@ -1,5 +1,5 @@
 ---
-title: 'Sentinel Examples — Prevent Screen Sleep'
+title: 'Sentinel Examples: Prevent Screen Sleep'
 description: Keep the screen awake during active use with a Sentinel-backed wake lock.
 ---
 
@@ -7,7 +7,7 @@ description: Keep the screen awake during active use with a Sentinel-backed wake
 
 ### Problem
 
-A long-running interactive session — a game, timer, or presentation — should keep the screen awake, but the Screen Wake Lock API auto-releases when the tab is hidden and must be re-requested on return. Managing that lifecycle by hand is error-prone.
+A long-running interactive session: a game, timer, or presentation: should keep the screen awake, but the Screen Wake Lock API auto-releases when the tab is hidden and must be re-requested on return. Managing that lifecycle by hand is error-prone.
 
 ### Solution
 
@@ -35,7 +35,7 @@ wakeLock.dispose();
 
 - The Wake Lock API requires a secure context (HTTPS or localhost); it is silently unavailable in non-secure environments.
 - The OS may deny or cancel the lock when battery is critically low.
-- `request()` is best-effort — check `getSnapshot().supported` if your UI should adapt to unsupported browsers.
+- `request()` is best-effort: check `getSnapshot().supported` if your UI should adapt to unsupported browsers.
 
 ### Related
 

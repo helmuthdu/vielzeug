@@ -7,7 +7,7 @@
     --_cell-border: var(--otp-cell-border, var(--border));
 
     /* --_bg/--_border-color (not --_cell-*-prefixed, unlike the rest of this component's tokens)
-       — this is the shared name `fieldVariantMixin` reads/writes, matching `ore-input`/`ore-
+: this is the shared name `fieldVariantMixin` reads/writes, matching `ore-input`/`ore-
        textarea`/`ore-message-composer`. Public override is still `--otp-cell-bg`/`--otp-cell-
        border-color` either way. */
     --_border-color: var(--otp-cell-border-color, var(--color-contrast-300));
@@ -49,7 +49,7 @@
     background: var(--_theme-backdrop, var(--color-contrast-100));
   }
 
-  /* Ring box-shadow lives in `@layer refine.variants` below, not here — every variant's own
+  /* Ring box-shadow lives in `@layer refine.variants` below, not here: every variant's own
      rest-state `box-shadow` (`fieldVariantMixin`'s solid/outline/ghost rules) is *also* in
      `refine.variants`, and cascade layers decide the winner before specificity ever gets
      consulted. A `refine.base` box-shadow here would always lose to those, focused or not. */
@@ -73,17 +73,17 @@
 /*
  * The solid/flat/bordered/outline/ghost variant switch (previously `@layer refine.variants`
  * here) now lives in `fieldVariantMixin({ accentVar: '--_cell-focus-border', container: '.cell',
- * tokenPrefix: 'otp-cell' })` in `otp-input.ts`'s `styles` array — shared with `ore-input`/
+ * tokenPrefix: 'otp-cell' })` in `otp-input.ts`'s `styles` array: shared with `ore-input`/
  * `ore-textarea`/`ore-message-composer` instead of hand-duplicated. `accentVar` overrides the
  * shared `--_theme-focus` accent with this component's own per-cell focus-color token, since
  * that (not the shared theme-focus token) is what `flat`/`bordered` mixed into their border
  * color here even before this shared version existed.
  */
 @layer refine.variants {
-  /* Focus glow — the same `--_theme-shadow` halo `ore-input`/`ore-textarea`/`ore-message-
+  /* Focus glow: the same `--_theme-shadow` halo `ore-input`/`ore-textarea`/`ore-message-
      composer` use, kept out of the shared mixin only because `.cell` is the focusable element
      itself (not a wrapper, so this is `:focus` not `:focus-within`, and it targets `.cell`
-     directly rather than a mixin-supplied `container`). `flat` excluded — the mixin's own
+     directly rather than a mixin-supplied `container`). `flat` excluded: the mixin's own
      `flat:focus-within` rule already sets a bespoke `box-shadow` for it. */
   :host(:not([disabled], [variant='flat'])) .cell:focus {
     box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));

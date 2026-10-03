@@ -1,5 +1,5 @@
 ---
-title: 'Ore Examples — Typed props and emits'
+title: 'Ore Examples: Typed props and emits'
 description: 'Typed props and emits example for @vielzeug/ore.'
 ---
 
@@ -61,10 +61,10 @@ define<AlertBoxProps>('alert-box', {
 ### Pitfalls
 
 - Omitting `as const` on `prop.oneOf(...)` widens the type to `string`, losing the union constraint.
-- Prop values in `setup()` are writable signals. Mutating `props.open.value = false` works but only updates local state — it does not reflect back to the parent's attribute unless `reflect: true` is set (the default for `prop.bool`).
+- Prop values in `setup()` are writable signals. Mutating `props.open.value = false` works but only updates local state: it does not reflect back to the parent's attribute unless `reflect: true` is set (the default for `prop.bool`).
 
 ### Related
 
-- [Refine — Accessible components](/refine/) built with typed props using these same patterns
+- [Refine: Accessible components](/refine/) built with typed props using these same patterns
 - [Prop helpers and raw PropsDef](./propsof-builder-api.md)
 - [Counter component](./counter-component.md)

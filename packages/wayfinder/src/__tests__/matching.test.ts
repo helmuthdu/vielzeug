@@ -1,5 +1,5 @@
 /**
- * Route matching — URL pattern semantics and route table compilation.
+ * Route matching: URL pattern semantics and route table compilation.
  * Tests run through the router to validate end-to-end matching behaviour.
  */
 import { createMemoryHistory, createRouter } from '../';
@@ -260,7 +260,7 @@ describe('route table', () => {
     createRouter({
       routes: {
         catchAll: { path: '/*' },
-        // This route can never be reached — the wildcard above always matches first.
+        // This route can never be reached: the wildcard above always matches first.
         unreachable: { path: '/about' },
       },
     });

@@ -1,5 +1,5 @@
 ---
-title: 'Rune Examples — Module Logger Pattern'
+title: 'Rune Examples: Module Logger Pattern'
 description: 'Module Logger Pattern example for @vielzeug/rune.'
 ---
 

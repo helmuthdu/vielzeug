@@ -27,7 +27,7 @@ test.describe('Layout', () => {
     await expect(item).toHaveCSS('border-top-width', '0px');
     await expect(item).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     // Source sets `text-align: start`; the built bundle lowers it to `left` for the
-    // browserslist floor. Assert the intent — the button's native `center` default is gone.
+    // browserslist floor. Assert the intent: the button's native `center` default is gone.
     await expect(item).not.toHaveCSS('text-align', 'center');
   });
 

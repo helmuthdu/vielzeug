@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — hash'
+title: 'Arsenal Examples: hash'
 description: 'hash example for @vielzeug/arsenal.'
 ---
 
@@ -47,13 +47,13 @@ hash(o); // '{"self":[Circular],"x":1}'
 import { hash } from '@vielzeug/arsenal';
 
 class Token {}
-hash(new Token()); // String(instance) — default
+hash(new Token()); // String(instance): default
 hash(new Token(), { onClassInstance: 'throw' }); // throws TypeError
 ```
 
 ### Pitfalls
 
-- Class instances coerce to `String(instance)` by default — pass `{ onClassInstance: 'throw' }` to detect them.
+- Class instances coerce to `String(instance)` by default: pass `{ onClassInstance: 'throw' }` to detect them.
 - `undefined` properties are omitted (same as `JSON.stringify`).
 - Map keys are sorted; output is deterministic regardless of insertion order.
 

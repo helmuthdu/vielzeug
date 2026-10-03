@@ -1,7 +1,7 @@
 /**
  * Resolves the effective text direction for an element.
  *
- * The closest ancestor with an explicit `dir="ltr"` or `dir="rtl"` attribute wins — this
+ * The closest ancestor with an explicit `dir="ltr"` or `dir="rtl"` attribute wins: this
  * supports locally-scoped RTL sections (e.g. a single `dir="rtl"` panel inside an otherwise
  * LTR page). When no explicit `dir` attribute is found up the tree, falls back to the
  * computed `direction` CSS property (e.g. set via a `direction: rtl` style rule with no

@@ -87,7 +87,7 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: computed nodes recover from first-run derivation failures — collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers",
+            "comment": "fix: computed nodes recover from first-run derivation failures: collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers",
             "commit": "145ea47ac74ffe82712ee7d5f514c9e3a61261e2"
           }
         ]
@@ -129,7 +129,7 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor: make isolated graph disposal terminal — writes, subscriptions, graph factories, and batch/untrack now throw RippleDisposedRuntimeError after dispose; Ripple exposes disposed",
+            "comment": "refactor: make isolated graph disposal terminal: writes, subscriptions, graph factories, and batch/untrack now throw RippleDisposedRuntimeError after dispose; Ripple exposes disposed",
             "commit": "352bf87a0875d78e0701ea25763f29eb47f6c56b"
           }
         ]

@@ -1,5 +1,5 @@
 ---
-title: 'Tempo Examples — Timezone Conversion'
+title: 'Tempo Examples: Timezone Conversion'
 description: 'Project an instant into user timezones with inTimeZone().'
 ---
 

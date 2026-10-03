@@ -4,7 +4,7 @@ import { format, parse, Temporal } from '@vielzeug/tempo';
 
 /**
  * Parses an ISO 8601 date string (`yyyy-MM-dd`) into a `Temporal.PlainDate`.
- * Returns `null` for any invalid / empty input — never throws.
+ * Returns `null` for any invalid / empty input: never throws.
  */
 export function parseIso(iso: string | undefined | null): Temporal.PlainDate | null {
   if (!iso) return null;
@@ -40,7 +40,7 @@ export type DateCell = {
   /** Day-of-month number (1–31) */
   day: number;
   isDisabled: boolean;
-  /** ISO date string yyyy-MM-dd — stable key for rendering */
+  /** ISO date string yyyy-MM-dd: stable key for rendering */
   iso: string;
   isOutsideMonth: boolean;
   isSelected: boolean;
@@ -139,7 +139,7 @@ function temporalDowToIndex(dow: number): number {
 /**
  * Pure, framework-agnostic date-picker state machine backed by `Temporal.PlainDate`.
  *
- * All state is held in plain mutable variables — suitable for wrapping in any
+ * All state is held in plain mutable variables: suitable for wrapping in any
  * reactive layer (ore `signal`, Vue ref, etc.). The factory returns a stable
  * handle object; callers are responsible for reactivity.
  *
@@ -315,7 +315,7 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
   }
 
   function buildWeekdayLabels(): string[] {
-    // 2024-01-07 is a Sunday — use it as the Sunday anchor
+    // 2024-01-07 is a Sunday: use it as the Sunday anchor
     const sunday = parse('2024-01-07', { as: 'plainDate' });
     const loc = locale();
 
@@ -398,8 +398,8 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
 /**
  * Roving-arrow keyboard navigation for a calendar grid, implementing the ARIA `grid` cell pattern:
  * Arrow keys move by one cell / one row (`columns` wide), Home/End jump to the row's first/last
- * cell, and Enter/Space activate the focused cell. Every calendar grid — days (7 columns) and
- * months/years (4 columns) — carries the base `.cal-grid` class, so `closest('.cal-grid')` scopes
+ * cell, and Enter/Space activate the focused cell. Every calendar grid: days (7 columns) and
+ * months/years (4 columns): carries the base `.cal-grid` class, so `closest('.cal-grid')` scopes
  * the movement to the grid the event fired in regardless of view.
  *
  * `onSelect` receives the activated cell element so the day view can read its `data-iso` while the

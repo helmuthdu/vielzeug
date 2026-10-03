@@ -21,7 +21,7 @@ console.log('Stored records with TTL')
 console.log('Immediate read:', await db.get('cache', 'short'))
 
 await new Promise((resolve) => setTimeout(resolve, 1500))
-console.log('After 1.5s:', await db.get('cache', 'short')) // expired — undefined
+console.log('After 1.5s:', await db.get('cache', 'short')) // expired: undefined
 console.log('Long-lived still here:', await db.get('cache', 'long'))
 
 console.log('ttl helpers:', {

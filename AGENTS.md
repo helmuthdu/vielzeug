@@ -1,4 +1,4 @@
-# AGENTS.md — Vielzeug
+# AGENTS.md: Vielzeug
 
 Canonical entrypoint for every AI client. `.github/copilot-instructions.md` and `.junie/AGENTS.md` point here instead of restating it. Repo-wide rules live in this file; task procedure lives in `.agents/skills/*/SKILL.md` (vendor-neutral agent skills: Copilot discovers `.agents/skills/` directly; Devin and Junie read them as plain files; clients with their own skills directory can symlink it to `.agents/skills`); engineering conventions live in `.agents/conventions.md`.
 
@@ -63,9 +63,9 @@ Surface the escalation with a `[BLOCKED]` marker instead of proceeding silently 
 
 ## Structured markers
 
-- `[BLOCKED] <decision>` — needs explicit user confirmation before proceeding.
-- `[VERIFY] <claim>: <reason>` — a claim not directly confirmed from source (e.g. browser-only runtime behavior). Flag it instead of asserting it.
-- `[DEFERRED] <work>: <reason>` — valuable but out of scope for this pass.
+- `[BLOCKED] <decision>`: needs explicit user confirmation before proceeding.
+- `[VERIFY] <claim>: <reason>`: a claim not directly confirmed from source (e.g. browser-only runtime behavior). Flag it instead of asserting it.
+- `[DEFERRED] <work>: <reason>`: valuable but out of scope for this pass.
 
 User-requested output formats take precedence, except that a safety gate always uses `[BLOCKED]`.
 
@@ -89,11 +89,11 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 
 ## Toolchain and workflow facts
 
-- Node 22 (`.nvmrc` for CI, `.tool-versions` for asdf — keep both on the same major), pnpm (`package.json#packageManager`, one root workspace for `packages/*` and `demos/*`), Rush (`rush.json`, `common/`; workspace install/build and change-file verification — version application is CalVer lockstep trains via `scripts/release/`, see `RELEASE.md`; it uses its own pinned pnpm), Vitest, Biome, VitePress.
-- Versioning: CalVer lockstep trains — `YY.MM.N`, the same number for every package. See `RELEASE.md`.
+- Node 22 (`.nvmrc` for CI, `.tool-versions` for asdf: keep both on the same major), pnpm (`package.json#packageManager`, one root workspace for `packages/*` and `demos/*`), Rush (`rush.json`, `common/`; workspace install/build and change-file verification: version application is CalVer lockstep trains via `scripts/release/`, see `RELEASE.md`; it uses its own pinned pnpm), Vitest, Biome, VitePress.
+- Versioning: CalVer lockstep trains: `YY.MM.N`, the same number for every package. See `RELEASE.md`.
 - Worktrees: `pnpm worktree:add <pkg>` only for packages with no `@vielzeug/*` dependency edge in either direction; the script checks live manifests.
 - Change files: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`. The type picks the changelog section only; it never affects the version.
-- Conventional commits: `feat(courier): add retry logic`. A breaking change rides the next train like any other — describe it in the changelog entry and the package's `docs/<name>/migration.md`.
+- Conventional commits: `feat(courier): add retry logic`. A breaking change rides the next train like any other: describe it in the changelog entry and the package's `docs/<name>/migration.md`.
 - AI metadata: edit `.agents/` sources directly, run `pnpm gen:ai-data` when the package table must change, then `pnpm check:ai-data`. Generated blocks are outputs, not editing surfaces.
 
 ## Repository layout
@@ -111,9 +111,9 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 
 ### `.agents/` contents
 
-- `conventions.md` — engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout.
-- `skills/<name>/SKILL.md` — task skills (`build`, `review`, `document`, `release`); `skills/vielzeug` is a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`) — edit it there, and load it with `build` when working inside `demos/`.
-- `reference/packages.md` — generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md` — hand-curated, shared by skills.
+- `conventions.md`: engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout.
+- `skills/<name>/SKILL.md`: task skills (`build`, `review`, `document`, `release`); `skills/vielzeug` is a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`): edit it there, and load it with `build` when working inside `demos/`.
+- `reference/packages.md`: generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md`: hand-curated, shared by skills.
 
 Every `.agents/...` path mentioned anywhere in the repo must resolve; `pnpm check:ai-data` fails on a dangling reference.
 
@@ -121,7 +121,7 @@ Every `.agents/...` path mentioned anywhere in the repo must resolve; `pnpm chec
 
 Subtrees carry their own `AGENTS.md` only when they have rules not covered here or in `.agents/conventions.md`; most packages intentionally have none.
 
-- `packages/AGENTS.md` — source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
-- `docs/AGENTS.md` — VitePress documentation site and REPL.
-- `scripts/AGENTS.md` — repo tooling and the shared `scripts/lib/` primitives.
-- `.github/AGENTS.md` — CI/CD workflows and the release automation they call.
+- `packages/AGENTS.md`: source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
+- `docs/AGENTS.md`: VitePress documentation site and REPL.
+- `scripts/AGENTS.md`: repo tooling and the shared `scripts/lib/` primitives.
+- `.github/AGENTS.md`: CI/CD workflows and the release automation they call.

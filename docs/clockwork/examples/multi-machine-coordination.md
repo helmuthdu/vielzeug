@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Multi-Machine Coordination'
+title: 'Clockwork Examples: Multi-Machine Coordination'
 description: 'Coordinate independent actors through an explicit application boundary.'
 ---
 

@@ -24,7 +24,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Patches
 
-- refactor: simplify internal asyncSource.fetch API — default failure and pending callbacks, reducing boilerplate in page/cursor/infinite source factories. No public API change.
+- refactor: simplify internal asyncSource.fetch API: default failure and pending callbacks, reducing boilerplate in page/cursor/infinite source factories. No public API change.
 
 ## 2.2.1
 Wed, 26 Aug 2026 17:29:55 GMT

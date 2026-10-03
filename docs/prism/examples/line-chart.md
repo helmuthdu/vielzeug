@@ -1,5 +1,5 @@
 ---
-title: 'Prism Examples — Create a Line Chart'
+title: 'Prism Examples: Create a Line Chart'
 description: Render an accessible, responsive line chart with axes and a tooltip.
 ---
 

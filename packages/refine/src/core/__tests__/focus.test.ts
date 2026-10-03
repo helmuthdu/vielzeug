@@ -148,7 +148,7 @@ describe('createFocusManager', () => {
         host,
       });
 
-      // Must not throw — malformed selector is swallowed
+      // Must not throw: malformed selector is swallowed
       expect(() => manager.applyInitialFocus()).not.toThrow();
       await vi.runAllTimersAsync();
 
@@ -200,7 +200,7 @@ describe('createFocusManager', () => {
       controller.abort();
       await vi.runAllTimersAsync();
 
-      // The disconnect happened before the deferred focus frame ran — it must not fire.
+      // The disconnect happened before the deferred focus frame ran: it must not fire.
       expect(document.activeElement).not.toBe(target);
 
       document.body.removeChild(host);

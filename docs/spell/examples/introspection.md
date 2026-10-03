@@ -1,5 +1,5 @@
 ---
-title: 'Spell Examples — Schema Introspection and Round-Trips'
+title: 'Spell Examples: Schema Introspection and Round-Trips'
 description: 'Export declarative spell definitions as JSON Schema.'
 ---
 

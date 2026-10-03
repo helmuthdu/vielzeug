@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — pipe'
+title: 'Arsenal Examples: pipe'
 description: 'pipe example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'pipe example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to chain functions left-to-right — applying the first function and passing the result to each subsequent one.
+You need to chain functions left-to-right: applying the first function and passing the result to each subsequent one.
 
 ### Solution
 

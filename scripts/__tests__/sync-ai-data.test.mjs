@@ -35,7 +35,7 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
     ]);
 
     expect(table).toContain('| Package | Description | Dependencies | Required peers | Optional peers |');
-    expect(table).toContain('| `@vielzeug/refine` | Components | `ore`, `ripple` | — | — |');
+    expect(table).toContain('| `@vielzeug/refine` | Components | `ore`, `ripple` | N/A | N/A |');
   });
 
   it('patches the generated table block in the packages reference', () => {
@@ -72,7 +72,7 @@ describe('renderSkillPackages() / patchSkillPackages()', () => {
   it('renders a flat list and excludes the codex tooling package', () => {
     const list = renderSkillPackages(packages);
 
-    expect(list).toBe(['- `@vielzeug/ripple` — Signals', '- `@vielzeug/spell` — —'].join('\n'));
+    expect(list).toBe(['- `@vielzeug/ripple`: Signals', '- `@vielzeug/spell`: N/A'].join('\n'));
   });
 
   it('patches the generated block in the consumer skill', () => {
@@ -82,7 +82,7 @@ describe('renderSkillPackages() / patchSkillPackages()', () => {
 
     const patched = patchSkillPackages(source, packages);
 
-    expect(patched).toContain('- `@vielzeug/ripple` — Signals');
+    expect(patched).toContain('- `@vielzeug/ripple`: Signals');
     expect(patched).not.toContain('@vielzeug/codex');
     expect(patched.endsWith('## Done when')).toBe(true);
   });

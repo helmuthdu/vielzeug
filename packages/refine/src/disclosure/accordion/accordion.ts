@@ -141,7 +141,7 @@ define<OreAccordionProps>(ACCORDION_TAG, {
             .find((node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'summary');
           const focused = activeSummary ? summaries.indexOf(activeSummary) : -1;
 
-          if (focused === -1) return; // focus is not on a summary — let native handling proceed
+          if (focused === -1) return; // focus is not on a summary: let native handling proceed
 
           listControl.set(focused);
           listControl.handleKeydown(evt);

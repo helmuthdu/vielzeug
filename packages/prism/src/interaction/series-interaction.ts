@@ -160,7 +160,7 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
 
       if (!candidate || !series) return;
 
-      // Same dedup as onMouseMove — tooltip announces when present.
+      // Same dedup as onMouseMove: tooltip announces when present.
       const announceText = !opts.tooltip ? `${series.name}: ${candidate.datum.value}` : undefined;
 
       opts.crosshair?.show(candidate.point.x, candidate.point.y, opts.dims().width, opts.dims().height, announceText);

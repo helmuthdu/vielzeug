@@ -1,5 +1,5 @@
 ---
-title: 'Tandem Examples — Keep Deletions from Resurrecting'
+title: 'Tandem Examples: Keep Deletions from Resurrecting'
 description: Tombstone local deletions and let unpushed edits win over remote deletions.
 ---
 
@@ -7,7 +7,7 @@ description: Tombstone local deletions and let unpushed edits win over remote de
 
 ### Problem
 
-A record deleted on device A must disappear from device B. But if device B edited that record while offline, blindly applying A's deletion destroys B's unsent work — and a naive pull can resurrect records that were deleted elsewhere.
+A record deleted on device A must disappear from device B. But if device B edited that record while offline, blindly applying A's deletion destroys B's unsent work, and a naive pull can resurrect records that were deleted elsewhere.
 
 ### Solution
 
@@ -45,7 +45,7 @@ const gateway: SyncGateway<Doc> = {
     for (const { id } of deletions) removeLocal(id);
   },
   async clearDeletions(deletions) {
-    // Only the tombstones this push carried — new deletions during the flight survive.
+    // Only the tombstones this push carried: new deletions during the flight survive.
     const gone = new Set(deletions.map((deletion) => `${deletion.entity}:${deletion.id}`));
     tombstones = tombstones.filter((tombstone) => !gone.has(`${tombstone.entity}:${tombstone.id}`));
   },
@@ -71,12 +71,12 @@ const sync = createSync<Doc>({ gateway, port });
 
 ### Pitfalls
 
-- Persist tombstones with your records — an in-memory list loses deletions across reloads and the record resurrects on the next pull.
+- Persist tombstones with your records: an in-memory list loses deletions across reloads and the record resurrects on the next pull.
 - Clear tombstones only for the deletions the acknowledged push carried; clearing the whole list races deletions made during the flight.
-- The server must apply deletions idempotently — the same tombstone can be pushed twice if the ack was lost.
+- The server must apply deletions idempotently: the same tombstone can be pushed twice if the ack was lost.
 
 ### Related
 
-- [Usage Guide — Propagate Deletions with Tombstones](../usage.md#propagate-deletions-with-tombstones)
-- [Postmaster](/postmaster/) — at-least-once delivery for the push itself when the network is flaky.
+- [Usage Guide: Propagate Deletions with Tombstones](../usage.md#propagate-deletions-with-tombstones)
+- [Postmaster](/postmaster/): at-least-once delivery for the push itself when the network is flaky.
 - [Sync a Vault Store](./sync-a-vault-store.md)

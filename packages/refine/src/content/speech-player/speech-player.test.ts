@@ -346,7 +346,7 @@ describe('ore-speech-player', () => {
   // ── Resume watchdog ────────────────────────────────────────────────────────
 
   describe('Resume watchdog', () => {
-    /** Captures timers instead of faking the clock — `act` flushes on real microtasks. */
+    /** Captures timers instead of faking the clock: `act` flushes on real microtasks. */
     function captureTimers(): Array<() => void> {
       const timers: Array<() => void> = [];
       vi.spyOn(window, 'setTimeout').mockImplementation(((handler: () => void) => {
@@ -373,7 +373,7 @@ describe('ore-speech-player', () => {
       expect(timers).toHaveLength(1);
       timers[0]();
 
-      // The frozen engine never pulsed — the current sentence restarts instead of lying.
+      // The frozen engine never pulsed: the current sentence restarts instead of lying.
       expect(synth.cancel).toHaveBeenCalled();
       expect(spoken().at(-1)?.text).toBe('Second sentence.');
       expect(progressEvents.at(-1)).toEqual({ sentence: 1, total: 2 });
@@ -409,7 +409,7 @@ describe('ore-speech-player', () => {
       await fixture.act(() => toggleOf(fixture).click());
       await fixture.act(() => toggleOf(fixture).click());
 
-      // No watchdog armed — the engine is trusted within the short-hold window.
+      // No watchdog armed: the engine is trusted within the short-hold window.
       expect(timers).toHaveLength(0);
     });
   });

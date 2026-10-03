@@ -1,5 +1,5 @@
 ---
-title: Wayfinder — API Reference
+title: 'Wayfinder: API Reference'
 description: Complete API reference for Wayfinder.
 ---
 
@@ -10,14 +10,14 @@ description: Complete API reference for Wayfinder.
 | Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                                |
 | --------------------------------------- | ---------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                                  |
-| `createRouteSignals(router)`            | Mirror a router into ripple readables (name/params/query/state) | Sync              | `router.getSnapshot()` alone is not ripple-reactive — use this bridge                                        |
+| `createRouteSignals(router)`            | Mirror a router into ripple readables (name/params/query/state) | Sync              | `router.getSnapshot()` alone is not ripple-reactive: use this bridge                                        |
 | `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | Requires server-side SPA rewrites                                                                            |
 | `createHashHistory(options?)`            | Create a static-host-safe hash history driver              | Sync                 | Pass the same `base` to the history and router                                                               |
 | `createHistoryForBase(base)`            | Pick browser vs hash history for a deploy base             | Sync                 | Returns the hash driver for any base other than `'/'`                                                        |
-| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                            |
-| `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                     |
+| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | N/A |
+| `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()`: always short-circuits the chain                                                     |
 | `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                               |
-| `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                                  |
+| `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe: call `subscribe()` to react to changes                                                  |
 | `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                    |
 | `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                          |
 | `router.href(name, params?, query?)`    | Build an anchor-ready href for a named route               | Sync                 | Hash-prefixed under `createHashHistory`                                                                     |
@@ -29,7 +29,7 @@ description: Complete API reference for Wayfinder.
 | `router.ready`                          | Await the initial navigation                               | Async                | Rejects when initial loading fails                                                                           |
 | `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending |
 | `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                               |
-| `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                     |
+| `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent: safe to call multiple times                                                                     |
 
 ## Package Entry Points
 
@@ -61,13 +61,13 @@ const router = createRouter({
 | Option         | Type                                           | Default                  | Description                                                                                                                                                |
 | -------------- | ---------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `base`         | `string`                                       | `'/'`                    | Base path prefix for all routes                                                                                                                            |
-| `coerceSearch` | `CoerceSearchFn`                               | —                        | Global search-param coercion applied to every route that does not define its own `coerceSearch`. Throwing falls back to raw strings and is reported via `onError`. |
+| `coerceSearch` | `CoerceSearchFn`                               | N/A | Global search-param coercion applied to every route that does not define its own `coerceSearch`. Throwing falls back to raw strings and is reported via `onError`. |
 | `history`      | `HistoryDriver`                                | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                          |
 | `middleware`   | `Middleware[]`                                 | `[]`                     | Global middleware prepended to every route                                                                                                                 |
-| `notFound`     | `{ data?, middleware? }`                       | —                        | Synthetic route used when no path matches. Global middleware runs first, then `notFound.middleware` and `notFound.data`. `ctx.pathname` is the unmatched path. |
-| `onError`      | `(error, context: RouterErrorContext) => void` | —                        | Optional sink for non-awaited/background router errors                                                                                                     |
+| `notFound`     | `{ data?, middleware? }`                       | N/A | Synthetic route used when no path matches. Global middleware runs first, then `notFound.middleware` and `notFound.data`. `ctx.pathname` is the unmatched path. |
+| `onError`      | `(error, context: RouterErrorContext) => void` | N/A | Optional sink for non-awaited/background router errors                                                                                                     |
 | `routes`       | `RouteTable`                                   | required                 | Declarative route table. Object key order defines match precedence.                                                                                       |
-| `scroll`       | `(to, from) => ScrollDecision`                 | —                        | Apply scroll behavior after successful navigation                                                                                                          |
+| `scroll`       | `(to, from) => ScrollDecision`                 | N/A | Apply scroll behavior after successful navigation                                                                                                          |
 | `viewTransition` | `boolean`                                    | `false`                  | Wrap navigation commits in the browser View Transition API when available                                                                                  |
 
 **Returns:** `Router`
@@ -179,7 +179,7 @@ const router = createRouter({
 });
 ```
 
-Create an in-memory `HistoryDriver`. No browser history globals required — suitable for unit tests and controlled non-browser runtimes. The optional `initialPath` defaults to `'/'`.
+Create an in-memory `HistoryDriver`. No browser history globals required: suitable for unit tests and controlled non-browser runtimes. The optional `initialPath` defaults to `'/'`.
 
 ## `Router`
 
@@ -187,7 +187,7 @@ Create an in-memory `HistoryDriver`. No browser history globals required — sui
 
 #### `router.dispose()`
 
-Remove listeners, clear subscribers, and reject future router interaction. Idempotent — safe to call multiple times.
+Remove listeners, clear subscribers, and reject future router interaction. Idempotent: safe to call multiple times.
 
 **Returns:** `void`
 
@@ -197,7 +197,7 @@ Remove listeners, clear subscribers, and reject future router interaction. Idemp
 
 #### `router.disposed`
 
-`boolean` — `true` after `dispose()` has been called.
+`boolean`: `true` after `dispose()` has been called.
 
 ---
 
@@ -224,7 +224,7 @@ await router.navigate({ name: 'search', query: { q: 'wayfinder' }, hash: 'result
 | Option    | Type      | Default | Description                                             |
 | --------- | --------- | ------- | ------------------------------------------------------- |
 | `replace` | `boolean` | `false` | Use `replaceState` instead of `pushState`               |
-| `state`   | `unknown` | —       | History state payload                                   |
+| `state`   | `unknown` | N/A | History state payload                                   |
 | `force`   | `boolean` | `false` | Re-run even when the destination URL is already current |
 | `viewTransition` | `boolean` | router default | Override view-transition behavior for this navigation |
 
@@ -238,7 +238,7 @@ Named routes stay the primary API, but `navigate()` also accepts raw path object
 await router.navigate({ path: '/marketing?utm_source=campaign' });
 await router.navigate({ path: '/checkout#payment' }, { replace: true });
 
-// Plain string — most concise for direct paths
+// Plain string: most concise for direct paths
 await router.navigate('/about');
 await router.navigate('/search?q=hello');
 ```
@@ -309,7 +309,7 @@ const state = await router.load('/dashboard', { signal: controller.signal });
 
 Load a full URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops). Returns `null` for unmatched URLs.
 
-Middleware is **not** executed — `load` is a data-only prefetch for SSR and pre-rendering where middleware side effects are not wanted. If your data loaders depend on `ctx.locals` set by middleware, use `navigate()` instead.
+Middleware is **not** executed: `load` is a data-only prefetch for SSR and pre-rendering where middleware side effects are not wanted. If your data loaders depend on `ctx.locals` set by middleware, use `navigate()` instead.
 
 When a `data()` function throws, the returned state has `status: 'error'` and `error` set to the thrown value.
 
@@ -397,10 +397,10 @@ The guard fires when the router is leaving any route whose name appears in the `
 
 ## `createPhaseMirror(options)`
 
-Mirrors a domain state machine's phase into a `/:subject/:id/:phase` route segment — the shared routing approach for stepped flows (wizards, chapters, onboarding). Two-way, with the state machine as the sole source of truth:
+Mirrors a domain state machine's phase into a `/:subject/:id/:phase` route segment: the shared routing approach for stepped flows (wizards, chapters, onboarding). Two-way, with the state machine as the sole source of truth:
 
 - **Domain → URL**: every phase change lands on the phase's route, replacing so the browser back button exits the flow rather than stepping between phases.
-- **URL → domain**: a mismatched phase route is a revisit request (`requestRevisit` — the consumer owns its confirm dialog) when `canRevisit(current, target)` allows it, otherwise a bounce back to the actual phase. Reacts to the URL and to the domain loading, never to domain-led changes. The mirror stops following entirely when the route leaves the flow or names a different subject.
+- **URL → domain**: a mismatched phase route is a revisit request (`requestRevisit`: the consumer owns its confirm dialog) when `canRevisit(current, target)` allows it, otherwise a bounce back to the actual phase. Reacts to the URL and to the domain loading, never to domain-led changes. The mirror stops following entirely when the route leaves the flow or names a different subject.
 - **Canonicalization**: the bare `detailRoute` URL redirects onto the current phase's route, so every arrival is shareable and reload-safe.
 
 Options carry the router, the valid `phases`, both route names, and ripple `Readable`s for `currentPhase` and `subjectId` (`null` while the subject is missing). The mirror exposes `routePhase`, `revisitPhases` (readables), `phaseHref`, `followPhase`, `bounceIfMismatched` (the dialog cancel path), and `dispose()`.
@@ -417,7 +417,7 @@ const activeName = computed(() => route.name.value); // re-computes on every nav
 
 Mirrors a router into ripple readables so templates and computeds react to navigation. `router.getSnapshot()` alone is **not** ripple-reactive: reading it inside a `computed()` computes once and never re-runs, because it registers no tracked dependency. This bridge wraps `subscribe()`/`getSnapshot()` with `fromSubscribable` once, for every consumer.
 
-**Returns:** `RouteSignals<TRoutes>` — `name` (deepest matched route name, `null` while nothing matches), `params` (its path params), `query` (raw string-valued query params of the current location), and `state` (the full `RouteState`, for deriving further computeds).
+**Returns:** `RouteSignals<TRoutes>`: `name` (deepest matched route name, `null` while nothing matches), `params` (its path params), `query` (raw string-valued query params of the current location), and `state` (the full `RouteState`, for deriving further computeds).
 
 ## `redirectTo(target, options?)`
 
@@ -465,7 +465,7 @@ const state = useSyncExternalStore(
 const { location, matches, status, error } = router.getSnapshot();
 
 location.pathname;
-location.query; // raw parsed query (QueryParams) — always string values
+location.query; // raw parsed query (QueryParams): always string values
 location.hash;
 location.historyState; // value passed to navigate({ ... }, { state: ... })
 
@@ -488,7 +488,7 @@ const unsubscribe = router.subscribe((state) => {
 });
 ```
 
-Register a listener for future state changes. The listener is **not** called with the current snapshot — call `router.getSnapshot()` when you subscribe if you need it.
+Register a listener for future state changes. The listener is **not** called with the current snapshot: call `router.getSnapshot()` when you subscribe if you need it.
 
 **Returns:** `() => void`
 
@@ -605,7 +605,7 @@ type RouteLocation = {
   /** State stored on the history entry that triggered this navigation. */
   readonly historyState: unknown;
   readonly pathname: string;
-  /** Raw parsed query params — always string values from URL parsing.
+  /** Raw parsed query params: always string values from URL parsing.
    * For coerced values (numbers, booleans), read `ctx.query` inside middleware or data loaders.
    */
   readonly query: QueryParams;
@@ -675,9 +675,9 @@ type NavigationStatus = 'idle' | 'loading' | 'error';
 
 Top-level status of the router.
 
-- `idle` — navigation settled successfully.
-- `loading` — data loaders are in-flight.
-- `error` — a data loader threw and no route-level `onError` handled it.
+- `idle`: navigation settled successfully.
+- `loading`: data loaders are in-flight.
+- `error`: a data loader threw and no route-level `onError` handled it.
 
 ### `RouteMiddleware<Path, TRoutes>`
 
@@ -774,7 +774,7 @@ interface HistoryDriver {
   replace(url: string, state?: unknown): void;
   /**
    * Subscribe to backwards/forwards navigation (popstate-equivalent).
-   * `push()` and `replace()` are silent — they do not notify subscribers.
+   * `push()` and `replace()` are silent: they do not notify subscribers.
    * Only `back()` (and browser popstate events) trigger notifications.
    * Returns an unsubscribe function.
    */
@@ -833,7 +833,7 @@ try {
   await router.navigate({ name: 'home' });
 } catch (e) {
   if (e instanceof WayfinderError) {
-    // any router-originated error — check e.name or `instanceof` a subclass for detail
+    // any router-originated error: check e.name or `instanceof` a subclass for detail
   }
 }
 ```
@@ -856,7 +856,7 @@ try {
 
 ### `WayfinderConfigError`
 
-Thrown at `createRouter()` time when the route table or a path pattern is malformed — for example a route that sets both `index: true` and `path`, a duplicate route name, or a wildcard that is not the final path segment.
+Thrown at `createRouter()` time when the route table or a path pattern is malformed: for example a route that sets both `index: true` and `path`, a duplicate route name, or a wildcard that is not the final path segment.
 
 ### `WayfinderRouteError`
 
@@ -868,7 +868,7 @@ Thrown when a chain of declarative `redirect`s (or a mix of declarative redirect
 
 ### `WayfinderApiError`
 
-Thrown on middleware misuse — currently only when a middleware function calls its `next()` more than once.
+Thrown on middleware misuse: currently only when a middleware function calls its `next()` more than once.
 
 ### Runtime error messages
 
@@ -904,6 +904,6 @@ Thrown on middleware misuse — currently only when a middleware function calls 
 - Wayfinder names come from the route-table object keys.
 - `data()` is the terminal action. Its return value becomes `match.data`. There is no separate `handler` step.
 - For unmatched URLs, use the `notFound` router option rather than `path: '*'` in the route table.
-- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.getSnapshot().error`. The original error object is never mutated — error context is carried in internal wrappers and the original `cause` chain is preserved.
+- Error handling is middleware that wraps `await next()`. The thrown error is also stored on `router.getSnapshot().error`. The original error object is never mutated: error context is carried in internal wrappers and the original `cause` chain is preserved.
 - Declarative `redirect` on a route definition is for permanent alias redirects. The `redirectTo()` middleware helper is for conditional guards.
 - `onError` in a route definition is a per-route data-loader boundary. If `onError` itself throws, the router falls through to `status: 'error'` as usual.

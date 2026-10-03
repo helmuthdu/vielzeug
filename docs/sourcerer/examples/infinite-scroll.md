@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — Infinite Scroll'
+title: 'Sourcerer Examples: Infinite Scroll'
 description: 'Append remote pages from an intersection observer.'
 ---
 

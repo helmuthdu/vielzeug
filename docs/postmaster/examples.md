@@ -1,5 +1,5 @@
 ---
-title: Postmaster — Examples
+title: 'Postmaster: Examples'
 description: Durable outbox recipes for offline mutations, network recovery, delayed eligibility, and dead-letter handling.
 ---
 

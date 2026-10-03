@@ -18,7 +18,7 @@ export type OreTabItemProps = {
   density?: 'compact' | 'default';
   /** Size (inherited from ore-tabs) */
   size?: ComponentSize;
-  /** Unique value identifier — must match a ore-tab-panel value */
+  /** Unique value identifier: must match a ore-tab-panel value */
   value: string;
   /** Visual variant (inherited from ore-tabs) */
   variant?: VisualVariant;
@@ -118,11 +118,11 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
     const buttonRef = ref<HTMLButtonElement>();
 
     // `aria-controls` as a plain IDREF attribute cannot resolve across shadow-tree boundaries
-    // (the matching `id` lives inside <ore-tab-panel>'s own shadow root) — see
+    // (the matching `id` lives inside <ore-tab-panel>'s own shadow root): see
     // `setAriaReflection()`'s doc comment. Deferred to `onMounted()`: sibling custom elements
     // (including the peer `<ore-tab-panel>`) connect in tree order within the same synchronous
     // insertion, so a sibling's shadow content may not exist yet during this element's own
-    // `setup()` — `onMounted()`'s microtask runs after the whole subtree has connected.
+    // `setup()`: `onMounted()`'s microtask runs after the whole subtree has connected.
     onMounted(() => {
       watchEffect(() => {
         const button = buttonRef.value;

@@ -13,7 +13,7 @@ export type SubscribeOptions = {
 
 /**
  * Runtime events emitted by {@link Bus.tap}.
- * Subscribe via `bus.tap(handler)` — handler errors are swallowed.
+ * Subscribe via `bus.tap(handler)`: handler errors are swallowed.
  */
 export type HeraldEvent<T extends EventMap = EventMap> =
   | { readonly event: EventKey<T>; readonly listeners: number; readonly payload: unknown; readonly type: 'emit' }
@@ -43,14 +43,14 @@ export type WaitAnyResult<T extends EventMap, K extends readonly EventKey<T>[]> 
 }[number];
 
 export type Bus<T extends EventMap> = {
-  /** Alias for dispose() — enables the `using` keyword for automatic cleanup. */
+  /** Alias for dispose(): enables the `using` keyword for automatic cleanup. */
   [Symbol.dispose](): void;
   /**
    * Signal that fires when the bus is disposed.
    * Use to tie other lifecycles (subscriptions, pipes, timers) to this bus's lifetime.
    */
   readonly disposalSignal: AbortSignal;
-  /** Permanently dispose the bus — clears all listeners; pending waits are rejected. Idempotent. */
+  /** Permanently dispose the bus: clears all listeners; pending waits are rejected. Idempotent. */
   dispose(): void;
   /** Whether the bus has been permanently disposed. */
   readonly disposed: boolean;
@@ -64,7 +64,7 @@ export type Bus<T extends EventMap> = {
   eventNames(): EventKey<T>[];
   /**
    * Number of active specific-event listeners for a given event key.
-   * Does not include wildcard (`onAny`) listeners — use `wildcardCount()` for those.
+   * Does not include wildcard (`onAny`) listeners: use `wildcardCount()` for those.
    * When called without an argument, returns the total across all specific-event listeners.
    */
   listenerCount(event?: EventKey<T>): number;
@@ -79,7 +79,7 @@ export type Bus<T extends EventMap> = {
    */
   onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe;
   /**
-   * Subscribe once — auto-unsubscribes after the first emit. Stops early when the signal aborts.
+   * Subscribe once: auto-unsubscribes after the first emit. Stops early when the signal aborts.
    */
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
   /**

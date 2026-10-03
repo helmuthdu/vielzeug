@@ -281,7 +281,7 @@ describe('child and bindings composition', () => {
     expect(b.entries).toHaveLength(1);
   });
 
-  it('withBindings pins bindings on every call — merged into data', () => {
+  it('withBindings pins bindings on every call: merged into data', () => {
     const { entries, log } = setup();
     const reqLog = log.withBindings({ requestId: 'abc' });
 
@@ -402,7 +402,7 @@ describe('consoleTransport', () => {
 
   it('deep-merges custom theme: only specified fields replace defaults (R6)', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    // Pass only badge — other fields (bg, border, color) should stay from DEFAULT_THEME
+    // Pass only badge: other fields (bg, border, color) should stay from DEFAULT_THEME
     const log = createLogger({
       transports: [consoleTransport({ theme: { warn: { badge: '⚡' } } })],
     });
@@ -429,7 +429,7 @@ describe('consoleTransport', () => {
 
       const callArgs = infoSpy.mock.calls[0];
 
-      // The prefix (first arg) must not contain a *live* %s/%d/etc. specifier — Node's console
+      // The prefix (first arg) must not contain a *live* %s/%d/etc. specifier: Node's console
       // methods run the first string argument through util.format, and an unescaped specifier
       // would consume and hide the message and data arguments that follow.
       expect(callArgs[0]).toContain('%%s');
@@ -818,7 +818,7 @@ describe('time()', () => {
     expect(entries).toHaveLength(0);
   });
 
-  it('accepts a custom level — emits at info level', () => {
+  it('accepts a custom level: emits at info level', () => {
     const { entries, log } = setup({ logLevel: 'info' });
 
     log.time('task', () => {}, 'info');
@@ -928,7 +928,7 @@ describe('group and groupCollapsed', () => {
 /* ─── createLogger bindings option ─── */
 
 describe('createLogger bindings option', () => {
-  it('accepts bindings in options object — appear in entry.data', () => {
+  it('accepts bindings in options object: appear in entry.data', () => {
     const { entries, transport } = createTestTransport();
     const log = createLogger({ bindings: { service: 'api' }, transports: [transport] });
 
@@ -951,7 +951,7 @@ describe('createLogger bindings option', () => {
 /* ─── lazy bindings in per-call context (F5) ─── */
 
 describe('lazy bindings in per-call context (F5)', () => {
-  it('resolves lazy in per-call context — appears in data', () => {
+  it('resolves lazy in per-call context: appears in data', () => {
     const factory = vi.fn(() => 'ctx-value');
     const { entries, log } = setup();
 
@@ -974,7 +974,7 @@ describe('lazy bindings in per-call context (F5)', () => {
 /* ─── consoleTransport format option (F6) ─── */
 
 describe('consoleTransport inspectFn / format options (F6)', () => {
-  it('format:json serializes data as a JSON string — message appears before JSON', () => {
+  it('format:json serializes data as a JSON string: message appears before JSON', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const t = consoleTransport({ format: 'json', timestamp: false });
 
@@ -1303,7 +1303,7 @@ describe('child() namespace dot-joining', () => {
     expect(auth.namespace).toBe('app.api.auth');
   });
 
-  it('dot-joining only — no slash prefix convention', () => {
+  it('dot-joining only: no slash prefix convention', () => {
     const parent = createLogger({ namespace: 'api' });
     const child = parent.child({ namespace: 'v2' });
 
@@ -1459,7 +1459,7 @@ describe('Logger.dispose()', () => {
 
     expect(() => log.dispose()).not.toThrow();
 
-    log.info('after dispose — should be silenced');
+    log.info('after dispose: should be silenced');
     expect(entries).toHaveLength(0);
   });
 });

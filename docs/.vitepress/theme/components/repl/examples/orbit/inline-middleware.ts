@@ -4,7 +4,7 @@ export const inlineMiddlewareExample = {
 // inline() corrects the reference rect for multi-line inline elements.
 // It picks the client rect closest to the cursor (or floating element).
 const span = document.createElement('span')
-span.textContent = 'Hover to reveal tooltip — this is a long inline element that may wrap'
+span.textContent = 'Hover to reveal tooltip: this is a long inline element that may wrap'
 span.style.cssText = 'line-height: 1.8; cursor: pointer; background: #f0f0f0; padding: 2px 4px; border-radius: 3px;'
 document.body.appendChild(span)
 

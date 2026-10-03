@@ -93,7 +93,7 @@ describe('announce()', () => {
       expect(getRegion('polite')).toBeNull();
     });
 
-    it('rapid consecutive calls — only last message survives', () => {
+    it('rapid consecutive calls: only last message survives', () => {
       announce('first');
       vi.advanceTimersByTime(20);
       announce('second');
@@ -105,7 +105,7 @@ describe('announce()', () => {
       expect(getRegion('polite')?.textContent).toBe('third');
     });
 
-    it('polite and assertive timers are independent — both messages appear', () => {
+    it('polite and assertive timers are independent: both messages appear', () => {
       announce('status update');
       announce('error!', { politeness: 'assertive' });
 

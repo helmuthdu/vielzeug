@@ -170,7 +170,7 @@
     --alert-shadow: var(--toast-snackbar-shadow, var(--shadow-lg));
   }
 
-  /* The bar sizes to its content up to the host's width cap — a short confirmation stays
+  /* The bar sizes to its content up to the host's width cap: a short confirmation stays
      a chip instead of stretching the full notification width. Anchored edges keep it
      flush with the position's side. */
   .toast-inner.snackbar {

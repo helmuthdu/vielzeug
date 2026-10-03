@@ -1,5 +1,5 @@
 ---
-title: 'Forge Examples — Form with Conditional Fields'
+title: 'Forge Examples: Form with Conditional Fields'
 description: Validate conditional values in one full-form rule.
 ---
 

@@ -78,8 +78,8 @@ Avoid assigning `grid-row` to individual groups when their columns contain diffe
 
 | Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| `open` | `string` | — | Controlled active trigger value. User interaction emits an `open-change` request; update this value to apply it. |
-| `default-open` | `string` | — | Initial active trigger value. |
+| `open` | `string` | N/A | Controlled active trigger value. User interaction emits an `open-change` request; update this value to apply it. |
+| `default-open` | `string` | N/A | Initial active trigger value. |
 | `close-on-select` | `boolean` | `true` | Closes the menu after activating a panel link. |
 | `columns` | `number` | `2` | Number of columns in the panel grid. |
 | `label` | `string` | `'Navigation menu'` | Accessible label for the trigger region. |

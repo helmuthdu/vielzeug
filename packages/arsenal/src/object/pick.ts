@@ -3,7 +3,7 @@ import type { Obj } from '../types';
 
 /**
  * Creates a new object containing only selected keys. Only `obj`'s own enumerable keys are
- * considered — inherited properties (e.g. `toString`) are never picked, and dangerous keys
+ * considered: inherited properties (e.g. `toString`) are never picked, and dangerous keys
  * (`__proto__`, `constructor`, `prototype`) are always skipped.
  *
  * @example

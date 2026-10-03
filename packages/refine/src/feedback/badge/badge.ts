@@ -30,7 +30,7 @@ export type OreBadgeProps = {
   dot?: boolean;
   /** Accessible label for assistive technology. Recommended for count-only and dot mode. */
   label?: string;
-  /** Max count — displays "<max>+" when count exceeds this value */
+  /** Max count: displays "<max>+" when count exceeds this value */
   max?: number;
   /** Border radius override */
   rounded?: RoundedSize;
@@ -113,7 +113,7 @@ define<OreBadgeProps>(BADGE_TAG, {
       return undefined;
     });
 
-    /** True once the default slot carries content — an icon-only badge folds its label region
+    /** True once the default slot carries content: an icon-only badge folds its label region
      *  away rather than leaving an empty flex child (and its gap) trailing the glyph. */
     const hasSlottedLabel = signal(false);
 

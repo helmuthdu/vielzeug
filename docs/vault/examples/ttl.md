@@ -1,5 +1,5 @@
 ---
-title: 'Vault Examples — TTL and Pruning'
+title: 'Vault Examples: TTL and Pruning'
 description: 'Write records with expiry and prune expired records in @vielzeug/vault.'
 ---
 
@@ -40,9 +40,9 @@ await db.put('sessions', { id: 's5', userId: 5 }, ttl.days(7));
 // Expired records are excluded from reads automatically:
 // db.get(), db.getAll(), db.count(), and queries skip expired records.
 
-// Explicit pruning — sweeps all tables, returns count per table
+// Explicit pruning: sweeps all tables, returns count per table
 const pruned = await db.pruneExpired();
-console.log(pruned); // { sessions: 0 } — none have expired yet
+console.log(pruned); // { sessions: 0 }: none have expired yet
 
 // Schedule periodic pruning tied to the adapter lifetime
 const pruneInterval = setInterval(() => db.pruneExpired(), ttl.hours(1));
@@ -55,12 +55,12 @@ await db.dispose();
 
 - Expired records are evicted **lazily** on the next read to that key. If a table is written to frequently but rarely read, expired records accumulate. Call `pruneExpired()` to reclaim storage proactively.
 - `ttl.hours(0)` throws because TTL durations must be finite positive values. Omit TTL for records that should not expire.
-- On **IndexedDB**, `pruneExpired` uses a cursor-based pass — expired records are deleted without loading their values into memory. On **LocalStorage / SessionStorage** and **Memory**, each key is checked in sequence.
+- On **IndexedDB**, `pruneExpired` uses a cursor-based pass: expired records are deleted without loading their values into memory. On **LocalStorage / SessionStorage** and **Memory**, each key is checked in sequence.
 - To schedule periodic pruning, use `setInterval` and cancel it on `store.disposalSignal`'s `abort` event.
 
 ### Related
 
 - [CRUD](./crud.md)
 - [Validators and Error Handling](./plugins.md)
-- [Usage Guide — Use TTL and Pruning](/vault/usage.md#use-ttl-and-pruning)
-- [API Reference — `pruneExpired`](/vault/api.md#keyvaluevaultstore)
+- [Usage Guide: Use TTL and Pruning](/vault/usage.md#use-ttl-and-pruning)
+- [API Reference: `pruneExpired`](/vault/api.md#keyvaluevaultstore)

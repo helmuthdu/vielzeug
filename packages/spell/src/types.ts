@@ -28,7 +28,7 @@ export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 /* -------------------- Messages -------------------- */
 
 /**
- * A validation message — either a static string or a function that receives context and returns a string.
+ * A validation message: either a static string or a function that receives context and returns a string.
  * **Note:** Static string values are used verbatim with no interpolation. Use the function form
  * for context-dependent messages (e.g. `(ctx) => \`Must be at least ${ctx.min}\``).
  */
@@ -152,9 +152,9 @@ export type CheckContext = {
 
 /**
  * Return type of a `check()` callback.
- * - `string` — validation failed; the string becomes the error message.
- * - `false` — validation failed with no message (use `addIssue` for a message).
- * - `true` / `null` / `void` — validation passed.
+ * - `string`: validation failed; the string becomes the error message.
+ * - `false`: validation failed with no message (use `addIssue` for a message).
+ * - `true` / `null` / `void`: validation passed.
  *
  * The shorthand `condition || 'message'` works naturally:
  * ```ts
@@ -163,7 +163,7 @@ export type CheckContext = {
  */
 export type ValidateResult = boolean | null | undefined | string;
 
-/** Re-exported from errors for convenience — defined there. */
+/** Re-exported from errors for convenience: defined there. */
 export type { FlatError, FlatErrorFirst } from './errors';
 
 type BaseDescriptor = {
@@ -268,5 +268,5 @@ type RawInferInput<T> = T extends { readonly [schemaInput]: infer Input } ? Inpu
 export type InferInput<T> = T extends AcceptsMissing ? RawInferInput<T> | undefined : RawInferInput<T>;
 export type Infer<T> = InferOutput<T>;
 
-/** Re-exported for convenience — defined in messages.ts. */
+/** Re-exported for convenience: defined in messages.ts. */
 export type { Messages } from './messages';

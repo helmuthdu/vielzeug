@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — File upload drop zone'
+title: 'Dnd Examples: File upload drop zone'
 description: 'File upload drop zone example for @vielzeug/dnd.'
 ---
 
@@ -90,7 +90,7 @@ using zone = createDropZone({
 
 ### Pitfalls
 
-- `e.dataTransfer.items[i].type` can be an empty string for files with unknown MIME types. Extension-based accept patterns (e.g. `.pdf`) cannot be validated from `DataTransferItem` during drag — Dnd lets them through the pre-check and applies exact filtering at drop time.
+- `e.dataTransfer.items[i].type` can be an empty string for files with unknown MIME types. Extension-based accept patterns (e.g. `.pdf`) cannot be validated from `DataTransferItem` during drag: Dnd lets them through the pre-check and applies exact filtering at drop time.
 - `zone.hovered` is only `true` when the drag payload matches the `accept` filter. Drags carrying rejected types do not trigger `onHoverChange`.
 - `onValidate` only receives type-accepted files. Files already rejected by the `accept` filter are forwarded to `onDropRejected` regardless of what `onValidate` returns.
 - `zone.validating` remains `true` until every pending `onValidate` operation settles. Its `signal` aborts when the zone is disposed.

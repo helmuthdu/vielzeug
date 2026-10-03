@@ -54,7 +54,7 @@
     display: none;
   }
 
-  /* The toggle is the invitation — icon and, before the first read, the label. A bare
+  /* The toggle is the invitation: icon and, before the first read, the label. A bare
      triangle asks nobody. Once engaged the label folds away; the controls are known. */
   .control--toggle {
     gap: var(--size-1-5);
@@ -84,7 +84,7 @@
     text-align: center;
   }
 
-  /* While reading, the toggle carries the accent — the control's "now playing" state,
+  /* While reading, the toggle carries the accent: the control's "now playing" state,
      distinct from its resting tone without a heavier affordance. */
   :host([state='playing']) .control--toggle,
   :host([state='paused']) .control--toggle {

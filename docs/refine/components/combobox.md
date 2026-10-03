@@ -140,7 +140,7 @@ Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. 
 
 ## Label Placement
 
-The label can be placed **inset** (inside the field, above the input — default) or **outside** (above the field border). Use `hide-label` only when surrounding context and placeholder text make the purpose clear; the label remains the combobox's accessible name.
+The label can be placed **inset** (inside the field, above the input: default) or **outside** (above the field border). Use `hide-label` only when surrounding context and placeholder text make the purpose clear; the label remains the combobox's accessible name.
 
 <ComponentPreview height="400px">
 
@@ -268,7 +268,7 @@ combobox.options = [
 
 ## No-Filter Mode (Server-Side Search)
 
-Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side — replace the `<ore-combobox-option>` children based on the `search` event. For short lists (fewer than 6 items) consider a plain `ore-select` instead.
+Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side: replace the `<ore-combobox-option>` children based on the `search` event. For short lists (fewer than 6 items) consider a plain `ore-select` instead.
 
 <ComponentPreview height="400px">
 
@@ -356,7 +356,7 @@ Assigning a new array to `options` updates the dropdown immediately. When both `
 
 ## In a Form
 
-`ore-combobox` is form-associated — its `name` attribute participates in native `FormData` submissions. Set `required` to fail constraint validation while nothing is selected — a native `<form>` blocks submission and `checkValidity()`/`reportValidity()` return `false` until an option is chosen; resetting the ancestor form restores the initial selection.
+`ore-combobox` is form-associated: its `name` attribute participates in native `FormData` submissions. Set `required` to fail constraint validation while nothing is selected: a native `<form>` blocks submission and `checkValidity()`/`reportValidity()` return `false` until an option is chosen; resetting the ancestor form restores the initial selection.
 
 <ComponentPreview height="400px">
 
@@ -428,10 +428,10 @@ cb.addEventListener('open-change', (e) => {
 | `placeholder`     | `string`                                                                  | `''`      | Input placeholder text                                      |
 | `helper`          | `string`                                                                  | `''`      | Helper text shown below the field                           |
 | `error`           | `string`                                                                  | `''`      | Error message; overrides helper text                        |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —         | Color theme                                                 |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme                                                 |
 | `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'` | Visual style variant                                        |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Field size                                                  |
-| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | —         | Border radius override                                      |
+| `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A | Border radius override                                      |
 | `clearable`       | `boolean`                                                                 | `false`   | Show a clear button when a value is selected                |
 | `no-filter`       | `boolean`                                                                 | `false`   | Disable client-side option filtering (for server-side use)  |
 | `creatable`       | `boolean`                                                                 | `false`   | Show a "Create X" option when no match is found             |
@@ -452,7 +452,7 @@ cb.addEventListener('open-change', (e) => {
 | Attribute  | Type      | Default | Description                                                                             |
 | ---------- | --------- | ------- | --------------------------------------------------------------------------------------- |
 | `value`    | `string`  | `''`    | The value submitted to the form and emitted in `ore-change`                              |
-| `label`    | `string`  | —       | Explicit text used for display and filtering; falls back to the element's `textContent` |
+| `label`    | `string`  | N/A | Explicit text used for display and filtering; falls back to the element's `textContent` |
 | `disabled` | `boolean` | `false` | Prevent this option from being selected                                                 |
 
 **`ore-combobox-option` Slots**

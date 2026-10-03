@@ -11,7 +11,7 @@ const TMP_DIR = process.env['REPL_TMP_DIR'];
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // Resolve @vielzeug/* imports to package source files so examples run without a prior
-// build step. DOM-output packages are excluded — they have no REPL examples to validate.
+// build step. DOM-output packages are excluded: they have no REPL examples to validate.
 const vielzeugAliases: Record<string, string> = {
   ...buildVielzeugSrcAliases(path.resolve(ROOT, 'packages'), REPL_EXCLUDED_PACKAGES),
   '@vielzeug/orbit/presets': path.resolve(ROOT, 'packages/orbit/src/presets.ts'),

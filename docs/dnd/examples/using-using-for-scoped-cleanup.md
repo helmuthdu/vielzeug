@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — Using `using` for scoped cleanup'
+title: 'Dnd Examples: Using `using` for scoped cleanup'
 description: 'Using `using` for scoped cleanup example for @vielzeug/dnd.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Using `using` for scoped cleanup example for @vielzeug/dnd.'
 
 ### Problem
 
-You set up drag-and-drop inside a function or block scope and want the cleanup to happen automatically when the block exits — without a try/finally or manual `dispose()` call.
+You set up drag-and-drop inside a function or block scope and want the cleanup to happen automatically when the block exits: without a try/finally or manual `dispose()` call.
 
 ### Solution
 
@@ -44,7 +44,7 @@ async function setupPage() {
 
 - `using` requires TypeScript 5.2+ and a `tsconfig.json` `target` of `es2022` or later. Without this, `[Symbol.dispose]` is `undefined` at runtime.
 - `using` calls `[Symbol.dispose]` on scope exit, not on `return`. If you return the value before the block exits, cleanup is still deferred until the scope ends.
-- `await using` requires `[Symbol.asyncDispose]`. The synchronous `using` keyword calls `[Symbol.dispose]` synchronously — avoid it if cleanup involves async operations that must complete before proceeding.
+- `await using` requires `[Symbol.asyncDispose]`. The synchronous `using` keyword calls `[Symbol.dispose]` synchronously: avoid it if cleanup involves async operations that must complete before proceeding.
 
 ### Related
 

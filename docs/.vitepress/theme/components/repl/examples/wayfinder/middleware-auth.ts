@@ -6,7 +6,7 @@ const session = { currentUser: null }
 
 const requireAuth = async (ctx, next) => {
   if (!session.currentUser) {
-    console.log('not authenticated — redirecting to /login')
+    console.log('not authenticated: redirecting to /login')
     await ctx.navigate({ name: 'login' }, { replace: true })
     return // do not call next(); cancels navigation to the protected route
   }
@@ -42,5 +42,5 @@ await router.navigate({ path: '/old-dashboard' })
 console.log('location after redirect:', router.getSnapshot().location.pathname)
 
 router.dispose()`,
-  name: 'Guards and Redirects — Auth Flows',
+  name: 'Guards and Redirects: Auth Flows',
 };

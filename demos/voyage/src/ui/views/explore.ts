@@ -220,7 +220,7 @@ define('explore-view', {
 
       <div class="page-content page-content--home">
         <section class="content-section" aria-labelledby="destinations-title">
-          ${sectionHeading('DISCOVER', 'Japan, one place at a time', 'From kinetic cities to still mountain mornings—find the pace that feels right.')}
+          ${sectionHeading('DISCOVER', 'Japan, one place at a time', 'From kinetic cities to still mountain mornings, find the pace that feels right.')}
           <ore-grid
             class="destination-grid"
             id="destinations-title"

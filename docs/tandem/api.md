@@ -1,5 +1,5 @@
 ---
-title: Tandem — API Reference
+title: 'Tandem: API Reference'
 description: Factory, port and gateway contracts, events, and types for Tandem.
 ---
 
@@ -35,7 +35,7 @@ Starts a sync scheduler: it loads the persisted baseline, pulls remote changes, 
 | `options.idleDelayMs` | `number \| undefined` | Quiet period before a flush (default `3000`) |
 | `options.port` | `SyncPort<TRecord>` | The server seam |
 
-**Returns** a `SyncHandle`. Ambient flushes never reject — they surface failures as `warning` events through `tap()`. An explicit `flush()` rejects when its cycle fails.
+**Returns** a `SyncHandle`. Ambient flushes never reject: they surface failures as `warning` events through `tap()`. An explicit `flush()` rejects when its cycle fails.
 
 **Example**
 
@@ -56,7 +56,7 @@ sync.dispose();
 | `dispose()` | Stops the scheduler, clears the timer, removes document/window listeners |
 | `disposed` | `true` once disposed |
 | `disposalSignal` | `AbortSignal` aborted on dispose |
-| `flush()` | Runs a full cycle — pull, then push; resolves when it completes, rejects when it fails, and is a no-op after `dispose` |
+| `flush()` | Runs a full cycle: pull, then push; resolves when it completes, rejects when it fails, and is a no-op after `dispose` |
 | `tap(handler, options?)` | Observes `TandemEvent`s; returns an unsubscribe function |
 | `[Symbol.dispose]()` | Calls `dispose()` for `using` scopes |
 
@@ -68,13 +68,13 @@ The server seam. `pull(since)` returns remote records, remote deletions, and the
 
 ### `SyncGateway`
 
-The storage seam. The engine owns every rev comparison — it calls your gateway with the decisions already made.
+The storage seam. The engine owns every rev comparison: it calls your gateway with the decisions already made.
 
 | Member | Contract |
 | --- | --- |
 | `records()` | This device's own records, remote mirrors excluded |
 | `pendingDeletions()` | Tombstones the server has not acknowledged |
-| `applyRecords(records)` | Upsert the given records — already filtered to what the server is ahead on; return the ids that failed validation |
+| `applyRecords(records)` | Upsert the given records: already filtered to what the server is ahead on; return the ids that failed validation |
 | `applyDeletions(deletions)` | Remove records deleted remotely |
 | `clearDeletions(deletions)` | Drop the given tombstones a successful push carried |
 | `loadState()` | The persisted `SyncState`, or `null` on a fresh device |
@@ -106,7 +106,7 @@ interface SyncRecordBase {
 }
 ```
 
-The only shape Tandem reads from a record: identity and a write counter. `rev` is required — the dirty model is a rev comparison, so every synced record carries one from birth.
+The only shape Tandem reads from a record: identity and a write counter. `rev` is required: the dirty model is a rev comparison, so every synced record carries one from birth.
 
 ### `SyncEnvelope`
 

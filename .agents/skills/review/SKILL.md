@@ -1,6 +1,6 @@
 ---
 name: review
-description: Source-verified review of code, design, or a pull request — correctness, architecture, types, tests, and security — without changing code unless asked. Use when asked to review, audit, critique, challenge a design, plan a refactor, do a greenfield or security review, or assess a PR.
+description: 'Source-verified review of code, design, or a pull request: correctness, architecture, types, tests, and security: without changing code unless asked. Use when asked to review, audit, critique, challenge a design, plan a refactor, do a greenfield or security review, or assess a PR.'
 ---
 
 # Review
@@ -25,7 +25,7 @@ State assumptions before analysis when required files, runtime behavior, consume
 3. Verify every claim against source or mark it `[VERIFY]`.
 4. Rank findings by expected user/developer impact relative to implementation, migration, and validation cost; use dependency order to break ties.
 
-Review security whenever security-sensitive code is in scope, driven by the checklist. Review performance only for hot paths, measurable regressions, or explicit performance goals — never report speculative micro-optimizations.
+Review security whenever security-sensitive code is in scope, driven by the checklist. Review performance only for hot paths, measurable regressions, or explicit performance goals: never report speculative micro-optimizations.
 
 ## Modes
 
@@ -71,7 +71,7 @@ Do not report style-only nits unless they impair readability, maintainability, o
 Default and PR findings use one line each:
 
 ```text
-[High|Medium|Low] <file>:<line> — <problem>. <evidence>. <recommended fix>
+[High|Medium|Low] <file>:<line>: <problem>. <evidence>. <recommended fix>
 ```
 
 Each proposal names the references, packages, and surfaces checked, and known versus unknown consumers. Report `[DEFERRED]`, `[VERIFY]`, and `[BLOCKED]` as needed. Close with `Summary: N High · N Medium · N Low · open: <list or none>`.

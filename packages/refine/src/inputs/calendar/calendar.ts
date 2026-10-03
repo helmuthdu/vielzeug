@@ -34,7 +34,7 @@ export type CalendarEvent = {
    * Any CSS color value for the event dot / pill.
    * Defaults to the component's theme color when omitted.
    * Rendered via `styleMap()`, which strips `;`/`{`/`}` so the value can't break out of
-   * its custom-property declaration — it is not a full CSS-color syntax validator, so an
+   * its custom-property declaration: it is not a full CSS-color syntax validator, so an
    * invalid (but injection-safe) value may still render as no color.
    */
   color?: string;
@@ -66,7 +66,7 @@ export type OreCalendarProps = {
    */
   events?: CalendarEvent[];
   /**
-   * Expanded layout — large cells with top-aligned day numbers suitable
+   * Expanded layout: large cells with top-aligned day numbers suitable
    * for a full-page calendar app view.
    */
   expanded?: boolean;
@@ -184,7 +184,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
     // ── Selected date: local-override pattern ─────────────────────────────────
     // `localSelection` holds a user-initiated pick (or undefined = no override).
     // `selectedDate` derives from it, falling back to the value prop reactively.
-    // This eliminates setInterval polling — external prop changes propagate
+    // This eliminates setInterval polling: external prop changes propagate
     // through the computed graph automatically.
 
     const localSelection = signal<Temporal.PlainDate | null | undefined>(undefined);
@@ -221,7 +221,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
     });
 
     // ── Reactive display state ────────────────────────────────────────────────
-    // Three separate primitive signals — the proven pattern. Mutating any one
+    // Three separate primitive signals: the proven pattern. Mutating any one
     // of them invalidates only the computeds that read it.
 
     const currentView = signal<DatePickerView>('day');
@@ -309,7 +309,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
       currentView.value = next;
     }
 
-    // ── Selection handlers — all disabled guards live here ────────────────────
+    // ── Selection handlers: all disabled guards live here ────────────────────
 
     function handleSelectMonth(month: number): void {
       if (isDisabled.value) return;
@@ -439,7 +439,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                           const overflow = evts.length - MAX_EVENTS;
 
                           if (isExpanded.value) {
-                            // Text node is written tag-tight (no inner line breaks) — this custom
+                            // Text node is written tag-tight (no inner line breaks): this custom
                             // `html` tagged template does not collapse whitespace at runtime like a
                             // browser parser would, so a pretty-printed multi-line `<span>...</span>`
                             // here would render literal newlines/indentation into `textContent`.

@@ -22,7 +22,7 @@ export type OreCarouselEvents = {
 export type OreCarouselProps = {
   /**
    * Whether to advance slides automatically. Defaults to `false`.
-   * Opt in explicitly — autoplay on by default is a WCAG 2.1 SC 2.2.2 violation for many use cases.
+   * Opt in explicitly: autoplay on by default is a WCAG 2.1 SC 2.2.2 violation for many use cases.
    */
   autoplay?: boolean;
   /** Interval in milliseconds between automatic slide advances. Defaults to `5000`. */
@@ -43,10 +43,10 @@ export type OreCarouselProps = {
   'slide-index'?: number;
   /**
    * Layout variant.
-   * - `'default'`   — slides translate in/out (default)
-   * - `'fade'`      — slides crossfade; no movement
-   * - `'filmstrip'` — all slides visible side-by-side; active expands
-   * - `'gallery'`   — active slide fills the majority; adjacent slides show as thumbnails
+   * - `'default'`: slides translate in/out (default)
+   * - `'fade'`: slides crossfade; no movement
+   * - `'filmstrip'`: all slides visible side-by-side; active expands
+   * - `'gallery'`: active slide fills the majority; adjacent slides show as thumbnails
    */
   variant?: CarouselVariant;
 };
@@ -179,7 +179,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     const activeIndex = signal<number>(props['slide-index'].value ?? 0);
     let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
-    // Slide cache — populated immediately, refreshed on slotchange.
+    // Slide cache: populated immediately, refreshed on slotchange.
     let slides: HTMLElement[] = Array.from(el.querySelectorAll<HTMLElement>(':scope > ore-carousel-slide'));
     const slideCount = signal(slides.length);
 
@@ -245,7 +245,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       { immediate: true },
     );
 
-    // ── Sync active index → slides — dispatch table ───────────────────────────
+    // ── Sync active index → slides: dispatch table ───────────────────────────
 
     const syncTable: Record<CarouselVariant, (slides: HTMLElement[], current: number) => void> = {
       default: syncDefaultSlides,
@@ -373,7 +373,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       const shadowRoot = el.shadowRoot!;
       const slot = shadowRoot.querySelector<HTMLSlotElement>('slot')!;
 
-      // slotchange replaces MutationObserver — fires exactly when assigned
+      // slotchange replaces MutationObserver: fires exactly when assigned
       // nodes change, scoped to this component's slot, no polling overhead.
       const onSlotChange = (): void => {
         refreshSlides();

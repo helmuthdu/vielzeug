@@ -1,34 +1,34 @@
-# AGENTS.md — refine
+# AGENTS.md: refine
 
 Accessible, themeable web components built on `ore`. Largest package; one custom element per component, organised by category folder (`content/`, `core/`, `disclosure/`, `feedback/`, `inputs/`, `layout/`, `overlay/`). Depends on `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, and `tempo` (`workspace:*`) plus `lucide`; `assay` is test-only.
 
 ## Local contracts
 
 - **`lucide` is an allowed external runtime dependency** (icons). This is the one documented exception to the monorepo zero-dependency rule. Do not add other external deps.
-- **Ore IIFE boundary** — Refine imports all Ore runtime APIs from `@vielzeug/ore`, which the bundle config externalizes as the single `'Ore'` global. Do not reintroduce Ore runtime sub-path imports: an unexternalized sub-path can inline a second runtime whose lifecycle hooks are disconnected from `window.Ore`.
+- **Ore IIFE boundary**: Refine imports all Ore runtime APIs from `@vielzeug/ore`, which the bundle config externalizes as the single `'Ore'` global. Do not reintroduce Ore runtime sub-path imports: an unexternalized sub-path can inline a second runtime whose lifecycle hooks are disconnected from `window.Ore`.
 - **Per-component sub-path exports are generated, not hand-edited.** The `exports` map in `package.json` is driven by `scripts/refine-manifest.mjs`:
   - `pnpm --filter @vielzeug/refine run sync:exports` regenerates the export map after adding/renaming/moving a component.
-  - `check:manifest` runs in `build` and fails if exports are out of sync — run `sync:exports` to fix.
-- **A component that renders another component must TAG re-export it, never bare-import it.** The per-entry library build (Rolldown, `preserveModules`, 72+ entries) silently drops side-effect-only imports *between entry modules*, so `import '../icon/icon';` ships a sub-path that never registers its child. Write `export { ICON_TAG } from '../icon/icon';` instead — bindings survive cross-entry chunking, so importing the parent registers the child. Same-directory absorbed modules (`carousel-slide`, `datagrid-column`) are *not* entries and bare-import fine. `check:cross-entry` runs in `build` and fails on both regressions: a bare entry import in `src/`, or a re-export whose link did not survive into `dist/`.
+  - `check:manifest` runs in `build` and fails if exports are out of sync: run `sync:exports` to fix.
+- **A component that renders another component must TAG re-export it, never bare-import it.** The per-entry library build (Rolldown, `preserveModules`, 72+ entries) silently drops side-effect-only imports *between entry modules*, so `import '../icon/icon';` ships a sub-path that never registers its child. Write `export { ICON_TAG } from '../icon/icon';` instead: bindings survive cross-entry chunking, so importing the parent registers the child. Same-directory absorbed modules (`carousel-slide`, `datagrid-column`) are *not* entries and bare-import fine. `check:cross-entry` runs in `build` and fails on both regressions: a bare entry import in `src/`, or a re-export whose link did not survive into `dist/`.
 - Build also emits a Custom Elements Manifest (`dist/custom-elements.json`) via `analyze`, and copies `src/styles/*.css` to `dist/styles`. CSS ships through the `./styles*` exports.
-- `sideEffects` is set for `dist/*.js`, `dist/*.cjs`, `dist/core/*`, `dist/styles/**`, and `src/core/icons.ts` — keep new side-effectful entry points covered. The `core/` entries are load-bearing, not decoration: `core/icons.ts` registers refine's own icon set (`registerIcons(...)`) as a top-level side effect, and without the flag, consuming bundlers tree-shake the call out of production builds — every icon refine's components render (accordion chevrons, close marks, board glyphs) silently vanishes. Verified against the primal demo's built bundle.
-- `src/_dev.ts` is private — never re-export.
-- **DOM-output package** — excluded from the REPL. Do not add REPL examples or Monaco types for refine.
-- **`--_*`-prefixed custom properties are a private contract between a component's own stylesheet and the shared mixins it composes in `styles: [...]`** (e.g. `sizeVariantMixin()` emits `--_gap`/`--_font-size`/`--_padding`; `colorThemeMixin` emits `--_theme-focus`/`--_theme-base`/`--_theme-shadow`/`--_theme-backdrop`). There is no compile-time check that a component's own CSS only reads `--_*` names an included mixin actually emits — a typo or a removed mixin silently no-ops (the variable falls back to its `var(..., fallback)` or to nothing) instead of erroring. When touching a component's `styles` array or its CSS, verify by inspection that every `--_*` variable it reads is emitted by one of its own `styles` entries.
+- `sideEffects` is set for `dist/*.js`, `dist/*.cjs`, `dist/core/*`, `dist/styles/**`, and `src/core/icons.ts`: keep new side-effectful entry points covered. The `core/` entries are load-bearing, not decoration: `core/icons.ts` registers refine's own icon set (`registerIcons(...)`) as a top-level side effect, and without the flag, consuming bundlers tree-shake the call out of production builds: every icon refine's components render (accordion chevrons, close marks, board glyphs) silently vanishes. Verified against the primal demo's built bundle.
+- `src/_dev.ts` is private: never re-export.
+- **DOM-output package**: excluded from the REPL. Do not add REPL examples or Monaco types for refine.
+- **`--_*`-prefixed custom properties are a private contract between a component's own stylesheet and the shared mixins it composes in `styles: [...]`** (e.g. `sizeVariantMixin()` emits `--_gap`/`--_font-size`/`--_padding`; `colorThemeMixin` emits `--_theme-focus`/`--_theme-base`/`--_theme-shadow`/`--_theme-backdrop`). There is no compile-time check that a component's own CSS only reads `--_*` names an included mixin actually emits: a typo or a removed mixin silently no-ops (the variable falls back to its `var(..., fallback)` or to nothing) instead of erroring. When touching a component's `styles` array or its CSS, verify by inspection that every `--_*` variable it reads is emitted by one of its own `styles` entries.
 
 ## Accessibility testing
 
 Two test layers cover different concerns.
 
-### Layer 1 — jsdom (vitest, `pnpm test`)
+### Layer 1: jsdom (vitest, `pnpm test`)
 
-- Each component test calls the global `axeCheck(element)` helper (`vitest.setup.ts`) and asserts **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute — do **not** re-enable them in jsdom tests.
+- Each component test calls the global `axeCheck(element)` helper (`vitest.setup.ts`) and asserts **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute: do **not** re-enable them in jsdom tests.
 - Assert roles, names, and ARIA state with `@vielzeug/assay` and keyboard/focus behaviour through the component's visible DOM contract.
 - Why jsdom can't do more: no CSS box model, `getComputedStyle` is stubbed, `@layer` blocks are silently dropped.
 
-### Layer 2 — real browser (Playwright, `pnpm test:e2e`)
+### Layer 2: real browser (Playwright, `pnpm test:e2e`)
 
-**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed — loads the built IIFE stack via `page.setContent()`. Requires a prior `pnpm build`.
+**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed: loads the built IIFE stack via `page.setContent()`. Requires a prior `pnpm build`.
 
 ```bash
 cd packages/refine
@@ -37,15 +37,15 @@ pnpm test:e2e src/content/list/list.e2e.ts          # one component's e2e file
 pnpm test:e2e -g "Accessibility"                    # every a11y describe block, any component
 ```
 
-Each `*.e2e.ts` file groups its tests into `describe('Accessibility', ...)` / `describe('Interaction', ...)` / `describe('Layout', ...)` / `describe('Selection', ...)` etc. as needed — not every component needs every category, and multi-part components (`ore-list` + `ore-list-item`) share one file per the parent folder (`list.e2e.ts` covers both).
+Each `*.e2e.ts` file groups its tests into `describe('Accessibility', ...)` / `describe('Interaction', ...)` / `describe('Layout', ...)` / `describe('Selection', ...)` etc. as needed: not every component needs every category, and multi-part components (`ore-list` + `ore-list-item`) share one file per the parent folder (`list.e2e.ts` covers both).
 
-- **Accessibility** — full wcag2a/aa axe scan with `color-contrast` and `target-size` re-enabled (`axeCheck()`, shared from `src/testing/fixtures.ts`). Tests are scoped to `.frame` to avoid page-level false positives. A handful across the suite are marked `test.fail()` with documented reasons (shadow DOM axe limitations for select/tabs, genuine checkbox a11y gap, the list/list-item nested-interactive combo).
-- **Layout** — CSS layout regression checks (flexbox geometry, overflow, padding ratios). `chat-message.e2e.ts` covers chat-message geometry in Chromium.
-- **Interaction** — open/close, focus-trap, keyboard navigation, gesture-driven state for overlay and composite components (dialog, accordion, tabs, tooltip, popover, list swipe actions).
+- **Accessibility**: full wcag2a/aa axe scan with `color-contrast` and `target-size` re-enabled (`axeCheck()`, shared from `src/testing/fixtures.ts`). Tests are scoped to `.frame` to avoid page-level false positives. A handful across the suite are marked `test.fail()` with documented reasons (shadow DOM axe limitations for select/tabs, genuine checkbox a11y gap, the list/list-item nested-interactive combo).
+- **Layout**: CSS layout regression checks (flexbox geometry, overflow, padding ratios). `chat-message.e2e.ts` covers chat-message geometry in Chromium.
+- **Interaction**: open/close, focus-trap, keyboard navigation, gesture-driven state for overlay and composite components (dialog, accordion, tabs, tooltip, popover, list swipe actions).
 
 **Adding a new e2e test:** add a `describe` block (or a new one) to the component's own `<component>.e2e.ts` (create it if this is the component's first e2e test), importing `test`/`expect`/`axeCheck` from `../../testing/fixtures` (path depth is always `category/component/` → two `../`). Call `refinePage.mountComponent(html)` to inject HTML and wait for upgrade. `src/testing/fixtures.ts` is private Playwright-only shared harness/helper infrastructure, not a spec file.
 
-**Known shadow DOM limitation with axe:** axe-core's flat-tree traversal cannot pierce shadow boundaries for role-child relationships (e.g. `listbox > option`). Components where the ARIA role tree crosses the shadow/light boundary may produce false-positive violations. Mark these `test.fail()` with an explanation — they document known gaps, not real failures.
+**Known shadow DOM limitation with axe:** axe-core's flat-tree traversal cannot pierce shadow boundaries for role-child relationships (e.g. `listbox > option`). Components where the ARIA role tree crosses the shadow/light boundary may produce false-positive violations. Mark these `test.fail()` with an explanation: they document known gaps, not real failures.
 
 ## Core Design Principles
 
@@ -53,16 +53,16 @@ Follow these when authoring or reviewing component styles and behaviour:
 
 ### Layout and Spacing
 
-- **4-point grid** — all spacing and dimensions use multiples of 4 via `var(--size-*)`.
-- **Whitespace** — sections breathe at 32 px / `var(--section-spacing)`; use proximity and containers to group related elements.
-- **Responsiveness** — 12-col desktop, 8-col tablet, 4-col mobile.
+- **4-point grid**: all spacing and dimensions use multiples of 4 via `var(--size-*)`.
+- **Whitespace**: sections breathe at 32 px / `var(--section-spacing)`; use proximity and containers to group related elements.
+- **Responsiveness**: 12-col desktop, 8-col tablet, 4-col mobile.
 
 ### Typography
 
 - Single sans-serif font via `var(--font-sans)`.
 - Headers: letter-spacing `var(--tracking-header)` (−5%), line-height `var(--leading-tight)` (115%).
 - Six font sizes max (`--text-xs` → `--text-2xl`); avoid sizes above 24 px on high-density pages.
-- Hierarchy via size, weight, and color — most important content large/bold/top.
+- Hierarchy via size, weight, and color: most important content large/bold/top.
 
 ### Color and Depth
 
@@ -90,10 +90,10 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 
 | Mode | Intent | Recommended with | Refine coverage |
 |------|--------|-----------------|----------------|
-| **harden** | Error handling, text overflow, edge-case resilience | `normalize`, `clarify`, `adapt` | — |
+| **harden** | Error handling, text overflow, edge-case resilience | `normalize`, `clarify`, `adapt` | N/A |
 | **normalize** | Match design system; ensure consistency | `extract`, `polish`, `harden` | Shared tokenized spacing/radius/typography/color mixins; consistent `focus-visible` outlines |
 | **optimize** | Loading speed, rendering, animations, bundle size | `distill`, `adapt`, `animate` | Reduced-motion fallbacks; variant styling via reusable mixins |
-| **polish** | Alignment, spacing, consistency — good → great | `normalize`, `clarify`, `quieter` | Refined helper/counter/label text; consistent focus ring and hover affordances |
+| **polish** | Alignment, spacing, consistency: good → great | `normalize`, `clarify`, `quieter` | Refined helper/counter/label text; consistent focus ring and hover affordances |
 | **bolder** | Amplify safe designs; more visual impact | `colorize`, `animate`, `delight` | Variant spectrum (solid/flat/bordered/outline/ghost/frost); optional rainbow/frost effects |
 | **quieter** | Tone down visually aggressive designs | `distill`, `normalize`, `polish` | Text/ghost variants and tokenized contrast levels |
 | **adapt** | Cross-device, cross-context consistency | `harden`, `optimize`, `onboard` | Small-screen dialog/drawer constraints; coarse-pointer touch targets; `dvh`-based overlay sizing |

@@ -85,7 +85,7 @@ export interface MeshInvitation {
   readonly secret: string;
   /** Random 128-bit session identifier, base64url-encoded. */
   readonly sessionId: string;
-  /** Schema version — currently always 1. */
+  /** Schema version: currently always 1. */
   readonly v: 1;
 }
 
@@ -141,7 +141,7 @@ export interface MeshOptions {
   readonly maxMessageBytes?: number;
   /** Randomness source for ids and secrets. Default: `crypto.getRandomValues`. */
   readonly random?: RandomSource;
-  /** WebRTC factory — the injection point for tests and non-browser runtimes. */
+  /** WebRTC factory: the injection point for tests and non-browser runtimes. */
   readonly rtc?: MeshRtcFactory;
   /** Disposes the node when aborted. */
   readonly signal?: AbortSignal;
@@ -197,7 +197,7 @@ export type Unsubscribe = () => void;
 
 /**
  * Runtime events emitted by {@link MeshNode.tap}.
- * Subscribe via `node.tap(handler)` — handler errors are swallowed.
+ * Subscribe via `node.tap(handler)`: handler errors are swallowed.
  */
 export type MeshEvent =
   | { readonly type: 'status-change'; readonly status: MeshStatus }
@@ -263,7 +263,7 @@ export interface MeshHost<P extends MeshProtocol> extends MeshNode {
   /**
    * Create a single-use invitation for one prospective guest. Deliver the
    * encoded invitation out-of-band (copy/paste, `navigator.share`, QR).
-   * May be called repeatedly — one invitation per guest. `meta.name` is
+   * May be called repeatedly: one invitation per guest. `meta.name` is
    * shown to the guest as this host's peer name.
    */
   createInvitation(meta?: { readonly name?: string }): Promise<MeshInvitation>;

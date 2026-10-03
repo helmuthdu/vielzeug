@@ -4,7 +4,7 @@ import type { ListItemRevealSide } from './list-item';
 
 /** Drag distance (px) past which the action panel snaps fully open on release. */
 const REVEAL_THRESHOLD = 64;
-/** Drag distance (px) past which the swipe auto-confirms the action — "swiped all the way". */
+/** Drag distance (px) past which the swipe auto-confirms the action: "swiped all the way". */
 const CONFIRM_THRESHOLD = REVEAL_THRESHOLD * 3;
 /** Fraction of CONFIRM_THRESHOLD past which `data-confirming` warns the drag is about to fire. */
 const CONFIRM_WARNING_RATIO = 0.85;
@@ -12,20 +12,20 @@ const CONFIRM_WARNING_RATIO = 0.85;
 export type RevealStateOptions = {
   disabled: Readable<boolean>;
   hasActions: (side: ListItemRevealSide) => boolean;
-  /** The full-swipe-through gesture fired — emit `confirm` and click the slot's own action. */
+  /** The full-swipe-through gesture fired: emit `confirm` and click the slot's own action. */
   onConfirm: (side: ListItemRevealSide) => void;
 };
 
 /**
  * The swipe-reveal-confirm gesture behind `ore-list-item`'s `actions-left`/`actions-right` slots
- * — isolated here since it's the one genuinely tricky part of the component (three distance
+ *: isolated here since it's the one genuinely tricky part of the component (three distance
  * thresholds, inline style/attribute choreography during an active drag). Deliberately *not* a
  * shared primitive: `createPanGesture` itself already is one (shared with `ore-toast`),
- * but this two-stage reveal/confirm layer on top of it has exactly one consumer today —
+ * but this two-stage reveal/confirm layer on top of it has exactly one consumer today :
  * generalizing it further would be speculative, not reusable.
  *
  * Only sets/clears the `revealed`/`data-dragging`/`data-confirming` attributes and `--_swipe-x`
- * style — it does not itself emit `reveal`/`conceal`. `ore-list-item` already watches `revealed`
+ * style: it does not itself emit `reveal`/`conceal`. `ore-list-item` already watches `revealed`
  * for transitions (to cover *both* this gesture and a directly-set attribute uniformly), so this
  * module setting the attribute is enough to drive both that watcher and `list.css`'s
  * `[revealed]` styling.

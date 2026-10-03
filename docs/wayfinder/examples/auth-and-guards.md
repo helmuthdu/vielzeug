@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Auth and Guards'
+title: 'Wayfinder Examples: Auth and Guards'
 description: 'Auth and guards example for @vielzeug/wayfinder.'
 ---
 
@@ -61,7 +61,7 @@ const router = createRouter({
 
 ### Pitfalls
 
-- Middleware that neither calls `next()` nor redirects cancels the navigation silently — the router stays on the current URL and status returns to `'idle'`. This is intentional for blocking middleware.
+- Middleware that neither calls `next()` nor redirects cancels the navigation silently: the router stays on the current URL and status returns to `'idle'`. This is intentional for blocking middleware.
 - Per-route middleware runs after global middleware, so any auth state populated by a global middleware loader is already available in `ctx.locals`.
 - `redirectTo()` is unconditional. For conditional guards (e.g., checking a role), write a custom middleware function.
 

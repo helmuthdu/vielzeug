@@ -1,6 +1,6 @@
 # Alert
 
-A feedback banner for surface-level status messages — errors, warnings, successes, and informational notices. Supports an optional heading, icon, metadata, action buttons, and a dismiss button.
+A feedback banner for surface-level status messages: errors, warnings, successes, and informational notices. Supports an optional heading, icon, metadata, action buttons, and a dismiss button.
 
 ## Variants
 
@@ -85,7 +85,7 @@ document.querySelector('ore-alert').addEventListener('dismiss', (e) => {
 
 ## Icon
 
-Use the `icon` slot to add a leading icon. The icon wrapper is hidden entirely when the slot is empty — no reserved space.
+Use the `icon` slot to add a leading icon. The icon wrapper is hidden entirely when the slot is empty: no reserved space.
 
 <ComponentPreview center vertical>
 
@@ -177,7 +177,7 @@ Add `horizontal` to move the actions to the right side of the content instead of
 </ComponentPreview>
 
 ::: tip
-Avoid combining `horizontal` with `heading` — it makes the layout feel cramped.
+Avoid combining `horizontal` with `heading`: it makes the layout feel cramped.
 :::
 
 ## Accented
@@ -203,10 +203,10 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 
 | Attribute     | Type                                                                      | Default  | Description                                      |
 | ------------- | ------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —        | Theme color                                      |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color                                      |
 | `variant`     | `'flat' \| 'solid' \| 'bordered'`                                         | `'flat'` | Visual style variant                             |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`   | Component size                                   |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | —        | Border radius override                           |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | N/A | Border radius override                           |
 | `heading`     | `string`                                                                  | `''`     | Bold heading above the message body              |
 | `dismissible` | `boolean`                                                                 | `false`  | Show a close (×) button                          |
 | `accented`    | `boolean`                                                                 | `false`  | Left accent border (flat/bordered variants only) |
@@ -218,7 +218,7 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 | Slot      | Description                                                             |
 | --------- | ----------------------------------------------------------------------- |
 | (default) | Alert message content                                                   |
-| `icon`    | Icon on the leading edge. Hidden when empty — no reserved space.        |
+| `icon`    | Icon on the leading edge. Hidden when empty: no reserved space.        |
 | `meta`    | Secondary info alongside the heading (lighter, right-aligned, smaller)  |
 | `actions` | Action buttons below the message, or beside it when `horizontal` is set |
 

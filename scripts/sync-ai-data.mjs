@@ -3,7 +3,7 @@
 //   - .agents/reference/packages.md            ← packages/*/package.json (name, description, graph)
 //   - packages/codex/skills/vielzeug/SKILL.md  ← same manifests (flat package list for consumers)
 // and validates that every `.agents/...` path referenced anywhere in the repo resolves to a
-// real file — see "Reference integrity" below. There is deliberately no curated JSON layer:
+// real file: see "Reference integrity" below. There is deliberately no curated JSON layer:
 // package facts live in manifests and task procedures live as skills.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -14,7 +14,7 @@ import { ROOT, replaceBetweenMarkers, syncFile } from './lib/marker-sync.mjs';
 import { readPackageManifests } from './lib/packages.mjs';
 
 // ---------------------------------------------------------------------------
-// Packages — the generated one-page view of packages/*/package.json.
+// Packages: the generated one-page view of packages/*/package.json.
 // ---------------------------------------------------------------------------
 
 export function readLivePackages(root = ROOT) {
@@ -32,10 +32,10 @@ export function readLivePackages(root = ROOT) {
 
 export function renderPackagesTable(packages) {
   const header = ['Package', 'Description', 'Dependencies', 'Required peers', 'Optional peers'];
-  const list = (items) => (items?.length > 0 ? items.map((dep) => `\`${dep}\``).join(', ') : '—');
+  const list = (items) => (items?.length > 0 ? items.map((dep) => `\`${dep}\``).join(', ') : 'N/A');
   const rows = packages.map((pkg) => [
     `\`${pkg.name}\``,
-    pkg.description || '—',
+    pkg.description || 'N/A',
     list(pkg.dependencies),
     list(pkg.peerDependencies),
     list(pkg.optionalPeers),
@@ -54,7 +54,7 @@ export function patchPackagesReference(source, packages) {
 }
 
 // ---------------------------------------------------------------------------
-// Consumer skill — the `vielzeug` skill shipped inside @vielzeug/codex carries a flat
+// Consumer skill: the `vielzeug` skill shipped inside @vielzeug/codex carries a flat
 // "what exists" list so agents in downstream projects can map a need to a package even
 // without the MCP server. Tooling-only packages are excluded (codex is the server itself).
 // ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ const SKILL_EXCLUDED_SLUGS = new Set(['codex']);
 export function renderSkillPackages(packages) {
   return packages
     .filter((pkg) => !SKILL_EXCLUDED_SLUGS.has(pkg.slug))
-    .map((pkg) => `- \`${pkg.name}\` — ${pkg.description || '—'}`)
+    .map((pkg) => `- \`${pkg.name}\`: ${pkg.description || 'N/A'}`)
     .join('\n');
 }
 
@@ -129,7 +129,7 @@ export function collectAiReferenceSources(root = ROOT) {
   return files.sort();
 }
 
-/** Pulls every literal `.agents/...` path token out of `text`, deduplicated. Skips obvious placeholders (e.g. `.agents/skills/<name>/SKILL.md`) — anything
+/** Pulls every literal `.agents/...` path token out of `text`, deduplicated. Skips obvious placeholders (e.g. `.agents/skills/<name>/SKILL.md`): anything
  * containing `<` is a template, not a real reference to validate. */
 export function extractAiReferences(text) {
   const matches = text.match(AI_REF_PATTERN) ?? [];
@@ -172,7 +172,7 @@ export async function main({ check = false } = {}) {
   );
   const dangling = findDanglingAiReferences(fileContents);
   for (const { file, ref } of dangling) {
-    console.error(`[DANGLING] ${file} references ${ref} — file does not exist`);
+    console.error(`[DANGLING] ${file} references ${ref}: file does not exist`);
   }
 
   if (check && stale) {
@@ -180,7 +180,7 @@ export async function main({ check = false } = {}) {
     return false;
   }
   if (dangling.length > 0) {
-    console.error('\nFix the dangling reference(s) above — regenerating will not resolve them.');
+    console.error('\nFix the dangling reference(s) above: regenerating will not resolve them.');
     return false;
   }
   if (!check) console.log('AI data synced.');

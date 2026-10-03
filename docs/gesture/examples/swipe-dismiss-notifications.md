@@ -1,5 +1,5 @@
 ---
-title: 'Gesture Examples — Swipe-to-Dismiss Notifications'
+title: 'Gesture Examples: Swipe-to-Dismiss Notifications'
 description: 'Implement swipe-to-dismiss behavior using createPanGesture.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Implement swipe-to-dismiss behavior using createPanGesture.'
 
 ### Problem
 
-You need to dismiss transient notifications by swiping horizontally, while preserving click access to inner actions (undo, retry, view details). The notification should track the finger with a live transform, fade as it moves, and either dismiss past an application-defined threshold or spring back under it. Inner buttons must remain tappable mid-gesture — the pan must not capture pointer events away from them.
+You need to dismiss transient notifications by swiping horizontally, while preserving click access to inner actions (undo, retry, view details). The notification should track the finger with a live transform, fade as it moves, and either dismiss past an application-defined threshold or spring back under it. Inner buttons must remain tappable mid-gesture: the pan must not capture pointer events away from them.
 
 ### Solution
 
@@ -147,7 +147,7 @@ function showToast({ message, actionLabel, onAction }: ToastOptions): void {
 
 ### Pitfalls
 
-- **`pointerCapture: false` is mandatory when children must stay clickable.** With default capture, the toast element steals all pointer events for the gesture's lifetime — the "Undo" button becomes unclickable until the gesture ends. Document-level tracking still keeps the pan active outside the target; disabling capture changes event targeting, not gesture tracking.
+- **`pointerCapture: false` is mandatory when children must stay clickable.** With default capture, the toast element steals all pointer events for the gesture's lifetime: the "Undo" button becomes unclickable until the gesture ends. Document-level tracking still keeps the pan active outside the target; disabling capture changes event targeting, not gesture tracking.
 - **Pair `pointerCapture: false` with `shouldStart`.** `shouldStart` protects controls under the initial pointer; `pointerCapture: false` additionally protects controls that appear beneath the pointer during a reveal interaction. Neither alone covers both cases.
 - **Reset inline styles on `reason: 'cancel'`, not just `reason: 'release'`.** A cancel path (disabled flip, `pointercancel`, `lostpointercapture`) must spring back; if you only reset on release, the toast stays translated and faded.
 - **Dispose the gesture when the toast leaves the DOM.** The handle holds listeners on a detached element; without `dispose()`, `disposalSignal` never aborts and retained handles keep their listeners alive.

@@ -13,7 +13,7 @@ type LayoutChange<ElementType extends Element> = Readonly<{
   y: number;
 }>;
 
-// Rounds before templating into a keyframe string purely for DevTools readability — a `getBoundingClientRect()`
+// Rounds before templating into a keyframe string purely for DevTools readability: a `getBoundingClientRect()`
 // subtraction routinely produces values like `12.340000000000002`, which is noise once rendered as CSS.
 // Pixels only need whole-number precision; scale factors (close to 1) need finer precision to stay visually exact.
 function round(value: number, precision: number): number {
@@ -22,7 +22,7 @@ function round(value: number, precision: number): number {
   return Math.round(value * factor) / factor;
 }
 
-// `getBoundingClientRect()`'s width/height is the rotated, axis-aligned bounding box — using it
+// `getBoundingClientRect()`'s width/height is the rotated, axis-aligned bounding box: using it
 // for size would distort the scale ratio under any rotation. `offsetWidth`/`offsetHeight` report
 // the box's own untransformed layout size instead. Elements without an offset box (e.g. SVG)
 // fall back to the bounding rect, accepting that same distortion as the only option available.
@@ -142,7 +142,7 @@ function matchByKey<ElementType extends Element>(
  * Each element's `x`/`y` position and `width`/`height` are captured. Rotation and other
  * transforms are not captured or compensated. Capture before mutating the DOM, then call
  * the returned transition's `animate()` method after the browser has applied the resulting
- * layout — position changes animate via translate, and size changes via scale, both
+ * layout: position changes animate via translate, and size changes via scale, both
  * additively composed on top of any authored transform.
  */
 export function captureLayout<ElementType extends Element>(

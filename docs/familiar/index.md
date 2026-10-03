@@ -1,5 +1,5 @@
 ---
-title: Familiar — Typed module-worker pools
+title: 'Familiar: Typed module-worker pools'
 description: Typed ES module Worker pools with cancellation, priority scheduling, streaming, and test utilities.
 package: familiar
 category: workers
@@ -91,14 +91,14 @@ try {
 
 <div class="features-grid">
 
-- `createWorker()` — versioned task protocol over ES module workers
-- `createStreamWorker()` — stream-only worker capability
-- `run()` — validated priority scheduling, transferables, timeout, and cancellation
-- `runBatch()` — ordered progressive results with shared fail-fast cancellation
-- `stats` — active, queued, completed, and failed counters
-- `createTestWorker()` — faithful in-process task-pool testing
-- `dispose()` and `drain()` — immediate or draining teardown, with `using` support
-- Application-owned promise composition — domain task groups without pool-owned orchestration state
+- `createWorker()`: versioned task protocol over ES module workers
+- `createStreamWorker()`: stream-only worker capability
+- `run()`: validated priority scheduling, transferables, timeout, and cancellation
+- `runBatch()`: ordered progressive results with shared fail-fast cancellation
+- `stats`: active, queued, completed, and failed counters
+- `createTestWorker()`: faithful in-process task-pool testing
+- `dispose()` and `drain()`: immediate or draining teardown, with `using` support
+- Application-owned promise composition: domain task groups without pool-owned orchestration state
 
 </div>
 
@@ -116,8 +116,8 @@ try {
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — expose worker results through reactive state.
-- [Herald](/herald/) — publish application events after worker jobs settle.
+- [Ripple](/ripple/): expose worker results through reactive state.
+- [Herald](/herald/): publish application events after worker jobs settle.
 
 </div>
 

@@ -55,7 +55,7 @@
     display: none;
   }
 
-  /* Pause shimmer when scrolled out of the viewport — no visible effect, saves GPU */
+  /* Pause shimmer when scrolled out of the viewport: no visible effect, saves GPU */
   :host([data-paused]) .bone::after {
     animation-play-state: paused;
   }
@@ -73,7 +73,7 @@
 }
 
 @layer refine.variants {
-  /* Circle variant — avatars, icons */
+  /* Circle variant: avatars, icons */
   :host([variant='circle']) {
     --_radius: var(--rounded-full);
 
@@ -82,7 +82,7 @@
     aspect-ratio: 1 / 1;
   }
 
-  /* Text variant — thinner, for inline text lines */
+  /* Text variant: thinner, for inline text lines */
   :host([variant='text']) {
     --_height: var(--size-3);
     --_radius: var(--rounded-sm);

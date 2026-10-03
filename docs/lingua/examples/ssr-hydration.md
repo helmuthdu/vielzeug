@@ -1,5 +1,5 @@
 ---
-title: 'Lingua Examples — SSR Hydration'
+title: 'Lingua Examples: SSR Hydration'
 description: Transfer resolved locale catalogs from server instance to client instance.
 ---
 

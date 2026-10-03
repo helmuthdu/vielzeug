@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Persisted Wizard'
+title: 'Clockwork Examples: Persisted Wizard'
 description: 'Persist validated actor snapshots at the application boundary.'
 ---
 

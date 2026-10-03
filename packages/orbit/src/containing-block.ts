@@ -1,5 +1,5 @@
 /**
- * @vielzeug/orbit — containing-block detection for `position: fixed` elements.
+ * @vielzeug/orbit: containing-block detection for `position: fixed` elements.
  */
 
 import { flatTreeParent } from './utils';
@@ -30,15 +30,15 @@ function establishesFixedContainingBlock(style: CSSStyleDeclaration): boolean {
 /**
  * Walks up from `element` (crossing shadow boundaries via the flat tree) to find the nearest
  * ancestor that establishes a containing block for `position: fixed` descendants. Returns `null`
- * when none is found — the common case, meaning the true viewport is the containing block.
+ * when none is found: the common case, meaning the true viewport is the containing block.
  *
  * `Element.offsetParent` can't answer this: browsers report it as `null` unconditionally for
- * `position: fixed` elements, without accounting for a transformed ancestor — even though the
+ * `position: fixed` elements, without accounting for a transformed ancestor: even though the
  * CSS Transforms spec says that ancestor *does* become the containing block once it has a
  * non-`none` `transform`/`filter`/`perspective`/`backdrop-filter` (even a visually-identity one,
  * e.g. `transform: scale(1)` left over from an entrance transition that never resets to `none` at
- * rest). A `position: fixed` floating element nested inside such an ancestor — a modal dialog's
- * panel is the classic case — has its `left`/`top` resolved against *that* ancestor's box instead
+ * rest). A `position: fixed` floating element nested inside such an ancestor: a modal dialog's
+ * panel is the classic case: has its `left`/`top` resolved against *that* ancestor's box instead
  * of the viewport, silently mispositioning it even though the coordinates computed for it were
  * correct viewport-relative values.
  *

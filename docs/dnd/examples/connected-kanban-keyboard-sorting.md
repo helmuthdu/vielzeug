@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — Connected kanban with keyboard sorting'
+title: 'Dnd Examples: Connected kanban with keyboard sorting'
 description: 'Connected kanban with keyboard sorting example for @vielzeug/dnd.'
 ---
 

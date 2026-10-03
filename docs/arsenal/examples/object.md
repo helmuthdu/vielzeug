@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Object Examples
+title: 'Arsenal: Object Examples'
 description: Object utility examples for Arsenal.
 ---
 

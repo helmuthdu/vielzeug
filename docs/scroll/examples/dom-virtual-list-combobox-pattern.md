@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — DOM Virtual List Combobox Pattern'
+title: 'Scroll Examples: DOM Virtual List Combobox Pattern'
 description: 'Use createDomVirtualList to virtualize a combobox/listbox popup with a small controller API.'
 ---
 
@@ -86,7 +86,7 @@ function destroyCombobox() {
 ### Pitfalls
 
 - Calling `setItems([])` destroys the virtualizer and clears the `listElement` height style. Re-opening calls `setItems(options)` which spawns a fresh virtualizer.
-- Holding a stale `controller` reference after `destroyCombobox()` — all method calls are safe no-ops. Re-create the controller on next open instead.
+- Holding a stale `controller` reference after `destroyCombobox()`: all method calls are safe no-ops. Re-create the controller on next open instead.
 - When `getItemKey` is omitted, `setItems()` drops all cached measurements. Pass `getItemKey: (_, opt) => opt.value` to preserve measurements across open/close cycles.
 
 ### Related

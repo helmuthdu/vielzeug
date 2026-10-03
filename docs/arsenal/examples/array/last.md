@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — last'
+title: 'Arsenal Examples: last'
 description: 'last example for @vielzeug/arsenal.'
 ---
 

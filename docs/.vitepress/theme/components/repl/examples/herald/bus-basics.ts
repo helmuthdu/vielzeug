@@ -16,7 +16,7 @@ bus.emit('notification', 'welcome back!')
 
 unsubLogin()
 
-bus.emit('user:login', { userId: '456', name: 'Bob' }) // no output — unsubscribed
+bus.emit('user:login', { userId: '456', name: 'Bob' }) // no output: unsubscribed
 console.log('active listeners:', bus.listenerCount())
 
 bus.dispose()`,

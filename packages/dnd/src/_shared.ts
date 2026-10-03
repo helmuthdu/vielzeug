@@ -4,7 +4,7 @@ import type { Disposable } from './types.js';
 
 /**
  * Create a `Disposable` backed by an `AbortController`.
- * `dispose()` is idempotent — the signal aborts and `cleanup` runs at most once.
+ * `dispose()` is idempotent: the signal aborts and `cleanup` runs at most once.
  * Pass the returned `disposalSignal` to `addEventListener` calls so removal happens
  * automatically on dispose, instead of pairing manual `removeEventListener` calls.
  */

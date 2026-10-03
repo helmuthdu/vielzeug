@@ -30,7 +30,7 @@
       "!**/dist",
       "!docs/.vitepress/cache",
       "!docs/.vitepress/theme/components/repl/registry.generated.ts",
-      // SVGs are exported artwork (Inkscape), not authored source — inline CSS uses
+      // SVGs are exported artwork (Inkscape), not authored source: inline CSS uses
       // Inkscape-specific properties and font names that Biome flags.
       "!**/*.svg"
     ]
@@ -116,7 +116,7 @@
             "useSemanticElements": "off"
           },
           "correctness": {
-            // Biome doesn't track Vue `ref="binding"` string attributes as references yet —
+            // Biome doesn't track Vue `ref="binding"` string attributes as references yet :
             // only `:prop="binding"` and `{{ binding }}` are seen. Re-enable when upstream lands.
             // https://github.com/biomejs/biome/issues/2973
             "noUnusedVariables": "off"
@@ -125,7 +125,7 @@
             // Scoped styles in Vue SFCs routinely need descending specificity for overrides.
             "noDescendingSpecificity": "off",
             // VitePress theme components are referenced by filename in config, not imported as
-            // Vue SFC components — single-word/acronym names like REPL.vue are intentional.
+            // Vue SFC components: single-word/acronym names like REPL.vue are intentional.
             "useVueMultiWordComponentNames": "off"
           }
         }

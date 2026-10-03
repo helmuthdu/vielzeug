@@ -13,21 +13,21 @@ export type ListVariant = 'bordered' | 'plain' | 'separated';
 export type ListContext = {
   /**
    * Closes every other item's swipe-revealed action panel. Called directly by an item the moment
-   * its own `revealed` attribute transitions to non-null (gesture or direct attribute set) —
+   * its own `revealed` attribute transitions to non-null (gesture or direct attribute set) :
    * replaces listening for a bubbled `reveal` event and re-deriving "is this actually my direct
    * child" with a plain function call, the same shape as `select` below.
    */
   requestReveal: (item: HTMLElement) => void;
   /**
    * Selects `value` (or clears the selection when `undefined`) and fires `change`. Called
-   * directly by an activated item — mirrors `ore-radio-group`'s `RadioGroupContext.select()`.
+   * directly by an activated item: mirrors `ore-radio-group`'s `RadioGroupContext.select()`.
    * No sibling bookkeeping needed here: every item's `selected` is *derived* from `value`, so
    * changing it here is the only thing that has to happen.
    */
   select: (value: string | undefined) => void;
   selectable: Readable<boolean>;
   /**
-   * Single source of truth for the current selection — `ore-list-item` never owns its own
+   * Single source of truth for the current selection: `ore-list-item` never owns its own
    * "selected" state; it's always derived by comparing its own `value` against this one (the
    * same shape as `ore-radio-group`'s `RadioGroupContext.value`).
    */
@@ -44,7 +44,7 @@ export type OreListEvents = {
 
 /** List component properties */
 export type OreListProps = {
-  /** Disable the entire list — blocks pointer interaction and removes items from tab order */
+  /** Disable the entire list: blocks pointer interaction and removes items from tab order */
   disabled?: boolean;
   /**
    * Enables single-selection listbox behavior: clicking (or pressing Enter/Space on) an item
@@ -55,7 +55,7 @@ export type OreListProps = {
   /** Size applied to all items (propagated via inherited CSS custom properties) */
   size?: ComponentSize;
   /**
-   * Selected item's `value` (only meaningful when `selectable`) — the single source of truth for
+   * Selected item's `value` (only meaningful when `selectable`): the single source of truth for
    * selection. `ore-list-item` never owns its own selected state; set this directly, bind it for
    * two-way control, or read it back from `change`.
    */
@@ -65,10 +65,10 @@ export type OreListProps = {
 };
 
 /**
- * A vertical list container for `ore-list-item` children — plain display list by default, or a
+ * A vertical list container for `ore-list-item` children: plain display list by default, or a
  * keyboard-navigable single-select listbox via `selectable`. Each item can independently reveal
  * a left/right action panel via touch/pointer swipe (see `ore-list-item`'s `actions-left`/
- * `actions-right` slots) — useful for mobile-style row actions (archive, delete, …).
+ * `actions-right` slots): useful for mobile-style row actions (archive, delete, …).
  *
  * @element ore-list
  * @element ore-list-item - Child element for each row
@@ -76,7 +76,7 @@ export type OreListProps = {
  * @attr {boolean} disabled - Disable the entire list
  * @attr {boolean} selectable - Enable single-selection listbox behavior with arrow-key navigation
  * @attr {string} size - Size applied to all items: 'sm' | 'md' | 'lg'
- * @attr {string} value - Selected item's value (only meaningful when `selectable`) — the single source of truth for selection
+ * @attr {string} value - Selected item's value (only meaningful when `selectable`): the single source of truth for selection
  * @attr {string} variant - Visual variant: 'plain' | 'bordered' | 'separated'
  *
  * @fires change - Emitted when the selected value changes. detail: { value: string | null }
@@ -117,12 +117,12 @@ define<OreListProps>(LIST_TAG, {
 
     const getAllItems = (): HTMLElement[] => [...el.querySelectorAll<HTMLElement>(':scope > ore-list-item')];
 
-    // Reaches into each item's shadow root for its focusable row — mirrors `ore-accordion`'s
-    // `getSummaryElements()` — rather than relying on `item.focus()` + `shadow: { delegatesFocus:
+    // Reaches into each item's shadow root for its focusable row: mirrors `ore-accordion`'s
+    // `getSummaryElements()`, rather than relying on `item.focus()` + `shadow: { delegatesFocus:
     // true }` to land focus correctly, since that cross-boundary reporting is inconsistent enough
     // between real browsers and jsdom that other multi-item components in this package
     // (`ore-menu`, `ore-tabs`) defensively check both forms too. Queried via `[part="row"]`, not
-    // the `.row` class — `part` is list-item's declared public seam for exactly this kind of
+    // the `.row` class: `part` is list-item's declared public seam for exactly this kind of
     // cross-component reach; the class name is a private styling detail that could change.
     const getRow = (item: Element): HTMLElement | null =>
       item.shadowRoot?.querySelector<HTMLElement>('[part="row"]') ?? null;
@@ -141,10 +141,10 @@ define<OreListProps>(LIST_TAG, {
       signal: lifecycleSignal(onCleanup),
     });
 
-    // Selection — `selectedValue` is the single source of truth (mirrors `ore-radio-group`'s
+    // Selection: `selectedValue` is the single source of truth (mirrors `ore-radio-group`'s
     // `selectedValue`/`RadioGroupContext.value` pattern): reflected onto the `value` attribute,
     // synced back in when set externally, and read by every item via context to derive its own
-    // `selected` state. No sibling-clearing needed anywhere — changing this one signal is enough.
+    // `selected` state. No sibling-clearing needed anywhere: changing this one signal is enough.
     const selectedValue = signal<string | undefined>(props.value.value);
 
     watch(props.value, (value) => {
@@ -159,7 +159,7 @@ define<OreListProps>(LIST_TAG, {
     };
 
     // Only one item's swipe-revealed action panel is open at a time. The item calls this
-    // directly the moment its own `revealed` attribute transitions to non-null — see
+    // directly the moment its own `revealed` attribute transitions to non-null: see
     // `ListContext.requestReveal`'s doc comment for why this replaced a bubbled event.
     const requestReveal = (item: HTMLElement): void => {
       for (const sibling of getAllItems()) {
@@ -167,7 +167,7 @@ define<OreListProps>(LIST_TAG, {
       }
     };
 
-    // Closes any swipe-revealed item when the user interacts anywhere outside of it — matches
+    // Closes any swipe-revealed item when the user interacts anywhere outside of it: matches
     // the outside-pointerdown-closes pattern used by ore-date-picker/ore-time-picker's popovers.
     const handleOutsidePointerDown = (event: PointerEvent): void => {
       const open = getAllItems().find((item) => item.hasAttribute('revealed'));

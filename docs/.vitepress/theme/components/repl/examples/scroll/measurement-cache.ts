@@ -1,7 +1,7 @@
 export const measurementCacheExample = {
   code: `import { createMeasurementCache, createVirtualizer } from '@vielzeug/scroll'
 
-// Shared cache — measurements from listA flow into listB automatically.
+// Shared cache: measurements from listA flow into listB automatically.
 const cache = createMeasurementCache()
 
 const makeList = (label, left) => {
@@ -38,7 +38,7 @@ const virtA = createVirtualizer(containerA, {
     items.forEach(({ index, start, size }) => {
       const row = document.createElement('div')
       row.style.cssText = \`position:absolute;top:\${start}px;left:0;right:0;min-height:\${size}px;padding:8px 12px;border-bottom:1px solid #f0f0f0;word-wrap:break-word;font-size:13px;\`
-      row.textContent = \`Row \${index} — \${'word '.repeat((index % 4) + 1).trim()}\`
+      row.textContent = \`Row \${index}: \${'word '.repeat((index % 4) + 1).trim()}\`
       contentA.appendChild(row)
       // Report actual height after paint
       requestAnimationFrame(() => virtA.measure(index, row.offsetHeight))
@@ -63,6 +63,6 @@ const virtB = createVirtualizer(containerB, {
 })
 
 console.log('✓ Two virtualizers share one MeasurementCache')
-console.log('Scroll List A to measure rows — List B reflects the same sizes')`,
+console.log('Scroll List A to measure rows: List B reflects the same sizes')`,
   name: 'createMeasurementCache - Shared Cache',
 };

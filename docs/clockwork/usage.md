@@ -1,5 +1,5 @@
 ---
-title: Clockwork — Usage Guide
+title: 'Clockwork: Usage Guide'
 description: Build deterministic state machines with pure transitions and actor-owned runtime work.
 ---
 

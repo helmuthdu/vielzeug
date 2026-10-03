@@ -10,9 +10,9 @@ export type CommandPaletteItemInput = {
   keywords?: string[];
   label?: string;
   /**
-   * Display-only shortcut hint rendered at the end of the row, one `<kbd>` per key — separate
-   * keys with `+` (e.g. `"⌘+S"`). Purely visual — not bound to a live key handler. A literal
-   * `+` key itself isn't representable this way — spell it out instead (e.g. `"Ctrl+Plus"`).
+   * Display-only shortcut hint rendered at the end of the row, one `<kbd>` per key: separate
+   * keys with `+` (e.g. `"⌘+S"`). Purely visual: not bound to a live key handler. A literal
+   * `+` key itself isn't representable this way: spell it out instead (e.g. `"Ctrl+Plus"`).
    */
   shortcut?: string;
   value: string;
@@ -45,7 +45,7 @@ export type OreCommandPaletteProps = {
   'default-open'?: boolean;
   /** Text shown when no item matches the current query. */
   'empty-text'?: string;
-  /** JS items array — alternative or supplement to slotted `<ore-command-palette-item>` elements. */
+  /** JS items array: alternative or supplement to slotted `<ore-command-palette-item>` elements. */
   items?: CommandPaletteItemInput[];
   /** Keep the palette open after an item is selected. Default: closes on select. */
   'keep-open-on-select'?: boolean;
@@ -53,7 +53,7 @@ export type OreCommandPaletteProps = {
   label?: string;
   /** Shows a loading row below the search input (e.g. while results are fetched asynchronously). */
   loading?: boolean;
-  /** Disables built-in client-side filtering — use when `items` is already filtered server-side. */
+  /** Disables built-in client-side filtering: use when `items` is already filtered server-side. */
   'no-filter'?: boolean;
   /** Controls the open state of the palette. */
   open?: boolean;
@@ -61,7 +61,7 @@ export type OreCommandPaletteProps = {
   placeholder?: string;
   /**
    * Global keyboard shortcut (in `@vielzeug/keymap` syntax, e.g. `"mod+k"`) that toggles the
-   * palette open/closed from anywhere on the page. Set to an empty string to disable — useful
+   * palette open/closed from anywhere on the page. Set to an empty string to disable: useful
    * when the host application already manages its own trigger and shortcut.
    */
   shortcut?: string;

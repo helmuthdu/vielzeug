@@ -1,6 +1,6 @@
 ---
 name: release
-description: Prepare delivery — Rush change files, approved commits or pull requests, packed-package checks, and release diagnostics. Use when asked to commit, open a PR, write a change file, bump versions, publish, or diagnose a release or publish failure.
+description: 'Prepare delivery: Rush change files, approved commits or pull requests, packed-package checks, and release diagnostics. Use when asked to commit, open a PR, write a change file, bump versions, publish, or diagnose a release or publish failure.'
 ---
 
 # Release
@@ -43,7 +43,7 @@ Never commit, push, tag, release, publish, rewrite history, or delete branches w
 
 ## Report
 
-- `Validation: <command> — <result>` for every executed check; list recommended or deferred checks separately
+- `Validation: <command>: <result>` for every executed check; list recommended or deferred checks separately
 - `[DEFERRED] <artifact or check>: <reason>`
 - `[BLOCKED] <approval or decision>`
 

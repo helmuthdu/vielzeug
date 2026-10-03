@@ -1,5 +1,5 @@
 // Type declarations for cli.mjs, consumed by the .ts scripts (generate-repl-registry.ts,
-// validate-repl.ts) that import this plain-JS module for tsc/eslint's benefit — the runtime
+// validate-repl.ts) that import this plain-JS module for tsc/eslint's benefit: the runtime
 // itself needs zero build step, which is why this stays .mjs, not .ts.
 
 export function isMain(moduleUrl: string): boolean;

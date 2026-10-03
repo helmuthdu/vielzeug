@@ -74,13 +74,13 @@ describe('@vielzeug/spell/json', () => {
       type: 'object',
     });
     expect(toJson(s.set(s.string()))).toEqual({
-      $comment: 'Set<T> — no standard JSON Schema equivalent; treated as an ordered unique-item array.',
+      $comment: 'Set<T>: no standard JSON Schema equivalent; treated as an ordered unique-item array.',
       items: { type: 'string' },
       type: 'array',
       uniqueItems: true,
     });
     expect(toJson(s.map(s.string(), s.number()))).toEqual({
-      $comment: 'Map type — represented as an object with arbitrary string keys.',
+      $comment: 'Map type: represented as an object with arbitrary string keys.',
       additionalProperties: { type: 'number' },
       type: 'object',
     });

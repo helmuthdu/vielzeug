@@ -1,5 +1,5 @@
 ---
-title: 'Tempo Examples — Expiry Classification'
+title: 'Tempo Examples: Expiry Classification'
 description: 'Classify fixed elapsed-time expiry thresholds with classifyExpiry().'
 ---
 

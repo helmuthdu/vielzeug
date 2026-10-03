@@ -1,5 +1,5 @@
 ---
-title: Lingua — API Reference
+title: 'Lingua: API Reference'
 description: Complete API reference for @vielzeug/lingua.
 ---
 
@@ -24,7 +24,7 @@ description: Complete API reference for @vielzeug/lingua.
 | --- | --- |
 | `@vielzeug/lingua` | Translation factories, state types, and Lingua errors |
 | `@vielzeug/lingua/format` | Standalone cached Intl formatter factory |
-| `@vielzeug/lingua/ripple` | `createReactiveI18n()` — reactive locale/translate bridge (optional `@vielzeug/ripple` peer) |
+| `@vielzeug/lingua/ripple` | `createReactiveI18n()`: reactive locale/translate bridge (optional `@vielzeug/ripple` peer) |
 | `@vielzeug/lingua/validate` | `validateCatalog()`, `compareCatalogs()`, and `ValidationIssue` |
 
 ## Translation Factories
@@ -128,7 +128,7 @@ function createReactiveI18n<C extends Catalog>(i18n: I18n<C>): ReactiveI18n<C>;
 
 Bridges a lingua instance into `@vielzeug/ripple` so translated strings are reactive. `i18n.translate()` is not ripple-reactive on its own: reading it inside a `computed()` computes once and never re-runs, since it registers no tracked dependency. Both translate methods here first read the reactive `locale` readable, so any binding built on them re-evaluates the instant `setLocale()` resolves.
 
-`@vielzeug/ripple` is an optional peer dependency — install it only when you use this subpath.
+`@vielzeug/ripple` is an optional peer dependency: install it only when you use this subpath.
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
@@ -144,7 +144,7 @@ await reactive.i18n.setLocale('fr');
 | Property or method | Signature | Returns |
 | --- | --- | --- |
 | `i18n` | `I18n<C>` | The underlying instance for imperative work (`setLocale`, `load`, disposal) |
-| `locale` | `Readable<Locale>` | Reactive locale — reading it inside a computed/template registers the dependency |
+| `locale` | `Readable<Locale>` | Reactive locale: reading it inside a computed/template registers the dependency |
 | `translate` | `(key, options?)` | Rendered string; re-evaluates whenever the locale changes |
 | `translateDynamic` | `(key, options?)` | Same, for runtime-assembled keys |
 
@@ -164,7 +164,7 @@ Enumerates every message key as a dotted path. Traverses nested grouping objects
 | --------- | ------------------- | ----------------------------------------- |
 | `catalog` | `C extends Catalog` | Raw catalog object or any catalog subtree |
 
-**Returns:** `ReadonlyArray<MessageKey<C>>` — dotted paths to every text and plural message.
+**Returns:** `ReadonlyArray<MessageKey<C>>`: dotted paths to every text and plural message.
 
 ```ts
 import { catalogKeys, createI18n } from '@vielzeug/lingua';
@@ -227,7 +227,7 @@ validateCatalog({ inbox: { plural: { one: 'One message' } } }, 'en');
 function compareCatalogs<C extends Catalog>(catalogs: Catalogs<C>): CatalogComparison;
 ```
 
-Compares key sets across locales. First locale is the base — reports keys missing in each target and keys present in targets but absent from base. Validates each catalog structurally.
+Compares key sets across locales. First locale is the base: reports keys missing in each target and keys present in targets but absent from base. Validates each catalog structurally.
 
 | Parameter | Type | Description |
 | --- | --- | --- |

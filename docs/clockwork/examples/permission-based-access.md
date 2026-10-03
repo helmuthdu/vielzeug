@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Permission-Based Access Control'
+title: 'Clockwork Examples: Permission-Based Access Control'
 description: 'Gate state changes with authorization guards at transition selection.'
 ---
 

@@ -27,7 +27,7 @@ try {
   console.log('connect failed:', err.message)
 }
 
-// dispose() is idempotent — safe to call multiple times
+// dispose() is idempotent: safe to call multiple times
 pulse.dispose()
 pulse.dispose()
 console.log('disposed:', pulse.disposed)
@@ -37,7 +37,7 @@ try {
   await pulse.connect()
 } catch (err) {
   if (err instanceof PulseDisposedError) {
-    console.log('connect() rejected with PulseDisposedError — correct')
+    console.log('connect() rejected with PulseDisposedError: correct')
   }
 }`,
   name: 'Lifecycle & Disposal',

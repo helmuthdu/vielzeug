@@ -1,9 +1,9 @@
 /**
- * Real-browser tests for `ore-stepper`/`ore-step` — a11y checks (including color-contrast and
+ * Real-browser tests for `ore-stepper`/`ore-step`: a11y checks (including color-contrast and
  * target-size, which jsdom can't evaluate) and real click/keyboard interaction. Complements
  * `stepper.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
@@ -59,7 +59,7 @@ test.describe('Interaction', () => {
 
     expect(isCurrent).toBe(true);
 
-    // Regression: the selection re-render replaces the clicked step's control —
+    // Regression: the selection re-render replaces the clicked step's control :
     // focus must be restored onto the new button, not dropped to <body>.
     const paymentHasFocus = await page.evaluate(
       () => document.activeElement === document.querySelector('ore-step[value="payment"]'),
@@ -185,7 +185,7 @@ test.describe('Layout', () => {
   // hidden` still claims flex-grow space, or later, a fixed-length connector still rendered)
   // and shift/pad the first indicator away from the container edge. Each indicator is centered
   // within its own equal-width column by design, so this checks the *first* column's indicator
-  // lands at that column's center — not further right because of a phantom leading connector —
+  // lands at that column's center: not further right because of a phantom leading connector :
   // and that the connector itself is not rendered for the first step at all.
   test('the first step centers its indicator with no phantom leading connector', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
@@ -211,7 +211,7 @@ test.describe('Layout', () => {
   });
 
   // Regression: the horizontal connector used to be a `flex: 1 1 auto` sibling competing with
-  // `.control` for leftover row space — once the label was long enough to need most of that
+  // `.control` for leftover row space: once the label was long enough to need most of that
   // space, the connector shrank toward 0 width and effectively disappeared right after the
   // previous step's label instead of visibly bridging the two steps.
   test('horizontal connector stays visible and reaches toward the next step even with long labels', async ({
@@ -250,7 +250,7 @@ test.describe('Layout', () => {
   });
 
   // Regression: `.connector` is `position: absolute`, which paints above normal-flow (static)
-  // content regardless of DOM order — including `.control`/`.indicator`, which used to have no
+  // content regardless of DOM order: including `.control`/`.indicator`, which used to have no
   // `position` of their own. The line ended up drawn on top of every indicator instead of
   // behind it, looking like one line running straight over all the steps.
   test('indicator paints above the connector line instead of the line cutting across it', async ({
@@ -268,7 +268,7 @@ test.describe('Layout', () => {
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
 
-      // `elementFromPoint` doesn't pierce shadow boundaries on its own — it returns the shadow
+      // `elementFromPoint` doesn't pierce shadow boundaries on its own: it returns the shadow
       // host, so descend manually into each nested shadow root's own `elementFromPoint`.
       let topElement: Element | null = document.elementFromPoint(x, y);
 
@@ -286,7 +286,7 @@ test.describe('Layout', () => {
     expect(topElementIsIndicator).toBe(true);
   });
 
-  // Regression: `ore-step` is its own shadow root, not just a div in a shared tree — a later
+  // Regression: `ore-step` is its own shadow root, not just a div in a shared tree: a later
   // sibling's positioned `.connector` always paints in front of an earlier sibling's content,
   // regardless of that earlier step's own internal stacking. The connector used to reach all
   // the way to the *previous* step's indicator center, so it visibly overlapped a slice of it.
@@ -297,7 +297,7 @@ test.describe('Layout', () => {
       const cartStep = document.querySelector('ore-step[value="cart"]') as HTMLElement & { shadowRoot: ShadowRoot };
       const indicator = cartStep.shadowRoot.querySelector('.indicator') as HTMLElement;
       const rect = indicator.getBoundingClientRect();
-      // Sample just inside the previous indicator's trailing (right) edge — the point most at
+      // Sample just inside the previous indicator's trailing (right) edge: the point most at
       // risk of being painted over by the next step's connector reaching backward.
       const x = rect.right - 2;
       const y = rect.top + rect.height / 2;
@@ -345,7 +345,7 @@ test.describe('Layout', () => {
 
   // Regression: the hover background used `--color-contrast-100` ("cards, elevated surfaces"),
   // which sits so close to the page background that the highlight's rounded edge read as
-  // ambiguous — the connector line crossing right at that low-contrast boundary looked like it
+  // ambiguous: the connector line crossing right at that low-contrast boundary looked like it
   // was escaping the highlight. Asserts real, visible contrast between the hover background and
   // white (not just "some background is present"), matching the design system's own
   // `--color-contrast-200` ("hover states") token.
@@ -364,7 +364,7 @@ test.describe('Layout', () => {
       const bg = getComputedStyle(control).backgroundColor;
 
       // Computed colors can come back as oklab()/oklch() strings (not plain rgb()) once the
-      // theme uses those color spaces — parse via a 1x1 canvas (its fillStyle parser resolves
+      // theme uses those color spaces: parse via a 1x1 canvas (its fillStyle parser resolves
       // any valid CSS color to real sRGB) instead of assuming an rgb()-shaped string.
       const canvas = document.createElement('canvas');
 
@@ -412,13 +412,13 @@ test.describe('Layout', () => {
 
     // The connector must not extend past its own step's indicator (no overlap)...
     expect(connectorBottom).toBeLessThanOrEqual(nextIndicatorTop + 1);
-    // ...and must start close to the previous step's indicator bottom — a few px of breathing
+    // ...and must start close to the previous step's indicator bottom: a few px of breathing
     // room from that step's own control padding is fine, a multi-step-gap-sized break is not.
     expect(connectorTop - prevIndicatorBottom).toBeLessThan(8);
   });
 
   // Regression: `.indicator` had no `box-sizing: border-box`, so its `border` rendered *on top
-  // of* `--step-indicator-size` instead of being included in it — the indicator was actually
+  // of* `--step-indicator-size` instead of being included in it: the indicator was actually
   // ~2 * border-width larger per axis than every connector position calc assumed. Horizontal
   // hid it (flexbox centers the indicator regardless of its exact width), but the vertical
   // connector's `left` is computed manually from `--step-indicator-size`, so it landed a few px
@@ -447,7 +447,7 @@ test.describe('Layout', () => {
   // Regression: the vertical connector's leading half had a fixed length (just the
   // `padding-block-start` gap), so it only ever reached from a step's own top edge to its own
   // indicator. A step with a description taller than its indicator makes that step's `<li>`
-  // taller too — the connector never covered that extra height, leaving a visible break
+  // taller too: the connector never covered that extra height, leaving a visible break
   // alongside the description text before the line picked up again at the next step.
   test('vertical connector spans the full height even when a step has a tall description', async ({
     page,

@@ -1,5 +1,5 @@
 ---
-title: Courier — API Reference
+title: 'Courier: API Reference'
 description: Reference for Courier HTTP, cached read, prefetch, middleware, and error APIs.
 ---
 
@@ -265,8 +265,8 @@ type PrefetchConfig<P extends string = string, T = unknown> = Omit<
 | `CourierTimeoutError` | Timeout signal aborts request | `method`, `url`, `cause` |
 | `CourierAbortError` | Caller or client cancellation | `method`, `url`, `cause` |
 | `CourierSchemaValidationError` | Response schema fails | `data`, `cause` |
-| `CourierParseError` | Response body cannot parse | — |
-| `CourierConfigError` | Invalid request config (GET/HEAD body, raw + schema) | — |
-| `CourierDisposedError` | Work starts after disposal | — |
+| `CourierParseError` | Response body cannot parse | N/A |
+| `CourierConfigError` | Invalid request config (GET/HEAD body, raw + schema) | N/A |
+| `CourierDisposedError` | Work starts after disposal | N/A |
 
 Errors thrown directly by custom middleware are preserved rather than reclassified.

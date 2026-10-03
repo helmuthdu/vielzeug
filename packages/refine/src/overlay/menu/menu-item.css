@@ -77,7 +77,7 @@
     color: currentcolor;
   }
 
-  /* CSS-based check/radio indicator — no Unicode characters */
+  /* CSS-based check/radio indicator: no Unicode characters */
   .item-check::before {
     display: block;
     width: 0.875rem;

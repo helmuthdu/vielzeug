@@ -1,5 +1,5 @@
 ---
-title: 'Courier Examples — Disposal'
+title: 'Courier Examples: Disposal'
 description: 'Cancel Courier work deterministically.'
 ---
 

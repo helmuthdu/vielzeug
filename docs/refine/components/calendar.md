@@ -1,6 +1,6 @@
 # Calendar
 
-An accessible, always-visible inline calendar. Supports day / month / year drill-down views, min/max bounds, disabled weekend days, theming, and native form association. Use this when you want the calendar rendered directly in the page — see [Date Picker](/refine/components/date-picker) for the trigger + popup variant.
+An accessible, always-visible inline calendar. Supports day / month / year drill-down views, min/max bounds, disabled weekend days, theming, and native form association. Use this when you want the calendar rendered directly in the page: see [Date Picker](/refine/components/date-picker) for the trigger + popup variant.
 
 ## With Pre-selected Value
 
@@ -63,9 +63,9 @@ Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weeke
 
 Pass an array of `CalendarEvent` objects via the `events` JS property. Each entry requires an `id`, a `date` (ISO 8601), and a `label`. An optional `color` accepts any CSS color value.
 
-**Normal mode** — up to 3 colored dots per cell; additional events appear as a `+N` count.
+**Normal mode**: up to 3 colored dots per cell; additional events appear as a `+N` count.
 
-**Expanded mode** — up to 3 colored pills with labels; additional events appear as `+N more`.
+**Expanded mode**: up to 3 colored pills with labels; additional events appear as `+N more`.
 
 <ComponentPreview vertical>
 
@@ -218,11 +218,11 @@ document.querySelector('ore-calendar').addEventListener('change', (e) => {
 
 The header label button cycles through three views on each click:
 
-1. **Day** — the standard month grid; Previous/Next navigate by month
-2. **Month** — a 4×3 grid of abbreviated month names; click a month to return to day view at that month
-3. **Year** — a 4×3 grid of year numbers; click a year to go to month view for that year
+1. **Day**: the standard month grid; Previous/Next navigate by month
+2. **Month**: a 4×3 grid of abbreviated month names; click a month to return to day view at that month
+3. **Year**: a 4×3 grid of year numbers; click a year to go to month view for that year
 
-The calendar panel maintains a stable size across all three views — day view reserves space for a maximum 6-week month, and month/year views fill the same width.
+The calendar panel maintains a stable size across all three views: day view reserves space for a maximum 6-week month, and month/year views fill the same width.
 
 ## API Reference
 
@@ -230,17 +230,17 @@ The calendar panel maintains a stable size across all three views — day view r
 
 | Prop           | Type              | Default        | Description                                                                                           |
 | -------------- | ----------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
-| `value`        | `string`          | —              | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                       |
-| `min`          | `string`          | —              | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                    |
-| `max`          | `string`          | —              | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                      |
+| `value`        | `string`          | N/A | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                       |
+| `min`          | `string`          | N/A | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                    |
+| `max`          | `string`          | N/A | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                      |
 | `weekend-days` | `number[]`        | `[]`           | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `weekend-days="[0,6]"` |
 | `locale`       | `string`          | browser locale | BCP 47 locale string for day/month names                                                              |
-| `color`        | `string`          | —              | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                  |
+| `color`        | `string`          | N/A | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                  |
 | `size`         | `string`          | `md`           | Component size: `sm` \| `md` \| `lg`                                                                  |
-| `rounded`      | `string`          | —              | Border radius override                                                                                |
+| `rounded`      | `string`          | N/A | Border radius override                                                                                |
 | `disabled`     | `boolean`         | `false`        | Disable all interaction                                                                               |
 | `required`     | `boolean`         | `false`        | Required field (form association)                                                                     |
-| `name`         | `string`          | —              | Form field name                                                                                       |
+| `name`         | `string`          | N/A | Form field name                                                                                       |
 | `events`       | `CalendarEvent[]` | `[]`           | Calendar events to display. Dots in normal mode, pills in expanded mode. Set via JS property          |
 | `expanded`     | `boolean`         | `false`        | Expanded calendar-app layout with tall cells and top-aligned day number circles                       |
 | `fullwidth`    | `boolean`         | `false`        | Expand calendar to full container width                                                               |
@@ -252,7 +252,7 @@ The calendar panel maintains a stable size across all three views — day view r
 | `id`    | `string` | Yes      | Unique identifier                                              |
 | `date`  | `string` | Yes      | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
 | `label` | `string` | Yes      | Short label shown in the cell (pill text in expanded mode)     |
-| `color` | `string` | —        | Any CSS color value. Falls back to the component's theme color |
+| `color` | `string` | N/A | Any CSS color value. Falls back to the component's theme color |
 
 ### Events
 
@@ -284,7 +284,7 @@ The calendar panel maintains a stable size across all three views — day view r
 
 ## Accessibility
 
-`ore-calendar` implements the [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/). The host element carries `role="group"` and `aria-label` set to the currently visible month/year. Each view (day/month/year) uses `role="grid"` with cells grouped into `role="row"` elements — `role="columnheader"` for the day view's weekday headers, `role="gridcell"` on every day/month/year cell.
+`ore-calendar` implements the [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/). The host element carries `role="group"` and `aria-label` set to the currently visible month/year. Each view (day/month/year) uses `role="grid"` with cells grouped into `role="row"` elements: `role="columnheader"` for the day view's weekday headers, `role="gridcell"` on every day/month/year cell.
 
 Selected days have `aria-selected="true"`; unselected days have `aria-selected="false"`. Today's cell carries `aria-current="date"`. Out-of-range and disabled-weekday cells have `aria-disabled="true"` and `tabindex="-1"`, removing them from tab order. When the `disabled` attribute is set on the host, it receives `aria-disabled="true"`, all cells become `tabindex="-1"`, and no interaction is processed.
 
@@ -318,9 +318,9 @@ Selected days have `aria-selected="true"`; unselected days have `aria-selected="
 
 | Key             | Action                                              |
 | --------------- | --------------------------------------------------- |
-| Click / `Enter` | Previous / Next button — navigate by month or year  |
-| Click / `Enter` | Label button — cycle view: Day → Month → Year → Day |
+| Click / `Enter` | Previous / Next button: navigate by month or year  |
+| Click / `Enter` | Label button: cycle view: Day → Month → Year → Day |
 
 ## Related Components
 
-- [Date Picker](/refine/components/date-picker) — trigger + popup wrapper around the same calendar logic
+- [Date Picker](/refine/components/date-picker): trigger + popup wrapper around the same calendar logic

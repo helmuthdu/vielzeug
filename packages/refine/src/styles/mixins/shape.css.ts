@@ -129,23 +129,23 @@ export const roundedVariantMixin = css`
 export type SizeConfig = {
   /** Arbitrary CSS custom properties (must start with --) */
   [key: `--${string}`]: string | undefined;
-  /** Font size — maps to --_font-size */
+  /** Font size: maps to --_font-size */
   fontSize?: string;
-  /** Gap between elements — maps to --_gap */
+  /** Gap between elements: maps to --_gap */
   gap?: string;
-  /** Element height — maps to --_height */
+  /** Element height: maps to --_height */
   height?: string;
-  /** Icon size — maps to --_icon-size */
+  /** Icon size: maps to --_icon-size */
   iconSize?: string;
-  /** Line height — maps to --_line-height */
+  /** Line height: maps to --_line-height */
   lineHeight?: string;
-  /** Internal padding — maps to --_padding */
+  /** Internal padding: maps to --_padding */
   padding?: string;
-  /** Element size (width/height) — maps to --_size */
+  /** Element size (width/height): maps to --_size */
   size?: string;
-  /** Thumb size (e.g. toggle/switch thumb) — maps to --_thumb-size */
+  /** Thumb size (e.g. toggle/switch thumb): maps to --_thumb-size */
   thumbSize?: string;
-  /** Element width — maps to --_width */
+  /** Element width: maps to --_width */
   width?: string;
 };
 

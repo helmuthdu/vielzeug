@@ -1,9 +1,9 @@
 # List
 
-A vertical list container for rows of content — a plain display list by default, or a
+A vertical list container for rows of content: a plain display list by default, or a
 keyboard-navigable single-select listbox via `selectable`. Each `ore-list-item` can independently
 reveal a left/right action panel via a horizontal pointer/touch swipe (or by focusing into the
-panel's contents) — useful for mobile-style row actions like archive or delete.
+panel's contents): useful for mobile-style row actions like archive or delete.
 
 ## Basic Usage
 
@@ -97,13 +97,13 @@ list.addEventListener('activate', (event) => {
 
 ## Selectable Listbox
 
-Set `selectable` to turn the list into a single-selection `role="listbox"` — clicking (or pressing
+Set `selectable` to turn the list into a single-selection `role="listbox"`: clicking (or pressing
 <kbd>Enter</kbd>/<kbd>Space</kbd> on) an item selects it and deselects any previously-selected
-sibling. Arrow keys move focus between items (manual activation — pressing <kbd>Enter</kbd>/
+sibling. Arrow keys move focus between items (manual activation: pressing <kbd>Enter</kbd>/
 <kbd>Space</kbd> on the focused item commits the selection). A `role="listbox"` needs an accessible
 name, so set `aria-label` (or `aria-labelledby`) directly, same as `ore-menu`.
 
-`ore-list`'s own `value` is the single source of truth for selection — set it to seed the initial
+`ore-list`'s own `value` is the single source of truth for selection: set it to seed the initial
 selection, bind it for two-way control, or read it back from `change`. `ore-list-item` has no
 `selected` prop of its own to set; its `selected` attribute is always derived by comparing its
 `value` against the list's.
@@ -132,25 +132,25 @@ selection, bind it for two-way control, or read it back from `change`. `ore-list
 ## Swipe Actions
 
 Slot content into `actions-left`/`actions-right` and it becomes reachable by swiping the row with
-a pointer or touch — the side with content reveals; swiping toward an empty side does nothing.
+a pointer or touch: the side with content reveals; swiping toward an empty side does nothing.
 Only one item can have its actions revealed at a time: opening another item, tapping the row
 itself, or tapping anywhere outside the item closes it again. Reverse-swiping an already-open item
-is not supported — close it one of the three ways above instead.
+is not supported: close it one of the three ways above instead.
 
 A single slotted action fills the whole panel (`flex: 1; height: 100%` on the slot itself), the
 big-tappable-target look of iOS Mail's/Gmail's row actions. For `ore-button` specifically, also
-set its own [`fullheight`](./button.md#full-height) attribute — its visible surface is an inner
+set its own [`fullheight`](./button.md#full-height) attribute: its visible surface is an inner
 element with a fixed height from its size preset, independent of its own light-DOM box size, so
 stretching the light-DOM box alone isn't enough.
 
 Swiping all the way through (well past the reveal distance) auto-confirms the action instead of
-just revealing it — the same "swipe all the way" shortcut as iOS Mail's delete gesture. It clicks
+just revealing it: the same "swipe all the way" shortcut as iOS Mail's delete gesture. It clicks
 the slot's own first element (so a real action button's own click handler runs) and fires
 `confirm`; the panel closes on its own afterward. The row and action panel tint slightly once the
 drag is close to that point, as a heads-up before it fires.
 
 On hover-capable fine pointers, a hovered row peeks a few pixels of its first populated action
-panel so the swipe affordance is discoverable without a gesture — touch discovers the swipe
+panel so the swipe affordance is discoverable without a gesture: touch discovers the swipe
 natively. The peek distance is `--list-item-peek`, a fraction of the panel width (default
 `0.08`; `0` disables it), and it never competes with a real state: it applies only while no
 panel is revealed, no slotted action is focused, and no drag is in progress.
@@ -224,7 +224,7 @@ individual item (also excludes it from arrow-key navigation).
 | `size`       | `'sm' \| 'md' \| 'lg'`                     | `'md'`    | Size applied to all items                                    |
 | `selectable` | `boolean`                                   | `false`   | Enable single-selection listbox behavior                    |
 | `disabled`   | `boolean`                                   | `false`   | Disable the entire list                                      |
-| `value`      | `string`                                    | —         | Selected item's value (`selectable` only) — the single source of truth for selection |
+| `value`      | `string`                                    | N/A | Selected item's value (`selectable` only): the single source of truth for selection |
 
 **`ore-list`** Events
 
@@ -238,9 +238,9 @@ individual item (also excludes it from arrow-key navigation).
 | ---------- | ---------------------- | --------- | -------------------------------------------------------------- |
 | `actionable` | `boolean`            | `false`   | Give the row button semantics and emit `activate` on pointer or keyboard activation |
 | `disabled` | `boolean`              | `false`   | Disable this item                                              |
-| `selected` | `boolean` (read-only)  | `false`   | Derived — `true` when this item's `value` matches the parent list's `value`. Not independently settable. |
-| `value`    | `string`               | —         | Opaque value compared against the parent list's `value` to derive `selected`; also reported in select/change events |
-| `revealed` | `'left' \| 'right'`    | —         | Which action panel is revealed; settable programmatically      |
+| `selected` | `boolean` (read-only)  | `false`   | Derived: `true` when this item's `value` matches the parent list's `value`. Not independently settable. |
+| `value`    | `string`               | N/A | Opaque value compared against the parent list's `value` to derive `selected`; also reported in select/change events |
+| `revealed` | `'left' \| 'right'`    | N/A | Which action panel is revealed; settable programmatically      |
 
 **`ore-list-item`** Events
 
@@ -275,17 +275,17 @@ individual item (also excludes it from arrow-key navigation).
 
 ## Accessibility
 
-- `ore-list` exposes `role="list"` by default, or `role="listbox"` when `selectable` — set
+- `ore-list` exposes `role="list"` by default, or `role="listbox"` when `selectable`: set
   `aria-label`/`aria-labelledby` on it in listbox mode, same as any native listbox or `ore-menu`.
 - `ore-list-item` exposes `role="listitem"` by default, or `role="option"` with `aria-selected`
   when its parent list is `selectable`.
 - `actionable` gives the focusable row `role="button"` and matching Enter/Space behavior without turning the list into a listbox.
 - Arrow keys / Home / End move focus between items when `selectable`; Enter/Space commits the
   selection on the focused item (manual activation, not selection-follows-focus).
-- Swipe-revealed action panels stay reachable from the keyboard independently of the gesture —
+- Swipe-revealed action panels stay reachable from the keyboard independently of the gesture :
   tabbing into a slotted action button reveals its panel via `:focus-within`.
-- Combining `selectable` with swipe actions **on the same item** — a `role="option"` element
-  containing a real focusable descendant — is a known WAI-ARIA tension (axe's `nested-interactive`
+- Combining `selectable` with swipe actions **on the same item**: a `role="option"` element
+  containing a real focusable descendant: is a known WAI-ARIA tension (axe's `nested-interactive`
   rule) inherent to that exact combination, not something a different role can route around; using
   either feature on its own (a plain swipeable list, or a selectable list without row actions) has
   no such gap.

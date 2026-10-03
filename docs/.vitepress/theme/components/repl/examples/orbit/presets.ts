@@ -3,7 +3,7 @@ export const presetsExample = {
 import { tooltip, dropdown, popover, contextMenu } from '@vielzeug/orbit/presets'
 
 // Presets are pre-configured middleware stacks for common UI patterns.
-// Each factory returns { placement, middleware } — spread into createPositioner().
+// Each factory returns { placement, middleware }: spread into createPositioner().
 
 // --- tooltip() ---
 const tooltipPreset = tooltip()

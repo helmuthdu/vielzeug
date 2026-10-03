@@ -3,7 +3,7 @@ name: Publish
 # The only workflow that can run `npm publish`.
 #
 # npm's Trusted Publishing (OIDC) validates the *triggering* workflow's filename and allows
-# exactly one filename per package, so every publish path must originate here — including the
+# exactly one filename per package, so every publish path must originate here: including the
 # ones that delegate the actual `npm publish` to the reusable `_publish-one.yml`. Register
 # `publish.yml` (not `_publish-one.yml`) as the Trusted Publisher on npmjs.com for every
 # @vielzeug/* package. See `.github/AGENTS.md`.
@@ -109,7 +109,7 @@ jobs:
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
 
-      # A release train must land on a tree the build didn't dirty — anything a build wrote
+      # A release train must land on a tree the build didn't dirty: anything a build wrote
       # to a tracked file is a bug worth stopping for, not something to fold into the
       # train commit (which stages only manifests, changelogs, and change files).
       - name: Require a clean tree after build
@@ -117,9 +117,9 @@ jobs:
 
       # Applies the CalVer train: every manifest stamped `YY.MM.N`, changelog entries for
       # packages with pending change files, those files consumed, one commit. mode=single
-      # scopes the changelog and consumption to the target package — see
+      # scopes the changelog and consumption to the target package: see
       # scripts/release/apply-train.mjs. A dry run still stamps and commits locally (the
-      # publish matrix is planned from the stamped versions) but never pushes — the push
+      # publish matrix is planned from the stamped versions) but never pushes: the push
       # step is gated on inputs.dry-run.
       - name: Apply release train
         run: node scripts/release/cli.mjs apply ${{ inputs.mode == 'single' && inputs.package || '' }}

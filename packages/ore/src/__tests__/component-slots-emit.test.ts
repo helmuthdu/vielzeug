@@ -60,7 +60,7 @@ describe('component slots and emit', () => {
   it('useSlots() called from setup() and from within onMounted() returns the same registry', async () => {
     // Regression test: onMounted() callbacks each run with their own freshly-created
     // RuntimeContext (see base-element.ts's _scheduleMountCallbacks), so the registry cache
-    // must key on the host element, not that ephemeral context — otherwise this pair of calls
+    // must key on the host element, not that ephemeral context, otherwise this pair of calls
     // would silently create two independent MutationObservers over the same shadow root.
     let fromSetup: ReturnType<typeof useSlots> | undefined;
     let fromMounted: ReturnType<typeof useSlots> | undefined;
@@ -104,7 +104,7 @@ describe('component slots and emit', () => {
     await flush();
     expect(assigned).toBe(true);
 
-    // Simulate disconnect + reconnect of the same element instance — setup() re-runs, and
+    // Simulate disconnect + reconnect of the same element instance: setup() re-runs, and
     // useSlots() must return a freshly-observing registry, not a torn-down cached one.
     const parent = element.parentNode;
 
@@ -197,7 +197,7 @@ describe('component slots and emit', () => {
 
   it('emit() crosses a nested shadow boundary so an outer listener observes it', async () => {
     // The inner component emits; it lives inside an outer component's shadow root.
-    // A listener on the outer host must still observe the event — only a composed
+    // A listener on the outer host must still observe the event: only a composed
     // event propagates out of the inner component's own shadow tree.
     define('ore-emit-nested-inner', {
       setup: () => {

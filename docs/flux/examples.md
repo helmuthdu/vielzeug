@@ -1,5 +1,5 @@
 ---
-title: Flux — Examples
+title: 'Flux: Examples'
 description: Practical examples and recipes for @vielzeug/flux.
 ---
 

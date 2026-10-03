@@ -18,7 +18,7 @@ export type QrPayload =
   | { readonly mode: 'numeric' | 'alphanumeric'; readonly text: string }
   | { readonly mode: 'byte'; readonly bytes: Uint8Array };
 
-/** Interpret `text` as `mode` — UTF-8-encoding only for byte mode. */
+/** Interpret `text` as `mode`: UTF-8-encoding only for byte mode. */
 export const payloadFromText = (text: string, mode: QrMode): QrPayload =>
   mode === 'byte' ? { bytes: textEncoder.encode(text), mode: 'byte' } : { mode, text };
 

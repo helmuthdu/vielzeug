@@ -1,5 +1,5 @@
 /* ========================================
-   Popover UA resets — unlayered so they unconditionally beat
+   Popover UA resets: unlayered so they unconditionally beat
    the browser's [popover] UA stylesheet (padding / inset / border / margin).
    Must NOT be inside @layer; unlayered author rules win over every layer and
    every UA default.
@@ -27,7 +27,7 @@
     --_tooltip-shadow: var(--shadow-md);
     --_tooltip-closed-transform: translateY(4px) scale(0.98);
 
-    /* Positioning — JS sets top/left inline */
+    /* Positioning: JS sets top/left inline */
     position: fixed;
     max-width: var(--tooltip-max-width, var(--size-72));
     font-size: var(--text-xs);

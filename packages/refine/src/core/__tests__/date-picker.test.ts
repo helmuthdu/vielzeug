@@ -49,7 +49,7 @@ describe('createDatePickerControl', () => {
 
       ctrl.nextMonth();
 
-      expect(ctrl.displayMonth()).toBe(2); // February — 1-indexed
+      expect(ctrl.displayMonth()).toBe(2); // February: 1-indexed
       expect(ctrl.displayYear()).toBe(2025);
     });
 
@@ -58,7 +58,7 @@ describe('createDatePickerControl', () => {
 
       ctrl.nextMonth();
 
-      expect(ctrl.displayMonth()).toBe(1); // January — 1-indexed
+      expect(ctrl.displayMonth()).toBe(1); // January: 1-indexed
       expect(ctrl.displayYear()).toBe(2026);
     });
 
@@ -67,7 +67,7 @@ describe('createDatePickerControl', () => {
 
       ctrl.prevMonth();
 
-      expect(ctrl.displayMonth()).toBe(5); // May — 1-indexed
+      expect(ctrl.displayMonth()).toBe(5); // May: 1-indexed
     });
 
     it('prevMonth wraps January → December and decrements year', () => {
@@ -75,7 +75,7 @@ describe('createDatePickerControl', () => {
 
       ctrl.prevMonth();
 
-      expect(ctrl.displayMonth()).toBe(12); // December — 1-indexed
+      expect(ctrl.displayMonth()).toBe(12); // December: 1-indexed
       expect(ctrl.displayYear()).toBe(2024);
     });
   });
@@ -314,17 +314,17 @@ describe('createDatePickerControl', () => {
       const ctrl = makeCtrl({ min: plain(2025, 6, 1), value: plain(2025, 1, 1) });
       const cells = ctrl.monthCells();
 
-      expect(cells[0].isDisabled).toBe(true); // January — ends before June
-      expect(cells[5].isDisabled).toBe(false); // June — not disabled
-      expect(cells[6].isDisabled).toBe(false); // July — not disabled
+      expect(cells[0].isDisabled).toBe(true); // January: ends before June
+      expect(cells[5].isDisabled).toBe(false); // June: not disabled
+      expect(cells[6].isDisabled).toBe(false); // July: not disabled
     });
 
     it('marks months after max as disabled', () => {
       const ctrl = makeCtrl({ max: plain(2025, 6, 30), value: plain(2025, 1, 1) });
       const cells = ctrl.monthCells();
 
-      expect(cells[5].isDisabled).toBe(false); // June — last day is max
-      expect(cells[6].isDisabled).toBe(true); // July — starts after max
+      expect(cells[5].isDisabled).toBe(false); // June: last day is max
+      expect(cells[6].isDisabled).toBe(true); // July: starts after max
     });
 
     it('no cells disabled when no min/max set', () => {
@@ -461,7 +461,7 @@ describe('formatDisplayDate()', () => {
     const enResult = formatDisplayDate(plain(2025, 1, 1), 'en-US');
     const deResult = formatDisplayDate(plain(2025, 1, 1), 'de-DE');
 
-    // English abbreviates January as "Jan"; German as "Jan." — different enough
+    // English abbreviates January as "Jan"; German as "Jan.": different enough
     // to prove the locale argument actually changes the output.
     expect(enResult).not.toBe(deResult);
   });

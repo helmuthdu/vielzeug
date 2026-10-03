@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isMatch'
+title: 'Arsenal Examples: isMatch'
 description: 'isMatch example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isMatch example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need partial structural matching — checking that an object contains at least the keys and values of a source, without requiring exact equality.
+You need partial structural matching: checking that an object contains at least the keys and values of a source, without requiring exact equality.
 
 ### Solution
 
@@ -25,8 +25,8 @@ isMatch(user, { role: 'user' }); // false
 
 ### Pitfalls
 
-- `Map` and `Set` sources always return `false` — use `isEqual` for those types.
-- Only checks keys present in `source` — extra keys in `object` are ignored.
+- `Map` and `Set` sources always return `false`: use `isEqual` for those types.
+- Only checks keys present in `source`: extra keys in `object` are ignored.
 
 ### Related
 

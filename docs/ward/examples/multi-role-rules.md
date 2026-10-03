@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Multi-Role Rules'
+title: 'Ward Examples: Multi-Role Rules'
 description: 'Grant one permission to several roles.'
 ---
 

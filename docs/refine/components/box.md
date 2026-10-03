@@ -1,15 +1,15 @@
 # Box
 
-A foundational layout primitive with theming support. Box provides a simple, semantic container with color, elevation, and padding options — the perfect building block for layouts and compositions.
+A foundational layout primitive with theming support. Box provides a simple, semantic container with color, elevation, and padding options: the perfect building block for layouts and compositions.
 
 ## Variants
 
 Four variants cover the full range from solid to translucent.
 
-- **Default** (no `variant`) — Canvas background with border and subtle shadow. Picks up `color` as a tinted backdrop.
-- **`solid`** — Filled with the selected theme color.
-- **`flat`** — Same as default but with no shadow; low visual weight.
-- **`frost`** — Translucent, color-tinted surface with a strong backdrop blur.
+- **Default** (no `variant`): Canvas background with border and subtle shadow. Picks up `color` as a tinted backdrop.
+- **`solid`**: Filled with the selected theme color.
+- **`flat`**: Same as default but with no shadow; low visual weight.
+- **`frost`**: Translucent, color-tinted surface with a strong backdrop blur.
 
 <ComponentPreview>
 
@@ -46,7 +46,7 @@ Use frost over colorful backgrounds or imagery, but avoid nesting multiple trans
 
 ## Colors
 
-Six semantic colors for different contexts. Hover state is included for `solid` and `flat` when a color is set. Combine `color` and `elevation` to create visual hierarchy without custom CSS. Note that `color` alone does not convey meaning — box is a container, not a status indicator.
+Six semantic colors for different contexts. Hover state is included for `solid` and `flat` when a color is set. Combine `color` and `elevation` to create visual hierarchy without custom CSS. Note that `color` alone does not convey meaning: box is a container, not a status indicator.
 
 <ComponentPreview>
 
@@ -125,7 +125,7 @@ Choose from five padding sizes.
 
 ## Rainbow Border
 
-Animated rainbow border effect — works on any variant.
+Animated rainbow border effect: works on any variant.
 
 <ComponentPreview center>
 
@@ -153,7 +153,7 @@ Animated rainbow border effect — works on any variant.
 | `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Internal padding       |
 | `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow depth (0–5)     |
 | `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`  | Border radius          |
-| `effect`    | `'rainbow'`                                                               | —       | Animated border effect |
+| `effect`    | `'rainbow'`                                                               | N/A | Animated border effect |
 | `fullwidth` | `boolean`                                                                 | `false` | Expand to full width   |
 
 ### Slots
@@ -166,7 +166,7 @@ Animated rainbow border effect — works on any variant.
 
 | Part  | Description                              |
 | ----- | ---------------------------------------- |
-| `box` | The inner `<div>` — target with `::part` |
+| `box` | The inner `<div>`: target with `::part` |
 
 ### CSS Custom Properties
 

@@ -1,4 +1,4 @@
-# `.github/` — CI/CD
+# `.github/`: CI/CD
 
 Workflow YAML is glue. Every non-trivial release operation is a plain Node module under
 [`scripts/release/`](../scripts/release) with its own tests (`pnpm vitest run scripts/release`);
@@ -11,7 +11,7 @@ not in the YAML.
 | ---------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `workflows/ci.yml`           | push `main`, PR         | Build, test (coverage on push), demos, REPL examples, docs build; lint and structure validators; `rush change --verify` on PRs.                                 |
 | `workflows/deploy-docs.yml`  | push `main`, dispatch   | Builds packages, docs and demos, deploys to GitHub Pages.                                                                                                     |
-| `workflows/publish.yml`      | dispatch                | **The only workflow that publishes.** `mode=single`/`all` apply the CalVer release train (lockstep manifest stamp, changelogs for changed packages), push, then publish each changed package as a matrix via `_publish-one.yml`; `mode=missing` backfills released-but-unpublished versions (changelog-entry rule — see `RELEASE.md`). `dry-run` input. |
+| `workflows/publish.yml`      | dispatch                | **The only workflow that publishes.** `mode=single`/`all` apply the CalVer release train (lockstep manifest stamp, changelogs for changed packages), push, then publish each changed package as a matrix via `_publish-one.yml`; `mode=missing` backfills released-but-unpublished versions (changelog-entry rule: see `RELEASE.md`). `dry-run` input. |
 | `workflows/_publish-one.yml` | `workflow_call`         | Publish + tag + GitHub release for one package (the matrix body).                                                                                             |
 | `workflows/release.yml`      | dispatch                | Tag + GitHub release only, for versions published via `pnpm release:publish-local` (which never tags). Scans for "on npm, not yet tagged"; no inputs besides `dry-run`. |
 | `actions/setup/`             | composite               | Node (`.nvmrc`), pnpm (`package.json#packageManager`), caches, `rush install`, root `pnpm install`. Inputs let a job skip installs it doesn't need; `trusted-publishing` pins npm for OIDC. |

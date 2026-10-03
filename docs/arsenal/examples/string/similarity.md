@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — similarity'
+title: 'Arsenal Examples: similarity'
 description: 'similarity example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'similarity example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need a 0–1 score for how similar two strings are — for example ranking search results or detecting near-duplicates.
+You need a 0–1 score for how similar two strings are: for example ranking search results or detecting near-duplicates.
 
 ### Solution
 
@@ -34,7 +34,7 @@ candidates.filter((c) => similarity(c.toLowerCase(), 'typescript') >= 0.5);
 ### Pitfalls
 
 - Throws `RangeError` if either input exceeds 10 000 characters.
-- Case-sensitive — lowercase both strings before comparing if case-insensitive matching is needed.
+- Case-sensitive: lowercase both strings before comparing if case-insensitive matching is needed.
 
 ### Related
 

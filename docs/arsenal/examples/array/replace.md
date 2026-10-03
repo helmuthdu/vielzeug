@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — replace'
+title: 'Arsenal Examples: replace'
 description: 'replace example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'replace example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to swap one item in an array with a new value without mutating the original — for example updating a single record in an immutable list.
+You need to swap one item in an array with a new value without mutating the original: for example updating a single record in an immutable list.
 
 ### Solution
 

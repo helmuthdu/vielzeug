@@ -1,5 +1,5 @@
 /**
- * `@vielzeug/codex/refine` — opt-in Refine component tools.
+ * `@vielzeug/codex/refine`: opt-in Refine component tools.
  *
  * The main entry (`@vielzeug/codex`) registers only generic, product-agnostic package
  * tools. Refine-specific tools (`refine-*`) live here behind a subpath so the core

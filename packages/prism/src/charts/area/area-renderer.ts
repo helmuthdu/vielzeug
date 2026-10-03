@@ -10,7 +10,7 @@ import type { ContinuousDatum, Scale, TransitionConfig } from '../../types';
 export interface AreaRenderOptions {
   color: string;
   curve: 'linear' | 'monotone' | 'step';
-  /** Aborted when the owning chart is disposed — stops the transition's `requestAnimationFrame` loop from rescheduling. */
+  /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
   disposalSignal?: AbortSignal;
   fillOpacity: number;
   showLine: boolean;
@@ -129,10 +129,10 @@ export function computeAreaPoints(
 ): Point[] {
   if (data.some((d) => d.key == null)) {
     warn(
-      'computeAreaPoints: datum.key is null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
+      'computeAreaPoints: datum.key is null or undefined: data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
     );
   } else if (data.some((d) => typeof d.key === 'string')) {
-    warn('computeAreaPoints: string keys are not supported for line/area charts — use numeric or Date keys.');
+    warn('computeAreaPoints: string keys are not supported for line/area charts: use numeric or Date keys.');
   }
 
   return data.map((d) => ({

@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Review Rule Order'
+title: 'Ward Examples: Review Rule Order'
 description: 'Test ordered policies for shadowed rules.'
 ---
 

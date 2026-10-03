@@ -199,7 +199,7 @@
             </span>
           </div>
         </div>
-        <!-- Sandboxed execution target — invisible: this REPL only shows console/return-value
+        <!-- Sandboxed execution target: invisible: this REPL only shows console/return-value
              output, never rendered DOM, so the iframe itself never needs to be seen. -->
         <div aria-hidden="true" class="sandbox-host" ref="sandboxContainer" ></div>
       </div>
@@ -270,7 +270,7 @@ const librariesInLoadOrder = computed<LibraryEntry[]>(() =>
 
 /** IIFE bundles to inline into the sandbox document, in dependency-first order.
  *  Prepends the Temporal polyfill when tempo (or a dependent like illusionist) is in the
- *  load order — tempo's IIFE expects a top-level `Temporal` global, which browsers don't
+ *  load order: tempo's IIFE expects a top-level `Temporal` global, which browsers don't
  *  provide natively. */
 const sandboxLibraries = computed<SandboxLibrary[]>(() => {
   const libs = librariesInLoadOrder.value.map((entry) => ({ globalName: entry.globalName, iifeSource: entry.iifeSource }));
@@ -322,7 +322,7 @@ function resolveGlobalNameFor(entries: LibraryEntry[]): (lib: string) => string 
   const globalNames = Object.fromEntries(entries.map((entry) => [entry.id, entry.globalName]));
 
   // Subpath imports (e.g. `@vielzeug/illusionist/locales`) capture the full path
-  // as `lib`. Strip to the package name to find the matching IIFE global — the
+  // as `lib`. Strip to the package name to find the matching IIFE global: the
   // subpath's exports are properties of the same global (see IIFE entry setup).
   return (lib: string) => globalNames[lib.split('/')[0]] ?? lib;
 }
@@ -452,7 +452,7 @@ watch(
   () => props.library.id,
   () => {
     selectedExample.value = '';
-    // Switching libraries abandons whatever the previous library's code was doing — cancel()
+    // Switching libraries abandons whatever the previous library's code was doing: cancel()
     // both supersedes the sandbox's current render (so a still-running/hung previous run's
     // output can't land in what now looks like a fresh panel) and clears the output itself.
     execution.cancel();

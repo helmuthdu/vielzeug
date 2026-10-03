@@ -1,5 +1,5 @@
 ---
-title: Herald Examples — Bridge Buses Explicitly
+title: 'Herald Examples: Bridge Buses Explicitly'
 description: Forward selected events between typed buses with ordinary subscriptions.
 ---
 

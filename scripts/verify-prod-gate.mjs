@@ -2,7 +2,7 @@
  * Repo-wide prod-gate assertion: no published artifact may contain a raw
  * `__<PKG>_PROD__` global reference. Every package's `src/_dev.ts` gates dev
  * warnings behind that global, and the shared build config (root vite.config.ts's
- * `prodGateDefine`) bakes it to the literal `true` — so a surviving reference means
+ * `prodGateDefine`) bakes it to the literal `true`, so a surviving reference means
  * the define was lost from some build path and dev warns are live in production.
  *
  * Run after a full build (`pnpm build`). Exits non-zero on any violation.
@@ -43,11 +43,11 @@ for (const pkg of readdirSync(PACKAGES_DIR)) {
 }
 
 if (failures.length > 0) {
-  console.error('Prod-gate violation — raw __*_PROD__ references survived into dist:');
+  console.error('Prod-gate violation: raw __*_PROD__ references survived into dist:');
 
   for (const failure of failures) console.error(`  - ${failure}`);
 
   process.exitCode = 1;
 } else {
-  console.log('OK — no raw __*_PROD__ references in any package dist.');
+  console.log('OK: no raw __*_PROD__ references in any package dist.');
 }

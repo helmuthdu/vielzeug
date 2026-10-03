@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — Cursor-Based Pagination'
+title: 'Sourcerer Examples: Cursor-Based Pagination'
 description: 'Navigate opaque cursor pages without inventing page numbers.'
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 'Herald Examples — Inspecting listener counts'
+title: 'Herald Examples: Inspecting listener counts'
 description: 'Inspecting listener counts example for @vielzeug/herald.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Inspecting listener counts example for @vielzeug/herald.'
 
 ### Problem
 
-During debugging or in a test, you want to assert that exactly the right number of listeners are registered on the bus — detecting leaks from missing cleanup or verifying that setup ran correctly.
+During debugging or in a test, you want to assert that exactly the right number of listeners are registered on the bus: detecting leaks from missing cleanup or verifying that setup ran correctly.
 
 ### Solution
 
@@ -22,7 +22,7 @@ bus.on('user:logout', handler3);
 
 bus.listenerCount('user:login'); // 2
 bus.listenerCount('user:logout'); // 1
-bus.listenerCount(); // 3 — total across specific events
+bus.listenerCount(); // 3: total across specific events
 bus.wildcardCount(); // onAny listeners only
 bus.eventNames(); // ['user:login', 'user:logout']
 

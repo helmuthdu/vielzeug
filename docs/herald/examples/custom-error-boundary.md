@@ -1,5 +1,5 @@
 ---
-title: Herald Examples — Observe Listener Failures
+title: 'Herald Examples: Observe Listener Failures'
 description: Observe isolated synchronous listener failures through Herald runtime tracing.
 ---
 

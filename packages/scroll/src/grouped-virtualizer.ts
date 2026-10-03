@@ -393,7 +393,7 @@ export function createGroupedVirtualizer<T>(
     },
     /**
      * Replace all sections. Closures for estimateFn and getItemKey already
-     * capture the live `flat`/`sections` references — only count is passed to
+     * capture the live `flat`/`sections` references: only count is passed to
      * the underlying virtualizer to avoid discarding measured sizes on every
      * data refresh. `refresh()` rebuilds offsets while preserving the cache.
      */

@@ -38,7 +38,7 @@ Mon, 17 Aug 2026 10:42:29 GMT
 
 ### Minor changes
 
-- refactor: fix InternalBusOptions leak — split createBus into public createBus(BusOptions) and @internal createBusInternal(InternalBusOptions). Remove HeraldError.is() type guard (use instanceof). Fix maxBuffer JSDoc to document HeraldConfigError instead of RangeError. Inline _prototype.ts isUnsafeObjectKey into testing/testing.ts and delete _prototype.ts. Update REPL error-handling example to use instanceof.
+- refactor: fix InternalBusOptions leak: split createBus into public createBus(BusOptions) and @internal createBusInternal(InternalBusOptions). Remove HeraldError.is() type guard (use instanceof). Fix maxBuffer JSDoc to document HeraldConfigError instead of RangeError. Inline _prototype.ts isUnsafeObjectKey into testing/testing.ts and delete _prototype.ts. Update REPL error-handling example to use instanceof.
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT
@@ -59,7 +59,7 @@ Sun, 26 Jul 2026 06:43:54 GMT
 
 ### Patches
 
-- fix(herald): remove dead @vielzeug/arsenal vite external — no longer imported and never declared as a dependency; derive the (now empty) external list via readWorkspaceDeps() instead of a hand-listed array
+- fix(herald): remove dead @vielzeug/arsenal vite external: no longer imported and never declared as a dependency; derive the (now empty) external list via readWorkspaceDeps() instead of a hand-listed array
 
 ## 1.0.4
 Fri, 24 Jul 2026 05:28:41 GMT

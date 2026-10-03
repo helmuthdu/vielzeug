@@ -1,5 +1,5 @@
 export const refinementsExample = {
-  code: `// check() and checkAsync() — explicit custom domain rules
+  code: `// check() and checkAsync(): explicit custom domain rules
 import { s } from '@vielzeug/spell'
 
 const reserved = new Set(['admin', 'root'])

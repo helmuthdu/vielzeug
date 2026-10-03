@@ -92,7 +92,7 @@ export type OreFileInputProps = {
   size?: string;
   /**
    * JS-only upload transport (see `FileUploadFn`). When set, every newly added file starts
-   * uploading immediately and independently — progress/speed/ETA, retry-on-failure, and a
+   * uploading immediately and independently: progress/speed/ETA, retry-on-failure, and a
    * success confirmation card are all driven from here. Omit it to keep the component in its
    * original picker-only mode (select files, no upload lifecycle).
    * Set as a JS property: `fileInput.upload = async (file, { onProgress, signal }) => { ... }`.
@@ -107,7 +107,7 @@ export type OreFileInputEvents = {
   /** Emitted when a specific file is removed */
   remove: { file: File; files: File[]; originalEvent?: Event; value: File[] };
   /**
-   * Emitted when files fail `accept`/`max-size` validation — nothing was added for them, so
+   * Emitted when files fail `accept`/`max-size` validation: nothing was added for them, so
    * this is the only signal the pick was refused. `files[i]` pairs with `reasons[i]`.
    */
   reject: { files: File[]; originalEvent?: Event; reasons: FileRejectReason[] };
@@ -120,8 +120,8 @@ export type OreFileInputEvents = {
 };
 
 /**
- * A file upload field with drag-and-drop support, built-in validation messaging, and — once a
- * `upload` transport is wired up — a full per-file upload lifecycle: live progress/speed/ETA,
+ * A file upload field with drag-and-drop support, built-in validation messaging, and: once a
+ * `upload` transport is wired up: a full per-file upload lifecycle: live progress/speed/ETA,
  * retry-on-failure, a success confirmation card, and fully independent handling of concurrent
  * files (one failing never blocks or cancels the others). Picking files with no `upload` set
  * keeps the original, upload-free selection-only behavior.
@@ -144,7 +144,7 @@ export type OreFileInputEvents = {
  *
  * @fires change - detail: { files: File[], value: File[] }
  * @fires remove - detail: { file: File, files: File[] }
- * @fires reject - detail: { files: File[], reasons: ('size' | 'type')[] } — nothing was added
+ * @fires reject - detail: { files: File[], reasons: ('size' | 'type')[] }: nothing was added
  * @fires upload-progress - detail: { file: File, loaded: number, total: number }
  * @fires upload-success - detail: { file: File }
  * @fires upload-error - detail: { file: File, error: unknown }
@@ -174,7 +174,7 @@ export type OreFileInputEvents = {
  * <ore-file-input variant="bordered" color="primary" />
  * ```
  * ```ts
- * // Wire up a real upload transport — progress/retry/success are then handled automatically.
+ * // Wire up a real upload transport: progress/retry/success are then handled automatically.
  * // `XMLHttpRequest` is used here (not `fetch`) because it's the only browser API that reports
  * // upload progress; swap in whatever transport the app already uses.
  * const input = document.querySelector('ore-file-input');
@@ -228,7 +228,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
 
     const isDragging = signal(false);
     // Set while a "Replace" action is waiting for the (shared) native file input's next
-    // `change` — routes that selection into `queue.replaceFile()` instead of `queue.addFiles()`.
+    // `change`: routes that selection into `queue.replaceFile()` instead of `queue.addFiles()`.
     const replaceTarget = signal<File | null>(null);
 
     const isDisabled = computed(() => Boolean(props.disabled.value));
@@ -236,7 +236,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     const maxSizeLimit = computed(() => props['max-size'].value ?? 0);
 
     // File selection + the opt-in upload lifecycle (progress, retry, replace, per-file
-    // isolation) live in `createFileQueue` — see file-input-upload.ts for why they're one unit.
+    // isolation) live in `createFileQueue`: see file-input-upload.ts for why they're one unit.
     const queue = createFileQueue({
       accept: props.accept,
       disabled: isDisabled,
@@ -302,7 +302,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     const dropzoneRef = ref<HTMLDivElement>();
     const inputRef = ref<HTMLInputElement>();
     const hintText = computed(() => {
-      // A set hint replaces the auto summary wholesale — the caller owns the whole line
+      // A set hint replaces the auto summary wholesale: the caller owns the whole line
       // (localized, formatted, or intentionally omitted detail).
       const override = props['dropzone-hint'].value;
       if (override) return override;
@@ -330,7 +330,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     });
 
     // ============================================
-    // Replace ("swap this one file" — see file-input-upload.ts's `replaceFile`)
+    // Replace ("swap this one file": see file-input-upload.ts's `replaceFile`)
     // ============================================
     function beginReplace(file: File): void {
       replaceTarget.value = file;
@@ -341,7 +341,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     // Gallery Preview URLs
     // ============================================
     // Object URLs are created lazily (only while `gallery` is enabled) and revoked as soon
-    // as their file is no longer selected, plus unconditionally on disconnect — otherwise
+    // as their file is no longer selected, plus unconditionally on disconnect, otherwise
     // each preview leaks its backing blob for the life of the page.
     const previewUrls = new Map<File, string>();
 
@@ -394,7 +394,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
         },
       });
 
-      // Native input → add files, or — if a "Replace" action opened the picker — swap the one
+      // Native input → add files, or: if a "Replace" action opened the picker: swap the one
       // file it targeted instead of appending a new entry.
       onEvent(inp, 'change', (e: Event) => {
         const input = e.target as HTMLInputElement;
@@ -424,7 +424,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
         skipNextClick = pressControl.handleKeydown(e) && e.key === 'Enter';
       });
 
-      // `createDropZone` has no way to update `disabled` after creation — recreate the zone
+      // `createDropZone` has no way to update `disabled` after creation: recreate the zone
       // whenever the prop changes instead of capturing a stale snapshot from this one `onMounted`
       // run. `watch`'s own returned cleanup (not a second `onCleanup`) disposes the current zone
       // both on the next toggle and on final teardown.
@@ -485,7 +485,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                       <ore-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>
                     `}
             </span>
-            <!-- Signal 01: the copy itself shifts on drag-entry (not just border/glow) — a
+            <!-- Signal 01: the copy itself shifts on drag-entry (not just border/glow): a
                  static "Drop files here" during an active drag reads as if the drop target
                  hasn't noticed the file yet. -->
             ${when(
@@ -520,13 +520,13 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                       <span class="file-thumb-frame">
                         ${
                           // Decorative: the file name is already announced via the visible
-                          // `.file-card-name` caption below — repeating it as `alt` text would
+                          // `.file-card-name` caption below: repeating it as `alt` text would
                           // duplicate it (and often trips redundant-alt checks, since real
                           // filenames commonly contain words like "photo" or "image").
                           isImageFile(file)
                             ? // Object URLs use the `blob:` scheme, which ore's attribute-level
                               // XSS guard blocks unconditionally on `src` (and other
-                              // URL-accepting attributes) — set it as a DOM property via `ref`
+                              // URL-accepting attributes): set it as a DOM property via `ref`
                               // instead, bypassing that string-based check. Safe here: the value
                               // comes from `URL.createObjectURL(file)` on a real `File` object we
                               // control, never from untrusted text.

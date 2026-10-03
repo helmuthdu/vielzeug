@@ -1,5 +1,5 @@
 ---
-title: Coins — API Reference
+title: 'Coins: API Reference'
 description: Exact money, currency definitions, exchange, formatting, serialization, and errors.
 ---
 
@@ -35,7 +35,7 @@ function currency<C extends string>(code: C): Currency<C>;
 function currency<C extends string>(definition: { code: C; minorUnit: number }): Currency<C>;
 ```
 
-Resolves one of the seven built-ins—`USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, or `KWD`—or constructs an immutable custom currency. Custom currencies are local values with no global registry. Code must be exactly three uppercase letters; `minorUnit` must be an integer from 0 to 6. Arithmetic compares currency definitions by reference.
+Resolves one of the seven built-ins (`USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, or `KWD`) or constructs an immutable custom currency. Custom currencies are local values with no global registry. Code must be exactly three uppercase letters; `minorUnit` must be an integer from 0 to 6. Arithmetic compares currency definitions by reference.
 
 ```ts
 currency('USD');
@@ -78,7 +78,7 @@ Validates untrusted or cross-realm data and returns canonical money. Plain bigin
 function isMoney(value: unknown): value is Money;
 ```
 
-Type guard for canonical Coins money values. Checks identity against the internal canonical set — forged frozen objects do not pass.
+Type guard for canonical Coins money values. Checks identity against the internal canonical set: forged frozen objects do not pass.
 
 ## Arithmetic
 
@@ -147,7 +147,7 @@ Rates are exact positive decimal strings. The money currency must be the same ca
 function isExchangeRate(value: unknown): value is ExchangeRate;
 ```
 
-Type guard for canonical exchange rates created by `exchangeRate()`. Checks identity against the internal canonical set — forged frozen objects do not pass.
+Type guard for canonical exchange rates created by `exchangeRate()`. Checks identity against the internal canonical set: forged frozen objects do not pass.
 
 ## Formatting
 

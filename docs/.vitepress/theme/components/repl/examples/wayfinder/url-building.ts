@@ -28,9 +28,9 @@ console.log('no match:', router.match('/app/does-not-exist'))
 
 console.log('--- isActive() ---')
 console.log('user (prefix):', router.isActive('user'))
-console.log('users (prefix):', router.isActive('users'))  // true — /users prefix matches /users/123
+console.log('users (prefix):', router.isActive('users'))  // true: /users prefix matches /users/123
 console.log('users (exact):', router.isActive('users', { exact: true })) // false
 
 router.dispose()`,
-  name: 'URL Building — Path Matching and Active State',
+  name: 'URL Building: Path Matching and Active State',
 };

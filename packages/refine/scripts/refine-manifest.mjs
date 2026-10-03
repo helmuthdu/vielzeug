@@ -8,13 +8,13 @@ const packageRoot = fileURLToPath(new URL('..', import.meta.url));
 
 /**
  * File basenames that register a custom element (`define(...)`) but are never independently
- * published — they're absorbed into a sibling's `dist/<name>.js` bundle and registered as a side
+ * published: they're absorbed into a sibling's `dist/<name>.js` bundle and registered as a side
  * effect of importing it. `carousel-slide.ts` is detected automatically (its only importer,
- * `carousel.ts`, bare-imports it purely for the registration side effect — see the detection
+ * `carousel.ts`, bare-imports it purely for the registration side effect: see the detection
  * rule below). `datagrid-column.ts` needs this explicit entry instead: `datagrid.ts` imports it
  * with named bindings (`COLUMN_OBSERVED_ATTRS`, `parseColumnChildren`) it actually needs for its
  * own logic, not a bare side-effect-only import, so the automatic same-directory/single-importer
- * heuristic (which only recognizes bare imports) can't detect it — `ore-datagrid-column` still
+ * heuristic (which only recognizes bare imports) can't detect it: `ore-datagrid-column` still
  * registers as a consequence of that import, same as any other, but there is no independent
  * `./datagrid-column` subpath.
  */
@@ -22,7 +22,7 @@ const PRIVATELY_REGISTERED = new Set(['datagrid-column']);
 
 /**
  * Discovers every published refine component entry point by scanning `src/**` for files that
- * call `define(...)` — the single source of truth is the filesystem itself (specifically,
+ * call `define(...)`: the single source of truth is the filesystem itself (specifically,
  * "does this file register a custom element"), not a hand-maintained list that can silently
  * drift from it. Mirrors the same signal the Custom Elements Manifest analyzer's glob already
  * uses (`customElementsManifestConfig` below), so there's one definition of "what a component
@@ -56,13 +56,13 @@ function discoverComponentManifest() {
 
   // A candidate absorbed into a same-directory sibling's bundle (e.g. `carousel-slide.ts`,
   // bare-imported by `carousel.ts` purely to register `ore-carousel-slide`) isn't independently
-  // published — only a *bare* (no-binding) single importer in the same directory counts; a named
+  // published: only a *bare* (no-binding) single importer in the same directory counts; a named
   // import (real bindings needed for logic) doesn't reliably signal "registration only" and is
   // handled via `PRIVATELY_REGISTERED` above instead.
   const importers = new Map();
 
   for (const file of allFiles) {
-    // Tolerates an optional trailing `// comment` after the semicolon — a bare side-effect import
+    // Tolerates an optional trailing `// comment` after the semicolon: a bare side-effect import
     // followed by an inline note (e.g. `import './foo'; // registers ore-foo`) must still count.
     const bareImportPattern = /^import\s+['"](\.[^'"]+)['"];?\s*(?:\/\/.*)?$/gm;
     let match;
@@ -105,7 +105,7 @@ function discoverComponentManifest() {
 }
 
 /**
- * Discovered inventory of published refine component entry points — drives the package
+ * Discovered inventory of published refine component entry points: drives the package
  * `exports` map (`check:manifest`/`sync:exports`) and the Vite multi-entry build list
  * (`getRefineLibraryEntries`). See `discoverComponentManifest`'s doc comment.
  */
@@ -345,9 +345,9 @@ function printUsageAndExit() {
  * Guards the built dist against a Rolldown chunking behavior: with `preserveModules` and
  * multiple entries, side-effect-only imports *between entry modules* are silently dropped,
  * so a component sub-path that bare-imports another component (`import '../icon/icon';`)
- * ships without registering that child — it only works when the app happens to import the
+ * ships without registering that child: it only works when the app happens to import the
  * child elsewhere. The fix (see any composite component's source) is a TAG re-export
- * (`export { ICON_TAG } from '../icon/icon';`) — bindings survive cross-entry chunking.
+ * (`export { ICON_TAG } from '../icon/icon';`): bindings survive cross-entry chunking.
  *
  * This check fails on either regression:
  * - a bare import of a component entry remaining in `src/` (would silently drop again), or
@@ -385,7 +385,7 @@ function verifyCrossEntryLinks() {
     const distFile = join(distDir, distSpecFor(file).replace(/^\.\//, ''));
 
     // Side-effect-only imports of component entries are the regression this
-    // check exists for — they must all be TAG re-exports by now.
+    // check exists for: they must all be TAG re-exports by now.
     for (const match of source.matchAll(/^import\s+['"](\.[^'"]+)['"];?\s*(?:\/\/.*)?$/gm)) {
       const target = `${resolve(dirname(file), match[1])}`;
 
@@ -395,7 +395,7 @@ function verifyCrossEntryLinks() {
     }
 
     // Orphan barrels (category index.ts files) are not reachable from any build
-    // entry, so no dist file exists for them — only built modules are verified.
+    // entry, so no dist file exists for them: only built modules are verified.
     if (!existsSync(distFile)) continue;
 
     for (const match of source.matchAll(/^export \{ (\w+_TAG) \} from '([^']+)';/gm)) {

@@ -1,5 +1,5 @@
 ---
-title: Coins — Examples
+title: 'Coins: Examples'
 description: Practical examples and recipes for @vielzeug/coins.
 ---
 

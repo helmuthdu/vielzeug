@@ -125,18 +125,18 @@ Add the `fullwidth` attribute to stretch the control to its container width.
 | Attribute         | Type                                                                      | Default     | Description                                |
 | ----------------- | ------------------------------------------------------------------------- | ----------- | ------------------------------------------ |
 | `value`           | `number \| null`                                                          | `null`      | Current numeric value                      |
-| `min`             | `number`                                                                  | —           | Minimum allowed value                      |
-| `max`             | `number`                                                                  | —           | Maximum allowed value                      |
+| `min`             | `number`                                                                  | N/A | Minimum allowed value                      |
+| `max`             | `number`                                                                  | N/A | Maximum allowed value                      |
 | `step`            | `number`                                                                  | `1`         | Increment / decrement step size            |
 | `large-step`      | `number`                                                                  | `10`        | Step size for `Page Up` / `Page Down` keys |
-| `label`           | `string`                                                                  | —           | Visible label text                         |
+| `label`           | `string`                                                                  | N/A | Visible label text                         |
 | `label-placement` | `'outside' \| 'inset'`                                                    | `'outside'` | Label above the control or inset inside it |
-| `name`            | `string`                                                                  | —           | Form field name                            |
-| `placeholder`     | `string`                                                                  | —           | Placeholder text when empty                |
+| `name`            | `string`                                                                  | N/A | Form field name                            |
+| `placeholder`     | `string`                                                                  | N/A | Placeholder text when empty                |
 | `nullable`        | `boolean`                                                                 | `false`     | Allow an empty / null value                |
 | `disabled`        | `boolean`                                                                 | `false`     | Disables the control                       |
 | `readonly`        | `boolean`                                                                 | `false`     | Prevents user edits                        |
-| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —           | Focus ring and accent color                |
+| `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Focus ring and accent color                |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Component size                             |
 | `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`   | Visual style variant                       |
 | `fullwidth`       | `boolean`                                                                 | `false`     | Stretch to the full width of the container |
@@ -169,5 +169,5 @@ The label is linked via `aria-labelledby`, and helper or error text is linked vi
 
 ## Related Components
 
-- [Input](./input) — plain text / single-line input field
-- [Slider](./slider) — drag-based numeric value picker
+- [Input](./input): plain text / single-line input field
+- [Slider](./slider): drag-based numeric value picker

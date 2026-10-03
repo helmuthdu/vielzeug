@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Wildcard Action'
+title: 'Ward Examples: Wildcard Action'
 description: 'Grant every action with a wildcard helper rule.'
 ---
 

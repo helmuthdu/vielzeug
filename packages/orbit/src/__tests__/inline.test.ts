@@ -78,7 +78,7 @@ describe('inline', () => {
     vi.spyOn(reference, 'getClientRects').mockReturnValue([] as unknown as DOMRectList);
     vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 40 }));
 
-    // With zero client rects, inline is a no-op — same result as without inline.
+    // With zero client rects, inline is a no-op: same result as without inline.
     const withInline = computePosition(reference, floating, { middleware: [inline()], placement: 'bottom' });
     const withoutInline = computePosition(reference, floating, { placement: 'bottom' });
 

@@ -238,10 +238,10 @@ describe('buildDocument', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — lifecycle
+// createSandbox: lifecycle
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — lifecycle', () => {
+describe('createSandbox: lifecycle', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -305,10 +305,10 @@ describe('createSandbox — lifecycle', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — disposalSignal
+// createSandbox: disposalSignal
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — disposalSignal', () => {
+describe('createSandbox: disposalSignal', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -346,10 +346,10 @@ describe('createSandbox — disposalSignal', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — render() Promise
+// createSandbox: render() Promise
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — render() Promise', () => {
+describe('createSandbox: render() Promise', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -456,10 +456,10 @@ describe('createSandbox — render() Promise', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — render() ready-timeout rejection
+// createSandbox: render() ready-timeout rejection
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — render() ready-timeout rejection', () => {
+describe('createSandbox: render() ready-timeout rejection', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -505,7 +505,7 @@ describe('createSandbox — render() ready-timeout rejection', () => {
     sandbox.dispose();
   });
 
-  it('does not reject a superseded render — it resolves when replaced by a second render()', async () => {
+  it('does not reject a superseded render: it resolves when replaced by a second render()', async () => {
     const sandbox = createSandbox(container);
     const p1 = sandbox.render('<p>v1</p>');
     const p2 = sandbox.render('<p>v2</p>');
@@ -531,10 +531,10 @@ describe('createSandbox — render() ready-timeout rejection', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — onMessage
+// createSandbox: onMessage
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — onMessage', () => {
+describe('createSandbox: onMessage', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -720,10 +720,10 @@ describe('createSandbox — onMessage', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — setState
+// createSandbox: setState
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — setState', () => {
+describe('createSandbox: setState', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -827,10 +827,10 @@ describe('createSandbox — setState', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — batched setState
+// createSandbox: batched setState
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — batched setState', () => {
+describe('createSandbox: batched setState', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -907,10 +907,10 @@ describe('createSandbox — batched setState', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — updateStyle
+// createSandbox: updateStyle
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — updateStyle', () => {
+describe('createSandbox: updateStyle', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -1032,10 +1032,10 @@ describe('createSandbox — updateStyle', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — replaceBody()
+// createSandbox: replaceBody()
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — replaceBody()', () => {
+describe('createSandbox: replaceBody()', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -1097,7 +1097,7 @@ describe('createSandbox — replaceBody()', () => {
     warnSpy.mockRestore();
   });
 
-  it('does not navigate the iframe — srcdoc is unchanged', async () => {
+  it('does not navigate the iframe: srcdoc is unchanged', async () => {
     const sandbox = createSandbox(container);
     const p = sandbox.render('<p>initial</p>');
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
@@ -1112,7 +1112,7 @@ describe('createSandbox — replaceBody()', () => {
     sandbox.dispose();
   });
 
-  it('does not reset bridgeReady — setState still works after replaceBody()', async () => {
+  it('does not reset bridgeReady: setState still works after replaceBody()', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
     const p = sandbox.render('<p>initial</p>');
@@ -1134,7 +1134,7 @@ describe('createSandbox — replaceBody()', () => {
     helpers.fireReady();
     await p1;
 
-    // Start a new full render — bridgeReady resets
+    // Start a new full render: bridgeReady resets
     sandbox.render('<p>v2</p>');
     sandbox.replaceBody('<p>too early again</p>');
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('bridge is not ready'));
@@ -1255,10 +1255,10 @@ describe('createSandboxTestHelpers', () => {
 });
 
 // ---------------------------------------------------------------------------
-// C1: onMessage() on disposed sandbox — exact warning message
+// C1: onMessage() on disposed sandbox: exact warning message
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — onMessage disposed warning', () => {
+describe('createSandbox: onMessage disposed warning', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -1277,7 +1277,7 @@ describe('createSandbox — onMessage disposed warning', () => {
     sandbox.onMessage(() => undefined);
 
     expect(warnSpy).toHaveBeenCalledWith(
-      '[@vielzeug/sandbox] onMessage() called on a disposed sandbox — handler will never fire.',
+      '[@vielzeug/sandbox] onMessage() called on a disposed sandbox: handler will never fire.',
     );
     warnSpy.mockRestore();
   });
@@ -1287,7 +1287,7 @@ describe('createSandbox — onMessage disposed warning', () => {
 // C2: buildDocument nonce appears in CSP meta tag content attribute
 // ---------------------------------------------------------------------------
 
-describe('buildDocument — nonce in CSP meta tag', () => {
+describe('buildDocument: nonce in CSP meta tag', () => {
   it("nonce appears as 'nonce-<value>' inside the CSP meta tag content attribute", () => {
     const doc = buildDocument('<p>hi</p>', { nonce: 'abc123' });
     const contentMatch = doc.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/);
@@ -1302,10 +1302,10 @@ describe('buildDocument — nonce in CSP meta tag', () => {
 });
 
 // ---------------------------------------------------------------------------
-// C3: updateStyle before render() — render picks up updated CSS
+// C3: updateStyle before render(): render picks up updated CSS
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — updateStyle before render', () => {
+describe('createSandbox: updateStyle before render', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -1331,10 +1331,10 @@ describe('createSandbox — updateStyle before render', () => {
 });
 
 // ---------------------------------------------------------------------------
-// window.__sandbox__.onState — bridge-side state subscription
+// window.__sandbox__.onState: bridge-side state subscription
 // ---------------------------------------------------------------------------
 
-describe('buildDocument — window.__sandbox__.onState', () => {
+describe('buildDocument: window.__sandbox__.onState', () => {
   it('wires an onState method onto window.__sandbox__ in the bridge script', () => {
     const doc = buildDocument('<p>hi</p>');
 
@@ -1344,7 +1344,7 @@ describe('buildDocument — window.__sandbox__.onState', () => {
   });
 
   it('onState filters sandbox:state-update events by key and returns an unsubscribe function', () => {
-    // The bridge script is plain JS embedded in an iframe srcdoc — jsdom does not execute
+    // The bridge script is plain JS embedded in an iframe srcdoc: jsdom does not execute
     // srcdoc scripts. This mirrors onState's exact logic (see BRIDGE_SCRIPT in _sandbox.ts)
     // against the real DOM to verify the filtering/unsubscribe contract without an iframe.
     function onState(key: string, handler: (value: unknown) => void) {
@@ -1375,7 +1375,7 @@ describe('buildDocument — window.__sandbox__.onState', () => {
 
   it("state-update-all fan-out reaches each key's own onState() handler exactly once", () => {
     // Mirrors the BRIDGE_SCRIPT 'state-update-all' handler: one CustomEvent per key
-    // in the pushed record — verifies the fan-out reaches multiple independent
+    // in the pushed record: verifies the fan-out reaches multiple independent
     // onState() subscriptions correctly, each receiving only its own key's value.
     function dispatchStateUpdateAll(record: Record<string, unknown>): void {
       for (const key of Object.keys(record)) {
@@ -1413,10 +1413,10 @@ describe('buildDocument — window.__sandbox__.onState', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Render generation — stale-document message protection
+// Render generation: stale-document message protection
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — render generation', () => {
+describe('createSandbox: render generation', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -1512,10 +1512,10 @@ describe('createSandbox — render generation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — readyTimeout option
+// createSandbox: readyTimeout option
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — readyTimeout option', () => {
+describe('createSandbox: readyTimeout option', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -1572,10 +1572,10 @@ describe('createSandbox — readyTimeout option', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — untrusted custom event details
+// createSandbox: untrusted custom event details
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — untrusted custom event details', () => {
+describe('createSandbox: untrusted custom event details', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -1604,10 +1604,10 @@ describe('createSandbox — untrusted custom event details', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — unified handle and root exports
+// createSandbox: unified handle and root exports
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — unified public surface', () => {
+describe('createSandbox: unified public surface', () => {
   let container: HTMLElement;
 
   beforeEach(() => {

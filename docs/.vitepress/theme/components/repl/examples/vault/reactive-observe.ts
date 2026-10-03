@@ -13,5 +13,5 @@ await Promise.resolve()
 console.log(snapshots) // [[], ['Ada']]
 stop()
 await db.dispose()`,
-  name: 'Reactive — observe()',
+  name: 'Reactive: observe()',
 };

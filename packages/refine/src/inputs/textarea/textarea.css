@@ -59,7 +59,7 @@
   }
 
   /* ========================================
-       Status Icon & Loading Spinner (top-right corner — clear of the
+       Status Icon & Loading Spinner (top-right corner: clear of the
        bottom-right native resize handle)
        ======================================== */
 
@@ -91,7 +91,7 @@
     color: var(--color-success);
   }
 
-  /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
+  /* Keyframe must live in shadow DOM: @keyframes don't inherit across shadow roots */
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -232,11 +232,11 @@
 }
 
 /*
- * Focus/error/success `box-shadow` on `.field` — moved out of `@layer refine.base` into
+ * Focus/error/success `box-shadow` on `.field`: moved out of `@layer refine.base` into
  * `refine.variants` (alongside `fieldVariantMixin`'s rest-state `box-shadow` for solid/outline/
  * ghost) so normal specificity decides the winner. Cascade layers beat specificity outright, so
  * a `refine.base` box-shadow here always lost to every variant's unconditional rest-state
- * `box-shadow`, focused/error/success or not — the same bug class fixed for `ore-otp-input`'s
+ * `box-shadow`, focused/error/success or not: the same bug class fixed for `ore-otp-input`'s
  * focus ring.
  */
 @layer refine.variants {
@@ -260,7 +260,7 @@
 /*
  * The solid/flat/bordered/outline/ghost variant switch (previously here) now lives in
  * `fieldVariantMixin({ container: '.field', text: 'textarea', tokenPrefix: 'textarea' })`
- * in `textarea.ts`'s `styles` array — shared with `ore-input`/`ore-message-composer` instead of
+ * in `textarea.ts`'s `styles` array: shared with `ore-input`/`ore-message-composer` instead of
  * hand-duplicated across all three (see the mixin's own doc comment for what it covers and why).
  */
 
@@ -277,14 +277,14 @@
 }
 
 /* ========================================
-     Disabled State — intentionally unlayered
+     Disabled State: intentionally unlayered
      ======================================== */
 
 /*
  * The shared `disabledLoadingMixin` (pulled in via `fieldMixins`) dims `:host([disabled])`
  * with `opacity: 0.5` as bare, unlayered CSS. Cascade layers always lose to unlayered rules
  * regardless of source order or specificity, so overriding that from inside any `@layer`
- * block in this file (including `refine.overrides`) would be a no-op — this has to stay
+ * block in this file (including `refine.overrides`) would be a no-op: this has to stay
  * unlayered too, to actually win. See `ore-input`'s `input.css` for the same pattern.
  *
  * Per the field-state UX review: opacity-based dimming reads as a washed-out/loading look

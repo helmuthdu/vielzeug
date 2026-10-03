@@ -197,7 +197,7 @@ describe('readDistFile()', () => {
 
 // Builds a minimal real packages/ tree (package.json + dist/index.d.ts + vite.bundle.config.ts)
 // so extractApi()/buildRegistrySource() exercise the real TS compiler Program API end to end,
-// the same way the real generator does — just against two tiny fake packages instead of the
+// the same way the real generator does: just against two tiny fake packages instead of the
 // full monorepo.
 function makeFakePackage(
   packagesDir: string,
@@ -220,7 +220,7 @@ function makeFakePackage(
   );
 }
 
-describe('extractApi() — real TS compiler Program against a fixture dist/index.d.ts', () => {
+describe('extractApi(): real TS compiler Program against a fixture dist/index.d.ts', () => {
   let root: string;
 
   afterEach(() => {
@@ -272,7 +272,7 @@ describe('extractApi() — real TS compiler Program against a fixture dist/index
   }, 15_000);
 });
 
-describe('buildRegistrySource() — full assembly against a fake two-package tree', () => {
+describe('buildRegistrySource(): full assembly against a fake two-package tree', () => {
   let root: string;
 
   afterEach(() => {
@@ -291,7 +291,7 @@ describe('buildRegistrySource() — full assembly against a fake two-package tre
 
     expect(packageCount).toBe(2);
     expect(output).toContain('export const LIBRARY_REGISTRY');
-    // Real TS syntax, not just a string template — this is what a consumer of the generated
+    // Real TS syntax, not just a string template: this is what a consumer of the generated
     // file actually type-checks against, so parse errors here would be a real regression.
     expect(() => ts.createSourceFile('registry.generated.ts', output, ts.ScriptTarget.Latest, true)).not.toThrow();
 

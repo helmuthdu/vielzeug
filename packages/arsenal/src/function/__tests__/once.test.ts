@@ -50,7 +50,7 @@ describe('once', () => {
     expect(result).toBe(7); // re-runs after reset
   });
 
-  it('a throwing first call does not count as "called" — fn runs again on the next call', () => {
+  it('a throwing first call does not count as "called": fn runs again on the next call', () => {
     const fn = vi.fn().mockImplementationOnce(() => {
       throw new Error('boom');
     });

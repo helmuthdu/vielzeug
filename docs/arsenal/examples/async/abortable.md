@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — abortable'
+title: 'Arsenal Examples: abortable'
 description: 'abortable example for @vielzeug/arsenal.'
 ---
 
@@ -36,7 +36,7 @@ try {
 
 ### Pitfalls
 
-- The wrapped promise continues running after cancellation — `abortable` only rejects the returned promise, it does not stop the underlying work. Pair with `fetch`'s `signal` option for true cancellation.
+- The wrapped promise continues running after cancellation: `abortable` only rejects the returned promise, it does not stop the underlying work. Pair with `fetch`'s `signal` option for true cancellation.
 - If the signal is already aborted when `abortable` is called, the returned promise rejects immediately.
 
 ### Related

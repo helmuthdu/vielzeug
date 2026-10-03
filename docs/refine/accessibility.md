@@ -1,5 +1,5 @@
 ---
-title: Refine — Accessibility
+title: 'Refine: Accessibility'
 description: WCAG compliance, keyboard support, testing strategy, and per-component coverage for Refine.
 ---
 
@@ -13,16 +13,16 @@ Refine targets **WCAG 2.1 AA** compliance across the component library. ARIA rol
 
 Most accessibility is handled for you. Two things require action on your side:
 
-- **Icon-only buttons** must have a `label` attribute — it becomes `aria-label`. Without it, screen readers have nothing to announce.
+- **Icon-only buttons** must have a `label` attribute: it becomes `aria-label`. Without it, screen readers have nothing to announce.
 - **Decorative icons** should have `aria-hidden="true"` so screen readers skip them. Meaningful standalone icons need an `aria-label`.
 
 ```html
-<!-- Icon-only button — label required -->
+<!-- Icon-only button: label required -->
 <ore-button icon-only label="Delete item" color="error">
   <ore-icon name="trash-2" size="18"></ore-icon>
 </ore-button>
 
-<!-- Decorative icon — hidden from screen readers -->
+<!-- Decorative icon: hidden from screen readers -->
 <ore-icon name="check" size="16" aria-hidden="true"></ore-icon>
 
 <!-- Meaningful standalone icon -->
@@ -40,11 +40,11 @@ You can also connect an input to external help text using `aria-describedby`:
 
 Refine uses a three-layer approach.
 
-**1 — Unit tests (jsdom + Ore test helpers)**
+**1: Unit tests (jsdom + Ore test helpers)**
 
 Every component has tests verifying correct `role` and `aria-*` attributes at render time, ARIA state changes on attribute mutation, keyboard event handling, focus management for overlays, and live-region announcements.
 
-**2 — Axe-core automated audit**
+**2: Axe-core automated audit**
 
 The `axeCheck` helper is available globally in all Refine tests:
 
@@ -60,7 +60,7 @@ it('has no axe violations', async () => {
 
 Only the `wcag2a`, `wcag2aa`, and `best-practice` rule sets run in CI to keep test suites fast.
 
-**3 — Manual checklist (per release)**
+**3: Manual checklist (per release)**
 
 Before each minor release:
 
@@ -99,11 +99,11 @@ Before each minor release:
 | ------------------- | ------------------ | ----------------- | ----------------------------------------- |
 | `ore-alert`          | `alert` / `status` | Dismiss button    | `aria-live` via region                    |
 | `ore-toast`          | `alert` / `status` | Dismiss button    | `aria-live="polite"` or `"assertive"`     |
-| `ore-async`          | Dynamic            | —                 | `aria-busy`, `aria-live`, `role="alert"` in error |
-| `ore-progress`       | `progressbar`      | —                 | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` |
-| `ore-skeleton`       | None (decorative)  | —                 | `aria-hidden="true"` on bones             |
-| `ore-typing-indicator` | `status` (on a visually-hidden label) | — | `aria-live="polite"`; dots are `aria-hidden="true"` |
-| `ore-badge`          | None               | —                 | `aria-label` if meaningful                |
+| `ore-async`          | Dynamic            | N/A | `aria-busy`, `aria-live`, `role="alert"` in error |
+| `ore-progress`       | `progressbar`      | N/A | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` |
+| `ore-skeleton`       | None (decorative)  | N/A | `aria-hidden="true"` on bones             |
+| `ore-typing-indicator` | `status` (on a visually-hidden label) | N/A | `aria-live="polite"`; dots are `aria-hidden="true"` |
+| `ore-badge`          | None               | N/A | `aria-label` if meaningful                |
 | `ore-chip`           | `button` (interactive) | Enter         | `aria-pressed`, `aria-label`              |
 
 ### Disclosure
@@ -129,22 +129,22 @@ Before each minor release:
 | Component       | Role                      | Keyboard      | Key ARIA attrs               |
 | --------------- | ------------------------- | ------------- | ---------------------------- |
 | `ore-card`       | `button` (interactive)    | Enter / Space | `aria-disabled`, `aria-busy` |
-| `ore-stats` | `article`                 | —             | `aria-disabled`, `aria-busy` |
-| `ore-chat-message` | `article` (on the bubble) | — | `aria-label` describing sender; failed sends also announced via an assertive live region |
-| `ore-list`       | `list` or `listbox` (`selectable`) | Arrow / Home / End / Enter / Space (`selectable` only) | `aria-disabled`; needs `aria-label`/`aria-labelledby` in listbox mode | Manual activation — arrow keys move focus, Enter/Space commits selection |
+| `ore-stats` | `article`                 | N/A | `aria-disabled`, `aria-busy` |
+| `ore-chat-message` | `article` (on the bubble) | N/A | `aria-label` describing sender; failed sends also announced via an assertive live region |
+| `ore-list`       | `list` or `listbox` (`selectable`) | Arrow / Home / End / Enter / Space (`selectable` only) | `aria-disabled`; needs `aria-label`/`aria-labelledby` in listbox mode | Manual activation: arrow keys move focus, Enter/Space commits selection |
 | `ore-stepper`    | `navigation` + `list`     | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled` | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |
 | `ore-list-item`  | `listitem` or `option` (`selectable`) | Enter / Space (activation); Tab reaches slotted `actions-left`/`actions-right` content | `aria-selected`, `aria-disabled` | Swipe-revealed action panels stay reachable via `:focus-within`, independent of the gesture |
 | `ore-table`      | `table` (native)          | Standard      | `aria-label`, `aria-busy`    |
 | `ore-pagination` | `navigation`              | Standard      | `aria-label`, `aria-current` |
 | `ore-breadcrumb` | `navigation`              | Standard      | `aria-label`, `aria-current` |
-| `ore-avatar`     | None                      | —             | `alt` or `aria-label`        |
+| `ore-avatar`     | None                      | N/A | `alt` or `aria-label`        |
 
 ### Layout
 
 | Component    | Notes                                                          |
 | ------------ | -------------------------------------------------------------- |
-| `ore-sidebar` | Navigation landmark — provide `aria-label` for screen readers  |
-| `ore-navbar`  | Navigation landmark — provide `aria-label` for screen readers  |
+| `ore-sidebar` | Navigation landmark: provide `aria-label` for screen readers  |
+| `ore-navbar`  | Navigation landmark: provide `aria-label` for screen readers  |
 | `ore-grid`    | Layout only, no interactive semantics                          |
 | `ore-box`     | Layout only, no interactive semantics                          |
 

@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Data Fetching with Error Recovery'
+title: 'Clockwork Examples: Data Fetching with Error Recovery'
 description: 'Map an abortable invoke into success and failure transitions.'
 ---
 

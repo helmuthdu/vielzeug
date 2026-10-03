@@ -57,7 +57,7 @@ export function createSandbox<State extends object = Record<string, unknown>>(
       try {
         listener(message);
       } catch {
-        warn('onMessage() handler threw — remaining handlers will still run.');
+        warn('onMessage() handler threw: remaining handlers will still run.');
       }
     }
   }
@@ -131,7 +131,7 @@ export function createSandbox<State extends object = Record<string, unknown>>(
 
   function onMessage(handler: (message: SandboxMessage) => void): () => void {
     if (disposed) {
-      warn('onMessage() called on a disposed sandbox — handler will never fire.');
+      warn('onMessage() called on a disposed sandbox: handler will never fire.');
 
       return () => {};
     }
@@ -212,7 +212,7 @@ export function createSandbox<State extends object = Record<string, unknown>>(
     }
 
     if (!bridgeReady || !iframe?.contentWindow) {
-      warn('replaceBody() called before render() has resolved — bridge is not ready. Await render() first.');
+      warn('replaceBody() called before render() has resolved: bridge is not ready. Await render() first.');
 
       return;
     }
@@ -229,7 +229,7 @@ export function createSandbox<State extends object = Record<string, unknown>>(
 
     devOnly(() => {
       if (!(id in styles)) {
-        warn(`updateStyle('${id}', …) — '${id}' is not a known styles key.`);
+        warn(`updateStyle('${id}', …): '${id}' is not a known styles key.`);
       }
     });
 

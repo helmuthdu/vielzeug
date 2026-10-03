@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — kebabCase'
+title: 'Arsenal Examples: kebabCase'
 description: 'kebabCase example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'kebabCase example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to convert a string to kebab-case — for example generating URL slugs or CSS class names from data.
+You need to convert a string to kebab-case: for example generating URL slugs or CSS class names from data.
 
 ### Solution
 

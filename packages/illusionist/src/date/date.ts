@@ -72,7 +72,7 @@ export function between(
 }
 
 /**
- * Generates a random birthday — a date with a random year (default 18-80 years ago) and random month/day.
+ * Generates a random birthday: a date with a random year (default 18-80 years ago) and random month/day.
  */
 export function birthday(
   ctx: IllusionistContext,

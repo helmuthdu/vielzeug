@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — difference'
+title: 'Arsenal Examples: difference'
 description: 'difference example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'difference example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have two arrays and need to find items present in the first but not the second — a set-difference operation.
+You have two arrays and need to find items present in the first but not the second: a set-difference operation.
 
 ### Solution
 
@@ -27,7 +27,7 @@ difference(active, removed, (u) => u.id);
 
 ### Pitfalls
 
-- Without a selector, uses deep equality for comparison — prefer a selector for large object arrays.
+- Without a selector, uses deep equality for comparison: prefer a selector for large object arrays.
 - Does not deduplicate the result; if `source` has duplicates, they appear in the output.
 
 ### Related

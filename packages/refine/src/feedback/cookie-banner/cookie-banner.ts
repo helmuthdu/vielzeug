@@ -5,7 +5,7 @@ import { reducedMotionMixin } from '../../styles';
 
 // The child components this banner renders. The bare-import form is not enough:
 // the per-entry library build drops side-effect-only imports between entry
-// modules, so these re-export the tags as bindings — the bundler keeps the
+// modules, so these re-export the tags as bindings: the bundler keeps the
 // module link, and importing `@vielzeug/refine/cookie-banner` registers
 // ore-button and ore-checkbox on its own.
 
@@ -17,7 +17,7 @@ export { CHECKBOX_TAG } from '../../inputs/checkbox/checkbox';
 /** A consent category offered as an opt-in checkbox. `id` is the key the `decide` detail is built from. */
 export type OreCookieBannerCategory = { description?: string; id: string; label: string };
 
-/** All rendered labels, each with an English default — pass translated strings for other locales. */
+/** All rendered labels, each with an English default: pass translated strings for other locales. */
 export type OreCookieBannerLabels = Partial<{
   acceptAll: string;
   essential: string;
@@ -32,7 +32,7 @@ export type CookieConsentRecord = Record<string, boolean>;
 
 /** Element interface exposing the imperative API for `ore-cookie-banner`. */
 export interface CookieBannerElement extends HTMLElement, OreCookieBannerProps {
-  /** Hides the banner without emitting anything — persistence stays with the consumer. */
+  /** Hides the banner without emitting anything: persistence stays with the consumer. */
   hide(): void;
   /** Shows the banner again, for example from a "Cookie settings" link after a decision. */
   show(): void;
@@ -70,8 +70,8 @@ const DEFAULT_LABELS = {
  * (default slot, links included), optional per-category opt-in checkboxes with
  * descriptions, and accept-all / reject / save actions.
  *
- * The layout is a single column — heading, policy text, a scrollable category
- * panel, and actions — that scales linearly from one to many categories. Each
+ * The layout is a single column: heading, policy text, a scrollable category
+ * panel, and actions, that scales linearly from one to many categories. Each
  * category renders as a checkbox row; its optional `description` passes through
  * the checkbox's `helper` mechanism, so it is both visible below the label and
  * linked to the control via `aria-describedby`. The category panel scrolls
@@ -85,14 +85,14 @@ const DEFAULT_LABELS = {
  * their choice.
  *
  * The banner is a non-modal `role="dialog"`: screen readers announce it when it
- * appears, focus moves to the dialog card itself on `show()` — a neutral target,
- * so no action is preselected for keyboard users — and returns to the previously
+ * appears, focus moves to the dialog card itself on `show()`: a neutral target,
+ * so no action is preselected for keyboard users, and returns to the previously
  * focused element on `hide()`. A banner that is simply present at page load (never
  * shown via `show()`) does not steal focus and is not announced; consumers that
  * want a load-time announcement should call `show()` from a user gesture.
  *
  * The `decide` record contains exactly the currently configured category ids
- * (plus `essential`, always true). Replace — do not merge — the stored record
+ * (plus `essential`, always true). Replace: do not merge: the stored record
  * with it, so categories removed between sessions drop their stale keys.
  *
  * @element ore-cookie-banner
@@ -100,7 +100,7 @@ const DEFAULT_LABELS = {
  * @attr {string} position - Viewport edge: 'bottom' (default) | 'top'
  * @attr {boolean} hide-on-decide - Hides the banner after `decide` (default true)
  *
- * @fires decide - A decision was made. detail: { consent } — every category id plus `essential`, always true.
+ * @fires decide - A decision was made. detail: { consent }: every category id plus `essential`, always true.
  *
  * @slot - Policy text, including links to the privacy policy and imprint
  *
@@ -168,7 +168,7 @@ define<OreCookieBannerProps>(COOKIE_BANNER_TAG, {
     // The element that had focus before the banner opened; `hide()` returns to it.
     let restoreFocusTo: HTMLElement | null = null;
 
-    // Focus lands on the dialog card itself — a neutral target, so no action is
+    // Focus lands on the dialog card itself: a neutral target, so no action is
     // preselected for keyboard users. Screen readers announce the dialog's name
     // when focus enters it.
     const focusCard = (): void => {

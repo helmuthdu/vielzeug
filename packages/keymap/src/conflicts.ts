@@ -14,9 +14,9 @@ function isPrefixOf(shorter: readonly ShortcutStep[], longer: readonly ShortcutS
 }
 
 /**
- * Finds registered bindings that would conflict with a proposed shortcut — an exact duplicate, a
+ * Finds registered bindings that would conflict with a proposed shortcut: an exact duplicate, a
  * shorter binding that would shadow it as a chord prefix, or a longer binding it would itself
- * shadow. Only compares against entries sharing the same `trigger` — `'keydown'` and `'keyup'`
+ * shadow. Only compares against entries sharing the same `trigger`: `'keydown'` and `'keyup'`
  * chords are matched independently and never conflict with each other.
  *
  * @example
@@ -30,7 +30,7 @@ export function findShortcutConflicts(
 ): BindingEntry[] {
   const { modKey, trigger = 'keydown' } = options;
 
-  // An empty/whitespace-only shortcut would be a trivial prefix of every entry — never report it
+  // An empty/whitespace-only shortcut would be a trivial prefix of every entry: never report it
   // as a conflict.
   if (shortcut.trim() === '') return [];
 

@@ -35,13 +35,13 @@ Wed, 19 Aug 2026 06:57:36 GMT
 
 ### Minor changes
 
-- feat: add catalogKeys(source) runtime utility that enumerates every message key as a dotted path — accepts a TranslationStore (reads current locale catalog) or a raw catalog object; traverses nested grouping objects and explicit plural messages, returning ReadonlyArray<TextKey<C>> so consumers can derive key arrays without maintaining stale parallel lists; calling on a nested subtree returns group-scoped keys without filtering
-- feat: add compareCatalogs(catalogs) to /validate subpath — compares key parity across locales, reporting missing and extra keys relative to the first locale as base; catches the most common i18n defect of incomplete translations
+- feat: add catalogKeys(source) runtime utility that enumerates every message key as a dotted path: accepts a TranslationStore (reads current locale catalog) or a raw catalog object; traverses nested grouping objects and explicit plural messages, returning ReadonlyArray<TextKey<C>> so consumers can derive key arrays without maintaining stale parallel lists; calling on a nested subtree returns group-scoped keys without filtering
+- feat: add compareCatalogs(catalogs) to /validate subpath: compares key parity across locales, reporting missing and extra keys relative to the first locale as base; catches the most common i18n defect of incomplete translations
 
 ### Patches
 
-- refactor: deduplicate MessageKey, TextKey, and PluralKey recursive types into a single generic CatalogPaths<C, Leaf> helper — same type-level behavior, one source of truth for traversal logic
-- refactor: export isPluralMessage from _catalog.ts and reuse in validate.ts — removes duplicated type guard
+- refactor: deduplicate MessageKey, TextKey, and PluralKey recursive types into a single generic CatalogPaths<C, Leaf> helper: same type-level behavior, one source of truth for traversal logic
+- refactor: export isPluralMessage from _catalog.ts and reuse in validate.ts: removes duplicated type guard
 
 ## 2.2.0
 Sat, 15 Aug 2026 10:39:54 GMT

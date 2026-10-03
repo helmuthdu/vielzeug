@@ -1,5 +1,5 @@
 ---
-title: Arsenal — Math Examples
+title: 'Arsenal: Math Examples'
 description: Math utility examples for Arsenal.
 ---
 

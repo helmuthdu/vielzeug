@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Infinite Scroll'
+title: 'Scroll Examples: Infinite Scroll'
 description: 'Infinite scroll example for @vielzeug/scroll.'
 ---
 

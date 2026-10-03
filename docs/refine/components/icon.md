@@ -6,7 +6,7 @@ A lightweight icon wrapper around a synchronous icon registry for consistent ren
 
 `ore-icon` resolves `name` from a synchronous registry. The registry always contains the icons refine's own components render (chevrons, close marks, spinners); it does not include the whole Lucide library, so an application only ever ships the icons it uses.
 
-You can register your own icons (or override existing ones) with `registerIcons`. Keys may be kebab-case or PascalCase — both resolve.
+You can register your own icons (or override existing ones) with `registerIcons`. Keys may be kebab-case or PascalCase: both resolve.
 
 ```ts
 import { registerIcons } from '@vielzeug/refine/icon';
@@ -23,7 +23,7 @@ registerIcons({
 <ore-icon name="brand-mark"></ore-icon>
 ```
 
-To register individual Lucide icons, import them from `lucide` and pass them to `registerIcons` — tree-shaking keeps the bundle to exactly those icons.
+To register individual Lucide icons, import them from `lucide` and pass them to `registerIcons`: tree-shaking keeps the bundle to exactly those icons.
 
 ```ts
 import { registerIcons } from '@vielzeug/refine/icon';
@@ -59,12 +59,12 @@ import '@vielzeug/refine/icon-lucide';
 
 ### Attributes
 
-- `name`: `string`, default `undefined` — Lucide icon name (for example `search`, `chevron-right`), resolved from the registered set
-- `size`: `number | string`, default `16` — Icon width/height
-- `stroke-width`: `number`, default `2` — SVG stroke width
-- `absolute-stroke-width`: `boolean`, default `false` — Keeps stroke width visually consistent on scale
-- `solid`: `boolean`, default `false` — Renders icon as a filled shape
-- `label`: `string`, default `undefined` — Accessible label; omit for decorative icons, required when the icon is the sole means of conveying information
+- `name`: `string`, default `undefined`: Lucide icon name (for example `search`, `chevron-right`), resolved from the registered set
+- `size`: `number | string`, default `16`: Icon width/height
+- `stroke-width`: `number`, default `2`: SVG stroke width
+- `absolute-stroke-width`: `boolean`, default `false`: Keeps stroke width visually consistent on scale
+- `solid`: `boolean`, default `false`: Renders icon as a filled shape
+- `label`: `string`, default `undefined`: Accessible label; omit for decorative icons, required when the icon is the sole means of conveying information
 
 ## Notes
 

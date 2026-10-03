@@ -28,7 +28,7 @@ function update() {
 // autoUpdate calls update immediately then re-calls on scroll/resize/mutation
 const cleanup = autoUpdate(button, dropdown, update)
 
-console.log('autoUpdate running — try resizing the window')
+console.log('autoUpdate running: try resizing the window')
 console.log('cleanup type (call to stop):', typeof cleanup)`,
   name: 'autoUpdate - Track on Scroll/Resize',
 };

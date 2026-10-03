@@ -1,5 +1,5 @@
 ---
-title: 'Scout Examples — Basic Search'
+title: 'Scout Examples: Basic Search'
 description: 'Build a trigram index and perform fuzzy search with match highlighting.'
 ---
 
@@ -26,7 +26,7 @@ const users: User[] = [
   { email: 'dave@example.com', name: 'Dave Alison', role: 'viewer' },
 ];
 
-// Build the index — construction is O(corpus × field_length)
+// Build the index: construction is O(corpus × field_length)
 const index = createIndex(users, {
   fields: [
     { field: 'name', weight: 2 }, // name matches rank higher
@@ -37,7 +37,7 @@ const index = createIndex(users, {
   limit: 10,
 });
 
-// Search — O(candidates)
+// Search: O(candidates)
 const results = index.search('alice');
 
 for (const { item, score, matches } of results) {
@@ -84,7 +84,7 @@ console.log(`Index size: ${index.size}`); // 5 (added 1, removed 1, updated 1)
 ```ts
 import { createIndex, segmentWords } from '@vielzeug/scout';
 
-// CJK text has no spaces between words — segmentWords() inserts them so
+// CJK text has no spaces between words: segmentWords() inserts them so
 // findMatchRanges() / highlight() split on word boundaries like they do for Latin text.
 const docs = [{ title: '日本語を勉強しています' }, { title: '我喜欢学习中文' }];
 
@@ -97,10 +97,10 @@ index.search('日本語'); // matches the first document
 
 ### Pitfalls
 
-- Rebuilding the index per keystroke defeats its purpose — build it once, then call `search()` per query.
+- Rebuilding the index per keystroke defeats its purpose: build it once, then call `search()` per query.
 - `threshold` and `limit` interact: a high `threshold` can return fewer than `limit` results even when more items exist below the cutoff.
-- Match `ranges` refer to the **original** field value, not a lowercased or tokenized copy — index into `item[field]`, not a normalized string.
-- `remove()`, `reindex()`, and `setItems()` use reference equality (`===`) — retain object references when refreshing a corpus.
+- Match `ranges` refer to the **original** field value, not a lowercased or tokenized copy: index into `item[field]`, not a normalized string.
+- `remove()`, `reindex()`, and `setItems()` use reference equality (`===`): retain object references when refreshing a corpus.
 - Fuzzy candidates can have no literal `matches`; render an unhighlighted field when `matches` has no range for it.
 
 ### Related

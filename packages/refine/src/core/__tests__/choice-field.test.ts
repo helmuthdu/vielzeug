@@ -134,7 +134,7 @@ describe('createChoiceField', () => {
       const field = createChoiceField(options);
 
       // Before any interaction, `options.value` hasn't been contaminated by selection-driven
-      // attribute reflection yet — an async-loaded default arriving after mount is still a
+      // attribute reflection yet: an async-loaded default arriving after mount is still a
       // legitimate "current default" to resync from.
       value.value = 'beta';
       expect(field.selectedValues.value).toEqual(['beta']);
@@ -143,12 +143,12 @@ describe('createChoiceField', () => {
       expect(field.selectedValues.value).toEqual(['beta']);
     });
 
-    it('freezes the reset target at the first interaction — later prop changes stop moving it', () => {
+    it('freezes the reset target at the first interaction: later prop changes stop moving it', () => {
       const value = signal<string | string[] | undefined>('alpha');
       const { options } = makeOptions({ value });
       const field = createChoiceField(options);
 
-      field.setValues(['gamma']); // first interaction — freezes the reset target at ['alpha']
+      field.setValues(['gamma']); // first interaction: freezes the reset target at ['alpha']
       expect(field.selectedValues.value).toEqual(['gamma']);
 
       // A later prop change is still live-mirrored (the component reflects the current

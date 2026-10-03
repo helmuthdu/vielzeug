@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — deepMerge / shallowMerge'
+title: 'Arsenal Examples: deepMerge / shallowMerge'
 description: 'deepMerge and shallowMerge examples for @vielzeug/arsenal.'
 ---
 

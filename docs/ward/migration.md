@@ -10,14 +10,14 @@ description: Migrate to Ward's immutable ordered decision model, declarative rol
 `WardRule` gains a first-class `roles?: readonly string[]` field, evaluated beside action, resource, and attributes. `allow()` and `deny()` store the role list as data instead of compiling it into a `condition` closure, so `ward.rules` stays serializable and loggable end-to-end.
 
 ```ts
-// Before — roles hidden inside a condition closure
+// Before: roles hidden inside a condition closure
 { action: 'read', resource: 'posts', effect: 'allow', condition: ({ principal }) => principal?.roles.includes('editor') ?? false }
 
-// After — roles as data
+// After: roles as data
 { action: 'read', resource: 'posts', effect: 'allow', roles: ['editor'] }
 ```
 
-`ANONYMOUS` matches a null principal and `WILDCARD` matches any authenticated principal, exactly as before. `predicate.hasRole()` is removed — declare `roles` on the rule instead. `condition` remains for checks roles cannot express, such as `predicate.owns()`.
+`ANONYMOUS` matches a null principal and `WILDCARD` matches any authenticated principal, exactly as before. `predicate.hasRole()` is removed: declare `roles` on the rule instead. `condition` remains for checks roles cannot express, such as `predicate.owns()`.
 
 ## `allowedActions()` derives its candidates
 

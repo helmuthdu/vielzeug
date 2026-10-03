@@ -75,7 +75,7 @@ const STANDARD_PAGE_CONTRACTS = {
   'examples.md': {},
   'index.md': INDEX_CONTRACT,
   // Versions are CalVer trains (RELEASE.md): migration.md is where a breaking change's
-  // migration story lands, so every package carries one — content-free until its first
+  // migration story lands, so every package carries one: content-free until its first
   // breaking train. Existence is the contract; the prose is the author's.
   'migration.md': { frontmatter: ['title'] },
   'usage.md': {

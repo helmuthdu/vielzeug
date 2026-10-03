@@ -231,9 +231,9 @@ describe('bandScale', () => {
   });
 });
 
-// ─── linearScale — explicit domain ────────────────────────────────────────────
+// ─── linearScale: explicit domain ────────────────────────────────────────────
 
-describe('linearScale — plain-value domain', () => {
+describe('linearScale: plain-value domain', () => {
   it('maps correctly with explicit plain-value domain', () => {
     const scale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
 
@@ -242,9 +242,9 @@ describe('linearScale — plain-value domain', () => {
   });
 });
 
-// ─── timeScale — explicit domain ──────────────────────────────────────────────
+// ─── timeScale: explicit domain ──────────────────────────────────────────────
 
-describe('timeScale — plain-value domain', () => {
+describe('timeScale: plain-value domain', () => {
   it('maps correctly with explicit plain-value domain', () => {
     const d0 = new Date('2024-01-01');
     const d1 = new Date('2024-12-31');
@@ -255,9 +255,9 @@ describe('timeScale — plain-value domain', () => {
   });
 });
 
-// ─── buildXScale — single-point domain ────────────────────────────────────────
+// ─── buildXScale: single-point domain ────────────────────────────────────────
 
-describe('buildXScale — single-point domain', () => {
+describe('buildXScale: single-point domain', () => {
   it('does not produce Infinity domain when all x values are identical', () => {
     const scale = buildXScale([5, 5, 5], 300);
 
@@ -276,9 +276,9 @@ describe('buildXScale — single-point domain', () => {
   });
 });
 
-// ─── buildYScale — includeZero option ─────────────────────────────────────────
+// ─── buildYScale: includeZero option ─────────────────────────────────────────
 
-describe('buildYScale — includeZero option', () => {
+describe('buildYScale: includeZero option', () => {
   it('default includeZero:true anchors domain at 0 for positive data', () => {
     const scale = buildYScale([100, 110, 120], 300);
 
@@ -307,9 +307,9 @@ describe('buildYScale — includeZero option', () => {
   });
 });
 
-// ─── buildXScale / buildYScale — null-guard warning paths ─────────────────────
+// ─── buildXScale / buildYScale: null-guard warning paths ─────────────────────
 
-describe('buildXScale — null-guard warning', () => {
+describe('buildXScale: null-guard warning', () => {
   it('emits warn and returns fallback scale when any x value is null', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const scale = buildXScale([null as unknown as number, 1, 2], 300);
@@ -321,7 +321,7 @@ describe('buildXScale — null-guard warning', () => {
   });
 });
 
-describe('buildYScale — null-guard warning', () => {
+describe('buildYScale: null-guard warning', () => {
   it('emits warn and returns fallback scale when any y value is null', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const scale = buildYScale([null as unknown as number, 10, 20], 300);

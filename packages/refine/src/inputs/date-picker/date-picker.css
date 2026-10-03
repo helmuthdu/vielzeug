@@ -21,8 +21,8 @@
     --_day-today-color: var(--date-picker-day-today-color, var(--_theme-base));
   }
 
-  /* Make the trigger look like a button — ore-input is readonly so pointer changes to text by
-     default. `width: 100%` matters just as much — see ore-select's own `.trigger` for why:
+  /* Make the trigger look like a button: ore-input is readonly so pointer changes to text by
+     default. `width: 100%` matters just as much: see ore-select's own `.trigger` for why:
      `:host` is `display: inline-block`, which never stretches its own children to fill its own
      box the way a flex/grid container with `stretch` alignment would. */
   .trigger {
@@ -38,9 +38,9 @@
 
   /* ── Calendar popup ──────────────────────────────────────────────────────── */
 
-  /* `fixed` (not `absolute`) — positioned via JS-computed top/left (see the positioner in
+  /* `fixed` (not `absolute`): positioned via JS-computed top/left (see the positioner in
      date-picker.ts), same as ore-select's own `.dropdown`. Laid out relative to the viewport,
-     so it never affects any ancestor's box size or scrollable-overflow area — `absolute`
+     so it never affects any ancestor's box size or scrollable-overflow area: `absolute`
      positioned relative to the host did, once the host sat near a scroll/clip ancestor's edge. */
   .calendar {
     position: fixed;
@@ -173,7 +173,7 @@
     min-height: calc(7 * var(--size-10) + 6 * var(--size-0-5));
   }
 
-  /* role="row" wrappers exist for ARIA grid structure only — `display: contents`
+  /* role="row" wrappers exist for ARIA grid structure only: `display: contents`
      removes them from layout so their children still participate directly in the
      parent's CSS grid tracks. */
   .cal-grid [role='row'] {
@@ -240,7 +240,7 @@
 
   .cal-grid-months,
   .cal-grid-years {
-    /* 4-column grid — same width as cal-grid-days, natural height. */
+    /* 4-column grid: same width as cal-grid-days, natural height. */
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--size-1);

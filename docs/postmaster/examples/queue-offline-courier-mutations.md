@@ -1,5 +1,5 @@
 ---
-title: 'Postmaster Examples — Queue Offline Courier Requests'
+title: 'Postmaster Examples: Queue Offline Courier Requests'
 description: Persist Courier requests through a Postmaster outbox so they survive reloads.
 ---
 

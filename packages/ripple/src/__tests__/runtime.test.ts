@@ -554,7 +554,7 @@ describe('tap', () => {
     const ripple = createRipple();
     const count = ripple.signal(0);
 
-    // No tap registered — emit should be a no-op early return.
+    // No tap registered: emit should be a no-op early return.
     // This test just verifies no throw and correct value propagation.
     count.value = 1;
     expect(count.peek()).toBe(1);
@@ -611,7 +611,7 @@ describe('fromSubscribable', () => {
   it('works without importing ripple in the source', async () => {
     const { fromSubscribable } = await import('../index');
 
-    // Source is a plain object — no ripple import needed.
+    // Source is a plain object: no ripple import needed.
     let value = 'hello';
     const subs = new Set<() => void>();
     const external = {

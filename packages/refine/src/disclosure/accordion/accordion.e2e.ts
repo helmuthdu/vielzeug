@@ -1,10 +1,10 @@
 /**
- * Real-browser interaction test for `ore-accordion`/`ore-accordion-item` — expand-on-click via
+ * Real-browser interaction test for `ore-accordion`/`ore-accordion-item`: expand-on-click via
  * the real shadow-DOM `<summary>` element, which jsdom can evaluate but this cross-checks in a
  * real browser alongside the rest of the disclosure family's e2e suite. Complements
  * `accordion.test.ts`/`accordion-item.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { expect, test } from '../../testing/fixtures';
 

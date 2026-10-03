@@ -1,5 +1,5 @@
 ---
-title: Ledger — Usage Guide
+title: 'Ledger: Usage Guide'
 description: Record reversible commands, observe serialized history, handle failures, and own cancellation and disposal.
 ---
 
@@ -133,7 +133,7 @@ If active user code ignores cancellation and finishes, Ledger rejects with `Ledg
 
 ## Record Externally Executed Work
 
-When a synchronous store owns its writes, execute first and record the reversible entry afterwards: `undo()` calls the recorded `revert`, `redo()` calls the recorded `apply` — so `apply` must be able to re-apply the effect.
+When a synchronous store owns its writes, execute first and record the reversible entry afterwards: `undo()` calls the recorded `revert`, `redo()` calls the recorded `apply`, so `apply` must be able to re-apply the effect.
 
 ```ts
 const previous = item.name;

@@ -1,5 +1,5 @@
 ---
-title: Herald — Migration Guide
+title: 'Herald: Migration Guide'
 description: Migrate to Herald's focused synchronous event bus, tracing, waits, and lifecycle contracts.
 ---
 
@@ -77,10 +77,10 @@ bus.emit('order:created', order);
 // Before
 for await (const payload of bus.events('cart:updated', { signal })) consume(payload);
 
-// After — continuous delivery
+// After: continuous delivery
 bus.on('cart:updated', consume, { signal });
 
-// After — one future event
+// After: one future event
 const payload = await bus.wait('cart:updated', { signal });
 ```
 

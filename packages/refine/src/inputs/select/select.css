@@ -3,14 +3,14 @@
     /* Pass this select's width floor down to the ore-input trigger. Without this, the
        trigger keeps the input's own 12rem floor, so a select sized below it (via
        `--select-min-width` or a constraining flex/grid track) renders a trigger wider
-       than its host — overflowing it, clipped by whatever ancestor hides overflow. */
+       than its host: overflowing it, clipped by whatever ancestor hides overflow. */
     --input-min-width: var(--select-min-width, 12rem);
     display: inline-block;
     min-width: var(--select-min-width, 12rem);
   }
 
   :host([fullwidth]) {
-    /* Full width means the trigger fills the host exactly — keep the input floor from
+    /* Full width means the trigger fills the host exactly: keep the input floor from
        holding it above a container narrower than the 12rem default. */
     --input-min-width: 0;
     display: block;
@@ -18,18 +18,18 @@
     min-width: 0;
   }
 
-  /* Hide native <option> elements — we render our own UI */
+  /* Hide native <option> elements: we render our own UI */
   ::slotted(option),
   ::slotted(optgroup) {
     display: none;
   }
 
-  /* ore-input is readonly so pointer defaults to text — override to pointer.
-     `width: 100%` matters just as much: `:host` is `display: inline-block`, which — unlike a
-     flex/grid container with `align-items`/`justify-items: stretch` — never stretches its own
+  /* ore-input is readonly so pointer defaults to text: override to pointer.
+     `width: 100%` matters just as much: `:host` is `display: inline-block`, which: unlike a
+     flex/grid container with `align-items`/`justify-items: stretch`: never stretches its own
      children to fill its own box. Without this, `.trigger` (an `ore-input`, whose own `:host`
      only guarantees a 12rem *minimum*) stays shrink-wrapped to that minimum even when this
-     select's own host has already been stretched wider by an ancestor grid/flex track — visibly
+     select's own host has already been stretched wider by an ancestor grid/flex track: visibly
      narrower than a sibling field (e.g. `ore-number-input`) occupying the same-width track. */
   .trigger {
     width: 100%;
@@ -105,7 +105,7 @@
     animation: var(--_motion-animation, spin var(--transition-loader) infinite);
   }
 
-  /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
+  /* Keyframe must live in shadow DOM: @keyframes don't inherit across shadow roots */
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -209,7 +209,7 @@
     color: var(--color-contrast-500);
   }
 
-  /* Image icons (URL or data: sources) — sized to match the lucide icon variant. */
+  /* Image icons (URL or data: sources): sized to match the lucide icon variant. */
   .option-icon--image {
     width: 1.25em;
     height: 1.25em;

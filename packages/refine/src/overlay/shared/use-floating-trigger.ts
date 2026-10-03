@@ -43,7 +43,7 @@ export type FloatingTriggerOptions = {
   placement: Readable<Placement>;
   /** Resolves the trigger slot element. Called each time events are (re)bound. */
   slot: () => HTMLSlotElement | null;
-  /** Slot elements signal — used to rebind when slotted elements change. */
+  /** Slot elements signal: used to rebind when slotted elements change. */
   slotElements: Readable<Element[]>;
   /** Which triggers are active. Set to empty array or omit if handling events manually. */
   triggers: Readable<FloatingTriggerType[]>;
@@ -108,7 +108,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
   const resolveTrigger = (): HTMLElement | null =>
     currentTrigger ?? (slot()?.assignedElements({ flatten: true })[0] as HTMLElement | undefined) ?? null;
 
-  // The same Orbit positioner the dropdown overlays use — RTL placement mirroring, the
+  // The same Orbit positioner the dropdown overlays use: RTL placement mirroring, the
   // containing-block self-correction, and flip/shift, so popover/tooltip no longer carry a second,
   // divergent copy of the positioning logic. Panels render in the Popover API top layer (no
   // clipping ancestor) and size themselves (no width matching), matching `ore-menu`'s config.

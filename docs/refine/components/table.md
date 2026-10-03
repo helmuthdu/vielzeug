@@ -258,7 +258,7 @@ Mix attributes for a fully styled, accessible table.
 
 | Attribute   | Type                                   | Default  | Description                                                                 |
 | ----------- | -------------------------------------- | -------- | --------------------------------------------------------------------------- |
-| `caption`   | `string`                               | —        | Visible caption rendered above the table                                    |
+| `caption`   | `string`                               | N/A | Visible caption rendered above the table                                    |
 | `density`   | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'` | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious |
 | `striped`   | `boolean`                              | `false`  | Alternating row background                                                  |
 | `bordered`  | `boolean`                              | `false`  | Outer border and rounded corners                                            |
@@ -268,15 +268,15 @@ Mix attributes for a fully styled, accessible table.
 
 ### Child Elements
 
-`ore-table` reads light-DOM marker elements and projects them into a native shadow `<table>`. There are no slots — child elements are observed via `MutationObserver`. Always use `<ore-th>` (not `<ore-td>`) for header cells — `scope` is inferred automatically.
+`ore-table` reads light-DOM marker elements and projects them into a native shadow `<table>`. There are no slots: child elements are observed via `MutationObserver`. Always use `<ore-th>` (not `<ore-td>`) for header cells: `scope` is inferred automatically.
 
 | Element        | Description                                                                  |
 | -------------- | ---------------------------------------------------------------------------- |
-| `<ore-tr head>` | Header row — projected into `<thead>`                                        |
-| `<ore-tr>`      | Body row — projected into `<tbody>`                                          |
-| `<ore-tr foot>` | Footer row — projected into `<tfoot>`                                        |
-| `<ore-th>`      | Header cell — mirrored as native `<th>`; `scope` is auto-inferred if omitted |
-| `<ore-td>`      | Data cell — mirrored as native `<td>`; supports `colspan`, `rowspan`, etc.   |
+| `<ore-tr head>` | Header row: projected into `<thead>`                                        |
+| `<ore-tr>`      | Body row: projected into `<tbody>`                                          |
+| `<ore-tr foot>` | Footer row: projected into `<tfoot>`                                        |
+| `<ore-th>`      | Header cell: mirrored as native `<th>`; `scope` is auto-inferred if omitted |
+| `<ore-td>`      | Data cell: mirrored as native `<td>`; supports `colspan`, `rowspan`, etc.   |
 
 ### Mirrored Attributes
 
@@ -286,14 +286,14 @@ Attributes on `<ore-th>` and `<ore-td>` are forwarded to the generated native `<
 | --------- | ---------------- | ------------------------------------------------ |
 | `colspan` | `ore-th`, `ore-td` | Spans multiple columns                           |
 | `rowspan` | `ore-th`, `ore-td` | Spans multiple rows                              |
-| `scope`   | `ore-th`          | Column/row association — auto-inferred if absent |
+| `scope`   | `ore-th`          | Column/row association: auto-inferred if absent |
 | `headers` | `ore-th`, `ore-td` | Associates cell with header IDs                  |
 
 ### Parts
 
 | Part          | Description                                                  |
 | ------------- | ------------------------------------------------------------ |
-| `scroll`      | Overflow container — target for max-height / scrolling       |
+| `scroll`      | Overflow container: target for max-height / scrolling       |
 | `table`       | Generated native `<table>` element                           |
 | `head`        | Generated native `<thead>` element                           |
 | `body`        | Generated native `<tbody>` element                           |

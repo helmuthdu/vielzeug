@@ -1,5 +1,5 @@
 ---
-title: Wayfinder — Usage Guide
+title: 'Wayfinder: Usage Guide'
 description: Router setup, middleware, data loading, nested routes, and state patterns for Wayfinder.
 ---
 
@@ -11,7 +11,7 @@ Start with the [Overview](./index.md), then use this page for the day-to-day API
 
 ## Mirror a State Machine into the URL
 
-A stepped flow's URL should name the step the domain is on — shareable, reload-safe, and never ahead of the truth. `createPhaseMirror` wires a `Router` to the domain phase as a ripple `Readable`, replacing (never pushing) so back exits the flow.
+A stepped flow's URL should name the step the domain is on: shareable, reload-safe, and never ahead of the truth. `createPhaseMirror` wires a `Router` to the domain phase as a ripple `Readable`, replacing (never pushing) so back exits the flow.
 
 ```ts
 import { createPhaseMirror } from '@vielzeug/wayfinder';
@@ -136,7 +136,7 @@ userDetail: {
     },
   ],
   data: async (ctx) => {
-    ctx.signal; // AbortSignal — cancelled when navigation is superseded
+    ctx.signal; // AbortSignal: cancelled when navigation is superseded
     return fetchUser(ctx.params.id, { signal: ctx.signal });
   },
 }
@@ -357,7 +357,7 @@ await router.navigate({ name: 'dashboard' }, { force: true }); // re-runs
 
 ### Leave Guards
 
-Guard navigation until the user confirms — useful for unsaved-changes forms:
+Guard navigation until the user confirms: useful for unsaved-changes forms:
 
 ```ts
 const removeGuard = router.beforeLeave(async (destination) => {
@@ -559,7 +559,7 @@ export function useRouter() {
   return { isActive, navigate, state, url };
 }
 
-// RouterView.tsx — exhaustive routes and an explicit fallback
+// RouterView.tsx: exhaustive routes and an explicit fallback
 const views = router.createViewRegistry(
   { home: HomePage, settings: SettingsPage },
   { notFound: NotFoundPage },
@@ -584,7 +584,7 @@ const router = createRouter({
   notFound: { data: () => ({ message: 'Not found' }) },
 });
 
-// shallowRef — no need to deep-track immutable route state.
+// shallowRef: no need to deep-track immutable route state.
 const state = shallowRef(router.getSnapshot());
 router.subscribe((next) => {
   state.value = next;
@@ -623,7 +623,7 @@ For full RouterView and RouterLink patterns, see [React Integration](./examples/
 
 ## Debug Logging
 
-`router.subscribe()` is the reactive subscription API — it receives every state change, including `loading` and `error` transitions. Attach a listener that logs to `console.debug` to inspect navigation without any dedicated debug tooling.
+`router.subscribe()` is the reactive subscription API: it receives every state change, including `loading` and `error` transitions. Attach a listener that logs to `console.debug` to inspect navigation without any dedicated debug tooling.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
@@ -641,7 +641,7 @@ const stop = router.subscribe((state) => {
 // [wayfinder] idle /dashboard
 ```
 
-The returned function unsubscribes the listener — call it when the logger is no longer needed (e.g. on teardown):
+The returned function unsubscribes the listener: call it when the logger is no longer needed (e.g. on teardown):
 
 ```ts
 stop();

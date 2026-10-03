@@ -57,7 +57,7 @@ A floating interactive panel anchored to a trigger element. Unlike a tooltip, a 
 
 ## Rich Content
 
-The `content` slot accepts any HTML — forms, cards, images, custom layouts.
+The `content` slot accepts any HTML: forms, cards, images, custom layouts.
 
 <ComponentPreview center height="400px">
 
@@ -143,12 +143,12 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 | Attribute   | Type                                                                                                                                                                 | Default    | Description                                                  |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------ |
 | `placement` | `'top' \| 'top-start' \| 'top-end' \| 'bottom' \| 'bottom-start' \| 'bottom-end' \| 'left' \| 'left-start' \| 'left-end' \| 'right' \| 'right-start' \| 'right-end'` | `'bottom'` | Preferred placement                                          |
-| `trigger`   | `string`                                                                                                                                                             | `'click'`  | Trigger mode(s) — `click`, `hover`, `focus`, comma-separated |
-| `open`      | `boolean`                                                                                                                                                            | —          | Controlled open state                                        |
+| `trigger`   | `string`                                                                                                                                                             | `'click'`  | Trigger mode(s): `click`, `hover`, `focus`, comma-separated |
+| `open`      | `boolean`                                                                                                                                                            | N/A | Controlled open state                                        |
 | `default-open` | `boolean`                                                                                                                                                         | `false`    | Initial state when `open` is not provided                    |
 | `offset`    | `number`                                                                                                                                                             | `8`        | Gap in pixels between trigger and panel                      |
 | `disabled`  | `boolean`                                                                                                                                                            | `false`    | Prevent the popover from opening                             |
-| `label`     | `string`                                                                                                                                                             | —          | `aria-label` for the panel                                   |
+| `label`     | `string`                                                                                                                                                             | N/A | `aria-label` for the panel                                   |
 
 ### Slots
 
@@ -181,5 +181,5 @@ When the trigger mode includes `click` or `focus`, focus moves into the panel on
 
 ## Related Components
 
-- [Tooltip](./tooltip) — lightweight non-interactive floating label
-- [Menu](./menu) — dropdown menu with keyboard navigation
+- [Tooltip](./tooltip): lightweight non-interactive floating label
+- [Menu](./menu): dropdown menu with keyboard navigation

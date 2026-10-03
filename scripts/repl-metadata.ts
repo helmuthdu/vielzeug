@@ -1,6 +1,6 @@
 export const DESCRIPTIONS: Record<string, string> = {
   arsenal: 'Tree-shakeable utilities with focused category entry points.',
-  assay: 'Framework-agnostic DOM testing primitives — scoped queries, event dispatch, and async waiting.',
+  assay: 'Framework-agnostic DOM testing primitives: scoped queries, event dispatch, and async waiting.',
   clockwork: 'Typed finite state machines with guards, async invokes, and more.',
   coins: 'Currency formatting and exchange utilities for monetary arithmetic.',
   conduit: 'Lightweight dependency injection container with IoC principles.',

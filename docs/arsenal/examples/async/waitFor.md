@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — waitFor'
+title: 'Arsenal Examples: waitFor'
 description: 'waitFor example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'waitFor example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to poll until a condition becomes true — for example waiting for a DOM element to appear, a flag to be set, or a resource to become available.
+You need to poll until a condition becomes true: for example waiting for a DOM element to appear, a flag to be set, or a resource to become available.
 
 ### Solution
 
@@ -44,7 +44,7 @@ await waitFor(() => isServiceReady(), {
 ### Pitfalls
 
 - Throws a `TimeoutError` (or `AbortError`) when the condition never becomes true within the timeout or the signal fires.
-- The condition function is called on a polling interval — avoid expensive operations inside it.
+- The condition function is called on a polling interval: avoid expensive operations inside it.
 
 ### Related
 

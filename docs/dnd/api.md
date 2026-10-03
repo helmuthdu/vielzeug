@@ -1,5 +1,5 @@
 ---
-title: Dnd — API Reference
+title: 'Dnd: API Reference'
 description: Complete API reference for Dnd.
 ---
 
@@ -232,18 +232,18 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 
 | Option           | Type                                             | Default  | Description                                                                                                                                                                                                                                      |
 | ---------------- | ------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `element`        | `HTMLElement`                                    | —        | **Required.** The element to attach drag listeners to.                                                                                                                                                                                           |
+| `element`        | `HTMLElement`                                    | N/A | **Required.** The element to attach drag listeners to.                                                                                                                                                                                           |
 | `accept`         | `string[]`                                       | `[]`     | Accepted file types, normalized and snapshotted at construction. Empty array accepts everything; invalid MIME, wildcard, or extension patterns throw `DndError`.                                                                                       |
-| `maxFiles`       | `number`                                         | —        | Non-negative safe-integer file limit. Excess files are passed to `onDropRejected`; invalid values throw `DndError` during construction.                                                                                                                         |
-| `onValidate`     | `(files, { signal }) => boolean \| Promise<boolean>` | —     | Optional async gating step. Return or resolve `false` to reject all accepted files. `validating` remains true until every operation settles; `signal` aborts on disposal. |
-| `disabled`       | `boolean`                                        | —        | When `true`, all drag and paste events are ignored. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally.                            |
+| `maxFiles`       | `number`                                         | N/A | Non-negative safe-integer file limit. Excess files are passed to `onDropRejected`; invalid values throw `DndError` during construction.                                                                                                                         |
+| `onValidate`     | `(files, { signal }) => boolean \| Promise<boolean>` | N/A | Optional async gating step. Return or resolve `false` to reject all accepted files. `validating` remains true until every operation settles; `signal` aborts on disposal. |
+| `disabled`       | `boolean`                                        | N/A | When `true`, all drag and paste events are ignored. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally.                            |
 | `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`           | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                                                                                                         |
-| `onDrop`         | `(files: File[]) => void`                        | —        | Called with accepted files only. Not called if all dropped files are rejected. Also receives paste events when `paste: true` and `onPaste` is omitted.                                                                                           |
-| `onDropRejected` | `(files: File[]) => void`                        | —        | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`.                                                                                                                                            |
-| `onHoverChange`  | `(hovered: boolean) => void`                     | —        | Called when hover state toggles. Use this callback for drag-over styling.                                                                                                                                                                        |
-| `onValidatingChange` | `(validating: boolean) => void`                | —        | Called whenever the aggregate async validation state changes. |
+| `onDrop`         | `(files: File[]) => void`                        | N/A | Called with accepted files only. Not called if all dropped files are rejected. Also receives paste events when `paste: true` and `onPaste` is omitted.                                                                                           |
+| `onDropRejected` | `(files: File[]) => void`                        | N/A | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`.                                                                                                                                            |
+| `onHoverChange`  | `(hovered: boolean) => void`                     | N/A | Called when hover state toggles. Use this callback for drag-over styling.                                                                                                                                                                        |
+| `onValidatingChange` | `(validating: boolean) => void`                | N/A | Called whenever the aggregate async validation state changes. |
 | `paste`          | `boolean`                                        | `false`  | When `true`, attaches a `paste` listener to `element`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.                                                                                        |
-| `onPaste`        | `(files: File[]) => void`                        | —        | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                                                                                                            |
+| `onPaste`        | `(files: File[]) => void`                        | N/A | Called when files are pasted from the clipboard. Falls back to `onDrop` when omitted. Only active when `paste: true`.                                                                                                                            |
 
 **Returns:** `DropZone`
 
@@ -277,7 +277,7 @@ const zone = createDropZone({
 
 `readonly hovered: boolean`
 
-`true` when a drag is currently over the zone. Updated synchronously by the internal counter — safe to read at any time.
+`true` when a drag is currently over the zone. Updated synchronously by the internal counter: safe to read at any time.
 
 ### `zone.validating`
 
@@ -305,7 +305,7 @@ An `AbortSignal` that fires when `dispose()` is called. Use it to cancel in-flig
 
 `dispose(): void`
 
-Removes all event listeners, aborts pending validation, and resets `hovered` and `validating`. Idempotent — safe to call multiple times.
+Removes all event listeners, aborts pending validation, and resets `hovered` and `validating`. Idempotent: safe to call multiple times.
 
 ```ts
 zone.dispose();
@@ -337,7 +337,7 @@ Makes the direct children of a container element reorderable via drag. Returns a
 - `getKey`: `(element: HTMLElement) => string`, required. Maps each item element to its stable string identity. Children for which `getKey` returns a falsy value are skipped.
 - `scope`: `SortableScope`, default private scope. Connects sortable lists explicitly; containers only exchange items when they share the same scope instance.
 - `handle`: `string`. Valid CSS selector for a drag handle inside each item. Invalid selectors throw `DndError`; an empty selector warns and disables dragging.
-- `keyboard`: `boolean`, default `true`. Enables keyboard reordering with arrow keys plus `Home` and `End`, matched through `matchKey` from `@vielzeug/keymap` — modifier chords (e.g. Ctrl+ArrowDown, browser back/forward) are ignored. Events from interactive descendants are ignored unless they match the configured handle.
+- `keyboard`: `boolean`, default `true`. Enables keyboard reordering with arrow keys plus `Home` and `End`, matched through `matchKey` from `@vielzeug/keymap`: modifier chords (e.g. Ctrl+ArrowDown, browser back/forward) are ignored. Events from interactive descendants are ignored unless they match the configured handle.
 - `axis`: `'vertical' | 'horizontal'`, default `'vertical'`. Controls midpoint calculation for placeholder insertion.
 - `autoScroll`: `boolean | AutoScrollOptions`, default `true`. Scrolls near edges; threshold must be finite and non-negative and speed finite and positive.
 - `dragImage`: `HTMLElement | ((id, item, event) => HTMLElement | null | undefined)`. Custom native drag preview passed to `dataTransfer.setDragImage()`. A `null` or `undefined` return skips `setDragImage` entirely.
@@ -346,8 +346,8 @@ Makes the direct children of a container element reorderable via drag. Returns a
 - `disabled`: `boolean`. Blocks drag interactions. If a list becomes disabled mid-drag, Dnd cancels the drag and restores the original order.
 - `onDragStart`: `(id: string, event: DragEvent) => void`. Called when a drag starts.
 - `onDragEnd`: `(id: string, event: DragEvent) => void`. Called when a drag ends, whether completed or cancelled.
-- `onInteraction`: `(event: SortableInteractionEvent) => void`. Structured accessibility event for pickup/move/drop/cancel — wire to a consumer-side announcer for screen-reader feedback. See [`SortableInteractionEvent`](#sortableinteractionevent).
-- `onBeforeReorder`: `(from: readonly string[], to: readonly string[]) => void`. Called with the before/after order snapshots just before a successful reorder commits — for both drag and keyboard. Items are still in their pre-commit positions at the time of the call, making it ideal for [`captureLayout()`](/necromancer/api.md#capturelayout) setup.
+- `onInteraction`: `(event: SortableInteractionEvent) => void`. Structured accessibility event for pickup/move/drop/cancel: wire to a consumer-side announcer for screen-reader feedback. See [`SortableInteractionEvent`](#sortableinteractionevent).
+- `onBeforeReorder`: `(from: readonly string[], to: readonly string[]) => void`. Called with the before/after order snapshots just before a successful reorder commits: for both drag and keyboard. Items are still in their pre-commit positions at the time of the call, making it ideal for [`captureLayout()`](/necromancer/api.md#capturelayout) setup.
 - `items`: `() => readonly HTMLElement[]`. Returns direct children owned by this sortable. `refresh()` restores elements no longer returned before marking the current set.
 - `onReorder`: `(event: ReorderEvent) => void`. Called after a successful reorder (drag or keyboard), only when the order changed. The event carries `before`, `after`, and `item` so application history can own rollback.
 
@@ -434,7 +434,7 @@ An `AbortSignal` that fires when `dispose()` is called.
 
 `dispose(): void`
 
-Removes all event listeners from the container, strips sortable attributes from items and handles, and cancels any in-progress drag by restoring the original order. Idempotent — safe to call multiple times.
+Removes all event listeners from the container, strips sortable attributes from items and handles, and cancels any in-progress drag by restoring the original order. Idempotent: safe to call multiple times.
 
 ### `sortable[Symbol.dispose]()`
 
@@ -505,7 +505,7 @@ Applies a DOM reorder result (`orderedIds`) to your backing array.
 
 - IDs missing from `items` are ignored.
 - Items not listed in `ids` are appended in original order.
-- Duplicate IDs in `ids` — first occurrence wins, later occurrences are ignored.
+- Duplicate IDs in `ids`: first occurrence wins, later occurrences are ignored.
 - Duplicate keys in `items` throw `DndError`; data is never silently discarded.
 
 **Returns:** A new array ordered by `ids`, with omitted items appended in their original order.

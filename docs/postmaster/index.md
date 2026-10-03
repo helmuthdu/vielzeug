@@ -1,5 +1,5 @@
 ---
-title: Postmaster — Durable job outbox
+title: 'Postmaster: Durable job outbox'
 description: Typed durable job outbox with leased processing, retries, and dead-letter recovery for browser applications.
 package: postmaster
 category: Async
@@ -15,7 +15,7 @@ environments: [browser, node]
 
 ## Why Postmaster?
 
-Application jobs that touch a remote service — posting a form, syncing state, sending analytics — must survive page reloads, resume later, retry according to an explicit policy, and retain terminal failures for recovery. Postmaster coordinates that delivery with typed job definitions, leased processing, and a dead-letter queue, all backed by IndexedDB.
+Application jobs that touch a remote service: posting a form, syncing state, sending analytics: must survive page reloads, resume later, retry according to an explicit policy, and retain terminal failures for recovery. Postmaster coordinates that delivery with typed job definitions, leased processing, and a dead-letter queue, all backed by IndexedDB.
 
 ```ts
 // Before
@@ -145,14 +145,14 @@ await store.dispose();
 
 ## Features
 
-- `defineJobs()` — Typed job registry with payload inference and validation.
-- `createPostmaster()` — Processor with leased claims, heartbeat renewal, and crash recovery.
-- `enqueue()` — Persist a job and wake the processor, with optional delayed eligibility via `availableAt`.
-- `flush()` — Process every available job until the queue is empty.
-- `retry()` / `remove()` — Recover or discard dead-letter jobs.
-- `tap()` — Typed runtime events for enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, and processor-error.
-- `createIndexedDbPostmasterStore()` — Durable browser store backed by Vault IndexedDB.
-- `createMemoryPostmasterStore()` — Deterministic in-memory store for tests.
+- `defineJobs()`: Typed job registry with payload inference and validation.
+- `createPostmaster()`: Processor with leased claims, heartbeat renewal, and crash recovery.
+- `enqueue()`: Persist a job and wake the processor, with optional delayed eligibility via `availableAt`.
+- `flush()`: Process every available job until the queue is empty.
+- `retry()` / `remove()`: Recover or discard dead-letter jobs.
+- `tap()`: Typed runtime events for enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, and processor-error.
+- `createIndexedDbPostmasterStore()`: Durable browser store backed by Vault IndexedDB.
+- `createMemoryPostmasterStore()`: Deterministic in-memory store for tests.
 
 </div>
 
@@ -171,11 +171,11 @@ await store.dispose();
 
 ## See Also
 
-- [@vielzeug/courier](../courier/) — Perform the HTTP requests Postmaster jobs coordinate.
-- [@vielzeug/sourcerer](../sourcerer/) — Reload paginated collection state after durable jobs complete.
-- [@vielzeug/vault](../vault/) — IndexedDB storage primitive backing the durable store.
-- [@vielzeug/sentinel](../sentinel/) — Flush the outbox when the network returns.
-- [@vielzeug/familiar](../familiar/) — In-memory Web Worker pool for CPU-bound tasks.
+- [@vielzeug/courier](../courier/): Perform the HTTP requests Postmaster jobs coordinate.
+- [@vielzeug/sourcerer](../sourcerer/): Reload paginated collection state after durable jobs complete.
+- [@vielzeug/vault](../vault/): IndexedDB storage primitive backing the durable store.
+- [@vielzeug/sentinel](../sentinel/): Flush the outbox when the network returns.
+- [@vielzeug/familiar](../familiar/): In-memory Web Worker pool for CPU-bound tasks.
 
 </div>
 

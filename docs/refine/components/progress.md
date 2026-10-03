@@ -39,12 +39,12 @@ The `label` attribute renders visible text and doubles as the accessible `aria-l
 
 **Linear:**
 
-- Without `title` — rendered at the **end of the bar** (trailing inline).
-- With `title` — moved into the **header row** above the bar.
+- Without `title`: rendered at the **end of the bar** (trailing inline).
+- With `title`: moved into the **header row** above the bar.
 
 **Circular:** renders as large, bold text **centered inside the ring**.
 
-Always set `label` (or `title`) to a meaningful description like `"Uploading file — 45%"` so screen readers have a useful accessible name. When neither is set, `aria-label` falls back to `"Progress"`.
+Always set `label` (or `title`) to a meaningful description like `"Uploading file: 45%"` so screen readers have a useful accessible name. When neither is set, `aria-label` falls back to `"Progress"`.
 
 <ComponentPreview vertical>
 
@@ -64,7 +64,7 @@ The `title` attribute provides contextual text.
 
 **Circular:** displayed as smaller text **below the label** inside the ring.
 
-Use `title` + `label` together to build a self-contained progress widget — the title names the operation and the label shows the current value.
+Use `title` + `label` together to build a self-contained progress widget: the title names the operation and the label shows the current value.
 
 <ComponentPreview vertical>
 
@@ -106,7 +106,7 @@ Set `segments` to split the linear bar into discrete blocks. Blocks up to `value
 
 ## Circular
 
-Set `type="circular"` to render a circular progress ring. The default diameter is `6rem` (sm: `4rem`, lg: `9rem`) — large enough to display content inside. Use `circular` for dashboard metrics, profile completions, or storage indicators where the ring itself communicates the proportion. For circular, combine `label` (value like `"75%"`) with `title` (context like `"Storage"`) for a self-contained widget.
+Set `type="circular"` to render a circular progress ring. The default diameter is `6rem` (sm: `4rem`, lg: `9rem`): large enough to display content inside. Use `circular` for dashboard metrics, profile completions, or storage indicators where the ring itself communicates the proportion. For circular, combine `label` (value like `"75%"`) with `title` (context like `"Storage"`) for a self-contained widget.
 
 ### Determinate
 
@@ -237,13 +237,13 @@ const interval = setInterval(() => {
 | `max`            | `number`                                                                  | `100`      | Maximum value                                                                                                                                                                                                                                            |
 | `indeterminate`  | `boolean`                                                                 | `false`    | Show infinite animation when duration is unknown                                                                                                                                                                                                         |
 | `type`           | `'linear' \| 'circular'`                                                  | `'linear'` | Bar style                                                                                                                                                                                                                                                |
-| `color`          | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Theme color for the fill                                                                                                                                                                                                                                 |
-| `size`           | `'sm' \| 'md' \| 'lg'`                                                    | —          | Bar height (linear) or circle diameter (circular)                                                                                                                                                                                                        |
-| `label`          | `string`                                                                  | —          | Visible text label and accessible name. **Linear** without `title`: rendered at bar end. **Linear** with `title`: moved to the header row. **Circular**: large text centered inside the ring. Falls back to `title`, then `"Progress"` for `aria-label`. |
-| `title`          | `string`                                                                  | —          | **Linear**: header text above the bar; moves `label` to the header row when combined. **Circular**: smaller text below the `label` inside the ring.                                                                                                      |
-| `floating-label` | `string`                                                                  | —          | Text for the floating chip above the fill endpoint (linear only). Hidden when `indeterminate`.                                                                                                                                                           |
+| `color`          | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for the fill                                                                                                                                                                                                                                 |
+| `size`           | `'sm' \| 'md' \| 'lg'`                                                    | N/A | Bar height (linear) or circle diameter (circular)                                                                                                                                                                                                        |
+| `label`          | `string`                                                                  | N/A | Visible text label and accessible name. **Linear** without `title`: rendered at bar end. **Linear** with `title`: moved to the header row. **Circular**: large text centered inside the ring. Falls back to `title`, then `"Progress"` for `aria-label`. |
+| `title`          | `string`                                                                  | N/A | **Linear**: header text above the bar; moves `label` to the header row when combined. **Circular**: smaller text below the `label` inside the ring.                                                                                                      |
+| `floating-label` | `string`                                                                  | N/A | Text for the floating chip above the fill endpoint (linear only). Hidden when `indeterminate`.                                                                                                                                                           |
 | `segments`       | `number`                                                                  | `0`        | Split the linear bar into this many discrete blocks; blocks up to `value / max` are filled. Ignored when `indeterminate` or vertical.                                                                                                                  |
-| `value-text`     | `string`                                                                  | —          | Human-readable value for screen readers (e.g. `"Step 2 of 5"`). Overrides the raw `aria-valuenow`.                                                                                                                                                       |
+| `value-text`     | `string`                                                                  | N/A | Human-readable value for screen readers (e.g. `"Step 2 of 5"`). Overrides the raw `aria-valuenow`.                                                                                                                                                       |
 
 ### CSS Custom Properties
 

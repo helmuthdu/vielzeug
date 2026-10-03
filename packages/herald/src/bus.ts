@@ -12,7 +12,7 @@ import type {
   WaitAnyResult,
 } from './types';
 
-// Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
+// Module-scoped noop: shared across all bus instances to avoid per-bus allocation.
 /** @internal */
 export const noop = () => {};
 

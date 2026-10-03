@@ -19,7 +19,7 @@ export type OreSkeletonProps = {
   radius?: string;
   /** Size preset controlling line height and circle size */
   size?: ComponentSize;
-  /** Render diagonal stripes instead of the shimmer — useful as a design-mode placeholder */
+  /** Render diagonal stripes instead of the shimmer: useful as a design-mode placeholder */
   striped?: boolean;
   /** Visual variant: 'rect' (default), 'circle', or 'text' */
   variant?: 'rect' | 'circle' | 'text';

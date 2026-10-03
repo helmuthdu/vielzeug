@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Auto-Dismiss Notification'
+title: 'Clockwork Examples: Auto-Dismiss Notification'
 description: 'Use actor-owned delayed transitions for temporary notifications.'
 ---
 

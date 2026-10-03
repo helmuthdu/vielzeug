@@ -1,6 +1,6 @@
 ---
-title: Scout — Usage Guide
-description: How-to guide for @vielzeug/scout — building indexes, reactive search, highlighting, and integrating with sourcerer and vault.
+title: 'Scout: Usage Guide'
+description: 'How-to guide for @vielzeug/scout: building indexes, reactive search, highlighting, and integrating with sourcerer and vault.'
 ---
 
 [[toc]]
@@ -72,7 +72,7 @@ const index = createIndex(products, {
 
 ### Non-Latin scripts (CJK, Thai, ...)
 
-`tokenize()` indexes any script correctly — trigrams are generated per-character, so Chinese, Japanese, Cyrillic, and accented Latin text are all searchable out of the box. What it doesn't do is insert word boundaries for scripts that don't use spaces (Chinese, Japanese, Thai, ...), which affects `findMatchRanges()` / highlighting and multi-word query semantics. Pre-segment those fields with `segmentWords()`:
+`tokenize()` indexes any script correctly: trigrams are generated per-character, so Chinese, Japanese, Cyrillic, and accented Latin text are all searchable out of the box. What it doesn't do is insert word boundaries for scripts that don't use spaces (Chinese, Japanese, Thai, ...), which affects `findMatchRanges()` / highlighting and multi-word query semantics. Pre-segment those fields with `segmentWords()`:
 
 ```ts
 import { createIndex, segmentWords } from '@vielzeug/scout';
@@ -86,7 +86,7 @@ const index = createIndex(docs, {
 index.search('日本語'); // matches the first document
 ```
 
-`segmentWords()` uses the runtime's native `Intl.Segmenter` — no dependency. It's opt-in per field rather than built into `tokenize()` because it benchmarks ~15x slower than the default regex path for ordinary whitespace-delimited text.
+`segmentWords()` uses the runtime's native `Intl.Segmenter`: no dependency. It's opt-in per field rather than built into `tokenize()` because it benchmarks ~15x slower than the default regex path for ordinary whitespace-delimited text.
 
 ### Limiting results
 
@@ -99,7 +99,7 @@ const results = index.search('widget', { limit: 10, threshold: 0.3 });
 
 Per-call options override the index-level defaults set in `createIndex`.
 
-Scores come from the overlap (Szymkiewicz–Simpson) coefficient — the fraction of the *shorter*
+Scores come from the overlap (Szymkiewicz–Simpson) coefficient: the fraction of the *shorter*
 trigram set (almost always the query) found in the longer one. This is deliberate for the
 autocomplete/command-palette use case `createIndex` targets: a short query that's a clean prefix
 of a much longer field value (e.g. `'fin'` against `'Finalize Q3 budget report'`) scores on how
@@ -119,7 +119,7 @@ const results = index.search('alice', { minQueryLength: 8 });
 
 ## Reactive Search
 
-### `createReactiveSearch()` — recommended
+### `createReactiveSearch()`: recommended
 
 For most use cases, `createReactiveSearch` builds the index and state together. It returns one external store whose snapshot contains `query`, `isSearching`, and `results`, plus `.index` for incremental mutations:
 
@@ -147,7 +147,7 @@ search.dispose();
 
 Each notification observes a complete committed snapshot. During a debounce window, `query` contains the latest input, `isSearching` is `true`, and `results` remain the last committed results.
 
-### `createSearch()` — separate index and state
+### `createSearch()`: separate index and state
 
 Use `createSearch` when sharing one index across multiple search stores:
 
@@ -250,13 +250,13 @@ index.add(newProduct); // triggers rerenderResultsList()
 unsubscribe(); // when done
 ```
 
-`onMutate()` only fires for mutations that actually change the index — a duplicate `add()` or a `remove()` of an unindexed item is a no-op and doesn't notify listeners.
+`onMutate()` only fires for mutations that actually change the index: a duplicate `add()` or a `remove()` of an unindexed item is a no-op and doesn't notify listeners.
 
 ## Match Highlighting
 
-Every `SearchResult` carries `matches` — per-field literal normalized-token ranges. A fuzzy trigram candidate can have `matches: []` when no literal query token appears in its field text.
+Every `SearchResult` carries `matches`: per-field literal normalized-token ranges. A fuzzy trigram candidate can have `matches: []` when no literal query token appears in its field text.
 
-### `highlightField()` — recommended
+### `highlightField()`: recommended
 
 `highlightField(result, field, text)` is the shorthand that does the field lookup and fragment split in one step:
 
@@ -272,7 +272,7 @@ for (const result of index.search('alice')) {
 
 ::: warning `part.text` is unescaped
 `highlight()` / `highlightField()` return the **original, unescaped** field text split into
-fragments — never concatenate `part.text` into an HTML string for `innerHTML`. Render each
+fragments: never concatenate `part.text` into an HTML string for `innerHTML`. Render each
 part as text (`textContent`, a framework's text binding) and wrap `highlighted` parts in your
 own element:
 
@@ -284,7 +284,7 @@ function renderHighlightedText(parts: HighlightPart[]): DocumentFragment {
     if (part.highlighted) {
       const mark = document.createElement('mark');
 
-      mark.textContent = part.text; // textContent — never innerHTML
+      mark.textContent = part.text; // textContent: never innerHTML
       fragment.appendChild(mark);
     } else {
       fragment.appendChild(document.createTextNode(part.text));
@@ -297,9 +297,9 @@ function renderHighlightedText(parts: HighlightPart[]): DocumentFragment {
 
 :::
 
-### `findMatchRanges()` + `highlight()` — manual
+### `findMatchRanges()` + `highlight()`: manual
 
-Use `findMatchRanges()` when you need to apply match ranges to a different string than the indexed field value — for example a truncated preview or a differently formatted display string:
+Use `findMatchRanges()` when you need to apply match ranges to a different string than the indexed field value: for example a truncated preview or a differently formatted display string:
 
 ```ts
 import { findMatchRanges, highlight } from '@vielzeug/scout';
@@ -357,7 +357,7 @@ stop();
 `tap()` emits only `state-change`; observe disposal through `disposed` or `disposalSignal`. Tapper errors are swallowed. Use `subscribe()` instead when application state must update after each snapshot commit.
 
 ::: warning Development logging
-`query` carries the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.
+`query` carries the full, literal search query string: if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.
 :::
 
 ## Framework Integration
@@ -456,7 +456,7 @@ console.log(source.state.items);
 
 ### With Vault
 
-`toFilterPredicate()` returns an `(item: T) => boolean` snapshot predicate — pass it to vault's `query.filter()` or plain `Array.filter`.
+`toFilterPredicate()` returns an `(item: T) => boolean` snapshot predicate: pass it to vault's `query.filter()` or plain `Array.filter`.
 
 ```ts
 import { createIndex, toFilterPredicate } from '@vielzeug/scout';
@@ -470,14 +470,14 @@ const rows = await db.query('products')
   .toArray();
 ```
 
-Call `toFilterPredicate` again whenever the query or corpus changes — the predicate is a snapshot, not reactive.
+Call `toFilterPredicate` again whenever the query or corpus changes: the predicate is a snapshot, not reactive.
 
 ## Best Practices
 
-- **Build the index once** — `createIndex()` runs in O(corpus × field_length). Create it at module level or in an effect, not inside render loops.
-- **Keep the index in sync** — call `index.add()` / `remove()` / `reindex()` when items mutate. Stale index entries return wrong scores.
-- **Tune threshold before limit** — set a meaningful `threshold` (e.g. `0.25–0.4`) to suppress noise, then use `limit` to cap the list length.
-- **Set `minQueryLength` for your corpus size** — the default `3` works well for most cases. Lower it for small corpora where single-char queries are expected; raise it for large corpora to avoid expensive O(n) scans.
-- **Dispose reactive state** — always call `search.dispose()` or use `using` when the component unmounts.
-- **Weight by importance** — name/title fields should have weight `2–3`; secondary fields (description, tags) stay at `1`.
-- **Segment CJK/Thai fields explicitly** — `segmentWords()` is opt-in per field, not automatic, to keep `createIndex()` fast for the common whitespace-delimited case.
+- **Build the index once**: `createIndex()` runs in O(corpus × field_length). Create it at module level or in an effect, not inside render loops.
+- **Keep the index in sync**: call `index.add()` / `remove()` / `reindex()` when items mutate. Stale index entries return wrong scores.
+- **Tune threshold before limit**: set a meaningful `threshold` (e.g. `0.25–0.4`) to suppress noise, then use `limit` to cap the list length.
+- **Set `minQueryLength` for your corpus size**: the default `3` works well for most cases. Lower it for small corpora where single-char queries are expected; raise it for large corpora to avoid expensive O(n) scans.
+- **Dispose reactive state**: always call `search.dispose()` or use `using` when the component unmounts.
+- **Weight by importance**: name/title fields should have weight `2–3`; secondary fields (description, tags) stay at `1`.
+- **Segment CJK/Thai fields explicitly**: `segmentWords()` is opt-in per field, not automatic, to keep `createIndex()` fast for the common whitespace-delimited case.

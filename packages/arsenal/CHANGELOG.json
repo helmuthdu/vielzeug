@@ -15,7 +15,7 @@
           },
           {
             "author": "agent@vielzeug",
-            "comment": "Add encoding/base64url — environment-independent base64url text and byte codecs",
+            "comment": "Add encoding/base64url: environment-independent base64url text and byte codecs",
             "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
           }
         ]

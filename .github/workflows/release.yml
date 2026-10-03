@@ -1,12 +1,12 @@
 name: Release (tag + GitHub release only)
 
-# Backfill for versions published outside publish.yml — normally `pnpm release:publish-local`
+# Backfill for versions published outside publish.yml: normally `pnpm release:publish-local`
 # (scripts/release/local-publish.mjs), which deliberately never tags so a stale local clone
 # can't push a wrong tag. Scans every publishable package whose committed version is on npm but
 # not yet tagged, then tags and creates a GitHub release for each. Never runs `npm publish`, so
 # it needs neither the `npm-publish` environment nor `id-token: write`.
 #
-# Do NOT register this filename as an npm Trusted Publisher — it never publishes.
+# Do NOT register this filename as an npm Trusted Publisher: it never publishes.
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ on:
         default: false
         type: boolean
 
-# Shares publish.yml's group — both push tags and create releases on the same repo.
+# Shares publish.yml's group: both push tags and create releases on the same repo.
 concurrency:
   group: release-main
   cancel-in-progress: false

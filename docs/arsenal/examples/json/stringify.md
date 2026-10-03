@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — stringify'
+title: 'Arsenal Examples: stringify'
 description: 'stringify example for @vielzeug/arsenal.'
 ---
 
@@ -19,7 +19,7 @@ import { stringify } from '@vielzeug/arsenal/json';
 
 const key1 = stringify({ sort: 'asc', filter: { role: 'admin' } });
 const key2 = stringify({ filter: { role: 'admin' }, sort: 'asc' });
-key1 === key2; // true — key insertion order doesn't matter
+key1 === key2; // true: key insertion order doesn't matter
 
 stringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
 stringify(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
@@ -48,13 +48,13 @@ stringify(o); // '{"self":[Circular],"x":1}'
 import { stringify } from '@vielzeug/arsenal';
 
 class Token {}
-stringify(new Token()); // String(instance) — default
+stringify(new Token()); // String(instance): default
 stringify(new Token(), { onClassInstance: 'throw' }); // throws TypeError
 ```
 
 ### Pitfalls
 
-- Class instances coerce to `String(instance)` by default — pass `{ onClassInstance: 'throw' }` to detect them.
+- Class instances coerce to `String(instance)` by default: pass `{ onClassInstance: 'throw' }` to detect them.
 - `undefined` properties are omitted (same as `JSON.stringify`).
 - Map keys are sorted; the output is deterministic regardless of insertion order.
 

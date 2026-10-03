@@ -19,7 +19,7 @@ export function registerRainbowProperty() {
         syntax: '<angle>',
       });
     } catch {
-      // Already registered — safe to ignore
+      // Already registered: safe to ignore
     }
   }
 
@@ -45,7 +45,7 @@ export function registerShineProperty() {
         syntax: '<angle>',
       });
     } catch {
-      // Already registered — safe to ignore
+      // Already registered: safe to ignore
     }
   }
 
@@ -59,12 +59,12 @@ export function registerShineProperty() {
  * Perfect for highlighting call-to-action elements or special features.
  *
  * @param selector - CSS selector for the element carrying the border, matched
- *   against the component's actual shadow DOM markup — a bare word like
+ *   against the component's actual shadow DOM markup: a bare word like
  *   'button' is a TYPE selector (matches a literal `<button>` tag), not a
  *   part/class selector. Use the selector that actually matches your root
  *   element, e.g. `'.box'` for a `<div class="box">`, or `'[part="button"]'`
  *   for a `<span part="button">`/`<a part="button">` (ore-button's actual
- *   markup — it never renders a `<button>` tag).
+ *   markup: it never renders a `<button>` tag).
  * @returns CSSResult with rainbow border animation
  *
  * @example
@@ -102,7 +102,7 @@ export const rainbowEffectMixin = (selector: string) => {
       /* Reserve no-clip space for glow */
       box-shadow: 0 0 calc(3 * var(--blur-xl)) rgba(0 0 0 / 0.001);
 
-      /* Rainbow gradient — Okabe-Ito colorblind-safe palette */
+      /* Rainbow gradient: Okabe-Ito colorblind-safe palette */
       background: conic-gradient(
           from var(--rainbow-angle),
           #56b4e9,
@@ -161,12 +161,12 @@ export const rainbowEffectMixin = (selector: string) => {
  * theme color rotates around the border, producing the glossy "shimmer"
  * look seen in modern card and button designs.
  *
- * Respects the `color` attribute via `--_theme-*` tokens — no extra
+ * Respects the `color` attribute via `--_theme-*` tokens: no extra
  * configuration needed. Falls back to the neutral theme when no color
  * is set.
  *
  * @param selector - CSS selector for the inner element, matched against the
- *   component's actual shadow DOM markup — see rainbowEffectMixin's
+ *   component's actual shadow DOM markup: see rainbowEffectMixin's
  *   `selector` doc above for why a bare word like 'button' is usually wrong.
  * @returns CSSResult with shine border animation
  *
@@ -192,7 +192,7 @@ export const shineEffectMixin = (selector: string) => {
       );
     }
 
-    /* Shine border — single pseudo, glow via box-shadow (follows border-radius, no artifacts) */
+    /* Shine border: single pseudo, glow via box-shadow (follows border-radius, no artifacts) */
     :host([effect='shine']) ${selector}::before {
       content: '';
       position: absolute;

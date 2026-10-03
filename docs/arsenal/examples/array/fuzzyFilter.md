@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — fuzzyFilter / fuzzyScore'
+title: 'Arsenal Examples: fuzzyFilter / fuzzyScore'
 description: 'Explicit-field fuzzy search examples for @vielzeug/arsenal.'
 ---
 

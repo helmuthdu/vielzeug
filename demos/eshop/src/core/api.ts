@@ -3,7 +3,7 @@ import { models as catalogModels, seedOrders } from './seed-data';
 import type { Order, OrderStatus } from './types';
 
 // ---------------------------------------------------------------------------
-// In-memory "server" state — the mock endpoints below read/write these arrays,
+// In-memory "server" state: the mock endpoints below read/write these arrays,
 // exactly like demos/crm/src/core/api.ts's `users` array models a read-only
 // directory. Orders are the one genuinely mutable resource here (placed via
 // checkout, cancelled from Order History, status-progressed from Admin).
@@ -65,7 +65,7 @@ async function mockFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
 }
 
 // ---------------------------------------------------------------------------
-// Courier instance — single shared transport for every REST call this app makes.
+// Courier instance: single shared transport for every REST call this app makes.
 // ---------------------------------------------------------------------------
 
 export const courier = createCourier({ cache: { ttlMs: 30_000 }, fetch: mockFetch });

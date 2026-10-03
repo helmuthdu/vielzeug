@@ -5,7 +5,7 @@
  *
  * Caveat: `null` and `''` both coerce to `0` in JavaScript (`Number(null) === 0`,
  * `Number('') === 0`) and are therefore returned as the finite number `0`, not
- * `undefined` — this function does not treat "absent" values specially. Only
+ * `undefined`: this function does not treat "absent" values specially. Only
  * genuinely non-numeric input (`undefined`, `NaN`, non-numeric strings) yields
  * `undefined`. Callers that mean "no bound set" should pass `undefined`
  * explicitly rather than `null` or `''`.

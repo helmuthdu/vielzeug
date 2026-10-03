@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — snakeCase'
+title: 'Arsenal Examples: snakeCase'
 description: 'snakeCase example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'snakeCase example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to convert a string to snake_case — for example transforming display names to database column names.
+You need to convert a string to snake_case: for example transforming display names to database column names.
 
 ### Solution
 

@@ -1,5 +1,5 @@
 ---
-title: Keymap — Examples
+title: 'Keymap: Examples'
 description: Worked examples for @vielzeug/keymap.
 ---
 

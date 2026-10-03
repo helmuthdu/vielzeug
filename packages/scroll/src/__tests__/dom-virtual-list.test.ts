@@ -207,7 +207,7 @@ describe('createDomVirtualList – measurement', () => {
     ctrl.measure(0, 100);
     await flushMicrotasks();
 
-    // setItems with same key set — should preserve measurement
+    // setItems with same key set: should preserve measurement
     ctrl.setItems([...rows]);
     await flushMicrotasks();
 
@@ -295,7 +295,7 @@ describe('createDomVirtualList – recycle', () => {
 
     const firstNode = nodeMap.get(0)!;
 
-    // Trigger a second render — same items, should reuse node 0
+    // Trigger a second render: same items, should reuse node 0
     ctrl.setItems([...rows]);
 
     expect(nodeMap.get(0)).toBe(firstNode);
@@ -563,7 +563,7 @@ describe('createDomVirtualList – refresh', () => {
     ctrl.measure(0, 80);
     await flushMicrotasks();
 
-    // setItems with same keys — uses refresh, NOT invalidate
+    // setItems with same keys: uses refresh, NOT invalidate
     ctrl.setItems([...rows]);
 
     // measurement should still be present after refresh
@@ -665,7 +665,7 @@ describe('createDomVirtualList – setItems double-render', () => {
 
     const callsAfterFirst = render.mock.calls.length;
 
-    // Adding items changes count — render should fire exactly once more.
+    // Adding items changes count: render should fire exactly once more.
     ctrl.setItems(makeRows(10));
     expect(render.mock.calls.length).toBe(callsAfterFirst + 1);
     ctrl.dispose();
@@ -687,7 +687,7 @@ describe('createDomVirtualList – setItems double-render', () => {
 
     const callsAfterFirst = render.mock.calls.length;
 
-    // Same count but different data — refresh() must fire.
+    // Same count but different data: refresh() must fire.
     const replaced = makeRows(5).map((r) => ({ ...r, label: 'updated' }));
 
     ctrl.setItems(replaced);
@@ -774,7 +774,7 @@ describe('createDomVirtualList – stickToBottom', () => {
     ctrl.setItems(rows); // totalSize 300, viewport 90 → maxOffset 210
     simulateScroll(scrollEl, scrollEl.scrollTop);
 
-    // Same count and keys — the last item's own size grows in place, like streamed tokens
+    // Same count and keys: the last item's own size grows in place, like streamed tokens
     // widening the final chat bubble.
     const grown = rows.map((r, i) => (i === rows.length - 1 ? { ...r, size: 300 } : r));
 
@@ -783,7 +783,7 @@ describe('createDomVirtualList – stickToBottom', () => {
     ctrl.dispose();
   });
 
-  it('is opt-in — disabled unless `stickToBottom` is set', () => {
+  it('is opt-in: disabled unless `stickToBottom` is set', () => {
     const { listEl, scrollEl } = makeList(90);
     const ctrl = createDomVirtualList<Row>({
       estimateSize: (_, r) => r.size,
@@ -813,7 +813,7 @@ describe('createDomVirtualList – stickToBottom', () => {
     });
 
     ctrl.setItems(makeRows(10)); // maxOffset 210
-    simulateScroll(scrollEl, 180); // 30px short of the end — outside the default 48px, inside 50px
+    simulateScroll(scrollEl, 180); // 30px short of the end: outside the default 48px, inside 50px
 
     ctrl.setItems(makeRows(11));
     expect(scrollEl.scrollTop).toBe(240);

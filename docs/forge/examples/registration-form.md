@@ -1,5 +1,5 @@
 ---
-title: 'Forge Examples — Registration Form'
+title: 'Forge Examples: Registration Form'
 description: Perform cross-field and asynchronous validation in one validator.
 ---
 

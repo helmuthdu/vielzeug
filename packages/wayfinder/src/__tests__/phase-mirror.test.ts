@@ -80,7 +80,7 @@ describe('createPhaseMirror', () => {
     expect(navigations).toHaveLength(0);
 
     // Navigating to another subject of the same flow while this mirror still holds subject 7:
-    // the arrival must stay put — its own mirror canonicalizes it once it mounts.
+    // the arrival must stay put: its own mirror canonicalizes it once it mounts.
     void router.navigate({ name: 'jobDetail', params: { id: '8' } });
 
     expect(navigations).toEqual([{ name: 'jobDetail', params: { id: '8' }, replace: undefined }]);

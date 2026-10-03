@@ -1,5 +1,5 @@
 ---
-title: Illusionist — API Reference
+title: 'Illusionist: API Reference'
 description: createIllusion, all category functions, seed utilities, types, and errors.
 ---
 
@@ -26,7 +26,7 @@ description: createIllusion, all category functions, seed utilities, types, and 
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/illusionist` | `createIllusion`, `createSeed`, `mulberry32`, `Illusionist`, `IllusionistOptions`, `IllusionistLocale`, error classes |
-| `@vielzeug/illusionist/locales` | Tree-shakeable barrel — `en`, `de` locale objects |
+| `@vielzeug/illusionist/locales` | Tree-shakeable barrel: `en`, `de` locale objects |
 | `@vielzeug/illusionist/locales/en` | English locale object only |
 | `@vielzeug/illusionist/locales/de` | German locale object only |
 
@@ -43,7 +43,7 @@ Creates a bound instance. All categories share one seeded random source and one 
 | `seed` | `number \| string` | `undefined` | Seed for deterministic output. Omit for cryptographic randomness. |
 | `locale` | `IllusionistLocale` | Required | Explicit locale object for locale-aware categories. |
 
-**Returns:** `Illusionist` — an object with `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, and `system` categories, plus readonly `seed` and `locale` values. It owns no external resources and requires no cleanup.
+**Returns:** `Illusionist`: an object with `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, and `system` categories, plus readonly `seed` and `locale` values. It owns no external resources and requires no cleanup.
 
 ```ts
 import { createIllusion } from '@vielzeug/illusionist';
@@ -619,7 +619,7 @@ Returns a semver string.
 function uuid(): string;
 ```
 
-Returns a random UUID via `crypto.randomUUID()`. **Not deterministic** — ignores the seeded `RandomSource`. Use only when uniqueness matters more than reproducibility.
+Returns a random UUID via `crypto.randomUUID()`. **Not deterministic**: ignores the seeded `RandomSource`. Use only when uniqueness matters more than reproducibility.
 
 ### `system.port(options?)`
 

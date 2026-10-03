@@ -1,5 +1,5 @@
 /**
- * Host element binding API — reactive attr, class, style, and event bindings
+ * Host element binding API: reactive attr, class, style, and event bindings
  * applied directly to the component's host element or any target element.
  */
 

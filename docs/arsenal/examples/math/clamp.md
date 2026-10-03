@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — clamp'
+title: 'Arsenal Examples: clamp'
 description: 'clamp example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'clamp example for @vielzeug/arsenal.'
 
 ### Problem
 
-A value may fall outside a valid range and you need to pin it to the nearest boundary — for example limiting a progress bar to 0–100 or a slider to its min/max.
+A value may fall outside a valid range and you need to pin it to the nearest boundary: for example limiting a progress bar to 0–100 or a slider to its min/max.
 
 ### Solution
 

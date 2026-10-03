@@ -11,7 +11,7 @@ export function safeCSSLength(value: string | null | undefined): string | null {
 
   const v = value.trim();
 
-  // Block CSS injection sequences (parens excluded — needed by var()/calc())
+  // Block CSS injection sequences (parens excluded: needed by var()/calc())
   if (/[;{}\n\r]/.test(v)) return null;
 
   // Allow: numbers with units, %, keywords, var(--token), calc(...), env(...)

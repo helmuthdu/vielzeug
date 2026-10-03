@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Restore Scroll Position'
+title: 'Scroll Examples: Restore Scroll Position'
 description: 'Restore Scroll Position examples for scroll.'
 ---
 

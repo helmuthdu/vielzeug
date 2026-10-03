@@ -5,7 +5,7 @@ import { createAutoResize } from '../auto-resize';
 const makeTextarea = (): HTMLTextAreaElement => document.createElement('textarea');
 
 describe('createAutoResize', () => {
-  // jsdom never computes real layout, so `scrollHeight` is always 0 — these assertions check
+  // jsdom never computes real layout, so `scrollHeight` is always 0: these assertions check
   // that height was actively recomputed (landing on "0px", jsdom's `scrollHeight`), not left
   // untouched, since the real pixel value can only be verified in a real browser.
 
@@ -15,7 +15,7 @@ describe('createAutoResize', () => {
 
     autoResize.wire(el);
 
-    // The initial recompute is deferred a frame (see wire()'s doc comment) — a synchronous
+    // The initial recompute is deferred a frame (see wire()'s doc comment): a synchronous
     // scrollHeight read right after mount can be stale before the browser lays anything out.
     expect(el.style.height).toBe('');
 

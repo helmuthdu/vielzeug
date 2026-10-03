@@ -18,13 +18,13 @@ export type CheckableBindingHandle = {
   helperText: Readable<string>;
   indeterminate?: Signal<boolean>;
   labelId: string;
-  /** Reflects `aria-required` — there's no native form control here to carry a real `required` attribute. */
+  /** Reflects `aria-required`: there's no native form control here to carry a real `required` attribute. */
   required?: Readable<boolean | undefined>;
 };
 
 /**
  * `prop.string()` already reflects `error`'s raw value as an attribute, but that leaves the
- * attribute present-but-empty (`error=""`) once set instead of removing it — this normalizes
+ * attribute present-but-empty (`error=""`) once set instead of removing it: this normalizes
  * an empty error back to "no attribute at all". Shared by every text-field component
  * (`ore-input`, `ore-textarea`, `ore-message-composer`) since `bind()`'s own `error` writer
  * needs a derived getter, not the raw prop, to get that behavior.

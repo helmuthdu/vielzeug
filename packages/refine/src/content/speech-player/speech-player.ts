@@ -6,10 +6,10 @@ import componentStyles from './speech-player.css?inline';
 
 export { ICON_TAG } from '../icon/icon';
 
-/** The player's reflected state — `unsupported` when the Web Speech API is missing. */
+/** The player's reflected state: `unsupported` when the Web Speech API is missing. */
 export type SpeechPlayerState = 'idle' | 'playing' | 'paused' | 'unsupported';
 
-/** The rate steps the speed control cycles through — normal, slow, fast. */
+/** The rate steps the speed control cycles through: normal, slow, fast. */
 export const SPEECH_RATES = [1, 0.85, 1.15] as const;
 export type SpeechRate = (typeof SPEECH_RATES)[number];
 
@@ -68,13 +68,13 @@ const DEFAULT_LABELS: OreSpeechPlayerLabels = {
 
 /** Speech player component properties */
 export type OreSpeechPlayerProps = {
-  /** Labels for the controls and announcements — override to localize. */
+  /** Labels for the controls and announcements: override to localize. */
   labels?: Partial<OreSpeechPlayerLabels>;
-  /** Playback rate — bind with `rate-change` to persist the listener's choice; unbound,
+  /** Playback rate: bind with `rate-change` to persist the listener's choice; unbound,
    *  the speed control cycles on its own. Values outside `SPEECH_RATES` snap into the
    *  cycle at the control's first use. */
   rate?: number;
-  /** The sentence index playback begins from — bind a persisted position so "resume"
+  /** The sentence index playback begins from: bind a persisted position so "resume"
    *  survives stops, collapses, and page loads. */
   'resume-at'?: number;
   /** The text to read aloud. */
@@ -85,15 +85,15 @@ export type OreSpeechPlayerProps = {
 export type OreSpeechPlayerEvents = {
   /** Reading finished on its own. */
   end: undefined;
-  /** The engine failed mid-read — reading stopped, but not by the listener. */
+  /** The engine failed mid-read: reading stopped, but not by the listener. */
   error: undefined;
-  /** Reading started — from the control or a `play()` call. */
+  /** Reading started: from the control or a `play()` call. */
   play: undefined;
-  /** A sentence began — carry `sentence` of `total` to the surfaces that follow the voice. */
+  /** A sentence began: carry `sentence` of `total` to the surfaces that follow the voice. */
   progress: { sentence: number; total: number };
   /** The speed control moved to a new step. */
   'rate-change': { rate: number };
-  /** Reading stopped before finishing — from the control or a `stop()` call. */
+  /** Reading stopped before finishing: from the control or a `stop()` call. */
   stop: undefined;
 };
 
@@ -101,7 +101,7 @@ export type OreSpeechPlayerEvents = {
 export interface SpeechPlayerElement extends HTMLElement, OreSpeechPlayerProps {
   /** Pauses the current reading. */
   pause(): void;
-  /** Starts reading — from `resume-at` when bound, else from the beginning.
+  /** Starts reading: from `resume-at` when bound, else from the beginning.
    *  Any player already reading stops first. */
   play(): void;
   /** Stops reading and cancels pending speech. */
@@ -112,7 +112,7 @@ export interface SpeechPlayerElement extends HTMLElement, OreSpeechPlayerProps {
  *  pieces under this length stay safely inside that window at any of the rate steps. */
 const UTTERANCE_LIMIT = 220;
 
-/** The entry's sentences — prose ends . ! or ?, closing quotes belong to the sentence
+/** The entry's sentences: prose ends . ! or ?, closing quotes belong to the sentence
  *  they end, and an unterminated tail is still a sentence. Consumers that highlight what
  *  is being read build their display from this same list, so `progress` sentence indexes
  *  map onto their own. */
@@ -141,7 +141,7 @@ function hardSplit(sentence: string, limit: number): string[] {
   return pieces;
 }
 
-/** One spoken unit: a sentence, or a piece of one that alone exceeds the engine limit —
+/** One spoken unit: a sentence, or a piece of one that alone exceeds the engine limit :
  *  pieces keep their sentence's index, so `progress` never skips a highlight. */
 type SpeechPiece = { sentence: number; text: string };
 
@@ -155,7 +155,7 @@ function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
 }
 
 /**
- * A text-to-speech player control — reads its `text` aloud through the Web Speech API.
+ * A text-to-speech player control: reads its `text` aloud through the Web Speech API.
  *
  * Renders a labeled play/pause toggle (the label folds away once engaged), a stop
  * control beside it that appears while reading, and a speed control cycling
@@ -201,7 +201,7 @@ function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
  */
 export const SPEECH_PLAYER_TAG = 'ore-speech-player' as const;
 
-/** Stops whichever player is currently reading — speechSynthesis is one global voice, so a
+/** Stops whichever player is currently reading: speechSynthesis is one global voice, so a
  *  new reader cancels the engine and the old player needs to settle to idle. */
 let stopActivePlayer: (() => void) | null = null;
 
@@ -258,7 +258,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     /** Utterance callbacks capture the generation they belong to; a stop or a later play
      *  bumps it, so stale events from a canceled utterance cannot chain or settle. */
     let generation = 0;
-    /** Bumped by any engine callback on the live utterance — liveness evidence for the
+    /** Bumped by any engine callback on the live utterance: liveness evidence for the
      *  resume watchdog. */
     let enginePulse = 0;
     let current = 0;
@@ -269,8 +269,8 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       const piece = pieces.value[index]!;
       const utterance = new SpeechSynthesisUtterance(piece.text);
       utterance.rate = rate.value;
-      // The native `lang` attribute names the text's language — the standard HTML
-      // semantic — and hints voice selection when no explicit voice matches yet.
+      // The native `lang` attribute names the text's language: the standard HTML
+      // semantic, and hints voice selection when no explicit voice matches yet.
       const lang = host.getAttribute('lang');
       if (lang) {
         utterance.lang = lang;
@@ -313,7 +313,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       if (stopActivePlayer === stop) stopActivePlayer = null;
     };
 
-    /** The first piece of the sentence to begin from — clamped into the text. */
+    /** The first piece of the sentence to begin from: clamped into the text. */
     const pieceIndexFor = (sentence: number | undefined): number => {
       const total = sentences.value.length;
       if (sentence === undefined || total === 0) return 0;
@@ -351,7 +351,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       labelOf('resumed');
       // Some Chromium builds resume a long-held pause into silence: no error, no
       // event, the playing state a lie. Within ten seconds the engine is trusted;
-      // beyond it, demand a pulse within a second or restart the current sentence —
+      // beyond it, demand a pulse within a second or restart the current sentence :
       // a fresh utterance always speaks. Boundary-less engines only pay this on long holds.
       if (performance.now() - pausedAt < 10_000) return;
       const pulse = enginePulse;
@@ -373,7 +373,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       emit('stop');
     }
 
-    /** One control, three meanings by state — play, pause, resume. */
+    /** One control, three meanings by state: play, pause, resume. */
     const toggle = (): void => {
       if (state.value === 'playing') pause();
       else if (state.value === 'paused') resume();

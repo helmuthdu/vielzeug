@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — mapKeys'
+title: 'Arsenal Examples: mapKeys'
 description: 'mapKeys example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'mapKeys example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to transform the keys of an object — for example converting snake_case API keys to camelCase for internal use.
+You need to transform the keys of an object: for example converting snake_case API keys to camelCase for internal use.
 
 ### Solution
 
@@ -24,7 +24,7 @@ mapKeys(apiResponse, camelCase);
 ### Pitfalls
 
 - If the mapper produces duplicate keys, last write wins.
-- Returns a shallow copy — values are not cloned.
+- Returns a shallow copy: values are not cloned.
 
 ### Related
 

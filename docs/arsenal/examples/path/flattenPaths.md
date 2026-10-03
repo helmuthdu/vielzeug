@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — flattenPaths / unflattenPaths'
+title: 'Arsenal Examples: flattenPaths / unflattenPaths'
 description: 'flattenPaths and unflattenPaths examples for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'flattenPaths and unflattenPaths examples for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to work with deeply nested objects as flat key-value maps — for example storing nested config in a flat database table, or diffing two deep objects.
+You need to work with deeply nested objects as flat key-value maps: for example storing nested config in a flat database table, or diffing two deep objects.
 
 ### Solution
 
@@ -51,7 +51,7 @@ const changed = Object.entries(after).filter(([key, value]) => before[key] !== v
 
 ### Pitfalls
 
-- Nesting beyond **10 levels** is treated as an opaque leaf — deeply nested objects are not recursed further.
+- Nesting beyond **10 levels** is treated as an opaque leaf: deeply nested objects are not recursed further.
 - Unsafe path segments (`__proto__`, `constructor`, `prototype`) are silently skipped in both directions.
 - Array values are treated as leaves and are not flattened.
 

@@ -1,5 +1,5 @@
 ---
-title: Sentinel — Subscribable environment snapshots
+title: 'Sentinel: Subscribable environment snapshots'
 description: Subscribable browser and DOM snapshots for viewport, network, media query, element size, intersection state, and screen wake lock.
 package: sentinel
 category: Environment
@@ -116,15 +116,15 @@ const stopObserving = observeViewport();
 
 ## Features
 
-- `createViewport()` — Observe viewport dimensions and device pixel ratio.
-- `createNetwork()` — Track online status and optional connection details.
-- `createMediaQuery()` — Observe one media query.
-- `createElementSize()` — Read content-box dimensions from `ResizeObserver`.
-- `createIntersection()` — Track normalized intersection state.
-- `createWakeLock()` — Prevent the screen from sleeping during active use.
-- `createFullscreen()` — Track and drive document fullscreen state.
-- `dispose()` — Release owned browser observers and listeners.
-- `SentinelOptions.signal` — Abort several Sentinels through one external lifetime.
+- `createViewport()`: Observe viewport dimensions and device pixel ratio.
+- `createNetwork()`: Track online status and optional connection details.
+- `createMediaQuery()`: Observe one media query.
+- `createElementSize()`: Read content-box dimensions from `ResizeObserver`.
+- `createIntersection()`: Track normalized intersection state.
+- `createWakeLock()`: Prevent the screen from sleeping during active use.
+- `createFullscreen()`: Track and drive document fullscreen state.
+- `dispose()`: Release owned browser observers and listeners.
+- `SentinelOptions.signal`: Abort several Sentinels through one external lifetime.
 
 </div>
 
@@ -143,10 +143,10 @@ const stopObserving = observeViewport();
 
 ## See Also
 
-- [@vielzeug/ripple](../ripple/) — Derive and watch values from Sentinel state.
-- [@vielzeug/ore](../ore/) — Bind Sentinels to web-component mount and cleanup lifecycles.
-- [@vielzeug/focus](../focus/) — Manage keyboard focus alongside observed UI state.
-- [@vielzeug/gesture](../gesture/) — Handle pointer gestures alongside environmental observations.
+- [@vielzeug/ripple](../ripple/): Derive and watch values from Sentinel state.
+- [@vielzeug/ore](../ore/): Bind Sentinels to web-component mount and cleanup lifecycles.
+- [@vielzeug/focus](../focus/): Manage keyboard focus alongside observed UI state.
+- [@vielzeug/gesture](../gesture/): Handle pointer gestures alongside environmental observations.
 
 </div>
 

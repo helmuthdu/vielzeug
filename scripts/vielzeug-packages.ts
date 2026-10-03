@@ -15,12 +15,12 @@ import { readPackageManifests } from './lib/packages.mjs';
 /** Packages that exist under `packages/` but are never resolved in a browser context. */
 const NON_BROWSER_PACKAGES = new Set(['codex']);
 
-/** DOM-output packages have no preview container in the REPL — excluded from REPL registration. */
+/** DOM-output packages have no preview container in the REPL: excluded from REPL registration. */
 export const REPL_EXCLUDED_PACKAGES = new Set(['ore', 'prism', 'refine']);
 
 /**
  * Returns every directory under `packagesDir` that has a `package.json`, sorted
- * alphabetically — the raw "what packages exist in this monorepo" primitive, with no
+ * alphabetically: the raw "what packages exist in this monorepo" primitive, with no
  * opinion about browser-resolvability. Consumers that need the browser-safe subset
  * should use `listVielzeugPackages`; consumers documenting/bundling every package
  * (e.g. codex's data generator) should use this directly.

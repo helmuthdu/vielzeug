@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Variable Height with Measurement'
+title: 'Scroll Examples: Variable Height with Measurement'
 description: 'Variable Height with Measurement examples for scroll.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Variable Height with Measurement examples for scroll.'
 
 ### Problem
 
-Row heights vary based on content (e.g., multi-line text, embedded images). The virtualizer cannot compute offsets upfront — it must accept measured heights reported after each row renders.
+Row heights vary based on content (e.g., multi-line text, embedded images). The virtualizer cannot compute offsets upfront: it must accept measured heights reported after each row renders.
 
 ### Solution
 
@@ -23,7 +23,7 @@ const messages: Message[] = [
 
 const virt = createVirtualizer(scrollEl, {
   count: messages.length,
-  estimateSize: 64, // rough estimate — actual heights vary
+  estimateSize: 64, // rough estimate: actual heights vary
   onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
     listEl.replaceChildren();
@@ -37,7 +37,7 @@ const virt = createVirtualizer(scrollEl, {
       listEl.appendChild(el);
     }
 
-    // Measure after layout — batched into one rebuild
+    // Measure after layout: batched into one rebuild
     requestAnimationFrame(() => {
       for (const item of items) {
         const el = listEl.querySelector<HTMLElement>(`[data-index="${item.index}"]`);
@@ -53,7 +53,7 @@ const virt = createVirtualizer(scrollEl, {
 ### Pitfalls
 
 - `measure(index, height)` must be called after the row's DOM is rendered and its height is stable. Calling it before render with an estimate triggers two layout passes per row.
-- Call `measure()` in `onMounted`/`firstUpdated` or a `ResizeObserver` — not in a scroll event handler, where it causes a measurement/layout loop.
+- Call `measure()` in `onMounted`/`firstUpdated` or a `ResizeObserver`: not in a scroll event handler, where it causes a measurement/layout loop.
 - If a row's height changes after initial measurement (e.g., a "show more" expansion), call `measure()` again. The virtualizer does not observe DOM height changes automatically.
 
 ### Related

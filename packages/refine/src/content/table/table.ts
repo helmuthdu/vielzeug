@@ -9,7 +9,7 @@ import componentStyles from './table.css?inline';
 export type OreTableProps = {
   /** Adds a thicker outer border */
   bordered?: boolean;
-  /** Visible caption text — also used as the accessible table label via `aria-label` */
+  /** Visible caption text: also used as the accessible table label via `aria-label` */
   caption?: string;
   /** Cell density: `'compact'` | `'cozy'` (default) | `'comfortable'` */
   density?: 'compact' | 'cozy' | 'comfortable';
@@ -87,7 +87,7 @@ if (!customElements.get('ore-td')) customElements.define('ore-td', class extends
 /* ── Proxy/mirror helpers ────────────────────────────────────────────────── */
 
 // Attributes forwarded from ore-th/ore-td to the generated native cell.
-// scope is intentionally excluded — it requires fallback logic and is handled separately.
+// scope is intentionally excluded: it requires fallback logic and is handled separately.
 const CELL_ATTRS = ['colspan', 'rowspan', 'headers', 'abbr'];
 
 /**
@@ -98,7 +98,7 @@ const CELL_ATTRS = ['colspan', 'rowspan', 'headers', 'abbr'];
  */
 function syncCell(source: Element, native: HTMLTableCellElement, fallbackScope?: string): void {
   if (source.childElementCount > 0) {
-    // Source has element children — deep-clone them into the native cell so
+    // Source has element children: deep-clone them into the native cell so
     // components like ore-skeleton render correctly inside the shadow table.
     // Guard: skip re-clone if the serialised content is identical to avoid
     // redundant DOM work on every MutationObserver tick (e.g. 250+ cells
@@ -190,8 +190,8 @@ function buildTable(
  * into a fully-native shadow `<table>`. Cell attributes (`colspan`, `rowspan`,
  * `scope`, etc.) are mirrored. Changes are observed and synced incrementally.
  *
- * Native table features — sticky headers, colspan/rowspan, the table layout
- * algorithm — all work because the shadow tree contains real table elements.
+ * Native table features: sticky headers, colspan/rowspan, the table layout
+ * algorithm: all work because the shadow tree contains real table elements.
  *
  * @element ore-table
  *
@@ -295,7 +295,7 @@ define<OreTableProps>(TABLE_TAG, {
       let cellMap = buildTable(el, thead, tbody, tfoot);
 
       // Content observer: syncs text/attribute changes inside ore-th/ore-td.
-      // Remains connected throughout the component lifetime — no
+      // Remains connected throughout the component lifetime: no
       // disconnect/reconnect during structural rebuilds. Records that arrive
       // for cells no longer in cellMap (after a rebuild) are silently ignored
       // by the `if (entry)` guard, so there is no correctness risk.

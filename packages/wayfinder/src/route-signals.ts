@@ -9,9 +9,9 @@ export interface RouteSignals<TRoutes extends RouteTable = RouteTable> {
   readonly name: Readable<RouteName<TRoutes> | null>;
   /** Path params of the deepest matched route. */
   readonly params: Readable<RouteParams>;
-  /** Raw parsed query params of the current location — always string values from URL parsing. */
+  /** Raw parsed query params of the current location: always string values from URL parsing. */
   readonly query: Readable<QueryParams>;
-  /** The full router state — subscribe or derive further computeds from it. */
+  /** The full router state: subscribe or derive further computeds from it. */
   readonly state: Readable<RouteState>;
 }
 

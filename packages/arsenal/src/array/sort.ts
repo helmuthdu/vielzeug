@@ -20,7 +20,7 @@ export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
  *
  * @param array - The array to sort.
  * @param selector - A function extracting the sort key, or a multi-field object.
- * @param direction - `'asc'` (default) or `'desc'` — only applies to single-field mode.
+ * @param direction - `'asc'` (default) or `'desc'`: only applies to single-field mode.
  * @returns A new sorted array.
  *
  * @throws {TypeError} If the first argument is not an array.

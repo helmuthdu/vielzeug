@@ -15,7 +15,7 @@ export { KEYBOARD_SHORTCUT_TAG } from '../../content/keyboard-key/keyboard-key';
 export type { OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
 
 /**
- * A pure data node describing one command. Never rendered directly — `ore-command-palette`
+ * A pure data node describing one command. Never rendered directly: `ore-command-palette`
  * reads its attributes/text content and renders the visible row itself.
  *
  * @element ore-command-palette-item
@@ -23,7 +23,7 @@ export type { OreCommandPaletteEvents, OreCommandPaletteProps } from './command-
  * @attr {string} value - Value emitted by the `select` event and matched against the search query
  * @attr {string} label - Explicit label text; falls back to the element's text content
  * @attr {string} group - Group heading the item is clustered under
- * @attr {string} shortcut - Display-only keyboard hint rendered at the end of the row, one `<kbd>` per `+`-separated key (e.g. `"⌘+S"` renders two keycaps; a literal `+` key isn't representable — spell it out, e.g. `"Ctrl+Plus"`)
+ * @attr {string} shortcut - Display-only keyboard hint rendered at the end of the row, one `<kbd>` per `+`-separated key (e.g. `"⌘+S"` renders two keycaps; a literal `+` key isn't representable: spell it out, e.g. `"Ctrl+Plus"`)
  * @attr {boolean} disabled - Excludes the item from keyboard navigation and selection
  *
  * @slot icon - Optional leading icon content
@@ -41,7 +41,7 @@ define(COMMAND_PALETTE_ITEM_TAG, {
 });
 
 /**
- * A searchable, keyboard-driven list of commands presented in a centered modal —
+ * A searchable, keyboard-driven list of commands presented in a centered modal :
  * the "⌘K" pattern popularized by editors and productivity apps. Built on the
  * native `<dialog>` element (focus trap, top-layer stacking, `Escape`-to-close)
  * and `@vielzeug/keymap` for the global shortcut that opens it.
@@ -116,11 +116,11 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     const query = signal('');
 
     // ── Items: slotted <ore-command-palette-item> elements, merged with the `items` prop ──
-    // Items are pure data nodes (see `ore-command-palette-item`'s own doc comment) — they're
+    // Items are pure data nodes (see `ore-command-palette-item`'s own doc comment): they're
     // never projected through a `<slot>`, just read directly off the host's light DOM. That
     // sidesteps `useSlots()`/`slotchange` entirely: a plain MutationObserver on the host
     // already covers everything `slotchange` would (an item added or removed) *and* the case
-    // it can't — an already-assigned item's own text/attributes changing. For items written
+    // it can't: an already-assigned item's own text/attributes changing. For items written
     // as static, inline HTML, the browser's parser can insert the last item before appending
     // its text-node child; without watching `characterData`, that would permanently cache an
     // empty label, since nothing else re-triggers once the element itself stops changing.
@@ -214,7 +214,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
             shortcut: trimmed,
           });
         } catch (error) {
-          warn(`invalid "shortcut" value "${trimmed}" — ${error instanceof Error ? error.message : String(error)}`);
+          warn(`invalid "shortcut" value "${trimmed}": ${error instanceof Error ? error.message : String(error)}`);
         }
       },
       { immediate: true },
@@ -258,7 +258,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       if (e.key === 'Enter') {
         // `list.navigate('first')` (called on open and on every keystroke) already keeps
         // the focused row off a disabled item, so this fallback is only ever reached when
-        // nothing has been focused yet — but it mirrors `selectItem`'s own disabled guard
+        // nothing has been focused yet, but it mirrors `selectItem`'s own disabled guard
         // rather than blindly grabbing index 0, in case that navigate-on-open wiring ever
         // changes.
         const active = list.getActiveItem() ?? filteredItems.value.find((item) => !item.disabled);

@@ -1,4 +1,4 @@
-// component-preview — Vite plugin barrel
+// component-preview: Vite plugin barrel
 //
 // Node-side only. Register this plugin in your VitePress (or Vite) config
 // to expose the refine-preview:* virtual modules consumed by the Vue component:

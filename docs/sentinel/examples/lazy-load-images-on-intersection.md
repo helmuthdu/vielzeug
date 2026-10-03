@@ -1,5 +1,5 @@
 ---
-title: 'Sentinel Examples — Lazy Load Images on Intersection'
+title: 'Sentinel Examples: Lazy Load Images on Intersection'
 description: Assign an image source when the image approaches the viewport.
 ---
 

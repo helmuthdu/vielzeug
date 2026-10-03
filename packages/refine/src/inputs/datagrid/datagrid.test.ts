@@ -463,7 +463,7 @@ describe('ore-datagrid', () => {
 
   // ── sort-mode="server" ────────────────────────────────────────────────────────
 
-  describe('Sorting — server mode', () => {
+  describe('Sorting: server mode', () => {
     it('emits sort-change but does NOT reorder rows', async () => {
       fixture = await mountGrid({ sortMode: 'server' });
 
@@ -482,9 +482,9 @@ describe('ore-datagrid', () => {
     });
   });
 
-  // ── Selection — single ────────────────────────────────────────────────────────
+  // ── Selection: single ────────────────────────────────────────────────────────
 
-  describe('Selection — single', () => {
+  describe('Selection: single', () => {
     it('sets aria-selected="true" on clicked row', async () => {
       fixture = await mountGrid({ selectionMode: 'single' });
 
@@ -559,9 +559,9 @@ describe('ore-datagrid', () => {
     });
   });
 
-  // ── Selection — multi ─────────────────────────────────────────────────────────
+  // ── Selection: multi ─────────────────────────────────────────────────────────
 
-  describe('Selection — multi', () => {
+  describe('Selection: multi', () => {
     it('renders a checkbox column when selection-mode="multi"', async () => {
       fixture = await mountGrid({ selectionMode: 'multi' });
 
@@ -1553,7 +1553,7 @@ describe('ore-datagrid', () => {
   // ── B2: split searchedRows / filteredRows ─────────────────────────────────
 
   describe('B2: searchedRows and filteredRows composition', () => {
-    it('search and filter are composed — filter operates on searched result', async () => {
+    it('search and filter are composed: filter operates on searched result', async () => {
       fixture = await mount('ore-datagrid', {});
 
       const el = fixture.element as GridElement;
@@ -1920,7 +1920,7 @@ describe('ore-datagrid', () => {
       await new Promise((r) => setTimeout(r, 0));
       await activateFilter(fixture, 'role');
 
-      // Apply the role filter — only Admin rows should be visible.
+      // Apply the role filter: only Admin rows should be visible.
       const filterSelect = fixture.query('.dg-filter') as HTMLElement;
 
       filterSelect.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: ['Admin'] } }));
@@ -1928,7 +1928,7 @@ describe('ore-datagrid', () => {
 
       expect(getBodyRows(fixture).length).toBe(1);
 
-      // Clear the filter — re-query the element as it may have been re-rendered.
+      // Clear the filter: re-query the element as it may have been re-rendered.
       const filterSelectAfter = fixture.query('.dg-filter') as HTMLElement;
 
       filterSelectAfter.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: [] } }));

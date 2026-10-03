@@ -1,5 +1,5 @@
 ---
-title: Herald — API Reference
+title: 'Herald: API Reference'
 description: Reference for typed synchronous events, subscriptions, waits, tracing, lifecycle, and test helpers.
 ---
 

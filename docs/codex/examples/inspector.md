@@ -1,5 +1,5 @@
 ---
-title: 'Codex Examples — Inspector'
+title: 'Codex Examples: Inspector'
 description: 'Inspect local Codex MCP server.'
 ---
 

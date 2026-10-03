@@ -116,7 +116,7 @@ test.describe('Layout', () => {
 
 test.describe('Accessibility', () => {
   // axe's color-contrast rule mis-parses oklch() tokens: for --color-neutral
-  // (oklch 52%) it reports #808080 where Chrome actually renders #696969 —
+  // (oklch 52%) it reports #808080 where Chrome actually renders #696969 :
   // verified below via canvas rasterization. The rule's violations on this
   // component are false positives, so it is excluded here and covered by the
   // rendered-color test that follows, which is the stronger oracle.
@@ -132,7 +132,7 @@ test.describe('Accessibility', () => {
   });
 
   // Real rendered contrast, measured through Chrome's own rasterization (canvas)
-  // — immune to the oklch parsing bug above. Buttons sit on the banner card
+  //: immune to the oklch parsing bug above. Buttons sit on the banner card
   // (ghost), their own themed backdrop (bordered), or their theme base (primary).
   test('button and description text meet 4.5:1 in actual rendered colors', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<ore-cookie-banner>Policy text.</ore-cookie-banner>');

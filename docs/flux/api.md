@@ -1,5 +1,5 @@
 ---
-title: Flux — API Reference
+title: 'Flux: API Reference'
 description: Complete reference for @vielzeug/flux streams, operators, channels, and structural bridges.
 ---
 
@@ -386,7 +386,7 @@ createChannel<T>(options?: ChannelOptions<T>): Channel<T>
 
 Creates an imperative multicast boundary. Disposal completes subscribers and releases replay and pending values.
 
-> **`initial` + `replay` interaction:** When `initial` is set and `replay` is omitted, `replay` defaults to `1` so the initial value is retained. Setting `replay: 0` with `initial` throws `RangeError` — the initial value would be immediately dropped.
+> **`initial` + `replay` interaction:** When `initial` is set and `replay` is omitted, `replay` defaults to `1` so the initial value is retained. Setting `replay: 0` with `initial` throws `RangeError`: the initial value would be immediately dropped.
 
 | Option | Type | Description |
 | --- | --- | --- |

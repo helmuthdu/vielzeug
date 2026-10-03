@@ -225,7 +225,7 @@ describe('ore-textarea', () => {
       expect(fixture.element.hasAttribute('error')).toBe(false);
     });
 
-    it('prefers error text over helper text — hides helper, shows error', async () => {
+    it('prefers error text over helper text: hides helper, shows error', async () => {
       fixture = await mount('ore-textarea', {
         attrs: { error: 'Too short', helper: 'At least 20 characters' },
       });

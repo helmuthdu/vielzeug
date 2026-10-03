@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — shuffle'
+title: 'Arsenal Examples: shuffle'
 description: 'shuffle example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'shuffle example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need a randomly reordered copy of an array — for example randomizing a quiz question order or a playlist.
+You need a randomly reordered copy of an array: for example randomizing a quiz question order or a playlist.
 
 ### Solution
 
@@ -22,7 +22,7 @@ shuffle([1, 2, 3, 4, 5]); // e.g. [2, 4, 1, 5, 3]
 
 ### Pitfalls
 
-- Returns a new array — the original is unchanged.
+- Returns a new array: the original is unchanged.
 - Default random source uses `crypto.getRandomValues`; pass a `RandomSource` for deterministic tests.
 
 ### Related

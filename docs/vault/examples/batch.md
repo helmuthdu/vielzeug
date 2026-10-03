@@ -1,5 +1,5 @@
 ---
-title: Vault Examples — IndexedDB Transactions
+title: 'Vault Examples: IndexedDB Transactions'
 description: Atomically change one or more tables with DocumentVaultStore.batch().
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Route Table Basics'
+title: 'Wayfinder Examples: Route Table Basics'
 description: 'Route table basics example for @vielzeug/wayfinder.'
 ---
 
@@ -64,4 +64,4 @@ const href = router.url('userDetail', { id: '42' }, { tab: 'profile' });
 
 - [Auth and Guards](./auth-and-guards.md)
 - [Not Found and Error Boundary](./not-found-and-error-boundary.md)
-- [Ripple — reactive state](/ripple/)
+- [Ripple: reactive state](/ripple/)

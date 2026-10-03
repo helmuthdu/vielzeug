@@ -8,7 +8,7 @@ Apply to every page you edit:
 
 - Be direct and technical. Address the reader as "you". Prefer active voice. Avoid filler ("simply", "just", "easy", "straightforward").
 - Short sentences, one idea each. Paragraphs: 2–4 sentences.
-- Explain intent before implementation — a one-line description before each code block.
+- Explain intent before implementation: a one-line description before each code block.
 - Code first, prose second. When in doubt, show annotated code rather than long prose.
 - No marketing language ("powerful", "blazing fast", "seamless"). Use factual comparison tables instead.
 - Code comments explain _why_, not _what_. One comment per meaningful block; never multi-line comment blocks.
@@ -22,7 +22,7 @@ points, and `packages/<name>/AGENTS.md` before assuming the Library default.
 
 | Archetype                    | Indicators                                                               | Adaptations                                                                                                                                                                                                                             |
 | ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland           | None — use the full template as written                                                                                                                                                                                                 |
+| **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland           | None: use the full template as written                                                                                                                                                                                                 |
 | **CLI / executable tool**    | `bin` field in `package.json`; primary interaction is a terminal command | Quick Start leads with the shell command, not TypeScript; `usage.md`'s Framework Integration becomes "Embedding in a `<Runtime>` Process" (programmatic use as secondary); comparison table compares invocation modes, not API surfaces |
 | **DOM-output / headless UI** | Renders DOM directly (`ore`, `prism`, `refine`); no REPL examples by convention | No REPL examples or Monaco types; Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters                                                                                       |
 
@@ -30,44 +30,44 @@ points, and `packages/<name>/AGENTS.md` before assuming the Library default.
 
 `pnpm validate:docs` applies explicit structural contracts from `DOCS_CONTRACT_OVERRIDES` in `scripts/validate-docs.ts`:
 
-- **`arsenal` — catalog:** nested category indexes and helper pages are navigation, not individual how-to recipes. Contract validates root pages and catalog entry structure without requiring every leaf to use recipe headings or appear directly in top-level index.
-- **`refine` — component library:** component pages, framework guides, and stylesheet/component sub-paths replace `examples.md`. Contract requires `index.md`, `usage.md`, and `api.md`, but does not require function-library usage/API headings.
+- **`arsenal`: catalog:** nested category indexes and helper pages are navigation, not individual how-to recipes. Contract validates root pages and catalog entry structure without requiring every leaf to use recipe headings or appear directly in top-level index.
+- **`refine`: component library:** component pages, framework guides, and stylesheet/component sub-paths replace `examples.md`. Contract requires `index.md`, `usage.md`, and `api.md`, but does not require function-library usage/API headings.
 
 Every other package uses `standard`. Add an override only for durable package-level information architecture. Do not use one to suppress normal documentation defects.
 
-## `index.md` — Overview
+## `index.md`: Overview
 
-Diátaxis type: **Explanation**. Landing page — helps the reader decide whether to adopt the library in 2–3 minutes. Not a tutorial, not a reference.
+Diátaxis type: **Explanation**. Landing page: helps the reader decide whether to adopt the library in 2–3 minutes. Not a tutorial, not a reference.
 
 Required frontmatter: `title`, `description`, `package`, `category`, `keywords`, `related`, `exports`, `environments`. The Codex MCP server reads these fields to expose packages to AI clients (`list-packages`, `search-packages`, `get-package`), so keep them accurate.
 
-- `package` — folder name without the `@vielzeug/` prefix; must equal the docs directory name.
-- `category` — lowercase grouping key used by the docs site and Codex (e.g. `state`, `ui`, `http`).
-- `keywords` — searchable terms, e.g. `[signals, reactive, state-management]`.
-- `related` — slugs of related packages that exist as real packages.
-- `exports` — the 3–5 primary exports as strings, e.g. `[createApi, createQuery, HttpError]`.
-- `environments` — list only supported runtimes from `browser`, `node`, `ssr`, `deno`, rendered as badges by `<PackageHero>`. No separate `## Compatibility` table. `browser, node` is the safe default for universal packages; `browser` only for DOM/Web-API-dependent packages (`vault`, `dnd`, `orbit`); `node` only for server/CLI packages (`codex`).
-- Minimum Node version is derived automatically from `engines.node` and folded into the `node` badge — nothing to add by hand. Monorepo floor is `>=18`; raise per-package only for a real constraint (e.g. `codex` `>=22`).
+- `package`: folder name without the `@vielzeug/` prefix; must equal the docs directory name.
+- `category`: lowercase grouping key used by the docs site and Codex (e.g. `state`, `ui`, `http`).
+- `keywords`: searchable terms, e.g. `[signals, reactive, state-management]`.
+- `related`: slugs of related packages that exist as real packages.
+- `exports`: the 3–5 primary exports as strings, e.g. `[createApi, createQuery, HttpError]`.
+- `environments`: list only supported runtimes from `browser`, `node`, `ssr`, `deno`, rendered as badges by `<PackageHero>`. No separate `## Compatibility` table. `browser, node` is the safe default for universal packages; `browser` only for DOM/Web-API-dependent packages (`vault`, `dnd`, `orbit`); `node` only for server/CLI packages (`codex`).
+- Minimum Node version is derived automatically from `engines.node` and folded into the `node` badge: nothing to add by hand. Monorepo floor is `>=18`; raise per-package only for a real constraint (e.g. `codex` `>=22`).
 
 Required structure, in order:
 
-1. `<PackageHero package="<pkg>" />` — replaces badges/logo/heading/quick-reference; renders from frontmatter.
-2. `## Why <PackageName>?` — one paragraph (max 3 sentences) on the concrete problem solved, followed by a single Before/After fenced code block (`// Before` then `// After`).
-3. Comparison table — columns: Feature, `<PackageName>`, 1–2 competitors. Rows must include bundle size (`<PackageInfo package="<pkg>" type="size" />`), zero dependencies, and 2–3 real differentiators. Use `<ore-icon name="check" size="16">`, `<ore-icon name="x" size="16">`, or `<ore-icon name="triangle-alert" size="16">` — never `circle-check`/`circle-x`.
-4. `<div class="decision-callout">` wrapping both **Use `<PackageName>` when** and **Consider `<alternative>` when** statements — both required.
-5. `## Installation` — `::: code-group` with pnpm/npm/yarn tabs.
-6. `## Quick Start` — a minimal but real working example, including error handling/cleanup where they'd apply.
-7. `## Features` inside `<div class="features-grid">` — one line per feature, starting with a backtick-quoted API name where applicable.
-8. `## Documentation` inside `<div class="doc-links">` — links to `usage.md`, `api.md`, `examples.md`. Use this exact heading; do not merge into See Also.
-9. `## See Also` inside `<div class="see-also">` — 2–4 related packages, each with a contextual one-sentence reason, not bare link text.
+1. `<PackageHero package="<pkg>" />`: replaces badges/logo/heading/quick-reference; renders from frontmatter.
+2. `## Why <PackageName>?`: one paragraph (max 3 sentences) on the concrete problem solved, followed by a single Before/After fenced code block (`// Before` then `// After`).
+3. Comparison table: columns: Feature, `<PackageName>`, 1–2 competitors. Rows must include bundle size (`<PackageInfo package="<pkg>" type="size" />`), zero dependencies, and 2–3 real differentiators. Use `<ore-icon name="check" size="16">`, `<ore-icon name="x" size="16">`, or `<ore-icon name="triangle-alert" size="16">`: never `circle-check`/`circle-x`.
+4. `<div class="decision-callout">` wrapping both **Use `<PackageName>` when** and **Consider `<alternative>` when** statements: both required.
+5. `## Installation`: `::: code-group` with pnpm/npm/yarn tabs.
+6. `## Quick Start`: a minimal but real working example, including error handling/cleanup where they'd apply.
+7. `## Features` inside `<div class="features-grid">`: one line per feature, starting with a backtick-quoted API name where applicable.
+8. `## Documentation` inside `<div class="doc-links">`: links to `usage.md`, `api.md`, `examples.md`. Use this exact heading; do not merge into See Also.
+9. `## See Also` inside `<div class="see-also">`: 2–4 related packages, each with a contextual one-sentence reason, not bare link text.
 
 Wrap the whole body in `<!-- markdownlint-disable MD025 MD033 MD060 -->` / `<!-- markdownlint-enable -->`.
 
-## `usage.md` — Usage Guide
+## `usage.md`: Usage Guide
 
-Diátaxis type: **How-to**. Task-oriented — the reader has already decided to use the library. No exhaustive option tables (those belong in `api.md`).
+Diátaxis type: **How-to**. Task-oriented: the reader has already decided to use the library. No exhaustive option tables (those belong in `api.md`).
 
-Required frontmatter: `title`, `description`. No `#` heading — frontmatter `title` is the page title. `[[toc]]` immediately after frontmatter.
+Required frontmatter: `title`, `description`. No `#` heading: frontmatter `title` is the page title. `[[toc]]` immediately after frontmatter.
 
 Canonical section order: `Basic Usage → <concept sections, simple to complex> → Testing (if applicable) → Framework Integration → Working with Other Vielzeug Libraries → Best Practices`.
 
@@ -75,43 +75,43 @@ Canonical section order: `Basic Usage → <concept sections, simple to complex> 
 - Testing, Debug Mode, or other package-specific utility sections go **before** Framework Integration, never after.
 - Omit Framework Integration only when there is truly no natural framework interop (e.g. `arsenal`); otherwise include it, showing React/Vue 3/Svelte in a code-group.
 - `Working with Other Vielzeug Libraries` is required when documented integration points exist.
-- `Best Practices` is always last — an actionable, verb-first bullet list, max 8 items.
+- `Best Practices` is always last: an actionable, verb-first bullet list, max 8 items.
 
-## `api.md` — API Reference
+## `api.md`: API Reference
 
-Diátaxis type: **Reference**. Consulted, not read — accurate and complete, no how-to prose or opinionated guidance. Inline examples illustrate the contract, not teach usage.
+Diátaxis type: **Reference**. Consulted, not read: accurate and complete, no how-to prose or opinionated guidance. Inline examples illustrate the contract, not teach usage.
 
 Required frontmatter: `title`, `description`. `[[toc]]` immediately after frontmatter.
 
 Required structure:
 
-1. `## API Overview` — table with columns Symbol, Purpose, Execution mode (Sync/Async), Common gotcha. Covers all primary exports.
-2. `## Package Entry Point` — table of `@vielzeug/<pkg>` import → purpose.
+1. `## API Overview`: table with columns Symbol, Purpose, Execution mode (Sync/Async), Common gotcha. Covers all primary exports.
+2. `## Package Entry Point`: table of `@vielzeug/<pkg>` import → purpose.
 3. One `##` group per logical area (e.g. "Core Functions"), each function as a `###` entry with: signature block, one-sentence return description, parameters table (if it takes an options object), **Returns**, **Example** (real import + usage), and a methods table if it returns an object with methods.
-4. `## Types` — every exported type/interface with full definition in a code block; one-line description for complex types.
-5. `## Errors` — every exported error class: name, what triggers it, notable properties.
+4. `## Types`: every exported type/interface with full definition in a code block; one-line description for complex types.
+5. `## Errors`: every exported error class: name, what triggers it, notable properties.
 
 Use `---` to separate top-level API entries within a group.
 
-## `examples.md` — Examples Index
+## `examples.md`: Examples Index
 
-Diátaxis role: **Navigation only**. No prose next to links — titles must be self-explanatory. No `#` heading. List recipes basic → advanced.
+Diátaxis role: **Navigation only**. No prose next to links: titles must be self-explanatory. No `#` heading. List recipes basic → advanced.
 
-## `migration.md` — Breaking Migration Guide
+## `migration.md`: Breaking Migration Guide
 
-Every package carries this page (the validator requires it); `new-package.mjs` scaffolds it empty. Versions are CalVer trains (`YY.MM.N`, see `RELEASE.md`), so there is no "major version" to name — a breaking change rides the next train and its story lands here. Keep migration guidance out of `usage.md`, `api.md`, and recipes so current-version documentation stays focused. Model the page on `docs/arsenal/migration.md`: one section per removed or changed contract, and concise Before/After code for every migration path. Link it from the package overview's Documentation section.
+Every package carries this page (the validator requires it); `new-package.mjs` scaffolds it empty. Versions are CalVer trains (`YY.MM.N`, see `RELEASE.md`), so there is no "major version" to name: a breaking change rides the next train and its story lands here. Keep migration guidance out of `usage.md`, `api.md`, and recipes so current-version documentation stays focused. Model the page on `docs/arsenal/migration.md`: one section per removed or changed contract, and concise Before/After code for every migration path. Link it from the package overview's Documentation section.
 
-## `examples/<slug>.md` — Individual Recipes
+## `examples/<slug>.md`: Individual Recipes
 
 Diátaxis type: **How-to**, problem-oriented. Self-contained and copy-paste ready.
 
-Required frontmatter: `title` (em dash, single-quoted, e.g. `'PackageName Examples — <Recipe Name>'`), `description`.
+Required frontmatter: `title` (em dash, single-quoted, e.g. `'PackageName Examples: <Recipe Name>'`), `description`.
 
-Required structure: `## <Recipe Name>` then, in order, `### Problem` (1–3 sentences, concrete use case + APIs involved), `### Solution` (one sentence + a complete runnable code block, no placeholders or undefined references; an optional `#### With <Variation>` sub-block), `### Pitfalls` (specific to this recipe, max 4 bullets — no generic boilerplate), `### Related` (2–4 links, cross-package where relevant). No `## Expected Output` section.
+Required structure: `## <Recipe Name>` then, in order, `### Problem` (1–3 sentences, concrete use case + APIs involved), `### Solution` (one sentence + a complete runnable code block, no placeholders or undefined references; an optional `#### With <Variation>` sub-block), `### Pitfalls` (specific to this recipe, max 4 bullets: no generic boilerplate), `### Related` (2–4 links, cross-package where relevant). No `## Expected Output` section.
 
 ## Verification checklist
 
-`pnpm validate:docs -- --package=<name>` checks objective page shape, frontmatter keys, recipe/index parity, and relative links — run it and fix what it reports. It cannot judge the items below; check them from source before declaring a docs pass done:
+`pnpm validate:docs -- --package=<name>` checks objective page shape, frontmatter keys, recipe/index parity, and relative links: run it and fix what it reports. It cannot judge the items below; check them from source before declaring a docs pass done:
 
 - [ ] Every signature in `api.md` matches `src/index.ts` exactly
 - [ ] All code blocks use the current API; no references to removed APIs

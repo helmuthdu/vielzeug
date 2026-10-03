@@ -1,7 +1,7 @@
 export const pairingExample = {
   code: `import { createMeshGuest, createMeshHost, meshCodec } from '@vielzeug/mesh'
 
-// In-memory WebRTC fake — the same 'rtc' injection point the package's own
+// In-memory WebRTC fake: the same 'rtc' injection point the package's own
 // tests use. In a real app, omit 'rtc' and globalThis.RTCPeerConnection is used.
 const fakeRtc = (() => {
   const links = new Map()
@@ -56,7 +56,7 @@ const fakeRtc = (() => {
       },
       setRemoteDescription(d) {
         if (d.type === 'offer') {
-          // sdp is CRLF-normalized like a real description — trim the token
+          // sdp is CRLF-normalized like a real description: trim the token
           const hostToken = d.sdp.split(':')[1].trim()
           const link = links.get(hostToken)
           link.guest = this
@@ -93,14 +93,14 @@ host.on('note', (m) => {
   host.send(m.peerId, 'ack', { ok: true })
 })
 
-// The out-of-band legs are plain strings — copy/paste or navigator.share
+// The out-of-band legs are plain strings: copy/paste or navigator.share
 const invitationText = meshCodec.encode(await host.createInvitation())
 console.log('invitation bytes:', invitationText.length)
 
 const answerText = meshCodec.encode(await guest.acceptInvitation(meshCodec.decode(invitationText)))
 const peer = await host.acceptAnswer(meshCodec.decode(answerText))
 
-console.log('paired — host sees peer', peer.id, '| status:', host.status, '/', guest.status)
+console.log('paired: host sees peer', peer.id, '| status:', host.status, '/', guest.status)
 
 guest.send('note', 'hello over the fake channel')
 await new Promise((r) => setTimeout(r, 0))

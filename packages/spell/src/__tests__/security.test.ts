@@ -12,10 +12,10 @@ import { s } from '../index';
 import { fromDefinition } from '../json';
 
 // ---------------------------------------------------------------------------
-// Prototype mutation — relaxed ObjectSchema
+// Prototype mutation: relaxed ObjectSchema
 // ---------------------------------------------------------------------------
 
-describe('prototype mutation — relaxed ObjectSchema', () => {
+describe('prototype mutation: relaxed ObjectSchema', () => {
   it('does not mutate the output prototype when __proto__ appears in input', () => {
     const schema = s.object({ name: s.string() }).relaxed();
     // JSON.parse creates __proto__ as an own enumerable data property
@@ -60,10 +60,10 @@ describe('prototype mutation — relaxed ObjectSchema', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Prototype mutation — RecordSchema
+// Prototype mutation: RecordSchema
 // ---------------------------------------------------------------------------
 
-describe('prototype mutation — RecordSchema', () => {
+describe('prototype mutation: RecordSchema', () => {
   it('does not mutate output prototype when __proto__ appears in input', () => {
     const schema = s.record(s.string(), s.unknown());
     const input = JSON.parse('{"key":"value","__proto__":{"isAdmin":true}}');
@@ -117,7 +117,7 @@ describe('prototype mutation — RecordSchema', () => {
 // BigInt coercion DoS guard
 // ---------------------------------------------------------------------------
 
-describe('prototype mutation — descriptor-driven object schemas', () => {
+describe('prototype mutation: descriptor-driven object schemas', () => {
   it('parses declared __proto__ fields without mutating the output prototype', () => {
     const schema = s.object({ safe: s.string() }).relaxed();
     const input = JSON.parse('{"safe":"ok","__proto__":"declared"}');
@@ -140,10 +140,10 @@ describe('prototype mutation — descriptor-driven object schemas', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Prototype mutation — IntersectSchema merge
+// Prototype mutation: IntersectSchema merge
 // ---------------------------------------------------------------------------
 
-describe('prototype mutation — IntersectSchema merge', () => {
+describe('prototype mutation: IntersectSchema merge', () => {
   it('deep-merges declared __proto__ branches without mutating the result prototype', () => {
     const left = s.object({ safe: s.string() }).relaxed();
     const right = s.object({ extra: s.boolean() }).relaxed();
@@ -227,14 +227,14 @@ describe('BigInt coercion DoS guard', () => {
   });
 
   it('rejects coercion of very large digit strings without significant delay', () => {
-    // 100 000 digits — would take ~3 ms without the guard
+    // 100 000 digits: would take ~3 ms without the guard
     const hugeDigits = '9'.repeat(100_000);
     const start = Date.now();
     const result = s.coerce.bigint().safeParse(hugeDigits);
     const elapsed = Date.now() - start;
 
     expect(result.success).toBe(false);
-    // Should return almost instantly — well under 50 ms
+    // Should return almost instantly: well under 50 ms
     expect(elapsed).toBeLessThan(50);
   });
 

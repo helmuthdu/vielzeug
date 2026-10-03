@@ -24,7 +24,7 @@ import componentStyles from './stepper.css?inline';
 // index/total/color/size/orientation) from this context instead of ore-stepper
 // pushing 8 attributes onto every child on every change. Matches the
 // provide()/inject() coordination already used by ore-tabs/ore-tab-item,
-// ore-radio-group/ore-radio, and ore-list/ore-list-item — ore-stepper was
+// ore-radio-group/ore-radio, and ore-list/ore-list-item: ore-stepper was
 // previously the one outlier doing manual `querySelectorAll` + `setAttribute`
 // fan-out, which meant every reactive change re-walked and re-wrote every step
 // regardless of whether that step's own state actually changed.
@@ -52,16 +52,16 @@ export type OreStepperProps = {
   clickable?: boolean;
   /** Theme color for the current/completed step indicators */
   color?: ThemeColor;
-  /** Disables the whole stepper — no step is navigable regardless of `clickable` */
+  /** Disables the whole stepper: no step is navigable regardless of `clickable` */
   disabled?: boolean;
   /** Accessible label for the nav landmark */
   label?: string;
   /**
-   * Restricts navigation to completed steps and the current step — steps ahead of the
+   * Restricts navigation to completed steps and the current step: steps ahead of the
    * current one cannot be clicked or focused, even when `clickable` is set.
    */
   linear?: boolean;
-  /** Layout orientation — 'horizontal' (default, desktop) or 'vertical' (compact/mobile-friendly) */
+  /** Layout orientation: 'horizontal' (default, desktop) or 'vertical' (compact/mobile-friendly) */
   orientation?: 'horizontal' | 'vertical';
   /** Component size */
   size?: ComponentSize;
@@ -138,7 +138,7 @@ define<OreStepperProps>(STEPPER_TAG, {
     };
 
     // ────────────────────────────────────────────────────────────────
-    // Selection State — mirrors ore-tabs' `selectedValue` signal + `ensureSelection()` pattern
+    // Selection State: mirrors ore-tabs' `selectedValue` signal + `ensureSelection()` pattern
     // ────────────────────────────────────────────────────────────────
 
     const currentValue = signal<string | undefined>(props.value.value);
@@ -194,12 +194,12 @@ define<OreStepperProps>(STEPPER_TAG, {
     });
 
     // Deferred to `onMounted()` (mirrors ore-tabs' `ensureSelection()` timing) rather than an
-    // immediate `watch(stepValues, ...)` — `getSteps()` walks the *live* light DOM, and while the
+    // immediate `watch(stepValues, ...)`: `getSteps()` walks the *live* light DOM, and while the
     // browser is still parsing this element's `ore-step` children (synchronously upgrading each
     // one as its own tag is reached, which happens whenever `customElements.define()` already
-    // ran before this markup was parsed — exactly what a sandboxed live-preview iframe does by
+    // ran before this markup was parsed: exactly what a sandboxed live-preview iframe does by
     // design), `stepValues` observes that child list mid-populate. Reading it eagerly here used
-    // to call `ensureSelection()` — and therefore write `currentValue` — once per step as each
+    // to call `ensureSelection()`, and therefore write `currentValue`: once per step as each
     // one was discovered, interleaved with that *same* step's own first render effect further
     // down the reactive graph. That reentrant write during a child's not-yet-finished initial
     // render corrupted its rendered output (the step's clickable/static control silently failed
@@ -263,7 +263,7 @@ define<OreStepperProps>(STEPPER_TAG, {
 
       setSelection(value ?? undefined, true);
       // The click focused the step's old control; the selection re-render replaced
-      // it — restore focus onto the new one (see onNavigate's ordering note).
+      // it: restore focus onto the new one (see onNavigate's ordering note).
       focusStep(step);
     };
 

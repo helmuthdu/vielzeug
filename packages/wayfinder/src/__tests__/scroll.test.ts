@@ -46,7 +46,7 @@ describe('scroll coordination', () => {
     const original = (document as Document & { startViewTransition?: unknown }).startViewTransition;
 
     // A minimal stand-in for the browser API: `finished` resolves after the callback runs.
-    // Listeners and scroll must fire while the callback is still open — the transition's
+    // Listeners and scroll must fire while the callback is still open: the transition's
     // new-state capture covers both, and neither lands as an uncovered jump after the fade.
     (document as Document & { startViewTransition?: unknown }).startViewTransition = (
       callback: () => void | Promise<void>,

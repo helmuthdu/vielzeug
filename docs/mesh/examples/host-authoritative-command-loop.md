@@ -1,5 +1,5 @@
 ---
-title: 'Mesh Examples — Host-Authoritative Command Loop'
+title: 'Mesh Examples: Host-Authoritative Command Loop'
 description: Guests send commands; the host owns the state and broadcasts numbered snapshots.
 ---
 
@@ -7,14 +7,14 @@ description: Guests send commands; the host owns the state and broadcasts number
 
 ### Problem
 
-Guests propose changes; the host is the single authority that validates each command and broadcasts the resulting state. You need a `toHost` command channel, a `toGuest` snapshot channel with revision numbers, and a rejection path — using `createMeshHost`, `createMeshGuest`, and typed `send`/`on`/`broadcast`.
+Guests propose changes; the host is the single authority that validates each command and broadcasts the resulting state. You need a `toHost` command channel, a `toGuest` snapshot channel with revision numbers, and a rejection path: using `createMeshHost`, `createMeshGuest`, and typed `send`/`on`/`broadcast`.
 
 ### Solution
 
 ```ts
 import { createMeshGuest, createMeshHost, meshCodec, type MeshProtocol } from '@vielzeug/mesh';
 
-// State shape stays `unknown` to the transport — semantics live in the app.
+// State shape stays `unknown` to the transport: semantics live in the app.
 interface Command {
   readonly op: 'set' | 'delete';
   readonly key: string;
@@ -70,17 +70,17 @@ guest.send('command', { key: 'volume', op: 'set', value: 8 });
 
 #### With multiple guests
 
-`broadcast` reaches every connected guest, so one accepted command synchronizes the whole room. Late joiners need a catch-up path — add a `toHost: { hello: {} }` type and answer it with a unicast `snapshot` instead of a broadcast.
+`broadcast` reaches every connected guest, so one accepted command synchronizes the whole room. Late joiners need a catch-up path: add a `toHost: { hello: {} }` type and answer it with a unicast `snapshot` instead of a broadcast.
 
 ### Pitfalls
 
-- `broadcast` skips peers whose channel is not yet `'connected'` — a guest that joined mid-command misses that revision; send a unicast catch-up on `'peer-joined'`.
-- Revisions are host-local numbers — after a host reload they restart; re-pair and resync rather than assuming continuity.
-- The host must validate every `command` — the payload type is declared, not enforced; a guest can send anything.
-- `state` is shared by reference in `snapshot` payloads — spread it (`{ ...state }`) if guests could mutate what they receive.
+- `broadcast` skips peers whose channel is not yet `'connected'`: a guest that joined mid-command misses that revision; send a unicast catch-up on `'peer-joined'`.
+- Revisions are host-local numbers: after a host reload they restart; re-pair and resync rather than assuming continuity.
+- The host must validate every `command`: the payload type is declared, not enforced; a guest can send anything.
+- `state` is shared by reference in `snapshot` payloads: spread it (`{ ...state }`) if guests could mutate what they receive.
 
 ### Related
 
 - [Pair Two Devices](./pair-two-devices.md)
-- [Usage Guide — Sending and Receiving](../usage.md#sending-and-receiving)
-- [Pulse](/pulse/) — rooms and presence when a server is available
+- [Usage Guide: Sending and Receiving](../usage.md#sending-and-receiving)
+- [Pulse](/pulse/): rooms and presence when a server is available

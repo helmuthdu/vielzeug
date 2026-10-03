@@ -1,7 +1,7 @@
 import type { Bus, BusOptions, EventKey, EventMap, HeraldEvent } from '..';
 import { createBus } from '../bus';
 
-// Property names that must never be used as a bracket-assignment key on a plain object literal —
+// Property names that must never be used as a bracket-assignment key on a plain object literal :
 // `obj[key] = value` for `key === '__proto__'` invokes `Object.prototype`'s `__proto__` accessor
 // and reassigns `obj`'s own prototype instead of setting an own property. `constructor` and
 // `prototype` are excluded defensively for the same class of risk.

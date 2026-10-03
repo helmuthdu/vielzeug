@@ -1,5 +1,5 @@
 ---
-title: Orbit — Floating UI positioning
+title: 'Orbit: Floating UI positioning'
 description: Floating positioning with lifecycle-owned geometry and middleware.
 package: orbit
 category: ui
@@ -80,12 +80,12 @@ positioner.dispose();
 
 <div class="features-grid">
 
-- `createPositioner()` — Lifecycle-owned floating positioning
-- `computePosition()` — Low-level calculation for advanced integrations
-- `autoUpdate()` — Scroll, viewport, resize, and animation-frame updates
-- Middleware — Offset, flip, shift, size, hide, arrow, inline, auto-placement
-- `strategy` — Explicit `fixed` or `absolute` coordinate behavior
-- `/reactive` — Optional Ripple position readable
+- `createPositioner()`: Lifecycle-owned floating positioning
+- `computePosition()`: Low-level calculation for advanced integrations
+- `autoUpdate()`: Scroll, viewport, resize, and animation-frame updates
+- Middleware: Offset, flip, shift, size, hide, arrow, inline, auto-placement
+- `strategy`: Explicit `fixed` or `absolute` coordinate behavior
+- `/reactive`: Optional Ripple position readable
 
 </div>
 
@@ -104,9 +104,9 @@ positioner.dispose();
 
 <div class="see-also">
 
-- [Refine](/refine/) — Accessible components using floating UI behavior.
-- [Ore](/ore/) — Lifecycle ownership for custom-element positioning.
-- [Prism](/prism/) — Chart tooltips positioned from virtual references.
+- [Refine](/refine/): Accessible components using floating UI behavior.
+- [Ore](/ore/): Lifecycle ownership for custom-element positioning.
+- [Prism](/prism/): Chart tooltips positioned from virtual references.
 
 </div>
 

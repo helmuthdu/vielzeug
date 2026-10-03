@@ -31,7 +31,7 @@ function run() {
   )
   status.textContent = 'Animating…'
   current.result.then((result) => {
-    status.textContent = result.status === 'finished' ? 'Finished — handle remains disposable' : result.status === 'reduced' ? 'Finished with reduced timing' : 'Cancelled'
+    status.textContent = result.status === 'finished' ? 'Finished: handle remains disposable' : result.status === 'reduced' ? 'Finished with reduced timing' : 'Cancelled'
   })
 }
 

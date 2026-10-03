@@ -40,5 +40,5 @@ const loc = router.getSnapshot().location
 console.log('raw location.query:', JSON.stringify(loc.query))
 
 router.dispose()`,
-  name: 'Query Parameters — Coercion and URL State',
+  name: 'Query Parameters: Coercion and URL State',
 };

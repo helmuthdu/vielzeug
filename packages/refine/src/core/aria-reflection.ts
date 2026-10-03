@@ -2,15 +2,15 @@
  * Cross-shadow-root ARIA relationship helper.
  *
  * Plain IDREF attributes (`aria-controls`, `aria-describedby`, `aria-labelledby`, …) cannot
- * resolve across shadow-tree boundaries — the browser only looks up an `id` within the same
+ * resolve across shadow-tree boundaries: the browser only looks up an `id` within the same
  * root as the referencing element, so `<div id="x">` inside one component's shadow root is
  * invisible to `aria-controls="x"` set inside another component's shadow root, even when both
- * custom elements are siblings in the light DOM. This is a platform limitation, not a bug —
+ * custom elements are siblings in the light DOM. This is a platform limitation, not a bug :
  * see the WICG "reference target" explainer for the full rationale.
  *
  * Modern browsers instead expose element-reflection IDL properties
  * (`ariaControlsElements`, `ariaDescribedByElements`, `ariaLabelledByElements`, …) that accept
- * live `Element` references directly, sidestepping ID lookup entirely — these work across
+ * live `Element` references directly, sidestepping ID lookup entirely: these work across
  * shadow roots by design. Where unsupported, this falls back to the plain IDREF attribute,
  * which is still correct for same-root pairings and degrades gracefully (no relationship)
  * for cross-root ones instead of throwing.

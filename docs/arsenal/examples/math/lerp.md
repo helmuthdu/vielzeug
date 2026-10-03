@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — lerp'
+title: 'Arsenal Examples: lerp'
 description: 'lerp example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'lerp example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to smoothly interpolate between two values — for example animating a property from start to end over time.
+You need to smoothly interpolate between two values: for example animating a property from start to end over time.
 
 ### Solution
 
@@ -24,7 +24,7 @@ lerp(0, 100, 0.25); // 25
 
 ### Pitfalls
 
-- `t` is not clamped — values outside `[0, 1]` extrapolate beyond the range. Use `clamp(t, 0, 1)` if you need to restrict.
+- `t` is not clamped: values outside `[0, 1]` extrapolate beyond the range. Use `clamp(t, 0, 1)` if you need to restrict.
 
 ### Related
 

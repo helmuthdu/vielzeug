@@ -118,7 +118,7 @@ describe('tavern', () => {
     // Wait for the microtask to flush.
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // The initial join snapshot plus exactly one coalesced update — not three.
+    // The initial join snapshot plus exactly one coalesced update: not three.
     expect(broadcasts.length).toBeLessThanOrEqual(2);
 
     joined.guest.dispose();
@@ -223,7 +223,7 @@ describe('tavern', () => {
       },
     });
 
-    // Passing an invitation where an answer is expected — the wrong code kind.
+    // Passing an invitation where an answer is expected: the wrong code kind.
     const invitation = await host.createInvitationText();
     await expect(host.acceptAnswerText(invitation)).rejects.toThrow(TavernPairingError);
 
@@ -354,7 +354,7 @@ describe('tavern', () => {
     });
     await host.acceptAnswerText(joined.answerText);
 
-    // The joining guest's initial snapshot read failed — warned, not thrown.
+    // The joining guest's initial snapshot read failed: warned, not thrown.
     await vi.waitFor(() => expect(warnings).toContain('corrupted subject'));
     host.dispose();
   });

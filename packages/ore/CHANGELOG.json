@@ -162,7 +162,7 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: provide() now registers onCleanup to delete its key from the context registry on disconnect — prevents stale context keys leaking to descendants across reconnect and eliminates spurious 'key already provided' dev warnings when setup() runs again on the same element",
+            "comment": "fix: provide() now registers onCleanup to delete its key from the context registry on disconnect: prevents stale context keys leaking to descendants across reconnect and eliminates spurious 'key already provided' dev warnings when setup() runs again on the same element",
             "commit": "e3f64113f7cce794fd9ba9014b4e47c3d3b8c73b"
           }
         ]
@@ -459,19 +459,19 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "chore: remove SetupContextBag — setup(props) takes only props; lifecycle hooks (onMounted/onCleanup/onEvent/onElement/watchEffect), host bindings (bind/aria), context (inject/injectStrict/provide), and per-instance factories (useEmit/useSlots/getHost) are now free functions imported from @vielzeug/ore. Form helpers (useField/createFormContext) moved to @vielzeug/ore/forms. define()/ComponentDefinition dropped the Emits/SlotNames generics in favor of useEmit<Emits>()/useSlots<SlotNames>().",
+            "comment": "chore: remove SetupContextBag: setup(props) takes only props; lifecycle hooks (onMounted/onCleanup/onEvent/onElement/watchEffect), host bindings (bind/aria), context (inject/injectStrict/provide), and per-instance factories (useEmit/useSlots/getHost) are now free functions imported from @vielzeug/ore. Form helpers (useField/createFormContext) moved to @vielzeug/ore/forms. define()/ComponentDefinition dropped the Emits/SlotNames generics in favor of useEmit<Emits>()/useSlots<SlotNames>().",
             "commit": "ad51ca1ecd11d03493507affc4b55b62f8a722ea"
           },
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor: consolidate lifecycle-guard errors, dedupe bind()/aria() attribute writing, remove each() dev-time keyFn probe, add axeCheck test helper, and harden internal invariants (compiled-template lookups, anchor parentNode) via a new OreInternalError. BREAKING: html`` now throws OreApiError immediately for an invalid dynamic tag name in every build (previously warned and skipped only the one slot) — matches each()'s duplicate-key guard, which already always throws.",
+            "comment": "refactor: consolidate lifecycle-guard errors, dedupe bind()/aria() attribute writing, remove each() dev-time keyFn probe, add axeCheck test helper, and harden internal invariants (compiled-template lookups, anchor parentNode) via a new OreInternalError. BREAKING: html`` now throws OreApiError immediately for an invalid dynamic tag name in every build (previously warned and skipped only the one slot): matches each()'s duplicate-key guard, which already always throws.",
             "commit": "f6340d38228508b5627c049e112061ea22a224ac"
           }
         ],
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "fix: add an IIFE-only aggregate entry (src/iife.ts) merging directives/forms/observers onto window.Ore — without it, downstream IIFE consumers that don't externalize every ore sub-path inline a second, disconnected copy of ore's runtime state",
+            "comment": "fix: add an IIFE-only aggregate entry (src/iife.ts) merging directives/forms/observers onto window.Ore: without it, downstream IIFE consumers that don't externalize every ore sub-path inline a second, disconnected copy of ore's runtime state",
             "commit": "28fe45930b21a92946dde47a6c6a4cf1aa3d717b"
           }
         ]

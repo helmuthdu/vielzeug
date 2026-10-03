@@ -22,7 +22,7 @@ void watchNextSessionEvent()
 
 setTimeout(() => {
   bus.emit('user:login', { email: 'alice@example.com', userId: '42' })
-  bus.emit('user:logout') // ignored — waitAny already resolved
+  bus.emit('user:logout') // ignored: waitAny already resolved
 }, 30)`,
   name: 'waitAny()',
 };

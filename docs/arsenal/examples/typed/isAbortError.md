@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isAbortError'
+title: 'Arsenal Examples: isAbortError'
 description: 'isAbortError example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isAbortError example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to distinguish an abort-caused rejection from other errors — for example silently ignoring cancellations while reporting real failures.
+You need to distinguish an abort-caused rejection from other errors: for example silently ignoring cancellations while reporting real failures.
 
 ### Solution
 
@@ -19,8 +19,8 @@ import { isAbortError } from '@vielzeug/arsenal/guards';
 try {
   await abortableTask;
 } catch (err) {
-  if (isAbortError(err)) return; // cancelled — ignore
-  throw err; // real failure — re-throw
+  if (isAbortError(err)) return; // cancelled: ignore
+  throw err; // real failure: re-throw
 }
 ```
 

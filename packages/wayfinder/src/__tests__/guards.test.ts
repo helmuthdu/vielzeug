@@ -1,5 +1,5 @@
 /**
- * beforeLeave guards — navigation blocking and removal semantics.
+ * beforeLeave guards: navigation blocking and removal semantics.
  */
 import { createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
 import { mockHistory, mockLocation, resetMocks } from './setup';
@@ -142,7 +142,7 @@ describe('beforeLeave', () => {
 
     const removeSecond = router.beforeLeave(second);
 
-    // First blocker removes the second one during execution — second must still run.
+    // First blocker removes the second one during execution: second must still run.
     router.beforeLeave(async () => {
       removeSecond();
 
@@ -256,7 +256,7 @@ describe('beforeLeave with route scope', () => {
     await settle();
     router.beforeLeave(blocker, { routes: ['home'] });
 
-    // Navigating away from /home — blocker should fire and block.
+    // Navigating away from /home: blocker should fire and block.
     await router.navigate({ path: '/page' });
 
     expect(blocker).toHaveBeenCalledTimes(1);
@@ -281,7 +281,7 @@ describe('beforeLeave with route scope', () => {
     await settle();
     router.beforeLeave(blocker, { routes: ['other'] });
 
-    // Currently on /, which is not 'other' — blocker should NOT fire.
+    // Currently on /, which is not 'other': blocker should NOT fire.
     await router.navigate({ path: '/page' });
 
     expect(blocker).not.toHaveBeenCalled();

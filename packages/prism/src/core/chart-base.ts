@@ -17,7 +17,7 @@ export function createChartBase(
   options: { a11y?: ChartA11y; margin?: Partial<ChartMargin> },
   onResize?: () => void,
 ): ChartBase {
-  // Duck-typed rather than `instanceof Element` — an `instanceof` check would reject a
+  // Duck-typed rather than `instanceof Element`: an `instanceof` check would reject a
   // structurally valid Element from a different realm (e.g. an Element created via
   // `iframe.contentDocument.createElement(...)`, whose prototype chain terminates in that
   // iframe's own `Element` constructor), which is a legitimate usage pattern this package

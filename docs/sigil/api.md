@@ -1,6 +1,6 @@
 ---
-title: Sigil — API Reference
-description: Public API of @vielzeug/sigil — encoder, renderers, scanner, types, and errors.
+title: 'Sigil: API Reference'
+description: 'Public API of @vielzeug/sigil: encoder, renderers, scanner, types, and errors.'
 ---
 
 [[toc]]
@@ -11,11 +11,11 @@ description: Public API of @vielzeug/sigil — encoder, renderers, scanner, type
 | --- | --- | --- | --- |
 | `encodeQr` | Encode a payload into a `QrMatrix` | Sync | Throws `SigilCapacityError` over capacity |
 | `qrCapacity` | Payload limit for a version/level/mode | Sync | Returns *characters* for numeric/alphanumeric, *bytes* for byte mode |
-| `toSvg` | Render a matrix as an SVG string | Sync | Escapes `dark`/`light` as raw CSS — pass values, not markup |
+| `toSvg` | Render a matrix as an SVG string | Sync | Escapes `dark`/`light` as raw CSS: pass values, not markup |
 | `drawToCanvas` | Paint a matrix onto a canvas | Sync | Browser only; resizes the canvas for DPR |
 | `detectQr` | One-shot detection on an image source | Async | Throws `SigilUnsupportedError` without `BarcodeDetector` |
 | `createQrScanner` | Camera scan loop | Async (start) | Must `dispose()`; camera tracks persist otherwise |
-| `isQrScanSupported` | Sync feature check | Sync | Constructor exists ≠ `qr_code` supported — prefer `qrScanSupport()` |
+| `isQrScanSupported` | Sync feature check | Sync | Constructor exists ≠ `qr_code` supported: prefer `qrScanSupport()` |
 | `qrScanSupport` | Async feature check incl. formats | Async | Never assume support per browser/version |
 
 ## Package Entry Point
@@ -36,7 +36,7 @@ Encodes `data` into a QR symbol. Picks the most compact mode covering the whole 
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `data` | `string \| Uint8Array` | — | Payload; `Uint8Array` is raw binary and always byte mode (no UTF-8 round-trip) |
+| `data` | `string \| Uint8Array` | N/A | Payload; `Uint8Array` is raw binary and always byte mode (no UTF-8 round-trip) |
 | `options.errorCorrection` | `'L' \| 'M' \| 'Q' \| 'H'` | `'M'` | Error-correction level |
 | `options.version` | `1–40` | auto | Pin the version; throws if payload can't fit |
 | `options.minVersion` | `1–40` | `1` | Smallest acceptable version |
@@ -78,7 +78,7 @@ qrCapacity(40, 'L', 'numeric'); // → 7089
 function toSvg(matrix: QrMatrix, options?: QrSvgOptions): string;
 ```
 
-Returns a complete `<svg>` string. Runs in any environment — no DOM required.
+Returns a complete `<svg>` string. Runs in any environment: no DOM required.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -87,7 +87,7 @@ Returns a complete `<svg>` string. Runs in any environment — no DOM required.
 | `options.margin` | `number` | `4` | Quiet-zone modules |
 | `options.scale` | `number` | `1` | User units per module |
 | `options.optimizePath` | `boolean` | `true` | Merge dark runs into one `<path>` |
-| `options.label` | `string` | — | `<title>` + `aria-label`; enables `role="img"` |
+| `options.label` | `string` | N/A | `<title>` + `aria-label`; enables `role="img"` |
 
 ```ts
 const svg = toSvg(matrix, { label: 'Pairing code', dark: 'var(--qr-dark)' });
@@ -95,7 +95,7 @@ const svg = toSvg(matrix, { label: 'Pairing code', dark: 'var(--qr-dark)' });
 
 ---
 
-### `drawToCanvas(matrix, canvas, options?)` — browser only
+### `drawToCanvas(matrix, canvas, options?)`: browser only
 
 ```ts
 function drawToCanvas(matrix: QrMatrix, canvas: HTMLCanvasElement, options?: QrCanvasOptions): number;
@@ -121,11 +121,11 @@ Creates a camera scan loop around the native `BarcodeDetector`.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `options.video` | `HTMLVideoElement` | — | Element the stream attaches to (needs `autoplay playsinline muted`) |
+| `options.video` | `HTMLVideoElement` | N/A | Element the stream attaches to (needs `autoplay playsinline muted`) |
 | `options.constraints` | `MediaTrackConstraints` | `{ facingMode: 'environment' }` | `getUserMedia` video constraints |
 | `options.intervalMs` | `number` | `200` | Minimum ms between detect passes |
 | `options.once` | `boolean` | `true` | Stop after the first result |
-| `options.signal` | `AbortSignal` | — | Abort → `stop()` |
+| `options.signal` | `AbortSignal` | N/A | Abort → `stop()` |
 | `options.detector` | `QrDetector` | native | Injected detector for tests |
 | `options.mediaDevices` | `Pick<MediaDevices, 'getUserMedia'>` | `navigator.mediaDevices` | Injected media for tests |
 
@@ -169,7 +169,7 @@ function isQrScanSupported(): boolean;
 function qrScanSupport(): Promise<boolean>;
 ```
 
-`isQrScanSupported` checks the `BarcodeDetector` constructor synchronously. `qrScanSupport` additionally asks `getSupportedFormats()` for `'qr_code'` — use it before showing scan affordances.
+`isQrScanSupported` checks the `BarcodeDetector` constructor synchronously. `qrScanSupport` additionally asks `getSupportedFormats()` for `'qr_code'`: use it before showing scan affordances.
 
 ## Types
 
@@ -212,11 +212,11 @@ type SigilEvent =
 
 | Class | Trigger | Notable members |
 | --- | --- | --- |
-| `SigilError` | Base class for all sigil errors | — |
+| `SigilError` | Base class for all sigil errors | N/A |
 | `SigilCapacityError` | Payload exceeds the version/mode limit | `bytes`, `maxBytes`, `version` |
-| `SigilOptionError` | Invalid option combination (forced mode can't represent input, bad mask/version) | — |
-| `SigilUnsupportedError` | `BarcodeDetector`/`getUserMedia`/canvas 2D context missing | — |
-| `SigilPermissionError` | Camera `NotAllowedError` | — |
-| `SigilDisposedError` | `start()` on a disposed scanner | — |
+| `SigilOptionError` | Invalid option combination (forced mode can't represent input, bad mask/version) | N/A |
+| `SigilUnsupportedError` | `BarcodeDetector`/`getUserMedia`/canvas 2D context missing | N/A |
+| `SigilPermissionError` | Camera `NotAllowedError` | N/A |
+| `SigilDisposedError` | `start()` on a disposed scanner | N/A |
 
 All carry `cause` when wrapping a platform error.

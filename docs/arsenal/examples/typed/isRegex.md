@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isRegex'
+title: 'Arsenal Examples: isRegex'
 description: 'isRegex example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isRegex example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to check whether a value is a `RegExp` instance — for example validating a config option that accepts either a string pattern or a compiled regex.
+You need to check whether a value is a `RegExp` instance: for example validating a config option that accepts either a string pattern or a compiled regex.
 
 ### Solution
 

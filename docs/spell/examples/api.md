@@ -1,5 +1,5 @@
 ---
-title: 'Spell Examples — Validating API Payloads'
+title: 'Spell Examples: Validating API Payloads'
 description: 'Validate HTTP payloads with spell before application code reads them.'
 ---
 

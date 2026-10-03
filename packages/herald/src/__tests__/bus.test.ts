@@ -79,7 +79,7 @@ describe('createBus - subscription lifecycle', () => {
 
     unsub(); // first removed; event key cleaned up
     bus.on('count', second); // new registration for same event
-    unsub(); // second call — must not remove second's entry
+    unsub(); // second call: must not remove second's entry
 
     bus.emit('count', 1);
 
@@ -96,7 +96,7 @@ describe('createBus - subscription lifecycle', () => {
 
     const unsub = bus.on('count', listener, { signal: controller.signal });
 
-    unsub(); // noop unsub — should not throw
+    unsub(); // noop unsub: should not throw
     bus.emit('count', 1);
 
     expect(listener).not.toHaveBeenCalled();
@@ -164,7 +164,7 @@ describe('createBus - subscription lifecycle', () => {
 
     expect(listener).toHaveBeenCalledTimes(2);
 
-    bus.emit('count', 2); // both consumed — no further calls
+    bus.emit('count', 2); // both consumed: no further calls
 
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -618,7 +618,7 @@ describe('createBus - maxListeners', () => {
 
     bus.on('count', vi.fn());
     bus.on('count', vi.fn());
-    expect(spy).not.toHaveBeenCalled(); // exactly at limit — no warning
+    expect(spy).not.toHaveBeenCalled(); // exactly at limit: no warning
 
     bus.on('count', vi.fn()); // exceeds limit
     expect(spy).toHaveBeenCalledOnce();

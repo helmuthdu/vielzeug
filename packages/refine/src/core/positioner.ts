@@ -28,11 +28,11 @@ export type OverlayPositioner = {
 
 export type DropdownPositionerOptions = {
   /**
-   * Clipping boundary for flip/shift/size — the edges the dropdown must stay within.
+   * Clipping boundary for flip/shift/size: the edges the dropdown must stay within.
    * Defaults to the nearest ancestor that actually clips content (`overflow:
    * hidden|auto|scroll|clip`, e.g. a dialog panel), auto-detected per update via
    * `getClippingAncestorRect()`, intersected with the viewport. Without this, flip/shift only
-   * avoid the full page viewport — a dropdown can be "in view" by that measure while still
+   * avoid the full page viewport: a dropdown can be "in view" by that measure while still
    * visibly overhanging a much smaller container it's actually nested in. Pass an explicit
    * boundary to override auto-detection.
    */
@@ -40,7 +40,7 @@ export type DropdownPositionerOptions = {
   /**
    * Returns the text direction used for placement mirroring. Defaults to the resolved
    * direction of the reference element (nearest `dir="ltr"|"rtl"` ancestor, falling back to
-   * computed style) — most callers never need to pass this explicitly.
+   * computed style): most callers never need to pass this explicitly.
    */
   getDir?: () => 'ltr' | 'rtl';
   /** Getter for the floating (dropdown panel) element. */
@@ -119,7 +119,7 @@ export function createDropdownPositioner({
     if (!ref || !floating) return;
 
     const placement = resolvedPlacement();
-    // Defaults to `undefined` (meaning "auto-detect"), not the detected value itself —
+    // Defaults to `undefined` (meaning "auto-detect"), not the detected value itself :
     // re-running the detection on every update (rather than once, at positioner-creation time)
     // matters because the dialog/scroll-container an instance is rendered into can change
     // across opens (e.g. the same `<ore-select>` reused in different dialogs), and the detected
@@ -144,7 +144,7 @@ export function createDropdownPositioner({
       // Clamp to the width the `size` middleware will report *before* positioning, so `flip`
       // and `shift` compensate for the box that actually renders. Without this, a panel whose
       // natural width exceeds the boundary is shifted fully inside for a width it is then
-      // clamped out of — landing further inside the boundary than needed, misaligned with its
+      // clamped out of: landing further inside the boundary than needed, misaligned with its
       // trigger. Horizontal placements derive their available width from the post-shift x and
       // cannot be pre-clamped; they keep the post-positioning clamp below.
       if (placement.startsWith('top') || placement.startsWith('bottom')) {
@@ -172,13 +172,13 @@ export function createDropdownPositioner({
     floating.style.top = `${result.y}px`;
 
     // `computePosition()` assumes `left`/`top` resolve relative to the viewport (correct for
-    // `position: fixed`) — true almost always, but not when some ancestor establishes a
+    // `position: fixed`): true almost always, but not when some ancestor establishes a
     // containing block for fixed descendants (a non-`none` `transform`, even a visually-identity
     // one left over from an entrance transition that never resets to `none` at rest is a real,
-    // easy-to-hit case — a modal dialog's panel, say). Analytically detecting *that* ancestor via
+    // easy-to-hit case: a modal dialog's panel, say). Analytically detecting *that* ancestor via
     // `getContainingBlock()` and pre-subtracting its rect turned out to be unreliable in
     // practice: browsers don't apply the "ancestor transform traps fixed descendants" rule
-    // uniformly across every element nested under it in every case we tested — some floating
+    // uniformly across every element nested under it in every case we tested: some floating
     // elements in the exact same subtree needed the correction and some didn't, for reasons we
     // couldn't fully pin down. Measuring what actually happened after writing `left`/`top`
     // and correcting only the observed gap sidesteps that: it's a no-op when the browser already
@@ -187,7 +187,7 @@ export function createDropdownPositioner({
     //
     // The measurement itself must not be fooled by the floating element's *own* transform,
     // though: dropdowns/popovers here all use a `transform: translateY(...)` entrance transition
-    // driven by a `[data-open]` attribute + `@starting-style` — right at open, before the
+    // driven by a `[data-open]` attribute + `@starting-style`: right at open, before the
     // transition has visibly progressed, `getBoundingClientRect()` can still reflect that
     // starting offset (a handful of px, matching `--overlay-enter-translate-y`), which this
     // correction would otherwise misread as a permanent ancestor-driven mismatch and bake in
@@ -215,7 +215,7 @@ export function createDropdownPositioner({
     if (matchWidth) {
       const available =
         (result.middlewareData.size as SizeData | undefined)?.availableWidth ?? Number.POSITIVE_INFINITY;
-      // A panel measured while not yet rendered reports 0 — fall back to the reference width.
+      // A panel measured while not yet rendered reports 0: fall back to the reference width.
       floating.style.width = `${Math.min(Math.max(naturalWidth, refWidth), available)}px`;
     }
 

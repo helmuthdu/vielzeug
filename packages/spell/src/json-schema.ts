@@ -67,7 +67,7 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
 
     case 'map':
       return {
-        $comment: 'Map type — represented as an object with arbitrary string keys.',
+        $comment: 'Map type: represented as an object with arbitrary string keys.',
         additionalProperties: descriptorToJsonSchema(d.value),
         type: 'object',
       };
@@ -121,7 +121,7 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
 
     case 'set':
       return {
-        $comment: 'Set<T> — no standard JSON Schema equivalent; treated as an ordered unique-item array.',
+        $comment: 'Set<T>: no standard JSON Schema equivalent; treated as an ordered unique-item array.',
         items: descriptorToJsonSchema(d.items),
         type: 'array',
         uniqueItems: true,

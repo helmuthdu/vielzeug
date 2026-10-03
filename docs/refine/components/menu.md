@@ -145,7 +145,7 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 
 ## Trigger with an Icon Button
 
-Any element works as the trigger — including icon-only buttons. Always provide a visible label or `aria-label` on an icon-only trigger button so the purpose is clear to screen reader users.
+Any element works as the trigger: including icon-only buttons. Always provide a visible label or `aria-label` on an icon-only trigger button so the purpose is clear to screen reader users.
 
 <ComponentPreview align="start" justify="start" height="400px" vertical>
 
@@ -232,10 +232,10 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | Attribute   | Type                                                                              | Default          | Description                                                |
 | ----------- | --------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------- |
 | `placement` | `'bottom' \| 'bottom-start' \| 'bottom-end' \| 'top' \| 'top-start' \| 'top-end'` | `'bottom-start'` | Preferred panel placement (auto-flips near viewport edges) |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`         | —                | Color theme                                                |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`         | N/A | Color theme                                                |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                 |
 | `disabled`  | `boolean`                                                                         | `false`          | Prevent the menu from opening                              |
-| `open`      | `boolean`                                                                         | —                | Controlled panel visibility                                |
+| `open`      | `boolean`                                                                         | N/A | Controlled panel visibility                                |
 | `default-open` | `boolean`                                                                      | `false`          | Initial visibility when `open` is not provided             |
 
 **`ore-menu`** Slots
@@ -250,7 +250,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | Attribute  | Type                    | Default | Description                                                  |
 | ---------- | ----------------------- | ------- | ------------------------------------------------------------ |
 | `value`    | `string`                | `''`    | Value emitted in the `select` event detail                   |
-| `type`     | `'checkbox' \| 'radio'` | —       | Makes the item checkable; radio items are mutually exclusive |
+| `type`     | `'checkbox' \| 'radio'` | N/A | Makes the item checkable; radio items are mutually exclusive |
 | `checked`  | `boolean`               | `false` | Whether a checkable item is currently checked                |
 | `disabled` | `boolean`               | `false` | Prevent the item from being selected                         |
 

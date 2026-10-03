@@ -29,7 +29,7 @@ export type OreListItemEvents = {
   /** Emitted when the revealed action panel closes (gesture, tap, or programmatic). */
   conceal: { item: HTMLElement };
   /**
-   * Emitted when a swipe crosses the full-swipe-through distance — the "swiped all the way"
+   * Emitted when a swipe crosses the full-swipe-through distance: the "swiped all the way"
    * confirm gesture. Fired just before the slotted action's own click (if any).
    */
   confirm: { item: HTMLElement; side: ListItemRevealSide };
@@ -45,39 +45,39 @@ export type OreListItemEvents = {
 export type OreListItemProps = {
   /** Enable pointer and Enter/Space activation with button semantics. */
   actionable?: boolean;
-  /** Disable this item — blocks pointer interaction, swipe actions, and selection */
+  /** Disable this item: blocks pointer interaction, swipe actions, and selection */
   disabled?: boolean;
   /** Which action panel is revealed: 'left' | 'right' (absent = closed). Settable programmatically. */
   revealed?: ListItemRevealSide;
   /**
    * Opaque value compared against the parent `selectable` `ore-list`'s own `value` to derive
-   * `selected` — required for selection to work. There's no separate `selected` prop: the parent
+   * `selected`: required for selection to work. There's no separate `selected` prop: the parent
    * list's `value` is the single source of truth, so this item's selected state can't drift from
    * it. Also reported in `select`/`deselect`/the parent's `change` event.
    */
   value?: string;
 };
 
-/** Maps a reveal side to its slot name — the one place this pairing is spelled out. */
+/** Maps a reveal side to its slot name: the one place this pairing is spelled out. */
 const actionSlot = (side: ListItemRevealSide): 'actions-left' | 'actions-right' =>
   side === 'left' ? 'actions-left' : 'actions-right';
 
 /**
  * A single row inside `ore-list`. Renders `leading`/default (title)/`description`/`trailing`
  * content plus two off-canvas action panels (`actions-left`, `actions-right`) that a horizontal
- * pointer/touch swipe reveals — useful for mobile-style row actions (archive, delete, …). An
+ * pointer/touch swipe reveals: useful for mobile-style row actions (archive, delete, …). An
  * action panel only opens if it actually has slotted content; swiping the other direction is a
  * no-op. Revealed actions stay reachable from the keyboard (Tab focus on a slotted action button
  * reveals its panel via `:focus-within`, independent of any gesture).
  *
- * Swiping past the reveal distance snaps the panel fully open on release; swiping further still —
- * past the full-swipe-through distance — auto-confirms that side's action immediately (fires
+ * Swiping past the reveal distance snaps the panel fully open on release; swiping further still :
+ * past the full-swipe-through distance: auto-confirms that side's action immediately (fires
  * `confirm` and clicks the slot's first element), the same "swipe all the way" shortcut as iOS
  * Mail's delete gesture.
  *
  * Closing a revealed panel is deliberately one-directional: tap/click the row itself, tap outside
  * the item, or open a different item's panel. Reverse-swiping an already-open item is not
- * supported — see `ore-list`'s docs for the reasoning.
+ * supported: see `ore-list`'s docs for the reasoning.
  *
  * On hover-capable fine pointers, a hovered row peeks a few pixels of its first action panel
  * (`--list-item-peek`, a fraction of the panel width) so the swipe affordance is discoverable
@@ -96,7 +96,7 @@ const actionSlot = (side: ListItemRevealSide): 'actions-left' | 'actions-right' 
  * @fires deselect - Item becomes deselected. detail: { item: HTMLElement, value: string | null }
  * @fires reveal   - An action panel opens. detail: { item: HTMLElement, side: 'left' | 'right' }
  * @fires conceal  - The revealed action panel closes. detail: { item: HTMLElement }
- * @fires confirm  - Swiped all the way through — fires before the slotted action's own click. detail: { item: HTMLElement, side: 'left' | 'right' }
+ * @fires confirm  - Swiped all the way through: fires before the slotted action's own click. detail: { item: HTMLElement, side: 'left' | 'right' }
  *
  * @slot leading - Content before the title (e.g. icon, avatar)
  * @slot - Item title
@@ -168,7 +168,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
         disabled: computed(() => props.disabled.value || Boolean(props.revealed.value)),
         hasActions,
         // Clicks the slot's own first element (the common case: a single action button) so its own
-        // click handler runs the real action — `confirm` covers slots without a clickable element.
+        // click handler runs the real action: `confirm` covers slots without a clickable element.
         onConfirm: (side) => {
           const target = slots.elements(actionSlot(side)).value[0] as HTMLElement | undefined;
 
@@ -180,15 +180,15 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
       onCleanup(() => pan.dispose());
     });
 
-    // Reflects the derived `selected` state as a plain boolean attribute — the styling/
-    // `[selected]`-selector hook — the same way `prop.bool()`'s own reflection would, since it
+    // Reflects the derived `selected` state as a plain boolean attribute: the styling/
+    // `[selected]`-selector hook: the same way `prop.bool()`'s own reflection would, since it
     // isn't a real settable prop anymore.
     watchEffect(() => {
       el.toggleAttribute('selected', isSelected.value);
     });
 
     // Emits select/deselect/reveal/conceal for both gesture-driven AND externally-set (attribute,
-    // or the parent list's `value`) state changes — the plain-reflected-prop equivalent of
+    // or the parent list's `value`) state changes: the plain-reflected-prop equivalent of
     // ore-accordion-item's native <details> `toggle`-event listener (there's no backing native
     // element here to piggyback on).
     let lastSelected = isSelected.value;
@@ -212,7 +212,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
       lastRevealed = current;
 
       if (current) {
-        // Only one item may have its swipe actions revealed at a time — tell the list directly
+        // Only one item may have its swipe actions revealed at a time: tell the list directly
         // instead of dispatching an event for it to listen for.
         listCtx?.requestReveal(el);
         emit('reveal', { item: el, side: current });

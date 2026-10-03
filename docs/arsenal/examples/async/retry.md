@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — retry'
+title: 'Arsenal Examples: retry'
 description: 'retry example for @vielzeug/arsenal.'
 ---
 
@@ -53,9 +53,9 @@ controller.abort(); // cancels retries mid-flight
 
 ### Pitfalls
 
-- `shouldRetry` is **not** called on the final (exhausting) attempt — it only guards intermediate retries.
+- `shouldRetry` is **not** called on the final (exhausting) attempt: it only guards intermediate retries.
 - `failureIndex` is 0-based: index `0` is the first failure, index `1` is the second, and so on.
-- When a `timeout` is set, the `signal` passed to `fn` fires after `timeout` ms — pass it to `fetch` or other cancellable APIs.
+- When a `timeout` is set, the `signal` passed to `fn` fires after `timeout` ms: pass it to `fetch` or other cancellable APIs.
 - On exhaustion, the last error is re-thrown unchanged.
 
 ### Related

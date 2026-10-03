@@ -31,7 +31,7 @@ content.style.cssText = 'position:absolute;top:0;left:0;right:0;'
 container.appendChild(spacer)
 container.appendChild(content)
 
-// Sticky header overlay — floats above the list
+// Sticky header overlay: floats above the list
 const stickyEl = document.createElement('div')
 stickyEl.style.cssText = 'position:sticky;top:0;z-index:1;background:#f9fafb;border-bottom:1px solid #e5e5e5;padding:0 14px;height:32px;line-height:32px;font-size:12px;font-weight:700;color:#374151;display:none;'
 container.appendChild(stickyEl)

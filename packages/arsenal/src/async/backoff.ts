@@ -1,6 +1,6 @@
 /**
  * Computes an exponential backoff delay cap for a given zero-based attempt number.
- * Returns `min(1000 × 2ⁿ, maxMs)` — the cap before optional jitter is applied.
+ * Returns `min(1000 × 2ⁿ, maxMs)`: the cap before optional jitter is applied.
  *
  * Multiply the result by `Math.random()` for full-jitter backoff.
  *

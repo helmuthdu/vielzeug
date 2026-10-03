@@ -91,7 +91,7 @@ Use `count` and `max` for numeric notification badges. When `count` exceeds `max
 
 ## Dot Indicator
 
-Use `dot` for a minimal presence indicator with no label — for example, online status or unread indicators where presence alone is enough.
+Use `dot` for a minimal presence indicator with no label: for example, online status or unread indicators where presence alone is enough.
 
 <ComponentPreview center>
 
@@ -259,8 +259,8 @@ Stack multiple badges to show different types of information.
 | `count`      | `number`                                                                  | -         | Numeric count to display                                                            |
 | `max`        | `number`                                                                  | `99`      | Maximum count before showing `{max}+`                                               |
 | `dot`        | `boolean`                                                                 | `false`   | Show as a dot indicator (no label)                                                  |
-| `anchor`     | `'top-end' \| 'top-start' \| 'bottom-end' \| 'bottom-start'`              | —         | Pin badge to a corner of the `target` slot content                                  |
-| `aria-label` | `string`                                                                  | —         | Accessible label for assistive technology. Recommended for count-only and dot mode. |
+| `anchor`     | `'top-end' \| 'top-start' \| 'bottom-end' \| 'bottom-start'`              | N/A | Pin badge to a corner of the `target` slot content                                  |
+| `aria-label` | `string`                                                                  | N/A | Accessible label for assistive technology. Recommended for count-only and dot mode. |
 
 ### Slots
 
@@ -287,6 +287,6 @@ Stack multiple badges to show different types of information.
 
 ## Accessibility
 
-Badge text content is read by screen readers as inline text. Count badges expose the full value (or `{max}+`) as visible text that is read aloud. Dot indicator badges and count-only badges convey meaning through color and shape alone — use the `aria-label` attribute directly on `ore-badge` to provide a text description for assistive technology. When multiple badges are present, each should have a distinct `aria-label` to distinguish them.
+Badge text content is read by screen readers as inline text. Count badges expose the full value (or `{max}+`) as visible text that is read aloud. Dot indicator badges and count-only badges convey meaning through color and shape alone: use the `aria-label` attribute directly on `ore-badge` to provide a text description for assistive technology. When multiple badges are present, each should have a distinct `aria-label` to distinguish them.
 
 Keep badge labels very short (1–3 words). For longer status text use `ore-alert`. Badges should not be used as the primary call-to-action; use `ore-button` for that.

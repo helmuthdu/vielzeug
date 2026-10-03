@@ -1,5 +1,5 @@
 ---
-title: 'Gesture Examples — Carousel Pan Navigation'
+title: 'Gesture Examples: Carousel Pan Navigation'
 description: 'Use gesture pan recognition to navigate a carousel.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Use gesture pan recognition to navigate a carousel.'
 
 ### Problem
 
-You need horizontal pan navigation in a carousel without coupling input recognition to rendering logic. The carousel must track the finger during the pan (live transform), commit to next/previous when the released distance crosses an application-defined threshold, and snap back if the gesture releases below threshold. It must coexist with vertical scrolling on touch devices — a horizontal pan must not hijack a vertical page scroll.
+You need horizontal pan navigation in a carousel without coupling input recognition to rendering logic. The carousel must track the finger during the pan (live transform), commit to next/previous when the released distance crosses an application-defined threshold, and snap back if the gesture releases below threshold. It must coexist with vertical scrolling on touch devices: a horizontal pan must not hijack a vertical page scroll.
 
 ### Solution
 
@@ -101,7 +101,7 @@ document.getElementById('next')!.addEventListener('click', () => goTo(current + 
 - **Toggle a `panning` class to kill CSS transitions during `onMove`.** A 300ms ease transform fights the per-frame `translateX` updates from `onMove` and produces visible lag.
 - **Handle `reason: 'cancel'` in `onEnd`.** A cancel path (disabled flip mid-pan, `pointercancel`, `lostpointercapture`) emits `onEnd` with `reason: 'cancel'`; treat it as a reset, never a commit.
 - **Own the completion threshold in `onEnd`.** Gesture reports distance and reason but does not decide what counts as a swipe. A fixed 48px threshold feels different on a 1200px desktop carousel vs a 360px phone. 15–20% of slide width is a sane default.
-- **Keep `onMove` cheap.** It fires per animation frame during the pan — avoid layout reads (`getBoundingClientRect`) inside it; cache `slideWidth()` outside or read it on pointerdown.
+- **Keep `onMove` cheap.** It fires per animation frame during the pan: avoid layout reads (`getBoundingClientRect`) inside it; cache `slideWidth()` outside or read it on pointerdown.
 
 ### Related
 

@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — padCenter'
+title: 'Arsenal Examples: padCenter'
 description: 'Center-pad strings with @vielzeug/arsenal.'
 ---
 

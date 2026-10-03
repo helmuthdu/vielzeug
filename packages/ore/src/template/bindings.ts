@@ -1,5 +1,5 @@
 /**
- * template/bindings.ts — Runtime binding appliers.
+ * template/bindings.ts: Runtime binding appliers.
  *
  * Responsibilities:
  * - Apply each Binding variant to the live DOM (attr, event, html, ref,
@@ -62,7 +62,7 @@ type LiveWriteState = { last: unknown };
  *
  * Live-write: when the binding was created from `live(source)`, a write is skipped
  * if the DOM value has diverged from this binding's last write (in-progress user
- * input) — unless the incoming value already matches the DOM (write would be a no-op).
+ * input): unless the incoming value already matches the DOM (write would be a no-op).
  */
 export const syncFormControl = (
   el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,

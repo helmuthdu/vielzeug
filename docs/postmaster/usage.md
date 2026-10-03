@@ -1,5 +1,5 @@
 ---
-title: Postmaster — Usage Guide
+title: 'Postmaster: Usage Guide'
 description: Define durable jobs, process them with leases, retry failures, and recover dead-letter work.
 ---
 
@@ -98,7 +98,7 @@ Postmaster does not import Courier. The integration happens in your job definiti
 
 ## Payload and version migration
 
-Each job declares a `version` and an optional `validate` function. When a stored job's version is older than the registered version, Postmaster applies contiguous version-step migrations before validating. `migrate` is keyed by the source version: key `n` transforms version `n` into `n + 1`. The lowest key declares the earliest stored version you support, and the range must lead into the current version without gaps. Omit `migrate` when a job has no supported older records. `validate` accepts a plain function `(value: unknown) => T` or any structural parser with `parse(value: unknown): T` — Spell schemas work directly:
+Each job declares a `version` and an optional `validate` function. When a stored job's version is older than the registered version, Postmaster applies contiguous version-step migrations before validating. `migrate` is keyed by the source version: key `n` transforms version `n` into `n + 1`. The lowest key declares the earliest stored version you support, and the range must lead into the current version without gaps. Omit `migrate` when a job has no supported older records. `validate` accepts a plain function `(value: unknown) => T` or any structural parser with `parse(value: unknown): T`: Spell schemas work directly:
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -173,7 +173,7 @@ const jobs = defineJobs({
 await postmaster.enqueue('sendDigest', { userId }, { availableAt: Date.now() + 60_000 });
 ```
 
-Postmaster does not guarantee execution at `availableAt` — only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution. In a browser, a closed page or suspended service worker will run the job when the processor next becomes active. Past timestamps remain immediately eligible. The same mechanism already backs retry delays, so delayed eligibility reuses the existing claim, wake, and persistence paths.
+Postmaster does not guarantee execution at `availableAt`: only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution. In a browser, a closed page or suspended service worker will run the job when the processor next becomes active. Past timestamps remain immediately eligible. The same mechanism already backs retry delays, so delayed eligibility reuses the existing claim, wake, and persistence paths.
 
 ## Dead-letter recovery
 
@@ -206,11 +206,11 @@ await postmaster.dispose();
 await store.dispose();
 ```
 
-Disposal aborts owned work, releases the active lease, and is idempotent. A controlled disposal abort does not consume the attempt — the job returns to queued.
+Disposal aborts owned work, releases the active lease, and is idempotent. A controlled disposal abort does not consume the attempt: the job returns to queued.
 
 ## Events
 
-Tap runtime events for observability. Handler errors are swallowed — observability never affects processing.
+Tap runtime events for observability. Handler errors are swallowed: observability never affects processing.
 
 ```ts
 const unsubscribe = postmaster.tap((event) => {

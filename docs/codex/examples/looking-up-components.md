@@ -1,5 +1,5 @@
 ---
-title: 'Codex Examples — Looking Up Components'
+title: 'Codex Examples: Looking Up Components'
 description: 'Looking up Refine components example for @vielzeug/codex.'
 ---
 
@@ -48,7 +48,7 @@ The result is the full CEM declaration including `attributes`, `members`, `event
 ```
 
 `refine-validate-usage` returns `[]` when the HTML is valid, or a list of `{ type, message }` issues
-for unknown attributes or slots — catching hallucinated attribute names before they reach the DOM.
+for unknown attributes or slots: catching hallucinated attribute names before they reach the DOM.
 
 ### Pitfalls
 
@@ -57,8 +57,8 @@ for unknown attributes or slots — catching hallucinated attribute names before
 
 ### Related
 
-- [Refine](/refine/) — the `@vielzeug/refine` package
-- [API Reference — refine-list-components](../api.md#refine-list-components)
-- [API Reference — refine-get-component](../api.md#refine-get-component)
-- [API Reference — refine-generate-template](../api.md#refine-generate-template)
-- [API Reference — refine-validate-usage](../api.md#refine-validate-usage)
+- [Refine](/refine/): the `@vielzeug/refine` package
+- [API Reference: refine-list-components](../api.md#refine-list-components)
+- [API Reference: refine-get-component](../api.md#refine-get-component)
+- [API Reference: refine-generate-template](../api.md#refine-generate-template)
+- [API Reference: refine-validate-usage](../api.md#refine-validate-usage)

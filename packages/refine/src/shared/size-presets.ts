@@ -103,7 +103,7 @@ export const SLIDER_SIZE_PRESET = {
 /**
  * Size preset for the message composer card. Padding is symmetric (unlike
  * `TEXTAREA_SIZE_PRESET`'s field-shaped padding) since this scales a card that wraps a field
- * *and* a toolbar row, not a bare field — `md`'s padding matches the value the card used before
+ * *and* a toolbar row, not a bare field: `md`'s padding matches the value the card used before
  * `size` scaled anything, so the default look is unchanged.
  */
 export const MESSAGE_COMPOSER_SIZE_PRESET = {
@@ -130,7 +130,7 @@ export const MESSAGE_COMPOSER_SIZE_PRESET = {
  * keys (not one of `SizeConfig`'s named slots) since the panel, its items, and its separators each
  * need independently-scaling spacing; `md`'s values match what `menu.css`/`menu-item.css`/
  * `menu-separator.css` hardcoded before `size` was wired up, so the default look is unchanged.
- * `--_font-size`/`--_gap` are inherited by `ore-menu-item` from `ore-menu`'s own host — custom
+ * `--_font-size`/`--_gap` are inherited by `ore-menu-item` from `ore-menu`'s own host: custom
  * properties cascade down through light-DOM children the same way they cascade into a shadow root.
  */
 export const MENU_SIZE_PRESET = {
@@ -159,14 +159,14 @@ export const MENU_SIZE_PRESET = {
 
 /**
  * Size preset for `ore-list`'s own host. `ore-list-item` has no `sizeVariantMixin` call of its
- * own — it reads `--_gap`/`--_padding`/`--_padding-inline-end`/`--_font-size`/`--_min-height`/
+ * own: it reads `--_gap`/`--_padding`/`--_padding-inline-end`/`--_font-size`/`--_min-height`/
  * `--_min-height-two-line` inherited straight from its parent `ore-list`'s shadow host (custom
  * properties cascade through light-DOM children the same way `MENU_SIZE_PRESET` cascades from
  * `ore-menu` into `ore-menu-item`), with fallback defaults for standalone use outside an
  * `ore-list`.
  *
  * Follows Material 3's list-item spacing at `md`/`lg`: 16dp between leading/content/trailing
- * (`gap`), 16dp inline-start (`padding`), 24dp inline-end (`--_padding-inline-end` — the trailing
+ * (`gap`), 16dp inline-start (`padding`), 24dp inline-end (`--_padding-inline-end`: the trailing
  * edge sits 8dp further out than the other three sides in the M3 spec), 56dp one-line / 72dp
  * two-line row height (`--_min-height`/`--_min-height-two-line`, applied in `list-item.css`).
  * `sm` keeps the same asymmetry and the M3/WCAG 48dp touch-target floor proportionally, for a

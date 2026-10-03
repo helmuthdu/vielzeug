@@ -1,5 +1,5 @@
 ---
-title: 'Wayfinder Examples — Not Found and Error Boundary'
+title: 'Wayfinder Examples: Not Found and Error Boundary'
 description: 'Not found and error boundary example for @vielzeug/wayfinder.'
 ---
 

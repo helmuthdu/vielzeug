@@ -66,7 +66,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       if (stacked) {
         if (allData.some((seriesData) => seriesData.some((datum) => (datum?.value ?? 0) < 0))) {
           warn(
-            'createBarChart: negative values in a stacked/stacked-horizontal series are clamped to 0 — stacking mixed-sign data is not supported.',
+            'createBarChart: negative values in a stacked/stacked-horizontal series are clamped to 0: stacking mixed-sign data is not supported.',
           );
         }
 

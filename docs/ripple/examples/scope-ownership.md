@@ -1,5 +1,5 @@
 ---
-title: 'Ripple Examples — Scope Ownership'
+title: 'Ripple Examples: Scope Ownership'
 description: Dispose a group of reactive work through one explicit scope.
 ---
 

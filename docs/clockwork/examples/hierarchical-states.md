@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Model Nested Workflows with Flat States'
+title: 'Clockwork Examples: Model Nested Workflows with Flat States'
 description: 'Represent nested workflow phases with explicit flat state names.'
 ---
 

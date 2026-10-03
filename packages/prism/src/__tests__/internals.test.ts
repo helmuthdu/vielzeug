@@ -178,7 +178,7 @@ describe('arcCentroid', () => {
 
 // ─── renderAxis: axis title (C2) ─────────────────────────────────────────────
 
-describe('renderAxis — axis title', () => {
+describe('renderAxis: axis title', () => {
   it('renders .prism-axis-title element when config.label is set', () => {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
     const scale = linearScale({ domain: [0, 100], range: [0, 400] });
@@ -213,7 +213,7 @@ describe('renderAxis — axis title', () => {
 
 // ─── linearScale clamp (C4) ───────────────────────────────────────────────────
 
-describe('linearScale — clamp', () => {
+describe('linearScale: clamp', () => {
   it('clamps output to range when clamp is true', () => {
     const scale = linearScale({ clamp: true, domain: [0, 100], range: [0, 400] });
 
@@ -231,7 +231,7 @@ describe('linearScale — clamp', () => {
 
 // ─── renderAxis smart tick density (F3) ──────────────────────────────────────
 
-describe('renderAxis — smart tick density', () => {
+describe('renderAxis: smart tick density', () => {
   it('uses fewer ticks for narrow horizontal axis (< 160px → 2 ticks)', () => {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
     const scale = linearScale({ domain: [0, 100], range: [0, 120] });
@@ -257,7 +257,7 @@ describe('renderAxis — smart tick density', () => {
 
 // ─── buildYScale includeZero (E2) ─────────────────────────────────────────────
 
-describe('buildYScale — includeZero', () => {
+describe('buildYScale: includeZero', () => {
   it('forces min to 0 by default for positive-only data', () => {
     const scale = buildYScale([100, 110], 400);
     const [d0] = scale.domain;
@@ -329,9 +329,9 @@ describe('SVG path generators', () => {
   });
 });
 
-// ─── computePoints / computeAreaPoints — null-key warning ───────────────────────────────
+// ─── computePoints / computeAreaPoints: null-key warning ───────────────────────────────
 
-describe('computePoints — null-key warning', () => {
+describe('computePoints: null-key warning', () => {
   it('emits warn when datum.key is null', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
@@ -349,7 +349,7 @@ describe('computePoints — null-key warning', () => {
   });
 });
 
-describe('computeAreaPoints — null-key warning', () => {
+describe('computeAreaPoints: null-key warning', () => {
   it('emits warn when datum.key is null', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
@@ -367,9 +367,9 @@ describe('computeAreaPoints — null-key warning', () => {
   });
 });
 
-// ─── computePoints — string-key warning ────────────────────────────────────────────────
+// ─── computePoints: string-key warning ────────────────────────────────────────────────
 
-describe('computePoints — string-key warning', () => {
+describe('computePoints: string-key warning', () => {
   it('emits warn once when any datum has a string key', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
@@ -408,9 +408,9 @@ describe('computePoints — string-key warning', () => {
   });
 });
 
-// ─── computeAreaPoints — string-key warning (B8) ───────────────────────────────────────
+// ─── computeAreaPoints: string-key warning (B8) ───────────────────────────────────────
 
-describe('computeAreaPoints — string-key warning', () => {
+describe('computeAreaPoints: string-key warning', () => {
   it('emits warn once when any datum has a string key', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
@@ -449,9 +449,9 @@ describe('computeAreaPoints — string-key warning', () => {
   });
 });
 
-// ─── buildXScale / buildYScale — NaN/Infinity guard (B1) ───────────────────────────────
+// ─── buildXScale / buildYScale: NaN/Infinity guard (B1) ───────────────────────────────
 
-describe('buildXScale — NaN/Infinity guard', () => {
+describe('buildXScale: NaN/Infinity guard', () => {
   it('falls back to [0,1] domain and warns on NaN x value', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const scale = buildXScale([1, Number.NaN, 3], 300);
@@ -471,7 +471,7 @@ describe('buildXScale — NaN/Infinity guard', () => {
   });
 });
 
-describe('buildYScale — NaN/Infinity guard', () => {
+describe('buildYScale: NaN/Infinity guard', () => {
   it('falls back to [0,1] domain and warns on NaN y value', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const scale = buildYScale([1, Number.NaN, 3], 300);
@@ -482,9 +482,9 @@ describe('buildYScale — NaN/Infinity guard', () => {
   });
 });
 
-// ─── linearScale — reversed domain + ticks(0)/ticks(1) edge cases (B1, B2) ─────────────
+// ─── linearScale: reversed domain + ticks(0)/ticks(1) edge cases (B1, B2) ─────────────
 
-describe('linearScale — reversed domain', () => {
+describe('linearScale: reversed domain', () => {
   it('produces a finite, non-NaN domain when min > max', () => {
     const scale = linearScale({ domain: [100, 0], range: [0, 400] });
 
@@ -493,7 +493,7 @@ describe('linearScale — reversed domain', () => {
   });
 });
 
-describe('linearScale — ticks(0) / ticks(1)', () => {
+describe('linearScale: ticks(0) / ticks(1)', () => {
   it('ticks(0) returns an empty array', () => {
     const scale = linearScale({ domain: [0, 100], range: [0, 400] });
 
@@ -509,7 +509,7 @@ describe('linearScale — ticks(0) / ticks(1)', () => {
   });
 });
 
-describe('bandScale — ticks(0)', () => {
+describe('bandScale: ticks(0)', () => {
   it('returns an empty array for an explicit 0, not the full domain', () => {
     const scale = bandScale({ domain: ['a', 'b', 'c'], range: [0, 300] });
 
@@ -523,9 +523,9 @@ describe('bandScale — ticks(0)', () => {
   });
 });
 
-// ─── createChartBase — invalid container (B13) ─────────────────────────────────────────
+// ─── createChartBase: invalid container (B13) ─────────────────────────────────────────
 
-describe('createChartBase — invalid container', () => {
+describe('createChartBase: invalid container', () => {
   it('throws PrismRenderError for a non-Element container', () => {
     expect(() => createChartBase({} as unknown as HTMLElement, {})).toThrow(PrismRenderError);
   });
@@ -539,10 +539,10 @@ describe('createChartBase — invalid container', () => {
   });
 
   it('accepts a structurally element-like object that fails instanceof Element (e.g. cross-realm)', () => {
-    // Simulates an Element from a different JS realm (iframe contentDocument, etc.) —
+    // Simulates an Element from a different JS realm (iframe contentDocument, etc.) :
     // `instanceof Element` would reject this even though it behaves like a real Element.
     // `getComputedStyle` is a real jsdom global that only accepts genuine jsdom nodes, so it's
-    // stubbed here too — this test targets the container-validation guard specifically, not
+    // stubbed here too: this test targets the container-validation guard specifically, not
     // full jsdom fidelity of a truly cross-realm object.
     const getComputedStyleSpy = vi
       .spyOn(globalThis, 'getComputedStyle')

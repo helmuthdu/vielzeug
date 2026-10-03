@@ -171,7 +171,7 @@ Control how items flow into the grid.
 
 ### Dense Packing
 
-Automatically fill gaps with smaller items that come later. Avoid `flow="row-dense"` or `flow="column-dense"` when reading order matters — items may appear in a different visual order than they exist in the DOM, which can confuse screen reader users and keyboard navigators.
+Automatically fill gaps with smaller items that come later. Avoid `flow="row-dense"` or `flow="column-dense"` when reading order matters: items may appear in a different visual order than they exist in the DOM, which can confuse screen reader users and keyboard navigators.
 
 <ComponentPreview center vertical>
 
@@ -371,7 +371,7 @@ Use `areas` (and its breakpoint variants `areas-sm`, `areas-md`, `areas-lg`, `ar
 
 ### Responsive Areas
 
-Provide different area templates at each breakpoint. The grid switches between them as the element resizes — a single-column stack on small widths, full page layout on larger ones.
+Provide different area templates at each breakpoint. The grid switches between them as the element resizes: a single-column stack on small widths, full page layout on larger ones.
 
 <ComponentPreview center vertical>
 
@@ -464,14 +464,14 @@ Use `responsive` for fluid layouts where column count depends on available space
 | ---------- | ------------------------------------------- | ------- | ---------------------------------------------- |
 | `col-span` | `'1'–'12' \| 'full'`                        | -       | Columns to span; `'full'` = `1 / -1`           |
 | `row-span` | `'1'–'6' \| 'full'`                         | -       | Rows to span; `'full'` = `1 / -1`              |
-| `col`      | `string`                                    | -       | Raw `grid-column` value — overrides `col-span` |
-| `row`      | `string`                                    | -       | Raw `grid-row` value — overrides `row-span`    |
+| `col`      | `string`                                    | -       | Raw `grid-column` value: overrides `col-span` |
+| `row`      | `string`                                    | -       | Raw `grid-row` value: overrides `row-span`    |
 | `align`    | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `align-self` for this cell                     |
 | `justify`  | `'start' \| 'center' \| 'end' \| 'stretch'` | -       | `justify-self` for this cell                   |
 
 ### CSS Custom Properties
 
-These are fallback values — attributes take precedence when set.
+These are fallback values: attributes take precedence when set.
 
 | Property         | Default           | Description              |
 | ---------------- | ----------------- | ------------------------ |
@@ -564,6 +564,6 @@ These are fallback values — attributes take precedence when set.
 
 ## Accessibility
 
-The grid component follows WAI-ARIA best practices. It maintains semantic HTML structure and document reading order by default — grid layout is purely visual, and keyboard navigation follows DOM order. The component is compatible with screen readers.
+The grid component follows WAI-ARIA best practices. It maintains semantic HTML structure and document reading order by default: grid layout is purely visual, and keyboard navigation follows DOM order. The component is compatible with screen readers.
 
 Be mindful of visual vs. DOM order when using `flow="dense"` or explicit item placement. When using dense packing modes, items may appear in a different visual order than their DOM position, which can confuse screen reader users and keyboard navigators.

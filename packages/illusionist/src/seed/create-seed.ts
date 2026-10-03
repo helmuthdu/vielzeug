@@ -5,9 +5,9 @@ import { mulberry32 } from './mulberry32';
 /**
  * Creates a {@link RandomSource} from a seed.
  *
- * - **Number seed** — used directly as the mulberry32 state.
- * - **String seed** — serialized via `JSON.stringify` and folded into a 32-bit integer.
- * - **No seed** — falls back to `crypto.getRandomValues` for cryptographic randomness.
+ * - **Number seed**: used directly as the mulberry32 state.
+ * - **String seed**: serialized via `JSON.stringify` and folded into a 32-bit integer.
+ * - **No seed**: falls back to `crypto.getRandomValues` for cryptographic randomness.
  *
  * @example
  * ```ts

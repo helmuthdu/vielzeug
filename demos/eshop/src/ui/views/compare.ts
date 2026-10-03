@@ -84,7 +84,7 @@ function valueFor(row: SpecKey, model: Model): number | string | null {
 
 function formatSpec(row: SpecKey, model: Model): string {
   const value = valueFor(row, model);
-  if (value === null) return '—';
+  if (value === null) return 'N/A';
   switch (row) {
     case 'basePrice':
       return formatPrice(String(value));

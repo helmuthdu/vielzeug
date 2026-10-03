@@ -81,7 +81,7 @@ After renaming a path or prefix, search for the old name with hidden files inclu
 
 ## Report
 
-- Baseline: `<command> — <result> — <pre-existing failures>`
+- Baseline: `<command>: <result>: <pre-existing failures>`
 - Impact: each public change, the dependents/call sites checked, and the propagation outcome
 - `[DEFERRED]` / `[BLOCKED]` items
 

@@ -1,5 +1,5 @@
 ---
-title: Coins Examples — Serialization
+title: 'Coins Examples: Serialization'
 description: Serialize exact money and restore canonical values at trust and realm boundaries.
 ---
 

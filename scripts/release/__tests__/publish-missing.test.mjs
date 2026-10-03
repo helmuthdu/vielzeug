@@ -17,7 +17,7 @@ function makePackage(root, slug, pkgJson) {
   const dir = path.join(root, 'packages', slug);
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkgJson));
-  // Every release stamps a changelog entry for the version it ships — the backfill
+  // Every release stamps a changelog entry for the version it ships: the backfill
   // candidate rule mirrors that (see hasChangelogEntry).
   writeFileSync(
     path.join(dir, 'CHANGELOG.json'),

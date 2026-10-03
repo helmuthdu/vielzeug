@@ -33,7 +33,7 @@ type ParsedResponseConfig<T> = {
   responseType?: Exclude<ResponseType, 'raw'>;
   /**
    * Optional schema for response validation. Any object with a `parse(data)` method
-   * works — e.g. a `@vielzeug/spell` schema or a plain validator function wrapper.
+   * works: e.g. a `@vielzeug/spell` schema or a plain validator function wrapper.
    * Called after the response body is parsed; throws if validation fails.
    * The schema's return type must be assignable to `T`.
    */

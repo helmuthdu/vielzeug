@@ -1,7 +1,7 @@
 import type { Primitive } from '../types';
 
 /**
- * Builds a `Set` of `selector(item)` results for O(1) membership checks — shared by
+ * Builds a `Set` of `selector(item)` results for O(1) membership checks: shared by
  * `intersection()` and `difference()`.
  *
  * Module-private: underscore-prefixed file is excluded from barrel exports.
@@ -13,7 +13,7 @@ export function toSelectorSet<T>(items: readonly T[], selector: (item: T) => Pri
 
 /**
  * Returns `items` with duplicate `selector(item)` results removed, preserving the first
- * occurrence of each key — shared by `union()` and `uniq()`.
+ * occurrence of each key: shared by `union()` and `uniq()`.
  *
  * Module-private: underscore-prefixed file is excluded from barrel exports.
  * @internal

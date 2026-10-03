@@ -1024,7 +1024,7 @@ describe('createVirtualizer – isAtEnd', () => {
     const v = createVirtualizer(el, { count: 100, estimateSize: 30 });
 
     // `scrollToBottom()` writes via `el.scrollTo()`, which the test container mock doesn't
-    // wire back into a 'scroll' event — simulate the resulting scroll position directly.
+    // wire back into a 'scroll' event: simulate the resulting scroll position directly.
     scrollEl(el, 100 * 30 - 100);
     expect(v.isAtEnd()).toBe(true);
     v.dispose();
@@ -1313,7 +1313,7 @@ describe('createVirtualizer – isScrolling', () => {
     scrollEl(el, 100);
     // Dispatch scrollend to trigger notifyScrollEnd (jsdom exposes onscrollend)
     el.dispatchEvent(new Event('scrollend'));
-    // We check isScrolling BEFORE the scrollend fires — dispatch is synchronous
+    // We check isScrolling BEFORE the scrollend fires: dispatch is synchronous
     // so isScrolling flips to false immediately. Test the intermediate state instead.
     expect(v.isScrolling).toBe(false); // synchronous scrollend flipped it back
     v.dispose();

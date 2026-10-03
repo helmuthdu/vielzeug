@@ -1,6 +1,6 @@
 ---
 title: Rune 3 Migration
-description: Migrate from Rune 2 to Rune 3 — explicit logger construction, direct transport arrays, and fail-closed redaction.
+description: 'Migrate from Rune 2 to Rune 3: explicit logger construction, direct transport arrays, and fail-closed redaction.'
 ---
 
 [[toc]]
@@ -11,9 +11,9 @@ Rune 3 removes shared singleton state and the redundant `pipe()` fan-out helper.
 
 Removed APIs:
 
-- `defaultLogger` — create logger instances explicitly with `createLogger()`
-- `pipe()` and `PipeOptions` — pass multiple transports directly to `createLogger({ transports })`
-- `RuneTransportError` — transport and middleware failures remain isolated rather than escaping to application code
+- `defaultLogger`: create logger instances explicitly with `createLogger()`
+- `pipe()` and `PipeOptions`: pass multiple transports directly to `createLogger({ transports })`
+- `RuneTransportError`: transport and middleware failures remain isolated rather than escaping to application code
 
 Retained APIs:
 

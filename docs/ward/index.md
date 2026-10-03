@@ -1,5 +1,5 @@
 ---
-title: Ward — Ordered authorization rules
+title: 'Ward: Ordered authorization rules'
 description: Zero-dependency authorization decisions with ordered rules, role helpers, ownership predicates, and default deny.
 package: ward
 category: security
@@ -75,7 +75,7 @@ pnpm add @vielzeug/ward
 
 ## See Also
 
-- [Postmaster](/postmaster/) — authorize durable job actions at application boundaries.
-- [Refine](/refine/) — consume decisions in accessible UI components.
+- [Postmaster](/postmaster/): authorize durable job actions at application boundaries.
+- [Refine](/refine/): consume decisions in accessible UI components.
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

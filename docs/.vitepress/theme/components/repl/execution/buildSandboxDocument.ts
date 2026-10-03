@@ -2,18 +2,18 @@
  * Assembles the HTML body handed to `sandbox.render()` (see useReplExecution.ts) for a
  * single REPL run.
  *
- * Everything the run needs — the selected library's dependency chain and the user's
- * (already transpiled + import-rewritten) code — is embedded as plain inline `<script>`
+ * Everything the run needs: the selected library's dependency chain and the user's
+ * (already transpiled + import-rewritten) code: is embedded as plain inline `<script>`
  * text. Nothing is fetched over the network: the sandbox's CSP defaults to
  * `connect-src 'none'` and `script-src 'unsafe-inline'` with no external origins allowed.
  * Courier examples that target `https://api.example.com` are handled by an in-sandbox
  * fetch mock, so they still run without punching holes in CSP. Because
  * `sandbox.render()` replaces the whole iframe document on every run, each run gets a
- * fresh `window` — library globals and any timers/intervals the user's code started are
+ * fresh `window`: library globals and any timers/intervals the user's code started are
  * gone the moment the next run replaces the document. No manual cleanup bookkeeping needed
  * on the host side (contrast with the old approach of running code via `new
  * Function(...).call(window)` directly on the host page, which leaked globals and timers
- * across runs — see git history).
+ * across runs: see git history).
  */
 
 export interface SandboxLibrary {
@@ -24,12 +24,12 @@ export interface SandboxLibrary {
 }
 
 // The HTML tokenizer ends a <script> block at the first literal "</script" byte sequence,
-// regardless of JS syntax (strings, comments, regexes — it doesn't parse JS at all). Our own
+// regardless of JS syntax (strings, comments, regexes: it doesn't parse JS at all). Our own
 // package bundles will never contain that sequence, but arbitrary user-typed REPL code could
 // (e.g. a string literal containing "</script>"). Splitting the sequence keeps the HTML parser
 // from ending the block early; it's a defense-in-depth measure for HTML-injection inside the
 // already fully-isolated (no storage, no network, opaque-origin) sandbox iframe, not a claim
-// that it's exploitable — worst case without it is inert HTML text leaking into the iframe body.
+// that it's exploitable: worst case without it is inert HTML text leaking into the iframe body.
 function escapeScriptClose(source: string): string {
   return source.replace(/<\/script/gi, '<\\/script');
 }
@@ -38,7 +38,7 @@ function inlineScript(source: string): string {
   return `<script>\n${escapeScriptClose(source)}\n</script>`;
 }
 
-// The sandbox iframe has `sandbox="allow-scripts"` with no `allow-same-origin` — an opaque
+// The sandbox iframe has `sandbox="allow-scripts"` with no `allow-same-origin`: an opaque
 // origin, deliberately, so untrusted REPL code can never touch the docs site's real
 // cookies/storage. One side effect: `window.localStorage`/`sessionStorage` throw a
 // SecurityError in that context (this is the browser enforcing the isolation, not a bug in
@@ -46,7 +46,7 @@ function inlineScript(source: string): string {
 // (private browsing or sandboxed iframe?)"). Examples that demonstrate vault's storage
 // adapters need *some* Storage-shaped object to write to, so each run gets a throwaway
 // in-memory one instead of real browser storage. It behaves like Storage for the duration of
-// the run and is gone with the rest of the iframe afterwards — consistent with every other
+// the run and is gone with the rest of the iframe afterwards: consistent with every other
 // run boundary in this sandbox (see the module doc comment above).
 const STORAGE_POLYFILL_SCRIPT = `
 function __replMemoryStorage() {
@@ -189,10 +189,10 @@ window.fetch = async function (input, init) {
 };
 `;
 
-// @vielzeug/sandbox's own bridge script — the thing that defines `window.__sandbox__` — is
+// @vielzeug/sandbox's own bridge script: the thing that defines `window.__sandbox__`: is
 // appended by buildDocument() *after* the body content passed to render() (i.e. after
 // everything below). So `window.__sandbox__` does not exist yet while our library scripts,
-// console overrides, and the user's code are still executing synchronously — any user
+// console overrides, and the user's code are still executing synchronously: any user
 // snippet that calls console.log() before its first `await` would hit `__sandbox__` as
 // undefined. Emitting messages by hand via the same postMessage shape the bridge itself
 // uses (see @vielzeug/sandbox's internal `post()`) sidesteps that ordering dependency
@@ -213,7 +213,7 @@ function __replEmit(event, detail) {
 // Runs inside the sandbox iframe. Overrides console methods so REPL output reaches the host
 // via the same custom-message channel as __sandbox__.emit(). Values are passed through
 // `structuredClone` first (the same algorithm `postMessage` itself uses) so anything that
-// can't cross the boundary — functions, DOM nodes — degrades to its string form instead of
+// can't cross the boundary: functions, DOM nodes: degrades to its string form instead of
 // silently dropping the whole console call.
 const CONSOLE_BRIDGE_SCRIPT = `
 function __replSafe(value) {
@@ -245,7 +245,7 @@ ${code}
 
 // Deliberate tradeoff: every run re-parses and re-executes the full IIFE source of the
 // selected library and all its transitive @vielzeug dependencies (e.g. flux pulls in
-// ripple + arsenal + herald + pulse + courier + itself) — there's no cross-run caching,
+// ripple + arsenal + herald + pulse + courier + itself): there's no cross-run caching,
 // because a fresh iframe is what makes cross-run isolation free (see the module doc
 // comment). Fine at today's bundle sizes (tens of KB, sub-frame to parse+eval); revisit
 // with a "keep dependency bundles warm across runs" strategy if that ever changes.

@@ -1,7 +1,7 @@
 export const testBusExample = {
   code: `import { createTestBus } from '@vielzeug/herald/testing'
 
-// TestBus wraps a normal bus with emission recording — no mocking required
+// TestBus wraps a normal bus with emission recording: no mocking required
 const bus = createTestBus()
 
 const stop = bus.on('cart:updated', (cart) => console.log('handler saw total:', cart.total))

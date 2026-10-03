@@ -2,12 +2,13 @@
 // .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
 /**
  * Regenerates the tool tables in docs/codex/tools.md from the real tool registries instead of a
- * hand-maintained table — the two used to drift (a removed tool stayed listed, a renamed one
+ * hand-maintained table. The two used to drift (a removed tool stayed listed, a renamed one
+ * `node --experimental-strip-types`, unlike a bundler or `tsc` itself, does not rewrite those
  * kept its old name) with nothing catching it.
  *
  * Run explicitly (`pnpm gen:tool-docs`) after a build, not as part of `build` or `prepare:data`: `src/tools/*.ts`
  * import their siblings with `.js` specifiers (required for the real NodeNext build), and
- * `node --experimental-strip-types` — unlike a bundler or `tsc` itself — does not rewrite those
+ * `node --experimental-strip-types`: unlike a bundler or `tsc` itself: does not rewrite those
  * back to `.ts` at run time, so this has to import the compiled `dist/` output, which only
  * exists after a build.
  *
@@ -29,7 +30,7 @@ const refineToolsEntry = resolve(__dirname, '../dist/tools/refine.js');
 
 for (const entry of [packageToolsEntry, refineToolsEntry]) {
   if (!existsSync(entry)) {
-    throw new Error(`generate-tool-docs: ${entry} not found. Run \`pnpm build\` first — this reads compiled output.`);
+    throw new Error(`generate-tool-docs: ${entry} not found. Run \`pnpm build\` first: this reads compiled output.`);
   }
 }
 
@@ -40,7 +41,7 @@ const ALL_TOOLS = [...packageTools, ...refineTools];
 function formatInputs(tool: ToolDefinition): string {
   const names = Object.keys(tool.inputSchema.properties);
 
-  if (names.length === 0) return '—';
+  if (names.length === 0) return 'N/A';
 
   const required = new Set(tool.inputSchema.required ?? []);
 
@@ -48,7 +49,7 @@ function formatInputs(tool: ToolDefinition): string {
 }
 
 /**
- * First sentence of a tool's description — the table cell, not the full multi-sentence blurb.
+ * First sentence of a tool's description: the table cell, not the full multi-sentence blurb.
  * Splits on ". " only when followed by a capital letter, so abbreviations like "e.g." (period,
  * space, lowercase) don't get mistaken for a sentence boundary.
  */

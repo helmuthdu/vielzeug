@@ -9,7 +9,7 @@
 import { installFormInternalsPolyfill } from './form-internals-polyfill';
 import { cleanup } from './mount';
 
-// Testing-only error: flush() is its only thrower in this package (a pending-work timeout —
+// Testing-only error: flush() is its only thrower in this package (a pending-work timeout :
 // see flush.ts). Exported here (not from the main `.` entry) so components with no interest
 // in the testing sub-path don't carry a testing-only error class in their public type surface.
 // Generic DOM interaction helpers belong to @vielzeug/assay, not this Ore-specific test API.

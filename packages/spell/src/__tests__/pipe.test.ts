@@ -1,7 +1,7 @@
 import { s } from '../index';
 
 describe('Schema.pipe()', () => {
-  it('chains two schemas — output of first is input to second', () => {
+  it('chains two schemas: output of first is input to second', () => {
     const schema = s.string().pipe(s.coerce.number().int().min(1).max(100));
 
     expect(schema.parse('42')).toBe(42);

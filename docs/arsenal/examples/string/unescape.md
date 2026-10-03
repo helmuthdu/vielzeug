@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — unescape'
+title: 'Arsenal Examples: unescape'
 description: 'unescape example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'unescape example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to decode HTML entities in a string — the inverse of `escape`.
+You need to decode HTML entities in a string: the inverse of `escape`.
 
 ### Solution
 

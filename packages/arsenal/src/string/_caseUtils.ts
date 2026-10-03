@@ -1,7 +1,7 @@
 /**
  * Shared regex pattern for splitting words in case conversion utilities.
  * Module-private (underscore-prefixed file is not barrel-exported).
- * Used only with String.prototype.replace — which always resets lastIndex.
+ * Used only with String.prototype.replace, which always resets lastIndex.
  * Uses Unicode property escapes (`\p{Ll}`/`\p{Lu}`/`\p{N}`) instead of `[a-z]`/`[A-Z]` so
  * accented and non-Latin letters (e.g. `café`, `日本語`) are treated as letters, not stripped.
  */

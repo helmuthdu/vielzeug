@@ -22,7 +22,7 @@ const getSourcePath = (entry: ExportConditions | string): string | undefined => 
 
 /**
  * Maps every `@vielzeug/*` dependency and any published sub-path export (e.g. `@vielzeug/ore/testing`)
- * to its real TS source file inside a sibling `../../packages/` checkout — the shared logic
+ * to its real TS source file inside a sibling `../../packages/` checkout: the shared logic
  * behind both `vite.config.ts`'s dev-time module aliasing and `write-local-tsconfig.ts`'s `tsc`
  * `paths` generation, so the two can't drift out of sync as two hand-maintained copies.
  *

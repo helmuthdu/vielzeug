@@ -1,5 +1,5 @@
 /**
- * Returns `true` if the given value is an `AbortError` — i.e. an `Error` whose
+ * Returns `true` if the given value is an `AbortError`: i.e. an `Error` whose
  * `name` is `'AbortError'`, as thrown by `AbortController` / `AbortSignal`.
  *
  * @example
@@ -7,7 +7,7 @@
  * try {
  *   await fetch(url, { signal });
  * } catch (err) {
- *   if (isAbortError(err)) return; // request was cancelled — ignore
+ *   if (isAbortError(err)) return; // request was cancelled: ignore
  *   throw err;
  * }
  * ```

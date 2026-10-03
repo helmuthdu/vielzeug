@@ -41,7 +41,7 @@ describe('s.array()', () => {
   });
 });
 
-describe('array — field-level transforms', () => {
+describe('array: field-level transforms', () => {
   it('coerce.number() inside array coerces each item', () => {
     expect(s.array(s.coerce.number()).parse(['1', '2', '3'])).toEqual([1, 2, 3]);
   });
@@ -55,7 +55,7 @@ describe('array — field-level transforms', () => {
   });
 });
 
-describe('array parseAsync — optional / nullable / catch', () => {
+describe('array parseAsync: optional / nullable / catch', () => {
   it('array.optional().parseAsync(undefined) returns undefined', async () => {
     expect(await s.array(s.string()).optional().parseAsync(undefined)).toBeUndefined();
   });
@@ -88,7 +88,7 @@ describe('ArraySchema.unique()', () => {
     expect(s.array(s.string()).unique().parse([])).toEqual([]);
   });
 
-  it('passes structurally identical objects (referential equality — no custom fn)', () => {
+  it('passes structurally identical objects (referential equality: no custom fn)', () => {
     const schema = s.array(s.object({ id: s.number() })).unique();
     const result = schema.safeParse([{ id: 1 }, { id: 1 }]);
 

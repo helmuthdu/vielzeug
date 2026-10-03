@@ -18,7 +18,7 @@ import componentStyles from './qr-scanner.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
 export { BUTTON_TAG } from '../button/button';
-/** Testing hook — inject a fake `createQrScanner` without touching globals. */
+/** Testing hook: inject a fake `createQrScanner` without touching globals. */
 export type QrScannerFactory = (options: QrScannerOptions) => QrScanner;
 
 /** Component-level view states; sigil's transport states are mapped onto these. */
@@ -218,7 +218,7 @@ define<OreQrScannerProps>(QR_SCANNER_TAG, {
       // Drive start/stop from intent + the current scanner instance. `watch`
       // (untracked callback) is required over `watchEffect`: `scanner.stop()`
       // synchronously re-enters the tap handler, and tracking its `status`
-      // reads would retrigger this effect on every transition — an infinite loop.
+      // reads would retrigger this effect on every transition: an infinite loop.
       watch(
         () => [requested.value, current.value] as const,
         ([want, scanner]) => {

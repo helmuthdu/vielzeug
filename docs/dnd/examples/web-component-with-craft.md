@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — Web Component with ore'
+title: 'Dnd Examples: Web Component with ore'
 description: 'Web component with Ore example for @vielzeug/dnd.'
 ---
 
@@ -47,7 +47,7 @@ define('my-dropzone', (props) => {
 
 ### Pitfalls
 
-- `createSortable()` and `createDropZone()` must be called after the element is connected to the DOM — inside `mount()`, not during component definition. The container element does not exist before connection.
+- `createSortable()` and `createDropZone()` must be called after the element is connected to the DOM: inside `mount()`, not during component definition. The container element does not exist before connection.
 - Each component instance needs its own `createSortable()` / `createDropZone()` instance. Sharing one across instances causes them to manipulate each other's DOM.
 - Call `onCleanup(() => sortable.dispose())` (or `zone.dispose()`) inside `mount()` so the listener is removed when the component disconnects.
 

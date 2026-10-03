@@ -1,5 +1,5 @@
 ---
-title: Prism — Responsive SVG data visualization
+title: 'Prism: Responsive SVG data visualization'
 description: Responsive SVG charts with explicit updates, accessible interactions, and CSS theming.
 package: prism
 category: ui
@@ -38,7 +38,7 @@ environments: [browser]
 Charting libraries typically require a framework binding, bundle heavy dependencies, or force canvas rendering that can't be styled with CSS. Prism takes a different approach:
 
 ```ts
-// Before — Chart.js, imperative setup with a canvas you can't CSS-theme
+// Before: Chart.js, imperative setup with a canvas you can't CSS-theme
 import Chart from 'chart.js/auto';
 const ctx = document.getElementById('myChart') as HTMLCanvasElement;
 new Chart(ctx, {
@@ -47,7 +47,7 @@ new Chart(ctx, {
   // re-create or mutate the Chart.js instance when data changes
 });
 
-// After — Prism, responsive SVG with an explicit update boundary
+// After: Prism, responsive SVG with an explicit update boundary
 import { createLineChart } from '@vielzeug/prism';
 
 const chart = createLineChart(document.getElementById('chart')!, {
@@ -159,23 +159,23 @@ chart.dispose();
 
 <div class="features-grid">
 
-- **`createLineChart(container, config)`** — line chart with linear, monotone, or step interpolation
-- **`createBarChart(container, config)`** — bar chart with four layout variants: grouped, stacked, grouped-horizontal, stacked-horizontal
-- **`createAreaChart(container, config)`** — filled area with configurable opacity
-- **`createSparkline(container, config)`** — minimal inline sparkline (line, area, or bar variant)
-- **`createPieChart(container, config)`** — pie, donut, or semi-circle donut chart
-- **`linearScale(config)`** — continuous numeric scale with nice tick generation
-- **`timeScale(config)`** — date/time scale with interval-based ticks
-- **`bandScale(config)`** — categorical scale for bar charts
-- **`ChartHandle.update(data)`** — replace chart data synchronously without coupling to a state library
-- **`seriesColor(index, override?)`** — resolve CSS palette color by series index
-- **`setTheme(theme)` / `resetTheme()`** — apply or clear custom colors, font, and grid tokens at runtime
-- **Event hooks** — `onClick` and `onHover` callbacks on every chart
-- **Devtools** — `debugChart()` from `@vielzeug/prism/devtools` logs mount/resize/dispose to `console.debug`; tree-shaken from production unless imported
-- **CSS custom properties** — full theme control via `--prism-*` tokens
-- **Responsive** — auto-resizes via `ResizeObserver`
-- **Accessible** — ARIA labels and semantic SVG structure
-- **`Symbol.dispose`** — explicit resource management following TC39 proposal
+- **`createLineChart(container, config)`**: line chart with linear, monotone, or step interpolation
+- **`createBarChart(container, config)`**: bar chart with four layout variants: grouped, stacked, grouped-horizontal, stacked-horizontal
+- **`createAreaChart(container, config)`**: filled area with configurable opacity
+- **`createSparkline(container, config)`**: minimal inline sparkline (line, area, or bar variant)
+- **`createPieChart(container, config)`**: pie, donut, or semi-circle donut chart
+- **`linearScale(config)`**: continuous numeric scale with nice tick generation
+- **`timeScale(config)`**: date/time scale with interval-based ticks
+- **`bandScale(config)`**: categorical scale for bar charts
+- **`ChartHandle.update(data)`**: replace chart data synchronously without coupling to a state library
+- **`seriesColor(index, override?)`**: resolve CSS palette color by series index
+- **`setTheme(theme)` / `resetTheme()`**: apply or clear custom colors, font, and grid tokens at runtime
+- **Event hooks**: `onClick` and `onHover` callbacks on every chart
+- **Devtools**: `debugChart()` from `@vielzeug/prism/devtools` logs mount/resize/dispose to `console.debug`; tree-shaken from production unless imported
+- **CSS custom properties**: full theme control via `--prism-*` tokens
+- **Responsive**: auto-resizes via `ResizeObserver`
+- **Accessible**: ARIA labels and semantic SVG structure
+- **`Symbol.dispose`**: explicit resource management following TC39 proposal
 
 </div>
 
@@ -185,7 +185,7 @@ chart.dispose();
 | -------------------------- | ------------------------------------------------------------------------------------ |
 | `@vielzeug/prism`          | All chart factories, scales, and types                                               |
 | `@vielzeug/prism/theme`    | Default CSS (custom properties + dark mode)                                          |
-| `@vielzeug/prism/devtools` | `debugChart()` — opt-in `console.debug` lifecycle logging, tree-shaken in production |
+| `@vielzeug/prism/devtools` | `debugChart()`: opt-in `console.debug` lifecycle logging, tree-shaken in production |
 
 ## Documentation
 
@@ -202,8 +202,8 @@ chart.dispose();
 
 <div class="see-also">
 
-- [Refine](/refine/) — accessible web components that pair well with Prism for dashboards
-- [Orbit](/orbit/) — floating element positioning for chart tooltips and popovers
+- [Refine](/refine/): accessible web components that pair well with Prism for dashboards
+- [Orbit](/orbit/): floating element positioning for chart tooltips and popovers
 
 </div>
 

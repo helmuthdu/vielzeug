@@ -142,7 +142,7 @@ describe('retry', () => {
     expect(mockFn).toHaveBeenCalledWith(undefined);
   });
 
-  it('throws RangeError for times: 0 without calling fn — regression for the silent undefined-return bug', async () => {
+  it('throws RangeError for times: 0 without calling fn: regression for the silent undefined-return bug', async () => {
     const mockFn = vi.fn().mockResolvedValue('ok');
 
     await expect(retry(mockFn, { times: 0 })).rejects.toThrow(RangeError);

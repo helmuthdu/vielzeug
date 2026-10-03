@@ -371,7 +371,7 @@ describe('Template: HTML System', () => {
     });
 
     it('should not block javascript: in non-URL attributes', async () => {
-      // "title" is not a URL attribute — the value should be set as-is
+      // "title" is not a URL attribute: the value should be set as-is
       const { query } = await mount(
         () => html`
           <span title=${'javascript:note'}>text</span>
@@ -529,7 +529,7 @@ describe('Template: HTML System', () => {
       });
 
       // Quotes adjacent to a *text* interpolation are content, not attribute
-      // syntax — only attribute-context quotes (attr="...") are stripped.
+      // syntax: only attribute-context quotes (attr="...") are stripped.
       expect(query('p')?.textContent).toBe('"world"');
     });
 
@@ -542,7 +542,7 @@ describe('Template: HTML System', () => {
         `;
       });
 
-      // `word = "` in prose is not attribute syntax (no start-tag context) — the
+      // `word = "` in prose is not attribute syntax (no start-tag context): the
       // quote must survive. Previously stripped by the attr-quote heuristic.
       expect(query('p')?.textContent).toBe('area = "12"');
     });
@@ -572,7 +572,7 @@ describe('Template: HTML System', () => {
 
       const div = query('div');
 
-      // Binding markers are namespaced (data-ore-b / <!--ore:N-->) — markup that
+      // Binding markers are namespaced (data-ore-b / <!--ore:N-->): markup that
       // happens to look like the old un-namespaced markers is plain content now.
       expect(div?.getAttribute('u')).toBe('3');
 

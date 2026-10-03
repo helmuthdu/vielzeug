@@ -13,7 +13,7 @@ import { accentHue, setAccentHue, setThemePreference, themePreference } from './
 import type { CartItem } from './types';
 
 // ---------------------------------------------------------------------------
-// Vault schema — one row per preference/collection, keyed by a fixed id, mirroring
+// Vault schema: one row per preference/collection, keyed by a fixed id, mirroring
 // demos/crm/src/core/persistence.ts's single-row-per-concern shape.
 // ---------------------------------------------------------------------------
 
@@ -90,7 +90,7 @@ async function loadCart(): Promise<CartRow | null> {
 
     return row ?? null;
   } catch {
-    // Corrupt or schema-incompatible cart — discard and re-seed from current signals.
+    // Corrupt or schema-incompatible cart: discard and re-seed from current signals.
     return null;
   }
 }

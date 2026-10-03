@@ -30,7 +30,7 @@ export const parseStringTriggers = <T extends string>(
 
 /**
  * Parses a boolean HTML attribute value into `true | false | undefined`, where
- * `undefined` means "attribute absent" — the signal controlled components (`open`)
+ * `undefined` means "attribute absent": the signal controlled components (`open`)
  * use to distinguish uncontrolled from controlled mode.
  *
  * The grammar is the standard attribute one: presence with no value (`open`) or

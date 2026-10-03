@@ -1,6 +1,6 @@
 # Counter
 
-A large-target tally control for counting things at a glance: `−` / value / `+` with an optional icon, label and hint. Built for touch and arm's-length use — tabletop trackers, inventories, scoreboards — rather than typed form entry. Holding either button auto-repeats; the value is announced through a live region and is keyboard-operable as a spinbutton.
+A large-target tally control for counting things at a glance: `−` / value / `+` with an optional icon, label and hint. Built for touch and arm's-length use: tabletop trackers, inventories, scoreboards, rather than typed form entry. Holding either button auto-repeats; the value is announced through a live region and is keyboard-operable as a spinbutton.
 
 Use [Number Input](./number-input) when the user should type a number inside a form.
 
@@ -54,7 +54,7 @@ The value is clamped to `min` (default `0`) and `max`; the matching button disab
 
 ## Quick Steps
 
-Set `quick-steps` to add an outer −/+ pair that moves by `large-step`. Use it for values that change in chunks — damage, scores, currency — so players are not tapping a single-step button repeatedly. Holding a quick-step button auto-repeats like the primary pair.
+Set `quick-steps` to add an outer −/+ pair that moves by `large-step`. Use it for values that change in chunks: damage, scores, currency, so players are not tapping a single-step button repeatedly. Holding a quick-step button auto-repeats like the primary pair.
 
 <ComponentPreview center>
 
@@ -93,7 +93,7 @@ The theme color tints the value and the slotted icon.
 
 ## Frost Variant
 
-`variant="frost"` turns the panel into frosted glass so a counter placed over artwork — a card, a battle-board image — blends into the scene instead of covering it with an opaque patch.
+`variant="frost"` turns the panel into frosted glass so a counter placed over artwork: a card, a battle-board image: blends into the scene instead of covering it with an opaque patch.
 
 <ComponentPreview center>
 
@@ -152,17 +152,17 @@ Override `--counter-value-size` and `--counter-button-size` to turn a counter in
 | ------------ | ------------------------------------------------------------------------- | ------- | ------------------------------------------------------ |
 | `value`      | `number`                                                                  | `0`     | Current value                                          |
 | `min`        | `number`                                                                  | `0`     | Minimum value                                          |
-| `max`        | `number`                                                                  | —       | Maximum value                                          |
+| `max`        | `number`                                                                  | N/A | Maximum value                                          |
 | `step`       | `number`                                                                  | `1`     | Increment/decrement step                               |
 | `large-step` | `number`                                                                  | `10 × step` | Step for `Page Up` / `Page Down` and the quick-step buttons |
 | `quick-steps` | `boolean`                                                                | `false` | Adds an outer −/+ pair that moves by `large-step`      |
-| `label`      | `string`                                                                  | —       | Visible label and accessible name                      |
-| `hint`       | `string`                                                                  | —       | One-line hint under the controls                       |
+| `label`      | `string`                                                                  | N/A | Visible label and accessible name                      |
+| `hint`       | `string`                                                                  | N/A | One-line hint under the controls                       |
 | `readonly`   | `boolean`                                                                 | `false` | Hides the buttons and shows the value only             |
 | `disabled`   | `boolean`                                                                 | `false` | Disables the control                                   |
-| `color`      | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Theme color for the value and slotted icon             |
+| `color`      | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Theme color for the value and slotted icon             |
 | `size`       | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Component size                                         |
-| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | —       | Surface variant; `frost` blurs the panel over artwork   |
+| `variant`    | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'frost'`      | N/A | Surface variant; `frost` blurs the panel over artwork   |
 
 ### Events
 
@@ -206,11 +206,11 @@ Override `--counter-value-size` and `--counter-button-size` to turn a counter in
 
 ## Accessibility
 
-The root is a `role="group"` labelled by the visible label. The value is an `<output role="spinbutton">` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-readonly` and `aria-live="polite"`, so every change is announced without moving focus. The `hint` is linked through `aria-describedby`. The −/+ buttons are named `Decrease <label>` / `Increase <label>` (quick-step buttons add `by <large-step>`) and are removed from the tab order — keyboard users operate the spinbutton directly: `↑` / `↓` step, `Page Up` / `Page Down` step by `large-step`, `Home` / `End` jump to `min` / `max`.
+The root is a `role="group"` labelled by the visible label. The value is an `<output role="spinbutton">` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-readonly` and `aria-live="polite"`, so every change is announced without moving focus. The `hint` is linked through `aria-describedby`. The −/+ buttons are named `Decrease <label>` / `Increase <label>` (quick-step buttons add `by <large-step>`) and are removed from the tab order: keyboard users operate the spinbutton directly: `↑` / `↓` step, `Page Up` / `Page Down` step by `large-step`, `Home` / `End` jump to `min` / `max`.
 
 Buttons meet the 44 px touch target on coarse pointers and are separated by at least `--size-3` so a thumb cannot hit both. Press-and-hold auto-repeat starts after 400 ms and stops at either bound. The value bump animation is suppressed under `prefers-reduced-motion: reduce`.
 
 ## Related Components
 
-- [Number Input](./number-input) — typed numeric form field with spin buttons
-- [Stats](./stats) — read-only metric display
+- [Number Input](./number-input): typed numeric form field with spin buttons
+- [Stats](./stats): read-only metric display

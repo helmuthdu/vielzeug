@@ -1,5 +1,5 @@
 ---
-title: Assay — Examples
+title: 'Assay: Examples'
 description: Practical examples and recipes for assay.
 ---
 

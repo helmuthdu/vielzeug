@@ -1,5 +1,5 @@
 ---
-title: Coins — Usage Guide
+title: 'Coins: Usage Guide'
 description: Construct exact money, aggregate values, convert currencies, and format results with Coins.
 ---
 

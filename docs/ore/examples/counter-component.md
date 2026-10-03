@@ -1,5 +1,5 @@
 ---
-title: 'Ore Examples — Counter Component'
+title: 'Ore Examples: Counter Component'
 description: 'Counter Component example for @vielzeug/ore.'
 ---
 
@@ -39,6 +39,6 @@ define('simple-counter', {
 
 ### Related
 
-- [Ripple — Signals](/ripple/) for the reactive primitives powering Ore components
+- [Ripple: Signals](/ripple/) for the reactive primitives powering Ore components
 - [Typed props and emits](./typed-props-and-emits.md)
 - [Search list with directives](./search-list-with-directives.md)

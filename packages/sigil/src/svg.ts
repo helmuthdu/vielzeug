@@ -1,7 +1,7 @@
 import type { QrMatrix, QrSvgOptions } from './types';
 
 /**
- * SVG rendering — pure string output, safe in any environment.
+ * SVG rendering: pure string output, safe in any environment.
  * The optimized path merges each row's dark-module runs into `M x y hW v1 h-W z`
  * spans; `optimizePath: false` emits one subpath per module.
  */

@@ -11,7 +11,7 @@ export type OreProgressProps = {
   color?: ThemeColor;
   /** Floating chip centered above the fill endpoint (linear only). Hidden in indeterminate mode. Position formula: left = fill% − half chip width (CSS: left:X%; transform:translateX(−50%)). */
   'floating-label'?: string;
-  /** When true, shows an infinite animation — use when progress is unknown. */
+  /** When true, shows an infinite animation: use when progress is unknown. */
   indeterminate?: boolean;
   /** Accessible name AND visible text label.
    * - Linear without `title`: rendered at the end of the bar.

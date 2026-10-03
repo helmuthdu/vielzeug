@@ -22,7 +22,7 @@ import { resetOreForTests } from './reset';
  * `element.shadowRoot`, falling back to `element` for light-DOM components (`shadow: false`).
  */
 export interface Fixture<T extends HTMLElement = HTMLElement> extends QueryScope {
-  /** Run a callback then flush — the standard way to trigger and assert a reactive update */
+  /** Run a callback then flush: the standard way to trigger and assert a reactive update */
   act(fn: () => unknown): Promise<void>;
   /** Set an attribute (boolean `false` removes it) then flush */
   attr(name: string, value: string | number | boolean): Promise<void>;
@@ -66,7 +66,7 @@ export type MountSetup = {
 
 export const _mountedElements: HTMLElement[] = [];
 
-// Monotonic across the whole test run — never reset: custom element registrations
+// Monotonic across the whole test run: never reset: custom element registrations
 // are permanent, so a re-used tag name would throw on re-define. Deterministic
 // within a run (trial-1, trial-2, ...) without a random suffix.
 let _componentTagCounter = 0;
@@ -119,13 +119,13 @@ const withWindowErrorCapture = async <T>(action: () => Promise<T>): Promise<T> =
  * Accepts a registered tag name, an inline setup function, or a component
  * options object. Setup functions are auto-registered with generated tag names.
  *
- * @example — inline setup function
+ * @example: inline setup function
  * const { query } = await mount(() => {
  *   const count = signal(0);
  *   return html`<button @click=${() => count.value++}>${count}</button>`;
  * });
  *
- * @example — registered tag name
+ * @example: registered tag name
  * const { query } = await mount('my-counter');
  */
 export async function mount<T extends HTMLElement = HTMLElement>(

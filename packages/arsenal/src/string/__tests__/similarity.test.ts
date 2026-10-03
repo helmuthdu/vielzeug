@@ -60,7 +60,7 @@ describe('similarity', () => {
     expect(similarity('こんにちは', 'こんにちは')).toBe(1);
   });
 
-  it('is commutative — similarity(a,b) === similarity(b,a)', () => {
+  it('is commutative: similarity(a,b) === similarity(b,a)', () => {
     expect(similarity('hello', 'world')).toBe(similarity('world', 'hello'));
     expect(similarity('abc', 'xyz')).toBe(similarity('xyz', 'abc'));
   });

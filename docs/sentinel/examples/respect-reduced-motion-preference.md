@@ -1,5 +1,5 @@
 ---
-title: 'Sentinel Examples — Respect Reduced Motion Preference'
+title: 'Sentinel Examples: Respect Reduced Motion Preference'
 description: Keep a document class synchronized with the reduced-motion media query.
 ---
 

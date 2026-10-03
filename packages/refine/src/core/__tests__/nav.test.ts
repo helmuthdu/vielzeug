@@ -170,7 +170,7 @@ describe('createListControl', () => {
     expect(nav.set(1)).toBe(-1);
     expect(nav.navigate('next')).toBe(-1);
 
-    // Idempotent — calling again does not throw.
+    // Idempotent: calling again does not throw.
     nav.dispose();
     expect(nav.disposed).toBe(true);
   });
@@ -421,7 +421,7 @@ describe('createListControl typeahead', () => {
       { disabled: false, label: 'Banana' },
     ]);
 
-    // Type 'av' — should land on 'Avocado' (index 1).
+    // Type 'av': should land on 'Avocado' (index 1).
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'v' }));
     expect(activeIndex()).toBe(1);

@@ -1,5 +1,5 @@
 ---
-title: 'Sourcerer Examples — URL-Synced List with Wayfinder'
+title: 'Sourcerer Examples: URL-Synced List with Wayfinder'
 description: 'Synchronize validated source params and pagination with a Wayfinder route.'
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 'Codex Examples — Package Metadata'
+title: 'Codex Examples: Package Metadata'
 description: 'Package metadata example for @vielzeug/codex.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Package metadata example for @vielzeug/codex.'
 
 ### Problem
 
-You need structured metadata for a specific package — its exports, related packages, available doc pages, and category — to guide further tool calls or code generation.
+You need structured metadata for a specific package: its exports, related packages, available doc pages, and category: to guide further tool calls or code generation.
 
 ### Solution
 
@@ -42,11 +42,11 @@ Result:
 - `PackageMeta` strips `docs`, `apiSource`, `examples`, and `typeSignatures` from the full package record (reducing `examples` to `exampleIds`). It is a summary, not the complete data.
 - `related` contains slugs, not package names. Use them directly as `packageSlug` in subsequent `get-package` or `get-docs` calls.
 - `hasSource: false` means no `src/index.ts` was bundled for this package; `get-source` and `get-type-signature` will return `isError: true` for it.
-- An unknown `packageSlug` returns `isError: true` with available slugs listed — not an empty object.
+- An unknown `packageSlug` returns `isError: true` with available slugs listed: not an empty object.
 
 ### Related
 
 - [Listing Packages](./listing-packages.md)
 - [Reading Docs](./reading-docs.md)
-- [API Reference — get-package](../api.md#get-package)
-- [API Reference — get-type-signature](../api.md#get-type-signature)
+- [API Reference: get-package](../api.md#get-package)
+- [API Reference: get-type-signature](../api.md#get-type-signature)

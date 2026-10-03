@@ -1,6 +1,6 @@
 const LAZY_BRAND = Symbol('rune.lazy');
 
-/** A deferred binding value — evaluated only when an entry is actually emitted. Create via `lazy(fn)`. */
+/** A deferred binding value: evaluated only when an entry is actually emitted. Create via `lazy(fn)`. */
 export type LazyBinding = { readonly factory: () => unknown; readonly [LAZY_BRAND]: true };
 
 /** @internal */

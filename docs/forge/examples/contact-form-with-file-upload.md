@@ -1,5 +1,5 @@
 ---
-title: 'Forge Examples — Contact Form with File Upload'
+title: 'Forge Examples: Contact Form with File Upload'
 description: Validate a file-bearing form and serialize it as multipart data.
 ---
 

@@ -13,7 +13,7 @@ interface ColorGroup {
 
 const brandGroups: ColorGroup[] = [
   {
-    description: 'Periwinkle violet — primary brand color',
+    description: 'Periwinkle violet: primary brand color',
     name: 'Primary',
     swatches: [
       { label: 'Base', textVariable: '--color-primary-content', variable: '--color-primary' },
@@ -25,7 +25,7 @@ const brandGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'Ink/charcoal (light) · silver (dark) — contrast-driven adaptive',
+    description: 'Ink/charcoal (light) · silver (dark): contrast-driven adaptive',
     name: 'Secondary',
     swatches: [
       { label: 'Base', textVariable: '--color-secondary-content', variable: '--color-secondary' },
@@ -37,7 +37,7 @@ const brandGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'True gray — neutral UI surfaces',
+    description: 'True gray: neutral UI surfaces',
     name: 'Neutral',
     swatches: [
       { label: 'Base', textVariable: '--color-neutral-content', variable: '--color-neutral' },
@@ -51,7 +51,7 @@ const brandGroups: ColorGroup[] = [
 ];
 
 // Every family shares the same lighter/light/base/dark/darker derivation recipe
-// (see theme.css's --shade-* tokens) — this list mirrors COLOR_FAMILIES in
+// (see theme.css's --shade-* tokens): this list mirrors COLOR_FAMILIES in
 // packages/refine/theme-tokens.mjs.
 const SHADE_FAMILIES = ['neutral', 'primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
 
@@ -69,7 +69,7 @@ const shadeGroups: ColorGroup[] = SHADE_FAMILIES.map((name) => ({
 
 const semanticGroups: ColorGroup[] = [
   {
-    description: 'Cyan-blue — informational messages',
+    description: 'Cyan-blue: informational messages',
     name: 'Info',
     swatches: [
       { label: 'Base', textVariable: '--color-info-content', variable: '--color-info' },
@@ -81,7 +81,7 @@ const semanticGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'Teal — positive outcomes & confirmations',
+    description: 'Teal: positive outcomes & confirmations',
     name: 'Success',
     swatches: [
       { label: 'Base', textVariable: '--color-success-content', variable: '--color-success' },
@@ -93,7 +93,7 @@ const semanticGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'Amber — cautionary states & alerts',
+    description: 'Amber: cautionary states & alerts',
     name: 'Warning',
     swatches: [
       { label: 'Base', textVariable: '--color-warning-content', variable: '--color-warning' },
@@ -105,7 +105,7 @@ const semanticGroups: ColorGroup[] = [
     ],
   },
   {
-    description: 'Vermilion — destructive actions & errors',
+    description: 'Vermilion: destructive actions & errors',
     name: 'Error',
     swatches: [
       { label: 'Base', textVariable: '--color-error-content', variable: '--color-error' },
@@ -209,7 +209,7 @@ const contrastScale: ColorSwatch[] = [
     <section class="palette-section">
       <h3 class="section-title">Contrast Scale</h3>
       <p class="section-desc">
-        Adaptive gray scale — surfaces (50–400) and text (500–900). Automatically inverts in dark mode.
+        Adaptive gray scale: surfaces (50–400) and text (500–900). Automatically inverts in dark mode.
       </p>
       <div class="contrast-row">
         <div

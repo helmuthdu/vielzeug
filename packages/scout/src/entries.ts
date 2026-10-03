@@ -1,5 +1,5 @@
 /**
- * Entry ranking and segmentation for searchable reference lists — the presentation half of
+ * Entry ranking and segmentation for searchable reference lists: the presentation half of
  * search: a heterogeneous set of entries (glossary terms, rules, profiles) ordered by how
  * directly they match a typed query, plus segmentation helpers for rendering matched and
  * keyword-linked text.
@@ -8,7 +8,7 @@
 /** An entry a reference list ranks and renders: identified, labeled, with summary and body text. */
 export interface RankableEntry {
   id: string;
-  /** The entry's title — the primary match surface. */
+  /** The entry's title: the primary match surface. */
   label: string;
   /** One-line context shown beside the label. */
   meta: string;
@@ -28,7 +28,7 @@ type Score = (typeof Score)[keyof typeof Score];
 
 export interface RankEntriesOptions {
   /**
-   * Entry ids the fuzzy index already matched — offered as the last resort when no field
+   * Entry ids the fuzzy index already matched: offered as the last resort when no field
    * contains the query, so approximate hits still surface.
    */
   fuzzyIds?: ReadonlySet<string>;

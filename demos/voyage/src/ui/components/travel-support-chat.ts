@@ -17,7 +17,7 @@ const TRAVEL_SUPPORT_CHAT_MESSAGES_KEY = 'voyage-support-chat-messages';
 const initialMessages = (): SupportMessage[] => [
   {
     sender: 'assistant',
-    text: 'Hi Avery — I can help with booking references, reservation changes, or finding another stay.',
+    text: 'Hi Avery: I can help with booking references, reservation changes, or finding another stay.',
   },
 ];
 
@@ -101,7 +101,7 @@ const SUGGESTIONS: OreChatPanelSuggestion[] = [
 
 /**
  * App-specific wrapper around `ore-chat-panel`. It owns only what is unique to
- * Voyage support — the scripted replies, transcript persistence, the persisted
+ * Voyage support: the scripted replies, transcript persistence, the persisted
  * open state, and the "navigate to a route" action semantics. All presentation,
  * transcript rendering, suggestions, composer, Escape, and focus handling come
  * from the panel.

@@ -7,7 +7,7 @@ describe('ore-list-item', () => {
 
   beforeAll(async () => {
     await import('./list-item');
-    // Needed for the `Selection` describe block below — selection is entirely context-driven
+    // Needed for the `Selection` describe block below: selection is entirely context-driven
     // (an item's `selected` state is derived from its parent `ore-list`'s `value`), so exercising
     // it means mounting a real `ore-list` parent, not just the item in isolation.
     await import('./list');
@@ -55,7 +55,7 @@ describe('ore-list-item', () => {
       expect(leading.hasAttribute('hidden')).toBe(true);
     });
 
-    it('marks which action panel a hover should peek — the first populated side', async () => {
+    it('marks which action panel a hover should peek: the first populated side', async () => {
       fixture = await mount('ore-list-item', { html: 'Inbox' });
       expect(fixture.element.hasAttribute('data-peek')).toBe(false);
 
@@ -136,7 +136,7 @@ describe('ore-list-item', () => {
     });
 
     // `selected` is derived from the parent `ore-list`'s `value`, not an independently settable
-    // prop — exercising select/deselect means driving that value, not the item's own attribute.
+    // prop: exercising select/deselect means driving that value, not the item's own attribute.
     it("emits select when the parent list is given this item's value", async () => {
       fixture = await mount('ore-list', {
         attrs: { selectable: '' },
@@ -227,7 +227,7 @@ describe('ore-list-item', () => {
       expect(onConfirm).toHaveBeenCalledTimes(1);
       expect(onConfirm.mock.calls[0][0].detail).toMatchObject({ item: fixture.element, side: 'right' });
       expect(onClick).toHaveBeenCalledTimes(1);
-      // The full-swipe-through gesture closes on its own — it doesn't leave the panel revealed.
+      // The full-swipe-through gesture closes on its own: it doesn't leave the panel revealed.
       expect(fixture.element.hasAttribute('revealed')).toBe(false);
     });
 
@@ -326,7 +326,7 @@ describe('ore-list-item', () => {
   });
 
   describe('Accessibility', () => {
-    // `role="listitem"` requires an ancestor with `role="list"` — real usage always nests
+    // `role="listitem"` requires an ancestor with `role="list"`: real usage always nests
     // `ore-list-item` inside `ore-list` (see list.test.ts's Accessibility suite for that
     // combination), so the standalone mount here disables the rule the same way
     // `ore-tab-item.test.ts` does for its own required-parent-role case.

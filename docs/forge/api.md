@@ -1,5 +1,5 @@
 ---
-title: Forge — API Reference
+title: 'Forge: API Reference'
 description: Immutable typed form state, flat validation issues, and optional integration helpers.
 ---
 
@@ -62,7 +62,7 @@ form.reset({ user: new UserModel() }); // same normalization as init
 function toPlainValues<T>(value: T): T;
 ```
 
-Deeply converts a value into the plain shape Forge accepts: primitives pass through, `Date` is cloned, `File`/`Blob` keep identity, arrays map, and class instances flatten to their own enumerable entries. Unsafe keys (`__proto__`, `constructor`, `prototype`) are dropped, so the output always passes value validation. The returned type parameter is a convenience cast — the flattened shape differs from the input type whenever class instances are present.
+Deeply converts a value into the plain shape Forge accepts: primitives pass through, `Date` is cloned, `File`/`Blob` keep identity, arrays map, and class instances flatten to their own enumerable entries. Unsafe keys (`__proto__`, `constructor`, `prototype`) are dropped, so the output always passes value validation. The returned type parameter is a convenience cast: the flattened shape differs from the input type whenever class instances are present.
 
 Lossy conversions replace the error an un-normalized write would throw: `Map`, `Set`, and other keyless built-ins flatten to `{}`; sparse array slots are dropped, shifting later indexes; `NaN`, `Infinity`, functions, and circular branches become `undefined`. Normalize model classes, not arbitrary graphs.
 
@@ -101,7 +101,7 @@ interface Form<TValues extends Record<string, unknown>> {
 
 `validate()` and `submit()` return `{ status: 'valid' }`, `{ status: 'invalid', issues }`, or `{ status: 'aborted' }`. Successful submission returns `{ status: 'ok', value }`. Submission handlers receive the exact snapshot that passed validation. `form.state` retains one stable reference until the next transition for framework external-store adapters.
 
-`patch()` shallow-merges top-level keys — `form.patch({ count: 1 })` equals `form.set((prev) => ({ ...prev, count: 1 }))` without the `as T` cast a spread requires. Nested values replace by identity; there is no deep merge.
+`patch()` shallow-merges top-level keys: `form.patch({ count: 1 })` equals `form.set((prev) => ({ ...prev, count: 1 }))` without the `as T` cast a spread requires. Nested values replace by identity; there is no deep merge.
 
 ```ts
 type FormState = Readonly<{
@@ -213,8 +213,8 @@ Flattens nested plain objects to dotted keys and repeats scalar or binary array 
 
 ## Errors
 
-- `ForgeError` — base package error.
-- `ForgeConfigError` — invalid value, path, issue, or serialization configuration.
-- `ForgeDisposedError` — operation attempted after disposal.
-- `ForgeSubmitError` — concurrent submission attempt.
-- `ForgeValidationError` — unexpected validator execution failure, with the original `cause`.
+- `ForgeError`: base package error.
+- `ForgeConfigError`: invalid value, path, issue, or serialization configuration.
+- `ForgeDisposedError`: operation attempted after disposal.
+- `ForgeSubmitError`: concurrent submission attempt.
+- `ForgeValidationError`: unexpected validator execution failure, with the original `cause`.

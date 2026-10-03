@@ -23,7 +23,7 @@ for (const result of results) {
   const parts   = highlightField(result, 'name', result.item.name)
   const display = parts.map(p => p.highlighted ? \`[\${p.text}]\` : p.text).join('')
 
-  console.log(\`\${display} — \${result.item.email} (\${result.score.toFixed(2)})\`)
+  console.log(\`\${display}: \${result.item.email} (\${result.score.toFixed(2)})\`)
 }`,
   name: 'Basic Search',
 };

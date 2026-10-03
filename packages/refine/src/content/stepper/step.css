@@ -19,14 +19,14 @@
 
   /* Horizontal (default) layout centers the indicator above the label in each equal-width
      column (see `.control`/`.content` below) so the indicator sits at a predictable, constant
-     horizontal position — the midpoint of its own step — regardless of label length. The full
-     line between two indicators is drawn as *two* halves — this step's own `.connector-leading`
+     horizontal position: the midpoint of its own step: regardless of label length. The full
+     line between two indicators is drawn as *two* halves: this step's own `.connector-leading`
      (its own left edge to its own indicator) and `.connector-trailing` (its own indicator to its
-     own right edge) — each confined entirely inside this step's own box. Reaching a single
+     own right edge): each confined entirely inside this step's own box. Reaching a single
      connector backward into the previous step's box (an earlier attempt) doesn't work: `ore-step`
      is its own custom element/shadow root, so a later sibling's positioned content always paints
      in front of an earlier sibling's regardless of internal stacking, and `.control`'s own hover
-     background only covers its own box — so the part of the line sitting outside it looked like
+     background only covers its own box, so the part of the line sitting outside it looked like
      a stray line poking out next to the hover highlight instead of being part of it. */
   .connector {
     position: absolute;
@@ -61,7 +61,7 @@
 
     /* Declared after `all: unset` (which resets `position` back to `static`), not before it.
        Puts `.control` in the same paint order as `.connector` (also positioned) instead of
-       `.connector` — being absolutely positioned — automatically painting above all of this
+       `.connector`: being absolutely positioned: automatically painting above all of this
        *static*, normal-flow content regardless of DOM order. `.control` comes after
        `.connector` in the markup, so with both positioned it (and the opaque indicator inside
        it) now correctly paints over the connector line instead of the line cutting across
@@ -100,7 +100,7 @@
   .indicator {
     /* Without this, the `border` below adds on top of `width`/`height` instead of being
        included in them, rendering the indicator ~2 * border-width larger per axis than
-       `--step-indicator-size` — every connector position calc using that variable to line up
+       `--step-indicator-size`: every connector position calc using that variable to line up
        with the indicator's true center/edge (especially the vertical connector's horizontal
        `left`, which has no flexbox centering to fall back on) would then be off by that much. */
     box-sizing: border-box;
@@ -300,10 +300,10 @@
   /* Same two-halves idea as horizontal, rotated: `.connector-leading` runs from this step's own
      top edge down into its indicator (through the `padding-block-start` gap reserved above).
      `.connector-trailing` runs from the *bottom* of this step's indicator down to this step's
-     own bottom edge — using `top`+`bottom` (no fixed `height`) so it stretches to whatever this
+     own bottom edge: using `top`+`bottom` (no fixed `height`) so it stretches to whatever this
      step's content actually needs, instead of a fixed length that only reached as far as the
      padding gap. A step with a longer description is taller, and its trailing segment grows
-     with it — the next step's leading segment then only has to bridge the fixed padding gap,
+     with it: the next step's leading segment then only has to bridge the fixed padding gap,
      so the two halves always meet exactly at the boundary between the two steps regardless of
      how much content either one has. */
   :host([orientation='vertical']) .connector-leading {
@@ -323,7 +323,7 @@
   }
 
   /* The first step's `padding-block-start` is reset to 0 above (no incoming line to make room
-     for) — `.connector-trailing`'s `top` has to drop the same gap term here, or it starts
+     for): `.connector-trailing`'s `top` has to drop the same gap term here, or it starts
      lower than the indicator's true bottom edge and its `bottom: 0` counterpart can compute a
      negative (clamped to 0) height, hiding the segment entirely. */
   :host([orientation='vertical']:first-of-type) .connector-trailing {

@@ -19,7 +19,7 @@ import type {
  * **Decision model**: rules are evaluated in declaration order; the first rule
  * that matches the request wins. If no rule matches, the decision is **deny**
  * (default deny). There is no priority, specificity scoring, or conflict
- * detection — order is the only tiebreaker.
+ * detection: order is the only tiebreaker.
  *
  * A rule matches when:
  * 1. Its `action` pattern matches the requested action (`*` or `ns:*` or exact).

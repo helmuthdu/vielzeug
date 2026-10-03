@@ -1,5 +1,5 @@
 ---
-title: Lingua — Examples
+title: 'Lingua: Examples'
 description: Focused examples for explicit catalogs and locale resources.
 ---
 

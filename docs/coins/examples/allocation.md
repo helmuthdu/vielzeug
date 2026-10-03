@@ -1,5 +1,5 @@
 ---
-title: Coins Examples — Allocation
+title: 'Coins Examples: Allocation'
 description: Split exact money without losing minor units.
 ---
 

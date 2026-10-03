@@ -1,5 +1,5 @@
 ---
-title: Refine — Framework Integration
+title: 'Refine: Framework Integration'
 description: Using Refine web components with React, Vue 3, Svelte, and Angular.
 ---
 
@@ -7,7 +7,7 @@ description: Using Refine web components with React, Vue 3, Svelte, and Angular.
 
 [[toc]]
 
-Refine components are native Web Components — they are HTML elements. You set attributes, listen to DOM events, and project content through slots. Every framework that renders HTML works the same way, with minor wiring differences per framework.
+Refine components are native Web Components: they are HTML elements. You set attributes, listen to DOM events, and project content through slots. Every framework that renders HTML works the same way, with minor wiring differences per framework.
 
 ::: tip Before you start
 Complete [installation](./index.md#installation) and import the global styles first. This guide covers framework-specific wiring only.
@@ -172,7 +172,7 @@ import type {} from '@vielzeug/refine/frameworks/vue';
 
 ## Svelte
 
-Svelte handles web components natively — no configuration needed.
+Svelte handles web components natively: no configuration needed.
 
 ```svelte
 <script>
@@ -273,7 +273,7 @@ import dynamic from 'next/dynamic';
 const MyForm = dynamic(() => import('./MyForm'), { ssr: false });
 ```
 
-Inside `MyForm`, import Refine components normally — they will only ever load in the browser.
+Inside `MyForm`, import Refine components normally: they will only ever load in the browser.
 
 ### Nuxt
 

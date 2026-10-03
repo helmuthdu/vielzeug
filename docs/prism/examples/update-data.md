@@ -1,5 +1,5 @@
 ---
-title: 'Prism Examples — Update Chart Data'
+title: 'Prism Examples: Update Chart Data'
 description: Connect application state to a Prism chart through its explicit update boundary.
 ---
 

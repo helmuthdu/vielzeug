@@ -19,14 +19,14 @@ const AppConfig = s.object({
   debug: s.boolean().default(false),
 });
 
-// Parse with partial input — missing fields use their defaults
+// Parse with partial input: missing fields use their defaults
 const parsed = AppConfig.parse({ server: { host: 'prod.example.com', port: 443, tls: true }, debug: true });
 console.log(parsed.server.host); // 'prod.example.com'
 
-// Schema with required field (no default) — throws if .defaults() called
+// Schema with required field (no default): throws if .defaults() called
 const Strict = s.object({ name: s.string() });
 const result = Strict.safeParse({});
-console.log(result.success); // false — name is required
+console.log(result.success); // false: name is required
 `,
   name: 'Object Defaults',
 };

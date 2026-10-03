@@ -80,7 +80,7 @@ describe('s.union()', () => {
   });
 });
 
-describe('s.union() — sync returns branch output', () => {
+describe('s.union(): sync returns branch output', () => {
   it('returns transformed value from matching branch', () => {
     expect(s.union(s.coerce.number(), s.string()).parse('42')).toBe(42);
   });
@@ -90,7 +90,7 @@ describe('s.union() — sync returns branch output', () => {
   });
 });
 
-describe('s.union() — async', () => {
+describe('s.union(): async', () => {
   it('runs async refinements inside branches', async () => {
     const a = s.string().checkAsync(async (s) => s.startsWith('a') || 'Must start with a');
     const b = s.number();
@@ -150,7 +150,7 @@ describe('UnionSchema.schemas introspection', () => {
   });
 });
 
-describe('s.union() — async non-SpellValidationError branch throw', () => {
+describe('s.union(): async non-SpellValidationError branch throw', () => {
   it('does not include non-SpellValidationError branch throws in branchErrors', async () => {
     const badSchema = s.string().checkAsync(async () => {
       throw new Error('unexpected internal error');

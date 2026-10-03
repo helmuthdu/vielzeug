@@ -1,5 +1,5 @@
 ---
-title: 'Tavern Examples — Share State Across Devices'
+title: 'Tavern Examples: Share State Across Devices'
 description: Mirror host-owned state on guest devices with commands sent back.
 ---
 
@@ -7,11 +7,11 @@ description: Mirror host-owned state on guest devices with commands sent back.
 
 ### Problem
 
-You have a stateful app — a shared editor, a live dashboard, a record under review — and want several people to see the same state on their own devices: one device owns the state, the others mirror it and send commands back. You need the pairing, the protocol, and the replication without hand-rolling 300 lines of session plumbing over `@vielzeug/mesh`.
+You have a stateful app: a shared editor, a live dashboard, a record under review, and want several people to see the same state on their own devices: one device owns the state, the others mirror it and send commands back. You need the pairing, the protocol, and the replication without hand-rolling 300 lines of session plumbing over `@vielzeug/mesh`.
 
 ### Solution
 
-Host the subject with `hostTavern`, wire the command table and snapshot access, and invite a guest with `joinTavern` — tavern owns the pairing, validation, and broadcasting.
+Host the subject with `hostTavern`, wire the command table and snapshot access, and invite a guest with `joinTavern`: tavern owns the pairing, validation, and broadcasting.
 
 ```ts
 import { hostTavern, joinTavern } from '@vielzeug/tavern';
@@ -52,19 +52,19 @@ await host.acceptAnswerText(answerText);
 // 5. The guest's commands run through the host's own table.
 guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
 
-// 6. Cleanup — hosting ends for every guest; the guest fires onEnded once.
+// 6. Cleanup: hosting ends for every guest; the guest fires onEnded once.
 host.dispose();
 guest.dispose();
 ```
 
 ### Pitfalls
 
-- The snapshot arrives as parsed JSON — always validate in `mount` before trusting it; returning `null` safely ignores it.
-- The subject id in `sendCommand` must match the hosted subject — the host rejects commands targeting anything else with a rejection message.
+- The snapshot arrives as parsed JSON: always validate in `mount` before trusting it; returning `null` safely ignores it.
+- The subject id in `sendCommand` must match the hosted subject: the host rejects commands targeting anything else with a rejection message.
 - A tab that both hosts and guests needs an echo guard in `notices.toWire` (one boolean set during `fromWire`), or wire notices will re-broadcast back to the guests.
 
 ### Related
 
-- [Usage Guide](../usage.md) — hosting, joining, notice relaying, and best practices.
-- [API Reference](../api.md) — full signatures for every option and return type.
-- [Mesh](/mesh/) — the P2P transport underneath.
+- [Usage Guide](../usage.md): hosting, joining, notice relaying, and best practices.
+- [API Reference](../api.md): full signatures for every option and return type.
+- [Mesh](/mesh/): the P2P transport underneath.

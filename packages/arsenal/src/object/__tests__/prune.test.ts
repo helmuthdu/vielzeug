@@ -208,7 +208,7 @@ describe('prune', () => {
   });
 
   describe('security', () => {
-    it('guards against __proto__ prototype pollution — security regression', () => {
+    it('guards against __proto__ prototype pollution: security regression', () => {
       const malicious = JSON.parse('{"__proto__":{"polluted":true},"safe":1}') as Record<string, unknown>;
       const result = prune(malicious) as Record<string, unknown>;
 

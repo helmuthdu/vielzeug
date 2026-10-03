@@ -30,8 +30,8 @@ const isContextRecord = (value: unknown): value is Record<string, unknown> => {
 
 /** Fails fast on the definition footguns the type system cannot express: out-of-range
  *  timer delays (platform timers fire immediately above 2^31 ms), empty transition
- *  arrays, and a context that is not a plain record. Everything else — declared
- *  targets, callback shapes, state keys — is compiler-checked in the typed definition. */
+ *  arrays, and a context that is not a plain record. Everything else: declared
+ *  targets, callback shapes, state keys: is compiler-checked in the typed definition. */
 const assertDefinition = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
   definition: MachineConfig<State, Context, Event>,
 ): void => {
@@ -70,8 +70,8 @@ type RuntimeEvent<State extends string, Context extends Record<string, unknown>,
   | InternalEvent<State, Context, Event>;
 
 /** A transition or delayed transition selected for execution. The reducer's event
- *  parameter is whatever the selector matched — the event for a user transition,
- *  `undefined` for a timer — which the declared per-type signatures cannot express. */
+ *  parameter is whatever the selector matched: the event for a user transition,
+ *  `undefined` for a timer, which the declared per-type signatures cannot express. */
 type ExecutableTransition<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly effects?: readonly Effect<Context, Event>[];
   readonly reduce?: (args: { readonly context: Readonly<Context>; readonly event: Event | undefined }) => Context;

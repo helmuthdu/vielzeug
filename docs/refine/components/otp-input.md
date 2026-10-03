@@ -8,7 +8,7 @@ A segmented one-time password input that renders individual cells for each digit
 <ore-otp-input label="Verification code" color="primary"></ore-otp-input>
 ```
 
-Listen for completion — use the `complete` event (not `change`) to trigger auto-submission after the last cell is filled. Always provide a `label` attribute to give context (e.g. `"Verification code"`).
+Listen for completion: use the `complete` event (not `change`) to trigger auto-submission after the last cell is filled. Always provide a `label` attribute to give context (e.g. `"Verification code"`).
 
 ```html
 <ore-otp-input id="otp" label="Enter OTP" color="primary"></ore-otp-input>
@@ -24,7 +24,7 @@ Listen for completion — use the `complete` event (not `change`) to trigger aut
 
 ## Length
 
-Keep `length` at 4–8 cells — more cells increase cognitive load.
+Keep `length` at 4–8 cells: more cells increase cognitive load.
 
 <ComponentPreview vertical>
 
@@ -38,7 +38,7 @@ Keep `length` at 4–8 cells — more cells increase cognitive load.
 
 ## Types
 
-Avoid using `alphanumeric` for numeric-only codes (e.g. SMS OTPs) — `numeric` triggers the numeric keyboard on mobile.
+Avoid using `alphanumeric` for numeric-only codes (e.g. SMS OTPs): `numeric` triggers the numeric keyboard on mobile.
 
 <ComponentPreview vertical>
 
@@ -136,9 +136,9 @@ Use `separator` to add a visual divider between cells.
 | `masked`    | `boolean`                                                                 | `false`     | Render cells as hidden characters                |
 | `separator` | `boolean`                                                                 | `false`     | Show a visual divider between cells              |
 | `disabled`  | `boolean`                                                                 | `false`     | Disable all cells                                |
-| `label`     | `string`                                                                  | —           | Accessible label for the group                   |
-| `name`      | `string`                                                                  | —           | Form field name                                  |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —           | Focus ring / active cell color                   |
+| `label`     | `string`                                                                  | N/A | Accessible label for the group                   |
+| `name`      | `string`                                                                  | N/A | Form field name                                  |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Focus ring / active cell color                   |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`      | Cell size                                        |
 | `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`   | Visual style variant                             |
 
@@ -171,8 +171,8 @@ The OTP input component follows WCAG 2.1 Level AA standards. It renders as a `<f
 
 Keyboard navigation is fully supported: focus auto-advances to the next cell on valid input, `Backspace` moves back and clears the cell, `Tab` moves focus out of the group, and paste fills all cells at once.
 
-Do not auto-submit without giving users a chance to review — show a confirmation step before sending.
+Do not auto-submit without giving users a chance to review: show a confirmation step before sending.
 
 ## Related Components
 
-- [Input](./input) — plain single-line input field
+- [Input](./input): plain single-line input field

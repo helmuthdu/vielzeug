@@ -1,5 +1,5 @@
 /**
- * @vielzeug/orbit — debug overlay for positioning visualisation.
+ * @vielzeug/orbit: debug overlay for positioning visualisation.
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
@@ -75,9 +75,9 @@ function createOutlineBox(x: number, y: number, width: number, height: number, c
  * Wraps `createPositioner()` and attaches a persistent visual debug overlay to the document.
  *
  * The overlay renders on every position update:
- * - **Blue dashed outline** — the viewport boundary used by overflow detection.
- * - **Orange dashed outline** — the reference element's bounding rect.
- * - **Blue label** — the active placement string (e.g. `"top-start"`).
+ * - **Blue dashed outline**: the viewport boundary used by overflow detection.
+ * - **Orange dashed outline**: the reference element's bounding rect.
+ * - **Blue label**: the active placement string (e.g. `"top-start"`).
  *
  * The overlay is automatically removed when `handle.dispose()` is called.
  *
@@ -117,7 +117,7 @@ export function debugPositioner(
       overlay.appendChild(createOutlineBox(r.left, r.top, r.width, r.height, 'rgba(255,120,0,0.7)'));
     }
 
-    // Placement label — positioned just above the floating element.
+    // Placement label: positioned just above the floating element.
     const fr = floating.getBoundingClientRect();
 
     overlay.appendChild(createPlacementBadge(result.placement, fr.left, fr.top - 22));

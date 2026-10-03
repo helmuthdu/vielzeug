@@ -13,7 +13,7 @@ const useLocalPackages = process.env.VIELZEUG_LOCAL_DEV === '1';
 const localPackageMap = useLocalPackages ? collectLocalPackageMap(__dirname) : {};
 
 const aliases = Object.entries(localPackageMap).map(([specifier, replacement]) => ({
-  // Exact-match regex — a plain string `find` would prefix-match, so
+  // Exact-match regex: a plain string `find` would prefix-match, so
   // `@vielzeug/refine` would also swallow `@vielzeug/refine/toast`.
   find: new RegExp(`^${specifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
   replacement,

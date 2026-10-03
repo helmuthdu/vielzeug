@@ -51,7 +51,7 @@ describe('createTestBus - emitted()', () => {
     bus.dispose();
   });
 
-  it('returns a snapshot — mutating the returned array does not affect internal records', () => {
+  it('returns a snapshot: mutating the returned array does not affect internal records', () => {
     const bus = createTestBus<TestEvents>();
 
     bus.emit('count', 1);
@@ -255,7 +255,7 @@ describe('createTestBus - allEmitted()', () => {
   it('does not let a "__proto__"/"constructor"/"prototype" event name hijack the result object', () => {
     // Regression: bracket-assigning `result['__proto__'] = value` on a plain object literal
     // invokes Object.prototype's __proto__ accessor and reassigns the object's own prototype
-    // instead of setting an own property — a real prototype-hijack risk when event names can be
+    // instead of setting an own property: a real prototype-hijack risk when event names can be
     // dynamically/externally determined.
     const bus = createTestBus<Record<string, unknown>>();
     const malicious = { polluted: true };
@@ -276,7 +276,7 @@ describe('createTestBus - allEmitted()', () => {
 });
 
 describe('createTestBus - on() SubscribeOptions forwarding', () => {
-  it('once() — listener fires once then auto-removes', () => {
+  it('once(): listener fires once then auto-removes', () => {
     const bus = createTestBus<TestEvents>();
     const listener = vi.fn();
 
@@ -290,7 +290,7 @@ describe('createTestBus - on() SubscribeOptions forwarding', () => {
     bus.dispose();
   });
 
-  it('{ signal } — listener auto-removes when signal aborts', () => {
+  it('{ signal }: listener auto-removes when signal aborts', () => {
     const bus = createTestBus<TestEvents>();
     const listener = vi.fn();
     const ctrl = new AbortController();

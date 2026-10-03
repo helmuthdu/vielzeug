@@ -4,7 +4,7 @@ import { drawToCanvas } from '../canvas';
 import { encodeQr } from '../encode';
 
 /**
- * jsdom has no real canvas — a fake 2D context records every fillRect so the
+ * jsdom has no real canvas: a fake 2D context records every fillRect so the
  * test can assert coverage and sizing math (including devicePixelRatio).
  */
 

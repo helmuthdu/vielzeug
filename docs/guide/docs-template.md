@@ -27,17 +27,17 @@ Each standard doc page maps to one primary quadrant:
 | `index.md`      | **Explanation**                                               | "What is this, why does it exist, and is it right for me?" |
 | `usage.md`      | **How-to Guide**                                              | "How do I accomplish this specific task?"                  |
 | `api.md`        | **Reference**                                                 | "What is the exact signature, behaviour, and contract?"    |
-| `examples.md`   | Navigation (not a Diátaxis quadrant — an organisational tool) | "Which recipe do I need?"                                  |
+| `examples.md`   | Navigation (not a Diátaxis quadrant: an organisational tool) | "Which recipe do I need?"                                  |
 | `examples/*.md` | **How-to Guide**                                              | "How do I solve this concrete problem end-to-end?"         |
 
 Understanding this mapping is more important than memorising the structural rules. When in doubt about where content belongs, ask: _which reader need does this serve?_
 
 **Common anti-patterns to avoid:**
 
-- Putting step-by-step learning walkthroughs in `index.md` — that is a tutorial, not an explanation.
-- Putting exhaustive option tables in `usage.md` — that belongs in `api.md`.
-- Putting opinionated guidance or "Best Practices" in `api.md` — that belongs in `usage.md`.
-- Putting conceptual background (the "why") in `api.md` or `usage.md` — that belongs in `index.md`.
+- Putting step-by-step learning walkthroughs in `index.md`, that is a tutorial, not an explanation.
+- Putting exhaustive option tables in `usage.md`, that belongs in `api.md`.
+- Putting opinionated guidance or "Best Practices" in `api.md`, that belongs in `usage.md`.
+- Putting conceptual background (the "why") in `api.md` or `usage.md`, that belongs in `index.md`.
 
 **Tutorials:** Vielzeug does not currently have a dedicated tutorial file per package. If a library's complexity warrants one (e.g., a ground-up walkthrough for a first-time user), add a `tutorial.md` at `docs/<pkg>/tutorial.md` and link it from `index.md`. A tutorial is learning-oriented: it takes the reader through a fixed, complete scenario step by step, prioritising the learning experience over real-world flexibility.
 

@@ -1,7 +1,7 @@
 export const capacityCheckExample = {
   code: `import { encodeQr, qrCapacity, SigilCapacityError } from '@vielzeug/sigil'
 
-// qrCapacity returns the payload limit per version/level/mode —
+// qrCapacity returns the payload limit per version/level/mode :
 // characters for numeric/alphanumeric, bytes for byte mode.
 for (const [v, ec, mode] of [
   [1, 'L', 'byte'],

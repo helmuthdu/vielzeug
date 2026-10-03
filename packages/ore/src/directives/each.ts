@@ -104,7 +104,7 @@ const reconcileItems = <T>(
     }
   }
 
-  // DOM ordering: right-to-left pass — move any item not already adjacent to cursor.
+  // DOM ordering: right-to-left pass: move any item not already adjacent to cursor.
   // An item is in place when its last node directly precedes the cursor; items may
   // span several nodes (whitespace text around an element), so compare the last one.
   // Moving an already-placed item would disconnect and reconnect its custom elements.
@@ -178,16 +178,16 @@ const reportEachError = (error: unknown, anchor: Comment): void => {
  * **Optional fallback:** the fourth argument renders when the list is empty.
  *
  * **Key choice:** pass a stable item identifier (e.g. `item.id`), never the
- * array index — an index-based key reassigns to a different item whenever the
+ * array index: an index-based key reassigns to a different item whenever the
  * list is reordered or an item is inserted/removed before it, causing full
  * item teardown/recreation instead of the in-place update `each()` is built
  * for.
  *
  * **Duplicate keys:** a reconciliation failure (e.g. duplicate keys, see `eachDuplicateKey`)
- * does not throw past this function — an uncaught exception inside the reactive effect that
+ * does not throw past this function: an uncaught exception inside the reactive effect that
  * drives `each()` would risk corrupting unrelated effects scheduled in the same update batch.
  * Instead the last valid list is preserved and the failure is reported via the `ore:error` DOM event
- * (see `OreLifecycleError`, phase `'each-reconcile'`) plus a dev-only console log — listen for
+ * (see `OreLifecycleError`, phase `'each-reconcile'`) plus a dev-only console log: listen for
  * `ore:error` on `document`/`window` to observe this in every build, including production.
  */
 export function each<T>(

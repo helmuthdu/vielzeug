@@ -16,7 +16,7 @@ bus.emit('message', 'second')  // fires
 
 controller.abort()             // removes the listener
 
-bus.emit('message', 'third')   // ignored — no listeners
+bus.emit('message', 'third')   // ignored: no listeners
 console.log('listeners after abort:', bus.listenerCount())
 
 // BusDisposedError: pending wait() rejects when bus is disposed

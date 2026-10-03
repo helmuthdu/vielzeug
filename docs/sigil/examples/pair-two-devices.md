@@ -1,5 +1,5 @@
 ---
-title: 'Sigil Examples — Pair Two Devices with QR'
+title: 'Sigil Examples: Pair Two Devices with QR'
 description: Exchange WebRTC pairing payloads between a desktop host and a phone guest via QR codes using meshQrCodec and sigil.
 ---
 
@@ -11,7 +11,7 @@ A desktop app (host) and a phone (guest) need to establish a Mesh P2P session wi
 
 ### Solution
 
-`meshQrCodec` (async) compresses pairing JSON with deflate-raw + base64url and prefixes it `mq1.` — comfortably inside QR byte capacity. Sigil renders the code on each side; `ore-qr-scanner` (or `createQrScanner`) reads the counterparty's screen.
+`meshQrCodec` (async) compresses pairing JSON with deflate-raw + base64url and prefixes it `mq1.`: comfortably inside QR byte capacity. Sigil renders the code on each side; `ore-qr-scanner` (or `createQrScanner`) reads the counterparty's screen.
 
 ```ts
 import { createMeshGuest, createMeshHost, meshQrCodec } from '@vielzeug/mesh';
@@ -21,7 +21,7 @@ import { createQrScanner, encodeQr, toSvg } from '@vielzeug/sigil';
 const host = createMeshHost();
 const invitation = await host.createInvitation();
 
-// meshQrCodec.encode is async — await before rendering.
+// meshQrCodec.encode is async: await before rendering.
 const invitationText = await meshQrCodec.encode(invitation); // "mq1.eNpN…"
 document.querySelector('#qr-out')!.innerHTML = toSvg(encodeQr(invitationText), {
   label: 'Pairing invitation',
@@ -30,7 +30,7 @@ document.querySelector('#qr-out')!.innerHTML = toSvg(encodeQr(invitationText), {
 const webcam = document.querySelector('video')!;
 const scanner = createQrScanner({ video: webcam });
 scanner.onResult(async ({ value }) => {
-  // decode accepts mq1.* and plain meshCodec text — paste works too.
+  // decode accepts mq1.* and plain meshCodec text: paste works too.
   const answer = await meshQrCodec.decode(value);
   const peer = await host.acceptAnswer(answer);
   console.log('paired with', peer.id);
@@ -73,11 +73,11 @@ await guestScanner.start();
 
 ### Pitfalls
 
-- `meshQrCodec.encode`/`decode` are **async** (streams-based compression) — awaiting them inside render code is a common source of `[object Promise]` payloads.
-- `CompressionStream`/`DecompressionStream` exist in modern browsers and Node 18+, but not everywhere — `meshQrCodec.encode` falls back to plain `meshCodec` output where `CompressionStream` is missing, and `decode` accepts both formats.
-- Camera scanning requires a secure context (`https` or `localhost`) and permission — always wire the `error` event so a denial surfaces instead of a dead UI.
-- The answer QR changes per attempt (fresh session id) — re-render on every new `createInvitation`/`acceptInvitation` call, don't cache the image.
-- Scanned strings are untrusted: `meshQrCodec.decode` validates shape and throws `MeshPairingError` on corrupt input — catch it before calling `acceptAnswer`.
+- `meshQrCodec.encode`/`decode` are **async** (streams-based compression): awaiting them inside render code is a common source of `[object Promise]` payloads.
+- `CompressionStream`/`DecompressionStream` exist in modern browsers and Node 18+, but not everywhere: `meshQrCodec.encode` falls back to plain `meshCodec` output where `CompressionStream` is missing, and `decode` accepts both formats.
+- Camera scanning requires a secure context (`https` or `localhost`) and permission: always wire the `error` event so a denial surfaces instead of a dead UI.
+- The answer QR changes per attempt (fresh session id): re-render on every new `createInvitation`/`acceptInvitation` call, don't cache the image.
+- Scanned strings are untrusted: `meshQrCodec.decode` validates shape and throws `MeshPairingError` on corrupt input: catch it before calling `acceptAnswer`.
 
 ### Related
 

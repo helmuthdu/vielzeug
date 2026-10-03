@@ -46,7 +46,7 @@ export function withRequestId(opts?: { generate?: () => string; header?: string 
 /**
  * Logs each request's method, URL, status code, and duration.
  *
- * Requires an explicit `logger` function — no default console output.
+ * Requires an explicit `logger` function: no default console output.
  *
  * **Security note:** The full URL is logged, including any query parameters.
  * If your URLs may contain sensitive data (tokens, PII), provide a custom

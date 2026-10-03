@@ -28,7 +28,7 @@
   }
 
   /* Single column: heading, policy text, scrollable category panel, actions.
-     The same structure serves one category or ten — only the panel scrolls. */
+     The same structure serves one category or ten: only the panel scrolls. */
   .banner {
     display: flex;
     flex-direction: column;
@@ -95,7 +95,7 @@
 
   /* Category descriptions arrive as the checkbox's helper text (aria-describedby-
      wired); sized up to --text-sm because they carry the consent decision's
-     substance, and recolored to --text-muted — the checkbox's default helper mix
+     substance, and recolored to --text-muted: the checkbox's default helper mix
      measures 3.77:1 on the sunken panel, below AA. */
   .category-row ore-checkbox::part(helper-text) {
     font-size: var(--text-sm);
@@ -110,7 +110,7 @@
     justify-content: flex-end;
   }
 
-  /* Narrow viewports: tighter rhythm — the card padding, section gaps and the
+  /* Narrow viewports: tighter rhythm: the card padding, section gaps and the
      nested panel padding compound (a box in a box), so each steps down one
      token to hand more of the small screen back to the page beneath. */
   @media (width <= 640px) {
@@ -125,7 +125,7 @@
   }
 
   /* Narrow viewports with room to spare: actions stack full-width (the primary
-     lands in the thumb zone). Short landscape viewports keep the row layout —
+     lands in the thumb zone). Short landscape viewports keep the row layout :
      a three-row button stack would crowd out the content. */
   @media ((width <= 640px) and (height > 480px)) {
     .actions {

@@ -1,4 +1,4 @@
-/** See `theme-tokens.mjs` — this declares the shape of its data exports for TS consumers. */
+/** See `theme-tokens.mjs`: this declares the shape of its data exports for TS consumers. */
 
 export declare const SHADE_RAMP: Record<string, string>;
 

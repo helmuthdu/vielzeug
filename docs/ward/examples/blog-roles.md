@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Blog Roles'
+title: 'Ward Examples: Blog Roles'
 description: 'Build an ordered blog authorization policy.'
 ---
 

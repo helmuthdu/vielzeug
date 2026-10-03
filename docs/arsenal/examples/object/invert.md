@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — invert'
+title: 'Arsenal Examples: invert'
 description: 'invert example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'invert example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need a reverse lookup map — swapping keys and values of an object so you can look up a key by its value.
+You need a reverse lookup map: swapping keys and values of an object so you can look up a key by its value.
 
 ### Solution
 
@@ -23,7 +23,7 @@ invert(roles);
 
 ### Pitfalls
 
-- If multiple keys share the same value, only one is kept — last wins.
+- If multiple keys share the same value, only one is kept: last wins.
 - All resulting keys are strings (values are coerced).
 
 ### Related

@@ -1,7 +1,7 @@
 import { createWard, matchesPattern, WILDCARD } from '../index';
 
 // ---------------------------------------------------------------------------
-// matchesPattern — hierarchical pattern matching (resources and actions)
+// matchesPattern: hierarchical pattern matching (resources and actions)
 // ---------------------------------------------------------------------------
 
 describe('ward: matchesPattern', () => {

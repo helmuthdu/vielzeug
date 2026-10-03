@@ -30,7 +30,7 @@ function getCspContent(doc: string): string {
 // F1: CSP directive injection via allowed*Origins
 // ---------------------------------------------------------------------------
 
-describe('buildCsp — origin validation', () => {
+describe('buildCsp: origin validation', () => {
   it.each([
     ['allowedScriptOrigins', { allowedScriptOrigins: ['evil.com; connect-src *'] }],
     ['allowedStyleOrigins', { allowedStyleOrigins: ['evil.com; script-src *'] }],
@@ -52,7 +52,7 @@ describe('buildCsp — origin validation', () => {
 // F1 (nonce): nonce sanitization
 // ---------------------------------------------------------------------------
 
-describe('buildCsp — nonce validation', () => {
+describe('buildCsp: nonce validation', () => {
   it.each(["abc' 'unsafe-eval", 'abc;connect-src *', 'abc\r\ndef', 'abc" onmouseover="alert(1)'])(
     'rejects invalid nonce %s',
     (nonce) => {
@@ -69,7 +69,7 @@ describe('buildCsp — nonce validation', () => {
 // F3: base-uri 'none' directive
 // ---------------------------------------------------------------------------
 
-describe('buildCsp — base-uri directive', () => {
+describe('buildCsp: base-uri directive', () => {
   it("includes 'base-uri 'none'' in the default CSP", () => {
     expect(buildCsp()).toContain("base-uri 'none'");
   });
@@ -86,11 +86,11 @@ describe('buildCsp — base-uri directive', () => {
 });
 
 // ---------------------------------------------------------------------------
-// F2: CSP <meta> content attribute — defense-in-depth escaping must not
+// F2: CSP <meta> content attribute: defense-in-depth escaping must not
 // corrupt legitimate single-quoted CSP keywords.
 // ---------------------------------------------------------------------------
 
-describe('buildDocument — CSP meta content attribute integrity', () => {
+describe('buildDocument: CSP meta content attribute integrity', () => {
   it('preserves single-quoted CSP keywords unescaped inside the content attribute', () => {
     const doc = buildDocument('<p>hi</p>');
     const content = getCspContent(doc);
@@ -114,10 +114,10 @@ describe('buildDocument — CSP meta content attribute integrity', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildDocument — HTML injection safety (escapeAttr / escapeText)
+// buildDocument: HTML injection safety (escapeAttr / escapeText)
 // ---------------------------------------------------------------------------
 
-describe('buildDocument — title escaping (escapeText)', () => {
+describe('buildDocument: title escaping (escapeText)', () => {
   it('escapes a </title> breakout attempt', () => {
     const doc = buildDocument('<p>hi</p>', { title: '</title><script>alert(1)</script>' });
 
@@ -130,13 +130,13 @@ describe('buildDocument — title escaping (escapeText)', () => {
   });
 });
 
-describe('buildDocument — lang validation', () => {
+describe('buildDocument: lang validation', () => {
   it('rejects an attribute-breakout attempt in lang', () => {
     expect(() => buildDocument('<p>hi</p>', { lang: 'en" onmouseover="alert(1)' })).toThrow(SandboxConfigurationError);
   });
 });
 
-describe('buildDocument — styles id validation', () => {
+describe('buildDocument: styles id validation', () => {
   it.each(['theme" onmouseover="alert(1)', 'theme"><script>alert(1)</script>', 'theme id'])(
     'rejects invalid style id %s',
     (id) => {
@@ -145,7 +145,7 @@ describe('buildDocument — styles id validation', () => {
   );
 });
 
-describe('buildDocument — nonce validation', () => {
+describe('buildDocument: nonce validation', () => {
   it('rejects an attribute-breakout attempt in nonce', () => {
     expect(() => buildDocument('<p>hi</p>', { nonce: 'abc" onmouseover="alert(1)' })).toThrow(
       SandboxConfigurationError,
@@ -153,7 +153,7 @@ describe('buildDocument — nonce validation', () => {
   });
 });
 
-describe('buildDocument — script src escaping (escapeAttr)', () => {
+describe('buildDocument: script src escaping (escapeAttr)', () => {
   it('encodes an ampersand in a script URL query string', () => {
     const doc = buildDocument('<p>hi</p>', { scripts: ['https://cdn.example.com/lib.js?a=1&b=2'] });
 
@@ -171,7 +171,7 @@ describe('buildDocument — script src escaping (escapeAttr)', () => {
 // F4: prototype-pollution-safe message dispatch
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — prototype-safe message dispatch (F4 regression)', () => {
+describe('createSandbox: prototype-safe message dispatch (F4 regression)', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -267,10 +267,10 @@ describe('createSandbox — prototype-safe message dispatch (F4 regression)', ()
 });
 
 // ---------------------------------------------------------------------------
-// isMsgObject guard — malformed message payloads
+// isMsgObject guard: malformed message payloads
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — malformed message payload guard (isMsgObject)', () => {
+describe('createSandbox: malformed message payload guard (isMsgObject)', () => {
   let container: HTMLElement;
 
   beforeEach(() => {

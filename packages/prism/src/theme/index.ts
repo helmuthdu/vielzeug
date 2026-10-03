@@ -7,7 +7,7 @@ export function setTheme(theme: PrismTheme): void {
 
   if (theme.colors) {
     // Clear (not just overwrite) every color slot the previous setTheme() call may have
-    // used — otherwise a theme with fewer colors than the last one leaves stale values
+    // used, otherwise a theme with fewer colors than the last one leaves stale values
     // on the untouched higher-index custom properties.
     for (let i = 0; i < MAX_THEME_COLORS; i++) {
       const color = theme.colors[i];

@@ -1,5 +1,5 @@
 ---
-title: 'Forge Examples — Login Form'
+title: 'Forge Examples: Login Form'
 description: Validate credentials and submit only a valid immutable login value.
 ---
 

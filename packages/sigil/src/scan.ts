@@ -2,7 +2,7 @@ import { SigilDisposedError, SigilError, SigilPermissionError, SigilUnsupportedE
 import type { QrDetector, QrScanner, QrScannerOptions, QrScannerStatus, QrScanResult, SigilEvent } from './types';
 
 /**
- * Scanning via the native `BarcodeDetector` API — a thin lifecycle wrapper.
+ * Scanning via the native `BarcodeDetector` API: a thin lifecycle wrapper.
  * Feature detection is lazy so importing the package is always safe (SSR).
  * No from-scratch image decoder: unsupported environments get
  * `SigilUnsupportedError` at `start()`/`detectQr()`, never at import.

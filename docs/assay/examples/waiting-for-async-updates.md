@@ -1,5 +1,5 @@
 ---
-title: 'Assay Examples — Waiting for Async Updates'
+title: 'Assay Examples: Waiting for Async Updates'
 description: 'Waiting for Async Updates example for @vielzeug/assay.'
 ---
 
@@ -22,7 +22,7 @@ const view = within(form);
 
 fireInput(view.get('input'));
 
-// Debounced search — poll until the result list renders.
+// Debounced search: poll until the result list renders.
 await waitUntil(() => (view.query('.results')?.children.length ?? 0) > 0);
 
 // Or, if the component dispatches a 'search-complete' event once done:
@@ -45,9 +45,9 @@ await waitUntil(() => (view.query('.results')?.children.length ?? 0) > 0, { time
 
 - `waitUntil()` requires a boolean result. Use `eventually()` for a retrying `expect()` assertion.
 - `waitUntil()` applies one hard deadline to polling and pending async predicates. Raise the default 1000ms only for intentionally longer workflows.
-- `waitForEvent()` only resolves on the *next* matching event — if the event may have already fired before listening starts, wait for resulting DOM state instead.
+- `waitForEvent()` only resolves on the *next* matching event: if the event may have already fired before listening starts, wait for resulting DOM state instead.
 
 ### Related
 
 - [Custom Element Interaction](./custom-element-interaction.md)
-- [Assay API Reference — Async Waiting](/assay/api#async-waiting)
+- [Assay API Reference: Async Waiting](/assay/api#async-waiting)

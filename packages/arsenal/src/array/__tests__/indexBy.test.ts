@@ -67,7 +67,7 @@ describe('indexBy', () => {
     expect(result).toEqual({ '1': { a: 1 }, '2': { a: 2 } });
   });
 
-  it('guards against __proto__ prototype pollution — security regression', () => {
+  it('guards against __proto__ prototype pollution: security regression', () => {
     const data = [
       { key: '__proto__', v: { polluted: true } },
       { key: 'safe', v: 1 },

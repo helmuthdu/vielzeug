@@ -9,20 +9,20 @@ export type OreGridItemProps = {
   align?: 'start' | 'center' | 'end' | 'stretch';
   /** Named grid area to place the item into. */
   area?: string;
-  /** Explicit grid-column value — overrides col-span (e.g. '2 / 5', 'span 3', '1 / -1'). */
+  /** Explicit grid-column value: overrides col-span (e.g. '2 / 5', 'span 3', '1 / -1'). */
   col?: string;
   /** Span N columns. Use 'full' to span all columns (1 / -1). */
   colSpan?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full';
   /** Justify self horizontally within the grid cell */
   justify?: 'start' | 'center' | 'end' | 'stretch';
-  /** Explicit grid-row value — overrides row-span (e.g. '1 / 3', 'span 2'). */
+  /** Explicit grid-row value: overrides row-span (e.g. '1 / 3', 'span 2'). */
   row?: string;
   /** Span N rows. Use 'full' to span all rows (1 / -1). */
   rowSpan?: '1' | '2' | '3' | '4' | '5' | '6' | 'full';
 };
 
 /**
- * ore-grid-item — A grid cell with declarative placement and span control.
+ * ore-grid-item: A grid cell with declarative placement and span control.
  *
  * Use `col-span` / `row-span` for the common case of spanning columns/rows.
  * Use `col` / `row` for full CSS grid-column / grid-row shorthand power

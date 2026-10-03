@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Grouped List (Headers + Rows)'
+title: 'Scroll Examples: Grouped List (Headers + Rows)'
 description: 'Grouped List (Headers + Rows) examples for scroll.'
 ---
 
@@ -90,7 +90,7 @@ virt.dispose();
 
 ### Pitfalls
 
-- `update(sections)` rebuilds the flat index from scratch. Pass the full sections array — not a partial diff.
+- `update(sections)` rebuilds the flat index from scratch. Pass the full sections array: not a partial diff.
 - `stickyHeader` is `null` when the scroll position is at the very top of the list (before any section header has scrolled out of view). Render it conditionally.
 - `scrollToSection` and `scrollToItem` are silent no-ops for out-of-range indices.
 

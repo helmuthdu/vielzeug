@@ -1,6 +1,6 @@
 # @vielzeug/arsenal
 
-> Non-trivial TypeScript utilities — retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections
+> Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections
 
 ## Installation
 
@@ -44,4 +44,4 @@ pool.dispose();
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

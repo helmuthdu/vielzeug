@@ -51,7 +51,7 @@ export type KeymapEvent =
  * A single ordered binding.
  *
  * Each binding has an explicit `id` (string) so duplicate shortcuts can coexist
- * with different ids — `unbind(id)` removes by id, not by shortcut string.
+ * with different ids: `unbind(id)` removes by id, not by shortcut string.
  *
  * @example
  * const map = createKeymap([

@@ -1,5 +1,5 @@
 ---
-title: Ledger — Reversible async history
+title: 'Ledger: Reversible async history'
 description: Serialized reversible command history with cancellation ownership and atomic reactive snapshots.
 package: ledger
 category: utilities
@@ -89,13 +89,13 @@ ledger.dispose();
 
 <div class="features-grid">
 
-- `createLedger()` — Create serialized reversible command history
-- `state` — Read atomic queue, undo, redo, and acceptance state
-- `compose()` — Combine reversible commands into one reversible command
-- `whenIdle()` — Await queued and active operation settlement
-- `LedgerCancelledError` — Distinguish cancellation from execution failure
-- `maxHistory` — Keep a non-negative safe-integer undo depth
-- `[Symbol.dispose]()` — Seal, abort, and clear a ledger owner
+- `createLedger()`: Create serialized reversible command history
+- `state`: Read atomic queue, undo, redo, and acceptance state
+- `compose()`: Combine reversible commands into one reversible command
+- `whenIdle()`: Await queued and active operation settlement
+- `LedgerCancelledError`: Distinguish cancellation from execution failure
+- `maxHistory`: Keep a non-negative safe-integer undo depth
+- `[Symbol.dispose]()`: Seal, abort, and clear a ledger owner
 
 </div>
 
@@ -114,10 +114,10 @@ ledger.dispose();
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — Project Ledger's structural state readable into a signal when reactive derivations are needed.
-- [Keymap](/keymap/) — Route undo and redo shortcuts to a Ledger error boundary.
-- [Forge](/forge/) — Record reversible form transitions.
-- [Vault](/vault/) — Persist application snapshots outside transient undo history.
+- [Ripple](/ripple/): Project Ledger's structural state readable into a signal when reactive derivations are needed.
+- [Keymap](/keymap/): Route undo and redo shortcuts to a Ledger error boundary.
+- [Forge](/forge/): Record reversible form transitions.
+- [Vault](/vault/): Persist application snapshots outside transient undo history.
 
 </div>
 

@@ -1,6 +1,6 @@
 # @vielzeug/tavern
 
-> Table sessions over mesh — host-owned state replication with guest command forwarding
+> Table sessions over mesh: host-owned state replication with guest command forwarding
 
 ## Installation
 
@@ -48,4 +48,4 @@ guest.sendCommand('doc-1', 'rename', ['Quarterly report']);
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.

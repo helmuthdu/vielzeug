@@ -1,5 +1,5 @@
 ---
-title: 'Spell Examples — Async Business Rules'
+title: 'Spell Examples: Async Business Rules'
 description: 'Attach asynchronous business rules to spell schemas using checkAsync() and parse them safely.'
 ---
 

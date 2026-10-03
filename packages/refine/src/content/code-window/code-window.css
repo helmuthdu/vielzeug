@@ -70,7 +70,7 @@
     border-inline-end: var(--border) solid var(--_border-color);
   }
 
-  /* Authentic macOS traffic-light palette — muted so they don't fight the content */
+  /* Authentic macOS traffic-light palette: muted so they don't fight the content */
   .dots span {
     display: block;
     width: var(--size-3);

@@ -1,6 +1,6 @@
 # QR Code
 
-A QR code display component powered by `@vielzeug/sigil`. Encodes the `value` payload into an inline SVG — themeable via `currentColor`, crisp at any scale, and requiring no canvas or external library. Payloads that exceed QR capacity render an error state and emit `error` instead of throwing.
+A QR code display component powered by `@vielzeug/sigil`. Encodes the `value` payload into an inline SVG: themeable via `currentColor`, crisp at any scale, and requiring no canvas or external library. Payloads that exceed QR capacity render an error state and emit `error` instead of throwing.
 
 ## Variants
 
@@ -18,7 +18,7 @@ Transparent background; module color inherits `currentColor`. Works on any surfa
 
 ### Card
 
-Themed background surface with the component's border radius. Preferred when the code sits on a busy or colored backdrop — scanners need a light quiet zone.
+Themed background surface with the component's border radius. Preferred when the code sits on a busy or colored backdrop: scanners need a light quiet zone.
 
 <ComponentPreview center vertical>
 
@@ -156,4 +156,4 @@ Higher levels tolerate more damage (logos, print wear) at the cost of a denser m
 
 ## Accessibility
 
-The SVG carries `role="img"` with `aria-label` from `label` and a `<title>` element — give `label` a meaningful description of what the code *does* ("Pairing code", "Wi-Fi join code"), not the payload itself. The error state uses `role="alert"`. On dark surfaces prefer `variant="card"` or set `--qr-code-light` so the quiet zone keeps contrast for scanners.
+The SVG carries `role="img"` with `aria-label` from `label` and a `<title>` element: give `label` a meaningful description of what the code *does* ("Pairing code", "Wi-Fi join code"), not the payload itself. The error state uses `role="alert"`. On dark surfaces prefer `variant="card"` or set `--qr-code-light` so the quiet zone keeps contrast for scanners.

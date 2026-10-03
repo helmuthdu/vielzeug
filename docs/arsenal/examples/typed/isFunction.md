@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isFunction'
+title: 'Arsenal Examples: isFunction'
 description: 'isFunction example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isFunction example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to check whether a value is callable — for example accepting either a static value or a factory function.
+You need to check whether a value is callable: for example accepting either a static value or a factory function.
 
 ### Solution
 

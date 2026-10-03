@@ -1,5 +1,5 @@
 ---
-title: Courier — Usage Guide
+title: 'Courier: Usage Guide'
 description: Use one Courier client for typed HTTP, explicit cached reads, prefetching, immutable middleware, and structured errors.
 ---
 
@@ -39,7 +39,7 @@ await courier.patch('/posts/{id}', {
 
 ## Default Headers
 
-Set default headers at construction. They are merged (lowercased) into every request and cannot be mutated at runtime — middleware handles dynamic headers.
+Set default headers at construction. They are merged (lowercased) into every request and cannot be mutated at runtime: middleware handles dynamic headers.
 
 ```ts
 const courier = createCourier({
@@ -50,7 +50,7 @@ const courier = createCourier({
 
 ## Middleware
 
-Middleware is an immutable chain configured once at construction. Each middleware receives an immutable `FetchContext` and a `next` function. Use `ctx.withHeaders()` or `ctx.withInit()` to derive a new context — never mutate `ctx` directly.
+Middleware is an immutable chain configured once at construction. Each middleware receives an immutable `FetchContext` and a `next` function. Use `ctx.withHeaders()` or `ctx.withInit()` to derive a new context: never mutate `ctx` directly.
 
 ```ts
 import { withBearerAuth, withRequestId, createCourier } from '@vielzeug/courier';
@@ -125,7 +125,7 @@ const buffer = await courier.request('/files/{id}', {
 
 ## Schema Validation
 
-Pass a `schema` with a `parse(data)` method to validate the parsed body. Any validator works — a `@vielzeug/spell` schema or a plain function wrapper. A failed parse throws `CourierSchemaValidationError`.
+Pass a `schema` with a `parse(data)` method to validate the parsed body. Any validator works: a `@vielzeug/spell` schema or a plain function wrapper. A failed parse throws `CourierSchemaValidationError`.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -137,7 +137,7 @@ const user = await courier.get('/users/1', {
 
 ## Cancellation and Disposal
 
-Pass a `signal` to cancel one request. `cancelAll()` aborts every active request without disposing the client. `dispose()` aborts active work and marks the client unusable — call it only at the final application or request boundary.
+Pass a `signal` to cancel one request. `cancelAll()` aborts every active request without disposing the client. `dispose()` aborts active work and marks the client unusable: call it only at the final application or request boundary.
 
 ```ts
 const controller = new AbortController();

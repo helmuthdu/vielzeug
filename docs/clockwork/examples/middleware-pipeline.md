@@ -1,5 +1,5 @@
 ---
-title: 'Clockwork Examples — Event Boundaries'
+title: 'Clockwork Examples: Event Boundaries'
 description: 'Validate and authorize input before sending domain events to an actor.'
 ---
 

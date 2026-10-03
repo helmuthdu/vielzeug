@@ -1,5 +1,5 @@
 /**
- * # Confidence boundary — read first
+ * # Confidence boundary: read first
  *
  * `dispatch` is a **low-level synthetic-event dispatch API**. It fires a caller-
  * supplied DOM `Event` synchronously and returns the `dispatchEvent`
@@ -8,9 +8,9 @@
  * hit-testing, and no trust flag (`event.isTrusted` is always `false`).
  *
  * Use it to drive event handlers in unit/integration tests where you control
- * the exact event shape. For **behavioral confidence** — that a real click
+ * the exact event shape. For **behavioral confidence**, that a real click
  * actually activates a control, that focus management works end-to-end, that
- * keyboard shortcuts fire under a real input device — write Playwright tests.
+ * keyboard shortcuts fire under a real input device: write Playwright tests.
  * Assay deliberately stops at the dispatch boundary; anything that depends on
  * the browser's interaction semantics belongs in a browser-driven suite.
  */

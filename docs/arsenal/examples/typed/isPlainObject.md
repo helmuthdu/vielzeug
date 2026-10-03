@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — isPlainObject'
+title: 'Arsenal Examples: isPlainObject'
 description: 'isPlainObject example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'isPlainObject example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to distinguish plain data objects from class instances, arrays, and built-ins — for example deciding whether to deep-merge or use as-is.
+You need to distinguish plain data objects from class instances, arrays, and built-ins: for example deciding whether to deep-merge or use as-is.
 
 ### Solution
 
@@ -20,8 +20,8 @@ isPlainObject({}); // true
 isPlainObject({ a: 1 }); // true
 isPlainObject(Object.create(null)); // true
 
-isPlainObject([]); // false — array
-isPlainObject(new Date()); // false — class instance
+isPlainObject([]); // false: array
+isPlainObject(new Date()); // false: class instance
 isPlainObject(null); // false
 ```
 

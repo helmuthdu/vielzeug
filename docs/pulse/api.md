@@ -1,5 +1,5 @@
 ---
-title: API — Pulse
+title: 'API: Pulse'
 description: Complete API reference for Pulse, including schema types, options, scopes, and error classes.
 package: pulse
 category: websockets
@@ -13,7 +13,7 @@ category: websockets
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createPulse()` | Create a typed WebSocket session instance. | Sync (returns `Pulse`) | Does not open the connection — call `connect()`. |
+| `createPulse()` | Create a typed WebSocket session instance. | Sync (returns `Pulse`) | Does not open the connection: call `connect()`. |
 | `Pulse` | Main instance: channels, rooms, messaging, lifecycle. | Sync methods, async `connect()`/`wait()` | `send()` throws while disconnected. |
 | `PulseChannel` | Scoped channel namespace with independent disposal. | Sync methods, async `wait()` | Each call returns a new scope; ref-counted subscription. |
 | `RoomScope` | Ref-counted room membership with optional presence. | Sync methods, async `joined` | `joined` rejects on transport close or timeout. |
@@ -52,7 +52,7 @@ Creates a Pulse instance. The WebSocket is not opened until `connect()` is calle
 
 ### Returns
 
-`Pulse<S>` — the Pulse instance.
+`Pulse<S>`: the Pulse instance.
 
 ---
 
@@ -92,9 +92,9 @@ type PulseOptions = {
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `heartbeat` | `boolean \| HeartbeatOptions` | `false` | Ping/pong keep-alive. |
-| `protocols` | `string \| string[]` | — | Sub-protocols passed to the WebSocket constructor. |
+| `protocols` | `string \| string[]` | N/A | Sub-protocols passed to the WebSocket constructor. |
 | `reconnect` | `boolean \| ReconnectOptions` | `false` | Auto-reconnect on unexpected close. |
-| `transform` | `OutgoingTransform` | — | Transform or filter outgoing application messages. |
+| `transform` | `OutgoingTransform` | N/A | Transform or filter outgoing application messages. |
 
 ---
 
@@ -210,7 +210,7 @@ Subscribes to a typed server event. Returns an unsubscribe function.
 
 ### `once(event, handler)`
 
-Subscribes once — auto-removes after first invocation.
+Subscribes once: auto-removes after first invocation.
 
 ### `send(event, payload)`
 
@@ -279,7 +279,7 @@ A discriminated union of lifecycle events emitted by a `Pulse` instance. Inspect
 | --- | --- | --- |
 | `status-change` | `status: PulseStatus` | The connection status transitions. |
 | `error` | `error: PulseError` | A typed transport or protocol error occurs. |
-| `dispose` | — | The instance is disposed. |
+| `dispose` | N/A | The instance is disposed. |
 
 ---
 

@@ -1,6 +1,6 @@
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
-// Camera interaction (getUserMedia + BarcodeDetector) cannot run in CI — Chromium
+// Camera interaction (getUserMedia + BarcodeDetector) cannot run in CI: Chromium
 // lacks a real camera and jsdom path is covered by the injected-factory unit tests.
 // e2e coverage is limited to the static states: layout + accessibility.
 test.describe('Layout', () => {

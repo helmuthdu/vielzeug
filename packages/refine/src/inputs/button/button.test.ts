@@ -53,11 +53,11 @@ describe('ore-button', () => {
   });
 
   // Regression guard: rainbowEffectMixin/shineEffectMixin take a CSS selector
-  // matched against the shadow DOM's actual root element — button.ts used to
+  // matched against the shadow DOM's actual root element: button.ts used to
   // pass the bare word 'button', a TYPE selector for a literal <button> tag.
   // ore-button never renders one (see "renders a visual part element" above,
   // and Link mode below: it's <span part="button"> or <a part="button">), so
-  // the effect rule matched nothing, ever, in any browser — not a stylesheet
+  // the effect rule matched nothing, ever, in any browser: not a stylesheet
   // presence check (that would have passed even with the bug), an actual
   // querySelector() against the live shadow DOM with the rule's own selector.
   describe('Effects', () => {
@@ -69,7 +69,7 @@ describe('ore-button', () => {
       expect(selectors.length).toBeGreaterThan(0);
       expect(selectors.every((s) => s.includes('[part="button"]'))).toBe(true);
       // The part after the last space in `:host([effect='rainbow']) [part="button"]`
-      // is a plain shadow-DOM selector — must resolve against the real element.
+      // is a plain shadow-DOM selector: must resolve against the real element.
       expect(fixture.query('[part="button"]')).toBeTruthy();
     });
 
@@ -85,7 +85,7 @@ describe('ore-button', () => {
 
   // Same bug class as Effects above: frostVariantMixin also takes a selector
   // matched against the shadow DOM. button.ts used to pass the bare word
-  // 'button' here too — the frost variant's halo shadow (var(--_theme-halo))
+  // 'button' here too: the frost variant's halo shadow (var(--_theme-halo))
   // and backdrop-filter never applied, in any browser.
   describe('Frost variant halo', () => {
     it("frost variant CSS targets the real [part='button'] element, not a <button> tag", async () => {
@@ -99,18 +99,18 @@ describe('ore-button', () => {
   });
 
   // Regression guard: the hover/active rule's own comment says "halo border
-  // effect", but the box-shadow declaration only listed --_theme-shadow —
+  // effect", but the box-shadow declaration only listed --_theme-shadow :
   // --_theme-halo was never actually in it, so hovering/pressing a button
   // never showed the halo glow the comment (and :focus-visible's own rule,
   // right above it) both promise.
   //
   // button.css authors its rules inside `@layer refine.base/overrides/
   // variants { ... }` (unlike the mixin-generated CSS the Effects/Frost
-  // tests above check, which isn't layer-wrapped) — jsdom's CSSOM silently
+  // tests above check, which isn't layer-wrapped): jsdom's CSSOM silently
   // drops every rule inside an `@layer` block (see refine's own AGENTS.md,
   // Accessibility testing section), so `adoptedStyleSheets.cssRules` can't
   // see this rule at all under jsdom. Assert against the raw CSS source
-  // text instead — a real browser is the correct place to verify the
+  // text instead: a real browser is the correct place to verify the
   // resulting *rendering*, this only guards the source declaration itself.
   describe('Hover/active halo', () => {
     it('hover/active rule declares both --_theme-shadow and --_theme-halo', () => {
@@ -130,7 +130,7 @@ describe('ore-button', () => {
     });
 
     // `[part='button']`'s own height otherwise comes from a fixed size-preset var
-    // (`--_height`) rather than the host's box — jsdom drops `@layer`-wrapped rules from the
+    // (`--_height`) rather than the host's box: jsdom drops `@layer`-wrapped rules from the
     // CSSOM (see the Hover/active halo test above for the same limitation), so this asserts the
     // raw CSS source's declarations directly; a real browser is where the actual rendering
     // (list-item.css's e2e layout suite) is verified.

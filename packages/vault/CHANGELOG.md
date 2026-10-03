@@ -37,7 +37,7 @@ Sun, 30 Aug 2026 13:16:08 GMT
 
 ### Minor changes
 
-- refactor: table() now enforces VaultKey at compile time — key field type must extend number | string. Remove IndexedDbVaultStore and SQLiteVaultStore type aliases — use TransactionalVaultStore from the root entry.
+- refactor: table() now enforces VaultKey at compile time: key field type must extend number | string. Remove IndexedDbVaultStore and SQLiteVaultStore type aliases: use TransactionalVaultStore from the root entry.
 
 ## 2.4.0
 Wed, 26 Aug 2026 17:29:55 GMT

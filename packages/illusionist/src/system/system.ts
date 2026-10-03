@@ -58,7 +58,7 @@ export function semver(ctx: IllusionistContext, options?: { maxMajor?: number; i
 /**
  * Generates a random UUID via `crypto.randomUUID()`.
  *
- * **Not deterministic** — ignores the seeded `RandomSource` and always uses
+ * **Not deterministic**: ignores the seeded `RandomSource` and always uses
  * cryptographic randomness. Use this for unique identifiers where
  * unpredictability matters more than reproducibility.
  */

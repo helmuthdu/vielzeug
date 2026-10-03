@@ -1,5 +1,5 @@
 ---
-title: Sentinel — API Reference
+title: 'Sentinel: API Reference'
 description: Factory signatures, options, state types, lifecycle handles, and errors for Sentinel.
 ---
 

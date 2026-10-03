@@ -1,7 +1,7 @@
 /**
  * Tag a published package version and create its GitHub release.
  *
- * Refuses to overwrite an existing tag rather than force-tagging over it — a tag that already
+ * Refuses to overwrite an existing tag rather than force-tagging over it: a tag that already
  * exists means this version was published without ever being tagged, or this release ran
  * twice, and either way that's a bug worth surfacing loudly instead of silently rewriting.
  */
@@ -12,7 +12,7 @@ import path from 'node:path';
 
 import { run as sharedRun } from '../lib/cli.mjs';
 
-// This module's every real call is meant to be seen live (git/gh output, prompts) — inherit
+// This module's every real call is meant to be seen live (git/gh output, prompts): inherit
 // stdio by default instead of the shared run()'s default of capturing it.
 function defaultRun(cmd, args, options) {
   return sharedRun(cmd, args, { inherit: true, ...options });
@@ -51,7 +51,7 @@ export function tagAndRelease({ dryRun = false, folder, package: pkg, run = defa
 
   if (tagExists(tag, { run })) {
     throw new Error(
-      `Tag ${tag} already exists — refusing to overwrite it. This means this version was published without ever ` +
+      `Tag ${tag} already exists: refusing to overwrite it. This means this version was published without ever ` +
         `being tagged, or this release ran twice; investigate before retagging by hand.`,
     );
   }

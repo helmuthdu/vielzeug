@@ -3,10 +3,10 @@
  * Apply pending change files as a CalVer lockstep release train.
  *
  * Every publishable package in rush.json is stamped with the same train number
- * (`YY.MM.N` — see train-version.mjs); packages with pending change files additionally get
+ * (`YY.MM.N`: see train-version.mjs); packages with pending change files additionally get
  * a CHANGELOG entry for it, their change files are consumed, and one commit lands the
  * whole train. A package is a publish candidate only when its CHANGELOG has an entry for
- * the current version — publish-missing.mjs enforces the same rule — so the lockstep stamp
+ * the current version: publish-missing.mjs enforces the same rule, so the lockstep stamp
  * never republishes an unchanged package: npm simply never sees the trains a package
  * didn't ride.
  *
@@ -36,8 +36,8 @@ const SECTIONS = [
 
 /**
  * Relative paths (e.g. "@vielzeug/ore/agent_123.json") of every pending change file. Rush
- * groups these under a directory per full scoped package name, which — because the name
- * itself contains a "/" — is really two nested directory levels (@vielzeug/ore), so this
+ * groups these under a directory per full scoped package name, which: because the name
+ * itself contains a "/": is really two nested directory levels (@vielzeug/ore), so this
  * walks recursively rather than assuming a fixed depth.
  */
 export function listChangeFiles(changesDir) {
@@ -65,7 +65,7 @@ export function listChangedPackageNames(root = repoRoot) {
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 
-/** Best-effort HEAD sha for changelog entry provenance — absent in tests and any repo
+/** Best-effort HEAD sha for changelog entry provenance: absent in tests and any repo
  *  without git history, and never worth failing a release over. */
 function headCommit(root, run) {
   try {
@@ -150,7 +150,7 @@ function stampManifests(packages, train, root) {
  * Applies the pending change files as a release train and returns
  * `{ changedPackages, train }`. With `packageName`, only that package's change files are
  * consumed and changelogged; the train stamp still covers every package.
- * `dryRun` computes the train and reports what it would do without touching any file —
+ * `dryRun` computes the train and reports what it would do without touching any file :
  * the whole point of a dry run is that pending change files survive it.
  */
 export function applyTrain(packageName, { dryRun = false, now = new Date(), root = repoRoot, run = defaultRun } = {}) {

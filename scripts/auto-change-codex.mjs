@@ -4,10 +4,10 @@
  *
  * codex has no @vielzeug/* dependency edges, so it never gets swept up in another package's
  * release. But `prepare:data` bundles all of docs/ into codex's published `data/` dir at build
- * time — so a docs-only change still changes what codex ships to npm, and needs its own release.
+ * time, so a docs-only change still changes what codex ships to npm, and needs its own release.
  * Humans forget this every time (see the codex AGENTS.md note); a git hook doesn't.
  *
- * Wired as a lefthook pre-commit step (glob: 'docs/**') — see lefthook.yml.
+ * Wired as a lefthook pre-commit step (glob: 'docs/**'): see lefthook.yml.
  *
  * Skips if a change file for codex is already pending (one is enough between releases; rush
  * deletes consumed change files on release, so the dir is empty again afterwards).
@@ -37,7 +37,7 @@ if (isMain(import.meta.url)) {
     const filepath = ensureCodexChangeFile();
     console.log(filepath ? `Written: ${path.relative(ROOT, filepath)}` : 'Skipped: codex change already pending');
   } catch (err) {
-    console.error(err); // consistent with every other script's isMain catch — see scripts/AGENTS.md
+    console.error(err); // consistent with every other script's isMain catch: see scripts/AGENTS.md
     process.exitCode = 1;
   }
 }

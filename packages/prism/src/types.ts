@@ -106,7 +106,7 @@ export interface CrosshairConfig {
   /**
    * Whether the crosshair snaps to the nearest datum (default `true`) or follows
    * the raw mouse position (`false`). Tooltip/`onHover` data is always based on
-   * the nearest datum regardless of this setting — only the crosshair line's
+   * the nearest datum regardless of this setting: only the crosshair line's
    * position is affected.
    */
   snap?: boolean;
@@ -176,10 +176,10 @@ export interface BarSeriesConfig extends Series {
 }
 
 /**
- * `grouped`            — vertical grouped bars (default)
- * `stacked`            — vertical stacked bars
- * `grouped-horizontal` — horizontal grouped bars
- * `stacked-horizontal` — horizontal stacked bars
+ * `grouped`: vertical grouped bars (default)
+ * `stacked`: vertical stacked bars
+ * `grouped-horizontal`: horizontal grouped bars
+ * `stacked-horizontal`: horizontal stacked bars
  */
 export type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked-horizontal';
 

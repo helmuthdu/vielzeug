@@ -1,12 +1,12 @@
 ---
 title: Getting Started
-description: Vielzeug is a collection of focused TypeScript packages — each one does one thing well, with zero external dependencies and full tree-shaking.
+description: 'Vielzeug is a collection of focused TypeScript packages: each one does one thing well, with zero external dependencies and full tree-shaking.'
 sidebar: false
 ---
 
 # Getting Started
 
-**Vielzeug** — a German-inspired name meaning roughly "many things" — is a collection of focused TypeScript packages. Each one solves a single problem. You pick what you need, import only what you use, and the rest never ships.
+**Vielzeug**: a German-inspired name meaning roughly "many things": is a collection of focused TypeScript packages. Each one solves a single problem. You pick what you need, import only what you use, and the rest never ships.
 
 Zero external dependencies. Full tree-shaking. TypeScript-first throughout.
 
@@ -45,7 +45,7 @@ The packages most projects reach for first.
 
 ### Ripple
 
-Fine-grained reactive state — signals, computed values, effects, stores, and reactive scopes.
+Fine-grained reactive state: signals, computed values, effects, stores, and reactive scopes.
 
 ```typescript
 import { signal, computed, effect } from '@vielzeug/ripple';
@@ -64,7 +64,7 @@ Most other packages build on Ripple. Learn it first.
 
 ### Ore
 
-Custom element authoring — reactive templates, signals, slots, and automatic lifecycle management.
+Custom element authoring: reactive templates, signals, slots, and automatic lifecycle management.
 
 ```typescript
 import { define, html } from '@vielzeug/ore';
@@ -80,7 +80,7 @@ define('my-counter', () => {
 
 ### Arsenal
 
-100+ tree-shakeable utilities — array, object, string, async, math, cache, and more. Nothing you don't import, nothing you pay for.
+100+ tree-shakeable utilities: array, object, string, async, math, cache, and more. Nothing you don't import, nothing you pay for.
 
 ```typescript
 import { debounce, groupBy, clamp, isEqual } from '@vielzeug/arsenal';
@@ -98,7 +98,7 @@ Packages for the tasks that come up in most real applications.
 
 ### Refine
 
-Accessible, themeable web components built on Ore — buttons, inputs, modals, and more.
+Accessible, themeable web components built on Ore: buttons, inputs, modals, and more.
 
 ```html
 <ore-button variant="solid" color="primary">Save</ore-button>
@@ -130,13 +130,13 @@ form.field('email').set('ada@example.com');
 await form.submit((value) => fetch('/api/users', { method: 'POST', body: JSON.stringify(value) }));
 ```
 
-Pairs with [Spell](#spell) — one schema for both form and API validation.
+Pairs with [Spell](#spell): one schema for both form and API validation.
 
 [Forge docs →](/forge/)
 
 ### Spell
 
-Schema-first validation and parsing — runtime type checking, coercion, and custom refinements.
+Schema-first validation and parsing: runtime type checking, coercion, and custom refinements.
 
 ```typescript
 import { s } from '@vielzeug/spell';
@@ -170,7 +170,7 @@ await courier.request(`/users/${id}`, { method: 'PATCH', body: { name: 'Alice' }
 
 ### Vault
 
-Storage adapter for IndexedDB and localStorage — TTL expiration, reactive signals, schema validation, and a query builder.
+Storage adapter for IndexedDB and localStorage: TTL expiration, reactive signals, schema validation, and a query builder.
 
 ```typescript
 import { s } from '@vielzeug/spell';
@@ -193,7 +193,7 @@ const admins = await db.query('users').equals('role', 'admin').toArray();
 
 ### Wayfinder
 
-Typed client-side router — guards, middleware, history management, and nested routes.
+Typed client-side router: guards, middleware, history management, and nested routes.
 
 ```typescript
 import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder';
@@ -223,7 +223,7 @@ Reach for these when the problem calls for them.
 
 ### Clockwork
 
-Typed finite state machines — pure transitions, plain readonly actor snapshots, owned actors, timers, and async invokes.
+Typed finite state machines: pure transitions, plain readonly actor snapshots, owned actors, timers, and async invokes.
 
 ```typescript
 import { defineMachine } from '@vielzeug/clockwork';
@@ -275,7 +275,7 @@ subject.send('hello'); // after 300 ms: hello
 
 ### Ward
 
-Role-based access control — ordered rules, declarative roles, wildcard patterns, and composable predicates.
+Role-based access control: ordered rules, declarative roles, wildcard patterns, and composable predicates.
 
 ```typescript
 import { allow, createWard, predicate, WILDCARD } from '@vielzeug/ward';
@@ -295,7 +295,7 @@ if (ward.decide({ action: 'delete', principal: currentUser, resource: 'posts' })
 
 ### Conduit
 
-Lightweight dependency injection — singletons, transient instances, factories, and child containers.
+Lightweight dependency injection: singletons, transient instances, factories, and child containers.
 
 ```typescript
 import { createContainer, token } from '@vielzeug/conduit';
@@ -316,10 +316,10 @@ const api = await container.resolve(ApiToken);
 
 | Package                          | What it does                                                                                       |
 | -------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **[Prism](/prism/)**             | Reactive SVG charts — line, bar, area, pie, and sparkline with signal-driven updates               |
+| **[Prism](/prism/)**             | Reactive SVG charts: line, bar, area, pie, and sparkline with signal-driven updates               |
 | **[Orbit](/orbit/)**             | Floating element positioning for tooltips, dropdowns, menus, and popovers                          |
 | **[Scroll](/scroll/)**           | Virtual list engine with variable-height rows, smooth scrolling, and zero layout thrash            |
-| **[Sentinel](/sentinel/)**       | Reactive observables for external environment state — viewport, network, media queries, element sizing |
+| **[Sentinel](/sentinel/)**       | Reactive observables for external environment state: viewport, network, media queries, element sizing |
 | **[Dnd](/dnd/)**                 | Framework-agnostic drag-and-drop with sortable lists, file-drop zones, and MIME filtering          |
 | **[Focus](/focus/)**             | Keyboard list navigation and focus restoration primitives for composite widgets                      |
 | **[Gesture](/gesture/)**         | Pointer swipe recognition primitives with lifecycle-owned handles                                    |
@@ -327,25 +327,25 @@ const api = await container.resolve(ApiToken);
 | **[Sourcerer](/sourcerer/)**     | Typed data-source adapter for pagination, filtering, sorting, search, and infinite scroll          |
 | **[Pulse](/pulse/)**             | Typed WebSocket client with channel multiplexing, presence tracking, and auto-reconnect            |
 | **[Lingua](/lingua/)**           | Typed translations, pluralization, lazy locale catalogs, and SSR support                           |
-| **[Herald](/herald/)**           | Typed event bus — pub/sub with namespaces, wildcards, and once-listeners                           |
+| **[Herald](/herald/)**           | Typed event bus: pub/sub with namespaces, wildcards, and once-listeners                           |
 | **[Keymap](/keymap/)**           | Headless keyboard shortcut manager with chord sequences, modifier aliases, and context guards      |
 | **[Ledger](/ledger/)**           | Async undo/redo command history with Ripple signals for reactive `canUndo`/`canRedo` state         |
 | **[Rune](/rune/)**               | Structured logging with scoped loggers, pluggable transports, and log levels                       |
 | **[Familiar](/familiar/)**       | Typed Web Worker pool with task queuing, streaming, and AbortSignal cancellation                   |
 | **[Postmaster](/postmaster/)**   | Typed durable job outbox with leased processing, retries, and dead-letter recovery                 |
-| **[Tempo](/tempo/)**             | Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting            |
+| **[Tempo](/tempo/)**             | Date and time utilities: timezone conversion, DST-safe arithmetic, and Intl formatting            |
 | **[Coins](/coins/)**             | Bigint-based monetary arithmetic with currency formatting and rounding policies                    |
-| **[Assay](/assay/)**             | Framework-agnostic DOM testing primitives — scoped queries, event dispatch, and async waiting      |
-| **[Mesh](/mesh/)**               | Backendless P2P WebRTC sessions with manual pairing — invitation/answer codes, typed protocols      |
+| **[Assay](/assay/)**             | Framework-agnostic DOM testing primitives: scoped queries, event dispatch, and async waiting      |
+| **[Mesh](/mesh/)**               | Backendless P2P WebRTC sessions with manual pairing: invitation/answer codes, typed protocols      |
 | **[Sigil](/sigil/)**             | SVG QR code generation and camera scanning with a unified result shape                            |
-| **[Tavern](/tavern/)**           | Table session replication over mesh — one host owns the state, guests mirror and forward commands |
+| **[Tavern](/tavern/)**           | Table session replication over mesh: one host owns the state, guests mirror and forward commands |
 
 ## Packages That Work Well Together
 
 | Combination                 | Why                                                                                                          |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Ripple + Ore**          | Ore templates are powered by Ripple signals — same reactive primitives, zero glue                          |
-| **Spell + Forge**           | Pass a Spell schema as a field validator — one schema for both form and API                                  |
+| **Ripple + Ore**          | Ore templates are powered by Ripple signals: same reactive primitives, zero glue                          |
+| **Spell + Forge**           | Pass a Spell schema as a field validator: one schema for both form and API                                  |
 | **Courier + Ripple**        | Fetch with caching, push results into a signal for reactive rendering                                        |
 | **Vault + Courier**         | Persist query results in IndexedDB for offline-capable apps                                                  |
 | **Ward + Wayfinder**        | Check permissions in router middleware before the route handler runs                                         |
@@ -356,29 +356,29 @@ const api = await container.resolve(ApiToken);
 | **Dnd + Scroll**            | Combine sortable drag handles with a virtual list for large reorderable datasets                             |
 | **Focus + Refine**          | Use Focus primitives for roving keyboard navigation and return-focus behavior in overlay/list components      |
 | **Gesture + Refine**        | Reuse one swipe gesture model across overlays and interactive content components                              |
-| **Clockwork + Ripple**      | Clockwork state and context are signals — bind them directly to effects or UI templates                      |
+| **Clockwork + Ripple**      | Clockwork state and context are signals: bind them directly to effects or UI templates                      |
 | **Clockwork + Ward**        | Call Ward predicates inside Clockwork guards to block unauthorized transitions                               |
 | **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                    |
 | **Flux + Ripple**           | `fromStore()` bridges signal snapshots into Flux pipelines; explicit subscriptions write results back                         |
 | **Flux + Herald**           | `fromSubscribe()` bridges typed bus events; explicit subscriptions publish results back                                        |
 | **Flux + Sourcerer**        | `fromStore()` adapts query snapshots into stream pipelines                                                                      |
 | **Flux + Pulse**            | `fromSubscribe()` bridges WebSocket events while `fromStore()` bridges presence snapshots                                      |
-| **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
+| **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals: query and results are reactive computed values  |
 | **Scout + Sourcerer**       | `toSearchMatcher()` adapts a Scout index into a filter predicate for derived arrays            |
 | **Keymap + Ledger**         | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |
-| **Keymap + Herald**         | Publish shortcut events to a bus instead of calling handlers directly — decouples keyboard from logic       |
-| **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values — bind directly to UI templates       |
-| **Illusionist + Coins**     | `commerce.price()` and `finance.amount()` return coins `Money` — format, add, or allocate directly          |
-| **Illusionist + Tempo**     | `date.past()` / `future()` / `recent()` return tempo `Temporal.ZonedDateTime` — shift, compare, or format   |
-| **Tavern + Ledger**         | Commands applied through the tavern host table land in the ledger — remote actions get undo like local ones |
-| **Tavern + Herald**         | Use a Herald bus as the notice stream tavern relays — typed keys cross the wire, each client translates     |
+| **Keymap + Herald**         | Publish shortcut events to a bus instead of calling handlers directly: decouples keyboard from logic       |
+| **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values: bind directly to UI templates       |
+| **Illusionist + Coins**     | `commerce.price()` and `finance.amount()` return coins `Money`: format, add, or allocate directly          |
+| **Illusionist + Tempo**     | `date.past()` / `future()` / `recent()` return tempo `Temporal.ZonedDateTime`: shift, compare, or format   |
+| **Tavern + Ledger**         | Commands applied through the tavern host table land in the ledger: remote actions get undo like local ones |
+| **Tavern + Herald**         | Use a Herald bus as the notice stream tavern relays: typed keys cross the wire, each client translates     |
 | **Postmaster + Courier**    | Wrap Courier mutations in Postmaster jobs so writes survive reloads and retry on network failure            |
 
 ## Philosophy
 
 **One problem per package.** Each package has a tight scope and does that one thing well. You pull in exactly what you need.
 
-**TypeScript first.** Types are not bolted on. Everything is designed around inference — you rarely write a type annotation and you never reach for `as any`.
+**TypeScript first.** Types are not bolted on. Everything is designed around inference: you rarely write a type annotation and you never reach for `as any`.
 
 **No magic.** No proxies chasing object mutations, no decorators, no global singletons. If you want to know what a function does, reading it is enough.
 

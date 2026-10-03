@@ -1,5 +1,5 @@
 ---
-title: Herald Examples — Continuous Event Consumption
+title: 'Herald Examples: Continuous Event Consumption'
 description: Consume ongoing typed events with a lifecycle-owned synchronous subscription.
 ---
 

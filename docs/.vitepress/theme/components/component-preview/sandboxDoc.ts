@@ -101,7 +101,7 @@ export interface SandboxDocOptions {
 }
 
 export interface SandboxDocResult {
-  /** Fragment to pass to sandbox.render(). Does not include refine CSS — pass that via styles. */
+  /** Fragment to pass to sandbox.render(). Does not include refine CSS: pass that via styles. */
   fragment: string;
 }
 
@@ -120,18 +120,18 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
     `*, *::before, *::after { box-sizing: border-box; }`,
     `html { color-scheme: ${dark ? 'dark' : 'light'}; height: fit-content; }`,
     `html, body { margin: 0; padding: 0; overflow: visible; background: transparent; font-family: var(--font-sans, system-ui, sans-serif); touch-action: manipulation; }`,
-    // Symmetric padding on all sides — the sandbox iframe auto-resizes to
+    // Symmetric padding on all sides: the sandbox iframe auto-resizes to
     // document.body's border-box height (see @vielzeug/sandbox's bridge
     // ResizeObserver), which never includes box-shadow spread. A halo/glow
     // effect (e.g. ore-button's hover/active box-shadow, which is offset
     // downward) that reaches past body's own layout box gets hard-clipped at
-    // the iframe's edge with no room below to render into — this used to be
+    // the iframe's edge with no room below to render into: this used to be
     // `padding-bottom: 0`, which is exactly why those effects showed outside
     // the preview (real page, natural space below) but not inside it.
     `body { display: flex; flex-direction: ${flexDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: ${align}; justify-content: ${justify}; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
   ].join(' ');
 
-  // The generated sandbox document only supports `<html lang="...">` — it has no
+  // The generated sandbox document only supports `<html lang="...">`: it has no
   // `dir` option, and the sandbox is created once (see useComponentPreview.ts) while `dir` can
   // toggle per render, so it can't be threaded through as a fixed sandbox-creation option
   // anyway. Applying it here via a `display: contents` wrapper instead: it establishes `dir`

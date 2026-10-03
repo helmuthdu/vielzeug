@@ -25,7 +25,7 @@ export interface ReplExecution {
 }
 
 // Everything posted from inside the sandbox is untrusted input (see @vielzeug/sandbox's own
-// "SandboxMessage data is untrusted" warning) — the iframe only ever runs code this REPL put
+// "SandboxMessage data is untrusted" warning): the iframe only ever runs code this REPL put
 // there itself, but nothing stops that code from calling `parent.postMessage` directly and
 // forging a payload that doesn't match what buildSandboxDocument.ts actually sends. Narrowing
 // here means a malformed/hostile message degrades to "ignored" instead of throwing inside the
@@ -42,7 +42,7 @@ function toOutputLevel(level: unknown): 'error' | 'log' | 'warn' {
  * Owns the single @vielzeug/sandbox instance a REPL editor executes code in, and turns its
  * postMessage protocol into a reactive `output` log.
  *
- * One sandbox is created lazily on the first run and reused for every subsequent run —
+ * One sandbox is created lazily on the first run and reused for every subsequent run :
  * `sandbox.render()` already replaces the whole iframe document (and therefore its `window`)
  * each time, so there's no cross-run state to worry about; recreating the sandbox itself
  * would only add churn.
@@ -50,7 +50,7 @@ function toOutputLevel(level: unknown): 'error' | 'log' | 'warn' {
  * Note on hung code: if user code never settles (e.g. an infinite loop), the 'repl:done'
  * message this composable waits for never arrives and `isExecuting` stays true until the
  * next run. There's no way to forcibly interrupt synchronous JS running inside the iframe
- * without a Worker (which can be `terminate()`d) — out of scope here, same limitation as
+ * without a Worker (which can be `terminate()`d): out of scope here, same limitation as
  * most browser-based code playgrounds.
  */
 export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecution {
@@ -130,11 +130,11 @@ export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecut
   // Abandons whatever the sandbox is currently running (e.g. the user switched libraries
   // mid-run) without tearing the sandbox down. render() replacing the document bumps
   // @vielzeug/sandbox's internal generation counter, and every message the abandoned run's
-  // code posts afterward carries the old generation — the sandbox package itself drops those
+  // code posts afterward carries the old generation: the sandbox package itself drops those
   // before they ever reach handleMessage(). That's simpler and more robust than this
   // composable tracking its own "is this message still relevant" state.
   //
-  // Always clears output too — a "cancel" that leaves the abandoned run's (now-meaningless)
+  // Always clears output too: a "cancel" that leaves the abandoned run's (now-meaningless)
   // output on screen isn't really a cancel from the user's point of view, so there's no
   // separate "cancel but don't clear" mode to reason about.
   function cancel(): void {
@@ -144,8 +144,8 @@ export function useReplExecution(container: Ref<HTMLElement | null>): ReplExecut
     if (!sandbox) return;
 
     // A non-empty placeholder avoids @vielzeug/sandbox's dev-only "render() called with empty
-    // HTML" warning — this is an intentional reset, not a mistake. Errors are swallowed
-    // (not reported — the user didn't ask to run anything) rather than left as an unhandled
+    // HTML" warning: this is an intentional reset, not a mistake. Errors are swallowed
+    // (not reported: the user didn't ask to run anything) rather than left as an unhandled
     // rejection.
     sandbox.render('<!-- repl reset -->').catch(() => {});
   }

@@ -8,7 +8,7 @@ import { NAVBAR_COLUMNS, PACKAGE_GROUPS } from '../packageGroups';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PACKAGES_DIR = resolve(__dirname, '../../../../../packages');
 
-/** Every directory under packages/ with a package.json — the source of truth for package count. */
+/** Every directory under packages/ with a package.json: the source of truth for package count. */
 function listPackageSlugs(): string[] {
   return readdirSync(PACKAGES_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())

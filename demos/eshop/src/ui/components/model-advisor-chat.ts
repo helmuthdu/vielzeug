@@ -117,7 +117,7 @@ export function openModelAdvisorChat(event?: Event): void {
 
 /**
  * App-specific wrapper around `ore-chat-panel`. It owns only what is unique to the
- * model advisor — the scripted replies, per-model/per-locale transcript persistence,
+ * model advisor: the scripted replies, per-model/per-locale transcript persistence,
  * and the "scroll to spec section" action semantics. All presentation, transcript
  * rendering, suggestions, composer, Escape, and focus handling come from the panel.
  */

@@ -61,7 +61,7 @@ test.describe('Layout', () => {
       const el = document.getElementById('msg') as HTMLElement & { shadowRoot: ShadowRoot };
       const content = el.shadowRoot.querySelector('.content') as HTMLElement;
       const styles = getComputedStyle(content);
-      // lineHeight may be 'normal' — fall back to fontSize * 1.2 as a conservative estimate
+      // lineHeight may be 'normal': fall back to fontSize * 1.2 as a conservative estimate
       const rawLineHeight = parseFloat(styles.lineHeight);
       const rawFontSize = parseFloat(styles.fontSize);
 

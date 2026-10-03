@@ -41,13 +41,13 @@ describe('resolveEasing', () => {
     expect(fn(0.5)).toBeCloseTo(0.5, 5);
   });
 
-  it('resolves "ease-in" — output < t for t in (0,1)', () => {
+  it('resolves "ease-in": output < t for t in (0,1)', () => {
     const fn = resolveEasing('ease-in');
 
     expect(fn(0.5)).toBeLessThan(0.5);
   });
 
-  it('resolves "ease-out" — output > t for t in (0,1)', () => {
+  it('resolves "ease-out": output > t for t in (0,1)', () => {
     const fn = resolveEasing('ease-out');
 
     expect(fn(0.5)).toBeGreaterThan(0.5);
@@ -79,7 +79,7 @@ describe('resolveEasing', () => {
 
   it('does not resolve prototype-chain keys to an Object.prototype value (SECURITY)', () => {
     // A bare bracket lookup on a plain object literal for these keys would return
-    // Object.prototype/Object itself instead of undefined — resolveEasing must not
+    // Object.prototype/Object itself instead of undefined: resolveEasing must not
     // let a caller-supplied string reach that.
     for (const key of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) {
       const fn = resolveEasing(key);
@@ -125,7 +125,7 @@ describe('animate', () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
-  it('negative stagger is clamped to 0 — all targets animate without negative delay', () => {
+  it('negative stagger is clamped to 0: all targets animate without negative delay', () => {
     const el1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     const el2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     const targets = [

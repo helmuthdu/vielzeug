@@ -1,9 +1,9 @@
 /**
- * CSS layout regression test for `ore-navbar` — real flexbox geometry that jsdom can't evaluate
+ * CSS layout regression test for `ore-navbar`: real flexbox geometry that jsdom can't evaluate
  * (no layout engine, `@layer` blocks silently dropped). Complements `navbar.test.ts`'s jsdom
  * coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { expect, test } from '../../testing/fixtures';
 
@@ -70,9 +70,9 @@ test.describe('Layout', () => {
     expect(overflow).toBe(false);
   });
 
-  // Icon-only items (no visible label — see OreNavbarItemProps['icon-only']) render a hidden,
+  // Icon-only items (no visible label: see OreNavbarItemProps['icon-only']) render a hidden,
   // empty label region alongside the icon. Left un-hidden, that empty region still reserves the
-  // inter-element `gap`, so the item ends up wider than tall — never a square-ish icon button —
+  // inter-element `gap`, so the item ends up wider than tall: never a square-ish icon button :
   // even though it has no visible text. `icon-only` collapses that phantom gap and switches to
   // symmetric padding; regression-test the resulting box shape since jsdom can't evaluate it
   // (see navbar.test.ts's jsdom coverage note for the same limitation).
@@ -96,7 +96,7 @@ test.describe('Layout', () => {
   });
 
   test('icon-only items render compact, roughly square padding around the icon', async ({ page, refinePage }) => {
-    // Force desktop mode regardless of the test harness's narrow `.frame` (max-width: 600px) —
+    // Force desktop mode regardless of the test harness's narrow `.frame` (max-width: 600px) :
     // the default breakpoint (max-width: 768px) would otherwise put the navbar in mobile mode,
     // hiding items outside the mobile menu toggle and making this a test of the wrong code path.
     await refinePage.mountComponent(
@@ -115,7 +115,7 @@ test.describe('Layout', () => {
       return { height: rect.height, width: rect.width };
     });
 
-    // Not a pixel-exact assertion (padding tokens may evolve) — just guards against the
+    // Not a pixel-exact assertion (padding tokens may evolve): just guards against the
     // reported bug: a lopsided item noticeably wider than it is tall from the phantom label gap.
     expect(box.width).toBeLessThan(box.height * 1.5);
   });

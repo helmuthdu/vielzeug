@@ -1,6 +1,6 @@
 # Dialog
 
-A modal dialog that blocks page interaction, traps focus, and dismisses on `Escape`. Built on the native `<dialog>` element for correct top-layer stacking and browser-managed accessibility semantics — no extra JS focus trapping or `z-index` juggling required.
+A modal dialog that blocks page interaction, traps focus, and dismisses on `Escape`. Built on the native `<dialog>` element for correct top-layer stacking and browser-managed accessibility semantics: no extra JS focus trapping or `z-index` juggling required.
 
 ## Opening and Closing
 
@@ -78,7 +78,7 @@ Use `open` as the controlled state and update it in response to `open-change`. U
 
 </ComponentPreview>
 
-Keep dialog content focused — if a dialog requires scrolling, it is usually a sign the content should live on its own page.
+Keep dialog content focused: if a dialog requires scrolling, it is usually a sign the content should live on its own page.
 
 ## Dismissible
 
@@ -124,7 +124,7 @@ Control the backdrop appearance with the `backdrop` attribute.
   ><p>Dark overlay, no blur.</p></ore-dialog
 >
 <ore-dialog id="dialog-backdrop-blur" label="blur" backdrop="blur" dismissible
-  ><p>Dark overlay with 4 px blur — the default.</p></ore-dialog
+  ><p>Dark overlay with 4 px blur: the default.</p></ore-dialog
 >
 <ore-dialog id="dialog-backdrop-transparent" label="transparent" backdrop="transparent" dismissible
   ><p>No overlay and no blur.</p></ore-dialog
@@ -199,7 +199,7 @@ Control the internal padding of the header, body, and footer with the `padding` 
 >
 <ore-dialog id="dialog-pad-sm" label="Padding: sm" padding="sm" dismissible><p>Small padding (12 px).</p></ore-dialog>
 <ore-dialog id="dialog-pad-md" label="Padding: md" padding="md" dismissible
-  ><p>Medium padding — the default (16 px).</p></ore-dialog
+  ><p>Medium padding: the default (16 px).</p></ore-dialog
 >
 <ore-dialog id="dialog-pad-lg" label="Padding: lg" padding="lg" dismissible><p>Large padding (24 px).</p></ore-dialog>
 <ore-dialog id="dialog-pad-xl" label="Padding: xl" padding="xl" dismissible
@@ -255,7 +255,7 @@ Use the `header` slot to replace the default title + close-button layout entirel
 
 ## Persistent (No Backdrop Close)
 
-Set `persistent` to prevent the dialog from closing when the user clicks outside the panel. Useful for forms where accidental dismissal would lose data. When using `persistent`, always include an accessible way to dismiss — either `dismissible` or a clearly labelled cancel button in the `footer`. A dialog with no dismissal mechanism traps keyboard users indefinitely. Do not nest dialogs; stack them in a queue instead.
+Set `persistent` to prevent the dialog from closing when the user clicks outside the panel. Useful for forms where accidental dismissal would lose data. When using `persistent`, always include an accessible way to dismiss: either `dismissible` or a clearly labelled cancel button in the `footer`. A dialog with no dismissal mechanism traps keyboard users indefinitely. Do not nest dialogs; stack them in a queue instead.
 
 <ComponentPreview height="400px">
 
@@ -264,7 +264,7 @@ Set `persistent` to prevent the dialog from closing when the user clicks outside
 
 <ore-dialog id="persistent-dialog" label="Required setup" persistent dismissible>
   <p>
-    Please complete the onboarding before continuing. Click outside the panel — nothing happens. Use the × button to
+    Please complete the onboarding before continuing. Click outside the panel: nothing happens. Use the × button to
     dismiss.
   </p>
 </ore-dialog>
@@ -280,7 +280,7 @@ Set `persistent` to prevent the dialog from closing when the user clicks outside
 
 ## Listening to Events
 
-Do not open dialogs without user intent (e.g. on page load) — this is disorienting for screen reader users. Do not use dialogs for non-blocking notifications; use `ore-alert` or a toast component instead.
+Do not open dialogs without user intent (e.g. on page load): this is disorienting for screen reader users. Do not use dialogs for non-blocking notifications; use `ore-alert` or a toast component instead.
 
 ```javascript
 const dialog = document.querySelector('ore-dialog');
@@ -303,14 +303,14 @@ dialog.addEventListener('close-request', (e) => {
 
 | Attribute     | Type                                              | Default    | Description                                                      |
 | ------------- | ------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
-| `open`        | `boolean`                                         | —          | Controlled visibility                                            |
+| `open`        | `boolean`                                         | N/A | Controlled visibility                                            |
 | `default-open`| `boolean`                                         | `false`    | Initial visibility when `open` is not provided                  |
 | `label`       | `string`                                          | `''`       | Dialog title shown in the header; used as `aria-label`           |
 | `size`        | `'sm' \| 'md' \| 'lg' \| 'xl' \| 'full'`          | `'md'`     | Panel width preset                                               |
 | `dismissible` | `boolean`                                         | `false`    | Show a close (×) button in the header                            |
 | `persistent`  | `boolean`                                         | `false`    | Prevent backdrop-click from closing the dialog                   |
-| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| ... \| 'full'` | —          | Override the panel border radius                                 |
-| `backdrop`    | `'blur' \| 'opaque' \| 'transparent'`             | `'opaque'` | Backdrop style — blur overlay, opaque (default) overlay, or none |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| ... \| 'full'` | N/A | Override the panel border radius                                 |
+| `backdrop`    | `'blur' \| 'opaque' \| 'transparent'`             | `'opaque'` | Backdrop style: blur overlay, opaque (default) overlay, or none |
 | `elevation`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'`     | Panel drop shadow depth                                          |
 | `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`          | `'md'`     | Padding for header, body, and footer                             |
 
@@ -326,7 +326,7 @@ dialog.addEventListener('close-request', (e) => {
 | Slot      | Description                                                              |
 | --------- | ------------------------------------------------------------------------ |
 | (default) | Dialog body content                                                      |
-| `header`  | Custom header content — replaces the default title + close-button layout |
+| `header`  | Custom header content: replaces the default title + close-button layout |
 | `footer`  | Action buttons or supplemental content pinned to the bottom of the panel |
 
 ### CSS Custom Properties
@@ -346,6 +346,6 @@ dialog.addEventListener('close-request', (e) => {
 
 The dialog component follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) and is built on the native `<dialog>` element for WCAG 2.1 Level AA compliance.
 
-The inner `<dialog>` element carries `role="dialog"` implicitly, so no extra ARIA role is needed. `aria-modal="true"` signals to assistive technologies that content outside the dialog is inert while it is open. When `label` is set, it becomes the `aria-label` of the dialog, giving screen readers a concise title to announce on open — always set a `label` (or provide a custom `header` slot), because a missing label creates a disorienting "unlabelled dialog" announcement when focus moves into the panel.
+The inner `<dialog>` element carries `role="dialog"` implicitly, so no extra ARIA role is needed. `aria-modal="true"` signals to assistive technologies that content outside the dialog is inert while it is open. When `label` is set, it becomes the `aria-label` of the dialog, giving screen readers a concise title to announce on open: always set a `label` (or provide a custom `header` slot), because a missing label creates a disorienting "unlabelled dialog" announcement when focus moves into the panel.
 
-Keyboard navigation is handled natively by the browser. `Tab` moves focus to the next focusable element inside the dialog and wraps around; `Shift + Tab` moves to the previous focusable element; `Escape` closes the dialog. On open, the browser moves focus into the dialog panel automatically — no manual `focus()` call is required. Focus is trapped inside the dialog while it is open, and on close the browser returns focus to the element that triggered the dialog.
+Keyboard navigation is handled natively by the browser. `Tab` moves focus to the next focusable element inside the dialog and wraps around; `Shift + Tab` moves to the previous focusable element; `Escape` closes the dialog. On open, the browser moves focus into the dialog panel automatically: no manual `focus()` call is required. Focus is trapped inside the dialog while it is open, and on close the browser returns focus to the element that triggered the dialog.

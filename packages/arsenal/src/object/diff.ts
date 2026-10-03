@@ -13,7 +13,7 @@ export type DiffResult<T extends Obj> = {
 
 /**
  * Computes the structural difference between two plain objects.
- * Returns an `{ added, removed, changed }` result — no sentinel symbols needed.
+ * Returns an `{ added, removed, changed }` result: no sentinel symbols needed.
  * Dangerous keys (`__proto__`, `constructor`, `prototype`) are omitted from `changed`.
  *
  * @example

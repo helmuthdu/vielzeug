@@ -30,7 +30,7 @@ export function isFail<T>(result: AttemptResult<T>): result is { ok: false; erro
 }
 
 /**
- * Executes a function — sync or async — and resolves to an `AttemptResult`.
+ * Executes a function: sync or async, and resolves to an `AttemptResult`.
  * Never throws.
  *
  * @example

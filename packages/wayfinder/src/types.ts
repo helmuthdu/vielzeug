@@ -329,7 +329,7 @@ export type RouteLocation = {
   readonly historyState: unknown;
   readonly pathname: string;
   /**
-   * Raw parsed query params — always string values from URL parsing.
+   * Raw parsed query params: always string values from URL parsing.
    * For coerced values (numbers, booleans), access `ctx.query` inside middleware or data loaders.
    */
   readonly query: QueryParams;
@@ -342,9 +342,9 @@ export type RouteState = {
   /** Matched route branch from root to leaf, including data loader results. */
   readonly matches: RouteMatchBranch;
   /**
-   * `idle` — navigation settled successfully.
-   * `loading` — data loaders are in-flight.
-   * `error` — a data loader threw and no route-level `onError` handled it.
+   * `idle`: navigation settled successfully.
+   * `loading`: data loaders are in-flight.
+   * `error`: a data loader threw and no route-level `onError` handled it.
    */
   readonly status: NavigationStatus;
 };
@@ -389,7 +389,7 @@ export interface HistoryDriver {
    * Optional: translate a router-internal URL (as produced by `Router.url()` and consumed
    * by `push()`/`replace()`) into the address-bar href an anchor element should carry.
    * Drivers whose internal URLs already match the address bar (browser, memory) may omit
-   * it — `Router.href()` falls back to the internal URL.
+   * it: `Router.href()` falls back to the internal URL.
    */
   href?(url: string): string;
   readonly location: {
@@ -400,7 +400,7 @@ export interface HistoryDriver {
   };
   /**
    * Subscribe to backwards/forwards navigation (popstate-equivalent).
-   * `push()` and `replace()` are silent — they do not notify subscribers.
+   * `push()` and `replace()` are silent: they do not notify subscribers.
    * Only `back()` (and browser popstate events) trigger notifications.
    * Returns an unsubscribe function.
    */

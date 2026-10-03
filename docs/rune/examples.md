@@ -1,5 +1,5 @@
 ---
-title: Rune — Examples
+title: 'Rune: Examples'
 description: Practical examples and recipes for rune.
 ---
 

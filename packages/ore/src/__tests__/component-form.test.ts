@@ -115,7 +115,7 @@ describe('useField()', () => {
     expect(captured.at(-1)).toBeNull();
   });
 
-  it('emptyStringForNull defaults to false — internals handle is accessible', async () => {
+  it('emptyStringForNull defaults to false: internals handle is accessible', async () => {
     await mount(
       () => {
         const val = signal<string | null>(null);

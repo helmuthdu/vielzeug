@@ -14,7 +14,7 @@ function makeSearch(debounce = 200) {
   return createSearch(index, { debounce });
 }
 
-describe('createSearch — initial state', () => {
+describe('createSearch: initial state', () => {
   test('query starts as empty string', () => {
     const search = makeSearch();
 
@@ -37,7 +37,7 @@ describe('createSearch — initial state', () => {
   });
 });
 
-describe('createSearch — debounce=0 (synchronous)', () => {
+describe('createSearch: debounce=0 (synchronous)', () => {
   test('results update synchronously when debounce is 0', () => {
     const search = makeSearch(0);
 
@@ -68,7 +68,7 @@ describe('createSearch — debounce=0 (synchronous)', () => {
   });
 });
 
-describe('createSearch — debounce (timer-based)', () => {
+describe('createSearch: debounce (timer-based)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -109,7 +109,7 @@ describe('createSearch — debounce (timer-based)', () => {
     search.dispose();
   });
 
-  test('rapid query changes debounce correctly — only last fires', () => {
+  test('rapid query changes debounce correctly: only last fires', () => {
     const search = makeSearch(100);
 
     search.setQuery('al');
@@ -124,7 +124,7 @@ describe('createSearch — debounce (timer-based)', () => {
   });
 });
 
-describe('createSearch — clear()', () => {
+describe('createSearch: clear()', () => {
   test('clear() resets query to empty string', () => {
     const search = makeSearch(0);
 
@@ -171,7 +171,7 @@ describe('createSearch — clear()', () => {
   });
 });
 
-describe('createSearch — dispose', () => {
+describe('createSearch: dispose', () => {
   test('dispose() stops internal subscriptions', () => {
     const search = makeSearch(0);
 
@@ -220,7 +220,7 @@ describe('createSearch — dispose', () => {
   });
 });
 
-describe('createSearch — reactivity to index mutations', () => {
+describe('createSearch: reactivity to index mutations', () => {
   test('results recompute after index.add() with no query change', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const search = createSearch(index, { debounce: 0 });
@@ -287,7 +287,7 @@ describe('createSearch — reactivity to index mutations', () => {
   });
 });
 
-describe('createSearch — subscriptions', () => {
+describe('createSearch: subscriptions', () => {
   test('publishes one consistent snapshot per state transition', () => {
     vi.useFakeTimers();
     const search = makeSearch(100);
@@ -377,7 +377,7 @@ describe('createSearch — subscriptions', () => {
   });
 });
 
-describe('createSearch — options', () => {
+describe('createSearch: options', () => {
   test('limit option caps results', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const search = createSearch(index, { debounce: 0, limit: 1 });
@@ -397,7 +397,7 @@ describe('createSearch — options', () => {
   });
 });
 
-describe('createSearch — configuration validation', () => {
+describe('createSearch: configuration validation', () => {
   test.each([[-1], [1.5], [Number.NaN], [Number.POSITIVE_INFINITY]])('rejects invalid debounce %s', (debounce) => {
     const index = createIndex(USERS, { fields: ['name'] });
 
@@ -464,7 +464,7 @@ describe('createReactiveSearch', () => {
 
     search.setQuery('alice');
 
-    // Below minQueryLength(10) forces the containment path — always score 1.0
+    // Below minQueryLength(10) forces the containment path: always score 1.0
     expect(search.getSnapshot().results.every((r) => r.score === 1)).toBe(true);
     search.dispose();
   });

@@ -14,13 +14,13 @@ export type PropDef<T> = { readonly default: T; readonly parse: (value: string |
 export type PropInputDefs = Record<string, PropDef<unknown>>;
 
 /**
- * Prop definition factory — use these helpers for all prop definitions.
+ * Prop definition factory: use these helpers for all prop definitions.
  * No implicit type inference; all parser behavior is explicit and intentional.
  */
 type PropFactory = {
   bool(defaultValue?: boolean): PropDef<boolean>;
   /**
-   * JS-only property — never reads from or writes to an HTML attribute.
+   * JS-only property: never reads from or writes to an HTML attribute.
    * Use for complex objects, arrays, callbacks, or any non-serialisable value.
    *
    * @example
@@ -41,14 +41,14 @@ type PropFactory = {
   string<T extends string = string>(defaultValue: string): PropDef<T>;
 };
 
-/** @internal JS-only prop implementation — never reads/writes attributes. */
+/** @internal JS-only prop implementation: never reads/writes attributes. */
 function _jsOnlyProp<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
   return { default: defaultValue, parse: () => defaultValue, reflect: false } as PropDef<T | undefined>;
 }
 
 export const prop: PropFactory = {
   /**
-   * Boolean prop — reflects its value as a presence-only attribute (toggleAttribute).
+   * Boolean prop: reflects its value as a presence-only attribute (toggleAttribute).
    * Reflection is always enabled. To suppress attribute reflection for a boolean,
    * use `prop.data<boolean>(false)` instead.
    */
@@ -65,7 +65,7 @@ export const prop: PropFactory = {
     return _jsOnlyProp(defaultValue);
   },
   /**
-   * JSON-serialisable prop — the value is stored as a JS object and parsed
+   * JSON-serialisable prop: the value is stored as a JS object and parsed
    * from the attribute via `JSON.parse`. Reflection is always disabled
    * because serialising complex objects back to attributes on every change
    * would be expensive and produce unreadable HTML.
@@ -142,7 +142,7 @@ const isPropDef = (value: unknown): value is PropDef<unknown> =>
  * Validate and normalize a prop definition.
  * Throws if definition is invalid or incomplete.
  *
- * Accepts any object shaped like `PropDef` — not just `prop.*` helper output — so you can
+ * Accepts any object shaped like `PropDef`: not just `prop.*` helper output, so you can
  * define a custom prop with explicit parser and reflection behavior when the `prop.*` helpers
  * don't cover your type:
  *
@@ -216,7 +216,7 @@ export const getPropMeta = (el: HTMLElement, attrName: string): PropMeta<unknown
 
 /**
  * A framework can hand a prop a raw attribute-style string well after the element
- * has upgraded — e.g. Vue reconciling server-rendered markup against a custom
+ * has upgraded: e.g. Vue reconciling server-rendered markup against a custom
  * element that auto-upgraded from its SSR attribute before hydration ran, or
  * assigning the pre-upgrade instance property it captured before `registerProp`
  * defined the real accessor. In both cases route the string through the same

@@ -5,7 +5,7 @@ import { size } from './middleware/size';
 import type { Middleware, Placement } from './types';
 
 /**
- * A positioning preset — a pre-configured `placement` and `middleware` array
+ * A positioning preset: a pre-configured `placement` and `middleware` array
  * ready to spread into `createPositioner()` or `computePosition()` options.
  */
 export interface PositioningPreset {

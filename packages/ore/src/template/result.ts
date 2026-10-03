@@ -1,9 +1,9 @@
 /**
- * template/result.ts — Branded result objects produced by the template authoring APIs.
+ * template/result.ts: Branded result objects produced by the template authoring APIs.
  *
  * Runtime code (factories, brand guards) lives here next to the template engine that
  * consumes it; pure binding-shape types live in `binding-types.ts`. All branding goes
- * through `utils/brand.ts` (`Symbol.for`) — see that module for why.
+ * through `utils/brand.ts` (`Symbol.for`): see that module for why.
  */
 
 import { type Signal, signal } from '@vielzeug/ripple';
@@ -30,7 +30,7 @@ const directiveBrand = makeBrand<DirectiveResult>('ore:directive');
 
 /**
  * Creates a registered DirectiveResult. All directive factories must use this
- * function — only objects created here pass `isDirectiveResult()`.
+ * function: only objects created here pass `isDirectiveResult()`.
  */
 export const createDirectiveResult = (mount: DirectiveResult['mount']): DirectiveResult =>
   directiveBrand.stamp({ mount });
@@ -42,7 +42,7 @@ export const isDirectiveResult = directiveBrand.is;
 /**
  * The output of an `html` tagged template call.
  *
- * Each `html` call produces an independent fragment — there is no shared mutable
+ * Each `html` call produces an independent fragment: there is no shared mutable
  * state between instances, so the same template can be safely rendered multiple
  * times (e.g. inside `each()`).
  *
@@ -62,7 +62,7 @@ export interface HTMLResult {
 /**
  * @internal The full result the template engine itself works with. `fragment` and
  * `apply` are the engine's own two-phase insertion protocol (static-embed merging in
- * the instantiator, `insertHtmlValues` in the binding layer) — not part of the
+ * the instantiator, `insertHtmlValues` in the binding layer): not part of the
  * public API. Consumers only ever see `HTMLResult`.
  */
 export interface CompiledHTMLResult extends HTMLResult {

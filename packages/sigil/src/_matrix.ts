@@ -7,7 +7,7 @@ import { alignmentPatternPositions } from './_tables';
  */
 
 export interface QrGrid {
-  /** Modules owned by function patterns — skipped by data placement and masks. */
+  /** Modules owned by function patterns: skipped by data placement and masks. */
   readonly isFunction: boolean[][];
   /** Final module colors; `true` = dark. Mutable during construction. */
   modules: boolean[][];
@@ -56,7 +56,7 @@ function drawAlignment(grid: QrGrid, cx: number, cy: number): void {
 
 /**
  * Reserve the 15 format-info modules around each finder (both copies) and the
- * 6×3 version-info blocks for v≥7 — drawn later by `_format.ts`, but data
+ * 6×3 version-info blocks for v≥7: drawn later by `_format.ts`, but data
  * placement must skip them now.
  */
 function reserveFormatAreas(grid: QrGrid): void {

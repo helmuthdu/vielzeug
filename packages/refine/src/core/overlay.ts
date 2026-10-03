@@ -1,11 +1,11 @@
 /**
  * Why an overlay was opened.
- * - `'click'`       — user clicked the trigger element
- * - `'focus'`       — focus entered the trigger (tooltip, popover)
- * - `'hover'`       — pointer entered the trigger (tooltip)
- * - `'keyboard'`    — keyboard shortcut or Enter/Space on a trigger
- * - `'programmatic'` — opened via the JS API without a user gesture
- * - `'trigger'`     — opened via the Invoker Commands API (`command="show-modal"`)
+ * - `'click'`: user clicked the trigger element
+ * - `'focus'`: focus entered the trigger (tooltip, popover)
+ * - `'hover'`: pointer entered the trigger (tooltip)
+ * - `'keyboard'`: keyboard shortcut or Enter/Space on a trigger
+ * - `'programmatic'`: opened via the JS API without a user gesture
+ * - `'trigger'`: opened via the Invoker Commands API (`command="show-modal"`)
  */
 export type OverlayOpenReason = 'click' | 'focus' | 'hover' | 'keyboard' | 'programmatic' | 'trigger';
 

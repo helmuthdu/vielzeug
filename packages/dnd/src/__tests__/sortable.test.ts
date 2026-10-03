@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { applyReorder, createSortable, createSortableScope } from '../sortable';
 import { endDrag, makeDragEvent, makeKeyEvent, makeList, startDrag } from './helpers';
 
-// Default getKey for tests — items are built with data-sort-id by makeList
+// Default getKey for tests: items are built with data-sort-id by makeList
 const getKey = (el: Element): string => el.getAttribute('data-sort-id') ?? '';
 
 // makeList attaches elements to document.body; clean up after every test.
@@ -34,7 +34,7 @@ describe('createSortableScope', () => {
 
     // Drag in list A
     startDrag(a1);
-    // Drag over list B — should not trigger because different scope
+    // Drag over list B: should not trigger because different scope
     listB.dispatchEvent(makeDragEvent('dragover', { dropEffect: 'move' }));
     endDrag(a1);
 
@@ -192,7 +192,7 @@ describe('createSortable', () => {
     // draggable item is a page scroll/pan before the scope touch controller's threshold logic and
     // `preventDefault()` calls ever run, silently handing the whole gesture to native scrolling.
     // The item then never receives the `dragover` sequence needed to update the drop target, so
-    // the drop commits back to wherever it started — indistinguishable from "reverting".
+    // the drop commits back to wherever it started: indistinguishable from "reverting".
     it('preserves touch action when touch input is disabled', () => {
       const {
         element,
@@ -1061,7 +1061,7 @@ describe('createSortable', () => {
       const { element: right } = makeList('r1');
       const rightReorder = vi.fn();
 
-      // No shared scope — each gets its own private scope
+      // No shared scope: each gets its own private scope
       const leftSortable = createSortable({ element: left, getKey });
       const rightSortable = createSortable({ element: right, getKey, onReorder: rightReorder });
 
@@ -1207,7 +1207,7 @@ describe('createSortable', () => {
       const bad = document.createElement('li');
 
       good.setAttribute('data-sort-id', 'good');
-      // bad has no data attribute — getKey returns '' which is falsy → should be skipped
+      // bad has no data attribute: getKey returns '' which is falsy → should be skipped
       element.append(good, bad);
       document.body.appendChild(element);
 
@@ -1286,7 +1286,7 @@ describe('applyReorder', () => {
     expect(result).toEqual([]);
   });
 
-  it('handles duplicate IDs in the ids array — first occurrence wins, second is ignored', () => {
+  it('handles duplicate IDs in the ids array: first occurrence wins, second is ignored', () => {
     const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
 
     const result = applyReorder(items, ['b', 'b', 'a'], (i) => i.id);
@@ -1321,7 +1321,7 @@ describe('scope validation', () => {
     const invalidScope = {} as ReturnType<typeof createSortableScope>;
 
     expect(() => createSortable({ element, getKey, scope: invalidScope })).toThrowError(
-      'Invalid scope — use createSortableScope() to create scopes.',
+      'Invalid scope: use createSortableScope() to create scopes.',
     );
   });
 });
@@ -1347,7 +1347,7 @@ describe('disposed', () => {
     expect(sortable.disposed).toBe(true);
   });
 
-  it('dispose() is idempotent — second call is a no-op', () => {
+  it('dispose() is idempotent: second call is a no-op', () => {
     const { element } = makeList('a');
     const sortable = createSortable({ element, getKey });
 
@@ -1659,7 +1659,7 @@ describe('onInteraction', () => {
     const onInteraction = vi.fn();
     const sortable = createSortable({ element, getKey, onInteraction });
 
-    // Drag and drop at the same position — no dragover on a different item,
+    // Drag and drop at the same position: no dragover on a different item,
     // so the order doesn't change.
     startDrag(first);
     endDrag(first);

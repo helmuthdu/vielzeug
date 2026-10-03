@@ -14,7 +14,7 @@ export function randomBytes(length: number, source?: RandomSource): Uint8Array {
   return bytes;
 }
 
-/** Random 128-bit base64url id — used for peer ids, session ids, and message ids. */
+/** Random 128-bit base64url id: used for peer ids, session ids, and message ids. */
 export function randomId(source?: RandomSource): string {
   return bytesToBase64Url(randomBytes(16, source));
 }

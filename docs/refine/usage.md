@@ -1,5 +1,5 @@
 ---
-title: Refine — Usage Guide
+title: 'Refine: Usage Guide'
 description: Register Refine components, configure properties, handle events, compose slots, and integrate frameworks.
 ---
 
@@ -202,4 +202,4 @@ loadingEffect.dispose();
 - **Use** component reference pages for supported slots, parts, and CSS properties.
 - **Dispose** application-owned Ripple effects and service handles.
 - **Guard** DOM-dependent component registration during SSR.
-- **Working with AI agents?** Install the `vielzeug` skill (`npx -y @vielzeug/codex skills install`) so agents reach for Refine components and tokens instead of custom widgets — see the [Codex usage guide](../codex/usage.md#agent-skill).
+- **Working with AI agents?** Install the `vielzeug` skill (`npx -y @vielzeug/codex skills install`) so agents reach for Refine components and tokens instead of custom widgets: see the [Codex usage guide](../codex/usage.md#agent-skill).

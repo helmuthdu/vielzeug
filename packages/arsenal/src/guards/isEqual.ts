@@ -3,7 +3,7 @@
  * Supports plain objects, arrays, `Date`, `Map`, `Set`, `RegExp`, and circular references.
  *
  * Uses `===` for the primitive comparison, so `isEqual(NaN, NaN)` is `false` and
- * `isEqual(0, -0)` is `true` — the opposite of `shallowEqual`, which uses `Object.is` and
+ * `isEqual(0, -0)` is `true`: the opposite of `shallowEqual`, which uses `Object.is` and
  * treats `NaN` as equal to itself and `-0` as distinct from `0`.
  *
  * For one-level-deep reference equality, use `shallowEqual` instead.
@@ -62,14 +62,14 @@ function safeIsEqual(a: unknown, b: unknown, visited: WeakMap<object, object>): 
     return true;
   }
 
-  // Set comparison — fast path for primitive values, deep for objects
+  // Set comparison: fast path for primitive values, deep for objects
   if (a instanceof Set && b instanceof Set) {
     if (a.size !== b.size) return false;
 
     const bItems = [...b];
 
     for (const v of a) {
-      // O(1) path for primitives — avoid the O(n) .some() scan
+      // O(1) path for primitives: avoid the O(n) .some() scan
       if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null || v === undefined) {
         if (!b.has(v)) return false;
       } else if (!bItems.some((bv) => safeIsEqual(v, bv, visited))) {

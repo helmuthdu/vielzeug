@@ -62,7 +62,7 @@
     outline: none;
   }
 
-  /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
+  /* Keyframe must live in shadow DOM: @keyframes don't inherit across shadow roots */
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -112,7 +112,7 @@
   }
 
   /* `[part='button']`'s own height otherwise comes from the fixed size-preset var
-     (`--_height`, default `--size-10`) — overriding just the host's own box height (e.g. via an
+     (`--_height`, default `--size-10`): overriding just the host's own box height (e.g. via an
      external `height: 100%` from a swipe-action panel container) stretches an invisible wrapper
      without moving the visible button surface at all. Both declarations are needed. */
   :host([fullheight]) {
@@ -243,7 +243,7 @@
     border-width: 0;
   }
 
-  /* Frost — sets its own interactive tokens so the shared rules below apply uniformly */
+  /* Frost: sets its own interactive tokens so the shared rules below apply uniformly */
   :host([variant='frost']:not([color])) {
     --_hover-bg: var(--button-frost-active-bg, color-mix(in oklch, var(--color-canvas) 70%, transparent));
     --_hover-border-color: var(
@@ -273,7 +273,7 @@
     );
   }
 
-  /* ── Shared interactive states — all variants use --_* tokens set above ── */
+  /* ── Shared interactive states: all variants use --_* tokens set above ── */
 
   [part='button']:hover {
     color: var(--_hover-color, var(--_color));
@@ -290,13 +290,13 @@
 }
 
 @layer refine.overrides {
-  /* Focus ring — keyboard navigation only; combines focus shadow + halo to avoid shadow pop */
+  /* Focus ring: keyboard navigation only; combines focus shadow + halo to avoid shadow pop */
   [part='button']:focus-visible {
     outline: none;
     box-shadow: var(--_theme-shadow), var(--_theme-halo);
   }
 
-  /* Hover depth — halo border effect matching ore-input focus style */
+  /* Hover depth: halo border effect matching ore-input focus style */
   [part='button']:hover,
   [part='button']:active {
     border-color: var(--_hover-border-color, var(--_theme-focus));
@@ -311,7 +311,7 @@
     transform: none;
   }
 
-  /* ...nor on :active — stay borderless even though the shared rule above now
+  /* ...nor on :active: stay borderless even though the shared rule above now
      adds a halo to :active too (physical press transform below still applies,
      this only cancels border-color/box-shadow). */
   :host([variant='ghost']) [part='button']:active,

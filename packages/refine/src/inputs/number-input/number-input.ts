@@ -35,7 +35,7 @@ export type OreNumberInputProps = {
   'large-step'?: number;
   /**
    * Shows an inline spinner inside the field and forces the control into `disabled` for the
-   * duration — use while an async validation/submission request is in flight to prevent
+   * duration: use while an async validation/submission request is in flight to prevent
    * double-submits.
    */
   loading?: boolean;
@@ -63,7 +63,7 @@ export type OreNumberInputProps = {
   step?: number;
   /**
    * Shows an inline green check icon inside the field to confirm the value has
-   * passed validation. Ignored while `error` is set — an error always wins.
+   * passed validation. Ignored while `error` is set: an error always wins.
    */
   success?: boolean;
   /** Current numeric value */
@@ -148,7 +148,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     const el = getHost();
     const watch = watchEffect;
 
-    // `loading` behaves like a temporary `disabled` — see ore-input's identical computation.
+    // `loading` behaves like a temporary `disabled`: see ore-input's identical computation.
     const isDisabled = computed(() => props.disabled.value || props.loading.value);
     const isReadonly = computed(() => Boolean(props.readonly.value));
 
@@ -204,11 +204,11 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     });
 
     // Composition uses ore-input's own documented `ref` prop (fired with the raw
-    // <input> on mount, `null` on unmount) instead of reaching into its shadow DOM —
+    // <input> on mount, `null` on unmount) instead of reaching into its shadow DOM :
     // see `packages/refine/AGENTS.md` / input.ts's `ref` JSDoc for the supported contract.
     // Set imperatively (rather than declared in the template) because ore's template
     // engine treats a function-valued attr binding as a reactive getter to invoke, not
-    // a literal value to assign — a plain property assignment avoids that entirely.
+    // a literal value to assign: a plain property assignment avoids that entirely.
     const bitInputRef = ref<HTMLElementTagNameMap['ore-input']>();
     let stopAriaWatch: (() => void) | null = null;
     let detachListeners: (() => void) | null = null;
@@ -228,7 +228,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
       }
 
       rawInput.setAttribute('inputmode', 'decimal');
-      // The wrapper div is a plain layout container — WAI-ARIA spinbutton semantics
+      // The wrapper div is a plain layout container: WAI-ARIA spinbutton semantics
       // live on the actually-focusable element (the raw <input> rendered by ore-input).
       rawInput.setAttribute('role', 'spinbutton');
 
@@ -295,7 +295,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
     // The stepper buttons are slotted *into* ore-input's own `prefix`/`suffix` slots instead of
-    // sitting outside it in a separate wrapper — they render inside ore-input's own bordered
+    // sitting outside it in a separate wrapper: they render inside ore-input's own bordered
     // box (same as its built-in clear/password-toggle buttons), matching every other field's
     // single-box look instead of floating as two detached icon buttons either side of a
     // narrow field. `@keydown` moves to ore-input itself: native keyboard events are

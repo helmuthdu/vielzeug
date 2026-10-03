@@ -34,7 +34,7 @@ export function createWakeLock(options?: SentinelOptions & { readonly target?: W
       });
       updateState(read());
     } catch {
-      // Not supported, denied, or not in a secure context — degrade silently.
+      // Not supported, denied, or not in a secure context: degrade silently.
     } finally {
       pending = false;
     }

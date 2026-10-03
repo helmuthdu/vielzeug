@@ -462,7 +462,7 @@ describe('ore-sidebar-item', () => {
       const item = fixture.element.querySelector('ore-sidebar-item')!;
 
       // The `:host([sidebar-bottom-nav]) { display: none; }` CSS effect itself needs a real
-      // browser to verify (jsdom has no CSS box model for shadow-adopted stylesheets) — this
+      // browser to verify (jsdom has no CSS box model for shadow-adopted stylesheets): this
       // pins down the attribute the CSS rule keys off.
       expect(item.hasAttribute('sidebar-bottom-nav')).toBe(true);
     } finally {

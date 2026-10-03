@@ -50,7 +50,7 @@ export interface Ledger<TMeta = undefined> {
   /**
    * Appends an already-executed command to the history without running it through the queue.
    * For stores that execute synchronously and own their writes: `undo()` calls the recorded
-   * `revert`, `redo()` calls the recorded `apply` — so `apply` must be able to re-apply the
+   * `revert`, `redo()` calls the recorded `apply`, so `apply` must be able to re-apply the
    * effect. Synchronous by design: the work happened before `record`, there is nothing to run.
    */
   record(command: ReversibleCommand<TMeta>): void;

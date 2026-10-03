@@ -1,5 +1,5 @@
 ---
-title: Tavern — Examples
+title: 'Tavern: Examples'
 description: Practical examples and recipes for @vielzeug/tavern.
 ---
 

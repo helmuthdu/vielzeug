@@ -39,14 +39,14 @@
 
     /* display + overlay allow-discrete hold the element in the top layer during exit
        and let @starting-style fire on entry via showModal().
-       Use fixed 200ms — --transition-normal resolves to 'none' under reduced-motion
+       Use fixed 200ms: --transition-normal resolves to 'none' under reduced-motion
        which makes the entire declaration syntactically invalid if used here. */
     transition:
       display 200ms allow-discrete,
       overlay 200ms allow-discrete;
   }
 
-  /* all:unset removes the UA stylesheet's dialog:not([open]){display:none} — restore it */
+  /* all:unset removes the UA stylesheet's dialog:not([open]){display:none}: restore it */
   dialog:not([open]) {
     display: none;
   }

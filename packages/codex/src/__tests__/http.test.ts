@@ -41,7 +41,7 @@ afterEach(async () => {
 });
 
 // Both SSE-framed (`event: message\ndata: {...}`) and plain-JSON response bodies are valid MCP
-// Streamable HTTP shapes — 2025-era (legacy) traffic answers as SSE by default, 2026-07-28
+// Streamable HTTP shapes: 2025-era (legacy) traffic answers as SSE by default, 2026-07-28
 // (modern, envelope-carrying) traffic answered plain JSON in these tests. Read either.
 async function readMcpResult(response: Response): Promise<{ error?: { message: string }; result?: unknown }> {
   const text = await response.text();

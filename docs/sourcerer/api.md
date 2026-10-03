@@ -1,5 +1,5 @@
 ---
-title: Sourcerer — API Reference
+title: 'Sourcerer: API Reference'
 description: Public API for @vielzeug/sourcerer.
 ---
 

@@ -19,7 +19,7 @@ title.textContent = 'Drop images here'
 
 const hint = document.createElement('small')
 hint.style.cssText = 'font-size:12px;color:#9ca3af;'
-hint.textContent = 'Max 2 MB each — async size check via onValidate'
+hint.textContent = 'Max 2 MB each: async size check via onValidate'
 
 dropEl.append(title, hint)
 

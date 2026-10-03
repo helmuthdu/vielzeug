@@ -13,7 +13,7 @@
  * // Static locale
  * const fmt = createFormatter('en-US');
  *
- * // Reactive — always reads the current locale from the i18n instance
+ * // Reactive: always reads the current locale from the i18n instance
  * const fmt = createFormatter(() => i18n.locale);
  *
  * fmt.number(1_234.56);
@@ -139,7 +139,7 @@ export function createFormatter(source: string | (() => string)): Formatter {
   const getLocale = typeof source === 'string' ? () => source : source;
 
   // Options that cannot be serialized (circular references, BigInt) get no cache key at
-  // all, so each call builds a fresh formatter — sharing one instance across different
+  // all, so each call builds a fresh formatter: sharing one instance across different
   // options would silently format wrong.
   function cachedKey(locale: string, options?: object): string | undefined {
     if (!options) return locale;

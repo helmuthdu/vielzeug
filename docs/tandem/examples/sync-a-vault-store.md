@@ -1,5 +1,5 @@
 ---
-title: 'Tandem Examples — Sync a Vault Store'
+title: 'Tandem Examples: Sync a Vault Store'
 description: Wire Tandem's gateway to a Vault IndexedDB store so saved records reach the server.
 ---
 
@@ -11,7 +11,7 @@ The app already persists records with Vault and mirrors them into memory. You ne
 
 ### Solution
 
-Express the store as a `SyncGateway`: `records()` reads the in-memory mirror, `applyRecords()` writes through the codec, and the sync-state row holds the baseline. Bump `rev` in the single write path so dirtiness is a counter comparison — the engine owns the comparisons, the gateway just upserts.
+Express the store as a `SyncGateway`: `records()` reads the in-memory mirror, `applyRecords()` writes through the codec, and the sync-state row holds the baseline. Bump `rev` in the single write path so dirtiness is a counter comparison: the engine owns the comparisons, the gateway just upserts.
 
 ```ts
 import { createSync, type SyncGateway, type SyncPort } from '@vielzeug/tandem';
@@ -35,14 +35,14 @@ const store: DocumentVaultStore<{ docs: ReturnType<typeof table>; syncState: Ret
 let mirror: Doc[] = [];
 store.observe('docs', (rows) => {
   mirror = rows;
-  sync.changed(); // any write — local or remote — schedules a flush
+  sync.changed(); // any write: local or remote: schedules a flush
 });
 
 const gateway: SyncGateway<Doc> = {
   records: () => mirror.map((record) => ({ entity: 'docs', record })),
   pendingDeletions: async () => [],
   async applyRecords(pulled) {
-    // Already filtered to records the server is ahead on — validate and upsert.
+    // Already filtered to records the server is ahead on: validate and upsert.
     const skipped: string[] = [];
     for (const { record } of pulled) {
       try {
@@ -77,11 +77,11 @@ function saveDoc(id: string, title: string): void {
 ### Pitfalls
 
 - Bump `rev` in the one write path every command uses; a write that skips the counter never syncs.
-- Keep `records()` reading the local mirror only — a remote session mirror must never be pushed as this device's state.
+- Keep `records()` reading the local mirror only: a remote session mirror must never be pushed as this device's state.
 - Observe the table rather than calling `changed()` at each call site, so cross-tab writes sync too.
 
 ### Related
 
-- [Usage Guide — Track Dirty Records with Revs](../usage.md#track-dirty-records-with-revs)
-- [Vault](/vault/) — the storage core behind the gateway.
+- [Usage Guide: Track Dirty Records with Revs](../usage.md#track-dirty-records-with-revs)
+- [Vault](/vault/): the storage core behind the gateway.
 - [Keep Deletions from Resurrecting](./keep-deletions-from-resurrecting.md)

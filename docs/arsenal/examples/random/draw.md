@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — draw / drawMany'
+title: 'Arsenal Examples: draw / drawMany'
 description: 'draw and drawMany example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'draw and drawMany example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to pick one random element from an array — for example selecting a random item, quote, or server from a pool.
+You need to pick one random element from an array: for example selecting a random item, quote, or server from a pool.
 
 ### Solution
 
@@ -26,7 +26,7 @@ drawMany(servers, 10); // ['us-east', 'eu-west', 'ap-south'] (clamped to length)
 
 ### Pitfalls
 
-- `draw` returns `undefined` for empty arrays — handle the empty case explicitly.
+- `draw` returns `undefined` for empty arrays: handle the empty case explicitly.
 - Default random source uses `crypto.getRandomValues`.
 - Pass a `RandomSource` as final argument when tests need deterministic output.
 

@@ -27,7 +27,7 @@ export interface LimitShiftOptions {
  * Returns a {@link ShiftLimiter} that constrains `shift()` so the floating element
  * stays visually connected to the reference along the cross axis.
  *
- * Without a limiter, `shift()` will push the float as far as needed to fit in the boundary —
+ * Without a limiter, `shift()` will push the float as far as needed to fit in the boundary :
  * potentially sliding it far away from the reference. `limitShift` clamps the drift so the
  * float stays within the reference's cross-axis extent (± `offset` pixels).
  *
@@ -80,7 +80,7 @@ export interface ShiftOptions extends DetectOverflowOptions {
   limiter?: ShiftLimiter;
   /**
    * Whether to shift along the main axis (the axis away from the reference).
-   * Default: `false` — main-axis overflow is better handled by `flip`.
+   * Default: `false`: main-axis overflow is better handled by `flip`.
    */
   mainAxis?: boolean;
 }

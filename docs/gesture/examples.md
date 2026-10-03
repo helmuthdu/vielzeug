@@ -1,5 +1,5 @@
 ---
-title: Gesture — Examples
+title: 'Gesture: Examples'
 description: Worked examples for @vielzeug/gesture.
 ---
 

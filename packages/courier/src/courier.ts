@@ -95,7 +95,7 @@ export function createCourier(options: CourierOptions = {}) {
 
     if (!res.ok) {
       // Error bodies are read once as text, then JSON-parsed if the content-type
-      // says so — a binary success config (`responseType: 'blob'`) must not trap
+      // says so: a binary success config (`responseType: 'blob'`) must not trap
       // the server's error message in an unreadable wrapper, and a failed
       // parseResponse-then-fallback double-read loses the body entirely.
       const isJson = res.headers.get('content-type')?.includes('json') ?? false;
@@ -114,7 +114,7 @@ export function createCourier(options: CourierOptions = {}) {
         try {
           body = JSON.parse(text);
         } catch {
-          // Malformed JSON error body — keep the raw text, not ''.
+          // Malformed JSON error body: keep the raw text, not ''.
         }
       }
 

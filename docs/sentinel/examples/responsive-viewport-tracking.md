@@ -1,5 +1,5 @@
 ---
-title: 'Sentinel Examples — Responsive Viewport Tracking'
+title: 'Sentinel Examples: Responsive Viewport Tracking'
 description: Update a layout marker when the viewport crosses responsive breakpoints.
 ---
 

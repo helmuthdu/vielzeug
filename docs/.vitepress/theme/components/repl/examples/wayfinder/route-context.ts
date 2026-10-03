@@ -36,5 +36,5 @@ await router.navigate(
 
 console.log('snapshot data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
 router.dispose()`,
-  name: 'Route Context — Full Context Access',
+  name: 'Route Context: Full Context Access',
 };

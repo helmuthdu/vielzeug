@@ -94,7 +94,7 @@ define<OreAsyncProps>(ASYNC_TAG, {
           `
         : '';
 
-    // All four regions are always in the shadow DOM — CSS on :host([status="…"])
+    // All four regions are always in the shadow DOM: CSS on :host([status="…"])
     // toggles their visibility. This means:
     // - No DOM churn on status transitions (no teardown/rebuild of slot elements).
     // - Live regions are always present, so screen readers announce correctly.

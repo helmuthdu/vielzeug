@@ -4,8 +4,8 @@
  *
  * A train is one release of the @vielzeug/* family: every package manifest is stamped with
  * the same `YY.MM.N` version, where `YY.MM` is the calendar month the train ships in and `N`
- * is the train revision — 0 for the month's first train, +1 for each train after it. The
- * number answers "when did this ship?", never "how big was the change?" — size lives in the
+ * is the train revision: 0 for the month's first train, +1 for each train after it. The
+ * number answers "when did this ship?", never "how big was the change?": size lives in the
  * changelog sections and per-package migration notes, not the version. See RELEASE.md.
  */
 

@@ -17,7 +17,7 @@ log.fatal('msg')
 console.log('All levels:', entries.map((e) => e.level))
 entries.length = 0
 
-// child() with raised threshold — debug and info are suppressed
+// child() with raised threshold: debug and info are suppressed
 const prodLog = log.child({ logLevel: 'warn' })
 prodLog.debug('suppressed')
 prodLog.info('suppressed')

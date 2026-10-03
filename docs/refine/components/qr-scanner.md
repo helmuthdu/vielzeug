@@ -2,7 +2,7 @@
 
 A camera QR scanner powered by `@vielzeug/sigil`'s `createQrScanner` (native `BarcodeDetector`). Renders a square video preview with a viewfinder, a live status line, and built-in Start/Stop controls. Set `active` to control the camera externally, or let the user drive it with the internal buttons.
 
-`active` defaults to `false`, so the preview below renders its idle state — no camera permission is requested until scanning starts.
+`active` defaults to `false`, so the preview below renders its idle state: no camera permission is requested until scanning starts.
 
 <ComponentPreview center vertical>
 
@@ -28,7 +28,7 @@ The component renders one view per state:
 
 ## Unsupported Fallback
 
-Browsers without `BarcodeDetector` (check: Chrome/Android yes; Safari varies by version — feature-detect, never assume) render the `unsupported` slot so apps can substitute a manual fallback, e.g. a paste input for the payload.
+Browsers without `BarcodeDetector` (check: Chrome/Android yes; Safari varies by version: feature-detect, never assume) render the `unsupported` slot so apps can substitute a manual fallback, e.g. a paste input for the payload.
 
 ```html
 <ore-qr-scanner>
@@ -127,4 +127,4 @@ With `once` (the default) the camera stops after the first decode and the compon
 
 ## Accessibility
 
-The component is a `role="region"` labelled by `label`. The status line is a `role="status"` live region, so transitions ("Starting camera…", "Code scanned: …", permission errors) are announced without moving focus. The video and viewfinder are `aria-hidden` — state is conveyed through the live region, not the preview. Start/Stop/Retry controls are real `ore-button`s with visible labels.
+The component is a `role="region"` labelled by `label`. The status line is a `role="status"` live region, so transitions ("Starting camera…", "Code scanned: …", permission errors) are announced without moving focus. The video and viewfinder are `aria-hidden`: state is conveyed through the live region, not the preview. Start/Stop/Retry controls are real `ore-button`s with visible labels.

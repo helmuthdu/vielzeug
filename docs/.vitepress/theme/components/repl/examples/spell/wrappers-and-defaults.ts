@@ -1,5 +1,5 @@
 export const wrappersAndDefaultsExample = {
-  code: `// optional(), nullable(), default(), catch() — missing-value semantics
+  code: `// optional(), nullable(), default(), catch(): missing-value semantics
 import { s } from '@vielzeug/spell'
 
 // optional: accepts undefined, passes through validation otherwise
@@ -25,7 +25,7 @@ const NullableButRequired = s.string().optional().nullable().required()
 console.log(NullableButRequired.parse(null))   // null
 console.log(NullableButRequired.safeParse(undefined).success) // false
 
-// catch(): returns a fallback when validation fails — never throws
+// catch(): returns a fallback when validation fails: never throws
 const Port = s.number().int().min(1).max(65535).catch(3000)
 console.log(Port.parse(8080))           // 8080
 console.log(Port.parse('not-a-port'))   // 3000`,

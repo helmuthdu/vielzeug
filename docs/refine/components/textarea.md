@@ -81,7 +81,7 @@ The label is placed above the field.
 
 ## Character Counter
 
-Set `maxlength` to enable a live character counter. The counter turns amber near the limit and red at the limit. Set `maxlength` whenever a backend constraint exists — the counter provides live feedback to users.
+Set `maxlength` to enable a live character counter. The counter turns amber near the limit and red at the limit. Set `maxlength` whenever a backend constraint exists: the counter provides live feedback to users.
 
 <ComponentPreview center>
 
@@ -98,7 +98,7 @@ Set `auto-resize` to let the textarea grow vertically with its content. Manual r
 <ComponentPreview center>
 
 ```html
-<ore-textarea label="Notes" auto-resize placeholder="Start typing — the field will grow"></ore-textarea>
+<ore-textarea label="Notes" auto-resize placeholder="Start typing: the field will grow"></ore-textarea>
 ```
 
 </ComponentPreview>
@@ -141,7 +141,7 @@ Control the resize handle with the `resize` attribute. Avoid `resize="horizontal
 | `name`            | `string`                                                                  | `''`         | Form field name                                    |
 | `placeholder`     | `string`                                                                  | `''`         | Placeholder text                                   |
 | `rows`            | `number`                                                                  | -            | Visible row count (sets minimum height)            |
-| `maxlength`       | `number`                                                                  | -            | Maximum character count — enables counter when set |
+| `maxlength`       | `number`                                                                  | -            | Maximum character count: enables counter when set |
 | `helper`          | `string`                                                                  | `''`         | Helper text below the field                        |
 | `error`           | `string`                                                                  | `''`         | Error message (marks field invalid)                |
 | `disabled`        | `boolean`                                                                 | `false`      | Disable the textarea                               |
@@ -194,4 +194,4 @@ The textarea component follows WCAG 2.1 Level AA standards.
 
 Keyboard navigation uses `Tab` to focus the field and `Shift+Tab` to blur it. Native textarea keyboard behaviour applies within the field.
 
-`aria-labelledby` links the label to the field and `aria-describedby` links helper and error text. `aria-invalid` is set when `error` is provided, `aria-required` reflects the `required` attribute, and `aria-disabled` reflects the disabled state. Always provide a `label` — do not rely solely on `placeholder`, as placeholder text is not exposed as an accessible label. Use `error` to surface server-side validation messages after submit.
+`aria-labelledby` links the label to the field and `aria-describedby` links helper and error text. `aria-invalid` is set when `error` is provided, `aria-required` reflects the `required` attribute, and `aria-disabled` reflects the disabled state. Always provide a `label`: do not rely solely on `placeholder`, as placeholder text is not exposed as an accessible label. Use `error` to surface server-side validation messages after submit.

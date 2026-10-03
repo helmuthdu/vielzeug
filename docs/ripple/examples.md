@@ -1,5 +1,5 @@
 ---
-title: Ripple — Examples
+title: 'Ripple: Examples'
 description: Practical Ripple recipes.
 ---
 

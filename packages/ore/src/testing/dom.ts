@@ -1,13 +1,13 @@
 /**
  * DOM traversal helpers for tests running under jsdom, which only implements the *light* DOM
- * tree — `Element.children`/`querySelectorAll()` never cross a `<slot>` into its assigned
+ * tree: `Element.children`/`querySelectorAll()` never cross a `<slot>` into its assigned
  * elements. Real browsers use the *flat tree* (light DOM with each `<slot>` transparently
- * replaced by what's actually assigned to it) for this — it's what "form owner" resolution,
+ * replaced by what's actually assigned to it) for this: it's what "form owner" resolution,
  * `:has()`, and plenty of other DOM algorithms are specified against.
  */
 
 /**
- * Walks the flat tree starting at `root`, calling `visit` for every element encountered —
+ * Walks the flat tree starting at `root`, calling `visit` for every element encountered :
  * expanding each `<slot>` via `assignedElements()` instead of descending into its (always
  * empty, in jsdom) literal children.
  *

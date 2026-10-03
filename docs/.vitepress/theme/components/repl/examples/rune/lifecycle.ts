@@ -11,7 +11,7 @@ log.debug('request start', { url: '/health' });
 
 // disposed logger silences all subsequent calls
 log.dispose();
-log.info('this is silenced — no output');
+log.info('this is silenced: no output');
 
 console.log('log.disposed:', log.disposed);
 

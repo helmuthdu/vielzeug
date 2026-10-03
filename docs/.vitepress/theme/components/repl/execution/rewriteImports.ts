@@ -3,7 +3,7 @@
  * the library's IIFE bundle exposes inside the sandboxed iframe (e.g. `window.Arsenal`).
  *
  * Why regex and not the TypeScript AST: by the time this runs, `transpileTypeScript()`
- * has already emitted plain JS via the real compiler (see transpile.ts) — all TS-only
+ * has already emitted plain JS via the real compiler (see transpile.ts): all TS-only
  * syntax (types, `as` casts, generics) is already gone. The only thing left to translate
  * is the small, fixed set of ESM import forms below, so a handful of anchored regexes are
  * simpler to read and test than pulling in a second AST pass just for this.
@@ -12,7 +12,7 @@
  *   import { a, b as c } from '@vielzeug/lib'  ->  const { a, b: c } = window.Lib
  *   import Lib from '@vielzeug/lib'            ->  const Lib = window.Lib
  *   import * as ns from '@vielzeug/lib'        ->  const ns = window.Lib
- *   import '@vielzeug/lib'                     ->  (removed — bundle is already loaded)
+ *   import '@vielzeug/lib'                     ->  (removed: bundle is already loaded)
  *
  * Any import that isn't `@vielzeug/*` has nothing to resolve to inside the sandbox and is
  * removed, matching the REPL's long-standing rule that examples only use top-level

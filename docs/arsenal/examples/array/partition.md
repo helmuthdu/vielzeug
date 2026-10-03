@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — partition'
+title: 'Arsenal Examples: partition'
 description: 'partition example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'partition example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to split an array into two groups — items that pass a predicate and items that fail — in a single pass.
+You need to split an array into two groups: items that pass a predicate and items that fail: in a single pass.
 
 ### Solution
 
@@ -25,7 +25,7 @@ const [admins, users] = partition([{ role: 'admin' }, { role: 'user' }, { role: 
 
 ### Pitfalls
 
-- Both groups are always returned, even if empty — never `undefined`.
+- Both groups are always returned, even if empty: never `undefined`.
 - Order within each group follows the original array.
 
 ### Related

@@ -1,5 +1,5 @@
 ---
-title: Prism — Examples
+title: 'Prism: Examples'
 description: Focused recipes for creating, updating, and customizing Prism charts.
 ---
 

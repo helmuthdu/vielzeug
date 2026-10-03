@@ -114,7 +114,7 @@ Restrict accepted file types using MIME types or file extensions. The accepted t
 
 ### Gallery / Preview Grid
 
-Set `gallery` to render selected files as a grid of thumbnails instead of the default single-column list — a better fit for photo uploads. Image files render an actual preview; other file types fall back to a generic file icon in the same grid cell. Object URLs are created lazily and revoked automatically when a file is removed or the component disconnects.
+Set `gallery` to render selected files as a grid of thumbnails instead of the default single-column list: a better fit for photo uploads. Image files render an actual preview; other file types fall back to a generic file icon in the same grid cell. Object URLs are created lazily and revoked automatically when a file is removed or the component disconnects.
 
 <ComponentPreview center>
 
@@ -134,7 +134,7 @@ Set `gallery` to render selected files as a grid of thumbnails instead of the de
 
 ### File Size & Count Limits
 
-Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't meet the criteria are silently filtered out. The limits appear in the dropzone hint. Always validate these constraints on the server as well — client-side filtering alone is not sufficient.
+Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't meet the criteria are silently filtered out. The limits appear in the dropzone hint. Always validate these constraints on the server as well: client-side filtering alone is not sufficient.
 
 <ComponentPreview center>
 
@@ -199,7 +199,7 @@ Expand the component to fill its container with `fullwidth`.
 
 ### Disabled
 
-Prevents all interaction — click, drag-and-drop, and keyboard activation are all blocked.
+Prevents all interaction: click, drag-and-drop, and keyboard activation are all blocked.
 
 <ComponentPreview center>
 
@@ -229,7 +229,7 @@ Display a validation error with the `error` attribute. The error message replace
 
 ## Form Integration
 
-`ore-file-input` is a form-associated custom element. It serializes its selected files as `FormData` under the given `name` key — identical to how a native `<input type="file">` behaves. Always include a `name` attribute when using the component inside a `<form>` — it is required for form submission.
+`ore-file-input` is a form-associated custom element. It serializes its selected files as `FormData` under the given `name` key: identical to how a native `<input type="file">` behaves. Always include a `name` attribute when using the component inside a `<form>`: it is required for form submission.
 
 ```html
 <form id="upload-form" method="post" enctype="multipart/form-data">
@@ -260,7 +260,7 @@ fileInput.addEventListener('remove', ({ detail }) => {
 | Attribute   | Type                                                                      | Default   | Description                                         |
 | ----------- | ------------------------------------------------------------------------- | --------- | --------------------------------------------------- |
 | `accept`    | `string`                                                                  | `''`      | Accepted MIME types or extensions (comma-separated) |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —         | Color theme                                         |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme                                         |
 | `disabled`  | `boolean`                                                                 | `false`   | Disable all interaction                             |
 | `error`     | `string`                                                                  | `''`      | Error message (replaces helper text)                |
 | `fullwidth` | `boolean`                                                                 | `false`   | Expand to full width                                |
@@ -272,7 +272,7 @@ fileInput.addEventListener('remove', ({ detail }) => {
 | `multiple`  | `boolean`                                                                 | `false`   | Allow selecting multiple files                      |
 | `name`      | `string`                                                                  | `''`      | Form field name                                     |
 | `required`  | `boolean`                                                                 | `false`   | Mark as required                                    |
-| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl'`                | —         | Border radius                                       |
+| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl'`                | N/A | Border radius                                       |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`    | Component size                                      |
 | `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'` | Visual variant                                      |
 
@@ -314,4 +314,4 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 The file input component follows WCAG 2.1 Level AA standards. The dropzone uses `role="button"` with `aria-labelledby` linking the label and `aria-describedby` linking helper text. `Tab` focuses the dropzone; `Enter` / `Space` open the native file picker. Remove buttons inside the file list are individually focusable, each with a descriptive `aria-label` (e.g. `"Remove report.pdf"`). Error messages use `role="alert"` for live-region announcements. `aria-disabled` reflects the disabled state.
 
-In gallery mode, thumbnail `<img>` elements use `alt=""` (decorative) rather than the file name — the name is already shown as a visible caption directly below each thumbnail, so screen readers get it from the caption in reading order instead of a duplicate, often-redundant `alt` (real filenames frequently contain words like "photo" or "image", which trips automated redundant-alt checks for no benefit).
+In gallery mode, thumbnail `<img>` elements use `alt=""` (decorative) rather than the file name: the name is already shown as a visible caption directly below each thumbnail, so screen readers get it from the caption in reading order instead of a duplicate, often-redundant `alt` (real filenames frequently contain words like "photo" or "image", which trips automated redundant-alt checks for no benefit).

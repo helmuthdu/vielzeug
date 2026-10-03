@@ -306,7 +306,7 @@
   }
 
   /* ========================================
-       Status Icon (Signals 03/04: error/success — never color alone)
+       Status Icon (Signals 03/04: error/success: never color alone)
        ======================================== */
 
   .status-icon {
@@ -335,7 +335,7 @@
        Loading Spinner (Signal 06)
        ======================================== */
 
-  /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
+  /* Keyframe must live in shadow DOM: @keyframes don't inherit across shadow roots */
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -361,12 +361,12 @@
 /*
  * The solid/flat/bordered/outline/ghost variant switch (previously here) now lives in
  * `fieldVariantMixin({ container: '.field', tokenPrefix: 'input' })` in `input.ts`'s `styles`
- * array — shared with `ore-textarea`/`ore-message-composer` instead of hand-duplicated across
+ * array: shared with `ore-textarea`/`ore-message-composer` instead of hand-duplicated across
  * all three (see the mixin's own doc comment for what it covers and why). `ore-input`'s extra
  * `text` variant (below) is not part of that shared set, so it keeps its own block here.
  */
 @layer refine.variants {
-  /* Text — underline style */
+  /* Text: underline style */
   :host([variant='text']) {
     --_bg: var(--input-bg, transparent);
     --_border-color: var(--input-border-color, var(--color-contrast-300));
@@ -384,11 +384,11 @@
   }
 
   /*
-   * Focus/error/success `box-shadow` on `.field` — kept here in `refine.variants` (alongside
+   * Focus/error/success `box-shadow` on `.field`: kept here in `refine.variants` (alongside
    * `fieldVariantMixin`'s rest-state `box-shadow` for solid/outline/ghost) rather than
    * `refine.overrides`, so normal specificity decides the winner. Cascade layers beat
    * specificity outright, so a `refine.overrides` box-shadow always lost to every variant's
-   * unconditional rest-state `box-shadow`, focused/error/success or not — the same bug class
+   * unconditional rest-state `box-shadow`, focused/error/success or not: the same bug class
    * fixed for `ore-otp-input`'s focus ring.
    */
   :host(:not([disabled], [variant='text'], [variant='flat'])) .field:focus-within {
@@ -409,7 +409,7 @@
 }
 
 @layer refine.utilities {
-  /* Full width: fill the track and never overflow it — a `fullwidth` field in a track narrower
+  /* Full width: fill the track and never overflow it: a `fullwidth` field in a track narrower
      than the 12rem floor shrinks with the track instead of pushing past it. */
   :host([fullwidth]) {
     width: 100%;
@@ -418,14 +418,14 @@
 }
 
 /* ========================================
-     Disabled State (Signal 05) — intentionally unlayered
+     Disabled State (Signal 05): intentionally unlayered
      ======================================== */
 
 /*
  * The shared `disabledLoadingMixin` (pulled in via `fieldMixins`) dims `:host([disabled])`
  * with `opacity: 0.5` as bare, unlayered CSS. Cascade layers always lose to unlayered rules
  * regardless of source order or specificity, so overriding that from inside any `@layer`
- * block in this file (including `refine.overrides`) would be a no-op — this has to stay
+ * block in this file (including `refine.overrides`) would be a no-op: this has to stay
  * unlayered too, to actually win.
  *
  * Per the field-state UX review: opacity-based dimming reads as a washed-out/loading look

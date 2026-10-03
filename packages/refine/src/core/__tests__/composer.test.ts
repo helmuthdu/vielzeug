@@ -59,7 +59,7 @@ describe('createComposerControl', () => {
     });
   });
 
-  describe('handleKeydown() — "enter" mode (default)', () => {
+  describe('handleKeydown(): "enter" mode (default)', () => {
     it('sends and prevents default on plain Enter', () => {
       const onSend = vi.fn();
       const control = createComposerControl({ onSend, value: signal('hi') });
@@ -114,7 +114,7 @@ describe('createComposerControl', () => {
     });
   });
 
-  describe('handleKeydown() — "mod+enter" mode', () => {
+  describe('handleKeydown(): "mod+enter" mode', () => {
     it('does not send on plain Enter, leaving the default newline insertion', () => {
       const onSend = vi.fn();
       const control = createComposerControl({ onSend, sendShortcut: signal('mod+enter'), value: signal('hi') });

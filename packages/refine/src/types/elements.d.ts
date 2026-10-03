@@ -3,11 +3,11 @@
  * This file is the single source of truth for DOM and framework element types.
  *
  * Every type referenced below is imported explicitly. The root tsconfig sets
- * `skipLibCheck: true`, which exempts `.d.ts` files from having their contents verified — an
+ * `skipLibCheck: true`, which exempts `.d.ts` files from having their contents verified: an
  * unresolvable bare type name here doesn't raise `TS2304: Cannot find name`, it silently
  * resolves to `any`, which then collapses the entire intersection it's part of to `any` too.
  * That turns every property/method access on the affected tag into a silent no-op for
- * consumers — no autocomplete, no error, nothing — which is a much worse failure mode than a
+ * consumers: no autocomplete, no error, nothing, which is a much worse failure mode than a
  * build error. Importing the real types is what keeps this file honest under `skipLibCheck`;
  * see `src/types/elements.test.ts` for the regression test that would have caught this.
  */

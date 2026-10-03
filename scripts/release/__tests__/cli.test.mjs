@@ -99,7 +99,7 @@ describe('publish', () => {
 
     await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore']);
 
-    expect(log).toHaveBeenCalledWith('⚠️  @vielzeug/ore@1.0.4 already on npm — skipping');
+    expect(log).toHaveBeenCalledWith('⚠️  @vielzeug/ore@1.0.4 already on npm: skipping');
     expect(publishPackage).not.toHaveBeenCalled();
     expect(tagAndRelease).not.toHaveBeenCalled();
   });
@@ -135,7 +135,7 @@ describe('publish', () => {
   });
 
   it('reads DRY_RUN per call, not once at module import time', async () => {
-    // cli.mjs was already imported (at the top of this file) with DRY_RUN unset — if `dryRun`
+    // cli.mjs was already imported (at the top of this file) with DRY_RUN unset: if `dryRun`
     // were captured at import time instead of inside main(), setting it now would have no effect.
     versionExists.mockResolvedValue(false);
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});

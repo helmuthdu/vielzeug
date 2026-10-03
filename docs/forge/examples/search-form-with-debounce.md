@@ -1,5 +1,5 @@
 ---
-title: 'Forge Examples — Search Form with Debounce'
+title: 'Forge Examples: Search Form with Debounce'
 description: Debounce application-owned search work from a field subscription.
 ---
 

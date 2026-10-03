@@ -1,5 +1,5 @@
 ---
-title: Ripple — API Reference
+title: 'Ripple: API Reference'
 description: Complete reference for reactive graphs, signals, effects, scopes, watchers, and observability.
 ---
 
@@ -25,7 +25,7 @@ description: Complete reference for reactive graphs, signals, effects, scopes, w
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/ripple` | All primitives, types, and errors — signals, computed, effects, scopes, watch, tap, and the isolated graph factory |
+| `@vielzeug/ripple` | All primitives, types, and errors: signals, computed, effects, scopes, watch, tap, and the isolated graph factory |
 
 ## Graph Creation
 
@@ -78,7 +78,7 @@ console.log(isReactive(signal(0)));
 
 ## Default Graph Functions
 
-Root helpers (`signal`, `computed`, `effect`, `batch`, `createScope`, `untrack`, `watch`, `resource`, `fromSubscribable`) operate on a process-lifetime default graph. Use them only when the application has one graph for its entire lifetime — they are never disposed. For isolated, disposable graphs (tests, SSR, embedded features) use `createRipple()`.
+Root helpers (`signal`, `computed`, `effect`, `batch`, `createScope`, `untrack`, `watch`, `resource`, `fromSubscribable`) operate on a process-lifetime default graph. Use them only when the application has one graph for its entire lifetime: they are never disposed. For isolated, disposable graphs (tests, SSR, embedded features) use `createRipple()`.
 
 ### `signal(initial, options?)`
 
@@ -189,7 +189,7 @@ console.log(untrack(() => locale.value));
 function createScope(name?: string): Scope;
 ```
 
-Creates a disposable ownership boundary. Work created inside `scope.run()` belongs to that scope. Explicit scopes created during an effect run attach to the enclosing scope—not the transient effect-run owner—and therefore survive reruns until explicitly or parent-disposed. Disposed children detach from parent ownership immediately.
+Creates a disposable ownership boundary. Work created inside `scope.run()` belongs to that scope. Explicit scopes created during an effect run attach to the enclosing scope (not the transient effect-run owner) and therefore survive reruns until explicitly or parent-disposed. Disposed children detach from parent ownership immediately.
 
 **Returns:** `Scope`.
 
@@ -238,7 +238,7 @@ function watch<T>(
 ): EffectHandle;
 ```
 
-Observes selected output changes using the default graph or a `Ripple.watch()` method. Callback-only reactive reads are untracked; without `immediate`, initial evaluation does not count as an invocation. For one-shot observation, dispose the returned handle from inside the callback — with `immediate: true`, do the first invocation at the call site instead, because the callback runs before the handle exists.
+Observes selected output changes using the default graph or a `Ripple.watch()` method. Callback-only reactive reads are untracked; without `immediate`, initial evaluation does not count as an invocation. For one-shot observation, dispose the returned handle from inside the callback: with `immediate: true`, do the first invocation at the call site instead, because the callback runs before the handle exists.
 
 **Returns:** `EffectHandle`.
 

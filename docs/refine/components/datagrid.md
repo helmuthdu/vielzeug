@@ -1,6 +1,6 @@
 # Data Grid
 
-An accessible, keyboard-navigable data grid with built-in column sorting, row-level pagination, single/multi row selection, inline search, filter, column resizing, and row expansion. The controls bar above the table provides named views (tabs), inline search, sort, filter, column visibility, and a row-add action — all reactive, no wrapper needed.
+An accessible, keyboard-navigable data grid with built-in column sorting, row-level pagination, single/multi row selection, inline search, filter, column resizing, and row expansion. The controls bar above the table provides named views (tabs), inline search, sort, filter, column visibility, and a row-add action: all reactive, no wrapper needed.
 
 ## Basic Usage
 
@@ -390,8 +390,8 @@ Add `expandable` to the grid and supply a `renderExpanded` function on one or mo
 
 Every datagrid renders a controls bar above the table with two regions:
 
-- **Left — Named views (tabs):** When `views` is set, tabs appear here. A view may provide a client-side `filter(row)` predicate that composes with search and field filters. Clicking a tab fires `view-change`; your application keeps `active-view` controlled. When search is active, the expanded search input replaces this region.
-- **Right — Action bar:** Sort, Filter, Column visibility, density, custom actions, and Search. Sort, Filter, and Columns share the same panel width, header spacing, conditional reset icon, and customized-state indicator.
+- **Left: Named views (tabs):** When `views` is set, tabs appear here. A view may provide a client-side `filter(row)` predicate that composes with search and field filters. Clicking a tab fires `view-change`; your application keeps `active-view` controlled. When search is active, the expanded search input replaces this region.
+- **Right: Action bar:** Sort, Filter, Column visibility, density, custom actions, and Search. Sort, Filter, and Columns share the same panel width, header spacing, conditional reset icon, and customized-state indicator.
 
 ### Inline Search
 
@@ -405,11 +405,11 @@ Click **Sort** to open a panel where you can choose a column and direction (A→
 
 Click **Filter by** to open a field picker. Click any column name to add a multi-select filter rule for it. Option values are derived from the raw or `filterValue` data, while labels use `filterLabel` or the formatted text returned by `cell`. Return numbers from `filterValue` for chronological or other range comparisons. Each active rule shows a combobox below the field picker. The header clear icon appears only while filter rules are active; individual rules retain their own remove action.
 
-Pre-define filter options via the `filterOptions` JS property. When provided, those options replace the auto-derived ones for matching column keys. The type is `FilterOption[]` — each entry has `key`, `label`, and `options`.
+Pre-define filter options via the `filterOptions` JS property. When provided, those options replace the auto-derived ones for matching column keys. The type is `FilterOption[]`: each entry has `key`, `label`, and `options`.
 
 ### Column Visibility
 
-The columns icon opens an ordered checkbox list. Its header reports how many columns are visible and shows the reset icon only after customization; the toolbar icon shows a dot while visibility differs from the default. The final visible column is protected from being hidden. Column visibility changes presentation only—search and filters continue to operate on the configured column values.
+The columns icon opens an ordered checkbox list. Its header reports how many columns are visible and shows the reset icon only after customization; the toolbar icon shows a dot while visibility differs from the default. The final visible column is protected from being hidden. Column visibility changes presentation only, search and filters continue to operate on the configured column values.
 
 <ComponentPreview>
 
@@ -455,7 +455,7 @@ The columns icon opens an ordered checkbox list. Its header reports how many col
 Use the left-side tablist for saved views without replacing the grid's `rows`. Assign a `filter(row)` predicate to each predefined view, then keep `active-view` in sync with `view-change`. Client-side predicates run before search, field filters, sorting, and pagination; source-backed grids continue to delegate filtering to their source.
 
 ::: tip Controlled pattern
-`views` and `active-view` are intentionally controlled — the grid never mutates `active-view` on its own. This keeps your application as the single source of truth for view state.
+`views` and `active-view` are intentionally controlled: the grid never mutates `active-view` on its own. This keeps your application as the single source of truth for view state.
 :::
 
 <ComponentPreview>
@@ -594,12 +594,12 @@ Set `selectedKeys` to programmatically control which rows are selected. Any chan
 
 `ore-datagrid` integrates directly with [`@vielzeug/sourcerer`](/sourcerer/) via the `source` JS property. When a source is provided:
 
-- `rows` is ignored — `source.state.items` drives displayed items.
+- `rows` is ignored: `source.state.items` drives displayed items.
 - The pagination footer reads `source.state.pagination`.
 - Prev/next buttons call `source.previous()` / `source.next()`.
 - The inline search input calls `source.setParams(search)` when available.
 - `source.state.loading` is reflected in the grid's `aria-busy` state.
-- Client-side sort and filter are bypassed — update source params from emitted grid events for server-side behavior.
+- Client-side sort and filter are bypassed: update source params from emitted grid events for server-side behavior.
 
 ### In-memory data (no source)
 
@@ -644,7 +644,7 @@ void source.reload().catch(() => undefined);
 ```
 
 ::: tip DataGridSource interface
-Any object that satisfies the `DataGridSource` structural interface works as a source — not just sourcerer instances. The required shape is:
+Any object that satisfies the `DataGridSource` structural interface works as a source: not just sourcerer instances. The required shape is:
 
 ```ts
 type DataGridSource<T> = {
@@ -690,26 +690,26 @@ Provided `filterOptions` define available choices without activating those filte
 
 | Name                 | Type                                   | Default                   | Description                                                                                                                              |
 | -------------------- | -------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `columns`            | `DataGridColumn[]`                     | —                         | Column definitions with optional `cell` text formatting and safe `renderCell` `HTMLResult` output. Takes precedence over `<ore-column>` children |
+| `columns`            | `DataGridColumn[]`                     | N/A | Column definitions with optional `cell` text formatting and safe `renderCell` `HTMLResult` output. Takes precedence over `<ore-column>` children |
 | `rows`               | `object[]`                             | `[]`                      | Row data (JS property only)                                                                                                              |
 | `getRowKey`          | `(row) => string`                      | `(row) => String(row.id)` | Returns a unique key per row. Required when rows lack an `id` field (JS property only)                                                   |
-| `views`              | `DataGridView[]`                       | —                         | Controlled tabs with optional client-side `filter(row)` predicates, rendered in the left controls region (JS property)                    |
-| `active-view`        | `string`                               | —                         | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                             |
-| `label`              | `string`                               | —                         | Accessible label for the grid (`aria-label`)                                                                                             |
+| `views`              | `DataGridView[]`                       | N/A | Controlled tabs with optional client-side `filter(row)` predicates, rendered in the left controls region (JS property)                    |
+| `active-view`        | `string`                               | N/A | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                             |
+| `label`              | `string`                               | N/A | Accessible label for the grid (`aria-label`)                                                                                             |
 | `labels`             | `Partial<DataGridLabels>`              | English defaults          | Localized built-in control labels, filter operators, and range/row formatters (JS property)                                              |
-| `selectedKeys`       | `string[]`                             | `[]`                      | Controlled selection — set externally to override the internal selection state (JS property)                                             |
+| `selectedKeys`       | `string[]`                             | `[]`                      | Controlled selection: set externally to override the internal selection state (JS property)                                             |
 | `selection-mode`     | `'none' \| 'single' \| 'multi'`        | `'none'`                  | Row selection behaviour                                                                                                                  |
 | `sort-mode`          | `'client' \| 'server'`                 | `'client'`                | `'server'` disables client-side sorting; consumer handles it via `sort-change`                                                           |
-| `page-size`          | `number`                               | `10`                      | Rows per page; `0` disables pagination. Reactive — can be changed after mount                                                            |
+| `page-size`          | `number`                               | `10`                      | Rows per page; `0` disables pagination. Reactive: can be changed after mount                                                            |
 | `expandable`         | `boolean`                              | `false`                   | Enable row expansion. Requires at least one column to have `renderExpanded`                                                              |
 | `empty-text`         | `string`                               | `'No data'`               | Text shown when `rows` is empty                                                                                                          |
 | `density`            | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'`                  | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious                                                              |
 | `striped`            | `boolean`                              | `false`                   | Alternating row backgrounds                                                                                                              |
 | `fullwidth`          | `boolean`                              | `false`                   | Stretch the grid to fill its container's width                                                                                           |
 | `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                         |
-| `filterOptions`      | `FilterOption[]`                       | —                         | Available choices for column or non-visible metadata filters. Definitions remain inactive until selected in the Filter popover (JS property) |
-| `pageSizeOptions`    | `number[]`                             | —                         | When set, renders a page-size `ore-select` in the footer (JS property)                                                                    |
-| `source`             | `DataGridSource`                       | —                         | A reactive source. When set, drives rows and pagination; string-param sources also drive search (JS property)                             |
+| `filterOptions`      | `FilterOption[]`                       | N/A | Available choices for column or non-visible metadata filters. Definitions remain inactive until selected in the Filter popover (JS property) |
+| `pageSizeOptions`    | `number[]`                             | N/A | When set, renders a page-size `ore-select` in the footer (JS property)                                                                    |
+| `source`             | `DataGridSource`                       | N/A | A reactive source. When set, drives rows and pagination; string-param sources also drive search (JS property)                             |
 | `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.state.loading` when `source` is provided                                      |
 | `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                  |
 
@@ -812,8 +812,8 @@ When using the declarative `<ore-column>` API, the following attributes map dire
 
 The datagrid implements the [ARIA Grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/). The `<table>` element carries `role="grid"`, every `<th>` has `role="columnheader"` and `scope="col"`, and every `<td>` has `role="gridcell"`. Always provide a meaningful `label` attribute so screen readers can announce the grid's purpose.
 
-Sortable columns render a native `<button>` inside the `<th>` — natively focusable, announced correctly by all screen readers, and keyboard-operable via Enter/Space. The `aria-sort="ascending|descending|none"` attribute is updated on each sort cycle.
+Sortable columns render a native `<button>` inside the `<th>`: natively focusable, announced correctly by all screen readers, and keyboard-operable via Enter/Space. The `aria-sort="ascending|descending|none"` attribute is updated on each sort cycle.
 
 When `selection-mode` is `"single"` or `"multi"`, body rows carry `aria-selected="true|false"`. When `expandable` is set, body rows carry `aria-expanded="true|false"` and the expand toggle button is placed at the trailing edge of each row. `aria-disabled="true"` is set on the table when `disabled` and `aria-busy="true"` when `loading`. Pagination controls use `aria-live="polite"` with `aria-atomic="true"` on the info text, and the prev/next buttons carry `aria-label="Previous page"` / `aria-label="Next page"`. The select-all checkbox is labelled `aria-label="Select all rows on this page"`.
 
-Focus management follows the roving tabindex pattern — Arrow keys move focus between header and body cells; Home/End jump to row edges.
+Focus management follows the roving tabindex pattern: Arrow keys move focus between header and body cells; Home/End jump to row edges.

@@ -99,7 +99,7 @@ Use `animated="false"` for static placeholders.
 
 ## Striped
 
-Add `striped` to replace the shimmer with a diagonal stripe pattern. Useful for designers building page layouts — the high-contrast stripes make it immediately obvious where content placeholders are, without relying on animation.
+Add `striped` to replace the shimmer with a diagonal stripe pattern. Useful for designers building page layouts: the high-contrast stripes make it immediately obvious where content placeholders are, without relying on animation.
 
 <ComponentPreview center>
 
@@ -142,10 +142,10 @@ The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS cus
 | Attribute  | Type                           | Default  | Description                                            |
 | ---------- | ------------------------------ | -------- | ------------------------------------------------------ |
 | `variant`  | `'rect' \| 'circle' \| 'text'` | `'rect'` | Visual shape preset                                    |
-| `size`     | `'sm' \| 'md' \| 'lg'`         | —        | Height preset for `rect`/`text`; diameter for `circle` |
-| `width`    | `string`                       | —        | Width override (e.g. `12rem`, `70%`)                   |
-| `height`   | `string`                       | —        | Height override                                        |
-| `radius`   | `string`                       | —        | Border-radius override                                 |
+| `size`     | `'sm' \| 'md' \| 'lg'`         | N/A | Height preset for `rect`/`text`; diameter for `circle` |
+| `width`    | `string`                       | N/A | Width override (e.g. `12rem`, `70%`)                   |
+| `height`   | `string`                       | N/A | Height override                                        |
+| `radius`   | `string`                       | N/A | Border-radius override                                 |
 | `animated` | `boolean`                      | `true`   | Set `animated="false"` to disable shimmer              |
 | `lines`    | `number`                       | `1`      | Number of text lines (`variant="text"`)                |
 | `striped`  | `boolean`                      | `false`  | Diagonal stripe pattern instead of shimmer             |
@@ -181,7 +181,7 @@ This component does not emit custom events.
 
 The shimmer animation is automatically paused when the element scrolls out of the viewport, using an `IntersectionObserver`. This prevents off-screen animations from consuming GPU resources.
 
-Animation can also be disabled entirely with `animated="false"` — useful for static mockups or when the parent already shows a loading spinner.
+Animation can also be disabled entirely with `animated="false"`: useful for static mockups or when the parent already shows a loading spinner.
 
 ## Accessibility
 

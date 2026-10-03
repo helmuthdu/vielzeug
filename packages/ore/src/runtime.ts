@@ -1,12 +1,12 @@
 /**
- * Component runtime — implicit "current component" context plus every lifecycle
+ * Component runtime: implicit "current component" context plus every lifecycle
  * hook a `setup()` function can call.
  *
  * Design note: hooks are plain module-level functions (not a bag/context object
  * passed into `setup`). They resolve the active component through a single
  * module-level pointer (`currentContext`), set for the duration of `setup()` and
  * of each queued `onMounted` callback. This is the same mechanism React/Vue/Solid
- * use for their composable hooks — it lets any helper function (not just the
+ * use for their composable hooks: it lets any helper function (not just the
  * top-level `setup()` body) call `onMounted`/`onCleanup`/`bind`/... directly,
  * with no context object to thread through every layer of a composable.
  */
@@ -32,7 +32,7 @@ let currentContext: RuntimeContext | null = null;
 
 /**
  * @internal Create a fresh runtime context for a component element. The single
- * construction site for `RuntimeContext` — used by `BaseElement` (setup and
+ * construction site for `RuntimeContext`: used by `BaseElement` (setup and
  * per-callback mount contexts) and by `testing/render-hook.ts`, so the test
  * harness can never silently desync from a new required field.
  */
@@ -44,11 +44,11 @@ export const createRuntimeContext = (element: HTMLElement): RuntimeContext => ({
 
 // ─── Pending work tracking ──────────────────────────────────────────────────
 // A single counter of "in-flight scheduled work" across every live component
-// instance on the page — incremented when a mount-callback microtask is scheduled
+// instance on the page: incremented when a mount-callback microtask is scheduled
 // (base-element.ts's _scheduleMountCallbacks()), decremented when it completes.
 //
 // Why this exists: `@vielzeug/ripple`'s reactive graph settles fully synchronously on
-// every signal write (see ripple's scheduling.ts) — there is no async flush queue to wait
+// every signal write (see ripple's scheduling.ts): there is no async flush queue to wait
 // for there. The only genuinely async work `testing/flush()` needs to wait for is ore's own
 // bounded, internal scheduling: `queueMicrotask`-scheduled onMounted callbacks.
 // `testing/flush()` polls `hasPendingWork()` to know precisely when that work has
@@ -91,7 +91,7 @@ export const runWithContext = <T>(ctx: RuntimeContext, fn: () => T): T => {
 /**
  * Returns the current runtime context, throwing a consistently-worded error
  * (naming the calling API) if called outside `setup()`. Every lifecycle/context
- * hook below routes through this — it's the single place that decides both
+ * hook below routes through this: it's the single place that decides both
  * "are we inside setup?" and what the resulting error looks like, so the error
  * message is never worse for one hook than another.
  * @internal
@@ -105,7 +105,7 @@ export const requireSetupContext = (api: string): RuntimeContext => {
 /**
  * Returns the current component's host element.
  * Only valid synchronously during component `setup()` (or inside a composable
- * called from it) — throws otherwise.
+ * called from it): throws otherwise.
  */
 export const getHost = (): HTMLElement => requireSetupContext('getHost').element;
 
@@ -133,7 +133,7 @@ export const onMounted = (fn: OnMountedCallback): void => {
 /**
  * Register work to run when the ancestor `<form>` is reset (native `formResetCallback`,
  * only fires for `formAssociated: true` components). Multiple callbacks run in
- * registration order, every time the form resets — unlike `onMounted`, this isn't a
+ * registration order, every time the form resets: unlike `onMounted`, this isn't a
  * one-shot hook.
  */
 export const onFormReset = (fn: OnFormResetCallback): void => {
@@ -147,7 +147,7 @@ export const onFormReset = (fn: OnFormResetCallback): void => {
  *
  * Named `watchEffect` (not `watch`) to avoid shadowing `@vielzeug/ripple`'s
  * `watch(source, callback)`, which has different semantics (explicit source,
- * old/new value pair) — the two are commonly imported in the same file.
+ * old/new value pair): the two are commonly imported in the same file.
  */
 export const watchEffect = (fn: () => Cleanup | undefined): (() => void) => {
   const sub = _effect(fn);

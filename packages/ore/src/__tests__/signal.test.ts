@@ -210,9 +210,9 @@ describe('Core: Signal System', () => {
         },
         { equals: (a, b) => a.length === b.length },
       );
-      s.value = [4, 5, 6]; // same length — suppressed
+      s.value = [4, 5, 6]; // same length: suppressed
       expect(fires).toBe(0);
-      s.value = [1, 2, 3, 4]; // different length — fires
+      s.value = [1, 2, 3, 4]; // different length: fires
       expect(fires).toBe(1);
     });
   });

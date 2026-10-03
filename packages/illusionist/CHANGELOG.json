@@ -100,7 +100,7 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "feat: initial release — typed fake data generator with seeded PRNG, locale-aware person/internet/commerce/date/finance/location/lorem/system categories, explicit tree-shakeable en + de locale objects, createIllusion factory with disposal",
+            "comment": "feat: initial release: typed fake data generator with seeded PRNG, locale-aware person/internet/commerce/date/finance/location/lorem/system categories, explicit tree-shakeable en + de locale objects, createIllusion factory with disposal",
             "commit": "62bd79001fd5b43df207ba0ee712357469d8d101"
           }
         ]

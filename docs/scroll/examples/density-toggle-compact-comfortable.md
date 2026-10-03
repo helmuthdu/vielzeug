@@ -1,5 +1,5 @@
 ---
-title: 'Scroll Examples — Density Toggle (Compact / Comfortable)'
+title: 'Scroll Examples: Density Toggle (Compact / Comfortable)'
 description: 'Density Toggle (Compact / Comfortable) examples for scroll.'
 ---
 
@@ -35,7 +35,7 @@ document.getElementById('toggle-density')!.addEventListener('click', () => {
 
 ### Pitfalls
 
-- Calling `update({ estimateSize })` triggers a full layout recalculation. Toggling rapidly (e.g., bound to a slider) causes layout thrashing — debounce the update call.
+- Calling `update({ estimateSize })` triggers a full layout recalculation. Toggling rapidly (e.g., bound to a slider) causes layout thrashing: debounce the update call.
 - Previously measured heights from `measure()` are discarded when `estimateSize` changes. If the user switches back to a previous density, all rows need to be re-measured.
 - The scroll position is preserved in pixels after `update()`. If the user was at item 500 and the row height changes, the visible items shift. Scroll to the same logical item index instead of trusting the pixel offset.
 

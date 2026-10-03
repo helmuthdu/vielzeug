@@ -1,9 +1,9 @@
 /**
- * Real-browser tests for `ore-tabs`/`ore-tab-item`/`ore-tab-panel` — a11y checks and click/
+ * Real-browser tests for `ore-tabs`/`ore-tab-item`/`ore-tab-panel`: a11y checks and click/
  * keyboard interaction that jsdom can't evaluate (no CSS box model, no real focus movement).
  * Complements `tabs.test.ts`/`tab-item.test.ts`/`tab-panel.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 

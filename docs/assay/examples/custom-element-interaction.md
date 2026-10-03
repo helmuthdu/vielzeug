@@ -1,5 +1,5 @@
 ---
-title: 'Assay Examples — Custom Element Interaction'
+title: 'Assay Examples: Custom Element Interaction'
 description: 'Custom Element Interaction example for @vielzeug/assay.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Custom Element Interaction example for @vielzeug/assay.'
 
 ### Problem
 
-You've written a vanilla custom element and want to assert on its behavior — click a button inside its DOM, then check that the visible state updated — without a framework-specific test renderer.
+You've written a vanilla custom element and want to assert on its behavior: click a button inside its DOM, then check that the visible state updated: without a framework-specific test renderer.
 
 ### Solution
 
@@ -45,11 +45,11 @@ el.remove();
 
 ### Pitfalls
 
-- `within(el)` queries `el`'s light DOM — if your element renders into a shadow root, scope to `el.shadowRoot` instead.
-- Remove the element (`el.remove()`) when you're done — Assay has no auto-cleanup registry.
+- `within(el)` queries `el`'s light DOM: if your element renders into a shadow root, scope to `el.shadowRoot` instead.
+- Remove the element (`el.remove()`) when you're done: Assay has no auto-cleanup registry.
 - `fireClick()` is synchronous; if the handler triggers an async update, await `waitUntil(...)` afterward.
 
 ### Related
 
 - [Waiting for Async Updates](./waiting-for-async-updates.md)
-- [Ore Usage Guide — Testing Utilities](/ore/usage#testing-utilities)
+- [Ore Usage Guide: Testing Utilities](/ore/usage#testing-utilities)

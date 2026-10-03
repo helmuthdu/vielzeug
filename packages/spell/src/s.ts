@@ -70,7 +70,7 @@ const sCoerce = {
   string: (): StringSchema<unknown> => StringSchema.coerce(),
 };
 
-/* -------------------- `s` namespace — the public API -------------------- */
+/* -------------------- `s` namespace: the public API -------------------- */
 
 /**
  * Namespace of all schema factories. Use `s.string()`, `s.object()`, etc.

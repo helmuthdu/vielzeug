@@ -114,7 +114,7 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
     name: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
     required: prop.bool(false),
-    // Not auto-reflected (`reflect: false`) — the derived, interaction-updated selection
+    // Not auto-reflected (`reflect: false`): the derived, interaction-updated selection
     // (`selectedValue`) is the single writer for this attribute, via `bind()` below; letting
     // `prop.string()`'s own default reflection also write the raw incoming value would leave
     // two effects racing to set the same attribute from different sources.

@@ -1,4 +1,4 @@
-/** @vielzeug/orbit — shared public type definitions. */
+/** @vielzeug/orbit: shared public type definitions. */
 
 export type Side = 'top' | 'bottom' | 'left' | 'right';
 export type Alignment = 'start' | 'end';
@@ -90,9 +90,9 @@ export interface MiddlewareState {
  * Signal that the middleware pipeline should re-run.
  *
  * Use `{}` for a bare restart (same rects and placement). Optionally:
- * - `remeasure: true` — re-read both rects from the DOM before restarting.
- * - `rects: { floating, reference }` — restart using the provided rects directly.
- * - `placement` — override the placement for the next pass.
+ * - `remeasure: true`: re-read both rects from the DOM before restarting.
+ * - `rects: { floating, reference }`: restart using the provided rects directly.
+ * - `placement`: override the placement for the next pass.
  *
  * **Precedence:** `remeasure` takes priority over `rects`. When both are set,
  * `remeasure` triggers a fresh DOM read and `rects` is ignored.

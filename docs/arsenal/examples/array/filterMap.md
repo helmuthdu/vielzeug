@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — filterMap'
+title: 'Arsenal Examples: filterMap'
 description: 'filterMap example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'filterMap example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to transform an array and drop some items in a single pass — without a separate `filter` then `map` chain.
+You need to transform an array and drop some items in a single pass: without a separate `filter` then `map` chain.
 
 ### Solution
 
@@ -38,7 +38,7 @@ const strings: string[] = filterMap(rows, (r) => r.value ?? undefined);
 ### Pitfalls
 
 - Return `undefined` to drop an item. Returning `null` keeps it.
-- Not lazy — processes the whole array in one pass.
+- Not lazy: processes the whole array in one pass.
 
 ### Related
 

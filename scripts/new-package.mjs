@@ -9,7 +9,7 @@
  * four `docs/<name>/` pages plus one recipe and an empty `migration.md` that
  * `pnpm validate:docs` requires for every package directory, registers the project in
  * `rush.json`, and refreshes `.agents/reference/packages.md`. Everything the standard package
- * shape needs lives here — if the shape changes, change this script, not a checklist.
+ * shape needs lives here: if the shape changes, change this script, not a checklist.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -135,7 +135,7 @@ import {} from '@vielzeug/${name}';
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © [Helmuth Saatkamp](https://github.com/helmuthdu): part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
 `;
 }
 
@@ -208,14 +208,14 @@ import {} from '${pkg}';
 
 <div class="see-also">
 
-- [Arsenal](/arsenal/) — general-purpose utilities.
+- [Arsenal](/arsenal/): general-purpose utilities.
 
 </div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->
 `,
     'usage.md': `---
-title: ${title} — Usage Guide
+title: ${title}: Usage Guide
 description: How to use ${pkg}.
 ---
 
@@ -232,7 +232,7 @@ import {} from '${pkg}';
 - TODO
 `,
     'api.md': `---
-title: ${title} — API Reference
+title: ${title}: API Reference
 description: Public API of ${pkg}.
 ---
 
@@ -251,7 +251,7 @@ description: Public API of ${pkg}.
 | \`${pkg}\` | Complete public ${title} API |
 `,
     'examples.md': `---
-title: ${title} — Examples
+title: ${title}: Examples
 description: Practical examples and recipes for ${pkg}.
 ---
 
@@ -260,7 +260,7 @@ description: Practical examples and recipes for ${pkg}.
 - [Getting Started](./examples/getting-started.md)
 `,
     'examples/getting-started.md': `---
-title: ${title} Examples — Getting Started
+title: ${title} Examples: Getting Started
 description: First steps with ${pkg}.
 ---
 
@@ -285,7 +285,7 @@ import {} from '${pkg}';
 - [Usage Guide](../usage.md)
 `,
     // Versions are CalVer trains (RELEASE.md); this page is where a breaking change's
-    // migration story lands — one section per break, old code → new code. Empty until
+    // migration story lands: one section per break, old code → new code. Empty until
     // the package's first breaking train.
     'migration.md': `---
 title: ${title} Migration

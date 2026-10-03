@@ -1,5 +1,5 @@
 ---
-title: Vault — Typed storage
+title: 'Vault: Typed storage'
 description: Typed browser storage and opt-in driver-neutral SQLite with portable keys, TTL, observation, and transactions.
 package: vault
 category: Storage
@@ -93,11 +93,11 @@ try {
 
 - `table()` defines typed records with portable string or number keys.
 - Spell and other parser schemas work directly as codecs; `validatorCodec()` creates an explicit identity-encoding codec.
-- `/memory` returns a portable `DocumentVaultStore` with `batch()` and `iterate()` — codecs optional (in-memory, no trust boundary).
-- `/local-storage` and `/session-storage` return `KeyValueVaultStore` — codecs required.
+- `/memory` returns a portable `DocumentVaultStore` with `batch()` and `iterate()`: codecs optional (in-memory, no trust boundary).
+- `/local-storage` and `/session-storage` return `KeyValueVaultStore`: codecs required.
 - `observe()` emits current and changed table snapshots.
 - `ttl` creates validated expiration durations.
-- `/indexeddb` and `/sqlite` return `DocumentVaultStore` with `batch()` and `iterate()` — codecs required. `/memory` shares the same contract without codecs.
+- `/indexeddb` and `/sqlite` return `DocumentVaultStore` with `batch()` and `iterate()`: codecs required. `/memory` shares the same contract without codecs.
 - `/indexeddb` accepts a `migrate` hook for schema upgrades the table schema cannot express.
 - `pruneExpired()` removes stale TTL entries on demand.
 - Bound helpers (`has`, `count`, `update`, `upsert`, `getMany`, `keys`, `deleteMany`) are available on every store and transaction context.

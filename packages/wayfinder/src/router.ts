@@ -219,7 +219,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
     this.ready = navigationPromise.catch(unwrapCarrier);
     // Attach a silent handler so an unawaited ready promise doesn't trigger
     // an unhandled-rejection warning. External consumers can still await ready
-    // and receive the rejection — each .catch() subscriber fires independently.
+    // and receive the rejection: each .catch() subscriber fires independently.
     this.ready.catch(() => {});
     // #runInBackground receives the raw promise so it can extract carrier context for onError.
     this.#runInBackground(navigationPromise, { source: 'initial-navigation' });
@@ -318,7 +318,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
   }
 
   /**
-   * Build an anchor-ready href for a named route — the address-bar form for the configured
+   * Build an anchor-ready href for a named route: the address-bar form for the configured
    * history driver. `url()` returns the router-internal path; under `createHashHistory`
    * the same route lives behind `#`, and `href()` returns that form for `<a>` elements.
    */
@@ -362,7 +362,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
   /**
    * Load a URL into a route state including data loader results, without modifying
    * router state or history. Follows declarative redirects but does not cache results.
-   * Middleware is not executed — use `navigate()` when middleware side effects are needed.
+   * Middleware is not executed: use `navigate()` when middleware side effects are needed.
    */
   async load(url: string, options?: { signal?: AbortSignal }): Promise<RouteState | null> {
     const prepared = await this.#resolveUrl(url);
@@ -537,7 +537,7 @@ class Router<TRoutes extends RouteTable = RouteTable> {
     this.#preloads.clear();
     this.#navigation.invalidate(new WayfinderDisposedError());
     this.#unlistenHistory();
-    // Abort the disposal signal last — waitFor() listeners clean themselves up via this signal.
+    // Abort the disposal signal last: waitFor() listeners clean themselves up via this signal.
     this.#disposeController.abort(new WayfinderDisposedError());
   }
 

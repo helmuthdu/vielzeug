@@ -9,7 +9,7 @@ type AppEvents = {
 
 const bus = createBus<AppEvents>({ name: 'app' })
 
-// onAny receives every event — useful for logging, analytics, tracing
+// onAny receives every event: useful for logging, analytics, tracing
 const unsub = bus.onAny((event, payload) => {
   console.log('[audit]', event, payload)
 })

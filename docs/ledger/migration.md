@@ -1,5 +1,5 @@
 ---
-title: Ledger — Migration Guide
+title: 'Ledger: Migration Guide'
 description: Migrate Ledger runtime injection, reactive state, reversible commands, cancellation, and lifecycle contracts.
 ---
 
@@ -11,7 +11,7 @@ Ledger 3.1 unifies the observable-state contract, removes redundant state, and t
 
 ### `state` is now `Subscribable`
 
-`LedgerReadable` is replaced by the exported `Subscribable` contract, which matches `Subscribable` in `@vielzeug/arsenal`: `getSnapshot()` and `subscribe(listener)`. The duplicate `value` getter and `peek()` read are gone — one read shape remains.
+`LedgerReadable` is replaced by the exported `Subscribable` contract, which matches `Subscribable` in `@vielzeug/arsenal`: `getSnapshot()` and `subscribe(listener)`. The duplicate `value` getter and `peek()` read are gone: one read shape remains.
 
 ```ts
 // Before
@@ -36,7 +36,7 @@ const accepting = !ledger.disposed;
 
 ### `whenIdle()` rejects on disposal
 
-`whenIdle()` no longer resolves against a disposed ledger. It rejects with `LedgerDisposedError` immediately if already disposed, or while waiting if disposal happens first — matching `do()`, `undo()`, `redo()`, and `clear()`.
+`whenIdle()` no longer resolves against a disposed ledger. It rejects with `LedgerDisposedError` immediately if already disposed, or while waiting if disposal happens first: matching `do()`, `undo()`, `redo()`, and `clear()`.
 
 ### `clear()` skips empty history
 
@@ -70,10 +70,10 @@ const ledger = createLedger({ maxHistory: 50 });
 `ledger.state` is no longer a Ripple signal. It implements a framework-neutral structural contract with `getSnapshot()` and `subscribe(listener)`. Subscriptions are invalidation callbacks: they are not immediate, receive no value argument, and run from a listener snapshot. Failures are rethrown in a microtask without interrupting Ledger bookkeeping or later subscribers.
 
 ```ts
-// Before — Ripple dependency tracking
+// Before: Ripple dependency tracking
 const stop = effect(() => renderHistory(ledger.state.getSnapshot()));
 
-// After — framework-neutral subscription
+// After: framework-neutral subscription
 const render = () => renderHistory(ledger.state.getSnapshot());
 render();
 const stop = ledger.state.subscribe(render);

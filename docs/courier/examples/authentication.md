@@ -1,5 +1,5 @@
 ---
-title: 'Courier Examples — Authentication'
+title: 'Courier Examples: Authentication'
 description: 'Add a current bearer token to every Courier request.'
 ---
 

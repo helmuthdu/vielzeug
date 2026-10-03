@@ -1,5 +1,5 @@
 ---
-title: Arsenal — String Examples
+title: 'Arsenal: String Examples'
 description: String utility examples for Arsenal.
 ---
 

@@ -17,7 +17,7 @@ function makeExecutionStub() {
 }
 
 describe('executeReplCode', () => {
-  it('reports "No code to execute" for blank code — no transpile, no run', async () => {
+  it('reports "No code to execute" for blank code: no transpile, no run', async () => {
     const execution = makeExecutionStub();
 
     await executeReplCode({

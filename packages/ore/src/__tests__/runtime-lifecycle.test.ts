@@ -495,7 +495,7 @@ describe('lifecycle hook aliases (R9)', () => {
 describe('testing/flush(): deterministic pending-work draining', () => {
   it('settles a deeply nested chain of self-registering onMounted callbacks with a single default flush()', async () => {
     // Regression test: flush() used to drain a fixed, guessed number of microtask turns
-    // (5 by default, 12 via the now-removed FLUSH_DEEP) — a chain deeper than that would
+    // (5 by default, 12 via the now-removed FLUSH_DEEP): a chain deeper than that would
     // silently leave later callbacks unrun. It's now deterministic: it waits for exactly as
     // much scheduled mount-callback work as is actually pending, however many microtask
     // turns that takes. Ten levels deep comfortably exceeds the old default.

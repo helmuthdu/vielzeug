@@ -1,5 +1,5 @@
 /**
- * Sign-correct modulo — unlike the native `%` operator, the result always has the same sign
+ * Sign-correct modulo: unlike the native `%` operator, the result always has the same sign
  * as the divisor `b` (e.g. `mod(-1, 4)` is `3`, not `-1`).
  *
  * @example

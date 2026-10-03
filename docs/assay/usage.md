@@ -1,5 +1,5 @@
 ---
-title: Assay — Usage Guide
+title: 'Assay: Usage Guide'
 description: Scoped DOM queries, exact event dispatch, and cancellable waiting with @vielzeug/assay.
 ---
 

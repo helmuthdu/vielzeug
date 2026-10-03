@@ -1,5 +1,5 @@
 ---
-title: Coins Examples — Exchange
+title: 'Coins Examples: Exchange'
 description: Convert exact money through explicit currency definitions and decimal rates.
 ---
 

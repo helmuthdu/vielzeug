@@ -1,5 +1,5 @@
 ---
-title: 'Lingua Examples — Static Translator'
+title: 'Lingua Examples: Static Translator'
 description: Translate a fixed set of locale messages without a stateful store.
 ---
 

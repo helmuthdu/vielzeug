@@ -1,5 +1,5 @@
 ---
-title: Codex — Usage Guide
+title: 'Codex: Usage Guide'
 description: Install, connect, develop, and debug the Vielzeug MCP server.
 ---
 
@@ -28,7 +28,7 @@ Response includes snapshot version. Runtime bind validation and Host/Origin allo
 
 ## Agent Skill
 
-Codex ships a `vielzeug` agent skill — a `SKILL.md` that tells an AI agent working in *your* project to discover packages through the MCP tools instead of guessing, to use the owning `@vielzeug/*` package instead of hand-rolling, and to build UI from Refine components, tokens, and theme whenever `@vielzeug/refine` is installed. Install it into the project:
+Codex ships a `vielzeug` agent skill: a `SKILL.md` that tells an AI agent working in *your* project to discover packages through the MCP tools instead of guessing, to use the owning `@vielzeug/*` package instead of hand-rolling, and to build UI from Refine components, tokens, and theme whenever `@vielzeug/refine` is installed. Install it into the project:
 
 ```sh
 npx -y @vielzeug/codex skills install

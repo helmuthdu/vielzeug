@@ -1,5 +1,5 @@
 ---
-title: Tempo — Usage Guide
+title: 'Tempo: Usage Guide'
 description: Parse explicit Temporal values, resolve wall-clock time, perform timezone-aware arithmetic, and format dates with Tempo.
 ---
 
@@ -103,7 +103,7 @@ formatRelative(instant, { base: parse('2026-03-21T09:15:30Z', { as: 'instant' })
 
 `formatRelative()` uses fixed elapsed-time units for short spans and complete calendar months or years for longer spans. Pass `timeZone` when calendar-relative output must use a specific regional calendar boundary.
 
-Use `formatTimer()` for stopwatch-style clocks — elapsed timers, recorded durations — where localized prose does not fit:
+Use `formatTimer()` for stopwatch-style clocks: elapsed timers, recorded durations: where localized prose does not fit:
 
 ```ts
 import { formatTimer } from '@vielzeug/tempo';

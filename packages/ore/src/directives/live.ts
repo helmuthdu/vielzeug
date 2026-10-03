@@ -3,7 +3,7 @@ import type { Readable } from '@vielzeug/ripple';
 import { makeBrand } from '../utils/brand';
 
 /**
- * A per-binding marker produced by `live()`. Wraps the source signal — the
+ * A per-binding marker produced by `live()`. Wraps the source signal: the
  * "live" flag belongs to this one binding site, never to the signal itself,
  * so other bindings of the same signal are unaffected.
  *

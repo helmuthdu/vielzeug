@@ -101,7 +101,7 @@ const requirePackageGroup = (id: string): PackageGroup => {
   return group;
 };
 
-// Explicit navbar column layout — keeps each column balanced as packages are added.
+// Explicit navbar column layout: keeps each column balanced as packages are added.
 // Columns render left-to-right; the menu's CSS grid places them in order.
 export const NAVBAR_COLUMNS: PackageGroup[][] = [
   [requirePackageGroup('foundations'), requirePackageGroup('data')], // Foundations · Data & Connectivity

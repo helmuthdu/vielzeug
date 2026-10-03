@@ -7,7 +7,7 @@ import { MeshPairingError, MeshUnsupportedError } from '../errors';
 import { meshQrCodec } from '../qr-codec';
 import type { MeshAnswer, MeshInvitation } from '../types';
 
-/** Realistic SDP offer shape — mirrors what Chrome produces (≈700 B). */
+/** Realistic SDP offer shape: mirrors what Chrome produces (≈700 B). */
 const sdp = [
   'v=0',
   'o=- 1234567890 2 IN IP4 127.0.0.1',
@@ -62,7 +62,7 @@ describe('meshQrCodec', () => {
       sessionId: invitation.sessionId,
       v: 1,
     });
-    // The SDP rebuilds as a minimal description — semantically equal, not identical.
+    // The SDP rebuilds as a minimal description: semantically equal, not identical.
     expect(compactSdp(decoded.sdp)).toEqual(compactSdp(invitation.sdp));
   });
 

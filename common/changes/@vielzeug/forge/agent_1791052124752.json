@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Standardize package text punctuation",
+      "packageName": "@vielzeug/forge",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

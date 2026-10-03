@@ -6,7 +6,7 @@
  * into virtualizer (which layers VirtualKey translation on top).
  */
 
-/** A single rendered virtual item — position and size on one axis. */
+/** A single rendered virtual item: position and size on one axis. */
 export interface VirtualItem {
   end: number;
   index: number;
@@ -88,7 +88,7 @@ export function createAxis1D(initialCount: number, sizeAtFn: (index: number) => 
   // ─── Incremental rebuild ────────────────────────────────────────────────────
 
   /**
-   * O(count - fromIndex) incremental rebuild — used after measurement.
+   * O(count - fromIndex) incremental rebuild: used after measurement.
    * Always resets dedup guards because measurements change layout.
    */
   function rebuildFrom(fromIndex: number): void {

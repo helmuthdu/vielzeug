@@ -84,7 +84,7 @@ describe('createReplaceableSlot()', () => {
   });
 });
 
-describe('setAttr — URL security', () => {
+describe('setAttr: URL security', () => {
   it('blocks javascript: href', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const el = document.createElement('a');
@@ -188,7 +188,7 @@ describe('setAttr — URL security', () => {
   });
 });
 
-describe('setAttr — on* attribute blocking', () => {
+describe('setAttr: on* attribute blocking', () => {
   it('blocks onclick attribute', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const el = document.createElement('div');
@@ -211,7 +211,7 @@ describe('setAttr — on* attribute blocking', () => {
   });
 });
 
-describe('setAttr — srcdoc blocking', () => {
+describe('setAttr: srcdoc blocking', () => {
   it('blocks srcdoc unconditionally (raw HTML, not a URL)', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const el = document.createElement('iframe');

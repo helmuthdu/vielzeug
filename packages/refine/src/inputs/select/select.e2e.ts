@@ -1,8 +1,8 @@
 /**
- * Real-browser accessibility check for `ore-select` — a real axe scan against the rendered
+ * Real-browser accessibility check for `ore-select`: a real axe scan against the rendered
  * shadow DOM. Complements `select.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
@@ -86,7 +86,7 @@ test.describe('Layout', () => {
   });
 
   // Regression: the positioner used to shift the panel fully inside the boundary for its
-  // natural (unclamped) width, then clamped the width afterwards — landing the panel far
+  // natural (unclamped) width, then clamped the width afterwards: landing the panel far
   // left of its trigger whenever the natural width exceeded a clipping ancestor. The clamp
   // must happen before `shift` so the panel only shifts for the width it renders at.
   test('dropdown in a clipping container stays aligned with its trigger after width clamping', async ({
@@ -121,13 +121,13 @@ test.describe('Layout', () => {
       };
     });
 
-    // Clamped to the container width, the panel needs at most a few px of shift to fit —
+    // Clamped to the container width, the panel needs at most a few px of shift to fit :
     // not the full overflow of its wider natural width.
     expect(metrics.dropdownLeft).toBeGreaterThan(metrics.triggerLeft - 16);
     expect(metrics.dropdownRight).toBeLessThanOrEqual(metrics.boxRight);
   });
 
-  // Regression: `--select-min-width` and `fullwidth` sized the host only — the inner
+  // Regression: `--select-min-width` and `fullwidth` sized the host only: the inner
   // ore-input kept its own 12rem floor, so a select constrained below 12rem rendered a
   // trigger wider than its host, overflowing (and clipped by) the host's container. The
   // host must pass its width floor down so the control never renders wider than its host.

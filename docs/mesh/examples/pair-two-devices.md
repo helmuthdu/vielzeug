@@ -1,5 +1,5 @@
 ---
-title: 'Mesh Examples — Pair Two Devices'
+title: 'Mesh Examples: Pair Two Devices'
 description: Pair a host and a guest over manual signaling and exchange typed messages.
 ---
 
@@ -7,7 +7,7 @@ description: Pair a host and a guest over manual signaling and exchange typed me
 
 ### Problem
 
-Two devices on the same network must exchange typed messages with no server. You need the smallest possible pairing loop: invitation out, answer back, channel open — using `createMeshHost`, `createMeshGuest`, and `meshCodec`.
+Two devices on the same network must exchange typed messages with no server. You need the smallest possible pairing loop: invitation out, answer back, channel open: using `createMeshHost`, `createMeshGuest`, and `meshCodec`.
 
 ### Solution
 
@@ -27,10 +27,10 @@ const guest = createMeshGuest<AppProtocol>();
 host.on('note', (m) => host.send(m.peerId, 'ack', { ok: true }));
 guest.on('ack', (m) => console.log('ack:', m.payload.ok));
 
-// Leg 1 — host → guest, out-of-band (copy/paste or navigator.share)
+// Leg 1: host → guest, out-of-band (copy/paste or navigator.share)
 const invitationText = meshCodec.encode(await host.createInvitation());
 
-// Leg 2 — guest → host, out-of-band
+// Leg 2: guest → host, out-of-band
 const answerText = meshCodec.encode(await guest.acceptInvitation(meshCodec.decode(invitationText)));
 
 // Resolves once the data channel is open.
@@ -45,12 +45,12 @@ try {
 
 ### Pitfalls
 
-- `RTCPeerConnection` needs a secure context — serve over `https:` or `localhost`, or `createInvitation` fails at the native layer.
+- `RTCPeerConnection` needs a secure context: serve over `https:` or `localhost`, or `createInvitation` fails at the native layer.
 - An invitation is single-use and expires (`invitationTtlMs`, default 5 minutes); `acceptAnswer` then throws `MeshPairingError`.
-- `acceptAnswer` waits for the channel to open — deliver the answer promptly or the guest's open guard marks it `'failed'`.
-- On the guest, inbound `peerId` is the invitation's `sessionId` — the identity the guest knows its host by.
+- `acceptAnswer` waits for the channel to open: deliver the answer promptly or the guest's open guard marks it `'failed'`.
+- On the guest, inbound `peerId` is the invitation's `sessionId`: the identity the guest knows its host by.
 
 ### Related
 
-- [Usage Guide — Pairing Flow](../usage.md#pairing-flow)
+- [Usage Guide: Pairing Flow](../usage.md#pairing-flow)
 - [Host-Authoritative Command Loop](./host-authoritative-command-loop.md)

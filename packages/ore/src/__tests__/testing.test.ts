@@ -85,7 +85,7 @@ describe('Testing: Render Utilities', () => {
 
   describe('fire', () => {
     // fire.*'s own dispatch behavior is covered exhaustively in @vielzeug/assay's own test
-    // suite (it has no ore-specific logic) — this is the one integration point worth keeping
+    // suite (it has no ore-specific logic): this is the one integration point worth keeping
     // here: firing against a real mounted ore component's rendered DOM.
     it('should fire click events', async () => {
       const spy = vi.fn();
@@ -118,7 +118,7 @@ describe('Testing: Render Utilities', () => {
     });
   });
 
-  describe('Fixture — additional query helpers and lifecycle', () => {
+  describe('Fixture: additional query helpers and lifecycle', () => {
     it('sets multiple attributes via attrs()', async () => {
       const fixture = await mount(
         () => html`

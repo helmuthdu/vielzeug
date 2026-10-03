@@ -1,5 +1,5 @@
 ---
-title: 'Rune Examples — Request Middleware'
+title: 'Rune Examples: Request Middleware'
 description: 'Request Middleware example for @vielzeug/rune.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Request Middleware example for @vielzeug/rune.'
 
 ### Problem
 
-Every log entry produced during an HTTP request should carry the request ID and authenticated user ID — without threading a logger parameter through every function that runs during the request.
+Every log entry produced during an HTTP request should carry the request ID and authenticated user ID: without threading a logger parameter through every function that runs during the request.
 
 ### Solution
 
@@ -37,7 +37,7 @@ export function requestLogger(req, res, next) {
 
 ### Pitfalls
 
-- `withBindings()` returns a new instance — it does not mutate in place. Assigning it back to a module-level variable replaces the logger for all callers. Use `AsyncLocalStorage` to scope a logger per request.
+- `withBindings()` returns a new instance: it does not mutate in place. Assigning it back to a module-level variable replaces the logger for all callers. Use `AsyncLocalStorage` to scope a logger per request.
 - The request ID must be generated before the logger is created for the request. Middleware that runs after the logging middleware means early log entries do not carry the request ID.
 - Using `console.log` alongside the structured logger bypasses the transport and formatter, producing mixed formats in log aggregators.
 

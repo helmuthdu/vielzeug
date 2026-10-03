@@ -1,9 +1,9 @@
 /**
- * Real-browser interaction test for `ore-popover` — click-to-open against real positioning
+ * Real-browser interaction test for `ore-popover`: click-to-open against real positioning
  * (`@vielzeug/orbit`), which jsdom can't evaluate. Complements `popover.test.ts`'s jsdom
  * coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { expect, test } from '../../testing/fixtures';
 

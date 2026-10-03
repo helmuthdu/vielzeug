@@ -35,7 +35,7 @@ export const dispatchKeyboardAction = (event: KeyboardEvent, options: KeyboardDi
 export type PressTrigger = 'keyboard' | 'pointer';
 
 /**
- * Options for `createInteraction` — a unified press + focus/blur interaction
+ * Options for `createInteraction`: a unified press + focus/blur interaction
  * handler for accessible interactive elements.
  */
 export type InteractionOptions = {

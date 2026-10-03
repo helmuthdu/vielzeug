@@ -1,5 +1,5 @@
 ---
-title: 'Ward Examples — Immutable Test Policies'
+title: 'Ward Examples: Immutable Test Policies'
 description: 'Verify isolated authorization behavior with immutable policy snapshots.'
 ---
 

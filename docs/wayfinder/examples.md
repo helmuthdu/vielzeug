@@ -1,5 +1,5 @@
 ---
-title: Wayfinder — Examples
+title: 'Wayfinder: Examples'
 description: Practical examples and recipes for wayfinder.
 ---
 

@@ -117,7 +117,7 @@
   }
 
   /* Frost: the variant mixin paints the surface with its own high-contrast theme ink.
-     Keep every inner element on that same ink — the page-ink defaults (--text-color-*)
+     Keep every inner element on that same ink: the page-ink defaults (--text-color-*)
      and the base-tinted value were written for opaque panels and fail over artwork. */
   :host([variant='frost']) .label,
   :host([variant='frost']) .value,
@@ -226,7 +226,7 @@
 /* Unlayered on purpose: the frost surface comes from the unlayered frostVariantMixin, and
    layered rules can never beat unlayered ones. The mixin paints the tinted film at 50% alpha,
    which lets dark artwork drag the surface below the lightness the theme ink (--_theme-content)
-   was designed against — dark ink on dark glass in dark mode, washed-out white in light mode.
+   was designed against: dark ink on dark glass in dark mode, washed-out white in light mode.
    A denser film keeps the color's own lightness dominant, so the ink pairing both themes define
    (dark ink on the light-mode base, light ink on the dark-mode base) holds over any artwork,
    while the blur and saturation still read as glass. */

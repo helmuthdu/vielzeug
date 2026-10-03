@@ -16,12 +16,12 @@ const PAYMENT_METHOD_KEYS: Record<PaymentMethod, string> = {
   lease: 'checkout.payment.methodLease',
 };
 
-/** Translates an `OrderStatus` enum value for display — never render the raw kebab-case value. */
+/** Translates an `OrderStatus` enum value for display: never render the raw kebab-case value. */
 export function formatOrderStatus(status: OrderStatus): string {
   return t(ORDER_STATUS_KEYS[status]);
 }
 
-/** Translates a `PaymentMethod` enum value for display — mirrors the payment step's own radio labels. */
+/** Translates a `PaymentMethod` enum value for display: mirrors the payment step's own radio labels. */
 export function formatPaymentMethod(method: PaymentMethod): string {
   return t(PAYMENT_METHOD_KEYS[method]);
 }

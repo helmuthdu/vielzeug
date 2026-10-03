@@ -21,14 +21,14 @@ test.describe('Layout', () => {
   /**
    * The pill's resolved size metrics beside the page's own token values. The size cascade is
    * the point of these tests: `sizeVariantMixin` emits unlayered `:host` defaults, so the
-   * badge's own size contract — the `--badge-*` variables and the `xs` size — must beat them
+   * badge's own size contract: the `--badge-*` variables and the `xs` size: must beat them
    * from unlayered rules adopted after the mixin's sheet.
    */
   const readMetrics = async (page: import('@playwright/test').Page, selector: string) => {
     return await page.locator(selector).evaluate((host) => {
       const pill = host.shadowRoot!.querySelector<HTMLElement>('.badge')!;
       const pillStyle = getComputedStyle(pill);
-      // Tokens resolve to px on a probe — custom properties never resolve units on their own.
+      // Tokens resolve to px on a probe: custom properties never resolve units on their own.
       const probe = document.createElement('div');
       probe.style.display = 'none';
       probe.style.paddingTop = 'var(--size-1)';
@@ -147,7 +147,7 @@ test.describe('Layout', () => {
     });
 
     expect(geometry.labelHidden).toBe(true);
-    // The pill is exactly the glyph between its padding and border — no phantom trailing gap.
+    // The pill is exactly the glyph between its padding and border: no phantom trailing gap.
     expect(geometry.pillW).toBeCloseTo(geometry.iconW + 2 * (geometry.paddingX + geometry.borderW), 1);
     expect(geometry.iconCenterOffset).toBeCloseTo(geometry.pillW / 2, 1);
   });

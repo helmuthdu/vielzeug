@@ -31,7 +31,7 @@ export type WheelOption = {
 
 export type PackageCategory = 'comfort' | 'performance' | 'safety' | 'technology';
 
-/** Luxury feature-card catalog — a fixed set every model draws a subset from, rendered as
+/** Luxury feature-card catalog: a fixed set every model draws a subset from, rendered as
  * icon+label cards on the model detail page (`model.features.*` in `core/i18n.ts` owns the labels). */
 export type FeatureKey =
   | 'adaptiveCruise'
@@ -79,7 +79,7 @@ export type ModelTechnical = {
 
 export type Model = {
   availability: 'available' | 'coming-soon' | 'limited';
-  /** Base price in USD — the storage currency; `core/currency.ts` converts for display. */
+  /** Base price in USD: the storage currency; `core/currency.ts` converts for display. */
   basePrice: string;
   bodyType: BodyType;
   colors: ColorOption[];
@@ -144,7 +144,7 @@ export type Address = {
 };
 
 /** `pickup`'s dealer is resolved via `Order.dealerId` against `seed-data.ts`'s static `DEALERS`
- * list — there's no dealer API/query in this demo, so no dealer store lives in `core/catalog.ts`. */
+ * list: there's no dealer API/query in this demo, so no dealer store lives in `core/catalog.ts`. */
 export type DeliveryMethod = 'delivery' | 'pickup';
 
 export type Dealer = {
@@ -153,7 +153,7 @@ export type Dealer = {
   name: string;
 };
 
-/** Self-reported — this demo has no valuation service, so the shopper's own estimate is the
+/** Self-reported: this demo has no valuation service, so the shopper's own estimate is the
  * number carried straight through to the order total (see `pricing.ts`'s `applyTradeInCredit`). */
 export type TradeIn = {
   description: string;

@@ -71,7 +71,7 @@ const doneSortable = createSortable({
   scope,
 })
 
-console.log('Connected lists ready — drag items between columns')
+console.log('Connected lists ready: drag items between columns')
 console.log('Scope is shared:', typeof scope)`,
   name: 'createSortableScope - Connected Lists',
 };

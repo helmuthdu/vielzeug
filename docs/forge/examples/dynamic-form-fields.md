@@ -1,5 +1,5 @@
 ---
-title: 'Forge Examples — Dynamic Form Fields'
+title: 'Forge Examples: Dynamic Form Fields'
 description: Update repeating form values through immutable array replacement.
 ---
 

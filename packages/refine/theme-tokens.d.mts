@@ -1,5 +1,5 @@
 // Type declarations for theme-tokens.mjs's exported data (the generator
-// script itself stays plain JS — see the file's own doc comment for why).
+// script itself stays plain JS: see the file's own doc comment for why).
 // Consumed by the contrast-ratio test; kept minimal on purpose, this isn't a
 // public package export.
 

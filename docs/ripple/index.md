@@ -1,5 +1,5 @@
 ---
-title: Ripple — Reactive graphs
+title: 'Ripple: Reactive graphs'
 description: Framework-agnostic signals, effects, async resources, scopes, structural bridges, and observability.
 package: ripple
 category: state
@@ -127,9 +127,9 @@ ripple.dispose();
 
 <div class="see-also">
 
-- [Ore](/ore/) — uses Ripple signals and effects for web-component reactivity.
-- [Clockwork](/clockwork/) — exposes machine state through reactive Ripple values.
-- [Ledger](/ledger/) — adds command-based undo and redo beside Ripple state.
+- [Ore](/ore/): uses Ripple signals and effects for web-component reactivity.
+- [Clockwork](/clockwork/): exposes machine state through reactive Ripple values.
+- [Ledger](/ledger/): adds command-based undo and redo beside Ripple state.
 
 </div>
 

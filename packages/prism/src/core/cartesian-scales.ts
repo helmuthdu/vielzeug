@@ -8,14 +8,14 @@ export function buildXScale(allX: (Date | number)[], width: number): Scale<Date>
 
   if (allX.some((v) => v == null)) {
     warn(
-      'buildXScale: one or more x values are null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
+      'buildXScale: one or more x values are null or undefined: data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
     );
 
     return linearScale({ domain: [0, 1], range: [0, width] });
   }
 
   if (allX.some((v) => typeof v === 'number' && !Number.isFinite(v))) {
-    warn('buildXScale: one or more x values are NaN or Infinity — check upstream data for invalid arithmetic.');
+    warn('buildXScale: one or more x values are NaN or Infinity: check upstream data for invalid arithmetic.');
 
     return linearScale({ domain: [0, 1], range: [0, width] });
   }
@@ -42,14 +42,14 @@ export function buildYScale(allY: number[], height: number, includeZero = true):
 
   if (allY.some((v) => v == null)) {
     warn(
-      'buildYScale: one or more y values are null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
+      'buildYScale: one or more y values are null or undefined: data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
     );
 
     return linearScale({ domain: [0, 1], range: [height, 0] });
   }
 
   if (allY.some((v) => !Number.isFinite(v))) {
-    warn('buildYScale: one or more y values are NaN or Infinity — check upstream data for invalid arithmetic.');
+    warn('buildYScale: one or more y values are NaN or Infinity: check upstream data for invalid arithmetic.');
 
     return linearScale({ domain: [0, 1], range: [height, 0] });
   }

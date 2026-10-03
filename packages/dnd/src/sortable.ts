@@ -31,7 +31,7 @@ export interface AutoScrollOptions {
 
 /**
  * Passed to `onReorder` after every successful reorder (drag or keyboard).
- * Application history owns rollback — use `before`/`after`/`item` to record
+ * Application history owns rollback: use `before`/`after`/`item` to record
  * an undo entry.
  */
 export interface ReorderEvent {
@@ -112,7 +112,7 @@ export interface SortableOptions {
    * When `true`, drag interactions are ignored.
    *
    * Note: if `disabled` transitions to `true` while a drag is in progress the
-   * drag is treated as a cancellation — the item snaps back to its original
+   * drag is treated as a cancellation: the item snaps back to its original
    * position rather than committing the last placeholder location.
    */
   disabled?: boolean;
@@ -129,7 +129,7 @@ export interface SortableOptions {
   /**
    * Returns the identity key for a given item element.
    * This separates the "what is this item?" concern (yours) from the "which children
-   * are sortable?" concern (ours — marked with `data-dnd-item`).
+   * are sortable?" concern (ours: marked with `data-dnd-item`).
    *
    * @example
    * ```ts
@@ -145,7 +145,7 @@ export interface SortableOptions {
   /**
    * Returns the current sortable item elements. When omitted the sortable
    * scans the container's direct children. Provide this for explicit item
-   * ownership — e.g. when items are managed by a framework render loop.
+   * ownership: e.g. when items are managed by a framework render loop.
    */
   items?: () => readonly HTMLElement[];
   /**
@@ -155,7 +155,7 @@ export interface SortableOptions {
   keyboard?: boolean;
   /**
    * Called just before a successful drag commit with the before and after order snapshots.
-   * Use this hook to set up FLIP animations — the source items are still in their
+   * Use this hook to set up FLIP animations: the source items are still in their
    * pre-commit positions at the time of the call.
    *
    * @example
@@ -171,7 +171,7 @@ export interface SortableOptions {
   /** Called when the user starts dragging an item. */
   onDragStart?: (id: string, event: DragEvent) => void;
   /**
-   * Structured accessibility event for pickup/move/drop/cancel — wire to a consumer-side
+   * Structured accessibility event for pickup/move/drop/cancel: wire to a consumer-side
    * announcer for screen-reader feedback. See {@link SortableInteractionEvent}.
    */
   onInteraction?: (event: SortableInteractionEvent) => void;
@@ -199,7 +199,7 @@ export interface Sortable extends Disposable {
   /**
    * Re-reads items from the `items` provider (or the container's direct children)
    * and reapplies `draggable`, ARIA roles, and handle attributes. Call this after
-   * programmatically adding, removing, or replacing items — e.g. after a framework
+   * programmatically adding, removing, or replacing items: e.g. after a framework
    * render that replaces DOM nodes.
    *
    * Not needed when items are only reordered via drag or keyboard.
@@ -500,7 +500,7 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
     handle.commitReorder({ after, before, item: session.draggedId });
   }
 
-  // Same-container — emit drop even when the order didn't change (user picked up
+  // Same-container: emit drop even when the order didn't change (user picked up
   // and dropped at the same position). The interaction completed; silence would
   // leave screen-reader users without confirmation.
   const sourceChange = changes.find((change) => change.handle === session.source);
@@ -600,7 +600,7 @@ function keyboardTargetIndex(
   else if (matchKey(event, 'End')) targetIndex = items.length - 1;
   else return null;
 
-  // Already at the boundary — return null so the caller does not call preventDefault
+  // Already at the boundary: return null so the caller does not call preventDefault
   // and the browser can handle the key (e.g. scrolling the page).
   return targetIndex === currentIndex ? null : targetIndex;
 }
@@ -728,7 +728,7 @@ export function createSortable(options: SortableOptions): Sortable {
 
   if (handle !== undefined && !handleSelector) {
     warn(
-      'handle option is an empty string — no handle elements will be found. Provide a valid CSS selector or omit the option.',
+      'handle option is an empty string: no handle elements will be found. Provide a valid CSS selector or omit the option.',
     );
   } else if (handleSelector) {
     try {
@@ -799,8 +799,8 @@ export function createSortable(options: SortableOptions): Sortable {
         el.setAttribute('draggable', 'true');
         // A native mouse drag has no competing gesture to arbitrate; touch does. Without this,
         // a mobile browser can decide the very first bit of finger movement is a page
-        // scroll/pan — a decision it makes independently of, and before, this library's own
-        // Gesture activation-distance/`preventDefault()` logic ever runs — and hand the rest of the
+        // scroll/pan: a decision it makes independently of, and before, this library's own
+        // Gesture activation-distance/`preventDefault()` logic ever runs, and hand the rest of the
         // gesture to native scrolling. Once that happens the item never receives the
         // `dragover` sequence needed to update the drop target, so the session ends up
         // committing back to wherever it started: indistinguishable from the drop "reverting".
@@ -831,7 +831,7 @@ export function createSortable(options: SortableOptions): Sortable {
         if (key) {
           if (seenKeys.has(key)) {
             warn(
-              `getKey returned the duplicate key "${key}" for two sibling items — the duplicate item was excluded. Ensure getKey returns a unique value per item.`,
+              `getKey returned the duplicate key "${key}" for two sibling items: the duplicate item was excluded. Ensure getKey returns a unique value per item.`,
             );
             continue;
           }
@@ -841,7 +841,7 @@ export function createSortable(options: SortableOptions): Sortable {
         }
       } catch (err) {
         warn(
-          `getKey threw for a child element — the item will not be sortable. Check your getKey implementation. ${String(err)}`,
+          `getKey threw for a child element: the item will not be sortable. Check your getKey implementation. ${String(err)}`,
         );
       }
     }
@@ -1065,7 +1065,7 @@ export function createSortable(options: SortableOptions): Sortable {
     const prevIndex = items.indexOf(item);
     const targetIndex = keyboardTargetIndex(items, item, e, axis);
 
-    // null means unrecognized key or boundary — let the browser handle it (e.g. page scroll)
+    // null means unrecognized key or boundary: let the browser handle it (e.g. page scroll)
     if (targetIndex === null) return;
 
     const targetItem = items[targetIndex];

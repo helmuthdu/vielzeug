@@ -65,7 +65,7 @@ describe('BigIntSchema', () => {
     expect(s.bigint().nullable().parse(null)).toBeNull();
   });
 
-  describe('definition() — constraint warning', () => {
+  describe('definition(): constraint warning', () => {
     test('warns when bigint has constraints (they are not serializable)', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 

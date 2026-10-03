@@ -1,5 +1,5 @@
 ---
-title: Coins Examples — Formatting
+title: 'Coins Examples: Formatting'
 description: Format bigint money values with Intl locale presentation.
 ---
 

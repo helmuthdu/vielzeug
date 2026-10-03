@@ -1,5 +1,5 @@
 ---
-title: 'Focus Examples — Dialog Return Focus Restoration'
+title: 'Focus Examples: Dialog Return Focus Restoration'
 description: 'Capture and restore focus around dialog open/close lifecycle.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Capture and restore focus around dialog open/close lifecycle.'
 
 ### Problem
 
-A dialog should return keyboard focus to its opener when the dialog closes. Native `<dialog>` does this automatically only when opened via `showModal()` from a user gesture — programmatic opens, nested dialogs, and async close flows all lose the original trigger. You need explicit capture/restore that survives opener unmount and intentional focus redirects.
+A dialog should return keyboard focus to its opener when the dialog closes. Native `<dialog>` does this automatically only when opened via `showModal()` from a user gesture: programmatic opens, nested dialogs, and async close flows all lose the original trigger. You need explicit capture/restore that survives opener unmount and intentional focus redirects.
 
 ### Solution
 
@@ -48,7 +48,7 @@ function openSettings(): void {
   dialog.showModal();
 
   // Restore on any close path: native submit, Escape, cancel button, backdrop click.
-  // The restorer is one-shot — later calls return false, so a single listener is safe.
+  // The restorer is one-shot: later calls return false, so a single listener is safe.
   dialog.addEventListener('close', () => {
     // Skip restoration when the close action intentionally redirects focus.
     if (dialog.returnValue === 'save' && shouldNavigateAfterSave()) return;
@@ -63,7 +63,7 @@ function shouldNavigateAfterSave(): boolean {
 
 cancel.addEventListener('click', () => dialog.close('cancel'));
 
-// Backdrop click dismisses — composedPath excludes the dialog panel itself.
+// Backdrop click dismisses: composedPath excludes the dialog panel itself.
 dialog.addEventListener('click', (event) => {
   if (event.target === dialog) dialog.close('backdrop');
 });
@@ -76,7 +76,7 @@ trigger.addEventListener('click', openSettings);
 - **Capture before `showModal()`, not after.** `document.activeElement` shifts to the dialog once `showModal()` runs; capturing too late restores focus to the dialog body, not the trigger.
 - **Provide a `fallback` when the opener can unmount.** A list item that opens a detail dialog can be removed from the DOM while the dialog is open (e.g. bulk-delete flow). Without a fallback, `restoreFocus` silently no-ops and focus lands on `document.body`.
 - **Do not restore when the close action intentionally redirects.** If "Save" navigates to a new view or focuses a confirmation toast, restoring to the opener fights the new focus target. Branch on `dialog.returnValue` before calling the restorer.
-- **The restorer is one-shot.** The first call attempts restoration; every later call returns `false`. There is no `dispose()` — the function releases its captured reference on the first call, so re-registering it on multiple `close` events is safe but only the first has an effect.
+- **The restorer is one-shot.** The first call attempts restoration; every later call returns `false`. There is no `dispose()`: the function releases its captured reference on the first call, so re-registering it on multiple `close` events is safe but only the first has an effect.
 
 ### Related
 

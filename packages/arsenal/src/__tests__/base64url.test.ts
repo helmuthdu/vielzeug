@@ -4,7 +4,7 @@ import { base64UrlToBytes, base64UrlToText, bytesToBase64Url, textToBase64Url, u
 
 describe('base64url', () => {
   it('round-trips text through the URL-safe alphabet', () => {
-    const text = 'Primal: The Awakening — builds, quests & more!';
+    const text = 'Primal: The Awakening: builds, quests & more!';
 
     expect(base64UrlToText(textToBase64Url(text))).toBe(text);
   });

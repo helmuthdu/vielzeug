@@ -14,7 +14,7 @@ export type FormFieldOptions<T = unknown> = {
   /**
    * When `true`, a `null` or `undefined` value is submitted as an empty string
    * (`''`) instead of `null`. This keeps the field's key present in `FormData`
-   * even when the value is absent — useful when the server expects the field to
+   * even when the value is absent: useful when the server expects the field to
    * always be included.
    *
    * @default false
@@ -22,12 +22,12 @@ export type FormFieldOptions<T = unknown> = {
   emptyStringForNull?: boolean;
   /**
    * Called when the ancestor `<form>` is reset (see `onFormReset`). Use to restore
-   * whatever local state backs `value` — `useField` itself owns no field state to reset.
+   * whatever local state backs `value`: `useField` itself owns no field state to reset.
    */
   onReset?: () => void;
   toFormValue?: (value: T) => File | FormData | string | null;
   /**
-   * Recomputed reactively and passed straight to `internals.setValidity()` — `null`
+   * Recomputed reactively and passed straight to `internals.setValidity()`: `null`
    * (or omitting `validity` entirely) means always valid. Pair with `validationMessage`.
    *
    * @example
@@ -47,7 +47,7 @@ export type FormFieldHandle = {
   reportValidity: () => boolean;
   /**
    * Set (non-empty message) or clear (empty string) a custom validity error.
-   * Guards the platform's throw-on-empty-message contract — prefer this over
+   * Guards the platform's throw-on-empty-message contract: prefer this over
    * calling `internals.setValidity` directly.
    */
   setCustomValidity: (message: string) => void;
@@ -92,7 +92,7 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
   if (disabled) {
     if (!('states' in internals)) {
       warn(
-        'useField(): ElementInternals.states (CustomStateSet) is not available in this environment — disabled state tracking skipped.',
+        'useField(): ElementInternals.states (CustomStateSet) is not available in this environment: disabled state tracking skipped.',
       );
     } else {
       const states = internals.states as CustomStateSet;
@@ -108,7 +108,7 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
     watchEffect(() => {
       const flags = options.validity?.value ?? {};
       // Per spec, ElementInternals.setValidity() throws if any flag is true and message is
-      // empty — a caller-supplied `validity` with no matching `validationMessage` would crash
+      // empty: a caller-supplied `validity` with no matching `validationMessage` would crash
       // this effect in a real browser. Fail safe with a generic message instead of propagating
       // that crash, and say so loudly in dev so the real fix (pass validationMessage) gets made.
       const hasFlag = Object.values(flags).some(Boolean);
@@ -116,7 +116,7 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
 
       if (hasFlag && !message) {
         warn(
-          'useField(): `validity` has a truthy flag but `validationMessage` is empty — internals.setValidity() ' +
+          'useField(): `validity` has a truthy flag but `validationMessage` is empty: internals.setValidity() ' +
             'requires a non-empty message whenever any flag is true. Falling back to a generic message; pass ' +
             '`validationMessage` to customize it.',
         );

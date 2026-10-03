@@ -8,7 +8,7 @@ import { MeshUnsupportedError } from './errors';
  * across pairing codecs that rebuild the description (see `mq2.`). The host
  * recomputes the proof without receiving the secret back.
  *
- * WebCrypto is required — a non-cryptographic fallback would make the proof
+ * WebCrypto is required: a non-cryptographic fallback would make the proof
  * forgeable, which defeats its purpose. Environments without `SubtleCrypto`
  * (insecure contexts) must pair over `https://` or `localhost` instead.
  *
@@ -17,7 +17,7 @@ import { MeshUnsupportedError } from './errors';
 export async function createProof(secret: string, sdp: string): Promise<string> {
   const subtle = globalThis.crypto?.subtle;
   if (!subtle) {
-    throw new MeshUnsupportedError('WebCrypto is unavailable — pairing requires a secure context');
+    throw new MeshUnsupportedError('WebCrypto is unavailable: pairing requires a secure context');
   }
   const encoder = new TextEncoder();
   const key = await subtle.importKey('raw', encoder.encode(secret), { hash: 'SHA-256', name: 'HMAC' }, false, ['sign']);

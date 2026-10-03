@@ -1,5 +1,5 @@
 ---
-title: 'Sandbox Examples — User Script Sandbox'
+title: 'Sandbox Examples: User Script Sandbox'
 description: User Script Sandbox example for @vielzeug/sandbox.
 ---
 
@@ -9,7 +9,7 @@ Run user-provided code with error boundaries and console output capture, keeping
 
 ### Problem
 
-You're building a code playground or evaluation tool. Users type arbitrary JavaScript that you need to execute, capture `console.log` output from, and display errors for — all without risking access to host-page cookies, storage, or the DOM.
+You're building a code playground or evaluation tool. Users type arbitrary JavaScript that you need to execute, capture `console.log` output from, and display errors for: all without risking access to host-page cookies, storage, or the DOM.
 
 ### Solution
 
@@ -81,14 +81,14 @@ console.log(error); // null
 
 ### Pitfalls
 
-- **`allow-scripts` only** — the sandbox attribute is `sandbox="allow-scripts"` with nothing else. User code cannot open popups, access top-level navigation, or use `localStorage`. Network access is blocked by the CSP (`connect-src 'none'`).
-- **Script errors are forwarded, not thrown** — `msg.type === 'error'` fires for uncaught errors and unhandled promise rejections. Subscribe before calling `render()`.
-- **Each `render()` is a fresh document** — there is no shared state between runs. Variables from a previous run do not persist.
-- **Treat `msg.detail` as untrusted** — user code controls what is emitted via `window.__sandbox__.emit`. Validate or sanitize before displaying.
+- **`allow-scripts` only**: the sandbox attribute is `sandbox="allow-scripts"` with nothing else. User code cannot open popups, access top-level navigation, or use `localStorage`. Network access is blocked by the CSP (`connect-src 'none'`).
+- **Script errors are forwarded, not thrown**: `msg.type === 'error'` fires for uncaught errors and unhandled promise rejections. Subscribe before calling `render()`.
+- **Each `render()` is a fresh document**: there is no shared state between runs. Variables from a previous run do not persist.
+- **Treat `msg.detail` as untrusted**: user code controls what is emitted via `window.__sandbox__.emit`. Validate or sanitize before displaying.
 
 ### Related
 
-- [Usage Guide — Handling Errors](../usage.md#handling-errors)
-- [Usage Guide — Receiving Events from the Sandbox](../usage.md#receiving-events-from-the-sandbox)
-- [Usage Guide — Awaiting Subsequent Renders](../usage.md#awaiting-subsequent-renders)
-- [API Reference — SandboxBridge](../api.md#sandboxbridge)
+- [Usage Guide: Handling Errors](../usage.md#handling-errors)
+- [Usage Guide: Receiving Events from the Sandbox](../usage.md#receiving-events-from-the-sandbox)
+- [Usage Guide: Awaiting Subsequent Renders](../usage.md#awaiting-subsequent-renders)
+- [API Reference: SandboxBridge](../api.md#sandboxbridge)

@@ -10,7 +10,7 @@ type CheckoutContext = {
 
 type CheckoutEvent = { type: 'BACK' } | { orderId: string; type: 'CONFIRM' } | { type: 'NEXT' } | { type: 'RESTART' };
 
-// ── Singleton — one checkout flow at a time, reset via RESTART after confirmation ────
+// ── Singleton: one checkout flow at a time, reset via RESTART after confirmation ────
 
 export const checkoutMachine = defineMachine<CheckoutContext, CheckoutEvent>()({
   context: { orderId: null },

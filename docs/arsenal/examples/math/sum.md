@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — sum'
+title: 'Arsenal Examples: sum'
 description: 'sum example for @vielzeug/arsenal.'
 ---
 

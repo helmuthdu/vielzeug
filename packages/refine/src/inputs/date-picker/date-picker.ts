@@ -59,7 +59,7 @@ export type OreDatePickerProps = {
   size?: ComponentSize;
   /**
    * Shows an inline green check icon inside the field to confirm the value has
-   * passed validation. Ignored while `error` is set — an error always wins.
+   * passed validation. Ignored while `error` is set: an error always wins.
    */
   success?: boolean;
   /**
@@ -171,7 +171,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
     // ── Selected date: local-override pattern ──────────────────────────────
     // localSelection holds a user-initiated pick (or undefined = no override).
-    // selectedDate falls back to the value prop reactively — no setInterval needed.
+    // selectedDate falls back to the value prop reactively: no setInterval needed.
 
     const localSelection = signal<Temporal.PlainDate | null | undefined>(undefined);
 
@@ -222,7 +222,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     });
 
     // ── Reactive display state ────────────────────────────────────────────
-    // Three separate primitive signals — the proven pattern.
+    // Three separate primitive signals: the proven pattern.
 
     const currentView = signal<DatePickerView>('day');
     const displayYear = signal(ctrl.displayYear());
@@ -240,15 +240,15 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
     // ── Floating position ────────────────────────────────────────────────────
     // The old CSS-only `position: absolute; top: 100%` positioned the calendar relative to
-    // the host box — fine until the host sits near a scroll/clip ancestor's edge (e.g. a form
+    // the host box: fine until the host sits near a scroll/clip ancestor's edge (e.g. a form
     // grid inside a dialog), where the same absolute box also expands that ancestor's
     // *scrollable* overflow area even though it never changes the ancestor's own layout size,
-    // which reads as "the dialog got bigger"/jumped. `createDropdownPositioner` — the same
-    // Orbit-powered primitive `ore-select`'s dropdown already uses — positions via `fixed` +
+    // which reads as "the dialog got bigger"/jumped. `createDropdownPositioner`: the same
+    // Orbit-powered primitive `ore-select`'s dropdown already uses: positions via `fixed` +
     // computed `top`/`left`, auto-detecting both the nearest clipping ancestor (so flip/shift
     // keep the calendar within the dialog panel, not just the page viewport) and any ancestor
     // that establishes a containing block for `position: fixed` (a dialog panel's entrance
-    // transition commonly leaves a permanent, if visually-identity, `transform` at rest) —
+    // transition commonly leaves a permanent, if visually-identity, `transform` at rest) :
     // see `createDropdownPositioner`'s own `boundary`/`containingBlock` docs.
     const triggerRef = ref<HTMLElement>();
     const calendarRef = ref<HTMLElement>();
@@ -490,7 +490,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         id="${dialogId}"
         role="dialog"
         aria-modal="true"
-        aria-label="${() => `Choose date — ${displayLabel.value}`}"
+        aria-label="${() => `Choose date: ${displayLabel.value}`}"
         ?data-open="${isOpen}"
         @keydown="${handleCalendarKeydown}">
         <!-- Calendar header -->

@@ -1,7 +1,7 @@
 /**
  * The two seams Tandem drives: a {@link SyncPort} that reaches the server, and a
  * {@link SyncGateway} that reaches the device's own storage. The engine never
- * sees a database, a transport, or a record shape — records travel as opaque
+ * sees a database, a transport, or a record shape: records travel as opaque
  * envelopes carrying only an `id` and a write-counter `rev`. Every rev
  * comparison is the engine's: the gateway upserts, validates, and tombstones
  * without re-deriving the sync policy.
@@ -30,7 +30,7 @@ export interface SyncDeletion {
 
 /** Per-account sync bookkeeping the gateway persists: the pull cursor and the newest
  *  rev the server has seen per record (`"${entity}:${id}"` → rev). A record is dirty
- *  exactly when its current rev is above that baseline — across reloads, not just
+ *  exactly when its current rev is above that baseline: across reloads, not just
  *  this session. */
 export interface SyncState {
   cursor: string | null;
@@ -52,7 +52,7 @@ export interface SyncPort<TRecord extends SyncRecordBase = SyncRecordBase> {
   /**
    * Push local records and deletions. Reject when the server diverged (it is ahead
    * of the pushed lineage) so the engine can pull and reconcile. `keepalive` marks
-   * a flush that must survive the tab closing — serve it with `navigator.sendBeacon`
+   * a flush that must survive the tab closing: serve it with `navigator.sendBeacon`
    * or a `keepalive` fetch.
    */
   push(
@@ -64,25 +64,25 @@ export interface SyncPort<TRecord extends SyncRecordBase = SyncRecordBase> {
 
 /**
  * The device side of sync: the app's storage, expressed as the handful of reads
- * and writes the engine needs. The engine does the rev math — `applyRecords`
+ * and writes the engine needs. The engine does the rev math: `applyRecords`
  * receives only records the server is ahead on, already filtered against
  * same-or-ahead locals and locally tombstoned ids, so the gateway upserts and
- * validates without comparing revs itself. Remote records are untrusted —
+ * validates without comparing revs itself. Remote records are untrusted :
  * `applyRecords` is the app's validation boundary and reports the ids it refused.
  */
 export interface SyncGateway<TRecord extends SyncRecordBase = SyncRecordBase> {
-  /** Applies pulled deletions — no tombstone: the deletion came from the server. */
+  /** Applies pulled deletions: no tombstone: the deletion came from the server. */
   applyDeletions(deletions: readonly SyncDeletion[]): Promise<void>;
   /** Upserts the given pulled records; returns the ids of records that failed validation. */
   applyRecords(records: readonly SyncEnvelope<TRecord>[]): Promise<string[]>;
-  /** Removes the tombstones a successful push carried — only those, since new
+  /** Removes the tombstones a successful push carried: only those, since new
    *  deletions may have been recorded while the push was in flight. */
   clearDeletions(deletions: readonly SyncDeletion[]): Promise<void>;
   /** The persisted baseline, or `null` on a fresh device. */
   loadState(): Promise<SyncState | null>;
   /** Tombstones not yet acknowledged by the server. */
   pendingDeletions(): Promise<SyncDeletion[]>;
-  /** The device's own records — no remote mirrors. */
+  /** The device's own records: no remote mirrors. */
   records(): SyncEnvelope<TRecord>[];
   /** Persists the baseline after a completed pull or push. */
   saveState(state: SyncState): Promise<void>;
@@ -113,12 +113,12 @@ export interface SyncHandle {
   changed(): void;
   /** Aborted when the handle is disposed. */
   readonly disposalSignal: AbortSignal;
-  /** Stops the scheduler. Dispose before switching accounts — the baseline is
+  /** Stops the scheduler. Dispose before switching accounts: the baseline is
    *  per-account state and a running scheduler would push into the wrong port. */
   dispose(): void;
   /** True once {@link dispose} has run. */
   readonly disposed: boolean;
-  /** Runs a full sync cycle now — pulls remote changes, then pushes dirty records.
+  /** Runs a full sync cycle now: pulls remote changes, then pushes dirty records.
    *  Resolves when the cycle completes; rejects when it fails (dirty records stay
    *  dirty and the next cycle retries them). A no-op after {@link dispose}. */
   flush(): Promise<void>;

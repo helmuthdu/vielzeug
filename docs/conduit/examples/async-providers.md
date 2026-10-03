@@ -1,5 +1,5 @@
 ---
-title: Conduit Examples — Async Providers
+title: 'Conduit Examples: Async Providers'
 description: Resolve async dependency-first factories.
 ---
 

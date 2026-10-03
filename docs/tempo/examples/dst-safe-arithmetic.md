@@ -1,5 +1,5 @@
 ---
-title: 'Tempo Examples — DST-Safe Arithmetic'
+title: 'Tempo Examples: DST-Safe Arithmetic'
 description: 'Resolve a wall-clock DST overlap and shift it safely with direct Temporal methods.'
 ---
 

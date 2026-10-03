@@ -1,9 +1,9 @@
 /**
- * Real-browser interaction test for `ore-tooltip` — hover-triggered show/hide, which jsdom can't
+ * Real-browser interaction test for `ore-tooltip`: hover-triggered show/hide, which jsdom can't
  * evaluate (no real `:hover` state, no positioning). Complements `tooltip.test.ts`'s jsdom
  * coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
 import { expect, test } from '../../testing/fixtures';
 

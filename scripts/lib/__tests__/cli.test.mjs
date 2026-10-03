@@ -86,7 +86,7 @@ describe('parseArgs()', () => {
   });
 
   it('drops a literal "--" separator instead of parsing it as a flag named ""', () => {
-    // Real shape of `pnpm run <script> -- --package=ripple` — pnpm forwards the `--` itself
+    // Real shape of `pnpm run <script> -- --package=ripple`: pnpm forwards the `--` itself
     // into the script's argv, it does not strip it (verified empirically, see cli.mjs's
     // parseArgs() header comment).
     expect(parseArgs(['--', '--package=ripple'])).toEqual({

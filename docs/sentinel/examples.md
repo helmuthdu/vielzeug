@@ -1,5 +1,5 @@
 ---
-title: Sentinel — Examples
+title: 'Sentinel: Examples'
 description: Focused browser and DOM observation examples for Sentinel.
 ---
 

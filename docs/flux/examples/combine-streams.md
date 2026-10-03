@@ -1,5 +1,5 @@
 ---
-title: 'Flux Examples — Combining Streams with combineLatest'
+title: 'Flux Examples: Combining Streams with combineLatest'
 description: 'Combine latest filter and page values from explicit channel streams.'
 ---
 

@@ -19,7 +19,7 @@ export type FocusManagerOptions = {
   host: HTMLElement;
   /**
    * `AbortSignal` from the component lifecycle. Cancels a pending `applyInitialFocus()`
-   * animation frame automatically on abort — prevents a stray `.focus()` call landing on an
+   * animation frame automatically on abort: prevents a stray `.focus()` call landing on an
    * element that's been disconnected in the meantime (e.g. the dialog closes and unmounts
    * before the deferred focus frame runs).
    */
@@ -88,7 +88,7 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
         try {
           target = root.querySelector<HTMLElement>(selector);
         } catch {
-          // Malformed selector (SyntaxError) — skip initial focus rather than throw.
+          // Malformed selector (SyntaxError): skip initial focus rather than throw.
           return;
         }
 

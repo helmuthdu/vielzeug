@@ -20,7 +20,7 @@ function overview(packages: readonly PackageMeta[], version: string): string {
 }
 
 function full(catalog: CatalogFile, contents: ReadonlyMap<string, PackageContent>): string {
-  const lines = ['# Vielzeug — Full Documentation', '', `> Complete documentation for ${catalog.packages.length} packages. Version: ${catalog.version}`];
+  const lines = ['# Vielzeug: Full Documentation', '', `> Complete documentation for ${catalog.packages.length} packages. Version: ${catalog.version}`];
   for (const pkg of catalog.packages) {
     const content = contents.get(pkg.slug);
     if (!content) continue;

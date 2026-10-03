@@ -1,5 +1,5 @@
 ---
-title: 'Ore Examples — Context Provider and Consumer'
+title: 'Ore Examples: Context Provider and Consumer'
 description: 'Context Provider and Consumer example for @vielzeug/ore.'
 ---
 
@@ -44,11 +44,11 @@ define('theme-label', {
 ### Pitfalls
 
 - The provider must be an ancestor in the custom element tree, not just the DOM tree. A child appended outside the provider's shadow root cannot find the context.
-- Providing a plain value (not a signal) means consumers get a snapshot, not live updates. Wrap mutable state in a `signal()` before providing — `inject()` resolves and caches its result once per consumer, so a later `provide()` call with a new raw value is not seen by consumers that already read it (a dev-mode warning fires if you `provide()` the same key twice on one element).
+- Providing a plain value (not a signal) means consumers get a snapshot, not live updates. Wrap mutable state in a `signal()` before providing: `inject()` resolves and caches its result once per consumer, so a later `provide()` call with a new raw value is not seen by consumers that already read it (a dev-mode warning fires if you `provide()` the same key twice on one element).
 - Multiple providers with the same key cause the nearest ancestor to win. Use distinct key strings to avoid accidental shadowing.
 
 ### Related
 
-- [Conduit — DI Container](/conduit/) for application-level dependency injection beyond component trees
+- [Conduit: DI Container](/conduit/) for application-level dependency injection beyond component trees
 - [Counter Component](./counter-component.md)
 - [Form-Associated Rating Input](./form-associated-rating-input.md)

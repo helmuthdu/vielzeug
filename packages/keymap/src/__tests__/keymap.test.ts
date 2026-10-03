@@ -697,7 +697,7 @@ describe('createKeymap', () => {
       expect(map.listBindings()).toHaveLength(0);
     });
 
-    it('returns a real snapshot — mutating a returned entry does not affect live matching', () => {
+    it('returns a real snapshot: mutating a returned entry does not affect live matching', () => {
       const handler = mockHandler();
       const map = createKeymap([{ handler, id: 'save', shortcut: 'ctrl+k' }]);
       const unmount = map.mount(target);

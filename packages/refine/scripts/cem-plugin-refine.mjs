@@ -70,7 +70,7 @@ function extractEnumFromDescription(description) {
 
   if (matches) return matches[0].trim();
 
-  // Single quoted value only — not an enum, skip
+  // Single quoted value only: not an enum, skip
   return null;
 }
 
@@ -210,7 +210,7 @@ function buildDeclaration(tagName, className, lines) {
     }
 
     if (tag === 'element') {
-      // Skip — we already have tagName; additional @element lines name children (ignore here)
+      // Skip: we already have tagName; additional @element lines name children (ignore here)
       continue;
     }
 
@@ -313,7 +313,7 @@ export function refineCemPlugin() {
         for (const decl of mod.declarations ?? []) {
           if (!decl.tagName || !decl.tagName.startsWith('ore-')) continue;
 
-          // Only patch stubs — declarations with no description and no attributes/demos
+          // Only patch stubs: declarations with no description and no attributes/demos
           const isStub =
             (!decl.description || decl.description.trim() === '') &&
             (!decl.attributes || decl.attributes.length === 0) &&
@@ -477,7 +477,7 @@ export function refineCemPlugin() {
       // followed immediately by: define<Props>(FOO_TAG, { ... })
       //
       // Strategy: when we see a `define(...)` call expression as an expression statement,
-      // look at the first argument — if it's an identifier referencing a const string 'ore-*',
+      // look at the first argument: if it's an identifier referencing a const string 'ore-*',
       // we resolve the tag name, then walk back to find the preceding JSDoc.
 
       if (ts.isExpressionStatement(node)) {

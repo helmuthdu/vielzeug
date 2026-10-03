@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — takeLast'
+title: 'Arsenal Examples: takeLast'
 description: 'takeLast example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'takeLast example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need the last N items from an array — for example showing the most recent log entries or the final page of paginated data.
+You need the last N items from an array: for example showing the most recent log entries or the final page of paginated data.
 
 ### Solution
 

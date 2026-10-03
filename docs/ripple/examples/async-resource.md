@@ -1,5 +1,5 @@
 ---
-title: Ripple Examples — Async Resource
+title: 'Ripple Examples: Async Resource'
 description: Load reactive async state with stale-request cancellation and explicit ownership.
 ---
 

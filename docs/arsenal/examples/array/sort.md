@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — sort'
+title: 'Arsenal Examples: sort'
 description: 'sort example for @vielzeug/arsenal.'
 ---
 
@@ -35,14 +35,14 @@ sort(users, { age: 'desc', name: 'asc' });
 ```ts
 import { sort } from '@vielzeug/arsenal';
 
-sort([3, 1, 4, 1, 5], { '': 'asc' }); // won't work for primitives — use native .sort()
+sort([3, 1, 4, 1, 5], { '': 'asc' }); // won't work for primitives: use native .sort()
 sort([{ n: 3 }, { n: 1 }], { n: 'asc' }); // [{ n: 1 }, { n: 3 }]
 ```
 
 ### Pitfalls
 
 - Returns a new array; the original is never mutated.
-- String comparison uses `localeCompare` — results may differ from `<`/`>` comparisons.
+- String comparison uses `localeCompare`: results may differ from `<`/`>` comparisons.
 
 ### Related
 

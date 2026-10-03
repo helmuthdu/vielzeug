@@ -1,5 +1,5 @@
 ---
-title: Illusionist — Fake Data Generator for TypeScript
+title: 'Illusionist: Fake Data Generator for TypeScript'
 description: Typed, deterministic, locale-aware fake data generator with a seeded PRNG, eight data categories, and zero external runtime dependencies.
 package: illusionist
 category: data
@@ -120,9 +120,9 @@ illusion.date.past({ years: 2 });  // Temporal.ZonedDateTime
 
 <div class="see-also">
 
-- [Arsenal](/arsenal/) — random primitives (`RandomSource`, `uuid`) that Illusionist builds on.
-- [Coins](/coins/) — exact money type returned by `commerce.price()` and `finance.amount()`.
-- [Tempo](/tempo/) — `Temporal` date utilities returned by every `date` function.
+- [Arsenal](/arsenal/): random primitives (`RandomSource`, `uuid`) that Illusionist builds on.
+- [Coins](/coins/): exact money type returned by `commerce.price()` and `finance.amount()`.
+- [Tempo](/tempo/): `Temporal` date utilities returned by every `date` function.
 
 </div>
 

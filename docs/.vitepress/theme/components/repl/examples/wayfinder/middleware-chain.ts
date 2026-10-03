@@ -17,7 +17,7 @@ const loadUser = async (ctx, next) => {
 const requireAdmin = async (ctx, next) => {
   console.log('[route]   checking role:', ctx.locals.user?.role)
   if (ctx.locals.user?.role !== 'admin') {
-    console.log('[route]   permission denied — aborting navigation')
+    console.log('[route]   permission denied: aborting navigation')
     return // do not call next(); cancels the navigation
   }
   await next()
@@ -45,5 +45,5 @@ await router.navigate({ name: 'admin' })
 console.log('data:', JSON.stringify(router.getSnapshot().matches.at(-1)?.data))
 
 router.dispose()`,
-  name: 'Middleware Chain — Execution Flow',
+  name: 'Middleware Chain: Execution Flow',
 };

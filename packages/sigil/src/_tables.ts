@@ -2,12 +2,12 @@ import type { QrErrorCorrection, QrMode } from './types';
 
 /**
  * QR Model 2 lookup tables, transcribed from ISO/IEC 18004:2015:
- * - `EC_CODEWORDS_PER_BLOCK` / `NUM_EC_BLOCKS` — Table 9 (error-correction
+ * - `EC_CODEWORDS_PER_BLOCK` / `NUM_EC_BLOCKS`: Table 9 (error-correction
  *   characteristics). Stored as per-block EC codewords and block count; the
  *   group-1/group-2 split is derived, since all blocks share one EC length.
- * - `alignmentPatternPositions` — Table E.1, computed by the spec formula.
- * - `CHAR_COUNT_BITS` — Table 3 (character-count indicator bit widths).
- * - `FORMAT_EC_BITS` — Table 10 (2-bit level field inside format information).
+ * - `alignmentPatternPositions`: Table E.1, computed by the spec formula.
+ * - `CHAR_COUNT_BITS`: Table 3 (character-count indicator bit widths).
+ * - `FORMAT_EC_BITS`: Table 10 (2-bit level field inside format information).
  *
  * `tables.test.ts` cross-checks every entry against the raw-module formula, so
  * a transcription slip fails the consistency test before the decode oracle runs.

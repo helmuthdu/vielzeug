@@ -305,7 +305,7 @@ onMounted(() => {
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 768px) {
   /* VitePress reserves an extra `--vp-nav-height` of top padding on mobile (normally used by
-     the doc-layout local nav bar), which this `layout: page` route never renders — cancel it out
+     the doc-layout local nav bar), which this `layout: page` route never renders: cancel it out
      so the IDE starts right below the nav instead of leaving a blank band above it. */
   .repl-container {
     margin-top: calc(-1 * var(--vp-nav-height, 64px));
@@ -321,7 +321,7 @@ onMounted(() => {
     border-left: none;
   }
 
-  /* Active library is already highlighted in the strip below — drop the duplicate header row. */
+  /* Active library is already highlighted in the strip below: drop the duplicate header row. */
   .sidebar-header {
     display: none;
   }
@@ -350,7 +350,7 @@ onMounted(() => {
     display: none;
   }
 
-  /* Description doesn't fit the compact horizontal strip — the logo + name are enough here. */
+  /* Description doesn't fit the compact horizontal strip: the logo + name are enough here. */
   .sidebar-item .sidebar-desc {
     display: none;
   }
@@ -386,7 +386,7 @@ onMounted(() => {
     text-align: left;
   }
 
-  /* Reference browser has nowhere to live inline on a phone screen — surface it as a bottom-sheet
+  /* Reference browser has nowhere to live inline on a phone screen: surface it as a bottom-sheet
      drawer that overlays the editor instead of permanently stealing space from it. */
   .sidebar-ref {
     position: fixed;

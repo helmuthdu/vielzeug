@@ -1,5 +1,5 @@
 ---
-title: 'Arsenal Examples — chunk'
+title: 'Arsenal Examples: chunk'
 description: 'chunk example for @vielzeug/arsenal.'
 ---
 
@@ -7,7 +7,7 @@ description: 'chunk example for @vielzeug/arsenal.'
 
 ### Problem
 
-You have a flat array (or string) and need to split it into fixed-size pages or sliding windows — for example paginating a list or building bigram tokens.
+You have a flat array (or string) and need to split it into fixed-size pages or sliding windows: for example paginating a list or building bigram tokens.
 
 ### Solution
 

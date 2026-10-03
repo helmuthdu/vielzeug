@@ -40,7 +40,7 @@ test.describe('Interaction', () => {
 
     await expect(page.locator(PLAYER)).toHaveAttribute('state', 'playing');
     await expect(page.locator(TOGGLE)).toHaveAttribute('aria-label', 'Pause reading');
-    // The label folds away — its text stays in the DOM, hidden with the control.
+    // The label folds away: its text stays in the DOM, hidden with the control.
     await expect(page.locator(LABEL)).toBeHidden();
     await expect(page.locator(STOP)).toBeVisible();
   });
@@ -129,7 +129,7 @@ test.describe('Accessibility', () => {
   });
 });
 
-/** Headless Chromium has no voices — keep the engine quiet without any engine behavior. */
+/** Headless Chromium has no voices: keep the engine quiet without any engine behavior. */
 async function stubEngine(page: Page): Promise<void> {
   await page.evaluate(() => {
     window.speechSynthesis.speak = () => {};

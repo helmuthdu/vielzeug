@@ -72,7 +72,7 @@ export function compileRule<TAction extends string, TResource extends string, TA
   }
 
   if (rule.action.endsWith(':')) {
-    throw new WardConfigError(`${at}.action '${rule.action}' ends with ':' — did you mean '${rule.action}*'?`);
+    throw new WardConfigError(`${at}.action '${rule.action}' ends with ':': did you mean '${rule.action}*'?`);
   }
 
   if (typeof rule.resource !== 'string' || !rule.resource.trim()) {
@@ -80,7 +80,7 @@ export function compileRule<TAction extends string, TResource extends string, TA
   }
 
   if (rule.resource.endsWith(':')) {
-    throw new WardConfigError(`${at}.resource '${rule.resource}' ends with ':' — did you mean '${rule.resource}*'?`);
+    throw new WardConfigError(`${at}.resource '${rule.resource}' ends with ':': did you mean '${rule.resource}*'?`);
   }
 
   if (rule.effect !== 'allow' && rule.effect !== 'deny') {

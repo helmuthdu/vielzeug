@@ -1,5 +1,5 @@
 ---
-title: Ore — API Reference
+title: 'Ore: API Reference'
 description: Complete API reference for @vielzeug/ore and @vielzeug/ore/testing.
 ---
 
@@ -7,15 +7,15 @@ description: Complete API reference for @vielzeug/ore and @vielzeug/ore/testing.
 
 ## API Overview
 
-All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/context/binding functions (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`, `bind`, `provide`, `useEmit`, `useSlots`, `getHost`) resolve the active component through an implicit "current component" context — they work when called synchronously during `setup()`, or from any composable function `setup()` calls (transitively), but throw if called outside that window.
+All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/context/binding functions (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`, `bind`, `provide`, `useEmit`, `useSlots`, `getHost`) resolve the active component through an implicit "current component" context: they work when called synchronously during `setup()`, or from any composable function `setup()` calls (transitively), but throw if called outside that window.
 
-> `watchEffect` is not named `watch` — `@vielzeug/ripple` already exports a `watch(source, callback)` with different semantics (explicit source + old/new value pair), and the two are frequently imported in the same file.
+> `watchEffect` is not named `watch`: `@vielzeug/ripple` already exports a `watch(source, callback)` with different semantics (explicit source + old/new value pair), and the two are frequently imported in the same file.
 
 | Symbol                | Purpose                                              | Execution mode | Common gotcha                                                             |
 | ---------------------- | ----------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
 | `define()`             | Create and register a custom element                   | Sync           | Tag must contain a hyphen; call before first use                          |
 | `html`                 | Tagged template literal returning HTMLResult          | Sync           | Expressions must be signals, functions, or primitives                     |
-| `prop.*`               | Typed prop helpers (string, bool, number, …)          | Sync           | Prop values are signals — read `.value`                                   |
+| `prop.*`               | Typed prop helpers (string, bool, number, …)          | Sync           | Prop values are signals: read `.value`                                   |
 | `provide()`/`inject()` | Context API for parent-to-descendant sharing          | Setup only     | Must be called synchronously during `setup()`                             |
 | `ref()`                | Reactive reference to a DOM element                   | Sync           | Value is null until after first mount                                     |
 | `createContext()`      | Create a unique typed injection key                   | Sync           | Context is scoped to the component tree                                   |
@@ -28,7 +28,7 @@ All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/c
 | `useField(options)`    | Wire signal to form `ElementInternals`                | Setup only     | Requires `formAssociated: true` on the component definition               |
 | `onFormReset(fn)`      | Run work when the ancestor `<form>` resets            | Setup only     | Fires every reset (not one-shot); only for `formAssociated: true` components |
 | `useEmit<Emits>()`     | Typed `emit()` bound to the current host              | Setup only     | Call once per component; returns `dispatchEvent`'s boolean (`false` if a listener called `preventDefault()`) |
-| `useSlots<SlotNames>()`| Reactive slot presence/element signals                | Setup only     | Safe to call more than once — the underlying registry is created once    |
+| `useSlots<SlotNames>()`| Reactive slot presence/element signals                | Setup only     | Safe to call more than once: the underlying registry is created once    |
 | `getHost()`            | The current component's host element                 | Setup only     | Prefer a higher-level helper (`bind`, …) when one exists                  |
 
 ## Package Entry Points
@@ -57,7 +57,7 @@ setup(props) {
 }
 ```
 
-Everything else — lifecycle hooks, host bindings, context, slots, emit — is a plain function imported from `@vielzeug/ore`, called directly from `setup()` (or a composable it calls):
+Everything else: lifecycle hooks, host bindings, context, slots, emit: is a plain function imported from `@vielzeug/ore`, called directly from `setup()` (or a composable it calls):
 
 ```ts
 import { define, html, onMounted, useEmit, useSlots } from '@vielzeug/ore';
@@ -69,7 +69,7 @@ define('my-card', {
 
     onMounted(() => console.log('mounted'));
 
-    // emit() returns dispatchEvent's boolean — false if a listener called preventDefault()
+    // emit() returns dispatchEvent's boolean: false if a listener called preventDefault()
     const notCancelled = emit('close');
 
     return html`${when(slots.has('header'), () => html`<slot name="header"></slot>`)}`;
@@ -77,7 +77,7 @@ define('my-card', {
 });
 ```
 
-`useEmit<Emits>()` and `useSlots<SlotNames>()` are factory hooks — call them once per setup run to get a typed
+`useEmit<Emits>()` and `useSlots<SlotNames>()` are factory hooks: call them once per setup run to get a typed
 `emit`/`slots` bound to the current host. `useSlots()` is safe to call more than once within that setup run.
 
 ### ComponentDefinition
@@ -113,7 +113,7 @@ setup(props) {
 }
 ```
 
-Because these resolve the active component through an implicit context (rather than a value threaded through parameters), composable helper functions can call them directly too — no need to pass hooks in as options:
+Because these resolve the active component through an implicit context (rather than a value threaded through parameters), composable helper functions can call them directly too: no need to pass hooks in as options:
 
 ```ts
 import { onCleanup } from '@vielzeug/ore';
@@ -138,12 +138,12 @@ setup(_props) {
 | `prop.number(defaultValue?)`        | `PropDef<number>`  | Returns default (not NaN) and warns in dev when attribute is not a valid number                              |
 | `prop.oneOf(allowed, defaultValue)` | `PropDef<T>`       | Restricts to provided string union                                                                           |
 | `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse from attribute; `reflect: false`                                                                  |
-| `prop.data<T>(defaultValue?)`       | `PropDef<T>`       | JS-only — never reads/writes an attribute; use for objects, arrays, callbacks, or any non-serialisable value |
+| `prop.data<T>(defaultValue?)`       | `PropDef<T>`       | JS-only: never reads/writes an attribute; use for objects, arrays, callbacks, or any non-serialisable value |
 
 > **Choosing the right prop helper:**
 >
-> - **`prop.json`** — value can be declared in HTML (`<my-el config='{"x":1}'>`); attribute string is `JSON.parse`d.
-> - **`prop.data`** — value is always set from JavaScript (objects, arrays, callbacks, class instances); the attribute is never read. Use this for both data and function props.
+> - **`prop.json`**: value can be declared in HTML (`<my-el config='{"x":1}'>`); attribute string is `JSON.parse`d.
+> - **`prop.data`**: value is always set from JavaScript (objects, arrays, callbacks, class instances); the attribute is never read. Use this for both data and function props.
 
 When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
 
@@ -219,7 +219,7 @@ bind({
 });
 ```
 
-`bind()` auto-registers cleanup with the component scope — no manual `onCleanup` needed. Returns a cleanup function for early teardown.
+`bind()` auto-registers cleanup with the component scope: no manual `onCleanup` needed. Returns a cleanup function for early teardown.
 
 ### Off-host bindings
 
@@ -255,32 +255,32 @@ Static values are applied once. Getters and signals create reactive effects. Cal
 
 ## Slots
 
-- `slots.has(name?)` — `Readable<boolean>` — whether the named (or default) slot has assigned content
-- `slots.elements(name?)` — `Readable<Element[]>` — the assigned elements for the slot
+- `slots.has(name?)`: `Readable<boolean>`: whether the named (or default) slot has assigned content
+- `slots.elements(name?)`: `Readable<Element[]>`: the assigned elements for the slot
 
 Slot signals update reactively when assigned content changes, including when slots are inserted dynamically (via `when()` or `each()`) after mount.
 
 ## Context API
 
-- `createContext<T>(description)` — Create a unique typed injection key; the description is diagnostic only
-- `provide(key, value)` — Provide a value to descendants
-- `inject(key)` — Resolve from nearest ancestor; returns `undefined` if not found
-- `inject(key, fallback)` — Resolve with a fallback value
-- `injectStrict(key)` — Resolve or throw if absent
+- `createContext<T>(description)`: Create a unique typed injection key; the description is diagnostic only
+- `provide(key, value)`: Provide a value to descendants
+- `inject(key)`: Resolve from nearest ancestor; returns `undefined` if not found
+- `inject(key, fallback)`: Resolve with a fallback value
+- `injectStrict(key)`: Resolve or throw if absent
 
 `provide()` and `inject()` must be called synchronously during `setup()`. Calling them outside a setup context throws
 `'Lifecycle hooks must be called during component setup'`. Context resolution walks the ancestor chain including shadow
-DOM boundaries. `inject()` resolves and caches its result once per consumer — provide a `Readable` (signal/computed)
+DOM boundaries. `inject()` resolves and caches its result once per consumer: provide a `Readable` (signal/computed)
 rather than a raw value if descendants need to observe later changes; re-calling `provide()` with a new raw value
 afterward is not seen by consumers that already resolved it (a dev-mode warning fires when a key is provided twice on
-the same element). `provide()` registers cleanup automatically — context keys are removed from the registry when the
+the same element). `provide()` registers cleanup automatically: context keys are removed from the registry when the
 providing component disconnects, so reconnecting the same element runs `setup()` fresh without spurious "overwriting"
 warnings or stale keys leaking to descendants.
 
 ## Utilities
 
-- `ref<T>()` — Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
-- `createId(prefix = 'id')` — Generate a collision-resistant ID with a semantic prefix, a per-runtime tag, and a monotonic counter (for example, `'field-a3k21'`).
+- `ref<T>()`: Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
+- `createId(prefix = 'id')`: Generate a collision-resistant ID with a semantic prefix, a per-runtime tag, and a monotonic counter (for example, `'field-a3k21'`).
 
 ## Form-Associated API
 
@@ -300,7 +300,7 @@ type FormFieldOptions<T> = {
    * @default false
    */
   emptyStringForNull?: boolean;
-  /** Called when the ancestor <form> resets (see onFormReset) — restore local field state here. */
+  /** Called when the ancestor <form> resets (see onFormReset): restore local field state here. */
   onReset?: () => void;
   toFormValue?: (value: T) => File | FormData | string | null;
   /** Recomputed reactively and passed straight to internals.setValidity(). null = always valid. */
@@ -350,13 +350,13 @@ Import from `@vielzeug/ore/testing`.
 Import `within`, named dispatchers such as `fireClick`, and waits such as `waitUntil` or `waitForEvent` from
 `@vielzeug/assay`.
 
-> **Form-associated component testing:** jsdom implements none of the `ElementInternals` form-association API — `install(afterEach, { formInternals: true })` polyfills `setFormValue`/`setValidity`/`checkValidity`/`reportValidity`/`validationMessage`/`validity`/`states`, mixes `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto the host element itself (real browsers do this for any `formAssociated: true` element), makes `FormData` collect a form-associated element's set value, and makes `<form>.reset()` invoke `formResetCallback()`. Every patch is a guarded no-op when its target already exists, and `installFormInternalsPolyfill()` returns an `uninstall()` that restores every patched global. The polyfill is opt-in (`{ formInternals: true }`) because the patches are global — suites without form-associated components shouldn't carry them. A downstream package (e.g. a component library built on `ore`) should rely on this instead of hand-rolling its own copy.
+> **Form-associated component testing:** jsdom implements none of the `ElementInternals` form-association API: `install(afterEach, { formInternals: true })` polyfills `setFormValue`/`setValidity`/`checkValidity`/`reportValidity`/`validationMessage`/`validity`/`states`, mixes `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto the host element itself (real browsers do this for any `formAssociated: true` element), makes `FormData` collect a form-associated element's set value, and makes `<form>.reset()` invoke `formResetCallback()`. Every patch is a guarded no-op when its target already exists, and `installFormInternalsPolyfill()` returns an `uninstall()` that restores every patched global. The polyfill is opt-in (`{ formInternals: true }`) because the patches are global: suites without form-associated components shouldn't carry them. A downstream package (e.g. a component library built on `ore`) should rely on this instead of hand-rolling its own copy.
 
 #### `Fixture` interface
 
 ```ts
 interface Fixture<T extends HTMLElement = HTMLElement> {
-  [Symbol.dispose](): void; // Delegates to dispose() — enables `using` declarations
+  [Symbol.dispose](): void; // Delegates to dispose(): enables `using` declarations
   element: T;
   readonly disposed: boolean; // true after dispose() has been called
   readonly shadow: ShadowRoot | null;
@@ -373,7 +373,7 @@ interface Fixture<T extends HTMLElement = HTMLElement> {
   attrs(record: Record<string, string | number | boolean>): Promise<void>;
   flush(options?: FlushOptions): Promise<void>;
   act(fn: () => unknown): Promise<void>;
-  dispose(): void; // Removes the component from the DOM — idempotent
+  dispose(): void; // Removes the component from the DOM: idempotent
 }
 ```
 
@@ -411,7 +411,7 @@ See the [Ripple documentation](/ripple/) for the full API.
 
 | Event         | When                                                                      |
 | ------------- | ------------------------------------------------------------------------- |
-| `ore:error`   | When a lifecycle callback fails — bubbles, composed; detail is `OreLifecycleError` |
+| `ore:error`   | When a lifecycle callback fails: bubbles, composed; detail is `OreLifecycleError` |
 
 ## Types
 
@@ -436,7 +436,7 @@ type InferProps<D extends PropInputDefs> = {
   readonly [K in keyof D]-?: Readable<InferPropValue<D[K]>>;
 };
 
-// Runtime hooks — all plain functions imported from '@vielzeug/ore', not fields on an object.
+// Runtime hooks: all plain functions imported from '@vielzeug/ore', not fields on an object.
 type OnMountedCallback = () => Cleanup | undefined;
 type OnFormResetCallback = () => void;
 
@@ -476,7 +476,7 @@ type ComponentDefinition<Props extends Record<string, unknown> = Record<never, n
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
-type MaybeReactive<T> = T | Readable<T> | (() => T); // Plain value, signal, or getter — accepted by when(), each(), classMap(), and bind()
+type MaybeReactive<T> = T | Readable<T> | (() => T); // Plain value, signal, or getter: accepted by when(), each(), classMap(), and bind()
 
 type HostBindingValue = MaybeReactive<string | number | boolean | null | undefined>;
 
@@ -548,15 +548,15 @@ type OreErrorPhase = 'each-reconcile' | 'form-reset' | 'mounted' | 'setup';
 
 ## Errors
 
-`OreError` is the base class for every Ore error class — `err instanceof OreError` catches all of them.
+`OreError` is the base class for every Ore error class: `err instanceof OreError` catches all of them.
 
-- **`OreApiError`** — thrown when the `ore` API itself is misused: calling `define()` with a duplicate tag, calling a lifecycle hook (`inject`, `onMounted`, `onCleanup`, `onEvent`, …) outside of `setup()`, or passing an invalid prop definition to `define()`.
-- **`OreInternalError`** — thrown when an Ore invariant fails, indicating a package bug rather than invalid application code.
-- **`OreLifecycleError`** — reported in the `ore:error` event when component `setup()`, a mounted callback, a form-reset callback, or `each()` reconciliation fails. Extends `OreError` with:
-  - `component: string` — the element's local name
-  - `phase: OreErrorPhase` — `'setup'` | `'mounted'` | `'form-reset'` | `'each-reconcile'`
-  - `cause: Error` — the original error thrown by `setup()`
-- **`OreTimeoutError`** — thrown by `flush()` (from `@vielzeug/ore/testing`) when pending Ore work does not settle before its timeout.
+- **`OreApiError`**: thrown when the `ore` API itself is misused: calling `define()` with a duplicate tag, calling a lifecycle hook (`inject`, `onMounted`, `onCleanup`, `onEvent`, …) outside of `setup()`, or passing an invalid prop definition to `define()`.
+- **`OreInternalError`**: thrown when an Ore invariant fails, indicating a package bug rather than invalid application code.
+- **`OreLifecycleError`**: reported in the `ore:error` event when component `setup()`, a mounted callback, a form-reset callback, or `each()` reconciliation fails. Extends `OreError` with:
+  - `component: string`: the element's local name
+  - `phase: OreErrorPhase`: `'setup'` | `'mounted'` | `'form-reset'` | `'each-reconcile'`
+  - `cause: Error`: the original error thrown by `setup()`
+- **`OreTimeoutError`**: thrown by `flush()` (from `@vielzeug/ore/testing`) when pending Ore work does not settle before its timeout.
 
 Lifecycle failures dispatch a bubbling, composed `ore:error` event whose `detail` is the `OreLifecycleError`. Setup
 failures still rethrow their original error; mounted and form-reset callback failures are reported through the same

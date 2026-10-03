@@ -110,7 +110,7 @@ describe('ore-skeleton', () => {
     it('does not set data-paused when IntersectionObserver has not fired yet', async () => {
       fixture = await mount('ore-skeleton');
 
-      // IntersectionObserver stub never fires — data-paused should be absent
+      // IntersectionObserver stub never fires: data-paused should be absent
       expect(fixture.element.hasAttribute('data-paused')).toBe(false);
     });
 

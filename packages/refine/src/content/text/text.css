@@ -36,7 +36,7 @@
   -webkit-line-clamp: var(--_lines);
 }
 
-/* Inline semantic tags — but not when align/truncate force block layout */
+/* Inline semantic tags, but not when align/truncate force block layout */
 :host(:is([as='span'], [as='label'], [as='code']):not([align], [truncate])) {
   display: inline;
 }
@@ -45,7 +45,7 @@
      Variant Styles
      ======================================== */
 
-/* Body (default) — uses base defaults above */
+/* Body (default): uses base defaults above */
 
 /* Heading
    Default size: --heading-md (24px)
@@ -59,7 +59,7 @@
   --_letter-spacing: var(--text-letter-spacing, var(--tracking-header));
 }
 
-/* Label — slightly tighter line-height for UI labels */
+/* Label: slightly tighter line-height for UI labels */
 :host([variant='label']) {
   --_size: var(--text-size, var(--text-sm));
   --_weight: var(--text-weight, var(--font-medium));
@@ -91,7 +91,7 @@
 }
 
 /* ========================================
-     Size Variants — body scale (--text-*)
+     Size Variants: body scale (--text-*)
      Used by all variants except heading.
      ======================================== */
 
@@ -124,7 +124,7 @@
 }
 
 /* ========================================
-     Size Variants — heading scale (--heading-*)
+     Size Variants: heading scale (--heading-*)
      Compound selectors override the body-scale rules above when
      variant="heading" and a size is also provided.
      ======================================== */
@@ -213,11 +213,11 @@
 }
 
 :host([color='muted']) {
-  --_color: var(--text-color, var(--text-color-secondary)); /* --color-contrast-600 — AA compliant */
+  --_color: var(--text-color, var(--text-color-secondary)); /* --color-contrast-600: AA compliant */
 }
 
 :host([color='tertiary']) {
-  --_color: var(--text-color, var(--text-color-tertiary)); /* --color-contrast-500 — AA for large text */
+  --_color: var(--text-color, var(--text-color-tertiary)); /* --color-contrast-500: AA for large text */
 }
 
 :host([color='disabled']) {

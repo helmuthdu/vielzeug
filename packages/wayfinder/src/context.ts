@@ -17,7 +17,7 @@ import type {
 
 // ─── Route state ──────────────────────────────────────────────────────────────
 
-/** No defensive deep-copy — RouteState is typed readonly; callers always pass fresh objects. */
+/** No defensive deep-copy: RouteState is typed readonly; callers always pass fresh objects. */
 export function createRouteState(input: {
   error?: unknown;
   location: RouteLocation;

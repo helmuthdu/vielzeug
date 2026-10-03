@@ -1,5 +1,5 @@
 ---
-title: Focus — API Reference
+title: 'Focus: API Reference'
 description: API reference for @vielzeug/focus navigation and restoration primitives.
 ---
 
@@ -10,7 +10,7 @@ description: API reference for @vielzeug/focus navigation and restoration primit
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `createListNavigation()` | Build keyboard navigation for composite widgets | Sync | Apply returned changes to DOM focus |
-| `createGridNavigation()` | Build two-dimensional arrow-key navigation for grids | Sync | Columns resolve per navigation — responsive grids need a getter |
+| `createGridNavigation()` | Build two-dimensional arrow-key navigation for grids | Sync | Columns resolve per navigation: responsive grids need a getter |
 | `restoreFocus()` | Restore focus to a target or fallback | Sync | Returns `false` when neither target can receive focus |
 | `rescueFocus()` | Re-home focus after the focused element unmounts | Sync | Returns `false` when focus is already on a real element |
 | `captureFocus()` | Capture active focus for one later restoration | Sync | The returned function is one-shot |
@@ -101,10 +101,10 @@ if (result?.change) result.change.item.focus();
 | `navigate(action)` | `GridNavigationChange<T> \| null` | Moves programmatically and returns the committed change. |
 | `set(index)` | `void` | Sets the tracked index for grids without `getActiveIndex`. |
 | `reset()` | `void` | Clears the tracked index. |
-| `getIndex()` | `number` | Returns the active index — derived from `getActiveIndex` when provided — or `-1`. |
+| `getIndex()` | `number` | Returns the active index: derived from `getActiveIndex` when provided, or `-1`. |
 | `getActiveItem()` | `T \| undefined` | Returns the item at the active index. |
 
-Unlike `createListNavigation`, items are not skipped when disabled — skipping in two dimensions would break row alignment. With no active index, forward moves start at the first item and backward moves at the last. `columns` may be a getter resolved on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. `FocusConfigError` is thrown when `columns` resolves below `1`.
+Unlike `createListNavigation`, items are not skipped when disabled: skipping in two dimensions would break row alignment. With no active index, forward moves start at the first item and backward moves at the last. `columns` may be a getter resolved on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. `FocusConfigError` is thrown when `columns` resolves below `1`.
 
 ---
 
@@ -121,7 +121,7 @@ Attempts to focus a connected target that is neither disabled nor inert. Throwin
 | `target` | `FocusTarget` | Element or getter resolved when `restoreFocus()` is called. |
 | `options` | `RestoreFocusOptions` | Optional lazy fallback and `preventScroll` flag. |
 
-**Returns:** `boolean` — `true` when focus moved to the target or fallback.
+**Returns:** `boolean`: `true` when focus moved to the target or fallback.
 
 **Example**
 
@@ -142,14 +142,14 @@ restoreFocus(() => triggerElement, {
 function rescueFocus(target: FocusTarget, options?: RestoreFocusOptions): boolean;
 ```
 
-Hands focus to `target` when focus has been lost to the document body — the state left behind when the focused element unmounts mid-swap, where keydown never reaches a handler.
+Hands focus to `target` when focus has been lost to the document body: the state left behind when the focused element unmounts mid-swap, where keydown never reaches a handler.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `target` | `FocusTarget` | Element or getter resolved when the rescue runs. |
 | `options` | `RestoreFocusOptions` | Optional lazy fallback and `preventScroll` flag, as in `restoreFocus()`. |
 
-**Returns:** `boolean` — `true` when focus was rescued; `false` when focus is already on a real element or neither target can receive focus.
+**Returns:** `boolean`: `true` when focus was rescued; `false` when focus is already on a real element or neither target can receive focus.
 
 **Example**
 

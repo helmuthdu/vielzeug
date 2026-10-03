@@ -42,7 +42,7 @@ export type CounterOptions = {
 
 /**
  * Creates a reactive counter state signal for text fields with `maxLength`.
- * Only call this when `maxLength` may be set — the state is genuinely opt-in.
+ * Only call this when `maxLength` may be set: the state is genuinely opt-in.
  *
  * @example
  * ```ts
@@ -67,7 +67,7 @@ export const createCounterState = (options: CounterOptions): Readable<CounterSta
   });
 
 /**
- * The single implementation of "which modifier class does this counter state map to" —
+ * The single implementation of "which modifier class does this counter state map to" :
  * every field with a character counter (`ore-input`, `ore-textarea`, `ore-message-composer`)
  * renders the identical near-limit/at-limit styling, so this is the one place that decides it.
  *
@@ -128,7 +128,7 @@ export type LabelPlacement = 'inset' | 'outside' | undefined;
 // ── Assistive state (error/helper text, describedby/errormessage/invalid) ─────
 
 /**
- * A field's error/helper/disabled/validation-trigger state — everything an input
+ * A field's error/helper/disabled/validation-trigger state: everything an input
  * needs *except* a visible `<label>`. Split out from label state (below) because
  * not every field has one: `ore-message-composer` names itself via `aria-label`
  * (a chat composer's accessible name conventionally comes from context/placeholder,
@@ -151,7 +151,7 @@ export type AssistiveStateHandle = {
   /**
    * Registers the real form field handle (the return value of `useField()`) so that
    * `triggerValidation()` can call its `reportValidity()`. See `TextFieldHandle.attachFormField`
-   * for why this is a post-hoc call instead of a constructor option — the same forward
+   * for why this is a post-hoc call instead of a constructor option: the same forward
    * reference applies here for choice fields.
    */
   attachFormField: (formField: { reportValidity(): void }) => void;
@@ -193,11 +193,11 @@ export const createAssistiveState = (options: AssistiveStateOptions): AssistiveS
     if (options.validateOn?.value !== on) return;
 
     if (!formField) {
-      // Not user-facing — this only fires when a component author wired `validateOn` but
+      // Not user-facing: this only fires when a component author wired `validateOn` but
       // forgot the matching `attachFormField(useField(...))` call, so validation silently
       // never runs instead of erroring where the mistake actually is.
       warn(
-        "triggerValidation() called before attachFormField() — validation will not run. See createTextField()/createChoiceField()/createCheckable()'s attachFormField doc comment.",
+        "triggerValidation() called before attachFormField(): validation will not run. See createTextField()/createChoiceField()/createCheckable()'s attachFormField doc comment.",
       );
 
       return;
@@ -225,7 +225,7 @@ export const createAssistiveState = (options: AssistiveStateOptions): AssistiveS
 export type LabelStateHandle = {
   /** `aria-labelledby` value. Non-null when a label is visible. */
   ariaLabelledBy: Readable<string | null>;
-  /** Stable `id` for the underlying form control — the `<label for="...">` target. */
+  /** Stable `id` for the underlying form control: the `<label for="...">` target. */
   fieldId: string;
   /** Stable `id` for the label element. Stamp this on your `<label id="...">`. */
   labelId: string;
@@ -259,7 +259,7 @@ export type LabelStateOptions = {
   /**
    * Label placement signal. Defaults to `'inset'`.
    *
-   * Not consumed by `createLabelState()` itself — visibility is driven solely by
+   * Not consumed by `createLabelState()` itself: visibility is driven solely by
    * `hasLabel`/`label`. Threaded through so component authors can apply
    * placement-specific styling (`label-placement` attribute) without a second
    * option; if placement-dependent visibility is ever needed, wire it into
@@ -287,14 +287,14 @@ export const createLabelState = (options: LabelStateOptions): LabelStateHandle =
 // ── Field handle (assistive + label, composed) ──────────────────────────────
 
 /**
- * Common handle returned by `createField` — the base for both `TextFieldHandle`
+ * Common handle returned by `createField`: the base for both `TextFieldHandle`
  * and `ChoiceFieldHandle`. Composes `createAssistiveState` + `createLabelState`;
  * call those directly instead if a field has no visible `<label>` (see
  * `createAssistiveState`'s doc comment).
  *
- * ARIA signals and label state are flat on the handle — no nested `aria` or
+ * ARIA signals and label state are flat on the handle: no nested `aria` or
  * `label` sub-objects. `labelId`/`labelVisible`/`ariaLabelledBy` are always
- * present but only meaningful when `label`/`hasLabel` was passed — omit both
+ * present but only meaningful when `label`/`hasLabel` was passed: omit both
  * and they resolve to an always-hidden, unreferenced label.
  *
  * @example

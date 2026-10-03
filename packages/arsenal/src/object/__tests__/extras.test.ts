@@ -23,7 +23,7 @@ describe('object extras', () => {
     expect(filterValues(input, (value) => value > 1)).toEqual({ b: 2 });
   });
 
-  it('guards against __proto__ prototype pollution — security regression', () => {
+  it('guards against __proto__ prototype pollution: security regression', () => {
     const malicious = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
 
     const d = defaults({} as Record<string, unknown>, malicious);

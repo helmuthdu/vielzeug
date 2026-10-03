@@ -20,13 +20,13 @@ export type OreDialogEvents = {
 };
 
 export type OreDialogProps = {
-  /** Backdrop style — 'blur' (default): dark overlay + blur; 'opaque': dark overlay only; 'transparent': no overlay */
+  /** Backdrop style: 'blur' (default): dark overlay + blur; 'opaque': dark overlay only; 'transparent': no overlay */
   backdrop?: DialogBackdrop;
   /** Initial uncontrolled open state. Ignored when `open` is set. */
   'default-open'?: boolean;
   /** Show a close (×) button in the header */
   dismissible?: boolean;
-  /** Panel shadow elevation — defaults to 'xl' */
+  /** Panel shadow elevation: defaults to 'xl' */
   elevation?: DialogElevation;
   /**
    * CSS selector for the element inside the dialog that should receive focus when the dialog opens.

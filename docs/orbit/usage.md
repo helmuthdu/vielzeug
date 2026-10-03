@@ -1,5 +1,5 @@
 ---
-title: Orbit — Usage Guide
+title: 'Orbit: Usage Guide'
 description: Position floating UI with lifecycle ownership, explicit coordinate strategy, middleware, and optional reactive state.
 ---
 

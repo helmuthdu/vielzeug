@@ -1,5 +1,5 @@
 ---
-title: 'Dnd Examples — Sortable list'
+title: 'Dnd Examples: Sortable list'
 description: 'Sortable list example for @vielzeug/dnd.'
 ---
 
@@ -7,7 +7,7 @@ description: 'Sortable list example for @vielzeug/dnd.'
 
 ### Problem
 
-You need a reorderable list where users drag items by an explicit handle. This is the baseline sortable pattern — a starting point before adding keyboard support or persistence.
+You need a reorderable list where users drag items by an explicit handle. This is the baseline sortable pattern: a starting point before adding keyboard support or persistence.
 
 ### Solution
 
@@ -30,7 +30,7 @@ A basic reorderable list with a visible drag handle and placeholder styling:
 }
 
 [data-dragging] {
-  /* opacity is managed automatically — use for other effects */
+  /* opacity is managed automatically: use for other effects */
 }
 
 .dnd-placeholder {
