@@ -705,7 +705,8 @@
     "./dist/core/*.js",
     "./dist/core/*.cjs",
     "./dist/styles/**",
-    "./src/core/icons.ts"
+    "./src/core/icons.ts",
+    "./src/icon-lucide.ts"
   ],
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
