@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "size the chart svg by its attributes only so the in-flow legend rides inside the reserved height instead of overflowing the container",
+      "packageName": "@vielzeug/prism",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

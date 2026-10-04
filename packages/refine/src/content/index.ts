@@ -42,6 +42,10 @@ export type { OrePaginationEvents, OrePaginationProps } from './pagination/pagin
 export { PAGINATION_TAG } from './pagination/pagination';
 export type { OreQrCodeEvents, OreQrCodeProps } from './qr-code/qr-code';
 export { QR_CODE_TAG } from './qr-code/qr-code';
+export type { OreRankItemProps } from './rank-list/rank-item';
+export { RANK_ITEM_TAG } from './rank-list/rank-item';
+export type { OreRankListProps, RankContext } from './rank-list/rank-list';
+export { RANK_CTX, RANK_LIST_TAG } from './rank-list/rank-list';
 export type { OreSeparatorProps } from './separator/separator';
 export { SEPARATOR_TAG } from './separator/separator';
 export type {

@@ -272,6 +272,8 @@ describe('createLineChart', () => {
       ],
     });
 
+    // The first arrow focuses the first point; the second moves to the next.
+    chart.el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
     chart.el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
     chart.el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
 
@@ -307,6 +309,26 @@ describe('createLineChart', () => {
     });
 
     expect(chart.el.querySelector('.prism-line-series')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('fits a Date x domain to the data so the line spans the plot width', () => {
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { key: new Date(2026, 8, 3), value: 10 },
+            { key: new Date(2026, 8, 14), value: 20 },
+          ],
+          name: 'Time',
+          showPoints: true,
+        },
+      ],
+    });
+    const xs = [...chart.el.querySelectorAll('.prism-line-dot')].map((dot) => Number(dot.getAttribute('cx')));
+
+    // Plot width is 600 - 50 (left) - 20 (right) margins.
+    expect(xs).toEqual([0, 530]);
     chart.dispose();
   });
 

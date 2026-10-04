@@ -2,6 +2,7 @@ import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
+import { uniqueId } from '../../core/ids';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
@@ -12,7 +13,9 @@ export interface AreaRenderOptions {
   curve: 'linear' | 'monotone' | 'step';
   /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
   disposalSignal?: AbortSignal;
-  fillOpacity: number;
+  fill: 'gradient' | 'solid';
+  /** Explicit opacity beats the `--prism-area-opacity` theme token. */
+  fillOpacity?: number;
   showLine: boolean;
   transition?: TransitionConfig;
 }
@@ -22,6 +25,38 @@ const previousPoints = new WeakMap<SVGGElement, Point[]>();
 
 function buildLinePath(pts: Point[], curve: AreaRenderOptions['curve']): string {
   return curve === 'monotone' ? monotonePath(pts) : curve === 'step' ? stepPath(pts) : linePath(pts);
+}
+
+/** A vertical gradient fading to transparent at the baseline, or a flat fill. */
+function applyAreaFill(parent: SVGGElement, fill: SVGPathElement, options: AreaRenderOptions): void {
+  let gradient = parent.querySelector<SVGLinearGradientElement>('linearGradient');
+
+  if (options.fill === 'gradient') {
+    if (!gradient) {
+      const defs = createSvgElement('defs');
+
+      gradient = createSvgElement('linearGradient', { id: uniqueId('prism-area-fill'), x1: 0, x2: 0, y1: 0, y2: 1 });
+      gradient.append(
+        createSvgElement('stop', { class: 'prism-area-stop-top', offset: 0 }),
+        createSvgElement('stop', { class: 'prism-area-stop-bottom', offset: 1 }),
+      );
+      defs.appendChild(gradient);
+      parent.insertBefore(defs, parent.firstChild);
+    }
+
+    for (const stop of gradient.querySelectorAll('stop')) {
+      stop.setAttribute('stop-color', options.color);
+      stop.style.stopColor = options.color;
+    }
+
+    setAttributes(fill, { fill: `url(#${gradient.id})` });
+  } else {
+    gradient?.parentElement?.remove();
+    setAttributes(fill, { fill: options.color });
+  }
+
+  setAttributes(fill, { class: `prism-area-fill prism-area-fill--${options.fill}`, stroke: 'none' });
+  fill.style.fillOpacity = options.fillOpacity === undefined ? '' : String(options.fillOpacity);
 }
 
 export function renderArea(parent: SVGGElement, points: Point[], baselineY: number, options: AreaRenderOptions): void {
@@ -36,7 +71,7 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
     parent.appendChild(fill);
   }
 
-  setAttributes(fill, { fill: options.color, 'fill-opacity': options.fillOpacity, stroke: 'none' });
+  applyAreaFill(parent, fill, options);
 
   let line: SVGPathElement | null = null;
 

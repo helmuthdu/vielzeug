@@ -14,7 +14,19 @@ export interface ChartBase {
 
 export function createChartBase(
   container: HTMLElement,
-  options: { a11y?: ChartA11y; margin?: Partial<ChartMargin> },
+  options: {
+    a11y?: ChartA11y;
+    /**
+     * The chart's own in-flow chrome inside the container (the legend). Its height is
+     * subtracted from every resize-driven svg height: the container's content box contains
+     * the svg plus this chrome, so assigning the full content height back to the svg would
+     * grow the container by the chrome's height on every pass — unbounded growth in any
+     * auto-height container. Subtracting it makes the layout converge on the fixed point
+     * `container = svg + chrome` instead.
+     */
+    chrome?: () => HTMLElement | null;
+    margin?: Partial<ChartMargin>;
+  },
   onResize?: () => void,
 ): ChartBase {
   // Duck-typed rather than `instanceof Element`: an `instanceof` check would reject a
@@ -48,7 +60,11 @@ export function createChartBase(
       ? { 'aria-hidden': 'true' }
       : { 'aria-label': a11y.ariaLabel, role: 'img', tabindex: '0' }),
     class: 'prism-chart',
-    style: 'display:block;width:100%;height:100%',
+    // The svg's width/height attributes are its single source of sizing truth (set below and
+    // on every resize pass, chrome excluded). CSS percentage sizing here would override the
+    // attributes: `height: 100%` fills the whole container, so the in-flow legend rides past
+    // the container's edge instead of inside the height the resize pass reserved for it.
+    style: 'display:block',
   });
 
   const chartAreaGroup = createSvgElement('g', {
@@ -73,9 +89,12 @@ export function createChartBase(
   };
 
   const stopObserving = observeResize(container, (width, height) => {
-    dimensions.height = height;
+    const chromeHeight = options.chrome?.()?.offsetHeight ?? 0;
+    const svgHeight = Math.max(0, height - chromeHeight);
+
+    dimensions.height = svgHeight;
     dimensions.width = width;
-    setAttributes(svg, { height, viewBox: `0 0 ${width} ${height}`, width });
+    setAttributes(svg, { height: svgHeight, viewBox: `0 0 ${width} ${svgHeight}`, width });
     onResize?.();
   });
 

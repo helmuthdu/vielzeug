@@ -87,6 +87,26 @@ Object.defineProperty(window, 'createToastService', {
 queueMicrotask(syncAllOverlays);
 `;
 
+const previewIconRuntime = `
+const registerIcons = window.Refine?.components?.content?.registerIcons;
+const icons = window.lucide?.icons;
+if (registerIcons && icons) {
+  registerIcons(icons);
+  const refreshIcons = (root) => {
+    root.querySelectorAll('ore-icon').forEach((icon) => {
+      const name = icon.getAttribute('name');
+      if (!name) return;
+      icon.removeAttribute('name');
+      icon.setAttribute('name', name);
+    });
+    root.querySelectorAll('*').forEach((element) => {
+      if (element.shadowRoot) refreshIcons(element.shadowRoot);
+    });
+  };
+  refreshIcons(document);
+}
+`;
+
 export interface SandboxDocOptions {
   align?: 'center' | 'end' | 'start' | 'stretch';
   /** When set, the sandbox body background is transparent so the host container's background image shows through. */
@@ -147,7 +167,8 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
 <script>${previewRuntime}</script>
 <script data-preview-dependencies>${refineDeps}</script>
 <div dir="${dir}" style="display: contents">${previewHtml}</div>
-<script data-preview-refine>${refineJs}</script>`;
+<script data-preview-refine>${refineJs}</script>
+<script data-preview-icons>${previewIconRuntime}</script>`;
 
   return { fragment };
 }

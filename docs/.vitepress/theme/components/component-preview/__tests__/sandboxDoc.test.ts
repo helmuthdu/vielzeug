@@ -50,6 +50,22 @@ describe('buildSandboxDoc()', () => {
     );
   });
 
+  it('registers Lucide icons after Refine upgrades preview elements', () => {
+    const { fragment } = buildSandboxDoc({
+      dark: false,
+      dir: 'ltr',
+      html: '<ore-speech-player></ore-speech-player>',
+      vertical: false,
+    });
+
+    expect(fragment.indexOf('<script data-preview-refine>')).toBeLessThan(
+      fragment.indexOf('<script data-preview-icons>'),
+    );
+    expect(fragment).toContain('registerIcons(icons)');
+    expect(fragment).toContain("icon.removeAttribute('name')");
+    expect(fragment).toContain("icon.setAttribute('name', name)");
+  });
+
   it('registers every native-dialog overlay for preview state synchronization', () => {
     const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '', vertical: false });
 

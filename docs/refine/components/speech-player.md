@@ -1,6 +1,6 @@
 # Speech Player
 
-A text-to-speech player control that reads its `text` aloud through the browser's Web Speech API. Renders a labeled play/pause toggle, a stop control beside it that appears while reading, and a gauged speed control: useful wherever long-form copy should be heard, not just read: journal entries, article bodies, instructions.
+A text-to-speech player control that reads its `text` aloud through the browser's Web Speech API. Renders a labeled play/pause toggle, a stop control beside it that appears while reading, and a gauged speed control: useful wherever long-form copy should be heard, not just read: article bodies, how-to instructions, changelogs.
 
 The text is read sentence by sentence: a whole page can be read without hitting Chromium's single-utterance truncation, and the player stops any other `ore-speech-player` on the page before it starts: only one voice reads at a time. `progress` events name the sentence being read, so a consumer can highlight what the voice is saying, and a bound `resume-at` makes "resume" mean it across stops and page loads.
 
@@ -44,11 +44,11 @@ The reading stream is sentence-addressed: each sentence is one utterance (a sent
 ```ts
 import { speechSentences } from '@vielzeug/refine/speech-player';
 
-const sentences = speechSentences(lore); // ["One.", "Two.", ...]
+const sentences = speechSentences(passage); // ["One.", "Two.", ...]
 ```
 
 ```html
-<ore-speech-player :text="lore" @progress="onProgress"></ore-speech-player>
+<ore-speech-player :text="passage" @progress="onProgress"></ore-speech-player>
 <span
   v-for="(sentence, index) in sentences"
   :class="{ spoken: index === current }"
@@ -67,7 +67,7 @@ function onProgress(event: Event): void {
 Bind `resume-at` to the sentence index playback should begin from, and the player restarts there instead of at the beginning: persist the last `progress` sentence per entry and "resume" survives stops, collapses, and page loads. A finished reading is the consumer's cue to clear the position, and a value beyond the end clamps into the last sentence.
 
 ```html
-<ore-speech-player :resume-at="savedSentence" :text="lore"></ore-speech-player>
+<ore-speech-player :resume-at="savedSentence" :text="passage"></ore-speech-player>
 ```
 
 ## Language
@@ -102,7 +102,7 @@ player.labels = {
 In Vue 3:
 
 ```html
-<ore-speech-player :labels="speechLabels" :text="lore"></ore-speech-player>
+<ore-speech-player :labels="speechLabels" :text="passage"></ore-speech-player>
 ```
 
 ## Handling Events
@@ -110,10 +110,10 @@ In Vue 3:
 The player emits at the boundaries an observer cares about: `play`, `stop` (stopped before finishing), `end` (finished on its own), `error` (the engine failed mid-read), plus `progress` (a sentence began) and `rate-change` (the speed control moved):
 
 ```html
-<ore-speech-player id="lore-player" text="..."></ore-speech-player>
+<ore-speech-player id="passage-player" text="..."></ore-speech-player>
 
 <script type="module">
-  document.getElementById('lore-player').addEventListener('play', () => {
+  document.getElementById('passage-player').addEventListener('play', () => {
     console.log('Reading started');
   });
 </script>
@@ -122,7 +122,7 @@ The player emits at the boundaries an observer cares about: `play`, `stop` (stop
 In Vue 3:
 
 ```html
-<ore-speech-player :text="lore" @play="onPlay" @stop="onStop" @end="onEnd"></ore-speech-player>
+<ore-speech-player :text="passage" @play="onPlay" @stop="onStop" @end="onEnd"></ore-speech-player>
 ```
 
 ## Imperative Control
@@ -140,7 +140,7 @@ lorePlayer.value?.stop();
 The `rate` attribute is the playback rate: bind it with the `rate-change` event to remember the listener's choice across sessions and instances; unbound, the control cycles on its own:
 
 ```html
-<ore-speech-player :rate="preferred" :text="lore" @rate-change="preferred = $event.detail.rate"></ore-speech-player>
+<ore-speech-player :rate="preferred" :text="passage" @rate-change="preferred = $event.detail.rate"></ore-speech-player>
 ```
 
 ## Custom Styling

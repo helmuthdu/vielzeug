@@ -4,11 +4,23 @@ import { tweenNumber } from '../../animation/tween';
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import { createRadialScaffold } from '../../core/chart-scaffold';
 import { createSvgElement, setAttributes } from '../../svg/element';
+import { estimateTextWidth } from '../../svg/text';
 import { seriesColor } from '../../theme';
 import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
 import { type Arc, arcCentroid, arcPath, computeArcs } from './pie-renderer';
 
 const TWO_PI = 2 * Math.PI;
+/** Default `--prism-pie-label-size` in px, used to decide whether a label fits its slice. */
+const LABEL_FONT_SIZE = 12;
+
+/** A label fits when its slice is wide enough along the centroid arc and thick enough radially. */
+function labelFits(arc: Arc, label: string): boolean {
+  const thickness = arc.outerRadius - arc.innerRadius;
+  const midRadius = (arc.outerRadius + arc.innerRadius) / 2;
+  const arcLength = (arc.endAngle - arc.startAngle - 2 * arc.padAngle) * midRadius;
+
+  return thickness >= LABEL_FONT_SIZE * 1.4 && arcLength >= estimateTextWidth(label, LABEL_FONT_SIZE) + 8;
+}
 
 const SEMI_START = -Math.PI / 2; // -90° = 9-o'clock (left)
 const SEMI_END = Math.PI / 2; // +90° = 3-o'clock (right) → true 180° half-circle
@@ -43,7 +55,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       const arc = currentArcs[i];
       const slice = slices[i];
 
-      if (!slice?.label) continue;
+      if (!slice?.label || !labelFits(arc, slice.label)) continue;
 
       const { x, y } = arcCentroid(arc);
       const text = createSvgElement('text', { class: 'prism-pie-label' });
@@ -187,49 +199,104 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
         legend?.update(currentArcs.map((arc) => ({ color: arc.color, name: arc.slice.label ?? '' })));
         tooltip?.hide();
 
-        const onMouseMove = (e: MouseEvent): void => {
-          const svgRect = svg.getBoundingClientRect();
-          const mx = e.clientX - svgRect.left;
-          const my = e.clientY - svgRect.top;
-          const hit = hitTestArc(currentArcs, mx, my, variant);
+        const total = currentArcs.reduce((sum, arc) => sum + Math.max(0, arc.slice.value), 0);
+        let activeIndex = -1;
 
-          if (hit >= 0) {
-            const arc = currentArcs[hit];
+        const describe = (arc: Arc): string => {
+          const percent = total > 0 ? Math.round((Math.max(0, arc.slice.value) / total) * 1000) / 10 : 0;
 
-            config.onHover?.(arc.slice, hit);
-
-            const { x, y } = arcCentroid(arc);
-            const contR = container.getBoundingClientRect();
-
-            tooltip?.show(
-              x + (svgRect.left - contR.left),
-              y + (svgRect.top - contR.top),
-              { key: hit, value: arc.slice.value },
-              { color: arc.color, data: [], name: arc.slice.label ?? '' },
-            );
-          } else {
-            config.onHover?.(null, null);
-            tooltip?.hide();
-          }
+          return `${arc.slice.label ?? `Slice ${arc.index + 1}`}: ${arc.slice.value} (${percent}%)`;
         };
 
-        const onMouseLeave = (): void => {
-          config.onHover?.(null, null);
+        const setActive = (index: number): void => {
+          activeIndex = index;
+          pieGroup.classList.toggle('prism-pie-focused', index >= 0);
+          for (const [i, el] of [...pieGroup.children].entries())
+            el.classList.toggle('prism-pie-slice--active', i === index);
+        };
+
+        const activate = (index: number): void => {
+          const arc = currentArcs[index];
+
+          if (!arc) return;
+
+          setActive(index);
+          config.onHover?.(arc.slice, index);
+
+          const text = describe(arc);
+
+          if (!tooltip) {
+            ctx.announcer.announce(text);
+
+            return;
+          }
+
+          const { x, y } = arcCentroid(arc);
+          const svgRect = svg.getBoundingClientRect();
+          const contR = container.getBoundingClientRect();
+
+          tooltip.show(
+            x + (svgRect.left - contR.left),
+            y + (svgRect.top - contR.top),
+            { key: index, value: arc.slice.value },
+            { color: arc.color, data: [], name: arc.slice.label ?? '' },
+            text,
+          );
+        };
+
+        const deactivate = (): void => {
+          setActive(-1);
           tooltip?.hide();
+          ctx.announcer.clear();
+          config.onHover?.(null, null);
+        };
+
+        const hitAt = (e: MouseEvent): number => {
+          const svgRect = svg.getBoundingClientRect();
+
+          return hitTestArc(currentArcs, e.clientX - svgRect.left, e.clientY - svgRect.top, variant);
+        };
+
+        const onMouseMove = (e: MouseEvent): void => {
+          const hit = hitAt(e);
+
+          if (hit >= 0) {
+            if (hit !== activeIndex) activate(hit);
+          } else if (activeIndex >= 0) {
+            deactivate();
+          }
         };
 
         const onClick = (e: MouseEvent): void => {
           if (!config.onClick) return;
 
-          const svgRect = svg.getBoundingClientRect();
-          const mx = e.clientX - svgRect.left;
-          const my = e.clientY - svgRect.top;
-          const hit = hitTestArc(currentArcs, mx, my, variant);
+          const hit = hitAt(e);
 
           if (hit >= 0) config.onClick(currentArcs[hit].slice, hit);
         };
 
-        return { onClick, onMouseLeave, onMouseMove };
+        const onKeyDown = (e: KeyboardEvent): void => {
+          const count = currentArcs.length;
+
+          if (count === 0) return;
+
+          const step: Record<string, number> = { ArrowDown: 1, ArrowLeft: -1, ArrowRight: 1, ArrowUp: -1 };
+
+          if (e.key in step) {
+            e.preventDefault();
+            activate(activeIndex < 0 ? (step[e.key] > 0 ? 0 : count - 1) : (activeIndex + step[e.key] + count) % count);
+          } else if (e.key === 'Home' || e.key === 'End') {
+            e.preventDefault();
+            activate(e.key === 'Home' ? 0 : count - 1);
+          } else if ((e.key === 'Enter' || e.key === ' ') && activeIndex >= 0 && config.onClick) {
+            e.preventDefault();
+            config.onClick(currentArcs[activeIndex].slice, activeIndex);
+          } else if (e.key === 'Escape') {
+            deactivate();
+          }
+        };
+
+        return { onClick, onKeyDown, onMouseLeave: deactivate, onMouseMove };
       },
       (next) => {
         data = next;

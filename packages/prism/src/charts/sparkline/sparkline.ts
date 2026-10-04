@@ -1,12 +1,17 @@
+import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createChartBase } from '../../core/chart-base';
+import { uniqueId } from '../../core/ids';
 import { PrismRenderError } from '../../errors';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
 import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
+
+/** Fits the 3.5px hover marker plus its ring inside the SVG. */
+const PLOT_INSET = 5;
 
 function buildTopPoints(data: number[], width: number, height: number): Point[] {
   if (data.length === 0) return [];
@@ -160,7 +165,9 @@ export function createSparkline(
   const color = config.color ?? 'var(--prism-color-1)';
   const curve = config.curve ?? 'linear';
   const strokeWidth = config.strokeWidth ?? 1.5;
-  const fillOpacity = config.fillOpacity ?? 0.2;
+  const fillOpacity = config.fillOpacity;
+  const showEndPoint = config.showEndPoint ?? true;
+  const gradientId = uniqueId('prism-spark-fill');
   let data = config.data;
 
   const base = createChartBase(
@@ -182,12 +189,27 @@ export function createSparkline(
 
   let cleanupInteraction: (() => void) | undefined;
 
+  /** Line and area plots are inset so dots on the first and last values are not clipped. */
+  function plotArea(): { h: number; inset: number; w: number } {
+    const { height, width } = base.dimensions;
+    const inset = variant === 'line' || variant === 'area' ? PLOT_INSET : 0;
+
+    return { h: Math.max(1, height - inset * 2), inset, w: Math.max(1, width - inset * 2) };
+  }
+
   function renderAll(): void {
     const { height: h, width: w } = base.dimensions;
+    const plot = plotArea();
 
     while (innerGroup.firstChild) innerGroup.removeChild(innerGroup.firstChild);
 
+    innerGroup.setAttribute('transform', `translate(${plot.inset},${plot.inset})`);
+
     if (data.length === 0) return;
+
+    if (!isStackData(data) && data.some((v) => !Number.isFinite(v))) {
+      warn('createSparkline: data contains non-finite values; they are drawn as the minimum.');
+    }
 
     if (variant === 'stack' && isStackData(data)) {
       const stackGroup = createSvgElement('g', { class: 'prism-spark-stack' });
@@ -226,18 +248,43 @@ export function createSparkline(
       renderSparkBars(barsGroup, data as number[], w, h, color, config.transition, ac.signal);
     } else {
       if (variant === 'area') {
-        const fill = createSvgElement('path', { class: 'prism-spark-fill' });
-        const fillD = buildAreaPath(data as number[], w, h, curve);
+        const defs = createSvgElement('defs');
+        const gradient = createSvgElement('linearGradient', { id: gradientId, x1: 0, x2: 0, y1: 0, y2: 1 });
 
-        setAttributes(fill, { d: fillD, fill: color, 'fill-opacity': fillOpacity, stroke: 'none' });
+        for (const [offset, className] of [
+          [0, 'prism-spark-stop-top'],
+          [1, 'prism-spark-stop-bottom'],
+        ] as const) {
+          const stop = createSvgElement('stop', { class: className, offset, 'stop-color': color });
+
+          stop.style.stopColor = color;
+          gradient.appendChild(stop);
+        }
+
+        defs.appendChild(gradient);
+        innerGroup.appendChild(defs);
+
+        const fill = createSvgElement('path', { class: 'prism-spark-fill' });
+        const fillD = buildAreaPath(data as number[], plot.w, plot.h, curve);
+
+        setAttributes(fill, { d: fillD, fill: `url(#${gradientId})`, stroke: 'none' });
+        fill.style.fillOpacity = fillOpacity === undefined ? '' : String(fillOpacity);
         innerGroup.appendChild(fill);
       }
 
       const path = createSvgElement('path', { class: 'prism-spark-line' });
-      const pathD = buildPath(data as number[], w, h, curve);
+      const pathD = buildPath(data as number[], plot.w, plot.h, curve);
 
       setAttributes(path, { d: pathD, fill: 'none', stroke: color, 'stroke-width': strokeWidth });
       innerGroup.appendChild(path);
+
+      const end = buildTopPoints(data as number[], plot.w, plot.h).at(-1);
+
+      if (showEndPoint && end) {
+        innerGroup.appendChild(
+          createSvgElement('circle', { class: 'prism-spark-end', cx: end.x, cy: end.y, fill: color, r: 2.5 }),
+        );
+      }
     }
 
     if (!isStackData(data)) attachInteraction(data as number[]);
@@ -251,28 +298,40 @@ export function createSparkline(
 
     if (data.length <= 1) return;
 
-    const { width: w } = base.dimensions;
+    const { h, inset, w } = plotArea();
 
     svg.style.cursor = 'crosshair';
 
     const xStep = w / (data.length - 1);
+    const points = variant === 'bar' ? [] : buildTopPoints(data, w, h);
+    const marker = createSvgElement('circle', { class: 'prism-spark-marker', fill: color, r: 3.5 });
+    const indexAt = (clientX: number): number =>
+      Math.max(0, Math.min(data.length - 1, Math.round((clientX - svg.getBoundingClientRect().left - inset) / xStep)));
+
+    marker.style.display = 'none';
+    innerGroup.appendChild(marker);
 
     const handleMove = (e: MouseEvent) => {
-      const rect = svg.getBoundingClientRect();
-      const relX = e.clientX - rect.left;
-      const idx = Math.max(0, Math.min(data.length - 1, Math.round(relX / xStep)));
+      const idx = indexAt(e.clientX);
+      const point = points[idx];
+
+      if (point) {
+        setAttributes(marker, { cx: point.x, cy: point.y });
+        marker.style.display = '';
+      }
 
       config.onHover?.(idx, data[idx]);
     };
 
-    const handleLeave = () => config.onHover?.(null, null);
+    const handleLeave = () => {
+      marker.style.display = 'none';
+      config.onHover?.(null, null);
+    };
 
     const handleClick = (e: MouseEvent) => {
       if (!config.onClick) return;
 
-      const rect = svg.getBoundingClientRect();
-      const relX = e.clientX - rect.left;
-      const idx = Math.max(0, Math.min(data.length - 1, Math.round(relX / xStep)));
+      const idx = indexAt(e.clientX);
 
       config.onClick(idx, data[idx]);
     };

@@ -4,7 +4,7 @@ import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
 import { createCrosshair } from '../../interaction/crosshair';
-import { createSeriesInteraction } from '../../interaction/series-interaction';
+import { createSeriesInteraction, ensureMarkerGroup } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { seriesColor } from '../../theme';
@@ -13,6 +13,7 @@ import { computePoints, renderLine } from './line-renderer';
 
 export function createLineChart(container: HTMLElement, config: LineChartConfig): ChartHandle<LineSeriesConfig[]> {
   let crosshair: ReturnType<typeof createCrosshair> | null = null;
+  let markers: SVGGElement | null = null;
   let seriesList = config.series;
 
   return createChartScaffold(
@@ -28,6 +29,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
 
       if (allX.length === 0) {
         clearCartesianDom(groups, legend, tooltip, crosshair);
+        markers?.replaceChildren();
 
         return;
       }
@@ -96,22 +98,27 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           disposalSignal: ctx.disposalSignal,
           pointRadius: series.pointRadius ?? 3,
           showPoints: series.showPoints ?? false,
-          strokeWidth: series.strokeWidth ?? 2,
+          strokeWidth: series.strokeWidth,
           transition: config.transition,
         });
       }
 
       legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       tooltip?.hide();
+      markers = ensureMarkerGroup(ctx.chartArea, markers);
 
       return createSeriesInteraction({
+        announcer: ctx.announcer,
+        colors: () => seriesList.map((s, i) => seriesColor(i, s.color)),
         crosshair,
         dims: () => ctx.dimensions,
         getData: () => allData,
         getPoints: () => allPoints,
         getSeriesList: () => seriesList,
+        markers,
         onClick: config.onClick,
         onHover: config.onHover,
+        seriesGroup: groups.series,
         svg: ctx.svg,
         tooltip,
       });

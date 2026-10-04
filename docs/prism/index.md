@@ -1,9 +1,9 @@
 ---
 title: 'Prism: Responsive SVG data visualization'
-description: Responsive SVG charts with explicit updates, accessible interactions, and CSS theming.
+description: Responsive SVG charts with explicit updates, keyboard and screen-reader support, and CSS theming.
 package: prism
 category: ui
-keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, typescript]
+keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, pie-chart, radar-chart, sparkline, accessibility, typescript]
 related: [refine, orbit]
 exports:
   [
@@ -11,20 +11,10 @@ exports:
     createBarChart,
     createAreaChart,
     createPieChart,
+    createRadarChart,
     createSparkline,
-    linearScale,
-    timeScale,
-    bandScale,
-    seriesColor,
     setTheme,
-    resetTheme,
     PrismError,
-    ChartA11y,
-    ContinuousDatum,
-    EasingFn,
-    StackSegment,
-    XAxisConfig,
-    YAxisConfig,
   ]
 environments: [browser]
 ---
@@ -87,6 +77,7 @@ chart.update([
 | CSS themeable       | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Limited                                      | <ore-icon name="check" size="16"></ore-icon> |
 | Framework-neutral   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Accessible SVG     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Manual                                       |
+| Keyboard navigation | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Manual                                       |
 | TypeScript-first   | <ore-icon name="check" size="16"></ore-icon> | Partial                                  | <ore-icon name="check" size="16"></ore-icon> | Types available                              |
 
 <div class="decision-callout">
@@ -161,31 +152,21 @@ chart.dispose();
 
 - **`createLineChart(container, config)`**: line chart with linear, monotone, or step interpolation
 - **`createBarChart(container, config)`**: bar chart with four layout variants: grouped, stacked, grouped-horizontal, stacked-horizontal
-- **`createAreaChart(container, config)`**: filled area with configurable opacity
-- **`createSparkline(container, config)`**: minimal inline sparkline (line, area, or bar variant)
-- **`createPieChart(container, config)`**: pie, donut, or semi-circle donut chart
-- **`linearScale(config)`**: continuous numeric scale with nice tick generation
-- **`timeScale(config)`**: date/time scale with interval-based ticks
-- **`bandScale(config)`**: categorical scale for bar charts
+- **`createAreaChart(container, config)`**: filled area with a gradient or solid fill
+- **`createPieChart(container, config)`**: pie, donut, or semi-circle donut chart; labels that do not fit their slice are hidden
+- **`createRadarChart(container, config)`**: radar chart for comparing values across 3+ axes, with per-axis ranges
+- **`createSparkline(container, config)`**: minimal inline line, area, bar, or stack chart
+- **`linearScale`, `timeScale`, `bandScale`**: standalone scales with nice tick generation
 - **`ChartHandle.update(data)`**: replace chart data synchronously without coupling to a state library
-- **`seriesColor(index, override?)`**: resolve CSS palette color by series index
 - **`setTheme(theme)` / `resetTheme()`**: apply or clear custom colors, font, and grid tokens at runtime
-- **Event hooks**: `onClick` and `onHover` callbacks on every chart
-- **Devtools**: `debugChart()` from `@vielzeug/prism/devtools` logs mount/resize/dispose to `console.debug`; tree-shaken from production unless imported
-- **CSS custom properties**: full theme control via `--prism-*` tokens
+- **Series comparison**: hover or keyboard focus reports every series at the active key in the tooltip, `onHover`, and screen-reader announcements
+- **Keyboard navigation**: arrow keys, `Enter`, and `Escape` on every labelled chart except sparklines
+- **CSS custom properties**: full theme control via `--prism-*` tokens, with dark mode built in
 - **Responsive**: auto-resizes via `ResizeObserver`
-- **Accessible**: ARIA labels and semantic SVG structure
-- **`Symbol.dispose`**: explicit resource management following TC39 proposal
+- **Devtools**: `debugChart()` from `@vielzeug/prism/devtools` logs mount/resize/dispose to `console.debug`
+- **`Symbol.dispose`**: explicit resource management following the TC39 proposal
 
 </div>
-
-## Sub-paths
-
-| Import                     | Purpose                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| `@vielzeug/prism`          | All chart factories, scales, and types                                               |
-| `@vielzeug/prism/theme`    | Default CSS (custom properties + dark mode)                                          |
-| `@vielzeug/prism/devtools` | `debugChart()`: opt-in `console.debug` lifecycle logging, tree-shaken in production |
 
 ## Documentation
 

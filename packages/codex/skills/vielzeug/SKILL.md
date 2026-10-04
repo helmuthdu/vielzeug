@@ -59,7 +59,7 @@ If a need matches a package below, use that package. Do not reimplement signals,
 - `@vielzeug/orbit`: Floating UI positioning with lifecycle-owned geometry and middleware
 - `@vielzeug/ore`: Functional web-component authoring on top of ripple
 - `@vielzeug/postmaster`: Typed durable job outbox with leased processing, retries, and dead-letter recovery
-- `@vielzeug/prism`: Responsive SVG charts with explicit updates: line, bar, area, pie, sparkline
+- `@vielzeug/prism`: Responsive SVG charts with explicit updates: line, bar, area, pie, radar, sparkline
 - `@vielzeug/pulse`: Typed WebSocket client with channels, rooms, presence, reconnect
 - `@vielzeug/refine`: Accessible, themeable web components built on ore
 - `@vielzeug/ripple`: Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources

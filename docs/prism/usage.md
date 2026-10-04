@@ -102,7 +102,7 @@ const chart = createLineChart(container, {
 
 ### Time-based X Axis
 
-When data points use `Date` objects for `key`, Prism automatically applies a time scale:
+When data points use `Date` objects for `key`, Prism automatically applies a time scale. The domain spans exactly the first to the last date, so the series fills the plot width:
 
 ```ts
 const chart = createLineChart(container, {
@@ -196,6 +196,8 @@ const chart = createBarChart(container, {
 
 ## Area Charts
 
+Area fills use a vertical gradient that fades toward the baseline. Set `fill: 'solid'` for a flat fill:
+
 ```ts
 import { createAreaChart } from '@vielzeug/prism';
 
@@ -205,7 +207,7 @@ const chart = createAreaChart(container, {
       name: 'Users',
       data: userData,
       curve: 'monotone',
-      fillOpacity: 0.2,
+      fill: 'gradient', // 'gradient' (default) | 'solid'
       showLine: true,
     },
   ],
@@ -214,6 +216,8 @@ const chart = createAreaChart(container, {
   crosshair: true,
 });
 ```
+
+`fillOpacity` overrides the theme opacity for one series.
 
 ## Pie, Donut, and Semi-circle Charts
 
@@ -257,10 +261,10 @@ createPieChart(container, {
 
 ### Slice Labels
 
-Set `label` on each `PieSliceConfig` to render text at the arc centroid:
+Set `label` on each `PieSliceConfig` to render text at the arc centroid. A label that does not fit inside its slice is not drawn; the value stays available through the tooltip, legend, and keyboard announcements:
 
 ```ts
-{ value: 42, label: '42%' }
+{ value: 42, label: 'Direct' }
 ```
 
 Style labels via CSS:
@@ -304,6 +308,71 @@ createPieChart(container, {
 });
 ```
 
+## Radar Charts
+
+`createRadarChart` compares several values on one shape, such as a hero's stats. Each series supplies values keyed by `axis.key`:
+
+```ts
+import { createRadarChart } from '@vielzeug/prism';
+
+const axes = [
+  { key: 'str', label: 'Strength' },
+  { key: 'agi', label: 'Agility' },
+  { key: 'int', label: 'Intellect' },
+  { key: 'end', label: 'Endurance' },
+  { key: 'spd', label: 'Speed', max: 5 },
+];
+
+const chart = createRadarChart(container, {
+  a11y: { ariaLabel: 'Hero stats' },
+  axes,
+  domain: [0, 10],
+  fill: 'gradient',
+  showValues: true,
+  series: [
+    {
+      name: 'Adam',
+      data: [
+        { key: 'str', value: 8 },
+        { key: 'agi', value: 6 },
+        { key: 'int', value: 4 },
+        { key: 'end', value: 9 },
+        { key: 'spd', value: 3 },
+      ],
+    },
+  ],
+});
+```
+
+### Scales
+
+Every axis shares `domain` (or a nice range around the data when omitted). Give an axis its own `min`/`max` when its stat uses a different range: above, Speed runs 0 to 5 while the rest run 0 to 10, so each still fills the chart.
+
+### Appearance
+
+| Option | Values | Use it for |
+| --- | --- | --- |
+| `fill` | `'solid'`, `'gradient'`, `'none'` | `gradient` for a single hero; `solid` or `none` when overlaying several |
+| `curve` | `'linear'`, `'rounded'` | Rounded reads softer; linear keeps exact vertices |
+| `grid.shape` | `'polygon'`, `'circle'` | Polygon matches the axes; circle suits many axes |
+| `grid.levels` / `grid.bands` | number / boolean | Ring count and alternate shading |
+| `grid.labels` | boolean | Level values; drawn only when every axis shares one domain |
+| `showValues` | boolean | Value beside each vertex, formatted by `axis.format` |
+
+### Comparing Series
+
+Pass several series with `legend: true`. Hovering one shape dims the others, and hovering an axis reports every series' value on it:
+
+```ts
+createRadarChart(container, {
+  axes,
+  legend: true,
+  series: [adam, eve],
+  tooltip: true, // "Agility: Adam 6, Eve 9"
+  onHover: (event) => event && console.log(event.axis.label, event.values),
+});
+```
+
 ## Sparklines
 
 Sparklines are minimal inline charts with no axes, no legend, and no margin: designed to live inline with text or inside table cells.
@@ -313,7 +382,7 @@ import { createSparkline } from '@vielzeug/prism';
 
 const spark = createSparkline(container, {
   data: [12, 18, 14, 22, 19, 28],
-  variant: 'line', // 'line' | 'area' | 'bar' (default: 'line')
+  variant: 'line', // 'line' | 'area' | 'bar' | 'stack' (default: 'line')
   color: '#3b82f6',
   curve: 'monotone',
   strokeWidth: 1.5,
@@ -325,9 +394,11 @@ spark.dispose();
 ### Variants
 
 - **`line`**: simple polyline path (default)
-- **`area`**: filled area + line overlay
+- **`area`**: gradient-filled area + line overlay
 - **`bar`**: vertical bar for each data point
 - **`stack`**: horizontal proportional segments; use `StackSegment[]` for `data` with per-segment colors
+
+Line and area sparklines mark the latest value with a dot. Set `showEndPoint: false` to hide it.
 
 ### Updating Data
 
@@ -342,7 +413,7 @@ spark.update([12, 18, 14, 22, 30]);
 
 ### Event Hooks
 
-Sparklines use simplified hooks: index-based rather than full `ChartEvent`:
+Sparklines use simplified hooks: index-based rather than full `ChartEvent`. With a hook set, a marker follows the hovered value:
 
 ```ts
 const spark = createSparkline(container, {
@@ -357,7 +428,7 @@ const spark = createSparkline(container, {
 });
 ```
 
-> **Note:** Sparkline SVGs are marked `aria-hidden="true"` since they are decorative. Provide meaningful surrounding text context for accessibility.
+> **Note:** Sparklines have no keyboard navigation. Label one with `a11y.ariaLabel` only when the trend carries meaning, and state the key value in surrounding text.
 
 ## Axes and Grid
 
@@ -378,9 +449,11 @@ const spark = createSparkline(container, {
 }
 ```
 
+Category axes show every label when the labels fit and thin them out only when they would overlap. Set `tickCount` to choose the density yourself.
+
 ## Tooltips
 
-Enable with `tooltip: true` for default rendering, or provide a custom `render` function. Strings are rendered as text. Return a DOM node for structured content:
+Enable with `tooltip: true`. On line, area, bar, and radar charts the default tooltip compares every series at the active key: a title, then a colour swatch, name, and value per series. Provide a custom `render` function to replace it. Strings are rendered as text. Return a DOM node for structured content:
 
 ```ts
 {
@@ -452,11 +525,12 @@ const chart = createLineChart(container, {
 
 `ChartEvent` provides:
 
-- `datum`: the nearest `Datum`
+- `datum`: the datum of the series nearest the pointer
 - `series`: the corresponding `Series` config
-- `originalEvent`: the raw `MouseEvent`
+- `values`: every series at the same key (line, area, and bar charts)
+- `originalEvent`: the raw `MouseEvent` or, for keyboard navigation, `KeyboardEvent`
 
-> **Pie chart events differ**: `onHover` and `onClick` receive `(slice: PieSliceConfig, index: number)` instead of `ChartEvent`. See [`PieChartConfig`](./api.md#piechartconfig) for details.
+> **Pie and radar events differ**: pie hooks receive `(slice: PieSliceConfig, index: number)`, and radar hooks receive a `RadarEvent` describing an axis. See [`PieChartConfig`](./api.md#chart-configurations) and [`createRadarChart()`](./api.md#createradarchart).
 
 ## Animations
 
@@ -467,12 +541,12 @@ Pass a `transition` config to animate enter and update transitions:
   transition: {
     duration: 400,
     easing: 'ease-out',
-    stagger: 30,  // bar charts only: ms delay between each bar's enter animation
+    stagger: 30,  // ms delay between bars (bar charts) or series (radar charts)
   },
 }
 ```
 
-All chart types use requestAnimationFrame-based interpolation. Bar charts additionally support `stagger`: a per-bar delay that creates a cascade effect on first render.
+All chart types use `requestAnimationFrame`-based interpolation and skip animation when the user prefers reduced motion (`preference: 'system'`, the default). Bar and radar charts apply `stagger` on entry; line, area, and pie charts ignore it.
 
 ## Theming
 
@@ -533,20 +607,55 @@ Apply tokens to a specific container:
 
 ### Available Tokens
 
-| Token                     | Default          | Description            |
-| ------------------------- | ---------------- | ---------------------- |
-| `--prism-color-{1-8}`     | Tailwind palette | Series color palette   |
-| `--prism-bg`              | `transparent`    | Chart background       |
-| `--prism-axis-color`      | `#94a3b8`        | Axis lines and ticks   |
-| `--prism-grid-color`      | `#e2e8f0`        | Grid lines             |
-| `--prism-text-color`      | `#334155`        | Axis labels and text   |
-| `--prism-font-family`     | `system-ui`      | Chart font             |
-| `--prism-font-size`       | `12px`           | Label font size        |
-| `--prism-tooltip-bg`      | `#1e293b`        | Tooltip background     |
-| `--prism-tooltip-color`   | `#f8fafc`        | Tooltip text           |
-| `--prism-tooltip-radius`  | `6px`            | Tooltip border radius  |
-| `--prism-crosshair-color` | `#64748b`        | Crosshair line         |
-| `--prism-crosshair-dash`  | `4 2`            | Crosshair dash pattern |
+| Token                     | Default                    | Description            |
+| ------------------------- | -------------------------- | ---------------------- |
+| `--prism-color-{1-8}`     | Colorblind-safe palette    | Series color palette   |
+| `--prism-bg`              | `transparent`              | Chart background       |
+| `--prism-axis-color`      | `hsl(215deg 16% 47%)`      | Axis lines and ticks   |
+| `--prism-grid-color`      | `hsl(220deg 10% 75%)`      | Grid lines             |
+| `--prism-text-color`      | `hsl(215deg 25% 27%)`      | Axis labels and text   |
+| `--prism-font-family`     | `system-ui`                | Chart font             |
+| `--prism-font-size`       | `0.75rem`                  | Label font size        |
+| `--prism-tooltip-bg`      | `hsl(222deg 47% 11%)`      | Tooltip background     |
+| `--prism-tooltip-color`   | `hsl(210deg 40% 98%)`      | Tooltip text           |
+| `--prism-tooltip-radius`  | `0.375rem`                 | Tooltip border radius  |
+| `--prism-crosshair-color` | `hsl(215deg 16% 47%)`      | Crosshair line         |
+| `--prism-crosshair-dash`  | `4 2`                      | Crosshair dash pattern |
+
+The palette follows Wong (2011) so adjacent series stay distinguishable under common color-vision deficiencies. Dark mode applies automatically through `prefers-color-scheme` or an `html.dark` class.
+
+Radar charts add their own tokens, each defaulting to a shared one:
+
+| Token | Default | Description |
+| --- | --- | --- |
+| `--prism-radar-grid-color` | `--prism-grid-color` | Rings |
+| `--prism-radar-grid-opacity` | `0.7` | Ring and spoke opacity |
+| `--prism-radar-band-fill` | `--prism-grid-color` | Alternate ring shading |
+| `--prism-radar-band-opacity` | `0.14` | Shading opacity |
+| `--prism-radar-spoke-color` | `--prism-radar-grid-color` | Spokes |
+| `--prism-radar-fill-opacity` | `--prism-area-opacity` | Solid shape fill |
+| `--prism-radar-stroke-width` | `--prism-line-width` | Shape outline |
+| `--prism-radar-point-radius` | `--prism-point-radius` | Vertex dots |
+| `--prism-radar-point-radius-active` | `--prism-point-radius-hover` | Dots on the active axis |
+| `--prism-radar-label-color` / `-size` | Secondary text tokens | Axis labels |
+| `--prism-radar-value-color` / `-size` | Text tokens | Vertex values |
+| `--prism-radar-dim-opacity` | `--prism-dim-opacity` | Other shapes while one is hovered |
+
+Shared interaction and chart tokens:
+
+| Token | Default | Description |
+| --- | --- | --- |
+| `--prism-dim-opacity` | `0.35` | Series or slices outside the active one |
+| `--prism-active-point-radius` | `--prism-point-radius-hover` | Points marked at the active key |
+| `--prism-point-ring` | `Canvas` | Ring separating active and end points from the line |
+| `--prism-focus-color` | `--prism-color-1` | Focus outline of a keyboard-focused chart |
+| `--prism-bar-radius` | `4px` | Bar corner radius (stacked bars stay square) |
+| `--prism-bar-band-fill` / `-opacity` | Grid colour / `0.18` | Shaded active category |
+| `--prism-bar-dim-opacity` | `0.55` | Bars outside the active category |
+| `--prism-area-gradient-start` / `-end` | `0.45` / `0.02` | Gradient fill opacity at the line and the baseline |
+| `--prism-spark-gradient-start` / `-end` | `0.35` / `0` | Sparkline gradient fill |
+
+Explicit config such as `strokeWidth`, `fillOpacity`, or `borderRadius` always wins over these tokens.
 
 ## Scales (Standalone)
 
@@ -612,6 +721,43 @@ chart.dispose();
 ```
 
 > `debugChart()` wraps and returns the same `ChartHandle` unchanged, so it drops into any `create*Chart()` call without restructuring your code.
+
+## Accessibility
+
+Label informative charts with `a11y: { ariaLabel }`. A labelled chart renders with `role="img"`, is focusable, and supports keyboard navigation. Charts without `a11y` are decorative and render with `aria-hidden="true"`.
+
+```ts
+createLineChart(container, {
+  a11y: { ariaLabel: 'Revenue by month' },
+  series: [...],
+});
+```
+
+Mark a chart decorative explicitly when surrounding text already states its meaning:
+
+```ts
+createSparkline(container, {
+  a11y: { decorative: true },
+  data: [...],
+});
+```
+
+### Keyboard and announcements
+
+Every labelled chart except sparklines shares one keyboard model:
+
+| Chart | Arrow keys move between | `Home` / `End` | Announced |
+| --- | --- | --- | --- |
+| Line, area | x positions | First / last position | `1: Adam 3, Eve 6` |
+| Bar | categories | First / last category | `Str: Adam 8, Eve 5` |
+| Pie | slices | First / last slice | `Wins: 15 (75%)` |
+| Radar | axes (wrapping) | Not supported | `Agility: Adam 6, Eve 9` |
+
+The first arrow press focuses the first item. `Enter` or `Space` fires `onClick` for the focused item, and `Escape` clears it. The tooltip speaks the text when one is enabled; otherwise the chart's own `role="status"` region (`.prism-live`) does, so each value is announced once.
+
+### Hover feedback
+
+The active key is shown the same way on every chart. Line and area charts mark each series' point and dim the series farther from the pointer. Bar charts shade the category band and dim the other categories. Pie charts dim the other slices. Radar charts highlight the active spoke and its points, and dim the other shapes while one is hovered.
 
 ## Framework Integration
 
@@ -681,35 +827,11 @@ const unsubscribe = source.subscribe((state) => chart.update(toSeries(state)));
 void source.reload().catch(() => undefined);
 ```
 
-## Accessibility
-
-Accessibility is a hard requirement for every chart factory. Label informative charts with `a11y: { ariaLabel }`; charts without `a11y` are decorative and render with `aria-hidden="true"`.
-
-Label a chart that conveys meaningful data:
-
-```ts
-createLineChart(container, {
-  a11y: { ariaLabel: 'Revenue by month' },
-  series: [...],
-});
-```
-
-Mark a decorative chart (e.g. a sparkline next to a text label) to exclude it from the accessibility tree:
-
-```ts
-createSparkline(container, {
-  a11y: { decorative: true },
-  data: [...],
-});
-```
-
-When `a11y` is omitted, every chart is hidden from assistive technology. Always set `a11y: { ariaLabel: '…' }` on charts that users need to understand.
-
 ## Best Practices
 
 - Ensure the container element has explicit dimensions before calling a chart factory: `ResizeObserver` needs a non-zero layout size to trigger the first render.
 - Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel transitions, disconnect resize observation, and remove DOM nodes.
 - Call `chart.update(data)` from your application state boundary; Prism does not require or own a state library.
-- Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data: accessibility is a hard requirement, not an optional add-on.
+- Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data: unlabelled charts are hidden from assistive technology and receive no keyboard navigation.
 - Wrap a chart with `debugChart()` from the `/devtools` subpath only in development code paths; it is tree-shaken in production.
 - For SSR, skip chart creation server-side: Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.

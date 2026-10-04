@@ -80,9 +80,12 @@
        Bars
        Bar chart element styling
        ======================================== */
-    --prism-bar-radius: 2px;
+    --prism-bar-radius: 4px;
     --prism-bar-hover-opacity: 0.8;
     --prism-bar-gap: 0.1;
+    --prism-bar-band-fill: var(--prism-grid-color);
+    --prism-bar-band-opacity: 0.18;
+    --prism-bar-dim-opacity: 0.55;
 
     /* ========================================
        Area
@@ -90,6 +93,8 @@
        ======================================== */
     --prism-area-opacity: 0.25;
     --prism-area-stroke-width: 2;
+    --prism-area-gradient-start: 0.45;
+    --prism-area-gradient-end: 0.02;
 
     /* ========================================
        Line
@@ -97,6 +102,41 @@
        ======================================== */
     --prism-line-width: 2;
     --prism-line-width-hover: 2.5;
+
+    /* ========================================
+       Interaction
+       Shared hover, focus, and keyboard states
+       ======================================== */
+    --prism-dim-opacity: 0.35;
+    --prism-active-point-radius: var(--prism-point-radius-hover);
+    --prism-point-ring: Canvas;
+    --prism-focus-color: var(--prism-color-1);
+
+    /* ========================================
+       Sparkline
+       ======================================== */
+    --prism-spark-fill-opacity: 1;
+    --prism-spark-gradient-start: 0.35;
+    --prism-spark-gradient-end: 0;
+
+    /* ========================================
+       Radar
+       Rings, spokes, and series shapes
+       ======================================== */
+    --prism-radar-grid-color: var(--prism-grid-color);
+    --prism-radar-grid-opacity: 0.7;
+    --prism-radar-band-fill: var(--prism-grid-color);
+    --prism-radar-band-opacity: 0.14;
+    --prism-radar-spoke-color: var(--prism-radar-grid-color);
+    --prism-radar-fill-opacity: var(--prism-area-opacity);
+    --prism-radar-stroke-width: var(--prism-line-width);
+    --prism-radar-point-radius: var(--prism-point-radius);
+    --prism-radar-point-radius-active: var(--prism-point-radius-hover);
+    --prism-radar-label-color: var(--prism-text-color-secondary);
+    --prism-radar-label-size: var(--prism-font-size-label);
+    --prism-radar-value-color: var(--prism-text-color);
+    --prism-radar-value-size: var(--prism-font-size-label);
+    --prism-radar-dim-opacity: var(--prism-dim-opacity);
 
     /* ========================================
        Transitions & Animation
@@ -255,6 +295,27 @@
     r: var(--prism-point-radius-hover);
   }
 
+  /* Shared interaction states */
+  .prism-chart:focus-visible {
+    outline: 2px solid var(--prism-focus-color);
+    outline-offset: 2px;
+    border-radius: var(--prism-border-radius);
+  }
+
+  .prism-series > * {
+    transition: opacity var(--prism-transition-fast);
+  }
+
+  .prism-series-focused > :not(.prism-series-active) {
+    opacity: var(--prism-dim-opacity);
+  }
+
+  .prism-active-point {
+    r: var(--prism-active-point-radius);
+    stroke: var(--prism-point-ring);
+    stroke-width: 2;
+  }
+
   /* Bar chart */
   .prism-bar {
     transition:
@@ -263,18 +324,34 @@
   }
 
   .prism-bar:hover {
-    opacity: var(--prism-bar-hover-opacity);
     filter: brightness(1.05);
   }
 
-  /* Area chart */
-  .prism-area-fill {
-    opacity: var(--prism-area-opacity);
-    transition: opacity var(--prism-transition-fast);
+  .prism-bars-focused .prism-bar:not(.prism-bar--active) {
+    opacity: var(--prism-bar-dim-opacity);
   }
 
-  .prism-area-series:hover .prism-area-fill {
-    opacity: calc(var(--prism-area-opacity) * 1.4);
+  .prism-bar-band {
+    opacity: var(--prism-bar-band-opacity);
+    fill: var(--prism-bar-band-fill);
+  }
+
+  /* Area chart */
+  .prism-area-fill--solid {
+    fill-opacity: var(--prism-area-opacity);
+    transition: fill-opacity var(--prism-transition-fast);
+  }
+
+  .prism-area-series:hover .prism-area-fill--solid {
+    fill-opacity: calc(var(--prism-area-opacity) * 1.4);
+  }
+
+  .prism-area-stop-top {
+    stop-opacity: var(--prism-area-gradient-start);
+  }
+
+  .prism-area-stop-bottom {
+    stop-opacity: var(--prism-area-gradient-end);
   }
 
   .prism-area-line {
@@ -282,6 +359,111 @@
     stroke-width: var(--prism-area-stroke-width);
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  /* Radar chart */
+  .prism-radar-ring,
+  .prism-radar-spoke {
+    opacity: var(--prism-radar-grid-opacity);
+    stroke-width: var(--prism-grid-width);
+  }
+
+  .prism-radar-ring {
+    stroke: var(--prism-radar-grid-color);
+  }
+
+  .prism-radar-spoke {
+    stroke: var(--prism-radar-spoke-color);
+    transition: opacity var(--prism-transition-fast);
+  }
+
+  .prism-radar-spoke--active {
+    opacity: 1;
+    stroke: var(--prism-crosshair-color);
+  }
+
+  .prism-radar-band {
+    opacity: var(--prism-radar-band-opacity);
+    fill: var(--prism-radar-band-fill);
+  }
+
+  .prism-radar-area {
+    stroke-width: var(--prism-radar-stroke-width);
+    transition:
+      fill-opacity var(--prism-transition-fast),
+      opacity var(--prism-transition-fast);
+  }
+
+  .prism-radar-area--solid {
+    fill-opacity: var(--prism-radar-fill-opacity);
+  }
+
+  .prism-radar-series:hover .prism-radar-area--solid {
+    fill-opacity: calc(var(--prism-radar-fill-opacity) * 1.4);
+  }
+
+  .prism-radar-series-group:has(.prism-radar-series:hover) .prism-radar-series:not(:hover) {
+    opacity: var(--prism-radar-dim-opacity);
+  }
+
+  .prism-radar-series {
+    transition: opacity var(--prism-transition-fast);
+  }
+
+  .prism-radar-point {
+    r: var(--prism-radar-point-radius);
+    stroke-width: 1.5;
+    transition: r var(--prism-transition-fast);
+  }
+
+  .prism-radar-point--active {
+    r: var(--prism-radar-point-radius-active);
+  }
+
+  .prism-radar-axis-label {
+    font-size: var(--prism-radar-label-size);
+    font-weight: var(--prism-font-weight-title);
+    fill: var(--prism-radar-label-color);
+  }
+
+  .prism-radar-level {
+    font-size: var(--prism-font-size-label);
+    fill: var(--prism-text-color-secondary);
+  }
+
+  .prism-radar-value {
+    font-size: var(--prism-radar-value-size);
+    font-weight: var(--prism-font-weight-title);
+    font-variant-numeric: tabular-nums;
+    fill: var(--prism-radar-value-color);
+  }
+
+  /* Pie chart */
+  .prism-pie-slice {
+    transition: opacity var(--prism-transition-fast);
+  }
+
+  .prism-pie-focused .prism-pie-slice:not(.prism-pie-slice--active) {
+    opacity: var(--prism-dim-opacity);
+  }
+
+  /* Sparkline */
+  .prism-spark-fill {
+    fill-opacity: var(--prism-spark-fill-opacity);
+  }
+
+  .prism-spark-stop-top {
+    stop-opacity: var(--prism-spark-gradient-start);
+  }
+
+  .prism-spark-stop-bottom {
+    stop-opacity: var(--prism-spark-gradient-end);
+  }
+
+  .prism-spark-end,
+  .prism-spark-marker {
+    stroke: var(--prism-point-ring);
+    stroke-width: 1.5;
   }
 
   /* Legend */
@@ -339,5 +521,30 @@
     opacity: 0;
     transition: opacity var(--prism-transition-fast);
     will-change: opacity;
+  }
+
+  .prism-tooltip-title {
+    margin-bottom: 0.25rem;
+    font-weight: var(--prism-font-weight-title);
+  }
+
+  .prism-tooltip-row {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+  }
+
+  .prism-tooltip-swatch {
+    flex-shrink: 0;
+    width: var(--prism-legend-dot-size);
+    height: var(--prism-legend-dot-size);
+    background: var(--prism-swatch);
+    border-radius: 50%;
+  }
+
+  .prism-tooltip-value {
+    margin-inline-start: auto;
+    font-weight: var(--prism-font-weight-title);
+    font-variant-numeric: tabular-nums;
   }
 }

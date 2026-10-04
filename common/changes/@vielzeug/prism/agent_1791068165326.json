@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fit date x-axis domains to the data instead of rounding outwards to a tick interval",
+      "packageName": "@vielzeug/prism",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

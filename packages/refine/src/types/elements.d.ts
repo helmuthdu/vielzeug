@@ -28,6 +28,8 @@ import type { OreListItemEvents, OreListItemProps } from '../content/list/list-i
 import type { OreMarqueeProps } from '../content/marquee/marquee';
 import type { OrePaginationEvents, OrePaginationProps } from '../content/pagination/pagination';
 import type { OreQrCodeEvents, OreQrCodeProps } from '../content/qr-code/qr-code';
+import type { OreRankItemProps } from '../content/rank-list/rank-item';
+import type { OreRankListProps } from '../content/rank-list/rank-list';
 import type { OreSeparatorProps } from '../content/separator/separator';
 import type { OreSpeechPlayerEvents, SpeechPlayerElement } from '../content/speech-player/speech-player';
 import type { OreStatsProps } from '../content/stats/stats';
@@ -181,6 +183,8 @@ export interface RefineElementMap {
   'ore-qr-scanner': HTMLElement & OreQrScannerProps & AddEventListeners<OreQrScannerEvents>;
   'ore-radio': HTMLElement & OreRadioProps & FormValidityMethods & AddEventListeners<OreRadioEvents>;
   'ore-radio-group': HTMLElement & OreRadioGroupProps & FormValidityMethods & AddEventListeners<OreRadioGroupEvents>;
+  'ore-rank-item': HTMLElement & OreRankItemProps;
+  'ore-rank-list': HTMLElement & OreRankListProps;
   'ore-rating': HTMLElement & OreRatingProps & FormValidityMethods & AddEventListeners<OreRatingEvents>;
   'ore-select': HTMLElement & OreSelectProps & FormValidityMethods & AddEventListeners<OreSelectEvents>;
   'ore-separator': HTMLElement & OreSeparatorProps;

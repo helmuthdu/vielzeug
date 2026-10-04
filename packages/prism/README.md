@@ -1,6 +1,6 @@
 # @vielzeug/prism
 
-> Responsive SVG charts with explicit updates: line, bar, area, pie, sparkline
+> Responsive SVG charts with explicit updates: line, bar, area, pie, radar, sparkline
 
 ## Installation
 

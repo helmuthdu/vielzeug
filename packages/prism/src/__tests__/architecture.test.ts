@@ -207,7 +207,7 @@ describe('crosshair', () => {
     chart.dispose();
   });
 
-  it('exposes a role="status"/aria-live="polite" live region announcing the snapped value (B14)', () => {
+  it('exposes a role="status"/aria-live="polite" live region announcing every series at the snapped key (B14)', () => {
     const chart = createLineChart(container, {
       crosshair: true,
       series: [
@@ -221,18 +221,18 @@ describe('crosshair', () => {
       ],
     });
 
-    const liveRegion = chart.el.querySelector('.prism-crosshair-live');
+    const liveRegion = chart.el.querySelector('.prism-live');
 
     expect(liveRegion?.getAttribute('role')).toBe('status');
     expect(liveRegion?.getAttribute('aria-live')).toBe('polite');
 
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 200, clientY: 100 }));
 
-    expect(liveRegion?.textContent).toContain('S:');
+    expect(liveRegion?.textContent).toBe('1: S 10');
     chart.dispose();
   });
 
-  it('clears the crosshair live region on mouseleave (Lens A fix)', () => {
+  it('clears the live region on mouseleave (Lens A fix)', () => {
     const chart = createLineChart(container, {
       crosshair: true,
       series: [
@@ -248,9 +248,9 @@ describe('crosshair', () => {
 
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 200, clientY: 100 }));
 
-    const liveRegion = chart.el.querySelector('.prism-crosshair-live');
+    const liveRegion = chart.el.querySelector('.prism-live');
 
-    expect(liveRegion?.textContent).toContain('S:');
+    expect(liveRegion?.textContent).toBe('1: S 10');
 
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     expect(liveRegion?.textContent).toBe('');
@@ -353,10 +353,10 @@ describe('tooltip: ARIA live region (B14)', () => {
 
     const tooltipEl = chart.el.parentElement?.querySelector('.prism-tooltip') as HTMLElement;
 
-    expect(tooltipEl.textContent).toContain('S:');
+    expect(tooltipEl.textContent).toContain('1: S 10');
 
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    expect(tooltipEl.textContent).toContain('S:');
+    expect(tooltipEl.textContent).toContain('1: S 10');
     await new Promise((resolve) => setTimeout(resolve, 160));
     expect(tooltipEl.textContent).toBe('');
     chart.dispose();

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/prism",
   "version": "26.10.0",
-  "description": "Responsive SVG charts with explicit updates: line, bar, area, pie, sparkline",
+  "description": "Responsive SVG charts with explicit updates: line, bar, area, pie, radar, sparkline",
   "keywords": [
     "chart",
     "svg",
@@ -10,6 +10,7 @@
     "line-chart",
     "bar-chart",
     "area-chart",
+    "radar-chart",
     "typescript"
   ],
   "homepage": "https://vielzeug.dev/prism/",

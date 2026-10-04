@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "subtract in-flow chart chrome from resize-driven svg heights so auto-height containers cannot grow unboundedly",
+      "packageName": "@vielzeug/prism",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

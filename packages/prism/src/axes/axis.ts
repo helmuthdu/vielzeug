@@ -1,7 +1,11 @@
 import { createSvgElement, removeChildren, setAttributes } from '../svg/element';
-import { createTextElement } from '../svg/text';
+import { createTextElement, estimateTextWidth } from '../svg/text';
 import type { AxisConfig, AxisPosition } from '../types';
 import { type AnyScale, mapTick } from './scale-utils';
+
+/** Default `--prism-font-size-label` in px, used to estimate category label size. */
+const LABEL_FONT_SIZE = 11;
+const LABEL_GAP = 8;
 
 const defaultTickFormat = (v: Date | number | string): string =>
   v instanceof Date ? v.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : String(v);
@@ -25,6 +29,22 @@ export function resolveTickCount(config: AxisConfig, length: number, defaultPosi
   const defaultTickCount = isHorizontal ? Math.max(2, Math.floor(length / 80)) : Math.max(2, Math.floor(length / 50));
 
   return config.tickCount ?? defaultTickCount;
+}
+
+/** How many category labels fit along the axis without their estimated boxes overlapping. */
+function categoryTickCount(
+  domain: readonly string[],
+  format: (value: string) => string,
+  length: number,
+  isHorizontal: boolean,
+): number {
+  if (domain.length === 0) return 0;
+
+  const size = isHorizontal
+    ? Math.max(...domain.map((value) => estimateTextWidth(format(value), LABEL_FONT_SIZE)))
+    : LABEL_FONT_SIZE * 1.3;
+
+  return Math.max(1, Math.min(domain.length, Math.floor(length / (size + LABEL_GAP))));
 }
 
 /**
@@ -58,8 +78,12 @@ export function renderAxis(
 
   parent.appendChild(axisLine);
 
-  const ticks = scale.ticks(resolveTickCount(config, length, defaultPosition));
   const format = config.tickFormat ?? defaultTickFormat;
+  const tickCount =
+    config.tickCount === undefined && 'bandwidth' in scale
+      ? categoryTickCount(scale.domain, format, length, isHorizontal)
+      : resolveTickCount(config, length, defaultPosition);
+  const ticks = scale.ticks(tickCount);
 
   for (const tick of ticks) {
     const pos = mapTick(scale, tick);

@@ -4,13 +4,15 @@ import { renderGrid } from '../../axes/grid';
 import { normalizeCartesianSeries } from '../../core/cartesian-model';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
+import { describeValues } from '../../interaction/announcer';
 import { getMousePosition } from '../../interaction/events';
+import { comparisonContent } from '../../interaction/tooltip';
 import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
-import { createSvgElement } from '../../svg/element';
+import { createSvgElement, setAttributes } from '../../svg/element';
 import { seriesColor } from '../../theme';
-import type { BarChartConfig, BarSeriesConfig, BarVariant, ChartHandle } from '../../types';
-import { findCatIdx, findSeriesIdx, isOutsideBars } from './bar-hit-test';
+import type { BarChartConfig, BarSeriesConfig, BarVariant, ChartEvent, ChartHandle, SeriesValue } from '../../types';
+import { findCatIdx, findSeriesIdx } from './bar-hit-test';
 import { renderBars } from './bar-renderer';
 import type { BarScaleContext } from './bar-scale-context';
 
@@ -25,6 +27,7 @@ function variantFlags(variant: BarVariant): { horizontal: boolean; stacked: bool
 
 export function createBarChart(container: HTMLElement, config: BarChartConfig): ChartHandle<BarSeriesConfig[]> {
   let seriesList = config.series;
+  let band: SVGRectElement | null = null;
 
   return createChartScaffold(
     container,
@@ -53,6 +56,8 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       if (categories.length === 0) {
         clearCartesianDom(groups, legend, tooltip);
+        band?.remove();
+        band = null;
 
         return;
       }
@@ -157,6 +162,11 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       }
 
       // Series groups
+      // Stacked segments stay square so they join cleanly.
+      const themeRadius = stacked
+        ? 0
+        : Number.parseFloat(getComputedStyle(ctx.svg).getPropertyValue('--prism-bar-radius')) || 0;
+
       while (groups.series.children.length > seriesList.length) {
         const last = groups.series.lastElementChild;
 
@@ -193,7 +203,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
         renderBars(group, barData, catScale, valScale, sc.baselinePx, {
           baselineYs,
-          borderRadius: series.borderRadius ?? 0,
+          borderRadius: series.borderRadius ?? themeRadius,
           color: seriesColor(i, series.color),
           disposalSignal: ctx.disposalSignal,
           horizontal,
@@ -206,79 +216,157 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       tooltip?.hide();
+      groups.series.classList.toggle('prism-bars-stacked', stacked);
+
+      if (!band || !ctx.chartArea.contains(band)) {
+        band = createSvgElement('rect', { 'aria-hidden': 'true', class: 'prism-bar-band', 'pointer-events': 'none' });
+        ctx.chartArea.insertBefore(band, groups.series);
+      }
+
+      band.style.display = 'none';
 
       // ─── Event handlers (close over render-derived state) ─────────────────────
 
-      const onMouseMove = (event: MouseEvent) => {
-        const d = ctx.dimensions;
-        const pos = getMousePosition(ctx.svg, event, d.margin.left, d.margin.top);
-        const a = chartArea(d.width, d.height, d.margin);
+      const colors = seriesList.map((s, i) => seriesColor(i, s.color));
+      const labelOf = (catIdx: number): string => String(model.labels.get(categories[catIdx]) ?? categories[catIdx]);
+      let activeCat = -1;
 
-        if (pos.x < 0 || pos.x > a.width || pos.y < 0 || pos.y > a.height) {
-          tooltip?.hide();
+      const valuesAt = (catIdx: number): SeriesValue[] =>
+        seriesList.map((series, si) => ({ datum: allData[si]?.[catIdx], series }));
 
-          return;
-        }
+      const eventAt = (catIdx: number, seriesIdx: number, originalEvent: Event): ChartEvent | null => {
+        const values = valuesAt(catIdx);
+        const preferred = values[seriesIdx]?.datum ? seriesIdx : values.findIndex((v) => v.datum);
+        const datum = values[preferred]?.datum;
 
-        const posBand = horizontal ? pos.y : pos.x;
-        const catIdx = findCatIdx(posBand, categories, sc);
-
-        if (catIdx === -1) {
-          tooltip?.hide();
-
-          return;
-        }
-
-        if (isOutsideBars(pos, catIdx, allData, sc, seriesList.length)) {
-          tooltip?.hide();
-
-          return;
-        }
-
-        const seriesIdx = findSeriesIdx(pos, catIdx, categories, sc, seriesList.length);
-        const point = allData[seriesIdx]?.[catIdx];
-
-        if (point) {
-          const bandCenterPx = sc.bandCenter(categories[catIdx]);
-          const stackedTop = stacked ? (stackedTops[seriesIdx]?.[catIdx] ?? point.value) : point.value;
-          const valuePx = valScale.map(stackedTop);
-
-          const tooltipX = horizontal ? valuePx + d.margin.left : bandCenterPx + d.margin.left;
-          const tooltipY = horizontal ? bandCenterPx + d.margin.top : valuePx + d.margin.top;
-
-          tooltip?.show(tooltipX, tooltipY, point, seriesList[seriesIdx]);
-          config.onHover?.({ datum: point, originalEvent: event, series: seriesList[seriesIdx] });
-        }
+        return datum ? { datum, originalEvent, series: seriesList[preferred], values } : null;
       };
 
-      const onMouseLeave = () => {
+      const setActive = (catIdx: number): void => {
+        activeCat = catIdx;
+        groups.series.classList.toggle('prism-bars-focused', catIdx >= 0);
+
+        for (const group of groups.series.children) {
+          for (const [i, rect] of [...group.children].entries())
+            rect.classList.toggle('prism-bar--active', i === catIdx);
+        }
+
+        if (!band) return;
+
+        band.style.display = catIdx < 0 ? 'none' : '';
+
+        if (catIdx < 0) return;
+
+        const start = sc.bandCenter(categories[catIdx]) - catScale.bandwidth() / 2 - catScale.gap() / 2;
+        const size = catScale.bandwidth() + catScale.gap();
+        const a = chartArea(ctx.dimensions.width, ctx.dimensions.height, ctx.dimensions.margin);
+
+        setAttributes(
+          band,
+          horizontal
+            ? { height: size, width: a.width, x: 0, y: start }
+            : { height: a.height, width: size, x: start, y: 0 },
+        );
+      };
+
+      const activate = (catIdx: number, seriesIdx: number, originalEvent: Event): void => {
+        const event = eventAt(catIdx, seriesIdx, originalEvent);
+
+        if (!event) return;
+
+        setActive(catIdx);
+
+        const values = event.values ?? [];
+        const spoken = describeValues(labelOf(catIdx), values);
+
+        if (tooltip) {
+          const tops = values.map((v, si) =>
+            stacked ? (stackedTops[si]?.[catIdx] ?? 0) : Math.max(0, v.datum?.value ?? 0),
+          );
+          const valuePx = valScale.map(Math.max(...tops));
+          const bandCenterPx = sc.bandCenter(categories[catIdx]);
+          const { margin } = ctx.dimensions;
+          const rows = values.flatMap((v, si) =>
+            v.datum ? [{ color: colors[si], name: v.series.name, value: String(v.datum.value) }] : [],
+          );
+
+          tooltip.show(
+            (horizontal ? valuePx : bandCenterPx) + margin.left,
+            (horizontal ? bandCenterPx : valuePx) + margin.top,
+            event.datum,
+            event.series,
+            comparisonContent(ctx.svg.ownerDocument, labelOf(catIdx), rows, spoken),
+          );
+        } else {
+          ctx.announcer.announce(spoken);
+        }
+
+        config.onHover?.(event);
+      };
+
+      const deactivate = (): void => {
+        setActive(-1);
         tooltip?.hide();
+        ctx.announcer.clear();
         config.onHover?.(null);
       };
 
-      const onClick = (event: MouseEvent) => {
-        if (!config.onClick) return;
-
+      const hit = (event: MouseEvent): { catIdx: number; seriesIdx: number } | null => {
         const d = ctx.dimensions;
         const pos = getMousePosition(ctx.svg, event, d.margin.left, d.margin.top);
         const a = chartArea(d.width, d.height, d.margin);
 
-        if (pos.x < 0 || pos.x > a.width || pos.y < 0 || pos.y > a.height) return;
+        if (pos.x < 0 || pos.x > a.width || pos.y < 0 || pos.y > a.height) return null;
 
-        const posBand = horizontal ? pos.y : pos.x;
-        const catIdx = findCatIdx(posBand, categories, sc);
+        const catIdx = findCatIdx(horizontal ? pos.y : pos.x, categories, sc);
 
-        if (catIdx === -1) return;
+        return catIdx === -1
+          ? null
+          : { catIdx, seriesIdx: findSeriesIdx(pos, catIdx, categories, sc, seriesList.length) };
+      };
 
-        const seriesIdx = findSeriesIdx(pos, catIdx, categories, sc, seriesList.length);
-        const point = allData[seriesIdx]?.[catIdx];
+      const onMouseMove = (event: MouseEvent) => {
+        const target = hit(event);
 
-        if (point) {
-          config.onClick({ datum: point, originalEvent: event, series: seriesList[seriesIdx] });
+        if (target) activate(target.catIdx, target.seriesIdx, event);
+        else if (activeCat >= 0) deactivate();
+      };
+
+      const onClick = (event: MouseEvent) => {
+        const target = config.onClick && hit(event);
+        const chartEvent = target && eventAt(target.catIdx, target.seriesIdx, event);
+
+        if (chartEvent) config.onClick?.(chartEvent);
+      };
+
+      const onKeyDown = (event: KeyboardEvent) => {
+        const last = categories.length - 1;
+        const prev = activeCat < 0 ? last : Math.max(0, activeCat - 1);
+        const next = activeCat < 0 ? 0 : Math.min(last, activeCat + 1);
+        const target: Record<string, number> = {
+          ArrowDown: next,
+          ArrowLeft: prev,
+          ArrowRight: next,
+          ArrowUp: prev,
+          End: last,
+          Home: 0,
+        };
+
+        if (event.key in target) {
+          event.preventDefault();
+          activate(target[event.key], 0, event);
+        } else if ((event.key === 'Enter' || event.key === ' ') && activeCat >= 0 && config.onClick) {
+          event.preventDefault();
+
+          const chartEvent = eventAt(activeCat, 0, event);
+
+          if (chartEvent) config.onClick(chartEvent);
+        } else if (event.key === 'Escape') {
+          deactivate();
         }
       };
 
-      return { onClick, onMouseLeave, onMouseMove };
+      return { onClick, onKeyDown, onMouseLeave: deactivate, onMouseMove };
     },
     (data) => {
       seriesList = data;

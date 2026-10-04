@@ -118,6 +118,13 @@ export interface ChartEvent {
   datum: Datum;
   originalEvent: Event;
   series: Series;
+  /** Every series' datum at the same key, in series order (line, area, bar). */
+  values?: SeriesValue[];
+}
+
+export interface SeriesValue {
+  datum: Datum | undefined;
+  series: Series;
 }
 
 // ─── Legend Types ────────────────────────────────────────────────────────────
@@ -190,6 +197,9 @@ export interface BarChartConfig extends BaseChartConfig {
 
 export interface AreaSeriesConfig extends Series<ContinuousDatum> {
   curve?: 'linear' | 'monotone' | 'step';
+  /** `gradient` (default) fades toward the baseline. */
+  fill?: 'gradient' | 'solid';
+  /** Overrides the `--prism-area-opacity` theme token. */
   fillOpacity?: number;
   showLine?: boolean;
 }
@@ -219,6 +229,58 @@ export interface PieChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClic
   variant?: PieVariant;
 }
 
+// ─── Radar Types ─────────────────────────────────────────────────────────────
+
+export interface RadarAxisConfig {
+  format?: (value: number) => string;
+  /** Matches `Datum.key` in each series. */
+  key: string;
+  label: string;
+  /** Overrides the chart `domain` for this axis. */
+  max?: number;
+  min?: number;
+}
+
+export type RadarSeriesConfig = Series<Datum<string>>;
+
+export interface RadarGridConfig {
+  /** Alternate shaded rings. Defaults to `true`. */
+  bands?: boolean;
+  /** Show level values along the first axis; only drawn when every axis shares one domain. Defaults to `false`. */
+  labels?: boolean;
+  /** Number of rings. Defaults to `4`. */
+  levels?: number;
+  shape?: 'circle' | 'polygon';
+}
+
+export interface RadarAxisValue {
+  datum: Datum<string> | undefined;
+  series: RadarSeriesConfig;
+}
+
+export interface RadarEvent {
+  axis: RadarAxisConfig;
+  index: number;
+  originalEvent: Event;
+  values: RadarAxisValue[];
+}
+
+export interface RadarChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
+  axes: RadarAxisConfig[];
+  curve?: 'linear' | 'rounded';
+  /** Shared value range. Defaults to `[0, nice max of the data]`. */
+  domain?: [number, number];
+  fill?: 'gradient' | 'none' | 'solid';
+  grid?: RadarGridConfig | boolean;
+  onClick?: (event: RadarEvent) => void;
+  onHover?: (event: RadarEvent | null) => void;
+  series: RadarSeriesConfig[];
+  showPoints?: boolean;
+  showValues?: boolean;
+  /** Degrees clockwise from 12 o'clock for the first axis. Defaults to `0`. */
+  startAngle?: number;
+}
+
 // ─── Sparkline Types ──────────────────────────────────────────────────────────
 
 export type SparklineVariant = 'area' | 'bar' | 'line' | 'stack';
@@ -235,10 +297,13 @@ export interface SparklineConfig {
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
   data: number[] | StackSegment[];
+  /** Overrides the `--prism-spark-fill-opacity` theme token (area variant). */
   fillOpacity?: number;
   onClick?: (index: number, value: number) => void;
   onHover?: (index: number | null, value: number | null) => void;
   padPixels?: number;
+  /** Dot on the latest value (line and area variants). Defaults to `true`. */
+  showEndPoint?: boolean;
   strokeWidth?: number;
   transition?: TransitionConfig;
   variant?: SparklineVariant;

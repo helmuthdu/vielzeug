@@ -13,6 +13,7 @@ description: Complete chart, scale, theme, handle, configuration, and error cont
 | `createAreaChart()` | Render an area chart | Sync | Line keys must be numbers or dates |
 | `createBarChart()` | Render grouped or stacked bars | Sync | Stacked negative values are clamped to zero |
 | `createPieChart()` | Render pie, donut, or semi-circle slices | Sync | Event callbacks use slice/index arguments |
+| `createRadarChart()` | Compare values across 3+ axes, such as hero stats | Sync | Events report a whole axis, not one series |
 | `createSparkline()` | Render an inline line, area, bar, or stack | Sync | Omitted `a11y` makes the chart decorative |
 | `linearScale()` | Create a numeric scale | Sync | `nice` defaults to `true` |
 | `timeScale()` | Create a date scale | Sync | Invalid dates produce an invalid domain |
@@ -146,6 +147,57 @@ const chart = createPieChart(container, {
   variant: 'donut',
 });
 ```
+
+---
+
+### `createRadarChart()`
+
+```ts
+function createRadarChart(
+  container: HTMLElement,
+  config: RadarChartConfig,
+): ChartHandle<RadarSeriesConfig[]>;
+```
+
+Renders one closed shape per series across three or more axes. `update()` replaces the series; the axes are fixed at creation.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `container` | `HTMLElement` | Host that receives the SVG and optional overlays |
+| `config` | `RadarChartConfig` | Axes, series, scale, grid, appearance, accessibility, and interaction settings |
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `axes` | `RadarAxisConfig[]` | N/A | Ordered axes, drawn clockwise; needs at least 3 |
+| `series` | `RadarSeriesConfig[]` | N/A | Values keyed by `axis.key` |
+| `domain` | `[number, number]` | `[0, nice max]` | Shared value range; `axis.min`/`axis.max` override it per axis |
+| `grid` | `boolean \| RadarGridConfig` | `true` | Rings, bands, and level labels; `false` hides the grid |
+| `fill` | `'gradient' \| 'none' \| 'solid'` | `'solid'` | Shape fill; `gradient` deepens toward the rim |
+| `curve` | `'linear' \| 'rounded'` | `'linear'` | Straight edges or a smooth closed curve |
+| `showPoints` | `boolean` | `true` | Vertex dots; a missing value shows a hollow dot at the centre |
+| `showValues` | `boolean` | `false` | Print each value beside its vertex |
+| `startAngle` | `number` | `0` | Degrees clockwise from 12 o'clock for the first axis |
+| `onHover` | `(event: RadarEvent \| null) => void` | N/A | Nearest axis under the pointer or keyboard focus |
+| `onClick` | `(event: RadarEvent) => void` | N/A | Axis clicked, or activated with Enter/Space |
+
+**Returns:** `ChartHandle<RadarSeriesConfig[]>`.
+
+```ts
+import { createRadarChart } from '@vielzeug/prism';
+
+const chart = createRadarChart(container, {
+  a11y: { ariaLabel: 'Hero stats' },
+  axes: [
+    { key: 'str', label: 'Strength' },
+    { key: 'agi', label: 'Agility' },
+    { key: 'end', label: 'Endurance' },
+  ],
+  domain: [0, 10],
+  series: [{ data: [{ key: 'str', value: 8 }, { key: 'agi', value: 6 }, { key: 'end', value: 9 }], name: 'Adam' }],
+});
+```
+
+Hovering or arrowing onto an axis highlights its spoke and reports every series' value on it. Without a tooltip, the chart announces the values through its own `role="status"` region. A value for an unknown axis, duplicate axis keys, or fewer than 3 axes warns in development.
 
 ---
 
@@ -329,10 +381,16 @@ interface ChartEvent {
   datum: Datum;
   series: Series;
   originalEvent: Event;
+  values?: SeriesValue[]; // every series at the same key (line, area, bar)
+}
+
+interface SeriesValue {
+  datum: Datum | undefined;
+  series: Series;
 }
 ```
 
-Line and area series use `ContinuousDatum`; bar series accept the complete `Datum` key range.
+Line and area series use `ContinuousDatum`; bar series accept the complete `Datum` key range. On line, area, and bar charts, `datum`/`series` name the series nearest the pointer, and `values` lists every series at that key (a missing value is `undefined`). `originalEvent` is a `MouseEvent`, or a `KeyboardEvent` for keyboard navigation.
 
 ---
 
@@ -377,6 +435,21 @@ interface PieChartConfig
   onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
 }
 
+interface RadarChartConfig
+  extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
+  axes: RadarAxisConfig[];
+  series: RadarSeriesConfig[];
+  curve?: 'linear' | 'rounded';
+  domain?: [number, number];
+  fill?: 'gradient' | 'none' | 'solid';
+  grid?: boolean | RadarGridConfig;
+  showPoints?: boolean;
+  showValues?: boolean;
+  startAngle?: number;
+  onClick?: (event: RadarEvent) => void;
+  onHover?: (event: RadarEvent | null) => void;
+}
+
 interface SparklineConfig {
   data: number[] | StackSegment[];
   variant?: SparklineVariant;
@@ -384,10 +457,11 @@ interface SparklineConfig {
   color?: string;
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
-  fillOpacity?: number;
+  fillOpacity?: number; // overrides --prism-spark-fill-opacity (area variant)
   onClick?: (index: number, value: number) => void;
   onHover?: (index: number | null, value: number | null) => void;
   padPixels?: number;
+  showEndPoint?: boolean; // default true: dot on the latest value (line, area)
   strokeWidth?: number;
   transition?: TransitionConfig;
 }
@@ -402,17 +476,18 @@ interface LineSeriesConfig extends Series<ContinuousDatum> {
   curve?: 'linear' | 'monotone' | 'step';
   pointRadius?: number;
   showPoints?: boolean;
-  strokeWidth?: number;
+  strokeWidth?: number; // overrides --prism-line-width
 }
 
 interface AreaSeriesConfig extends Series<ContinuousDatum> {
   curve?: 'linear' | 'monotone' | 'step';
-  fillOpacity?: number;
+  fill?: 'gradient' | 'solid'; // default 'gradient', fading toward the baseline
+  fillOpacity?: number; // overrides --prism-area-opacity
   showLine?: boolean;
 }
 
 interface BarSeriesConfig extends Series {
-  borderRadius?: number;
+  borderRadius?: number; // overrides --prism-bar-radius; stacked bars stay square
 }
 
 interface PieSliceConfig {
@@ -421,12 +496,43 @@ interface PieSliceConfig {
   label?: string;
 }
 
+interface RadarAxisConfig {
+  key: string;
+  label: string;
+  min?: number;
+  max?: number;
+  format?: (value: number) => string;
+}
+
+type RadarSeriesConfig = Series<Datum<string>>;
+
+interface RadarGridConfig {
+  bands?: boolean; // default true
+  labels?: boolean; // default false; drawn only when every axis shares one domain
+  levels?: number; // default 4
+  shape?: 'circle' | 'polygon'; // default 'polygon'
+}
+
+interface RadarEvent {
+  axis: RadarAxisConfig;
+  index: number;
+  values: RadarAxisValue[];
+  originalEvent: Event;
+}
+
+interface RadarAxisValue {
+  datum: Datum<string> | undefined;
+  series: RadarSeriesConfig;
+}
+
 interface StackSegment {
   value: number;
   color?: string;
   label?: string;
 }
 ```
+
+A custom radar `tooltip.render` receives `datum.meta` with `axis`, `values`, and the default `text`.
 
 ---
 
@@ -547,13 +653,14 @@ interface PrismTheme {
 ### `debugChart()`
 
 ```ts
-function debugChart<T extends ChartHandle>(
-  handle: T,
-  options?: { label?: string },
-): T;
+function debugChart<T extends ChartHandle>(handle: T, options?: DebugChartOptions): T;
+
+interface DebugChartOptions {
+  label?: string; // log prefix; defaults to 'chart', producing [prism:chart]
+}
 ```
 
-Logs mount, resize, and disposal events to `console.debug` and returns the same handle. Import it from `@vielzeug/prism/devtools`.
+Logs mount, resize, and disposal events to `console.debug` and returns the same handle. Import it and `DebugChartOptions` from `@vielzeug/prism/devtools`.
 
 ## Errors
 

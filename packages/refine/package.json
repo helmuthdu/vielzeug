@@ -339,6 +339,16 @@
       "require": "./dist/radio-group.cjs",
       "types": "./dist/inputs/radio-group/radio-group.d.ts"
     },
+    "./rank-item": {
+      "import": "./dist/rank-item.js",
+      "require": "./dist/rank-item.cjs",
+      "types": "./dist/content/rank-list/rank-item.d.ts"
+    },
+    "./rank-list": {
+      "import": "./dist/rank-list.js",
+      "require": "./dist/rank-list.cjs",
+      "types": "./dist/content/rank-list/rank-list.d.ts"
+    },
     "./rating": {
       "import": "./dist/rating.js",
       "require": "./dist/rating.cjs",
@@ -617,6 +627,12 @@
       ],
       "radio-group": [
         "dist/inputs/radio-group/radio-group.d.ts"
+      ],
+      "rank-item": [
+        "dist/content/rank-list/rank-item.d.ts"
+      ],
+      "rank-list": [
+        "dist/content/rank-list/rank-list.d.ts"
       ],
       "rating": [
         "dist/inputs/rating/rating.d.ts"

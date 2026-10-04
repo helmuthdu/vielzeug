@@ -14,7 +14,8 @@ export interface LineRenderOptions {
   disposalSignal?: AbortSignal;
   pointRadius: number;
   showPoints: boolean;
-  strokeWidth: number;
+  /** Explicit width beats the `--prism-line-width` theme token. */
+  strokeWidth?: number;
   transition?: TransitionConfig;
 }
 
@@ -36,7 +37,8 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     parent.appendChild(path);
   }
 
-  setAttributes(path, { stroke: options.color, 'stroke-width': options.strokeWidth });
+  setAttributes(path, { stroke: options.color, 'stroke-width': options.strokeWidth ?? 2 });
+  path.style.strokeWidth = options.strokeWidth === undefined ? '' : String(options.strokeWidth);
 
   let dotsGroup = parent.querySelector<SVGGElement>('.prism-line-dots');
 

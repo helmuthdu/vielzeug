@@ -1,25 +1,42 @@
 import { keyId } from '../core/cartesian-model';
 import type { ChartEventHandlers } from '../core/chart-scaffold';
 import { chartArea } from '../core/layout';
+import { createSvgElement } from '../svg/element';
 import type { Point } from '../svg/path';
-import type { ChartDimensions, ChartEvent, Datum, Series } from '../types';
+import type { ChartDimensions, ChartEvent, Datum, Series, SeriesValue } from '../types';
+import { type Announcer, describeValues } from './announcer';
 import type { CrosshairState } from './crosshair';
 import { getMousePosition } from './events';
-import type { TooltipState } from './tooltip';
+import { comparisonContent, type TooltipState } from './tooltip';
 
 export interface SeriesInteractionOptions {
+  announcer: Announcer;
+  colors: () => string[];
   crosshair?: CrosshairState | null;
   dims: () => ChartDimensions;
   getData: () => Datum[][];
   getPoints: () => Point[][];
   getSeriesList: () => Series[];
+  /** Receives one marker per series at the active key. */
+  markers: SVGGElement;
   onClick?: ((event: ChartEvent) => void) | undefined;
   onHover?: ((event: ChartEvent | null) => void) | undefined;
+  /** Parent of the per-series groups; the nearest series is emphasised and the rest dim. */
+  seriesGroup: SVGGElement;
   svg: SVGSVGElement;
   tooltip?: TooltipState | null;
 }
 
-type SeriesPoint = { datum: Datum; point: Point; seriesIndex: number };
+interface KeyEntry {
+  datum: Datum | undefined;
+  point: Point | undefined;
+}
+
+const keyOrder = (key: Datum['key']): number => (key instanceof Date ? key.getTime() : Number(key));
+
+export function keyLabel(key: Datum['key']): string {
+  return key instanceof Date ? key.toLocaleDateString() : String(key);
+}
 
 function findNearestKey(allData: Datum[][], allPoints: Point[][], posX: number): Datum['key'] | null {
   let nearest: Datum['key'] | null = null;
@@ -44,151 +61,215 @@ function findNearestKey(allData: Datum[][], allPoints: Point[][], posX: number):
   return nearest;
 }
 
-function findNearestSeries(
-  allData: Datum[][],
-  allPoints: Point[][],
-  key: Datum['key'],
-  posY: number,
-): SeriesPoint | null {
-  const id = keyId(key);
-  let nearest: { datum: Datum; point: Point; seriesIndex: number } | null = null;
-  let minYDist = Infinity;
-
-  for (let seriesIndex = 0; seriesIndex < allPoints.length; seriesIndex++) {
-    const datumIndex = allData[seriesIndex]?.findIndex((datum) => keyId(datum.key) === id) ?? -1;
-    const datum = datumIndex === -1 ? undefined : allData[seriesIndex]?.[datumIndex];
-    const point = datumIndex === -1 ? undefined : allPoints[seriesIndex]?.[datumIndex];
-
-    if (!datum || !point) continue;
-
-    const distance = Number.isFinite(posY) ? Math.abs(point.y - posY) : 0;
-
-    if (distance < minYDist) {
-      minYDist = distance;
-      nearest = { datum, point, seriesIndex };
-    }
-  }
-
-  return nearest;
-}
-
 export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEventHandlers {
-  let keyboardIndex = 0;
+  let keyboardIndex = -1;
+  let active = false;
 
-  const onMouseMove = (event: MouseEvent) => {
+  const entriesAt = (key: Datum['key']): KeyEntry[] => {
+    const id = keyId(key);
     const allPoints = opts.getPoints();
 
-    if (allPoints.length === 0 || allPoints[0].length === 0) return;
+    return opts.getData().map((data, seriesIndex) => {
+      const datumIndex = data.findIndex((datum) => keyId(datum.key) === id);
 
-    const dims = opts.dims();
-    const pos = getMousePosition(opts.svg, event, dims.margin.left, dims.margin.top);
-    const area = chartArea(dims.width, dims.height, dims.margin);
-
-    if (pos.x < 0 || pos.x > area.width || pos.y < 0 || pos.y > area.height) {
-      opts.crosshair?.hide();
-      opts.tooltip?.hide();
-
-      return;
-    }
-
-    const key = findNearestKey(opts.getData(), allPoints, pos.x);
-
-    if (key === null) return;
-
-    const nearest = findNearestSeries(opts.getData(), allPoints, key, pos.y);
-    const series = nearest ? opts.getSeriesList()[nearest.seriesIndex] : undefined;
-    const crosshairX = opts.crosshair?.snap === false ? pos.x : (nearest?.point.x ?? pos.x);
-    const crosshairY = opts.crosshair?.snap === false ? pos.y : (nearest?.point.y ?? pos.y);
-
-    // When a tooltip is present it already carries role="status" + aria-live="polite",
-    // so the crosshair's own live region must stay silent to avoid double-announcing.
-    const announceText = !opts.tooltip && series && nearest ? `${series.name}: ${nearest.datum.value}` : undefined;
-
-    opts.crosshair?.show(crosshairX, crosshairY, area.width, area.height, announceText);
-
-    if (nearest && series) {
-      opts.tooltip?.show(nearest.point.x + dims.margin.left, nearest.point.y + dims.margin.top, nearest.datum, series);
-      opts.onHover?.({ datum: nearest.datum, originalEvent: event, series });
-    }
+      return datumIndex === -1
+        ? { datum: undefined, point: undefined }
+        : { datum: data[datumIndex], point: allPoints[seriesIndex]?.[datumIndex] };
+    });
   };
 
-  const onMouseLeave = () => {
+  const nearestIndex = (entries: KeyEntry[], posY: number): number => {
+    let best = -1;
+    let minDistance = Infinity;
+
+    entries.forEach(({ point }, index) => {
+      if (!point) return;
+
+      const distance = Number.isFinite(posY) ? Math.abs(point.y - posY) : 0;
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        best = index;
+      }
+    });
+
+    return best;
+  };
+
+  const highlight = (entries: KeyEntry[], emphasised: number): void => {
+    const colors = opts.colors();
+
+    opts.markers.replaceChildren();
+    entries.forEach(({ point }, index) => {
+      if (!point) return;
+
+      opts.markers.appendChild(
+        createSvgElement('circle', {
+          class: 'prism-active-point',
+          cx: point.x,
+          cy: point.y,
+          fill: colors[index],
+          r: 4,
+        }),
+      );
+    });
+
+    const groups = [...opts.seriesGroup.children];
+
+    opts.seriesGroup.classList.toggle('prism-series-focused', emphasised >= 0 && groups.length > 1);
+    for (const [index, group] of groups.entries()) group.classList.toggle('prism-series-active', index === emphasised);
+  };
+
+  const clear = (): void => {
     opts.crosshair?.hide();
     opts.tooltip?.hide();
+    opts.announcer.clear();
+    highlight([], -1);
+    active = false;
     opts.onHover?.(null);
   };
 
-  const onClick = (event: MouseEvent) => {
-    if (!opts.onClick) return;
+  const eventFor = (
+    key: Datum['key'],
+    posY: number,
+    originalEvent: Event,
+  ): { entries: KeyEntry[]; event: ChartEvent; index: number } | null => {
+    const entries = entriesAt(key);
+    const index = nearestIndex(entries, posY);
+    const seriesList = opts.getSeriesList();
+    const datum = entries[index]?.datum;
 
+    if (index < 0 || !datum) return null;
+
+    const values: SeriesValue[] = entries.map((entry, i) => ({ datum: entry.datum, series: seriesList[i] }));
+
+    return { entries, event: { datum, originalEvent, series: seriesList[index], values }, index };
+  };
+
+  const focus = (key: Datum['key'], pos: Point | null, originalEvent: Event): void => {
+    const found = eventFor(key, pos?.y ?? Number.NaN, originalEvent);
+
+    if (!found) return;
+
+    const { entries, event, index } = found;
+    const point = entries[index].point!;
+    const dims = opts.dims();
+    const area = chartArea(dims.width, dims.height, dims.margin);
+    const raw = opts.crosshair?.snap === false && pos;
+    const label = keyLabel(key);
+    const values = event.values ?? [];
+    const colors = opts.colors();
+
+    opts.crosshair?.show(raw ? pos.x : point.x, raw ? pos.y : point.y, area.width, area.height);
+    highlight(entries, index);
+
+    const spoken = describeValues(label, values);
+
+    if (opts.tooltip) {
+      const rows = values.flatMap(({ datum, series }, i) =>
+        datum ? [{ color: colors[i], name: series.name, value: String(datum.value) }] : [],
+      );
+
+      opts.tooltip.show(
+        point.x + dims.margin.left,
+        point.y + dims.margin.top,
+        event.datum,
+        event.series,
+        comparisonContent(opts.svg.ownerDocument, label, rows, spoken),
+      );
+    } else {
+      opts.announcer.announce(spoken);
+    }
+
+    active = true;
+    opts.onHover?.(event);
+  };
+
+  const pointerKey = (event: MouseEvent): { key: Datum['key']; pos: Point } | null => {
     const allPoints = opts.getPoints();
 
-    if (allPoints.length === 0 || allPoints[0].length === 0) return;
+    if (allPoints.every((points) => points.length === 0)) return null;
 
     const dims = opts.dims();
     const pos = getMousePosition(opts.svg, event, dims.margin.left, dims.margin.top);
     const area = chartArea(dims.width, dims.height, dims.margin);
 
-    if (pos.x < 0 || pos.x > area.width || pos.y < 0 || pos.y > area.height) return;
+    if (pos.x < 0 || pos.x > area.width || pos.y < 0 || pos.y > area.height) return null;
 
     const key = findNearestKey(opts.getData(), allPoints, pos.x);
 
-    if (key === null) return;
+    return key === null ? null : { key, pos };
+  };
 
-    const nearest = findNearestSeries(opts.getData(), allPoints, key, pos.y);
-    const series = nearest ? opts.getSeriesList()[nearest.seriesIndex] : undefined;
+  const sortedKeys = (): Datum['key'][] =>
+    [
+      ...new Map(
+        opts
+          .getData()
+          .flat()
+          .map((datum) => [keyId(datum.key), datum.key]),
+      ).values(),
+    ].sort((a, b) => keyOrder(a) - keyOrder(b));
 
-    if (nearest && series) {
-      opts.onClick({ datum: nearest.datum, originalEvent: event, series });
+  const onMouseMove = (event: MouseEvent): void => {
+    const hit = pointerKey(event);
+
+    if (hit) focus(hit.key, hit.pos, event);
+    else if (active) clear();
+  };
+
+  const onClick = (event: MouseEvent): void => {
+    if (!opts.onClick) return;
+
+    const hit = pointerKey(event);
+    const found = hit && eventFor(hit.key, hit.pos.y, event);
+
+    if (found) opts.onClick(found.event);
+  };
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    const keys = sortedKeys();
+
+    if (keys.length === 0) return;
+
+    const last = keys.length - 1;
+    const target: Record<string, number> = {
+      ArrowLeft: keyboardIndex < 0 ? last : Math.max(0, keyboardIndex - 1),
+      ArrowRight: keyboardIndex < 0 ? 0 : Math.min(last, keyboardIndex + 1),
+      End: last,
+      Home: 0,
+    };
+
+    if (event.key in target) {
+      event.preventDefault();
+      keyboardIndex = target[event.key];
+      focus(keys[keyboardIndex], null, event);
+    } else if ((event.key === 'Enter' || event.key === ' ') && keyboardIndex >= 0 && opts.onClick) {
+      event.preventDefault();
+
+      const found = eventFor(keys[keyboardIndex], Number.NaN, event);
+
+      if (found) opts.onClick(found.event);
+    } else if (event.key === 'Escape') {
+      keyboardIndex = -1;
+      clear();
     }
   };
 
-  const onKeyDown = (event: KeyboardEvent) => {
-    const allData = opts.getData();
-    const allPoints = opts.getPoints();
-    const domain = [...new Map(allData.flat().map((datum) => [keyId(datum.key), datum.key])).values()];
+  return { onClick, onKeyDown, onMouseLeave: clear, onMouseMove };
+}
 
-    if (domain.length === 0) return;
+/** Group for the per-series active markers, reused across renders. */
+export function ensureMarkerGroup(parent: SVGGElement, current: SVGGElement | null): SVGGElement {
+  if (current && parent.contains(current)) return current;
 
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-      event.preventDefault();
-      keyboardIndex = Math.max(0, Math.min(domain.length - 1, keyboardIndex + (event.key === 'ArrowLeft' ? -1 : 1)));
+  const group = createSvgElement('g', {
+    'aria-hidden': 'true',
+    class: 'prism-active-points',
+    'pointer-events': 'none',
+  });
 
-      const key = domain[keyboardIndex]!;
-      const candidate = findNearestSeries(allData, allPoints, key, Number.POSITIVE_INFINITY);
-      const series = candidate ? opts.getSeriesList()[candidate.seriesIndex] : undefined;
+  parent.appendChild(group);
 
-      if (!candidate || !series) return;
-
-      // Same dedup as onMouseMove: tooltip announces when present.
-      const announceText = !opts.tooltip ? `${series.name}: ${candidate.datum.value}` : undefined;
-
-      opts.crosshair?.show(candidate.point.x, candidate.point.y, opts.dims().width, opts.dims().height, announceText);
-      opts.tooltip?.show(
-        candidate.point.x + opts.dims().margin.left,
-        candidate.point.y + opts.dims().margin.top,
-        candidate.datum,
-        series,
-      );
-      opts.onHover?.({ datum: candidate.datum, originalEvent: event, series });
-    }
-
-    if ((event.key === 'Enter' || event.key === ' ') && opts.onClick) {
-      event.preventDefault();
-
-      const key = domain[keyboardIndex]!;
-      const candidate = findNearestSeries(allData, allPoints, key, Number.POSITIVE_INFINITY);
-      const series = candidate ? opts.getSeriesList()[candidate.seriesIndex] : undefined;
-
-      if (candidate && series) opts.onClick({ datum: candidate.datum, originalEvent: event, series });
-    }
-
-    if (event.key === 'Escape') {
-      opts.crosshair?.hide();
-      opts.tooltip?.hide();
-      opts.onHover?.(null);
-    }
-  };
-
-  return { onClick, onKeyDown, onMouseLeave, onMouseMove };
+  return group;
 }

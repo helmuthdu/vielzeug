@@ -1,11 +1,68 @@
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 import type { Datum, Series, TooltipConfig } from '../types';
 
+export interface TooltipRow {
+  color: string;
+  name: string;
+  value: string;
+}
+
+/** Inline so the spoken text stays hidden even without prism's stylesheet. */
+const SCREEN_READER_ONLY =
+  'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
+
+/**
+ * Title plus one swatch row per series; text only, so data is never parsed as HTML.
+ * `spoken` is what the tooltip's live region announces; the visual rows are aria-hidden.
+ */
+export function comparisonContent(
+  doc: Document,
+  title: string,
+  rows: readonly TooltipRow[],
+  spoken: string,
+): HTMLElement {
+  const body = doc.createElement('div');
+  const sr = doc.createElement('span');
+  const visual = doc.createElement('div');
+  const head = doc.createElement('div');
+
+  body.className = 'prism-tooltip-body';
+  sr.className = 'prism-tooltip-sr';
+  sr.style.cssText = SCREEN_READER_ONLY;
+  sr.textContent = spoken;
+  visual.setAttribute('aria-hidden', 'true');
+  head.className = 'prism-tooltip-title';
+  head.textContent = title;
+  visual.appendChild(head);
+
+  for (const row of rows) {
+    const line = doc.createElement('div');
+    const swatch = doc.createElement('span');
+    const name = doc.createElement('span');
+    const value = doc.createElement('span');
+
+    line.className = 'prism-tooltip-row';
+    swatch.className = 'prism-tooltip-swatch';
+    swatch.style.setProperty('--prism-swatch', row.color);
+    name.className = 'prism-tooltip-name';
+    name.textContent = row.name;
+    value.className = 'prism-tooltip-value';
+    value.textContent = row.value;
+    line.append(swatch, name, value);
+    visual.appendChild(line);
+  }
+
+  body.append(sr, visual);
+
+  return body;
+}
+
 export interface TooltipState {
   dispose(): void;
   el: HTMLDivElement | null;
   hide(): void;
-  show(x: number, y: number, datum: Datum, series: Series): void;
+  /** `content` replaces the default `series: value` body when no custom `render` is configured. */
+  show(x: number, y: number, datum: Datum, series: Series, content?: Node | string): void;
   [Symbol.dispose](): void;
 }
 
@@ -69,19 +126,15 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
         if (!visible) el.textContent = '';
       }, 150);
     },
-    show(x: number, y: number, datum: Datum, series: Series) {
+    show(x: number, y: number, datum: Datum, series: Series, content?: Node | string) {
       if (!container.isConnected) return;
 
       cancelClear();
 
-      if (render) {
-        const content = render(datum, series);
+      const body = render ? render(datum, series) : (content ?? `${series.name}: ${datum.value}`);
 
-        if (typeof content === 'string') el.textContent = content;
-        else el.replaceChildren(content);
-      } else {
-        el.textContent = `${series.name}: ${datum.value}`;
-      }
+      if (typeof body === 'string') el.textContent = body;
+      else el.replaceChildren(body);
 
       const virtualRef = {
         getBoundingClientRect: () => {

@@ -1,5 +1,70 @@
 ---
-title: Prism 3 Migration
+title: Prism Migration
+---
+
+# Upcoming Train Migration
+
+Line, area, bar, pie, and sparkline charts now share the radar chart's interaction model: series comparison, keyboard navigation, and active-key highlighting. Default visuals and a few DOM contracts changed.
+
+## Keep flat area fills
+
+Area series default to a gradient that fades toward the baseline. Set `fill: 'solid'` to keep the previous flat fill.
+
+```ts
+// Before: flat fill by default
+createAreaChart(container, { series: [{ data, name: 'Users' }] });
+
+// After: opt back into a flat fill
+createAreaChart(container, { series: [{ data, fill: 'solid', name: 'Users' }] });
+```
+
+Sparkline `area` fills also use a gradient. Their default `fillOpacity` is now the `--prism-spark-fill-opacity` token instead of `0.2`.
+
+## Keep square bars
+
+Grouped bars take their corner radius from `--prism-bar-radius`, now `4px`. Stacked bars stay square.
+
+```ts
+// Per series
+createBarChart(container, { series: [{ borderRadius: 0, data, name: 'Sales' }] });
+```
+
+```css
+/* Or for every chart */
+:root {
+  --prism-bar-radius: 0;
+}
+```
+
+## Review explicit stroke and opacity values
+
+`strokeWidth` (line series), `fillOpacity` (area series and sparklines), and `borderRadius` (bar series) now override the theme tokens. Previously the stylesheet overrode them. Remove values you set but relied on the theme replacing.
+
+## Read announcements from `.prism-live`
+
+Each chart has one `role="status"` region, `.prism-live`, replacing `.prism-crosshair-live` and `.prism-radar-live`. Announcements and the default tooltip now compare every series at the active key.
+
+```ts
+// Before
+chart.el.querySelector('.prism-crosshair-live')?.textContent; // 'Revenue: 10'
+
+// After
+chart.el.querySelector('.prism-live')?.textContent; // '1: Revenue 10, Costs 6'
+```
+
+## Expect the first arrow press to focus the first point
+
+On line and area charts, the first arrow press now focuses the first x position instead of the second. Update keyboard tests that pressed once to reach the second point.
+
+## Expect date axes to fit the data
+
+Line and area charts with `Date` keys no longer round the x domain outwards to a tick interval, matching numeric keys. The series now spans the full plot width, and edge ticks may fall inside the data range. Update visual snapshots that captured the padded axis.
+
+```ts
+// Before: 3 to 14 September rendered on an axis from 27 August to 17 September
+// After: the same data renders on an axis from 3 to 14 September
+```
+
 ---
 
 # Prism 3 Migration

@@ -46,7 +46,9 @@ const products = [
   { id: 'p3', price: 15, published: true },
 ];
 
-const publishedLabels = filterMap(products, (product) => (product.published ? `${product.id}: ${product.price}` : undefined));
+const publishedLabels = filterMap(products, (product) =>
+  product.published ? `${product.id}: ${product.price}` : undefined,
+);
 const byId = indexBy(products, (product) => product.id);
 const byPrice = sort(products, (product) => product.price);
 
@@ -158,8 +160,8 @@ Share codes ride in URLs and QR payloads, where `+`, `/`, and padding `=` break 
 ```ts
 import { base64UrlToText, textToBase64Url } from '@vielzeug/arsenal';
 
-const code = textToBase64Url(JSON.stringify({ hunterId: 'daeron', version: 2 }));
-// eyJodW50ZXJJZCI6ImRhZXJvbiIsInZlcnNpb24iOjJ9: safe in a query string or QR
+const code = textToBase64Url(JSON.stringify({ seat: 4, version: 2 }));
+// eyJzZWF0Ijo0LCJ2ZXJzaW9uIjoyfQ: safe in a query string or QR
 
 const payload = JSON.parse(base64UrlToText(code));
 ```

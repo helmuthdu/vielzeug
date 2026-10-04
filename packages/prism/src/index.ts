@@ -6,6 +6,7 @@ export { createAreaChart } from './charts/area';
 export { createBarChart } from './charts/bar';
 export { createLineChart } from './charts/line';
 export { createPieChart } from './charts/pie';
+export { createRadarChart } from './charts/radar';
 export { createSparkline } from './charts/sparkline';
 // Error classes
 export { PrismError, PrismRenderError } from './errors';
@@ -44,8 +45,15 @@ export type {
   PieSliceConfig,
   PieVariant,
   PrismTheme,
+  RadarAxisConfig,
+  RadarAxisValue,
+  RadarChartConfig,
+  RadarEvent,
+  RadarGridConfig,
+  RadarSeriesConfig,
   Scale,
   Series,
+  SeriesValue,
   SparklineConfig,
   SparklineVariant,
   StackSegment,

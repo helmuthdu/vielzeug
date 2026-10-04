@@ -27,7 +27,7 @@ export function buildXScale(allX: (Date | number)[], width: number): Scale<Date>
     const min = new Date(minMs);
     const max = new Date(minMs === maxMs ? maxMs + 1 : maxMs);
 
-    return timeScale({ domain: [min, max], range: [0, width] });
+    return timeScale({ domain: [min, max], nice: false, range: [0, width] });
   }
 
   const nums = allX as number[];

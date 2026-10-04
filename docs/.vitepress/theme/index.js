@@ -20,6 +20,7 @@ import ShowcasePage from './components/ShowcasePage.vue';
 // Must be a CSS import (not JS-injected) so the rule is available at first paint.
 import '@vielzeug/refine/fouc.css';
 import '@vielzeug/refine/tokens.css';
+import '@vielzeug/refine/icon-lucide';
 // Import Prism chart styles
 import '@vielzeug/prism/theme';
 

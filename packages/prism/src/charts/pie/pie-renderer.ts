@@ -1,3 +1,4 @@
+import { polarPoint as p, polarX as px, polarY as py } from '../../core/polar';
 import type { PieSliceConfig } from '../../types';
 
 export interface Arc {
@@ -65,21 +66,6 @@ export function computeArcs(
       startAngle: rawStart,
     };
   });
-}
-
-// Polar to cartesian, returns x,y string for SVG path
-function p(cx: number, cy: number, r: number, a: number): string {
-  return `${cx + r * Math.sin(a)},${cy - r * Math.cos(a)}`;
-}
-
-// Cartesian x component
-function px(cx: number, r: number, a: number): number {
-  return cx + r * Math.sin(a);
-}
-
-// Cartesian y component
-function py(cy: number, r: number, a: number): number {
-  return cy - r * Math.cos(a);
 }
 
 export function arcPath(arc: Arc): string {

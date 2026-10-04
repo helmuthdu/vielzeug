@@ -4,7 +4,7 @@ import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
 import { createCrosshair } from '../../interaction/crosshair';
-import { createSeriesInteraction } from '../../interaction/series-interaction';
+import { createSeriesInteraction, ensureMarkerGroup } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { seriesColor } from '../../theme';
@@ -13,6 +13,7 @@ import { computeAreaPoints, renderArea } from './area-renderer';
 
 export function createAreaChart(container: HTMLElement, config: AreaChartConfig): ChartHandle<AreaSeriesConfig[]> {
   let crosshair: ReturnType<typeof createCrosshair> | null = null;
+  let markers: SVGGElement | null = null;
   let seriesList = config.series;
 
   return createChartScaffold(
@@ -28,6 +29,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
 
       if (allX.length === 0) {
         clearCartesianDom(groups, legend, tooltip, crosshair);
+        markers?.replaceChildren();
 
         return;
       }
@@ -95,7 +97,8 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
           color: seriesColor(i, series.color),
           curve: series.curve ?? 'linear',
           disposalSignal: ctx.disposalSignal,
-          fillOpacity: series.fillOpacity ?? 0.3,
+          fill: series.fill ?? 'gradient',
+          fillOpacity: series.fillOpacity,
           showLine: series.showLine !== false,
           transition: config.transition,
         });
@@ -103,15 +106,20 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
 
       legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       tooltip?.hide();
+      markers = ensureMarkerGroup(ctx.chartArea, markers);
 
       return createSeriesInteraction({
+        announcer: ctx.announcer,
+        colors: () => seriesList.map((s, i) => seriesColor(i, s.color)),
         crosshair,
         dims: () => ctx.dimensions,
         getData: () => allData,
         getPoints: () => allPoints,
         getSeriesList: () => seriesList,
+        markers,
         onClick: config.onClick,
         onHover: config.onHover,
+        seriesGroup: groups.series,
         svg: ctx.svg,
         tooltip,
       });

@@ -1,4 +1,5 @@
 import { PrismRenderError } from '../errors';
+import { type Announcer, createAnnouncer } from '../interaction/announcer';
 import type { CrosshairState } from '../interaction/crosshair';
 import type { LegendState } from '../interaction/legend';
 import { createLegend } from '../interaction/legend';
@@ -36,6 +37,8 @@ export function clearCartesianDom(
 }
 
 export interface ScaffoldContext {
+  /** Speaks hover/keyboard values when no tooltip is shown (the tooltip is its own live region). */
+  announcer: Announcer;
   chartArea: SVGGElement;
   container: HTMLElement;
   dimensions: ChartDimensions;
@@ -48,6 +51,7 @@ export interface ScaffoldContext {
 }
 
 export interface RadialScaffoldContext {
+  announcer: Announcer;
   container: HTMLElement;
   dimensions: ChartDimensions;
   /** Aborted when the chart is disposed: renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
@@ -76,16 +80,25 @@ function runScaffold<TCtx, TData>(
     tooltip: TooltipState | null,
     legend: LegendState | null,
     disposalSignal: AbortSignal,
+    announcer: Announcer,
   ) => TCtx,
   renderFn: (ctx: TCtx) => ChartEventHandlers | undefined,
   updateData: (data: TData) => void,
 ): ChartHandle<TData> {
   let render = () => {};
-  const base = createChartBase(container, { a11y: config.a11y, margin: config.margin }, () => render());
+  // The legend is created after the base (bottom legends append after the svg), but the
+  // chrome accessor runs only from the resize observer's async callback — by which time
+  // the legend exists — so the deferred reference is safe.
+  let legend: LegendState | null = null;
+  const base = createChartBase(
+    container,
+    { a11y: config.a11y, chrome: () => legend?.el ?? null, margin: config.margin },
+    () => render(),
+  );
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
-  const legend = config.legend ? createLegend(container, config.legend) : null;
+  legend = config.legend ? createLegend(container, config.legend) : null;
   const ac = new AbortController();
-  const ctx = buildCtx(base, tooltip, legend, ac.signal);
+  const ctx = buildCtx(base, tooltip, legend, ac.signal, createAnnouncer(base.svg, 'prism-live'));
 
   let disposed = false;
   const events = makeEventManager(base.svg);
@@ -193,7 +206,7 @@ export function createChartScaffold<TData>(
   return runScaffold(
     container,
     config,
-    (base, tooltip, legend, disposalSignal) => {
+    (base, tooltip, legend, disposalSignal, announcer) => {
       const groups: ScaffoldGroups = {
         // Grid lines are purely decorative relative to the root svg's own role="img"/aria-label.
         // Axis groups are NOT hidden wholesale: they can contain a meaningful `.prism-axis-title`;
@@ -210,6 +223,7 @@ export function createChartScaffold<TData>(
       base.chartArea.appendChild(groups.series);
 
       return {
+        announcer,
         chartArea: base.chartArea,
         container,
         dimensions: base.dimensions,
@@ -238,8 +252,9 @@ export function createRadialScaffold<TData>(
   return runScaffold(
     container,
     config,
-    (base, tooltip, legend, disposalSignal) =>
+    (base, tooltip, legend, disposalSignal, announcer) =>
       ({
+        announcer,
         container,
         dimensions: base.dimensions,
         disposalSignal,

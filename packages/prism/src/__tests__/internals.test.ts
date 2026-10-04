@@ -557,3 +557,62 @@ describe('createChartBase: invalid container', () => {
     getComputedStyleSpy.mockRestore();
   });
 });
+
+// ─── createChartBase: resize excludes in-flow chrome ─────────────────────────────
+
+describe('createChartBase: resize excludes in-flow chrome', () => {
+  it('subtracts the chart chrome from the svg height so an auto-height container converges', async () => {
+    // Regression: a container sized by its content reports the svg plus the legend back
+    // through the resize observer. Assigning that total to the svg grows the container by
+    // the legend's height on every pass — unbounded growth in any auto-height container.
+    // jsdom's stubbed observer never fires, so a controllable one drives the pass here.
+    const originalObserver = globalThis.ResizeObserver;
+    const observed: Array<{ callback: ResizeObserverCallback; el: HTMLElement }> = [];
+
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) {
+        this.callback = callback;
+      }
+
+      callback: ResizeObserverCallback;
+
+      observe(el: HTMLElement): void {
+        observed.push({ callback: this.callback, el });
+      }
+
+      unobserve(): void {}
+
+      disconnect(): void {}
+    } as unknown as typeof ResizeObserver;
+
+    try {
+      const container = document.createElement('div');
+
+      document.body.appendChild(container);
+
+      const chrome = document.createElement('div');
+
+      Object.defineProperty(chrome, 'offsetHeight', { get: () => 40 });
+      container.appendChild(chrome);
+
+      const base = createChartBase(container, { chrome: () => chrome });
+
+      // The auto-height container reports svg + legend. The fixed point is 340 − 40: without
+      // the subtraction the svg would be assigned 340 and the container would grow forever.
+      observed[0].callback([{ contentRect: { height: 340, width: 400 } } as ResizeObserverEntry], {} as ResizeObserver);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(base.svg.getAttribute('height')).toBe('300');
+      expect(base.dimensions.height).toBe(300);
+      // The svg's attributes must stay its only sizing truth: CSS percentage sizing would
+      // override them and push the in-flow legend out of the reserved height.
+      expect(base.svg.style.height).toBe('');
+      expect(base.svg.style.width).toBe('');
+
+      base.dispose();
+      container.remove();
+    } finally {
+      globalThis.ResizeObserver = originalObserver;
+    }
+  });
+});

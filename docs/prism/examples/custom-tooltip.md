@@ -7,7 +7,7 @@ description: Render safe structured tooltip content without HTML string injectio
 
 ### Problem
 
-A chart tooltip needs formatted, structured content rather than Prism's default text.
+A chart tooltip needs content formatted for your domain, such as currency, rather than Prism's default series comparison.
 
 ### Solution
 
@@ -18,8 +18,8 @@ Return a DOM node from `tooltip.render`. Assign dynamic values with `textContent
 ```html
 <style>
   .tooltip-demo { width: 100%; min-width: 0; }
-  .tooltip-demo__hint { margin: 0 0 0.75rem; color: color-mix(in srgb, CanvasText 65%, Canvas); font-size: 0.875rem; }
-  .tooltip-demo__value { margin-top: 0.2rem; font-variant-numeric: tabular-nums; }
+  .tooltip-demo__hint { margin: 0 0 var(--size-3); color: var(--text-color-secondary); font-size: var(--text-sm); }
+  .tooltip-demo__value { margin-top: var(--size-1); font-variant-numeric: tabular-nums; }
 </style>
 <div class="tooltip-demo">
   <p class="tooltip-demo__hint">Move across the line to inspect monthly revenue.</p>
