@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Render the documented ore-menu-item parts (item, icon-slot, item-label) so consumers can style items through ::part().",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

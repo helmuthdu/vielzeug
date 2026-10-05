@@ -134,19 +134,20 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
       ? html`
           <div
             class="${itemClass}"
+            part="item"
             tabindex="-1"
             role="${itemRole}"
             aria-checked="${() => String(isChecked())}"
             aria-disabled="${props.disabled}">
             <span class="item-check" aria-hidden="true"></span>
-            <span class="icon-slot"><slot name="icon"></slot></span>
-            <span class="item-label"><slot></slot></span>
+            <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
+            <span class="item-label" part="item-label"><slot></slot></span>
           </div>
         `
       : html`
-          <div class="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
-            <span class="icon-slot"><slot name="icon"></slot></span>
-            <span class="item-label"><slot></slot></span>
+          <div class="item" part="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
+            <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
+            <span class="item-label" part="item-label"><slot></slot></span>
           </div>
         `;
   },

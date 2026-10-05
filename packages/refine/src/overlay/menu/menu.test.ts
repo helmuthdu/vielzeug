@@ -113,6 +113,24 @@ describe('ore-menu', () => {
       expect(internalItem?.getAttribute('role')).toBe('menuitemcheckbox');
       expect(internalCheck).toBeTruthy();
     });
+
+    it('renders the documented item parts: item, icon-slot, item-label', async () => {
+      fixture = await mount('ore-menu', {
+        html: '<button slot="trigger">Actions</button><ore-menu-item value="edit">Edit</ore-menu-item>',
+      });
+      await fixture.flush();
+
+      const item = fixture.element.querySelector<MenuItemElement>('[value="edit"]')!;
+      const parts = {
+        icon: item.shadowRoot?.querySelector('[part="icon-slot"]'),
+        item: item.shadowRoot?.querySelector('[part="item"]'),
+        label: item.shadowRoot?.querySelector('[part="item-label"]'),
+      };
+
+      expect(parts.item).toBeTruthy();
+      expect(parts.icon).toBeTruthy();
+      expect(parts.label).toBeTruthy();
+    });
   });
 
   describe('Sizing', () => {
