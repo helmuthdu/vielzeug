@@ -64,7 +64,7 @@ export function createChartBase(
     // on every resize pass, chrome excluded). CSS percentage sizing here would override the
     // attributes: `height: 100%` fills the whole container, so the in-flow legend rides past
     // the container's edge instead of inside the height the resize pass reserved for it.
-    style: 'display:block',
+    style: 'display:block;max-width:100%',
   });
 
   const chartAreaGroup = createSvgElement('g', {

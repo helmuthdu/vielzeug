@@ -608,6 +608,7 @@ describe('createChartBase: resize excludes in-flow chrome', () => {
       // override them and push the in-flow legend out of the reserved height.
       expect(base.svg.style.height).toBe('');
       expect(base.svg.style.width).toBe('');
+      expect(base.svg.style.maxWidth).toBe('100%');
 
       base.dispose();
       container.remove();
