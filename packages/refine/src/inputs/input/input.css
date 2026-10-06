@@ -153,7 +153,7 @@
     line-height: var(--leading-normal);
 
     /* No all: unset needed - reset layer handles it */
-    color: var(--color-contrast-900);
+    color: var(--input-color, var(--color-contrast-900));
     outline: none;
     background: transparent;
     border: none;

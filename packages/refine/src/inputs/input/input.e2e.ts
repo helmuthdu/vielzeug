@@ -37,6 +37,17 @@ test.describe('Accessibility', () => {
 });
 
 test.describe('Layout', () => {
+  test('honors the documented input color override', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-input label="Stance" value="Stance 1" style="--input-color:rgb(255 255 255);--input-bg:rgb(32 32 32)"></ore-input>',
+    );
+    const color = await page
+      .locator('ore-input')
+      .getByRole('textbox', { name: 'Stance' })
+      .evaluate((element) => getComputedStyle(element).color);
+    expect(color).toBe('rgb(255, 255, 255)');
+  });
+
   // Regression coverage for a real bug: `fieldVariantMixin`'s `@layer refine.variants` rules
   // were silently losing to `componentStyles`'s `@layer refine.base` defaults when the mixin
   // was wired into `styles` *before* `componentStyles`: every variant rendered identically to

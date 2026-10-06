@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "honor the documented --input-color override on ore-input",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}
