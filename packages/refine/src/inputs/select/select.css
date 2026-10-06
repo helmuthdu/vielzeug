@@ -5,6 +5,7 @@
        `--select-min-width` or a constraining flex/grid track) renders a trigger wider
        than its host: overflowing it, clipped by whatever ancestor hides overflow. */
     --input-min-width: var(--select-min-width, 12rem);
+    --_radius: var(--select-radius, var(--rounded-lg));
     display: inline-block;
     min-width: var(--select-min-width, 12rem);
   }

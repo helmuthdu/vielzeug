@@ -4,6 +4,7 @@
  *
  * Run with: pnpm test:e2e (requires built dist: run pnpm build first)
  */
+import type { Page } from '@playwright/test';
 import { axeCheck, expect, test } from '../../testing/fixtures';
 
 test.describe('Accessibility', () => {
@@ -156,5 +157,65 @@ test.describe('Layout', () => {
     expect(metrics.floored.host).toBeLessThan(192);
     expect(Math.abs(metrics.full.trigger - metrics.full.host)).toBeLessThanOrEqual(1);
     expect(Math.abs(metrics.floored.trigger - metrics.floored.host)).toBeLessThanOrEqual(1);
+  });
+
+  // The panel reads `--_radius`, the shared mixin name. Every other component that reads it
+  // also defines it on its own host (from its public token), so the name only reaches a
+  // select's panel by *inheritance* from whatever surrounds it: a select slotted inside an
+  // ore-counter styled `--counter-radius: var(--rounded-full)` (the demo's damage band)
+  // opened a pill-shaped list. The host must define the name itself — from the documented
+  // `--select-radius` token — so the panel owns its radius and inherits nobody's.
+  const panelRadius = (page: Page, id: string) =>
+    page.evaluate((hostId: string) => {
+      const select = document.getElementById(hostId) as HTMLElement & { shadowRoot: ShadowRoot };
+      const dropdown = select.shadowRoot.querySelector('.dropdown') as HTMLElement;
+      // A probe resolves the token to the same computed unit the panel reports.
+      const probe = document.createElement('div');
+      probe.style.borderRadius = 'var(--rounded-lg)';
+      document.body.append(probe);
+      const token = getComputedStyle(probe).borderRadius;
+      probe.remove();
+      return { radius: getComputedStyle(dropdown).borderRadius, token };
+    }, id);
+
+  test('dropdown panel defaults to the rounded-lg token', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-select id="plain" label="Stance"><option value="1">Stance 1</option><option value="2">Stance 2</option></ore-select>',
+    );
+
+    await page.locator('#plain').click();
+    const { radius, token } = await panelRadius(page, 'plain');
+
+    expect(radius).toBe(token);
+  });
+
+  test('--select-radius overrides the dropdown panel radius', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-select id="custom" style="--select-radius: 4px" label="Stance"><option value="1">Stance 1</option></ore-select>',
+    );
+
+    await page.locator('#custom').click();
+    const { radius } = await panelRadius(page, 'custom');
+
+    expect(radius).toBe('4px');
+  });
+
+  test('a select slotted in a counter with a full --counter-radius keeps its own panel radius', async ({
+    page,
+    refinePage,
+  }) => {
+    await refinePage.mountComponent(
+      '<ore-counter label="Damage" value="3" style="--counter-radius: var(--rounded-full)">' +
+        '<ore-select id="slotted" slot="header-end" label="Stance" style="--select-min-width:0;width:6rem">' +
+        '<option value="1">Stance 1</option>' +
+        '<option value="2">Stance 2</option>' +
+        '</ore-select>' +
+        '</ore-counter>',
+    );
+
+    await page.locator('#slotted').click();
+    const { radius, token } = await panelRadius(page, 'slotted');
+
+    expect(radius).toBe(token);
   });
 });
