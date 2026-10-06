@@ -171,10 +171,14 @@ export interface LineSeriesConfig extends Series<ContinuousDatum> {
   pointRadius?: number;
   showPoints?: boolean;
   strokeWidth?: number;
+  /** Value axis for this series; defaults to the left axis. */
+  yAxis?: 'left' | 'right';
 }
 
 export interface LineChartConfig extends BaseChartConfig {
   crosshair?: CrosshairConfig | boolean;
+  /** Independent right-side value axis for series assigned to it. */
+  rightYAxis?: Omit<YAxisConfig, 'position' | 'grid'>;
   series: LineSeriesConfig[];
 }
 

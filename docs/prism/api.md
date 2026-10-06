@@ -411,6 +411,7 @@ interface BaseChartConfig {
 
 interface LineChartConfig extends BaseChartConfig {
   crosshair?: boolean | CrosshairConfig;
+  rightYAxis?: Omit<YAxisConfig, 'position' | 'grid'>;
   series: LineSeriesConfig[];
 }
 
@@ -473,6 +474,7 @@ interface SparklineConfig {
 
 ```ts
 interface LineSeriesConfig extends Series<ContinuousDatum> {
+  yAxis?: 'left' | 'right'; // defaults to 'left'
   curve?: 'linear' | 'monotone' | 'step';
   pointRadius?: number;
   showPoints?: boolean;

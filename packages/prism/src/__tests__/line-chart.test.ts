@@ -161,6 +161,70 @@ describe('createLineChart', () => {
     chart.dispose();
   });
 
+  it('scales left and right series independently and clears the right axis when removed', async () => {
+    const chart = createLineChart(container, {
+      a11y: { ariaLabel: 'Health and monster damage' },
+      rightYAxis: { label: 'Damage' },
+      series: [
+        {
+          data: [
+            { key: 0, value: 0 },
+            { key: 1, value: 10 },
+          ],
+          name: 'Health',
+          showPoints: true,
+        },
+        {
+          data: [
+            { key: 0, value: 0 },
+            { key: 1, value: 1000 },
+          ],
+          name: 'Damage',
+          showPoints: true,
+          yAxis: 'right',
+        },
+      ],
+      transition: { preference: 'never' },
+      yAxis: { label: 'Health' },
+    });
+    const groups = chart.el.querySelectorAll('.prism-line-series');
+    expect(groups[0].querySelectorAll('circle')[1].getAttribute('cy')).toBe(
+      groups[1].querySelectorAll('circle')[1].getAttribute('cy'),
+    );
+    expect(chart.el.querySelector('.prism-y-axis-right .prism-axis-title')?.textContent).toBe('Damage');
+    expect(chart.el.querySelector('.prism-y-axis .prism-axis-title')?.textContent).toBe('Health');
+    expect((await axeCheck(container)).violations).toEqual([]);
+    chart.update([{ data: [{ key: 1, value: 10 }], name: 'Health' }]);
+    expect(chart.el.querySelector('.prism-y-axis-right')?.children).toHaveLength(0);
+    chart.update([{ data: [{ key: 1, value: 1000 }], name: 'Damage', yAxis: 'right' }]);
+    expect(chart.el.querySelector('.prism-y-axis')?.children).toHaveLength(0);
+    expect(chart.el.querySelector('.prism-y-axis-right .prism-axis-title')?.textContent).toBe('Damage');
+    chart.update([]);
+    expect(chart.el.querySelectorAll('.prism-axis-tick')).toHaveLength(0);
+    chart.dispose();
+  });
+
+  it('selects the rendered marker when independently scaled points overlap', () => {
+    const onClick = vi.fn();
+    const chart = createLineChart(container, {
+      onClick,
+      series: [
+        { data: [{ key: 1, value: 10 }], name: 'Health', showPoints: true },
+        { data: [{ key: 1, value: 1000 }], name: 'Wound', showPoints: true, yAxis: 'right' },
+      ],
+      transition: { preference: 'never' },
+    });
+    const marker = chart.el.querySelectorAll('.prism-line-series')[1].querySelector('circle')!;
+    marker.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 50, clientY: 20 }));
+    expect(onClick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        datum: expect.objectContaining({ value: 1000 }),
+        series: expect.objectContaining({ name: 'Wound' }),
+      }),
+    );
+    chart.dispose();
+  });
+
   it('renders a legend when legend is true', () => {
     const chart = createLineChart(container, {
       legend: true,

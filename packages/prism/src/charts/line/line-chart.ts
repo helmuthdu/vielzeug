@@ -2,7 +2,7 @@ import { positionAxis, renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
-import { chartArea } from '../../core/layout';
+import { chartArea, resolveMargin } from '../../core/layout';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction, ensureMarkerGroup } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
@@ -14,6 +14,7 @@ import { computePoints, renderLine } from './line-renderer';
 export function createLineChart(container: HTMLElement, config: LineChartConfig): ChartHandle<LineSeriesConfig[]> {
   let crosshair: ReturnType<typeof createCrosshair> | null = null;
   let markers: SVGGElement | null = null;
+  let rightAxis: SVGGElement | null = null;
   let seriesList = config.series;
 
   return createChartScaffold(
@@ -22,14 +23,24 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
     (ctx) => {
       const { groups, legend, tooltip } = ctx;
       const dims = ctx.dimensions;
+      const hasRight = seriesList.some((series) => series.yAxis === 'right');
+      const hasLeftData = seriesList.some((series) => series.yAxis !== 'right' && series.data.length > 0);
+      dims.margin.right =
+        config.margin?.right ?? (hasRight ? (config.rightYAxis?.label ? 72 : 50) : resolveMargin(config.margin).right);
       const area = chartArea(dims.width, dims.height, dims.margin);
       const allData = seriesList.map((series) => series.data);
       const allX = allData.flat().map((datum) => datum.key);
-      const allY = allData.flat().map((d) => d.value);
+      const leftY = seriesList
+        .filter((series) => series.yAxis !== 'right')
+        .flatMap((series) => series.data.map((datum) => datum.value));
+      const rightY = seriesList
+        .filter((series) => series.yAxis === 'right')
+        .flatMap((series) => series.data.map((datum) => datum.value));
 
       if (allX.length === 0) {
         clearCartesianDom(groups, legend, tooltip, crosshair);
         markers?.replaceChildren();
+        rightAxis?.replaceChildren();
 
         return;
       }
@@ -39,9 +50,10 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
       }
 
       const xScale = buildXScale(allX, area.width);
-      const yScale = buildYScale(allY, area.height);
+      const yScale = buildYScale(leftY, area.height);
+      const rightYScale = buildYScale(rightY, area.height);
 
-      if (config.yAxis?.grid) {
+      if (config.yAxis?.grid && (!hasRight || hasLeftData)) {
         renderGrid(
           groups.grid,
           yScale,
@@ -50,6 +62,8 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           'horizontal',
           resolveTickCount(config.yAxis, area.height, 'left'),
         );
+      } else {
+        groups.grid.replaceChildren();
       }
 
       if (config.xAxis?.grid) {
@@ -68,9 +82,24 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
         renderAxis(groups.xAxis, xScale, config.xAxis, area.width, 'bottom');
       }
 
-      if (config.yAxis) {
-        positionAxis(groups.yAxis, config.yAxis.position ?? 'left', area.width, area.height);
-        renderAxis(groups.yAxis, yScale, config.yAxis, area.height, 'left');
+      if (config.yAxis && (!hasRight || hasLeftData)) {
+        const axis = { ...config.yAxis, position: hasRight ? ('left' as const) : (config.yAxis.position ?? 'left') };
+        positionAxis(groups.yAxis, axis.position, area.width, area.height);
+        renderAxis(groups.yAxis, yScale, axis, area.height, 'left');
+      } else {
+        groups.yAxis.replaceChildren();
+      }
+
+      if (hasRight) {
+        if (!rightAxis) {
+          rightAxis = createSvgElement('g', { class: 'prism-y-axis-right' });
+          ctx.chartArea.appendChild(rightAxis);
+        }
+        const axis = { ...config.rightYAxis, position: 'right' as const };
+        positionAxis(rightAxis, 'right', area.width, area.height);
+        renderAxis(rightAxis, rightYScale, axis, area.height, 'right');
+      } else {
+        rightAxis?.replaceChildren();
       }
 
       while (groups.series.children.length > seriesList.length) {
@@ -88,7 +117,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           groups.series.appendChild(group);
         }
 
-        const points = computePoints(allData[i], xScale, yScale);
+        const points = computePoints(allData[i], xScale, series.yAxis === 'right' ? rightYScale : yScale);
 
         allPoints.push(points);
 

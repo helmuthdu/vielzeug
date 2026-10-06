@@ -65,6 +65,25 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
   let keyboardIndex = -1;
   let active = false;
 
+  const renderedHit = (event: Event): { datum: Datum; point: Point; seriesIndex: number } | null => {
+    const target = event.target;
+    if (
+      !(target instanceof SVGElement) ||
+      target.tagName.toLowerCase() !== 'circle' ||
+      !opts.seriesGroup.contains(target) ||
+      !target.parentElement
+    )
+      return null;
+    let group: Element | null = target.parentElement;
+    while (group && group.parentNode !== opts.seriesGroup) group = group.parentElement;
+    if (!group) return null;
+    const seriesIndex = [...opts.seriesGroup.children].indexOf(group);
+    const datumIndex = [...target.parentElement.children].indexOf(target);
+    const datum = opts.getData()[seriesIndex]?.[datumIndex];
+    const point = opts.getPoints()[seriesIndex]?.[datumIndex];
+    return datum && point ? { datum, point, seriesIndex } : null;
+  };
+
   const entriesAt = (key: Datum['key']): KeyEntry[] => {
     const id = keyId(key);
     const allPoints = opts.getPoints();
@@ -135,7 +154,9 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
     originalEvent: Event,
   ): { entries: KeyEntry[]; event: ChartEvent; index: number } | null => {
     const entries = entriesAt(key);
-    const index = nearestIndex(entries, posY);
+    const hit = renderedHit(originalEvent);
+    const index = hit?.seriesIndex ?? nearestIndex(entries, posY);
+    if (hit) entries[index] = { datum: hit.datum, point: hit.point };
     const seriesList = opts.getSeriesList();
     const datum = entries[index]?.datum;
 
@@ -186,6 +207,8 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
   };
 
   const pointerKey = (event: MouseEvent): { key: Datum['key']; pos: Point } | null => {
+    const rendered = renderedHit(event);
+    if (rendered) return { key: rendered.datum.key, pos: rendered.point };
     const allPoints = opts.getPoints();
 
     if (allPoints.every((points) => points.length === 0)) return null;

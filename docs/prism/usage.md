@@ -100,6 +100,24 @@ const chart = createLineChart(container, {
 });
 ```
 
+### Independent Value Axes
+
+Assign a line series to `yAxis: 'right'` when its values need a different range. Both axes share the same X scale, while tooltips retain the original values.
+
+```ts
+const chart = createLineChart(container, {
+  series: [
+    { name: 'Health', data: [{ key: 0, value: 30 }, { key: 1, value: 20 }] },
+    { name: 'Damage', yAxis: 'right', data: [{ key: 0, value: 0 }, { key: 1, value: 300 }] },
+  ],
+  yAxis: { label: 'Health' },
+  rightYAxis: { label: 'Damage' },
+  tooltip: true,
+});
+```
+
+The primary axis is on the left when right-axis series are present. Grid configuration belongs to the primary axis. Dual-axis curve crossings do not imply equal numeric values. Preserve each marker's axis assignment when calling `update()`.
+
 ### Time-based X Axis
 
 When data points use `Date` objects for `key`, Prism automatically applies a time scale. The domain spans exactly the first to the last date, so the series fills the plot width:
