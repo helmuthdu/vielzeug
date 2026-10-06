@@ -75,6 +75,20 @@ describe('ore-counter', () => {
       expect(fixture.query<HTMLElement>('[part="hint"]')?.hidden).toBe(true);
     });
 
+    it('exposes a trailing header action without changing the counter label or value', async () => {
+      fixture = await mount('ore-counter', {
+        attrs: { label: 'Damage', value: 3 },
+        html: '<button slot="header-end" aria-label="Confirm wound">Wound</button>',
+      });
+      await fixture.flush();
+      const slot = fixture.query<HTMLSlotElement>('slot[name="header-end"]')!;
+      expect(slot.assignedElements()).toHaveLength(1);
+      fireClick(slot.assignedElements()[0]);
+      expect(fixture.query('[part="label"]')?.textContent).toBe('Damage');
+      expect(valueText(fixture)).toBe('3');
+      expect((await axeCheck(fixture.element)).violations).toEqual([]);
+    });
+
     it('exposes icon and hint slots', async () => {
       fixture = await mount('ore-counter', { html: '<span slot="icon">★</span><span slot="hint">Custom</span>' });
       await fixture.flush();

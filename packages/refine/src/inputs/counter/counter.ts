@@ -86,6 +86,7 @@ export const COUNTER_HOLD_REPEAT_MS = 120;
  * @fires change - Fired after every accepted change. detail: { value: number, delta: number }
  *
  * @slot icon - Leading icon or token artwork shown before the label
+ * @slot header-end - Trailing header action beside the label
  * @slot hint - Custom hint content (replaces the `hint` attribute)
  *
  * @cssprop --counter-value-size - Font size of the value
@@ -260,6 +261,7 @@ define<OreCounterProps>(COUNTER_TAG, {
         <div class="header" part="header">
           <slot name="icon"></slot>
           <span class="label" part="label" id="${labelId}">${() => props.label.value ?? ''}</span>
+          <span class="header-end"><slot name="header-end"></slot></span>
         </div>
         <div class="controls" part="controls" @keydown="${(e: KeyboardEvent) => spinner.handleKeydown(e)}">
           <button

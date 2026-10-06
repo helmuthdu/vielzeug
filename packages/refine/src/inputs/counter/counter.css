@@ -75,6 +75,13 @@
     white-space: nowrap;
   }
 
+  .header-end {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    margin-inline-start: auto;
+  }
+
   .controls {
     display: flex;
     gap: var(--_gap);

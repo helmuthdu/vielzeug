@@ -39,6 +39,18 @@ Slot an icon or token artwork before the label and add a one-line `hint` under t
 
 </ComponentPreview>
 
+## Header Action
+
+Place a compact control beside the label with the `header-end` slot. Keep an accessible label when the control has no visible text.
+
+```html
+<ore-counter label="Damage" value="12">
+  <ore-button slot="header-end" icon-only size="sm" variant="ghost" label="Confirm wound">
+    <ore-icon name="heart-crack"></ore-icon>
+  </ore-button>
+</ore-counter>
+```
+
 ## Min, Max and Step
 
 The value is clamped to `min` (default `0`) and `max`; the matching button disables at each bound.
@@ -176,6 +188,7 @@ Override `--counter-value-size` and `--counter-button-size` to turn a counter in
 | ------ | -------------------------------------------------------- |
 | `icon` | Leading icon or token artwork shown before the label     |
 | `hint` | Custom hint content (replaces the `hint` attribute text) |
+| `header-end` | Trailing header action beside the label |
 
 ### Parts
 
