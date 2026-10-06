@@ -177,6 +177,15 @@
     width: fit-content;
   }
 
+  /* One bar height whether or not the line carries an action: the message cell reserves
+     the sm action button's height and centres its text in it, so a plain confirmation
+     stands exactly as tall as its actionable sibling. */
+  .toast-inner.snackbar ore-alert::part(body) {
+    display: flex;
+    align-items: center;
+    min-height: var(--toast-snackbar-height, var(--size-8));
+  }
+
   :host([position$='-right']) .toast-inner.snackbar {
     margin-inline-start: auto;
   }

@@ -410,6 +410,7 @@ export const TOAST_TAG = 'ore-toast' as const;
  * @cssprop --toast-shadow - Elevation shadow.
  * @cssprop --toast-enter-duration / --toast-exit-duration - Motion durations.
  * @cssprop --toast-progress-height - Height of the auto-dismiss progress bar.
+ * @cssprop --toast-snackbar-height - Snackbar message row height, action or not (default --size-8).
  * @cssprop --toast-inset-top / --toast-inset-bottom / --toast-inset-left / --toast-inset-right - Viewport insets.
  *
  * @part container - Notification list.

@@ -340,6 +340,7 @@ Flat and bordered notifications use an opaque surface (`--toast-bg`) tinted with
 | `--toast-snackbar-bg`                                                             | Snackbar surface                                     | `var(--color-contrast-900)`             |
 | `--toast-snackbar-color`                                                          | Snackbar text colour                                 | `var(--color-contrast-100)`             |
 | `--toast-snackbar-padding`                                                        | Snackbar padding                                     | `var(--size-2) var(--size-4)`           |
+| `--toast-snackbar-height`                                                         | Snackbar message row height, action or not           | `var(--size-8)`                         |
 | `--toast-snackbar-shadow`                                                          | Snackbar elevation shadow                            | `var(--shadow-lg)`                      |
 | `--toast-shadow`                                                                  | Elevation shadow                                     | `var(--shadow-xl)`                      |
 | `--toast-enter-duration` / `--toast-exit-duration`                                | Motion durations                                     | `var(--duration-200)`                   |
