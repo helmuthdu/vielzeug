@@ -16,12 +16,17 @@ export type SchemaEntry<T extends object, Key extends keyof T & string = keyof T
 
 export type AnySchema = Record<string, { defaultTtl?: number; indexes?: readonly string[]; key: string }>;
 
-export type RecordOf<S extends AnySchema, K extends keyof S> =
-  S[K] extends SchemaEntry<infer R, infer _Key> ? R : never;
-export type KeyOf<S extends AnySchema, K extends keyof S> = Extract<
-  S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never,
-  VaultKey
->;
+/** Distributes over the table key so a union of tables resolves to the union of its records
+ *  (and of its keys) instead of collapsing to `never`: callers that dispatch on a set of
+ *  tables keep the store's correlation without per-table casts. */
+export type RecordOf<S extends AnySchema, K extends keyof S> = K extends unknown
+  ? S[K] extends SchemaEntry<infer R, infer _Key>
+    ? R
+    : never
+  : never;
+export type KeyOf<S extends AnySchema, K extends keyof S> = K extends unknown
+  ? Extract<S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never, VaultKey>
+  : never;
 
 /** A codec validates and decodes persisted values crossing a trust boundary. */
 export type RecordCodec<T> = {

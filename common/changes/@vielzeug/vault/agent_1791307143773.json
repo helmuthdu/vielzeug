@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "RecordOf and KeyOf now distribute over a union of table keys, so a union of tables resolves to the union of its records and keys instead of never: callers dispatching on a set of tables keep the store's table-record correlation without per-table casts.",
+      "packageName": "@vielzeug/vault",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

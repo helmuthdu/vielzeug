@@ -371,9 +371,15 @@ type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & stri
   key: Key;
 };
 type RecordOf<S extends AnySchema, K extends keyof S> =
-  S[K] extends SchemaEntry<infer R, infer _Key> ? R : never;
+  K extends unknown
+    ? S[K] extends SchemaEntry<infer R, infer _Key>
+      ? R
+      : never
+    : never;
 type KeyOf<S extends AnySchema, K extends keyof S> =
-  Extract<S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never, VaultKey>;
+  K extends unknown
+    ? Extract<S[K] extends SchemaEntry<infer R, infer Key> ? R[Key] : never, VaultKey>
+    : never;
 ```
 
 ```ts
