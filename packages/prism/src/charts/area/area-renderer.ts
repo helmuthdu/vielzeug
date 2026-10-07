@@ -2,6 +2,7 @@ import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
+import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '../../core/datum-style';
 import { uniqueId } from '../../core/ids';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
@@ -16,6 +17,8 @@ export interface AreaRenderOptions {
   fill: 'gradient' | 'solid';
   /** Explicit opacity beats the `--prism-area-opacity` theme token. */
   fillOpacity?: number;
+  /** Per-datum presentation parallel to `points`; styled runs split the top line into subpaths. */
+  marks?: readonly DatumMark[];
   showLine: boolean;
   transition?: TransitionConfig;
 }
@@ -74,26 +77,82 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   applyAreaFill(parent, fill, options);
 
   let line: SVGPathElement | null = null;
+  let runs: readonly StyleRun[] = [];
+  let lines: SVGPathElement[] = [];
+  const styled = hasStyledRuns(options.marks);
+  const marks = options.marks ?? [];
 
   if (options.showLine) {
-    line = parent.querySelector<SVGPathElement>('.prism-area-line');
+    if (styled) {
+      runs = computeStyleRuns(marks, points.length);
 
-    if (!line) {
-      line = createSvgElement('path', { class: 'prism-area-line', fill: 'none' });
-      parent.appendChild(line);
+      const existing = [...parent.querySelectorAll<SVGPathElement>('.prism-area-line')];
+
+      for (const extra of existing.slice(runs.length)) extra.remove();
+
+      lines = runs.map((_, r) => {
+        const reuse = existing[r];
+
+        if (reuse) return reuse;
+
+        const created = createSvgElement('path', { class: 'prism-area-line', fill: 'none' });
+
+        parent.appendChild(created);
+
+        return created;
+      });
+
+      for (const [r, run] of runs.entries()) {
+        setAttributes(lines[r], {
+          opacity: run.opacity,
+          stroke: options.color,
+          'stroke-dasharray': run.dash,
+          'stroke-width': 2,
+        });
+      }
+
+      line = null;
+    } else {
+      const existing = [...parent.querySelectorAll<SVGPathElement>('.prism-area-line')];
+
+      for (const stale of existing.slice(1)) stale.remove();
+
+      line = existing[0] ?? null;
+
+      if (!line) {
+        line = createSvgElement('path', { class: 'prism-area-line', fill: 'none' });
+        parent.appendChild(line);
+      }
+
+      setAttributes(line, {
+        opacity: undefined,
+        stroke: options.color,
+        'stroke-dasharray': undefined,
+        'stroke-width': 2,
+      });
     }
-
-    setAttributes(line, { stroke: options.color, 'stroke-width': 2 });
   } else {
-    parent.querySelector('.prism-area-line')?.remove();
+    for (const stale of parent.querySelectorAll('.prism-area-line')) stale.remove();
   }
+
+  const drawLine = (pts: Point[]): void => {
+    if (!options.showLine) return;
+
+    if (styled) {
+      for (const [r, run] of runs.entries()) {
+        setAttributes(lines[r], { d: buildLinePath(pts.slice(run.start, run.end + 1), options.curve) });
+      }
+    } else if (line) {
+      setAttributes(line, { d: buildLinePath(pts, options.curve) });
+    }
+  };
 
   if (dur === 0) {
     const bottomPoints = points.map((p) => ({ x: p.x, y: baselineY }));
 
     setAttributes(fill, { d: areaPath(points, bottomPoints, options.curve) });
 
-    if (line) setAttributes(line, { d: buildLinePath(points, options.curve) });
+    drawLine(points);
 
     return;
   }
@@ -107,7 +166,7 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
 
     setAttributes(fill, { d: areaPath(points, bottomPoints, options.curve) });
 
-    if (line) setAttributes(line, { d: buildLinePath(points, options.curve) });
+    drawLine(points);
 
     previousPoints.set(parent, points);
 
@@ -138,7 +197,7 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
 
     setAttributes(fill!, { d: areaPath(interpolated, interpolatedBottom, options.curve) });
 
-    if (line) setAttributes(line, { d: buildLinePath(interpolated, options.curve) });
+    drawLine(interpolated);
 
     if (t < 1) {
       const id = requestAnimationFrame(frame);

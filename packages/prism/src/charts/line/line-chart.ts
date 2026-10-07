@@ -3,6 +3,7 @@ import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea, resolveMargin } from '../../core/layout';
+import { seriesDomId } from '../../core/series-id';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction, ensureMarkerGroup } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
@@ -117,6 +118,8 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           groups.series.appendChild(group);
         }
 
+        group.setAttribute('data-series-id', seriesDomId(series, i));
+
         const points = computePoints(allData[i], xScale, series.yAxis === 'right' ? rightYScale : yScale);
 
         allPoints.push(points);
@@ -125,6 +128,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           color: seriesColor(i, series.color),
           curve: series.curve ?? 'linear',
           disposalSignal: ctx.disposalSignal,
+          marks: series.data,
           pointRadius: series.pointRadius ?? 3,
           showPoints: series.showPoints ?? false,
           strokeWidth: series.strokeWidth,

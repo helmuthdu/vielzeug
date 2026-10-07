@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add per-datum dash/opacity presentation and stable data-series-id on series groups",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

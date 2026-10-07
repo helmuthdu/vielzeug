@@ -20,7 +20,7 @@ const activeBarAnimations = new WeakMap<SVGGElement, () => void>();
 
 export function renderBars(
   parent: SVGGElement,
-  data: { base: number; key: string; present: boolean; y: number }[],
+  data: { base: number; dash?: string; key: string; opacity?: number; present: boolean; y: number }[],
   xScale: BandScale,
   yScale: Scale<number>,
   baselineY: number,
@@ -56,6 +56,15 @@ export function renderBars(
     }
 
     rect.style.display = d.present ? '' : 'none';
+
+    // Presentation attributes (not inline styles) so CSS interaction states
+    // like the focus-dim rule keep winning over per-datum styling.
+    setAttributes(rect, {
+      opacity: d.opacity,
+      stroke: d.dash ? options.color : undefined,
+      'stroke-dasharray': d.dash,
+      'stroke-width': d.dash ? 1 : undefined,
+    });
 
     if (horizontal) {
       // Horizontal: category on Y axis, value on X axis

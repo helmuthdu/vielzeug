@@ -3,6 +3,7 @@ import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
+import { seriesDomId } from '../../core/series-id';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction, ensureMarkerGroup } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
@@ -89,6 +90,8 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
           groups.series.appendChild(group);
         }
 
+        group.setAttribute('data-series-id', seriesDomId(series, i));
+
         const points = computeAreaPoints(allData[i], xScale, yScale);
 
         allPoints.push(points);
@@ -99,6 +102,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
           disposalSignal: ctx.disposalSignal,
           fill: series.fill ?? 'gradient',
           fillOpacity: series.fillOpacity,
+          marks: series.data,
           showLine: series.showLine !== false,
           transition: config.transition,
         });

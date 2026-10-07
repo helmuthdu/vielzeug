@@ -4,6 +4,7 @@ import { renderGrid } from '../../axes/grid';
 import { normalizeCartesianSeries } from '../../core/cartesian-model';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
+import { seriesDomId } from '../../core/series-id';
 import { describeValues } from '../../interaction/announcer';
 import { getMousePosition } from '../../interaction/events';
 import { comparisonContent } from '../../interaction/tooltip';
@@ -182,6 +183,8 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
           groups.series.appendChild(group);
         }
 
+        group.setAttribute('data-series-id', seriesDomId(series, i));
+
         const barData = categories.map((key, categoryIndex) => {
           const datum = allData[i]?.[categoryIndex];
 
@@ -191,10 +194,17 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
             stackTops[key] = top;
 
-            return { base, key, present: datum !== undefined, y: top };
+            return { base, dash: datum?.dash, key, opacity: datum?.opacity, present: datum !== undefined, y: top };
           }
 
-          return { base: 0, key, present: datum !== undefined, y: datum?.value ?? 0 };
+          return {
+            base: 0,
+            dash: datum?.dash,
+            key,
+            opacity: datum?.opacity,
+            present: datum !== undefined,
+            y: datum?.value ?? 0,
+          };
         });
 
         stackedTops[i] = barData.map((d) => d.y);

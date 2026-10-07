@@ -367,6 +367,8 @@ interface Datum<TKey extends Date | number | string = Date | number | string> {
   key: TKey;
   value: number;
   meta?: Record<string, unknown>;
+  dash?: string; // stroke-dasharray for this datum's marks, e.g. '5 5'
+  opacity?: number; // opacity multiplier 0-1 for this datum's marks, e.g. 0.4
 }
 
 type ContinuousDatum = Datum<Date | number>;
@@ -375,6 +377,7 @@ interface Series<TDatum extends Datum = Datum> {
   name: string;
   data: TDatum[];
   color?: string;
+  id?: string; // stable data-series-id on the series group; defaults to series-<index>
 }
 
 interface ChartEvent {
@@ -391,6 +394,23 @@ interface SeriesValue {
 ```
 
 Line and area series use `ContinuousDatum`; bar series accept the complete `Datum` key range. On line, area, and bar charts, `datum`/`series` name the series nearest the pointer, and `values` lists every series at that key (a missing value is `undefined`). `originalEvent` is a `MouseEvent`, or a `KeyboardEvent` for keyboard navigation.
+
+#### Per-datum presentation
+
+`dash` and `opacity` style an individual datum's marks without splitting the series — the usual case is a forecast tail where points past "today" are faded or dashed. They are styling-only: interaction, tooltip, and accessibility behavior never change. Support is per chart type:
+
+| Chart | `dash` | `opacity` |
+| --- | --- | --- |
+| Bar | `stroke-dasharray` on the datum's `rect`, plus a 1px series-color stroke so the dash is visible on the fill. | Element `opacity` on the datum's `rect`. |
+| Line | The segment from this datum to the next (Chart.js-style segments). The last datum's `dash` has no segment and is ignored. | That same segment, plus this datum's own point marker. |
+| Area | The top line's segment from this datum to the next (last datum ignored). The fill keeps the series-level treatment. | Same segment on the top line. |
+| Sparkline, pie, radar | Ignored. | Ignored. |
+
+Consecutive datums that share one `dash`/`opacity` render as a single path run. Absent fields keep the series/theme default, and a series with no presentation fields renders byte-identically to a chart that never used them. See [Forecast / emphasis styling](./usage.md#forecast--emphasis-styling).
+
+#### Stable series identity
+
+`Series.id` is rendered as `data-series-id` on the chart's series group (`.prism-line-series`, `.prism-bar-series`, `.prism-area-series`, `.prism-radar-series`) so tooltips, tests, and external CSS can address a series without positional assumptions. Characters outside `[A-Za-z0-9_-]` are replaced with `-`. It defaults to `series-<index>`, which only stays stable while the series order does — set `id` to survive reordering.
 
 ---
 

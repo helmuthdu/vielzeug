@@ -237,6 +237,66 @@ const chart = createAreaChart(container, {
 
 `fillOpacity` overrides the theme opacity for one series.
 
+## Forecast / emphasis styling
+
+A single series often mixes points that should look different — actuals plus a
+forecast tail, or a run that crossed a budget. Rather than split the series,
+carry `dash` and `opacity` on the individual datums. They are styling-only:
+tooltips, hover, keyboard, and screen-reader behavior never change.
+
+For a forecast tail, map a parallel `types` array onto the datums:
+
+```ts
+import { createLineChart } from '@vielzeug/prism';
+
+const types = ['REAL', 'REAL', 'FORECAST', 'FORECAST'];
+
+const chart = createLineChart(container, {
+  series: [
+    {
+      name: 'Cost',
+      data: values.map((value, i) => ({
+        key: months[i],
+        value,
+        ...(types[i] === 'FORECAST' ? { dash: '5 5', opacity: 0.4 } : {}),
+      })),
+    },
+  ],
+});
+```
+
+On a line chart, a datum's `dash` styles the segment from that point to the
+next, so the forecast run renders dashed while the actuals stay solid; its
+`opacity` fades that segment and the point marker. The last datum's `dash` has
+no segment to paint and is ignored. On a bar chart, both fields apply to that
+datum's own bar — a `dash` adds a 1px series-color stroke so the dash reads on
+the filled rect. On an area chart they style the top line only; the fill keeps
+its series-level treatment.
+
+The same mapping fades bars:
+
+```ts
+import { createBarChart } from '@vielzeug/prism';
+
+const chart = createBarChart(container, {
+  series: [
+    {
+      name: 'Cost',
+      data: values.map((value, i) => ({
+        key: months[i],
+        value,
+        ...(types[i] === 'FORECAST' ? { dash: '5 5', opacity: 0.4 } : {}),
+      })),
+    },
+  ],
+});
+```
+
+Because the fields live on the data, a normal `update(newSeries)` re-applies
+them; removing the fields on the next update clears the styling. A series with
+no `dash`/`opacity` anywhere renders exactly as it did before these fields
+existed.
+
 ## Pie, Donut, and Semi-circle Charts
 
 All three variants use `createPieChart` with the `variant` field:

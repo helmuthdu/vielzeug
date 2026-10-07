@@ -37,10 +37,40 @@ export interface ChartHandle<TData = unknown> {
  * A single data point in a cartesian chart series.
  * `key` is the x-axis identity (number, Date, or string category).
  * `value` is the measured quantity on the y-axis.
+ *
+ * `dash` and `opacity` style this datum's marks without splitting the series.
+ * A typical use is a forecast tail: datums past "today" carry
+ * `{ dash: '5 5', opacity: 0.4 }` while real datums stay default-styled.
+ *
+ * Support is per chart type:
+ *
+ * - **Bar**: both fields apply to this datum's own `rect`.
+ * - **Line**: `dash` styles the segment from this datum to the next one
+ *   (Chart.js-style segment semantics); the last datum's `dash` has no segment
+ *   to paint and is ignored. `opacity` fades that same segment *and* this
+ *   datum's own point marker.
+ * - **Area**: both fields style the top line's segment from this datum to the
+ *   next one (last datum's `dash` ignored); the fill keeps the series-level
+ *   treatment.
+ * - **Sparkline, pie, radar**: ignored.
+ *
+ * Absent fields keep the series/theme default; setting them never changes
+ * interaction, tooltip, or accessibility behavior.
  */
 export interface Datum<TKey extends Date | number | string = Date | number | string> {
+  /**
+   * `stroke-dasharray` for this datum's marks, e.g. `'5 5'`.
+   * On line/area charts this starts a dashed run at this datum's segment.
+   */
+  dash?: string;
   key: TKey;
   meta?: Record<string, unknown>;
+  /**
+   * Opacity multiplier (0-1) for this datum's marks, e.g. `0.4`.
+   * On line/area charts this fades this datum's segment to the next point; on
+   * line charts it also fades this datum's own point marker.
+   */
+  opacity?: number;
   value: number;
 }
 
@@ -49,6 +79,13 @@ export type ContinuousDatum = Datum<Date | number>;
 export interface Series<TDatum extends Datum = Datum> {
   color?: string;
   data: TDatum[];
+  /**
+   * Stable identifier rendered as `data-series-id` on the chart's series group,
+   * for tooltips, tests, and external CSS. Characters outside `[A-Za-z0-9_-]`
+   * are replaced with `-`. Defaults to `series-<index>`, which only stays
+   * stable while the series order does; set `id` to survive reordering.
+   */
+  id?: string;
   name: string;
 }
 

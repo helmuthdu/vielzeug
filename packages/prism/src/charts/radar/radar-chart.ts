@@ -6,6 +6,7 @@ import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import { createRadialScaffold } from '../../core/chart-scaffold';
 import { uniqueId } from '../../core/ids';
 import { polarX, polarY } from '../../core/polar';
+import { seriesDomId } from '../../core/series-id';
 import { describeValues } from '../../interaction/announcer';
 import { comparisonContent } from '../../interaction/tooltip';
 import { createSvgElement, setAttributes } from '../../svg/element';
@@ -213,6 +214,8 @@ export function createRadarChart(container: HTMLElement, config: RadarChartConfi
         group = createSvgElement('g', { class: 'prism-radar-series' });
         seriesGroup.appendChild(group);
       }
+
+      group.setAttribute('data-series-id', seriesDomId(s, i));
 
       group.replaceChildren();
 

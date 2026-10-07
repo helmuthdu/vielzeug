@@ -2,6 +2,7 @@ import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
+import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '../../core/datum-style';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { linePath, monotonePath, stepPath } from '../../svg/path';
@@ -12,6 +13,8 @@ export interface LineRenderOptions {
   curve: 'linear' | 'monotone' | 'step';
   /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
   disposalSignal?: AbortSignal;
+  /** Per-datum presentation parallel to `points`; styled runs split the line into subpaths. */
+  marks?: readonly DatumMark[];
   pointRadius: number;
   showPoints: boolean;
   /** Explicit width beats the `--prism-line-width` theme token. */
@@ -26,19 +29,74 @@ function buildPath(pts: Point[], curve: LineRenderOptions['curve']): string {
 }
 
 export function renderLine(parent: SVGGElement, points: Point[], options: LineRenderOptions): void {
+  const styled = hasStyledRuns(options.marks);
+  const marks = options.marks ?? [];
   const motion = resolveMotion(options.transition, 0);
   const dur = motion.duration;
   const easing = resolveEasing(motion.easing);
 
-  let path = parent.querySelector<SVGPathElement>('.prism-line-path');
+  let path: SVGPathElement | null = null;
+  let runs: readonly StyleRun[] = [];
+  let runPaths: SVGPathElement[] = [];
 
-  if (!path) {
-    path = createSvgElement('path', { class: 'prism-line-path', fill: 'none' });
-    parent.appendChild(path);
+  if (styled) {
+    runs = computeStyleRuns(marks, points.length);
+
+    const existing = [...parent.querySelectorAll<SVGPathElement>('.prism-line-path')];
+
+    for (const extra of existing.slice(runs.length)) extra.remove();
+
+    runPaths = runs.map((_, r) => {
+      const reuse = existing[r];
+
+      if (reuse) return reuse;
+
+      const created = createSvgElement('path', { class: 'prism-line-path', fill: 'none' });
+
+      parent.appendChild(created);
+
+      return created;
+    });
+
+    for (const [r, run] of runs.entries()) {
+      setAttributes(runPaths[r], {
+        opacity: run.opacity,
+        stroke: options.color,
+        'stroke-dasharray': run.dash,
+        'stroke-width': options.strokeWidth ?? 2,
+      });
+      runPaths[r].style.strokeWidth = options.strokeWidth === undefined ? '' : String(options.strokeWidth);
+    }
+  } else {
+    const existing = [...parent.querySelectorAll<SVGPathElement>('.prism-line-path')];
+
+    path = existing[0] ?? null;
+
+    for (const stale of existing.slice(1)) stale.remove();
+
+    if (!path) {
+      path = createSvgElement('path', { class: 'prism-line-path', fill: 'none' });
+      parent.appendChild(path);
+    }
+
+    setAttributes(path, {
+      opacity: undefined,
+      stroke: options.color,
+      'stroke-dasharray': undefined,
+      'stroke-width': options.strokeWidth ?? 2,
+    });
+    path.style.strokeWidth = options.strokeWidth === undefined ? '' : String(options.strokeWidth);
   }
 
-  setAttributes(path, { stroke: options.color, 'stroke-width': options.strokeWidth ?? 2 });
-  path.style.strokeWidth = options.strokeWidth === undefined ? '' : String(options.strokeWidth);
+  const draw = (pts: Point[]): void => {
+    if (styled) {
+      for (const [r, run] of runs.entries()) {
+        setAttributes(runPaths[r], { d: buildPath(pts.slice(run.start, run.end + 1), options.curve) });
+      }
+    } else {
+      setAttributes(path!, { d: buildPath(pts, options.curve) });
+    }
+  };
 
   let dotsGroup = parent.querySelector<SVGGElement>('.prism-line-dots');
 
@@ -53,7 +111,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 
   if (dur === 0) {
-    setAttributes(path, { d: buildPath(points, options.curve) });
+    draw(points);
 
     if (dotsGroup) {
       while (dotsGroup.children.length > points.length) dotsGroup.removeChild(dotsGroup.lastChild!);
@@ -66,7 +124,13 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
           dotsGroup.appendChild(c);
         }
 
-        setAttributes(c, { cx: points[i].x, cy: points[i].y, fill: options.color, r: options.pointRadius });
+        setAttributes(c, {
+          cx: points[i].x,
+          cy: points[i].y,
+          fill: options.color,
+          opacity: marks[i]?.opacity,
+          r: options.pointRadius,
+        });
       }
     }
 
@@ -75,7 +139,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
 
   activeAnimations.get(parent)?.();
 
-  const hasExisting = !!path.getAttribute('d');
+  const hasExisting = styled ? runPaths.some((p) => p.hasAttribute('d')) : !!path?.getAttribute('d');
 
   const fromPts: Point[] = [];
   let lastKnown: Point | null = null;
@@ -96,8 +160,18 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     for (let i = dotsGroup.children.length; i < points.length; i++) {
       const c = createSvgElement('circle', { class: 'prism-line-dot' });
 
-      setAttributes(c, { cx: points[i].x, cy: points[i].y, fill: options.color, r: options.pointRadius });
+      setAttributes(c, {
+        cx: points[i].x,
+        cy: points[i].y,
+        fill: options.color,
+        opacity: marks[i]?.opacity,
+        r: options.pointRadius,
+      });
       dotsGroup.appendChild(c);
+    }
+
+    for (let i = 0; i < dotsGroup.children.length; i++) {
+      setAttributes(dotsGroup.children[i] as SVGCircleElement, { opacity: marks[i]?.opacity });
     }
   }
 
@@ -124,7 +198,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
       return { x: tweenNumber(from.x, to.x, e), y: tweenNumber(from.y, to.y, e) };
     });
 
-    setAttributes(path!, { d: buildPath(interpolated, options.curve) });
+    draw(interpolated);
 
     if (dotsGroup) {
       for (let i = 0; i < points.length; i++) {
@@ -144,7 +218,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 
   if (!hasExisting) {
-    setAttributes(path, { d: buildPath(points, options.curve) });
+    draw(points);
   } else {
     const id = requestAnimationFrame(frame);
 
