@@ -43,7 +43,9 @@ const { answerText, guest } = await joinTavern({
   name: 'Alex',
   onEnded: (subject) => unmountMirror(subject.id),
   onJoined: (subject) => navigateTo(subject.id),
-  onRejected: (message) => showToast(message),
+});
+guest.tap((event) => {
+  if (event.type === 'rejected') showToast(event.message);
 });
 
 // 4. The host accepts the answer; the channel opens.

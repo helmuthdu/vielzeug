@@ -46,16 +46,20 @@ const host = hostTavern({
     has: (name) => name in myStore,
   },
   onEnded: () => updateSessionUi(), // hosting ended: subject removed or disposed
-  onPeersChanged: (peers) => updatePeerList(peers),
-  onPeerJoined: (peer) => toast(`${peer.name ?? 'A guest'} joined`),
-  onPeerLeft: (peer) => toast(`${peer.name ?? 'A guest'} left`),
-  onWarning: (message) => log.warn(message),
   subjectId: 'doc-1',
   subjects: {
     onChanged: (listener) => myStore.onUpdated('doc-1', listener),
     onRemoved: (listener) => myStore.onRemoved('doc-1', listener),
     snapshot: () => myStore.read('doc-1'),
   },
+});
+
+// Presence and transport warnings arrive through tap(); the peer list is a getter.
+host.tap((event) => {
+  if (event.type === 'peer-joined') toast(`${event.peer.name ?? 'A guest'} joined`);
+  if (event.type === 'peer-left') toast(`${event.peer.name ?? 'A guest'} left`);
+  if (event.type === 'warning') log.warn(event.message, event.error);
+  updatePeerList(host.peers); // always current inside a presence event
 });
 
 const invitation = await host.createInvitationText();
@@ -82,7 +86,10 @@ const { answerText, guest } = await joinTavern({
   onEnded: (subject) => unmountMirror(subject.id),
   onFailed: (reason) => showError(reason),
   onJoined: (subject) => mountMirror(subject),
-  onRejected: (message) => showToast(message),
+});
+guest.tap((event) => {
+  if (event.type === 'rejected') showToast(event.message); // event.commandId names the command it answers
+  if (event.type === 'warning') log.warn(event.message, event.error);
 });
 
 guest.sendCommand('doc-1', 'rename', ['New name']);
@@ -109,6 +116,21 @@ host.relayNotice(localNotice);
 
 **Echo guard**: a tab that both hosts and guests must prevent re-broadcasting a wire-originated notice back to its own guests. One boolean set during `fromWire` and checked in `toWire` is sufficient: the consumer owns this because only they know their local event system.
 
+## Observe with tap()
+
+Both handles expose `tap()` for observability: presence and warnings on the host, rejections and warnings on the guest. Handler errors are swallowed, and the subscription detaches when its signal aborts or the session ends. Lifecycle transitions stay callbacks (`onEnded`, `onJoined`, `onFailed`) because they fire while `joinTavern` is still resolving, before you can hold the handle.
+
+```ts
+import type { TavernGuestEvent, TavernHostEvent } from '@vielzeug/tavern';
+
+host.tap((event: TavernHostEvent) => {
+  if (event.type === 'warning') log.warn(event.message, event.error); // the original error, not just text
+});
+guest.tap((event: TavernGuestEvent) => {
+  if (event.type === 'rejected') log.info(`command ${event.commandId} rejected: ${event.message}`);
+});
+```
+
 ## Handle Pairing Mistakes
 
 Every user-input pairing failure surfaces as `TavernPairingError` from both `acceptAnswerText` and `joinTavern`: a garbage code, the wrong code kind, an expired invitation, or an answer the host refuses. Catch it to show a helpful message instead of a raw error; the underlying mesh failure is chained as `cause` when you need it.
@@ -129,7 +151,7 @@ try {
 
 ## Working with Other Vielzeug Libraries
 
-Tavern builds on `@vielzeug/mesh` for the WebRTC transport, pairing codes, and QR-optimized codecs. You do not interact with mesh directly: tavern owns the protocol, but the `rtc` option accepts a `MeshRtcFactory` for testing or non-browser runtimes, and the peer and status types in callbacks are mesh types.
+Tavern builds on `@vielzeug/mesh` for the WebRTC transport, pairing codes, and QR-optimized codecs. You do not interact with mesh directly: tavern owns the protocol, but the `rtc` option accepts a `MeshRtcFactory` for testing or non-browser runtimes, and the peers carried by tap events and the {@link TavernHost.peers} getter are mesh types.
 
 ```ts
 import type { MeshRtcFactory } from '@vielzeug/mesh';

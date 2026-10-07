@@ -1,7 +1,15 @@
 import { MeshPairingError } from '@vielzeug/mesh';
 import { createFakeRtc } from '@vielzeug/mesh/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { hostTavern, joinTavern, TavernError, type TavernNotices, TavernPairingError } from '../index';
+import {
+  hostTavern,
+  joinTavern,
+  TavernDisposedError,
+  type TavernGuestEvent,
+  type TavernHostEvent,
+  type TavernNotices,
+  TavernPairingError,
+} from '../index';
 
 interface BookHarness {
   applied: { args: unknown[]; name: string }[];
@@ -127,7 +135,7 @@ describe('tavern', () => {
 
   it('rejects foreign subjects and unknown commands with a message', async () => {
     const { rtc } = createFakeRtc();
-    const rejected: string[] = [];
+    const rejected: TavernGuestEvent[] = [];
     const host = hostTavern({
       commands: { apply: () => undefined, has: (name) => name === 'rename' },
       rtc,
@@ -143,17 +151,19 @@ describe('tavern', () => {
       invitationText: await host.createInvitationText(),
       mount: (snapshot) => ({ id: 'book-1', ...(snapshot as object) }),
       name: 'Sam',
-      onRejected: (message) => rejected.push(message),
       rtc,
     });
+    joined.guest.tap((event) => rejected.push(event));
     await host.acceptAnswerText(joined.answerText);
 
     joined.guest.sendCommand('other-book', 'rename', []);
     await vi.waitFor(() => expect(rejected).toHaveLength(1));
-    expect(rejected[0]).toContain('out-of-session');
+    expect(rejected[0]).toMatchObject({ message: expect.stringContaining('out-of-session'), type: 'rejected' });
 
     joined.guest.sendCommand('book-1', 'erase', []);
     await vi.waitFor(() => expect(rejected).toHaveLength(2));
+    // The rejection carries the id of the command it answers.
+    expect(rejected[1]!.type === 'rejected' && rejected[1]!.commandId).toMatch(/^cmd-/);
 
     joined.guest.dispose();
     host.dispose();
@@ -323,18 +333,55 @@ describe('tavern', () => {
     expect(guest.disposalSignal.aborted).toBe(true);
   });
 
-  it('throws TavernError when sending a command after the session ended', async () => {
+  it('throws TavernDisposedError when sending a command after the session ended', async () => {
     const { guest } = await tavernBook();
     guest.dispose();
-    expect(() => guest.sendCommand('book-1', 'rename', [])).toThrow(TavernError);
+    expect(() => guest.sendCommand('book-1', 'rename', [])).toThrow(TavernDisposedError);
   });
 
-  it('routes a throwing snapshot read to onWarning instead of crashing', async () => {
+  it('reports presence through tap and the peers getter', async () => {
+    const events: TavernHostEvent[] = [];
+    const { host, peerId } = await tavernBook();
+    host.tap((event) => events.push(event));
+
+    // The guest paired before the tapper attached: the getter sees it live.
+    expect(host.peers.map((peer) => peer.id)).toEqual([peerId]);
+
+    host.kick(peerId);
+    await vi.waitFor(() =>
+      expect(events.some((event) => event.type === 'peer-left' && event.peer.id === peerId)).toBe(true),
+    );
+    expect(host.peers).toHaveLength(0);
+
+    host.dispose();
+  });
+
+  it('throws TavernDisposedError when the stopped host is used again', async () => {
+    const { host } = await tavernBook();
+    host.dispose();
+
+    expect(() => host.kick('whoever')).toThrow(TavernDisposedError);
+    await expect(host.createInvitationText()).rejects.toBeInstanceOf(TavernDisposedError);
+    await expect(host.acceptAnswerText('whatever')).rejects.toBeInstanceOf(TavernDisposedError);
+  });
+
+  it('detaches tappers when hosting ends and no-ops after', async () => {
+    const { host } = await tavernBook();
+    const unsubscribe = host.tap(() => {
+      throw new Error('must never run after stop');
+    });
+    host.dispose();
+
+    expect(() => unsubscribe()).not.toThrow();
+    // Tapping after dispose returns a no-op subscription instead of throwing.
+    expect(() => host.tap(() => undefined)).not.toThrow();
+  });
+
+  it('routes a throwing snapshot read to a warning event instead of crashing', async () => {
     const { rtc } = createFakeRtc();
-    const warnings: string[] = [];
+    const warnings: TavernHostEvent[] = [];
     const host = hostTavern({
       commands: { apply: () => undefined, has: () => true },
-      onWarning: (message) => warnings.push(message),
       rtc,
       subjectId: 'book-1',
       subjects: {
@@ -345,6 +392,7 @@ describe('tavern', () => {
         },
       },
     });
+    host.tap((event) => warnings.push(event));
 
     const joined = await joinTavern({
       invitationText: await host.createInvitationText(),
@@ -355,7 +403,11 @@ describe('tavern', () => {
     await host.acceptAnswerText(joined.answerText);
 
     // The joining guest's initial snapshot read failed: warned, not thrown.
-    await vi.waitFor(() => expect(warnings).toContain('corrupted subject'));
+    await vi.waitFor(() =>
+      expect(warnings.some((event) => event.type === 'warning' && event.message === 'corrupted subject')).toBe(true),
+    );
+    // The warning carries the original error, not only its message.
+    expect(warnings.some((event) => event.type === 'warning' && event.error instanceof Error)).toBe(true);
     host.dispose();
   });
 });

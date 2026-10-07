@@ -10,9 +10,10 @@ import {
   meshQrCodec,
 } from '@vielzeug/mesh';
 
-import { TavernError, TavernPairingError } from './errors';
+import { createTappers } from './_tappers';
+import { TavernDisposedError, TavernError, TavernPairingError } from './errors';
 
-export { TavernError, TavernPairingError };
+export { TavernDisposedError, TavernError, TavernPairingError };
 
 /**
  * Reclassifies a mesh pairing failure as the tavern-level user mistake it is:
@@ -83,6 +84,17 @@ interface WireProtocol extends MeshProtocol {
   };
 }
 
+/** Notable host moments reported through {@link TavernHost.tap}. */
+export type TavernHostEvent =
+  | { readonly peer: MeshPeer; readonly type: 'peer-joined' }
+  | { readonly peer: MeshPeer; readonly reason?: string; readonly type: 'peer-left' }
+  | { readonly error: unknown; readonly message: string; readonly type: 'warning' };
+
+/** Notable guest moments reported through {@link TavernGuest.tap}. */
+export type TavernGuestEvent =
+  | { readonly commandId: string; readonly message: string; readonly type: 'rejected' }
+  | { readonly error: unknown; readonly message: string; readonly type: 'warning' };
+
 /** Snapshots can be large; the default mesh frame cap is too tight for whole documents. */
 const DEFAULT_MAX_MESSAGE_BYTES = 512 * 1024;
 
@@ -105,12 +117,13 @@ function parseWireCommand(raw: unknown): { args: unknown[]; id: string; name: st
 export interface TavernHostOptions {
   commands: TavernCommands;
   notices?: TavernNotices;
-  /** Hosting ended: the subject was removed or the host was disposed. Fires exactly once. */
+  /**
+   * Hosting ended: the subject was removed or the host was disposed. Fires exactly
+   * once. This is a lifecycle transition, not observability: presence, transport
+   * warnings, and the peer list all belong to {@link TavernHost.tap} and
+   * {@link TavernHost.peers}.
+   */
   onEnded?(): void;
-  onPeerJoined?(peer: MeshPeer): void;
-  onPeerLeft?(peer: MeshPeer): void;
-  onPeersChanged?(peers: MeshPeer[]): void;
-  onWarning?(message: string): void;
   rtc?: MeshRtcFactory;
   /** The id of the subject being hosted: guest commands targeting anything else reject. */
   subjectId: string;
@@ -129,8 +142,16 @@ export interface TavernHost {
   /** Whether hosting has ended: the subject was removed or `dispose()` ran. */
   readonly disposed: boolean;
   kick(peerId: string): void;
-  /** Relays one local notice to every guest; the serializer decides what crosses. */
+  /** The guests currently connected: read it from a `peer-joined`/`peer-left` tap event. */
+  readonly peers: readonly MeshPeer[];
+  /** Relays one local notice to every guest; the serializer decides what crosses.
+   *  A notice relayed after hosting ended is dropped, not thrown: it is ephemeral
+   *  UI state with no audience left, unlike the control-plane methods, which fail
+   *  with `TavernDisposedError` so a leaked handle surfaces. */
   relayNotice(notice: unknown): void;
+  /** Subscribes to {@link TavernHostEvent}s. Handler errors are swallowed; the
+   *  subscription detaches when `signal` aborts or hosting ends. */
+  tap(handler: (event: TavernHostEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
 }
@@ -145,6 +166,7 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
     maxMessageBytes: DEFAULT_MAX_MESSAGE_BYTES,
     rtc: options.rtc,
   });
+  const tappers = createTappers<TavernHostEvent>();
   let closed = false;
   let flushScheduled = false;
 
@@ -153,7 +175,12 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
     closed = true;
     for (const off of detach.splice(0)) off();
     host.dispose();
+    tappers.stop();
     options.onEnded?.();
+  };
+  const disposedError = (): TavernDisposedError => new TavernDisposedError('This host has stopped.');
+  const warn = (error: unknown): void => {
+    tappers.emit({ error, message: error instanceof Error ? error.message : String(error), type: 'warning' });
   };
 
   /** Reads the snapshot for a broadcast; a throwing read warns instead of crashing the host. */
@@ -161,7 +188,7 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
     try {
       return options.subjects.snapshot();
     } catch (error) {
-      options.onWarning?.(error instanceof Error ? error.message : 'Reading the snapshot failed.');
+      warn(error);
       return null;
     }
   };
@@ -207,21 +234,19 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
     options.subjects.onChanged(broadcastSnapshot),
     options.subjects.onRemoved(close),
     host.tap((event) => {
-      if (event.type === 'peer-joined' || event.type === 'peer-left') {
-        options.onPeersChanged?.([...host.peers.values()]);
-      }
       if (event.type === 'peer-joined') {
         const snapshot = readSnapshot();
         if (snapshot !== null && snapshot !== undefined) host.send(event.peer.id, 'snapshot', snapshot);
-        options.onPeerJoined?.(event.peer);
+        tappers.emit({ peer: event.peer, type: 'peer-joined' });
       }
-      if (event.type === 'peer-left') options.onPeerLeft?.(event.peer);
-      if (event.type === 'error') options.onWarning?.(event.error.message);
+      if (event.type === 'peer-left') tappers.emit({ peer: event.peer, reason: event.reason, type: 'peer-left' });
+      if (event.type === 'error') warn(event.error);
     }),
   ];
 
   return {
     acceptAnswerText: async (text: string): Promise<MeshPeer> => {
+      if (closed) throw disposedError();
       let decoded: MeshInvitation | MeshAnswer;
       try {
         decoded = await meshQrCodec.decode(text);
@@ -237,7 +262,10 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
         throw error instanceof MeshPairingError ? toPairingError(error) : error;
       }
     },
-    createInvitationText: async () => meshQrCodec.encode(await host.createInvitation()),
+    createInvitationText: async () => {
+      if (closed) throw disposedError();
+      return meshQrCodec.encode(await host.createInvitation());
+    },
     get disposalSignal() {
       return host.disposalSignal;
     },
@@ -246,13 +274,18 @@ export function hostTavern(options: TavernHostOptions): TavernHost {
       return closed;
     },
     kick: (peerId: string): void => {
+      if (closed) throw disposedError();
       host.kick(peerId);
+    },
+    get peers(): readonly MeshPeer[] {
+      return [...host.peers.values()];
     },
     relayNotice: (notice: unknown): void => {
       if (closed) return;
       const wire = options.notices ? options.notices.toWire(notice) : null;
       if (wire !== null && wire !== undefined) host.broadcast('notice', wire);
     },
+    tap: tappers.tap,
     [Symbol.dispose]() {
       close();
     },
@@ -274,15 +307,18 @@ export interface TavernGuestOptions<Mounted> {
   /** The guest's display name on the channel. */
   name: string;
   notices?: TavernNotices;
-  /** The channel ended after joining; the mounted value is passed for unmounting. */
+  /**
+   * The channel ended after joining; the mounted value is passed for unmounting.
+   * Lifecycle, not observability: rejections and transport warnings belong to
+   * {@link TavernGuest.tap}. `onJoined` and `onFailed` stay callbacks for the same
+   * reason: they fire while {@link joinTavern} is still resolving, before the
+   * consumer can hold the handle and register a tapper.
+   */
   onEnded?(subject: Mounted): void;
   /** The host never accepted the answer in time. */
   onFailed?(reason: string): void;
   /** The mounted value once the first snapshot arrives. */
   onJoined?(subject: Mounted): void;
-  /** The host rejected a forwarded command. */
-  onRejected?(message: string): void;
-  onWarning?(message: string): void;
   rtc?: MeshRtcFactory;
 }
 
@@ -296,8 +332,12 @@ export interface TavernGuest {
   /**
    * Forwards a command to the host. The subject id is the consumer's routing key: the host
    * rejects commands that do not name the subject it is hosting.
+   * Throws `TavernDisposedError` after the session has ended.
    */
   sendCommand(subjectId: string, name: string, args: readonly unknown[]): void;
+  /** Subscribes to {@link TavernGuestEvent}s. Handler errors are swallowed; the
+   *  subscription detaches when `signal` aborts or the session ends. */
+  tap(handler: (event: TavernGuestEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
 }
@@ -324,6 +364,7 @@ export async function joinTavern<Mounted>(
     maxMessageBytes: DEFAULT_MAX_MESSAGE_BYTES,
     rtc: options.rtc,
   });
+  const tappers = createTappers<TavernGuestEvent>();
   let mounted: Mounted | null = null;
   let ended = false;
 
@@ -335,6 +376,7 @@ export async function joinTavern<Mounted>(
     mounted = null;
     for (const off of detach.splice(0)) off();
     guest.dispose();
+    tappers.stop();
     if (subject !== null) options.onEnded?.(subject);
   };
 
@@ -351,7 +393,11 @@ export async function joinTavern<Mounted>(
       options.notices?.fromWire(payload);
     }),
     guest.on('rejected', ({ payload }) => {
-      options.onRejected?.(payload.message || 'The host rejected the action.');
+      tappers.emit({
+        commandId: payload.commandId,
+        message: payload.message || 'The host rejected the action.',
+        type: 'rejected',
+      });
     }),
     guest.tap((event) => {
       if (event.type !== 'status-change' && event.type !== 'peer-status-change') return;
@@ -362,7 +408,9 @@ export async function joinTavern<Mounted>(
       if (event.status === 'disconnected' || event.status === 'failed') endSession();
     }),
     guest.tap((event) => {
-      if (event.type === 'error') options.onWarning?.(event.error.message);
+      if (event.type === 'error') {
+        tappers.emit({ error: event.error, message: event.error.message, type: 'warning' });
+      }
     }),
   ];
 
@@ -379,9 +427,10 @@ export async function joinTavern<Mounted>(
           return ended;
         },
         sendCommand: (subjectId: string, name: string, args: readonly unknown[]): void => {
-          if (ended) throw new TavernError('The session has ended.');
+          if (ended) throw new TavernDisposedError('The session has ended.');
           guest.send('command', { args: [...args], id: commandId(), name, subjectId });
         },
+        tap: tappers.tap,
         [Symbol.dispose]() {
           endSession();
         },

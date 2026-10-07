@@ -4,7 +4,7 @@ description: "Table sessions over mesh: host-owned state replication with guest 
 package: tavern
 category: utilities
 keywords: [session, host, guest, replication, mesh, commands, snapshots, collaboration, peer-to-peer]
-exports: [hostTavern, joinTavern, TavernHost, TavernGuest, TavernCommands, TavernNotices, TavernError, TavernPairingError]
+exports: [hostTavern, joinTavern, TavernHost, TavernGuest, TavernHostEvent, TavernGuestEvent, TavernCommands, TavernNotices, TavernError, TavernPairingError, TavernDisposedError]
 related: [mesh, ledger, herald]
 environments: [browser, node]
 ---

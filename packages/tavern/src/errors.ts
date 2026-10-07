@@ -12,3 +12,10 @@ export class TavernError extends Error {
 
 /** A pairing code the consumer pasted could not be used: a user-input mistake, not a bug. */
 export class TavernPairingError extends TavernError {}
+
+/**
+ * Thrown when a stopped host or an ended guest session is used again. Mirrors
+ * mesh's `MeshDisposedError` inside the tavern error hierarchy, so
+ * `instanceof TavernError` catches every tavern failure in one branch.
+ */
+export class TavernDisposedError extends TavernError {}
