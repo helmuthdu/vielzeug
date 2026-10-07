@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Wed, 07 Oct 2026 09:37:46 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 11:33:21 GMT and should not be manually modified.
 
+## 26.10.3
+Wed, 07 Oct 2026 11:33:21 GMT
+
+### Minor changes
+
+- Greenfield refactor: replace debugChart/devtools with ChartHandle.tap(), unify animation on startTween, and make pie/sparkline callbacks object events
 ## 26.10.2
 Wed, 07 Oct 2026 09:37:46 GMT
 

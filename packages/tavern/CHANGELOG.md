@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/tavern
 
-This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 11:33:21 GMT and should not be manually modified.
 
+## 26.10.3
+Wed, 07 Oct 2026 11:33:21 GMT
+
+### Minor changes
+
+- Greenfield API pass: presence/warnings/rejections move from onX callbacks to tap() with TavernHostEvent/TavernGuestEvent, host gains a peers getter, post-dispose use throws TavernDisposedError, rejections carry commandId
 ## 26.10.1
 Wed, 07 Oct 2026 07:25:55 GMT
 

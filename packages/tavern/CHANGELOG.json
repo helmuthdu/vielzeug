@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Greenfield API pass: presence/warnings/rejections move from onX callbacks to tap() with TavernHostEvent/TavernGuestEvent, host gains a peers getter, post-dispose use throws TavernDisposedError, rejections carry commandId",
+            "commit": "8efd696a26a716b5860d0c8ff0f42045d3074a05"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 11:33:21 GMT",
+      "tag": "@vielzeug/tavern_v26.10.3",
+      "version": "26.10.3"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "agent@vielzeug",

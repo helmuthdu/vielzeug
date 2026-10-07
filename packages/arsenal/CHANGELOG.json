@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "8efd696a26a716b5860d0c8ff0f42045d3074a05"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 11:33:21 GMT",
+      "tag": "@vielzeug/arsenal_v26.10.3",
+      "version": "26.10.3"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "8a9a83237241814fdfb54a1a56717a05d75544e9"
           }
         ]

@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Greenfield refactor: replace debugChart/devtools with ChartHandle.tap(), unify animation on startTween, and make pie/sparkline callbacks object events",
+            "commit": "8efd696a26a716b5860d0c8ff0f42045d3074a05"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 11:33:21 GMT",
+      "tag": "@vielzeug/prism_v26.10.3",
+      "version": "26.10.3"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Add per-datum dash/opacity presentation and stable data-series-id on series groups",
             "commit": "6cf892a763f32b4bee6218b3de7a9416fd30f6ca"
           }
