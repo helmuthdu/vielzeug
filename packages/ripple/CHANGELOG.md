@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 10:50:06 GMT and should not be manually modified.
 
+## 26.10.2
+Wed, 07 Oct 2026 10:50:06 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.1
 Wed, 07 Oct 2026 07:25:55 GMT
 
