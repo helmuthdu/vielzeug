@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/arsenal
 
-This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
 
+## 26.10.1
+Wed, 07 Oct 2026 07:25:55 GMT
+
+### Patches
+
+- Standardize package text punctuation
+- Clarify assertion and array example documentation
 ## 26.10.0
 Fri, 02 Oct 2026 18:01:51 GMT
 

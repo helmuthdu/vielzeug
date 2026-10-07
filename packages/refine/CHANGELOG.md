@@ -1,7 +1,24 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
 
+## 26.10.1
+Wed, 07 Oct 2026 07:25:55 GMT
+
+### Minor changes
+
+- add ore-rank-list/ore-rank-item: ranked rows where each row is its own proportional-bar visualization
+- Render the documented ore-menu-item parts (item, icon-slot, item-label) so consumers can style items through ::part().
+- add a header-end action slot to ore-counter
+
+### Patches
+
+- fix(button): keep slotted content when href is set after upgrade
+- fix(theme): define --focus-ring outline token consumed by navbar/sidebar/list/drawer focus styles; consolidate dead --color-focus uses onto it
+- Standardize package text punctuation
+- honor the documented --input-color override on ore-input
+- define the select panel radius from --select-radius so a slotted select stops inheriting the surrounding radius
+- Snackbar toasts keep one bar height whether or not they carry an action: the message row reserves the action button's height (new --toast-snackbar-height, default --size-8) and centres its text.
 ## 26.10.0
 Fri, 02 Oct 2026 18:01:51 GMT
 

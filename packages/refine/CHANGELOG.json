@@ -5,6 +5,62 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "add ore-rank-list/ore-rank-item: ranked rows where each row is its own proportional-bar visualization",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Render the documented ore-menu-item parts (item, icon-slot, item-label) so consumers can style items through ::part().",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "add a header-end action slot to ore-counter",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "fix(button): keep slotted content when href is set after upgrade",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "fix(theme): define --focus-ring outline token consumed by navbar/sidebar/list/drawer focus styles; consolidate dead --color-focus uses onto it",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Standardize package text punctuation",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "honor the documented --input-color override on ore-input",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "define the select panel radius from --select-radius so a slotted select stops inheriting the surrounding radius",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Snackbar toasts keep one bar height whether or not they carry an action: the message row reserves the action button's height (new --toast-snackbar-height, default --size-8) and centres its text.",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 07:25:55 GMT",
+      "tag": "@vielzeug/refine_v26.10.1",
+      "version": "26.10.1"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Adapt ore-qr-scanner to sigil 4-state scanner status",
             "commit": "ea4d73e8facc23ab01dc6226a57314706ac4b4e3"
           },

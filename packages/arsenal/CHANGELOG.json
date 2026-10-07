@@ -2,6 +2,25 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Standardize package text punctuation",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Clarify assertion and array example documentation",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 07:25:55 GMT",
+      "tag": "@vielzeug/arsenal_v26.10.1",
+      "version": "26.10.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",

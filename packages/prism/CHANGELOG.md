@@ -1,7 +1,23 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
 
+## 26.10.1
+Wed, 07 Oct 2026 07:25:55 GMT
+
+### Minor changes
+
+- Add createRadarChart for comparing values across 3+ axes, with per-axis ranges, gradient fill, axis hover and keyboard navigation
+- Bring line, area, bar, pie, and sparkline charts to the radar's interaction standard: series-comparison tooltips and announcements, keyboard navigation on every chart, active-key highlighting, gradient area fills, rounded bars, fit-aware pie and category labels; explicit config now overrides theme tokens
+- add an independent right value axis for line charts
+
+### Patches
+
+- Standardize package text punctuation
+- Fit date x-axis domains to the data instead of rounding outwards to a tick interval
+- subtract in-flow chart chrome from resize-driven svg heights so auto-height containers cannot grow unboundedly
+- size the chart svg by its attributes only so the in-flow legend rides inside the reserved height instead of overflowing the container
+- cap the chart svg width at its host so wide charts stop overflowing their container
 ## 26.10.0
 Fri, 02 Oct 2026 18:01:51 GMT
 

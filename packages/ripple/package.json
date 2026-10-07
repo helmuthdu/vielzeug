@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ripple",
-  "version": "26.10.0",
+  "version": "26.10.1",
   "description": "Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources",
   "repository": {
     "type": "git",

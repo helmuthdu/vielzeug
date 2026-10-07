@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/pulse",
-  "version": "26.10.0",
+  "version": "26.10.1",
   "description": "Typed WebSocket client with channels, rooms, presence, reconnect",
   "repository": {
     "type": "git",

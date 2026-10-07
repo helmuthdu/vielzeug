@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/wayfinder
 
-This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
 
+## 26.10.1
+Wed, 07 Oct 2026 07:25:55 GMT
+
+### Patches
+
+- Standardize package text punctuation
+- Cover ampersand deployment bases
 ## 26.10.0
 Fri, 02 Oct 2026 18:01:51 GMT
 

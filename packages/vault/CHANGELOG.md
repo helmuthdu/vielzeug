@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Fri, 02 Oct 2026 18:01:51 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
 
+## 26.10.1
+Wed, 07 Oct 2026 07:25:55 GMT
+
+### Patches
+
+- Standardize package text punctuation
+- RecordOf and KeyOf now distribute over a union of table keys, so a union of tables resolves to the union of its records and keys instead of never: callers dispatching on a set of tables keep the store's table-record correlation without per-table casts.
 ## 26.10.0
 Fri, 02 Oct 2026 18:01:51 GMT
 

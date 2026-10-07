@@ -2,6 +2,57 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add createRadarChart for comparing values across 3+ axes, with per-axis ranges, gradient fill, axis hover and keyboard navigation",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Bring line, area, bar, pie, and sparkline charts to the radar's interaction standard: series-comparison tooltips and announcements, keyboard navigation on every chart, active-key highlighting, gradient area fills, rounded bars, fit-aware pie and category labels; explicit config now overrides theme tokens",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "add an independent right value axis for line charts",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Standardize package text punctuation",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fit date x-axis domains to the data instead of rounding outwards to a tick interval",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "subtract in-flow chart chrome from resize-driven svg heights so auto-height containers cannot grow unboundedly",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "size the chart svg by its attributes only so the in-flow legend rides inside the reserved height instead of overflowing the container",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "cap the chart svg width at its host so wide charts stop overflowing their container",
+            "commit": "fa343447d42f1d927becef00af66cd9082635d36"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 07:25:55 GMT",
+      "tag": "@vielzeug/prism_v26.10.1",
+      "version": "26.10.1"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "agent@vielzeug",

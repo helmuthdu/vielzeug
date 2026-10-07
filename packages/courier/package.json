@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/courier",
-  "version": "26.10.0",
+  "version": "26.10.1",
   "description": "Typed HTTP client with bounded structured-key caching, prefetching, immutable middleware, and structured errors",
   "repository": {
     "type": "git",
