@@ -1,11 +1,11 @@
 import { uniqueId } from '../core/ids';
-import { createSvgElement } from '../svg/element';
+import { createSvgElement, setAttributes } from '../svg/element';
 import type { TransitionConfig } from '../types';
 import { resolveEasing } from './easing';
 import { startTween } from './transition';
 
-/** Vertical rise (px) for fade-and-rise entrances. */
-export const RISE_PX = 8;
+/** Vertical settle (px) added to a wipe so the plot drifts into place as it is drawn. */
+export const REVEAL_SETTLE_PX = 4;
 
 /** Added per series index to stagger a multi-series entrance. */
 export const SERIES_REVEAL_STAGGER = 60;
@@ -31,13 +31,16 @@ export function cancelReveal(parent: Element): void {
  * through {@link cancelReveal} — snaps to fully visible instead of freezing a
  * partial wipe. Returns a cancel function with the same effect, for callers that
  * rebuild their DOM per render and cannot look the parent up again.
+ *
+ * With `settle`, the group also fades in and drifts up {@link REVEAL_SETTLE_PX} while
+ * the wipe runs, so the entrance carries motion energy instead of being a pure reveal.
  */
 export function playReveal(
   parent: SVGGElement,
   bounds: { height: number; width: number; x?: number; y?: number },
   paintFinal: () => void,
   motion: TransitionConfig & { duration: number },
-  options?: { delay?: number; signal?: AbortSignal },
+  options?: { delay?: number; settle?: boolean; signal?: AbortSignal },
 ): () => void {
   cancelReveal(parent);
   paintFinal();
@@ -64,9 +67,13 @@ export function playReveal(
   const easing = resolveEasing(motion.easing);
   let cancelTween: () => void = () => {};
 
+  const settle = options?.settle ?? false;
+
   const finish = (): void => {
     activeReveals.delete(parent);
     parent.removeAttribute('clip-path');
+    parent.removeAttribute('opacity');
+    parent.removeAttribute('transform');
     clipPath.remove();
     if (host.childNodes.length === 0) host.remove();
     cancelTween();
@@ -79,7 +86,14 @@ export function playReveal(
     easing,
     onComplete: finish,
     onFrame: (progress) => {
-      rect.setAttribute('width', String(bounds.width * progress(0)));
+      const e = progress(0);
+
+      rect.setAttribute('width', String(bounds.width * e));
+
+      if (settle) {
+        parent.setAttribute('opacity', String(e));
+        parent.setAttribute('transform', `translate(0,${(REVEAL_SETTLE_PX * (1 - e)).toFixed(2)})`);
+      }
     },
     signal: options?.signal,
   });
@@ -91,57 +105,96 @@ export function playReveal(
   return finish;
 }
 
+/** One revealed slot in a {@link playGrowReveal} entrance, in final geometry. */
+export interface GrowRevealLane {
+  /** Screen coordinate the lane grows away from: the bar's own baseline edge. */
+  anchor: number;
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
 /**
- * Entrance for radial plots: every series paints its final shape synchronously, then
- * fades in while rising {@link RISE_PX} into place, each lane `stagger` ms behind the
- * previous. Only opacity and a group translate change, so no geometry deforms.
- * Returns a cancel function that snaps every lane to fully visible.
+ * Entrance for bar plots: the final bars are painted once, then one clip rectangle
+ * per lane grows away from the lane's `anchor` to reveal it. Growing the rects
+ * themselves from `height: 0` instead would spend the first frames as a 1-3 px
+ * sliver, where the browser clamps `rx` and the rounded corners visibly pop — a
+ * reveal shows the finished shape from each lane's first frame.
+ *
+ * Each lane is staggered, so a row of bars grows out left to right (or top to bottom).
  */
-export function playFadeRise(
+export function playGrowReveal(
   parent: SVGGElement,
-  count: number,
-  stagger: number,
+  lanes: readonly GrowRevealLane[],
   paintFinal: () => void,
   motion: TransitionConfig & { duration: number },
-  options?: { signal?: AbortSignal },
+  options: { axis: 'x' | 'y'; signal?: AbortSignal; stagger?: number },
 ): () => void {
   cancelReveal(parent);
   paintFinal();
 
-  if (motion.duration <= 0 || count <= 0) return () => {};
+  if (motion.duration <= 0 || lanes.length === 0) return () => {};
 
-  const groups = [...parent.children].slice(0, count) as SVGGElement[];
+  const { axis, stagger = 0 } = options;
+  const clipId = uniqueId('prism-reveal');
+  const host = parent.querySelector('defs') ?? createSvgElement('defs');
+
+  if (!parent.querySelector('defs')) parent.insertBefore(host, parent.firstChild);
+
+  const clipPath = createSvgElement('clipPath', { id: clipId });
+  const rects = lanes.map((lane) => {
+    const rect = createSvgElement('rect', { height: 0, width: 0, x: lane.x, y: lane.y });
+
+    clipPath.appendChild(rect);
+
+    return rect;
+  });
+
+  host.appendChild(clipPath);
+  parent.setAttribute('clip-path', `url(#${clipId})`);
+
   const easing = resolveEasing(motion.easing);
   let cancelTween: () => void = () => {};
 
   const finish = (): void => {
     activeReveals.delete(parent);
+    parent.removeAttribute('clip-path');
+    clipPath.remove();
+    if (host.childNodes.length === 0) host.remove();
     cancelTween();
-
-    for (const group of groups) {
-      group.removeAttribute('opacity');
-      group.removeAttribute('transform');
-    }
   };
 
-  activeReveals.set(parent, finish);
-
   cancelTween = startTween({
-    count,
+    count: lanes.length,
     duration: motion.duration,
     easing,
     onComplete: finish,
     onFrame: (progress) => {
-      for (const [i, group] of groups.entries()) {
-        const e = progress(i);
+      for (const [lane, rect] of rects.entries()) {
+        const final = lanes[lane];
+        const e = progress(lane);
 
-        group.setAttribute('opacity', String(e));
-        group.setAttribute('transform', `translate(0,${(RISE_PX * (1 - e)).toFixed(2)})`);
+        // Both edges travel away from the anchor, which covers bars on either side
+        // of a zero baseline without special-casing their sign.
+        if (axis === 'y') {
+          const top = final.anchor + (final.y - final.anchor) * e;
+          const bottom = final.anchor + (final.y + final.height - final.anchor) * e;
+
+          setAttributes(rect, { height: Math.max(0, bottom - top), width: final.width, y: top });
+        } else {
+          const left = final.anchor + (final.x - final.anchor) * e;
+          const right = final.anchor + (final.x + final.width - final.anchor) * e;
+
+          setAttributes(rect, { height: final.height, width: Math.max(0, right - left), x: left });
+        }
       }
     },
-    signal: options?.signal,
+    signal: options.signal,
     stagger,
   });
+
+  activeReveals.set(parent, finish);
 
   return finish;
 }

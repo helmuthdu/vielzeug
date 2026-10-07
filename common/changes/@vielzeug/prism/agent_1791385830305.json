@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Refine chart entrances: bars reveal growing from the baseline behind a per-bar clip (no rounded-corner sliver), line/area wipes drift up as they draw, radar returns to growing out of the center",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

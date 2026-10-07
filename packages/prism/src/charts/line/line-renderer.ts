@@ -196,6 +196,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
       motion,
       {
         delay: (options.seriesIndex ?? 0) * SERIES_REVEAL_STAGGER,
+        settle: true,
         signal: options.disposalSignal,
       },
     );

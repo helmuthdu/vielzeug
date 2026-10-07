@@ -192,6 +192,7 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
       motion,
       {
         delay: (options.seriesIndex ?? 0) * SERIES_REVEAL_STAGGER,
+        settle: true,
         signal: options.disposalSignal,
       },
     );

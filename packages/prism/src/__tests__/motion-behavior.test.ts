@@ -77,17 +77,41 @@ describe('motion is on by default', () => {
     vi.restoreAllMocks();
   });
 
-  it('bar charts grow from the baseline without any transition config', () => {
+  it('bar charts reveal the finished bars from the baseline without any transition config', () => {
     const frames = driveFrames();
-    const chart = createBarChart(container, { series: BARS });
+    const chart = createBarChart(container, { series: BARS, transition: { duration: 300 } });
     const bar = chart.el.querySelector('.prism-bar')!;
+    const series = chart.el.querySelector('.prism-bar-series')!;
 
-    expect(Number(bar.getAttribute('height'))).toBe(0);
+    // The bar is painted at its final height immediately — a grow reveal never
+    // renders the corner-clamped sliver frames of a height tween — and a per-bar
+    // clip rect hides it until the frames run.
+    expect(Number(bar.getAttribute('height'))).toBeGreaterThan(0);
+    expect(series.getAttribute('clip-path')).toMatch(/^url\(#prism-reveal-/);
+
+    const clipRects = () => {
+      const id = series.getAttribute('clip-path')?.match(/#(.+)\)/)?.[1];
+
+      return [...chart.el.querySelectorAll(`clipPath#${CSS.escape(id ?? '')} rect`)] as SVGRectElement[];
+    };
+    const barTop = Number(bar.getAttribute('y'));
+    const baseline = barTop + Number(bar.getAttribute('height'));
+
+    expect(Number(clipRects()[0]?.getAttribute('height'))).toBe(0);
 
     frames.shift()?.(0);
+    frames.shift()?.(150);
+
+    // Mid-flight: the first bar's clip has grown up from the baseline toward its top.
+    const mid = clipRects()[0];
+
+    expect(Number(mid?.getAttribute('height'))).toBeGreaterThan(0);
+    expect(Number(mid?.getAttribute('y'))).toBeLessThan(baseline);
+
     frames.shift()?.(1_000);
 
-    expect(Number(bar.getAttribute('height'))).toBeGreaterThan(0);
+    // At completion the clip has covered the full bar and torn itself down.
+    expect(series.hasAttribute('clip-path')).toBe(false);
     chart.dispose();
   });
 
