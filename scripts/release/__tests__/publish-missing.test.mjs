@@ -113,6 +113,38 @@ describe('publishMissing()', () => {
     });
   });
 
+  it('refuses to publish a package whose dependency pin is neither in the batch nor on npm', async () => {
+    // prism is missing and pins orbit; orbit is neither missing (no changelog entry / already
+    // stamped-published) nor on the registry at the pinned version. Publishing prism alone
+    // would ship a dangling pin, so the whole run must fail before any publish.
+    const repo = makeRepo([
+      { json: { dependencies: { '@vielzeug/orbit': '26.10.0' }, name: '@vielzeug/prism', version: '26.10.0' }, slug: 'prism' },
+      { json: { name: '@vielzeug/orbit', version: '26.10.0' }, slug: 'orbit' },
+    ]);
+    // orbit is already on npm at an OLDER version only: its 26.10.0 stamp is absent, and it has
+    // no changelog entry for it, so it is not in the missing batch either.
+    writeFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.json'), JSON.stringify({ entries: [{ version: '26.9.0' }], name: '@vielzeug/orbit' }));
+
+    const checkVersion = vi.fn(async () => false); // nothing at 26.10.0 is on npm
+    const publish = vi.fn(async () => {});
+
+    await expect(publishMissing(repo, { checkVersion, publish, verify: vi.fn() })).rejects.toThrow(/neither in this batch nor on npm/);
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('publishes when a rider dependency is in the same missing batch', async () => {
+    const repo = makeRepo([
+      { json: { dependencies: { '@vielzeug/orbit': '26.10.0' }, name: '@vielzeug/prism', version: '26.10.0' }, slug: 'prism' },
+      { json: { name: '@vielzeug/orbit', version: '26.10.0' }, slug: 'orbit' },
+    ]);
+    const checkVersion = vi.fn(async () => false); // both missing → both in the batch → pin resolves
+    const publish = vi.fn(async () => {});
+
+    const results = await publishMissing(repo, { checkVersion, publish, verify: vi.fn() });
+
+    expect(results.published.sort()).toEqual(['@vielzeug/orbit@26.10.0', '@vielzeug/prism@26.10.0']);
+  });
+
   it('passes dryRun through to the publish function', async () => {
     const repo = makeRepo([{ json: { name: '@vielzeug/ore', version: '1.0.4' }, slug: 'ore' }]);
     const checkVersion = vi.fn(async () => false);

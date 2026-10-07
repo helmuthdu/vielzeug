@@ -21,10 +21,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { run as defaultRun } from '../lib/cli.mjs';
+import { expandWithWorkspaceDependencies } from './publish-closure.mjs';
 import { listPublishablePackages } from './publish-missing.mjs';
 import { nextTrainVersion } from './train-version.mjs';
 
 const repoRoot = path.join(fileURLToPath(import.meta.url), '..', '..', '..');
+
+/** Changelog comment for a dependency pulled onto a train only because a rider pins it: no
+ *  code changed, it simply must publish at the train version so the rider's exact pin resolves.
+ *  Mirrors the manual alignment entries the first CalVer train wrote by hand. */
+const ALIGNMENT_COMMENT = 'chore: align with CalVer lockstep trains: no code change this train';
 
 /** Change-file type → CHANGELOG section title, in render order. The titles match what
  *  Rush wrote for the pre-CalVer history, so one changelog reads as one format. */
@@ -152,6 +158,12 @@ function stampManifests(packages, train, root) {
  * consumed and changelogged; the train stamp still covers every package.
  * `dryRun` computes the train and reports what it would do without touching any file :
  * the whole point of a dry run is that pending change files survive it.
+ *
+ * A rider's `@vielzeug/*` dependencies are pulled onto the train too (see
+ * publish-closure.mjs): each gets an alignment-only CHANGELOG entry so it publishes at the
+ * train version and the rider's exact pin resolves on npm. `changedPackages` is the full
+ * publish set (riders plus pulled-in dependencies), which is what the publish matrix plans
+ * from; a dependency with its own pending change file is already a rider and is untouched.
  */
 export function applyTrain(packageName, { dryRun = false, now = new Date(), root = repoRoot, run = defaultRun } = {}) {
   const changesDir = path.join(root, 'common', 'changes');
@@ -164,9 +176,10 @@ export function applyTrain(packageName, { dryRun = false, now = new Date(), root
     );
   }
 
-  const changedPackages = [...new Set(consumed.map((relFile) => path.dirname(relFile)))].sort();
+  const riders = [...new Set(consumed.map((relFile) => path.dirname(relFile)))].sort();
   const packages = listPublishablePackages(root);
   const train = nextTrainVersion(packages.map(({ version }) => version), now);
+  const changedPackages = expandWithWorkspaceDependencies(riders, { list: () => packages, root });
   if (dryRun) return { changedPackages, train };
 
   const date = now.toUTCString();
@@ -175,16 +188,17 @@ export function applyTrain(packageName, { dryRun = false, now = new Date(), root
   const touched = stampManifests(packages, train, root);
   for (const name of changedPackages) {
     const { folder } = packages.find((candidate) => candidate.name === name);
-    const comments = collectComments(
-      consumed.filter((relFile) => path.dirname(relFile) === name),
-      changesDir,
-    );
+    const riderFiles = consumed.filter((relFile) => path.dirname(relFile) === name);
+    const comments =
+      riderFiles.length > 0
+        ? collectComments(riderFiles, changesDir)
+        : { patch: [{ author: 'release-train', comment: ALIGNMENT_COMMENT }] }; // pulled-in dependency: no change file of its own
 
     updateMarkdownChangelog(path.join(root, folder, 'CHANGELOG.md'), name, train, date, comments);
     updateJsonChangelog(path.join(root, folder, 'CHANGELOG.json'), name, train, date, comments, commit);
     touched.push(path.join(root, folder, 'CHANGELOG.md'), path.join(root, folder, 'CHANGELOG.json'));
 
-    for (const relFile of consumed.filter((relFile) => path.dirname(relFile) === name)) {
+    for (const relFile of riderFiles) {
       rmSync(path.join(changesDir, relFile));
     }
   }

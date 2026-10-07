@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../npm-publish.mjs', () => ({ publishPackage: vi.fn() }));
 vi.mock('../npm-version-exists.mjs', () => ({ versionExists: vi.fn() }));
+vi.mock('../publish-closure.mjs', () => ({
+  expandWithWorkspaceDependencies: vi.fn((names) => names),
+  findDanglingPins: vi.fn(async () => []),
+}));
 vi.mock('../publish-missing.mjs', () => ({ publishMissing: vi.fn(), summaryMarkdown: vi.fn(() => '## summary') }));
 vi.mock('../release-only-plan.mjs', () => ({ planTagReleases: vi.fn() }));
 vi.mock('../release-plan.mjs', () => ({ planReleases: vi.fn() }));
@@ -11,6 +15,7 @@ vi.mock('../tag-and-release.mjs', () => ({ tagAndRelease: vi.fn() }));
 
 const { publishPackage } = await import('../npm-publish.mjs');
 const { versionExists } = await import('../npm-version-exists.mjs');
+const { expandWithWorkspaceDependencies, findDanglingPins } = await import('../publish-closure.mjs');
 const { publishMissing } = await import('../publish-missing.mjs');
 const { planTagReleases } = await import('../release-only-plan.mjs');
 const { planReleases } = await import('../release-plan.mjs');
@@ -85,10 +90,41 @@ describe('plan', () => {
 
     await main(['plan', '@vielzeug/ore', '@vielzeug/orbit']);
 
+    expect(expandWithWorkspaceDependencies).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit']);
     expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit']);
     expect(log).toHaveBeenCalledWith(
       JSON.stringify([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '26.10.0' }]),
     );
+  });
+
+  it('plans the workspace-dependency closure, not just the named packages', async () => {
+    expandWithWorkspaceDependencies.mockReturnValue(['@vielzeug/orbit', '@vielzeug/prism']);
+    planReleases.mockResolvedValue([]);
+
+    await main(['plan', '@vielzeug/prism']);
+
+    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/orbit', '@vielzeug/prism']);
+  });
+
+  it('refuses to print a plan with a dangling dependency pin', async () => {
+    planReleases.mockResolvedValue([{ folder: 'packages/prism', package: '@vielzeug/prism', version: '26.10.0' }]);
+    findDanglingPins.mockResolvedValue([{ dependency: '@vielzeug/orbit', dependencyVersion: '26.10.0', package: '@vielzeug/prism' }]);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(main(['plan', '@vielzeug/prism'])).rejects.toThrow(/dangling dependency pins/);
+    expect(log).not.toHaveBeenCalled();
+  });
+});
+
+describe('closure', () => {
+  it('prints the space-separated workspace-dependency closure of the named packages', async () => {
+    expandWithWorkspaceDependencies.mockReturnValue(['@vielzeug/orbit', '@vielzeug/prism']);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await main(['closure', '@vielzeug/prism']);
+
+    expect(expandWithWorkspaceDependencies).toHaveBeenCalledWith(['@vielzeug/prism']);
+    expect(log).toHaveBeenCalledWith('@vielzeug/orbit @vielzeug/prism');
   });
 });
 
