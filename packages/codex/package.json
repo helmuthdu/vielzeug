@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/codex",
-  "version": "26.10.3",
+  "version": "26.10.4",
   "description": "MCP server exposing all Vielzeug docs to AI clients",
   "repository": {
     "type": "git",

@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Wed, 07 Oct 2026 11:33:21 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 14:13:11 GMT and should not be manually modified.
 
+## 26.10.4
+Wed, 07 Oct 2026 14:13:11 GMT
+
+### Minor changes
+
+- Themeable + turn-key axes: scoped/expanded setTheme, [data-prism-theme=dark] trigger, ResizeObserver guard, theme.css subpath, axes on by default
+- Animate every chart by default with a shared motion model (transition: true/false shorthand, 300ms default, system reduced-motion respected), cubic + back-out/expo-out easings, pie slice morphs, sparkline data-space tweens, mounted line/area rise-from-baseline, and transform-based crosshair/tooltip transitions
 ## 26.10.3
 Wed, 07 Oct 2026 11:33:21 GMT
 

@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "a1454be1fc41f76db6d62e8ec7a1c1d2f3455b32"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 14:13:11 GMT",
+      "tag": "@vielzeug/orbit_v26.10.4",
+      "version": "26.10.4"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "8efd696a26a716b5860d0c8ff0f42045d3074a05"
           }
         ]

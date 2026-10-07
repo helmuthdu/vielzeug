@@ -5,6 +5,25 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Themeable + turn-key axes: scoped/expanded setTheme, [data-prism-theme=dark] trigger, ResizeObserver guard, theme.css subpath, axes on by default",
+            "commit": "a1454be1fc41f76db6d62e8ec7a1c1d2f3455b32"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Animate every chart by default with a shared motion model (transition: true/false shorthand, 300ms default, system reduced-motion respected), cubic + back-out/expo-out easings, pie slice morphs, sparkline data-space tweens, mounted line/area rise-from-baseline, and transform-based crosshair/tooltip transitions",
+            "commit": "a1454be1fc41f76db6d62e8ec7a1c1d2f3455b32"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 14:13:11 GMT",
+      "tag": "@vielzeug/prism_v26.10.4",
+      "version": "26.10.4"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Greenfield refactor: replace debugChart/devtools with ChartHandle.tap(), unify animation on startTween, and make pie/sparkline callbacks object events",
             "commit": "8efd696a26a716b5860d0c8ff0f42045d3074a05"
           }

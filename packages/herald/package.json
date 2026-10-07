@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/herald",
-  "version": "26.10.3",
+  "version": "26.10.4",
   "description": "Typed synchronous event bus with wildcard subscriptions, one-shot waits, and lifecycle tracing",
   "repository": {
     "type": "git",
