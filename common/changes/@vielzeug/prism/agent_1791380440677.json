@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Animate every chart by default with a shared motion model (transition: true/false shorthand, 300ms default, system reduced-motion respected), cubic + back-out/expo-out easings, pie slice morphs, sparkline data-space tweens, mounted line/area rise-from-baseline, and transform-based crosshair/tooltip transitions",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

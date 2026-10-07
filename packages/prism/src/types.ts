@@ -1,10 +1,29 @@
+import type { EasingName } from './animation/easing';
+
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
 export interface PrismTheme {
+  /** Structural axis line/tick color (`--prism-axis-color`). */
+  axisColor?: string;
   colors?: string[];
   fontFamily?: string;
   gridColor?: string;
   gridOpacity?: number;
+  /** Primary label text color (`--prism-text-color`). */
+  textColor?: string;
+  /** Secondary label text color (`--prism-text-color-secondary`). */
+  textColorSecondary?: string;
+  /** Tooltip background (`--prism-tooltip-bg`). */
+  tooltipBg?: string;
+  /** Tooltip border (`--prism-tooltip-border`). */
+  tooltipBorder?: string;
+  /** Tooltip text color (`--prism-tooltip-color`). */
+  tooltipColor?: string;
+}
+
+/** Where `setTheme()`/`resetTheme()` write custom properties: `scope` targets one subtree, omitted means `document.documentElement`. */
+export interface ThemeScope {
+  readonly scope?: HTMLElement;
 }
 
 // ─── Core Types ──────────────────────────────────────────────────────────────
@@ -191,11 +210,25 @@ export interface LegendConfig {
 // ─── Animation Types ─────────────────────────────────────────────────────────
 
 export interface TransitionConfig {
+  /** Milliseconds per animated lane. Defaults to 300. */
   duration?: number;
-  easing?: 'ease-in' | 'ease-in-out' | 'ease-out' | 'linear' | ((t: number) => number);
+  easing?: EasingName | ((t: number) => number);
+  /** `system` (the default) skips animation when the user prefers reduced motion. */
   preference?: 'always' | 'never' | 'system';
+  /**
+   * Per-lane delay in milliseconds: bars on a bar chart, series on a radar chart.
+   * Bar charts cap the effective value so a long category axis stays under ~400 ms
+   * of added delay; other chart types use it as given.
+   */
   stagger?: number;
 }
+
+/**
+ * Chart motion is on by default. Pass `false` to render every update synchronously,
+ * `true` for the defaults, or a {@link TransitionConfig} to tune duration, easing,
+ * stagger, or the reduced-motion behavior.
+ */
+export type TransitionOption = TransitionConfig | boolean;
 
 // ─── Chart Config Types ──────────────────────────────────────────────────────
 
@@ -214,9 +247,12 @@ export interface BaseChartConfig {
   onClick?: (event: ChartEvent) => void;
   onHover?: (event: ChartEvent | null) => void;
   tooltip?: TooltipConfig | boolean;
-  transition?: TransitionConfig;
-  xAxis?: XAxisConfig;
-  yAxis?: YAxisConfig;
+  /** Motion is on by default; `false` renders every update synchronously. */
+  transition?: TransitionOption;
+  /** Omitted renders the axis with defaults; `false` suppresses it. */
+  xAxis?: XAxisConfig | false;
+  /** Omitted renders the axis with defaults; `false` suppresses it. */
+  yAxis?: YAxisConfig | false;
 }
 
 export interface LineSeriesConfig extends Series<ContinuousDatum> {
@@ -376,6 +412,7 @@ export interface SparklineConfig {
   /** Dot on the latest value (line and area variants). Defaults to `true`. */
   showEndPoint?: boolean;
   strokeWidth?: number;
-  transition?: TransitionConfig;
+  /** Motion is on by default; `false` renders every update synchronously. */
+  transition?: TransitionOption;
   variant?: SparklineVariant;
 }

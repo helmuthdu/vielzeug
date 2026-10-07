@@ -18,8 +18,8 @@ description: Complete chart, scale, theme, handle, configuration, and error cont
 | `linearScale()` | Create a numeric scale | Sync | `nice` defaults to `true` |
 | `timeScale()` | Create a date scale | Sync | Invalid dates produce an invalid domain |
 | `bandScale()` | Create a categorical scale | Sync | Unknown categories map to `0` and warn in development |
-| `setTheme()` | Set Prism CSS custom properties | Sync | Values apply to `document.documentElement` |
-| `resetTheme()` | Remove Prism theme overrides | Sync | Removes only properties managed by `setTheme()` |
+| `setTheme()` | Set Prism CSS custom properties | Sync | Writes to `document.documentElement` unless `scope` is given |
+| `resetTheme()` | Remove Prism theme overrides | Sync | Clears only properties `setTheme()` wrote, on the same target |
 | `seriesColor()` | Resolve a series palette color | Sync | Palette indexes wrap after eight colors |
 
 ## Package Entry Point
@@ -27,7 +27,7 @@ description: Complete chart, scale, theme, handle, configuration, and error cont
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/prism` | Chart factories, scales, theme helpers, errors, and public types |
-| `@vielzeug/prism/theme` | Default CSS custom properties and dark-mode values |
+| `@vielzeug/prism/theme.css` | Default CSS custom properties and dark-mode values |
 
 ## Chart Factories
 
@@ -301,18 +301,23 @@ const scale = bandScale({ domain: ['A', 'B'], range: [0, 200] });
 ### `setTheme()`
 
 ```ts
-function setTheme(theme: PrismTheme): void;
+function setTheme(theme: PrismTheme, options?: ThemeScope): void;
 ```
 
-Sets Prism color, font, and grid custom properties on `document.documentElement`.
+Sets Prism theme custom properties as inline styles on `options.scope` when given, otherwise on `document.documentElement`. Inline values outrank every stylesheet rule, including dark-mode selectors.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `theme` | `PrismTheme` | Tokens to write; omitted keys are left untouched |
+| `options.scope` | `HTMLElement` | Subtree to theme instead of `:root`; charts inside it resolve their `var(--prism-*)` lookups against these values |
 
 ### `resetTheme()`
 
 ```ts
-function resetTheme(): void;
+function resetTheme(options?: ThemeScope): void;
 ```
 
-Removes every custom property managed by `setTheme()`.
+Removes every custom property `setTheme()` can set from `options.scope` (default `documentElement`). Scoped and global calls are independent targets.
 
 ### `seriesColor()`
 
@@ -429,9 +434,10 @@ interface BaseChartConfig {
   onClick?: (event: ChartEvent) => void;
   onHover?: (event: ChartEvent | null) => void;
   tooltip?: boolean | TooltipConfig;
-  transition?: TransitionConfig;
-  xAxis?: XAxisConfig;
-  yAxis?: YAxisConfig;
+  transition?: TransitionOption; // motion is on by default; false renders synchronously
+  // Omitted renders the axis with defaults (value axis with gridlines); false suppresses it.
+  xAxis?: XAxisConfig | false;
+  yAxis?: YAxisConfig | false;
 }
 
 interface LineChartConfig extends BaseChartConfig {
@@ -489,7 +495,7 @@ interface SparklineConfig {
   padPixels?: number;
   showEndPoint?: boolean; // default true: dot on the latest value (line, area)
   strokeWidth?: number;
-  transition?: TransitionConfig;
+  transition?: TransitionOption; // motion is on by default; false renders synchronously
 }
 ```
 
@@ -616,11 +622,17 @@ interface LegendConfig {
 type LegendPosition = 'bottom' | 'left' | 'right' | 'top';
 
 interface TransitionConfig {
-  duration?: number;
-  easing?: EasingFn | 'ease-in' | 'ease-in-out' | 'ease-out' | 'linear';
-  preference?: 'always' | 'never' | 'system';
-  stagger?: number;
+  duration?: number; // ms per lane; default 300
+  easing?: EasingName | EasingFn;
+  preference?: 'always' | 'never' | 'system'; // 'system' (default) skips reduced-motion
+  stagger?: number; // ms per bar (bar) or series (radar); ignored elsewhere
 }
+
+// Motion is on by default. `false` renders every update synchronously,
+// `true` uses the chart defaults, or pass a config to tune them.
+type TransitionOption = TransitionConfig | boolean;
+
+type EasingName = 'ease-in' | 'ease-in-out' | 'ease-out' | 'back-out' | 'expo-out' | 'linear';
 
 type EasingFn = (t: number) => number;
 ```
@@ -680,10 +692,20 @@ type PieVariant = 'donut' | 'pie' | 'semi';
 type SparklineVariant = 'area' | 'bar' | 'line' | 'stack';
 
 interface PrismTheme {
+  axisColor?: string; // --prism-axis-color
   colors?: string[];
   fontFamily?: string;
   gridColor?: string;
   gridOpacity?: number;
+  textColor?: string; // --prism-text-color
+  textColorSecondary?: string; // --prism-text-color-secondary
+  tooltipBg?: string; // --prism-tooltip-bg
+  tooltipBorder?: string; // --prism-tooltip-border
+  tooltipColor?: string; // --prism-tooltip-color
+}
+
+interface ThemeScope {
+  readonly scope?: HTMLElement;
 }
 ```
 

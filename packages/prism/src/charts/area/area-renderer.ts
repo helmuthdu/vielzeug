@@ -8,7 +8,7 @@ import { uniqueId } from '../../core/ids';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
-import type { ContinuousDatum, Scale, TransitionConfig } from '../../types';
+import type { ContinuousDatum, Scale, TransitionOption } from '../../types';
 
 export interface AreaRenderOptions {
   color: string;
@@ -21,11 +21,11 @@ export interface AreaRenderOptions {
   /** Per-datum presentation parallel to `points`; styled runs split the top line into subpaths. */
   marks?: readonly DatumMark[];
   showLine: boolean;
-  transition?: TransitionConfig;
+  transition?: TransitionOption;
 }
 
 const activeAreaAnimations = new WeakMap<SVGGElement, () => void>();
-const previousPoints = new WeakMap<SVGGElement, Point[]>();
+const drawnPoints = new WeakMap<SVGGElement, Point[]>();
 
 function buildLinePath(pts: Point[], curve: AreaRenderOptions['curve']): string {
   return curve === 'monotone' ? monotonePath(pts) : curve === 'step' ? stepPath(pts) : linePath(pts);
@@ -64,7 +64,7 @@ function applyAreaFill(parent: SVGGElement, fill: SVGPathElement, options: AreaR
 }
 
 export function renderArea(parent: SVGGElement, points: Point[], baselineY: number, options: AreaRenderOptions): void {
-  const motion = resolveMotion(options.transition, 0);
+  const motion = resolveMotion(options.transition);
   const dur = motion.duration;
   const easing = resolveEasing(motion.easing);
 
@@ -154,30 +154,36 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
     setAttributes(fill, { d: areaPath(points, bottomPoints, options.curve) });
 
     drawLine(points);
+    drawnPoints.set(parent, points);
 
     return;
   }
 
   activeAreaAnimations.get(parent)?.();
 
-  const hasExisting = fill.hasAttribute('d');
-
-  if (!hasExisting) {
-    const bottomPoints = points.map((p) => ({ x: p.x, y: baselineY }));
-
-    setAttributes(fill, { d: areaPath(points, bottomPoints, options.curve) });
-
-    drawLine(points);
-
-    previousPoints.set(parent, points);
-
-    return;
-  }
-
-  const rawFrom = previousPoints.get(parent) ?? points;
+  const hasExisting = drawnPoints.has(parent);
+  // A first render has no drawn shape to interpolate from: the mount animation
+  // grows the area out of its baseline instead.
+  const rawFrom: Point[] = hasExisting
+    ? (drawnPoints.get(parent) ?? points)
+    : points.map((p) => ({ x: p.x, y: baselineY }));
   const fromPoints: Point[] = points.map((_, i) => rawFrom[i] ?? rawFrom[rawFrom.length - 1] ?? points[i]);
 
-  previousPoints.set(parent, fromPoints);
+  const paintFrame = (e: number): void => {
+    const interpolated: Point[] = points.map((to, i) => ({
+      x: tweenNumber(fromPoints[i].x, to.x, e),
+      y: tweenNumber(fromPoints[i].y, to.y, e),
+    }));
+    const interpolatedBottom = interpolated.map((p) => ({ x: p.x, y: baselineY }));
+
+    drawnPoints.set(parent, interpolated);
+    setAttributes(fill!, { d: areaPath(interpolated, interpolatedBottom, options.curve) });
+    drawLine(interpolated);
+  };
+
+  // The starting geometry goes on screen immediately: `startTween` only paints on
+  // the first frame callback, which would otherwise leave one blank frame.
+  paintFrame(0);
 
   activeAreaAnimations.set(
     parent,
@@ -187,19 +193,9 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
       easing,
       onComplete: () => {
         activeAreaAnimations.delete(parent);
-        previousPoints.set(parent, points);
+        drawnPoints.set(parent, points);
       },
-      onFrame: (progress) => {
-        const e = progress(0);
-        const interpolated: Point[] = points.map((to, i) => ({
-          x: tweenNumber(fromPoints[i].x, to.x, e),
-          y: tweenNumber(fromPoints[i].y, to.y, e),
-        }));
-        const interpolatedBottom = interpolated.map((p) => ({ x: p.x, y: baselineY }));
-
-        setAttributes(fill!, { d: areaPath(interpolated, interpolatedBottom, options.curve) });
-        drawLine(interpolated);
-      },
+      onFrame: (progress) => paintFrame(progress(0)),
       signal: options.disposalSignal,
     }),
   );

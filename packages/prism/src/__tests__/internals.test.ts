@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderAxis } from '../axes/axis';
 import { computeAreaPoints } from '../charts/area/area-renderer';
+import { createLineChart } from '../charts/line';
 import { computePoints } from '../charts/line/line-renderer';
 import { arcCentroid, computeArcs } from '../charts/pie/pie-renderer';
 import { buildXScale, buildYScale } from '../core/cartesian-scales';
 import { createChartBase } from '../core/chart-base';
 import { chartArea, resolveMargin } from '../core/layout';
+import { observeResize } from '../core/responsive';
 import { PrismRenderError } from '../errors';
 import { bandScale } from '../scales/band';
 import { linearScale } from '../scales/linear';
@@ -558,7 +560,42 @@ describe('createChartBase: invalid container', () => {
   });
 });
 
-// ─── createChartBase: resize excludes in-flow chrome ─────────────────────────────
+// ─── observeResize without ResizeObserver ────────────────────────────────────────
+
+describe('observeResize without ResizeObserver', () => {
+  it('is a no-op subscription and the chart still mounts and renders', () => {
+    // jsdom/SSR environments lack ResizeObserver: observeResize must degrade to a no-op
+    // unsubscribe instead of throwing, so charts mount with their initial size and no
+    // consumer polyfill is required.
+    const originalObserver = globalThis.ResizeObserver;
+    // @ts-expect-error deliberately removing the global to emulate an environment without it
+    delete globalThis.ResizeObserver;
+
+    try {
+      const unsubscribe = observeResize(document.createElement('div'), () => {
+        throw new Error('callback must not fire without an observer');
+      });
+
+      expect(() => unsubscribe()).not.toThrow();
+
+      const container = document.createElement('div');
+
+      document.body.appendChild(container);
+
+      const chart = createLineChart(container, { series: [{ data: [{ key: 1, value: 2 }], name: 'S' }] });
+
+      expect(chart.el.querySelector('.prism-line-series')).not.toBeNull();
+      expect(chart.el.getAttribute('width')).toBe('600');
+
+      chart.dispose();
+      container.remove();
+    } finally {
+      globalThis.ResizeObserver = originalObserver;
+    }
+  });
+});
+
+// ─── createChartBase: resize excludes in-flow chrome ─────────────────────────
 
 describe('createChartBase: resize excludes in-flow chrome', () => {
   it('subtracts the chart chrome from the svg height so an auto-height container converges', async () => {

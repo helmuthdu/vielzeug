@@ -47,6 +47,9 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
   // Current arcs shared between renderFn and event handlers via closure.
   let currentArcs: Arc[] = [];
+  // The geometry actually on screen right now (mid-tween included): the update
+  // morph interpolates from this, so interrupting a tween never jumps.
+  let drawnArcs: Arc[] = [];
   let activeTween: (() => void) | null = null;
 
   function renderLabels(slices: PieSliceConfig[]): void {
@@ -127,7 +130,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
       labelGroup.replaceChildren();
 
-      const motion = resolveMotion(config.transition, 0);
+      const motion = resolveMotion(config.transition);
       const dur = motion.duration;
       const easing = resolveEasing(motion.easing);
 
@@ -147,28 +150,70 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
       activeTween?.();
 
+      // Mount sweeps the ring in once; an update morphs every slice from its
+      // drawn angles to the new ones, which reads as the data changing rather
+      // than the chart redrawing.
+      const isMount = drawnArcs.length === 0;
+      const fromArcs = drawnArcs;
+
       activeTween = startTween({
         count: 1,
         duration: dur,
         easing,
         onComplete: () => renderLabels(slices),
         onFrame: (progress) => {
-          const revealAngle = tweenNumber(start, end, progress(0));
+          const e = progress(0);
 
-          for (let j = 0; j < currentArcs.length; j++) {
-            const a = currentArcs[j];
-            const el = pieGroup.children[j] as SVGPathElement | undefined;
+          if (isMount) {
+            const revealAngle = tweenNumber(start, end, e);
 
-            if (!el) continue;
+            drawnArcs = currentArcs.map((a, j) => {
+              const el = pieGroup.children[j] as SVGPathElement | undefined;
 
-            if (revealAngle <= a.startAngle) {
-              setAttributes(el, { d: '' });
-            } else {
+              if (!el) return a;
+
+              if (revealAngle <= a.startAngle) {
+                setAttributes(el, { d: '' });
+
+                return { ...a, endAngle: a.startAngle };
+              }
+
               const visibleEnd = Math.min(a.endAngle, revealAngle);
 
               setAttributes(el, { d: arcPath({ ...a, endAngle: visibleEnd }) });
-            }
+
+              return { ...a, endAngle: visibleEnd };
+            });
+
+            return;
           }
+
+          drawnArcs = currentArcs.map((to, j) => {
+            const el = pieGroup.children[j] as SVGPathElement | undefined;
+            const lastDrawn = fromArcs.at(-1);
+            // A slice that was not drawn before grows out of the end of the last drawn one.
+            const from: Arc = fromArcs[j] ?? {
+              ...to,
+              endAngle: lastDrawn?.endAngle ?? start,
+              startAngle: lastDrawn?.endAngle ?? start,
+            };
+            const morphed: Arc = {
+              ...to,
+              endAngle: tweenNumber(from.endAngle, to.endAngle, e),
+              innerRadius: tweenNumber(from.innerRadius, to.innerRadius, e),
+              outerRadius: tweenNumber(from.outerRadius, to.outerRadius, e),
+              padAngle: tweenNumber(from.padAngle, to.padAngle, e),
+              startAngle: tweenNumber(from.startAngle, to.startAngle, e),
+            };
+
+            if (!el) return morphed;
+
+            setAttributes(el, {
+              d: morphed.endAngle - morphed.startAngle <= 1e-6 ? '' : arcPath(morphed),
+            });
+
+            return morphed;
+          });
         },
         signal: ctx.disposalSignal,
       });

@@ -29,88 +29,18 @@ function buildTopPoints(data: number[], width: number, height: number): Point[] 
   }));
 }
 
-function buildAreaPath(
-  data: number[],
-  width: number,
-  height: number,
-  curve: SparklineConfig['curve'] = 'linear',
-): string {
-  if (data.length === 0) return '';
+function buildAreaPathFromPoints(top: Point[], height: number, curve: SparklineConfig['curve']): string {
+  if (top.length === 0) return '';
 
-  const top = buildTopPoints(data, width, height);
   const bottom = top.map((p) => ({ x: p.x, y: height }));
 
   return areaPath(top, bottom, curve ?? 'linear');
 }
 
-function buildPath(data: number[], width: number, height: number, curve: SparklineConfig['curve']): string {
-  if (data.length === 0) return '';
-
-  const points = buildTopPoints(data, width, height);
+function buildPathFromPoints(points: Point[], curve: SparklineConfig['curve']): string {
+  if (points.length === 0) return '';
 
   return curve === 'monotone' ? monotonePath(points) : curve === 'step' ? stepPath(points) : linePath(points);
-}
-
-function renderSparkBars(
-  parent: SVGGElement,
-  data: number[],
-  width: number,
-  height: number,
-  color: string,
-  transition?: SparklineConfig['transition'],
-  disposalSignal?: AbortSignal,
-): void {
-  const count = data.length;
-  const barW = Math.max(1, width / count - 1);
-  const gap = width / count;
-  const min = Math.min(0, ...data);
-  const max = Math.max(...data);
-  const yRange = max - min || 1;
-  const motion = resolveMotion(transition, 0);
-  const dur = motion.duration;
-  const easing = resolveEasing(motion.easing);
-
-  while (parent.children.length > count) {
-    const last = parent.lastElementChild;
-
-    if (last) parent.removeChild(last);
-  }
-
-  for (let i = 0; i < count; i++) {
-    const finalH = Math.max(1, ((data[i] - min) / yRange) * height);
-    const finalY = height - finalH;
-
-    let rect = parent.children[i] as SVGRectElement | undefined;
-
-    if (!rect) {
-      rect = createSvgElement('rect', { class: 'prism-spark-bar' });
-      parent.appendChild(rect);
-    }
-
-    setAttributes(rect, { fill: color, width: barW, x: i * gap });
-
-    if (dur > 0 && !rect.hasAttribute('data-init')) {
-      rect.setAttribute('data-init', '1');
-
-      startTween({
-        count: 1,
-        duration: dur,
-        easing,
-        onFrame: (progress) => {
-          const t = progress(0);
-
-          setAttributes(rect!, {
-            height: tweenNumber(0, finalH, t),
-            y: tweenNumber(height, finalY, t),
-          });
-        },
-        signal: disposalSignal,
-      });
-    } else {
-      rect.setAttribute('data-init', '1');
-      setAttributes(rect, { height: finalH, y: finalY });
-    }
-  }
 }
 
 function isStackData(data: number[] | StackSegment[]): data is StackSegment[] {
@@ -164,7 +94,13 @@ export function createSparkline(
   const showEndPoint = config.showEndPoint ?? true;
   const gradientId = uniqueId('prism-spark-fill');
   const tappers = createTappers<PrismEvent>();
+  const motion = resolveMotion(config.transition);
+  const easing = resolveEasing(motion.easing);
   let data = config.data;
+  // Values currently on screen (mid-tween included), in data space so a resize
+  // never re-animates: every variant interpolates these and repaints.
+  let drawnValues: number[] | null = null;
+  let activeTween: (() => void) | null = null;
 
   const base = createChartBase(
     container,
@@ -196,6 +132,44 @@ export function createSparkline(
     return { h: Math.max(1, height - inset * 2), inset, w: Math.max(1, width - inset * 2) };
   }
 
+  /**
+   * Tweens the plotted values from what is on screen to `to`, repainting through
+   * `paint`. A first render (or a length change, which has no per-index
+   * predecessor) grows out of `floorValue`, the scale's minimum. Unchanged values
+   * — a resize re-layout, for instance — repaint without animating.
+   */
+  function animateValues(to: number[], floorValue: number, paint: (values: number[]) => void): void {
+    activeTween?.();
+
+    const from = drawnValues?.length === to.length ? drawnValues : to.map(() => floorValue);
+    const unchanged = from.every((value, i) => value === to[i]);
+
+    if (unchanged || motion.duration === 0) {
+      drawnValues = to;
+      paint(to);
+
+      return;
+    }
+
+    activeTween = startTween({
+      count: 1,
+      duration: motion.duration,
+      easing,
+      onFrame: (progress) => {
+        const e = progress(0);
+        const values = to.map((value, i) => tweenNumber(from[i], value, e));
+
+        drawnValues = values;
+        paint(values);
+      },
+      signal: ac.signal,
+    });
+    // Paint the starting geometry now: the tween only paints on its first frame
+    // callback, which would otherwise leave one blank frame after mount.
+    drawnValues = from;
+    paint(from);
+  }
+
   function renderAll(): void {
     const { height: h, width: w } = base.dimensions;
     const plot = plotArea();
@@ -204,7 +178,11 @@ export function createSparkline(
 
     innerGroup.setAttribute('transform', `translate(${plot.inset},${plot.inset})`);
 
-    if (data.length === 0) return;
+    if (data.length === 0) {
+      drawnValues = null;
+
+      return;
+    }
 
     if (!isStackData(data) && data.some((v) => !Number.isFinite(v))) {
       warn('createSparkline: data contains non-finite values; they are drawn as the minimum.');
@@ -218,34 +196,82 @@ export function createSparkline(
       const cornerRadius = config.cornerRadius ?? 4;
       const segs = data as StackSegment[];
       const total = segs.reduce((s, d) => s + Math.max(0, d.value), 0);
+      const paths = segs.map((seg, i) => {
+        const path = createSvgElement('path', { class: 'prism-spark-stack-segment' });
+
+        setAttributes(path, { fill: seg.color ?? defaultStackColor(i) });
+        stackGroup.appendChild(path);
+
+        return path;
+      });
 
       if (total > 0) {
-        const half = (config.padPixels ?? 0) / 2;
-        let xAcc = 0;
+        animateValues(
+          segs.map((seg) => Math.max(0, seg.value)),
+          0,
+          (values) => {
+            const runningTotal = values.reduce((s, v) => s + v, 0) || 1;
+            const half = (config.padPixels ?? 0) / 2;
+            let xAcc = 0;
 
-        segs.forEach((seg, i) => {
-          const xStart = Math.round(xAcc);
+            values.forEach((value, i) => {
+              const xStart = Math.round(xAcc);
 
-          xAcc += (Math.max(0, seg.value) / total) * w;
+              xAcc += (value / runningTotal) * w;
 
-          const xEnd = i === segs.length - 1 ? w : Math.round(xAcc);
-          const isFirst = i === 0;
-          const isLast = i === segs.length - 1;
-          const drawX = xStart + (isFirst ? 0 : half);
-          const drawW = Math.max(0, xEnd - xStart - (isFirst ? 0 : half) - (isLast ? 0 : half));
-          const d = buildRoundedStackRect(drawX, 0, drawW, h, cornerRadius, isFirst, isLast);
-          const path = createSvgElement('path', { class: 'prism-spark-stack-segment' });
+              const xEnd = i === values.length - 1 ? w : Math.round(xAcc);
+              const isFirst = i === 0;
+              const isLast = i === values.length - 1;
+              const drawX = xStart + (isFirst ? 0 : half);
+              const drawW = Math.max(0, xEnd - xStart - (isFirst ? 0 : half) - (isLast ? 0 : half));
 
-          setAttributes(path, { d, fill: seg.color ?? defaultStackColor(i) });
-          stackGroup.appendChild(path);
-        });
+              paths[i]?.setAttribute('d', buildRoundedStackRect(drawX, 0, drawW, h, cornerRadius, isFirst, isLast));
+            });
+          },
+        );
+      } else {
+        // Nothing to draw: clear the recorded geometry so a later update cannot
+        // interpolate from values that are no longer on screen.
+        activeTween?.();
+        drawnValues = null;
       }
     } else if (variant === 'bar') {
       const barsGroup = createSvgElement('g', { class: 'prism-spark-bars' });
 
       innerGroup.appendChild(barsGroup);
-      renderSparkBars(barsGroup, data as number[], w, h, color, config.transition, ac.signal);
+
+      const values = data as number[];
+      const barMin = Math.min(0, ...values);
+      const barRange = Math.max(...values) - barMin || 1;
+      const barW = Math.max(1, w / values.length - 1);
+      const gap = w / values.length;
+      const rects = values.map(() => {
+        const rect = createSvgElement('rect', { class: 'prism-spark-bar', fill: color });
+
+        barsGroup.appendChild(rect);
+
+        return rect;
+      });
+
+      animateValues(values, barMin, (frame) => {
+        for (const [i, rect] of rects.entries()) {
+          const barHeight = Math.max(1, ((frame[i] - barMin) / barRange) * h);
+
+          setAttributes(rect, { height: barHeight, width: barW, x: i * gap, y: h - barHeight });
+        }
+      });
     } else {
+      const values = data as number[];
+      // The scale is fixed to the target values, so a tween moves points along
+      // stable axes instead of wobbling as the domain follows each frame.
+      const lineMin = Math.min(...values);
+      const lineRange = Math.max(...values) - lineMin || 1;
+      const xStep = plot.w / Math.max(1, values.length - 1);
+      const pointsFromValues = (frame: number[]): Point[] =>
+        frame.map((v, i) => ({ x: i * xStep, y: plot.h - ((v - lineMin) / lineRange) * plot.h }));
+
+      let fill: SVGPathElement | null = null;
+
       if (variant === 'area') {
         const defs = createSvgElement('defs');
         const gradient = createSvgElement('linearGradient', { id: gradientId, x1: 0, x2: 0, y1: 0, y2: 1 });
@@ -263,27 +289,36 @@ export function createSparkline(
         defs.appendChild(gradient);
         innerGroup.appendChild(defs);
 
-        const fill = createSvgElement('path', { class: 'prism-spark-fill' });
-        const fillD = buildAreaPath(data as number[], plot.w, plot.h, curve);
+        fill = createSvgElement('path', { class: 'prism-spark-fill' });
 
-        setAttributes(fill, { d: fillD, fill: `url(#${gradientId})`, stroke: 'none' });
+        setAttributes(fill, { fill: `url(#${gradientId})`, stroke: 'none' });
         fill.style.fillOpacity = fillOpacity === undefined ? '' : String(fillOpacity);
         innerGroup.appendChild(fill);
       }
 
       const path = createSvgElement('path', { class: 'prism-spark-line' });
-      const pathD = buildPath(data as number[], plot.w, plot.h, curve);
 
-      setAttributes(path, { d: pathD, fill: 'none', stroke: color, 'stroke-width': strokeWidth });
+      setAttributes(path, { fill: 'none', stroke: color, 'stroke-width': strokeWidth });
       innerGroup.appendChild(path);
 
-      const end = buildTopPoints(data as number[], plot.w, plot.h).at(-1);
+      const endDot =
+        showEndPoint && values.length > 0
+          ? createSvgElement('circle', { class: 'prism-spark-end', fill: color, r: 2.5 })
+          : null;
 
-      if (showEndPoint && end) {
-        innerGroup.appendChild(
-          createSvgElement('circle', { class: 'prism-spark-end', cx: end.x, cy: end.y, fill: color, r: 2.5 }),
-        );
-      }
+      if (endDot) innerGroup.appendChild(endDot);
+
+      animateValues(values, lineMin, (frame) => {
+        const top = pointsFromValues(frame);
+
+        setAttributes(path, { d: buildPathFromPoints(top, curve) });
+
+        if (fill) setAttributes(fill, { d: buildAreaPathFromPoints(top, plot.h, curve) });
+
+        const end = top.at(-1);
+
+        if (endDot && end) setAttributes(endDot, { cx: end.x, cy: end.y });
+      });
     }
 
     if (!isStackData(data)) attachInteraction(data as number[]);

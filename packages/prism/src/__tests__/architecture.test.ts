@@ -60,11 +60,53 @@ describe('setTheme', () => {
     expect(document.documentElement.style.getPropertyValue('--prism-color-2')).toBe('');
     expect(document.documentElement.style.getPropertyValue('--prism-color-3')).toBe('');
   });
+
+  it('writes the expanded structural tokens', () => {
+    setTheme({
+      axisColor: '#111',
+      textColor: '#222',
+      textColorSecondary: '#333',
+      tooltipBg: '#444',
+      tooltipBorder: '#666',
+      tooltipColor: '#555',
+    });
+
+    const style = document.documentElement.style;
+
+    expect(style.getPropertyValue('--prism-axis-color')).toBe('#111');
+    expect(style.getPropertyValue('--prism-text-color')).toBe('#222');
+    expect(style.getPropertyValue('--prism-text-color-secondary')).toBe('#333');
+    expect(style.getPropertyValue('--prism-tooltip-bg')).toBe('#444');
+    expect(style.getPropertyValue('--prism-tooltip-color')).toBe('#555');
+    expect(style.getPropertyValue('--prism-tooltip-border')).toBe('#666');
+  });
+
+  it('writes onto scope instead of documentElement when given', () => {
+    const scope = document.createElement('div');
+
+    setTheme({ axisColor: '#abc', colors: ['#def'] }, { scope });
+
+    expect(scope.style.getPropertyValue('--prism-axis-color')).toBe('#abc');
+    expect(scope.style.getPropertyValue('--prism-color-1')).toBe('#def');
+    expect(document.documentElement.style.getPropertyValue('--prism-axis-color')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--prism-color-1')).toBe('');
+
+    resetTheme({ scope });
+    expect(scope.style.getPropertyValue('--prism-axis-color')).toBe('');
+    expect(scope.style.getPropertyValue('--prism-color-1')).toBe('');
+  });
 });
 
 describe('resetTheme', () => {
   it('clears every custom property setTheme() can set', () => {
-    setTheme({ colors: ['#aaa'], fontFamily: 'sans-serif', gridColor: '#e2e8f0', gridOpacity: 0.5 });
+    setTheme({
+      axisColor: '#111',
+      colors: ['#aaa'],
+      fontFamily: 'sans-serif',
+      gridColor: '#e2e8f0',
+      gridOpacity: 0.5,
+      textColor: '#222',
+    });
     resetTheme();
 
     const style = document.documentElement.style;
@@ -73,6 +115,8 @@ describe('resetTheme', () => {
     expect(style.getPropertyValue('--prism-font-family')).toBe('');
     expect(style.getPropertyValue('--prism-grid-color')).toBe('');
     expect(style.getPropertyValue('--prism-grid-opacity')).toBe('');
+    expect(style.getPropertyValue('--prism-axis-color')).toBe('');
+    expect(style.getPropertyValue('--prism-text-color')).toBe('');
   });
 });
 
@@ -164,9 +208,10 @@ describe('crosshair', () => {
     // snap:true would instead round to the nearer datum (x=0).
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 }));
 
-    const vLine = chart.el.querySelector('.prism-crosshair-v');
+    const vLine = chart.el.querySelector<SVGLineElement>('.prism-crosshair-v');
 
-    expect(Number(vLine?.getAttribute('x1'))).toBeCloseTo(250, 0);
+    // Position lives in the transform so a snapped guide can glide between datums.
+    expect(Number(/translateX\(([-\d.]+)px\)/.exec(vLine?.style.transform ?? '')?.[1])).toBeCloseTo(250, 0);
     chart.dispose();
   });
 
@@ -190,10 +235,10 @@ describe('crosshair', () => {
 
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 }));
 
-    const vLine = chart.el.querySelector('.prism-crosshair-v');
+    const vLine = chart.el.querySelector<SVGLineElement>('.prism-crosshair-v');
 
     // Nearest datum to area-local x=250 is the first point at area-local x=0.
-    expect(Number(vLine?.getAttribute('x1'))).toBeCloseTo(0, 0);
+    expect(Number(/translateX\(([-\d.]+)px\)/.exec(vLine?.style.transform ?? '')?.[1])).toBeCloseTo(0, 0);
     chart.dispose();
   });
 

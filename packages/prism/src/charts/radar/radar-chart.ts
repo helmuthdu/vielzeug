@@ -306,7 +306,8 @@ export function createRadarChart(container: HTMLElement, config: RadarChartConfi
     activeTween?.();
 
     const from = targets.map((row, i) => row.map((_, j) => drawn[i]?.[j] ?? 0));
-    const motion = resolveMotion(config.transition, 400);
+    // Radar morphs a whole polygon, so it reads better slightly slower than the shared default.
+    const motion = resolveMotion(config.transition, { defaultDuration: 400 });
     const easing = resolveEasing(motion.easing ?? 'ease-out');
     const unchanged = from.every((row, i) => row.every((v, j) => v === targets[i][j]));
 

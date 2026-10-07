@@ -132,6 +132,31 @@ describe('createLineChart', () => {
     chart.dispose();
   });
 
+  it('renders both axes and value-axis gridlines with no axis config', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
+    });
+
+    expect(chart.el.querySelector('.prism-x-axis .prism-axis-tick')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-y-axis .prism-axis-tick')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('suppresses axes configured false', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
+      xAxis: false,
+      yAxis: false,
+    });
+
+    expect(chart.el.querySelector('.prism-x-axis')?.children).toHaveLength(0);
+    expect(chart.el.querySelector('.prism-y-axis')?.children).toHaveLength(0);
+    expect(chart.el.querySelector('.prism-grid-line')).toBeNull();
+    expect(chart.el.querySelector('.prism-line-series')).not.toBeNull();
+    chart.dispose();
+  });
+
   it('supports Symbol.dispose', () => {
     const chart = createLineChart(container, {
       series: [{ data: [{ key: 1, value: 5 }], name: 'Test' }],

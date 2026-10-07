@@ -161,7 +161,9 @@
 
   /* ========================================
      Dark Mode
-     Triggered by OS preference or html.dark class
+     Triggers: OS preference, html.dark, or [data-prism-theme='dark'] on any
+     ancestor of the chart (the hook for apps that switch theme in JS without
+     touching <html>, e.g. MUI/Backstage palette toggles).
      ======================================== */
   @media (prefers-color-scheme: dark) {
     :root:not(.light) {
@@ -187,7 +189,8 @@
     }
   }
 
-  html.dark {
+  html.dark,
+  [data-prism-theme='dark'] {
     --prism-color-1: #56b4e9;
     --prism-color-2: #e69f00;
     --prism-color-3: #009e73;
@@ -270,6 +273,8 @@
     stroke: var(--prism-crosshair-color);
     stroke-width: var(--prism-crosshair-width);
     stroke-dasharray: var(--prism-crosshair-dash);
+    /* Guides are positioned by transform, so a snapped guide glides to the next datum. */
+    transition: transform var(--prism-transition-fast);
   }
 
   /* Line chart */
@@ -519,8 +524,17 @@
     border-radius: var(--prism-tooltip-radius);
     box-shadow: var(--prism-tooltip-shadow);
     opacity: 0;
-    transition: opacity var(--prism-transition-fast);
-    will-change: opacity;
+    /* The reveal rises 4px into place; positioning lives on left/top so the
+       transform never fights the flip/shift placement. */
+    transform: translateY(4px);
+    transition:
+      opacity var(--prism-transition-fast),
+      transform var(--prism-transition-fast);
+    will-change: opacity, transform;
+  }
+
+  .prism-tooltip--visible {
+    transform: translateY(0);
   }
 
   .prism-tooltip-title {

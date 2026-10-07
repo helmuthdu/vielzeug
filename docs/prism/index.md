@@ -110,7 +110,7 @@ yarn add @vielzeug/prism
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
-import '@vielzeug/prism/theme';
+import '@vielzeug/prism/theme.css';
 
 const chart = createLineChart(document.getElementById('chart')!, {
   a11y: { ariaLabel: 'Revenue by month' },
@@ -158,7 +158,9 @@ chart.dispose();
 - **`createSparkline(container, config)`**: minimal inline line, area, bar, or stack chart
 - **`linearScale`, `timeScale`, `bandScale`**: standalone scales with nice tick generation
 - **`ChartHandle.update(data)`**: replace chart data synchronously without coupling to a state library
-- **`setTheme(theme)` / `resetTheme()`**: apply or clear custom colors, font, and grid tokens at runtime
+- **`setTheme(theme, { scope })` / `resetTheme({ scope })`**: apply or clear colors, font, grid, axis, text, and tooltip tokens globally or on one subtree at runtime
+- **Axes on by default**: line, area, and bar charts render both axes with gridlines on the value axis; `xAxis: false` / `yAxis: false` opt out
+- **Animations on by default**: every chart animates entry and updates through one rAF loop, honors reduced motion, and opts out with `transition: false`
 - **Series comparison**: hover or keyboard focus reports every series at the active key in the tooltip, `onHover`, and screen-reader announcements
 - **Keyboard navigation**: arrow keys, `Enter`, and `Escape` on every labelled chart except sparklines
 - **CSS custom properties**: full theme control via `--prism-*` tokens, with dark mode built in

@@ -9,7 +9,7 @@ import { createSeriesInteraction, ensureMarkerGroup } from '../../interaction/se
 import { createSvgElement } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { seriesColor } from '../../theme';
-import type { AreaChartConfig, AreaSeriesConfig, ChartHandle } from '../../types';
+import type { AreaChartConfig, AreaSeriesConfig, ChartHandle, XAxisConfig, YAxisConfig } from '../../types';
 import { computeAreaPoints, renderArea } from './area-renderer';
 
 export function createAreaChart(container: HTMLElement, config: AreaChartConfig): ChartHandle<AreaSeriesConfig[]> {
@@ -43,36 +43,44 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
       const yScale = buildYScale(allY, area.height);
       const baselineY = yScale.map(0);
 
-      if (config.yAxis?.grid) {
+      // Axes render by default (value axis with gridlines); `false` opts out.
+      const xAxisConfig: XAxisConfig | false = config.xAxis === false ? false : (config.xAxis ?? {});
+      const yAxisConfig: YAxisConfig | false = config.yAxis === false ? false : (config.yAxis ?? { grid: true });
+
+      if (yAxisConfig && yAxisConfig.grid) {
         renderGrid(
           groups.grid,
           yScale,
-          config.yAxis.grid,
+          yAxisConfig.grid,
           area.width,
           'horizontal',
-          resolveTickCount(config.yAxis, area.height, 'left'),
+          resolveTickCount(yAxisConfig, area.height, 'left'),
         );
       }
 
-      if (config.xAxis?.grid) {
+      if (xAxisConfig && xAxisConfig.grid) {
         renderGrid(
           groups.grid,
           xScale,
-          config.xAxis.grid,
+          xAxisConfig.grid,
           area.height,
           'vertical',
-          resolveTickCount(config.xAxis, area.width, 'bottom'),
+          resolveTickCount(xAxisConfig, area.width, 'bottom'),
         );
       }
 
-      if (config.xAxis) {
-        positionAxis(groups.xAxis, config.xAxis.position ?? 'bottom', area.width, area.height);
-        renderAxis(groups.xAxis, xScale, config.xAxis, area.width, 'bottom');
+      if (xAxisConfig) {
+        positionAxis(groups.xAxis, xAxisConfig.position ?? 'bottom', area.width, area.height);
+        renderAxis(groups.xAxis, xScale, xAxisConfig, area.width, 'bottom');
+      } else {
+        groups.xAxis.replaceChildren();
       }
 
-      if (config.yAxis) {
-        positionAxis(groups.yAxis, config.yAxis.position ?? 'left', area.width, area.height);
-        renderAxis(groups.yAxis, yScale, config.yAxis, area.height, 'left');
+      if (yAxisConfig) {
+        positionAxis(groups.yAxis, yAxisConfig.position ?? 'left', area.width, area.height);
+        renderAxis(groups.yAxis, yScale, yAxisConfig, area.height, 'left');
+      } else {
+        groups.yAxis.replaceChildren();
       }
 
       while (groups.series.children.length > seriesList.length) {

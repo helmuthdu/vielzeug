@@ -7,7 +7,7 @@ description: Scope Prism theme tokens to one container and map them to Refine de
 
 ### Problem
 
-Charts must use the application's brand colours, fonts, and surfaces in one section of a page without changing every other chart, so `setTheme()` (which writes to `:root`) is too broad.
+Charts must use the application's brand colours, fonts, and surfaces in one section of a page without changing every other chart. A global `setTheme()` call is too broad, and a component-driven app keeps its palette in a JS object rather than a stylesheet.
 
 ### Solution
 
@@ -64,12 +64,48 @@ Override `--prism-*` custom properties on a container class. They inherit into t
 
 </ComponentPreview>
 
+#### With a JS palette (MUI, Chakra, Backstage)
+
+When the palette lives in a JS object, write the tokens onto the chart container with `setTheme({ … }, { scope })` instead of a CSS class:
+
+```tsx
+import { useEffect, useRef } from 'react';
+import { useTheme } from '@mui/material/styles';
+import { createLineChart, resetTheme, setTheme, type LineSeriesConfig } from '@vielzeug/prism';
+import '@vielzeug/prism/theme.css';
+
+function PaletteChart({ series }: { series: LineSeriesConfig[] }) {
+  const theme = useTheme();
+  const scope = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!scope.current) return;
+
+    setTheme(
+      { axisColor: theme.palette.divider, textColor: theme.palette.text.primary },
+      { scope: scope.current },
+    );
+
+    const chart = createLineChart(scope.current, { series, tooltip: true });
+
+    return () => {
+      chart.dispose();
+      resetTheme({ scope: scope.current! });
+    };
+  }, [series, theme]);
+
+  return <div ref={scope} style={{ height: 300 }} />;
+}
+```
+
+For a dark/light toggle without a stylesheet, set `data-prism-theme="dark"` on the container (or any ancestor): the shipped theme ships the same dark token block for `[data-prism-theme='dark']` as for `html.dark`.
+
 ### Pitfalls
 
 - Keep enough contrast between adjacent series colours; Prism's default palette is colour-blind safe, a brand palette may not be.
 - Explicit `color`, `strokeWidth`, or `fillOpacity` in the config win over tokens. Leave them unset when the theme should decide.
-- Scoped values apply in light and dark mode alike. Map them to Refine tokens, which adapt through `light-dark()`, or add a dark-mode rule.
-- `setTheme()` writes to `:root`, so a scoped class still wins inside its container.
+- Scoped values apply in light and dark mode alike. Map them to Refine tokens, which adapt through `light-dark()`, or re-apply on palette change.
+- `setTheme()` without `scope` writes to `:root`; a scoped class or scoped `setTheme()` call still wins inside its container.
 
 ### Related
 

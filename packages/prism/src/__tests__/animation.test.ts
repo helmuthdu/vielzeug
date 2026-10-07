@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { resolveEasing } from '../animation/easing';
-import { resolveMotion } from '../animation/motion';
+import { DEFAULT_DURATION, resolveMotion } from '../animation/motion';
 import { animate } from '../animation/transition';
 import { tweenNumber } from '../animation/tween';
 
@@ -61,7 +61,7 @@ describe('resolveEasing', () => {
   });
 
   it('all built-in easings are 0 at t=0 and 1 at t=1', () => {
-    const names = ['linear', 'ease-in', 'ease-out', 'ease-in-out'] as const;
+    const names = ['linear', 'ease-in', 'ease-out', 'ease-in-out', 'expo-out', 'back-out'] as const;
 
     for (const name of names) {
       const fn = resolveEasing(name);
@@ -69,6 +69,18 @@ describe('resolveEasing', () => {
       expect(fn(0)).toBeCloseTo(0, 5);
       expect(fn(1)).toBeCloseTo(1, 5);
     }
+  });
+
+  it('back-out overshoots past 1 mid-flight, which is what gives entrances their bounce', () => {
+    const fn = resolveEasing('back-out');
+
+    expect(fn(0.7)).toBeGreaterThan(1);
+  });
+
+  it('expo-out front-loads progress far above linear', () => {
+    const fn = resolveEasing('expo-out');
+
+    expect(fn(0.25)).toBeGreaterThan(0.5);
   });
 
   it('falls back to ease-out for unknown easing names, not a crash (SECURITY)', () => {
@@ -98,6 +110,32 @@ describe('resolveMotion', () => {
 
   it('uses explicit duration when motion is always enabled', () => {
     expect(resolveMotion({ duration: 300, preference: 'always' }).duration).toBe(300);
+  });
+
+  it('false disables motion without touching preference', () => {
+    const motion = resolveMotion(false, { defaultDuration: 500 });
+
+    expect(motion.duration).toBe(0);
+    expect(motion.stagger).toBe(0);
+  });
+
+  it('true enables motion with the chart defaults', () => {
+    const motion = resolveMotion(true, { defaultDuration: 400, defaultStagger: 20 });
+
+    expect(motion.duration).toBe(400);
+    expect(motion.stagger).toBe(20);
+  });
+
+  it('omitted config enables motion with the shared default duration', () => {
+    expect(resolveMotion().duration).toBe(DEFAULT_DURATION);
+  });
+
+  it('an explicit duration beats the chart default', () => {
+    expect(resolveMotion({ duration: 120 }, { defaultDuration: 400 }).duration).toBe(120);
+  });
+
+  it('an explicit stagger beats the chart default', () => {
+    expect(resolveMotion({ stagger: 5 }, { defaultStagger: 20 }).stagger).toBe(5);
   });
 });
 

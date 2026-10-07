@@ -213,6 +213,7 @@ describe('createAreaChart', () => {
   it('updates area data explicitly', () => {
     const chart = createAreaChart(container, {
       series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
+      transition: false,
     });
     const before = chart.el.querySelector('.prism-area-fill')?.getAttribute('d');
 

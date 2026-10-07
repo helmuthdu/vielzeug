@@ -22,7 +22,7 @@ import '@vielzeug/refine/fouc.css';
 import '@vielzeug/refine/tokens.css';
 import '@vielzeug/refine/icon-lucide';
 // Import Prism chart styles
-import '@vielzeug/prism/theme';
+import '@vielzeug/prism/theme.css';
 
 import './theme.css';
 

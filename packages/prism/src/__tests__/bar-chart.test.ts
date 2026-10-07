@@ -65,6 +65,40 @@ describe('createBarChart', () => {
     chart.dispose();
   });
 
+  it('renders both axes and value-axis gridlines with no axis config', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
+    });
+
+    expect(chart.el.querySelector('.prism-x-axis .prism-axis-tick')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-y-axis .prism-axis-tick')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('suppresses an axis configured false', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
+      xAxis: false,
+    });
+
+    expect(chart.el.querySelector('.prism-x-axis')?.children).toHaveLength(0);
+    expect(chart.el.querySelector('.prism-y-axis .prism-axis-tick')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('keeps the category axis gridline-free by default and gridless on horizontal value axis config', () => {
+    const chart = createBarChart(container, {
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
+      variant: 'grouped-horizontal',
+    });
+
+    // Horizontal: value axis is x (grid by default), category axis is y (no grid by default).
+    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-y-axis .prism-axis-tick')).not.toBeNull();
+    chart.dispose();
+  });
+
   it('renders multiple series', () => {
     const chart = createBarChart(container, {
       series: [
@@ -303,6 +337,7 @@ describe('createBarChart', () => {
           name: 'S1',
         },
       ],
+      transition: false,
       variant: 'grouped-horizontal',
       xAxis: { position: 'bottom' },
       yAxis: { position: 'left' },

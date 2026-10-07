@@ -87,6 +87,14 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
   const tooltipOffset: number = (config !== true && config?.offset) || 8;
   const render = config !== true ? config?.render : undefined;
 
+  // Opacity stays inline (the transition is declared in CSS against the token
+  // duration); the class carries the rise, which needs to combine with the
+  // left/top positioning without fighting it.
+  const setVisible = (next: boolean): void => {
+    el.classList.toggle('prism-tooltip--visible', next);
+    el.style.opacity = next ? '1' : '0';
+  };
+
   let revealFrame: number | null = null;
   let clearTimer: ReturnType<typeof setTimeout> | null = null;
   let visible = false;
@@ -119,7 +127,7 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
       cancelReveal();
       cancelClear();
       visible = false;
-      el.style.opacity = '0';
+      setVisible(false);
       clearTimer = setTimeout(() => {
         clearTimer = null;
 
@@ -163,17 +171,19 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
       el.style.top = `${positionY}px`;
 
       if (visible) {
-        if (revealFrame === null) el.style.opacity = '1';
+        if (revealFrame === null) setVisible(true);
 
         return;
       }
 
       visible = true;
-      el.style.opacity = '0';
+      setVisible(false);
+      // One frame at the hidden state first: without it the browser has no
+      // starting value to transition from and the tooltip would just appear.
       revealFrame = requestAnimationFrame(() => {
         revealFrame = null;
 
-        if (visible) el.style.opacity = '1';
+        if (visible) setVisible(true);
       });
     },
     [Symbol.dispose]: disposeHandle,

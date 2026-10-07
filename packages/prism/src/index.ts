@@ -1,6 +1,6 @@
 // Public API: all exports for @vielzeug/prism
 
-export type { EasingFn } from './animation/easing';
+export type { EasingFn, EasingName } from './animation/easing';
 // Chart factories
 export { createAreaChart } from './charts/area';
 export { createBarChart } from './charts/bar';
@@ -60,8 +60,10 @@ export type {
   SparklineEvent,
   SparklineVariant,
   StackSegment,
+  ThemeScope,
   TooltipConfig,
   TransitionConfig,
+  TransitionOption,
   VerticalAxisPosition,
   XAxisConfig,
   YAxisConfig,

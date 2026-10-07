@@ -1,7 +1,8 @@
+import { resolveMotion } from '../../animation/motion';
 import type { AnimationTarget } from '../../animation/transition';
 import { animate } from '../../animation/transition';
 import { createSvgElement, setAttributes } from '../../svg/element';
-import type { BandScale, Scale, TransitionConfig } from '../../types';
+import type { BandScale, Scale, TransitionOption } from '../../types';
 
 export interface BarRenderOptions {
   baselineYs?: number[];
@@ -13,8 +14,13 @@ export interface BarRenderOptions {
   seriesCount: number;
   seriesIndex: number;
   stacked?: boolean;
-  transition?: TransitionConfig;
+  transition?: TransitionOption;
 }
+
+/** Per-bar entrance delay; {@link MAX_STAGGER_TOTAL} bounds how long the last bar waits. */
+const DEFAULT_BAR_STAGGER = 20;
+/** Upper bound on the total staggered delay a bar chart may add, whatever the per-bar value. */
+const MAX_STAGGER_TOTAL = 400;
 
 const activeBarAnimations = new WeakMap<SVGGElement, () => void>();
 
@@ -39,6 +45,10 @@ export function renderBars(
 
   const enterTargets: AnimationTarget[] = [];
   const updateTargets: AnimationTarget[] = [];
+  const motion = resolveMotion(options.transition, { defaultStagger: DEFAULT_BAR_STAGGER });
+  const animateBars = motion.duration > 0;
+  // A long category axis must not stretch the entrance past ~400 ms of added delay.
+  const enterStagger = Math.min(motion.stagger, MAX_STAGGER_TOTAL / Math.max(1, data.length));
 
   for (let i = 0; i < data.length; i++) {
     const d = data[i];
@@ -80,7 +90,7 @@ export function renderBars(
         y: bandPos,
       });
 
-      if (options.transition) {
+      if (animateBars) {
         if (isNew) {
           setAttributes(rect, { width: 0, x: barBaselineY });
           enterTargets.push({
@@ -112,7 +122,7 @@ export function renderBars(
         x: bandPos,
       });
 
-      if (options.transition) {
+      if (animateBars) {
         if (isNew) {
           setAttributes(rect, { height: 0, y: barBaselineY });
           enterTargets.push({
@@ -134,17 +144,17 @@ export function renderBars(
     }
   }
 
-  if (options.transition) {
+  if (animateBars) {
     activeBarAnimations.get(parent)?.();
 
     const cancels: (() => void)[] = [];
 
     if (enterTargets.length > 0) {
-      cancels.push(animate(enterTargets, options.transition, undefined, options.disposalSignal));
+      cancels.push(animate(enterTargets, { ...motion, stagger: enterStagger }, undefined, options.disposalSignal));
     }
 
     if (updateTargets.length > 0) {
-      cancels.push(animate(updateTargets, { ...options.transition, stagger: 0 }, undefined, options.disposalSignal));
+      cancels.push(animate(updateTargets, { ...motion, stagger: 0 }, undefined, options.disposalSignal));
     }
 
     activeBarAnimations.set(parent, () => {

@@ -9,7 +9,7 @@ import { createSeriesInteraction, ensureMarkerGroup } from '../../interaction/se
 import { createSvgElement } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { seriesColor } from '../../theme';
-import type { ChartHandle, LineChartConfig, LineSeriesConfig } from '../../types';
+import type { ChartHandle, LineChartConfig, LineSeriesConfig, XAxisConfig, YAxisConfig } from '../../types';
 import { computePoints, renderLine } from './line-renderer';
 
 export function createLineChart(container: HTMLElement, config: LineChartConfig): ChartHandle<LineSeriesConfig[]> {
@@ -60,37 +60,43 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
       const yScale = buildYScale(leftY, area.height);
       const rightYScale = buildYScale(rightY, area.height);
 
-      if (config.yAxis?.grid && (!hasRight || hasLeftData)) {
+      // Axes render by default (value axis with gridlines); `false` opts out.
+      const xAxisConfig: XAxisConfig | false = config.xAxis === false ? false : (config.xAxis ?? {});
+      const yAxisConfig: YAxisConfig | false = config.yAxis === false ? false : (config.yAxis ?? { grid: true });
+
+      if (yAxisConfig && yAxisConfig.grid && (!hasRight || hasLeftData)) {
         renderGrid(
           groups.grid,
           yScale,
-          config.yAxis.grid,
+          yAxisConfig.grid,
           area.width,
           'horizontal',
-          resolveTickCount(config.yAxis, area.height, 'left'),
+          resolveTickCount(yAxisConfig, area.height, 'left'),
         );
       } else {
         groups.grid.replaceChildren();
       }
 
-      if (config.xAxis?.grid) {
+      if (xAxisConfig && xAxisConfig.grid) {
         renderGrid(
           groups.grid,
           xScale,
-          config.xAxis.grid,
+          xAxisConfig.grid,
           area.height,
           'vertical',
-          resolveTickCount(config.xAxis, area.width, 'bottom'),
+          resolveTickCount(xAxisConfig, area.width, 'bottom'),
         );
       }
 
-      if (config.xAxis) {
-        positionAxis(groups.xAxis, config.xAxis.position ?? 'bottom', area.width, area.height);
-        renderAxis(groups.xAxis, xScale, config.xAxis, area.width, 'bottom');
+      if (xAxisConfig) {
+        positionAxis(groups.xAxis, xAxisConfig.position ?? 'bottom', area.width, area.height);
+        renderAxis(groups.xAxis, xScale, xAxisConfig, area.width, 'bottom');
+      } else {
+        groups.xAxis.replaceChildren();
       }
 
-      if (config.yAxis && (!hasRight || hasLeftData)) {
-        const axis = { ...config.yAxis, position: hasRight ? ('left' as const) : (config.yAxis.position ?? 'left') };
+      if (yAxisConfig && (!hasRight || hasLeftData)) {
+        const axis = { ...yAxisConfig, position: hasRight ? ('left' as const) : (yAxisConfig.position ?? 'left') };
         positionAxis(groups.yAxis, axis.position, area.width, area.height);
         renderAxis(groups.yAxis, yScale, axis, area.height, 'left');
       } else {
@@ -126,11 +132,13 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
 
         group.setAttribute('data-series-id', seriesDomId(series, i));
 
-        const points = computePoints(allData[i], xScale, series.yAxis === 'right' ? rightYScale : yScale);
+        const seriesScale = series.yAxis === 'right' ? rightYScale : yScale;
+        const points = computePoints(allData[i], xScale, seriesScale);
 
         allPoints.push(points);
 
         renderLine(group, points, {
+          baselineY: seriesScale.map(0),
           color: seriesColor(i, series.color),
           curve: series.curve ?? 'linear',
           disposalSignal: ctx.disposalSignal,

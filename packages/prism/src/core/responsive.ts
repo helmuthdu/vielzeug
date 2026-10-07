@@ -1,4 +1,8 @@
 export function observeResize(el: HTMLElement, callback: (width: number, height: number) => void): () => void {
+  // Environments without ResizeObserver (jsdom, SSR) get a no-op subscription: the chart
+  // keeps its initial getBoundingClientRect size and never observes, instead of throwing.
+  if (typeof ResizeObserver === 'undefined') return () => {};
+
   let rafId: number | null = null;
 
   const observer = new ResizeObserver((entries) => {

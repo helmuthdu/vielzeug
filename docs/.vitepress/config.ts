@@ -2366,7 +2366,7 @@ export default defineConfig({
       // without a build step. Derived from the `packages/` directory listing: see
       // scripts/vielzeug-packages.ts, instead of a hand-maintained list.
       alias: [
-        { find: '@vielzeug/prism/theme', replacement: resolve(PACKAGES_DIR, 'prism/src/theme/prism.css') },
+        { find: '@vielzeug/prism/theme.css', replacement: resolve(PACKAGES_DIR, 'prism/src/theme/prism.css') },
         ...Object.entries(buildVielzeugSrcAliases(PACKAGES_DIR)).map(([find, replacement]) => ({ find, replacement })),
       ],
     },

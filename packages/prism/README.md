@@ -14,7 +14,7 @@ yarn add @vielzeug/prism
 
 ```ts
 import { createLineChart, setTheme } from '@vielzeug/prism';
-import '@vielzeug/prism/theme';
+import '@vielzeug/prism/theme.css';
 
 // Optional: apply a custom color palette at startup
 setTheme({ colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'] });

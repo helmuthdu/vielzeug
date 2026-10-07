@@ -38,10 +38,7 @@
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
-    "./theme": {
-      "default": "./dist/theme/prism.css",
-      "import": "./dist/theme/prism.css"
-    }
+    "./theme.css": "./dist/theme/prism.css"
   },
   "sideEffects": [
     "./dist/theme/**"

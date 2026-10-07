@@ -11,7 +11,7 @@ Every chart needs a container element with defined dimensions and the theme CSS:
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
-import '@vielzeug/prism/theme';
+import '@vielzeug/prism/theme.css';
 
 const container = document.querySelector<HTMLElement>('#chart')!;
 const chart = createLineChart(container, {
@@ -514,6 +514,8 @@ const spark = createSparkline(container, {
 
 ## Axes and Grid
 
+Both axes render by default: the value axis (y on vertical charts, x on horizontal ones) carries gridlines, the category axis does not. Set `xAxis: false` or `yAxis: false` to suppress one. An explicit config is used verbatim:
+
 ```ts
 {
   xAxis: {
@@ -616,7 +618,13 @@ const chart = createLineChart(container, {
 
 ## Animations
 
-Pass a `transition` config to animate enter and update transitions:
+Every chart animates by default: bars grow from the baseline, line and area
+series rise out of the plot, pie slices sweep in and then morph between values,
+radar polygons reshape, and sparklines tween. Motion runs through one
+`requestAnimationFrame` loop and is skipped when the user prefers reduced motion
+(`preference: 'system'`, the default).
+
+Tune it with `transition`, or turn it off entirely:
 
 ```ts
 {
@@ -628,14 +636,23 @@ Pass a `transition` config to animate enter and update transitions:
 }
 ```
 
-All chart types use `requestAnimationFrame`-based interpolation and skip animation when the user prefers reduced motion (`preference: 'system'`, the default). Bar and radar charts apply `stagger` on entry; line, area, and pie charts ignore it.
+```ts
+{ transition: false }  // every update renders synchronously
+{ transition: true }   // the defaults, stated explicitly
+```
+
+Named easings are `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`,
+`'expo-out'` (a hard decelerate), and `'back-out'` (a small overshoot); pass a
+`(t: number) => number` for anything else. `stagger` applies to bar-chart bars
+and radar-chart series and is ignored elsewhere — bar charts cap the total
+staggered delay near 400 ms so a long category axis still finishes promptly.
 
 ## Theming
 
 Import the default theme:
 
 ```ts
-import '@vielzeug/prism/theme';
+import '@vielzeug/prism/theme.css';
 ```
 
 ### Programmatic Theme with `setTheme`
@@ -646,20 +663,62 @@ Call `setTheme` once at app startup to apply custom tokens programmatically:
 import { setTheme } from '@vielzeug/prism';
 
 setTheme({
+  axisColor: '#94a3b8', // sets --prism-axis-color
   colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'], // replaces --prism-color-1 through -4
   fontFamily: 'Inter, system-ui, sans-serif', // sets --prism-font-family
   gridColor: '#e2e8f0', // sets --prism-grid-color
   gridOpacity: 0.6, // sets --prism-grid-opacity
+  textColor: '#0f172a', // sets --prism-text-color
+  tooltipBg: '#0f172a', // sets --prism-tooltip-bg
 });
 ```
 
-`setTheme` writes to `document.documentElement` style, so it takes precedence over CSS file defaults. Call `resetTheme()` to clear every custom property `setTheme` can set and restore the default theme: useful for a theme-switcher's "reset" action or test teardown:
+`setTheme` writes inline custom properties, so it takes precedence over stylesheet defaults. Call `resetTheme()` to clear every custom property `setTheme` can set and restore the default theme: useful for a theme-switcher's "reset" action or test teardown:
 
 ```ts
 import { resetTheme } from '@vielzeug/prism';
 
 resetTheme();
 ```
+
+### Theming One Subtree (component libraries)
+
+Pass `scope` to write the tokens onto one element instead of `document.documentElement`. Charts render inside it, so their `var(--prism-*)` lookups resolve against the scoped values without touching `:root` — the hook for apps whose theme lives in a JS palette object (MUI, Chakra, Backstage):
+
+```tsx
+import { useEffect, useRef } from 'react';
+import { useTheme } from '@mui/material/styles';
+import { createBarChart, resetTheme, setTheme, type BarSeriesConfig } from '@vielzeug/prism';
+import '@vielzeug/prism/theme.css';
+
+function CostsChart({ series }: { series: BarSeriesConfig[] }) {
+  const theme = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scope = containerRef.current;
+
+    if (!scope) return;
+
+    // Scoped tokens win over :root inside this subtree and never leak out of it.
+    setTheme(
+      { axisColor: theme.palette.divider, textColor: theme.palette.text.primary },
+      { scope },
+    );
+
+    const chart = createBarChart(scope, { series });
+
+    return () => {
+      chart.dispose();
+      resetTheme({ scope });
+    };
+  }, [series, theme]);
+
+  return <div ref={containerRef} style={{ height: 300 }} />;
+}
+```
+
+A scoped call and a global call are independent: `resetTheme({ scope })` clears only what `setTheme({ scope })` wrote.
 
 ### Custom Theme (CSS)
 
@@ -704,7 +763,7 @@ Apply tokens to a specific container:
 | `--prism-crosshair-color` | `hsl(215deg 16% 47%)`      | Crosshair line         |
 | `--prism-crosshair-dash`  | `4 2`                      | Crosshair dash pattern |
 
-The palette follows Wong (2011) so adjacent series stay distinguishable under common color-vision deficiencies. Dark mode applies automatically through `prefers-color-scheme` or an `html.dark` class.
+The palette follows Wong (2011) so adjacent series stay distinguishable under common color-vision deficiencies. Dark mode applies through `prefers-color-scheme`, an `html.dark` class, or `data-prism-theme="dark"` on the chart container or any ancestor — the last is the hook for apps that switch theme in JS without owning `<html>`.
 
 Radar charts add their own tokens, each defaulting to a shared one:
 

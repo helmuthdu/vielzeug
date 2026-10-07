@@ -12,7 +12,16 @@ import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { seriesColor } from '../../theme';
-import type { BarChartConfig, BarSeriesConfig, BarVariant, ChartEvent, ChartHandle, SeriesValue } from '../../types';
+import type {
+  BarChartConfig,
+  BarSeriesConfig,
+  BarVariant,
+  ChartEvent,
+  ChartHandle,
+  SeriesValue,
+  XAxisConfig,
+  YAxisConfig,
+} from '../../types';
 import { findCatIdx, findSeriesIdx } from './bar-hit-test';
 import { renderBars } from './bar-renderer';
 import type { BarScaleContext } from './bar-scale-context';
@@ -41,9 +50,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       const model = normalizeCartesianSeries(seriesList, sourceData);
       const categories = model.domain;
       const allData = model.series.map(({ byKey }) => categories.map((key) => byKey.get(key)));
-      const categoryAxis = (axis: BarChartConfig['xAxis'] | BarChartConfig['yAxis']) => {
-        if (!axis) return undefined;
-
+      const categoryAxis = (axis: XAxisConfig | YAxisConfig) => {
         return {
           ...axis,
           tickFormat: (value: Date | number | string) => {
@@ -64,6 +71,13 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       }
 
       const { horizontal, stacked } = variantFlags(config.variant ?? 'grouped');
+
+      // Axes render by default; `false` opts out. The value axis carries gridlines by
+      // default, the category axis does not; an explicit config is used verbatim.
+      const xAxisConfig: XAxisConfig | false =
+        config.xAxis === false ? false : (config.xAxis ?? (horizontal ? { grid: true } : {}));
+      const yAxisConfig: YAxisConfig | false =
+        config.yAxis === false ? false : (config.yAxis ?? (horizontal ? {} : { grid: true }));
 
       // Value domain
       let vMax: number;
@@ -115,50 +129,50 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       // Axes & grid
       if (horizontal) {
-        if (config.xAxis?.grid) {
+        if (xAxisConfig && xAxisConfig.grid) {
           renderGrid(
             groups.grid,
             valScale,
-            config.xAxis.grid,
+            xAxisConfig.grid,
             area.height,
             'vertical',
-            resolveTickCount(config.xAxis, area.width, 'bottom'),
+            resolveTickCount(xAxisConfig, area.width, 'bottom'),
           );
         }
 
-        const yAxis = categoryAxis(config.yAxis);
+        if (yAxisConfig !== false) {
+          const yAxis = categoryAxis(yAxisConfig);
 
-        if (yAxis) {
           positionAxis(groups.yAxis, yAxis.position ?? 'left', area.width, area.height);
           renderAxis(groups.yAxis, catScale, yAxis, area.height, 'left');
         }
 
-        if (config.xAxis) {
-          positionAxis(groups.xAxis, config.xAxis.position ?? 'bottom', area.width, area.height);
-          renderAxis(groups.xAxis, valScale, config.xAxis, area.width, 'bottom');
+        if (xAxisConfig) {
+          positionAxis(groups.xAxis, xAxisConfig.position ?? 'bottom', area.width, area.height);
+          renderAxis(groups.xAxis, valScale, xAxisConfig, area.width, 'bottom');
         }
       } else {
-        if (config.yAxis?.grid) {
+        if (yAxisConfig && yAxisConfig.grid) {
           renderGrid(
             groups.grid,
             valScale,
-            config.yAxis.grid,
+            yAxisConfig.grid,
             area.width,
             'horizontal',
-            resolveTickCount(config.yAxis, area.height, 'left'),
+            resolveTickCount(yAxisConfig, area.height, 'left'),
           );
         }
 
-        const xAxis = categoryAxis(config.xAxis);
+        if (xAxisConfig !== false) {
+          const xAxis = categoryAxis(xAxisConfig);
 
-        if (xAxis) {
           positionAxis(groups.xAxis, xAxis.position ?? 'bottom', area.width, area.height);
           renderAxis(groups.xAxis, catScale, xAxis, area.width, 'bottom');
         }
 
-        if (config.yAxis) {
-          positionAxis(groups.yAxis, config.yAxis.position ?? 'left', area.width, area.height);
-          renderAxis(groups.yAxis, valScale, config.yAxis, area.height, 'left');
+        if (yAxisConfig) {
+          positionAxis(groups.yAxis, yAxisConfig.position ?? 'left', area.width, area.height);
+          renderAxis(groups.yAxis, valScale, yAxisConfig, area.height, 'left');
         }
       }
 

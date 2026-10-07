@@ -4,7 +4,49 @@ title: Prism Migration
 
 # Upcoming Train Migration
 
-Line, area, bar, pie, and sparkline charts now share the radar chart's interaction model: series comparison, keyboard navigation, and active-key highlighting. Default visuals and a few DOM contracts changed.
+Line, area, bar, pie, and sparkline charts now share the radar chart's interaction model: series comparison, keyboard navigation, and active-key highlighting. Default visuals, default motion, and a few DOM contracts changed.
+
+## Charts animate by default
+
+Every chart now animates without configuration: line and area series rise from the plot baseline on mount, pie slices morph between values instead of replaying their entry sweep, and sparklines tween an update instead of snapping. Previously these charts drew every frame synchronously unless you passed a `transition` config.
+
+```ts
+// Before: static unless a transition was configured
+createLineChart(container, { series });
+
+// After: same call animates; opt out to restore synchronous rendering
+createLineChart(container, { series, transition: false });
+```
+
+`transition` now also accepts a boolean: `false` renders every update synchronously, `true` states the default explicitly. Reduced-motion users still get synchronous rendering through `preference: 'system'`, the default.
+
+Two consequences for tests: a first render no longer ends on final geometry (drive the animation frames, or pass `transition: false`), and crosshair guides carry their position in a `transform` instead of `x1`/`y1` attributes so a snapped guide can glide to the next datum.
+
+## Import the theme as `theme.css`
+
+The theme subpath is now `@vielzeug/prism/theme.css`; the extensionless `@vielzeug/prism/theme` export is removed. The `.css` suffix lets extension-based CSS loaders and Jest `moduleNameMapper` rules resolve the subpath without a bespoke mapping.
+
+```ts
+// Before
+import '@vielzeug/prism/theme';
+
+// After
+import '@vielzeug/prism/theme.css';
+```
+
+## Expect axes to render by default
+
+Line, area, and bar charts render both axes when the config omits them, with gridlines on the value axis. Previously a chart with no `xAxis`/`yAxis` key drew no axis at all. Pass `false` to keep the old look.
+
+```ts
+// Before: no axes drawn
+createBarChart(container, { series });
+
+// After: same call now draws both axes; opt out explicitly
+createBarChart(container, { series, xAxis: false, yAxis: false });
+```
+
+Update visual snapshots that captured an axis-less chart, and drop the now-redundant `xAxis: {}` / `yAxis: { grid: true }` boilerplate.
 
 ## Keep flat area fills
 

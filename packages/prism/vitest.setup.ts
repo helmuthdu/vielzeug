@@ -32,9 +32,3 @@ export async function axeCheck(node: Element, options: axe.RunOptions = {}): Pro
 declare global {
   var axeCheck: (node: Element, options?: axe.RunOptions) => Promise<axe.AxeResults>;
 }
-
-globalThis.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};

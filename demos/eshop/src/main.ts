@@ -1,5 +1,5 @@
 import '@vielzeug/refine/tokens.css';
-import '@vielzeug/prism/theme';
+import '@vielzeug/prism/theme.css';
 
 import './styles/app.css';
 import { setupPersistence } from './core/persistence';

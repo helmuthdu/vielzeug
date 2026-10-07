@@ -7,9 +7,11 @@ import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { linePath, monotonePath, stepPath } from '../../svg/path';
-import type { ContinuousDatum, Scale, TransitionConfig } from '../../types';
+import type { ContinuousDatum, Scale, TransitionOption } from '../../types';
 
 export interface LineRenderOptions {
+  /** Plot-area bottom in area-local coordinates: the mount animation raises the line from here. */
+  baselineY: number;
   color: string;
   curve: 'linear' | 'monotone' | 'step';
   /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
@@ -20,10 +22,13 @@ export interface LineRenderOptions {
   showPoints: boolean;
   /** Explicit width beats the `--prism-line-width` theme token. */
   strokeWidth?: number;
-  transition?: TransitionConfig;
+  transition?: TransitionOption;
 }
 
 const activeAnimations = new WeakMap<SVGGElement, () => void>();
+// Geometry currently on screen, so an update interpolates from it even when the
+// series hides its point markers (the dots would otherwise be the only record).
+const drawnPoints = new WeakMap<SVGGElement, Point[]>();
 
 function buildPath(pts: Point[], curve: LineRenderOptions['curve']): string {
   return curve === 'monotone' ? monotonePath(pts) : curve === 'step' ? stepPath(pts) : linePath(pts);
@@ -32,7 +37,7 @@ function buildPath(pts: Point[], curve: LineRenderOptions['curve']): string {
 export function renderLine(parent: SVGGElement, points: Point[], options: LineRenderOptions): void {
   const styled = hasStyledRuns(options.marks);
   const marks = options.marks ?? [];
-  const motion = resolveMotion(options.transition, 0);
+  const motion = resolveMotion(options.transition);
   const dur = motion.duration;
   const easing = resolveEasing(motion.easing);
 
@@ -113,6 +118,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
 
   if (dur === 0) {
     draw(points);
+    drawnPoints.set(parent, points);
 
     if (dotsGroup) {
       while (dotsGroup.children.length > points.length) dotsGroup.removeChild(dotsGroup.lastChild!);
@@ -140,30 +146,20 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
 
   activeAnimations.get(parent)?.();
 
-  const hasExisting = styled ? runPaths.some((p) => p.hasAttribute('d')) : !!path?.getAttribute('d');
+  const hasExisting = drawnPoints.has(parent);
+  // A first render has no drawn shape to interpolate between: the mount animation
+  // raises the whole line from the plot baseline instead.
+  const isMount = !hasExisting;
 
-  const fromPts: Point[] = [];
-  let lastKnown: Point | null = null;
+  const fromPts: Point[] = isMount ? points.map((p) => ({ x: p.x, y: options.baselineY })) : [];
 
   if (dotsGroup) {
-    const existingCount = dotsGroup.children.length;
-
-    for (let i = 0; i < existingCount; i++) {
-      const c = dotsGroup.children[i] as SVGCircleElement;
-      const pt = { x: Number(c.getAttribute('cx')), y: Number(c.getAttribute('cy')) };
-
-      fromPts.push(pt);
-      lastKnown = pt;
-    }
-
     while (dotsGroup.children.length > points.length) dotsGroup.removeChild(dotsGroup.lastChild!);
 
     for (let i = dotsGroup.children.length; i < points.length; i++) {
       const c = createSvgElement('circle', { class: 'prism-line-dot' });
 
       setAttributes(c, {
-        cx: points[i].x,
-        cy: points[i].y,
         fill: options.color,
         opacity: marks[i]?.opacity,
         r: options.pointRadius,
@@ -176,15 +172,36 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     }
   }
 
-  for (let i = fromPts.length; i < points.length; i++) {
-    fromPts.push(lastKnown ?? points[i]);
+  if (!isMount) {
+    const drawn = drawnPoints.get(parent) ?? points;
+
+    for (const [i, to] of points.entries()) {
+      fromPts.push(drawn[i] ?? drawn.at(-1) ?? to);
+    }
   }
 
-  if (!hasExisting) {
-    draw(points);
+  const paintFrame = (e: number): void => {
+    const interpolated: Point[] = points.map((to, i) => {
+      const from = fromPts[i] ?? to;
 
-    return;
-  }
+      return { x: tweenNumber(from.x, to.x, e), y: tweenNumber(from.y, to.y, e) };
+    });
+
+    drawnPoints.set(parent, interpolated);
+    draw(interpolated);
+
+    if (dotsGroup) {
+      for (let i = 0; i < points.length; i++) {
+        const c = dotsGroup.children[i] as SVGCircleElement | undefined;
+
+        if (c) setAttributes(c, { cx: interpolated[i].x, cy: interpolated[i].y });
+      }
+    }
+  };
+
+  // The starting geometry goes on screen immediately: `startTween` only paints on
+  // the first frame callback, which would otherwise leave one blank frame.
+  paintFrame(0);
 
   activeAnimations.set(
     parent,
@@ -192,25 +209,11 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
       count: 1,
       duration: dur,
       easing,
-      onComplete: () => activeAnimations.delete(parent),
-      onFrame: (progress) => {
-        const e = progress(0);
-        const interpolated: Point[] = points.map((to, i) => {
-          const from = fromPts[i] ?? to;
-
-          return { x: tweenNumber(from.x, to.x, e), y: tweenNumber(from.y, to.y, e) };
-        });
-
-        draw(interpolated);
-
-        if (dotsGroup) {
-          for (let i = 0; i < points.length; i++) {
-            const c = dotsGroup.children[i] as SVGCircleElement | undefined;
-
-            if (c) setAttributes(c, { cx: interpolated[i].x, cy: interpolated[i].y });
-          }
-        }
+      onComplete: () => {
+        activeAnimations.delete(parent);
+        drawnPoints.set(parent, points);
       },
+      onFrame: (progress) => paintFrame(progress(0)),
       signal: options.disposalSignal,
     }),
   );

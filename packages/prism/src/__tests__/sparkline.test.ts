@@ -159,6 +159,7 @@ describe('createSparkline', () => {
     const chart = createSparkline(container, {
       curve: 'monotone',
       data: [10, 20, 15, 30, 25],
+      transition: false,
       variant: 'area',
     });
     const fill = chart.el.querySelector('.prism-spark-fill');

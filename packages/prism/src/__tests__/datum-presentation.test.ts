@@ -116,7 +116,7 @@ describe('per-datum presentation (dash / opacity)', () => {
     ];
 
     it('splits the line at the dash-run boundary and styles only the tail segment', () => {
-      const chart = createLineChart(container, { series: TAIL });
+      const chart = createLineChart(container, { series: TAIL, transition: false });
       const paths = chart.el.querySelectorAll<SVGPathElement>('.prism-line-path');
 
       expect(paths).toHaveLength(2);
@@ -237,6 +237,7 @@ describe('per-datum presentation (dash / opacity)', () => {
             name: 'Test',
           },
         ],
+        transition: false,
       });
 
       expect(chart.el.querySelector('.prism-line-series')?.innerHTML).toBe(
