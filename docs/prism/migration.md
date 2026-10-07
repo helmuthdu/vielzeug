@@ -8,7 +8,7 @@ Line, area, bar, pie, and sparkline charts now share the radar chart's interacti
 
 ## Charts animate by default
 
-Every chart now animates without configuration: line and area series rise from the plot baseline on mount, pie slices morph between values instead of replaying their entry sweep, and sparklines tween an update instead of snapping. Previously these charts drew every frame synchronously unless you passed a `transition` config.
+Every chart now animates without configuration: line and area series are wiped in left to right on mount (the final shape is painted first and revealed behind a clip, so the curve never deforms), radar series fade in while rising, pie slices morph between values instead of replaying their entry sweep, and sparklines reveal their final plot on mount and tween an update instead of snapping. Previously these charts drew every frame synchronously unless you passed a `transition` config.
 
 ```ts
 // Before: static unless a transition was configured
@@ -20,7 +20,7 @@ createLineChart(container, { series, transition: false });
 
 `transition` now also accepts a boolean: `false` renders every update synchronously, `true` states the default explicitly. Reduced-motion users still get synchronous rendering through `preference: 'system'`, the default.
 
-Two consequences for tests: a first render no longer ends on final geometry (drive the animation frames, or pass `transition: false`), and crosshair guides carry their position in a `transform` instead of `x1`/`y1` attributes so a snapped guide can glide to the next datum.
+Three consequences for tests: a first render no longer ends on final geometry (drive the animation frames, or pass `transition: false`); during a mount entrance a line/area series group carries a temporary `clip-path` pointing at a `prism-reveal-*` clip (it is removed when the entrance completes, so settled charts have none); and crosshair guides carry their position in a `transform` instead of `x1`/`y1` attributes so a snapped guide can glide to the next datum.
 
 ## Import the theme as `theme.css`
 

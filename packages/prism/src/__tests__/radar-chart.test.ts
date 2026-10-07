@@ -218,18 +218,27 @@ describe('createRadarChart', () => {
       chart.dispose();
     });
 
-    it('animates from the previous shape when a transition is enabled', () => {
+    it('morphs from the previous shape when a transition is enabled', () => {
       const frames: FrameRequestCallback[] = [];
 
       vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => frames.push(cb));
 
       const chart = create({ transition: { duration: 100 } });
-      const point = chart.el.querySelector('.prism-radar-point');
+
+      // Let the mount fade-and-rise settle so the update morphs from drawn geometry.
+      for (let i = 0; i < 5 && frames.length > 0; i++) frames.shift()?.(i * 100);
+
+      // The series groups rebuild on update, so the point is re-queried each time.
+      const cy = () => chart.el.querySelector('.prism-radar-point')?.getAttribute('cy');
+      const settled = cy();
+
+      chart.update([BROM]);
 
       frames.shift()?.(0);
-      expect(point?.getAttribute('cy')).toBe('200');
+      // The morph starts on the geometry that is already on screen.
+      expect(cy()).toBe(settled);
       frames.shift()?.(100);
-      expect(Number(point?.getAttribute('cy'))).toBeLessThan(200);
+      expect(cy()).not.toBe(settled);
       chart.dispose();
     });
 

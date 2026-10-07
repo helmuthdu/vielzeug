@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Redesign chart mount entrances so data never deforms: line/area/sparkline reveal behind a left-to-right clip wipe, radar series fade in while rising, multi-series entrances stagger on a 60ms offset; updates keep morphing from the geometry on screen",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

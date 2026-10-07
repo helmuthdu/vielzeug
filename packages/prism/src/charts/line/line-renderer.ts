@@ -1,6 +1,7 @@
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { cancelReveal, playReveal, SERIES_REVEAL_STAGGER } from '../../animation/reveal';
 import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '../../core/datum-style';
@@ -10,8 +11,8 @@ import { linePath, monotonePath, stepPath } from '../../svg/path';
 import type { ContinuousDatum, Scale, TransitionOption } from '../../types';
 
 export interface LineRenderOptions {
-  /** Plot-area bottom in area-local coordinates: the mount animation raises the line from here. */
-  baselineY: number;
+  /** Plot-area size in area-local coordinates: the mount wipe sweeps across this box. */
+  bounds: { height: number; width: number };
   color: string;
   curve: 'linear' | 'monotone' | 'step';
   /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
@@ -19,6 +20,8 @@ export interface LineRenderOptions {
   /** Per-datum presentation parallel to `points`; styled runs split the line into subpaths. */
   marks?: readonly DatumMark[];
   pointRadius: number;
+  /** Series position: multi-series mounts stagger by this index so they do not wipe in lockstep. */
+  seriesIndex?: number;
   showPoints: boolean;
   /** Explicit width beats the `--prism-line-width` theme token. */
   strokeWidth?: number;
@@ -117,6 +120,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 
   if (dur === 0) {
+    cancelReveal(parent);
     draw(points);
     drawnPoints.set(parent, points);
 
@@ -145,13 +149,9 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 
   activeAnimations.get(parent)?.();
+  cancelReveal(parent);
 
-  const hasExisting = drawnPoints.has(parent);
-  // A first render has no drawn shape to interpolate between: the mount animation
-  // raises the whole line from the plot baseline instead.
-  const isMount = !hasExisting;
-
-  const fromPts: Point[] = isMount ? points.map((p) => ({ x: p.x, y: options.baselineY })) : [];
+  const isMount = !drawnPoints.has(parent);
 
   if (dotsGroup) {
     while (dotsGroup.children.length > points.length) dotsGroup.removeChild(dotsGroup.lastChild!);
@@ -172,12 +172,42 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     }
   }
 
-  if (!isMount) {
-    const drawn = drawnPoints.get(parent) ?? points;
+  if (isMount) {
+    // A first render has no drawn shape to interpolate between: the final line is
+    // painted once and wiped in left to right, so the curve never deforms.
+    const paintDots = (): void => {
+      if (!dotsGroup) return;
 
-    for (const [i, to] of points.entries()) {
-      fromPts.push(drawn[i] ?? drawn.at(-1) ?? to);
-    }
+      for (const [i, point] of points.entries()) {
+        const c = dotsGroup.children[i] as SVGCircleElement | undefined;
+
+        if (c) setAttributes(c, { cx: point.x, cy: point.y });
+      }
+    };
+
+    playReveal(
+      parent,
+      options.bounds,
+      () => {
+        draw(points);
+        paintDots();
+        drawnPoints.set(parent, points);
+      },
+      motion,
+      {
+        delay: (options.seriesIndex ?? 0) * SERIES_REVEAL_STAGGER,
+        signal: options.disposalSignal,
+      },
+    );
+    // The reveal owns the mount: the update tween below would replay it from the baseline.
+    return;
+  }
+
+  const fromPts: Point[] = [];
+  const drawn = drawnPoints.get(parent) ?? points;
+
+  for (const [i, to] of points.entries()) {
+    fromPts.push(drawn[i] ?? drawn.at(-1) ?? to);
   }
 
   const paintFrame = (e: number): void => {

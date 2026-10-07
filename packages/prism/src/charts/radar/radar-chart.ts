@@ -1,6 +1,7 @@
 import { devOnly, warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { playFadeRise, SERIES_REVEAL_STAGGER } from '../../animation/reveal';
 import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
@@ -305,15 +306,34 @@ export function createRadarChart(container: HTMLElement, config: RadarChartConfi
   function animateTo(targets: number[][], signal: AbortSignal): void {
     activeTween?.();
 
-    const from = targets.map((row, i) => row.map((_, j) => drawn[i]?.[j] ?? 0));
     // Radar morphs a whole polygon, so it reads better slightly slower than the shared default.
     const motion = resolveMotion(config.transition, { defaultDuration: 400 });
     const easing = resolveEasing(motion.easing ?? 'ease-out');
+    const isMount = drawn.length === 0;
+    const from = targets.map((row, i) => row.map((_, j) => drawn[i]?.[j] ?? 0));
     const unchanged = from.every((row, i) => row.every((v, j) => v === targets[i][j]));
 
     if (motion.duration === 0 || unchanged) {
       drawn = targets;
       draw(targets);
+
+      return;
+    }
+
+    if (isMount) {
+      // A first render has no polygon to grow from: each series paints its final
+      // shape and fades in while rising, staggered, instead of inflating from the center.
+      activeTween = playFadeRise(
+        seriesGroup,
+        targets.length,
+        motion.stagger || SERIES_REVEAL_STAGGER,
+        () => {
+          drawn = targets;
+          draw(targets);
+        },
+        motion,
+        { signal },
+      );
 
       return;
     }

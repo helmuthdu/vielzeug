@@ -105,12 +105,14 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
         allPoints.push(points);
 
         renderArea(group, points, baselineY, {
+          bounds: { height: area.height, width: area.width },
           color: seriesColor(i, series.color),
           curve: series.curve ?? 'linear',
           disposalSignal: ctx.disposalSignal,
           fill: series.fill ?? 'gradient',
           fillOpacity: series.fillOpacity,
           marks: series.data,
+          seriesIndex: i,
           showLine: series.showLine !== false,
           transition: config.transition,
         });

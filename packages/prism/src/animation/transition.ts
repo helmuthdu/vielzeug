@@ -12,6 +12,8 @@ export interface AnimationTarget {
 export interface TweenOptions {
   /** Number of staggered lanes; the loop runs until the last lane finishes. */
   count: number;
+  /** Milliseconds before the first lane starts; shifts the whole tween, not just one lane. */
+  delay?: number;
   /** Milliseconds per lane. A non-positive value completes synchronously. */
   duration: number;
   easing: EasingFn;
@@ -39,7 +41,7 @@ export interface TweenOptions {
  * a tween before it ends.
  */
 export function startTween(options: TweenOptions): () => void {
-  const { count, duration, easing, stagger = 0, signal, onFrame, onComplete } = options;
+  const { count, delay = 0, duration, easing, stagger = 0, signal, onFrame, onComplete } = options;
 
   if (signal?.aborted) return () => {};
 
@@ -57,7 +59,7 @@ export function startTween(options: TweenOptions): () => void {
     return () => {};
   }
 
-  const totalDuration = duration + stagger * (count - 1);
+  const totalDuration = delay + duration + stagger * (count - 1);
   let startTime: number | null = null;
   let rafId: number | null = null;
   let cancelled = false;
@@ -80,7 +82,7 @@ export function startTween(options: TweenOptions): () => void {
 
     const elapsed = timestamp - startTime;
 
-    onFrame((lane) => easing(Math.max(0, Math.min(1, (elapsed - lane * stagger) / duration))));
+    onFrame((lane) => easing(Math.max(0, Math.min(1, (elapsed - delay - lane * stagger) / duration))));
 
     if (elapsed < totalDuration) {
       rafId = requestAnimationFrame(frame);

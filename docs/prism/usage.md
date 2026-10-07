@@ -618,11 +618,15 @@ const chart = createLineChart(container, {
 
 ## Animations
 
-Every chart animates by default: bars grow from the baseline, line and area
-series rise out of the plot, pie slices sweep in and then morph between values,
-radar polygons reshape, and sparklines tween. Motion runs through one
-`requestAnimationFrame` loop and is skipped when the user prefers reduced motion
-(`preference: 'system'`, the default).
+Every chart animates by default. Entrances never deform the data: bars grow from
+the baseline, line and area series are wiped in left to right behind a clip, radar
+polygons fade in while rising, pie slices sweep in, and sparklines reveal their
+final plot. Motion runs through one `requestAnimationFrame` loop and is skipped
+when the user prefers reduced motion (`preference: 'system'`, the default).
+
+Updates interpolate instead: line/area points and radar polygons morph from the
+geometry on screen, pie slices morph between values, and sparklines tween their
+values.
 
 Tune it with `transition`, or turn it off entirely:
 
@@ -646,6 +650,8 @@ Named easings are `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`,
 `(t: number) => number` for anything else. `stagger` applies to bar-chart bars
 and radar-chart series and is ignored elsewhere — bar charts cap the total
 staggered delay near 400 ms so a long category axis still finishes promptly.
+Multi-series line, area, and radar entrances enter one series at a time on a
+fixed 60 ms offset so they never wipe in lockstep.
 
 ## Theming
 

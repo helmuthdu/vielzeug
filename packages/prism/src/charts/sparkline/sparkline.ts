@@ -2,6 +2,7 @@ import { warn } from '../../_dev';
 import { createTappers } from '../../_tappers';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { playReveal } from '../../animation/reveal';
 import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import { createChartBase } from '../../core/chart-base';
@@ -101,6 +102,9 @@ export function createSparkline(
   // never re-animates: every variant interpolates these and repaints.
   let drawnValues: number[] | null = null;
   let activeTween: (() => void) | null = null;
+  // The sparkline rebuilds its plot DOM on every render, so the in-flight mount
+  // wipe is held here (not in a WeakMap) and cancelled before each rebuild.
+  let activeReveal: (() => void) | null = null;
 
   const base = createChartBase(
     container,
@@ -174,12 +178,17 @@ export function createSparkline(
     const { height: h, width: w } = base.dimensions;
     const plot = plotArea();
 
+    activeReveal?.();
+    activeReveal = null;
+    activeTween?.();
+
     while (innerGroup.firstChild) innerGroup.removeChild(innerGroup.firstChild);
 
     innerGroup.setAttribute('transform', `translate(${plot.inset},${plot.inset})`);
 
     if (data.length === 0) {
       drawnValues = null;
+      activeTween = null;
 
       return;
     }
@@ -187,6 +196,9 @@ export function createSparkline(
     if (!isStackData(data) && data.some((v) => !Number.isFinite(v))) {
       warn('createSparkline: data contains non-finite values; they are drawn as the minimum.');
     }
+
+    // No recorded geometry: this render is the mount entrance, not an update.
+    const isMount = drawnValues === null;
 
     if (variant === 'stack' && isStackData(data)) {
       const stackGroup = createSvgElement('g', { class: 'prism-spark-stack' });
@@ -206,29 +218,38 @@ export function createSparkline(
       });
 
       if (total > 0) {
-        animateValues(
-          segs.map((seg) => Math.max(0, seg.value)),
-          0,
-          (values) => {
-            const runningTotal = values.reduce((s, v) => s + v, 0) || 1;
-            const half = (config.padPixels ?? 0) / 2;
-            let xAcc = 0;
+        const finalValues = segs.map((seg) => Math.max(0, seg.value));
 
-            values.forEach((value, i) => {
-              const xStart = Math.round(xAcc);
+        const paintStack = (values: number[]): void => {
+          const runningTotal = values.reduce((s, v) => s + v, 0) || 1;
+          const half = (config.padPixels ?? 0) / 2;
+          let xAcc = 0;
 
-              xAcc += (value / runningTotal) * w;
+          values.forEach((value, i) => {
+            const xStart = Math.round(xAcc);
 
-              const xEnd = i === values.length - 1 ? w : Math.round(xAcc);
-              const isFirst = i === 0;
-              const isLast = i === values.length - 1;
-              const drawX = xStart + (isFirst ? 0 : half);
-              const drawW = Math.max(0, xEnd - xStart - (isFirst ? 0 : half) - (isLast ? 0 : half));
+            xAcc += (value / runningTotal) * w;
 
-              paths[i]?.setAttribute('d', buildRoundedStackRect(drawX, 0, drawW, h, cornerRadius, isFirst, isLast));
-            });
-          },
-        );
+            const xEnd = i === values.length - 1 ? w : Math.round(xAcc);
+            const isFirst = i === 0;
+            const isLast = i === values.length - 1;
+            const drawX = xStart + (isFirst ? 0 : half);
+            const drawW = Math.max(0, xEnd - xStart - (isFirst ? 0 : half) - (isLast ? 0 : half));
+
+            paths[i]?.setAttribute('d', buildRoundedStackRect(drawX, 0, drawW, h, cornerRadius, isFirst, isLast));
+          });
+        };
+
+        if (isMount) {
+          // Segments sliding to new widths would deform the bar mid-wipe: paint the
+          // final split once and reveal it left to right instead.
+          drawnValues = finalValues;
+          activeReveal = playReveal(innerGroup, { height: h, width: w }, () => paintStack(finalValues), motion, {
+            signal: ac.signal,
+          });
+        } else {
+          animateValues(finalValues, 0, paintStack);
+        }
       } else {
         // Nothing to draw: clear the recorded geometry so a later update cannot
         // interpolate from values that are no longer on screen.
@@ -308,7 +329,7 @@ export function createSparkline(
 
       if (endDot) innerGroup.appendChild(endDot);
 
-      animateValues(values, lineMin, (frame) => {
+      const paintPlot = (frame: number[]): void => {
         const top = pointsFromValues(frame);
 
         setAttributes(path, { d: buildPathFromPoints(top, curve) });
@@ -318,7 +339,19 @@ export function createSparkline(
         const end = top.at(-1);
 
         if (endDot && end) setAttributes(endDot, { cx: end.x, cy: end.y });
-      });
+      };
+
+      if (isMount) {
+        // A first render has nothing to tween from: paint the final plot once and
+        // wipe it in left to right, so the curve never inflates out of the floor.
+        // The clip space is the group's translated space, so plot bounds are exact.
+        drawnValues = values;
+        activeReveal = playReveal(innerGroup, { height: plot.h, width: plot.w }, () => paintPlot(values), motion, {
+          signal: ac.signal,
+        });
+      } else {
+        animateValues(values, lineMin, paintPlot);
+      }
     }
 
     if (!isStackData(data)) attachInteraction(data as number[]);

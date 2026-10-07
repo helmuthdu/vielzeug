@@ -1,6 +1,7 @@
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { cancelReveal, playReveal, SERIES_REVEAL_STAGGER } from '../../animation/reveal';
 import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '../../core/datum-style';
@@ -11,6 +12,8 @@ import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
 import type { ContinuousDatum, Scale, TransitionOption } from '../../types';
 
 export interface AreaRenderOptions {
+  /** Plot-area size in area-local coordinates: the mount wipe sweeps across this box. */
+  bounds: { height: number; width: number };
   color: string;
   curve: 'linear' | 'monotone' | 'step';
   /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
@@ -20,6 +23,8 @@ export interface AreaRenderOptions {
   fillOpacity?: number;
   /** Per-datum presentation parallel to `points`; styled runs split the top line into subpaths. */
   marks?: readonly DatumMark[];
+  /** Series position: multi-series mounts stagger by this index so they do not wipe in lockstep. */
+  seriesIndex?: number;
   showLine: boolean;
   transition?: TransitionOption;
 }
@@ -149,6 +154,7 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   };
 
   if (dur === 0) {
+    cancelReveal(parent);
     const bottomPoints = points.map((p) => ({ x: p.x, y: baselineY }));
 
     setAttributes(fill, { d: areaPath(points, bottomPoints, options.curve) });
@@ -160,13 +166,40 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   }
 
   activeAreaAnimations.get(parent)?.();
+  cancelReveal(parent);
 
-  const hasExisting = drawnPoints.has(parent);
-  // A first render has no drawn shape to interpolate from: the mount animation
-  // grows the area out of its baseline instead.
-  const rawFrom: Point[] = hasExisting
-    ? (drawnPoints.get(parent) ?? points)
-    : points.map((p) => ({ x: p.x, y: baselineY }));
+  const drawArea = (pts: Point[]): void => {
+    setAttributes(fill!, {
+      d: areaPath(
+        pts,
+        pts.map((p) => ({ x: p.x, y: baselineY })),
+        options.curve,
+      ),
+    });
+  };
+
+  if (!drawnPoints.has(parent)) {
+    // A first render has no drawn shape to interpolate from: the final area is
+    // painted once and wiped in left to right, so the fill never inflates.
+    playReveal(
+      parent,
+      options.bounds,
+      () => {
+        drawArea(points);
+        drawLine(points);
+        drawnPoints.set(parent, points);
+      },
+      motion,
+      {
+        delay: (options.seriesIndex ?? 0) * SERIES_REVEAL_STAGGER,
+        signal: options.disposalSignal,
+      },
+    );
+    // The reveal owns the mount: the update tween below would replay it from the baseline.
+    return;
+  }
+
+  const rawFrom: Point[] = drawnPoints.get(parent) ?? points;
   const fromPoints: Point[] = points.map((_, i) => rawFrom[i] ?? rawFrom[rawFrom.length - 1] ?? points[i]);
 
   const paintFrame = (e: number): void => {
@@ -174,10 +207,9 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
       x: tweenNumber(fromPoints[i].x, to.x, e),
       y: tweenNumber(fromPoints[i].y, to.y, e),
     }));
-    const interpolatedBottom = interpolated.map((p) => ({ x: p.x, y: baselineY }));
 
     drawnPoints.set(parent, interpolated);
-    setAttributes(fill!, { d: areaPath(interpolated, interpolatedBottom, options.curve) });
+    drawArea(interpolated);
     drawLine(interpolated);
   };
 

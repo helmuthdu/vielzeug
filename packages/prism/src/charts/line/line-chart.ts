@@ -138,12 +138,13 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
         allPoints.push(points);
 
         renderLine(group, points, {
-          baselineY: seriesScale.map(0),
+          bounds: { height: area.height, width: area.width },
           color: seriesColor(i, series.color),
           curve: series.curve ?? 'linear',
           disposalSignal: ctx.disposalSignal,
           marks: series.data,
           pointRadius: series.pointRadius ?? 3,
+          seriesIndex: i,
           showPoints: series.showPoints ?? false,
           strokeWidth: series.strokeWidth,
           transition: config.transition,
