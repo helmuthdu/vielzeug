@@ -65,6 +65,47 @@ Line and area charts with `Date` keys no longer round the x domain outwards to a
 // After: the same data renders on an axis from 3 to 14 September
 ```
 
+## Replace `debugChart()` with `ChartHandle.tap()`
+
+The `@vielzeug/prism/devtools` subpath and its `debugChart()` helper are removed. Every handle now exposes `tap()`, which observes the chart's own resize and dispose events with no second observer and no wrapper.
+
+```ts
+// Before
+import { debugChart } from '@vielzeug/prism/devtools';
+const chart = debugChart(createLineChart(container, config), { label: 'revenue' });
+
+// After
+const chart = createLineChart(container, config);
+const unsubscribe = chart.tap((event) => {
+  if (event.type === 'resize') console.log('resized', event.width, event.height);
+  if (event.type === 'dispose') console.log('disposed');
+});
+```
+
+`tap()` returns an unsubscribe function and accepts `{ signal }` for automatic detach. Handler errors are swallowed. Tapping a disposed handle returns a no-op unsubscribe.
+
+## Read pie and sparkline events from one object
+
+Pie and sparkline `onClick`/`onHover` callbacks now receive a single event object instead of positional arguments, matching the `ChartEvent` and `RadarEvent` shape used by the other charts.
+
+```ts
+// Before
+createPieChart(container, {
+  data,
+  onClick: (slice, index) => console.log(index, slice.label),
+  onHover: (slice, index) => slice && console.log(index),
+});
+
+// After
+createPieChart(container, {
+  data,
+  onClick: (event) => console.log(event.index, event.slice.label),
+  onHover: (event) => event && console.log(event.index),
+});
+```
+
+`PieEvent` carries `index`, `slice`, and `originalEvent`; `SparklineEvent` carries `index`, `value`, and `originalEvent`. `onHover` still receives `null` when the pointer leaves.
+
 ---
 
 # Prism 3 Migration

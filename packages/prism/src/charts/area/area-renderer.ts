@@ -1,6 +1,7 @@
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '../../core/datum-style';
 import { uniqueId } from '../../core/ids';
@@ -176,44 +177,32 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   const rawFrom = previousPoints.get(parent) ?? points;
   const fromPoints: Point[] = points.map((_, i) => rawFrom[i] ?? rawFrom[rawFrom.length - 1] ?? points[i]);
 
-  let startTime: number | null = null;
-
-  function frame(ts: number) {
-    if (options.disposalSignal?.aborted) {
-      activeAreaAnimations.delete(parent);
-
-      return;
-    }
-
-    if (startTime === null) startTime = ts;
-
-    const t = Math.min(1, (ts - startTime) / dur);
-    const e = easing(t);
-    const interpolated: Point[] = points.map((to, i) => ({
-      x: tweenNumber(fromPoints[i].x, to.x, e),
-      y: tweenNumber(fromPoints[i].y, to.y, e),
-    }));
-    const interpolatedBottom = interpolated.map((p) => ({ x: p.x, y: baselineY }));
-
-    setAttributes(fill!, { d: areaPath(interpolated, interpolatedBottom, options.curve) });
-
-    drawLine(interpolated);
-
-    if (t < 1) {
-      const id = requestAnimationFrame(frame);
-
-      activeAreaAnimations.set(parent, () => cancelAnimationFrame(id));
-    } else {
-      activeAreaAnimations.delete(parent);
-      previousPoints.set(parent, points);
-    }
-  }
-
   previousPoints.set(parent, fromPoints);
 
-  const id = requestAnimationFrame(frame);
+  activeAreaAnimations.set(
+    parent,
+    startTween({
+      count: 1,
+      duration: dur,
+      easing,
+      onComplete: () => {
+        activeAreaAnimations.delete(parent);
+        previousPoints.set(parent, points);
+      },
+      onFrame: (progress) => {
+        const e = progress(0);
+        const interpolated: Point[] = points.map((to, i) => ({
+          x: tweenNumber(fromPoints[i].x, to.x, e),
+          y: tweenNumber(fromPoints[i].y, to.y, e),
+        }));
+        const interpolatedBottom = interpolated.map((p) => ({ x: p.x, y: baselineY }));
 
-  activeAreaAnimations.set(parent, () => cancelAnimationFrame(id));
+        setAttributes(fill!, { d: areaPath(interpolated, interpolatedBottom, options.curve) });
+        drawLine(interpolated);
+      },
+      signal: options.disposalSignal,
+    }),
+  );
 }
 
 export function computeAreaPoints(

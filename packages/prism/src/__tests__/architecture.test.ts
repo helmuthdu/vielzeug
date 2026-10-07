@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { error, warn } from '../_dev';
+import { warn } from '../_dev';
 import { animate } from '../animation/transition';
 import { createAreaChart } from '../charts/area';
 import { createBarChart } from '../charts/bar';
@@ -396,18 +396,16 @@ describe('buildYScale', () => {
   });
 });
 
-// ─── devtools ────────────────────────────────────────────────────────────────
+// ─── dev diagnostics ─────────────────────────────────────────────────────────
 
-describe('warn / error', () => {
-  it('exports warn and error without throwing', () => {
+describe('warn', () => {
+  it('emits a development warning without throwing', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => warn('test warn')).not.toThrow();
-    expect(() => error('test error')).not.toThrow();
+    expect(warnSpy).toHaveBeenCalledWith('[@vielzeug/prism] test warn');
 
     warnSpy.mockRestore();
-    errorSpy.mockRestore();
   });
 });
 
@@ -736,7 +734,7 @@ describe('createSparkline: interaction cleanup', () => {
 
     chart.update([1, 2, 3, 4]);
     chart.el.dispatchEvent(new MouseEvent('mouseleave'));
-    expect(onHover).toHaveBeenCalledWith(null, null);
+    expect(onHover).toHaveBeenCalledWith(null);
     chart.dispose();
   });
 });

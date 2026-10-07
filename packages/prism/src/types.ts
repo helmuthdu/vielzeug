@@ -22,11 +22,27 @@ export interface ChartDimensions {
   width: number;
 }
 
+/**
+ * Runtime observation event delivered to {@link ChartHandle.tap} handlers.
+ *
+ * - `resize`: the container's content box changed size and the chart re-laid-out.
+ * - `dispose`: the chart was disposed; emitted once, before teardown completes.
+ */
+export type PrismEvent =
+  | { readonly height: number; readonly type: 'resize'; readonly width: number }
+  | { readonly type: 'dispose' };
+
 export interface ChartHandle<TData = unknown> {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
   readonly el: SVGSVGElement;
+  /**
+   * Observes runtime behavior (resize, dispose) outside the render path.
+   * Returns an unsubscribe function; pass `signal` to detach automatically.
+   * Handler errors are swallowed: observation never affects chart behavior.
+   */
+  tap(handler: (event: PrismEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   update(data: TData): void;
   [Symbol.dispose](): void;
 }
@@ -260,12 +276,19 @@ export interface PieSliceConfig {
   value: number;
 }
 
+/** Interaction event for one pie/donut/semi slice. */
+export interface PieEvent {
+  index: number;
+  originalEvent: Event;
+  slice: PieSliceConfig;
+}
+
 export interface PieChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
   cornerRadius?: number;
   data: PieSliceConfig[];
   innerRadius?: number;
-  onClick?: (slice: PieSliceConfig, index: number) => void;
-  onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
+  onClick?: (event: PieEvent) => void;
+  onHover?: (event: PieEvent | null) => void;
   padPixels?: number;
   variant?: PieVariant;
 }
@@ -332,6 +355,13 @@ export interface StackSegment {
   value: number;
 }
 
+/** Interaction event for one sparkline value. */
+export interface SparklineEvent {
+  index: number;
+  originalEvent: Event;
+  value: number;
+}
+
 export interface SparklineConfig {
   a11y?: ChartA11y;
   color?: string;
@@ -340,8 +370,8 @@ export interface SparklineConfig {
   data: number[] | StackSegment[];
   /** Overrides the `--prism-spark-fill-opacity` theme token (area variant). */
   fillOpacity?: number;
-  onClick?: (index: number, value: number) => void;
-  onHover?: (index: number | null, value: number | null) => void;
+  onClick?: (event: SparklineEvent) => void;
+  onHover?: (event: SparklineEvent | null) => void;
   padPixels?: number;
   /** Dot on the latest value (line and area variants). Defaults to `true`. */
   showEndPoint?: boolean;

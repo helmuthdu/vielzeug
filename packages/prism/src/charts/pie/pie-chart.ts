@@ -1,5 +1,6 @@
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import { createRadialScaffold } from '../../core/chart-scaffold';
@@ -46,7 +47,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
   // Current arcs shared between renderFn and event handlers via closure.
   let currentArcs: Arc[] = [];
-  let activeRaf: number | null = null;
+  let activeTween: (() => void) | null = null;
 
   function renderLabels(slices: PieSliceConfig[]): void {
     labelGroup.replaceChildren();
@@ -75,266 +76,212 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
     }
   }
 
-  let handle: ChartHandle<PieSliceConfig[]> | undefined;
+  return createRadialScaffold(
+    container,
+    {
+      a11y: config.a11y,
+      legend: config.legend,
+      tooltip: config.tooltip,
+    },
+    (ctx): ChartEventHandlers => {
+      const { legend, svg, tooltip } = ctx;
 
-  try {
-    handle = createRadialScaffold(
-      container,
-      {
-        a11y: config.a11y,
-        legend: config.legend,
-        tooltip: config.tooltip,
-      },
-      (ctx): ChartEventHandlers => {
-        const { legend, svg, tooltip } = ctx;
+      // Append pie groups to SVG on first render (idempotent).
+      if (!svg.contains(bgCircle)) {
+        svg.appendChild(bgCircle);
+        svg.appendChild(pieGroup);
+        svg.appendChild(labelGroup);
+      }
 
-        // Append pie groups to SVG on first render (idempotent).
-        if (!svg.contains(bgCircle)) {
-          svg.appendChild(bgCircle);
-          svg.appendChild(pieGroup);
-          svg.appendChild(labelGroup);
+      const { height: h, width: w } = ctx.dimensions;
+      const isSemi = variant === 'semi';
+      const cx = w / 2;
+      const cy = isSemi ? h * 0.85 : h / 2;
+      const padding = 8;
+      const outer = isSemi ? Math.min(cx, cy) - padding : Math.min(w, h) / 2 - padding;
+      const defaultInner = variant === 'pie' ? 0 : Math.round(outer * 0.55);
+      const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
+      const outerR = Math.max(inner + 1, outer);
+
+      const slices = data;
+      const { end, start } = semiAngles(variant);
+
+      currentArcs = computeArcs(
+        slices,
+        cx,
+        cy,
+        outerR,
+        inner,
+        start,
+        end,
+        padPixels,
+        cornerRadius,
+        (i) => seriesColor(i),
+        false,
+      );
+
+      setAttributes(bgCircle, { cx, cy, r: inner > 0 ? inner : 0 });
+      bgCircle.setAttribute('style', 'fill:var(--prism-bg,#fff)');
+
+      while (pieGroup.children.length > currentArcs.length) pieGroup.removeChild(pieGroup.lastChild!);
+
+      labelGroup.replaceChildren();
+
+      const motion = resolveMotion(config.transition, 0);
+      const dur = motion.duration;
+      const easing = resolveEasing(motion.easing);
+
+      for (let i = 0; i < currentArcs.length; i++) {
+        const arc = currentArcs[i];
+        let path = pieGroup.children[i] as SVGPathElement | undefined;
+
+        if (!path) {
+          path = createSvgElement('path', { class: 'prism-pie-slice' });
+          pieGroup.appendChild(path);
         }
 
-        const { height: h, width: w } = ctx.dimensions;
-        const isSemi = variant === 'semi';
-        const cx = w / 2;
-        const cy = isSemi ? h * 0.85 : h / 2;
-        const padding = 8;
-        const outer = isSemi ? Math.min(cx, cy) - padding : Math.min(w, h) / 2 - padding;
-        const defaultInner = variant === 'pie' ? 0 : Math.round(outer * 0.55);
-        const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
-        const outerR = Math.max(inner + 1, outer);
+        path.setAttribute('fill', arc.color);
+        path.setAttribute('stroke', 'none');
+        path.style.cursor = config.onClick || config.onHover ? 'pointer' : '';
+      }
 
-        const slices = data;
-        const { end, start } = semiAngles(variant);
+      activeTween?.();
 
-        currentArcs = computeArcs(
-          slices,
-          cx,
-          cy,
-          outerR,
-          inner,
-          start,
-          end,
-          padPixels,
-          cornerRadius,
-          (i) => seriesColor(i),
-          false,
-        );
+      activeTween = startTween({
+        count: 1,
+        duration: dur,
+        easing,
+        onComplete: () => renderLabels(slices),
+        onFrame: (progress) => {
+          const revealAngle = tweenNumber(start, end, progress(0));
 
-        setAttributes(bgCircle, { cx, cy, r: inner > 0 ? inner : 0 });
-        bgCircle.setAttribute('style', 'fill:var(--prism-bg,#fff)');
-
-        while (pieGroup.children.length > currentArcs.length) pieGroup.removeChild(pieGroup.lastChild!);
-
-        labelGroup.replaceChildren();
-
-        const motion = resolveMotion(config.transition, 0);
-        const dur = motion.duration;
-        const easing = resolveEasing(motion.easing);
-
-        for (let i = 0; i < currentArcs.length; i++) {
-          const arc = currentArcs[i];
-          let path = pieGroup.children[i] as SVGPathElement | undefined;
-
-          if (!path) {
-            path = createSvgElement('path', { class: 'prism-pie-slice' });
-            pieGroup.appendChild(path);
-          }
-
-          path.setAttribute('fill', arc.color);
-          path.setAttribute('stroke', 'none');
-          path.style.cursor = config.onClick || config.onHover ? 'pointer' : '';
-        }
-
-        if (activeRaf !== null) {
-          cancelAnimationFrame(activeRaf);
-          activeRaf = null;
-        }
-
-        if (dur > 0) {
-          let rafStart: number | null = null;
-
-          const frame = (ts: number) => {
-            if (rafStart === null) rafStart = ts;
-
-            const t = easing(Math.min(1, (ts - rafStart) / dur));
-            const revealAngle = tweenNumber(start, end, t);
-
-            for (let j = 0; j < currentArcs.length; j++) {
-              const a = currentArcs[j];
-              const el = pieGroup.children[j] as SVGPathElement | undefined;
-
-              if (!el) continue;
-
-              if (revealAngle <= a.startAngle) {
-                setAttributes(el, { d: '' });
-              } else {
-                const visibleEnd = Math.min(a.endAngle, revealAngle);
-
-                setAttributes(el, { d: arcPath({ ...a, endAngle: visibleEnd }) });
-              }
-            }
-
-            if (t < 1) {
-              activeRaf = requestAnimationFrame(frame);
-            } else {
-              activeRaf = null;
-              renderLabels(slices);
-            }
-          };
-
-          activeRaf = requestAnimationFrame(frame);
-        } else {
           for (let j = 0; j < currentArcs.length; j++) {
             const a = currentArcs[j];
             const el = pieGroup.children[j] as SVGPathElement | undefined;
 
-            if (el) setAttributes(el, { d: arcPath(a) });
-          }
+            if (!el) continue;
 
-          renderLabels(slices);
+            if (revealAngle <= a.startAngle) {
+              setAttributes(el, { d: '' });
+            } else {
+              const visibleEnd = Math.min(a.endAngle, revealAngle);
+
+              setAttributes(el, { d: arcPath({ ...a, endAngle: visibleEnd }) });
+            }
+          }
+        },
+        signal: ctx.disposalSignal,
+      });
+
+      legend?.update(currentArcs.map((arc) => ({ color: arc.color, name: arc.slice.label ?? '' })));
+      tooltip?.hide();
+
+      const total = currentArcs.reduce((sum, arc) => sum + Math.max(0, arc.slice.value), 0);
+      let activeIndex = -1;
+
+      const describe = (arc: Arc): string => {
+        const percent = total > 0 ? Math.round((Math.max(0, arc.slice.value) / total) * 1000) / 10 : 0;
+
+        return `${arc.slice.label ?? `Slice ${arc.index + 1}`}: ${arc.slice.value} (${percent}%)`;
+      };
+
+      const setActive = (index: number): void => {
+        activeIndex = index;
+        pieGroup.classList.toggle('prism-pie-focused', index >= 0);
+        for (const [i, el] of [...pieGroup.children].entries())
+          el.classList.toggle('prism-pie-slice--active', i === index);
+      };
+
+      const activate = (index: number, originalEvent: Event): void => {
+        const arc = currentArcs[index];
+
+        if (!arc) return;
+
+        setActive(index);
+        config.onHover?.({ index, originalEvent, slice: arc.slice });
+
+        const text = describe(arc);
+
+        if (!tooltip) {
+          ctx.announcer.announce(text);
+
+          return;
         }
 
-        legend?.update(currentArcs.map((arc) => ({ color: arc.color, name: arc.slice.label ?? '' })));
+        const { x, y } = arcCentroid(arc);
+        const svgRect = svg.getBoundingClientRect();
+        const contR = container.getBoundingClientRect();
+
+        tooltip.show(
+          x + (svgRect.left - contR.left),
+          y + (svgRect.top - contR.top),
+          { key: index, value: arc.slice.value },
+          { color: arc.color, data: [], name: arc.slice.label ?? '' },
+          text,
+        );
+      };
+
+      const deactivate = (): void => {
+        setActive(-1);
         tooltip?.hide();
+        ctx.announcer.clear();
+        config.onHover?.(null);
+      };
 
-        const total = currentArcs.reduce((sum, arc) => sum + Math.max(0, arc.slice.value), 0);
-        let activeIndex = -1;
+      const hitAt = (e: MouseEvent): number => {
+        const svgRect = svg.getBoundingClientRect();
 
-        const describe = (arc: Arc): string => {
-          const percent = total > 0 ? Math.round((Math.max(0, arc.slice.value) / total) * 1000) / 10 : 0;
+        return hitTestArc(currentArcs, e.clientX - svgRect.left, e.clientY - svgRect.top, variant);
+      };
 
-          return `${arc.slice.label ?? `Slice ${arc.index + 1}`}: ${arc.slice.value} (${percent}%)`;
-        };
+      const onMouseMove = (e: MouseEvent): void => {
+        const hit = hitAt(e);
 
-        const setActive = (index: number): void => {
-          activeIndex = index;
-          pieGroup.classList.toggle('prism-pie-focused', index >= 0);
-          for (const [i, el] of [...pieGroup.children].entries())
-            el.classList.toggle('prism-pie-slice--active', i === index);
-        };
-
-        const activate = (index: number): void => {
-          const arc = currentArcs[index];
-
-          if (!arc) return;
-
-          setActive(index);
-          config.onHover?.(arc.slice, index);
-
-          const text = describe(arc);
-
-          if (!tooltip) {
-            ctx.announcer.announce(text);
-
-            return;
-          }
-
-          const { x, y } = arcCentroid(arc);
-          const svgRect = svg.getBoundingClientRect();
-          const contR = container.getBoundingClientRect();
-
-          tooltip.show(
-            x + (svgRect.left - contR.left),
-            y + (svgRect.top - contR.top),
-            { key: index, value: arc.slice.value },
-            { color: arc.color, data: [], name: arc.slice.label ?? '' },
-            text,
-          );
-        };
-
-        const deactivate = (): void => {
-          setActive(-1);
-          tooltip?.hide();
-          ctx.announcer.clear();
-          config.onHover?.(null, null);
-        };
-
-        const hitAt = (e: MouseEvent): number => {
-          const svgRect = svg.getBoundingClientRect();
-
-          return hitTestArc(currentArcs, e.clientX - svgRect.left, e.clientY - svgRect.top, variant);
-        };
-
-        const onMouseMove = (e: MouseEvent): void => {
-          const hit = hitAt(e);
-
-          if (hit >= 0) {
-            if (hit !== activeIndex) activate(hit);
-          } else if (activeIndex >= 0) {
-            deactivate();
-          }
-        };
-
-        const onClick = (e: MouseEvent): void => {
-          if (!config.onClick) return;
-
-          const hit = hitAt(e);
-
-          if (hit >= 0) config.onClick(currentArcs[hit].slice, hit);
-        };
-
-        const onKeyDown = (e: KeyboardEvent): void => {
-          const count = currentArcs.length;
-
-          if (count === 0) return;
-
-          const step: Record<string, number> = { ArrowDown: 1, ArrowLeft: -1, ArrowRight: 1, ArrowUp: -1 };
-
-          if (e.key in step) {
-            e.preventDefault();
-            activate(activeIndex < 0 ? (step[e.key] > 0 ? 0 : count - 1) : (activeIndex + step[e.key] + count) % count);
-          } else if (e.key === 'Home' || e.key === 'End') {
-            e.preventDefault();
-            activate(e.key === 'Home' ? 0 : count - 1);
-          } else if ((e.key === 'Enter' || e.key === ' ') && activeIndex >= 0 && config.onClick) {
-            e.preventDefault();
-            config.onClick(currentArcs[activeIndex].slice, activeIndex);
-          } else if (e.key === 'Escape') {
-            deactivate();
-          }
-        };
-
-        return { onClick, onKeyDown, onMouseLeave: deactivate, onMouseMove };
-      },
-      (next) => {
-        data = next;
-      },
-    );
-
-    return {
-      get disposalSignal(): AbortSignal {
-        return handle!.disposalSignal;
-      },
-
-      dispose() {
-        if (activeRaf !== null) {
-          cancelAnimationFrame(activeRaf);
-          activeRaf = null;
+        if (hit >= 0) {
+          if (hit !== activeIndex) activate(hit, e);
+        } else if (activeIndex >= 0) {
+          deactivate();
         }
+      };
 
-        handle!.dispose();
-      },
+      const onClick = (e: MouseEvent): void => {
+        if (!config.onClick) return;
 
-      get disposed(): boolean {
-        return handle!.disposed;
-      },
+        const hit = hitAt(e);
 
-      el: handle!.el,
+        if (hit >= 0) config.onClick({ index: hit, originalEvent: e, slice: currentArcs[hit].slice });
+      };
 
-      update(next) {
-        handle!.update(next);
-      },
+      const onKeyDown = (e: KeyboardEvent): void => {
+        const count = currentArcs.length;
 
-      [Symbol.dispose]() {
-        this.dispose();
-      },
-    };
-  } catch (error) {
-    handle?.dispose();
-    throw error;
-  }
+        if (count === 0) return;
+
+        const step: Record<string, number> = { ArrowDown: 1, ArrowLeft: -1, ArrowRight: 1, ArrowUp: -1 };
+
+        if (e.key in step) {
+          e.preventDefault();
+          activate(
+            activeIndex < 0 ? (step[e.key] > 0 ? 0 : count - 1) : (activeIndex + step[e.key] + count) % count,
+            e,
+          );
+        } else if (e.key === 'Home' || e.key === 'End') {
+          e.preventDefault();
+          activate(e.key === 'Home' ? 0 : count - 1, e);
+        } else if ((e.key === 'Enter' || e.key === ' ') && activeIndex >= 0 && config.onClick) {
+          e.preventDefault();
+          config.onClick({ index: activeIndex, originalEvent: e, slice: currentArcs[activeIndex].slice });
+        } else if (e.key === 'Escape') {
+          deactivate();
+        }
+      };
+
+      return { onClick, onKeyDown, onMouseLeave: deactivate, onMouseMove };
+    },
+    (next) => {
+      data = next;
+    },
+  );
 }
 
 function hitTestArc(arcs: Arc[], mx: number, my: number, variant: PieChartConfig['variant']): number {

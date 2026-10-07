@@ -376,15 +376,17 @@ chart.update([
 ```ts
 createPieChart(container, {
   data,
-  onHover: (slice, index) => {
-    // slice/index are null on mouseleave
-    if (slice) console.log(slice.label, slice.value);
+  onHover: (event) => {
+    // event is PieEvent | null (null on mouseleave)
+    if (event) console.log(event.index, event.slice.label, event.slice.value);
   },
-  onClick: (slice, index) => {
-    console.log('clicked', slice.label);
+  onClick: (event) => {
+    console.log('clicked', event.index, event.slice.label);
   },
 });
 ```
+
+`PieEvent` provides `index`, the hovered/clicked `slice` (`PieSliceConfig`), and the `originalEvent` (`MouseEvent` or `KeyboardEvent`).
 
 ## Radar Charts
 
@@ -491,20 +493,22 @@ spark.update([12, 18, 14, 22, 30]);
 
 ### Event Hooks
 
-Sparklines use simplified hooks: index-based rather than full `ChartEvent`. With a hook set, a marker follows the hovered value:
+Sparklines use simplified hooks: `SparklineEvent` rather than full `ChartEvent`. With a hook set, a marker follows the hovered value:
 
 ```ts
 const spark = createSparkline(container, {
   data: [10, 20, 30],
-  onHover: (index, value) => {
-    // index/value are null on mouseleave
-    if (index !== null) console.log(`Hovering point ${index}: ${value}`);
+  onHover: (event) => {
+    // event is SparklineEvent | null (null on mouseleave)
+    if (event) console.log(`Hovering point ${event.index}: ${event.value}`);
   },
-  onClick: (index, value) => {
-    console.log(`Clicked point ${index}: ${value}`);
+  onClick: (event) => {
+    console.log(`Clicked point ${event.index}: ${event.value}`);
   },
 });
 ```
+
+`SparklineEvent` provides `index`, the hovered/clicked `value`, and the `originalEvent`.
 
 > **Note:** Sparklines have no keyboard navigation. Label one with `a11y.ariaLabel` only when the trend carries meaning, and state the key value in surrounding text.
 
@@ -608,7 +612,7 @@ const chart = createLineChart(container, {
 - `values`: every series at the same key (line, area, and bar charts)
 - `originalEvent`: the raw `MouseEvent` or, for keyboard navigation, `KeyboardEvent`
 
-> **Pie and radar events differ**: pie hooks receive `(slice: PieSliceConfig, index: number)`, and radar hooks receive a `RadarEvent` describing an axis. See [`PieChartConfig`](./api.md#chart-configurations) and [`createRadarChart()`](./api.md#createradarchart).
+> **Pie, radar, and sparkline events differ**: pie hooks receive a `PieEvent` (`index`, `slice`, `originalEvent`), sparkline hooks a `SparklineEvent` (`index`, `value`, `originalEvent`), and radar hooks a `RadarEvent` describing an axis. See [`PieChartConfig`](./api.md#chart-configurations) and [`createRadarChart()`](./api.md#createradarchart).
 
 ## Animations
 
@@ -783,22 +787,27 @@ Call `update()` only while the handle is active. Updating a disposed chart throw
 
 Charts resize automatically when the container dimensions change. Prism uses `ResizeObserver` internally: no manual `resize()` call is needed.
 
-## Devtools
+## Runtime Observation
 
-Import `debugChart()` from the `/devtools` subpath to log a chart's mount, resize, and dispose events to `console.debug`. It's separate from prism's internal validation warnings (those run automatically in development, no import needed) and is tree-shaken from production bundles when this subpath isn't imported.
+Every handle exposes `tap()` to observe runtime behavior — resize and dispose — outside the render path. It reuses the chart's own `ResizeObserver`, so observing costs nothing extra, and handler errors are swallowed: observation never affects chart behavior.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
-import { debugChart } from '@vielzeug/prism/devtools';
 
-const chart = debugChart(createLineChart(container, config), { label: 'revenue' });
-// [prism:revenue] mounted
-// [prism:revenue] resized  600×300
-chart.dispose();
-// [prism:revenue] disposed
+const chart = createLineChart(container, {
+  series: [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }],
+});
+const controller = new AbortController();
+const unsubscribe = chart.tap(
+  (event) => {
+    if (event.type === 'resize') console.log('resized', event.width, event.height);
+    if (event.type === 'dispose') console.log('disposed');
+  },
+  { signal: controller.signal },
+);
 ```
 
-> `debugChart()` wraps and returns the same `ChartHandle` unchanged, so it drops into any `create*Chart()` call without restructuring your code.
+`tap()` returns an unsubscribe function; pass `options.signal` to detach automatically instead. The `resize` event carries the new `width`/`height` and fires after the chart re-laid-out; `dispose` fires once, before teardown completes. Tapping a disposed handle returns a no-op unsubscribe. This is separate from prism's internal validation warnings, which run automatically in development and are never part of the public API.
 
 ## Accessibility
 
@@ -911,5 +920,5 @@ void source.reload().catch(() => undefined);
 - Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel transitions, disconnect resize observation, and remove DOM nodes.
 - Call `chart.update(data)` from your application state boundary; Prism does not require or own a state library.
 - Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data: unlabelled charts are hidden from assistive technology and receive no keyboard navigation.
-- Wrap a chart with `debugChart()` from the `/devtools` subpath only in development code paths; it is tree-shaken in production.
+- Observe lifecycle with `chart.tap(handler)` rather than polling `chart.disposed` or wrapping the container: it costs nothing when untapped and detaches via `signal`.
 - For SSR, skip chart creation server-side: Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.

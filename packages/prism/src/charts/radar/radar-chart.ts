@@ -1,6 +1,7 @@
 import { devOnly, warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import { createRadialScaffold } from '../../core/chart-scaffold';
@@ -84,7 +85,7 @@ export function createRadarChart(container: HTMLElement, config: RadarChartConfi
   root.append(defs, gridGroup, seriesGroup, labelGroup);
 
   let drawn: number[][] = [];
-  let activeRaf: number | null = null;
+  let activeTween: (() => void) | null = null;
   let activeIndex = -1;
   let layout = { cx: 0, cy: 0, radius: 0 };
 
@@ -301,11 +302,8 @@ export function createRadarChart(container: HTMLElement, config: RadarChartConfi
     }
   }
 
-  function animateTo(targets: number[][]): void {
-    if (activeRaf !== null) {
-      cancelAnimationFrame(activeRaf);
-      activeRaf = null;
-    }
+  function animateTo(targets: number[][], signal: AbortSignal): void {
+    activeTween?.();
 
     const from = targets.map((row, i) => row.map((_, j) => drawn[i]?.[j] ?? 0));
     const motion = resolveMotion(config.transition, 400);
@@ -319,206 +317,166 @@ export function createRadarChart(container: HTMLElement, config: RadarChartConfi
       return;
     }
 
-    let start: number | null = null;
+    activeTween = startTween({
+      count: targets.length,
+      duration: motion.duration,
+      easing,
+      onFrame: (progress) => {
+        drawn = targets.map((row, i) => {
+          const e = progress(i);
 
-    const frame = (ts: number): void => {
-      if (start === null) start = ts;
-
-      const elapsed = ts - start;
-      let done = true;
-
-      drawn = targets.map((row, i) => {
-        const raw = Math.max(0, Math.min(1, (elapsed - i * motion.stagger) / motion.duration));
-
-        if (raw < 1) done = false;
-
-        return row.map((to, j) => tweenNumber(from[i][j], to, easing(raw)));
-      });
-      draw(drawn);
-      activeRaf = done ? null : requestAnimationFrame(frame);
-    };
-
-    activeRaf = requestAnimationFrame(frame);
-  }
-
-  let handle: ChartHandle<RadarSeriesConfig[]> | undefined;
-
-  try {
-    handle = createRadialScaffold(
-      container,
-      { a11y: config.a11y, legend: config.legend, tooltip: config.tooltip },
-      (ctx): ChartEventHandlers | undefined => {
-        const { legend, svg, tooltip } = ctx;
-
-        if (!svg.contains(root)) svg.appendChild(root);
-
-        tooltip?.hide();
-        legend?.update(series.map((s, i) => ({ color: s.color ?? seriesColor(i), name: s.name })));
-
-        if (axes.length < 3) {
-          for (const group of [defs, gridGroup, seriesGroup, labelGroup]) group.replaceChildren();
-          drawn = [];
-
-          return undefined;
-        }
-
-        const { height, width } = ctx.dimensions;
-        const radius = fitRadius(
-          width,
-          height,
-          axes.map((axis) => axis.label),
-          angles,
-          LABEL_FONT_SIZE,
-          labelGap,
-        );
-
-        layout = { cx: width / 2, cy: height / 2, radius };
-
-        const domains = resolveAxisDomains(axes, series, config.domain);
-
-        renderGrid(domains);
-        renderLabels();
-        renderSeries();
-        animateTo(
-          series.map((s) =>
-            axes.map((_, j) => {
-              const value = datumAt(s, j)?.value;
-
-              return value !== undefined && Number.isFinite(value) ? normalize(value, domains[j]) : 0;
-            }),
-          ),
-        );
-        setActive(activeIndex);
-
-        const eventFor = (index: number, originalEvent: Event): RadarEvent => ({
-          axis: axes[index],
-          index,
-          originalEvent,
-          values: valuesAt(index),
+          return row.map((to, j) => tweenNumber(from[i][j], to, e));
         });
-
-        const activate = (index: number, originalEvent: Event): void => {
-          setActive(index);
-          config.onHover?.(eventFor(index, originalEvent));
-
-          const text = describe(index);
-
-          if (!tooltip) {
-            ctx.announcer.announce(text);
-
-            return;
-          }
-
-          const reach = Math.max(0, ...drawn.map((row) => row[index] ?? 0));
-          const svgRect = svg.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
-          const values = valuesAt(index);
-          const first = values.find((v) => v.datum)?.datum;
-          const rows = values.flatMap(({ datum, series: s }) =>
-            datum
-              ? [
-                  {
-                    color: s.color ?? seriesColor(series.indexOf(s)),
-                    name: s.name,
-                    value: formatValue(index, datum.value),
-                  },
-                ]
-              : [],
-          );
-
-          tooltip.show(
-            polarX(layout.cx, layout.radius * reach, angles[index]) + (svgRect.left - containerRect.left),
-            polarY(layout.cy, layout.radius * reach, angles[index]) + (svgRect.top - containerRect.top),
-            { key: axes[index].key, meta: { axis: axes[index], text, values }, value: first?.value ?? 0 },
-            { color: series[0]?.color ?? seriesColor(0), data: [], name: axes[index].label },
-            comparisonContent(svg.ownerDocument, axes[index].label, rows, text),
-          );
-        };
-
-        const deactivate = (): void => {
-          setActive(-1);
-          config.onHover?.(null);
-          tooltip?.hide();
-          ctx.announcer.clear();
-        };
-
-        const hitIndex = (event: MouseEvent): number => {
-          const rect = svg.getBoundingClientRect();
-          const dx = event.clientX - rect.left - layout.cx;
-          const dy = event.clientY - rect.top - layout.cy;
-
-          if (Math.hypot(dx, dy) > layout.radius + labelGap + LABEL_FONT_SIZE * 2) return -1;
-
-          return nearestAxis(dx, dy, axes.length, startAngle);
-        };
-
-        return {
-          onClick(event) {
-            const index = hitIndex(event);
-
-            if (index >= 0) config.onClick?.(eventFor(index, event));
-          },
-          onKeyDown(event) {
-            const step = ARROW_STEPS[event.key];
-
-            if (step !== undefined) {
-              event.preventDefault();
-              activate(activeIndex < 0 ? 0 : (activeIndex + step + axes.length) % axes.length, event);
-            } else if ((event.key === 'Enter' || event.key === ' ') && activeIndex >= 0 && config.onClick) {
-              event.preventDefault();
-              config.onClick(eventFor(activeIndex, event));
-            } else if (event.key === 'Escape') {
-              deactivate();
-            }
-          },
-          onMouseLeave: deactivate,
-          onMouseMove(event) {
-            const index = hitIndex(event);
-
-            if (index < 0) {
-              if (activeIndex >= 0) deactivate();
-            } else if (index !== activeIndex) {
-              activate(index, event);
-            }
-          },
-        };
+        draw(drawn);
       },
-      (next) => {
-        series = next;
-        warnOnInvalid(axes, series);
-      },
-    );
+      signal,
+      stagger: motion.stagger,
+    });
+  }
 
-    return {
-      get disposalSignal(): AbortSignal {
-        return handle!.disposalSignal;
-      },
+  return createRadialScaffold(
+    container,
+    { a11y: config.a11y, legend: config.legend, tooltip: config.tooltip },
+    (ctx): ChartEventHandlers | undefined => {
+      const { legend, svg, tooltip } = ctx;
 
-      dispose() {
-        if (activeRaf !== null) {
-          cancelAnimationFrame(activeRaf);
-          activeRaf = null;
+      if (!svg.contains(root)) svg.appendChild(root);
+
+      tooltip?.hide();
+      legend?.update(series.map((s, i) => ({ color: s.color ?? seriesColor(i), name: s.name })));
+
+      if (axes.length < 3) {
+        for (const group of [defs, gridGroup, seriesGroup, labelGroup]) group.replaceChildren();
+        drawn = [];
+
+        return undefined;
+      }
+
+      const { height, width } = ctx.dimensions;
+      const radius = fitRadius(
+        width,
+        height,
+        axes.map((axis) => axis.label),
+        angles,
+        LABEL_FONT_SIZE,
+        labelGap,
+      );
+
+      layout = { cx: width / 2, cy: height / 2, radius };
+
+      const domains = resolveAxisDomains(axes, series, config.domain);
+
+      renderGrid(domains);
+      renderLabels();
+      renderSeries();
+      animateTo(
+        series.map((s) =>
+          axes.map((_, j) => {
+            const value = datumAt(s, j)?.value;
+
+            return value !== undefined && Number.isFinite(value) ? normalize(value, domains[j]) : 0;
+          }),
+        ),
+        ctx.disposalSignal,
+      );
+      setActive(activeIndex);
+
+      const eventFor = (index: number, originalEvent: Event): RadarEvent => ({
+        axis: axes[index],
+        index,
+        originalEvent,
+        values: valuesAt(index),
+      });
+
+      const activate = (index: number, originalEvent: Event): void => {
+        setActive(index);
+        config.onHover?.(eventFor(index, originalEvent));
+
+        const text = describe(index);
+
+        if (!tooltip) {
+          ctx.announcer.announce(text);
+
+          return;
         }
 
-        handle!.dispose();
-      },
+        const reach = Math.max(0, ...drawn.map((row) => row[index] ?? 0));
+        const svgRect = svg.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const values = valuesAt(index);
+        const first = values.find((v) => v.datum)?.datum;
+        const rows = values.flatMap(({ datum, series: s }) =>
+          datum
+            ? [
+                {
+                  color: s.color ?? seriesColor(series.indexOf(s)),
+                  name: s.name,
+                  value: formatValue(index, datum.value),
+                },
+              ]
+            : [],
+        );
 
-      get disposed(): boolean {
-        return handle!.disposed;
-      },
+        tooltip.show(
+          polarX(layout.cx, layout.radius * reach, angles[index]) + (svgRect.left - containerRect.left),
+          polarY(layout.cy, layout.radius * reach, angles[index]) + (svgRect.top - containerRect.top),
+          { key: axes[index].key, meta: { axis: axes[index], text, values }, value: first?.value ?? 0 },
+          { color: series[0]?.color ?? seriesColor(0), data: [], name: axes[index].label },
+          comparisonContent(svg.ownerDocument, axes[index].label, rows, text),
+        );
+      };
 
-      el: handle!.el,
+      const deactivate = (): void => {
+        setActive(-1);
+        config.onHover?.(null);
+        tooltip?.hide();
+        ctx.announcer.clear();
+      };
 
-      update(next) {
-        handle!.update(next);
-      },
+      const hitIndex = (event: MouseEvent): number => {
+        const rect = svg.getBoundingClientRect();
+        const dx = event.clientX - rect.left - layout.cx;
+        const dy = event.clientY - rect.top - layout.cy;
 
-      [Symbol.dispose]() {
-        this.dispose();
-      },
-    };
-  } catch (error) {
-    handle?.dispose();
-    throw error;
-  }
+        if (Math.hypot(dx, dy) > layout.radius + labelGap + LABEL_FONT_SIZE * 2) return -1;
+
+        return nearestAxis(dx, dy, axes.length, startAngle);
+      };
+
+      return {
+        onClick(event) {
+          const index = hitIndex(event);
+
+          if (index >= 0) config.onClick?.(eventFor(index, event));
+        },
+        onKeyDown(event) {
+          const step = ARROW_STEPS[event.key];
+
+          if (step !== undefined) {
+            event.preventDefault();
+            activate(activeIndex < 0 ? 0 : (activeIndex + step + axes.length) % axes.length, event);
+          } else if ((event.key === 'Enter' || event.key === ' ') && activeIndex >= 0 && config.onClick) {
+            event.preventDefault();
+            config.onClick(eventFor(activeIndex, event));
+          } else if (event.key === 'Escape') {
+            deactivate();
+          }
+        },
+        onMouseLeave: deactivate,
+        onMouseMove(event) {
+          const index = hitIndex(event);
+
+          if (index < 0) {
+            if (activeIndex >= 0) deactivate();
+          } else if (index !== activeIndex) {
+            activate(index, event);
+          }
+        },
+      };
+    },
+    (next) => {
+      series = next;
+      warnOnInvalid(axes, series);
+    },
+  );
 }

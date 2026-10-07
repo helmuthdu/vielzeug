@@ -331,7 +331,7 @@ describe('chart interaction standard', () => {
 
       press(chart, 'ArrowRight');
       press(chart, 'Enter');
-      expect(onClick).toHaveBeenCalledWith(SLICES[0], 0);
+      expect(onClick).toHaveBeenCalledWith(expect.objectContaining({ index: 0, slice: SLICES[0] }));
       chart.dispose();
     });
 

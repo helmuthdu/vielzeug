@@ -3,7 +3,7 @@ import type { ChartEventHandlers } from '../core/chart-scaffold';
 import { chartArea } from '../core/layout';
 import { createSvgElement } from '../svg/element';
 import type { Point } from '../svg/path';
-import type { ChartDimensions, ChartEvent, Datum, Series, SeriesValue } from '../types';
+import type { ChartDimensions, ChartEvent, ChartMargin, Datum, Series, SeriesValue } from '../types';
 import { type Announcer, describeValues } from './announcer';
 import type { CrosshairState } from './crosshair';
 import { getMousePosition } from './events';
@@ -17,6 +17,8 @@ export interface SeriesInteractionOptions {
   getData: () => Datum[][];
   getPoints: () => Point[][];
   getSeriesList: () => Series[];
+  /** Effective chart margin (including any dual-axis widening): hit bounds and tooltip offsets use this, never the shared dimensions. */
+  margin: ChartMargin;
   /** Receives one marker per series at the active key. */
   markers: SVGGElement;
   onClick?: ((event: ChartEvent) => void) | undefined;
@@ -175,7 +177,7 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
     const { entries, event, index } = found;
     const point = entries[index].point!;
     const dims = opts.dims();
-    const area = chartArea(dims.width, dims.height, dims.margin);
+    const area = chartArea(dims.width, dims.height, opts.margin);
     const raw = opts.crosshair?.snap === false && pos;
     const label = keyLabel(key);
     const values = event.values ?? [];
@@ -192,8 +194,8 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
       );
 
       opts.tooltip.show(
-        point.x + dims.margin.left,
-        point.y + dims.margin.top,
+        point.x + opts.margin.left,
+        point.y + opts.margin.top,
         event.datum,
         event.series,
         comparisonContent(opts.svg.ownerDocument, label, rows, spoken),
@@ -214,8 +216,8 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
     if (allPoints.every((points) => points.length === 0)) return null;
 
     const dims = opts.dims();
-    const pos = getMousePosition(opts.svg, event, dims.margin.left, dims.margin.top);
-    const area = chartArea(dims.width, dims.height, dims.margin);
+    const pos = getMousePosition(opts.svg, event, opts.margin.left, opts.margin.top);
+    const area = chartArea(dims.width, dims.height, opts.margin);
 
     if (pos.x < 0 || pos.x > area.width || pos.y < 0 || pos.y > area.height) return null;
 

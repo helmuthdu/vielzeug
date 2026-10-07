@@ -132,7 +132,7 @@ describe('createPieChart', () => {
     const chart = createPieChart(container, { data: DATA, onHover, transition: { duration: 0 } });
 
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    expect(onHover).toHaveBeenCalledWith(null, null);
+    expect(onHover).toHaveBeenCalledWith(null);
     chart.dispose();
   });
 

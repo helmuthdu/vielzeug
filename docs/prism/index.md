@@ -163,7 +163,7 @@ chart.dispose();
 - **Keyboard navigation**: arrow keys, `Enter`, and `Escape` on every labelled chart except sparklines
 - **CSS custom properties**: full theme control via `--prism-*` tokens, with dark mode built in
 - **Responsive**: auto-resizes via `ResizeObserver`
-- **Devtools**: `debugChart()` from `@vielzeug/prism/devtools` logs mount/resize/dispose to `console.debug`
+- **`ChartHandle.tap()`**: observe resize and dispose events outside the render path, with zero cost when untapped
 - **`Symbol.dispose`**: explicit resource management following the TC39 proposal
 
 </div>

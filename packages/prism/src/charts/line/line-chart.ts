@@ -26,9 +26,15 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
       const dims = ctx.dimensions;
       const hasRight = seriesList.some((series) => series.yAxis === 'right');
       const hasLeftData = seriesList.some((series) => series.yAxis !== 'right' && series.data.length > 0);
-      dims.margin.right =
-        config.margin?.right ?? (hasRight ? (config.rightYAxis?.label ? 72 : 50) : resolveMargin(config.margin).right);
-      const area = chartArea(dims.width, dims.height, dims.margin);
+      // The right axis widens the right margin; the effective margin stays local to this
+      // render pass (and is handed to the interaction layer) instead of mutating shared dims.
+      const margin = {
+        ...resolveMargin(config.margin),
+        right:
+          config.margin?.right ??
+          (hasRight ? (config.rightYAxis?.label ? 72 : 50) : resolveMargin(config.margin).right),
+      };
+      const area = chartArea(dims.width, dims.height, margin);
       const allData = seriesList.map((series) => series.data);
       const allX = allData.flat().map((datum) => datum.key);
       const leftY = seriesList
@@ -148,6 +154,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
         getData: () => allData,
         getPoints: () => allPoints,
         getSeriesList: () => seriesList,
+        margin,
         markers,
         onClick: config.onClick,
         onHover: config.onHover,

@@ -120,6 +120,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
         getData: () => allData,
         getPoints: () => allPoints,
         getSeriesList: () => seriesList,
+        margin: ctx.dimensions.margin,
         markers,
         onClick: config.onClick,
         onHover: config.onHover,

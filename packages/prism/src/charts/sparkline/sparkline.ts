@@ -1,6 +1,8 @@
 import { warn } from '../../_dev';
+import { createTappers } from '../../_tappers';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import { createChartBase } from '../../core/chart-base';
 import { uniqueId } from '../../core/ids';
@@ -8,7 +10,7 @@ import { PrismRenderError } from '../../errors';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
-import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
+import type { ChartHandle, PrismEvent, SparklineConfig, StackSegment } from '../../types';
 
 /** Fits the 3.5px hover marker plus its ring inside the SVG. */
 const PLOT_INSET = 5;
@@ -89,28 +91,21 @@ function renderSparkBars(
 
     if (dur > 0 && !rect.hasAttribute('data-init')) {
       rect.setAttribute('data-init', '1');
-      setAttributes(rect, { height: 0, y: height });
 
-      let start: number | null = null;
-      const from = { h: 0, y: height };
-      const to = { h: finalH, y: finalY };
+      startTween({
+        count: 1,
+        duration: dur,
+        easing,
+        onFrame: (progress) => {
+          const t = progress(0);
 
-      const frame = (ts: number) => {
-        if (disposalSignal?.aborted) return;
-
-        if (start === null) start = ts;
-
-        const t = easing(Math.min(1, (ts - start) / dur));
-
-        setAttributes(rect!, {
-          height: tweenNumber(from.h, to.h, t),
-          y: tweenNumber(from.y, to.y, t),
-        });
-
-        if (t < 1) requestAnimationFrame(frame);
-      };
-
-      requestAnimationFrame(frame);
+          setAttributes(rect!, {
+            height: tweenNumber(0, finalH, t),
+            y: tweenNumber(height, finalY, t),
+          });
+        },
+        signal: disposalSignal,
+      });
     } else {
       rect.setAttribute('data-init', '1');
       setAttributes(rect, { height: finalH, y: finalY });
@@ -168,6 +163,7 @@ export function createSparkline(
   const fillOpacity = config.fillOpacity;
   const showEndPoint = config.showEndPoint ?? true;
   const gradientId = uniqueId('prism-spark-fill');
+  const tappers = createTappers<PrismEvent>();
   let data = config.data;
 
   const base = createChartBase(
@@ -176,7 +172,10 @@ export function createSparkline(
       a11y: config.a11y,
       margin: { bottom: 0, left: 0, right: 0, top: 0 },
     },
-    renderAll,
+    () => {
+      tappers.emit({ height: base.dimensions.height, type: 'resize', width: base.dimensions.width });
+      renderAll();
+    },
   );
 
   const { svg } = base;
@@ -320,12 +319,12 @@ export function createSparkline(
         marker.style.display = '';
       }
 
-      config.onHover?.(idx, data[idx]);
+      config.onHover?.({ index: idx, originalEvent: e, value: data[idx] });
     };
 
     const handleLeave = () => {
       marker.style.display = 'none';
-      config.onHover?.(null, null);
+      config.onHover?.(null);
     };
 
     const handleClick = (e: MouseEvent) => {
@@ -333,7 +332,7 @@ export function createSparkline(
 
       const idx = indexAt(e.clientX);
 
-      config.onClick(idx, data[idx]);
+      config.onClick({ index: idx, originalEvent: e, value: data[idx] });
     };
 
     svg.addEventListener('mousemove', handleMove);
@@ -362,6 +361,8 @@ export function createSparkline(
         if (isDisposed) return;
 
         isDisposed = true;
+        tappers.emit({ type: 'dispose' });
+        tappers.stop();
         ac.abort();
         cleanupInteraction?.();
         base.dispose();
@@ -372,6 +373,8 @@ export function createSparkline(
       },
 
       el: svg,
+
+      tap: tappers.tap,
 
       update(next) {
         if (isDisposed) throw new PrismRenderError('Cannot update a disposed chart.');

@@ -1,3 +1,4 @@
+import { createTappers } from '../_tappers';
 import { PrismRenderError } from '../errors';
 import { type Announcer, createAnnouncer } from '../interaction/announcer';
 import type { CrosshairState } from '../interaction/crosshair';
@@ -6,7 +7,7 @@ import { createLegend } from '../interaction/legend';
 import type { TooltipState } from '../interaction/tooltip';
 import { createTooltip } from '../interaction/tooltip';
 import { createSvgElement, removeChildren } from '../svg/element';
-import type { BaseChartConfig, ChartDimensions, ChartHandle } from '../types';
+import type { BaseChartConfig, ChartDimensions, ChartHandle, PrismEvent } from '../types';
 import { createChartBase } from './chart-base';
 
 export interface ScaffoldGroups {
@@ -86,6 +87,7 @@ function runScaffold<TCtx, TData>(
   updateData: (data: TData) => void,
 ): ChartHandle<TData> {
   let render = () => {};
+  const tappers = createTappers<PrismEvent>();
   // The legend is created after the base (bottom legends append after the svg), but the
   // chrome accessor runs only from the resize observer's async callback — by which time
   // the legend exists — so the deferred reference is safe.
@@ -93,7 +95,10 @@ function runScaffold<TCtx, TData>(
   const base = createChartBase(
     container,
     { a11y: config.a11y, chrome: () => legend?.el ?? null, margin: config.margin },
-    () => render(),
+    () => {
+      tappers.emit({ height: base.dimensions.height, type: 'resize', width: base.dimensions.width });
+      render();
+    },
   );
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
   legend = config.legend ? createLegend(container, config.legend) : null;
@@ -129,6 +134,8 @@ function runScaffold<TCtx, TData>(
       if (disposed) return;
 
       disposed = true;
+      tappers.emit({ type: 'dispose' });
+      tappers.stop();
       ac.abort();
       events.detach();
       tooltip?.dispose();
@@ -141,6 +148,8 @@ function runScaffold<TCtx, TData>(
     },
 
     el: base.svg,
+
+    tap: tappers.tap,
 
     update(data) {
       if (disposed) throw new PrismRenderError('Cannot update a disposed chart.');

@@ -12,7 +12,7 @@ description: Complete chart, scale, theme, handle, configuration, and error cont
 | `createLineChart()` | Render a line chart | Sync | Line keys must be numbers or dates |
 | `createAreaChart()` | Render an area chart | Sync | Line keys must be numbers or dates |
 | `createBarChart()` | Render grouped or stacked bars | Sync | Stacked negative values are clamped to zero |
-| `createPieChart()` | Render pie, donut, or semi-circle slices | Sync | Event callbacks use slice/index arguments |
+| `createPieChart()` | Render pie, donut, or semi-circle slices | Sync | `onHover` receives `null` when the pointer leaves |
 | `createRadarChart()` | Compare values across 3+ axes, such as hero stats | Sync | Events report a whole axis, not one series |
 | `createSparkline()` | Render an inline line, area, bar, or stack | Sync | Omitted `a11y` makes the chart decorative |
 | `linearScale()` | Create a numeric scale | Sync | `nice` defaults to `true` |
@@ -21,7 +21,6 @@ description: Complete chart, scale, theme, handle, configuration, and error cont
 | `setTheme()` | Set Prism CSS custom properties | Sync | Values apply to `document.documentElement` |
 | `resetTheme()` | Remove Prism theme overrides | Sync | Removes only properties managed by `setTheme()` |
 | `seriesColor()` | Resolve a series palette color | Sync | Palette indexes wrap after eight colors |
-| `debugChart()` | Log chart lifecycle events | Sync | Import from `@vielzeug/prism/devtools` |
 
 ## Package Entry Point
 
@@ -29,7 +28,6 @@ description: Complete chart, scale, theme, handle, configuration, and error cont
 | --- | --- |
 | `@vielzeug/prism` | Chart factories, scales, theme helpers, errors, and public types |
 | `@vielzeug/prism/theme` | Default CSS custom properties and dark-mode values |
-| `@vielzeug/prism/devtools` | Optional `debugChart()` lifecycle logging |
 
 ## Chart Factories
 
@@ -333,10 +331,15 @@ interface ChartHandle<TData = unknown> {
   readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   readonly el: SVGSVGElement;
+  tap(handler: (event: PrismEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   update(data: TData): void;
   dispose(): void;
   [Symbol.dispose](): void;
 }
+
+type PrismEvent =
+  | { readonly height: number; readonly type: 'resize'; readonly width: number }
+  | { readonly type: 'dispose' };
 
 interface ChartMargin {
   top: number;
@@ -357,6 +360,8 @@ type ChartA11y =
 ```
 
 `update()` renders synchronously and throws `PrismRenderError` after disposal. Omitting `a11y` makes the SVG decorative with `aria-hidden="true"`.
+
+`tap()` observes runtime behavior outside the render path: it receives `resize` and `dispose` events (see `PrismEvent`). It returns an unsubscribe function; pass `options.signal` to detach automatically. Handler errors are swallowed, and tapping a disposed handle returns a no-op unsubscribe.
 
 ---
 
@@ -452,8 +457,8 @@ interface PieChartConfig
   innerRadius?: number;
   cornerRadius?: number;
   padPixels?: number;
-  onClick?: (slice: PieSliceConfig, index: number) => void;
-  onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
+  onClick?: (event: PieEvent) => void;
+  onHover?: (event: PieEvent | null) => void;
 }
 
 interface RadarChartConfig
@@ -479,8 +484,8 @@ interface SparklineConfig {
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
   fillOpacity?: number; // overrides --prism-spark-fill-opacity (area variant)
-  onClick?: (index: number, value: number) => void;
-  onHover?: (index: number | null, value: number | null) => void;
+  onClick?: (event: SparklineEvent) => void;
+  onHover?: (event: SparklineEvent | null) => void;
   padPixels?: number;
   showEndPoint?: boolean; // default true: dot on the latest value (line, area)
   strokeWidth?: number;
@@ -518,6 +523,12 @@ interface PieSliceConfig {
   label?: string;
 }
 
+interface PieEvent {
+  index: number;
+  originalEvent: Event;
+  slice: PieSliceConfig;
+}
+
 interface RadarAxisConfig {
   key: string;
   label: string;
@@ -551,6 +562,12 @@ interface StackSegment {
   value: number;
   color?: string;
   label?: string;
+}
+
+interface SparklineEvent {
+  index: number;
+  originalEvent: Event;
+  value: number;
 }
 ```
 
@@ -669,20 +686,6 @@ interface PrismTheme {
   gridOpacity?: number;
 }
 ```
-
-## Devtools
-
-### `debugChart()`
-
-```ts
-function debugChart<T extends ChartHandle>(handle: T, options?: DebugChartOptions): T;
-
-interface DebugChartOptions {
-  label?: string; // log prefix; defaults to 'chart', producing [prism:chart]
-}
-```
-
-Logs mount, resize, and disposal events to `console.debug` and returns the same handle. Import it and `DebugChartOptions` from `@vielzeug/prism/devtools`.
 
 ## Errors
 

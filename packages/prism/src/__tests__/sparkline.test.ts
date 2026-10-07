@@ -119,7 +119,7 @@ describe('createSparkline', () => {
     });
 
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    expect(onHover).toHaveBeenCalledWith(null, null);
+    expect(onHover).toHaveBeenCalledWith(null);
     chart.dispose();
   });
 

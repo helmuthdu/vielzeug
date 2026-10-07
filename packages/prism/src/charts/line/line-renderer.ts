@@ -1,6 +1,7 @@
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '../../core/datum-style';
 import { createSvgElement, setAttributes } from '../../svg/element';
@@ -179,51 +180,40 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     fromPts.push(lastKnown ?? points[i]);
   }
 
-  let startTime: number | null = null;
-
-  function frame(ts: number) {
-    if (options.disposalSignal?.aborted) {
-      activeAnimations.delete(parent);
-
-      return;
-    }
-
-    if (startTime === null) startTime = ts;
-
-    const t = Math.min(1, (ts - startTime) / dur);
-    const e = easing(t);
-    const interpolated: Point[] = points.map((to, i) => {
-      const from = fromPts[i] ?? to;
-
-      return { x: tweenNumber(from.x, to.x, e), y: tweenNumber(from.y, to.y, e) };
-    });
-
-    draw(interpolated);
-
-    if (dotsGroup) {
-      for (let i = 0; i < points.length; i++) {
-        const c = dotsGroup.children[i] as SVGCircleElement | undefined;
-
-        if (c) setAttributes(c, { cx: interpolated[i].x, cy: interpolated[i].y });
-      }
-    }
-
-    if (t < 1) {
-      const id = requestAnimationFrame(frame);
-
-      activeAnimations.set(parent, () => cancelAnimationFrame(id));
-    } else {
-      activeAnimations.delete(parent);
-    }
-  }
-
   if (!hasExisting) {
     draw(points);
-  } else {
-    const id = requestAnimationFrame(frame);
 
-    activeAnimations.set(parent, () => cancelAnimationFrame(id));
+    return;
   }
+
+  activeAnimations.set(
+    parent,
+    startTween({
+      count: 1,
+      duration: dur,
+      easing,
+      onComplete: () => activeAnimations.delete(parent),
+      onFrame: (progress) => {
+        const e = progress(0);
+        const interpolated: Point[] = points.map((to, i) => {
+          const from = fromPts[i] ?? to;
+
+          return { x: tweenNumber(from.x, to.x, e), y: tweenNumber(from.y, to.y, e) };
+        });
+
+        draw(interpolated);
+
+        if (dotsGroup) {
+          for (let i = 0; i < points.length; i++) {
+            const c = dotsGroup.children[i] as SVGCircleElement | undefined;
+
+            if (c) setAttributes(c, { cx: interpolated[i].x, cy: interpolated[i].y });
+          }
+        }
+      },
+      signal: options.disposalSignal,
+    }),
+  );
 }
 
 export function computePoints(data: ContinuousDatum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
