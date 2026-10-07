@@ -11,6 +11,7 @@ description: API reference for @vielzeug/focus navigation and restoration primit
 | --- | --- | --- | --- |
 | `createListNavigation()` | Build keyboard navigation for composite widgets | Sync | Apply returned changes to DOM focus |
 | `createGridNavigation()` | Build two-dimensional arrow-key navigation for grids | Sync | Columns resolve per navigation: responsive grids need a getter |
+| `createQuickLookGrid()` | Build arrow-key tile browsing with a preview key for card grids | Sync | The preview key consumes Space: the focused button never activates |
 | `restoreFocus()` | Restore focus to a target or fallback | Sync | Returns `false` when neither target can receive focus |
 | `rescueFocus()` | Re-home focus after the focused element unmounts | Sync | Returns `false` when focus is already on a real element |
 | `captureFocus()` | Capture active focus for one later restoration | Sync | The returned function is one-shot |
@@ -105,6 +106,41 @@ if (result?.change) result.change.item.focus();
 | `getActiveItem()` | `T \| undefined` | Returns the item at the active index. |
 
 Unlike `createListNavigation`, items are not skipped when disabled: skipping in two dimensions would break row alignment. With no active index, forward moves start at the first item and backward moves at the last. `columns` may be a getter resolved on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. `FocusConfigError` is thrown when `columns` resolves below `1`.
+
+---
+
+### `createQuickLookGrid()`
+
+```ts
+function createQuickLookGrid(options: QuickLookGridOptions): QuickLookGrid;
+```
+
+Creates keyboard browsing over a tile grid with a Quick Look key: arrows and Home/End move focus through the items (delegating to `createGridNavigation()`) and `inspectKey` previews the item under the event instead of activating it: the pair every card picker needs.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `options` | `QuickLookGridOptions` | Item lookup, active-index source, column resolution, preview key, wrapping, and inspection callback. |
+
+**Returns:** `QuickLookGrid`.
+
+**Example**
+
+```ts
+import { createQuickLookGrid } from '@vielzeug/focus';
+
+const quickLook = createQuickLookGrid({
+  getItems: () => [...grid.querySelectorAll<HTMLElement>('.tile')],
+  onInspect: (item, index) => previewCard(index),
+});
+
+grid.addEventListener('keydown', (event) => quickLook.handleKeydown(event));
+```
+
+| Member | Return | Contract |
+| --- | --- | --- |
+| `handleKeydown(event)` | `void` | Routes one `keydown`: navigation keys move focus to the reported item, `inspectKey` calls `preventDefault()`/`stopPropagation()` then `onInspect(item, index)`. Unrecognized, already-prevented, composing, modifier, and disabled events pass through. |
+
+`columns` defaults to the rendered row length at the active item (items sharing its top edge), which follows the grid's own responsive wrapping without a media query; supply `columns` to read a track list instead. `getActiveIndex` defaults to the item that is or contains `document.activeElement`; supply it when focus sits on a wrapper around the item. `inspectKey` defaults to `' '` (Space), the platform preview key. The recognizer pairs with a pointer long-press at the call site as the touch counterpart of `onInspect`.
 
 ---
 
@@ -266,6 +302,20 @@ type GridNavigation<T> = {
   navigate(action: GridNavigationAction): GridNavigationChange<T> | null;
   reset(): void;
   set(index: number): void;
+};
+
+type QuickLookGridOptions = {
+  columns?: GridColumns;
+  disabled?: MaybeGetter<boolean>;
+  getActiveIndex?: () => number;
+  getItems: () => readonly HTMLElement[];
+  inspectKey?: string;
+  loop?: boolean;
+  onInspect: (item: HTMLElement, index: number) => void;
+};
+
+type QuickLookGrid = {
+  handleKeydown(event: KeyboardEvent): void;
 };
 
 type FocusTarget = HTMLElement | SVGElement | null | undefined | (() => HTMLElement | SVGElement | null | undefined);

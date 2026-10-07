@@ -107,6 +107,25 @@ grid.addEventListener('keydown', (event) => {
 
 `columns` resolves on every navigation, so responsive grids can read a media query and measured grids can read the rendered row length. Clamping is the default; set `loop: true` to wrap moves around the grid's edges by flat index. Items are never skipped when disabled: skipping in two dimensions would break row alignment.
 
+## Browse Card Grids with Quick Look
+
+Use `createQuickLookGrid()` for card pickers, where arrows walk the tiles and Space previews the focused card instead of activating it: the WAI-ARIA Quick Look convention. The primitive pairs the navigation with the preview key, consumes the Space press so the focused button never toggles, and reports the item through `onInspect`:
+
+```ts
+import { createQuickLookGrid } from '@vielzeug/focus';
+
+const tiles = () => [...grid.querySelectorAll<HTMLElement>('.tile')];
+
+const quickLook = createQuickLookGrid({
+  getItems: tiles,
+  onInspect: (_item, index) => openPreview(index),
+});
+
+grid.addEventListener('keydown', (event) => quickLook.handleKeydown(event));
+```
+
+Leave `columns` unset to measure the rendered row length at the focused tile, which follows the grid's own responsive wrapping without a media query. Supply `getActiveIndex` when focus may sit on a wrapper around the item rather than the item itself. Enter keeps activating the focused tile through its own handler: only the preview key is intercepted. A pointer long-press recognizer is the touch counterpart of `onInspect`; pair them at the call site.
+
 ## Restore Focus
 
 Capture focus before opening a transient surface, then invoke the one-shot restorer when it closes:

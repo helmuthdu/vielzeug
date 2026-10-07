@@ -3,8 +3,8 @@ title: 'Focus: Navigation and restoration'
 description: Framework-neutral list navigation and focus restoration primitives.
 package: focus
 category: input
-keywords: [focus, roving, keyboard, accessibility, list navigation, grid navigation]
-exports: [createListNavigation, createGridNavigation, captureFocus, restoreFocus, rescueFocus]
+keywords: [focus, roving, keyboard, accessibility, list navigation, grid navigation, quick look]
+exports: [createListNavigation, createGridNavigation, createQuickLookGrid, captureFocus, restoreFocus, rescueFocus]
 related: [refine, keymap, ore]
 environments: [browser]
 ---
@@ -36,6 +36,7 @@ list.addEventListener('keydown', (event) => {
 | Zero dependencies | n/a | <ore-icon name="check" size="16"></ore-icon> |
 | RTL mirroring | Manual | Built in |
 | Grid navigation | Flat only | `createGridNavigation()` |
+| Quick Look grids | Manual Space handling | `createQuickLookGrid()` |
 | Typeahead | Manual | Optional via `typeahead` |
 | Focus restoration | Manual capture | `captureFocus()` / `restoreFocus()` |
 
@@ -89,6 +90,7 @@ container.removeEventListener('keydown', onKeydown);
 
 - `createListNavigation()`: pure composite navigation with explicit handled/change results
 - `createGridNavigation()`: two-dimensional arrow-key navigation with fixed or measured columns
+- `createQuickLookGrid()`: tile-grid arrow browsing with a Space preview key for card pickers
 - Orientation and direction support: vertical/horizontal/both with LTR/RTL defaults
 - Dynamic item queries: disabled filtering and loop control
 - Optional typeahead: label-based navigation in key-driven lists

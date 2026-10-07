@@ -19,6 +19,8 @@ export type {
   MaybeGetter,
 } from './list-navigation.js';
 export { createListNavigation } from './list-navigation.js';
+export type { QuickLookGrid, QuickLookGridOptions } from './quick-look-grid.js';
+export { createQuickLookGrid } from './quick-look-grid.js';
 export type {
   CaptureFocusOptions,
   FocusRestorer,
