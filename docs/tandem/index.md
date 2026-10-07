@@ -5,7 +5,7 @@ package: tandem
 category: sync
 keywords: [sync, offline, conflict, tombstone, rev, replication, last-write-wins]
 related: [vault, postmaster, sentinel, ripple]
-exports: [createSync, SyncPort, SyncGateway, SyncHandle, TandemEvent]
+exports: [createSync, SyncPort, SyncGateway, SyncHandle, TandemEvent, TandemError, TandemDisposedError]
 environments: [browser, node]
 ---
 
@@ -113,7 +113,7 @@ sync.dispose();
 - **`flush()`**: a full cycle on demand: pull remote changes, then push dirty records; rejects on failure.
 - **Hide-flows**: flushes with `keepalive` on `pagehide`/`hidden`, runs a full cycle on return to the foreground.
 - **`tap()`**: typed `TandemEvent`s for pushes, pulls, invalid records, and warnings.
-- **Lifecycle-owned**: `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]`.
+- **Lifecycle-owned**: `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]`; post-dispose `changed()`/`flush()` fail with `TandemDisposedError`.
 
 </div>
 

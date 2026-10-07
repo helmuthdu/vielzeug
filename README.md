@@ -262,6 +262,27 @@ pnpm add @vielzeug/postmaster
 
 ---
 
+### [@vielzeug/tandem](packages/tandem) – Offline-First Sync Engine
+
+Backend-agnostic sync scheduler between your storage and your server: rev baselines, tombstoned deletions, and idle-batched pushes.
+
+```bash
+pnpm add @vielzeug/tandem
+```
+
+**Key Features:**
+
+- Two seams you implement: `SyncPort` (server) and `SyncGateway` (storage): the engine owns every rev comparison
+- Dirty tracking by `rev` write counter, persisted across reloads
+- Tombstoned deletions that survive pulls and clear only on server ack
+- Idle-batched pushes, keepalive flushes on tab hide, and push-rejection reconcile pulls
+- `tap()` observation seam with typed events; `TandemDisposedError` surfaces leaked handles
+- Zero dependencies (3.3 KB min / 1.4 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/tandem/) • [Examples](https://vielzeug.dev/tandem/examples)
+
+---
+
 ### [@vielzeug/vault](packages/vault) – Browser Storage
 
 Powerful, type-safe browser storage with a unified API for IndexedDB and LocalStorage.
@@ -811,8 +832,9 @@ pnpm add @vielzeug/tavern
 - The host's command table is the same object the host's own UI calls: remote actions cannot bypass validation
 - Snapshot broadcasting coalesced on a microtask: bursts of local changes ship one snapshot
 - `TavernNotices`: consumer-defined notice serialization; catalog keys cross the wire, each client translates locally
+- `tap()` observability: presence and warnings on the host, rejections and warnings on the guest, as typed events
 - `onEnded` fires exactly once whether the channel drops or the guest disposes
-- Typed errors: `TavernPairingError` separates pasted-the-wrong-code from programming errors
+- Typed errors: `TavernPairingError` separates pasted-the-wrong-code from programming errors; `TavernDisposedError` surfaces a reused handle
 
 [📖 Documentation](https://vielzeug.dev/tavern/) • [Examples](https://vielzeug.dev/tavern/examples)
 
@@ -937,6 +959,7 @@ vielzeug/
 │   ├── scroll/        # Virtual list engine
 │   ├── sourcerer/     # Reactive data sources
 │   ├── spell/         # Schema validation
+│   ├── tandem/        # Offline-first sync engine
 │   ├── tempo/         # Date & time utilities
 │   ├── vault/         # Browser storage (IndexedDB + LocalStorage)
 │   ├── ward/          # RBAC & permission management
@@ -995,6 +1018,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/refine`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
 | `@vielzeug/sourcerer`    | **8.5 KB**                   | **2.6 KB**     | 1\*          |
 | `@vielzeug/spell`        | **49.1 KB**                  | **11.9 KB**    | 0            |
+| `@vielzeug/tandem`       | **3.3 KB**                   | **1.4 KB**     | 0            |
 | `@vielzeug/tempo`        | **12.5 KB**                  | **4.0 KB**     | 0            |
 | `@vielzeug/vault`        | **26.9 KB**                  | **8.7 KB**     | 0            |
 | `@vielzeug/ward`         | **7.1 KB**                   | **2.6 KB**     | 0            |

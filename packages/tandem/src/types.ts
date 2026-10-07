@@ -23,7 +23,10 @@ export interface SyncEnvelope<TRecord extends SyncRecordBase = SyncRecordBase> {
 
 /** A deletion that travels: stored locally as a tombstone, propagated on the next push. */
 export interface SyncDeletion {
-  readonly deletedAt: string;
+  /** When the deletion happened, set by whoever recorded it. The engine never reads
+   *  it: a device may stamp its own tombstones, a server that needs the timestamp
+   *  for conflict policy may send one, and either may omit it. */
+  readonly deletedAt?: string;
   readonly entity: string;
   readonly id: string;
 }
@@ -82,8 +85,10 @@ export interface SyncGateway<TRecord extends SyncRecordBase = SyncRecordBase> {
   loadState(): Promise<SyncState | null>;
   /** Tombstones not yet acknowledged by the server. */
   pendingDeletions(): Promise<SyncDeletion[]>;
-  /** The device's own records: no remote mirrors. */
-  records(): SyncEnvelope<TRecord>[];
+  /** The device's own records: no remote mirrors. Sync or async, so an in-memory
+   *  gateway can return them directly while a disk-backed one reads them from
+   *  storage instead of holding a mirror of every synced record in memory. */
+  records(): Promise<SyncEnvelope<TRecord>[]> | SyncEnvelope<TRecord>[];
   /** Persists the baseline after a completed pull or push. */
   saveState(state: SyncState): Promise<void>;
 }
@@ -93,7 +98,7 @@ export type TandemEvent =
   | { readonly records: number; readonly type: 'pull' }
   | { readonly records: number; readonly type: 'push' }
   | { readonly message: string; readonly skipped: readonly string[]; readonly type: 'invalid' }
-  | { readonly message: string; readonly type: 'warning' }
+  | { readonly error: unknown; readonly message: string; readonly type: 'warning' }
   | { readonly type: 'dispose' };
 
 /** Options for {@link createSync}. */
@@ -109,7 +114,9 @@ export interface SyncOptions<TRecord extends SyncRecordBase = SyncRecordBase> {
 /** The running sync scheduler returned by {@link createSync}. */
 export interface SyncHandle {
   /** Records that a local change happened; (re)starts the idle timer that flushes
-   *  dirty records. Wire this to the app's write path or reactive layer. */
+   *  dirty records. Wire this to the app's write path or reactive layer.
+   *  Throws `TandemDisposedError` after {@link dispose}: a leaked scheduler must
+   *  fail loudly rather than stop syncing in silence. */
   changed(): void;
   /** Aborted when the handle is disposed. */
   readonly disposalSignal: AbortSignal;
@@ -120,7 +127,8 @@ export interface SyncHandle {
   readonly disposed: boolean;
   /** Runs a full sync cycle now: pulls remote changes, then pushes dirty records.
    *  Resolves when the cycle completes; rejects when it fails (dirty records stay
-   *  dirty and the next cycle retries them). A no-op after {@link dispose}. */
+   *  dirty and the next cycle retries them). Rejects with `TandemDisposedError`
+   *  after {@link dispose}. */
   flush(): Promise<void>;
   /** Subscribes to {@link TandemEvent}s. Handler errors are swallowed; the
    *  subscription detaches when `signal` aborts or the handle is disposed. */

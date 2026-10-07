@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { TandemDisposedError } from '../errors';
 import type { SyncDeletion, SyncEnvelope, SyncGateway, SyncHandle, SyncPort, SyncState, TandemEvent } from '../index';
 import { createSync } from '../index';
 
@@ -74,18 +75,26 @@ function createGateway(initial: TestRecord[] = []) {
   let tombstones: SyncDeletion[] = [];
   let stored: SyncState | null = null;
   const applied: SyncEnvelope<TestRecord>[] = [];
+  let refused: string[] = [];
   const gateway: SyncGateway<TestRecord> = {
     async applyDeletions(deletions) {
       for (const { id } of deletions) records = records.filter((record) => record.id !== id);
     },
     async applyRecords(pulled) {
       applied.push(...pulled);
+      const skipped: string[] = [];
+
       for (const { record } of pulled) {
+        if (refused.includes(record.id)) {
+          skipped.push(record.id);
+
+          continue;
+        }
         records = records.some((candidate) => candidate.id === record.id)
           ? records.map((candidate) => (candidate.id === record.id ? record : candidate))
           : [...records, record];
       }
-      return [];
+      return skipped;
     },
     async clearDeletions(deletions) {
       const gone = new Set(deletions.map((deletion) => `${deletion.entity}:${deletion.id}`));
@@ -108,9 +117,17 @@ function createGateway(initial: TestRecord[] = []) {
       records = records.map((record) => (record.id === id ? { ...mutate(record), rev: record.rev + 1 } : record));
     },
     gateway,
+    /** Makes applyRecords report these ids as failing validation. */
+    refuse(...ids: string[]): void {
+      refused = ids;
+    },
     remove(id: string): void {
       records = records.filter((record) => record.id !== id);
       tombstones.push({ deletedAt: '2026-01-01T00:00:00.000Z', entity: 'docs', id });
+    },
+    /** The last state the engine persisted, exactly as the gateway stored it. */
+    get storedState(): SyncState | null {
+      return stored;
     },
     get values(): TestRecord[] {
       return records;
@@ -194,6 +211,37 @@ describe('push', () => {
 
     await vi.waitFor(() => expect(pushes).toHaveLength(1));
     expect(pushes[0]!.keepalive).toBe(true);
+  });
+
+  it('pushes with keepalive when the page is hiding', async () => {
+    const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
+    const { port, pushes } = createPort();
+    handle = createSync({ gateway: device.gateway, idleDelayMs: 60_000, port });
+    await vi.waitFor(() => expect(pushes).toHaveLength(1));
+    pushes.length = 0;
+
+    device.edit('a', (record) => ({ ...record, value: 1 }));
+    handle.changed();
+
+    window.dispatchEvent(new Event('pagehide'));
+
+    await vi.waitFor(() => expect(pushes).toHaveLength(1));
+    expect(pushes[0]!.keepalive).toBe(true);
+  });
+
+  it('accepts a gateway whose records() reads storage asynchronously', async () => {
+    const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
+    const { port, pushes } = createPort();
+    const asyncGateway: SyncGateway<TestRecord> = {
+      ...device.gateway,
+      records: async () => device.values.map((record) => ({ entity: 'docs', record })),
+    };
+    handle = createSync({ gateway: asyncGateway, idleDelayMs: 30, port });
+    await vi.waitFor(() => expect(pushes).toHaveLength(1));
+
+    const pushed = pushes[0]!.records.find((entry) => entry.record.id === 'a')!;
+
+    expect(pushed.record.value).toBe(0);
   });
 
   it('pushes deletions as tombstones and clears them once acked', async () => {
@@ -304,6 +352,39 @@ describe('pull', () => {
 
     expect(device.values.find((record) => record.id === 'a')).toBeUndefined(); // the tombstone held
   });
+
+  it('reports records the gateway refused as invalid and does not apply them', async () => {
+    const device = createGateway();
+    device.refuse('bad');
+    const { port } = createPort({
+      records: [
+        { entity: 'docs', record: { id: 'good', rev: 1, value: 1 } },
+        { entity: 'docs', record: { id: 'bad', rev: 1, value: 2 } },
+      ],
+    });
+    const events: TandemEvent[] = [];
+    handle = createSync({ gateway: device.gateway, idleDelayMs: 60_000, port });
+    handle.tap((event) => events.push(event));
+
+    await vi.waitFor(() => expect(device.values.map((record) => record.id)).toEqual(['good']));
+
+    const invalid = events.find((event) => event.type === 'invalid');
+
+    expect(invalid).toMatchObject({ skipped: ['bad'], type: 'invalid' });
+  });
+
+  it('prunes the baseline for a record a remote deletion removed', async () => {
+    const device = createGateway([{ id: 'a', rev: 3, value: 0 }]);
+    const { port, setRemote } = createPort();
+    handle = createSync({ gateway: device.gateway, idleDelayMs: 60_000, port });
+    await vi.waitFor(() => expect(device.storedState?.revs['docs:a']).toBe(3)); // pushed baseline
+
+    setRemote({ deletions: [{ entity: 'docs', id: 'a' }] });
+    await handle.flush();
+
+    expect(device.values).toHaveLength(0);
+    expect(device.storedState?.revs['docs:a']).toBeUndefined(); // no orphan baseline entry
+  });
 });
 
 describe('flush', () => {
@@ -343,6 +424,8 @@ describe('failure handling', () => {
     expect(events.some((event) => event.type === 'warning' && event.message === 'conflict: the server is ahead')).toBe(
       true,
     );
+    // The cause travels through tap, not just its stringified message.
+    expect(events.some((event) => event.type === 'warning' && event.error instanceof Error)).toBe(true);
     await handle.flush(); // the retry lands
     const pushed = pushes.at(-1)!.records.find((entry) => entry.record.id === 'a')!;
     expect(pushed.record.value).toBe(1);
@@ -380,6 +463,41 @@ describe('persistence', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(second.pushes).toHaveLength(0); // nothing dirty: the baseline survived
+  });
+
+  it('carries the pull cursor into the next pull', async () => {
+    const device = createGateway();
+    const { port, pulls, setRemote } = createPort({ cursor: 'c1' });
+    handle = createSync({ gateway: device.gateway, idleDelayMs: 60_000, port });
+    await vi.waitFor(() => expect(pulls[0]).toBeNull()); // boot pulls from the start
+
+    setRemote({ cursor: 'c2' });
+    await handle.flush();
+
+    expect(pulls.at(-1)).toBe('c1'); // the cursor the last pull returned
+    expect(device.storedState?.cursor).toBe('c2');
+  });
+
+  it('never hands the gateway a state object it can alias', async () => {
+    const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
+    const { port } = createPort();
+    const saved: SyncState[] = [];
+    const original = device.gateway.saveState.bind(device.gateway);
+    const spy = vi.spyOn(device.gateway, 'saveState').mockImplementation(async (next) => {
+      saved.push(next);
+      await original(next);
+    });
+    handle = createSync({ gateway: device.gateway, idleDelayMs: 60_000, port });
+    await vi.waitFor(() => expect(spy).toHaveBeenCalled());
+
+    const first = saved[0]!;
+    const firstBaseline = first.revs['docs:a'];
+
+    device.edit('a', (record) => ({ ...record, value: 1 }));
+    await handle.flush();
+
+    expect(first.revs['docs:a']).toBe(firstBaseline); // the earlier object was never mutated in place
+    expect(saved.at(-1)!.revs['docs:a']).toBe(1); // and the fresh baseline did reach the gateway
   });
 });
 
@@ -421,7 +539,20 @@ describe('lifecycle', () => {
     expect(events).toHaveLength(0); // detached before the dispose event fired
   });
 
-  it('ignores changed() after dispose', async () => {
+  it('returns a no-op unsubscribe when tapping after dispose', async () => {
+    const device = createGateway();
+    const { port } = createPort();
+    handle = createSync({ gateway: device.gateway, port });
+    handle.dispose();
+
+    const unsubscribe = handle.tap(() => {
+      throw new Error('must never run');
+    });
+
+    expect(() => unsubscribe()).not.toThrow();
+  });
+
+  it('throws from changed() after dispose', async () => {
     const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
     const { port, pushes } = createPort();
     handle = createSync({ gateway: device.gateway, idleDelayMs: 10, port });
@@ -430,13 +561,13 @@ describe('lifecycle', () => {
 
     handle.dispose();
     device.edit('a', (record) => ({ ...record, value: 1 }));
-    handle.changed();
+    expect(() => handle.changed()).toThrow(TandemDisposedError);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(pushes).toHaveLength(0);
   });
 
-  it('resolves flush as a no-op after dispose', async () => {
+  it('rejects flush after dispose', async () => {
     const device = createGateway([{ id: 'a', rev: 0, value: 0 }]);
     const { port, pushes } = createPort();
     handle = createSync({ gateway: device.gateway, port });
@@ -445,7 +576,7 @@ describe('lifecycle', () => {
 
     handle.dispose();
     device.edit('a', (record) => ({ ...record, value: 1 }));
-    await expect(handle.flush()).resolves.toBeUndefined();
+    await expect(handle.flush()).rejects.toThrow(TandemDisposedError);
     expect(pushes).toHaveLength(0);
   });
 

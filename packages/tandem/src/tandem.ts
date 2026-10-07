@@ -1,8 +1,12 @@
+import { TandemDisposedError } from './errors';
 import type { SyncEnvelope, SyncHandle, SyncOptions, SyncRecordBase, SyncState, TandemEvent } from './types';
 
 const DEFAULT_IDLE_DELAY_MS = 3000;
 
 const baseline = (cursor: string | null = null): SyncState => ({ cursor, revs: {} });
+
+/** Copies persisted state so the engine never aliases the object its gateway handed it. */
+const cloneState = (state: SyncState): SyncState => ({ cursor: state.cursor, revs: { ...state.revs } });
 
 /**
  * Drives a {@link SyncPort} against a {@link SyncGateway}. The engine never sees
@@ -24,6 +28,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
   const controller = new AbortController();
   const tappers = new Set<(event: TandemEvent) => void>();
   const emit = (event: TandemEvent): void => {
+    if (tappers.size === 0) return;
     for (const tapper of tappers) {
       try {
         tapper(event);
@@ -33,30 +38,36 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
     }
   };
   const warn = (error: unknown): void => {
-    emit({ message: error instanceof Error ? error.message : String(error), type: 'warning' });
+    if (tappers.size === 0) return;
+    emit({ error, message: error instanceof Error ? error.message : String(error), type: 'warning' });
   };
 
   let state: SyncState = baseline();
   let timer: ReturnType<typeof setTimeout> | null = null;
   let queue: Promise<void> = Promise.resolve();
 
-  const key = (envelope: SyncEnvelope<TRecord>): string => `${envelope.entity}:${envelope.record.id}`;
-  const isDirty = (envelope: SyncEnvelope<TRecord>): boolean => envelope.record.rev > (state.revs[key(envelope)] ?? -1);
+  const key = (entity: string, id: string): string => `${entity}:${id}`;
+  const envelopeKey = (envelope: SyncEnvelope<TRecord>): string => key(envelope.entity, envelope.record.id);
+  const isDirty = (envelope: SyncEnvelope<TRecord>): boolean =>
+    envelope.record.rev > (state.revs[envelopeKey(envelope)] ?? -1);
+  const save = (): Promise<void> => gateway.saveState(cloneState(state));
 
   const pull = async (): Promise<void> => {
     if (controller.signal.aborted) return;
     const { cursor, deletions, records } = await port.pull(state.cursor);
     // One read of the device's records answers every rev question this pull raises.
-    const localRevs = new Map(gateway.records().map((envelope) => [key(envelope), envelope.record.rev] as const));
-    const entombed = new Set((await gateway.pendingDeletions()).map((d) => `${d.entity}:${d.id}`));
-    const deleted = new Set(deletions.map((d) => `${d.entity}:${d.id}`));
+    const localRevs = new Map(
+      (await gateway.records()).map((envelope) => [envelopeKey(envelope), envelope.record.rev] as const),
+    );
+    const entombed = new Set((await gateway.pendingDeletions()).map((deletion) => key(deletion.entity, deletion.id)));
+    const deleted = new Set(deletions.map((deletion) => key(deletion.entity, deletion.id)));
     // Apply only records the server is ahead on: a locally tombstoned id or an id
     // deleted in this same pull never resurrects through the apply.
     const ahead = records.filter(
       (envelope) =>
-        !entombed.has(key(envelope)) &&
-        !deleted.has(key(envelope)) &&
-        (localRevs.get(key(envelope)) ?? -1) < envelope.record.rev,
+        !entombed.has(envelopeKey(envelope)) &&
+        !deleted.has(envelopeKey(envelope)) &&
+        (localRevs.get(envelopeKey(envelope)) ?? -1) < envelope.record.rev,
     );
     const skipped = await gateway.applyRecords(ahead);
     if (skipped.length) {
@@ -64,26 +75,31 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
     }
     // A deletion loses to local changes that have not made it to the server yet.
     const doomed = deletions.filter((deletion) => {
-      const localKey = `${deletion.entity}:${deletion.id}`;
+      const localKey = key(deletion.entity, deletion.id);
+
       return (localRevs.get(localKey) ?? -1) <= (state.revs[localKey] ?? -1);
     });
     await gateway.applyDeletions(doomed);
-    for (const envelope of records) state.revs[key(envelope)] = envelope.record.rev;
+    for (const envelope of records) state.revs[envelopeKey(envelope)] = envelope.record.rev;
+    // A record this pull removed locally has no baseline left to keep: pruning
+    // keeps `revs` bounded to records that still exist.
+    for (const deletion of doomed) delete state.revs[key(deletion.entity, deletion.id)];
     state.cursor = cursor;
-    await gateway.saveState(state);
+    await save();
     emit({ records: ahead.length, type: 'pull' });
   };
 
   const push = async (keepalive: boolean): Promise<void> => {
     if (controller.signal.aborted) return;
-    const records = gateway.records().filter(isDirty);
+    const records = (await gateway.records()).filter(isDirty);
     const deletions = await gateway.pendingDeletions();
     if (!records.length && !deletions.length) return;
     await port.push(records, deletions, keepalive ? { keepalive: true } : undefined);
-    for (const envelope of records) state.revs[key(envelope)] = envelope.record.rev;
+    for (const envelope of records) state.revs[envelopeKey(envelope)] = envelope.record.rev;
     // Only the tombstones this push carried: new ones may have landed mid-flight.
     await gateway.clearDeletions(deletions);
-    await gateway.saveState(state);
+    for (const deletion of deletions) delete state.revs[key(deletion.entity, deletion.id)];
+    await save();
     emit({ records: records.length, type: 'push' });
   };
 
@@ -108,7 +124,6 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
   };
 
   const flushSoon = (): void => {
-    if (controller.signal.aborted) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => void enqueue(pushJob(false)), idleDelay);
   };
@@ -126,12 +141,18 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
   // then push anything created or changed while offline. Later flushes chain onto it.
   void enqueue(async () => {
     if (controller.signal.aborted) return;
-    state = (await gateway.loadState()) ?? baseline();
+    state = cloneState((await gateway.loadState()) ?? baseline());
     await cycle();
   });
 
+  const disposedError = (): TandemDisposedError => new TandemDisposedError('This sync handle has been disposed.');
+
   return {
-    changed: flushSoon,
+    changed(): void {
+      if (controller.signal.aborted) throw disposedError();
+
+      flushSoon();
+    },
     disposalSignal: controller.signal,
     dispose(): void {
       if (controller.signal.aborted) return;
@@ -145,7 +166,7 @@ export function createSync<TRecord extends SyncRecordBase = SyncRecordBase>(opti
     get disposed(): boolean {
       return controller.signal.aborted;
     },
-    flush: () => enqueue(cycle),
+    flush: () => (controller.signal.aborted ? Promise.reject(disposedError()) : enqueue(cycle)),
     tap(handler, tapOptions): () => void {
       if (controller.signal.aborted || tapOptions?.signal?.aborted) return () => {};
       const detach = (): void => {

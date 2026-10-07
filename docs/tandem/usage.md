@@ -99,7 +99,7 @@ try {
 }
 ```
 
-`flush()` pulls remote changes and then pushes dirty records, so it is also the wiring point for a returning network connection. It rejects when either half fails; the records stay dirty and the next cycle retries them. A `flush()` after `dispose()` resolves as a no-op.
+`flush()` pulls remote changes and then pushes dirty records, so it is also the wiring point for a returning network connection. It rejects when either half fails; the records stay dirty and the next cycle retries them. After `dispose()`, `flush()` rejects with `TandemDisposedError` and `changed()` throws it: a leaked scheduler fails loudly instead of silently stopping. If your reactive wiring can fire after disposal, unsubscribe from your store before disposing the handle, or guard with `sync.disposed`.
 
 Tandem also flushes on its own: it pushes with `keepalive: true` when the tab hides or closes, and runs a full cycle when the tab returns to the foreground. Serve the keepalive push with `navigator.sendBeacon` or a `keepalive` fetch so it survives the tab closing.
 
@@ -129,7 +129,7 @@ const unsubscribe = sync.tap((event) => {
       console.warn(event.message, event.skipped);
       break;
     case 'warning':
-      console.warn(event.message); // push rejected, network failure, etc.
+      console.warn(event.message, event.error); // push rejected, network failure, etc.
       break;
   }
 });
@@ -209,7 +209,7 @@ useEffect(() => {
 
 ## Working with Other Vielzeug Libraries
 
-- **Vault**: the usual `gateway` backend. Its IndexedDB adapter stores records and the sync-state row; `records()` reads the in-memory mirror, `applyRecords()` writes through the codec.
+- **Vault**: the usual `gateway` backend. Its IndexedDB adapter stores records and the sync-state row; `records()` reads them from storage (it may be async), `applyRecords()` writes through the codec.
 - **Postmaster**: complementary, not overlapping. Postmaster guarantees at-least-once delivery of discrete mutations; Tandem keeps whole-record state in step. Apps that need both run them side by side.
 - **Sentinel**: subscribe to `createNetwork()` and call `sync.flush()` when the connection returns; the cycle pulls and pushes, so remote changes land without waiting for the next foreground return.
 - **Ripple**: `store.subscribe(() => sync.changed())` is the idiomatic wiring for a signal-backed store.

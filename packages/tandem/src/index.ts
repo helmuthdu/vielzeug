@@ -1,4 +1,6 @@
 // Public root surface of @vielzeug/tandem. Every public export goes through this file.
+
+export { TandemDisposedError, TandemError } from './errors';
 export { createSync } from './tandem';
 export type {
   SyncDeletion,

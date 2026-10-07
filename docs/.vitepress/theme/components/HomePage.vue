@@ -135,6 +135,7 @@ const heroPackages = [
   { cmd: 'pnpm add @vielzeug/sigil', id: 'sigil', name: 'sigil', tagline: 'QR generation & scanning' },
   { cmd: 'pnpm add @vielzeug/sourcerer', id: 'sourcerer', name: 'sourcerer', tagline: 'Reactive data sources' },
   { cmd: 'pnpm add @vielzeug/spell', id: 'spell', name: 'spell', tagline: 'Schema validation' },
+  { cmd: 'pnpm add @vielzeug/tandem', id: 'tandem', name: 'tandem', tagline: 'Offline-first sync engine' },
   { cmd: 'pnpm add @vielzeug/tavern', id: 'tavern', name: 'tavern', tagline: 'Table session replication' },
   { cmd: 'pnpm add @vielzeug/tempo', id: 'tempo', name: 'tempo', tagline: 'Date & time' },
   { cmd: 'pnpm add @vielzeug/vault', id: 'vault', name: 'vault', tagline: 'Browser storage' },

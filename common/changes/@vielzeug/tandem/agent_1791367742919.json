@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Greenfield API hardening: changed()/flush() throw TandemDisposedError after dispose, warning events carry the original error, SyncGateway.records() may be async, SyncDeletion.deletedAt is optional, state is cloned across the gateway seam, and revs are pruned on deletion",
+      "packageName": "@vielzeug/tandem",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tandem"
+}
