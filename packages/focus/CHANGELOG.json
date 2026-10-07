@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add createQuickLookGrid: arrow-key tile browsing with a Space preview key for card grids.",
+            "commit": "6cf892a763f32b4bee6218b3de7a9416fd30f6ca"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 09:37:46 GMT",
+      "tag": "@vielzeug/focus_v26.10.2",
+      "version": "26.10.2"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "agent@vielzeug",

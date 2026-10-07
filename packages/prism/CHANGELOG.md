@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
+This log was last generated on Wed, 07 Oct 2026 09:37:46 GMT and should not be manually modified.
 
+## 26.10.2
+Wed, 07 Oct 2026 09:37:46 GMT
+
+### Minor changes
+
+- Add per-datum dash/opacity presentation and stable data-series-id on series groups
 ## 26.10.1
 Wed, 07 Oct 2026 07:25:55 GMT
 

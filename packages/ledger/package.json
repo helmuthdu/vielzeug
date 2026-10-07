@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ledger",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "description": "Serialized reversible command history with atomic framework-neutral state and cancellation ownership",
   "repository": {
     "type": "git",

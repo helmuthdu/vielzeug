@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/tandem",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "description": "Offline-first sync engine with rev baselines, tombstoned deletions, and idle-batched pushes",
   "repository": {
     "type": "git",

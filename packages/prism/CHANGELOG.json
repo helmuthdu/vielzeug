@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Add per-datum dash/opacity presentation and stable data-series-id on series groups",
+            "commit": "6cf892a763f32b4bee6218b3de7a9416fd30f6ca"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 09:37:46 GMT",
+      "tag": "@vielzeug/prism_v26.10.2",
+      "version": "26.10.2"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Add createRadarChart for comparing values across 3+ axes, with per-axis ranges, gradient fill, axis hover and keyboard navigation",
             "commit": "fa343447d42f1d927becef00af66cd9082635d36"
           },

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/gesture",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "description": "Framework-neutral two-dimensional pointer drag and one-axis pan recognition with lifecycle-owned handles",
   "repository": {
     "type": "git",

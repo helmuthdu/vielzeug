@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/mesh",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "description": "Backendless peer-to-peer session transport over WebRTC data channels with manual pairing and host-authoritative star topology",
   "repository": {
     "type": "git",

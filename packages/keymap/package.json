@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/keymap",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "description": "Headless keyboard shortcut manager with chord sequences",
   "repository": {
     "type": "git",

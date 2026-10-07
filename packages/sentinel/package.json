@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sentinel",
-  "version": "26.10.1",
+  "version": "26.10.2",
   "description": "Subscribable snapshots for external browser environment state",
   "repository": {
     "type": "git",

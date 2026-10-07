@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "6cf892a763f32b4bee6218b3de7a9416fd30f6ca"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 09:37:46 GMT",
+      "tag": "@vielzeug/codex_v26.10.2",
+      "version": "26.10.2"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Standardize punctuation in documentation",
             "commit": "fa343447d42f1d927becef00af66cd9082635d36"
           },
