@@ -8,7 +8,6 @@ import {
   scoreRecord,
   seriesSheet,
   tallyTrial,
-  trialRankingFor,
   withWorksheetCaps,
   worksheetTotal,
 } from './trial-score';
@@ -65,10 +64,10 @@ describe('tallyTrial', () => {
   });
 
   it('ranks by the highest tier reached, Rookie as the fallback', () => {
-    expect(trialRankingFor(trialByFire, 130)?.name).toBe('Dragon Slayer');
-    expect(trialRankingFor(trialByFire, 129)?.name).toBe('Beast Master');
-    expect(trialRankingFor(trialByFire, 45)?.name).toBe('Rookie');
-    expect(trialRankingFor(jungleBane, -10)?.name).toBe('Rookie');
+    expect(rankingFor(trialByFire.rankings, 130)?.name).toBe('Dragon Slayer');
+    expect(rankingFor(trialByFire.rankings, 129)?.name).toBe('Beast Master');
+    expect(rankingFor(trialByFire.rankings, 45)?.name).toBe('Rookie');
+    expect(rankingFor(jungleBane.rankings, -10)?.name).toBe('Rookie');
   });
 
   it('keeps the row breakdown aligned with the printed modifiers', () => {

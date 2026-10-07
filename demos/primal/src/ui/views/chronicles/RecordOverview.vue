@@ -84,7 +84,11 @@ usePrismChart(
     onClick: selectFromBand,
     series: bandSeries.value,
     tooltip: true,
+    // The band is one stacked bar read through the legend: prism's default axes would
+    // only repeat what the legend and tooltips already say.
     variant: 'stacked-horizontal',
+    xAxis: false,
+    yAxis: false,
   }),
 );
 </script>

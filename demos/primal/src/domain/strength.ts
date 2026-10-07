@@ -1,5 +1,5 @@
 import { forgeById, hunterCardById, hunters, starterCards } from '../content';
-import { baseEquipment, starterMasteryId } from './deck';
+import { baseEquipment, type DeckType, deckTypeOf, starterMasteryId } from './deck';
 import type { ForgeEquipment, Hunter, HunterBuild, HunterCard, HunterStrengthAxis, HunterStrengths } from './types';
 
 /**
@@ -152,16 +152,25 @@ export function textSignal(text: string): StrengthSignal {
   return signal;
 }
 
-/** The deck type a card fills: attacks hit, parries and dodges guard, maneuvers reposition. */
-const SUBTYPE_SIGNAL: Readonly<Record<string, Partial<StrengthSignal>>> = {
-  Attack: { power: 1 },
-  Dodge: { defense: 0.5, mobility: 0.5 },
-  Maneuver: { control: 0.5, mobility: 0.5 },
-  Parry: { defense: 1 },
+/** The deck type a card fills: attacks hit, parries and dodges guard, maneuvers reposition.
+ *  Keyed by the canonical `DeckType` and read through `deckTypeOf`, so strength and the deck
+ *  rules share one card classification instead of two parallel subtype strings. */
+const SUBTYPE_SIGNAL: Readonly<Partial<Record<DeckType, Partial<StrengthSignal>>>> = {
+  attack: { power: 1 },
+  dodge: { defense: 0.5, mobility: 0.5 },
+  maneuver: { control: 0.5, mobility: 0.5 },
+  parry: { defense: 1 },
 };
 
 /** Resonate resolves a Resonance card's effect twice when chained: weighed as half again. */
 const RESONANCE_WEIGHT = 1.5;
+
+/** A weapon's printed damage is its power signal: normal damage at full weight, and the
+ *  piercing value — which only lands on a Pierce action — at a tenth, capped so a legendary
+ *  50-pierce spear adds bounded power instead of dominating the axis. */
+const NORMAL_DAMAGE_WEIGHT = 0.75;
+const PIERCING_WEIGHT = 0.1;
+const PIERCING_CAP = 3;
 
 /**
  * A mastery's unfocused face charges it: each leading "When …," / "At the end of …," clause names
@@ -174,7 +183,8 @@ export function cardSignal(card: HunterCard): StrengthSignal {
   const faces = [card.text, card.unfocused && chargeEffects(card.unfocused.text), card.focused?.text];
   const effects = textSignal(faces.filter(Boolean).join(' | '));
   const signal = addSignal(emptySignal(), effects, card.trait === 'Resonance' ? RESONANCE_WEIGHT : 1);
-  addSignal(signal, SUBTYPE_SIGNAL[card.subtype ?? ''] ?? {});
+  const deckType = deckTypeOf(card);
+  if (deckType) addSignal(signal, SUBTYPE_SIGNAL[deckType] ?? {});
   if (card.staminaIcons !== null && card.staminaIcons > 1) signal.speed += 0.5 * (card.staminaIcons - 1);
   if (card.staminaCost === 0) signal.speed += 0.25;
   // Aggro symbols pull the monster's attention onto this hunter and off the party.
@@ -186,14 +196,17 @@ export function cardSignal(card: HunterCard): StrengthSignal {
 export function equipmentSignal(piece: ForgeEquipment): StrengthSignal {
   const signal = textSignal(piece.description);
   if (piece.type === 'weapon' && piece.damage !== null) {
-    signal.power += 0.75 * (typeof piece.damage === 'number' ? piece.damage : piece.damage[0] + 1);
+    signal.power +=
+      typeof piece.damage === 'number'
+        ? NORMAL_DAMAGE_WEIGHT * piece.damage
+        : NORMAL_DAMAGE_WEIGHT * piece.damage[0] + Math.min(PIERCING_CAP, PIERCING_WEIGHT * piece.damage[1]);
   }
   if ((piece.type === 'armor' || piece.type === 'helm') && piece.health !== null) signal.defense += 0.25 * piece.health;
   return signal;
 }
 
 /** The raw signal of a whole build: deck cards, the mastery and every worn piece, summed. */
-export function buildSignal(build: HunterBuild, hunter: Hunter): StrengthSignal {
+function buildSignal(build: HunterBuild, hunter: Hunter): StrengthSignal {
   const signal = emptySignal();
   for (const id of [...build.deckCardIds, build.masteryCardId]) {
     const card = hunterCardById(hunter, id);
@@ -215,21 +228,18 @@ export const starterBuild = (hunter: Hunter): HunterBuild => ({
   masteryCardId: starterMasteryId(hunter),
 });
 
-/** Per axis, the weakest and strongest starter builds' raw signal: the roster's reference span. */
-let reference: { max: StrengthSignal; min: StrengthSignal } | undefined;
-function starterReference(): { max: StrengthSignal; min: StrengthSignal } {
-  if (!reference) {
-    const signals = hunters.map((hunter) => buildSignal(starterBuild(hunter), hunter));
-    const max = emptySignal();
-    const min = emptySignal();
-    for (const axis of STRENGTH_AXES) {
-      max[axis] = Math.max(...signals.map((signal) => signal[axis]));
-      min[axis] = Math.min(...signals.map((signal) => signal[axis]));
-    }
-    reference = { max, min };
+/** Per axis, the weakest and strongest starter builds' raw signal: the roster's reference span.
+ *  Content is static, so the span is computed once at load — no lazy cache to invalidate. */
+const STARTER_REFERENCE: { max: StrengthSignal; min: StrengthSignal } = (() => {
+  const signals = hunters.map((hunter) => buildSignal(starterBuild(hunter), hunter));
+  const max = emptySignal();
+  const min = emptySignal();
+  for (const axis of STRENGTH_AXES) {
+    max[axis] = Math.max(...signals.map((signal) => signal[axis]));
+    min[axis] = Math.min(...signals.map((signal) => signal[axis]));
   }
-  return reference;
-}
+  return { max, min };
+})();
 
 /** The weakest starter on an axis reads this; the strongest reads `STARTER_CEILING`. */
 const STARTER_FLOOR = 1.5;
@@ -242,7 +252,7 @@ const STARTER_CEILING = 3.5;
  */
 export function buildProfile(build: HunterBuild, hunter: Hunter): HunterStrengths {
   const signal = buildSignal(build, hunter);
-  const { max, min } = starterReference();
+  const { max, min } = STARTER_REFERENCE;
   const profile = emptySignal();
   for (const axis of STRENGTH_AXES) {
     const span = max[axis] - min[axis];

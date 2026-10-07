@@ -61,7 +61,7 @@ const formatDelta = (delta: number) => (delta > 0 ? `+${delta.toFixed(1)}` : `âˆ
 </script>
 
 <template>
-  <section aria-labelledby="build-profile-title" class="panel stack">
+  <section aria-labelledby="build-profile-title" class="build-profile panel stack">
     <div class="card-title">
       <div>
         <ore-text as="h2" id="build-profile-title" size="sm" variant="heading">{{ t('builds.profileTitle')
@@ -94,9 +94,19 @@ const formatDelta = (delta: number) => (delta > 0 ? `+${delta.toFixed(1)}` : `âˆ
 </template>
 
 <style scoped>
+/* The stack's implicit auto track would size to the chart svg's fixed pixel width, so the
+   column is pinned: the chart may shrink the page, the page may never grow past it. */
+.build-profile {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Prism sizes its svg to the container's content box and stamps that measurement as a
+   fixed pixel width: without min-width the svg's intrinsic width inflates this grid item
+   and the page's content column with it, which the resize observer can never shrink back. */
 .build-profile__chart {
   justify-self: center;
   width: min(100%, 20rem);
+  min-width: 0;
   aspect-ratio: 1;
 }
 

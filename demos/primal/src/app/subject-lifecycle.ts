@@ -57,7 +57,7 @@ export function startCampaign(config: CampaignConfig, hunterIds: string[]): Camp
   const campaign = commitSubject(
     createCampaign({ config, hunterIds, id: uid('campaign'), now: now() }),
     'campaign created',
-  ) as Campaign;
+  );
   emitNotice('toasts.campaignStarted', 'success', { values: { name: campaign.name } });
   return campaign;
 }
@@ -96,7 +96,7 @@ export function saveExpedition(draft: ExpeditionDraft, existingId?: string): Exp
   const issues = validateExpedition(expedition);
   if (issues.length)
     throw new PrimalDomainError('expedition-incomplete', issues[0]?.message ?? 'The expedition is incomplete.');
-  const saved = commitSubject(expedition, existing ? 'expedition updated' : 'expedition saved') as Expedition;
+  const saved = commitSubject(expedition, existing ? 'expedition updated' : 'expedition saved');
   expeditionLogger.info(existing ? 'Expedition updated' : 'Expedition saved', {
     monsterId: saved.monsterId,
     scenarioId: saved.scenarioId,
@@ -118,15 +118,7 @@ export function removeSubject(ref: SubjectRef): void {
   const def = SUBJECTS[ref.kind];
   const subject = def.local(ref.id);
   def.drop(ref.id);
-  void commitWrite(`delete ${def.table}`, (account) =>
-    ref.kind === 'campaign'
-      ? account.delete('campaigns', ref.id)
-      : ref.kind === 'ascent'
-        ? account.delete('ascents', ref.id)
-        : ref.kind === 'challenge'
-          ? account.delete('challenges', ref.id)
-          : account.delete('expeditions', ref.id),
-  );
+  void commitWrite(`delete ${def.table}`, (account) => def.remove(account, ref.id));
   recordTombstone(def.table, ref.id);
   emitSubjectRemoved(ref.kind, ref.id);
   if (subject) def.notifyRemoved?.(subject);
@@ -143,7 +135,7 @@ export function startAscent(
   let ascent = createAscent(uid('ascent'), name.trim() || 'Mount Havoc', expansionIds, stamp);
   ascent = setAscentNightmareVariant(ascent, nightmareVariant, stamp);
   ascent = setAscentHunters(ascent, hunterIds, stamp);
-  const created = commitSubject(ascent, 'ascent created') as Ascent;
+  const created = commitSubject(ascent, 'ascent created');
   expeditionLogger.info('Ascent created', { ascentId: created.id, hunters: hunterIds });
   emitNotice('toasts.ascentStarted', 'success', { values: { name: created.name } });
   return created;
@@ -152,7 +144,7 @@ export function startAscent(
 export function duplicateAscent(id: string): Ascent | undefined {
   const ascent = ascentById(id);
   if (!ascent) return undefined;
-  const copy = commitSubject(duplicateAscentRecord(ascent, uid('ascent'), now()), 'ascent duplicated') as Ascent;
+  const copy = commitSubject(duplicateAscentRecord(ascent, uid('ascent'), now()), 'ascent duplicated');
   expeditionLogger.info('Ascent duplicated', { ascentId: copy.id, sourceAscentId: id });
   emitNotice('toasts.ascentDuplicated', 'info', { values: { name: copy.name } });
   return copy;
@@ -171,7 +163,7 @@ export function startChallenge(
   let run = createChallenge(uid('challenge'), seriesId, name.trim() || seriesName, expansionIds, stamp);
   run = setChallengeNightmareVariant(run, nightmareVariant, stamp);
   run = setChallengeHunters(run, hunterIds, stamp);
-  const created = commitSubject(run, 'challenge created') as Challenge;
+  const created = commitSubject(run, 'challenge created');
   expeditionLogger.info('Challenge created', {
     challengeId: created.id,
     hunters: hunterIds,
@@ -197,10 +189,7 @@ export function restartChallenge(id: string): Challenge | undefined {
 export function duplicateCampaign(id: string): Campaign | undefined {
   const campaign = campaignById(id);
   if (!campaign) return undefined;
-  const copy = commitSubject(
-    duplicateCampaignRecord(campaign, uid('campaign'), now()),
-    'campaign duplicated',
-  ) as Campaign;
+  const copy = commitSubject(duplicateCampaignRecord(campaign, uid('campaign'), now()), 'campaign duplicated');
   emitNotice('toasts.campaignDuplicated', 'info', { values: { name: copy.name } });
   return copy;
 }
@@ -210,10 +199,7 @@ export function duplicateCampaign(id: string): Campaign | undefined {
 export function replayExpedition(id: string): Expedition | undefined {
   const expedition = expeditionById(id);
   if (!expedition) return undefined;
-  const replay = commitSubject(
-    replayExpeditionRecord(expedition, uid('expedition'), now()),
-    'expedition replayed',
-  ) as Expedition;
+  const replay = commitSubject(replayExpeditionRecord(expedition, uid('expedition'), now()), 'expedition replayed');
   expeditionLogger.info('Expedition replayed', { expeditionId: replay.id, sourceExpeditionId: id });
   emitNotice('toasts.expeditionReplayed', 'success');
   return replay;

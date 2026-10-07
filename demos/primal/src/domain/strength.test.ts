@@ -112,6 +112,26 @@ describe('strength profiles', () => {
     }
   });
 
+  it('weighs a piercing weapon’s printed piercing value, capped', () => {
+    const piece = (id: string) => {
+      const entry = forgeById(id);
+      if (!entry) throw new Error(`${id} is missing`);
+      return entry;
+    };
+    // The damage term alone: total power minus whatever the printed text scores.
+    const damagePower = (id: string) => {
+      const entry = piece(id);
+      return equipmentSignal(entry).power - textSignal(entry.description).power;
+    };
+
+    // Normal damage at full weight, the piercing value at a tenth: two spears with the same
+    // normal damage but different piercing no longer read alike.
+    expect(damagePower('weapon-zaraya-deathspear-l2')).toBeCloseTo(6.25, 6); // [5,25] → 3.75 + 2.5
+    expect(damagePower('weapon-zaraya-bonepiercer-l2')).toBeCloseTo(6.75, 6); // [5,30] → 3.75 + 3 (capped)
+    // A legendary's 50-pierce leg caps at 3 rather than dominating the power axis.
+    expect(damagePower('weapon-zaraya-ancient-spear-l3')).toBeCloseTo(11.25, 6); // [11,50] → 8.25 + 3 (capped)
+  });
+
   it('scores a mastery’s unfocused face by its effects, never its charging trigger', () => {
     const card = (hunterId: string, cardId: string) => {
       const entry = hunterCardById(hunter(hunterId), cardId);

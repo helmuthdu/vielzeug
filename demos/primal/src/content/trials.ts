@@ -98,10 +98,14 @@ export interface TrialRankLevel {
   text: string;
 }
 
+/** A hunter rank level's name: every ladder tier must name one of these, so a typo cannot
+ *  silently lose the level's flavor line. */
+export type TrialRankLevelName = (typeof TRIAL_RANK_LEVELS)[number]['name'];
+
 /** The hunter rank levels every trial table prints its tiers from, coldest first. A level's
  *  place on this ladder is its shade of a ranking's rising heat, so every table that names
  *  the level — the full Nightmare table or a series' subset — colors it the same. */
-export const TRIAL_RANK_LEVELS: readonly TrialRankLevel[] = [
+export const TRIAL_RANK_LEVELS = [
   { name: 'Rookie', text: 'Survived the hunt through basic tactics.' },
   { name: 'Expert', text: 'Mastered card chains and tactical positioning.' },
   { name: 'Prime Hunter', text: 'Demonstrated flawless execution against apex beasts.' },
@@ -111,7 +115,7 @@ export const TRIAL_RANK_LEVELS: readonly TrialRankLevel[] = [
   { name: 'Indomitable', text: 'Unbroken resilience through brutal campaign pressure.' },
   { name: 'Primal Beast', text: 'Embodied raw instinct and supreme combat mastery.' },
   { name: 'Nightmare', text: 'Pinnacle campaign score. A legendary feat accomplished.' },
-];
+] as const satisfies readonly TrialRankLevel[];
 
 /** The named level, if the rank ladder prints it. */
 export const trialRankLevel = (name: string): TrialRankLevel | undefined =>

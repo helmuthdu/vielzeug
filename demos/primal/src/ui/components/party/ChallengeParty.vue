@@ -33,7 +33,7 @@ const props = defineProps<{ runId: string; selectedHunterId: string; showProfile
 const all = useReadable(challenges);
 const run = computed(() => all.value.find((entry) => entry.id === props.runId));
 const party = computed<readonly ChallengeHunter[]>(() => run.value?.hunters ?? []);
-const subject: SubjectRef = { id: props.runId, kind: 'challenge' };
+const subject = computed<SubjectRef>(() => ({ id: props.runId, kind: 'challenge' }));
 
 const {
   applyLoadout,
@@ -71,17 +71,17 @@ const {
   equip: (member, slot, equipmentId) => {
     const current = run.value;
     if (current && current.expeditionNumber > 1 && equipmentId) {
-      runCommand('takeChallengeEquipment', subject, member.hunterId, slot, equipmentId);
+      runCommand('takeChallengeEquipment', subject.value, member.hunterId, slot, equipmentId);
       return;
     }
-    runCommand('equipEquipment', subject, member.hunterId, slot, equipmentId);
+    runCommand('equipEquipment', subject.value, member.hunterId, slot, equipmentId);
   },
   onUpgradeConfirmed: () => {
     openBranch.value = null;
   },
   party: () => party.value,
   selectedId: () => props.selectedHunterId,
-  subject: () => subject,
+  subject: () => subject.value,
 });
 
 /** A later session's preparation spends the hunt's one equipment reward; the first drafts instead. */
@@ -121,7 +121,7 @@ function setWounds(event: Event): void {
   const member = selectedMember.value;
   if (!member || !woundsEditable.value) return;
   const { value } = (event as CustomEvent<{ value: number }>).detail;
-  runCommand('setSubjectWounds', subject, member.hunterId, value);
+  runCommand('setSubjectWounds', subject.value, member.hunterId, value);
 }
 </script>
 

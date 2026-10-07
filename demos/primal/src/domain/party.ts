@@ -1,5 +1,6 @@
 import { enabledContent, hunters } from '../content';
 import { PrimalDomainError } from './errors';
+import { syncHunterState } from './hunter-state';
 import type { ExpansionId, Hunter, HuntSubject } from './types';
 
 export const PARTY_MIN = 2;
@@ -51,6 +52,36 @@ export function validateParty(
 export function assertParty(hunterIds: readonly string[], expansionIds: readonly ExpansionId[]): void {
   const [issue] = validateParty(hunterIds, expansionIds);
   if (issue) throw new PrimalDomainError(issue.code, issue.message);
+}
+
+/**
+ * The party-seat write every mode shares: hunters already in the party keep their build,
+ * new ones arrive through the mode's own factory, the fight-state map follows the roster,
+ * and a roster change clears the in-progress fight timeline. Phase gating, party bounds and
+ * any extra board resync stay with the calling mode: they genuinely differ.
+ * Like `setPlayerName`, the cast only restores the kind↔member-array correlation the spread
+ * cannot express.
+ */
+export function seatParty<S extends HuntSubject, M extends { hunterId: string }>(
+  subject: S & { hunters: readonly M[] },
+  hunterIds: readonly string[],
+  createMember: (hunterId: string) => M,
+  now: string,
+): S {
+  const partyChanged =
+    hunterIds.length !== subject.hunters.length ||
+    hunterIds.some((id) => !subject.hunters.some((member) => member.hunterId === id));
+  const hunters = hunterIds.map(
+    (hunterId) => subject.hunters.find((member) => member.hunterId === hunterId) ?? createMember(hunterId),
+  );
+  return {
+    ...subject,
+    fightEvents: partyChanged ? [] : subject.fightEvents,
+    fightStart: partyChanged ? null : subject.fightStart,
+    hunterState: syncHunterState(hunterIds, subject.hunterState),
+    hunters,
+    updatedAt: now,
+  } as S;
 }
 
 const withPlayerName = <T extends { hunterId: string; playerName: string }>(

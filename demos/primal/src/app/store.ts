@@ -36,7 +36,7 @@ export {
 export { notifyError } from './notices';
 export type { AppLocale, HunterBoardLayout, Settings, ThemePreference } from './persistence';
 export { patchSettings, resetSettings, setLanguage } from './settings';
-export type { CommandOutcome, SubjectCommandArgs, SubjectCommandName } from './subject-commands';
+export type { CommandOutcome, CommandResult, SubjectCommandArgs, SubjectCommandName } from './subject-commands';
 export { subjectCommands } from './subject-commands';
 export { redoLastSubjectCommand, undoLastSubjectCommand } from './subject-history';
 export type { ExpeditionDraft } from './subject-lifecycle';

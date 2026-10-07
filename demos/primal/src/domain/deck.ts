@@ -2,6 +2,7 @@ import {
   enabledContent,
   forgeById,
   forgeEquipment,
+  hunterById,
   hunterCards,
   masteryCards,
   monsters,
@@ -33,9 +34,11 @@ import type {
   Hunter,
   HunterBuild,
   HunterCard,
+  HuntSubject,
   Monster,
   Potion,
 } from './types';
+import { isAscentSubject, isCampaignSubject, isChallengeSubject } from './types';
 
 /**
  * Action-deck rules. A deck must hold exactly the card counts printed on the weapon; every two pieces
@@ -377,6 +380,32 @@ export function challengeDeckContext(run: Challenge, member: ChallengeHunter, hu
     huntPool: enabledContent(monsters, run.expansionIds),
     monster: carrierMonster(run) ?? null,
   };
+}
+
+/** Validates one party against its kind's deck contexts. */
+function partyDeckStatus<S extends HuntSubject>(
+  subject: S,
+  context: (subject: S, member: S['hunters'][number], hunter: Hunter) => DeckContext,
+): Record<string, boolean> {
+  const status: Record<string, boolean> = {};
+  for (const member of subject.hunters) {
+    const hunter = hunterById(member.hunterId);
+    if (hunter) status[member.hunterId] = validateDeck(member.deckCardIds, context(subject, member, hunter)).valid;
+  }
+  return status;
+}
+
+/**
+ * Every party hunter's saved-deck validity, keyed by hunter id: what a roster marks
+ * "not legal". Like `setSubjectDeck`, the kind dispatch lives in the domain, so no view
+ * re-derives the four deck contexts. The saved build is what's measured: staged edits on
+ * the deck page validate through their own draft context.
+ */
+export function subjectHuntersDeckStatus(subject: HuntSubject): Record<string, boolean> {
+  if (isCampaignSubject(subject)) return partyDeckStatus(subject, campaignDeckContext);
+  if (isAscentSubject(subject)) return partyDeckStatus(subject, ascentDeckContext);
+  if (isChallengeSubject(subject)) return partyDeckStatus(subject, challengeDeckContext);
+  return partyDeckStatus(subject, expeditionDeckContext);
 }
 
 /** Saved builds are edited against the owned boxes with no hunt target. */

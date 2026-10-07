@@ -4,7 +4,7 @@ import { formatDuration } from '../../../../app/format';
 import { t } from '../../../../app/i18n';
 import { useMediaQuery } from '../../../../app/vue-bridge';
 import { monsterById } from '../../../../content';
-import { nightmareHunterTrialLadder } from '../../../../domain/scoring';
+import { nightmareHunterTrialLadder } from '../../../../domain/campaign';
 import { victoryFromCampaign, victoryFromCampaignFinal } from '../../../../domain/victory';
 import LinkButton from '../../../components/LinkButton.vue';
 import LoreEntry from '../../../components/LoreEntry.vue';
@@ -197,7 +197,7 @@ const isPhone = useMediaQuery('(width < 640px)');
       <ore-button color="secondary" variant="solid" v-if="!dashboard.campaign.defeats"
         :disabled="dashboard.isLastChapter" :icon-only="isPhone" :label="dashboard.isLastChapter
           ? t('dashboard.campaignComplete')
-          : t('dashboard.beginChapter', { number: (dashboard.campaign?.chapter ?? 0) + 1 })" :rounded="isPhone ? 'full' : undefined" 
+          : t('dashboard.beginChapter', { number: (dashboard.campaign?.chapter ?? 0) + 1 })" :rounded="isPhone ? 'full' : undefined"
         @click="dashboard.advance">
         <ore-icon name="chevron-right" v-if="isPhone" />
         <template v-if="!isPhone">

@@ -1,8 +1,10 @@
 import { s } from '@vielzeug/spell';
 import {
+  campaignAggression,
   chapterByNumber,
   enabledContent,
   expansions,
+  finalBattle,
   forgeById,
   forgeEquipment,
   hunterById,
@@ -16,6 +18,8 @@ import {
   rewardCardEquipment,
   rewardCardPotions,
   TOTAL_CHAPTERS,
+  TRIAL_SCORE_LEVELS,
+  type TrialRanking,
 } from '../content';
 import { type ChapterEvent, transitionPhase } from './chapter-machine';
 import {
@@ -29,12 +33,14 @@ import {
   validateDeck,
 } from './deck';
 import { PrimalDomainError } from './errors';
-import { idleHuntTimer } from './hunt-timer';
+import { appendHuntRecord } from './hunt-history';
+import { idleHuntTimer, stopHuntTimer } from './hunt-timer';
 import { syncHunterState } from './hunter-state';
 import { idleMonsterState, setupMonsterState } from './monster-state';
 import { assertParty } from './party';
-import { emptyPotionLoadout } from './potion';
+import { emptyPotionLoadout, refillPotion } from './potion';
 import { type QuestEvent, transitionQuest } from './quest-machine';
+import { rankingFor, scoreRecord, scoreTotal, tier } from './trial-score';
 import type {
   Campaign,
   CampaignCondition,
@@ -46,6 +52,7 @@ import type {
   ExpansionId,
   ForgeEquipment,
   Hunter,
+  HuntResult,
   MaterialId,
   Note,
   Potion,
@@ -1196,4 +1203,148 @@ export function prepareHunterPotion(
     },
     now,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Hunt results and Hunter's Trial scoring
+// ---------------------------------------------------------------------------
+
+/** The trial's running score: the recorded hunt sheets added up, the Winds' own logic. */
+export function huntersTrialScore(campaign: Campaign): number | null {
+  return usesHuntersTrial(campaign) ? scoreTotal(campaign.scores) : null;
+}
+
+/** The Hunter's Trial table, derived from the rulebook's own arithmetic: the campaign's
+ *  eleven hunts fight at three aggression tiers (chapters 1–3, 4–7, 8–11), so a clean
+ *  sweep — every hunt won, no KO, no cards — sums its bases to 170: Dragon Slayer's bar.
+ *  The Nightmare behavior cards never mix levels into one deck (about three ship per
+ *  level), so the reference plays stack one card at a time: the stance flag every hunt
+ *  reaches 253 (Indomitable), one behavior card each 295 (Primal Beast), two each 337
+ *  (Nightmare); every threshold rounds down to the five. The four mortal tiers below
+ *  split the clean base evenly, each step a handful of KOs deep. The Rookie row is the
+ *  catch-all below Expert, highest first like every ladder. */
+export const nightmareHunterTrialLadder: readonly TrialRanking[] = [
+  tier('Nightmare', 330),
+  tier('Primal Beast', 290),
+  tier('Indomitable', 250),
+  tier('Dragon Slayer', 170),
+  tier('Beast Master', 135),
+  tier('Commander', 100),
+  tier('Prime Hunter', 65),
+  tier('Expert', 30),
+  tier('Rookie', null, 30),
+];
+
+/** The tier a trial total earns on the Nightmare ladder; the Rookie row is the catch-all. */
+export function nightmareHunterTrialRank(score: number): string {
+  return rankingFor(nightmareHunterTrialLadder, score)?.name ?? 'Rookie';
+}
+
+function settleConsumedPotions(campaign: Campaign, restoreRewardAndCrafted: boolean): Campaign {
+  return {
+    ...campaign,
+    hunters: campaign.hunters.map((hunter) => {
+      if (restoreRewardAndCrafted || !hunter.consumedPotionIds.length) return { ...hunter, consumedPotionIds: [] };
+      // Reward potions refill after every hunt: only crafted ones are spent on victory.
+      const reward = new Set(hunter.rewardPotionIds);
+      const spent = new Set(hunter.consumedPotionIds.filter((id) => !reward.has(id)));
+      return {
+        ...hunter,
+        consumedPotionIds: [],
+        potionInventoryIds: hunter.potionInventoryIds.filter((id) => !spent.has(id)),
+        // Spelled out per slot: the loadout is a fixed three-slot tuple, and map would widen it.
+        potionLoadoutIds: [
+          refillPotion(hunter.potionLoadoutIds[0], spent),
+          refillPotion(hunter.potionLoadoutIds[1], spent),
+          refillPotion(hunter.potionLoadoutIds[2], spent),
+        ],
+      };
+    }),
+  };
+}
+
+/**
+ * Records the outcome of the chapter's hunt with its score sheet. Victory completes the
+ * active quest and moves to the Result phase; defeat counts against the campaign and keeps
+ * the quest active so the hunt can be retried after another Preparation phase unless
+ * Hunter's Trial ends the campaign. A trial quest victory carries the sheet's answers and
+ * their tally — the standard series worksheet at the chapter's aggression — while the
+ * final battle completes the campaign without a sheet: the trial's score is its eleven
+ * quest hunts' sheets summed.
+ */
+export function finishHunt(campaign: Campaign, outcome: HuntResult, answers: readonly number[], now: string): Campaign {
+  if (campaign.phase !== 'hunt') {
+    throw new PrimalDomainError('phase-transition', 'Results can only be recorded during the Hunt phase.');
+  }
+  const isFinalBattle = campaign.chapter === TOTAL_CHAPTERS && campaign.resolvedChapter === TOTAL_CHAPTERS;
+  if (!campaign.activeQuestId && !isFinalBattle) {
+    throw new PrimalDomainError('quest-state', 'No quest is active for this hunt.');
+  }
+  const activeQuest = campaign.activeQuestId ? questById(campaign.activeQuestId) : undefined;
+  const monsterId = activeQuest?.monsterId ?? (isFinalBattle ? finalBattle.monsterId : null);
+  if (!monsterId) throw new PrimalDomainError('quest-state', 'No monster is active for this hunt.');
+  const next = sendChapterEvent(campaign, { type: 'RECORD_RESULT' }, now);
+  const timed = {
+    ...next,
+    huntHistory: appendHuntRecord(campaign, monsterId, outcome, now),
+    huntTimer: stopHuntTimer(campaign.huntTimer, now),
+  };
+  if (outcome === 'defeat') return recordDefeat(settleConsumedPotions(timed, true), now);
+
+  const completed = isFinalBattle
+    ? { ...timed, finalBattleWon: true }
+    : completeQuest(timed, campaign.activeQuestId as string, now);
+  const settled = settleConsumedPotions(completed, false);
+  if (!usesHuntersTrial(campaign) || isFinalBattle) {
+    return { ...settled, defeats: 0, totalDefeats: campaign.totalDefeats + campaign.defeats };
+  }
+
+  // The quest hunt's worksheet, the standard series sheet at the chapter's aggression
+  // (chapters 1–3 the first level, 4–7 the second, 8–11 the summit's): the eleven sheets
+  // sum to the trial's score, so a retried or re-recorded hunt re-fills its own slot. The
+  // final battle completes the campaign without a sheet of its own. The recorded answers
+  // clamp at the sheet's own caps, whatever the wire carried.
+  const scores = [...settled.scores];
+  scores[campaign.chapter - 1] = scoreRecord(
+    TRIAL_SCORE_LEVELS[campaignAggression(campaign.chapter)],
+    { monsterId, partySize: campaign.hunters.length },
+    answers,
+  );
+  return {
+    ...settled,
+    defeats: 0,
+    scores,
+    totalDefeats: campaign.totalDefeats + campaign.defeats,
+  };
+}
+
+export function recordAchievement(campaign: Campaign, achievement: string, now: string): Campaign {
+  if (campaign.achievements.includes(achievement)) return campaign;
+  return { ...campaign, achievements: [...campaign.achievements, achievement], updatedAt: now };
+}
+
+function recordDefeat(campaign: Campaign, now: string): Campaign {
+  return { ...campaign, defeats: campaign.defeats + 1, updatedAt: now };
+}
+
+export interface CampaignStatistics {
+  achievements: number;
+  chaptersCompleted: number;
+  huntersTrialScore: number | null;
+  questsCompleted: number;
+  questsExpired: number;
+  totalDefeats: number;
+  trophies: number;
+}
+
+export function campaignStatistics(campaign: Campaign): CampaignStatistics {
+  return {
+    achievements: campaign.achievements.length,
+    chaptersCompleted: campaign.chapter - 1,
+    huntersTrialScore: huntersTrialScore(campaign),
+    questsCompleted: campaign.quests.filter((quest) => quest.status === 'completed').length,
+    questsExpired: campaign.quests.filter((quest) => quest.status === 'expired').length,
+    totalDefeats: campaign.totalDefeats,
+    trophies: campaign.trophies.length,
+  };
 }

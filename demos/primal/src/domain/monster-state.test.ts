@@ -7,7 +7,7 @@ import {
   setAscentHunters,
   setAscentNightmareVariant,
 } from './ascent';
-import { commitQuestSelection, createCampaign, sendChapterEvent } from './campaign';
+import { commitQuestSelection, createCampaign, finishHunt, sendChapterEvent } from './campaign';
 import {
   createChallenge,
   rollChallengeEncounter,
@@ -41,7 +41,6 @@ import {
   upkeepStruggleGain,
   woundThreshold,
 } from './monster-state';
-import { finishHunt } from './scoring';
 import type { Ascent, Campaign, Challenge, Expedition } from './types';
 
 const NOW = '2026-01-01T00:00:00.000Z';

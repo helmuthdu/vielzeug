@@ -10,7 +10,9 @@ import '@vielzeug/refine/text';
 
 /**
  * One hunter card as a tappable tile: the scan when one exists, otherwise a typed placeholder.
- * With `selected` set the tile becomes a toggle (deck builder) and inspection moves to a corner button.
+ * Clicking the tile always inspects (zooms) the card. With `selected` set, a corner check button
+ * (deck builder) toggles the card instead: it sits beside the tile button, never inside it, so its
+ * click cannot bubble into the inspect handler.
  */
 const props = defineProps<{
   card: HunterCard;
@@ -26,6 +28,20 @@ const props = defineProps<{
 const emit = defineEmits<{ inspect: [card: HunterCard]; toggle: [card: HunterCard] }>();
 
 const artSrc = computed(() => (props.focused && props.card.artFocused ? props.card.artFocused : props.card.art));
+
+/** The corner toggle's accessible label, mirroring the detail dialog's add/remove/select wording. */
+const toggleLabel = computed(() =>
+  t(
+    props.radio
+      ? props.selected
+        ? 'deck.selectedCardAria'
+        : 'deck.selectCardAria'
+      : props.selected
+        ? 'deck.removeCardAria'
+        : 'deck.addCardAria',
+    { name: props.card.name },
+  ),
+);
 
 /**
  * Safari and Firefox do not focus buttons on click, which would leave the keyboard grid without a
@@ -62,10 +78,23 @@ function focusTile(event: PointerEvent): void {
             {{ card.kind === 'mastery' ? t('party.mastery') : card.cardType }}
           </span>
         </span>
-        <span class="tile__check" v-if="selected === true">
-          <ore-icon :name="radio ? 'circle-dot' : 'check'" :solid="radio" />
-        </span>
       </span>
+    </ore-button>
+    <ore-button
+      class="tile__check"
+      icon-only
+      rounded="full"
+      size="sm"
+      v-if="selected !== undefined && !lockedLabel"
+      :aria-pressed="selected"
+      :class="{ 'tile__check--on': selected === true }"
+      :label="toggleLabel"
+      @click="emit('toggle', card)">
+      <ore-icon
+        aria-hidden="true"
+        :name="radio ? (selected ? 'circle-dot' : 'circle') : selected ? 'check' : 'plus'"
+        :solid="radio && selected === true"
+      />
     </ore-button>
     <ore-chip class="tile__lock" size="sm" variant="solid" v-if="lockedLabel">
       <ore-icon name="lock" slot="icon" />
@@ -94,18 +123,24 @@ function focusTile(event: PointerEvent): void {
   text-align: center;
 }
 
+/* The toggle lives above the tile button (a button cannot nest inside one): clicking it
+   toggles the card, while clicks anywhere else on the tile still reach the inspect button. */
 .tile__check {
+  --button-bg: var(--p-panel);
+  --button-border: 0;
+  --button-color: var(--p-text);
   position: absolute;
   inset-block-start: var(--size-1-5);
   inset-inline-start: var(--size-1-5);
-  display: grid;
-  place-items: center;
-  width: var(--size-6);
-  height: var(--size-6);
-  color: var(--p-ink);
-  background: var(--p-gold);
+  z-index: 1;
+  /* The shadow draws on this host box, not the inner circle: without the radius it is a square. */
   border-radius: var(--rounded-full);
   box-shadow: var(--shadow-sm);
+}
+
+.tile__check--on {
+  --button-bg: var(--p-gold);
+  --button-color: var(--p-ink);
 }
 
 .tile__lock {

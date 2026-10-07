@@ -9,10 +9,10 @@ import { isAscentSubject } from '../domain/types';
 import { notify as emitNotice, type Notice, type NotifyAction } from './events';
 import { now } from './ids';
 import {
-  type CommandArgs,
   type CommandOutcome,
   requireCampaign,
   requireChallenge,
+  type SubjectCommandArgs,
   type SubjectCommandName,
   subjectCommands,
 } from './subject-commands';
@@ -141,7 +141,7 @@ export const UNDO_CAPTURES = {
       ),
   }),
 } satisfies Partial<{
-  [K in SubjectCommandName]: (subject: HuntSubject, ...args: CommandArgs<K>) => CommandRevert;
+  [K in SubjectCommandName]: (subject: HuntSubject, ...args: SubjectCommandArgs<K>) => CommandRevert;
 }>;
 
 /** The commands players expect to take back: exactly the capture table's keys. */

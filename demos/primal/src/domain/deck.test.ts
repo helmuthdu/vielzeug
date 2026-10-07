@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hunterById, hunterCards, monsterById, monsters, weaponById } from '../content';
+import { setSubjectDeck } from './build';
 import { createCampaign } from './campaign';
 import {
   baseEquipment,
@@ -16,6 +17,7 @@ import {
   huntMatchups,
   loadoutDeckContext,
   sameBuild,
+  subjectHuntersDeckStatus,
   validateDeck,
   wearEquipment,
 } from './deck';
@@ -367,5 +369,15 @@ describe('buildAvailability and sameBuild', () => {
     expect(sameBuild(build, { ...build, deckCardIds: starterDeck.slice(1) })).toBe(false);
     expect(sameBuild(build, { ...build, masteryCardId: 'hero-daeron-dragon-guard-a2' })).toBe(false);
     expect(sameBuild(build, { ...build, potionLoadoutIds: [null, 'herbalist-anyone-alemore-l3', null] })).toBe(false);
+  });
+});
+
+describe('subjectHuntersDeckStatus', () => {
+  it('marks every party hunter’s saved-deck validity, keyed by hunter id', () => {
+    const expedition = setExpeditionHunters(createExpedition('e1', ['core'], NOW), ['daeron', 'mirah'], NOW);
+    expect(subjectHuntersDeckStatus(expedition)).toEqual({ daeron: true, mirah: true });
+
+    const broken = setSubjectDeck(expedition, 'daeron', [], NOW);
+    expect(subjectHuntersDeckStatus(broken)).toEqual({ daeron: false, mirah: true });
   });
 });

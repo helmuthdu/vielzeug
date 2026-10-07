@@ -140,9 +140,10 @@ const typeLabel = (type: DeckType) => t(`deck.type.${type}`);
 
 /**
  * Keyboard drafting over the card grid: arrows and Home/End walk the tiles in browse order,
- * A/R add or remove the focused card, and Space zooms it open (Quick Look style). Enter keeps
- * toggling through the tile's own button. Captured so Space beats the button's toggle handler.
- * Tile order and browseCards are the same flat list, so one index serves both.
+ * A/R add or remove the focused card, and Space zooms it open (Quick Look style). Tab reaches
+ * a tile's corner check button, which toggles like A/R do. Captured so Space beats the tile
+ * button's inspect handler. Tile order and browseCards are the same flat list, so one index
+ * serves both.
  */
 const cardsSection = ref<HTMLElement | null>(null);
 const tiles = (): HTMLElement[] => [...(cardsSection.value?.querySelectorAll<HTMLElement>('.editor__grid .tile') ?? [])];

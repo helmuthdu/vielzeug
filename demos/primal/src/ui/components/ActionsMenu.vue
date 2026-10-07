@@ -21,7 +21,7 @@ function onSelect(event: Event): void {
 
 <template>
   <ore-menu class="dock-actions-menu" placement="top" :label="t('dock.actionsLabel')" @select="onSelect">
-    <ore-button rounded="full" size="sm" slot="trigger" variant="bordered" :label="t('dock.actionsLabel')">
+    <ore-button rounded="xl" size="sm" slot="trigger" variant="ghost" :label="t('dock.actionsLabel')">
       {{ t('dock.actionsLabel') }}
       <ore-icon name="chevron-down" slot="suffix" />
     </ore-button>

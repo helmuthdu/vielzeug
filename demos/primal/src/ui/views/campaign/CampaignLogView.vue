@@ -15,8 +15,7 @@ import {
   TOTAL_CHAPTERS,
 } from '../../../content/index';
 import { narrativeAvailable, selectNarrative } from '../../../content/lore';
-import { questsByStatus } from '../../../domain/campaign';
-import { campaignStatistics, nightmareHunterTrialRank } from '../../../domain/scoring';
+import { campaignStatistics, nightmareHunterTrialRank, questsByStatus } from '../../../domain/campaign';
 import LinkButton from '../../components/LinkButton.vue';
 import LoreEntry from '../../components/LoreEntry.vue';
 import PageHeader from '../../components/PageHeader.vue';
@@ -176,7 +175,7 @@ const statItems = computed(() => {
 const usesHuntersTrial = computed(() => campaign.value?.variants.includes('hunters-trial') ?? false);
 const usesNightmare = computed(() => campaign.value?.nightmareVariant ?? false);
 const hunterRank = computed(() => {
-  const score = stats.value?.hunterScore;
+  const score = stats.value?.huntersTrialScore;
   return usesNightmare.value && score !== null && score !== undefined ? nightmareHunterTrialRank(score) : null;
 });
 const noteDraft = ref('');
@@ -316,9 +315,9 @@ function saveNote(): void {
                 class="hunter-score"
                 padding="md"
                 variant="flat"
-                v-if="campaign.finalBattleWon && stats.hunterScore !== null">
+                v-if="campaign.finalBattleWon && stats.huntersTrialScore !== null">
                 <ore-text variant="overline">{{ t('campaignLog.finalScore') }}</ore-text>
-                <ore-text size="md" variant="heading">{{ stats.hunterScore }}</ore-text>
+                <ore-text size="md" variant="heading">{{ stats.huntersTrialScore }}</ore-text>
                 <ore-chip color="error" size="sm" variant="flat" v-if="hunterRank">{{ hunterRank }}</ore-chip>
                 <ore-text color="muted" size="sm">{{ t('campaignLog.scoreHint') }}</ore-text>
               </ore-box>
@@ -466,7 +465,7 @@ function saveNote(): void {
          the phase the campaign stands in, the boards' own grammar. -->
     <PhaseDock>
       <template #back>
-        <PhaseBackButton 
+        <PhaseBackButton
           to="campaignDashboard" :label="t('campaignLog.backToCampaign')" :params="{ id: campaign.id }"/>
       </template>
     </PhaseDock>

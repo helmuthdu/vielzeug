@@ -8,7 +8,9 @@ import {
   challengeBountyDue,
   challengeDraftPairs,
   challengePotions,
+  challengeRank,
   challengeRewardPool,
+  challengeTotal,
   chooseChallengeBounty,
   createChallenge,
   finishChallengePreparation,
@@ -25,7 +27,6 @@ import {
 import { canTransitionChallenge, transitionChallengePhase } from './challenge-machine';
 import { PrimalDomainError } from './errors';
 import { assertHuntEditable } from './hunt-timer';
-import { challengeRank, challengeTotal } from './scoring';
 import type { Challenge, EquipmentSlot, Hunter } from './types';
 
 const NOW = '2026-01-01T00:00:00.000Z';

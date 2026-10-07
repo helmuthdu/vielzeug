@@ -5,7 +5,7 @@ import { t } from '../../../app/i18n';
 import { expeditions } from '../../../app/store';
 import { useReadable } from '../../../app/vue-bridge';
 import { hunterById, weaponClassById } from '../../../content/index';
-import { eligibleEquipment, expeditionDeckContext, validateDeck } from '../../../domain/deck';
+import { eligibleEquipment, expeditionDeckContext, subjectHuntersDeckStatus } from '../../../domain/deck';
 import { expeditionPotions } from '../../../domain/expedition';
 import { carrierMonster } from '../../../domain/monster-state';
 import type { ExpeditionHunter, SubjectRef } from '../../../domain/types';
@@ -28,7 +28,7 @@ const expedition = computed(() => all.value.find((entry) => entry.id === props.e
 const party = computed<readonly ExpeditionHunter[]>(() => expedition.value?.hunters ?? []);
 const partyHunters = computed(() => party.value.flatMap((member) => hunterById(member.hunterId) ?? []));
 const selectedHunterId = ref(props.modelValue || '');
-const subject: SubjectRef = { id: props.expeditionId, kind: 'expedition' };
+const subject = computed<SubjectRef>(() => ({ id: props.expeditionId, kind: 'expedition' }));
 
 const {
   applyLoadout,
@@ -53,7 +53,7 @@ const {
     expedition.value ? expeditionDeckContext(expedition.value, member, hunter) : undefined,
   party: () => party.value,
   selectedId: () => selectedHunterId.value,
-  subject: () => subject,
+  subject: () => subject.value,
 });
 
 watch(
@@ -77,17 +77,9 @@ const equipment = computed(() =>
 );
 const potions = computed(() => (expedition.value ? expeditionPotions(expedition.value) : []));
 const huntTarget = computed(() => (expedition.value ? (carrierMonster(expedition.value) ?? null) : null));
-const partyDeckStatus = computed<Record<string, boolean>>(() => {
-  if (!expedition.value) return {};
-  const map: Record<string, boolean> = {};
-  for (const member of expedition.value.hunters) {
-    const hunter = hunterById(member.hunterId);
-    if (!hunter) continue;
-    const ctx = expeditionDeckContext(expedition.value, member, hunter);
-    map[member.hunterId] = validateDeck(member.deckCardIds, ctx).valid;
-  }
-  return map;
-});
+const partyDeckStatus = computed(() =>
+  expedition.value ? subjectHuntersDeckStatus(expedition.value) : {},
+);
 </script>
 
 <template>

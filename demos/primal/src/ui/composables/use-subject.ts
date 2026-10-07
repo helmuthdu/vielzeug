@@ -60,6 +60,14 @@ const DETAIL_ROUTES: Record<SubjectKind, RouteName> = {
   expedition: 'expeditionDetail',
 };
 
+/** The deck builder for a subject kind: the route the deck view itself runs on. */
+const DECK_ROUTES: Record<SubjectKind, RouteName> = {
+  ascent: 'ascentDeck',
+  campaign: 'campaignDeck',
+  challenge: 'challengeDeck',
+  expedition: 'expeditionDeck',
+};
+
 const HUNTER_BOARD_ROUTES: Record<SubjectKind, RouteName> = {
   ascent: 'ascentHunterBoard',
   campaign: 'campaignHunterBoard',
@@ -75,10 +83,11 @@ const MONSTER_BOARD_ROUTES: Record<SubjectKind, RouteName> = {
 };
 
 /**
- * The board views' shared subject resolution: find the routed entity from its kind's signal,
- * compute lock state and board route names, and expose the SubjectRef the store's runCommand
- * expects. Both board views (hunter and monster) route through this: one code path for all
- * four modes.
+ * The routed subject, shared by every view that edits one: boards, the deck builder and the
+ * detail screens. Find the routed entity from its kind's signal, compute lock state and route
+ * names, expose the party member for the route's hunterId param, and expose the SubjectRef
+ * the store's runCommand expects. One code path for all four modes: a new route classifies
+ * itself in ROUTE_KINDS instead of re-deriving the lookup.
  */
 export function useSubject() {
   const params = useRouteParams();
@@ -86,6 +95,8 @@ export function useSubject() {
   const kind = computed<SubjectKind | null>(() => (routeName.value ? ROUTE_KINDS[routeName.value] : null));
   const isCampaign = computed(() => kind.value === 'campaign');
   const isAscent = computed(() => kind.value === 'ascent');
+  const isChallenge = computed(() => kind.value === 'challenge');
+  const isExpedition = computed(() => kind.value === 'expedition');
 
   const allAscents = useReadable(ascents);
   const allCampaigns = useReadable(campaigns);
@@ -131,6 +142,9 @@ export function useSubject() {
   /** The detail page behind this board: where the back button goes. */
   const backRoute = computed<RouteName>(() => (kind.value ? DETAIL_ROUTES[kind.value] : 'home'));
 
+  /** The deck builder for this subject kind: the route the deck view runs on. */
+  const deckRoute = computed<RouteName>(() => (kind.value ? DECK_ROUTES[kind.value] : 'home'));
+
   /** The hunter board for this subject: the counterpart of the monster board. */
   const hunterBoardRoute = computed<RouteName>(() => (kind.value ? HUNTER_BOARD_ROUTES[kind.value] : 'home'));
 
@@ -142,18 +156,26 @@ export function useSubject() {
     entity.value && kind.value ? { id: entity.value.id, kind: kind.value } : null,
   );
 
+  /** The party member behind the route's hunterId param: the deck builder's edit target. */
+  const member = computed(() => entity.value?.hunters.find((entry) => entry.hunterId === params.value.hunterId));
+
   return {
     ascent,
     backRoute,
     campaign,
     challenge,
+    deckRoute,
     entity,
     expedition,
     hunterBoardRoute,
     isAscent,
     isCampaign,
+    isChallenge,
+    isExpedition,
+    kind,
     locked,
     lockReason,
+    member,
     monsterBoardRoute,
     params,
     subject,

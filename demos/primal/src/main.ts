@@ -4,7 +4,7 @@
 // unupgraded elements until their chunk arrives.
 import '@vielzeug/refine/fouc.css';
 import '@vielzeug/refine/tokens.css';
-import '@vielzeug/prism/theme';
+import '@vielzeug/prism/theme.css';
 import './styles/fonts.css';
 import './styles/theme.css';
 import '@vielzeug/refine/button';

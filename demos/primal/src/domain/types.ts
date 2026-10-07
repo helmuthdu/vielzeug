@@ -149,7 +149,7 @@ export interface HunterCard {
 export type HunterStrengthAxis = 'control' | 'defense' | 'mobility' | 'power' | 'speed' | 'support';
 
 /** A strength profile on the shared 1–5 scale, derived from a build's cards and gear. */
-export interface HunterStrengths extends Record<HunterStrengthAxis, number> {}
+export type HunterStrengths = Record<HunterStrengthAxis, number>;
 
 export interface Hunter extends GameContent {
   artwork: string;

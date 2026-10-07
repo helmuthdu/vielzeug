@@ -4,7 +4,6 @@ import { asset } from '../../../app/assets';
 import { notify } from '../../../app/events';
 import { t, tp } from '../../../app/i18n';
 import { createPhaseRoutes } from '../../../app/phase-routes';
-import type { SubjectCommandArgs, SubjectCommandName } from '../../../app/store';
 import { ascents, duplicateAscent, notifyError, removeSubject, runCommand, startAscent } from '../../../app/store';
 import { navigate, useMediaQuery, useReadable, useRouteParams } from '../../../app/vue-bridge';
 import { ASCENT_CHAPTERS, ASCENT_EPILOGUE } from '../../../content/ascent';
@@ -13,13 +12,12 @@ import {
   ASCENT_CHAPTERS_TOTAL,
   ASCENT_PARTY_MIN,
   ascentChapter,
-  ascentScenario,
+  ascentScenario,ascentSummitLadder, ascentSummitRank, ascentTotal 
 } from '../../../domain/ascent';
 import { ASCENT_PHASES, canTransitionAscent } from '../../../domain/ascent-machine';
-import { ascentDeckContext, validateDeck } from '../../../domain/deck';
+import { ascentDeckContext, subjectHuntersDeckStatus } from '../../../domain/deck';
 import { canHostSubject } from '../../../domain/host-eligibility';
 import { partyMaxFor } from '../../../domain/party';
-import { ascentSummitLadder, ascentSummitRank, ascentTotal } from '../../../domain/scoring';
 import { type SeriesSheet, seriesSheet } from '../../../domain/trial-score';
 import type { AscentPhase, HunterLoadout, SubjectRef } from '../../../domain/types';
 import { victoryFromAscent } from '../../../domain/victory';
@@ -50,6 +48,7 @@ import ShareDialog from '../../components/share/ShareDialog.vue';
 import { type ShareSubject, victoryShareSubject } from '../../components/share/share-subject';
 import { usePartyBuilds } from '../../composables/use-party-builds';
 import { useSessionGuest } from '../../composables/use-session-guest';
+import { useSubjectCommands } from '../../composables/use-subject-commands';
 import '@vielzeug/refine/alert';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
@@ -77,18 +76,7 @@ const scenario = computed(() => (ascent.value ? ascentScenario(ascent.value) : u
 const finished = computed(() => ascent.value?.status === 'finished');
 const selectedHunterId = ref('');
 const partyHunters = computed(() => ascent.value?.hunters.flatMap((member) => hunterById(member.hunterId) ?? []) ?? []);
-const partyDeckStatus = computed<Record<string, boolean>>(() => {
-  const current = ascent.value;
-  if (!current) return {};
-  return Object.fromEntries(
-    current.hunters.flatMap((member) => {
-      const hunter = hunterById(member.hunterId);
-      if (!hunter) return [];
-      const context = ascentDeckContext(current, member, hunter);
-      return [[member.hunterId, validateDeck(member.deckCardIds, context).valid]];
-    }),
-  );
-});
+const partyDeckStatus = computed(() => (ascent.value ? subjectHuntersDeckStatus(ascent.value) : {}));
 watch(
   () => ascent.value?.hunters.map((member) => member.hunterId),
   (hunterIds) => {
@@ -98,10 +86,7 @@ watch(
 );
 const phaseEntries = computed(() => ASCENT_PHASES.map((id) => ({ id, label: phaseLabel(id) })));
 
-function command<K extends SubjectCommandName>(name: K, ...args: SubjectCommandArgs<K>): void {
-  if (!subject.value) return;
-  runCommand(name, subject.value, ...args);
-}
+const command = useSubjectCommands(subject);
 
 // The one-click party load: each hunter's newest saved build, pre-checked in the dialog.
 const partyLoadOpen = ref(false);
@@ -403,7 +388,7 @@ const phaseLabel = (phase: AscentPhase) => t(`ascentDetail.phase.${phase}`);
 
     <!-- Encounter: the quest board's own grammar, the battlefield area in the list's
          place — the chapter tools over the terrain, the drawn monster's briefing beside. -->
-    <AscentEncounterBoard v-if="ascent.phase === 'encounter'" :ascent-id="ascent.id" 
+    <AscentEncounterBoard v-if="ascent.phase === 'encounter'" :ascent-id="ascent.id"
       @back="requestRevisit('preparing')" />
 
     <!-- Hunt -->
@@ -489,7 +474,7 @@ const phaseLabel = (phase: AscentPhase) => t(`ascentDetail.phase.${phase}`);
           <template v-if="!isPhone">{{ t('victory.share') }}</template>
         </ore-button>
         <ore-button color="primary" variant="solid"
-          v-if="ascent.result === 'victory' && !summitReached" :icon-only="isPhone" 
+          v-if="ascent.result === 'victory' && !summitReached" :icon-only="isPhone"
           :label="t('ascentDetail.nextChapter')" :rounded="isPhone ? 'full' : undefined" @click="advance">
           <ore-icon name="chevron-right" v-if="isPhone" />
           <template v-if="!isPhone">{{ t('ascentDetail.nextChapter') }}</template>

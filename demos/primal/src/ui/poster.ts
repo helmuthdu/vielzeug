@@ -423,7 +423,7 @@ export async function renderVictoryPoster(victory: SharedVictory, qrElement: Ele
   const success = readColor('--color-success', '#2e8b57');
 
   const [banner, trophy, qr, logo] = await Promise.all([
-    loadImage(asset(victoryResultArt(victory) ?? '')),
+    loadImage(asset(victoryResultArt(victory))),
     loadImage(asset(monster?.trophyIcon ?? '')),
     loadQr(qrElement),
     loadLogo(gold),

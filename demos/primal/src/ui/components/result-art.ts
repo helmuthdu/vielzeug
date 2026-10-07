@@ -1,5 +1,5 @@
 import { t } from '../../app/i18n';
-import { questById, scenarioById } from '../../content';
+import { trialSeriesById } from '../../content';
 import type { SharedVictory } from '../../domain/victory';
 
 export function resultArtwork(
@@ -29,19 +29,20 @@ export function victoryModeLabel(mode: SharedVictory['mode']): string {
   }
 }
 
-/** The banner art a shared victory carries: the same image its result screen showed. */
-export function victoryResultArt(victory: SharedVictory): string | undefined {
-  const number =
-    victory.mode === 'campaign-hunt'
-      ? victory.questId
-        ? questById(victory.questId)?.number
-        : undefined
-      : victory.mode === 'expedition'
-        ? victory.scenarioId
-          ? scenarioById(victory.scenarioId)?.number
-          : undefined
-        : victory.mode === 'challenge'
-          ? (victory.expeditionNumber ?? undefined)
-          : (victory.chapter ?? undefined);
-  return resultArtwork('victory', number ?? 1, victory.finished);
+/** The banner art a shared victory carries: the game mode's own background, so a poster
+ *  reads as the game it came from. The Winds carry their series cover; only the campaign's
+ *  closing record keeps the final art. */
+export function victoryResultArt(victory: SharedVictory): string {
+  switch (victory.mode) {
+    case 'ascent':
+      return '/backgrounds/bg_mount_havoc_2.webp';
+    case 'campaign-final':
+      return '/backgrounds/bg_final_1.webp';
+    case 'campaign-hunt':
+      return '/backgrounds/bg_campaign.webp';
+    case 'challenge':
+      return trialSeriesById(victory.seriesId ?? '')?.art ?? '/backgrounds/bg_challenges.webp';
+    case 'expedition':
+      return '/backgrounds/bg_expedition.webp';
+  }
 }

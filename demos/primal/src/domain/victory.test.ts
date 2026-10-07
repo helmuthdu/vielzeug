@@ -10,7 +10,7 @@ import {
   revealAscentEncounter,
   setAscentHunters,
 } from './ascent';
-import { activateQuest, createCampaign } from './campaign';
+import { activateQuest, createCampaign, finishHunt } from './campaign';
 import {
   advanceChallengeSession,
   chooseChallengeBounty,
@@ -30,7 +30,6 @@ import {
   setExpeditionScenario,
 } from './expedition';
 import { startSubjectHuntTimer } from './hunt-timer';
-import { finishHunt } from './scoring';
 import type { Challenge, VariantId } from './types';
 import {
   decodeVictoryCode,

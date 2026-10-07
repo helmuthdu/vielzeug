@@ -448,7 +448,7 @@ html[data-theme='dark'] .menu {
   max-height: 28dvh;
   object-fit: none;
   object-position: -9999em -9999em;
-  background: linear-gradient(180deg, oklch(33% 0.045 55deg) 0%, oklch(17% 0.012 52deg) 72%);
+  background: linear-gradient(180deg, oklch(33% 0.045 55deg) 10%, oklch(17% 0.012 52deg) 72%);
   filter: drop-shadow(0 -10px 34px var(--hero-glow));
   -webkit-mask: var(--hero, none) center bottom / contain no-repeat;
   mask: var(--hero, none) center bottom / contain no-repeat;

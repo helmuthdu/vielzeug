@@ -11,6 +11,17 @@ import type { RunStatus } from './types';
 export const RUN_NAME_MAX = 40;
 export const RUN_MAX_WOUNDS = 3;
 
+/** Fisher–Yates with the caller's random so tests stay deterministic. The ascent's draw pile
+ *  and the Winds sheet's draft pairs are the runs' only randomness, and both shuffle ids. */
+export function shuffle(ids: readonly string[], random: () => number): string[] {
+  const result = [...ids];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 /** The member fields the run operations touch. */
 interface RunMember {
   hunterId: string;

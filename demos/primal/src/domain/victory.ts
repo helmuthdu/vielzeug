@@ -9,17 +9,11 @@ import {
   TOTAL_CHAPTERS,
   trialSeriesById,
 } from '../content';
-import { CHALLENGE_EXPEDITIONS_TOTAL } from './challenge';
+import { ascentSummitRank, ascentTotal } from './ascent';
+import { huntersTrialScore, nightmareHunterTrialRank } from './campaign';
+import { CHALLENGE_EXPEDITIONS_TOTAL, challengeRank, challengeTotal } from './challenge';
 import { PrimalDomainError } from './errors';
 import { RUN_NAME_MAX } from './run';
-import {
-  ascentSummitRank,
-  ascentTotal,
-  challengeRank,
-  challengeTotal,
-  hunterScore,
-  nightmareHunterTrialRank,
-} from './scoring';
 import type { Ascent, Campaign, Challenge, Expedition } from './types';
 
 /**
@@ -220,7 +214,7 @@ export function victoryFromCampaign(campaign: Campaign): SharedVictory | null {
     name: campaign.name,
     questId: quest.id,
     scenarioId: null,
-    score: hunterScore(campaign),
+    score: huntersTrialScore(campaign),
     seriesId: null,
   };
 }
@@ -241,7 +235,7 @@ export function victoryFromCampaignFinal(campaign: Campaign): SharedVictory | nu
     name: campaign.name,
     questId: null,
     scenarioId: null,
-    score: hunterScore(campaign),
+    score: huntersTrialScore(campaign),
     seriesId: null,
   };
 }

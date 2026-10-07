@@ -32,7 +32,7 @@ const props = defineProps<{ ascentId: string; selectedHunterId: string; showProf
 const all = useReadable(ascents);
 const ascent = computed(() => all.value.find((entry) => entry.id === props.ascentId));
 const party = computed<readonly AscentHunter[]>(() => ascent.value?.hunters ?? []);
-const subject: SubjectRef = { id: props.ascentId, kind: 'ascent' };
+const subject = computed<SubjectRef>(() => ({ id: props.ascentId, kind: 'ascent' }));
 
 const {
   applyLoadout,
@@ -69,7 +69,7 @@ const {
   },
   party: () => party.value,
   selectedId: () => props.selectedHunterId,
-  subject: () => subject,
+  subject: () => subject.value,
 });
 
 const equipment = computed(() =>
@@ -84,7 +84,7 @@ function setWounds(event: Event): void {
   const member = selectedMember.value;
   if (!member || !woundsEditable.value) return;
   const { value } = (event as CustomEvent<{ value: number }>).detail;
-  runCommand('setSubjectWounds', subject, member.hunterId, value);
+  runCommand('setSubjectWounds', subject.value, member.hunterId, value);
 }
 </script>
 

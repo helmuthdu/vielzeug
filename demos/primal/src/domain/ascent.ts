@@ -6,6 +6,8 @@ import {
   monsterById,
   monsters,
   scenarioById,
+  TRIAL_SCORE_LEVELS,
+  type TrialRanking,
 } from '../content';
 import { ascentChapterByNumber } from '../content/ascent';
 import { transitionAscentPhase } from './ascent-machine';
@@ -21,15 +23,14 @@ import {
 import { PrimalDomainError } from './errors';
 import { appendHuntRecord } from './hunt-history';
 import { idleHuntTimer, stopHuntTimer } from './hunt-timer';
-import { syncHunterState } from './hunter-state';
 import { carrierMonster, idleMonsterState, setupMonsterState } from './monster-state';
-import { partyMaxFor } from './party';
+import { partyMaxFor, seatParty } from './party';
 import { emptyPotionLoadout } from './potion';
 import { missingExpansionIds, requiredExpansionsFor } from './prerequisites';
-import { duplicateRun, renameRun, setRunWoundCount } from './run';
-import { ascentScoreRecord } from './scoring';
+import { duplicateRun, renameRun, setRunWoundCount, shuffle } from './run';
 import { emptySkillTree, type SkillProgress, unlockedCards } from './skill-tree';
-import type { Ascent, AscentHunter, EquipmentIds, ExpansionId, Hunter, PotionLoadout } from './types';
+import { rankingFor, scoreRecord, scoreTotal, tier } from './trial-score';
+import type { Ascent, AscentHunter, EquipmentIds, ExpansionId, Hunter, PotionLoadout, TrialScoreRecord } from './types';
 
 /** Ascent parties need 2–4 hunters; the Mount Havoc expansion permits a fifth. */
 export const ASCENT_PARTY_MIN = 2;
@@ -47,16 +48,6 @@ const suggestedNames = [
 
 export function suggestAscentName(random = Math.random): string {
   return suggestedNames[Math.floor(random() * suggestedNames.length)] ?? 'Mount Havoc';
-}
-
-/** Fisher–Yates with the caller's random so tests stay deterministic. */
-function shuffle(ids: readonly string[], random: () => number): string[] {
-  const result = [...ids];
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
 }
 
 export function createAscent(
@@ -170,9 +161,6 @@ export function createAscentHunter(ascent: Ascent, hunterId: string): AscentHunt
 
 /** Sets the party before the first hunt; hunters already in it keep their build. */
 export function setAscentHunters(ascent: Ascent, hunterIds: string[], now: string): Ascent {
-  const partyChanged =
-    hunterIds.length !== ascent.hunters.length ||
-    hunterIds.some((id) => !ascent.hunters.some((hunter) => hunter.hunterId === id));
   if (ascent.phase !== 'preparing') {
     throw new PrimalDomainError('phase-transition', 'The party is only chosen before the hunt begins.');
   }
@@ -189,17 +177,7 @@ export function setAscentHunters(ascent: Ascent, hunterIds: string[], now: strin
   for (const id of hunterIds) {
     if (!hunterById(id)) throw new PrimalDomainError('party-unavailable', `Hunter "${id}" is not available.`);
   }
-  const hunters = hunterIds.map(
-    (hunterId) => ascent.hunters.find((member) => member.hunterId === hunterId) ?? createAscentHunter(ascent, hunterId),
-  );
-  return {
-    ...ascent,
-    fightEvents: partyChanged ? [] : ascent.fightEvents,
-    fightStart: partyChanged ? null : ascent.fightStart,
-    hunterState: syncHunterState(hunterIds, ascent.hunterState),
-    hunters,
-    updatedAt: now,
-  };
+  return seatParty(ascent, hunterIds, (hunterId) => createAscentHunter(ascent, hunterId), now);
 }
 
 /** Wounds are the sheet's tracker; the hunt itself is resolved on paper. */
@@ -257,6 +235,47 @@ export function beginAscentHunt(ascent: Ascent, now: string): Ascent {
     phase: transitionAscentPhase(ascent.phase, { type: 'BEGIN_HUNT' }),
     updatedAt: now,
   };
+}
+
+/** The Ascent's summit table, the same rulebook derivation on the climb's three chapters
+ *  (one per level): a clean sweep sums its bases to 45, the stance flag every chapter
+ *  reaches 67, and — the Nightmare behavior cards never mix levels into one deck, about
+ *  three ship per level — one behavior card each reaches 78, two each 89. Every
+ *  threshold rounds down to the five. The mortal tiers split the clean base evenly;
+ *  the Rookie row is the catch-all below Expert, highest first like every ladder. */
+export const ascentSummitLadder: readonly TrialRanking[] = [
+  tier('Nightmare', 85),
+  tier('Primal Beast', 75),
+  tier('Indomitable', 65),
+  tier('Dragon Slayer', 45),
+  tier('Beast Master', 40),
+  tier('Commander', 30),
+  tier('Prime Hunter', 20),
+  tier('Expert', 10),
+  tier('Rookie', null, 10),
+];
+
+/** The climb's score so far: the chapters' recorded worksheets added up. */
+export function ascentTotal(ascent: Pick<Ascent, 'scores'>): number {
+  return scoreTotal(ascent.scores);
+}
+
+/** The level the climb reaches on the summit ladder; the Rookie row is the catch-all. */
+export function ascentSummitRank(score: number): string {
+  return rankingFor(ascentSummitLadder, score)?.name ?? 'Rookie';
+}
+
+/** One chapter's recorded sheet: the standard series worksheet at the climb's level, its
+ * answers clamped at the sheet's own caps for the fight's monster and party. */
+function ascentScoreRecord(
+  ascent: Pick<Ascent, 'chapter' | 'hunters' | 'pending'>,
+  answers: readonly number[],
+): TrialScoreRecord {
+  return scoreRecord(
+    TRIAL_SCORE_LEVELS[ascent.chapter],
+    { monsterId: ascent.pending?.monsterId, partySize: ascent.hunters.length },
+    answers,
+  );
 }
 
 /**

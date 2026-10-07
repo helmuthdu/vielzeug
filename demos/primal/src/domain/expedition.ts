@@ -20,7 +20,7 @@ import { appendHuntRecord } from './hunt-history';
 import { idleHuntTimer, stopHuntTimer } from './hunt-timer';
 import { syncHunterState } from './hunter-state';
 import { idleMonsterState, isIdleMonsterState, setupMonsterState } from './monster-state';
-import { assertParty, validateParty } from './party';
+import { assertParty, seatParty, validateParty } from './party';
 import { emptyPotionLoadout } from './potion';
 import { tallyTrial } from './trial-score';
 import type {
@@ -84,26 +84,12 @@ export function createExpeditionHunter(expedition: Expedition, hunterId: string)
 /** Sets the party; hunters already in it keep their build. */
 export function setExpeditionHunters(expedition: Expedition, hunterIds: string[], now: string): Expedition {
   assertParty(hunterIds, expedition.expansionIds);
-  const partyChanged =
-    hunterIds.length !== expedition.hunters.length ||
-    hunterIds.some((id) => !expedition.hunters.some((hunter) => hunter.hunterId === id));
-  const hunters = hunterIds.map(
-    (hunterId) =>
-      expedition.hunters.find((member) => member.hunterId === hunterId) ?? createExpeditionHunter(expedition, hunterId),
-  );
+  const seated = seatParty(expedition, hunterIds, (hunterId) => createExpeditionHunter(expedition, hunterId), now);
   // A board still at setup follows the party; one already in play keeps its counts.
   const monsterState = isIdleMonsterState(expedition.monsterState, expedition.hunters.length)
-    ? setupMonsterState({ ...expedition, hunters })
+    ? setupMonsterState(seated)
     : expedition.monsterState;
-  return refreshStatus({
-    ...expedition,
-    fightEvents: partyChanged ? [] : expedition.fightEvents,
-    fightStart: partyChanged ? null : expedition.fightStart,
-    hunterState: syncHunterState(hunterIds, expedition.hunterState),
-    hunters,
-    monsterState,
-    updatedAt: now,
-  });
+  return refreshStatus({ ...seated, monsterState });
 }
 
 /** Every potion from the enabled boxes: expeditions have no Herbalist progression. */

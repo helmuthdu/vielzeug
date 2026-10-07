@@ -1,6 +1,6 @@
 import type { MeshPeer, MeshRtcFactory } from '@vielzeug/mesh';
 import { hostTavern, joinTavern, type TavernGuest, type TavernHost } from '@vielzeug/tavern';
-import type { GameMode, HuntSubject } from '../domain/types';
+import type { GameMode } from '../domain/types';
 import {
   bus,
   notify as emitNotice,
@@ -11,12 +11,6 @@ import {
   sessionState,
 } from './events';
 import { campaignLogger } from './logger';
-import {
-  sanitizeAscentSnapshot,
-  sanitizeCampaignSnapshot,
-  sanitizeChallengeSnapshot,
-  sanitizeExpeditionSnapshot,
-} from './persistence';
 import { href } from './router';
 import {
   applySubjectCommand,
@@ -42,14 +36,6 @@ interface WireSnapshot {
   record: unknown;
 }
 
-/** One sanitizer per subject kind: the same schemas backups run through. */
-const SNAPSHOT_SANITIZERS: Record<GameMode, (record: unknown) => HuntSubject> = {
-  ascent: sanitizeAscentSnapshot,
-  campaign: sanitizeCampaignSnapshot,
-  challenge: sanitizeChallengeSnapshot,
-  expedition: sanitizeExpeditionSnapshot,
-};
-
 let hostNode: TavernHost | null = null;
 let guestNode: TavernGuest | null = null;
 let detachHost: Array<() => void> = [];
@@ -74,7 +60,8 @@ function mountSnapshot(payload: unknown): PrimalSubject | null {
     return null;
   }
   try {
-    const record = SNAPSHOT_SANITIZERS[snapshot.kind](snapshot.record);
+    // The registry row owns the kind's schema: the same validation backups and sync use.
+    const record = SUBJECTS[snapshot.kind].sanitize(snapshot.record);
     mountRemoteSubject(record);
     return { id: record.id, kind: record.kind };
   } catch {
@@ -135,11 +122,6 @@ export function startSessionHost(subject: PrimalSubject, options: { rtc?: MeshRt
       sessionState.update(() => ({ mode: null, subject: null }));
       sessionPeers.update(() => []);
     },
-    onPeerJoined: (peer) =>
-      emitNotice('toasts.sessionPeerJoined', 'success', { values: { name: peer.name ?? 'A player' } }),
-    onPeerLeft: (peer) => emitNotice('toasts.sessionPeerLeft', 'info', { values: { name: peer.name ?? 'A player' } }),
-    onPeersChanged: (peers) => sessionPeers.update(() => [...peers]),
-    onWarning: (message) => campaignLogger.warn('Session error', { error: message }),
     rtc: options.rtc,
     subjectId: subject.id,
     subjects: {
@@ -155,6 +137,17 @@ export function startSessionHost(subject: PrimalSubject, options: { rtc?: MeshRt
         ),
       snapshot: () => snapshotFor(subject),
     },
+  });
+  host.tap((event) => {
+    if (event.type === 'peer-joined') {
+      emitNotice('toasts.sessionPeerJoined', 'success', { values: { name: event.peer.name ?? 'A player' } });
+      sessionPeers.update(() => [...host.peers]);
+    }
+    if (event.type === 'peer-left') {
+      emitNotice('toasts.sessionPeerLeft', 'info', { values: { name: event.peer.name ?? 'A player' } });
+      sessionPeers.update(() => [...host.peers]);
+    }
+    if (event.type === 'warning') campaignLogger.warn('Session error', { error: event.error });
   });
   hostNode = host;
   sessionState.update(() => ({ mode: 'host', subject }));
@@ -238,8 +231,13 @@ export async function beginSessionJoin(
       sessionState.update(() => ({ mode: 'guest', subject }));
       bus.emit('session:joined', { subject });
     },
-    onRejected: (message) => emitNotice('toasts.sessionActionRejected', 'warning', { values: { message } }),
     rtc: options.rtc,
+  });
+  guest.tap((event) => {
+    if (event.type === 'rejected') {
+      emitNotice('toasts.sessionActionRejected', 'warning', { values: { message: event.message } });
+    }
+    if (event.type === 'warning') campaignLogger.warn('Session error', { error: event.error });
   });
   guestNode = guest;
   setSessionCommandSender((subjectId, command, args) => {

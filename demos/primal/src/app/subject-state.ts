@@ -5,7 +5,6 @@ import { PrimalDomainError } from '../domain/errors';
 import { type FightAction, trackFightChange } from '../domain/fight-events';
 import { idleMonsterState } from '../domain/monster-state';
 import type { Ascent, Campaign, Challenge, Expedition, HunterLoadout, HuntSubject, SubjectRef } from '../domain/types';
-import { isAscentSubject, isCampaignSubject, isChallengeSubject, isExpeditionSubject } from '../domain/types';
 import { openPrimalStore, type PrimalStore, primalDatabaseName, SETTINGS_ID } from './database';
 import { bus, notify as emitNotice } from './events';
 import { setLocale } from './i18n';
@@ -49,14 +48,13 @@ export const settings: Signal<Settings> = signal<Settings>({ ...DEFAULT_SETTINGS
 
 let store: PrimalStore | null = null;
 const stoppers: Array<() => void> = [];
-let rawAscents: Ascent[] = [];
-let rawCampaigns: Campaign[] = [];
-let rawChallenges: Challenge[] = [];
-let rawExpeditions: Expedition[] = [];
 
 type SubjectKind = SubjectRef['kind'];
 
 export type { SubjectKind };
+
+/** The vault table one subject kind persists to. */
+type SubjectTable = 'ascents' | 'campaigns' | 'challenges' | 'expeditions';
 
 /** The record one subject kind stores: kind and record stay correlated through this map. */
 type SubjectOf<K extends SubjectKind> = K extends 'campaign'
@@ -77,19 +75,16 @@ function withMirrors<K extends SubjectKind>(kind: K, records: SubjectOf<K>[]): S
   return [...replaced, ...extra] as SubjectOf<K>[];
 }
 
-/** Inserts or replaces a record in one of the raw lists: the shared list edit behind upsert. */
+/** Inserts or replaces a record in a kind's record list: the shared list edit behind upsert. */
 function upsertRecord<T extends HuntSubject>(records: T[], next: T): T[] {
   return records.some((entry) => entry.id === next.id)
     ? records.map((entry) => (entry.id === next.id ? next : entry))
     : [...records, next];
 }
 
-/** Publishes the raw record lists plus the mounted mirrors into the display signals. */
+/** Republishes every kind's display signal: called whenever the mounted mirrors change. */
 function publishSubjects(): void {
-  ascents.update(() => withMirrors('ascent', rawAscents));
-  campaigns.update(() => withMirrors('campaign', rawCampaigns));
-  challenges.update(() => withMirrors('challenge', rawChallenges));
-  expeditions.update(() => withMirrors('expedition', rawExpeditions));
+  for (const def of Object.values(SUBJECTS)) def.publish();
 }
 
 /**
@@ -101,117 +96,131 @@ const emitSubjectUpdated = (kind: SubjectKind, id: string, reason: string): void
 export const emitSubjectRemoved = (kind: SubjectKind, id: string): void => bus.emit('subject:removed', { id, kind });
 
 /**
- * Everything that differs per subject kind, one row per kind. The store, the session wiring
- * and the board views resolve through this table instead of switching on the kind: adding a
- * fourth subject means adding one row here, not touching every call site.
+ * Everything that differs per subject kind, one row per kind. The store, the session wiring,
+ * the sync gateway and the board views resolve through this table instead of switching on the
+ * kind: the row is the ONLY per-kind code, so adding a fifth subject means adding one row
+ * here and touching nothing else.
  */
 interface SubjectDef {
   /** The record from the display signal (mirrors included). */
   display(id: string): HuntSubject | undefined;
-  /** Drops the record from the raw list and republishes. */
+  /** Drops the record from the vault-backed list and republishes. */
   drop(id: string): void;
-  /** The database record, ignoring any mounted mirror. */
+  /** The kind this row owns: the record's `kind` discriminator. */
+  readonly kind: SubjectKind;
+  /** The vault-backed record, ignoring any mounted mirror. */
   local(id: string): HuntSubject | undefined;
   /** Records the write in the log. */
   log(id: string, reason: string): void;
   /** The deletion toast; expeditions confirm inline in their list, so they stay silent. */
   notifyRemoved?(subject: HuntSubject): void;
-  /** Carries database records into the raw list and the display signal. */
+  /** Carries vault records into the backed list and the display signal. */
   observe(account: PrimalStore): () => void;
+  /** Republishes the display signal: needed when the mounted mirrors change. */
+  publish(): void;
+  /** Writes the record to the kind's vault table. The table's codec validates it on every read. */
+  put(account: PrimalStore, record: HuntSubject): Promise<unknown>;
+  /** Removes the record from the kind's vault table. */
+  remove(account: PrimalStore, id: string): Promise<unknown>;
+  /** Validates an untrusted record (sync pull, session snapshot) through the kind's schema. */
+  sanitize(record: unknown): HuntSubject;
   /** The vault table (and sync entity) the kind persists to. */
-  readonly table: 'ascents' | 'campaigns' | 'challenges' | 'expeditions';
-  /** Inserts or replaces the record in the raw list and republishes. */
+  readonly table: SubjectTable;
+  /** Inserts or replaces the record in the vault-backed list and republishes. */
   upsert(next: HuntSubject): void;
 }
 
-export const SUBJECTS: Record<SubjectKind, SubjectDef> = {
-  ascent: {
-    display: (id) => ascents.value.find((entry) => entry.id === id),
+/** The kind-typed view of a registry row: static consumers (backups, sync payloads) read the
+ *  kind's own record type; dynamic consumers use the kind-erased SubjectDef surface. */
+interface SubjectRecords<K extends SubjectKind> {
+  /** Every vault-backed record of the kind: mounted mirrors are excluded, so sync and backups
+   *  speak to the device's own data only. */
+  all(): readonly SubjectOf<K>[];
+}
+
+/** One registry row. The factory owns the record list, the signal and every vault touch, so
+ *  a row carries only the genuinely per-kind data: its table, signal, log line, toast and schema. */
+function createSubjectDef<K extends SubjectKind>(config: {
+  kind: K;
+  log(id: string, reason: string): void;
+  notifyRemoved?(subject: SubjectOf<K>): void;
+  sanitize(record: unknown): SubjectOf<K>;
+  signal: Signal<SubjectOf<K>[]>;
+  table: SubjectTable;
+}): SubjectDef & SubjectRecords<K> {
+  let records: SubjectOf<K>[] = [];
+  const publish = (): void => {
+    config.signal.update(() => withMirrors(config.kind, records));
+  };
+  return {
+    all: () => records,
+    display: (id) => config.signal.value.find((entry) => entry.id === id),
     drop: (id) => {
-      rawAscents = rawAscents.filter((entry) => entry.id !== id);
-      publishSubjects();
+      records = records.filter((entry) => entry.id !== id);
+      publish();
     },
-    local: (id) => rawAscents.find((entry) => entry.id === id),
+    kind: config.kind,
+    local: (id) => records.find((entry) => entry.id === id),
+    log: config.log,
+    notifyRemoved: config.notifyRemoved && ((subject) => config.notifyRemoved?.(subject as SubjectOf<K>)),
+    observe: (account) =>
+      account.observe(config.table, (next) => {
+        // The observer hands over the table's records; the row's kind keeps them correlated.
+        records = next as SubjectOf<K>[];
+        publish();
+      }),
+    publish,
+    put: (account, record) => account.put(config.table, record as SubjectOf<K>),
+    remove: (account, id) => account.delete(config.table, id),
+    sanitize: config.sanitize,
+    table: config.table,
+    upsert: (next) => {
+      if (next.kind === config.kind) records = upsertRecord(records, next as SubjectOf<K>);
+      publish();
+    },
+  };
+}
+
+export const SUBJECTS: { [K in SubjectKind]: SubjectDef & SubjectRecords<K> } = {
+  ascent: createSubjectDef({
+    kind: 'ascent',
     log: (id, reason) => expeditionLogger.debug(reason, { ascentId: id }),
-    notifyRemoved: (subject) => {
-      if (isAscentSubject(subject)) emitNotice('toasts.ascentDeleted', 'warning', { values: { name: subject.name } });
-    },
-    observe: (account) =>
-      account.observe('ascents', (records) => {
-        rawAscents = records;
-        publishSubjects();
-      }),
+    notifyRemoved: (subject) => emitNotice('toasts.ascentDeleted', 'warning', { values: { name: subject.name } }),
+    sanitize: sanitizeAscentSnapshot,
+    signal: ascents,
     table: 'ascents',
-    upsert: (next) => {
-      if (isAscentSubject(next)) rawAscents = upsertRecord(rawAscents, next);
-      publishSubjects();
-    },
-  },
-  campaign: {
-    display: (id) => campaigns.value.find((entry) => entry.id === id),
-    drop: (id) => {
-      rawCampaigns = rawCampaigns.filter((entry) => entry.id !== id);
-      publishSubjects();
-    },
-    local: (id) => rawCampaigns.find((entry) => entry.id === id),
+  }),
+  campaign: createSubjectDef({
+    kind: 'campaign',
     log: (id, reason) => campaignLogger.info(reason, { campaignId: id }),
-    notifyRemoved: (subject) => {
-      if (isCampaignSubject(subject))
-        emitNotice('toasts.campaignDeleted', 'warning', { values: { name: subject.name } });
-    },
-    observe: (account) =>
-      account.observe('campaigns', (records) => {
-        rawCampaigns = records;
-        publishSubjects();
-      }),
+    notifyRemoved: (subject) => emitNotice('toasts.campaignDeleted', 'warning', { values: { name: subject.name } }),
+    sanitize: sanitizeCampaignSnapshot,
+    signal: campaigns,
     table: 'campaigns',
-    upsert: (next) => {
-      if (isCampaignSubject(next)) rawCampaigns = upsertRecord(rawCampaigns, next);
-      publishSubjects();
-    },
-  },
-  challenge: {
-    display: (id) => challenges.value.find((entry) => entry.id === id),
-    drop: (id) => {
-      rawChallenges = rawChallenges.filter((entry) => entry.id !== id);
-      publishSubjects();
-    },
-    local: (id) => rawChallenges.find((entry) => entry.id === id),
+  }),
+  challenge: createSubjectDef({
+    kind: 'challenge',
     log: (id, reason) => expeditionLogger.debug(reason, { challengeId: id }),
-    notifyRemoved: (subject) => {
-      if (isChallengeSubject(subject))
-        emitNotice('toasts.challengeDeleted', 'warning', { values: { name: subject.name } });
-    },
-    observe: (account) =>
-      account.observe('challenges', (records) => {
-        rawChallenges = records;
-        publishSubjects();
-      }),
+    notifyRemoved: (subject) => emitNotice('toasts.challengeDeleted', 'warning', { values: { name: subject.name } }),
+    sanitize: sanitizeChallengeSnapshot,
+    signal: challenges,
     table: 'challenges',
-    upsert: (next) => {
-      if (isChallengeSubject(next)) rawChallenges = upsertRecord(rawChallenges, next);
-      publishSubjects();
-    },
-  },
-  expedition: {
-    display: (id) => expeditions.value.find((entry) => entry.id === id),
-    drop: (id) => {
-      rawExpeditions = rawExpeditions.filter((entry) => entry.id !== id);
-      publishSubjects();
-    },
-    local: (id) => rawExpeditions.find((entry) => entry.id === id),
+  }),
+  expedition: createSubjectDef({
+    kind: 'expedition',
     log: (id, reason) => expeditionLogger.debug(reason, { expeditionId: id }),
-    observe: (account) =>
-      account.observe('expeditions', (records) => {
-        rawExpeditions = records;
-        publishSubjects();
-      }),
+    sanitize: sanitizeExpeditionSnapshot,
+    signal: expeditions,
     table: 'expeditions',
-    upsert: (next) => {
-      if (isExpeditionSubject(next)) rawExpeditions = upsertRecord(rawExpeditions, next);
-      publishSubjects();
-    },
-  },
+  }),
+};
+
+/** The sync layer's table names resolve to the same registry rows the kinds use. */
+const SUBJECT_BY_TABLE: Record<SubjectTable, SubjectDef> = {
+  ascents: SUBJECTS.ascent,
+  campaigns: SUBJECTS.campaign,
+  challenges: SUBJECTS.challenge,
+  expeditions: SUBJECTS.expedition,
 };
 
 /**
@@ -339,18 +348,11 @@ export async function commitWrite(label: string, work: (account: PrimalStore) =>
   }
 }
 
-/** Persists one subject row after a command committed it to memory. The one spot where a
- *  subject's kind meets its vault table: discriminated narrowing keeps the row type exact. */
+/** Persists one subject row after a command committed it to memory. The registry row owns
+ *  the kind's vault table, so the commit path never switches on the kind. */
 function persistSubject(next: HuntSubject): void {
-  void commitWrite(`save ${SUBJECTS[next.kind].table}`, (account) =>
-    next.kind === 'campaign'
-      ? account.put('campaigns', next)
-      : next.kind === 'ascent'
-        ? account.put('ascents', next)
-        : next.kind === 'challenge'
-          ? account.put('challenges', next)
-          : account.put('expeditions', next),
-  );
+  const def = SUBJECTS[next.kind];
+  void commitWrite(`save ${def.table}`, (account) => def.put(account, next));
 }
 
 /** Replaces every subject table from a backup file; throws so the caller can report failures. */
@@ -474,10 +476,10 @@ export function exportSavedData(): string {
   const backup: SavedDataBackup = {
     appVersion: APP_VERSION,
     data: {
-      ascents: rawAscents.filter((entry) => !remoteSubjects.has(entry.id)),
-      campaigns: rawCampaigns.filter((entry) => !remoteSubjects.has(entry.id)),
-      challenges: rawChallenges.filter((entry) => !remoteSubjects.has(entry.id)),
-      expeditions: rawExpeditions.filter((entry) => !remoteSubjects.has(entry.id)),
+      ascents: SUBJECTS.ascent.all().filter((entry) => !remoteSubjects.has(entry.id)),
+      campaigns: SUBJECTS.campaign.all().filter((entry) => !remoteSubjects.has(entry.id)),
+      challenges: SUBJECTS.challenge.all().filter((entry) => !remoteSubjects.has(entry.id)),
+      expeditions: SUBJECTS.expedition.all().filter((entry) => !remoteSubjects.has(entry.id)),
       loadouts: loadouts.value,
       settings: settings.value,
     },
@@ -509,13 +511,17 @@ export function findSubject(ref: SubjectRef): HuntSubject | undefined {
   return SUBJECTS[ref.kind].display(ref.id);
 }
 
-export function commitSubject(next: HuntSubject, reason: string, fightAction?: FightAction): HuntSubject {
+/** Commits a subject through its registry row: fight-event tracking, rev stamping, validation,
+ *  the in-memory publish and the vault write. The kind flows through the return type, so
+ *  kind-specific callers never re-narrow. */
+export function commitSubject<T extends HuntSubject>(next: T, reason: string, fightAction?: FightAction): T {
   // Every committed write counts: equal revs on two devices mean a concurrent edit. Creations
   // enter with the seed 0 and take their first counted write here.
   const before = SUBJECTS[next.kind].local(next.id);
   const stamp = now();
   const tracked = before ? trackFightChange(before, next, { action: fightAction, recordedAt: stamp }) : next;
-  const stamped = { ...tracked, rev: next.rev + 1 };
+  // The spread widens to the union; the rev stamp is the only change, so T survives it.
+  const stamped = { ...tracked, rev: next.rev + 1 } as T;
   const def = SUBJECTS[stamped.kind];
   sanitizeSnapshot(def.table, stamped);
   def.upsert(stamped);
@@ -528,23 +534,10 @@ export function commitSubject(next: HuntSubject, reason: string, fightAction?: F
 // Sync gateway: the sync layer's only vault access
 // ---------------------------------------------------------------------------
 
-/** Remote records are untrusted: they run through the same schemas as backups. */
-function sanitizeSnapshot(
-  entity: SyncEntity,
-  record: unknown,
-): Campaign | Challenge | Expedition | HunterLoadout | Ascent {
-  switch (entity) {
-    case 'campaigns':
-      return sanitizeCampaignSnapshot(record);
-    case 'challenges':
-      return sanitizeChallengeSnapshot(record);
-    case 'expeditions':
-      return sanitizeExpeditionSnapshot(record);
-    case 'ascents':
-      return sanitizeAscentSnapshot(record);
-    case 'loadouts':
-      return loadoutCodec.parse(record);
-  }
+/** Remote records are untrusted: they run through the same schemas as backups. The subject
+ *  tables resolve through the registry; loadouts are the one sync entity that is not a subject. */
+function sanitizeSnapshot(entity: SyncEntity, record: unknown): HuntSubject | HunterLoadout {
+  return entity === 'loadouts' ? loadoutCodec.parse(record) : SUBJECT_BY_TABLE[entity].sanitize(record);
 }
 
 /** Narrows a remote payload's entity string to a table the sync layer owns. */
@@ -604,10 +597,10 @@ export const syncGateway = {
   /** The device's own records: session mirrors are excluded. */
   records(): SyncRecord[] {
     return [
-      ...rawAscents.map((record): SyncRecord => ({ entity: 'ascents', record })),
-      ...rawCampaigns.map((record): SyncRecord => ({ entity: 'campaigns', record })),
-      ...rawChallenges.map((record): SyncRecord => ({ entity: 'challenges', record })),
-      ...rawExpeditions.map((record): SyncRecord => ({ entity: 'expeditions', record })),
+      ...SUBJECTS.ascent.all().map((record): SyncRecord => ({ entity: 'ascents', record })),
+      ...SUBJECTS.campaign.all().map((record): SyncRecord => ({ entity: 'campaigns', record })),
+      ...SUBJECTS.challenge.all().map((record): SyncRecord => ({ entity: 'challenges', record })),
+      ...SUBJECTS.expedition.all().map((record): SyncRecord => ({ entity: 'expeditions', record })),
       ...loadouts.peek().map((record): SyncRecord => ({ entity: 'loadouts', record })),
     ];
   },

@@ -162,6 +162,7 @@ usePrismChart(strengthChartEl, createRadarChart, () => radarConfig.value);
 .chronicle__strength-chart {
   justify-self: center;
   width: min(100%, 26rem);
+  min-width: 0;
   aspect-ratio: 1;
 }
 

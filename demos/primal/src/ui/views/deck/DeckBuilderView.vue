@@ -2,18 +2,8 @@
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { t } from '../../../app/i18n';
 import type { RouteName } from '../../../app/router';
-import {
-  ascents,
-  campaigns,
-  challenges,
-  expeditions,
-  loadouts,
-  runCommand,
-  saveHunterBuild,
-  saveLoadout,
-  updateLoadoutBuild,
-} from '../../../app/store';
-import { navigate, useReadable, useRouteName, useRouteParams, useRouteQuery } from '../../../app/vue-bridge';
+import { loadouts, runCommand, saveHunterBuild, saveLoadout, updateLoadoutBuild } from '../../../app/store';
+import { navigate, useReadable, useRouteQuery } from '../../../app/vue-bridge';
 import { enabledContent, forgeById, hunterById, potionById, potions as potionCatalog, weaponClassById } from '../../../content/index';
 import { ascentEquipmentFor, ascentPotions } from '../../../domain/ascent';
 import { challengePotions } from '../../../domain/challenge';
@@ -27,6 +17,7 @@ import {
   eligibleEquipment,
   expeditionDeckContext,
   sameBuild,
+  subjectHuntersDeckStatus,
   validateDeck,
 } from '../../../domain/deck';
 import { expeditionPotions } from '../../../domain/expedition';
@@ -39,7 +30,6 @@ import type {
   HunterLoadout,
   PotionLoadout,
   PotionSlot,
-  SubjectRef,
 } from '../../../domain/types';
 import ActionsMenu from '../../components/ActionsMenu.vue';
 import ConfirmDialog from '../../components/ConfirmDialog.vue';
@@ -53,6 +43,7 @@ import PartySection from '../../components/party/PartySection.vue';
 import PlayerBoard from '../../components/party/PlayerBoard.vue';
 import ShareDialog from '../../components/share/ShareDialog.vue';
 import { buildShareSubject, type ShareSubject } from '../../components/share/share-subject';
+import { useSubject } from '../../composables/use-subject';
 import '@vielzeug/refine/alert';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
@@ -66,71 +57,32 @@ import '@vielzeug/refine/tooltip';
  * side column and changes equipment through the same slot picker as every board, and the saved-build
  * library is reached through Load / Save build.
  */
-const params = useRouteParams();
 const query = useRouteQuery();
-const routeName = useRouteName();
-const isCampaign = computed(() => routeName.value === 'campaignDeck');
-const isAscent = computed(() => routeName.value === 'ascentDeck');
-const isChallenge = computed(() => routeName.value === 'challengeDeck');
-const isExpedition = computed(() => routeName.value === 'expeditionDeck');
-const allAscents = useReadable(ascents);
-const allCampaigns = useReadable(campaigns);
-const allChallenges = useReadable(challenges);
-const allExpeditions = useReadable(expeditions);
 const savedLoadouts = useReadable(loadouts);
-const ascent = computed(() => allAscents.value.find((entry) => entry.id === params.value.id));
-const campaign = computed(() => allCampaigns.value.find((entry) => entry.id === params.value.id));
-const challenge = computed(() => allChallenges.value.find((entry) => entry.id === params.value.id));
-const expedition = computed(() => allExpeditions.value.find((entry) => entry.id === params.value.id));
-const entity = computed(() =>
-  isCampaign.value
-    ? campaign.value
-    : isAscent.value
-      ? ascent.value
-      : isChallenge.value
-        ? challenge.value
-        : expedition.value,
-);
+// The routed subject resolves through the shared composable: entity, the party member behind
+// the hunterId param, the deck route and the SubjectRef all come from one place (see use-subject).
+const { ascent, backRoute: detailRoute, campaign, challenge, deckRoute, entity, expedition, isAscent, isCampaign, isChallenge, isExpedition, member, params, subject } =
+  useSubject();
 const party = computed(() =>
-  (entity.value?.hunters ?? []).map((member) => hunterById(member.hunterId)).filter((entry) => entry !== undefined),
+  (entity.value?.hunters ?? []).map((entry) => hunterById(entry.hunterId)).filter((entry) => entry !== undefined),
 );
 const hunter = computed(() => party.value.find((entry) => entry.id === params.value.hunterId));
+// The deck context and the campaign's pools read the member's progression fields, so each
+// kind's member is resolved beside the kind-correct member useSubject provides for the board.
 const campaignMember = computed(() => campaign.value?.hunters.find((entry) => entry.hunterId === hunter.value?.id));
 const expeditionMember = computed(() => expedition.value?.hunters.find((entry) => entry.hunterId === hunter.value?.id));
 const ascentMember = computed(() => ascent.value?.hunters.find((entry) => entry.hunterId === hunter.value?.id));
 const runMember = computed(() => challenge.value?.hunters.find((entry) => entry.hunterId === hunter.value?.id));
-const member = computed(() =>
-  isCampaign.value
-    ? campaignMember.value
-    : isAscent.value
-      ? ascentMember.value
-      : isChallenge.value
-        ? runMember.value
-        : expeditionMember.value,
-);
 const monster = computed(() => (entity.value ? (carrierMonster(entity.value) ?? null) : null));
 
 // The creation wizard links its deck edits back to its own preparation step: the marker
 // names the return route, and the back carries the record for the wizard to re-attach.
 const backToCreate = computed(() => query.value.back === 'expeditionCreate' && isExpedition.value);
-const backRoute = computed<RouteName>(() =>
-  backToCreate.value
-    ? 'expeditionCreate'
-    : isCampaign.value
-      ? 'campaignDashboard'
-      : isAscent.value
-        ? 'ascentDetail'
-        : isChallenge.value
-          ? 'challengeDetail'
-          : 'expeditionDetail',
-);
+const backRoute = computed<RouteName>(() => (backToCreate.value ? 'expeditionCreate' : detailRoute.value));
 const backParams = computed(
   () => (backToCreate.value ? {} : { id: entity.value?.id ?? '' }) as Record<string, string>,
 );
 const backQuery = computed(() => (backToCreate.value ? { continue: entity.value?.id ?? '' } : undefined));
-const deckRoute = computed<RouteName>(() =>
-  isCampaign.value ? 'campaignDeck' : isAscent.value ? 'ascentDeck' : isChallenge.value ? 'challengeDeck' : 'expeditionDeck',
-);
 const locked = computed(() =>
   isCampaign.value
     ? campaign.value?.phase !== 'preparing'
@@ -193,24 +145,12 @@ const currentBuild = computed<BoardBuild | undefined>(() =>
 const storedValid = computed(
   () => !!context.value && validateDeck(member.value?.deckCardIds ?? [], context.value).valid,
 );
+// The roster marks every hunter whose saved deck breaks the rules, the same way the
+// preparation phases do: the party's other problems stay visible while one hunter edits.
+const partyDeckStatus = computed(() => (entity.value ? subjectHuntersDeckStatus(entity.value) : {}));
 const dirty = ref(false);
 /** The whole build is dirty: deck cards drafted, or equipment and potions staged on the board. */
 const buildDirty = computed(() => dirty.value || stagedEquipment.value !== null || stagedPotions.value !== null);
-
-const subject = computed<SubjectRef | null>(() =>
-  entity.value
-    ? {
-      id: entity.value.id,
-      kind: isCampaign.value
-        ? 'campaign'
-        : isAscent.value
-          ? 'ascent'
-          : isChallenge.value
-            ? 'challenge'
-            : 'expedition',
-    }
-    : null,
-);
 
 function saveDeck(ids: string[], masteryCardId: string): void {
   const ref = subject.value;
@@ -247,19 +187,14 @@ function stagedOf<T extends BoardBuild & { potionLoadoutIds: PotionLoadout }>(cu
     potionLoadoutIds: stagedPotions.value ?? current.potionLoadoutIds,
   };
 }
+/** The staged member of the routed subject: the same member `useSubject` resolved, for the shared board. */
+const boardMember = computed(() => stagedOf(member.value));
+// The deck context is per-kind (each *DeckContext takes its own member type), so it keeps
+// the staged member resolved per kind rather than the widened union the board can use.
 const boardCampaignMember = computed(() => stagedOf(campaignMember.value));
 const boardAscentMember = computed(() => stagedOf(ascentMember.value));
 const boardExpeditionMember = computed(() => stagedOf(expeditionMember.value));
 const boardRunMember = computed(() => stagedOf(runMember.value));
-const boardMember = computed(() =>
-  isCampaign.value
-    ? boardCampaignMember.value
-    : isAscent.value
-      ? boardAscentMember.value
-      : isChallenge.value
-        ? boardRunMember.value
-        : boardExpeditionMember.value,
-);
 
 // Switching hunters or subjects drops the stages, the same way the deck draft resets.
 watch(
@@ -497,7 +432,7 @@ const hiddenReason = computed(() =>
          the roster's rail and the dock's bar both travel it while the builder scrolls. -->
     <PartySection heading-id="deck-party-title" :subtitle="t('deck.partyHint')" :title="t('deck.partyTitle')">
       <div class="phase-flow" style="--phase-gap: var(--size-5)">
-        <HunterRoster :hunters="party" :selected-id="hunter.id" @select="selectHunter" />
+        <HunterRoster :deck-status="partyDeckStatus" :hunters="party" :selected-id="hunter.id" @select="selectHunter" />
 
         <ore-alert color="info" size="sm" variant="flat" v-if="locked">
           <ore-icon name="lock" slot="icon" />

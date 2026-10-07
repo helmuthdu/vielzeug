@@ -24,6 +24,7 @@ import {
   advanceChapter,
   assignRewardCard,
   campaignHuntersDeckStatus,
+  campaignStatistics,
   canAffordRecipe,
   canCraftEquipment,
   commitQuestSelection,
@@ -38,12 +39,16 @@ import {
   equipmentCraftRequirements,
   exactEquipmentCraftPayment,
   expireQuest,
+  finishHunt,
   huntersTrialCampaignOver,
+  huntersTrialScore,
   isCampaignReadyForHunt,
+  nightmareHunterTrialRank,
   prepareHunterPotion,
   questExpirationChapter,
   questStatus,
   recipeCostOptions,
+  recordAchievement,
   resolveChapterRewards,
   sendChapterEvent,
   setCampaignNightmare,
@@ -64,7 +69,6 @@ import {
   setHunterDepleted,
   setHunterKnockedOut,
 } from './hunter-state';
-import { campaignStatistics, finishHunt, hunterScore, nightmareHunterTrialRank, recordAchievement } from './scoring';
 import type { Campaign, Hunter, HunterLoadout } from './types';
 
 const NOW = '2026-01-01T00:00:00.000Z';
@@ -1352,7 +1356,7 @@ describe('finishHunt', () => {
     expect(firstDefeat).toMatchObject({ defeats: 1, scores: [], totalDefeats: 0 });
     expect(secondDefeat).toMatchObject({ defeats: 2, scores: [], totalDefeats: 0 });
     expect(victory).toMatchObject({ defeats: 0, totalDefeats: 2 });
-    expect(hunterScore(victory)).toBe(10);
+    expect(huntersTrialScore(victory)).toBe(10);
   });
 
   it("scores the trial's hunt by the standard worksheet at the chapter's tier", () => {
@@ -1361,7 +1365,7 @@ describe('finishHunt', () => {
     // The standard level-one sheet: base 10, the stance flag +5, two behavior cards +4,
     // one other hunter KO'd −3.
     expect(victory.scores).toEqual([{ answers: [1, 2, 0, 1], total: 10 + 5 + 4 - 3 }]);
-    expect(hunterScore(victory)).toBe(16);
+    expect(huntersTrialScore(victory)).toBe(16);
   });
 
   it("scores each hunt at its chapter's campaign aggression", () => {
@@ -1392,12 +1396,12 @@ describe('finishHunt', () => {
   it('re-fills a re-recorded hunt sheet into its own slot', () => {
     const active = activateQuest(campaign({ variants: ['hunters-trial'] }), questId(1), NOW);
     const first = finishHunt({ ...active, phase: 'hunt' }, 'victory', [0, 0, 0, 0], NOW);
-    expect(hunterScore(first)).toBe(10);
+    expect(huntersTrialScore(first)).toBe(10);
     // The undo-and-re-record path: the ledger restores the pre-record state, and the fight's
     // sheet re-fills its own slot instead of stacking a second one.
     const reRecorded = finishHunt({ ...active, phase: 'hunt' }, 'victory', [1, 0, 0, 0], NOW);
     expect(reRecorded.scores).toHaveLength(1);
-    expect(hunterScore(reRecorded)).toBe(15);
+    expect(huntersTrialScore(reRecorded)).toBe(15);
   });
 
   it('uses the rulebook-derived Nightmare Hunter’s Trial rankings', () => {
@@ -1439,10 +1443,10 @@ describe('finishHunt', () => {
     expect(() => sendChapterEvent(third, { type: 'RETRY_HUNT' }, NOW)).toThrow(/campaign is over/i);
   });
 
-  it('calculates the running Hunter Score from the recorded sheets', () => {
+  it('calculates the running Hunter’s Trial score from the recorded sheets', () => {
     const trial = campaign({ variants: ['hunters-trial'] });
-    expect(hunterScore(trial)).toBe(0);
-    expect(hunterScore(campaign())).toBeNull();
+    expect(huntersTrialScore(trial)).toBe(0);
+    expect(huntersTrialScore(campaign())).toBeNull();
     const scored = {
       ...trial,
       scores: [
@@ -1450,7 +1454,7 @@ describe('finishHunt', () => {
         { answers: [1, 0, 0, 0], total: 15 },
       ],
     };
-    expect(hunterScore(scored)).toBe(25);
+    expect(huntersTrialScore(scored)).toBe(25);
   });
 
   it('refuses to record a result outside the Hunt phase', () => {

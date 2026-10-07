@@ -14,10 +14,15 @@ import {
   TRIAL_SCORE_LEVELS,
 } from '../../../../content/index';
 import { narrativeAvailable } from '../../../../content/lore';
-import { campaignHuntersDeckStatus, huntersTrialCampaignOver, usesHuntersTrial } from '../../../../domain/campaign';
+import {
+  campaignHuntersDeckStatus,
+  huntersTrialCampaignOver,
+  huntersTrialScore,
+  nightmareHunterTrialRank,
+  usesHuntersTrial,
+} from '../../../../domain/campaign';
 import type { ChapterEvent } from '../../../../domain/chapter-machine';
 import { CHAPTER_PHASES, canTransition } from '../../../../domain/chapter-machine';
-import { hunterScore, nightmareHunterTrialRank } from '../../../../domain/scoring';
 import { type SeriesSheet, seriesSheet } from '../../../../domain/trial-score';
 import type { ChapterPhase, SubjectRef } from '../../../../domain/types';
 
@@ -114,7 +119,7 @@ function createDashboard() {
   const trialCampaignOver = computed(() => (campaign.value ? huntersTrialCampaignOver(campaign.value) : false));
   /** The run is over — final battle won or the trial's third defeat: no header or stepper past this point. */
   const campaignOver = computed(() => Boolean(campaign.value?.finalBattleWon) || trialCampaignOver.value);
-  const finalHunterScore = computed(() => (campaign.value ? hunterScore(campaign.value) : null));
+  const finalHunterScore = computed(() => (campaign.value ? huntersTrialScore(campaign.value) : null));
   const finalHunterRank = computed(() =>
     finalHunterScore.value !== null && usesNightmare.value ? nightmareHunterTrialRank(finalHunterScore.value) : null,
   );
@@ -215,7 +220,7 @@ function createDashboard() {
   const victorySheetBase = computed(() => {
     const current = campaign.value;
     if (!current || !isHuntersTrial.value || isFinalBattle.value) return 0;
-    return (hunterScore(current) ?? 0) + TRIAL_SCORE_LEVELS[campaignAggression(current.chapter)].base;
+    return (huntersTrialScore(current) ?? 0) + TRIAL_SCORE_LEVELS[campaignAggression(current.chapter)].base;
   });
 
   function confirmOutcome(answers?: readonly number[]): void {

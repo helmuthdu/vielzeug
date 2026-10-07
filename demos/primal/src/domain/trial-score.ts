@@ -1,6 +1,19 @@
-import type { TrialHunt, TrialRanking, TrialScoreModifier, TrialSeriesScoringLevel } from '../content';
-import type { HuntOutcome } from './scoring';
-import type { TrialScoreRecord } from './types';
+import {
+  type TrialHunt,
+  type TrialRanking,
+  type TrialRankLevelName,
+  type TrialScoreModifier,
+  type TrialSeriesScoringLevel,
+  trialRankLevel,
+} from '../content';
+import type { HuntResult, TrialScoreRecord } from './types';
+
+/**
+ * The shared scoring primitives: the worksheet's arithmetic (clamping answers, tallying
+ * totals, composing capped sheets) and the ranking ladders' lookups. Every subject module
+ * (campaign, ascent, challenge, expedition) builds its own table and records its own
+ * results on top of these; this module keeps no state and knows no subject.
+ */
 
 /** The worksheet's answers: one occurrence count per scoring modifier, in printed order. */
 export type TrialScoreAnswers = readonly number[];
@@ -63,7 +76,7 @@ export function worksheetTotal(
  * by hand; this only does the arithmetic. Cards that score on victory alone produce no score in
  * defeat, and victory-gated rows never count in defeat.
  */
-export function tallyTrial(hunt: TrialHunt, result: HuntOutcome, answers: TrialScoreAnswers): TrialScore | null {
+export function tallyTrial(hunt: TrialHunt, result: HuntResult, answers: TrialScoreAnswers): TrialScore | null {
   if (result === 'defeat' && !hunt.scoring.scoredOnDefeat) return null;
   const counts = clampAnswers(hunt.scoring.modifiers, answers);
   const rows: TrialScoreRow[] = [];
@@ -152,6 +165,16 @@ export function nextRankingFor(
 }
 
 /** The highest tier whose minimum the total reaches; the Rookie row is the catch-all. */
-export function trialRankingFor(hunt: TrialHunt, total: number): TrialRanking | undefined {
+function trialRankingFor(hunt: TrialHunt, total: number): TrialRanking | undefined {
   return rankingFor(hunt.rankings, total);
 }
+
+/** One ladder row as a ranking ladder renders it: the tier's threshold, its flavor
+ *  line, and — only for the Rookie catch-all — its ceiling. Subject modules build their
+ *  table from this; the flavor line resolves through the shared rank levels. */
+export const tier = (name: TrialRankLevelName, minScore: number | null, maxScore?: number): TrialRanking => ({
+  maxScore,
+  minScore,
+  name,
+  text: trialRankLevel(name)?.text,
+});

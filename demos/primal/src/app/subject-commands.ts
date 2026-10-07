@@ -39,8 +39,10 @@ import {
   commitQuestSelection,
   craftHunterEquipment,
   equipmentUpgradeSource,
+  finishHunt,
   huntersTrialCampaignOver,
   prepareHunterPotion,
+  recordAchievement,
   renameCampaign,
   sendChapterEvent,
   setCampaignNightmare,
@@ -86,7 +88,6 @@ import {
   unleashMonster,
 } from '../domain/monster-state';
 import { setPlayerName } from '../domain/party';
-import { finishHunt, type HuntOutcome, recordAchievement } from '../domain/scoring';
 import { placeTerrain, removeTerrain, transformTerrain } from '../domain/terrain';
 import type {
   Ascent,
@@ -100,6 +101,7 @@ import type {
   HunterCondition,
   HunterCounter,
   HunterLoadout,
+  HuntResult,
   HuntSubject,
   KoToken,
   MonsterCounter,
@@ -372,7 +374,7 @@ export const subjectCommands = {
       subject: next,
     };
   },
-  recordHuntResult(subject: HuntSubject, outcome: HuntOutcome, answers: number[]): CommandOutcome {
+  recordHuntResult(subject: HuntSubject, outcome: HuntResult, answers: number[]): CommandOutcome {
     const campaign = requireCampaign(subject);
     const next = finishHunt(campaign, outcome, answers, now());
     const notices: Notice[] = [];
@@ -609,34 +611,36 @@ export const subjectCommands = {
 
 export type SubjectCommandName = keyof typeof subjectCommands;
 
-export type CommandArgs<K extends SubjectCommandName> =
-  Parameters<(typeof subjectCommands)[K]> extends [HuntSubject, ...infer Rest] ? Rest : never;
-
 /** The trailing arguments a given subject command takes after its SubjectRef. */
-export type SubjectCommandArgs<K extends SubjectCommandName> = CommandArgs<K>;
+export type SubjectCommandArgs<K extends SubjectCommandName> =
+  Parameters<(typeof subjectCommands)[K]> extends [HuntSubject, ...infer Rest] ? Rest : never;
 
 export type CommandResult<K extends SubjectCommandName> = ReturnType<(typeof subjectCommands)[K]>['subject'];
 
-export function requireCampaign(subject: HuntSubject): Campaign {
-  if (!isCampaignSubject(subject)) throw new PrimalDomainError('phase-transition', 'This action is campaign-only.');
+/** The one refusal behind every kind guard: the named guards keep the call sites readable. */
+function requireSubjectKind<T extends HuntSubject>(
+  subject: HuntSubject,
+  matches: (candidate: HuntSubject) => candidate is T,
+  label: string,
+): T {
+  if (!matches(subject)) throw new PrimalDomainError('phase-transition', `This action is ${label}-only.`);
   return subject;
+}
+
+export function requireCampaign(subject: HuntSubject): Campaign {
+  return requireSubjectKind(subject, isCampaignSubject, 'campaign');
 }
 
 export function requireExpedition(subject: HuntSubject): Expedition {
-  if (!isExpeditionSubject(subject)) throw new PrimalDomainError('phase-transition', 'This action is expedition-only.');
-  return subject;
+  return requireSubjectKind(subject, isExpeditionSubject, 'expedition');
 }
 
 export function requireAscent(subject: HuntSubject): Ascent {
-  if (!isAscentSubject(subject)) throw new PrimalDomainError('phase-transition', 'This action is ascent-only.');
-  return subject;
+  return requireSubjectKind(subject, isAscentSubject, 'ascent');
 }
 
 export function requireChallenge(subject: HuntSubject): Challenge {
-  if (!isChallengeSubject(subject)) {
-    throw new PrimalDomainError('phase-transition', 'This action is challenge-only.');
-  }
-  return subject;
+  return requireSubjectKind(subject, isChallengeSubject, 'challenge');
 }
 
 const questNumber = (identifier: string): number => Number(identifier.replace('quest-', ''));

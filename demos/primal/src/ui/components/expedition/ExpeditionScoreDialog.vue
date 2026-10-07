@@ -11,11 +11,11 @@ import { t } from '../../../app/i18n';
 import { expeditions, runCommand } from '../../../app/store';
 import { useReadable } from '../../../app/vue-bridge';
 import { trialHuntForScenario } from '../../../content/index';
-import type { HuntOutcome } from '../../../domain/scoring';
+import type { HuntResult } from '../../../domain/types';
 import '@vielzeug/refine/text';
 import ScoreDialog from '../scoring/ScoreDialog.vue';
 
-const props = defineProps<{ correcting?: boolean; expeditionId: string; open: boolean; result: HuntOutcome }>();
+const props = defineProps<{ correcting?: boolean; expeditionId: string; open: boolean; result: HuntResult }>();
 const emit = defineEmits<{ close: [] }>();
 
 const all = useReadable(expeditions);

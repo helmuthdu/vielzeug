@@ -1,4 +1,13 @@
-import { forgeById, hunterById, monsterById, potionById, potions, starterCards, trialSeriesById } from '../content';
+import {
+  forgeById,
+  hunterById,
+  monsterById,
+  potionById,
+  potions,
+  starterCards,
+  type TrialRanking,
+  trialSeriesById,
+} from '../content';
 import { transitionChallengePhase } from './challenge-machine';
 import {
   challengeDeckContext,
@@ -11,14 +20,13 @@ import {
 import { PrimalDomainError } from './errors';
 import { appendHuntRecord } from './hunt-history';
 import { idleHuntTimer, stopHuntTimer } from './hunt-timer';
-import { syncHunterState } from './hunter-state';
 import { carrierMonster, idleMonsterState, setupMonsterState } from './monster-state';
-import { assertParty } from './party';
+import { assertParty, seatParty } from './party';
 import { emptyPotionLoadout } from './potion';
 import { missingExpansionIds, requiredExpansionsFor } from './prerequisites';
-import { renameRun, runName, setRunWoundCount } from './run';
-import { challengeScoreRecord } from './scoring';
+import { renameRun, runName, setRunWoundCount, shuffle } from './run';
 import { emptySkillTree } from './skill-tree';
+import { rankingFor, scoreRecord, scoreTotal, tier } from './trial-score';
 import type {
   Challenge,
   ChallengeDraftSlot,
@@ -28,10 +36,50 @@ import type {
   ExpansionId,
   Hunter,
   PotionLoadout,
+  TrialScoreRecord,
 } from './types';
 
 /** A Winds series is five expeditions. */
 export const CHALLENGE_EXPEDITIONS_TOTAL = 5;
+
+/** The Winds series table, the same rulebook derivation on the series' most ambitious
+ *  route — raise at every bounty, so the five expeditions fight at L1, L2, L3, L3, L3: a
+ *  clean sweep sums its bases to 85, the stance flag every expedition reaches 127, and —
+ *  the Nightmare behavior cards never mix levels into one deck, about three ship per
+ *  level — one behavior card each reaches 148, two each 169; every threshold rounds down
+ *  to the five. The mortal tiers split the clean base evenly; the Rookie row is the
+ *  catch-all below Expert, highest first like every ladder. */
+export const challengeLadder: readonly TrialRanking[] = [
+  tier('Nightmare', 165),
+  tier('Primal Beast', 145),
+  tier('Indomitable', 125),
+  tier('Dragon Slayer', 85),
+  tier('Beast Master', 70),
+  tier('Commander', 50),
+  tier('Prime Hunter', 35),
+  tier('Expert', 15),
+  tier('Rookie', null, 15),
+];
+
+/** The run's final score: the recorded expedition sheets added up. */
+export const challengeTotal = (run: Pick<Challenge, 'scores'>): number => scoreTotal(run.scores);
+
+/** The tier a total earns on the Winds ladder; the Rookie row is the catch-all. */
+export function challengeRank(total: number): string {
+  return rankingFor(challengeLadder, total)?.name ?? 'Rookie';
+}
+
+/** One expedition's recorded sheet: the standard series worksheet at the run's aggression,
+ * its answers clamped at the sheet's own caps for the fight's monster and party. */
+function challengeScoreRecord(
+  run: Pick<Challenge, 'aggression' | 'hunters' | 'pending' | 'seriesId'>,
+  answers: readonly number[],
+): TrialScoreRecord {
+  const level = trialSeriesById(run.seriesId)?.scoreLevels[run.aggression];
+  if (!level) throw new PrimalDomainError('challenge-series', 'The series has no score table for its level.');
+  return scoreRecord(level, { monsterId: run.pending?.monsterId, partySize: run.hunters.length }, answers);
+}
+
 export { RUN_MAX_WOUNDS as CHALLENGE_MAX_WOUNDS, RUN_NAME_MAX as CHALLENGE_NAME_MAX } from './run';
 
 const suggestedNamesBySeries: Record<string, readonly string[]> = {
@@ -150,24 +198,11 @@ export function createChallengeHunter(run: Challenge, hunterId: string): Challen
 
 /** Sets the party before a session's fight; hunters already in it keep their build. */
 export function setChallengeHunters(run: Challenge, hunterIds: string[], now: string): Challenge {
-  const partyChanged =
-    hunterIds.length !== run.hunters.length ||
-    hunterIds.some((id) => !run.hunters.some((hunter) => hunter.hunterId === id));
   if (run.phase !== 'quest-board' && run.phase !== 'preparing') {
     throw new PrimalDomainError('phase-transition', 'The party is only chosen before the fight begins.');
   }
   assertParty(hunterIds, run.expansionIds);
-  const hunters = hunterIds.map(
-    (hunterId) => run.hunters.find((member) => member.hunterId === hunterId) ?? createChallengeHunter(run, hunterId),
-  );
-  return {
-    ...run,
-    fightEvents: partyChanged ? [] : run.fightEvents,
-    fightStart: partyChanged ? null : run.fightStart,
-    hunterState: syncHunterState(hunterIds, run.hunterState),
-    hunters,
-    updatedAt: now,
-  };
+  return seatParty(run, hunterIds, (hunterId) => createChallengeHunter(run, hunterId), now);
 }
 
 /** Wounds are the sheet's tracker; they persist between expeditions until a bounty heals them. */
@@ -470,16 +505,6 @@ export function challengeRewardPool(run: Challenge, hunter: Hunter) {
       (piece.type !== 'weapon' || piece.classRestriction === hunter.classId) &&
       (monster ? piece.element === monster.element : true),
   );
-}
-
-/** Fisher–Yates with the caller's random so tests stay deterministic. */
-function shuffle(values: readonly string[], random: () => number): string[] {
-  const result = [...values];
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
 }
 
 /**

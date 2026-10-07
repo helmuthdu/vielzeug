@@ -79,6 +79,7 @@ export {
   type TrialHunt,
   type TrialRanking,
   type TrialRankLevel,
+  type TrialRankLevelName,
   type TrialScoreModifier,
   type TrialScoring,
   type TrialSeries,

@@ -9,7 +9,6 @@ import { computed, ref, watch } from 'vue';
 import { notify } from '../../../app/events';
 import { t, tp } from '../../../app/i18n';
 import { createPhaseRoutes } from '../../../app/phase-routes';
-import type { SubjectCommandArgs, SubjectCommandName } from '../../../app/store';
 import { challenges, notifyError, removeSubject, restartChallenge, runCommand } from '../../../app/store';
 import { navigate, useMediaQuery, useReadable, useRouteParams } from '../../../app/vue-bridge';
 import {
@@ -22,13 +21,12 @@ import {
 import {
   CHALLENGE_EXPEDITIONS_TOTAL,
   challengeBountyDue,
-  challengeDraftedCount,
-  challengeSeries,
+  challengeDraftedCount,challengeLadder, challengeRank, 
+  challengeSeries,challengeTotal 
 } from '../../../domain/challenge';
 import { CHALLENGE_PHASES, canTransitionChallenge } from '../../../domain/challenge-machine';
 import { challengeDeckContext, validateDeck } from '../../../domain/deck';
 import { canHostSubject } from '../../../domain/host-eligibility';
-import { challengeLadder, challengeRank, challengeTotal } from '../../../domain/scoring';
 import type { ChallengePhase, HunterLoadout, SubjectRef } from '../../../domain/types';
 import { victoryFromChallenge } from '../../../domain/victory';
 import ActionsMenu from '../../components/ActionsMenu.vue';
@@ -58,6 +56,7 @@ import ShareDialog from '../../components/share/ShareDialog.vue';
 import { type ShareSubject, victoryShareSubject } from '../../components/share/share-subject';
 import { usePartyBuilds } from '../../composables/use-party-builds';
 import { useSessionGuest } from '../../composables/use-session-guest';
+import { useSubjectCommands } from '../../composables/use-subject-commands';
 import '@vielzeug/refine/alert';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/button-group';
@@ -75,10 +74,7 @@ const subject = computed<SubjectRef | null>(() =>
 const series = computed(() => (run.value ? challengeSeries(run.value) : undefined));
 const editable = computed(() => run.value?.status === 'running');
 
-function command<K extends SubjectCommandName>(name: K, ...args: SubjectCommandArgs<K>): void {
-  if (!subject.value) return;
-  runCommand(name, subject.value, ...args);
-}
+const command = useSubjectCommands(subject);
 
 // The one-click party load: each hunter's newest saved build, pre-checked in the dialog.
 const partyLoadOpen = ref(false);
