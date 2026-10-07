@@ -3,13 +3,14 @@ title: 'Prism: Responsive SVG data visualization'
 description: Responsive SVG charts with explicit updates, keyboard and screen-reader support, and CSS theming.
 package: prism
 category: ui
-keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, pie-chart, radar-chart, sparkline, accessibility, typescript]
+keywords: [chart, svg, visualization, responsive, line-chart, bar-chart, area-chart, scatter-chart, pie-chart, radar-chart, sparkline, accessibility, typescript]
 related: [refine, orbit]
 exports:
   [
     createLineChart,
     createBarChart,
     createAreaChart,
+    createScatterChart,
     createPieChart,
     createRadarChart,
     createSparkline,
@@ -153,6 +154,7 @@ chart.dispose();
 - **`createLineChart(container, config)`**: line chart with linear, monotone, or step interpolation
 - **`createBarChart(container, config)`**: bar chart with four layout variants: grouped, stacked, grouped-horizontal, stacked-horizontal
 - **`createAreaChart(container, config)`**: filled area with a gradient or solid fill
+- **`createScatterChart(container, config)`**: scatter plot of independent `(x, y)` points on a fitted value axis
 - **`createPieChart(container, config)`**: pie, donut, or semi-circle donut chart; labels that do not fit their slice are hidden
 - **`createRadarChart(container, config)`**: radar chart for comparing values across 3+ axes, with per-axis ranges
 - **`createSparkline(container, config)`**: minimal inline line, area, bar, or stack chart

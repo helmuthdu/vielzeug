@@ -7,6 +7,7 @@ export { createBarChart } from './charts/bar';
 export { createLineChart } from './charts/line';
 export { createPieChart } from './charts/pie';
 export { createRadarChart } from './charts/radar';
+export { createScatterChart } from './charts/scatter';
 export { createSparkline } from './charts/sparkline';
 // Error classes
 export { PrismError, PrismRenderError } from './errors';
@@ -54,6 +55,8 @@ export type {
   RadarGridConfig,
   RadarSeriesConfig,
   Scale,
+  ScatterChartConfig,
+  ScatterSeriesConfig,
   Series,
   SeriesValue,
   SparklineConfig,

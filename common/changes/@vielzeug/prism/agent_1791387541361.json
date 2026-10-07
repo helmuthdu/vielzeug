@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add createScatterChart: a two-dimensional scatter plot of independent (x, y) points on a fitted value axis, with nearest-point hover, keyboard traversal, and the same wipe-in mount as line/area.",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

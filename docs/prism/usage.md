@@ -237,6 +237,53 @@ const chart = createAreaChart(container, {
 
 `fillOpacity` overrides the theme opacity for one series.
 
+## Scatter Charts
+
+A scatter plot draws each datum as an independent point: `key` is its position on
+the value (x) axis and `value` on the measure (y) axis. Points are not joined and
+not aligned to a shared category axis, so the value axis fits the data instead of
+forcing a zero baseline — a tight cluster of high values fills the plot rather than
+squashing against the top.
+
+```ts
+import { createScatterChart } from '@vielzeug/prism';
+
+const chart = createScatterChart(container, {
+  a11y: { ariaLabel: 'Height against weight' },
+  series: [
+    {
+      name: 'Cohort A',
+      data: [
+        { key: 160, value: 55 },
+        { key: 175, value: 70 },
+        { key: 190, value: 88 },
+      ],
+    },
+  ],
+  tooltip: true,
+});
+```
+
+Hovering or arrowing onto a point highlights it and reports its `x` and `y`.
+Because a point is a single pair rather than one sample in a shared axis,
+`onHover`/`onClick` report one `datum`/`series` and no cross-series `values`.
+Keyboard navigation walks every point across all series in x order.
+
+`pointRadius` overrides the marker size for one series, and a datum's `opacity`
+fades its own marker so overlapping points stay legible:
+
+```ts
+createScatterChart(container, {
+  series: [
+    {
+      name: 'Sample',
+      pointRadius: 5,
+      data: [{ key: 12, value: 40, opacity: 0.5 }],
+    },
+  ],
+});
+```
+
 ## Forecast / emphasis styling
 
 A single series often mixes points that should look different — actuals plus a
@@ -614,20 +661,21 @@ const chart = createLineChart(container, {
 - `values`: every series at the same key (line, area, and bar charts)
 - `originalEvent`: the raw `MouseEvent` or, for keyboard navigation, `KeyboardEvent`
 
-> **Pie, radar, and sparkline events differ**: pie hooks receive a `PieEvent` (`index`, `slice`, `originalEvent`), sparkline hooks a `SparklineEvent` (`index`, `value`, `originalEvent`), and radar hooks a `RadarEvent` describing an axis. See [`PieChartConfig`](./api.md#chart-configurations) and [`createRadarChart()`](./api.md#createradarchart).
+> **Pie, radar, and sparkline events differ**: pie hooks receive a `PieEvent` (`index`, `slice`, `originalEvent`), sparkline hooks a `SparklineEvent` (`index`, `value`, `originalEvent`), and radar hooks a `RadarEvent` describing an axis. Scatter hooks receive a `ChartEvent` for the single nearest point, with `values` omitted. See [`PieChartConfig`](./api.md#chart-configurations) and [`createRadarChart()`](./api.md#createradarchart).
 
 ## Animations
 
 Every chart animates by default. Entrances never deform the data: bars are
-revealed growing out of the baseline behind a per-bar clip, line and area series
-are wiped in left to right behind a clip while drifting up into place, radar
-polygons grow out of the center, pie slices sweep in, and sparklines reveal their
-final plot. Motion runs through one `requestAnimationFrame` loop and is skipped
-when the user prefers reduced motion (`preference: 'system'`, the default).
+revealed growing out of the baseline behind a per-bar clip, line, area, and
+scatter series are wiped in left to right behind a clip while drifting up into
+place, radar polygons grow out of the center, pie slices sweep in, and
+sparklines reveal their final plot. Motion runs through one
+`requestAnimationFrame` loop and is skipped when the user prefers reduced motion
+(`preference: 'system'`, the default).
 
-Updates interpolate instead: line/area points and radar polygons morph from the
-geometry on screen, pie slices morph between values, and sparklines tween their
-values.
+Updates interpolate instead: line/area points, scatter points, and radar
+polygons morph from the geometry on screen, pie slices morph between values, and
+sparklines tween their values.
 
 Tune it with `transition`, or turn it off entirely:
 

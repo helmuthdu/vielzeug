@@ -87,6 +87,7 @@ export interface ChartHandle<TData = unknown> {
  * - **Area**: both fields style the top line's segment from this datum to the
  *   next one (last datum's `dash` ignored); the fill keeps the series-level
  *   treatment.
+ * - **Scatter**: `opacity` fades this datum's own point marker; `dash` is ignored.
  * - **Sparkline, pie, radar**: ignored.
  *
  * Absent fields keep the series/theme default; setting them never changes
@@ -300,6 +301,24 @@ export interface AreaSeriesConfig extends Series<ContinuousDatum> {
 export interface AreaChartConfig extends BaseChartConfig {
   crosshair?: CrosshairConfig | boolean;
   series: AreaSeriesConfig[];
+}
+
+// ─── Scatter Types ───────────────────────────────────────────────────────────
+
+export interface ScatterSeriesConfig extends Series<ContinuousDatum> {
+  /** Point marker radius for this series; overrides the `--prism-scatter-point-radius` token. */
+  pointRadius?: number;
+}
+
+/**
+ * Two-dimensional scatter plot: each datum's `key` is its position on the value
+ * (x) axis and its `value` on the measure (y) axis, so a point is an independent
+ * `(x, y)` pair rather than one sample in a shared category axis. Points are
+ * plotted on a fitted domain (the y axis is not forced to include zero).
+ */
+export interface ScatterChartConfig extends BaseChartConfig {
+  crosshair?: CrosshairConfig | boolean;
+  series: ScatterSeriesConfig[];
 }
 
 // ─── Pie / Donut Types ───────────────────────────────────────────────────────

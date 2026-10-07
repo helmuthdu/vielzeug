@@ -11,6 +11,7 @@ description: Complete chart, scale, theme, handle, configuration, and error cont
 | --- | --- | --- | --- |
 | `createLineChart()` | Render a line chart | Sync | Line keys must be numbers or dates |
 | `createAreaChart()` | Render an area chart | Sync | Line keys must be numbers or dates |
+| `createScatterChart()` | Plot independent `(x, y)` points | Sync | The value axis fits the data and is not forced to zero |
 | `createBarChart()` | Render grouped or stacked bars | Sync | Stacked negative values are clamped to zero |
 | `createPieChart()` | Render pie, donut, or semi-circle slices | Sync | `onHover` receives `null` when the pointer leaves |
 | `createRadarChart()` | Compare values across 3+ axes, such as hero stats | Sync | Events report a whole axis, not one series |
@@ -87,6 +88,40 @@ const chart = createAreaChart(container, {
   series: [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }],
 });
 ```
+
+---
+
+### `createScatterChart()`
+
+```ts
+function createScatterChart(
+  container: HTMLElement,
+  config: ScatterChartConfig,
+): ChartHandle<ScatterSeriesConfig[]>;
+```
+
+Plots each datum as an independent point: `key` is its position on the value (x) axis and `value` on the measure (y) axis. Unlike line and area, points are not joined and are not aligned to a shared category axis, so the value axis fits the data instead of forcing a zero baseline.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `container` | `HTMLElement` | Host that receives the SVG and optional overlays |
+| `config` | `ScatterChartConfig` | Initial series, axes, interaction, accessibility, and transition settings |
+
+**Returns:** `ChartHandle<ScatterSeriesConfig[]>`.
+
+```ts
+import { createScatterChart } from '@vielzeug/prism';
+
+const chart = createScatterChart(container, {
+  a11y: { ariaLabel: 'Height against weight' },
+  series: [
+    { data: [{ key: 160, value: 55 }, { key: 175, value: 70 }, { key: 190, value: 88 }], name: 'Cohort A' },
+  ],
+  tooltip: true,
+});
+```
+
+Hovering or arrowing onto a point highlights it and reports its `x` and `y`. Keyboard navigation walks every point across all series in x order. Because a scatter point is an independent pair, `onHover`/`onClick` report a single `datum`/`series` (no cross-series `values`).
 
 ---
 
@@ -403,7 +438,7 @@ interface SeriesValue {
 }
 ```
 
-Line and area series use `ContinuousDatum`; bar series accept the complete `Datum` key range. On line, area, and bar charts, `datum`/`series` name the series nearest the pointer, and `values` lists every series at that key (a missing value is `undefined`). `originalEvent` is a `MouseEvent`, or a `KeyboardEvent` for keyboard navigation.
+Line and area series use `ContinuousDatum`; bar series accept the complete `Datum` key range. On line, area, and bar charts, `datum`/`series` name the series nearest the pointer, and `values` lists every series at that key (a missing value is `undefined`). Scatter charts report a single `datum`/`series` for the nearest point and omit `values`, since each point is an independent pair. `originalEvent` is a `MouseEvent`, or a `KeyboardEvent` for keyboard navigation.
 
 #### Per-datum presentation
 
@@ -414,13 +449,14 @@ Line and area series use `ContinuousDatum`; bar series accept the complete `Datu
 | Bar | `stroke-dasharray` on the datum's `rect`, plus a 1px series-color stroke so the dash is visible on the fill. | Element `opacity` on the datum's `rect`. |
 | Line | The segment from this datum to the next (Chart.js-style segments). The last datum's `dash` has no segment and is ignored. | That same segment, plus this datum's own point marker. |
 | Area | The top line's segment from this datum to the next (last datum ignored). The fill keeps the series-level treatment. | Same segment on the top line. |
+| Scatter | Ignored. | Element `opacity` on the datum's point marker. |
 | Sparkline, pie, radar | Ignored. | Ignored. |
 
 Consecutive datums that share one `dash`/`opacity` render as a single path run. Absent fields keep the series/theme default, and a series with no presentation fields renders byte-identically to a chart that never used them. See [Forecast / emphasis styling](./usage.md#forecast--emphasis-styling).
 
 #### Stable series identity
 
-`Series.id` is rendered as `data-series-id` on the chart's series group (`.prism-line-series`, `.prism-bar-series`, `.prism-area-series`, `.prism-radar-series`) so tooltips, tests, and external CSS can address a series without positional assumptions. Characters outside `[A-Za-z0-9_-]` are replaced with `-`. It defaults to `series-<index>`, which only stays stable while the series order does — set `id` to survive reordering.
+`Series.id` is rendered as `data-series-id` on the chart's series group (`.prism-line-series`, `.prism-bar-series`, `.prism-area-series`, `.prism-scatter-series`, `.prism-radar-series`) so tooltips, tests, and external CSS can address a series without positional assumptions. Characters outside `[A-Za-z0-9_-]` are replaced with `-`. It defaults to `series-<index>`, which only stays stable while the series order does — set `id` to survive reordering.
 
 ---
 
@@ -449,6 +485,11 @@ interface LineChartConfig extends BaseChartConfig {
 interface AreaChartConfig extends BaseChartConfig {
   crosshair?: boolean | CrosshairConfig;
   series: AreaSeriesConfig[];
+}
+
+interface ScatterChartConfig extends BaseChartConfig {
+  crosshair?: boolean | CrosshairConfig;
+  series: ScatterSeriesConfig[];
 }
 
 interface BarChartConfig extends BaseChartConfig {
@@ -517,6 +558,10 @@ interface AreaSeriesConfig extends Series<ContinuousDatum> {
   fill?: 'gradient' | 'solid'; // default 'gradient', fading toward the baseline
   fillOpacity?: number; // overrides --prism-area-opacity
   showLine?: boolean;
+}
+
+interface ScatterSeriesConfig extends Series<ContinuousDatum> {
+  pointRadius?: number; // overrides --prism-point-radius
 }
 
 interface BarSeriesConfig extends Series {
