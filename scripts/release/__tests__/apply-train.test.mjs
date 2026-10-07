@@ -145,6 +145,32 @@ describe('applyTrain()', () => {
     expect(readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.md'), 'utf8')).not.toContain('## 26.10.0');
   });
 
+  it('pulls a rider dependency with no change file onto the train with an alignment entry', () => {
+    // ore rides the train and depends on orbit; orbit has NO change file of its own. Without
+    // the closure rule, orbit is stamped but never changelogged, so it never publishes and
+    // ore's exact pin to it dangles on npm (the prism -> orbit 26.10.2 breakage).
+    const repo = makeRepo();
+    rmSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json')); // orbit no longer rides
+    // Give ore a real dependency edge on orbit.
+    const oreManifest = JSON.parse(readFileSync(path.join(repo, 'packages', 'ore', 'package.json'), 'utf8'));
+    oreManifest.dependencies = { '@vielzeug/orbit': 'workspace:*' };
+    writeFileSync(path.join(repo, 'packages', 'ore', 'package.json'), JSON.stringify(oreManifest, null, 2));
+
+    const run = vi.fn(() => '');
+    const result = applyTrain(undefined, { now: NOW, root: repo, run });
+
+    // The publish set is the closure: ore (rider) plus orbit (pulled in).
+    expect(result).toEqual({ changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'], train: '26.10.0' });
+
+    // orbit got an alignment-only changelog entry for the train, so it now publishes at it.
+    const orbitLog = readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.md'), 'utf8');
+    expect(orbitLog).toContain('## 26.10.0');
+    expect(orbitLog).toContain('chore: align with CalVer lockstep trains: no code change this train');
+    const orbitJson = JSON.parse(readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.json'), 'utf8'));
+    expect(orbitJson.entries[0]).toMatchObject({ tag: '@vielzeug/orbit_v26.10.0', version: '26.10.0' });
+    expect(orbitJson.entries[0].comments.patch[0].comment).toContain('no code change this train');
+  });
+
   it('advances the revision when a train already shipped this month', () => {
     const repo = makeRepo();
     const run = vi.fn(() => '');

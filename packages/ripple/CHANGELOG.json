@@ -4,6 +4,20 @@
       "comments": {
         "patch": [
           {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "8a9a83237241814fdfb54a1a56717a05d75544e9"
+          }
+        ]
+      },
+      "date": "Wed, 07 Oct 2026 10:50:06 GMT",
+      "tag": "@vielzeug/ripple_v26.10.2",
+      "version": "26.10.2"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
             "author": "agent@vielzeug",
             "comment": "Standardize package text punctuation",
             "commit": "fa343447d42f1d927becef00af66cd9082635d36"

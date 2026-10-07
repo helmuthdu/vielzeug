@@ -61,7 +61,16 @@ export async function listMissingPackages(root = repoRoot, { checkVersion = vers
 
 export async function publishMissing(
   root = repoRoot,
-  { checkVersion = versionExists, dryRun = false, interactive = false, otp, progress = console.log, publish = publishPackage, verify } = {},
+  {
+    checkVersion = versionExists,
+    dryRun = false,
+    findPins,
+    interactive = false,
+    otp,
+    progress = console.log,
+    publish = publishPackage,
+    verify,
+  } = {},
 ) {
   const results = { failed: [], published: [], skipped: [] };
   progress('Checking npm for unpublished package versions...');
@@ -76,6 +85,20 @@ export async function publishMissing(
   }
 
   if (missing.length > 0) {
+    // A package published here pins its @vielzeug/* deps to the train version: refuse to
+    // publish one whose dependency is neither in this same batch nor already on npm, so a
+    // partial backfill can't ship a pin that dangles (see publish-closure.mjs). Imported
+    // lazily like verify-packed above: publish-closure.mjs imports this module's own exports.
+    const findDangling = findPins ?? (await import('./publish-closure.mjs')).findDanglingPins;
+    const dangling = await findDangling(missing, { checkVersion, root });
+    if (dangling.length > 0) {
+      const detail = dangling.map(({ dependency, dependencyVersion, package: pkg }) => `${pkg} → ${dependency}@${dependencyVersion}`).join('\n  ');
+      throw new Error(
+        `Refusing to publish: these packages pin a dependency that is neither in this batch nor on npm:\n  ${detail}\n` +
+          `Backfill a CHANGELOG entry for each missing dependency (so it joins this batch) and re-run.`,
+      );
+    }
+
     progress(`Verifying ${missing.length} publish candidate(s) before upload...`);
     const verifyPacked = verify ?? (await import('../verify-packed-packages.mjs')).verifyPackedPackages;
 

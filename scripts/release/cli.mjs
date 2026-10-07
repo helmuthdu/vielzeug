@@ -14,9 +14,14 @@
  *   changed-packages                        list packages with a pending change file
  *   project <pkg>                           print folder=/version= for one package
  *   apply [pkg]                             apply pending change files as a CalVer lockstep
- *                                            train: stamp every manifest, changelog changed
- *                                            packages, consume their change files, commit
- *   plan <pkg...>                           print a JSON publish plan (for a matrix)
+ *                                            train: stamp every manifest, changelog the riders
+ *                                            and the @vielzeug/* deps they pin, consume the
+ *                                            riders' change files, commit
+ *   plan <pkg...>                           print a JSON publish plan (for a matrix): the
+ *                                            workspace-dependency closure of <pkg...>, refusing
+ *                                            to emit a plan with a dangling dependency pin
+ *   closure <pkg...>                        print the workspace-dependency closure of <pkg...>
+ *                                            (what a train publishes for those riders)
  *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag + release one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
  *   tag-release <pkg> <version> <folder>    tag + GitHub release only: no `npm publish` (the
@@ -42,6 +47,7 @@ import { appendFileSync } from 'node:fs';
 import { isMain, parseArgs } from '../lib/cli.mjs';
 import { publishPackage } from './npm-publish.mjs';
 import { versionExists } from './npm-version-exists.mjs';
+import { expandWithWorkspaceDependencies, findDanglingPins } from './publish-closure.mjs';
 import { publishMissing, summaryMarkdown } from './publish-missing.mjs';
 import { planTagReleases } from './release-only-plan.mjs';
 import { planReleases } from './release-plan.mjs';
@@ -83,8 +89,24 @@ async function main(argv) {
     }
 
     case 'plan': {
-      const plan = await planReleases(args);
+      // Expand to the workspace-dependency closure so a rider's dependencies ride the same
+      // train (see publish-closure.mjs): the apply step already changelogged them, so the
+      // matrix must publish them too or the rider's exact pin dangles on npm.
+      const plan = await planReleases(expandWithWorkspaceDependencies(args));
+      const dangling = await findDanglingPins(plan);
+      if (dangling.length > 0) {
+        const detail = dangling.map(({ dependency, dependencyVersion, package: pkg }) => `${pkg} → ${dependency}@${dependencyVersion}`).join('\n  ');
+        throw new Error(`Refusing to build a publish plan with dangling dependency pins:\n  ${detail}`);
+      }
       console.log(JSON.stringify(plan));
+      return;
+    }
+
+    case 'closure': {
+      // The full publish set for a rider list: riders plus the @vielzeug/* deps they pin.
+      // publish.yml pipes the pending riders through this so verify:packed covers every package
+      // the plan will publish, not only the riders ("verify what you publish").
+      console.log(expandWithWorkspaceDependencies(args).join(' '));
       return;
     }
 

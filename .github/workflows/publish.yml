@@ -96,8 +96,13 @@ jobs:
           else
             PACKAGES="$PENDING"
           fi
+          # The publish set is the riders plus the @vielzeug/* deps they pin (the closure):
+          # apply-train changelogs the whole closure and the plan publishes it, so verify:packed
+          # must cover it too. Dependency edges are workspace:* and don't change with stamping,
+          # so the closure is the same before and after the apply step below.
+          CLOSURE=$(node scripts/release/cli.mjs closure $PACKAGES)
           echo "list=$PACKAGES" >> "$GITHUB_OUTPUT"
-          echo "csv=$(echo "$PACKAGES" | tr ' ' ',')" >> "$GITHUB_OUTPUT"
+          echo "closure-csv=$(echo "$CLOSURE" | tr ' ' ',')" >> "$GITHUB_OUTPUT"
 
       - name: Configure Git
         run: |
@@ -116,16 +121,17 @@ jobs:
         run: git diff --quiet || { git status --short; echo "❌ Build modified tracked files."; exit 1; }
 
       # Applies the CalVer train: every manifest stamped `YY.MM.N`, changelog entries for
-      # packages with pending change files, those files consumed, one commit. mode=single
-      # scopes the changelog and consumption to the target package: see
-      # scripts/release/apply-train.mjs. A dry run still stamps and commits locally (the
-      # publish matrix is planned from the stamped versions) but never pushes: the push
-      # step is gated on inputs.dry-run.
+      # packages with pending change files *and* the @vielzeug/* deps they pin (alignment-only,
+      # so a rider's exact pin resolves on npm: see publish-closure.mjs), the riders' change
+      # files consumed, one commit. mode=single scopes the change-file consumption to the target
+      # package (its deps still get alignment entries): see scripts/release/apply-train.mjs. A
+      # dry run still stamps and commits locally (the publish matrix is planned from the stamped
+      # versions) but never pushes: the push step is gated on inputs.dry-run.
       - name: Apply release train
         run: node scripts/release/cli.mjs apply ${{ inputs.mode == 'single' && inputs.package || '' }}
 
       - name: Verify packed consumer contracts
-        run: pnpm verify:packed -- --package=${{ steps.packages.outputs.csv }}
+        run: pnpm verify:packed -- --package=${{ steps.packages.outputs.closure-csv }}
 
       - name: Push train commit
         if: ${{ !inputs.dry-run }}
