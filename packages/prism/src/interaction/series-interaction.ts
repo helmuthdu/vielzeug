@@ -3,7 +3,7 @@ import type { ChartEventHandlers } from '../core/chart-scaffold';
 import { chartArea } from '../core/layout';
 import { createSvgElement } from '../svg/element';
 import type { Point } from '../svg/path';
-import type { ChartDimensions, ChartEvent, ChartMargin, Datum, Series, SeriesValue } from '../types';
+import type { ChartDimensions, ChartEvent, ChartMargin, Datum, Series, SeriesValue, TooltipConfig } from '../types';
 import { type Announcer, describeValues } from './announcer';
 import type { CrosshairState } from './crosshair';
 import { getMousePosition } from './events';
@@ -27,6 +27,8 @@ export interface SeriesInteractionOptions {
   seriesGroup: SVGGElement;
   svg: SVGSVGElement;
   tooltip?: TooltipState | null;
+  /** Value/title formatters from the tooltip config, applied to rows and spoken text alike. */
+  tooltipFormat?: Pick<TooltipConfig, 'titleFormat' | 'valueFormat'>;
 }
 
 interface KeyEntry {
@@ -179,18 +181,27 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
     const dims = opts.dims();
     const area = chartArea(dims.width, dims.height, opts.margin);
     const raw = opts.crosshair?.snap === false && pos;
-    const label = keyLabel(key);
+    const label = opts.tooltipFormat?.titleFormat ? opts.tooltipFormat.titleFormat(key) : keyLabel(key);
     const values = event.values ?? [];
     const colors = opts.colors();
+    const valueFormat = opts.tooltipFormat?.valueFormat;
 
     opts.crosshair?.show(raw ? pos.x : point.x, raw ? pos.y : point.y, area.width, area.height);
     highlight(entries, index);
 
-    const spoken = describeValues(label, values);
+    const spoken = describeValues(label, values, valueFormat ?? String);
 
     if (opts.tooltip) {
       const rows = values.flatMap(({ datum, series }, i) =>
-        datum ? [{ color: colors[i], name: series.name, value: String(datum.value) }] : [],
+        datum
+          ? [
+              {
+                color: colors[i],
+                name: series.name,
+                value: valueFormat ? valueFormat(datum.value, datum, series) : String(datum.value),
+              },
+            ]
+          : [],
       );
 
       opts.tooltip.show(

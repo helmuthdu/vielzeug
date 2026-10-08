@@ -1,3 +1,4 @@
+import { devOnly, warn } from '../_dev';
 import { createSvgElement, removeChildren, setAttributes } from '../svg/element';
 import { createTextElement, estimateTextWidth } from '../svg/text';
 import type { AxisConfig, AxisPosition } from '../types';
@@ -7,13 +8,63 @@ import { type AnyScale, mapTick } from './scale-utils';
 const LABEL_FONT_SIZE = 11;
 const LABEL_GAP = 8;
 
-const defaultTickFormat = (v: Date | number | string): string =>
-  v instanceof Date ? v.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : String(v);
+const COMPACT = new Intl.NumberFormat(undefined, { maximumSignificantDigits: 3, notation: 'compact' });
 
 /**
- * Resolves the tick count an axis will render for a given scale/length: shared with
- * `renderGrid` so gridlines line up with axis ticks. `defaultPosition` must match the
- * one passed to the corresponding `renderAxis` call ('bottom' for xAxis, 'left' for yAxis).
+ * Dates localize; magnitudes of 1e5 and above render in compact notation ("123K",
+ * "1.23M") so a long number cannot crop against the default 50 px value-axis margin.
+ * With three significant digits every compact label is at most as wide as "99999",
+ * the widest plain label below the threshold. Opt out with `tickFormat: String`.
+ */
+const defaultTickFormat = (v: Date | number | string): string => {
+  if (v instanceof Date) return v.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+  if (typeof v === 'number' && Math.abs(v) >= 1e5) return COMPACT.format(v);
+
+  return String(v);
+};
+
+/**
+ * The single tick source for an axis and its gridlines: explicit `tickValues` when set,
+ * scale-generated ticks otherwise. Keeping grid on this same array is what stops
+ * gridlines from drifting off the rendered ticks.
+ */
+export function resolveTicks(scale: AnyScale, config: AxisConfig, tickCount: number): (Date | number | string)[] {
+  return config.tickValues ? [...config.tickValues] : scale.ticks(tickCount);
+}
+
+/** Development-only check that explicit tickValues match the scale they render on. */
+function warnOffScaleTicks(scale: AnyScale, tickValues: ReadonlyArray<Date | number | string>): void {
+  devOnly(() => {
+    if ('bandwidth' in scale) {
+      for (const tick of tickValues) {
+        if (!scale.domain.includes(tick as string)) {
+          warn(`renderAxis: tickValue "${String(tick)}" is not a category in the band scale's domain.`);
+        }
+      }
+
+      return;
+    }
+
+    const toMs = (v: Date | number): number => (v instanceof Date ? v.getTime() : v);
+    const [a, b] = scale.domain;
+    const lo = Math.min(toMs(a), toMs(b));
+    const hi = Math.max(toMs(a), toMs(b));
+
+    for (const tick of tickValues) {
+      const value = tick instanceof Date ? tick.getTime() : Number(tick);
+
+      if (Number.isNaN(value) || value < lo || value > hi) {
+        warn(`renderAxis: tickValue "${String(tick)}" is outside the axis domain and renders off-canvas.`);
+      }
+    }
+  });
+}
+
+/**
+ * Resolves the tick count an axis will render for a given scale/length: charts pass it to
+ * `resolveTicks` for both the axis and its gridlines so the two stay aligned.
+ * `defaultPosition` must match the one passed to the corresponding `renderAxis` call
+ * ('bottom' for xAxis, 'left' for yAxis).
  */
 export function positionAxis(parent: SVGGElement, position: AxisPosition, width: number, height: number): void {
   const transform =
@@ -83,7 +134,9 @@ export function renderAxis(
     config.tickCount === undefined && 'bandwidth' in scale
       ? categoryTickCount(scale.domain, format, length, isHorizontal)
       : resolveTickCount(config, length, defaultPosition);
-  const ticks = scale.ticks(tickCount);
+  const ticks = resolveTicks(scale, config, tickCount);
+
+  if (config.tickValues) warnOffScaleTicks(scale, config.tickValues);
 
   for (const tick of ticks) {
     const pos = mapTick(scale, tick);

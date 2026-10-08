@@ -145,7 +145,17 @@ const chart = createLineChart(container, {
 chart.dispose();
 ```
 
-`tickFormat` formats axis labels only. Tooltip content and accessibility announcements use the underlying keys and values.
+`tickFormat` formats axis labels only. Tooltip content and accessibility announcements use the underlying keys and values. To render an exact set of ticks instead of scale-generated ones, pass `tickValues`; gridlines follow the same list. Values must match the axis's scale kind, and an off-scale value warns in development:
+
+```ts
+// Force a tick on the last month, which nice-stepped ticks can skip.
+const chart = createLineChart(container, {
+  series: [{ data: [{ key: 0, value: 90 }, { key: 11, value: 128 }], name: 'Costs' }],
+  xAxis: { tickValues: [0, 6, 11] },
+});
+```
+
+Numeric tick labels at a magnitude of `1e5` or above default to compact notation (`123K`, `1.23M`) so long numbers fit the default value-axis margin; pass `tickFormat: String` for raw labels. Supplying a partial value-axis config merges over its default, so `yAxis: { tickFormat }` alone keeps the default grid lines.
 
 ## Bar Charts
 
@@ -342,7 +352,7 @@ For a stacked sparkline, each segment can set `value`, `color`, and `label`. Spa
 
 ## Interaction
 
-Set `tooltip: true` to show Prism's default tooltip, or pass a `TooltipConfig` to format its content. A `render` callback receives the active `Datum` and `Series`. Returned strings are inserted as text; return a DOM `Node` for structured content.
+Set `tooltip: true` to show Prism's default tooltip, or pass a `TooltipConfig` to format its content. `titleFormat` and `valueFormat` shape the default comparison tooltip on line, area, and bar charts—the title from the focused key and each row's value—without rebuilding its markup, and the same formatting is applied to the tooltip's spoken summary. A `render` callback receives the active `Datum` and `Series` and replaces the whole body, taking precedence over the formatters. Returned strings are inserted as text; return a DOM `Node` for structured content.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
@@ -351,10 +361,14 @@ const container = document.createElement('div');
 container.style.cssText = 'width:640px;height:320px';
 document.body.append(container);
 
+const compact = new Intl.NumberFormat(undefined, { notation: 'compact' });
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 const chart = createLineChart(container, {
-  series: [{ data: [{ key: 1, value: 4200 }, { key: 2, value: 5100 }], name: 'Revenue' }],
+  series: [{ data: [{ key: 11, value: 128000 }], name: 'EC2' }],
   tooltip: {
-    render: (datum, series) => `${series.name}: ${new Intl.NumberFormat().format(datum.value)}`,
+    titleFormat: (key) => months[Number(key)] ?? String(key),
+    valueFormat: (value) => compact.format(value),
   },
 });
 

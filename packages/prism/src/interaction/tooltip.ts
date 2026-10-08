@@ -1,4 +1,4 @@
-import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
+import { computePosition, flip, getClippingAncestorRect, offset, type Rect, shift } from '@vielzeug/orbit';
 import type { Datum, Series, TooltipConfig } from '../types';
 
 export interface TooltipRow {
@@ -10,6 +10,27 @@ export interface TooltipRow {
 /** Inline so the spoken text stays hidden even without prism's stylesheet. */
 const SCREEN_READER_ONLY =
   'position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
+
+/**
+ * The shift boundary: the chart container intersected with the tooltip's clipping-ancestor
+ * rect (what a host `overflow: hidden` actually shows). Clamping to the container alone would
+ * let the tooltip sit inside a container that is itself clipped by a smaller ancestor; the
+ * intersection keeps it inside what is actually visible. A degenerate intersection (zero area)
+ * falls back to the container rect.
+ */
+function shiftBoundary(container: HTMLElement, tooltip: HTMLElement): Rect {
+  const box = container.getBoundingClientRect();
+  const containerRect: Rect = { height: box.height, width: box.width, x: box.x, y: box.y };
+  const visible = getClippingAncestorRect(tooltip);
+  const x = Math.max(containerRect.x, visible.x);
+  const y = Math.max(containerRect.y, visible.y);
+  const right = Math.min(containerRect.x + containerRect.width, visible.x + visible.width);
+  const bottom = Math.min(containerRect.y + containerRect.height, visible.y + visible.height);
+
+  if (right <= x || bottom <= y) return containerRect;
+
+  return { height: bottom - y, width: right - x, x, y };
+}
 
 /**
  * Title plus one swatch row per series; text only, so data is never parsed as HTML.
@@ -163,7 +184,7 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
 
       const { x: positionX, y: positionY } = computePosition(virtualRef, el, {
         containingBlock: container,
-        middleware: [offset(tooltipOffset), flip(), shift({ padding: 8 })],
+        middleware: [offset(tooltipOffset), flip(), shift({ boundary: shiftBoundary(container, el), padding: 8 })],
         placement: 'top',
       });
 

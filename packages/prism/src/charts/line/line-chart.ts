@@ -1,4 +1,4 @@
-import { positionAxis, renderAxis, resolveTickCount } from '../../axes/axis';
+import { positionAxis, renderAxis, resolveTickCount, resolveTicks } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
@@ -61,9 +61,11 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
       const yScale = buildYScale(leftY, area.height);
       const rightYScale = buildYScale(rightY, area.height);
 
-      // Axes render by default (value axis with gridlines); `false` opts out.
+      // Axes render by default (value axis with gridlines); `false` opts out. The value
+      // axis merges over its default so a partial config (e.g. only `tickFormat`) keeps
+      // the default gridlines.
       const xAxisConfig: XAxisConfig | false = config.xAxis === false ? false : (config.xAxis ?? {});
-      const yAxisConfig: YAxisConfig | false = config.yAxis === false ? false : (config.yAxis ?? { grid: true });
+      const yAxisConfig: YAxisConfig | false = config.yAxis === false ? false : { grid: true, ...config.yAxis };
 
       if (yAxisConfig && yAxisConfig.grid && (!hasRight || hasLeftData)) {
         renderGrid(
@@ -72,7 +74,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           yAxisConfig.grid,
           area.width,
           'horizontal',
-          resolveTickCount(yAxisConfig, area.height, 'left'),
+          resolveTicks(yScale, yAxisConfig, resolveTickCount(yAxisConfig, area.height, 'left')),
         );
       } else {
         groups.grid.replaceChildren();
@@ -85,7 +87,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           xAxisConfig.grid,
           area.height,
           'vertical',
-          resolveTickCount(xAxisConfig, area.width, 'bottom'),
+          resolveTicks(xScale, xAxisConfig, resolveTickCount(xAxisConfig, area.width, 'bottom')),
         );
       }
 
@@ -169,6 +171,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
         seriesGroup: groups.series,
         svg: ctx.svg,
         tooltip,
+        tooltipFormat: typeof config.tooltip === 'object' ? config.tooltip : undefined,
       });
     },
     (data) => {

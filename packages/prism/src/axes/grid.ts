@@ -8,13 +8,12 @@ export function renderGrid(
   config: GridConfig | true,
   crossLength: number,
   direction: 'horizontal' | 'vertical',
-  tickCount = 10,
+  ticks: readonly (Date | number | string)[],
 ): void {
   removeChildren(parent);
 
   const color = (config !== true && config.color) || undefined;
   const dash = (config !== true && config.dash) || undefined;
-  const ticks = scale.ticks(tickCount);
 
   for (const tick of ticks) {
     const pos = mapTick(scale, tick);

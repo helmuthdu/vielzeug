@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "tooltip clamps to the chart container; axes gain tickValues and compact numeric defaults; tooltips gain titleFormat/valueFormat; partial value-axis configs keep their default gridlines",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

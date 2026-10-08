@@ -160,6 +160,13 @@ export interface AxisConfig<TPosition extends AxisPosition = AxisPosition> {
   position?: TPosition;
   tickCount?: number;
   tickFormat?: (value: Date | number | string) => string;
+  /**
+   * Render exactly these ticks instead of scale-generated ones (gridlines follow).
+   * Values must match the axis's scale kind: numbers on a linear axis, `Date`s on a
+   * time axis, category strings on a band axis. Off-scale values warn in development
+   * and render at the scale's default position for unknown values.
+   */
+  tickValues?: ReadonlyArray<Date | number | string>;
 }
 
 export type XAxisConfig = AxisConfig<HorizontalAxisPosition>;
@@ -170,6 +177,16 @@ export type YAxisConfig = AxisConfig<VerticalAxisPosition>;
 export interface TooltipConfig {
   offset?: number;
   render?: (datum: Datum, series: Series) => Node | string;
+  /**
+   * Formats the focused key shown as the tooltip title (default: the key's display
+   * label, e.g. `'11'` or a localized date). Applied to the spoken summary too.
+   */
+  titleFormat?: (key: Date | number | string) => string;
+  /**
+   * Formats each row's value (default: `String(value)`). Applied to the spoken
+   * summary too, so screen-reader output matches the visual rows.
+   */
+  valueFormat?: (value: number, datum: Datum, series: Series) => string;
 }
 
 export interface CrosshairConfig {

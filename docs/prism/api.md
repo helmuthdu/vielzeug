@@ -645,6 +645,7 @@ export interface AxisConfig<TPosition extends AxisPosition = AxisPosition> {
   position?: TPosition;
   tickCount?: number;
   tickFormat?: (value: Date | number | string) => string;
+  tickValues?: ReadonlyArray<Date | number | string>;
 }
 
 export type XAxisConfig = AxisConfig<HorizontalAxisPosition>;
@@ -653,6 +654,8 @@ export type YAxisConfig = AxisConfig<VerticalAxisPosition>;
 export interface TooltipConfig {
   offset?: number;
   render?: (datum: Datum, series: Series) => Node | string;
+  titleFormat?: (key: Date | number | string) => string;
+  valueFormat?: (value: number, datum: Datum, series: Series) => string;
 }
 
 export interface CrosshairConfig {
@@ -670,7 +673,11 @@ export interface LegendConfig {
 
 The crosshair defaults to a vertical line that snaps to the nearest datum; the horizontal line is hidden by default. With `snap: false`, only the guide follows the pointer—tooltip and callback data still refer to the nearest datum.
 
-Tooltip strings are assigned as text, not parsed as HTML. For a radar chart, `tooltip.render` receives a datum whose `meta` contains the active axis, all series values, and the default announcement text.
+`tickValues` renders exactly the given ticks instead of scale-generated ones, and gridlines follow the same list. Values must match the axis's scale kind (numbers on a linear axis, `Date`s on a time axis, category strings on a band axis); an off-scale value warns in development. Without it, ticks come from the scale as before.
+
+Numeric tick labels at a magnitude of 1e5 or above default to compact notation (`123K`, `1.23M`) so long numbers fit the default value-axis margin; pass `tickFormat: String` for raw labels. Supplying a partial `yAxis` (or the value axis of a horizontal bar chart) merges over the default, so `{ tickFormat }` alone keeps the default grid lines.
+
+`titleFormat` and `valueFormat` shape the default comparison tooltip on line, area, and bar charts—the title from the focused key and each row's value—and the same formatting is applied to the tooltip's spoken summary. `render` still replaces the whole tooltip body and takes precedence. Tooltip strings are assigned as text, not parsed as HTML. For a radar chart, `tooltip.render` receives a datum whose `meta` contains the active axis, all series values, and the default announcement text.
 
 ### Chart Configuration Types
 

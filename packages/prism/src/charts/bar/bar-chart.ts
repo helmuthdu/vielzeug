@@ -1,5 +1,5 @@
 import { warn } from '../../_dev';
-import { positionAxis, renderAxis, resolveTickCount } from '../../axes/axis';
+import { positionAxis, renderAxis, resolveTickCount, resolveTicks } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { normalizeCartesianSeries } from '../../core/cartesian-model';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
@@ -18,6 +18,7 @@ import type {
   BarVariant,
   ChartEvent,
   ChartHandle,
+  Datum,
   SeriesValue,
   XAxisConfig,
   YAxisConfig,
@@ -73,12 +74,13 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       const { horizontal, stacked } = variantFlags(config.variant ?? 'grouped');
 
-      // Axes render by default; `false` opts out. The value axis carries gridlines by
-      // default, the category axis does not; an explicit config is used verbatim.
+      // Axes render by default; `false` opts out. The value axis (x when horizontal, y
+      // otherwise) carries gridlines by default and merges over that default, so a partial
+      // config (e.g. only `tickFormat`) keeps the gridlines; the category axis defaults to none.
       const xAxisConfig: XAxisConfig | false =
-        config.xAxis === false ? false : (config.xAxis ?? (horizontal ? { grid: true } : {}));
+        config.xAxis === false ? false : horizontal ? { grid: true, ...config.xAxis } : (config.xAxis ?? {});
       const yAxisConfig: YAxisConfig | false =
-        config.yAxis === false ? false : (config.yAxis ?? (horizontal ? {} : { grid: true }));
+        config.yAxis === false ? false : horizontal ? (config.yAxis ?? {}) : { grid: true, ...config.yAxis };
 
       // Value domain
       let vMax: number;
@@ -137,7 +139,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
             xAxisConfig.grid,
             area.height,
             'vertical',
-            resolveTickCount(xAxisConfig, area.width, 'bottom'),
+            resolveTicks(valScale, xAxisConfig, resolveTickCount(xAxisConfig, area.width, 'bottom')),
           );
         }
 
@@ -160,7 +162,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
             yAxisConfig.grid,
             area.width,
             'horizontal',
-            resolveTickCount(yAxisConfig, area.height, 'left'),
+            resolveTicks(valScale, yAxisConfig, resolveTickCount(yAxisConfig, area.height, 'left')),
           );
         }
 
@@ -253,6 +255,11 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       const colors = seriesList.map((s, i) => seriesColor(i, s.color));
       const labelOf = (catIdx: number): string => String(model.labels.get(categories[catIdx]) ?? categories[catIdx]);
+      const tooltipFormat = typeof config.tooltip === 'object' ? config.tooltip : undefined;
+      const keyOf = (catIdx: number): Datum['key'] => model.labels.get(categories[catIdx]) ?? categories[catIdx];
+      const titleOf = (catIdx: number): string =>
+        tooltipFormat?.titleFormat ? tooltipFormat.titleFormat(keyOf(catIdx)) : labelOf(catIdx);
+      const formatValue = tooltipFormat?.valueFormat ?? String;
       let activeCat = -1;
 
       const valuesAt = (catIdx: number): SeriesValue[] =>
@@ -301,7 +308,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         setActive(catIdx);
 
         const values = event.values ?? [];
-        const spoken = describeValues(labelOf(catIdx), values);
+        const spoken = describeValues(titleOf(catIdx), values, formatValue);
 
         if (tooltip) {
           const tops = values.map((v, si) =>
@@ -311,7 +318,9 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
           const bandCenterPx = sc.bandCenter(categories[catIdx]);
           const { margin } = ctx.dimensions;
           const rows = values.flatMap((v, si) =>
-            v.datum ? [{ color: colors[si], name: v.series.name, value: String(v.datum.value) }] : [],
+            v.datum
+              ? [{ color: colors[si], name: v.series.name, value: formatValue(v.datum.value, v.datum, v.series) }]
+              : [],
           );
 
           tooltip.show(
@@ -319,7 +328,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
             (horizontal ? bandCenterPx : valuePx) + margin.top,
             event.datum,
             event.series,
-            comparisonContent(ctx.svg.ownerDocument, labelOf(catIdx), rows, spoken),
+            comparisonContent(ctx.svg.ownerDocument, titleOf(catIdx), rows, spoken),
           );
         } else {
           ctx.announcer.announce(spoken);

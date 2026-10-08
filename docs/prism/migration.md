@@ -48,6 +48,12 @@ createBarChart(container, { series, xAxis: false, yAxis: false });
 
 Update visual snapshots that captured an axis-less chart, and drop the now-redundant `xAxis: {}` / `yAxis: { grid: true }` boilerplate.
 
+## Value-axis ticks are compact and partial configs keep their grid
+
+Numeric tick labels at a magnitude of `1e5` or above now render in compact notation (`123K`, `1.23M`) so long numbers fit the default value-axis margin instead of cropping at the SVG edge. Pass `tickFormat: String` to restore raw labels.
+
+Supplying a partial value-axis config now merges over its default instead of replacing it, so `yAxis: { tickFormat }` keeps the default grid lines. Previously any `yAxis` object dropped them and forced a repeated `grid: true`. `grid: false` still opts out.
+
 ## Keep flat area fills
 
 Area series default to a gradient that fades toward the baseline. Set `fill: 'solid'` to keep the previous flat fill.

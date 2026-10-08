@@ -10,9 +10,11 @@ export interface Announcer {
 export function describeValues(
   label: string,
   values: readonly { datum: Datum | undefined; series: Series }[],
-  format: (value: number) => string = String,
+  format: (value: number, datum: Datum, series: Series) => string = String,
 ): string {
-  return `${label}: ${values.map(({ datum, series }) => `${series.name} ${datum ? format(datum.value) : 'n/a'}`).join(', ')}`;
+  return `${label}: ${values
+    .map(({ datum, series }) => `${series.name} ${datum ? format(datum.value, datum, series) : 'n/a'}`)
+    .join(', ')}`;
 }
 
 /** Polite status region for charts whose visuals are aria-hidden. */
