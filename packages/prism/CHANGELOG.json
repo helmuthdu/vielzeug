@@ -5,6 +5,27 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Skip the initial no-op ResizeObserver fire so a settling container no longer cancels a chart's mount entrance (bar/line/area/radar)",
+            "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix chart entrances, reserve legend space before rendering, and apply bar and line resizes without animation; refresh Prism documentation and scatter examples",
+            "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
+          }
+        ]
+      },
+      "date": "Thu, 08 Oct 2026 07:48:38 GMT",
+      "tag": "@vielzeug/prism_v26.10.5",
+      "version": "26.10.5"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Themeable + turn-key axes: scoped/expanded setTheme, [data-prism-theme=dark] trigger, ResizeObserver guard, theme.css subpath, axes on by default",
             "commit": "a1454be1fc41f76db6d62e8ec7a1c1d2f3455b32"
           },

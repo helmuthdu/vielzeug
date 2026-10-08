@@ -4,6 +4,20 @@
       "comments": {
         "patch": [
           {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
+          }
+        ]
+      },
+      "date": "Thu, 08 Oct 2026 07:48:38 GMT",
+      "tag": "@vielzeug/sourcerer_v26.10.5",
+      "version": "26.10.5"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
             "author": "agent@vielzeug",
             "comment": "Standardize package text punctuation",
             "commit": "fa343447d42f1d927becef00af66cd9082635d36"

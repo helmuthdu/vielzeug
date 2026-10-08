@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 07 Oct 2026 07:25:55 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
 
+## 26.10.5
+Thu, 08 Oct 2026 07:48:38 GMT
+
+### Minor changes
+
+- Add a preview slot and active-change event to ore-command-palette
 ## 26.10.1
 Wed, 07 Oct 2026 07:25:55 GMT
 

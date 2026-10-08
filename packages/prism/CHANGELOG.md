@@ -1,7 +1,17 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Wed, 07 Oct 2026 14:13:11 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
 
+## 26.10.5
+Thu, 08 Oct 2026 07:48:38 GMT
+
+### Minor changes
+
+- Skip the initial no-op ResizeObserver fire so a settling container no longer cancels a chart's mount entrance (bar/line/area/radar)
+
+### Patches
+
+- Fix chart entrances, reserve legend space before rendering, and apply bar and line resizes without animation; refresh Prism documentation and scatter examples
 ## 26.10.4
 Wed, 07 Oct 2026 14:13:11 GMT
 

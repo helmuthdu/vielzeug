@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Wed, 07 Oct 2026 14:13:11 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
 
+## 26.10.5
+Thu, 08 Oct 2026 07:48:38 GMT
+
+### Patches
+
+- chore(codex): refresh bundled docs data
+- docs: full-family CalVer trains: every package rides every train, aggregate train release
 ## 26.10.4
 Wed, 07 Oct 2026 14:13:11 GMT
 

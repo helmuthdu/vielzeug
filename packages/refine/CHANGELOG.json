@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Add a preview slot and active-change event to ore-command-palette",
+            "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
+          }
+        ]
+      },
+      "date": "Thu, 08 Oct 2026 07:48:38 GMT",
+      "tag": "@vielzeug/refine_v26.10.5",
+      "version": "26.10.5"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "add ore-rank-list/ore-rank-item: ranked rows where each row is its own proportional-bar visualization",
             "commit": "fa343447d42f1d927becef00af66cd9082635d36"
           },

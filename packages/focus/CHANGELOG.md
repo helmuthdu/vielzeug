@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/focus
 
-This log was last generated on Wed, 07 Oct 2026 09:37:46 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
 
+## 26.10.5
+Thu, 08 Oct 2026 07:48:38 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.2
 Wed, 07 Oct 2026 09:37:46 GMT
 

@@ -6,6 +6,25 @@
           {
             "author": "agent@vielzeug",
             "comment": "chore(codex): refresh bundled docs data",
+            "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "docs: full-family CalVer trains: every package rides every train, aggregate train release",
+            "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
+          }
+        ]
+      },
+      "date": "Thu, 08 Oct 2026 07:48:38 GMT",
+      "tag": "@vielzeug/codex_v26.10.5",
+      "version": "26.10.5"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "a1454be1fc41f76db6d62e8ec7a1c1d2f3455b32"
           }
         ]
