@@ -63,8 +63,9 @@ jobs:
   publish:
     if: ${{ !inputs.dry-run }}
     runs-on: ubuntu-latest
-    # Manual approval: Settings > Environments > npm-publish (required reviewers).
-    environment: npm-publish
+    # No `environment` here on purpose: publish.yml's single `gate` job holds the npm-publish
+    # approval for the whole train, and this matrix waits on it. Declaring the environment per
+    # job meant one approval prompt per package (~40 per full-family train).
     permissions:
       contents: write
       id-token: write # npm Trusted Publishing (OIDC)

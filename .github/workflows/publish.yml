@@ -183,13 +183,29 @@ jobs:
           echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
           [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 
+  # One approval unlocks the whole train. The environment's required reviewers fire once
+  # here, and the publish matrix waits on this job instead of each package job declaring the
+  # environment itself: a full-family train is ~40 matrix jobs, and per-job environments meant
+  # ~40 approval prompts per train. This job runs nothing: it exists to hold the gate. Skipped
+  # for dry runs (nothing reaches npm, so there is nothing to approve).
+  gate:
+    needs: prepare
+    if: needs.prepare.outputs.has-releases == 'true' && !inputs.dry-run
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    steps:
+      - run: |
+          echo "Approved: publishing the train plan at ${{ needs.prepare.outputs.sha }}"
+
   # One job per package: own log, own pass/fail. `fail-fast: false` because one package failing
   # is no reason to abort the others; E409 conflicts are retried inside npm-publish.mjs.
   # `max-parallel` caps the burst of concurrent OIDC publishes a full-family train is (~40 at
-  # once), which npm rate-limits well below that.
+  # once), which npm rate-limits well below that. No `environment` here on purpose: the single
+  # `gate` job above already holds the human approval; re-declaring it per job is what made a
+  # train need ~40 approvals.
   publish:
-    needs: prepare
-    if: needs.prepare.outputs.has-releases == 'true'
+    needs: [prepare, gate]
+    if: needs.prepare.outputs.has-releases == 'true' && (inputs.dry-run || needs.gate.result == 'success')
     strategy:
       fail-fast: false
       max-parallel: 10
@@ -214,8 +230,8 @@ jobs:
   # re-run after every package already published): createTrainRelease is idempotent on the
   # train tag, so this closes the gap where a failed train-release job could never be retried.
   train-release:
-    needs: [prepare, publish]
-    if: ${{ always() && needs.prepare.result == 'success' && needs.publish.result != 'failure' && needs.publish.result != 'cancelled' && needs.prepare.outputs.train != '' }}
+    needs: [prepare, gate, publish]
+    if: ${{ always() && needs.prepare.result == 'success' && (needs.gate.result == 'success' || needs.gate.result == 'skipped') && needs.publish.result != 'failure' && needs.publish.result != 'cancelled' && needs.prepare.outputs.train != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

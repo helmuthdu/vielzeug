@@ -31,8 +31,12 @@ Dispatched production workflows refuse to run off `main`.
 3. **npm is pinned to 11 for publishing** (`actions/setup/` `trusted-publishing` input) because
    npm 12.0.0 ships without `sigstore` (`npm/cli#9722`). Remove the pin once Node 22's bundled
    npm is a fixed 12.x.
-4. **Publish access is granted in one place:** the `npm-publish` GitHub Environment (required
-   reviewers). Every job that runs `npm publish` declares it.
+4. **Publish approval is held in one place:** the `npm-publish` GitHub Environment (required
+   reviewers). `publish.yml`'s single `gate` job declares it once per train and the publish
+   matrix `needs` it, so a full-family train is one approval, not one per package; the matrix
+   jobs deliberately do NOT declare the environment. `mode=missing` is a single job and declares
+   the environment directly (still one approval). Keep it that way: re-declaring the environment
+   on each matrix job reintroduces ~40 approval prompts per train.
 5. **Rush does not run npm `pre*`/`post*` hooks.** Anything a package build needs must be in its
    `build` script itself (see `@vielzeug/codex`).
 
