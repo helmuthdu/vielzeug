@@ -1,12 +1,11 @@
 /**
  * Publish every public @vielzeug/* package whose current package.json version isn't on npm
- * yet AND has a CHANGELOG entry: the changelog-entry rule is what keeps CalVer lockstep
- * stamping from republishing every unchanged package: a stamp without an entry means the
- * package didn't ride that train, so there is nothing to publish even though the manifest
- * version is absent from the registry. A one-off backfill for versions that were bumped and
- * merged but never made it to the registry (e.g. a prior release run failed after the
- * version-bump commit but before publish): normal releases go through publish.yml's
- * mode=single / mode=all instead.
+ * yet AND has a CHANGELOG entry for it. Under full-family lockstep every train writes an
+ * entry for every package, so the changelog rule mainly guards against a half-applied train
+ * (stamped manifests whose changelog commit never landed) and pre-CalVer stamps. A one-off
+ * backfill for versions that were bumped and merged but never made it to the registry (e.g.
+ * a prior release run failed after the version-bump commit but before publish): normal
+ * releases go through publish.yml's mode=single / mode=all instead.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -87,9 +86,9 @@ export async function publishMissing(
   if (missing.length > 0) {
     // A package published here pins its @vielzeug/* deps to the train version: refuse to
     // publish one whose dependency is neither in this same batch nor already on npm, so a
-    // partial backfill can't ship a pin that dangles (see publish-closure.mjs). Imported
-    // lazily like verify-packed above: publish-closure.mjs imports this module's own exports.
-    const findDangling = findPins ?? (await import('./publish-closure.mjs')).findDanglingPins;
+    // partial backfill can't ship a pin that dangles (see dangling-pins.mjs). Imported
+    // lazily like verify-packed above: dangling-pins.mjs imports this module's own exports.
+    const findDangling = findPins ?? (await import('./dangling-pins.mjs')).findDanglingPins;
     const dangling = await findDangling(missing, { checkVersion, root });
     if (dangling.length > 0) {
       const detail = dangling.map(({ dependency, dependencyVersion, package: pkg }) => `${pkg} → ${dependency}@${dependencyVersion}`).join('\n  ');

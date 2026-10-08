@@ -14,20 +14,24 @@
  *   changed-packages                        list packages with a pending change file
  *   project <pkg>                           print folder=/version= for one package
  *   apply [pkg]                             apply pending change files as a CalVer lockstep
- *                                            train: stamp every manifest, changelog the riders
- *                                            and the @vielzeug/* deps they pin, consume the
- *                                            riders' change files, commit
- *   plan <pkg...>                           print a JSON publish plan (for a matrix): the
- *                                            workspace-dependency closure of <pkg...>, refusing
- *                                            to emit a plan with a dangling dependency pin
- *   closure <pkg...>                        print the workspace-dependency closure of <pkg...>
- *                                            (what a train publishes for those riders)
- *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag + release one package
+ *                                            train: stamp every manifest, changelog every
+ *                                            package (real entries for riders, alignment-only
+ *                                            for the rest), consume the riders' change files,
+ *                                            commit
+ *   plan [pkg...]                           print a JSON publish plan (for a matrix): every
+ *                                            publishable package not yet on npm, optionally
+ *                                            narrowed to <pkg...>; refuses to emit a plan
+ *                                            with a dangling dependency pin
+ *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
- *   tag-release <pkg> <version> <folder>    tag + GitHub release only: no `npm publish` (the
- *                                            version must already exist on npm, e.g. published
- *                                            via `pnpm release:publish-local`)
- *   release-plan                            print a JSON tag+release plan (release.yml's matrix):
+ *   tag <pkg> <version>                     git tag only: no `npm publish`, no GitHub release
+ *                                            (the version must already exist on npm, e.g.
+ *                                            published via `pnpm release:publish-local`)
+ *   train-release [version]                 the train's single aggregate GitHub release: tag
+ *                                            the train number and create one release listing
+ *                                            the packages that changed (git-tag.mjs; defaults
+ *                                            to the version every manifest carries)
+ *   release-plan                            print a JSON tag plan (release.yml's matrix):
  *                                            every publishable package whose
  *                                            current version is on npm but not yet tagged
  *
@@ -47,13 +51,13 @@ import { appendFileSync } from 'node:fs';
 import { isMain, parseArgs } from '../lib/cli.mjs';
 import { publishPackage } from './npm-publish.mjs';
 import { versionExists } from './npm-version-exists.mjs';
-import { expandWithWorkspaceDependencies, findDanglingPins } from './publish-closure.mjs';
-import { publishMissing, summaryMarkdown } from './publish-missing.mjs';
+import { findDanglingPins } from './dangling-pins.mjs';
+import { listPublishablePackages, publishMissing, summaryMarkdown } from './publish-missing.mjs';
 import { planTagReleases } from './release-only-plan.mjs';
 import { planReleases } from './release-plan.mjs';
 import { applyTrain, listChangedPackageNames } from './apply-train.mjs';
+import { createTrainRelease, tagPackage } from './git-tag.mjs';
 import { findProject, listProjectNames } from './rush-project.mjs';
-import { tagAndRelease } from './tag-and-release.mjs';
 
 async function main(argv) {
   const { flags, positionals } = parseArgs(argv);
@@ -81,32 +85,26 @@ async function main(argv) {
 
     case 'apply': {
       const [pkg] = args;
-      const { changedPackages, train } = applyTrain(pkg, { dryRun });
+      const { riders, train } = applyTrain(pkg, { dryRun });
       console.log(
-        `${dryRun ? '[dry-run] would apply' : 'Applied'} release train ${train}: changelog for: ${changedPackages.join(', ')}`,
+        `${dryRun ? '[dry-run] would apply' : 'Applied'} release train ${train}: every package rides, real changes for: ${riders.join(', ')}`,
       );
       return;
     }
 
     case 'plan': {
-      // Expand to the workspace-dependency closure so a rider's dependencies ride the same
-      // train (see publish-closure.mjs): the apply step already changelogged them, so the
-      // matrix must publish them too or the rider's exact pin dangles on npm.
-      const plan = await planReleases(expandWithWorkspaceDependencies(args));
+      // Full-family lockstep: a train publishes every publishable package (apply-train.mjs
+      // changelogs them all), so the plan is the whole family by default, narrowed only when
+      // the caller names packages explicitly. The dangling-pin check stays as the
+      // belt-and-braces guard for a narrowed subset (see dangling-pins.mjs).
+      const targets = args.length > 0 ? args : listPublishablePackages().map(({ name }) => name);
+      const plan = await planReleases(targets);
       const dangling = await findDanglingPins(plan);
       if (dangling.length > 0) {
         const detail = dangling.map(({ dependency, dependencyVersion, package: pkg }) => `${pkg} → ${dependency}@${dependencyVersion}`).join('\n  ');
         throw new Error(`Refusing to build a publish plan with dangling dependency pins:\n  ${detail}`);
       }
       console.log(JSON.stringify(plan));
-      return;
-    }
-
-    case 'closure': {
-      // The full publish set for a rider list: riders plus the @vielzeug/* deps they pin.
-      // publish.yml pipes the pending riders through this so verify:packed covers every package
-      // the plan will publish, not only the riders ("verify what you publish").
-      console.log(expandWithWorkspaceDependencies(args).join(' '));
       return;
     }
 
@@ -117,21 +115,26 @@ async function main(argv) {
         return;
       }
       await publishPackage(folder, { dryRun, interactive: Boolean(flags.interactive), otp: flags.otp });
-      tagAndRelease({ dryRun, folder, package: pkg, version });
+      tagPackage({ dryRun, package: pkg, version });
       console.log(dryRun ? `[dry-run] validated ${pkg}@${version}` : `✅ Published ${pkg}@${version}`);
       return;
     }
 
-    case 'tag-release': {
-      const [pkg, version, folder] = args;
+    case 'tag': {
+      const [pkg, version] = args;
       if (!(await versionExists(pkg, version))) {
         throw new Error(
-          `${pkg}@${version} not found on npm: this command only tags and creates a GitHub release for a ` +
-            `version already published (e.g. via 'pnpm release:publish-local'). Publish it first, then re-run.`,
+          `${pkg}@${version} not found on npm: this command only tags a version already published ` +
+            `(e.g. via 'pnpm release:publish-local'). Publish it first, then re-run.`,
         );
       }
-      tagAndRelease({ dryRun, folder, package: pkg, version });
-      console.log(`✅ Tagged and released ${pkg}@${version} (no npm publish: already on npm)`);
+      tagPackage({ dryRun, package: pkg, version });
+      console.log(`✅ Tagged ${pkg}@${version} (no npm publish: already on npm)`);
+      return;
+    }
+
+    case 'train-release': {
+      createTrainRelease({ dryRun, version: args[0] });
       return;
     }
 

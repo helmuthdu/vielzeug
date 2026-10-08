@@ -4,12 +4,14 @@
  * release:publish-local`, see that script's header comment) but doesn't have a git tag yet.
  *
  * Mirrors `release-plan.mjs`'s "filter before building the matrix" shape so the Actions UI
- * only ever shows real tag+release work, not a "skipped" entry per already-tagged package.
+ * only ever shows real tagging work, not a "skipped" entry per already-tagged package. The
+ * train's single aggregate GitHub release is created once by `git-tag.mjs`'s
+ * createTrainRelease(), not per matrix entry.
  */
 
 import { versionExists } from './npm-version-exists.mjs';
 import { listPublishablePackages } from './publish-missing.mjs';
-import { tagExists } from './tag-and-release.mjs';
+import { tagExists } from './git-tag.mjs';
 
 export async function planTagReleases(
   root,

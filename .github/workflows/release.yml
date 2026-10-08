@@ -1,10 +1,10 @@
-name: Release (tag + GitHub release only)
+name: Release (git tags + GitHub release only)
 
 # Backfill for versions published outside publish.yml: normally `pnpm release:publish-local`
 # (scripts/release/local-publish.mjs), which deliberately never tags so a stale local clone
 # can't push a wrong tag. Scans every publishable package whose committed version is on npm but
-# not yet tagged, then tags and creates a GitHub release for each. Never runs `npm publish`, so
-# it needs neither the `npm-publish` environment nor `id-token: write`.
+# not yet tagged, tags each, then creates the train's single aggregate GitHub release. Never
+# runs `npm publish`, so it needs neither the `npm-publish` environment nor `id-token: write`.
 #
 # Do NOT register this filename as an npm Trusted Publisher: it never publishes.
 
@@ -71,8 +71,34 @@ jobs:
           root-install: 'false'
           rush-install: 'false'
 
-      - name: Tag and create GitHub release
+      - name: Tag the published version
         env:
           DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
-          GH_TOKEN: ${{ github.token }}
-        run: node scripts/release/cli.mjs tag-release "${{ matrix.package }}" "${{ matrix.version }}" "${{ matrix.folder }}"
+        run: node scripts/release/cli.mjs tag "${{ matrix.package }}" "${{ matrix.version }}"
+
+  # One aggregate GitHub release per train (git-tag.mjs), after every package tag is pushed.
+  # Runs even when the tag matrix was empty (createTrainRelease is idempotent on the train
+  # tag), so a train whose aggregate release was never created can always be backfilled by
+  # re-dispatching this workflow.
+  train-release:
+    needs: [plan, release]
+    if: ${{ always() && needs.plan.result == 'success' && needs.release.result != 'failure' && needs.release.result != 'cancelled' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - name: Create the aggregate train release
+        run: node scripts/release/cli.mjs train-release

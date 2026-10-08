@@ -12,8 +12,8 @@ Every `@vielzeug/*` package carries the same version: the release train it last 
 The version answers **when**, never **how big**. There is no major/minor judgment baked into it:
 
 - A breaking change rides the next train like any other change. It says so in that package's changelog entry and in its migration guide (linked from the package's docs).
-- Packages still release independently in the sense that matters: a train stamps every package, but only packages that actually changed publish, and unchanged packages keep their previous version on npm. A breaking change in `ward` never forces `ripple` to move.
-- So an npm version is "the last train in which that package changed": two packages on the same version were released together; two packages on different versions simply last rode different trains.
+- Every package rides every train: a train publishes the whole family at its number, so all `@vielzeug/*` versions on npm always line up. A package whose changelog entry for a train says "no code change this train" shipped unchanged: its version moved with the train, its code didn't.
+- Because the whole family shares one number, an upgrade is a set move: every `@vielzeug/*` dependency moves to the same train together, and installing `@latest` of any combination of packages always resolves to one copy of each: no duplicated nested versions.
 
 ## How to depend on Vielzeug
 
@@ -27,7 +27,7 @@ Pin exact versions rather than caret ranges:
 }
 ```
 
-A caret range stops at the pre-CalVer history by design (`^26.10.0` will never pull a `26.11.x` train), which is the behavior you want: trains you haven't read about shouldn't flow into your lockfile silently. When you do move to a newer train, read the changed packages' changelog entries and each package's migration guide first.
+Exact pinning matters more under CalVer than you might expect: `^26.10.0` means `>=26.10.0 <27.0.0`, which spans *months*: `26.11.x`, `26.12.x` and every later train in 2026 all match. And because a breaking change rides the next train like any other change, a caret range can silently pull a breaking train into your lockfile. Upgrade deliberately: move every `@vielzeug/*` dependency to the same train, read the changed packages' changelog entries, and each changed package's migration guide first.
 
 ## Where to read about a train
 

@@ -92,13 +92,17 @@ describe('listChangedPackageNames()', () => {
 });
 
 describe('applyTrain()', () => {
-  it('stamps every manifest with the train version and changelogs only changed packages', () => {
+  it('stamps every manifest and changelogs every package: riders get real entries', () => {
     const repo = makeRepo();
     const run = vi.fn(() => '');
 
     const result = applyTrain(undefined, { now: NOW, root: repo, run });
 
-    expect(result).toEqual({ changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'], train: '26.10.0' });
+    expect(result).toEqual({
+      changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'],
+      riders: ['@vielzeug/orbit', '@vielzeug/ore'],
+      train: '26.10.0',
+    });
 
     // Every manifest carries the train: lockstep.
     for (const slug of ['ore', 'orbit']) {
@@ -128,39 +132,46 @@ describe('applyTrain()', () => {
     expect(commands).toContainEqual(expect.stringContaining('chore: apply release train 26.10.0'));
   });
 
-  it('scopes a single-package train: sibling change files survive, every manifest still stamps', () => {
+  it('scopes a single-package train: sibling change files survive, every package still rides', () => {
     const repo = makeRepo();
     const run = vi.fn(() => '');
 
     const result = applyTrain('@vielzeug/ore', { now: NOW, root: repo, run });
 
-    expect(result).toEqual({ changedPackages: ['@vielzeug/ore'], train: '26.10.0' });
+    expect(result).toEqual({
+      changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'],
+      riders: ['@vielzeug/ore'],
+      train: '26.10.0',
+    });
 
     expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(false);
     expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json'))).toBe(true);
 
-    // The sibling is stamped (a train is repo-wide) but gets no changelog entry :
-    // publish-missing's changelog-entry rule keeps it from ever publishing this train.
+    // The sibling is stamped AND gets an alignment-only changelog entry: full-family
+    // lockstep means it publishes at the train number too, so any exact pin to it resolves.
     expect(JSON.parse(readFileSync(path.join(repo, 'packages', 'orbit', 'package.json'), 'utf8')).version).toBe('26.10.0');
-    expect(readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.md'), 'utf8')).not.toContain('## 26.10.0');
+    const orbitLog = readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.md'), 'utf8');
+    expect(orbitLog).toContain('## 26.10.0');
+    expect(orbitLog).toContain('chore: align with CalVer lockstep trains: no code change this train');
+    expect(orbitLog).not.toContain('fix: orbit thing'); // its own pending change file was NOT consumed
   });
 
-  it('pulls a rider dependency with no change file onto the train with an alignment entry', () => {
-    // ore rides the train and depends on orbit; orbit has NO change file of its own. Without
-    // the closure rule, orbit is stamped but never changelogged, so it never publishes and
-    // ore's exact pin to it dangles on npm (the prism -> orbit 26.10.2 breakage).
+  it('gives a package with no change file an alignment entry so it publishes at the train', () => {
+    // ore rides with a real change; orbit has NO change file of its own. Under full-family
+    // lockstep orbit still rides with an alignment entry, so an exact pin to orbit@26.10.0
+    // resolves on npm (the historical prism -> orbit 26.10.2 breakage stays impossible).
     const repo = makeRepo();
-    rmSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json')); // orbit no longer rides
-    // Give ore a real dependency edge on orbit.
-    const oreManifest = JSON.parse(readFileSync(path.join(repo, 'packages', 'ore', 'package.json'), 'utf8'));
-    oreManifest.dependencies = { '@vielzeug/orbit': 'workspace:*' };
-    writeFileSync(path.join(repo, 'packages', 'ore', 'package.json'), JSON.stringify(oreManifest, null, 2));
+    rmSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json')); // orbit no longer a rider
 
     const run = vi.fn(() => '');
     const result = applyTrain(undefined, { now: NOW, root: repo, run });
 
-    // The publish set is the closure: ore (rider) plus orbit (pulled in).
-    expect(result).toEqual({ changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'], train: '26.10.0' });
+    // The publish set is the full family: ore (rider) plus orbit (alignment-only).
+    expect(result).toEqual({
+      changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'],
+      riders: ['@vielzeug/ore'],
+      train: '26.10.0',
+    });
 
     // orbit got an alignment-only changelog entry for the train, so it now publishes at it.
     const orbitLog = readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.md'), 'utf8');
@@ -189,7 +200,11 @@ describe('applyTrain()', () => {
 
     const result = applyTrain(undefined, { dryRun: true, now: NOW, root: repo, run });
 
-    expect(result).toEqual({ changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'], train: '26.10.0' });
+    expect(result).toEqual({
+      changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'],
+      riders: ['@vielzeug/orbit', '@vielzeug/ore'],
+      train: '26.10.0',
+    });
     expect(JSON.parse(readFileSync(path.join(repo, 'packages', 'ore', 'package.json'), 'utf8')).version).toBe('3.0.0');
     expect(readFileSync(path.join(repo, 'packages', 'ore', 'CHANGELOG.md'), 'utf8')).not.toContain('## 26.10.0');
     expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(true);

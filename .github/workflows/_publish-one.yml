@@ -1,8 +1,10 @@
 name: Publish one package (reusable)
 
-# The single "publish + tag + release" implementation. publish.yml runs it as a matrix, one job
+# The single "publish + git tag" implementation. publish.yml runs it as a matrix, one job
 # per package. A reusable workflow (rather than a composite action) is what lets one
-# implementation serve as a matrix body with its own log and pass/fail per package.
+# implementation serve as a matrix body with its own log and pass/fail per package. The
+# train's single aggregate GitHub release is created separately (publish.yml's train-release
+# job), not per package.
 #
 # npm's Trusted Publishing validates the *triggering* workflow's filename (publish.yml), not
 # this one: don't register `_publish-one.yml` on npmjs.com.
@@ -84,7 +86,5 @@ jobs:
           name: built-packages
           path: packages/
 
-      - name: Publish, tag and release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Publish and tag
         run: node scripts/release/cli.mjs publish "${{ inputs.package }}" "${{ inputs.version }}" "${{ inputs.folder }}"

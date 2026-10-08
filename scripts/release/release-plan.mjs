@@ -1,11 +1,11 @@
 /**
  * The publish plan publish.yml turns directly into a matrix: every named package whose
- * current version is not yet on npm. Callers pass the packages with pending change files
- * (the train's riders), so the plan is "riders not already published".
+ * current version is not yet on npm. Under full-family lockstep the caller passes every
+ * publishable package (the whole train); a narrowed call passes an explicit subset.
  *
- * Filtering "already published" here: once, before the matrix is built, rather than inside
- * each matrix job keeps the matrix itself an accurate list of real work: no phantom "skipped"
- * job entries cluttering the Actions UI for a 30-package run where only 2 packages changed.
+ * Filtering "already published" here, once before the matrix is built rather than inside
+ * each matrix job, keeps the matrix itself an accurate list of real work: no phantom
+ * "skipped" job entries cluttering the Actions UI for a 40-package train.
  */
 
 import { versionExists } from './npm-version-exists.mjs';

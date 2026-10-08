@@ -1,22 +1,19 @@
 /**
- * The publish closure: every package a set of packages-to-publish depends on, and the
- * check that no packed pin points at a version that will never exist on the registry.
+ * The check that no packed pin points at a version that will never exist on the registry.
  *
  * A published package pins its `@vielzeug/*` dependencies to an exact version: a train
  * stamps every manifest with the same number, and `resolve-workspace-deps.mjs` rewrites a
  * `workspace:*` edge to the dependency's stamped version. That exact pin is only installable
- * if the dependency is published at that same version. But a train stamps *every* manifest
- * while publishing only the packages that rode it (a CHANGELOG entry for the version is the
- * gate), so a rider whose dependency skipped the train ships a pin to a version that was
- * never published — the `@vielzeug/prism@26.10.2` → `@vielzeug/orbit@26.10.2` breakage, where
- * orbit was stamped 26.10.2 but had no change file, so nothing ever put 26.10.2 on npm.
+ * if the dependency is published at that same version.
  *
- * The rule that makes exact pins safe: **a package's dependencies must ride every train the
- * package rides.** `expandWithWorkspaceDependencies` computes that closure (the transitive
- * `@vielzeug/*` runtime-dependency set); `findDanglingPins` is the belt-and-braces check that
- * every dependency pin in a publish set is either riding the same train or already on the
- * registry, so a gap fails the release loudly instead of surfacing as a broken consumer
- * install (`YN0082: No candidates found`).
+ * Normal trains are safe by construction: every publishable package rides every train
+ * (apply-train.mjs), so every pin resolves by the time the publish matrix runs. This guard
+ * exists for the paths that publish a *subset*: `mode=missing` backfills only the versions
+ * absent from npm, and a partial batch can pin a dependency that is neither in the batch nor
+ * on the registry — the historical `@vielzeug/prism@26.10.2` → `@vielzeug/orbit@26.10.2`
+ * breakage, where the stamp existed but nothing ever put that version on npm. `findDanglingPins`
+ * turns that gap into a loud release failure instead of a broken consumer install
+ * (`YN0082: No candidates found`).
  */
 
 import { readFileSync } from 'node:fs';
@@ -31,40 +28,9 @@ const repoRoot = path.join(fileURLToPath(import.meta.url), '..', '..', '..');
 
 const defaultReadManifest = (file) => JSON.parse(readFileSync(file, 'utf8'));
 
-/** name → { folder, version } for every publishable package, so the graph walks only real edges. */
+/** name → { folder, version } for every publishable package, so only real workspace edges are checked. */
 function packageIndex(list, root) {
   return new Map(list(root).map(({ folder, name, version }) => [name, { folder, version }]));
-}
-
-/**
- * The transitive closure of `names` over `@vielzeug/*` runtime dependencies: `names` plus
- * everything they depend on, directly or transitively, that is itself a publishable workspace
- * package. Dependencies outside the workspace (private packages, external npm deps) are not
- * traversed — they are not this train's to publish. Returned sorted for a stable plan.
- */
-export function expandWithWorkspaceDependencies(
-  names,
-  { list = listPublishablePackages, readManifest = defaultReadManifest, root = repoRoot } = {},
-) {
-  const index = packageIndex(list, root);
-  const closure = new Set();
-  const stack = [...names];
-
-  while (stack.length > 0) {
-    const name = stack.pop();
-    if (closure.has(name)) continue;
-    closure.add(name);
-
-    const entry = index.get(name);
-    if (!entry) continue; // not a publishable workspace package: nothing to expand
-
-    const manifest = readManifest(path.join(root, entry.folder, 'package.json'));
-    for (const dep of internalDependencies(manifest)) {
-      if (index.has(dep)) stack.push(dep);
-    }
-  }
-
-  return [...closure].sort();
 }
 
 /**

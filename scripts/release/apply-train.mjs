@@ -2,35 +2,41 @@
 /**
  * Apply pending change files as a CalVer lockstep release train.
  *
- * Every publishable package in rush.json is stamped with the same train number
- * (`YY.MM.N`: see train-version.mjs); packages with pending change files additionally get
- * a CHANGELOG entry for it, their change files are consumed, and one commit lands the
- * whole train. A package is a publish candidate only when its CHANGELOG has an entry for
- * the current version: publish-missing.mjs enforces the same rule, so the lockstep stamp
- * never republishes an unchanged package: npm simply never sees the trains a package
- * didn't ride.
+ * Every publishable package in rush.json rides every train: each manifest is stamped with
+ * the same train number (`YY.MM.N`: see train-version.mjs) and each CHANGELOG gets an entry
+ * for it: real comments for packages with pending change files (their change files are
+ * consumed), an alignment-only entry for every other package. One commit lands the whole
+ * train, and the whole family publishes at the train number.
  *
- * `applyTrain(pkg)` scopes the changelog entry and change-file consumption to one package
- * (publish.yml mode=single) while still stamping every manifest, because a train is
- * repo-wide by definition; sibling packages' pending change files survive for their own
- * release.
+ * Full-family publishing is what makes exact `@vielzeug/*` dependency pins always
+ * resolvable: a consumer upgrading to any train gets one consistent version set (every
+ * package pins its deps to the same number it carries), never nested duplicate copies of
+ * the same library. Selective publishing was the alternative and it required a
+ * dependency-closure expansion plus a dangling-pin guard to stay installable: this design
+ * removes the reason that machinery existed. `findDanglingPins` (dangling-pins.mjs) stays
+ * as the guard for the paths that publish a subset: `mode=missing` backfills.
+ *
+ * `applyTrain(pkg)` scopes change-file consumption to one package (publish.yml mode=single:
+ * "only this package has real changes this train"); every other package still rides with an
+ * alignment entry, and sibling change files survive for a later train.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { run as defaultRun } from '../lib/cli.mjs';
-import { expandWithWorkspaceDependencies } from './publish-closure.mjs';
 import { listPublishablePackages } from './publish-missing.mjs';
 import { nextTrainVersion } from './train-version.mjs';
 
 const repoRoot = path.join(fileURLToPath(import.meta.url), '..', '..', '..');
 
-/** Changelog comment for a dependency pulled onto a train only because a rider pins it: no
- *  code changed, it simply must publish at the train version so the rider's exact pin resolves.
- *  Mirrors the manual alignment entries the first CalVer train wrote by hand. */
-const ALIGNMENT_COMMENT = 'chore: align with CalVer lockstep trains: no code change this train';
+/** Changelog comment for a package that rides a train without a change file of its own: no
+ *  code changed, it simply publishes at the train number so every exact pin to it resolves.
+ *  Mirrors the manual alignment entries the first CalVer train wrote by hand. git-tag.mjs
+ *  recognizes this exact entry to keep alignment-only packages out of the train's
+ *  aggregate GitHub release notes. */
+export const ALIGNMENT_COMMENT = 'chore: align with CalVer lockstep trains: no code change this train';
 
 /** Change-file type → CHANGELOG section title, in render order. The titles match what
  *  Rush wrote for the pre-CalVer history, so one changelog reads as one format. */
@@ -154,16 +160,14 @@ function stampManifests(packages, train, root) {
 
 /**
  * Applies the pending change files as a release train and returns
- * `{ changedPackages, train }`. With `packageName`, only that package's change files are
- * consumed and changelogged; the train stamp still covers every package.
+ * `{ changedPackages, riders, train }`. Every publishable package rides: `changedPackages`
+ * is the full publish set (every package, in sorted order), and `riders` names the packages
+ * with real change entries: the ones worth calling out in the train's release notes.
+ * With `packageName` (mode=single), only that package's change files are consumed; every
+ * other package still rides with an alignment entry, and sibling change files survive for a
+ * later train.
  * `dryRun` computes the train and reports what it would do without touching any file :
  * the whole point of a dry run is that pending change files survive it.
- *
- * A rider's `@vielzeug/*` dependencies are pulled onto the train too (see
- * publish-closure.mjs): each gets an alignment-only CHANGELOG entry so it publishes at the
- * train version and the rider's exact pin resolves on npm. `changedPackages` is the full
- * publish set (riders plus pulled-in dependencies), which is what the publish matrix plans
- * from; a dependency with its own pending change file is already a rider and is untouched.
  */
 export function applyTrain(packageName, { dryRun = false, now = new Date(), root = repoRoot, run = defaultRun } = {}) {
   const changesDir = path.join(root, 'common', 'changes');
@@ -179,8 +183,8 @@ export function applyTrain(packageName, { dryRun = false, now = new Date(), root
   const riders = [...new Set(consumed.map((relFile) => path.dirname(relFile)))].sort();
   const packages = listPublishablePackages(root);
   const train = nextTrainVersion(packages.map(({ version }) => version), now);
-  const changedPackages = expandWithWorkspaceDependencies(riders, { list: () => packages, root });
-  if (dryRun) return { changedPackages, train };
+  const changedPackages = packages.map(({ name }) => name).sort();
+  if (dryRun) return { changedPackages, riders, train };
 
   const date = now.toUTCString();
   const commit = headCommit(root, run);
@@ -192,7 +196,7 @@ export function applyTrain(packageName, { dryRun = false, now = new Date(), root
     const comments =
       riderFiles.length > 0
         ? collectComments(riderFiles, changesDir)
-        : { patch: [{ author: 'release-train', comment: ALIGNMENT_COMMENT }] }; // pulled-in dependency: no change file of its own
+        : { patch: [{ author: 'release-train', comment: ALIGNMENT_COMMENT }] }; // rides without a change file of its own
 
     updateMarkdownChangelog(path.join(root, folder, 'CHANGELOG.md'), name, train, date, comments);
     updateJsonChangelog(path.join(root, folder, 'CHANGELOG.json'), name, train, date, comments, commit);
@@ -206,5 +210,5 @@ export function applyTrain(packageName, { dryRun = false, now = new Date(), root
   run('git', ['add', ...touched, 'common/changes'], { cwd: root });
   run('git', ['commit', '-m', `chore: apply release train ${train}`], { cwd: root, inherit: true });
 
-  return { changedPackages, train };
+  return { changedPackages, riders, train };
 }

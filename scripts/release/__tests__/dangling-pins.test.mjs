@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { expandWithWorkspaceDependencies, findDanglingPins } from '../publish-closure.mjs';
+import { findDanglingPins } from '../dangling-pins.mjs';
 
 let root;
 
@@ -18,7 +18,7 @@ afterEach(() => {
  * the slugs it depends on; every package is `@vielzeug/<slug>` at version 26.10.0.
  */
 function makeRepo(edges) {
-  root = mkdtempSync(path.join(tmpdir(), 'publish-closure-test-'));
+  root = mkdtempSync(path.join(tmpdir(), 'dangling-pins-test-'));
   const projects = Object.keys(edges).map((slug) => ({ packageName: `@vielzeug/${slug}`, projectFolder: `packages/${slug}` }));
   writeFileSync(path.join(root, 'rush.json'), JSON.stringify({ projects }));
 
@@ -34,49 +34,6 @@ function makeRepo(edges) {
   }
   return root;
 }
-
-describe('expandWithWorkspaceDependencies()', () => {
-  it('returns the names alone when they have no workspace dependencies', () => {
-    const repo = makeRepo({ ore: [], coins: [] });
-    expect(expandWithWorkspaceDependencies(['@vielzeug/ore'], { root: repo })).toEqual(['@vielzeug/ore']);
-  });
-
-  it('pulls in a direct dependency', () => {
-    const repo = makeRepo({ prism: ['orbit'], orbit: [] });
-    expect(expandWithWorkspaceDependencies(['@vielzeug/prism'], { root: repo })).toEqual(['@vielzeug/orbit', '@vielzeug/prism']);
-  });
-
-  it('pulls in the full transitive closure', () => {
-    // prism -> orbit -> {arsenal, ripple}: the real 26.10.2 shape that left pins dangling.
-    const repo = makeRepo({ prism: ['orbit'], orbit: ['arsenal', 'ripple'], arsenal: [], ripple: [] });
-    expect(expandWithWorkspaceDependencies(['@vielzeug/prism'], { root: repo })).toEqual([
-      '@vielzeug/arsenal',
-      '@vielzeug/orbit',
-      '@vielzeug/prism',
-      '@vielzeug/ripple',
-    ]);
-  });
-
-  it('de-duplicates a diamond dependency and returns a sorted set', () => {
-    const repo = makeRepo({ a: ['b', 'c'], b: ['d'], c: ['d'], d: [] });
-    expect(expandWithWorkspaceDependencies(['@vielzeug/a'], { root: repo })).toEqual([
-      '@vielzeug/a',
-      '@vielzeug/b',
-      '@vielzeug/c',
-      '@vielzeug/d',
-    ]);
-  });
-
-  it('terminates on a dependency cycle', () => {
-    const repo = makeRepo({ a: ['b'], b: ['a'] });
-    expect(expandWithWorkspaceDependencies(['@vielzeug/a'], { root: repo })).toEqual(['@vielzeug/a', '@vielzeug/b']);
-  });
-
-  it('does not traverse a dependency that is not a publishable workspace package', () => {
-    const repo = makeRepo({ prism: ['ghost'] }); // ghost is a dep edge but has no manifest of its own
-    expect(expandWithWorkspaceDependencies(['@vielzeug/prism'], { root: repo })).toEqual(['@vielzeug/prism']);
-  });
-});
 
 describe('findDanglingPins()', () => {
   it('reports nothing when every dependency rides the same train', async () => {

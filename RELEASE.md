@@ -8,24 +8,36 @@ Every `@vielzeug/*` package carries the same version: the release train it last 
 
 This replaces semantic versioning, deliberately. Semver's compat signal was aimed at consumers we don't have: every in-repo consumer (demos, docs, REPL) moves in the same commit as the packages. The compatibility contract for outside consumers is the changelog and `migration.md`, read per train.
 
+## Full-family trains
+
+Every publishable package rides every train: each train stamps every manifest, writes a CHANGELOG entry for every package (real comments for packages with change files, an alignment-only entry for the rest), and publishes the whole family at the train number.
+
+This is what makes exact `@vielzeug/*` dependency pins always resolvable: a consumer on any train gets one consistent version set, every package pinning its deps to the number it carries. Selective publishing was the earlier design and it left stale versions on npm: a consumer mixing `@vielzeug/arsenal@26.10.4` with a dependent last published at `26.10.3` got two nested copies of arsenal, because the dependent's exact pin could not stretch. Under full-family lockstep, `npm i @vielzeug/<pkg>@latest` for any set of packages always dedupes to one version each.
+
+The cost is honest and mechanical: most publishes in a train carry no code change (an alignment entry), and every package's `latest` tag moves each train.
+
 ## Releasing a train
 
 1. Land changes. Every publishable package that changed carries a change file:
    `node scripts/rush-change.mjs <pkg> <patch|minor|major> "<message>"`.
    The type only picks the changelog section: it never touches the version.
-2. Dispatch the **Publish** workflow (`publish.yml`) with `mode=all` (or `single` for one package). It applies the train: stamps every manifest with the train number, writes changelog entries for packages with pending change files *and* for the `@vielzeug/*` dependencies they pin (alignment-only, so a published package's exact dependency pin always resolves on npm), consumes the riders' change files in one commit: then verifies packed packages and publishes and tags each package in that publish set. CI details: `.github/AGENTS.md`.
-3. `mode=missing` backfills any released-but-unpublished version. A package is a candidate only when its CHANGELOG has an entry for its current version: a lockstep stamp alone never republishes an unchanged package. It refuses to publish a package whose dependency pin is neither in the same batch nor already on npm, so a partial backfill can never ship a dangling pin.
+2. Dispatch the **Publish** workflow (`publish.yml`) with `mode=all` (or `single` when only one package has real changes). It applies the train: stamps every manifest with the train number and writes a CHANGELOG entry for every package (alignment-only where there is no change file), consumes the riders' change files in one commit: then verifies every packed package, publishes the full family as a matrix, tags each published version, and creates the train's single aggregate GitHub release. CI details: `.github/AGENTS.md`.
+3. `mode=missing` backfills any released-but-unpublished version. A package is a candidate only when its CHANGELOG has an entry for its current version. Because a backfill publishes a *subset*, it refuses to publish a package whose dependency pin is neither in the same batch nor already on npm (dangling-pins.mjs), so a partial backfill can never ship a dangling pin.
 
-`mode=single` still stamps the whole family (a train is repo-wide by definition) but consumes only the named package's change files; sibling change files survive for their own train. The named package's `@vielzeug/*` dependencies still ride (alignment-only), so publishing one package never leaves it pinning an unpublished version.
+`mode=single` means "only this package has real changes this train": it consumes only the named package's change files, and every other package rides with an alignment entry. Sibling change files survive for a later train.
+
+## Releases and tags
+
+Each published package version gets its own git tag (`@vielzeug/<pkg>@<version>`: the anchor CHANGELOG deep-links point at), and the train gets exactly **one** GitHub release named for the train number, whose notes list only the packages that actually changed. Per-package GitHub releases would bury the release page under dozens of alignment-only entries per train.
 
 ## The epoch train
 
-The first CalVer train (`26.10.0`) is an epoch: every publishable package carries a change file, so all 41 publish at the same number and the registry starts the new era uniform. Three of those entries (`orbit`, `prism`, `rune`) are alignment-only: "no code change this train". Since then, alignment entries are printed automatically whenever a published package pins a `@vielzeug/*` dependency that has no change file of its own: a dependency must ride every train its dependents ride, or the dependent's exact pin would point at a version that never reaches npm. So a package skips a train only when nothing that *did* ride the train depends on it.
+The first CalVer train (`26.10.0`) was an epoch: every publishable package carried a change file, so all 41 published at the same number and the registry started the new era uniform. Three of those entries (`orbit`, `prism`, `rune`) were alignment-only: "no code change this train". From the first full-family train on, every train is like that by design: alignment entries are written automatically for every package without a change file.
 
 ## Consequences
 
-- An npm version is "the last train in which that package changed, or a dependent did": a package can be republished unchanged (an alignment entry) to keep a dependent's pin resolvable, but it never rides a train that nothing depending on it rides.
-- Consumers outside the monorepo should pin exact versions and read the package's `migration.md` when moving between trains. Caret ranges stop at the pre-CalVer history by design: trains you should read about don't flow through `^`.
+- An npm version is "the train this package last shipped on": which is every train, since every package rides every train. A package's version number tells you *when*, and its changelog entry for that train tells you *whether anything changed*.
+- Consumers outside the monorepo should pin exact versions and read the changed packages' `migration.md` when moving between trains. Note what CalVer means for ranges: `^26.10.0` spans *months* (`>=26.10.0 <27.0.0` includes `26.11.x`, `26.12.x`:), and a breaking change rides the next train like any other, so a caret range can silently pull a breaking monthly train. Exact pins are the contract; upgrade deliberately, train by train.
 - The docs site and demos always track `main`, the latest train.
 
 ## Local use

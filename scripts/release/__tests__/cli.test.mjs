@@ -2,26 +2,30 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../npm-publish.mjs', () => ({ publishPackage: vi.fn() }));
 vi.mock('../npm-version-exists.mjs', () => ({ versionExists: vi.fn() }));
-vi.mock('../publish-closure.mjs', () => ({
-  expandWithWorkspaceDependencies: vi.fn((names) => names),
-  findDanglingPins: vi.fn(async () => []),
+vi.mock('../dangling-pins.mjs', () => ({ findDanglingPins: vi.fn(async () => []) }));
+vi.mock('../publish-missing.mjs', () => ({
+  listPublishablePackages: vi.fn(() => []),
+  publishMissing: vi.fn(),
+  summaryMarkdown: vi.fn(() => '## summary'),
 }));
-vi.mock('../publish-missing.mjs', () => ({ publishMissing: vi.fn(), summaryMarkdown: vi.fn(() => '## summary') }));
 vi.mock('../release-only-plan.mjs', () => ({ planTagReleases: vi.fn() }));
 vi.mock('../release-plan.mjs', () => ({ planReleases: vi.fn() }));
-vi.mock('../apply-train.mjs', () => ({ applyTrain: vi.fn(() => ({ changedPackages: [], train: '26.10.0' })), listChangedPackageNames: vi.fn() }));
+vi.mock('../apply-train.mjs', () => ({
+  applyTrain: vi.fn(() => ({ changedPackages: [], riders: [], train: '26.10.0' })),
+  listChangedPackageNames: vi.fn(),
+}));
 vi.mock('../rush-project.mjs', () => ({ findProject: vi.fn(), listProjectNames: vi.fn() }));
-vi.mock('../tag-and-release.mjs', () => ({ tagAndRelease: vi.fn() }));
+vi.mock('../git-tag.mjs', () => ({ createTrainRelease: vi.fn(), tagPackage: vi.fn() }));
 
 const { publishPackage } = await import('../npm-publish.mjs');
 const { versionExists } = await import('../npm-version-exists.mjs');
-const { expandWithWorkspaceDependencies, findDanglingPins } = await import('../publish-closure.mjs');
-const { publishMissing } = await import('../publish-missing.mjs');
+const { findDanglingPins } = await import('../dangling-pins.mjs');
+const { listPublishablePackages, publishMissing } = await import('../publish-missing.mjs');
 const { planTagReleases } = await import('../release-only-plan.mjs');
 const { planReleases } = await import('../release-plan.mjs');
 const { applyTrain, listChangedPackageNames } = await import('../apply-train.mjs');
+const { createTrainRelease, tagPackage } = await import('../git-tag.mjs');
 const { findProject, listProjectNames } = await import('../rush-project.mjs');
-const { tagAndRelease } = await import('../tag-and-release.mjs');
 const { main } = await import('../cli.mjs');
 
 beforeEach(() => {
@@ -84,26 +88,29 @@ describe('apply', () => {
 });
 
 describe('plan', () => {
-  it('prints the plan as JSON for the named packages', async () => {
+  it('plans the full family by default', async () => {
+    listPublishablePackages.mockReturnValue([
+      { folder: 'packages/orbit', name: '@vielzeug/orbit', version: '26.10.0' },
+      { folder: 'packages/ore', name: '@vielzeug/ore', version: '26.10.0' },
+    ]);
+    planReleases.mockResolvedValue([]);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await main(['plan']);
+
+    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/orbit', '@vielzeug/ore']);
+  });
+
+  it('narrows to the named packages when given explicitly', async () => {
     planReleases.mockResolvedValue([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '26.10.0' }]);
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await main(['plan', '@vielzeug/ore', '@vielzeug/orbit']);
+    await main(['plan', '@vielzeug/ore']);
 
-    expect(expandWithWorkspaceDependencies).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit']);
-    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit']);
+    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore']);
     expect(log).toHaveBeenCalledWith(
       JSON.stringify([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '26.10.0' }]),
     );
-  });
-
-  it('plans the workspace-dependency closure, not just the named packages', async () => {
-    expandWithWorkspaceDependencies.mockReturnValue(['@vielzeug/orbit', '@vielzeug/prism']);
-    planReleases.mockResolvedValue([]);
-
-    await main(['plan', '@vielzeug/prism']);
-
-    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/orbit', '@vielzeug/prism']);
   });
 
   it('refuses to print a plan with a dangling dependency pin', async () => {
@@ -116,18 +123,6 @@ describe('plan', () => {
   });
 });
 
-describe('closure', () => {
-  it('prints the space-separated workspace-dependency closure of the named packages', async () => {
-    expandWithWorkspaceDependencies.mockReturnValue(['@vielzeug/orbit', '@vielzeug/prism']);
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-    await main(['closure', '@vielzeug/prism']);
-
-    expect(expandWithWorkspaceDependencies).toHaveBeenCalledWith(['@vielzeug/prism']);
-    expect(log).toHaveBeenCalledWith('@vielzeug/orbit @vielzeug/prism');
-  });
-});
-
 describe('publish', () => {
   it('skips publishing when the version already exists on npm', async () => {
     versionExists.mockResolvedValue(true);
@@ -137,21 +132,16 @@ describe('publish', () => {
 
     expect(log).toHaveBeenCalledWith('⚠️  @vielzeug/ore@1.0.4 already on npm: skipping');
     expect(publishPackage).not.toHaveBeenCalled();
-    expect(tagAndRelease).not.toHaveBeenCalled();
+    expect(tagPackage).not.toHaveBeenCalled();
   });
 
-  it('publishes then tags and releases when the version is new', async () => {
+  it('publishes then tags when the version is new', async () => {
     versionExists.mockResolvedValue(false);
 
     await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore']);
 
     expect(publishPackage).toHaveBeenCalledWith('packages/ore', { dryRun: false, interactive: false, otp: undefined });
-    expect(tagAndRelease).toHaveBeenCalledWith({
-      dryRun: false,
-      folder: 'packages/ore',
-      package: '@vielzeug/ore',
-      version: '1.0.4',
-    });
+    expect(tagPackage).toHaveBeenCalledWith({ dryRun: false, package: '@vielzeug/ore', version: '1.0.4' });
   });
 
   it('forwards --otp to publishPackage (TOTP accounts)', async () => {
@@ -189,28 +179,21 @@ describe('publish', () => {
   });
 });
 
-describe('tag-release', () => {
+describe('tag', () => {
   it('throws when the version is not on npm yet', async () => {
     versionExists.mockResolvedValue(false);
 
-    await expect(main(['tag-release', '@vielzeug/ore', '1.0.4', 'packages/ore'])).rejects.toThrow(
-      '@vielzeug/ore@1.0.4 not found on npm',
-    );
-    expect(tagAndRelease).not.toHaveBeenCalled();
+    await expect(main(['tag', '@vielzeug/ore', '1.0.4'])).rejects.toThrow('@vielzeug/ore@1.0.4 not found on npm');
+    expect(tagPackage).not.toHaveBeenCalled();
   });
 
-  it('tags and releases without publishing when the version already exists on npm', async () => {
+  it('tags without publishing when the version already exists on npm', async () => {
     versionExists.mockResolvedValue(true);
 
-    await main(['tag-release', '@vielzeug/ore', '1.0.4', 'packages/ore']);
+    await main(['tag', '@vielzeug/ore', '1.0.4']);
 
     expect(publishPackage).not.toHaveBeenCalled();
-    expect(tagAndRelease).toHaveBeenCalledWith({
-      dryRun: false,
-      folder: 'packages/ore',
-      package: '@vielzeug/ore',
-      version: '1.0.4',
-    });
+    expect(tagPackage).toHaveBeenCalledWith({ dryRun: false, package: '@vielzeug/ore', version: '1.0.4' });
   });
 
   it('honors DRY_RUN', async () => {
@@ -219,13 +202,31 @@ describe('tag-release', () => {
     process.env.DRY_RUN = '1';
 
     try {
-      await main(['tag-release', '@vielzeug/ore', '1.0.4', 'packages/ore']);
-      expect(tagAndRelease).toHaveBeenCalledWith({
-        dryRun: true,
-        folder: 'packages/ore',
-        package: '@vielzeug/ore',
-        version: '1.0.4',
-      });
+      await main(['tag', '@vielzeug/ore', '1.0.4']);
+      expect(tagPackage).toHaveBeenCalledWith({ dryRun: true, package: '@vielzeug/ore', version: '1.0.4' });
+    } finally {
+      if (originalDryRun === undefined) delete process.env.DRY_RUN;
+      else process.env.DRY_RUN = originalDryRun;
+    }
+  });
+});
+
+describe('train-release', () => {
+  it('delegates to createTrainRelease, with an optional explicit train version', async () => {
+    await main(['train-release']);
+    expect(createTrainRelease).toHaveBeenCalledWith({ dryRun: false, version: undefined });
+
+    await main(['train-release', '26.10.5']);
+    expect(createTrainRelease).toHaveBeenLastCalledWith({ dryRun: false, version: '26.10.5' });
+  });
+
+  it('honors DRY_RUN', async () => {
+    const originalDryRun = process.env.DRY_RUN;
+    process.env.DRY_RUN = '1';
+
+    try {
+      await main(['train-release']);
+      expect(createTrainRelease).toHaveBeenCalledWith({ dryRun: true, version: undefined });
     } finally {
       if (originalDryRun === undefined) delete process.env.DRY_RUN;
       else process.env.DRY_RUN = originalDryRun;

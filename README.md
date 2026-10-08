@@ -1099,7 +1099,7 @@ Inter-package dependencies use `workspace:*` during development and are pinned t
 
 ### What's the versioning strategy?
 
-CalVer lockstep trains: every package carries the same `YY.MM.N` version: the release train it last shipped on. The number answers *when*, never *how big*; a breaking change rides the next train like any other and says so in that package's changelog and `migration.md`. Packages still release independently in the sense that matters: unchanged packages skip a train and keep their previous version, so a breaking change in `ward` never forces `ripple` to move. Pin exact versions and read each package's `migration.md` when moving between trains.
+CalVer lockstep trains: every package carries the same `YY.MM.N` version: the release train it last shipped on. The number answers *when*, never *how big*; a breaking change rides the next train like any other and says so in that package's changelog and `migration.md`. Every package rides every train: a train publishes the whole family at its number, so all `@vielzeug/*` versions always line up and installing `@latest` of any combination resolves to exactly one copy of each package. Pin exact versions (a caret range spans months under CalVer and can silently pull a breaking train) and read each changed package's `migration.md` when moving between trains.
 
 ### Where can I get help?
 

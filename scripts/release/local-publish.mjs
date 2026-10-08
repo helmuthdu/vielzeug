@@ -38,10 +38,9 @@
  *
  * This intentionally does **not** tag or create GitHub releases (same as `publish-missing` in
  * CI): a tag pushed from a local clone that's behind `main` is a worse failure mode than a
- * missing tag. After a successful run, create each tag from an up-to-date `main` yourself:
- *
- *   git tag @vielzeug/<pkg>@<version> && git push origin @vielzeug/<pkg>@<version>
- *   gh release create @vielzeug/<pkg>@<version> --generate-notes
+ * missing tag. After a successful run, dispatch the `release.yml` workflow from an up-to-date
+ * `main`: it tags every published-but-untagged version and creates the train's single
+ * aggregate GitHub release.
  */
 
 import { createInterface } from 'node:readline';

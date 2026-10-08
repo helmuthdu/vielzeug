@@ -8,15 +8,20 @@ name: Publish
 # `publish.yml` (not `_publish-one.yml`) as the Trusted Publisher on npmjs.com for every
 # @vielzeug/* package. See `.github/AGENTS.md`.
 #
-#   mode=single   apply the train + publish one package (needs "package"; it must have a pending change file)
-#   mode=all      apply the train + publish every package with a pending change file
+# Full-family lockstep: a train publishes EVERY publishable package at the train number
+# (apply-train.mjs), so a consumer upgrading to any train gets one consistent version set and
+# exact @vielzeug/* pins always resolve: never nested duplicate copies of one library.
+#
+#   mode=single   apply the train where only the named package has real changes (it must have
+#                 a pending change file); every other package rides alignment-only
+#   mode=all      apply the train + publish the full family (riders = every pending change file)
 #   mode=missing  publish any version already committed but absent from npm (no version bump)
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'single: one package (needs "package") · all: every package with a pending change file · missing: backfill versions already committed but absent from npm (no version bump)'
+        description: 'single: only the named package has real changes (needs "package") · all: full-family train from every pending change file · missing: backfill versions already committed but absent from npm (no version bump)'
         required: true
         type: choice
         options:
@@ -24,7 +29,7 @@ on:
           - all
           - missing
       package:
-        description: 'mode=single only: package name (e.g. @vielzeug/coins). Must have a pending change file.'
+        description: 'mode=single only: the one package with real changes (e.g. @vielzeug/coins). Must have a pending change file.'
         required: false
         type: string
       dry-run:
@@ -49,6 +54,7 @@ jobs:
       has-releases: ${{ steps.plan.outputs.has-releases }}
       matrix: ${{ steps.plan.outputs.matrix }}
       sha: ${{ steps.head.outputs.sha }}
+      train: ${{ steps.apply.outputs.train }}
     steps:
       - name: Require main
         if: github.ref != 'refs/heads/main'
@@ -78,8 +84,7 @@ jobs:
           root-install: 'false'
           rush-install: 'false'
 
-      - name: Resolve packages to release
-        id: packages
+      - name: Require pending change files
         run: |
           PENDING=$(node scripts/release/cli.mjs changed-packages)
           if [ "${{ inputs.mode }}" = "single" ]; then
@@ -92,17 +97,8 @@ jobs:
               echo "❌ No pending change file for ${{ inputs.package }}. Run scripts/rush-change.mjs, commit it, and re-trigger."
               exit 1
             fi
-            PACKAGES="${{ inputs.package }}"
-          else
-            PACKAGES="$PENDING"
           fi
-          # The publish set is the riders plus the @vielzeug/* deps they pin (the closure):
-          # apply-train changelogs the whole closure and the plan publishes it, so verify:packed
-          # must cover it too. Dependency edges are workspace:* and don't change with stamping,
-          # so the closure is the same before and after the apply step below.
-          CLOSURE=$(node scripts/release/cli.mjs closure $PACKAGES)
-          echo "list=$PACKAGES" >> "$GITHUB_OUTPUT"
-          echo "closure-csv=$(echo "$CLOSURE" | tr ' ' ',')" >> "$GITHUB_OUTPUT"
+          echo "Pending change files: $PENDING"
 
       - name: Configure Git
         run: |
@@ -120,18 +116,25 @@ jobs:
       - name: Require a clean tree after build
         run: git diff --quiet || { git status --short; echo "❌ Build modified tracked files."; exit 1; }
 
-      # Applies the CalVer train: every manifest stamped `YY.MM.N`, changelog entries for
-      # packages with pending change files *and* the @vielzeug/* deps they pin (alignment-only,
-      # so a rider's exact pin resolves on npm: see publish-closure.mjs), the riders' change
-      # files consumed, one commit. mode=single scopes the change-file consumption to the target
-      # package (its deps still get alignment entries): see scripts/release/apply-train.mjs. A
-      # dry run still stamps and commits locally (the publish matrix is planned from the stamped
-      # versions) but never pushes: the push step is gated on inputs.dry-run.
+      # Applies the CalVer train: every manifest stamped `YY.MM.N`, a changelog entry for every
+      # package (real comments for riders, alignment-only for the rest: see
+      # scripts/release/apply-train.mjs), the riders' change files consumed, one commit.
+      # mode=single scopes the change-file consumption to the named package; every other package
+      # still rides alignment-only. A dry run still stamps and commits locally (the publish
+      # matrix is planned from the stamped versions) but never pushes: the push step is gated on
+      # inputs.dry-run.
       - name: Apply release train
-        run: node scripts/release/cli.mjs apply ${{ inputs.mode == 'single' && inputs.package || '' }}
+        id: apply
+        run: |
+          OUT=$(node scripts/release/cli.mjs apply ${{ inputs.mode == 'single' && inputs.package || '' }})
+          echo "$OUT"
+          TRAIN=$(echo "$OUT" | grep -oE 'release train [0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d' ' -f3)
+          echo "train=$TRAIN" >> "$GITHUB_OUTPUT"
 
+      # The train publishes the full family, so every packed manifest is verified: the
+      # workspace:* → exact-pin rewrite touches every package's tarball each train.
       - name: Verify packed consumer contracts
-        run: pnpm verify:packed -- --package=${{ steps.packages.outputs.closure-csv }}
+        run: pnpm verify:packed -- --package=all
 
       - name: Push train commit
         if: ${{ !inputs.dry-run }}
@@ -172,21 +175,24 @@ jobs:
             packages/*/CHANGELOG.json
           retention-days: 1
 
-      # Drops packages already on npm *before* the matrix is built, so the Actions UI only
-      # shows real publish jobs.
+      # The full family minus whatever is already on npm (a re-run after a partial matrix),
+      # so the Actions UI only shows real publish jobs.
       - id: plan
         run: |
-          PLAN=$(node scripts/release/cli.mjs plan ${{ steps.packages.outputs.list }})
+          PLAN=$(node scripts/release/cli.mjs plan)
           echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
           [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 
   # One job per package: own log, own pass/fail. `fail-fast: false` because one package failing
   # is no reason to abort the others; E409 conflicts are retried inside npm-publish.mjs.
+  # `max-parallel` caps the burst of concurrent OIDC publishes a full-family train is (~40 at
+  # once), which npm rate-limits well below that.
   publish:
     needs: prepare
     if: needs.prepare.outputs.has-releases == 'true'
     strategy:
       fail-fast: false
+      max-parallel: 10
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     uses: ./.github/workflows/_publish-one.yml
     permissions:
@@ -198,6 +204,38 @@ jobs:
       package: ${{ matrix.package }}
       ref: ${{ needs.prepare.outputs.sha }}
       version: ${{ matrix.version }}
+
+  # The train's single GitHub release (git-tag.mjs): one entry on the release page per train,
+  # listing the packages that really changed. Per-package git tags happen inside each publish
+  # job; this job only tags the train number and opens the aggregate release. Runs on the
+  # train commit so the tag points at the pushed changelogs. Needs the publish matrix green
+  # (or empty): an aggregate release over a train where some package failed to publish would
+  # announce versions that don't exist on npm. Runs even when the matrix was skipped (a
+  # re-run after every package already published): createTrainRelease is idempotent on the
+  # train tag, so this closes the gap where a failed train-release job could never be retried.
+  train-release:
+    needs: [prepare, publish]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.publish.result != 'failure' && needs.publish.result != 'cancelled' && needs.prepare.outputs.train != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - name: Create the aggregate train release
+        run: node scripts/release/cli.mjs train-release ${{ needs.prepare.outputs.train }}
 
   publish-missing:
     if: inputs.mode == 'missing'
