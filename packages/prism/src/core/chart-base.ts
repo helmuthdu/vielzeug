@@ -10,6 +10,7 @@ export interface ChartBase {
   dimensions: ChartDimensions;
   dispose(): void;
   svg: SVGSVGElement;
+  syncChrome(): void;
 }
 
 export function createChartBase(
@@ -82,24 +83,49 @@ export function createChartBase(
     );
   }
 
+  const initialWidth = rect.width || 600;
+  const initialHeight = rect.height || 300;
+
   const dimensions: ChartDimensions = {
-    height: rect.height || 300,
+    height: initialHeight,
     margin,
-    width: rect.width || 600,
+    width: initialWidth,
+  };
+
+  // The dimensions the svg currently carries. A resize pass only re-renders when the
+  // effective drawing size moves away from these.
+  let appliedWidth = initialWidth;
+  let appliedHeight = initialHeight;
+  let containerHeight = initialHeight;
+
+  // Legend updates reserve their space synchronously, before a renderer builds scales.
+  const syncChrome = (): void => {
+    const height = Math.max(0, containerHeight - (options.chrome?.()?.offsetHeight ?? 0));
+
+    appliedHeight = height;
+    dimensions.height = height;
+    setAttributes(svg, { height, viewBox: `0 0 ${dimensions.width} ${height}` });
   };
 
   const stopObserving = observeResize(container, (width, height) => {
+    containerHeight = height;
     const chromeHeight = options.chrome?.()?.offsetHeight ?? 0;
     const svgHeight = Math.max(0, height - chromeHeight);
 
+    // A ResizeObserver fires once for the initial observation, at the size the chart was
+    // already built at. Re-rendering there is a no-op for layout but cancels a mount
+    // entrance still in flight (the renderers treat the redraw as an already-drawn
+    // update and snap to final), so a chart would never animate on first paint. Skip the
+    // pass unless the effective size — legend chrome included — has genuinely changed.
+    if (width === appliedWidth && svgHeight === appliedHeight) return;
+
+    appliedWidth = width;
+    appliedHeight = svgHeight;
     dimensions.height = svgHeight;
     dimensions.width = width;
     setAttributes(svg, { height: svgHeight, viewBox: `0 0 ${width} ${svgHeight}`, width });
     onResize?.();
   });
-
-  const initialWidth = rect.width || 600;
-  const initialHeight = rect.height || 300;
 
   setAttributes(svg, {
     height: initialHeight,
@@ -117,5 +143,6 @@ export function createChartBase(
       svg.remove();
     },
     svg,
+    syncChrome,
   };
 }

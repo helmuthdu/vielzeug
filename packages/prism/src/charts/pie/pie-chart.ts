@@ -88,6 +88,10 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
     },
     (ctx): ChartEventHandlers => {
       const { legend, svg, tooltip } = ctx;
+      const hasSlices = data.some((slice) => slice.value > 0);
+      legend?.update(
+        hasSlices ? data.map((slice, i) => ({ color: slice.color ?? seriesColor(i), name: slice.label ?? '' })) : [],
+      );
 
       // Append pie groups to SVG on first render (idempotent).
       if (!svg.contains(bgCircle)) {
@@ -218,7 +222,6 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
         signal: ctx.disposalSignal,
       });
 
-      legend?.update(currentArcs.map((arc) => ({ color: arc.color, name: arc.slice.label ?? '' })));
       tooltip?.hide();
 
       const total = currentArcs.reduce((sum, arc) => sum + Math.max(0, arc.slice.value), 0);

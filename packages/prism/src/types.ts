@@ -210,7 +210,7 @@ export interface LegendConfig {
 // ─── Animation Types ─────────────────────────────────────────────────────────
 
 export interface TransitionConfig {
-  /** Milliseconds per animated lane. Defaults to 300. */
+  /** Milliseconds per animated lane. Defaults to 300 (420 for a line entrance, 400 for radar). */
   duration?: number;
   easing?: EasingName | ((t: number) => number);
   /** `system` (the default) skips animation when the user prefers reduced motion. */

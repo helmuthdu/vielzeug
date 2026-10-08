@@ -37,6 +37,21 @@ describe('createPieChart', () => {
     chart.dispose();
   });
 
+  it('clears the legend when an update has no positive slice values', () => {
+    const chart = createPieChart(container, { data: DATA, legend: true, transition: false });
+
+    expect(container.querySelectorAll('.prism-legend-item')).toHaveLength(3);
+    chart.update([
+      { label: 'Empty', value: 0 },
+      { label: 'Negative', value: -2 },
+    ]);
+    expect(chart.el.querySelectorAll('.prism-pie-slice')).toHaveLength(0);
+    expect(container.querySelectorAll('.prism-legend-item')).toHaveLength(0);
+    chart.update(DATA);
+    expect(container.querySelectorAll('.prism-legend-item')).toHaveLength(3);
+    chart.dispose();
+  });
+
   it('variant: pie renders slices without inner radius', () => {
     const chart = createPieChart(container, { data: DATA, transition: { duration: 0 }, variant: 'pie' });
     const slice = chart.el.querySelector('.prism-pie-slice') as SVGPathElement;

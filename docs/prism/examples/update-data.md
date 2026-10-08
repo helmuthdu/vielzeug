@@ -69,5 +69,5 @@ Keep state in the application and pass the next complete data value to `update()
 ### Related
 
 - [Create a line chart](./line-chart.md)
-- [ChartHandle API](../api.md#core-types)
+- [ChartHandle API](../api.md#chart-handle)
 - [Framework integration](../usage.md#framework-integration)

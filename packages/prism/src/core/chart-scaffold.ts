@@ -69,6 +69,8 @@ export interface ChartEventHandlers {
   onMouseMove?: (event: MouseEvent) => void;
 }
 
+type RenderReason = 'mount' | 'resize' | 'update';
+
 function runScaffold<TCtx, TData>(
   container: HTMLElement,
   config: BaseChartConfig,
@@ -83,38 +85,37 @@ function runScaffold<TCtx, TData>(
     disposalSignal: AbortSignal,
     announcer: Announcer,
   ) => TCtx,
-  renderFn: (ctx: TCtx) => ChartEventHandlers | undefined,
+  renderFn: (ctx: TCtx, reason: RenderReason) => ChartEventHandlers | undefined,
   updateData: (data: TData) => void,
 ): ChartHandle<TData> {
-  let render = () => {};
+  let render = (_reason: RenderReason) => {};
   const tappers = createTappers<PrismEvent>();
-  // The legend is created after the base (bottom legends append after the svg), but the
-  // chrome accessor runs only from the resize observer's async callback — by which time
-  // the legend exists — so the deferred reference is safe.
+  // Bottom legends follow the SVG. Populate them before measuring chart geometry,
+  // so the first observer notification does not interrupt the entrance.
   let legend: LegendState | null = null;
   const base = createChartBase(
     container,
     { a11y: config.a11y, chrome: () => legend?.el ?? null, margin: config.margin },
     () => {
       tappers.emit({ height: base.dimensions.height, type: 'resize', width: base.dimensions.width });
-      render();
+      render('resize');
     },
   );
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
-  legend = config.legend ? createLegend(container, config.legend) : null;
+  legend = config.legend ? createLegend(container, config.legend, () => base.syncChrome()) : null;
   const ac = new AbortController();
   const ctx = buildCtx(base, tooltip, legend, ac.signal, createAnnouncer(base.svg, 'prism-live'));
 
   let disposed = false;
   const events = makeEventManager(base.svg);
 
-  render = () => {
+  render = (reason) => {
     if (disposed) return;
-    events.attach(renderFn(ctx));
+    events.attach(renderFn(ctx, reason));
   };
 
   try {
-    render();
+    render('mount');
   } catch (error) {
     disposed = true;
     ac.abort();
@@ -154,7 +155,7 @@ function runScaffold<TCtx, TData>(
     update(data) {
       if (disposed) throw new PrismRenderError('Cannot update a disposed chart.');
       updateData(data);
-      render();
+      render('update');
     },
 
     [Symbol.dispose]() {
@@ -209,7 +210,7 @@ function makeEventManager(svg: SVGSVGElement): {
 export function createChartScaffold<TData>(
   container: HTMLElement,
   config: BaseChartConfig,
-  renderFn: (ctx: ScaffoldContext) => ChartEventHandlers | undefined,
+  renderFn: (ctx: ScaffoldContext, reason: RenderReason) => ChartEventHandlers | undefined,
   updateData: (data: TData) => void,
 ): ChartHandle<TData> {
   return runScaffold(
@@ -255,7 +256,7 @@ export function createChartScaffold<TData>(
 export function createRadialScaffold<TData>(
   container: HTMLElement,
   config: BaseChartConfig,
-  renderFn: (ctx: RadialScaffoldContext) => ChartEventHandlers | undefined,
+  renderFn: (ctx: RadialScaffoldContext, reason: RenderReason) => ChartEventHandlers | undefined,
   updateData: (data: TData) => void,
 ): ChartHandle<TData> {
   return runScaffold(

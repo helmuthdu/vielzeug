@@ -64,38 +64,29 @@ Override `--prism-*` custom properties on a container class. They inherit into t
 
 </ComponentPreview>
 
-#### With a JS palette (MUI, Chakra, Backstage)
+#### With a JavaScript palette
 
-When the palette lives in a JS object, write the tokens onto the chart container with `setTheme({ … }, { scope })` instead of a CSS class:
+When a palette lives in a JavaScript object, write supported tokens onto the chart container with `setTheme({ ... }, { scope })`:
 
-```tsx
-import { useEffect, useRef } from 'react';
-import { useTheme } from '@mui/material/styles';
-import { createLineChart, resetTheme, setTheme, type LineSeriesConfig } from '@vielzeug/prism';
+```ts
+import { createLineChart, resetTheme, setTheme } from '@vielzeug/prism';
 import '@vielzeug/prism/theme.css';
 
-function PaletteChart({ series }: { series: LineSeriesConfig[] }) {
-  const theme = useTheme();
-  const scope = useRef<HTMLDivElement>(null);
+const scope = document.createElement('div');
+scope.style.cssText = 'width:640px;height:320px';
+document.body.append(scope);
 
-  useEffect(() => {
-    if (!scope.current) return;
+setTheme({ axisColor: '#64748b', textColor: '#172033' }, { scope });
+const chart = createLineChart(scope, {
+  a11y: { ariaLabel: 'Active users by month' },
+  series: [{
+    data: [{ key: 1, value: 320 }, { key: 2, value: 410 }, { key: 3, value: 380 }],
+    name: 'Active users',
+  }],
+});
 
-    setTheme(
-      { axisColor: theme.palette.divider, textColor: theme.palette.text.primary },
-      { scope: scope.current },
-    );
-
-    const chart = createLineChart(scope.current, { series, tooltip: true });
-
-    return () => {
-      chart.dispose();
-      resetTheme({ scope: scope.current! });
-    };
-  }, [series, theme]);
-
-  return <div ref={scope} style={{ height: 300 }} />;
-}
+chart.dispose();
+resetTheme({ scope });
 ```
 
 For a dark/light toggle without a stylesheet, set `data-prism-theme="dark"` on the container (or any ancestor): the shipped theme ships the same dark token block for `[data-prism-theme='dark']` as for `html.dark`.

@@ -68,6 +68,6 @@ Return a DOM node from `tooltip.render`. Assign dynamic values with `textContent
 
 ### Related
 
-- [TooltipConfig API](../api.md#axis-interaction-and-transition-configurations)
+- [Tooltip and interaction types](../api.md#axis-and-interaction-types)
 - [Create a line chart](./line-chart.md)
 - [Orbit](/orbit/): tooltip positioning primitives used by Prism

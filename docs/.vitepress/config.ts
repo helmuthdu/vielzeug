@@ -1396,6 +1396,7 @@ export default defineConfig({
           items: [
             { link: '/prism/examples/line-chart', text: 'Line Chart' },
             { link: '/prism/examples/time-series', text: 'Time Series' },
+            { link: '/prism/examples/scatter-chart', text: 'Scatter Chart' },
             { link: '/prism/examples/bar-chart', text: 'Bar Chart' },
             { link: '/prism/examples/compact-charts', text: 'Compact Charts' },
             { link: '/prism/examples/radar-chart', text: 'Radar Chart' },

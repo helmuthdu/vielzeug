@@ -21,8 +21,9 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
   return createChartScaffold(
     container,
     config,
-    (ctx) => {
+    (ctx, reason) => {
       const { groups, legend, tooltip } = ctx;
+      legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       const dims = ctx.dimensions;
       const hasRight = seriesList.some((series) => series.yAxis === 'right');
       const hasLeftData = seriesList.some((series) => series.yAxis !== 'right' && series.data.length > 0);
@@ -138,7 +139,7 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
         allPoints.push(points);
 
         renderLine(group, points, {
-          baselineY: seriesScale.map(0),
+          bounds: { height: area.height, width: area.width },
           color: seriesColor(i, series.color),
           curve: series.curve ?? 'linear',
           disposalSignal: ctx.disposalSignal,
@@ -146,11 +147,10 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
           pointRadius: series.pointRadius ?? 3,
           showPoints: series.showPoints ?? false,
           strokeWidth: series.strokeWidth,
-          transition: config.transition,
+          transition: reason === 'resize' ? false : config.transition,
         });
       }
 
-      legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       tooltip?.hide();
       markers = ensureMarkerGroup(ctx.chartArea, markers);
 

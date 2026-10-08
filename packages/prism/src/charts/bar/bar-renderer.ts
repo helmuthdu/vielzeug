@@ -1,4 +1,5 @@
 import { resolveMotion } from '../../animation/motion';
+import { type GrowRevealLane, playGrowReveal } from '../../animation/reveal';
 import type { AnimationTarget } from '../../animation/transition';
 import { animate } from '../../animation/transition';
 import { createSvgElement, setAttributes } from '../../svg/element';
@@ -17,12 +18,20 @@ export interface BarRenderOptions {
   transition?: TransitionOption;
 }
 
-/** Per-bar entrance delay; {@link MAX_STAGGER_TOTAL} bounds how long the last bar waits. */
-const DEFAULT_BAR_STAGGER = 20;
+/** Preserve the stagger for bars inserted by a data update, not the initial entrance. */
+const DEFAULT_NEW_BAR_STAGGER = 20;
 /** Upper bound on the total staggered delay a bar chart may add, whatever the per-bar value. */
 const MAX_STAGGER_TOTAL = 400;
 
 const activeBarAnimations = new WeakMap<SVGGElement, () => void>();
+
+/**
+ * The group's bars in data order. Queried by class rather than by `children` index
+ * because a mount reveal injects a `<defs>` into the same group.
+ */
+function barsOf(parent: SVGGElement): SVGRectElement[] {
+  return [...parent.children].filter((child): child is SVGRectElement => child.classList.contains('prism-bar'));
+}
 
 export function renderBars(
   parent: SVGGElement,
@@ -32,20 +41,25 @@ export function renderBars(
   baselineY: number,
   options: BarRenderOptions,
 ): void {
-  while (parent.children.length > data.length) {
-    const last = parent.lastElementChild;
+  activeBarAnimations.get(parent)?.();
+  activeBarAnimations.delete(parent);
+  const existingBars = barsOf(parent);
 
-    if (last) parent.removeChild(last);
-  }
+  for (const extra of existingBars.slice(data.length)) extra.remove();
 
   const bandwidth = xScale.bandwidth();
   const barBand = options.stacked ? bandwidth : bandwidth / options.seriesCount;
+  const bandSize = Math.max(0, barBand - 1);
   const offset = options.stacked ? 0 : barBand * options.seriesIndex;
   const horizontal = options.horizontal ?? false;
+  // A group with no bars yet is mounting: every bar enters together through a grow
+  // reveal. A group that already has bars updates in place (with per-bar attr tweens).
+  const isMount = existingBars.length === 0;
 
   const enterTargets: AnimationTarget[] = [];
   const updateTargets: AnimationTarget[] = [];
-  const motion = resolveMotion(options.transition, { defaultStagger: DEFAULT_BAR_STAGGER });
+  const lanes: GrowRevealLane[] = [];
+  const motion = resolveMotion(options.transition, { defaultStagger: isMount ? 0 : DEFAULT_NEW_BAR_STAGGER });
   const animateBars = motion.duration > 0;
   // A long category axis must not stretch the entrance past ~400 ms of added delay.
   const enterStagger = Math.min(motion.stagger, MAX_STAGGER_TOTAL / Math.max(1, data.length));
@@ -56,7 +70,7 @@ export function renderBars(
     const barBaselineY = options.baselineYs ? options.baselineYs[i] : baselineY;
     const valuePx = yScale.map(d.y);
 
-    let rect = parent.children[i] as SVGRectElement | undefined;
+    let rect = existingBars[i];
 
     const isNew = !rect;
 
@@ -84,13 +98,20 @@ export function renderBars(
 
       setAttributes(rect, {
         fill: options.color,
-        height: Math.max(0, barBand - 1),
+        height: bandSize,
         rx: options.borderRadius,
         ry: options.borderRadius,
         y: bandPos,
       });
 
-      if (animateBars) {
+      if (isMount) {
+        // Final geometry now; the grow reveal below uncovers it lane by lane.
+        setAttributes(rect, { width: finalWidth, x: finalX });
+
+        if (animateBars) {
+          lanes.push({ anchor: barBaselineY, height: bandSize, width: finalWidth, x: finalX, y: bandPos });
+        }
+      } else if (animateBars) {
         if (isNew) {
           setAttributes(rect, { width: 0, x: barBaselineY });
           enterTargets.push({
@@ -118,11 +139,19 @@ export function renderBars(
         fill: options.color,
         rx: options.borderRadius,
         ry: options.borderRadius,
-        width: Math.max(0, barBand - 1),
+        width: bandSize,
         x: bandPos,
       });
 
-      if (animateBars) {
+      if (isMount) {
+        // Final geometry now; the grow reveal below uncovers it lane by lane, so a
+        // rounded bar never renders as a corner-clamped 1-3 px sliver mid-grow.
+        setAttributes(rect, { height: finalHeight, y: finalY });
+
+        if (animateBars) {
+          lanes.push({ anchor: barBaselineY, height: finalHeight, width: bandSize, x: bandPos, y: finalY });
+        }
+      } else if (animateBars) {
         if (isNew) {
           setAttributes(rect, { height: 0, y: barBaselineY });
           enterTargets.push({
@@ -145,9 +174,17 @@ export function renderBars(
   }
 
   if (animateBars) {
-    activeBarAnimations.get(parent)?.();
-
     const cancels: (() => void)[] = [];
+
+    if (isMount && lanes.length > 0) {
+      cancels.push(
+        playGrowReveal(parent, lanes, () => {}, motion, {
+          axis: horizontal ? 'x' : 'y',
+          signal: options.disposalSignal,
+          stagger: enterStagger,
+        }),
+      );
+    }
 
     if (enterTargets.length > 0) {
       cancels.push(animate(enterTargets, { ...motion, stagger: enterStagger }, undefined, options.disposalSignal));

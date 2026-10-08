@@ -1,20 +1,24 @@
 ---
 title: 'Prism: Usage Guide'
-description: Concepts, update patterns, and best practices for responsive SVG charts with @vielzeug/prism.
+description: Create responsive SVG charts, update their data, handle interaction, and theme @vielzeug/prism.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Every chart needs a container element with defined dimensions and the theme CSS:
+Create a host element with non-zero dimensions, then pass it to a chart factory. This example creates the host in JavaScript so the snippet can run as written.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
 import '@vielzeug/prism/theme.css';
 
-const container = document.querySelector<HTMLElement>('#chart')!;
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
 const chart = createLineChart(container, {
+  a11y: { ariaLabel: 'Revenue by month' },
   series: [
     {
       name: 'Revenue',
@@ -24,960 +28,499 @@ const chart = createLineChart(container, {
       ],
     },
   ],
+  tooltip: true,
 });
 
 chart.dispose();
 ```
 
-```html
-<div id="chart" style="width: 100%; height: 300px;"></div>
-```
-
-Prism observes the container size via `ResizeObserver` and re-renders automatically on resize. If the container has zero dimensions at mount time, a `warn` is emitted in development: ensure the container has layout before calling the chart factory.
+Each factory appends an SVG to its container and returns a `ChartHandle`. Prism observes the container with `ResizeObserver`; if it has zero dimensions on creation, Prism uses a temporary `600 × 300` size and warns in development. Give the host its layout before creating the chart.
 
 ## Updating Data
 
-Chart factories render synchronously and return a typed handle. Call `update()` with the same data shape used by the factory when application state changes.
+Keep application state outside Prism and pass the next complete data value to `update()`. The update method replaces chart data synchronously; the default transition may animate the resulting SVG.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
 
-const chart = createLineChart(container, {
-  series: [{ data: [{ key: 1, value: 10 }], name: 'Live' }],
-});
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
 
-chart.update([
-  {
-    data: [
-      { key: 1, value: 10 },
-      { key: 2, value: 20 },
-    ],
-    name: 'Live',
-  },
-]);
+let series = [{ data: [{ key: 1, value: 10 }], name: 'Live' }];
+const chart = createLineChart(container, { series });
+
+series = [{ data: [{ key: 1, value: 10 }, { key: 2, value: 20 }], name: 'Live' }];
+chart.update(series);
+chart.dispose();
 ```
 
-`update()` is state-library neutral. Call it from a framework effect, store subscription, event handler, or request callback. It throws after the chart is disposed instead of silently retaining detached state.
+`update()` accepts the type shown by that factory's handle: a complete series array for line, area, scatter, bar, and radar charts; a slice array for pie charts; and a number or stack-segment array for sparklines. Chart options such as axes, variant, callbacks, and accessibility are set at creation. For example, radar axes and a pie chart's variant do not change through `update()`.
 
 ## Line Charts
 
+Line and area series use number or `Date` keys. All series in one chart must use the same key kind. Use `curve` to choose interpolation, and enable markers with `showPoints`.
+
 ```ts
 import { createLineChart } from '@vielzeug/prism';
 
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
 const chart = createLineChart(container, {
+  a11y: { ariaLabel: 'Revenue and expenses' },
   series: [
     {
+      curve: 'monotone',
+      data: [{ key: 1, value: 100 }, { key: 2, value: 150 }, { key: 3, value: 130 }],
       name: 'Revenue',
-      data: [
-        { key: 1, value: 100 },
-        { key: 2, value: 150 },
-        { key: 3, value: 130 },
-      ],
-      color: '#3b82f6',
-      curve: 'monotone', // 'linear' | 'monotone' | 'step'
-      strokeWidth: 2,
       showPoints: true,
-      pointRadius: 4,
+    },
+    {
+      color: '#c2410c',
+      data: [{ key: 1, value: 70 }, { key: 2, value: 95 }, { key: 3, value: 110 }],
+      name: 'Expenses',
     },
   ],
-  xAxis: { position: 'bottom' },
-  yAxis: { position: 'left', grid: true },
   tooltip: true,
-  crosshair: true,
+  xAxis: { label: 'Month' },
+  yAxis: { grid: true, label: 'Dollars' },
 });
-```
 
-### Multiple Series
-
-```ts
-const chart = createLineChart(container, {
-  series: [
-    { name: 'Revenue', data: revenueData, color: '#3b82f6' },
-    { name: 'Expenses', data: expenseData, color: '#ef4444' },
-  ],
-  xAxis: { position: 'bottom' },
-  yAxis: { position: 'left', grid: true },
-});
+chart.dispose();
 ```
 
 ### Independent Value Axes
 
-Assign a line series to `yAxis: 'right'` when its values need a different range. Both axes share the same X scale, while tooltips retain the original values.
+Assign a line series to the right axis when it uses a different value range. Both axes share the x-scale; `rightYAxis` configures the second axis and cannot configure its position or grid.
 
 ```ts
+import { createLineChart } from '@vielzeug/prism';
+
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
 const chart = createLineChart(container, {
-  series: [
-    { name: 'Health', data: [{ key: 0, value: 30 }, { key: 1, value: 20 }] },
-    { name: 'Damage', yAxis: 'right', data: [{ key: 0, value: 0 }, { key: 1, value: 300 }] },
-  ],
-  yAxis: { label: 'Health' },
+  a11y: { ariaLabel: 'Health and damage by level' },
   rightYAxis: { label: 'Damage' },
-  tooltip: true,
+  series: [
+    { data: [{ key: 1, value: 30 }, { key: 2, value: 20 }], name: 'Health' },
+    { data: [{ key: 1, value: 100 }, { key: 2, value: 300 }], name: 'Damage', yAxis: 'right' },
+  ],
+  yAxis: { grid: true, label: 'Health' },
 });
+
+chart.dispose();
 ```
 
-The primary axis is on the left when right-axis series are present. Grid configuration belongs to the primary axis. Dual-axis curve crossings do not imply equal numeric values. Preserve each marker's axis assignment when calling `update()`.
+When any series uses the right axis, the primary value axis is placed on the left. Grid lines belong to the primary `yAxis`. The independent numeric scales mean that curve crossings do not imply equal values.
 
-### Time-based X Axis
+### Time-Based X Axis
 
-When data points use `Date` objects for `key`, Prism automatically applies a time scale. The domain spans exactly the first to the last date, so the series fills the plot width:
+Use `Date` values for every key when plotting time. Line and area charts use a time scale whose domain fits the data instead of rounding outward to tick boundaries.
 
 ```ts
+import { createLineChart } from '@vielzeug/prism';
+
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
+const formatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const chart = createLineChart(container, {
-  series: [
-    {
-      name: 'Signups',
-      data: [
-        { key: new Date('2024-01-01'), value: 50 },
-        { key: new Date('2024-02-01'), value: 80 },
-        { key: new Date('2024-03-01'), value: 120 },
-      ],
-    },
-  ],
-  xAxis: { position: 'bottom', tickFormat: (d) => (d as Date).toLocaleDateString() },
-  yAxis: { position: 'left' },
+  a11y: { ariaLabel: 'Signups over time' },
+  series: [{
+    data: [
+      { key: new Date('2026-09-01'), value: 50 },
+      { key: new Date('2026-09-08'), value: 80 },
+      { key: new Date('2026-09-15'), value: 120 },
+    ],
+    name: 'Signups',
+  }],
+  xAxis: { tickFormat: (value) => value instanceof Date ? formatter.format(value) : String(value) },
 });
+
+chart.dispose();
 ```
+
+`tickFormat` formats axis labels only. Tooltip content and accessibility announcements use the underlying keys and values.
 
 ## Bar Charts
+
+Bar chart keys are string categories. The default `grouped` variant puts series side by side; the horizontal variants put categories on the y-axis and values on the x-axis.
 
 ```ts
 import { createBarChart } from '@vielzeug/prism';
 
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
 const chart = createBarChart(container, {
-  series: [
-    {
-      name: 'Sales',
-      data: [
-        { key: 'Q1', value: 200 },
-        { key: 'Q2', value: 350 },
-        { key: 'Q3', value: 280 },
-        { key: 'Q4', value: 400 },
-      ],
-      borderRadius: 4,
-    },
-  ],
-  xAxis: { position: 'bottom' },
-  yAxis: { position: 'left', grid: true },
+  a11y: { ariaLabel: 'Sales by quarter' },
+  series: [{
+    data: [{ key: 'Q1', value: 200 }, { key: 'Q2', value: 350 }, { key: 'Q3', value: 280 }],
+    name: 'Sales',
+  }],
   tooltip: true,
 });
+
+chart.dispose();
 ```
 
-### Variants
+Choose `grouped`, `stacked`, `grouped-horizontal`, or `stacked-horizontal` in `variant`. Negative values in a stacked chart are clamped to zero and produce a development warning. Bars in stacked variants remain square; `borderRadius` applies to grouped bars.
 
-Select the bar layout with `variant`:
-
-| Value                  | Layout                     |
-| ---------------------- | -------------------------- |
-| `'grouped'`            | Vertical grouped (default) |
-| `'stacked'`            | Vertical stacked           |
-| `'grouped-horizontal'` | Horizontal grouped         |
-| `'stacked-horizontal'` | Horizontal stacked         |
-
-```ts
-const chart = createBarChart(container, {
-  variant: 'stacked',
-  series: [
-    { name: 'Mobile', data: mobileData, color: '#3b82f6', borderRadius: 0 },
-    { name: 'Desktop', data: desktopData, color: '#10b981', borderRadius: 0 },
-  ],
-  xAxis: { position: 'bottom' },
-  yAxis: { position: 'left', grid: true },
-  tooltip: true,
-  legend: true,
-});
-```
-
-For horizontal layouts, categories appear on the Y axis and values on the X axis:
-
-```ts
-const chart = createBarChart(container, {
-  variant: 'grouped-horizontal',
-  series: [{ name: 'Revenue', data, color: '#3b82f6' }],
-  xAxis: { position: 'bottom', grid: true },
-  yAxis: { position: 'left' },
-});
-```
-
-### Grouped Bars
-
-Multiple series with `variant: 'grouped'` (default) render side-by-side:
-
-```ts
-const chart = createBarChart(container, {
-  series: [
-    { name: '2023', data: lastYearData, color: '#94a3b8' },
-    { name: '2024', data: thisYearData, color: '#3b82f6' },
-  ],
-});
-```
+Axes render by default, with grid lines on the value axis. For horizontal variants, `xAxis` is the value axis and `yAxis` is the category axis. Configure `grid` on the value axis.
 
 ## Area Charts
 
-Area fills use a vertical gradient that fades toward the baseline. Set `fill: 'solid'` for a flat fill:
+Area series use a gradient fill by default. Set `fill: 'solid'` for a flat fill, or set `fillOpacity` to override the theme opacity for that series.
 
 ```ts
 import { createAreaChart } from '@vielzeug/prism';
 
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
 const chart = createAreaChart(container, {
-  series: [
-    {
-      name: 'Users',
-      data: userData,
-      curve: 'monotone',
-      fill: 'gradient', // 'gradient' (default) | 'solid'
-      showLine: true,
-    },
-  ],
-  xAxis: { position: 'bottom' },
-  yAxis: { position: 'left', grid: true },
+  a11y: { ariaLabel: 'Visitors over time' },
   crosshair: true,
+  series: [{
+    curve: 'monotone',
+    data: [{ key: 1, value: 12 }, { key: 2, value: 18 }, { key: 3, value: 15 }],
+    fill: 'solid',
+    fillOpacity: 0.2,
+    name: 'Visitors',
+    showLine: true,
+  }],
 });
+
+chart.dispose();
 ```
 
-`fillOpacity` overrides the theme opacity for one series.
+## Scatter Charts
 
-## Forecast / emphasis styling
+Scatter charts treat every datum as an independent point: `key` is the numeric x-value and `value` is the y-value. The scales fit the observed values rather than forcing the y-domain to include zero. Set `pointRadius` on a series to change its marker size.
 
-A single series often mixes points that should look different — actuals plus a
-forecast tail, or a run that crossed a budget. Rather than split the series,
-carry `dash` and `opacity` on the individual datums. They are styling-only:
-tooltips, hover, keyboard, and screen-reader behavior never change.
+```ts
+import { createScatterChart } from '@vielzeug/prism';
 
-For a forecast tail, map a parallel `types` array onto the datums:
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
+const chart = createScatterChart(container, {
+  a11y: { ariaLabel: 'Height against weight' },
+  series: [{
+    data: [{ key: 160, value: 55 }, { key: 175, value: 70 }, { key: 190, value: 88 }],
+    name: 'Cohort A',
+    pointRadius: 5,
+  }],
+  tooltip: true,
+});
+
+chart.dispose();
+```
+
+Scatter callbacks identify one nearest point and do not provide cross-series `values`, because points do not share a category key.
+
+## Forecast and Emphasis Styling
+
+Add `dash` or `opacity` to individual `Datum` objects when one part of a series needs distinct styling. These fields do not change interaction, tooltip, or accessibility behavior.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
 
-const types = ['REAL', 'REAL', 'FORECAST', 'FORECAST'];
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
 
+const values = [10, 13, 15, 18];
 const chart = createLineChart(container, {
-  series: [
-    {
-      name: 'Cost',
-      data: values.map((value, i) => ({
-        key: months[i],
-        value,
-        ...(types[i] === 'FORECAST' ? { dash: '5 5', opacity: 0.4 } : {}),
-      })),
-    },
-  ],
+  series: [{
+    data: values.map((value, index) => ({
+      key: index + 1,
+      value,
+      ...(index >= 2 ? { dash: '5 5', opacity: 0.4 } : {}),
+    })),
+    name: 'Forecast',
+    showPoints: true,
+  }],
 });
+
+chart.dispose();
 ```
 
-On a line chart, a datum's `dash` styles the segment from that point to the
-next, so the forecast run renders dashed while the actuals stay solid; its
-`opacity` fades that segment and the point marker. The last datum's `dash` has
-no segment to paint and is ignored. On a bar chart, both fields apply to that
-datum's own bar — a `dash` adds a 1px series-color stroke so the dash reads on
-the filled rect. On an area chart they style the top line only; the fill keeps
-its series-level treatment.
+For line and area charts, each datum's `dash` styles the segment from that datum to the next; the final datum has no outgoing segment. Line opacity also fades the datum's marker. Area styling affects the top line, not the fill. Bar opacity and dashes apply to the individual bar; scatter opacity applies to its point and scatter dashes are ignored. Pie, radar, and sparkline ignore these two fields.
 
-The same mapping fades bars:
+## Pie, Donut, and Semi Charts
 
-```ts
-import { createBarChart } from '@vielzeug/prism';
-
-const chart = createBarChart(container, {
-  series: [
-    {
-      name: 'Cost',
-      data: values.map((value, i) => ({
-        key: months[i],
-        value,
-        ...(types[i] === 'FORECAST' ? { dash: '5 5', opacity: 0.4 } : {}),
-      })),
-    },
-  ],
-});
-```
-
-Because the fields live on the data, a normal `update(newSeries)` re-applies
-them; removing the fields on the next update clears the styling. A series with
-no `dash`/`opacity` anywhere renders exactly as it did before these fields
-existed.
-
-## Pie, Donut, and Semi-circle Charts
-
-All three variants use `createPieChart` with the `variant` field:
+Use `createPieChart()` for all three shapes. `variant` is fixed when the chart is created; `update()` replaces the slice data.
 
 ```ts
 import { createPieChart } from '@vielzeug/prism';
 
+const container = document.createElement('div');
+container.style.cssText = 'width:320px;height:240px';
+document.body.append(container);
+
 const chart = createPieChart(container, {
+  a11y: { ariaLabel: 'Orders by channel' },
   data: [
-    { label: 'Direct', value: 42, color: '#3b82f6' },
-    { label: 'Organic', value: 28, color: '#10b981' },
-    { label: 'Referral', value: 18, color: '#f59e0b' },
-    { label: 'Social', value: 12, color: '#8b5cf6' },
+    { label: 'Direct', value: 42 },
+    { label: 'Organic', value: 28 },
+    { label: 'Referral', value: 18 },
+    { label: 'Social', value: 12 },
   ],
-  variant: 'donut', // 'pie' | 'donut' | 'semi'
+  legend: true,
   tooltip: true,
-  transition: { duration: 400, easing: 'ease-out' },
-});
-```
-
-### Variants
-
-| Value     | Shape                                                   |
-| --------- | ------------------------------------------------------- |
-| `'pie'`   | Full circle, no hole                                    |
-| `'donut'` | Full circle with inner hole (~55% of outer by default)  |
-| `'semi'`  | Top-half semicircle with inner hole: useful for gauges |
-
-### Inner Radius
-
-`innerRadius` overrides the automatic calculation:
-
-```ts
-createPieChart(container, {
-  data,
-  variant: 'donut',
-  innerRadius: 60, // explicit pixels
-});
-```
-
-### Slice Labels
-
-Set `label` on each `PieSliceConfig` to render text at the arc centroid. A label that does not fit inside its slice is not drawn; the value stays available through the tooltip, legend, and keyboard announcements:
-
-```ts
-{ value: 42, label: 'Direct' }
-```
-
-Style labels via CSS:
-
-```css
-:root {
-  --prism-pie-label-color: #fff;
-  --prism-pie-label-size: 11px;
-}
-```
-
-### Updating Data
-
-```ts
-const chart = createPieChart(container, {
-  data: [
-    { label: 'A', value: 40 },
-    { label: 'B', value: 60 },
-  ],
   variant: 'donut',
 });
 
-chart.update([
-  { label: 'A', value: 55 },
-  { label: 'B', value: 45 },
-]);
+chart.dispose();
 ```
 
-### Event Hooks
-
-```ts
-createPieChart(container, {
-  data,
-  onHover: (event) => {
-    // event is PieEvent | null (null on mouseleave)
-    if (event) console.log(event.index, event.slice.label, event.slice.value);
-  },
-  onClick: (event) => {
-    console.log('clicked', event.index, event.slice.label);
-  },
-});
-```
-
-`PieEvent` provides `index`, the hovered/clicked `slice` (`PieSliceConfig`), and the `originalEvent` (`MouseEvent` or `KeyboardEvent`).
+The `pie` default has no inner radius. `donut` and `semi` default to an inner radius of 55% of the outer radius. `innerRadius` overrides that size in pixels. Slice labels are omitted when they do not fit; keep a tooltip or legend when small slices need identifying.
 
 ## Radar Charts
 
-`createRadarChart` compares several values on one shape, such as a hero's stats. Each series supplies values keyed by `axis.key`:
+Define at least three axes when creating a radar chart. Series data uses string keys that match `RadarAxisConfig.key`; `update()` replaces series but keeps axes and other configuration fixed.
 
 ```ts
 import { createRadarChart } from '@vielzeug/prism';
 
-const axes = [
-  { key: 'str', label: 'Strength' },
-  { key: 'agi', label: 'Agility' },
-  { key: 'int', label: 'Intellect' },
-  { key: 'end', label: 'Endurance' },
-  { key: 'spd', label: 'Speed', max: 5 },
-];
+const container = document.createElement('div');
+container.style.cssText = 'width:400px;height:320px';
+document.body.append(container);
 
+const axes = [
+  { key: 'strength', label: 'Strength' },
+  { key: 'agility', label: 'Agility' },
+  { key: 'endurance', label: 'Endurance' },
+];
 const chart = createRadarChart(container, {
   a11y: { ariaLabel: 'Hero stats' },
   axes,
   domain: [0, 10],
-  fill: 'gradient',
-  showValues: true,
-  series: [
-    {
-      name: 'Adam',
-      data: [
-        { key: 'str', value: 8 },
-        { key: 'agi', value: 6 },
-        { key: 'int', value: 4 },
-        { key: 'end', value: 9 },
-        { key: 'spd', value: 3 },
-      ],
-    },
-  ],
+  series: [{
+    data: [{ key: 'strength', value: 8 }, { key: 'agility', value: 6 }, { key: 'endurance', value: 9 }],
+    name: 'Adam',
+  }],
+  tooltip: true,
 });
+
+chart.dispose();
 ```
 
-### Scales
-
-Every axis shares `domain` (or a nice range around the data when omitted). Give an axis its own `min`/`max` when its stat uses a different range: above, Speed runs 0 to 5 while the rest run 0 to 10, so each still fills the chart.
-
-### Appearance
-
-| Option | Values | Use it for |
-| --- | --- | --- |
-| `fill` | `'solid'`, `'gradient'`, `'none'` | `gradient` for a single hero; `solid` or `none` when overlaying several |
-| `curve` | `'linear'`, `'rounded'` | Rounded reads softer; linear keeps exact vertices |
-| `grid.shape` | `'polygon'`, `'circle'` | Polygon matches the axes; circle suits many axes |
-| `grid.levels` / `grid.bands` | number / boolean | Ring count and alternate shading |
-| `grid.labels` | boolean | Level values; drawn only when every axis shares one domain |
-| `showValues` | boolean | Value beside each vertex, formatted by `axis.format` |
-
-### Comparing Series
-
-Pass several series with `legend: true`. Hovering one shape dims the others, and hovering an axis reports every series' value on it:
-
-```ts
-createRadarChart(container, {
-  axes,
-  legend: true,
-  series: [adam, eve],
-  tooltip: true, // "Agility: Adam 6, Eve 9"
-  onHover: (event) => event && console.log(event.axis.label, event.values),
-});
-```
+The default shared domain starts at zero and uses a nice maximum; set `domain` to compare series on a fixed range. Per-axis `min` and `max` override the chart domain for that axis. Grid rings, bands, curves, fills, vertex dots, and values are configurable; see `RadarChartConfig` and `RadarGridConfig` in the API reference.
 
 ## Sparklines
 
-Sparklines are minimal inline charts with no axes, no legend, and no margin: designed to live inline with text or inside table cells.
+Sparklines omit axes, margins, and legends. Choose `line`, `area`, or `bar` for numeric arrays, and `stack` for an array of `StackSegment` objects.
 
 ```ts
 import { createSparkline } from '@vielzeug/prism';
 
-const spark = createSparkline(container, {
-  data: [12, 18, 14, 22, 19, 28],
-  variant: 'line', // 'line' | 'area' | 'bar' | 'stack' (default: 'line')
-  color: '#3b82f6',
-  curve: 'monotone',
-  strokeWidth: 1.5,
-});
+const container = document.createElement('div');
+container.style.cssText = 'width:240px;height:48px';
+document.body.append(container);
 
-spark.dispose();
-```
-
-### Variants
-
-- **`line`**: simple polyline path (default)
-- **`area`**: gradient-filled area + line overlay
-- **`bar`**: vertical bar for each data point
-- **`stack`**: horizontal proportional segments; use `StackSegment[]` for `data` with per-segment colors
-
-Line and area sparklines mark the latest value with a dot. Set `showEndPoint: false` to hide it.
-
-### Updating Data
-
-```ts
-const spark = createSparkline(container, {
-  data: [12, 18, 14, 22],
+const chart = createSparkline(container, {
+  a11y: { ariaLabel: 'Weekly orders' },
+  data: [10, 14, 12, 18, 22],
   variant: 'area',
 });
 
-spark.update([12, 18, 14, 22, 30]);
-```
-
-### Event Hooks
-
-Sparklines use simplified hooks: `SparklineEvent` rather than full `ChartEvent`. With a hook set, a marker follows the hovered value:
-
-```ts
-const spark = createSparkline(container, {
-  data: [10, 20, 30],
-  onHover: (event) => {
-    // event is SparklineEvent | null (null on mouseleave)
-    if (event) console.log(`Hovering point ${event.index}: ${event.value}`);
-  },
-  onClick: (event) => {
-    console.log(`Clicked point ${event.index}: ${event.value}`);
-  },
-});
-```
-
-`SparklineEvent` provides `index`, the hovered/clicked `value`, and the `originalEvent`.
-
-> **Note:** Sparklines have no keyboard navigation. Label one with `a11y.ariaLabel` only when the trend carries meaning, and state the key value in surrounding text.
-
-## Axes and Grid
-
-Both axes render by default: the value axis (y on vertical charts, x on horizontal ones) carries gridlines, the category axis does not. Set `xAxis: false` or `yAxis: false` to suppress one. An explicit config is used verbatim:
-
-```ts
-{
-  xAxis: {
-    position: 'bottom',          // 'top' | 'bottom'
-    tickCount: 5,
-    tickFormat: (v) => `$${v}`,
-    label: 'Month',
-    grid: true,                  // or { color: '#ddd', dash: '4 2' }
-  },
-  yAxis: {
-    position: 'left',            // 'left' | 'right'
-    grid: { color: '#f0f0f0' },
-    label: 'Revenue ($)',
-  },
-}
-```
-
-Category axes show every label when the labels fit and thin them out only when they would overlap. Set `tickCount` to choose the density yourself.
-
-## Tooltips
-
-Enable with `tooltip: true`. On line, area, bar, and radar charts the default tooltip compares every series at the active key: a title, then a colour swatch, name, and value per series. Provide a custom `render` function to replace it. Strings are rendered as text. Return a DOM node for structured content:
-
-```ts
-{
-  tooltip: {
-    offset: 12,
-    render: (datum, series) => {
-      const content = document.createElement('strong');
-      content.textContent = `${series.name}: ${datum.value.toLocaleString()}`;
-      return content;
-    },
-  },
-}
-```
-
-Prism never injects tooltip strings as HTML, so custom rendering does not require a sanitizer.
-
-The tooltip element is scoped inside the chart container (not `document.body`) and is removed automatically on `dispose()`.
-
-## Crosshair
-
-A vertical guide that snaps to the nearest data point:
-
-```ts
-{
-  crosshair: true,
-  // or configure:
-  crosshair: { vertical: true, horizontal: true, snap: true },
-}
-```
-
-## Legend
-
-Enable with `legend: true` (defaults to `bottom`) or configure position:
-
-```ts
-{
-  legend: true,
-  // or:
-  legend: { position: 'top' },  // 'top' | 'bottom' | 'left' | 'right'
-}
-```
-
-The legend renders as a `div` placed outside the SVG. Each item shows a color swatch and the series `name`. Customize via CSS:
-
-```css
-:root {
-  --prism-legend-gap: 1rem;
-  --prism-legend-dot-size: 0.5rem;
-  --prism-legend-font-size: 0.75rem;
-}
-```
-
-## Event Hooks
-
-All charts expose `onClick` and `onHover` callbacks on the config:
-
-```ts
-const chart = createLineChart(container, {
-  series: [{ name: 'Revenue', data }],
-  onHover: (event) => {
-    // event is ChartEvent | null (null on mouseleave)
-    if (event) console.log(event.datum, event.series);
-  },
-  onClick: (event) => {
-    console.log('clicked', event.datum);
-  },
-});
-```
-
-`ChartEvent` provides:
-
-- `datum`: the datum of the series nearest the pointer
-- `series`: the corresponding `Series` config
-- `values`: every series at the same key (line, area, and bar charts)
-- `originalEvent`: the raw `MouseEvent` or, for keyboard navigation, `KeyboardEvent`
-
-> **Pie, radar, and sparkline events differ**: pie hooks receive a `PieEvent` (`index`, `slice`, `originalEvent`), sparkline hooks a `SparklineEvent` (`index`, `value`, `originalEvent`), and radar hooks a `RadarEvent` describing an axis. See [`PieChartConfig`](./api.md#chart-configurations) and [`createRadarChart()`](./api.md#createradarchart).
-
-## Animations
-
-Every chart animates by default: bars grow from the baseline, line and area
-series rise out of the plot, pie slices sweep in and then morph between values,
-radar polygons reshape, and sparklines tween. Motion runs through one
-`requestAnimationFrame` loop and is skipped when the user prefers reduced motion
-(`preference: 'system'`, the default).
-
-Tune it with `transition`, or turn it off entirely:
-
-```ts
-{
-  transition: {
-    duration: 400,
-    easing: 'ease-out',
-    stagger: 30,  // ms delay between bars (bar charts) or series (radar charts)
-  },
-}
-```
-
-```ts
-{ transition: false }  // every update renders synchronously
-{ transition: true }   // the defaults, stated explicitly
-```
-
-Named easings are `'linear'`, `'ease-in'`, `'ease-out'`, `'ease-in-out'`,
-`'expo-out'` (a hard decelerate), and `'back-out'` (a small overshoot); pass a
-`(t: number) => number` for anything else. `stagger` applies to bar-chart bars
-and radar-chart series and is ignored elsewhere — bar charts cap the total
-staggered delay near 400 ms so a long category axis still finishes promptly.
-
-## Theming
-
-Import the default theme:
-
-```ts
-import '@vielzeug/prism/theme.css';
-```
-
-### Programmatic Theme with `setTheme`
-
-Call `setTheme` once at app startup to apply custom tokens programmatically:
-
-```ts
-import { setTheme } from '@vielzeug/prism';
-
-setTheme({
-  axisColor: '#94a3b8', // sets --prism-axis-color
-  colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'], // replaces --prism-color-1 through -4
-  fontFamily: 'Inter, system-ui, sans-serif', // sets --prism-font-family
-  gridColor: '#e2e8f0', // sets --prism-grid-color
-  gridOpacity: 0.6, // sets --prism-grid-opacity
-  textColor: '#0f172a', // sets --prism-text-color
-  tooltipBg: '#0f172a', // sets --prism-tooltip-bg
-});
-```
-
-`setTheme` writes inline custom properties, so it takes precedence over stylesheet defaults. Call `resetTheme()` to clear every custom property `setTheme` can set and restore the default theme: useful for a theme-switcher's "reset" action or test teardown:
-
-```ts
-import { resetTheme } from '@vielzeug/prism';
-
-resetTheme();
-```
-
-### Theming One Subtree (component libraries)
-
-Pass `scope` to write the tokens onto one element instead of `document.documentElement`. Charts render inside it, so their `var(--prism-*)` lookups resolve against the scoped values without touching `:root` — the hook for apps whose theme lives in a JS palette object (MUI, Chakra, Backstage):
-
-```tsx
-import { useEffect, useRef } from 'react';
-import { useTheme } from '@mui/material/styles';
-import { createBarChart, resetTheme, setTheme, type BarSeriesConfig } from '@vielzeug/prism';
-import '@vielzeug/prism/theme.css';
-
-function CostsChart({ series }: { series: BarSeriesConfig[] }) {
-  const theme = useTheme();
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const scope = containerRef.current;
-
-    if (!scope) return;
-
-    // Scoped tokens win over :root inside this subtree and never leak out of it.
-    setTheme(
-      { axisColor: theme.palette.divider, textColor: theme.palette.text.primary },
-      { scope },
-    );
-
-    const chart = createBarChart(scope, { series });
-
-    return () => {
-      chart.dispose();
-      resetTheme({ scope });
-    };
-  }, [series, theme]);
-
-  return <div ref={containerRef} style={{ height: 300 }} />;
-}
-```
-
-A scoped call and a global call are independent: `resetTheme({ scope })` clears only what `setTheme({ scope })` wrote.
-
-### Custom Theme (CSS)
-
-```css
-:root {
-  --prism-color-1: #6366f1;
-  --prism-color-2: #22c55e;
-  --prism-axis-color: #71717a;
-  --prism-grid-color: #f4f4f5;
-  --prism-text-color: #18181b;
-  --prism-tooltip-bg: #27272a;
-  --prism-font-family: 'Inter', system-ui, sans-serif;
-}
-```
-
-### Scoped Themes
-
-Apply tokens to a specific container:
-
-```css
-.dark-dashboard {
-  --prism-axis-color: #64748b;
-  --prism-grid-color: #334155;
-  --prism-text-color: #e2e8f0;
-}
-```
-
-### Available Tokens
-
-| Token                     | Default                    | Description            |
-| ------------------------- | -------------------------- | ---------------------- |
-| `--prism-color-{1-8}`     | Colorblind-safe palette    | Series color palette   |
-| `--prism-bg`              | `transparent`              | Chart background       |
-| `--prism-axis-color`      | `hsl(215deg 16% 47%)`      | Axis lines and ticks   |
-| `--prism-grid-color`      | `hsl(220deg 10% 75%)`      | Grid lines             |
-| `--prism-text-color`      | `hsl(215deg 25% 27%)`      | Axis labels and text   |
-| `--prism-font-family`     | `system-ui`                | Chart font             |
-| `--prism-font-size`       | `0.75rem`                  | Label font size        |
-| `--prism-tooltip-bg`      | `hsl(222deg 47% 11%)`      | Tooltip background     |
-| `--prism-tooltip-color`   | `hsl(210deg 40% 98%)`      | Tooltip text           |
-| `--prism-tooltip-radius`  | `0.375rem`                 | Tooltip border radius  |
-| `--prism-crosshair-color` | `hsl(215deg 16% 47%)`      | Crosshair line         |
-| `--prism-crosshair-dash`  | `4 2`                      | Crosshair dash pattern |
-
-The palette follows Wong (2011) so adjacent series stay distinguishable under common color-vision deficiencies. Dark mode applies through `prefers-color-scheme`, an `html.dark` class, or `data-prism-theme="dark"` on the chart container or any ancestor — the last is the hook for apps that switch theme in JS without owning `<html>`.
-
-Radar charts add their own tokens, each defaulting to a shared one:
-
-| Token | Default | Description |
-| --- | --- | --- |
-| `--prism-radar-grid-color` | `--prism-grid-color` | Rings |
-| `--prism-radar-grid-opacity` | `0.7` | Ring and spoke opacity |
-| `--prism-radar-band-fill` | `--prism-grid-color` | Alternate ring shading |
-| `--prism-radar-band-opacity` | `0.14` | Shading opacity |
-| `--prism-radar-spoke-color` | `--prism-radar-grid-color` | Spokes |
-| `--prism-radar-fill-opacity` | `--prism-area-opacity` | Solid shape fill |
-| `--prism-radar-stroke-width` | `--prism-line-width` | Shape outline |
-| `--prism-radar-point-radius` | `--prism-point-radius` | Vertex dots |
-| `--prism-radar-point-radius-active` | `--prism-point-radius-hover` | Dots on the active axis |
-| `--prism-radar-label-color` / `-size` | Secondary text tokens | Axis labels |
-| `--prism-radar-value-color` / `-size` | Text tokens | Vertex values |
-| `--prism-radar-dim-opacity` | `--prism-dim-opacity` | Other shapes while one is hovered |
-
-Shared interaction and chart tokens:
-
-| Token | Default | Description |
-| --- | --- | --- |
-| `--prism-dim-opacity` | `0.35` | Series or slices outside the active one |
-| `--prism-active-point-radius` | `--prism-point-radius-hover` | Points marked at the active key |
-| `--prism-point-ring` | `Canvas` | Ring separating active and end points from the line |
-| `--prism-focus-color` | `--prism-color-1` | Focus outline of a keyboard-focused chart |
-| `--prism-bar-radius` | `4px` | Bar corner radius (stacked bars stay square) |
-| `--prism-bar-band-fill` / `-opacity` | Grid colour / `0.18` | Shaded active category |
-| `--prism-bar-dim-opacity` | `0.55` | Bars outside the active category |
-| `--prism-area-gradient-start` / `-end` | `0.45` / `0.02` | Gradient fill opacity at the line and the baseline |
-| `--prism-spark-gradient-start` / `-end` | `0.35` / `0` | Sparkline gradient fill |
-
-Explicit config such as `strokeWidth`, `fillOpacity`, or `borderRadius` always wins over these tokens.
-
-## Scales (Standalone)
-
-Scales can be used independently for custom visualizations:
-
-```ts
-import { linearScale, timeScale, bandScale } from '@vielzeug/prism';
-
-const y = linearScale({ domain: [0, 100], range: [300, 0] });
-y.map(50); // → 150
-y.invert(150); // → 50
-y.ticks(5); // → [0, 20, 40, 60, 80, 100]
-
-const x = bandScale({ domain: ['A', 'B', 'C'], range: [0, 300] });
-x.map('B'); // → pixel left edge of band B
-x.bandwidth(); // → width of each band
-```
-
-## Lifecycle and Cleanup
-
-Every chart returns a `ChartHandle`. Always call `dispose()` when removing a chart:
-
-```ts
-const chart = createLineChart(container, config);
-
-// When done:
+chart.update([10, 14, 12, 18, 22, 25]);
 chart.dispose();
-
-// Or with TC39 explicit resource management:
-{
-  using chart = createLineChart(container, config);
-  // auto-disposed at block end
-}
 ```
 
-Calling `dispose()`:
+For a stacked sparkline, each segment can set `value`, `color`, and `label`. Sparklines do not offer keyboard navigation, a tooltip, or a live value announcer. Add a visible value or summary when the trend conveys important information.
 
-- Cancels in-flight transitions
-- Disconnects the `ResizeObserver`
-- Removes the SVG element, tooltip, and legend from the DOM
-- Restores container styles changed for tooltip positioning
-- Is idempotent: safe to call multiple times
+## Interaction
 
-Call `update()` only while the handle is active. Updating a disposed chart throws `PrismRenderError`.
-
-## Responsive Behavior
-
-Charts resize automatically when the container dimensions change. Prism uses `ResizeObserver` internally: no manual `resize()` call is needed.
-
-## Runtime Observation
-
-Every handle exposes `tap()` to observe runtime behavior — resize and dispose — outside the render path. It reuses the chart's own `ResizeObserver`, so observing costs nothing extra, and handler errors are swallowed: observation never affects chart behavior.
+Set `tooltip: true` to show Prism's default tooltip, or pass a `TooltipConfig` to format its content. A `render` callback receives the active `Datum` and `Series`. Returned strings are inserted as text; return a DOM `Node` for structured content.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
+
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
+const chart = createLineChart(container, {
+  series: [{ data: [{ key: 1, value: 4200 }, { key: 2, value: 5100 }], name: 'Revenue' }],
+  tooltip: {
+    render: (datum, series) => `${series.name}: ${new Intl.NumberFormat().format(datum.value)}`,
+  },
+});
+
+chart.dispose();
+```
+
+`onHover` receives an event while a point, category, slice, or radar axis is active, then `null` when the interaction clears. `onClick` receives the selected event. For line, area, and bar charts, `ChartEvent.values` contains each series' datum at that shared key; a missing datum is `undefined`. Scatter, pie, radar, and sparkline use their chart-specific event types.
+
+`crosshair` is available on line, area, and scatter charts. By default it shows a vertical guide and snaps the line to the nearest datum. Set `horizontal: true` to add a horizontal guide or `vertical: false` to hide the vertical one. Set `snap: false` to make the guide follow the pointer; tooltip and callback data still come from the nearest datum.
+
+### Keyboard and Announcements
+
+Set `a11y: { ariaLabel }` on an informative chart. Prism gives the SVG `role="img"`, an accessible name, and keyboard focus. Arrow keys move among chart data; `Home` and `End` move to the first and last item where supported; `Enter` or `Space` activates an item when an `onClick` callback is configured; `Escape` clears the active selection. Sparklines do not support keyboard navigation.
+
+When `a11y` is omitted, or set to `{ decorative: true }`, the SVG is marked `aria-hidden="true"` and does not enter the keyboard tab order. Only mark charts decorative when their information is available elsewhere. Interactive cartesian and pie/radar charts use the tooltip as a polite live region when enabled; otherwise they announce active values in `.prism-live`. Sparklines have no live value announcements, so provide an equivalent visible value or summary.
+
+## Animation
+
+Chart motion is enabled by default, with a 300 ms duration per animated lane (radar uses 400 ms). Pass `transition: false` to render updates synchronously, or pass `true` to state the default explicitly.
+
+```ts
+import { createBarChart } from '@vielzeug/prism';
+
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
+const chart = createBarChart(container, {
+  series: [{ data: [{ key: 'A', value: 4 }, { key: 'B', value: 7 }], name: 'Count' }],
+  transition: { duration: 500, easing: 'ease-out', preference: 'system' },
+});
+
+chart.dispose();
+```
+
+Columns grow together from their baseline by default over 300 ms. Lines trace their final curve over 420 ms, uncovering point markers along the way without fading or shifting the series. Line data updates retain the default 300 ms geometry transition; an explicit `duration` overrides both timings.
+
+`preference: 'system'` (the default) disables JavaScript motion when the user prefers reduced motion. Use `'always'` to ignore that preference or `'never'` to disable motion. `stagger` sets an optional delay between bars or radar series; bar charts cap the effective delay so long category axes do not add unbounded time. Named easing values are `ease-in`, `ease-in-out`, `ease-out`, `back-out`, `expo-out`, and `linear`; you can also provide an easing function.
+
+## Responsive Layout and Lifecycle
+
+Size the host with CSS. Prism observes its content box and updates the SVG dimensions and chart layout when it changes. Bar and line resize redraws apply immediately rather than animating between layout sizes; entrance animations and explicit data-update transitions remain enabled. The legend is rendered as container chrome outside the SVG and included in resize calculations.
+
+Call `dispose()` when the view no longer owns the chart. Disposal is idempotent: it removes the SVG, tooltip, legend, and resize observation, stops in-flight chart motion, and aborts `disposalSignal`. `chart[Symbol.dispose]()` calls the same cleanup method.
+
+Use `tap()` when external code needs resize or dispose notifications rather than observing the chart DOM itself:
+
+```ts
+import { createLineChart } from '@vielzeug/prism';
+
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
 
 const chart = createLineChart(container, {
   series: [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }],
 });
-const controller = new AbortController();
-const unsubscribe = chart.tap(
-  (event) => {
-    if (event.type === 'resize') console.log('resized', event.width, event.height);
-    if (event.type === 'dispose') console.log('disposed');
-  },
-  { signal: controller.signal },
-);
-```
-
-`tap()` returns an unsubscribe function; pass `options.signal` to detach automatically instead. The `resize` event carries the new `width`/`height` and fires after the chart re-laid-out; `dispose` fires once, before teardown completes. Tapping a disposed handle returns a no-op unsubscribe. This is separate from prism's internal validation warnings, which run automatically in development and are never part of the public API.
-
-## Accessibility
-
-Label informative charts with `a11y: { ariaLabel }`. A labelled chart renders with `role="img"`, is focusable, and supports keyboard navigation. Charts without `a11y` are decorative and render with `aria-hidden="true"`.
-
-```ts
-createLineChart(container, {
-  a11y: { ariaLabel: 'Revenue by month' },
-  series: [...],
+const stopObserving = chart.tap((event) => {
+  if (event.type === 'resize') console.log(event.width, event.height);
+  if (event.type === 'dispose') console.log('chart disposed');
 });
-```
 
-Mark a chart decorative explicitly when surrounding text already states its meaning:
-
-```ts
-createSparkline(container, {
-  a11y: { decorative: true },
-  data: [...],
-});
-```
-
-### Keyboard and announcements
-
-Every labelled chart except sparklines shares one keyboard model:
-
-| Chart | Arrow keys move between | `Home` / `End` | Announced |
-| --- | --- | --- | --- |
-| Line, area | x positions | First / last position | `1: Adam 3, Eve 6` |
-| Bar | categories | First / last category | `Str: Adam 8, Eve 5` |
-| Pie | slices | First / last slice | `Wins: 15 (75%)` |
-| Radar | axes (wrapping) | Not supported | `Agility: Adam 6, Eve 9` |
-
-The first arrow press focuses the first item. `Enter` or `Space` fires `onClick` for the focused item, and `Escape` clears it. The tooltip speaks the text when one is enabled; otherwise the chart's own `role="status"` region (`.prism-live`) does, so each value is announced once.
-
-### Hover feedback
-
-The active key is shown the same way on every chart. Line and area charts mark each series' point and dim the series farther from the pointer. Bar charts shade the category band and dim the other categories. Pie charts dim the other slices. Radar charts highlight the active spoke and its points, and dim the other shapes while one is hovered.
-
-## Framework Integration
-
-Prism has no framework adapter. Connect the same three operations to your framework's lifecycle: create after mount, update when state changes, and dispose before unmount.
-
-```ts
-import { createLineChart, type ChartHandle, type ContinuousDatum, type LineSeriesConfig } from '@vielzeug/prism';
-
-let chart: ChartHandle<LineSeriesConfig[]> | undefined;
-
-export function mountChart(container: HTMLElement, data: ContinuousDatum[]): void {
-  chart = createLineChart(container, { series: [{ data, name: 'Series' }] });
-}
-
-export function updateChart(data: ContinuousDatum[]): void {
-  chart?.update([{ data, name: 'Series' }]);
-}
-
-export function unmountChart(): void {
-  chart?.dispose();
-  chart = undefined;
-}
-```
-
-## Working with Other Vielzeug Libraries
-
-### With Ripple
-
-Keep state ownership in Ripple and connect it to Prism through an explicit subscription.
-
-```ts
-import { createLineChart } from '@vielzeug/prism';
-import { signal } from '@vielzeug/ripple';
-
-const data = signal([{ key: 1, value: 10 }]);
-const toSeries = () => [{ data: data.value, name: 'Series' }];
-const chart = createLineChart(container, { series: toSeries() });
-const unsubscribe = data.subscribe(() => chart.update(toSeries()));
-
-// Cleanup both owners together.
-unsubscribe();
+stopObserving();
 chart.dispose();
 ```
 
-### With Sourcerer
+`tap()` returns an unsubscribe function and accepts `{ signal }` for automatic unsubscription. A listener exception is swallowed by the observer so it cannot interrupt chart rendering.
 
-Bind chart data to a Sourcerer remote source so charts update whenever the list refreshes.
+## Theming
+
+Import the stylesheet once to load Prism's structural styles, default tokens, dark-mode rules, and reduced-motion CSS. You can override any CSS custom property on an ancestor of the chart.
+
+```css
+.dashboard-chart {
+  --prism-color-1: #2563eb;
+  --prism-color-2: #16a34a;
+  --prism-grid-color: #94a3b8;
+  --prism-line-width: 3;
+  --prism-text-color: #172033;
+  --prism-tooltip-bg: #111827;
+}
+```
+
+`setTheme()` provides a typed subset of theme properties. A scoped call writes inline values on the provided element; omit `scope` to write them to `document.documentElement`. Inline values override stylesheet tokens until reset.
 
 ```ts
-import { createBarChart } from '@vielzeug/prism';
-import { createPageSource } from '@vielzeug/sourcerer';
+import { resetTheme, setTheme } from '@vielzeug/prism';
 
-const source = createPageSource({
-  load: async ({ page, pageSize, signal }) => {
-    const result = await api.stats.list({ page, pageSize }, { signal });
-    return { items: result.data, totalItems: result.total };
-  },
-});
-const toSeries = (state) => [
-  {
-    data: state.items.map((item) => ({ key: item.label, value: item.count })),
-    name: 'Series',
-  },
-];
-const chart = createBarChart(container, { series: toSeries(source.state) });
-const unsubscribe = source.subscribe((state) => chart.update(toSeries(state)));
-void source.reload().catch(() => undefined);
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
+setTheme({ colors: ['#2563eb', '#16a34a'], fontFamily: 'Inter, sans-serif' }, { scope: container });
+// Call resetTheme({ scope: container }) when this scoped theme is no longer needed.
+resetTheme({ scope: container });
 ```
+
+### Available Tokens
+
+The stylesheet defines defaults for the following token groups. Pie-label color and size are read with fallback values by the renderer but are not declared in the base token block. Set a token on the chart container or an ancestor to scope an override.
+
+| Group | CSS custom properties |
+| --- | --- |
+| Palette and surfaces | `--prism-color-1` through `--prism-color-8`, `--prism-bg`, `--prism-border-radius` |
+| Axes and grid | `--prism-axis-color`, `--prism-axis-width`, `--prism-grid-color`, `--prism-grid-width`, `--prism-grid-dash`, `--prism-grid-opacity` |
+| Text | `--prism-font-family`, `--prism-font-size`, `--prism-font-size-label`, `--prism-font-size-title`, `--prism-font-weight`, `--prism-font-weight-title`, `--prism-text-color`, `--prism-text-color-secondary` |
+| Tooltip | `--prism-tooltip-bg`, `--prism-tooltip-color`, `--prism-tooltip-border`, `--prism-tooltip-radius`, `--prism-tooltip-padding`, `--prism-tooltip-shadow`, `--prism-tooltip-font-size` |
+| Crosshair | `--prism-crosshair-color`, `--prism-crosshair-width`, `--prism-crosshair-dash`, `--prism-crosshair-opacity` |
+| Points | `--prism-point-radius`, `--prism-point-radius-hover`, `--prism-point-stroke-width`, `--prism-point-stroke` |
+| Bars | `--prism-bar-radius`, `--prism-bar-hover-opacity`, `--prism-bar-gap`, `--prism-bar-band-fill`, `--prism-bar-band-opacity`, `--prism-bar-dim-opacity` |
+| Areas and lines | `--prism-area-opacity`, `--prism-area-stroke-width`, `--prism-area-gradient-start`, `--prism-area-gradient-end`, `--prism-line-width`, `--prism-line-width-hover` |
+| Interaction | `--prism-dim-opacity`, `--prism-active-point-radius`, `--prism-point-ring`, `--prism-focus-color` |
+| Sparklines | `--prism-spark-fill-opacity`, `--prism-spark-gradient-start`, `--prism-spark-gradient-end` |
+| Radar | `--prism-radar-grid-color`, `--prism-radar-grid-opacity`, `--prism-radar-band-fill`, `--prism-radar-band-opacity`, `--prism-radar-spoke-color`, `--prism-radar-fill-opacity`, `--prism-radar-stroke-width`, `--prism-radar-point-radius`, `--prism-radar-point-radius-active`, `--prism-radar-label-color`, `--prism-radar-label-size`, `--prism-radar-value-color`, `--prism-radar-value-size`, `--prism-radar-dim-opacity` |
+| Motion | `--prism-duration-fast`, `--prism-duration`, `--prism-duration-slow`, `--prism-ease`, `--prism-ease-spring`, `--prism-transition`, `--prism-transition-fast` |
+| Legend and pie labels | `--prism-legend-gap`, `--prism-legend-dot-size`, `--prism-legend-font-size`, `--prism-pie-label-color`, `--prism-pie-label-size` |
+
+The default palette and structural colors adapt to `prefers-color-scheme: dark`, `html.dark`, or `[data-prism-theme='dark']` on an ancestor. Scoped inline values set with `setTheme()` take precedence in either mode. The stylesheet also provides `prefers-reduced-motion` overrides for CSS transitions.
+
+## Errors and Diagnostics
+
+Prism throws `PrismRenderError` when the container is not a DOM element, when initial rendering fails, or when `update()` is called on a disposed chart. A wrapped initial-render error exposes its cause. Use `PrismError` to catch all Prism-originated errors.
+
+Empty or malformed data is not always an exception. Depending on the chart, Prism may draw nothing or emit a development-only `console.warn`; examples include an unknown `bandScale` category, negative values in stacked bars, and radar axes with fewer than three entries or duplicate keys. Correct the input rather than relying on a warning for validation.
+
+## Framework Integration
+
+Prism has no React, Vue, or Svelte adapter. In any framework, give Prism a host element after it is mounted, call `update()` when data changes, and call `dispose()` before the host is removed. This plain DOM pattern shows the ownership boundary without depending on a framework-specific lifecycle API:
+
+```ts
+import { createLineChart, type LineSeriesConfig } from '@vielzeug/prism';
+
+function mountChart(host: HTMLElement, series: LineSeriesConfig[]) {
+  const chart = createLineChart(host, { a11y: { ariaLabel: 'Revenue' }, series });
+
+  return {
+    update(next: LineSeriesConfig[]) {
+      chart.update(next);
+    },
+    dispose() {
+      chart.dispose();
+    },
+  };
+}
+
+const host = document.createElement('div');
+host.style.cssText = 'width:640px;height:320px';
+document.body.append(host);
+const view = mountChart(host, [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }]);
+view.update([{ data: [{ key: 1, value: 10 }, { key: 2, value: 15 }], name: 'Revenue' }]);
+view.dispose();
+```
+
+The application owns its state and host; Prism owns only the SVG, observer, and optional overlay elements it creates.
+
+## Working with Other Vielzeug Libraries
+
+Use Refine components for dashboard controls and keep Prism in a sized host element. Map Refine theme tokens to Prism CSS custom properties or call `setTheme()` with a scoped element; Prism does not require a Refine adapter. Prism uses Orbit internally to place tooltips, so chart users do not need to create Orbit floating elements for the built-in tooltip.
 
 ## Best Practices
 
-- Ensure the container element has explicit dimensions before calling a chart factory: `ResizeObserver` needs a non-zero layout size to trigger the first render.
-- Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel transitions, disconnect resize observation, and remove DOM nodes.
-- Call `chart.update(data)` from your application state boundary; Prism does not require or own a state library.
-- Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data: unlabelled charts are hidden from assistive technology and receive no keyboard navigation.
-- Observe lifecycle with `chart.tap(handler)` rather than polling `chart.disposed` or wrapping the container: it costs nothing when untapped and detaches via `signal`.
-- For SSR, skip chart creation server-side: Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.
+- Give the host a non-zero size before creating a chart.
+- Set `a11y.ariaLabel` when a chart communicates information.
+- Use `Date` or number keys consistently across each line or area chart.
+- Pass the complete new data value to `update()`.
+- Keep chart options fixed after creation; recreate the chart to change them.
+- Dispose the handle when its host leaves the owning view.
+- Use `transition: false` for deterministic synchronous rendering.
+- Prefer CSS custom properties for reusable theme overrides.

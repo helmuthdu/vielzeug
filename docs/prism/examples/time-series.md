@@ -50,10 +50,26 @@ Pass `Date` keys to `createAreaChart` so Prism switches to a time scale, format 
 Set `fill: 'solid'` and an explicit `fillOpacity` on a series to replace the gradient with a flat tint, for example when areas overlap heavily.
 
 ```ts
-chart.update([
-  { ...toSeries('Visits', visits), fill: 'solid', fillOpacity: 0.2 },
-  { ...toSeries('Signups', signups), fill: 'solid', fillOpacity: 0.2 },
-]);
+import { createAreaChart } from '@vielzeug/prism';
+
+const container = document.createElement('div');
+container.style.cssText = 'width:640px;height:320px';
+document.body.append(container);
+
+const days = [1, 2, 3, 4];
+const toSeries = (name, values) => ({
+  curve: 'monotone',
+  data: values.map((value, i) => ({ key: new Date(2026, 8, days[i]), value })),
+  fill: 'solid',
+  fillOpacity: 0.2,
+  name,
+});
+const chart = createAreaChart(container, {
+  a11y: { ariaLabel: 'Daily visits and signups' },
+  series: [toSeries('Visits', [420, 460, 510, 480]), toSeries('Signups', [32, 35, 41, 38])],
+});
+
+chart.dispose();
 ```
 
 ### Pitfalls

@@ -59,11 +59,13 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * @attr {string} empty-text - Message shown when no item matches the query
  * @attr {boolean} keep-open-on-select - Keep the palette open after an item is selected
  *
+ * @fires active-change - Fired when the focused row changes (keyboard, hover, typing, open, close). detail: `{ value, label, item }`; `item` is `undefined` and `value` empty when no row is active
  * @fires open-change - Fired when the palette state changes. detail: `{ open, reason }`
  * @fires search - Fired on every keystroke in the search input. detail: `{ query }`
  * @fires select - Fired when a command is chosen (click or `Enter`). detail: `{ value, label, item }`
  *
  * @slot - `<ore-command-palette-item>` elements (alternative/supplement to the `items` prop)
+ * @slot preview - Optional detail panel rendered beside the list, shown while it has content. Pair it with `active-change` to preview the focused row
  *
  * @cssprop --command-palette-bg - Panel background color
  * @cssprop --command-palette-border-color - Panel border color
@@ -73,11 +75,13 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * @cssprop --command-palette-backdrop - Backdrop overlay color
  * @cssprop --command-palette-option-hover-bg - Item background on hover
  * @cssprop --command-palette-option-focus-bg - Item background when keyboard-focused
+ * @cssprop --command-palette-preview-width - Preview panel width when the `preview` slot has content
  *
  * @part dialog - Dialog root container
  * @part panel - Panel container
  * @part input - Search input
  * @part listbox - Listbox of matching commands
+ * @part preview - Preview panel shown beside the list
  *
  * @example
  * ```html
@@ -158,6 +162,21 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       signal: abortSignal,
     });
     const { focusedIndex } = list;
+
+    // ── Active row: mirrors the focused row to the host so a `preview` slot can ──
+    // follow keyboard, hover and typing without the host reaching into the listbox.
+    // Watching the derived item (not just the index) also catches the row under a
+    // stable index changing because the filtered list itself changed.
+    watch(
+      () => filteredItems.value[focusedIndex.value],
+      (item) => {
+        emit('active-change', item ? { item, label: item.label, value: item.value } : { label: '', value: '' });
+      },
+    );
+
+    // The preview pane folds away while its slot is empty, so a palette that never
+    // uses it keeps the plain single-column layout.
+    const hasPreview = signal(false);
 
     // ── Dialog chrome: native <dialog>, focus trap, Escape, backdrop click ──
     const resetSearch = (): void => {
@@ -293,6 +312,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
               @keydown="${handleKeydown}" />
             <span class="search-loader" ?hidden="${() => !props.loading.value}" aria-hidden="true"></span>
           </div>
+          <div class="body">
           <div
             class="listbox"
             part="listbox"
@@ -354,6 +374,15 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
                       </div>
                     `,
               )}
+          </div>
+          <div class="preview" part="preview" role="region" aria-label="Preview" ?hidden="${() => !hasPreview.value}">
+            <slot
+              name="preview"
+              @slotchange="${(e: Event) => {
+                hasPreview.value = (e.target as HTMLSlotElement).assignedElements().length > 0;
+              }}"
+            ></slot>
+          </div>
           </div>
           <div class="footer" part="footer">
             <span class="footer-hint">

@@ -82,10 +82,10 @@ describe('ore-command-palette', () => {
     it('reads items directly off the host: no <slot> needed in the shadow tree', async () => {
       // Items are pure data nodes, never projected for display: see `ore-command-palette-item`'s
       // own doc comment. Reading `el.children` directly (instead of `useSlots()`) means there's
-      // no `<slot>` element backing this at all.
+      // no default `<slot>` backing them at all (the named `preview` slot is unrelated).
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, html: itemsHtml });
 
-      expect(fixture.query('slot')).toBeFalsy();
+      expect(fixture.query('slot:not([name])')).toBeFalsy();
       expect(getRows()).toHaveLength(4);
     });
 
@@ -341,6 +341,91 @@ describe('ore-command-palette', () => {
       });
 
       expect(getRows()).toHaveLength(1);
+    });
+  });
+
+  describe('Active row and preview', () => {
+    const settleSlot = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('emits active-change when the focused row moves', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
+
+      const onActive = vi.fn();
+
+      fixture.element.addEventListener('active-change', onActive);
+
+      fireKeyDown(getInput()!, { key: 'ArrowDown' });
+
+      const detail = (onActive.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+
+      expect(detail).toMatchObject({ label: 'Open File', value: 'open-file' });
+      expect(detail.item.value).toBe('open-file');
+    });
+
+    it('emits active-change when typing refocuses the first row', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
+
+      const onActive = vi.fn();
+
+      fixture.element.addEventListener('active-change', onActive);
+
+      getInput()!.value += 'theme';
+      fireInput(getInput()!);
+
+      expect((onActive.mock.calls.at(-1)?.[0] as CustomEvent).detail.value).toBe('toggle-theme');
+    });
+
+    it('emits an empty active-change when no row matches', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
+
+      const onActive = vi.fn();
+
+      fixture.element.addEventListener('active-change', onActive);
+
+      getInput()!.value += 'zzz-no-match';
+      fireInput(getInput()!);
+
+      const detail = (onActive.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+
+      expect(detail).toEqual({ label: '', value: '' });
+      expect(detail.item).toBeUndefined();
+    });
+
+    it('renders slotted preview content beside the list', async () => {
+      fixture = await mount('ore-command-palette', {
+        attrs: { open: '' },
+        html: '<div slot="preview">Detail for the active row</div>',
+        props: { items },
+      });
+      await settleSlot();
+
+      const preview = fixture.query<HTMLElement>('.preview')!;
+      const slot = fixture.query<HTMLSlotElement>('.preview slot')!;
+
+      expect(preview.hasAttribute('hidden')).toBe(false);
+      expect(slot.assignedElements()[0]?.textContent).toContain('Detail for the active row');
+    });
+
+    it('folds the preview pane away while its slot is empty', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
+      await settleSlot();
+
+      expect(fixture.query('.preview')?.hasAttribute('hidden')).toBe(true);
+    });
+
+    it('un-folds the preview pane when content is added to the slot', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
+      await settleSlot();
+      expect(fixture.query('.preview')?.hasAttribute('hidden')).toBe(true);
+
+      const panel = document.createElement('div');
+
+      panel.setAttribute('slot', 'preview');
+      panel.textContent = 'Now visible';
+      fixture.element.appendChild(panel);
+      await settleSlot();
+
+      expect(fixture.query('.preview')?.hasAttribute('hidden')).toBe(false);
     });
   });
 

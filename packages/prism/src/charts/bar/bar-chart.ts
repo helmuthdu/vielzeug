@@ -42,8 +42,9 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
   return createChartScaffold(
     container,
     config,
-    (ctx) => {
+    (ctx, reason) => {
       const { groups, legend, tooltip } = ctx;
+      legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       const dims = ctx.dimensions;
       const area = chartArea(dims.width, dims.height, dims.margin);
       const sourceData = seriesList.map((series) => series.data);
@@ -234,11 +235,10 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
           seriesCount: seriesList.length,
           seriesIndex: i,
           stacked,
-          transition: config.transition,
+          transition: reason === 'resize' ? false : config.transition,
         });
       }
 
-      legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       tooltip?.hide();
       groups.series.classList.toggle('prism-bars-stacked', stacked);
 

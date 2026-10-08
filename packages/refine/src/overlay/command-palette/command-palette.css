@@ -2,6 +2,7 @@
   :host {
     --_radius: var(--command-palette-radius, var(--rounded-lg));
     --_max-width: var(--command-palette-max-width, 40rem);
+    --_preview-width: var(--command-palette-preview-width, 18rem);
     --_backdrop-bg: var(--command-palette-backdrop, color-mix(in oklch, var(--color-canvas) 40%, transparent));
     --_panel-bg: var(--command-palette-bg, var(--color-canvas));
     --_panel-border-color: var(--command-palette-border-color, var(--color-divider));
@@ -118,6 +119,19 @@
     dialog {
       padding-block-start: var(--size-4);
     }
+
+    /* No horizontal room for a side-by-side pane: the preview drops under the
+       list with its own capped height, keeping the rows scannable. */
+    .body {
+      flex-direction: column;
+    }
+
+    .preview {
+      width: auto;
+      max-height: 40%;
+      border-block-start: var(--border) solid var(--color-contrast-100);
+      border-inline-start: 0;
+    }
   }
 
   /* =====================
@@ -180,12 +194,40 @@
        Listbox
        ===================== */
 
+  /* Row holding the listbox and the optional preview pane side by side. The
+     preview folds away (hidden attribute) while its slot is empty, so palettes
+     that never use it keep the plain single-column panel. */
+  .body {
+    display: flex;
+    flex: 1;
+    /* The listbox scrolls inside this row: without min-height the flex item
+       grows past the panel instead of honoring max-height. */
+    min-height: 0;
+  }
+
   .listbox {
     flex: 1;
+    min-width: 0;
     padding: var(--size-1);
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: thin;
+  }
+
+  .preview {
+    flex-shrink: 0;
+    width: var(--_preview-width);
+    padding: var(--size-3) var(--size-4);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    font-size: var(--text-sm);
+    color: var(--color-contrast-700);
+    scrollbar-width: thin;
+    border-inline-start: var(--border) solid var(--color-contrast-100);
+  }
+
+  .preview[hidden] {
+    display: none;
   }
 
   .empty {

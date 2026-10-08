@@ -22,6 +22,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
     config,
     (ctx) => {
       const { groups, legend, tooltip } = ctx;
+      legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       const dims = ctx.dimensions;
       const area = chartArea(dims.width, dims.height, dims.margin);
       const allData = seriesList.map((series) => series.data);
@@ -116,7 +117,6 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
         });
       }
 
-      legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
       tooltip?.hide();
       markers = ensureMarkerGroup(ctx.chartArea, markers);
 

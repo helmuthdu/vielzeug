@@ -30,6 +30,13 @@ function pathYs(d: string | null): number[] {
   return [...(d ?? '').matchAll(/M?[\d.-]+,([\d.-]+)/g)].map((m) => Number(m[1]));
 }
 
+/** Remaining normalized length of a line's entrance trace. */
+function traceOffsetFor(root: Element, group: Element): number {
+  const id = group.getAttribute('mask')?.match(/#(.+)\)/)?.[1];
+
+  return Number(root.querySelector(`mask#${CSS.escape(id ?? '')} path`)?.getAttribute('stroke-dashoffset'));
+}
+
 const LINE_SERIES = [
   {
     data: [
@@ -68,19 +75,197 @@ describe('motion is on by default', () => {
   afterEach(() => {
     container.remove();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
-  it('bar charts grow from the baseline without any transition config', () => {
-    const frames = driveFrames();
-    const chart = createBarChart(container, { series: BARS });
-    const bar = chart.el.querySelector('.prism-bar')!;
+  it.each(['grouped', 'grouped-horizontal'] as const)(
+    '%s bars reserve the legend before growing from their stationary baseline',
+    (variant) => {
+      const frames = driveFrames();
+      vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function () {
+        return this.classList.contains('prism-legend') ? 30 : 0;
+      });
+      const chart = createBarChart(container, { legend: true, series: BARS, variant });
+      const bar = chart.el.querySelector('.prism-bar')!;
+      const clip = chart.el.querySelector('clipPath rect')!;
+      const horizontal = variant === 'grouped-horizontal';
+      const dimension = horizontal ? 'width' : 'height';
+      const position = horizontal ? 'x' : 'y';
+      const geometry = bar.outerHTML;
 
-    expect(Number(bar.getAttribute('height'))).toBe(0);
+      expect(chart.el.getAttribute('height')).toBe('270');
+      expect(Number(clip.getAttribute(dimension))).toBe(0);
+      const baseline = horizontal
+        ? Number(bar.getAttribute('x'))
+        : Number(bar.getAttribute('y')) + Number(bar.getAttribute('height'));
+
+      frames.shift()?.(0);
+      frames.shift()?.(150);
+      expect(Number(clip.getAttribute(dimension))).toBeGreaterThan(0);
+      expect(Number(clip.getAttribute(dimension))).toBeLessThan(Number(bar.getAttribute(dimension)));
+      expect(
+        horizontal
+          ? Number(clip.getAttribute(position))
+          : Number(clip.getAttribute(position)) + Number(clip.getAttribute(dimension)),
+      ).toBeCloseTo(baseline);
+      expect(bar.outerHTML).toBe(geometry);
+      chart.dispose();
+    },
+  );
+
+  it('lines with a legend trace at their final layout instead of moving upward', () => {
+    const frames = driveFrames();
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function () {
+      return this.classList.contains('prism-legend') ? 30 : 0;
+    });
+    const chart = createLineChart(container, { legend: true, series: LINE_SERIES });
+    const path = chart.el.querySelector('.prism-line-path')!;
+    const geometry = path.getAttribute('d');
+
+    expect(chart.el.getAttribute('height')).toBe('270');
+    frames.shift()?.(0);
+    frames.shift()?.(200);
+    expect(path.getAttribute('d')).toBe(geometry);
+    expect(traceOffsetFor(chart.el, chart.el.querySelector('.prism-line-series')!)).toBeLessThan(1);
+    chart.dispose();
+  });
+
+  it('the first resize notification preserves a legend-aware line entrance', () => {
+    const frames = driveFrames();
+    let notify: ResizeObserverCallback | undefined;
+
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          notify = callback;
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function () {
+      return this.classList.contains('prism-legend') ? 30 : 0;
+    });
+    const chart = createLineChart(container, { legend: true, series: LINE_SERIES });
+    const series = chart.el.querySelector('.prism-line-series')!;
+    const mask = series.getAttribute('mask');
+    const geometry = chart.el.querySelector('.prism-line-path')?.getAttribute('d');
+
+    notify?.([{ contentRect: { height: 300, width: 600 } } as ResizeObserverEntry], {} as ResizeObserver);
+    frames.shift()?.(0);
+    frames.shift()?.(0);
+    frames.shift()?.(100);
+    expect(series.getAttribute('mask')).toBe(mask);
+    expect(chart.el.querySelector('.prism-line-path')?.getAttribute('d')).toBe(geometry);
+    expect(chart.el.getAttribute('height')).toBe('270');
+    chart.dispose();
+  });
+
+  it.each(['line', 'grouped', 'grouped-horizontal'] as const)(
+    '%s applies a page-load size change immediately instead of sliding the geometry',
+    (kind) => {
+      const pending = new Map<number, FrameRequestCallback>();
+      let nextId = 0;
+      let notify: ResizeObserverCallback | undefined;
+
+      vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+        pending.set(++nextId, cb);
+        return nextId;
+      });
+      vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation((id) => {
+        pending.delete(id);
+      });
+      vi.stubGlobal(
+        'ResizeObserver',
+        class {
+          constructor(callback: ResizeObserverCallback) {
+            notify = callback;
+          }
+          observe() {}
+          disconnect() {}
+          unobserve() {}
+        },
+      );
+      const chart =
+        kind === 'line'
+          ? createLineChart(container, { series: LINE_SERIES })
+          : createBarChart(container, { series: BARS, variant: kind });
+      const step = (time: number) => {
+        const callbacks = [...pending.values()];
+        pending.clear();
+        for (const callback of callbacks) callback(time);
+      };
+
+      step(0);
+      notify?.([{ contentRect: { height: 240, width: 500 } } as ResizeObserverEntry], {} as ResizeObserver);
+      step(100);
+      expect(chart.el.getAttribute('viewBox')).toBe('0 0 500 240');
+      expect(chart.el.querySelector('mask, clipPath')).toBeNull();
+      expect(pending.size).toBe(0);
+
+      const referenceHost = document.createElement('div');
+      Object.defineProperty(referenceHost, 'getBoundingClientRect', {
+        value: () => ({ height: 240, width: 500, x: 0, y: 0 }),
+      });
+      container.appendChild(referenceHost);
+      const reference =
+        kind === 'line'
+          ? createLineChart(referenceHost, { series: LINE_SERIES, transition: false })
+          : createBarChart(referenceHost, { series: BARS, transition: false, variant: kind });
+      const geometry = (svg: SVGSVGElement) =>
+        [...svg.querySelectorAll('.prism-line-path, .prism-bar')].map((el) =>
+          ['d', 'x', 'y', 'width', 'height'].map((attr) => el.getAttribute(attr)),
+        );
+
+      expect(geometry(chart.el)).toEqual(geometry(reference.el));
+      chart.dispose();
+      reference.dispose();
+    },
+  );
+
+  it('bar charts reveal the finished bars from the baseline without any transition config', () => {
+    const frames = driveFrames();
+    const chart = createBarChart(container, { series: BARS, transition: { duration: 300 } });
+    const bar = chart.el.querySelector('.prism-bar')!;
+    const series = chart.el.querySelector('.prism-bar-series')!;
+
+    // The bar is painted at its final height immediately — a grow reveal never
+    // renders the corner-clamped sliver frames of a height tween — and a per-bar
+    // clip rect hides it until the frames run.
+    expect(Number(bar.getAttribute('height'))).toBeGreaterThan(0);
+    expect(series.getAttribute('clip-path')).toMatch(/^url\(#prism-reveal-/);
+
+    const clipRects = () => {
+      const id = series.getAttribute('clip-path')?.match(/#(.+)\)/)?.[1];
+
+      return [...chart.el.querySelectorAll(`clipPath#${CSS.escape(id ?? '')} rect`)] as SVGRectElement[];
+    };
+    const barTop = Number(bar.getAttribute('y'));
+    const baseline = barTop + Number(bar.getAttribute('height'));
+
+    expect(Number(clipRects()[0]?.getAttribute('height'))).toBe(0);
 
     frames.shift()?.(0);
+    frames.shift()?.(150);
+
+    // Mid-flight: the first bar's clip has grown up from the baseline toward its top.
+    const mid = clipRects()[0];
+
+    expect(Number(mid?.getAttribute('height'))).toBeGreaterThan(0);
+    expect(Number(mid?.getAttribute('y'))).toBeLessThan(baseline);
+    const bars = [...chart.el.querySelectorAll('.prism-bar')];
+    const progress = clipRects().map(
+      (rect, i) => Number(rect.getAttribute('height')) / Number(bars[i].getAttribute('height')),
+    );
+
+    expect(progress[0]).toBeCloseTo(progress[1]);
+
     frames.shift()?.(1_000);
 
-    expect(Number(bar.getAttribute('height'))).toBeGreaterThan(0);
+    // At completion the clip has covered the full bar and torn itself down.
+    expect(series.hasAttribute('clip-path')).toBe(false);
     chart.dispose();
   });
 
@@ -92,39 +277,176 @@ describe('motion is on by default', () => {
     chart.dispose();
   });
 
-  it('line charts raise the series from the baseline on mount', () => {
+  it('line charts trace the final geometry without fading, drifting, or deforming it', () => {
     const frames = driveFrames();
     const chart = createLineChart(container, { series: LINE_SERIES });
     const path = chart.el.querySelector('.prism-line-path')!;
 
-    // The starting frame is painted during render, so the line is flat on the
-    // baseline immediately rather than blank until the first callback.
     const mountYs = pathYs(path.getAttribute('d'));
 
-    expect(mountYs).toHaveLength(2);
-    expect(mountYs[0]).toBe(mountYs[1]);
+    expect(mountYs[0]).not.toBe(mountYs[1]);
+
+    const series = chart.el.querySelector('.prism-line-series')!;
+
+    expect(series.getAttribute('mask')).toMatch(/^url\(#prism-trace-/);
+    expect(traceOffsetFor(chart.el, series)).toBe(1);
+    expect(series.hasAttribute('clip-path')).toBe(false);
+    expect(series.hasAttribute('opacity')).toBe(false);
+    expect(series.hasAttribute('transform')).toBe(false);
 
     frames.shift()?.(0);
+    frames.shift()?.(210);
+    expect(traceOffsetFor(chart.el, series)).toBeGreaterThan(0);
+    expect(traceOffsetFor(chart.el, series)).toBeLessThan(1);
     frames.shift()?.(1_000);
 
-    const finalYs = pathYs(path.getAttribute('d'));
-
-    expect(finalYs[0]).not.toBe(finalYs[1]);
+    expect(series.hasAttribute('mask')).toBe(false);
+    expect(series.querySelector('defs')).toBeNull();
+    expect(pathYs(path.getAttribute('d'))[0]).toBe(mountYs[0]);
     chart.dispose();
   });
 
-  it('area charts grow out of the baseline on mount', () => {
+  it('area charts grow from the baseline to the final fill on mount', () => {
     const frames = driveFrames();
     const chart = createAreaChart(container, { series: LINE_SERIES });
     const fill = chart.el.querySelector('.prism-area-fill')!;
-    const mountYs = pathYs(fill.getAttribute('d'));
 
-    expect(new Set(mountYs).size).toBe(1);
+    const initial = fill.getAttribute('d');
+    expect(new Set(pathYs(initial)).size).toBe(1);
+
+    frames.shift()?.(0);
+    frames.shift()?.(150);
+    const intermediate = fill.getAttribute('d');
+    expect(intermediate).not.toBe(initial);
+    expect(new Set(pathYs(intermediate)).size).toBeGreaterThan(1);
+    frames.shift()?.(1_000);
+
+    expect(fill.getAttribute('d')).not.toBe(intermediate);
+    expect(new Set(pathYs(fill.getAttribute('d'))).size).toBeGreaterThan(1);
+    chart.dispose();
+  });
+
+  it('an update during a line trace removes the mask and morphs from the final shape', () => {
+    const frames = driveFrames();
+    const chart = createLineChart(container, { series: LINE_SERIES, transition: { duration: 100 } });
+    const series = chart.el.querySelector('.prism-line-series')!;
+
+    frames.shift()?.(0);
+
+    chart.update([
+      {
+        data: [
+          { key: 1, value: 20 },
+          { key: 2, value: 10 },
+        ],
+        name: 'S',
+      },
+    ]);
+
+    expect(series.hasAttribute('mask')).toBe(false);
+    expect(series.querySelector('defs')).toBeNull();
 
     frames.shift()?.(0);
     frames.shift()?.(1_000);
+    chart.dispose();
+  });
 
-    expect(new Set(pathYs(fill.getAttribute('d'))).size).toBeGreaterThan(1);
+  it('multi-series lines trace together without an entrance delay', () => {
+    const frames = driveFrames();
+    const chart = createLineChart(container, {
+      series: [
+        LINE_SERIES[0],
+        {
+          data: [
+            { key: 1, value: 20 },
+            { key: 2, value: 10 },
+          ],
+          name: 'T',
+        },
+      ],
+      transition: { duration: 100 },
+    });
+    const [first, second] = [...chart.el.querySelectorAll('.prism-line-series')];
+
+    frames.shift()?.(0);
+    frames.shift()?.(0);
+    frames.shift()?.(30);
+    frames.shift()?.(30);
+
+    expect(traceOffsetFor(chart.el, first)).toBeLessThan(1);
+    expect(traceOffsetFor(chart.el, second)).toBe(traceOffsetFor(chart.el, first));
+
+    frames.shift()?.(1_000);
+    chart.dispose();
+  });
+
+  it('the line trace preserves dashed styling and uncovers fixed-position markers', () => {
+    const frames = driveFrames();
+    const chart = createLineChart(container, {
+      series: [{ ...LINE_SERIES[0], data: LINE_SERIES[0].data.map((d) => ({ ...d, dash: '4 2' })), showPoints: true }],
+    });
+    const series = chart.el.querySelector('.prism-line-series')!;
+    const path = series.querySelector('.prism-line-path')!;
+    const dots = [...series.querySelectorAll('.prism-line-dot')];
+    const positions = dots.map((dot) => [dot.getAttribute('cx'), dot.getAttribute('cy')]);
+
+    expect(path.getAttribute('stroke-dasharray')).toBe('4 2');
+    expect(series.querySelector('mask path')?.getAttribute('d')).toBe(path.getAttribute('d'));
+    expect(Number(series.querySelector('mask path')?.getAttribute('stroke-width'))).toBeGreaterThan(6);
+    frames.shift()?.(0);
+    frames.shift()?.(210);
+    expect(path.getAttribute('stroke-dasharray')).toBe('4 2');
+    expect(dots.map((dot) => [dot.getAttribute('cx'), dot.getAttribute('cy')])).toEqual(positions);
+    chart.dispose();
+    expect(series.hasAttribute('mask')).toBe(false);
+  });
+
+  it('reduced motion renders lines immediately without a mask or animation frames', () => {
+    const frames = driveFrames();
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+
+    try {
+      const chart = createLineChart(container, { series: LINE_SERIES });
+
+      expect(chart.el.querySelector('mask')).toBeNull();
+      expect(frames).toHaveLength(0);
+      expect(chart.el.querySelector('.prism-line-path')?.getAttribute('d')).toBeTruthy();
+      chart.dispose();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('traces each styled curved segment using its exact rendered geometry in sequence', () => {
+    const frames = driveFrames();
+    const chart = createLineChart(container, {
+      series: [
+        {
+          curve: 'monotone',
+          data: [
+            { key: 0, value: 5 },
+            { key: 1, value: 22 },
+            { dash: '4 2', key: 2, value: 9 },
+            { dash: '4 2', key: 3, value: 30 },
+            { key: 4, value: 14 },
+          ],
+          name: 'S',
+          showPoints: true,
+        },
+      ],
+      transition: { duration: 400, easing: 'linear' },
+    });
+    const paths = [...chart.el.querySelectorAll('.prism-line-path')];
+    const traces = [...chart.el.querySelectorAll('mask path')];
+
+    expect(traces.map((trace) => trace.getAttribute('d'))).toEqual(paths.map((path) => path.getAttribute('d')));
+    frames.shift()?.(0);
+    frames.shift()?.(100);
+    expect(Number(traces[0].getAttribute('stroke-dashoffset'))).toBeCloseTo(0.5);
+    expect(Number(traces[1].getAttribute('stroke-dashoffset'))).toBe(1);
+    frames.shift()?.(300);
+    expect(Number(traces[0].getAttribute('stroke-dashoffset'))).toBe(0);
+    expect(Number(traces[1].getAttribute('stroke-dashoffset'))).toBeCloseTo(0.5);
     chart.dispose();
   });
 

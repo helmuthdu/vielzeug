@@ -654,3 +654,69 @@ describe('createChartBase: resize excludes in-flow chrome', () => {
     }
   });
 });
+
+// ─── createChartBase: the initial observer fire is a no-op ─────────────────────
+
+describe('createChartBase: initial resize fire', () => {
+  it('does not re-render when the observer reports the size the chart was built at', async () => {
+    // Regression: a ResizeObserver fires once on observe(), at the size the chart was
+    // already laid out at. Re-rendering there is a layout no-op but cancels a mount
+    // entrance still in flight — the renderers treat the redraw as an already-drawn
+    // update and snap to final — so a chart would never animate on first paint in any
+    // real browser. The pass must be skipped unless the effective size genuinely moved.
+    const originalObserver = globalThis.ResizeObserver;
+    let resizeCallback: ResizeObserverCallback | undefined;
+
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+      }
+
+      observe(): void {}
+
+      unobserve(): void {}
+
+      disconnect(): void {}
+    } as unknown as typeof ResizeObserver;
+
+    const frames: FrameRequestCallback[] = [];
+    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      frames.push(cb);
+
+      return frames.length;
+    });
+
+    try {
+      const container = document.createElement('div');
+
+      Object.defineProperty(container, 'getBoundingClientRect', {
+        value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+      });
+      document.body.appendChild(container);
+
+      let resizes = 0;
+      const base = createChartBase(container, {}, () => {
+        resizes += 1;
+      });
+
+      // The initial fire reports the same 600×300 the chart was built at: no re-render.
+      resizeCallback?.([{ contentRect: { height: 300, width: 600 } } as ResizeObserverEntry], {} as ResizeObserver);
+      frames.shift()?.(0);
+
+      expect(resizes).toBe(0);
+
+      // A genuine size change still re-renders.
+      resizeCallback?.([{ contentRect: { height: 200, width: 600 } } as ResizeObserverEntry], {} as ResizeObserver);
+      frames.shift()?.(0);
+
+      expect(resizes).toBe(1);
+      expect(base.dimensions.height).toBe(200);
+
+      base.dispose();
+      container.remove();
+    } finally {
+      rafSpy.mockRestore();
+      globalThis.ResizeObserver = originalObserver;
+    }
+  });
+});

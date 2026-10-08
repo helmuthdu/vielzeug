@@ -1,6 +1,7 @@
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
+import { cancelReveal, playTraceReveal } from '../../animation/reveal';
 import { startTween } from '../../animation/transition';
 import { tweenNumber } from '../../animation/tween';
 import { computeStyleRuns, type DatumMark, hasStyledRuns, type StyleRun } from '../../core/datum-style';
@@ -10,8 +11,8 @@ import { linePath, monotonePath, stepPath } from '../../svg/path';
 import type { ContinuousDatum, Scale, TransitionOption } from '../../types';
 
 export interface LineRenderOptions {
-  /** Plot-area bottom in area-local coordinates: the mount animation raises the line from here. */
-  baselineY: number;
+  /** Plot-area size in area-local coordinates: bounds the entrance mask. */
+  bounds: { height: number; width: number };
   color: string;
   curve: 'linear' | 'monotone' | 'step';
   /** Aborted when the owning chart is disposed: stops the transition's `requestAnimationFrame` loop from rescheduling. */
@@ -117,6 +118,8 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 
   if (dur === 0) {
+    activeAnimations.get(parent)?.();
+    cancelReveal(parent);
     draw(points);
     drawnPoints.set(parent, points);
 
@@ -145,13 +148,9 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 
   activeAnimations.get(parent)?.();
+  cancelReveal(parent);
 
-  const hasExisting = drawnPoints.has(parent);
-  // A first render has no drawn shape to interpolate between: the mount animation
-  // raises the whole line from the plot baseline instead.
-  const isMount = !hasExisting;
-
-  const fromPts: Point[] = isMount ? points.map((p) => ({ x: p.x, y: options.baselineY })) : [];
+  const isMount = !drawnPoints.has(parent);
 
   if (dotsGroup) {
     while (dotsGroup.children.length > points.length) dotsGroup.removeChild(dotsGroup.lastChild!);
@@ -172,12 +171,48 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     }
   }
 
-  if (!isMount) {
-    const drawn = drawnPoints.get(parent) ?? points;
+  if (isMount) {
+    draw(points);
+    drawnPoints.set(parent, points);
 
-    for (const [i, to] of points.entries()) {
-      fromPts.push(drawn[i] ?? drawn.at(-1) ?? to);
+    if (dotsGroup) {
+      for (const [i, point] of points.entries()) {
+        const c = dotsGroup.children[i] as SVGCircleElement | undefined;
+
+        if (c) setAttributes(c, { cx: point.x, cy: point.y });
+      }
     }
+
+    if (points.length > 1) {
+      const renderedPath = path ?? runPaths[0];
+      const strokeWidth = options.strokeWidth ?? (Number.parseFloat(getComputedStyle(renderedPath).strokeWidth) || 2);
+      const traces = styled
+        ? runs.map((run, i) => ({
+            d: runPaths[i].getAttribute('d')!,
+            end: run.end / (points.length - 1),
+            start: run.start / (points.length - 1),
+          }))
+        : [{ d: path!.getAttribute('d')!, end: 1, start: 0 }];
+
+      // A wide trace also uncovers markers as it reaches them, without a second timeline.
+      playTraceReveal(
+        parent,
+        options.bounds,
+        traces,
+        Math.max(strokeWidth, options.showPoints ? options.pointRadius * 2 : 0) + 2,
+        resolveMotion(options.transition, { defaultDuration: 420 }),
+        options.disposalSignal,
+      );
+    }
+
+    return;
+  }
+
+  const fromPts: Point[] = [];
+  const drawn = drawnPoints.get(parent) ?? points;
+
+  for (const [i, to] of points.entries()) {
+    fromPts.push(drawn[i] ?? drawn.at(-1) ?? to);
   }
 
   const paintFrame = (e: number): void => {

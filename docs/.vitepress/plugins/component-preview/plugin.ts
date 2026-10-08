@@ -34,6 +34,7 @@ const DEPS_ID = 'refine-preview:deps';
 const pkgDir = resolve(__dirname, '../../../../packages');
 const refineDir = resolve(pkgDir, 'refine/dist');
 const refineSrcStylesDir = resolve(pkgDir, 'refine/src/styles');
+const prismDir = resolve(pkgDir, 'prism/dist');
 
 // createRequire from within .pnpm/node_modules so it can resolve hoisted
 // pnpm packages. Subpath exports on these packages don't expose dist files
@@ -105,6 +106,8 @@ export function componentPreviewPlugin(): Plugin {
 
       // Also watch dist for JS/IIFE changes when running docs:dev:refine.
       server.watcher.add(refineDir);
+      server.watcher.add(depPaths);
+      server.watcher.add(prismDir);
 
       // `pnpm build` empties `dist/` before rewriting it (rimraf + vite `emptyOutDir`), which
       // chokidar reports as `unlink` + `add` rather than `change`. Listening to `change` only
@@ -114,8 +117,10 @@ export function componentPreviewPlugin(): Plugin {
       const handleWatchEvent = (file: string) => {
         const isSrcCss = file.startsWith(refineSrcStylesDir) && file.endsWith('.css');
         const isDistFile = file.startsWith(refineDir);
+        const isDependency = depPaths.includes(file);
+        const isPrismCss = file === resolve(prismDir, 'theme/prism.css');
 
-        if (!isSrcCss && !isDistFile) return;
+        if (!isSrcCss && !isDistFile && !isDependency && !isPrismCss) return;
 
         if (isSrcCss || (isDistFile && file.endsWith('.css'))) {
           const mod = server.moduleGraph.getModuleById(`\0${CSS_ID}`);
@@ -124,7 +129,7 @@ export function componentPreviewPlugin(): Plugin {
 
           const distCssPath = resolve(refineDir, 'styles/tokens.css');
           const srcCssPath = resolve(refineSrcStylesDir, 'tokens.css');
-          const css = inlineCss(existsSync(srcCssPath) ? srcCssPath : distCssPath);
+          const css = `${inlineCss(existsSync(srcCssPath) ? srcCssPath : distCssPath)}\n${readFileSync(resolve(prismDir, 'theme/prism.css'), 'utf-8')}`;
 
           server.ws.send({ data: { css }, event: REFINE_CSS_HMR_EVENT, type: 'custom' });
 

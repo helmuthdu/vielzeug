@@ -5,6 +5,7 @@ description: Focused recipes for creating, updating, interacting with, and themi
 
 - [Create a line chart](./examples/line-chart.md)
 - [Plot a time series](./examples/time-series.md)
+- [Plot a scatter chart](./examples/scatter-chart.md)
 - [Compare categories with a bar chart](./examples/bar-chart.md)
 - [Render compact charts](./examples/compact-charts.md)
 - [Compare hero stats with a radar chart](./examples/radar-chart.md)

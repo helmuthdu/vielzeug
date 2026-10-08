@@ -2,13 +2,13 @@
 title: Prism Migration
 ---
 
-# Upcoming Train Migration
+# Prism 26.10 Migration
 
-Line, area, bar, pie, and sparkline charts now share the radar chart's interaction model: series comparison, keyboard navigation, and active-key highlighting. Default visuals, default motion, and a few DOM contracts changed.
+With an informative `a11y.ariaLabel`, line, area, bar, scatter, pie, and radar charts support pointer and keyboard interaction with active-value announcements. Cartesian series compare values at a shared key; scatter identifies one independent point, while pie and radar report a slice or axis. Sparklines remain pointer-only and do not provide a tooltip or live value region. Default visuals, default motion, and a few DOM contracts changed.
 
 ## Charts animate by default
 
-Every chart now animates without configuration: line and area series rise from the plot baseline on mount, pie slices morph between values instead of replaying their entry sweep, and sparklines tween an update instead of snapping. Previously these charts drew every frame synchronously unless you passed a `transition` config.
+Every chart now animates without configuration: bars grow together out of the baseline behind per-bar clips, lines trace their final curve behind a stroke mask, and area series grow from their baseline on mount. Bar and line entrances reveal their final geometry instead of deforming it. Pie slices morph between values instead of replaying their entry sweep. Previously these charts drew every frame synchronously unless you passed a `transition` config.
 
 ```ts
 // Before: static unless a transition was configured
@@ -20,7 +20,7 @@ createLineChart(container, { series, transition: false });
 
 `transition` now also accepts a boolean: `false` renders every update synchronously, `true` states the default explicitly. Reduced-motion users still get synchronous rendering through `preference: 'system'`, the default.
 
-Two consequences for tests: a first render no longer ends on final geometry (drive the animation frames, or pass `transition: false`), and crosshair guides carry their position in a `transform` instead of `x1`/`y1` attributes so a snapped guide can glide to the next datum.
+Three consequences for tests: a first render is not fully visible until its entrance completes (drive the animation frames, or pass `transition: false`); during a mount entrance bar series carry a temporary `clip-path`, while line series carry a temporary `mask` (the attribute and matching `<defs>` child are removed when the entrance completes); and crosshair guides carry their position in a `transform` instead of `x1`/`y1` attributes so a snapped guide can glide to the next datum.
 
 ## Import the theme as `theme.css`
 
@@ -54,10 +54,10 @@ Area series default to a gradient that fades toward the baseline. Set `fill: 'so
 
 ```ts
 // Before: flat fill by default
-createAreaChart(container, { series: [{ data, name: 'Users' }] });
+createAreaChart(container, { series: [{ data: [{ key: 1, value: 10 }], name: 'Users' }] });
 
 // After: opt back into a flat fill
-createAreaChart(container, { series: [{ data, fill: 'solid', name: 'Users' }] });
+createAreaChart(container, { series: [{ data: [{ key: 1, value: 10 }], fill: 'solid', name: 'Users' }] });
 ```
 
 Sparkline `area` fills also use a gradient. Their default `fillOpacity` is now the `--prism-spark-fill-opacity` token instead of `0.2`.
@@ -84,7 +84,7 @@ createBarChart(container, { series: [{ borderRadius: 0, data, name: 'Sales' }] }
 
 ## Read announcements from `.prism-live`
 
-Each chart has one `role="status"` region, `.prism-live`, replacing `.prism-crosshair-live` and `.prism-radar-live`. Announcements and the default tooltip now compare every series at the active key.
+Cartesian, pie, and radar charts include a `role="status"` region, `.prism-live`, replacing `.prism-crosshair-live` and `.prism-radar-live`. Without a tooltip, Prism writes active-value announcements there. With a tooltip, the overlay is a polite status region and `.prism-live` remains empty. Announcements and the default tooltip compare every series at the active key; sparklines do not provide a tooltip or live value region.
 
 ```ts
 // Before

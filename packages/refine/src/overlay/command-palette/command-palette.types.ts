@@ -34,7 +34,18 @@ export type CommandPaletteSelectDetail = {
   value: string;
 };
 
+/**
+ * The row the palette currently points at. `item` is `undefined` when the list is empty or the
+ * palette has no focus, which is also when a `preview` slot should be emptied by its owner.
+ */
+export type CommandPaletteActiveChangeDetail = {
+  item?: CommandPaletteItem;
+  label: string;
+  value: string;
+};
+
 export type OreCommandPaletteEvents = {
+  'active-change': CommandPaletteActiveChangeDetail;
   'open-change': OverlayOpenChangeDetail;
   search: { query: string };
   select: CommandPaletteSelectDetail;

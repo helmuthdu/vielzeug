@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Skip the initial no-op ResizeObserver fire so a settling container no longer cancels a chart's mount entrance (bar/line/area/radar)",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

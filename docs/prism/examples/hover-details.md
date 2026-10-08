@@ -87,5 +87,5 @@ Render the panel from `onHover`: it receives every series value for the active k
 
 - [Event hooks](../usage.md#event-hooks)
 - [Keyboard and announcements](../usage.md#keyboard-and-announcements)
-- [`ChartEvent` type](../api.md#axis-interaction-and-transition-configurations)
+- [`ChartEvent` type](../api.md#core-and-data-types)
 - [Render a custom tooltip](./custom-tooltip.md)

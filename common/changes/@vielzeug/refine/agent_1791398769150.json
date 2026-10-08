@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add a preview slot and active-change event to ore-command-palette",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

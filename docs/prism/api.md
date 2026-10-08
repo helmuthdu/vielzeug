@@ -1,35 +1,42 @@
 ---
 title: 'Prism: API Reference'
-description: Complete chart, scale, theme, handle, configuration, and error contracts for @vielzeug/prism.
+description: Complete reference for Prism chart factories, scales, themes, types, and errors.
 ---
 
 [[toc]]
 
 ## API Overview
 
+All chart factories, scale utilities, theme helpers, and error classes are synchronous. Charts render into an HTML element and return a `ChartHandle`; they do not return a promise.
+
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createLineChart()` | Render a line chart | Sync | Line keys must be numbers or dates |
-| `createAreaChart()` | Render an area chart | Sync | Line keys must be numbers or dates |
-| `createBarChart()` | Render grouped or stacked bars | Sync | Stacked negative values are clamped to zero |
-| `createPieChart()` | Render pie, donut, or semi-circle slices | Sync | `onHover` receives `null` when the pointer leaves |
-| `createRadarChart()` | Compare values across 3+ axes, such as hero stats | Sync | Events report a whole axis, not one series |
-| `createSparkline()` | Render an inline line, area, bar, or stack | Sync | Omitted `a11y` makes the chart decorative |
-| `linearScale()` | Create a numeric scale | Sync | `nice` defaults to `true` |
-| `timeScale()` | Create a date scale | Sync | Invalid dates produce an invalid domain |
-| `bandScale()` | Create a categorical scale | Sync | Unknown categories map to `0` and warn in development |
-| `setTheme()` | Set Prism CSS custom properties | Sync | Writes to `document.documentElement` unless `scope` is given |
-| `resetTheme()` | Remove Prism theme overrides | Sync | Clears only properties `setTheme()` wrote, on the same target |
-| `seriesColor()` | Resolve a series palette color | Sync | Palette indexes wrap after eight colors |
+| `createLineChart()` | Render one or more continuous line series | Sync | `key` values must be numbers or dates |
+| `createAreaChart()` | Render continuous series with filled areas | Sync | Fills use a gradient by default |
+| `createScatterChart()` | Plot independent `(x, y)` points | Sync | `key` is the x-value; the y-domain is fitted to data |
+| `createBarChart()` | Render categorical bars | Sync | Negative values in stacked variants are clamped to zero |
+| `createPieChart()` | Render pie, donut, or semi-circle slices | Sync | `variant` is fixed at creation; `update()` replaces slices |
+| `createRadarChart()` | Compare series across fixed axes | Sync | Requires at least three axes to draw |
+| `createSparkline()` | Render a compact line, area, bar, or stack | Sync | Has no axes, legend, or keyboard navigation |
+| `linearScale()` | Create a numeric scale | Sync | `nice` defaults to `true`; set `nice: false` to preserve the domain |
+| `timeScale()` | Create a date scale | Sync | `nice` defaults to `true` |
+| `bandScale()` | Create an ordered categorical scale | Sync | Unknown categories map to `0` and warn in development |
+| `setTheme()` | Set Prism CSS custom properties | Sync | Writes inline styles to `document.documentElement` by default |
+| `resetTheme()` | Remove theme overrides set by `setTheme()` | Sync | Only clears the selected target |
+| `seriesColor()` | Resolve a palette CSS value | Sync | Palette positions wrap after eight |
+| `PrismError` | Base class for Prism errors | Sync | Use `instanceof` to catch any Prism error |
+| `PrismRenderError` | Report an invalid chart container or failed chart operation | Sync | Also thrown by `update()` after disposal |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/prism` | Chart factories, scales, theme helpers, errors, and public types |
-| `@vielzeug/prism/theme.css` | Default CSS custom properties and dark-mode values |
+| `@vielzeug/prism` | Chart factories, scale and theme functions, error classes, and public types |
+| `@vielzeug/prism/theme.css` | Default chart styles, CSS custom properties, dark-mode values, and reduced-motion rules |
 
 ## Chart Factories
+
+Each factory appends an SVG to `container`. A chart with no measurable container size uses a temporary `600 × 300` SVG size and emits a development warning; `ResizeObserver` applies later size changes. Unless `a11y` is informative, the SVG is hidden from the accessibility tree.
 
 ### `createLineChart()`
 
@@ -40,27 +47,31 @@ function createLineChart(
 ): ChartHandle<LineSeriesConfig[]>;
 ```
 
-Renders a line chart and returns a handle that replaces the complete series array through `update()`.
+Renders line series and returns a handle whose `update()` argument replaces the complete series array. Axes render by default; the value axis has grid lines by default. Pass `false` to `xAxis` or `yAxis` to suppress that axis.
+
+Series use linear interpolation by default, omit point markers by default, and use a point radius of 3 when markers are enabled. `yAxis` defaults to `'left'`; crosshair, tooltip, and legend are disabled unless configured.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `container` | `HTMLElement` | Host that receives the SVG and optional overlays |
-| `config` | `LineChartConfig` | Initial series, axes, interaction, accessibility, and transition settings |
+| `container` | `HTMLElement` | Host that receives the chart SVG and optional overlays |
+| `config` | `LineChartConfig` | Series, axes, interaction, accessibility, and motion settings |
 
 **Returns:** `ChartHandle<LineSeriesConfig[]>`.
 
 ```ts
 import { createLineChart } from '@vielzeug/prism';
 
-const chart = createLineChart(container, {
+const host = document.createElement('div');
+host.style.cssText = 'width:640px;height:320px';
+document.body.append(host);
+
+const chart = createLineChart(host, {
   a11y: { ariaLabel: 'Revenue by month' },
-  series: [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }],
+  series: [{ data: [{ key: 1, value: 10 }, { key: 2, value: 15 }], name: 'Revenue' }],
 });
-
-chart.update([{ data: [{ key: 2, value: 20 }], name: 'Revenue' }]);
+chart.update([{ data: [{ key: 1, value: 10 }, { key: 2, value: 15 }, { key: 3, value: 18 }], name: 'Revenue' }]);
+chart.dispose();
 ```
-
----
 
 ### `createAreaChart()`
 
@@ -71,24 +82,67 @@ function createAreaChart(
 ): ChartHandle<AreaSeriesConfig[]>;
 ```
 
-Renders an area chart and returns a handle that replaces the complete series array through `update()`.
+Renders continuous area series with a gradient fill by default. `update()` replaces the complete series array.
+
+Area series use linear interpolation by default and show their top line unless `showLine: false` is set. Axes render by default, with grid lines on the value axis.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `container` | `HTMLElement` | Host that receives the SVG and optional overlays |
-| `config` | `AreaChartConfig` | Initial series, axes, interaction, accessibility, and transition settings |
+| `container` | `HTMLElement` | Host that receives the chart SVG and optional overlays |
+| `config` | `AreaChartConfig` | Series, axes, interaction, accessibility, and motion settings |
 
 **Returns:** `ChartHandle<AreaSeriesConfig[]>`.
 
 ```ts
 import { createAreaChart } from '@vielzeug/prism';
 
-const chart = createAreaChart(container, {
-  series: [{ data: [{ key: 1, value: 10 }], name: 'Revenue' }],
+const host = document.createElement('div');
+host.style.cssText = 'width:640px;height:320px';
+document.body.append(host);
+
+const chart = createAreaChart(host, {
+  a11y: { ariaLabel: 'Visitors over time' },
+  series: [{ data: [{ key: 1, value: 10 }, { key: 2, value: 18 }], name: 'Visitors' }],
 });
+chart.dispose();
 ```
 
----
+### `createScatterChart()`
+
+```ts
+function createScatterChart(
+  container: HTMLElement,
+  config: ScatterChartConfig,
+): ChartHandle<ScatterSeriesConfig[]>;
+```
+
+Plots each datum independently: `key` is the numeric or date x-value and `value` is the y-value. Points are not joined. `update()` replaces the complete series array.
+
+Axes render by default, with grid lines on the value axis. The value scale is fitted to the observed data rather than forced to include zero. Tooltip, crosshair, and legend are disabled unless configured.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `container` | `HTMLElement` | Host that receives the chart SVG and optional overlays |
+| `config` | `ScatterChartConfig` | Independent points, axes, interaction, accessibility, and motion settings |
+
+**Returns:** `ChartHandle<ScatterSeriesConfig[]>`.
+
+```ts
+import { createScatterChart } from '@vielzeug/prism';
+
+const host = document.createElement('div');
+host.style.cssText = 'width:640px;height:320px';
+document.body.append(host);
+
+const chart = createScatterChart(host, {
+  a11y: { ariaLabel: 'Height against weight' },
+  series: [{ data: [{ key: 160, value: 55 }, { key: 175, value: 70 }], name: 'Cohort A' }],
+  tooltip: true,
+});
+chart.dispose();
+```
+
+Scatter interaction reports one datum and series rather than a `values` array. Keyboard navigation visits points across series in x order.
 
 ### `createBarChart()`
 
@@ -99,25 +153,32 @@ function createBarChart(
 ): ChartHandle<BarSeriesConfig[]>;
 ```
 
-Renders grouped, stacked, grouped-horizontal, or stacked-horizontal bars.
+Renders grouped, stacked, grouped-horizontal, or stacked-horizontal categories. `update()` replaces the complete series array; the variant is fixed at creation. Axes render by default, with grid lines on the value axis.
+
+The default variant is `grouped`; tooltip and legend are disabled unless configured.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `container` | `HTMLElement` | Host that receives the SVG and optional overlays |
-| `config` | `BarChartConfig` | Initial series, variant, axes, accessibility, and interaction settings |
+| `container` | `HTMLElement` | Host that receives the chart SVG and optional overlays |
+| `config` | `BarChartConfig` | Series, layout variant, axes, interaction, accessibility, and motion settings |
 
 **Returns:** `ChartHandle<BarSeriesConfig[]>`.
 
 ```ts
 import { createBarChart } from '@vielzeug/prism';
 
-const chart = createBarChart(container, {
-  series: [{ data: [{ key: 'Open', value: 12 }], name: 'Tasks' }],
-  variant: 'grouped',
+const host = document.createElement('div');
+host.style.cssText = 'width:640px;height:320px';
+document.body.append(host);
+
+const chart = createBarChart(host, {
+  a11y: { ariaLabel: 'Tasks by status' },
+  series: [{ data: [{ key: 'Open', value: 12 }, { key: 'Done', value: 8 }], name: 'Tasks' }],
 });
+chart.dispose();
 ```
 
----
+For stacked variants, negative values are treated as zero and produce a development warning.
 
 ### `createPieChart()`
 
@@ -128,25 +189,29 @@ function createPieChart(
 ): ChartHandle<PieSliceConfig[]>;
 ```
 
-Renders pie, donut, or semi-circle slices.
+Renders pie, donut, or semi-circle slices. The default variant is `pie`; `update()` replaces the slice array. The default inner radius is zero for pies and 55% of the outer radius for donut and semi variants. Pie slices default to no padding or rounded corners; donut and semi slices default to 8px padding and corner radius.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `container` | `HTMLElement` | Host that receives the SVG and optional overlays |
-| `config` | `PieChartConfig` | Initial slices, variant, geometry, accessibility, and interaction settings |
+| `container` | `HTMLElement` | Host that receives the chart SVG and optional overlays |
+| `config` | `PieChartConfig` | Slices, shape, geometry, legend, tooltip, and interaction settings |
 
 **Returns:** `ChartHandle<PieSliceConfig[]>`.
 
 ```ts
 import { createPieChart } from '@vielzeug/prism';
 
-const chart = createPieChart(container, {
-  data: [{ label: 'Complete', value: 72 }, { label: 'Remaining', value: 28 }],
+const host = document.createElement('div');
+host.style.cssText = 'width:320px;height:240px';
+document.body.append(host);
+
+const chart = createPieChart(host, {
+  a11y: { ariaLabel: 'Orders by channel' },
+  data: [{ label: 'Direct', value: 72 }, { label: 'Referral', value: 28 }],
   variant: 'donut',
 });
+chart.dispose();
 ```
-
----
 
 ### `createRadarChart()`
 
@@ -157,47 +222,32 @@ function createRadarChart(
 ): ChartHandle<RadarSeriesConfig[]>;
 ```
 
-Renders one closed shape per series across three or more axes. `update()` replaces the series; the axes are fixed at creation.
+Renders one shape per series across the configured axes. `update()` replaces series data but not axes or other configuration. Fewer than three axes warn in development and draw no chart. Tooltip and legend are disabled unless configured.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `container` | `HTMLElement` | Host that receives the SVG and optional overlays |
-| `config` | `RadarChartConfig` | Axes, series, scale, grid, appearance, accessibility, and interaction settings |
-
-| Field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `axes` | `RadarAxisConfig[]` | N/A | Ordered axes, drawn clockwise; needs at least 3 |
-| `series` | `RadarSeriesConfig[]` | N/A | Values keyed by `axis.key` |
-| `domain` | `[number, number]` | `[0, nice max]` | Shared value range; `axis.min`/`axis.max` override it per axis |
-| `grid` | `boolean \| RadarGridConfig` | `true` | Rings, bands, and level labels; `false` hides the grid |
-| `fill` | `'gradient' \| 'none' \| 'solid'` | `'solid'` | Shape fill; `gradient` deepens toward the rim |
-| `curve` | `'linear' \| 'rounded'` | `'linear'` | Straight edges or a smooth closed curve |
-| `showPoints` | `boolean` | `true` | Vertex dots; a missing value shows a hollow dot at the centre |
-| `showValues` | `boolean` | `false` | Print each value beside its vertex |
-| `startAngle` | `number` | `0` | Degrees clockwise from 12 o'clock for the first axis |
-| `onHover` | `(event: RadarEvent \| null) => void` | N/A | Nearest axis under the pointer or keyboard focus |
-| `onClick` | `(event: RadarEvent) => void` | N/A | Axis clicked, or activated with Enter/Space |
+| `container` | `HTMLElement` | Host that receives the chart SVG and optional overlays |
+| `config` | `RadarChartConfig` | Fixed axes, series, scale, grid, appearance, and interaction settings |
 
 **Returns:** `ChartHandle<RadarSeriesConfig[]>`.
 
 ```ts
 import { createRadarChart } from '@vielzeug/prism';
 
-const chart = createRadarChart(container, {
+const host = document.createElement('div');
+host.style.cssText = 'width:400px;height:320px';
+document.body.append(host);
+
+const chart = createRadarChart(host, {
   a11y: { ariaLabel: 'Hero stats' },
-  axes: [
-    { key: 'str', label: 'Strength' },
-    { key: 'agi', label: 'Agility' },
-    { key: 'end', label: 'Endurance' },
-  ],
+  axes: [{ key: 'str', label: 'Strength' }, { key: 'agi', label: 'Agility' }, { key: 'end', label: 'Endurance' }],
   domain: [0, 10],
   series: [{ data: [{ key: 'str', value: 8 }, { key: 'agi', value: 6 }, { key: 'end', value: 9 }], name: 'Adam' }],
 });
+chart.dispose();
 ```
 
-Hovering or arrowing onto an axis highlights its spoke and reports every series' value on it. Without a tooltip, the chart announces the values through its own `role="status"` region. A value for an unknown axis, duplicate axis keys, or fewer than 3 axes warns in development.
-
----
+Radar defaults are a solid fill, linear curves, visible points, a four-level polygon grid with bands, no grid labels, and a first-axis angle of zero degrees. Grid labels render only when all axes share a domain.
 
 ### `createSparkline()`
 
@@ -208,21 +258,28 @@ function createSparkline(
 ): ChartHandle<number[] | StackSegment[]>;
 ```
 
-Renders a compact chart without axes, margin, or legend.
+Renders compact data without axes, chart margins, or a legend. `update()` replaces the number or stack-segment array. The default variant is `line`; only line and area variants draw the endpoint marker by default.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `container` | `HTMLElement` | Host that receives the SVG |
-| `config` | `SparklineConfig` | Initial values, variant, appearance, accessibility, and callbacks |
+| `container` | `HTMLElement` | Host that receives the chart SVG |
+| `config` | `SparklineConfig` | Values, variant, appearance, accessibility, and pointer callbacks |
 
 **Returns:** `ChartHandle<number[] | StackSegment[]>`.
 
 ```ts
 import { createSparkline } from '@vielzeug/prism';
 
-const chart = createSparkline(container, { data: [2, 5, 3, 8], variant: 'area' });
+const host = document.createElement('div');
+host.style.cssText = 'width:240px;height:48px';
+document.body.append(host);
+
+const chart = createSparkline(host, { data: [2, 5, 3, 8], variant: 'area' });
 chart.update([2, 5, 3, 8, 13]);
+chart.dispose();
 ```
+
+`StackSegment[]` is for `variant: 'stack'`. Pointer callbacks are available for numeric line, area, and bar sparklines; sparklines do not support keyboard navigation.
 
 ## Scale Factories
 
@@ -232,14 +289,16 @@ chart.update([2, 5, 3, 8, 13]);
 function linearScale(config: LinearScaleConfig): Scale<number>;
 ```
 
-| Field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `domain` | `[number, number]` | N/A | Input extent |
-| `range` | `[number, number]` | N/A | Output extent |
-| `clamp` | `boolean` | `false` | Clamp mapped and inverted values |
-| `nice` | `boolean` | `true` | Expand the domain to rounded boundaries |
+Maps a numeric domain to a numeric range. `nice` defaults to `true`; `clamp` defaults to `false` and applies to `map()`, not `invert()`.
 
-**Returns:** `Scale<number>`.
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `config.domain` | `[number, number]` | Required | Input extent |
+| `config.range` | `[number, number]` | Required | Output extent |
+| `config.clamp` | `boolean` | `false` | Clamp mapped values to the range |
+| `config.nice` | `boolean` | `true` | Expand the domain to rounded boundaries |
+
+**Returns:** `Scale<number>`, with `map`, `invert`, `ticks`, `domain`, and `range`.
 
 ```ts
 import { linearScale } from '@vielzeug/prism';
@@ -248,21 +307,21 @@ const scale = linearScale({ domain: [0, 100], range: [0, 500] });
 scale.map(50); // 250
 ```
 
----
-
 ### `timeScale()`
 
 ```ts
 function timeScale(config: TimeScaleConfig): Scale<Date>;
 ```
 
-| Field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `domain` | `[Date, Date]` | N/A | Input date extent |
-| `range` | `[number, number]` | N/A | Output extent |
-| `nice` | `boolean` | `true` | Expand the domain to rounded interval boundaries |
+Maps date values to a numeric range. `nice` defaults to `true` and rounds the domain to a time interval.
 
-**Returns:** `Scale<Date>`.
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `config.domain` | `[Date, Date]` | Required | Input date extent |
+| `config.range` | `[number, number]` | Required | Output extent |
+| `config.nice` | `boolean` | `true` | Expand the domain to time-interval boundaries |
+
+**Returns:** `Scale<Date>`, with `map`, `invert`, `ticks`, `domain`, and `range`.
 
 ```ts
 import { timeScale } from '@vielzeug/prism';
@@ -271,9 +330,8 @@ const scale = timeScale({
   domain: [new Date('2026-01-01'), new Date('2026-12-31')],
   range: [0, 500],
 });
+scale.map(new Date('2026-07-02'));
 ```
-
----
 
 ### `bandScale()`
 
@@ -281,22 +339,27 @@ const scale = timeScale({
 function bandScale(config: BandScaleConfig): BandScale;
 ```
 
-| Field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `domain` | `string[]` | N/A | Ordered categories |
-| `range` | `[number, number]` | N/A | Output extent |
-| `padding` | `number` | `0.1` | Inner gap ratio |
-| `paddingOuter` | `number` | `padding` | Outer gap ratio |
+Maps ordered string categories to the start of each band. `padding` defaults to `0.1`; `paddingOuter` defaults to the same value. Mapping an unknown category returns `0` and warns in development.
 
-**Returns:** `BandScale`.
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `config.domain` | `string[]` | Required | Ordered categories |
+| `config.range` | `[number, number]` | Required | Output extent |
+| `config.padding` | `number` | `0.1` | Inner gap as a ratio of bandwidth |
+| `config.paddingOuter` | `number` | `padding` | Outer gap as a ratio of bandwidth |
+
+**Returns:** `BandScale`, with `map`, `ticks`, `bandwidth`, `gap`, `domain`, and `range`.
 
 ```ts
 import { bandScale } from '@vielzeug/prism';
 
 const scale = bandScale({ domain: ['A', 'B'], range: [0, 200] });
+scale.bandwidth();
 ```
 
 ## Theme Utilities
+
+`theme.css` supplies the base CSS values and styles. `setTheme()` writes inline custom properties, which take precedence over stylesheet declarations. For other visual controls, set CSS custom properties directly.
 
 ### `setTheme()`
 
@@ -304,12 +367,22 @@ const scale = bandScale({ domain: ['A', 'B'], range: [0, 200] });
 function setTheme(theme: PrismTheme, options?: ThemeScope): void;
 ```
 
-Sets Prism theme custom properties as inline styles on `options.scope` when given, otherwise on `document.documentElement`. Inline values outrank every stylesheet rule, including dark-mode selectors.
+Sets the provided theme values on `options.scope`, or on `document.documentElement` when omitted. Omitted scalar keys remain unchanged. Providing `colors` replaces all eight palette slots, removing unused slots.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `theme` | `PrismTheme` | Tokens to write; omitted keys are left untouched |
-| `options.scope` | `HTMLElement` | Subtree to theme instead of `:root`; charts inside it resolve their `var(--prism-*)` lookups against these values |
+| `theme` | `PrismTheme` | Palette and supported axis, grid, text, font, and tooltip properties |
+| `options.scope` | `HTMLElement` | Element that scopes the inline custom properties |
+
+**Returns:** `void`.
+
+```ts
+import { setTheme } from '@vielzeug/prism';
+
+const host = document.createElement('div');
+document.body.append(host);
+setTheme({ colors: ['#2563eb', '#16a34a'], textColor: '#111827' }, { scope: host });
+```
 
 ### `resetTheme()`
 
@@ -317,7 +390,21 @@ Sets Prism theme custom properties as inline styles on `options.scope` when give
 function resetTheme(options?: ThemeScope): void;
 ```
 
-Removes every custom property `setTheme()` can set from `options.scope` (default `documentElement`). Scoped and global calls are independent targets.
+Removes every custom property managed by `setTheme()` from the given scope or the document root. It does not remove CSS rules or change any other custom properties.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `options` | `ThemeScope` | Optional target; defaults to `document.documentElement` |
+
+**Returns:** `void`.
+
+```ts
+import { resetTheme, setTheme } from '@vielzeug/prism';
+
+const scope = document.createElement('div');
+setTheme({ textColor: '#111827' }, { scope });
+resetTheme({ scope });
+```
 
 ### `seriesColor()`
 
@@ -325,387 +412,422 @@ Removes every custom property `setTheme()` can set from `options.scope` (default
 function seriesColor(index: number, override?: string): string;
 ```
 
-Returns `override` when provided; otherwise returns `var(--prism-color-N)` with an eight-color wrap.
+Returns `override` when it is provided; otherwise returns a `var(--prism-color-N)` reference. The palette has eight positions and the index wraps around after the eighth.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `index` | `number` | Zero-based palette position |
+| `override` | `string` | Optional color returned instead of a CSS variable |
+
+**Returns:** `string`.
+
+```ts
+import { seriesColor } from '@vielzeug/prism';
+
+seriesColor(0); // 'var(--prism-color-1)'
+seriesColor(1, '#2563eb'); // '#2563eb'
+```
+
+## Chart Handle
+
+`ChartHandle<TData>` is returned by every chart factory. `update()` synchronously rebuilds the chart from its new data; enabled motion may animate the resulting SVG. `dispose()` is idempotent, removes the chart SVG, observers, tooltip and legend, cancels chart-owned animation, aborts `disposalSignal`, and emits one `dispose` tap event. `update()` after disposal throws `PrismRenderError`.
+
+`tap()` observes `resize` and `dispose` events outside the render path. It returns an unsubscribe function; an optional abort signal removes the subscription. Observer-handler exceptions are swallowed so they cannot affect chart behavior. A tap added after disposal returns a no-op unsubscribe function.
+
+`[Symbol.dispose]()` delegates to `dispose()`, allowing explicit resource management where supported.
+
+All chart handles expose the same lifecycle members; interactive cartesian and pie/radar charts use a `.prism-live` status region when no tooltip is enabled. A tooltip is itself a polite status region. Sparklines have neither a tooltip nor a live value announcer.
+
+| Method or property | Contract |
+| --- | --- |
+| `el` | The chart's root `SVGSVGElement` |
+| `update(data)` | Replace chart data and render; throws `PrismRenderError` after disposal |
+| `dispose()` | Idempotently release chart-owned DOM, observation, and motion |
+| `disposed` | Whether the handle has been disposed |
+| `disposalSignal` | `AbortSignal` aborted during disposal |
+| `tap(handler, options?)` | Observe resize/dispose events; returns an unsubscribe function |
+| `[Symbol.dispose]()` | Calls `dispose()` |
+
+`PrismEvent` reports a changed SVG content size as `{ type: 'resize', width, height }`; the `dispose` event is emitted once before teardown completes.
 
 ## Types
 
-### Core types
+The following are all types and interfaces exported from `@vielzeug/prism`. Definitions mirror the package entry-point contracts.
+
+### Animation Types
 
 ```ts
-interface ChartHandle<TData = unknown> {
+export type EasingFn = (t: number) => number;
+export type EasingName = 'back-out' | 'ease-in' | 'ease-in-out' | 'ease-out' | 'expo-out' | 'linear';
+
+export interface TransitionConfig {
+  /** Milliseconds per animated lane. Defaults to 300 (420 for a line entrance, 400 for radar). */
+  duration?: number;
+  easing?: EasingName | ((t: number) => number);
+  /** `system` skips animation when reduced motion is preferred. */
+  preference?: 'always' | 'never' | 'system';
+  /** Per-bar delay on bar charts or per-series delay on radar charts. */
+  stagger?: number;
+}
+
+export type TransitionOption = TransitionConfig | boolean;
+```
+
+### Theme Types
+
+```ts
+export interface PrismTheme {
+  axisColor?: string;
+  colors?: string[];
+  fontFamily?: string;
+  gridColor?: string;
+  gridOpacity?: number;
+  textColor?: string;
+  textColorSecondary?: string;
+  tooltipBg?: string;
+  tooltipBorder?: string;
+  tooltipColor?: string;
+}
+
+export interface ThemeScope {
+  readonly scope?: HTMLElement;
+}
+```
+
+`PrismTheme.colors` writes up to eight palette slots. The scalar fields map as follows:
+
+| Field | CSS custom property |
+| --- | --- |
+| `axisColor` | `--prism-axis-color` |
+| `fontFamily` | `--prism-font-family` |
+| `gridColor` | `--prism-grid-color` |
+| `gridOpacity` | `--prism-grid-opacity` |
+| `textColor` | `--prism-text-color` |
+| `textColorSecondary` | `--prism-text-color-secondary` |
+| `tooltipBg` | `--prism-tooltip-bg` |
+| `tooltipBorder` | `--prism-tooltip-border` |
+| `tooltipColor` | `--prism-tooltip-color` |
+
+### Core and Data Types
+
+```ts
+export interface ChartMargin {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+}
+
+export interface ChartDimensions {
+  height: number;
+  margin: ChartMargin;
+  width: number;
+}
+
+export type PrismEvent =
+  | { readonly height: number; readonly type: 'resize'; readonly width: number }
+  | { readonly type: 'dispose' };
+
+export interface ChartHandle<TData = unknown> {
   readonly disposalSignal: AbortSignal;
+  dispose(): void;
   readonly disposed: boolean;
   readonly el: SVGSVGElement;
   tap(handler: (event: PrismEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   update(data: TData): void;
-  dispose(): void;
   [Symbol.dispose](): void;
 }
 
-type PrismEvent =
-  | { readonly height: number; readonly type: 'resize'; readonly width: number }
-  | { readonly type: 'dispose' };
-
-interface ChartMargin {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
-interface ChartDimensions {
-  width: number;
-  height: number;
-  margin: ChartMargin;
-}
-
-type ChartA11y =
+export type ChartA11y =
   | { readonly decorative: true }
   | { readonly ariaLabel: string; readonly decorative?: false };
-```
 
-`update()` renders synchronously and throws `PrismRenderError` after disposal. Omitting `a11y` makes the SVG decorative with `aria-hidden="true"`.
-
-`tap()` observes runtime behavior outside the render path: it receives `resize` and `dispose` events (see `PrismEvent`). It returns an unsubscribe function; pass `options.signal` to detach automatically. Handler errors are swallowed, and tapping a disposed handle returns a no-op unsubscribe.
-
----
-
-### Data types
-
-```ts
-interface Datum<TKey extends Date | number | string = Date | number | string> {
+export interface Datum<TKey extends Date | number | string = Date | number | string> {
+  dash?: string;
   key: TKey;
-  value: number;
   meta?: Record<string, unknown>;
-  dash?: string; // stroke-dasharray for this datum's marks, e.g. '5 5'
-  opacity?: number; // opacity multiplier 0-1 for this datum's marks, e.g. 0.4
+  opacity?: number;
+  value: number;
 }
 
-type ContinuousDatum = Datum<Date | number>;
+export type ContinuousDatum = Datum<Date | number>;
 
-interface Series<TDatum extends Datum = Datum> {
-  name: string;
-  data: TDatum[];
+export interface Series<TDatum extends Datum = Datum> {
   color?: string;
-  id?: string; // stable data-series-id on the series group; defaults to series-<index>
+  data: TDatum[];
+  id?: string;
+  name: string;
 }
 
-interface ChartEvent {
+export interface ChartEvent {
   datum: Datum;
-  series: Series;
   originalEvent: Event;
-  values?: SeriesValue[]; // every series at the same key (line, area, bar)
+  series: Series;
+  values?: SeriesValue[];
 }
 
-interface SeriesValue {
+export interface SeriesValue {
   datum: Datum | undefined;
   series: Series;
 }
 ```
 
-Line and area series use `ContinuousDatum`; bar series accept the complete `Datum` key range. On line, area, and bar charts, `datum`/`series` name the series nearest the pointer, and `values` lists every series at that key (a missing value is `undefined`). `originalEvent` is a `MouseEvent`, or a `KeyboardEvent` for keyboard navigation.
-
-#### Per-datum presentation
-
-`dash` and `opacity` style an individual datum's marks without splitting the series — the usual case is a forecast tail where points past "today" are faded or dashed. They are styling-only: interaction, tooltip, and accessibility behavior never change. Support is per chart type:
+`Datum.dash` and `Datum.opacity` affect rendered marks only on the chart types that support them. On bars, `dash` adds a 1px series-color stroke so the dash is visible against the fill. `Series.id` becomes a `data-series-id` attribute on a series group; characters outside `[A-Za-z0-9_-]` are replaced with `-`. When omitted, the id is based on the series index.
 
 | Chart | `dash` | `opacity` |
 | --- | --- | --- |
-| Bar | `stroke-dasharray` on the datum's `rect`, plus a 1px series-color stroke so the dash is visible on the fill. | Element `opacity` on the datum's `rect`. |
-| Line | The segment from this datum to the next (Chart.js-style segments). The last datum's `dash` has no segment and is ignored. | That same segment, plus this datum's own point marker. |
-| Area | The top line's segment from this datum to the next (last datum ignored). The fill keeps the series-level treatment. | Same segment on the top line. |
-| Sparkline, pie, radar | Ignored. | Ignored. |
+| Bar | Strokes that datum's bar | Applies to that bar |
+| Line | Applies to the segment from this datum to the next | Applies to that segment and its point marker |
+| Area | Applies to the top-line segment from this datum to the next | Applies to that segment |
+| Scatter | Ignored | Applies to that point |
+| Pie, radar, sparkline | Ignored | Ignored |
 
-Consecutive datums that share one `dash`/`opacity` render as a single path run. Absent fields keep the series/theme default, and a series with no presentation fields renders byte-identically to a chart that never used them. See [Forecast / emphasis styling](./usage.md#forecast--emphasis-styling).
+For line and area charts, the last datum has no following segment, so its `dash` value is ignored. The chart factories group adjacent segments with the same presentation values into path runs.
 
-#### Stable series identity
+For line, area, and bar charts, `ChartEvent.values` lists each series at the active key in series order. Its `datum` is `undefined` when that series has no matching key. `originalEvent` is a pointer event or a keyboard event for keyboard activation. Scatter events identify only the nearest independent point and omit `values`.
 
-`Series.id` is rendered as `data-series-id` on the chart's series group (`.prism-line-series`, `.prism-bar-series`, `.prism-area-series`, `.prism-radar-series`) so tooltips, tests, and external CSS can address a series without positional assumptions. Characters outside `[A-Za-z0-9_-]` are replaced with `-`. It defaults to `series-<index>`, which only stays stable while the series order does — set `id` to survive reordering.
-
----
-
-### Chart configurations
+### Scale Types
 
 ```ts
-interface BaseChartConfig {
-  a11y?: ChartA11y;
-  legend?: boolean | LegendConfig;
-  margin?: Partial<ChartMargin>;
-  onClick?: (event: ChartEvent) => void;
-  onHover?: (event: ChartEvent | null) => void;
-  tooltip?: boolean | TooltipConfig;
-  transition?: TransitionOption; // motion is on by default; false renders synchronously
-  // Omitted renders the axis with defaults (value axis with gridlines); false suppresses it.
-  xAxis?: XAxisConfig | false;
-  yAxis?: YAxisConfig | false;
+export interface Scale<T> {
+  readonly domain: readonly [T, T];
+  invert(pixel: number): T;
+  map(value: T): number;
+  readonly range: readonly [number, number];
+  ticks(count?: number): T[];
 }
 
-interface LineChartConfig extends BaseChartConfig {
-  crosshair?: boolean | CrosshairConfig;
-  rightYAxis?: Omit<YAxisConfig, 'position' | 'grid'>;
-  series: LineSeriesConfig[];
+export interface BandScale {
+  bandwidth(): number;
+  readonly domain: readonly string[];
+  gap(): number;
+  map(value: string): number;
+  readonly range: readonly [number, number];
+  ticks(count?: number): string[];
 }
 
-interface AreaChartConfig extends BaseChartConfig {
-  crosshair?: boolean | CrosshairConfig;
-  series: AreaSeriesConfig[];
+export interface LinearScaleConfig {
+  clamp?: boolean;
+  domain: [number, number];
+  nice?: boolean;
+  range: [number, number];
 }
 
-interface BarChartConfig extends BaseChartConfig {
-  series: BarSeriesConfig[];
-  variant?: BarVariant;
+export interface TimeScaleConfig {
+  domain: [Date, Date];
+  nice?: boolean;
+  range: [number, number];
 }
 
-interface PieChartConfig
-  extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
-  data: PieSliceConfig[];
-  variant?: PieVariant;
-  innerRadius?: number;
-  cornerRadius?: number;
-  padPixels?: number;
-  onClick?: (event: PieEvent) => void;
-  onHover?: (event: PieEvent | null) => void;
-}
-
-interface RadarChartConfig
-  extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
-  axes: RadarAxisConfig[];
-  series: RadarSeriesConfig[];
-  curve?: 'linear' | 'rounded';
-  domain?: [number, number];
-  fill?: 'gradient' | 'none' | 'solid';
-  grid?: boolean | RadarGridConfig;
-  showPoints?: boolean;
-  showValues?: boolean;
-  startAngle?: number;
-  onClick?: (event: RadarEvent) => void;
-  onHover?: (event: RadarEvent | null) => void;
-}
-
-interface SparklineConfig {
-  data: number[] | StackSegment[];
-  variant?: SparklineVariant;
-  a11y?: ChartA11y;
-  color?: string;
-  cornerRadius?: number;
-  curve?: 'linear' | 'monotone' | 'step';
-  fillOpacity?: number; // overrides --prism-spark-fill-opacity (area variant)
-  onClick?: (event: SparklineEvent) => void;
-  onHover?: (event: SparklineEvent | null) => void;
-  padPixels?: number;
-  showEndPoint?: boolean; // default true: dot on the latest value (line, area)
-  strokeWidth?: number;
-  transition?: TransitionOption; // motion is on by default; false renders synchronously
+export interface BandScaleConfig {
+  domain: string[];
+  padding?: number;
+  paddingOuter?: number;
+  range: [number, number];
 }
 ```
 
----
-
-### Series and slice configurations
+### Axis and Interaction Types
 
 ```ts
-interface LineSeriesConfig extends Series<ContinuousDatum> {
-  yAxis?: 'left' | 'right'; // defaults to 'left'
-  curve?: 'linear' | 'monotone' | 'step';
-  pointRadius?: number;
-  showPoints?: boolean;
-  strokeWidth?: number; // overrides --prism-line-width
-}
+export type HorizontalAxisPosition = 'bottom' | 'top';
+export type VerticalAxisPosition = 'left' | 'right';
+export type AxisPosition = HorizontalAxisPosition | VerticalAxisPosition;
 
-interface AreaSeriesConfig extends Series<ContinuousDatum> {
-  curve?: 'linear' | 'monotone' | 'step';
-  fill?: 'gradient' | 'solid'; // default 'gradient', fading toward the baseline
-  fillOpacity?: number; // overrides --prism-area-opacity
-  showLine?: boolean;
-}
-
-interface BarSeriesConfig extends Series {
-  borderRadius?: number; // overrides --prism-bar-radius; stacked bars stay square
-}
-
-interface PieSliceConfig {
-  value: number;
+export interface GridConfig {
   color?: string;
-  label?: string;
+  dash?: string;
 }
 
-interface PieEvent {
-  index: number;
-  originalEvent: Event;
-  slice: PieSliceConfig;
-}
-
-interface RadarAxisConfig {
-  key: string;
-  label: string;
-  min?: number;
-  max?: number;
-  format?: (value: number) => string;
-}
-
-type RadarSeriesConfig = Series<Datum<string>>;
-
-interface RadarGridConfig {
-  bands?: boolean; // default true
-  labels?: boolean; // default false; drawn only when every axis shares one domain
-  levels?: number; // default 4
-  shape?: 'circle' | 'polygon'; // default 'polygon'
-}
-
-interface RadarEvent {
-  axis: RadarAxisConfig;
-  index: number;
-  values: RadarAxisValue[];
-  originalEvent: Event;
-}
-
-interface RadarAxisValue {
-  datum: Datum<string> | undefined;
-  series: RadarSeriesConfig;
-}
-
-interface StackSegment {
-  value: number;
-  color?: string;
-  label?: string;
-}
-
-interface SparklineEvent {
-  index: number;
-  originalEvent: Event;
-  value: number;
-}
-```
-
-A custom radar `tooltip.render` receives `datum.meta` with `axis`, `values`, and the default `text`.
-
----
-
-### Axis, interaction, and transition configurations
-
-```ts
-type HorizontalAxisPosition = 'bottom' | 'top';
-type VerticalAxisPosition = 'left' | 'right';
-type AxisPosition = HorizontalAxisPosition | VerticalAxisPosition;
-
-interface AxisConfig<TPosition extends AxisPosition = AxisPosition> {
-  grid?: boolean | GridConfig;
+export interface AxisConfig<TPosition extends AxisPosition = AxisPosition> {
+  grid?: GridConfig | boolean;
   label?: string;
   position?: TPosition;
   tickCount?: number;
   tickFormat?: (value: Date | number | string) => string;
 }
 
-type XAxisConfig = AxisConfig<HorizontalAxisPosition>;
-type YAxisConfig = AxisConfig<VerticalAxisPosition>;
+export type XAxisConfig = AxisConfig<HorizontalAxisPosition>;
+export type YAxisConfig = AxisConfig<VerticalAxisPosition>;
 
-interface GridConfig {
-  color?: string;
-  dash?: string;
-}
-
-interface TooltipConfig {
+export interface TooltipConfig {
   offset?: number;
   render?: (datum: Datum, series: Series) => Node | string;
 }
 
-interface CrosshairConfig {
+export interface CrosshairConfig {
   horizontal?: boolean;
   snap?: boolean;
   vertical?: boolean;
 }
 
-interface LegendConfig {
+export type LegendPosition = 'bottom' | 'left' | 'right' | 'top';
+
+export interface LegendConfig {
   position?: LegendPosition;
 }
-
-type LegendPosition = 'bottom' | 'left' | 'right' | 'top';
-
-interface TransitionConfig {
-  duration?: number; // ms per lane; default 300
-  easing?: EasingName | EasingFn;
-  preference?: 'always' | 'never' | 'system'; // 'system' (default) skips reduced-motion
-  stagger?: number; // ms per bar (bar) or series (radar); ignored elsewhere
-}
-
-// Motion is on by default. `false` renders every update synchronously,
-// `true` uses the chart defaults, or pass a config to tune them.
-type TransitionOption = TransitionConfig | boolean;
-
-type EasingName = 'ease-in' | 'ease-in-out' | 'ease-out' | 'back-out' | 'expo-out' | 'linear';
-
-type EasingFn = (t: number) => number;
 ```
 
-Tooltip strings are assigned through `textContent`. Return a `Node` for structured content.
+The crosshair defaults to a vertical line that snaps to the nearest datum; the horizontal line is hidden by default. With `snap: false`, only the guide follows the pointer—tooltip and callback data still refer to the nearest datum.
 
----
+Tooltip strings are assigned as text, not parsed as HTML. For a radar chart, `tooltip.render` receives a datum whose `meta` contains the active axis, all series values, and the default announcement text.
 
-### Scale types
-
-```ts
-interface Scale<T> {
-  readonly domain: readonly [T, T];
-  readonly range: readonly [number, number];
-  map(value: T): number;
-  invert(pixel: number): T;
-  ticks(count?: number): T[];
-}
-
-interface BandScale {
-  readonly domain: readonly string[];
-  readonly range: readonly [number, number];
-  map(value: string): number;
-  ticks(count?: number): string[];
-  bandwidth(): number;
-  gap(): number;
-}
-
-interface LinearScaleConfig {
-  domain: [number, number];
-  range: [number, number];
-  clamp?: boolean;
-  nice?: boolean;
-}
-
-interface TimeScaleConfig {
-  domain: [Date, Date];
-  range: [number, number];
-  nice?: boolean;
-}
-
-interface BandScaleConfig {
-  domain: string[];
-  range: [number, number];
-  padding?: number;
-  paddingOuter?: number;
-}
-```
-
----
-
-### Remaining unions and theme type
+### Chart Configuration Types
 
 ```ts
-type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked-horizontal';
-type PieVariant = 'donut' | 'pie' | 'semi';
-type SparklineVariant = 'area' | 'bar' | 'line' | 'stack';
-
-interface PrismTheme {
-  axisColor?: string; // --prism-axis-color
-  colors?: string[];
-  fontFamily?: string;
-  gridColor?: string;
-  gridOpacity?: number;
-  textColor?: string; // --prism-text-color
-  textColorSecondary?: string; // --prism-text-color-secondary
-  tooltipBg?: string; // --prism-tooltip-bg
-  tooltipBorder?: string; // --prism-tooltip-border
-  tooltipColor?: string; // --prism-tooltip-color
+export interface BaseChartConfig {
+  a11y?: ChartA11y;
+  legend?: LegendConfig | boolean;
+  margin?: Partial<ChartMargin>;
+  onClick?: (event: ChartEvent) => void;
+  onHover?: (event: ChartEvent | null) => void;
+  tooltip?: TooltipConfig | boolean;
+  transition?: TransitionOption;
+  xAxis?: XAxisConfig | false;
+  yAxis?: YAxisConfig | false;
 }
 
-interface ThemeScope {
-  readonly scope?: HTMLElement;
+export interface LineSeriesConfig extends Series<ContinuousDatum> {
+  curve?: 'linear' | 'monotone' | 'step';
+  pointRadius?: number;
+  showPoints?: boolean;
+  strokeWidth?: number;
+  yAxis?: 'left' | 'right';
+}
+
+export interface LineChartConfig extends BaseChartConfig {
+  crosshair?: CrosshairConfig | boolean;
+  rightYAxis?: Omit<YAxisConfig, 'position' | 'grid'>;
+  series: LineSeriesConfig[];
+}
+
+export interface AreaSeriesConfig extends Series<ContinuousDatum> {
+  curve?: 'linear' | 'monotone' | 'step';
+  fill?: 'gradient' | 'solid';
+  fillOpacity?: number;
+  showLine?: boolean;
+}
+
+export interface AreaChartConfig extends BaseChartConfig {
+  crosshair?: CrosshairConfig | boolean;
+  series: AreaSeriesConfig[];
+}
+
+export interface ScatterSeriesConfig extends Series<ContinuousDatum> {
+  pointRadius?: number;
+}
+
+export interface ScatterChartConfig extends BaseChartConfig {
+  crosshair?: CrosshairConfig | boolean;
+  series: ScatterSeriesConfig[];
+}
+
+export interface BarSeriesConfig extends Series {
+  borderRadius?: number;
+}
+
+export type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked-horizontal';
+
+export interface BarChartConfig extends BaseChartConfig {
+  series: BarSeriesConfig[];
+  variant?: BarVariant;
+}
+
+export type PieVariant = 'donut' | 'pie' | 'semi';
+
+export interface PieSliceConfig {
+  color?: string;
+  label?: string;
+  value: number;
+}
+
+export interface PieEvent {
+  index: number;
+  originalEvent: Event;
+  slice: PieSliceConfig;
+}
+
+export interface PieChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
+  cornerRadius?: number;
+  data: PieSliceConfig[];
+  innerRadius?: number;
+  onClick?: (event: PieEvent) => void;
+  onHover?: (event: PieEvent | null) => void;
+  padPixels?: number;
+  variant?: PieVariant;
+}
+
+export interface RadarAxisConfig {
+  format?: (value: number) => string;
+  key: string;
+  label: string;
+  max?: number;
+  min?: number;
+}
+
+export type RadarSeriesConfig = Series<Datum<string>>;
+
+export interface RadarGridConfig {
+  bands?: boolean;
+  labels?: boolean;
+  levels?: number;
+  shape?: 'circle' | 'polygon';
+}
+
+export interface RadarAxisValue {
+  datum: Datum<string> | undefined;
+  series: RadarSeriesConfig;
+}
+
+export interface RadarEvent {
+  axis: RadarAxisConfig;
+  index: number;
+  originalEvent: Event;
+  values: RadarAxisValue[];
+}
+
+export interface RadarChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
+  axes: RadarAxisConfig[];
+  curve?: 'linear' | 'rounded';
+  domain?: [number, number];
+  fill?: 'gradient' | 'none' | 'solid';
+  grid?: RadarGridConfig | boolean;
+  onClick?: (event: RadarEvent) => void;
+  onHover?: (event: RadarEvent | null) => void;
+  series: RadarSeriesConfig[];
+  showPoints?: boolean;
+  showValues?: boolean;
+  startAngle?: number;
+}
+
+export type SparklineVariant = 'area' | 'bar' | 'line' | 'stack';
+
+export interface StackSegment {
+  color?: string;
+  label?: string;
+  value: number;
+}
+
+export interface SparklineEvent {
+  index: number;
+  originalEvent: Event;
+  value: number;
+}
+
+export interface SparklineConfig {
+  a11y?: ChartA11y;
+  color?: string;
+  cornerRadius?: number;
+  curve?: 'linear' | 'monotone' | 'step';
+  data: number[] | StackSegment[];
+  fillOpacity?: number;
+  onClick?: (event: SparklineEvent) => void;
+  onHover?: (event: SparklineEvent | null) => void;
+  padPixels?: number;
+  showEndPoint?: boolean;
+  strokeWidth?: number;
+  transition?: TransitionOption;
+  variant?: SparklineVariant;
 }
 ```
 
@@ -713,8 +835,18 @@ interface ThemeScope {
 
 ### `PrismError`
 
-Base class for every Prism-originated error. It supports standard `ErrorOptions` cause chaining.
+```ts
+class PrismError extends Error {
+  constructor(message: string, opts?: ErrorOptions);
+}
+```
+
+Base class for Prism-originated errors. Its `name` is set to the concrete error class name, and it supports the standard `ErrorOptions` including `cause`.
 
 ### `PrismRenderError`
 
-Extends `PrismError`. Thrown for invalid containers, failed initial renders, and attempts to update disposed charts.
+```ts
+class PrismRenderError extends PrismError {}
+```
+
+Thrown when a chart cannot be rendered because its container is not a DOM element, when initial rendering fails (the original error is available as `cause`), or when `update()` is called after disposal. Empty or malformed chart data may instead produce a development warning or an empty rendering, depending on the chart.

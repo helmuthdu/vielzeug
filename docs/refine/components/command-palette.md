@@ -190,6 +190,46 @@ Override the global shortcut with `shortcut`, or set it to an empty string to di
 
 Set `no-filter` on this pattern once results come back already scoped to the query, otherwise the built-in client-side filter runs again on top of the server response.
 
+## Previewing the Active Row
+
+Put content in the `preview` slot to render a detail pane beside the command list: the pane opens automatically while the slot has content and folds away when the slot is empty, so a palette that never uses it keeps the plain single-column layout. Listen to `active-change` to keep the pane in step with the row the user points at: it fires whenever the focused row changes (keyboard, hover, typing, open, close), with `item: undefined` when no row is active. On narrow screens the pane drops below the list instead of sitting beside it.
+
+<ComponentPreview height="480px">
+
+```html
+<ore-command-palette id="preview-palette" label="Command palette" open>
+  <ore-command-palette-item value="keyword-focus" group="Keywords" icon="eye">Focus</ore-command-palette-item>
+  <ore-command-palette-item value="keyword-range" group="Keywords" icon="ruler">Range</ore-command-palette-item>
+  <ore-command-palette-item value="keyword-cover" group="Keywords" icon="shield">Cover</ore-command-palette-item>
+  <div slot="preview" id="preview-pane" style="display: flex; flex-direction: column; gap: 0.5rem">
+    <strong id="preview-title"></strong>
+    <span id="preview-body" style="color: var(--color-contrast-600)"></span>
+  </div>
+</ore-command-palette>
+
+<script type="module">
+  import '@vielzeug/refine/command-palette';
+
+  const entries = {
+    'keyword-focus': 'A hunter may spend an action to steady themselves, drawing the card that answers what comes next.',
+    'keyword-range': 'Measured in sectors from the attacker: a target outside the printed range cannot be attacked.',
+    'keyword-cover': 'Figures behind cover are harder to hit: the attacker must spend extra range to aim around it.',
+  };
+
+  const palette = document.getElementById('preview-palette');
+
+  palette.addEventListener('active-change', (e) => {
+    const text = entries[e.detail.value];
+    document.getElementById('preview-title').textContent = e.detail.label;
+    document.getElementById('preview-body').textContent = text ?? 'No entry for this command.';
+  });
+</script>
+```
+
+</ComponentPreview>
+
+The slot is plain light DOM: the palette only owns where and when it renders, so the pane can hold any markup or components the host app already uses. Pair it with `no-filter` when the catalogue is app-ranked: the preview then explains the app's own ranking as the user arrows through the hits.
+
 ## Listening to Events
 
 <ComponentPreview height="480px" vertical>
@@ -262,6 +302,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | Slot      | Description                                                          |
 | --------- | ---------------------------------------------------------------------- |
 | (default) | `ore-command-palette-item` elements (alternative/supplement to `items`) |
+| `preview` | Optional detail pane rendered beside the list while the slot has content; pair with `active-change` |
 
 **`ore-command-palette-item`** Attributes
 
@@ -280,6 +321,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | Event    | Detail                                                                          | Description                                        |
 | -------- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `select` | `{ value: string, label: string, item: CommandPaletteItem }`                    | Emitted when a command is chosen (click or `Enter`) |
+| `active-change` | `{ value: string, label: string, item?: CommandPaletteItem }`          | Emitted when the focused row changes; `item` is `undefined` when no row is active |
 | `search` | `{ query: string }`                                                              | Emitted on every keystroke in the search input      |
 | `open-change` | `{ open: boolean, reason: string }`                                         | Emitted whenever the palette opens or closes        |
 
@@ -295,6 +337,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | `--command-palette-backdrop`          | Backdrop overlay color      | Theme-dependent         |
 | `--command-palette-option-hover-bg`   | Item background on hover    | Theme-dependent         |
 | `--command-palette-option-focus-bg`   | Item background when keyboard-focused | Theme-dependent |
+| `--command-palette-preview-width`     | Preview pane width (when the `preview` slot has content) | `18rem` |
 
 ## Accessibility
 

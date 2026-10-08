@@ -13,7 +13,7 @@ function resolvePosition(config: LegendConfig | true): LegendPosition {
   return config.position ?? 'bottom';
 }
 
-export function createLegend(container: HTMLElement, config: LegendConfig | true): LegendState {
+export function createLegend(container: HTMLElement, config: LegendConfig | true, onLayout?: () => void): LegendState {
   const position = resolvePosition(config);
   const el = document.createElement('div');
 
@@ -54,6 +54,7 @@ export function createLegend(container: HTMLElement, config: LegendConfig | true
         item.appendChild(label);
         el.appendChild(item);
       }
+      onLayout?.();
     },
   };
 }
