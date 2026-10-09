@@ -34,6 +34,10 @@ console.log(groupBy(matches, (user) => user.name), data, profile, cachedResponse
 pool.dispose();
 ```
 
+## Features
+
+- `compressBytes` / `decompressBytes`: native compression streams with a required decompressed-byte limit, available from the root and `/encoding` entry points.
+
 ## Documentation
 
 - [Overview](https://vielzeug.dev/arsenal/)

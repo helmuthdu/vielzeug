@@ -168,6 +168,25 @@ const payload = JSON.parse(base64UrlToText(code));
 
 Decoding throws on characters outside the base64url alphabet, so corrupted input fails loudly instead of decoding to garbage.
 
+## Compress Share Payloads
+
+Compress UTF-8 bytes before Base64url encoding. Set a decoded-byte limit before accepting compressed input from another device.
+
+```ts
+import { base64UrlToBytes, bytesToBase64Url, compressBytes, decompressBytes } from '@vielzeug/arsenal';
+
+const payload = JSON.stringify({ name: 'Hunters', notes: 'An expedition through Alborea. '.repeat(20) });
+const compressed = await compressBytes(new TextEncoder().encode(payload));
+const code = bytesToBase64Url(compressed);
+const bytes = await decompressBytes(base64UrlToBytes(code), { maxOutputBytes: 8192 });
+const restored = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+console.log(restored === payload);
+```
+
+Both helpers default to `deflate-raw`. You can explicitly select `gzip` or `deflate`; use the same format at both ends. The helpers reject when native streams do not support the selected format. They do not choose a fallback or define a wire protocol.
+
+Compression can enlarge small inputs. Compare the final encoded strings, including any format marker, before choosing a representation. Bound input size before decoding Base64url and validate decompressed JSON against your schema. The decompression limit bounds retained output, not native stream working memory.
+
 ## Working with Other Vielzeug Libraries
 
 Use Spell after `tryParseJson` for typed external data. Use Vault instead of `cache` when data must survive reloads or process restart.

@@ -11,6 +11,7 @@ import { asyncPoolExample } from './async-pool';
 import { asyncQueueExample } from './async-queue';
 import { asyncRetryExample } from './async-retry';
 import { asyncWaitForExample } from './async-waitFor';
+import { encodingCompressionExample } from './encoding-compression';
 import { functionRunAllExample } from './function-curry';
 import { functionDebounceExample } from './function-debounce';
 import { functionMemoExample } from './function-memo';
@@ -43,6 +44,7 @@ export const arsenalExamples = {
   'async-queue': asyncQueueExample,
   'async-retry': asyncRetryExample,
   'async-waitFor': asyncWaitForExample,
+  'encoding-compression': encodingCompressionExample,
   'function-debounce': functionDebounceExample,
   'function-memo': functionMemoExample,
   'function-pipe': functionPipeExample,

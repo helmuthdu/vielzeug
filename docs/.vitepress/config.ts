@@ -201,6 +201,12 @@ export default defineConfig({
             },
             {
               collapsed: true,
+              items: [{ link: '/arsenal/examples/encoding/compression', text: 'compressBytes / decompressBytes' }],
+              link: '/arsenal/examples/encoding',
+              text: 'Encoding',
+            },
+            {
+              collapsed: true,
               items: [
                 { link: '/arsenal/examples/function/assert', text: 'assert' },
                 { link: '/arsenal/examples/function/debounce', text: 'debounce' },

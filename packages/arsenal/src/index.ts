@@ -17,6 +17,7 @@ export * from './async/waitFor';
 export * from './cache/cache';
 export * from './cache/memo';
 export * from './encoding/base64url';
+export * from './encoding/compression';
 export * from './errors';
 export * from './function/debounce';
 export * from './function/once';

@@ -23,6 +23,7 @@ description: Reference for Arsenal root utilities and category entry points.
 | `allocate` | Lossless proportional distribution | Sync | Available from `/math` |
 | `isEqual` | Structural equality | Sync | Root export |
 | `hash` | Deterministic serialization for cache keys | Sync | Available from `/object` |
+| `compressBytes` / `decompressBytes` | Native byte compression with bounded decompression | Async | Requires native compression streams; decoding requires an output limit |
 
 ## Package Entry Points
 
@@ -32,6 +33,7 @@ description: Reference for Arsenal root utilities and category entry points.
 | `@vielzeug/arsenal/array` | Immutable transforms, set operations, sorting, fuzzy search |
 | `@vielzeug/arsenal/async` | Retry, cancellation, task pool, timing |
 | `@vielzeug/arsenal/cache` | In-memory cache and memoization |
+| `@vielzeug/arsenal/encoding` | Base64url and native byte compression |
 | `@vielzeug/arsenal/function` | Assertions, composition, timing, teardown |
 | `@vielzeug/arsenal/guards` | Type guards, predicate combinators, equality guards |
 | `@vielzeug/arsenal/math` | Ranges, aggregation, statistics, interpolation, exact allocation |
@@ -149,6 +151,56 @@ base64UrlToBytes(code); // throws on characters outside the alphabet
 utf8Bytes('Hunter äöü'); // 11: byte length of a UTF-8 string
 ```
 
+### compressBytes
+
+```ts
+compressBytes(bytes: Uint8Array, options?: CompressionOptions): Promise<Uint8Array>
+```
+
+Compresses bytes using the native `CompressionStream` API without modifying the input.
+
+| Option | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `format` | `CompressionFormat` | `'deflate-raw'` | Compression format; the receiver must use the same format |
+
+**Returns:** Compressed bytes. Rejects with `ArsenalSerializationError` when the format or capability is unavailable, or stream processing fails. Does not fall back to another format.
+
+**Example:** Encode compressed bytes for a URL.
+
+```ts
+import { bytesToBase64Url, compressBytes } from '@vielzeug/arsenal';
+
+const bytes = new TextEncoder().encode(JSON.stringify({ name: 'Hunters' }));
+const code = bytesToBase64Url(await compressBytes(bytes));
+```
+
+---
+
+### decompressBytes
+
+```ts
+decompressBytes(bytes: Uint8Array, options: DecompressionOptions): Promise<Uint8Array>
+```
+
+Decompresses bytes using the native `DecompressionStream` API, enforcing the output limit while reading chunks.
+
+| Option | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `format` | `CompressionFormat` | `'deflate-raw'` | Format used by the sender |
+| `maxOutputBytes` | `number` | Required | Non-negative safe integer; maximum decoded byte length |
+
+**Returns:** Decompressed bytes. Rejects with `ArsenalSerializationError` for invalid limits, corrupt or truncated data, unavailable formats/capabilities, or output exceeding the limit. A failed stream is canceled and its reader lock released. Bound encoded input separately before calling this function.
+
+**Example:** Decode text within an application-defined byte limit.
+
+```ts
+import { compressBytes, decompressBytes } from '@vielzeug/arsenal';
+
+const compressed = await compressBytes(new TextEncoder().encode('Hunters'));
+const bytes = await decompressBytes(compressed, { maxOutputBytes: 8192 });
+const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+```
+
 ## Object
 
 ### tryParseJson
@@ -231,10 +283,18 @@ type CacheOptions = {
   now?: () => number;
   ttlMs?: number;
 };
+
+interface CompressionOptions {
+  format?: CompressionFormat;
+}
+
+interface DecompressionOptions extends CompressionOptions {
+  maxOutputBytes: number;
+}
 ```
 
 ## Errors
 
 - `RangeError`: invalid numeric bounds, capacity, concurrency, or retry count.
 - `TypeError`: invalid value types, unsupported comparison, or required path missing.
-- `ArsenalSerializationError`: memo or hash cannot serialize supplied input.
+- `ArsenalSerializationError`: memo or hash cannot serialize supplied input; compression fails, is unavailable, receives an invalid output limit, or exceeds that limit. Stream failures retain the original error as `cause`.

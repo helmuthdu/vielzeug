@@ -8,6 +8,7 @@ description: Practical examples and recipes for arsenal.
 - [Array utilities](./examples/array.md)
 - [Async utilities](./examples/async.md)
 - [Cache utilities](./examples/cache.md)
+- [Encoding utilities](./examples/encoding.md)
 - [Function utilities](./examples/function.md)
 - [Guards / Typed predicates](./examples/typed.md)
 - [Math utilities](./examples/math.md)

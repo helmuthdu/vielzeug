@@ -30,7 +30,7 @@ export const EXPORTS = {
   ],
   async: ['abortable', 'abortError', 'attempt', 'backoff', 'parallel', 'retry', 'sleep', 'taskPool', 'waitFor'],
   cache: ['cache', 'memo'],
-  encoding: ['base64url'],
+  encoding: ['base64url', 'compression'],
   function: ['assert', 'debounce', 'once', 'pipe', 'runAll', 'tap', 'tapper', 'throttle'],
   guards: [
     'combinators',
@@ -119,6 +119,7 @@ export const ROOT_EXPORTS = [
   'cache/cache',
   'cache/memo',
   'encoding/base64url',
+  'encoding/compression',
   'errors',
   'function/debounce',
   'function/once',
