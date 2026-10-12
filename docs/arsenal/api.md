@@ -24,6 +24,7 @@ description: Reference for Arsenal root utilities and category entry points.
 | `isEqual` | Structural equality | Sync | Root export |
 | `hash` | Deterministic serialization for cache keys | Sync | Available from `/object` |
 | `compressBytes` / `decompressBytes` | Native byte compression with bounded decompression | Async | Requires native compression streams; decoding requires an output limit |
+| `pack` / `unpack` | Versioned, compressed, URL-safe payload envelope | Async | Both sides bound the payload with `maxBytes`; compression falls back to raw |
 
 ## Package Entry Points
 
@@ -201,6 +202,51 @@ const bytes = await decompressBytes(compressed, { maxOutputBytes: 8192 });
 const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 ```
 
+---
+
+### pack
+
+```ts
+pack(payload: unknown, options: ShareCodeOptions): Promise<string>
+```
+
+Serializes `payload` as JSON and encodes it into a compact share code: `prefix` + mode marker + base64url bytes, compressed with raw DEFLATE when the compressed form is shorter and the runtime supports the streams.
+
+| Option | Type | Meaning |
+| --- | --- | --- |
+| `maxBytes` | `number` | Positive safe integer; maximum serialized payload size |
+| `prefix` | `string` | 1–8 alphanumeric characters identifying the code family and version |
+
+**Returns:** The shorter of the raw (`prefix` + `r`) and compressed (`prefix` + `d`) representations. Throws `ShareCodeError` (`too-large`, `invalid`) for oversized payloads and misconfigured options.
+
+**Example:** Encode a shareable build as a code small enough for a URL.
+
+```ts
+import { pack } from '@vielzeug/arsenal';
+
+const code = await pack({ cards: ['slash', 'guard'] }, { maxBytes: 8192, prefix: 'ab1' });
+```
+
+---
+
+### unpack
+
+```ts
+unpack(code: string, options: ShareCodeOptions): Promise<unknown>
+```
+
+Decodes a share code produced by `pack` with the same options. Both sides are bounded: input longer than `maxBytes` could carry is refused up front, streamed decompression stops at `maxBytes`, and non-canonical base64url is rejected by round-trip.
+
+**Returns:** The parsed JSON payload. Throws `ShareCodeError` (`invalid` for foreign or malformed codes, `too-large` for budget overruns, `compression-unavailable` when a compressed code arrives on a runtime without `DecompressionStream`). Underlying compression failures surface as `ArsenalSerializationError`.
+
+**Example:** Decode untrusted input within the byte budget.
+
+```ts
+import { unpack } from '@vielzeug/arsenal';
+
+const payload = await unpack(code, { maxBytes: 8192, prefix: 'ab1' });
+```
+
 ## Object
 
 ### tryParseJson
@@ -298,3 +344,4 @@ interface DecompressionOptions extends CompressionOptions {
 - `RangeError`: invalid numeric bounds, capacity, concurrency, or retry count.
 - `TypeError`: invalid value types, unsupported comparison, or required path missing.
 - `ArsenalSerializationError`: memo or hash cannot serialize supplied input; compression fails, is unavailable, receives an invalid output limit, or exceeds that limit. Stream failures retain the original error as `cause`.
+- `ShareCodeError`: a share code cannot be encoded or decoded; the `reason` field is `invalid`, `too-large`, or `compression-unavailable`.

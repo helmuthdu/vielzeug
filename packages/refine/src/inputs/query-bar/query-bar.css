@@ -1,0 +1,215 @@
+@layer refine.base {
+  :host {
+    --_dropdown-bg: var(--combobox-dropdown-bg, var(--color-canvas));
+    --_dropdown-border-color: var(--combobox-dropdown-border-color, var(--color-contrast-200));
+    --_option-hover-bg: var(--combobox-option-hover-bg, var(--color-contrast-100));
+    --_option-focus-bg: var(
+      --combobox-option-focus-bg,
+      color-mix(in oklch, var(--_theme-base) 12%, var(--color-contrast-100))
+    );
+
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: var(--query-bar-min-width, 12rem);
+  }
+
+  :host([open]) {
+    /* Nothing yet: the open state is reflected for consumer styling. */
+  }
+
+  /* ore-input cursor override so the field still feels like a text input */
+  .trigger::part(input) {
+    cursor: text;
+  }
+
+  /* Allow the field to grow vertically when pills wrap to multiple rows. */
+  .trigger::part(field) {
+    height: auto;
+    min-height: var(--input-height, var(--size-10));
+  }
+
+  /* Wrap pills + input across rows; the suffix stays on the input's row.
+     Only row-gap is set here: spacing between pills is handled via margin on
+     ore-chip so the empty prefix adds no extra offset. */
+  .trigger::part(input-row) {
+    flex-wrap: wrap;
+    row-gap: var(--size-1);
+    align-items: center;
+  }
+
+  /* ========================================
+     Prefix: search icon + pill tokens
+     ======================================== */
+
+  /* display:contents removes the prefix wrapper from the flex layout so the
+     icon and chips become direct flex items of input-row. */
+  .prefix {
+    display: contents;
+  }
+
+  .prefix > ore-icon {
+    flex-shrink: 0;
+    margin-inline-end: var(--size-1);
+    color: var(--text-color-tertiary);
+  }
+
+  /* .pills is also display:contents so individual ore-chip elements are the
+     direct flex items, wrapping inline with the search input. */
+  .pills {
+    display: contents;
+  }
+
+  /* Trailing space after each chip covers both inter-chip spacing and
+     the gap between the last chip and the search input. Pills never shrink:
+     they keep their readable size and wrap instead. */
+  .prefix ore-chip {
+    flex: none;
+    margin-inline-end: var(--size-1);
+  }
+
+  /* ========================================
+     Suffix: clear button
+     ======================================== */
+
+  .suffix {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-1);
+    align-items: center;
+  }
+
+  .clear-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0;
+    color: var(--color-contrast-400);
+    cursor: pointer;
+    background: none;
+    border: 0;
+  }
+
+  .clear-btn[hidden] {
+    display: none;
+  }
+
+  .clear-btn:hover {
+    color: var(--color-contrast-600);
+  }
+
+  .clear-btn:focus-visible {
+    outline: var(--border-2) solid var(--_theme-focus);
+    outline-offset: var(--border);
+    border-radius: var(--rounded-sm);
+  }
+
+  /* ========================================
+     Dropdown / Listbox
+     ======================================== */
+
+  .dropdown {
+    position: fixed;
+    inset: 0 auto auto 0;
+    z-index: calc(var(--z-popover, 1000) + 1);
+    box-sizing: border-box;
+    min-width: var(--query-bar-dropdown-min-width, 16rem);
+    max-width: var(--query-bar-dropdown-max-width, min(28rem, calc(100vw - var(--size-4))));
+    max-height: min(16rem, 50dvh);
+    padding: var(--size-1);
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    text-align: start;
+    pointer-events: none;
+    scrollbar-width: thin;
+    background: var(--_dropdown-bg);
+    border: var(--border) solid var(--_dropdown-border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    backdrop-filter: blur(var(--blur-md));
+    transform: translateY(var(--overlay-enter-translate-y));
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      display var(--transition-fast) allow-discrete
+    );
+  }
+
+  .dropdown[data-open] {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y));
+    }
+  }
+
+  /* ========================================
+     Suggestion rows
+     ======================================== */
+
+  .option {
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--size-2);
+    align-items: baseline;
+    height: var(--query-bar-option-height, 36px);
+    padding: var(--size-1) var(--size-2-5);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    cursor: pointer;
+    border-radius: var(--rounded-sm);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .option:hover {
+    background: var(--_option-hover-bg);
+  }
+
+  .option[data-focused] {
+    color: var(--_theme-base);
+    background: var(--_option-focus-bg);
+  }
+
+  /* The muted dead-draft row: explains the degradation instead of closing silently.
+     Follows the combobox "no-results" presentation pattern. */
+  .no-match {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    height: var(--query-bar-option-height, 36px);
+    padding: var(--size-1) var(--size-2-5);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--text-color-tertiary);
+    border-radius: var(--rounded-sm);
+  }
+
+  .option-label {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The muted second column names the dimension a value belongs to, or the
+     `key:` syntax a key suggestion inserts. */
+  .option-meta {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    color: var(--text-color-tertiary);
+    text-align: end;
+    white-space: nowrap;
+  }
+}

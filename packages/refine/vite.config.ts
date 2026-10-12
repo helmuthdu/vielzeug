@@ -9,9 +9,6 @@ import { getConfig, readWorkspaceDeps } from '../../vite.config.ts';
 import { getRefineLibraryEntries } from './scripts/refine-manifest.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } })
-  .process?.env;
-const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_FILE_ERROR_BASE_FOLDER !== undefined;
 
 // Derived from package.json instead of hand-listed: the hand-listed version had silently
 // drifted (missing '@vielzeug/keymap', a real dependency), which meant keymap was getting
@@ -39,9 +36,6 @@ export default defineConfig(
     {
       build: {
         rolldownOptions: {
-          checks: {
-            pluginTimings: !disablePluginTimings,
-          },
           external: isRefineExternal,
         },
       },

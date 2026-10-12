@@ -142,7 +142,7 @@ const chart = createScatterChart(host, {
 chart.dispose();
 ```
 
-Scatter interaction reports one datum and series rather than a `values` array. Keyboard navigation visits points across series in x order.
+Scatter interaction reports the datum and series of the point nearest the pointer in two dimensions, without a `values` array. Keyboard navigation visits points across series in x order. Tooltip `titleFormat` receives the x-value and `valueFormat` the y-value. On mount, points grow from radius zero at their final positions; updates slide existing points and grow new ones.
 
 ### `createBarChart()`
 
@@ -466,7 +466,7 @@ export interface TransitionConfig {
   easing?: EasingName | ((t: number) => number);
   /** `system` skips animation when reduced motion is preferred. */
   preference?: 'always' | 'never' | 'system';
-  /** Per-bar delay on bar charts or per-series delay on radar charts. */
+  /** Per-bar delay on bar charts, per-entering-point delay (x order) on scatter charts, or per-series delay on radar charts. Bar and scatter charts cap the total added delay at about 400 ms. */
   stagger?: number;
 }
 

@@ -254,6 +254,54 @@ describe('Courier HTTP transport', () => {
     abort.mockRestore();
   });
 
+  it.each([204, 205])('normalizes a raw %s carrying an unexpected empty body stream', async (status) => {
+    // Some transports deliver a 204/205 whose body is an EMPTY but non-null
+    // stream: re-wrapping it with `new Response(stream, {status})` would throw
+    // ('Invalid response status code'), so the raw path must normalize instead.
+    const cancel = vi.fn(async () => undefined);
+    let requestSignal: AbortSignal | null = null;
+    const courier = createCourier({
+      fetch: vi.fn(async (_input, init) => {
+        requestSignal = init?.signal ?? null;
+        const response = new Response(new ReadableStream<Uint8Array>({ cancel }), {
+          headers: { 'x-empty': 'yes' },
+          status: 200,
+          statusText: 'No Content',
+        });
+        Object.defineProperties(response, {
+          redirected: { value: true },
+          status: { value: status },
+          type: { value: 'basic' },
+          url: { value: 'https://api.example.com/empty' },
+        });
+        return response;
+      }),
+    });
+
+    const response = await courier.delete<Response>('/empty', { responseType: 'raw', timeout: Infinity });
+
+    expect(response).toBeInstanceOf(Response);
+    expect(response.body).toBeNull();
+    expect(response.status).toBe(status);
+    expect(response.statusText).toBe('No Content');
+    expect(response.headers.get('x-empty')).toBe('yes');
+    expect(response.url).toBe('https://api.example.com/empty');
+    expect(response.redirected).toBe(true);
+    expect(response.type).toBe('basic');
+    await expect(response.text()).resolves.toBe('');
+    const clone = response.clone();
+    expect(clone.body).toBeNull();
+    expect(clone.url).toBe(response.url);
+    expect(clone.redirected).toBe(response.redirected);
+    expect(clone.status).toBe(status);
+    // The unexpected transport stream is cancelled once, and the request is
+    // fully released: cancelAll must not abort the already-completed request.
+    expect(cancel).toHaveBeenCalledTimes(1);
+    courier.cancelAll();
+    expect((requestSignal as AbortSignal | null)?.aborted).toBe(false);
+    courier.dispose();
+  });
+
   it('untracks requests when body serialization fails', async () => {
     const abort = vi.spyOn(AbortController.prototype, 'abort');
     const courier = createCourier({ fetch: vi.fn(async () => new Response(null, { status: 204 })) });

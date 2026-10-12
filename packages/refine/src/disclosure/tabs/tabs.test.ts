@@ -93,6 +93,25 @@ describe('ore-tabs', () => {
       expect(fixture.element.getAttribute('value')).toBe('overview');
     });
 
+    it('does not lock a fallback selection before slotted values are bound', async () => {
+      fixture = await mount('ore-tabs', {
+        html: '<ore-tab-item slot="tabs">One</ore-tab-item><ore-tab-item slot="tabs">Two</ore-tab-item>',
+      });
+      await fixture.flush();
+
+      // No item carries a value yet (template bindings land after mount): the
+      // fallback must defer instead of locking an empty first value.
+      expect(fixture.element.getAttribute('value')).toBeNull();
+
+      const items = fixture.element.querySelectorAll('ore-tab-item');
+      items[0].setAttribute('value', 'one');
+      items[1].setAttribute('value', 'two');
+      fixture.element.setAttribute('value', 'two');
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('two');
+    });
+
     it('keeps configured selection when tab items are assigned after connect', async () => {
       fixture = await mount('ore-tabs', { attrs: { value: 'settings' } });
 

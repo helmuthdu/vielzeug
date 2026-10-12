@@ -6,6 +6,7 @@ Generated from `packages/*/package.json` by `pnpm gen:ai-data`. Edit manifests, 
 
 | Package | Description | Dependencies | Required peers | Optional peers |
 | --- | --- | --- | --- | --- |
+| `@vielzeug/archive` | Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas | `spell` | N/A | N/A |
 | `@vielzeug/arsenal` | Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections | N/A | N/A | N/A |
 | `@vielzeug/assay` | Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting | `arsenal` | N/A | N/A |
 | `@vielzeug/clockwork` | Framework-neutral finite state machines with pure transitions and actors | `arsenal` | N/A | N/A |
@@ -29,7 +30,7 @@ Generated from `packages/*/package.json` by `pnpm gen:ai-data`. Edit manifests, 
 | `@vielzeug/orbit` | Floating UI positioning with lifecycle-owned geometry and middleware | `arsenal` | N/A | `ripple` |
 | `@vielzeug/ore` | Functional web-component authoring on top of ripple | N/A | `ripple` | `assay` |
 | `@vielzeug/postmaster` | Typed durable job outbox with leased processing, retries, and dead-letter recovery | `arsenal`, `vault` | N/A | N/A |
-| `@vielzeug/prism` | Responsive SVG charts with explicit updates: line, bar, area, pie, radar, sparkline | `orbit` | N/A | N/A |
+| `@vielzeug/prism` | Responsive SVG charts with explicit updates: line, bar, area, scatter, pie, radar, sparkline | `orbit` | N/A | N/A |
 | `@vielzeug/pulse` | Typed WebSocket client with channels, rooms, presence, reconnect | `arsenal` | N/A | N/A |
 | `@vielzeug/refine` | Accessible, themeable web components built on ore | `arsenal`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, `sigil`, `tempo` | N/A | N/A |
 | `@vielzeug/ripple` | Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources | N/A | N/A | N/A |

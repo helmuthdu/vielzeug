@@ -113,7 +113,7 @@ Concurrent callers share physical work but own their own signal and timeout. One
 
 ## Response Parsing
 
-Courier parses successful 2xx response bodies automatically based on `content-type`, unless you set `responseType` explicitly (`'json'`, `'text'`, `'blob'`, `'arrayBuffer'`, or `'raw'` for the `Response` itself). Empty JSON bodies return `undefined` instead of throwing. Raw response bodies remain owned by Courier until consumed or cancelled, so `cancelAll()` and `dispose()` still abort them. Raw responses cannot be combined with `schema`. Always consume or cancel the body to release request ownership, and set `timeout: Infinity` for intentionally long-lived streams. Courier preserves URL, redirect, and type metadata on tracked responses and their clones.
+Courier parses successful 2xx response bodies automatically based on `content-type`, unless you set `responseType` explicitly (`'json'`, `'text'`, `'blob'`, `'arrayBuffer'`, or `'raw'` for the `Response` itself). Empty JSON bodies return `undefined` instead of throwing. Raw response bodies remain owned by Courier until consumed or cancelled, so `cancelAll()` and `dispose()` still abort them. Raw responses cannot be combined with `schema`. Always consume or cancel the body to release request ownership, and set `timeout: Infinity` for intentionally long-lived streams. Courier preserves URL, redirect, and type metadata on tracked responses and their clones. A `204`/`205` raw answer is normalized to `body: null` — a stray empty transport stream is cancelled for you — so a null-body raw response never carries pending body ownership and needs no consumption.
 
 ```ts
 const buffer = await courier.request('/files/{id}', {

@@ -42,6 +42,11 @@ jobs:
       - name: Unit tests
         run: pnpm test --run ${{ github.event_name == 'push' && '--coverage' || '' }}
 
+      - name: Archive integration tests
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: pnpm --filter @vielzeug/archive test:integration
+
       # Real-browser tests against the built dist IIFE bundles (rush rebuild above produced
       # them). The fixture loads bundles directly via page.setContent(), so no dev server.
       # - name: Browser e2e tests (refine)
@@ -51,6 +56,20 @@ jobs:
 
       - name: Build and test demos
         run: pnpm validate:demos
+
+      # Every demo that ships a Worker API validates it: typecheck + integration suite
+      # (real workerd + local D1) + wrangler dry-run bundle check. The api:* scripts
+      # build their workspace dependencies themselves.
+      - name: Validate demo APIs
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          for dir in demos/*/; do
+            [ -f "${dir}package.json" ] || continue
+            if grep -q '"api:test"' "${dir}package.json"; then
+              (cd "$dir" && pnpm api:typecheck && pnpm api:test && pnpm api:build) || exit 1
+            fi
+          done
 
       - name: Validate REPL examples
         run: pnpm validate:repl

@@ -840,6 +840,15 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
     // Prevent reverse tabnapping: auto-inject noopener + noreferrer for _blank links.
     const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
 
+    // The `aria-current` token: `location` for in-page anchors (the current position
+    // within this document), `page` for actual page routes. Announcing a section
+    // anchor as `page` would claim the section is the current document.
+    const ariaCurrent = computed<null | 'location' | 'page'>(() => {
+      if (!props.active.value) return null;
+      const href = props.href.value;
+      return href !== undefined && href.startsWith('#') ? 'location' : 'page';
+    });
+
     // Closes the mobile overflow panel when one of its items is activated, otherwise picking a
     // destination (or firing any other action placed in the `mobile-menu` slot) leaves the panel
     // open over the page until the user separately taps the toggle again. Only matters while
@@ -870,7 +879,7 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
               rel="${effectiveRel}"
               target="${props.target}"
               aria-label="${() => props.ariaLabel.value ?? null}"
-              aria-current="${() => (props.active.value ? 'page' : null)}"
+              aria-current="${ariaCurrent}"
               @click=${closeMobileMenuIfOpen}>
               ${renderItemContent()}
             </a>

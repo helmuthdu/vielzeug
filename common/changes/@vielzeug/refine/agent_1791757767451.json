@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix ore-tabs boot race: ensureSelection no longer locks an empty first value when slotted tab items have not received their bound values yet; it defers until a valued tab exists, so a bound host value is never overridden by the fallback.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

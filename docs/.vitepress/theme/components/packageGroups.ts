@@ -23,6 +23,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
     id: 'data',
     name: 'Data & Connectivity',
     packages: [
+      { id: 'archive', tagline: 'Community archive core' },
       { id: 'courier', tagline: 'HTTP client & caching' },
       { id: 'mesh', tagline: 'Backendless P2P sessions' },
       { id: 'postmaster', tagline: 'Durable job outbox' },

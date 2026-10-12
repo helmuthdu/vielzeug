@@ -17,6 +17,21 @@ export function trackRawResponse(response: Response, signal: AbortSignal | undef
     return response;
   }
 
+  // A 204/205 with an unexpected non-null body stream cannot be re-wrapped:
+  // `new Response(stream, {status: 204})` throws 'Invalid response status code'.
+  // Cancel the stray transport stream and hand back a normal null-body response
+  // with the original metadata — the request releases like any consumed body.
+  if (response.status === 204 || response.status === 205) {
+    void response.body.cancel().catch(() => undefined);
+    const normalized = new Response(null, {
+      headers: response.headers,
+      status: response.status,
+      statusText: response.statusText,
+    });
+    onDone();
+    return preserveMetadata(normalized, response);
+  }
+
   if (response.body.locked) throw new CourierParseError('Raw response body is already locked');
 
   const reader = response.body.getReader();

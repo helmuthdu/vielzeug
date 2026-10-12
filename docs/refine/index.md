@@ -67,6 +67,7 @@ exports:
     ore-progress,
     ore-qr-code,
     ore-qr-scanner,
+    ore-query-bar,
     ore-radio,
     ore-radio-group,
     ore-rating,
@@ -227,7 +228,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 **Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-cookie-banner`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`, `ore-typing-indicator`
 
-**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
+**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-counter`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-qr-scanner`, `ore-query-bar`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
 **Layout:** `ore-box`, `ore-grid`, `ore-grid-item`, `ore-navbar`, `ore-sidebar`
 

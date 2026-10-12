@@ -30,6 +30,8 @@
       "!**/dist",
       "!docs/.vitepress/cache",
       "!docs/.vitepress/theme/components/repl/registry.generated.ts",
+      // Wrangler-generated Worker types are outputs, not authored source.
+      "!**/worker-configuration.d.ts",
       // SVGs are exported artwork (Inkscape), not authored source: inline CSS uses
       // Inkscape-specific properties and font names that Biome flags.
       "!**/*.svg"

@@ -19,6 +19,7 @@ const packageRoot = fileURLToPath(new URL('..', import.meta.url));
  * `./datagrid-column` subpath.
  */
 const PRIVATELY_REGISTERED = new Set(['datagrid-column']);
+const REFINE_SIDE_EFFECTS = ['./dist/*.js', './dist/*.cjs', './dist/core/*', './dist/styles/**', './src/core/icons.ts'];
 
 /**
  * Discovers every published refine component entry point by scanning `src/**` for files that
@@ -268,9 +269,9 @@ export function syncComponentExports() {
 
   packageJson.exports = createRefineExports(packageJson.exports ?? {});
 
-  // Ensure sideEffects lists all component dist bundles and styles so bundlers
-  // never eliminate side-effect-only imports (customElements.define calls, CSS).
-  packageJson.sideEffects = ['./dist/*.js', './dist/*.cjs', './dist/styles/**'];
+  // Keep the icon registry's nested module and its source entry marked as side-effectful:
+  // otherwise consumer production bundlers can drop registerIcons() from component imports.
+  packageJson.sideEffects = [...REFINE_SIDE_EFFECTS];
 
   const nextContent = `${JSON.stringify(packageJson, null, 2)}\n`;
 
@@ -286,6 +287,10 @@ export function syncComponentExports() {
 export function verifyComponentExports() {
   const packageJson = readRefinePackageJson();
   const exportsField = packageJson.exports ?? {};
+  if (JSON.stringify(packageJson.sideEffects) !== JSON.stringify(REFINE_SIDE_EFFECTS)) {
+    throw new Error(`refine sideEffects is out of sync with the generated manifest: ${REFINE_SIDE_EFFECTS.join(', ')}`);
+  }
+
   const expectedComponentExports = getComponentExports();
   const expectedComponentKeys = new Set(Object.keys(expectedComponentExports));
   const actualComponentKeys = Object.keys(exportsField).filter(

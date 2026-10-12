@@ -15,8 +15,13 @@ import { readPackageManifests } from './lib/packages.mjs';
 /** Packages that exist under `packages/` but are never resolved in a browser context. */
 const NON_BROWSER_PACKAGES = new Set(['codex']);
 
-/** DOM-output packages have no preview container in the REPL: excluded from REPL registration. */
-export const REPL_EXCLUDED_PACKAGES = new Set(['ore', 'prism', 'refine']);
+/**
+ * Packages with no runnable surface in the REPL, excluded from REPL registration:
+ * DOM-output packages have no preview container, and worker-runtime packages
+ * (`archive`) need D1/JWKS bindings the sandbox cannot host — they also ship no
+ * IIFE bundle for the registry to inline.
+ */
+export const REPL_EXCLUDED_PACKAGES = new Set(['archive', 'ore', 'prism', 'refine']);
 
 /**
  * Returns every directory under `packagesDir` that has a `package.json`, sorted

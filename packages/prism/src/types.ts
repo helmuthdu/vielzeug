@@ -87,6 +87,7 @@ export interface ChartHandle<TData = unknown> {
  * - **Area**: both fields style the top line's segment from this datum to the
  *   next one (last datum's `dash` ignored); the fill keeps the series-level
  *   treatment.
+ * - **Scatter**: `opacity` fades this datum's own point marker; `dash` is ignored.
  * - **Sparkline, pie, radar**: ignored.
  *
  * Absent fields keep the series/theme default; setting them never changes
@@ -103,7 +104,8 @@ export interface Datum<TKey extends Date | number | string = Date | number | str
   /**
    * Opacity multiplier (0-1) for this datum's marks, e.g. `0.4`.
    * On line/area charts this fades this datum's segment to the next point; on
-   * line charts it also fades this datum's own point marker.
+   * line charts it also fades this datum's own point marker, and on scatter
+   * charts it fades only that marker.
    */
   opacity?: number;
   value: number;
@@ -207,7 +209,7 @@ export interface ChartEvent {
   datum: Datum;
   originalEvent: Event;
   series: Series;
-  /** Every series' datum at the same key, in series order (line, area, bar). */
+  /** Every series' datum at the same key, in series order (line, area, bar). Scatter events omit it. */
   values?: SeriesValue[];
 }
 
@@ -233,9 +235,10 @@ export interface TransitionConfig {
   /** `system` (the default) skips animation when the user prefers reduced motion. */
   preference?: 'always' | 'never' | 'system';
   /**
-   * Per-lane delay in milliseconds: bars on a bar chart, series on a radar chart.
-   * Bar charts cap the effective value so a long category axis stays under ~400 ms
-   * of added delay; other chart types use it as given.
+   * Per-lane delay in milliseconds: bars on a bar chart, points (in x order) on a
+   * scatter chart, series on a radar chart. Bar and scatter charts cap the effective
+   * value so many marks stay under ~400 ms of added delay; other chart types use it
+   * as given.
    */
   stagger?: number;
 }
@@ -317,6 +320,23 @@ export interface AreaSeriesConfig extends Series<ContinuousDatum> {
 export interface AreaChartConfig extends BaseChartConfig {
   crosshair?: CrosshairConfig | boolean;
   series: AreaSeriesConfig[];
+}
+
+// ─── Scatter Types ───────────────────────────────────────────────────────────
+
+export interface ScatterSeriesConfig extends Series<ContinuousDatum> {
+  /** Point marker radius for this series. Defaults to 3. */
+  pointRadius?: number;
+}
+
+/**
+ * Two-dimensional scatter plot: each datum's `key` is its x position and its
+ * `value` its y position, so a point is an independent `(x, y)` pair rather than
+ * one sample at a shared key. The y domain is fitted to the data (zero is not forced).
+ */
+export interface ScatterChartConfig extends BaseChartConfig {
+  crosshair?: CrosshairConfig | boolean;
+  series: ScatterSeriesConfig[];
 }
 
 // ─── Pie / Donut Types ───────────────────────────────────────────────────────

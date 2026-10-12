@@ -71,6 +71,7 @@ import type { OreMessageComposerEvents, OreMessageComposerProps } from '../input
 import type { OreNumberInputEvents, OreNumberInputProps } from '../inputs/number-input/number-input';
 import type { OreOtpInputEvents, OreOtpInputProps } from '../inputs/otp-input/otp-input';
 import type { OreQrScannerEvents, OreQrScannerProps } from '../inputs/qr-scanner/qr-scanner';
+import type { OreQueryBarEvents, OreQueryBarProps } from '../inputs/query-bar/query-bar.types';
 import type { OreRadioEvents, OreRadioProps } from '../inputs/radio/radio';
 import type { OreRadioGroupEvents, OreRadioGroupProps } from '../inputs/radio-group/radio-group';
 import type { OreRatingEvents, OreRatingProps } from '../inputs/rating/rating';
@@ -181,6 +182,7 @@ export interface RefineElementMap {
   'ore-progress': HTMLElement & OreProgressProps;
   'ore-qr-code': HTMLElement & OreQrCodeProps & AddEventListeners<OreQrCodeEvents>;
   'ore-qr-scanner': HTMLElement & OreQrScannerProps & AddEventListeners<OreQrScannerEvents>;
+  'ore-query-bar': HTMLElement & OreQueryBarProps & AddEventListeners<OreQueryBarEvents>;
   'ore-radio': HTMLElement & OreRadioProps & FormValidityMethods & AddEventListeners<OreRadioEvents>;
   'ore-radio-group': HTMLElement & OreRadioGroupProps & FormValidityMethods & AddEventListeners<OreRadioGroupEvents>;
   'ore-rank-item': HTMLElement & OreRankItemProps;

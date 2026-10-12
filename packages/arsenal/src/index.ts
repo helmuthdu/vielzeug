@@ -18,6 +18,7 @@ export * from './cache/cache';
 export * from './cache/memo';
 export * from './encoding/base64url';
 export * from './encoding/compression';
+export * from './encoding/share-code';
 export * from './errors';
 export * from './function/debounce';
 export * from './function/once';

@@ -329,6 +329,11 @@
       "require": "./dist/qr-scanner.cjs",
       "types": "./dist/inputs/qr-scanner/qr-scanner.d.ts"
     },
+    "./query-bar": {
+      "import": "./dist/query-bar.js",
+      "require": "./dist/query-bar.cjs",
+      "types": "./dist/inputs/query-bar/query-bar.d.ts"
+    },
     "./radio": {
       "import": "./dist/radio.js",
       "require": "./dist/radio.cjs",
@@ -622,6 +627,9 @@
       "qr-scanner": [
         "dist/inputs/qr-scanner/qr-scanner.d.ts"
       ],
+      "query-bar": [
+        "dist/inputs/query-bar/query-bar.d.ts"
+      ],
       "radio": [
         "dist/inputs/radio/radio.d.ts"
       ],
@@ -702,21 +710,20 @@
   "sideEffects": [
     "./dist/*.js",
     "./dist/*.cjs",
-    "./dist/core/*.js",
-    "./dist/core/*.cjs",
+    "./dist/core/*",
     "./dist/styles/**",
-    "./src/core/icons.ts",
-    "./src/icon-lucide.ts"
+    "./src/core/icons.ts"
   ],
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
-    "build": "pnpm --silent run check:theme && pnpm --silent run check:manifest && pnpm --silent run check:css-contract && vite build && pnpm --silent run check:cross-entry && pnpm --silent run build:bundle && cp -r src/styles/*.css dist/styles && pnpm --silent run build:types && pnpm --silent run analyze && pnpm --silent run gen:framework-types",
+    "build": "pnpm --silent run check:theme && pnpm --silent run check:manifest && pnpm --silent run check:css-contract && vite build && pnpm --silent run check:cross-entry && pnpm --silent run build:bundle && cp -r src/styles/*.css dist/styles && pnpm --silent run build:types && pnpm --silent run analyze && pnpm --silent run gen:framework-types && pnpm --silent run check:packed-icons",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:bundle:watch": "vite build --watch --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "check:css-contract": "node ./scripts/check-css-contract.mjs",
     "check:cross-entry": "node ./scripts/refine-manifest.mjs check-cross-entry",
     "check:manifest": "node ./scripts/refine-manifest.mjs check-exports",
+    "check:packed-icons": "node ./scripts/check-packed-icons.mjs",
     "check:theme": "node ./scripts/theme-tokens.mjs check",
     "dev": "vite",
     "fix": "biome check --write src",

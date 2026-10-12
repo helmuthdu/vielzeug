@@ -216,6 +216,11 @@
       "packageName": "@vielzeug/tandem",
       "projectFolder": "packages/tandem",
       "shouldPublish": true
+    },
+    {
+      "packageName": "@vielzeug/archive",
+      "projectFolder": "packages/archive",
+      "shouldPublish": true
     }
   ],
   "repository": {

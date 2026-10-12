@@ -213,7 +213,7 @@ chart.dispose();
 
 ## Scatter Charts
 
-Scatter charts treat every datum as an independent point: `key` is the numeric x-value and `value` is the y-value. The scales fit the observed values rather than forcing the y-domain to include zero. Set `pointRadius` on a series to change its marker size.
+Scatter charts treat every datum as an independent point: `key` is the numeric or `Date` x-value and `value` is the y-value. The scales fit the observed values rather than forcing the y-domain to include zero. Set `pointRadius` on a series to change its marker size (default `3`).
 
 ```ts
 import { createScatterChart } from '@vielzeug/prism';
@@ -235,7 +235,7 @@ const chart = createScatterChart(container, {
 chart.dispose();
 ```
 
-Scatter callbacks identify one nearest point and do not provide cross-series `values`, because points do not share a category key.
+Scatter callbacks identify the nearest point in two dimensions and do not provide cross-series `values`, because points do not share a category key. Keyboard navigation visits every point across series in x order. With a tooltip, `titleFormat` formats the x-value and `valueFormat` the y-value, in both the visible row and the spoken summary.
 
 ## Forecast and Emphasis Styling
 
@@ -375,7 +375,7 @@ const chart = createLineChart(container, {
 chart.dispose();
 ```
 
-`onHover` receives an event while a point, category, slice, or radar axis is active, then `null` when the interaction clears. `onClick` receives the selected event. For line, area, and bar charts, `ChartEvent.values` contains each series' datum at that shared key; a missing datum is `undefined`. Scatter, pie, radar, and sparkline use their chart-specific event types.
+`onHover` receives an event while a point, category, slice, or radar axis is active, then `null` when the interaction clears. `onClick` receives the selected event. For line, area, and bar charts, `ChartEvent.values` contains each series' datum at that shared key; a missing datum is `undefined`. Scatter events are `ChartEvent` objects without `values`; pie, radar, and sparkline use their chart-specific event types.
 
 `crosshair` is available on line, area, and scatter charts. By default it shows a vertical guide and snaps the line to the nearest datum. Set `horizontal: true` to add a horizontal guide or `vertical: false` to hide the vertical one. Set `snap: false` to make the guide follow the pointer; tooltip and callback data still come from the nearest datum.
 
@@ -406,11 +406,11 @@ chart.dispose();
 
 Columns grow together from their baseline by default over 300 ms. Lines trace their final curve over 420 ms, uncovering point markers along the way without fading or shifting the series. Line data updates retain the default 300 ms geometry transition; an explicit `duration` overrides both timings.
 
-`preference: 'system'` (the default) disables JavaScript motion when the user prefers reduced motion. Use `'always'` to ignore that preference or `'never'` to disable motion. `stagger` sets an optional delay between bars or radar series; bar charts cap the effective delay so long category axes do not add unbounded time. Named easing values are `ease-in`, `ease-in-out`, `ease-out`, `back-out`, `expo-out`, and `linear`; you can also provide an easing function.
+`preference: 'system'` (the default) disables JavaScript motion when the user prefers reduced motion. Use `'always'` to ignore that preference or `'never'` to disable motion. `stagger` sets an optional delay between bars, entering scatter points (in x order), or radar series; bar and scatter charts cap the effective delay so many marks do not add unbounded time. Named easing values are `ease-in`, `ease-in-out`, `ease-out`, `back-out`, `expo-out`, and `linear`; you can also provide an easing function.
 
 ## Responsive Layout and Lifecycle
 
-Size the host with CSS. Prism observes its content box and updates the SVG dimensions and chart layout when it changes. Bar and line resize redraws apply immediately rather than animating between layout sizes; entrance animations and explicit data-update transitions remain enabled. The legend is rendered as container chrome outside the SVG and included in resize calculations.
+Size the host with CSS. Prism observes its content box and updates the SVG dimensions and chart layout when it changes. Bar, line, and scatter resize redraws apply immediately rather than animating between layout sizes; entrance animations and explicit data-update transitions remain enabled. The legend is rendered as container chrome outside the SVG and included in resize calculations.
 
 Call `dispose()` when the view no longer owns the chart. Disposal is idempotent: it removes the SVG, tooltip, legend, and resize observation, stops in-flight chart motion, and aborts `disposalSignal`. `chart[Symbol.dispose]()` calls the same cleanup method.
 

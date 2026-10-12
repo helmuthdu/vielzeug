@@ -26,6 +26,37 @@ afterEach(() => {
 });
 
 describe('normalizePackageManifest()', () => {
+  it('preserves types-first ESM and CJS export conditions without mutating the input', () => {
+    const manifest = {
+      exports: {
+        '.': {
+          types: './dist/index.d.ts',
+          source: './src/index.ts',
+          import: './dist/index.js',
+          require: './dist/index.cjs',
+        },
+        './http': {
+          types: './dist/http.d.ts',
+          source: './src/http.ts',
+          import: './dist/http.js',
+          require: './dist/http.cjs',
+        },
+      },
+    };
+    const original = structuredClone(manifest);
+    const normalized = normalizePackageManifest(manifest);
+
+    for (const subpath of ['.', './http']) {
+      expect(Object.keys(normalized.exports[subpath])).toEqual(['types', 'import', 'require']);
+      expect(normalized.exports[subpath].types).toBe(original.exports[subpath].types);
+      expect(normalized.exports[subpath].import).toBe(original.exports[subpath].import);
+      expect(normalized.exports[subpath].require).toBe(original.exports[subpath].require);
+    }
+    expect(normalized.typesVersions).toEqual({ '*': { http: ['dist/http.d.ts'] } });
+    expect(manifest).toEqual(original);
+    expect(Object.keys(manifest.exports['.'])).toEqual(['types', 'source', 'import', 'require']);
+  });
+
   it('removes source conditions and derives classic TypeScript subpath mappings', () => {
     expect(
       normalizePackageManifest({

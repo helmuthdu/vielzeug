@@ -1,17 +1,17 @@
 ---
 title: 'Prism Examples: Plot a Scatter Chart'
-description: Plot independent numeric x/y measurements and inspect the nearest point with pointer and keyboard interaction.
+description: Plot independent numeric x/y measurements with pointer and keyboard interaction.
 ---
 
 ## Plot a Scatter Chart
 
 ### Problem
 
-You need to compare independent measurements where each observation has its own x and y value, rather than a shared category or connected time series. You also need the selected point's values available to users exploring the chart.
+You need to compare independent measurements where each observation has its own x and y value, rather than a shared category or connected time series.
 
 ### Solution
 
-Create a labelled scatter chart with separate series, formatted axis labels, and a tooltip; use `onHover` to keep a details line in sync with the nearest point.
+Create a labelled scatter chart with separate series, formatted axes, and a tooltip.
 
 <ComponentPreview vertical align="stretch" height="440px">
 
@@ -30,6 +30,7 @@ Create a labelled scatter chart with separate series, formatted axis labels, and
   const chart = Prism.createScatterChart(document.getElementById('scatter-chart'), {
     a11y: { ariaLabel: 'Study participants by height and weight' },
     crosshair: { horizontal: true },
+    legend: { position: 'top' },
     onHover: (event) => {
       detail.textContent = event
         ? `${event.series.name}: ${event.datum.key} cm, ${event.datum.value} kg`
@@ -37,24 +38,12 @@ Create a labelled scatter chart with separate series, formatted axis labels, and
     },
     series: [
       {
-        color: 'var(--prism-color-1)',
-        data: [
-          { key: 158, value: 52 },
-          { key: 164, value: 58 },
-          { key: 169, value: 63 },
-          { key: 173, value: 67 },
-        ],
+        data: [{ key: 158, value: 52 }, { key: 164, value: 58 }, { key: 169, value: 63 }, { key: 173, value: 67 }],
         name: 'Group A',
         pointRadius: 5,
       },
       {
-        color: 'var(--prism-color-2)',
-        data: [
-          { key: 162, value: 60 },
-          { key: 168, value: 66 },
-          { key: 177, value: 73 },
-          { key: 184, value: 82 },
-        ],
+        data: [{ key: 162, value: 60 }, { key: 168, value: 66 }, { key: 177, value: 73 }, { key: 184, value: 82 }],
         name: 'Group B',
         pointRadius: 5,
       },
@@ -74,7 +63,7 @@ Create a labelled scatter chart with separate series, formatted axis labels, and
 
 - Each datum is an independent `(x, y)` pair: `key` is x and `value` is y; Prism does not connect points.
 - Use number or `Date` keys consistently across all scatter series.
-- The y-scale fits the data instead of forcing zero into its domain, so similarly sized values in separate charts do not imply the same scale.
+- The y-scale fits the data instead of forcing zero into its domain.
 - Scatter callbacks report one nearest `datum` and `series`; they do not include cross-series `values`.
 
 ### Related

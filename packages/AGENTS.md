@@ -16,6 +16,7 @@ Every `packages/<name>/` is an independent, publishable `@vielzeug/*` library. `
 
 Most packages need no `AGENTS.md`; only these carry rules beyond the conventions.
 
+- `packages/archive/AGENTS.md`: community content Worker core and passwordless issuer; browser-safe root plus `./worker` and `./auth` subpaths; package-owned D1 initialization; real-workerd integration suite.
 - `packages/ore/AGENTS.md`: web-component authoring primitives; `./testing` sub-path; narrow a11y contract.
 - `packages/prism/AGENTS.md`: reactive SVG charting; DOM-output; a11y hard requirement.
 - `packages/refine/AGENTS.md`: component library; manifest-driven exports; bundles `lucide`; design modes.

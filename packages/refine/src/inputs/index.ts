@@ -46,6 +46,16 @@ export type {
   QrScannerFactory,
 } from './qr-scanner/qr-scanner';
 export { QR_SCANNER_TAG } from './qr-scanner/qr-scanner';
+export {
+  QUERY_BAR_TAG,
+  type QueryDraft,
+  type QueryOption,
+  type QueryState,
+  type QuerySuggestion,
+  type QueryToken,
+  type QueryTokenDef,
+} from './query-bar/query-bar';
+export type { OreQueryBarEvents, OreQueryBarProps } from './query-bar/query-bar.types';
 export type { OreRadioEvents, OreRadioProps } from './radio/radio';
 export { RADIO_TAG } from './radio/radio';
 export type { OreRadioGroupEvents, OreRadioGroupProps } from './radio-group/radio-group';

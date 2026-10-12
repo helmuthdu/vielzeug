@@ -99,7 +99,13 @@ Sends one HTTP request. `config.method` defaults to `GET`; pass any method (incl
 | `timeout` | `number` | Integer milliseconds from 1 to 2,147,483,647, or `Infinity`; overrides default |
 | `fetchInit` | `Omit<RequestInit, 'body' \| 'headers' \| 'method' \| 'signal'>` | Raw fetch options for advanced use |
 
-**Returns:** Parsed response body (or `undefined` for empty bodies).
+**Returns:** Parsed response body (or `undefined` for empty bodies). With
+`responseType: 'raw'` the resolved value is the `Response` itself; a `204`/`205`
+answer whose transport carried an unexpected empty body stream is normalized to
+`body: null` — the stray stream is cancelled and headers, status, statusText,
+URL, redirect and type metadata are preserved (on the response and its clones).
+A null-body raw response owns no pending resource, so no consumption is required
+to release the request.
 
 ```ts
 const created = await courier.request<User>('/users', {

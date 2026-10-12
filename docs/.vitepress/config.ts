@@ -106,6 +106,30 @@ export default defineConfig({
       provider: 'local',
     },
     sidebar: makePackageSidebarsCollapsible({
+      '/archive/': [
+        { link: '/archive/', text: 'Overview' },
+        {
+          items: [{ link: '/archive/usage#basic-usage', text: 'Basic Usage' }],
+          link: '/archive/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [{ link: '/archive/api#api-overview', text: 'Overview' }],
+          link: '/archive/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/archive/examples/stand-up-a-content-archive', text: 'Stand Up a Content Archive' },
+            { link: '/archive/examples/content-identity-and-versions', text: 'Content Identity and Versions' },
+            { link: '/archive/examples/multi-collection-deployment', text: 'Multi-Collection Deployment' },
+            { link: '/archive/examples/client-error-mapping', text: 'Client Error Mapping' },
+            { link: '/archive/examples/gdpr-erasure-and-export', text: 'GDPR Erasure and Export' },
+          ],
+          link: '/archive/examples',
+          text: 'Examples',
+        },
+      ],
       '/arsenal/': [
         { link: '/arsenal/', text: 'Overview' },
         { link: '/arsenal/migration', text: 'Migration' },
@@ -201,7 +225,10 @@ export default defineConfig({
             },
             {
               collapsed: true,
-              items: [{ link: '/arsenal/examples/encoding/compression', text: 'compressBytes / decompressBytes' }],
+              items: [
+                { link: '/arsenal/examples/encoding/compression', text: 'compressBytes / decompressBytes' },
+                { link: '/arsenal/examples/encoding/share-codes', text: 'pack / unpack' },
+              ],
               link: '/arsenal/examples/encoding',
               text: 'Encoding',
             },
@@ -585,6 +612,10 @@ export default defineConfig({
           items: [
             { link: '/courier/examples/ai-token-stream', text: 'AI Token Stream' },
             { link: '/courier/examples/authentication', text: 'Authentication' },
+            {
+              link: '/courier/examples/service-discovery-and-custom-fetch',
+              text: 'Service Discovery and Custom Fetch',
+            },
             { link: '/courier/examples/crud-operations', text: 'CRUD Operations' },
             { link: '/courier/examples/disposal', text: 'Disposal' },
             { link: '/courier/examples/error-handling-patterns', text: 'Error Handling Patterns' },
@@ -1583,6 +1614,7 @@ export default defineConfig({
                 { link: '/refine/components/input', text: 'Input' },
                 { link: '/refine/components/message-composer', text: 'Message Composer' },
                 { link: '/refine/components/number-input', text: 'Number Input' },
+                { link: '/refine/components/query-bar', text: 'Query Bar' },
                 { link: '/refine/components/otp-input', text: 'OTP Input' },
                 { link: '/refine/components/qr-scanner', text: 'QR Scanner' },
                 { link: '/refine/components/radio', text: 'Radio' },
@@ -2096,6 +2128,10 @@ export default defineConfig({
         {
           items: [
             { link: '/tandem/examples/sync-a-vault-store', text: 'Sync a Vault Store' },
+            {
+              link: '/tandem/examples/make-store-commands-undoable',
+              text: 'Make Store Commands Undoable',
+            },
             {
               link: '/tandem/examples/keep-deletions-from-resurrecting',
               text: 'Keep Deletions from Resurrecting',

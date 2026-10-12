@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Reject unsupported or unserializable share-code payloads with typed errors rather than producing invalid codes.",
+      "packageName": "@vielzeug/arsenal",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/arsenal"
+}

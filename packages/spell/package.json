@@ -19,19 +19,19 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     },
     "./json": {
+      "types": "./dist/json.d.ts",
       "import": "./dist/json.js",
-      "require": "./dist/json.cjs",
-      "types": "./dist/json.d.ts"
+      "require": "./dist/json.cjs"
     },
     "./predicates": {
+      "types": "./dist/predicates.d.ts",
       "import": "./dist/predicates.js",
-      "require": "./dist/predicates.cjs",
-      "types": "./dist/predicates.d.ts"
+      "require": "./dist/predicates.cjs"
     }
   },
   "typesVersions": {

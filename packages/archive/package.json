@@ -1,0 +1,74 @@
+{
+  "name": "@vielzeug/archive",
+  "version": "0.1.0",
+  "description": "Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/archive"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "migrations"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./worker": {
+      "types": "./dist/worker.d.ts",
+      "import": "./dist/worker.js",
+      "require": "./dist/worker.cjs"
+    },
+    "./auth": {
+      "types": "./dist/auth.d.ts",
+      "import": "./dist/auth.js",
+      "require": "./dist/auth.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "worker": [
+        "dist/worker.d.ts"
+      ],
+      "auth": [
+        "dist/auth.d.ts"
+      ]
+    }
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vite build && pnpm --silent run build:types",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src test",
+    "lint": "biome ci src test",
+    "prepublishOnly": "pnpm --silent run build",
+    "test": "vitest",
+    "test:integration": "vitest run --config vitest.config.integration.ts",
+    "test:types": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vielzeug/spell": "workspace:*",
+    "jose": "6.2.12"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "wrangler": "4.149.0"
+  }
+}

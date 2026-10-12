@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add Archive community publishing for Workers and D1, with typed collections, moderation, passwordless identity, coordinated account export and erasure, account-wide session revocation, live issuer validation, readiness checks, canonical fresh-database schemas and deployment documentation.",
+      "packageName": "@vielzeug/archive",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Restore scatter charts with independent points, keyboard interaction, accessible announcements and live documentation.",
+      "packageName": "@vielzeug/prism",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

@@ -157,9 +157,14 @@ define<OreTabsProps>(TABS_TAG, {
 
       if (hasCurrent) return;
 
-      const firstEnabled = tabs.find((tab) => !tab.hasAttribute('disabled'))?.getAttribute('value') ?? undefined;
+      // Fall back only to a tab that carries a value: slot bindings land after
+      // mount, and locking an empty first value here would later override a
+      // bound host `value`. No valued tab yet means defer until a later sync.
+      const firstEnabled = tabs.find((tab) => !tab.hasAttribute('disabled') && tab.getAttribute('value'));
 
-      setSelection(firstEnabled, false);
+      if (!firstEnabled) return;
+
+      setSelection(firstEnabled.getAttribute('value') ?? undefined, false);
     };
 
     watch(props.value, (value) => {

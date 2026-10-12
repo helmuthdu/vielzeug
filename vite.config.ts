@@ -108,6 +108,10 @@ export const getConfig = (
         name,
       },
       rolldownOptions: {
+        checks: {
+          // Rush treats stderr as a failed build; timings are profiling hints, not diagnostics.
+          pluginTimings: process.env.CI !== 'true' && process.env.RUSHSTACK_FILE_ERROR_BASE_FOLDER === undefined,
+        },
         ...(external?.length && { external: isExternal }),
         output: {
           preserveModules,
@@ -160,6 +164,9 @@ export const getBundleConfig = (__dirname: string, options: BundleOptions) => {
         name,
       },
       rolldownOptions: {
+        checks: {
+          pluginTimings: process.env.CI !== 'true' && process.env.RUSHSTACK_FILE_ERROR_BASE_FOLDER === undefined,
+        },
         ...(external?.length ? { external } : {}),
         output: {
           ...(Object.keys(globals).length ? { globals } : {}),

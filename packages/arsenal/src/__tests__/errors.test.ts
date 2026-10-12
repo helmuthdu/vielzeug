@@ -1,5 +1,5 @@
 import { memo } from '../cache/memo';
-import { ArsenalError, ArsenalSerializationError } from '../errors';
+import { ArsenalError, ArsenalSerializationError, ShareCodeError } from '../errors';
 
 describe('ArsenalError', () => {
   it('is instanceof Error with correct name and message', () => {
@@ -24,6 +24,14 @@ describe('ArsenalError', () => {
   it('ArsenalSerializationError is an instanceof ArsenalError and Error', () => {
     expect(new ArsenalSerializationError('serialization')).toBeInstanceOf(ArsenalError);
     expect(new ArsenalSerializationError('serialization')).toBeInstanceOf(Error);
+  });
+
+  it('ShareCodeError is an instanceof ArsenalError and carries its reason', () => {
+    const err = new ShareCodeError('too-large', 'The share payload exceeds the byte limit.');
+    expect(err).toBeInstanceOf(ArsenalError);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.name).toBe('ShareCodeError');
+    expect(err.reason).toBe('too-large');
   });
 
   it('has a name matching its constructor', () => {

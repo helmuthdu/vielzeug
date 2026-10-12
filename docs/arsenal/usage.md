@@ -185,6 +185,8 @@ console.log(restored === payload);
 
 Both helpers default to `deflate-raw`. You can explicitly select `gzip` or `deflate`; use the same format at both ends. The helpers reject when native streams do not support the selected format. They do not choose a fallback or define a wire protocol.
 
+For a complete versioned envelope over these primitives — prefix, compression mode marker, byte budgets on both sides — see [`pack` / `unpack`](./api.md#pack).
+
 Compression can enlarge small inputs. Compare the final encoded strings, including any format marker, before choosing a representation. Bound input size before decoding Base64url and validate decompressed JSON against your schema. The decompression limit bounds retained output, not native stream working memory.
 
 ## Working with Other Vielzeug Libraries

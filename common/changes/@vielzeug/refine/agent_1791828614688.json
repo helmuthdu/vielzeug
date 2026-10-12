@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Preserve internal icon registration in production bundles and connect query-bar suggestions across shadow-root boundaries.",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

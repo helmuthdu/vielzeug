@@ -6,6 +6,7 @@ allowBuilds:
   lefthook: true
   playwright: true
   rs-module-lexer: true
+  workerd: false
 minimumReleaseAgeExclude:
   - '@modelcontextprotocol/core@2.1.0'
   - '@modelcontextprotocol/server@2.1.0'

@@ -13,3 +13,20 @@ export class ArsenalError extends Error {
  * unsupported class instance with `{ onClassInstance: 'throw' }`.
  */
 export class ArsenalSerializationError extends ArsenalError {}
+
+/** Why a share code was rejected: the envelope format, its byte budget, or the runtime's decode capability. */
+export type ShareCodeReason = 'compression-unavailable' | 'invalid' | 'too-large';
+
+/**
+ * Thrown when a share code cannot be encoded or decoded: a foreign or malformed code, a payload
+ * over the byte budget, or a compressed code on a runtime without `DecompressionStream` support.
+ * The `reason` field carries the rejection class so consumers can branch without message matching.
+ */
+export class ShareCodeError extends ArsenalError {
+  readonly reason: ShareCodeReason;
+
+  constructor(reason: ShareCodeReason, message: string, opts?: ErrorOptions) {
+    super(message, opts);
+    this.reason = reason;
+  }
+}

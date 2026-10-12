@@ -587,10 +587,16 @@ describe('ore-navbar-item', () => {
     expect(fixture.query('a.item')).toBeFalsy();
   });
 
-  it('applies aria-current=page when active', async () => {
+  it('applies aria-current=page to an active page route', async () => {
     fixture = await mount('ore-navbar-item', { attrs: { active: '', href: '/dashboard' } });
 
     expect(fixture.query('a.item')?.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('applies aria-current=location to an active in-page anchor', async () => {
+    fixture = await mount('ore-navbar-item', { attrs: { active: '', href: '#section' } });
+
+    expect(fixture.query('a.item')?.getAttribute('aria-current')).toBe('location');
   });
 
   it('keeps semantic text content accessible', async () => {

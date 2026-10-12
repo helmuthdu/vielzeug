@@ -6,6 +6,7 @@ description: Practical examples and recipes for courier.
 ## Examples
 
 - [Authentication](./examples/authentication.md)
+- [Service Discovery and Custom Fetch](./examples/service-discovery-and-custom-fetch.md)
 - [CRUD Operations](./examples/crud-operations.md)
 - [Disposal](./examples/disposal.md)
 - [Error Handling Patterns](./examples/error-handling-patterns.md)

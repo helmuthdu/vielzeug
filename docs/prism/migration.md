@@ -8,7 +8,7 @@ With an informative `a11y.ariaLabel`, line, area, bar, scatter, pie, and radar c
 
 ## Charts animate by default
 
-Every chart now animates without configuration: bars grow together out of the baseline behind per-bar clips, lines trace their final curve behind a stroke mask, and area series grow from their baseline on mount. Bar and line entrances reveal their final geometry instead of deforming it. Pie slices morph between values instead of replaying their entry sweep. Previously these charts drew every frame synchronously unless you passed a `transition` config.
+Every chart now animates without configuration: bars grow together out of the baseline behind per-bar clips, lines trace their final curve behind a stroke mask, area series grow from their baseline, and scatter points grow from radius zero at their final positions on mount. Bar and line entrances reveal their final geometry instead of deforming it. Pie slices morph between values instead of replaying their entry sweep. Previously these charts drew every frame synchronously unless you passed a `transition` config.
 
 ```ts
 // Before: static unless a transition was configured
