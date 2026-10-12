@@ -5,6 +5,25 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "tooltip clamps to the chart container; axes gain tickValues and compact numeric defaults; tooltips gain titleFormat/valueFormat; partial value-axis configs keep their default gridlines",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Restore scatter charts with independent points, keyboard interaction, accessible announcements and live documentation.",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          }
+        ]
+      },
+      "date": "Mon, 12 Oct 2026 18:44:06 GMT",
+      "tag": "@vielzeug/prism_v26.10.6",
+      "version": "26.10.6"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Skip the initial no-op ResizeObserver fire so a settling container no longer cancels a chart's mount entrance (bar/line/area/radar)",
             "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
           }

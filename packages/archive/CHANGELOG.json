@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add Archive community publishing for Workers and D1, with typed collections, moderation, passwordless identity, coordinated account export and erasure, account-wide session revocation, live issuer validation, readiness checks, canonical fresh-database schemas and deployment documentation.",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          }
+        ]
+      },
+      "date": "Mon, 12 Oct 2026 18:44:06 GMT",
+      "tag": "@vielzeug/archive_v26.10.6",
+      "version": "26.10.6"
+    }
+  ],
+  "name": "@vielzeug/archive"
+}

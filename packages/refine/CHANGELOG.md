@@ -1,7 +1,19 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
+This log was last generated on Mon, 12 Oct 2026 18:44:06 GMT and should not be manually modified.
 
+## 26.10.6
+Mon, 12 Oct 2026 18:44:06 GMT
+
+### Minor changes
+
+- add ore-query-bar: a token search field with removable filter pills and a key/value suggestion dropdown
+- ore-navbar-item now emits aria-current="location" for active in-page (#) anchors and "page" only for actual page routes: a section anchor announced as the current page misdescribed the document to screen readers
+
+### Patches
+
+- Fix ore-tabs boot race: ensureSelection no longer locks an empty first value when slotted tab items have not received their bound values yet; it defers until a valued tab exists, so a bound host value is never overridden by the fallback.
+- Preserve internal icon registration in production bundles and connect query-bar suggestions across shadow-root boundaries.
 ## 26.10.5
 Thu, 08 Oct 2026 07:48:38 GMT
 

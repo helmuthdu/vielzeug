@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
+This log was last generated on Mon, 12 Oct 2026 18:44:06 GMT and should not be manually modified.
 
+## 26.10.6
+Mon, 12 Oct 2026 18:44:06 GMT
+
+### Minor changes
+
+- tooltip clamps to the chart container; axes gain tickValues and compact numeric defaults; tooltips gain titleFormat/valueFormat; partial value-axis configs keep their default gridlines
+- Restore scatter charts with independent points, keyboard interaction, accessible announcements and live documentation.
 ## 26.10.5
 Thu, 08 Oct 2026 07:48:38 GMT
 

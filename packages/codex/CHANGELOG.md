@@ -1,7 +1,14 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
+This log was last generated on Mon, 12 Oct 2026 18:44:06 GMT and should not be manually modified.
 
+## 26.10.6
+Mon, 12 Oct 2026 18:44:06 GMT
+
+### Patches
+
+- chore(codex): refresh bundled docs data
+- Refresh bundled Archive, share-code, scatter-chart, Query Bar and HTTP integration documentation.
 ## 26.10.5
 Thu, 08 Oct 2026 07:48:38 GMT
 

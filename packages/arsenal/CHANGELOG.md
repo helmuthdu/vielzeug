@@ -1,7 +1,17 @@
 # Change Log - @vielzeug/arsenal
 
-This log was last generated on Thu, 08 Oct 2026 07:48:38 GMT and should not be manually modified.
+This log was last generated on Mon, 12 Oct 2026 18:44:06 GMT and should not be manually modified.
 
+## 26.10.6
+Mon, 12 Oct 2026 18:44:06 GMT
+
+### Minor changes
+
+- Add pack/unpack: a versioned, compressed, URL-safe share-code envelope bounded by maxBytes, rejecting with a typed ShareCodeError.
+
+### Patches
+
+- Reject unsupported or unserializable share-code payloads with typed errors rather than producing invalid codes.
 ## 26.10.5
 Thu, 08 Oct 2026 07:48:38 GMT
 

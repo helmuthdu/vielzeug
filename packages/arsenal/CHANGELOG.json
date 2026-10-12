@@ -2,6 +2,27 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Add pack/unpack: a versioned, compressed, URL-safe share-code envelope bounded by maxBytes, rejecting with a typed ShareCodeError.",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Reject unsupported or unserializable share-code payloads with typed errors rather than producing invalid codes.",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          }
+        ]
+      },
+      "date": "Mon, 12 Oct 2026 18:44:06 GMT",
+      "tag": "@vielzeug/arsenal_v26.10.6",
+      "version": "26.10.6"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

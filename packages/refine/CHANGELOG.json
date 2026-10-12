@@ -5,6 +5,37 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "add ore-query-bar: a token search field with removable filter pills and a key/value suggestion dropdown",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "ore-navbar-item now emits aria-current=\"location\" for active in-page (#) anchors and \"page\" only for actual page routes: a section anchor announced as the current page misdescribed the document to screen readers",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fix ore-tabs boot race: ensureSelection no longer locks an empty first value when slotted tab items have not received their bound values yet; it defers until a valued tab exists, so a bound host value is never overridden by the fallback.",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Preserve internal icon registration in production bundles and connect query-bar suggestions across shadow-root boundaries.",
+            "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
+          }
+        ]
+      },
+      "date": "Mon, 12 Oct 2026 18:44:06 GMT",
+      "tag": "@vielzeug/refine_v26.10.6",
+      "version": "26.10.6"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Add a preview slot and active-change event to ore-command-palette",
             "commit": "9574fb6436c49ca843ca91f240c1f33147fffd73"
           }
