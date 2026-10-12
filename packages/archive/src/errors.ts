@@ -8,7 +8,7 @@ export class ArchiveError extends Error {
 
 export class ArchiveDefinitionError extends ArchiveError {}
 
-export type ArchiveDerivationStage = 'schema' | 'canonicalize' | 'index' | 'hash' | 'response';
+export type ArchiveDerivationStage = 'canonicalize' | 'hash' | 'index' | 'schema';
 
 /** A collection callback or core runtime fault, not invalid submitted content. */
 export class ArchiveDerivationError extends ArchiveError {

@@ -40,7 +40,7 @@ server subpaths) and their browsers (the root contract).
 - Collection filter/tag/title projections are persisted data, derived only on
   publication/update. Changing a payload schema, vocabulary or `index` does not
   rewrite existing rows; the active definition must match the stored dataset.
-  Deliberately reset/reseed fresh unreleased development databases when semantics
+  Deliberately reset/reseed fresh development databases when semantics
   change. Reset is destructive and must be explicit, never automatic on startup
   or deployment. Do not introduce an upgrade/projection migration framework.
 - `ARCHIVE_LIMITS` must stay in lockstep with the DDL CHECKs it mirrors (payload bytes,
@@ -73,22 +73,25 @@ server subpaths) and their browsers (the root contract).
   non-mutating indexing and the canonical byte ceiling. Invalid submitted JSON,
   schema failures, title/tag-count bounds and canonical size return `null` → 422.
   Callback exceptions, lossy/non-JSON schema outputs, unstable schema transforms, invalid/non-idempotent
-  canonicalization, index mutation/out-of-vocabulary projections and hashing or
-  response-schema faults throw `ArchiveDerivationError` → sanitized 500. Its
-  `stage` is `schema | canonicalize | index | hash | response`; causes stay local.
+  canonicalization and index mutation/out-of-vocabulary projections throw
+  `ArchiveDerivationError` → sanitized 500. Its `stage` is
+  `schema | canonicalize | index | hash`; causes stay local. Stored payloads are
+  canonical by construction, so the emitted entry schemas embed the plain payload
+  schema — no parallel response-stability re-validation layer.
   Route handlers never re-check content — do not add parallel validation layers.
 - The content hash envelope (`{contentVersion, payload}`) is core-owned: a change
   there deliberately re-identifies every stored entry. Collections never hash.
 - No content-migration helpers, historical-schema registries, compatibility
-  aliases or deprecated APIs: the package has not been released.
+  aliases or deprecated APIs: the package ships one current contract, and stored
+  rows are never reinterpreted by a newer definition.
 
 ## HTTP and identity boundaries
 
 - Only anonymous entry lists may cache for `publicCacheSeconds`; any Cookie or
   Authorization header disables caching. Details always use `no-store`; metadata,
   private responses and errors do too.
-- `/me/likes` (without `ids`), `/me/reports`, operator reports and moderation log
-  use forward keyset pages bounded by `maxPageSize`, never total export caps.
+- Every list (entry pages included) uses forward keyset pages bounded by
+  `maxPageSize`, never total export caps; one pagination idiom covers them all.
   Subset likes (`?ids`) retain `{ ids }`. Reports have unique IDs, `resolvedAt`,
   queue status `unresolved | resolved` and the explicit report-resolution route.
 - Health bypasses rate limits and sessions; schema mismatch and database failure

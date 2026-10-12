@@ -43,7 +43,7 @@ wire `schemaVersion` and the storage stamp.
 
 Filter, tag and title projections are stored when content is published or updated.
 Changing the indexing function does not rewrite existing rows, even if the payload
-schema and content version stay the same. For unreleased development deployments,
+schema and content version stay the same. For development deployments,
 deliberately reset and reseed a fresh database with the active definition when
 projection semantics change; Archive provides no automatic projection updates.
 Resetting is destructive: perform it only as an explicit development operation.

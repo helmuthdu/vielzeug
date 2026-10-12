@@ -3,9 +3,9 @@ import { likedPublicationsSql, listPublicationsSql, type PublicationCursor } fro
 
 /** A well-formed keyset cursor for assertions; values are arbitrary but stable. */
 const cursor = (): PublicationCursor => ({
+  createdAt: '2026-01-01T00:00:00.000Z',
   id: '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
   likeCount: 5,
-  publishedAt: '2026-01-01T00:00:00.000Z',
 });
 
 describe('listPublicationsSql ordering', () => {
@@ -86,11 +86,11 @@ describe('listPublicationsSql cursor keysets', () => {
     const bound = listPublicationsSql({
       collection: 'fixture',
       cursor: cursor(),
-      direction: 'next',
       limit: 11,
       sort: 'recent',
     });
     expect(bound.sql).toContain('(p.published_at < ? OR (p.published_at = ? AND p.id < ?))');
+    expect(bound.sql).toContain('ORDER BY p.published_at DESC, p.id DESC LIMIT ?');
     expect(bound.parameters).toEqual([
       'fixture',
       '2026-01-01T00:00:00.000Z',
@@ -104,13 +104,13 @@ describe('listPublicationsSql cursor keysets', () => {
     const bound = listPublicationsSql({
       collection: 'fixture',
       cursor: cursor(),
-      direction: 'next',
       limit: 11,
       sort: 'liked',
     });
     expect(bound.sql).toContain(
       '(p.like_count < ? OR (p.like_count = ? AND (\n        p.published_at < ? OR (p.published_at = ? AND p.id < ?)\n      )))',
     );
+    expect(bound.sql).toContain('ORDER BY p.like_count DESC, p.published_at DESC, p.id DESC LIMIT ?');
     expect(bound.parameters).toEqual([
       'fixture',
       5,
@@ -120,30 +120,6 @@ describe('listPublicationsSql cursor keysets', () => {
       cursor().id,
       11,
     ]);
-  });
-
-  it('flips the comparison direction for previous pages', () => {
-    const bound = listPublicationsSql({
-      collection: 'fixture',
-      cursor: cursor(),
-      direction: 'previous',
-      limit: 11,
-      sort: 'recent',
-    });
-    expect(bound.sql).toContain('(p.published_at > ? OR (p.published_at = ? AND p.id > ?))');
-    expect(bound.sql).toContain('ORDER BY p.published_at ASC, p.id ASC LIMIT ?');
-  });
-
-  it('flips the liked comparison direction for previous pages', () => {
-    const bound = listPublicationsSql({
-      collection: 'fixture',
-      cursor: cursor(),
-      direction: 'previous',
-      limit: 11,
-      sort: 'liked',
-    });
-    expect(bound.sql).toContain('(p.like_count > ? OR (p.like_count = ? AND (');
-    expect(bound.sql).toContain('ORDER BY p.like_count ASC, p.published_at ASC, p.id ASC LIMIT ?');
   });
 });
 

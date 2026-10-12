@@ -130,18 +130,19 @@ export function reportsPageSql(
   };
 }
 
+/** The entry-list keyset boundary: the shared cursor with its sort field resolved. */
 export interface PublicationCursor {
+  createdAt: string;
   id: string;
   likeCount: number;
-  publishedAt: string;
 }
 
 export interface PublicationFilter {
   /** Restrict to one author's publisher id; omit for all authors. */
   author?: string;
   collection: string;
+  /** Forward keyset boundary: `createdAt`/`id` plus the liked sort's `likeCount`. */
   cursor?: PublicationCursor;
-  direction?: 'next' | 'previous';
   filter?: string;
   limit: number;
   /** Quoted word-prefix terms, normalized before reaching the SQL boundary. */
@@ -183,24 +184,22 @@ export function listPublicationsSql(filter: PublicationFilter): BoundSql {
     )`);
     parameters.push(filter.searchMatch);
   }
+  // Forward-only keyset walk: every list orders DESC and the cursor is the last
+  // row of the previous page.
   const cursor = filter.cursor;
-  const comparison = filter.direction === 'previous' ? '>' : '<';
   if (cursor) {
     if (filter.sort === 'liked') {
-      where.push(`(p.like_count ${comparison} ? OR (p.like_count = ? AND (
-        p.published_at ${comparison} ? OR (p.published_at = ? AND p.id ${comparison} ?)
+      where.push(`(p.like_count < ? OR (p.like_count = ? AND (
+        p.published_at < ? OR (p.published_at = ? AND p.id < ?)
       )))`);
-      parameters.push(cursor.likeCount, cursor.likeCount, cursor.publishedAt, cursor.publishedAt, cursor.id);
+      parameters.push(cursor.likeCount, cursor.likeCount, cursor.createdAt, cursor.createdAt, cursor.id);
     } else {
-      where.push(`(p.published_at ${comparison} ? OR (p.published_at = ? AND p.id ${comparison} ?))`);
-      parameters.push(cursor.publishedAt, cursor.publishedAt, cursor.id);
+      where.push('(p.published_at < ? OR (p.published_at = ? AND p.id < ?))');
+      parameters.push(cursor.createdAt, cursor.createdAt, cursor.id);
     }
   }
-  const direction = filter.direction === 'previous' ? 'ASC' : 'DESC';
   const order =
-    filter.sort === 'liked'
-      ? `p.like_count ${direction}, p.published_at ${direction}, p.id ${direction}`
-      : `p.published_at ${direction}, p.id ${direction}`;
+    filter.sort === 'liked' ? 'p.like_count DESC, p.published_at DESC, p.id DESC' : 'p.published_at DESC, p.id DESC';
   parameters.push(filter.limit);
   return {
     parameters,

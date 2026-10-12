@@ -20,7 +20,7 @@ import {
   SESSION_MAX_AGE_SECONDS,
   uuidSchema,
 } from '../contract';
-import { decodeCursorValue, encodeCursorValue, forwardPage, nextCursor } from './_pagination';
+import { forwardPage, forwardPageParams, nextCursor } from './_pagination';
 import { JWT_CLOCK_TOLERANCE_SECONDS, type Publisher, type Session } from './auth';
 import type { ApiConfig, ArchiveWorkerEnv } from './env';
 import {
@@ -157,8 +157,6 @@ const entryById = async (collection: ArchiveCollection, env: ArchiveWorkerEnv, i
 
 /* ----------------------------------- list --------------------------------- */
 
-type CursorDirection = 'next' | 'previous';
-
 /** Normalizes free text into the bounded FTS prefix-match expression the SQL expects. */
 const searchMatchFor = (search: string | null): string | undefined => {
   if (search === null) return undefined;
@@ -170,75 +168,33 @@ const searchMatchFor = (search: string | null): string | undefined => {
   return terms.map((t) => `"${t}"*`).join(' ');
 };
 
-/** The cursor carries direction plus filter context so a replayed/mismatched cursor is 400. */
-interface CursorPayload {
-  c: PublicationCursor;
-  d: CursorDirection;
-  q: {
-    a: string | null;
-    e: string | null;
-    g: string;
-    m: string | null;
-    s: 'liked' | 'recent';
-    t: string | null;
-  };
-}
-
-const cursorPayloadSchema = s.object({
-  c: s.object({
-    id: s.string().uuid(),
-    likeCount: s.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-    publishedAt: s.string().isoDateTime(),
-  }),
-  d: s.enum(['next', 'previous'] as const),
-  q: s.object({
-    a: s.string().uuid().nullable(),
-    e: s.string().max(ARCHIVE_LIMITS.vocabChars).nullable(),
-    g: s.string().max(ARCHIVE_LIMITS.vocabChars),
-    m: s
-      .string()
-      .max(ARCHIVE_LIMITS.searchChars * ARCHIVE_LIMITS.searchTerms)
-      .nullable(),
-    s: s.enum(['liked', 'recent'] as const),
-    t: s.string().max(ARCHIVE_LIMITS.vocabChars).nullable(),
-  }),
-});
+/**
+ * The entry-list cursor context: every query dimension the page's boundary depends
+ * on, so a cursor minted under one filter/sort/search and replayed under another is
+ * a 400 — the same forward-cursor guard every other list in the package uses.
+ */
+const entryCursorContext = (query: {
+  author?: string;
+  collection: string;
+  filter?: string;
+  searchMatch?: string;
+  sort: 'liked' | 'recent';
+  tag?: string;
+}): string =>
+  JSON.stringify([
+    query.collection,
+    query.sort,
+    query.author ?? '',
+    query.filter ?? '',
+    query.tag ?? '',
+    query.searchMatch ?? '',
+  ]);
 
 const cursorFromRow = (row: PublicationRow): PublicationCursor => ({
+  createdAt: row.published_at,
   id: row.id,
   likeCount: row.like_count,
-  publishedAt: row.published_at,
 });
-
-const encodeCursor = (row: PublicationRow, direction: CursorDirection, query: PublicationFilter): string =>
-  encodeCursorValue({
-    c: cursorFromRow(row),
-    d: direction,
-    q: {
-      a: query.author ?? null,
-      e: query.filter ?? null,
-      g: query.collection,
-      m: query.searchMatch ?? null,
-      s: query.sort,
-      t: query.tag ?? null,
-    },
-  } satisfies CursorPayload);
-
-const decodeCursor = (raw: string, query: PublicationFilter): CursorPayload => {
-  const payload = decodeCursorValue(raw, cursorPayloadSchema);
-  const { q } = payload;
-  if (
-    (q.a ?? undefined) !== query.author ||
-    q.s !== query.sort ||
-    q.g !== query.collection ||
-    (q.e ?? undefined) !== query.filter ||
-    (q.m ?? undefined) !== query.searchMatch ||
-    (q.t ?? undefined) !== query.tag
-  ) {
-    throw badRequest();
-  }
-  return payload;
-};
 
 export async function listEntries(
   collection: ArchiveCollection,
@@ -252,10 +208,6 @@ export async function listEntries(
   const sortParsed = archiveSortSchema.safeParse(sortRaw);
   if (!sortParsed.success) throw badRequest();
 
-  const limitRaw = params.get('limit');
-  const limit = limitRaw === null ? ARCHIVE_LIMITS.pageSize : Number(limitRaw);
-  if (!Number.isInteger(limit) || limit < 1 || limit > ARCHIVE_LIMITS.maxPageSize) throw badRequest();
-
   const filter = params.get('filter');
   if (filter !== null && !collection.filters.includes(filter)) throw badRequest();
   const tag = params.get('tag');
@@ -264,9 +216,21 @@ export async function listEntries(
   if (author !== null && !UUID_RE.test(author)) throw badRequest();
 
   const searchMatch = searchMatchFor(params.get('search'));
+  const context = entryCursorContext({
+    author: author ?? undefined,
+    collection: collection.name,
+    filter: filter ?? undefined,
+    searchMatch,
+    sort: sortParsed.data,
+    tag: tag ?? undefined,
+  });
+  const { cursor, limit } = forwardPageParams(params, context);
+
   const query: PublicationFilter = {
     author: author ?? undefined,
     collection: collection.name,
+    cursor:
+      cursor === null ? undefined : { createdAt: cursor.createdAt, id: cursor.id, likeCount: cursor.likeCount ?? 0 },
     filter: filter ?? undefined,
     limit: limit + 1,
     searchMatch,
@@ -274,51 +238,18 @@ export async function listEntries(
     tag: tag ?? undefined,
   };
 
-  // The cursor tells the fetch direction; the first page always walks forward.
-  const cursorRaw = params.get('cursor');
-  const decoded = cursorRaw === null ? null : decodeCursor(cursorRaw, query);
-  const direction: CursorDirection = decoded?.d ?? 'next';
-  if (decoded !== null) query.cursor = decoded.c;
-  query.direction = direction;
-
-  const fetchRows = async (f: PublicationFilter): Promise<PublicationRow[]> => {
-    const bound = listPublicationsSql(f);
-    return all<PublicationRow>(env, bound.sql, ...bound.parameters);
-  };
-
-  const fetched = await fetchRows(query);
-  const hasMore = fetched.length > limit;
-  // 'previous' reads ASC off the cursor; display flips back to normal DESC order.
+  // One bounded query — never a count: the over-read row is the next page's proof.
+  const bound = listPublicationsSql(query);
+  const fetched = await all<PublicationRow>(env, bound.sql, ...bound.parameters);
   const page = fetched.slice(0, limit);
-  if (direction === 'previous') page.reverse();
+  const last = page.at(-1);
 
-  // Bounded index probes — never a count query — decide has-more in the opposite
-  // direction. A first (uncursored) page needs no backward probe: it IS the top.
-  let hasOpposite = false;
-  if (decoded !== null && page.length > 0) {
-    const probe: PublicationFilter = { ...query, limit: 1 };
-    if (direction === 'next') {
-      probe.cursor = cursorFromRow(page[0]);
-      probe.direction = 'previous';
-    } else {
-      probe.cursor = cursorFromRow(page[page.length - 1]);
-      probe.direction = 'next';
-    }
-    hasOpposite = (await fetchRows(probe)).length > 0;
-  }
-
-  const next =
-    page.length > 0 && ((direction === 'next' && hasMore) || (direction === 'previous' && hasOpposite))
-      ? encodeCursor(page[page.length - 1], 'next', query)
-      : null;
-  const previous =
-    page.length > 0 && ((direction === 'previous' && hasMore) || (direction === 'next' && hasOpposite))
-      ? encodeCursor(page[0], 'previous', query)
-      : null;
-
-  // Entries are validated per row through the collection's entry schema; the cursors
-  // are internally generated, so the page composes validated parts directly.
-  const pageDto = { cursor: next, entries: page.map((row) => rowToEntry(collection, row)), previous };
+  // Entries are validated per row through the collection's entry schema; the cursor
+  // is internally generated, so the page composes validated parts directly.
+  const pageDto = {
+    cursor: fetched.length > limit && last !== undefined ? nextCursor(cursorFromRow(last), context) : null,
+    entries: page.map((row) => rowToEntry(collection, row)),
+  };
   return json(200, pageDto, noStore);
 }
 
@@ -603,6 +534,35 @@ const updateBodySchema = s.object({
   payload: s.unknown(),
 });
 
+interface RetryRecord {
+  expires_at: number;
+  payload_hash: string;
+  publication_id: string | null;
+}
+
+/**
+ * The one replay/conflict/gone decision for a create retry key, shared by the
+ * pre-read and the post-insert race re-read: a live record for a different payload
+ * is a 409, a tombstone (null publication id) is a 410, and a live record for the
+ * same payload replays the entry. `'vanished'` means the recorded publication is
+ * no longer readable — hidden or raced-deleted — and only the caller knows which:
+ * the pre-read falls through to the publication-by-key lookup (a hidden entry is
+ * 403 there), the post-insert re-read answers 410.
+ */
+async function resolveRetryRecord(
+  collection: ArchiveCollection,
+  env: ArchiveWorkerEnv,
+  record: RetryRecord | null,
+  hash: string,
+): Promise<Response | 'vanished' | null> {
+  if (record === null || record.expires_at <= Date.now()) return null;
+  if (record.payload_hash !== hash) throw conflict('That key was used for a different payload.');
+  if (record.publication_id === null) throw new ApiError(410, 'gone', 'That publication was removed.');
+  const entry = await entryById(collection, env, record.publication_id);
+  if (entry === null) return 'vanished';
+  return json(200, entry, noStore);
+}
+
 export async function publishEntry(
   collection: ArchiveCollection,
   request: Request,
@@ -628,22 +588,9 @@ export async function publishEntry(
   // Retry-key inspection first: the request record decides replay vs conflict vs gone.
   // A logically expired record is ignored entirely — retention is enforced by time,
   // not just by the periodic sweep.
-  const nowMs = Date.now();
-  const retry = await first<{ expires_at: number; payload_hash: string; publication_id: string | null }>(
-    env,
-    SQL.request,
-    owner,
-    name,
-    clientKey,
-  );
-  if (retry !== null && retry.expires_at > nowMs) {
-    if (retry.payload_hash !== hash) throw conflict('That key was used for a different payload.');
-    if (retry.publication_id === null) {
-      throw new ApiError(410, 'gone', 'That publication was removed.');
-    }
-    const entry = await entryById(collection, env, retry.publication_id);
-    if (entry !== null) return json(200, entry, noStore);
-  }
+  const retry = await first<RetryRecord>(env, SQL.request, owner, name, clientKey);
+  const replay = await resolveRetryRecord(collection, env, retry, hash);
+  if (replay !== null && replay !== 'vanished') return replay;
 
   const existing = await first<PublicationRow>(env, SQL.publicationByKey, owner, name, clientKey);
   if (existing !== null) {
@@ -700,23 +647,10 @@ export async function publishEntry(
     // The guarded insert was skipped: a race already wrote the key, the key's
     // publication was removed, or the owner's live-publication quota is full.
     // Re-reading the request record first distinguishes a tombstone from a race.
-    const request = await first<{ expires_at: number; payload_hash: string; publication_id: string | null }>(
-      env,
-      SQL.request,
-      owner,
-      name,
-      clientKey,
-    );
-    if (request !== null && request.expires_at > Date.now()) {
-      if (request.publication_id === null) throw new ApiError(410, 'gone', 'That publication was removed.');
-      if (request.payload_hash === hash) {
-        const entry = await entryById(collection, env, request.publication_id);
-        if (entry !== null) return json(200, entry, noStore);
-        // The publication vanished between checks: the key is a tombstone.
-        throw new ApiError(410, 'gone', 'That publication was removed.');
-      }
-      throw conflict('That key was used for a different payload.');
-    }
+    const racedRecord = await first<RetryRecord>(env, SQL.request, owner, name, clientKey);
+    const racedReplay = await resolveRetryRecord(collection, env, racedRecord, hash);
+    if (racedReplay === 'vanished') throw new ApiError(410, 'gone', 'That publication was removed.');
+    if (racedReplay !== null) return racedReplay;
     const raced = await first<PublicationRow>(env, SQL.publicationByKey, owner, name, clientKey);
     if (raced !== null && raced.hidden_at !== null) throw forbidden('This entry is under moderation review.');
     if (raced !== null && raced.content_hash === hash) return json(200, rowToEntry(collection, raced), noStore);

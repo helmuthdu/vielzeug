@@ -1220,38 +1220,27 @@ describe('listing, filtering and paging', () => {
 
     const page1 = await page(null);
     expect(page1.res.status).toBe(200);
-    const p1 = page1.json as { cursor: string | null; entries: { id: string }[]; previous: string | null };
+    const p1 = page1.json as { cursor: string | null; entries: { id: string }[] };
     expect(p1.entries.length).toBe(2);
-    expect(p1.previous).toBeNull();
     expect(p1.cursor).not.toBeNull();
     const page2 = await page(p1.cursor);
-    const p2 = page2.json as { cursor: string | null; entries: { id: string }[]; previous: string | null };
+    const p2 = page2.json as { cursor: string | null; entries: { id: string }[] };
     const seen = new Set([...p1.entries, ...p2.entries].map((e) => e.id));
     expect(seen.size).toBe(p1.entries.length + p2.entries.length);
-    expect(p2.previous).not.toBeNull();
-    // Walking back recovers the first page.
-    const back = await page(p2.previous);
-    const pb = back.json as { entries: { id: string }[]; previous: string | null };
-    expect(pb.entries.map((e) => e.id)).toEqual(p1.entries.map((e) => e.id));
 
-    // Full round-trip: first -> second -> third -> second -> first. Exactly five
-    // pageable entries exist, so pages are 2 + 2 + 1 and the third is last.
+    // Forward walk to the end: exactly five pageable entries exist, so pages are
+    // 2 + 2 + 1 and the third page carries no cursor.
     const page3 = await page(p2.cursor);
-    const p3 = page3.json as { cursor: string | null; entries: { id: string }[]; previous: string | null };
+    const p3 = page3.json as { cursor: string | null; entries: { id: string }[] };
     expect(p3.entries.length).toBe(1);
     expect(p3.cursor).toBeNull();
-    const back2 = await page(p3.previous);
-    const p2b = back2.json as { entries: { id: string }[]; previous: string | null };
-    expect(p2b.entries.map((e) => e.id)).toEqual(p2.entries.map((e) => e.id));
-    const back3 = await page(p2b.previous);
-    expect((back3.json as { entries: { id: string }[] }).entries.map((e) => e.id)).toEqual(p1.entries.map((e) => e.id));
 
     // Deleted-boundary recovery: decode the cursor's actual boundary entry, delete
     // it unconditionally, then page FROM that cursor — the ghost must not appear.
     const cursorPayload = JSON.parse(
       Buffer.from((p2.cursor ?? '').replaceAll('-', '+').replaceAll('_', '/'), 'base64').toString('utf8'),
-    ) as { c: { id: string } };
-    const boundary = cursorPayload.c.id;
+    ) as { id: string };
+    const boundary = cursorPayload.id;
     const del = await call(API, `/api/v1/collections/recipes/entries/${boundary}`, {
       cookie: alice,
       method: 'DELETE',
@@ -1525,30 +1514,31 @@ describe('cursor and search boundaries', () => {
     const entryId = ((json as { entries: { id: string }[] }).entries[0] ?? { id: crypto.randomUUID() }).id;
     for (const cursor of [
       'not-base64!!!',
-      Buffer.from('{"c":{}}').toString('base64url'),
+      Buffer.from('{}').toString('base64url'),
       // Tampered: valid structure plus an unknown top-level key.
       Buffer.from(
         JSON.stringify({
-          c: { id: entryId, likeCount: 0, publishedAt: new Date().toISOString() },
-          d: 'next',
+          context: JSON.stringify(['recipes', 'recent', '', 'italian', '', '']),
+          createdAt: new Date().toISOString(),
+          id: entryId,
           injected: true,
-          q: { e: null, g: 'recipes', m: null, s: 'recent', t: null },
         }),
       ).toString('base64url'),
-      // Wrong direction value.
+      // Wrong context (a cursor minted for another query).
       Buffer.from(
         JSON.stringify({
-          c: { id: entryId, likeCount: 0, publishedAt: new Date().toISOString() },
-          d: 'sideways',
-          q: { e: null, g: 'recipes', m: null, s: 'recent', t: null },
+          context: JSON.stringify(['recipes', 'liked', '', 'italian', '', '']),
+          createdAt: new Date().toISOString(),
+          id: entryId,
         }),
       ).toString('base64url'),
       // Negative count.
       Buffer.from(
         JSON.stringify({
-          c: { id: entryId, likeCount: -1, publishedAt: new Date().toISOString() },
-          d: 'next',
-          q: { e: null, g: 'recipes', m: null, s: 'recent', t: null },
+          context: JSON.stringify(['recipes', 'recent', '', 'italian', '', '']),
+          createdAt: new Date().toISOString(),
+          id: entryId,
+          likeCount: -1,
         }),
       ).toString('base64url'),
     ]) {
@@ -1594,24 +1584,18 @@ describe('cursor and search boundaries', () => {
     const search = encodeURIComponent('東京');
     const page1 = await call(API, `/api/v1/collections/recipes/entries?limit=1&sort=recent&search=${search}`);
     expect(page1.res.status).toBe(200);
-    const p1 = page1.json as { cursor: string | null; entries: { id: string }[]; previous: string | null };
+    const p1 = page1.json as { cursor: string | null; entries: { id: string }[] };
     expect(p1.entries.length).toBe(1);
     expect(p1.cursor).not.toBeNull();
     const page2 = await call(
       API,
       `/api/v1/collections/recipes/entries?limit=1&sort=recent&search=${search}&cursor=${encodeURIComponent(p1.cursor ?? '')}`,
     );
-    const p2 = page2.json as { cursor: string | null; entries: { id: string }[]; previous: string | null };
+    const p2 = page2.json as { cursor: string | null; entries: { id: string }[] };
     expect(p2.entries.length).toBe(1);
+    expect(p2.cursor).toBeNull();
     const all = new Set([...p1.entries, ...p2.entries].map((e) => e.id));
     expect(all).toEqual(new Set([a.entry.id, b.entry.id]));
-    // Walking back through the previous cursor recovers the first page.
-    const back = await call(
-      API,
-      `/api/v1/collections/recipes/entries?limit=1&sort=recent&search=${search}&cursor=${encodeURIComponent(p2.previous ?? '')}`,
-    );
-    expect(back.res.status).toBe(200);
-    expect((back.json as { entries: { id: string }[] }).entries.map((e) => e.id)).toEqual(p1.entries.map((e) => e.id));
   });
 });
 

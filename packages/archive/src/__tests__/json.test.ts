@@ -2,7 +2,7 @@ import { s } from '@vielzeug/spell';
 import { describe, expect, it } from 'vitest';
 import { defineArchiveCollection } from '../collection';
 import { ARCHIVE_CONTRACT_VERSION } from '../contract';
-import { ArchiveDefinitionError, ArchiveDerivationError, ArchiveError } from '../errors';
+import { ArchiveDefinitionError, ArchiveError } from '../errors';
 
 const collection = defineArchiveCollection({
   contentVersion: 1,
@@ -144,7 +144,7 @@ describe('collection JSON storage contract', () => {
     });
   });
 
-  it('rejects transformation drift in entry responses', () => {
+  it('re-runs the plain payload schema when parsing entry responses', () => {
     const normalized = defineArchiveCollection({
       contentVersion: 1,
       index: () => ({ filter: null, tags: [], title: 'response' }),
@@ -163,8 +163,13 @@ describe('collection JSON storage contract', () => {
       schemaVersion: ARCHIVE_CONTRACT_VERSION,
       updatedAt: '2026-10-12T09:00:00.000Z',
     };
-    expect(normalized.contract.entry.safeParse(entry).success).toBe(false);
-    expect(normalized.contract.entry.safeParse({ ...entry, payload: { value: 'padded' } }).success).toBe(true);
+    // Stored payloads are canonical by construction, so the entry schema is the
+    // plain payload schema: a transform applies on read like anywhere else, and a
+    // payload outside the schema fails the parse instead of throwing a server error.
+    const parsed = normalized.contract.entry.safeParse(entry);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.payload).toEqual({ value: 'padded' });
+    expect(normalized.contract.entry.safeParse({ ...entry, payload: { value: 7 } }).success).toBe(false);
   });
 
   it('freezes independent vocabulary copies and collection metadata', async () => {
@@ -186,65 +191,6 @@ describe('collection JSON storage contract', () => {
     expect(Object.isFrozen(defined.tags)).toBe(true);
     expect(Object.isFrozen(defined)).toBe(true);
     expect(await defined.derive({})).not.toBeNull();
-  });
-
-  it('surfaces unexpected schema callback faults while parsing response payloads', () => {
-    const cause = new Error('private response callback failure');
-    const faulty = defineArchiveCollection({
-      contentVersion: 1,
-      index: () => ({ filter: null, tags: [], title: 'faulty' }),
-      name: 'faulty',
-      payloadSchema: s.object({
-        value: s.string().transform(() => {
-          throw cause;
-        }),
-      }),
-    });
-    const entry = {
-      author: { id: '00000000-0000-4000-8000-000000000001', name: 'Author' },
-      contentHash: 'a'.repeat(64),
-      contentVersion: 1,
-      id: '00000000-0000-4000-8000-000000000002',
-      likeCount: 0,
-      payload: { value: 'valid' },
-      publishedAt: '2026-10-12T09:00:00.000Z',
-      revision: 1,
-      schemaVersion: ARCHIVE_CONTRACT_VERSION,
-      updatedAt: '2026-10-12T09:00:00.000Z',
-    };
-    expect(() => faulty.contract.entry.safeParse(entry)).toThrow(ArchiveDerivationError);
-    try {
-      faulty.contract.entry.safeParse(entry);
-    } catch (error) {
-      expect(error).toMatchObject({ cause, stage: 'response' });
-      expect((error as Error).message).not.toContain(cause.message);
-    }
-  });
-
-  it('surfaces a schema that changes between response validation and parsing', () => {
-    let calls = 0;
-    const changing = defineArchiveCollection({
-      contentVersion: 1,
-      index: () => ({ filter: null, tags: [], title: 'changing' }),
-      name: 'changing',
-      payloadSchema: s.object({
-        value: s.string().transform((value) => (++calls === 1 ? value : `${value}!`)),
-      }),
-    });
-    expect(() =>
-      changing.contract.entry.safeParse({
-        author: { id: '00000000-0000-4000-8000-000000000001', name: 'Author' },
-        contentHash: 'a'.repeat(64),
-        contentVersion: 1,
-        id: '00000000-0000-4000-8000-000000000002',
-        likeCount: 0,
-        payload: { value: 'valid' },
-        publishedAt: '2026-10-12T09:00:00.000Z',
-        revision: 1,
-        schemaVersion: ARCHIVE_CONTRACT_VERSION,
-        updatedAt: '2026-10-12T09:00:00.000Z',
-      }),
-    ).toThrow(expect.objectContaining({ name: 'ArchiveDerivationError', stage: 'response' }));
   });
 
   it('throws typed definition errors for unsafe versions', () => {

@@ -325,11 +325,12 @@ export type ArchiveModerationLog = InferOutput<typeof archiveModerationLogSchema
 export type ArchiveSort = 'liked' | 'recent';
 export const archiveSortSchema: Schema<ArchiveSort> = s.enum(['liked', 'recent'] as const);
 
-/** One page of archive entries plus forward/backward cursors around it. */
+/**
+ * One page of archive entries. Every list in the package pages forward-only: the
+ * cursor walks toward the oldest entry and is null after the last page.
+ */
 export interface ArchivePage<T> {
   /** Cursor for the next page; null after the last. */
   cursor: string | null;
   entries: readonly T[];
-  /** Cursor for the previous page; null when already at the top. */
-  previous: string | null;
 }

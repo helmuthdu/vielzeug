@@ -1,13 +1,14 @@
 import { runInNewContext } from 'node:vm';
 import { decodeJwt, decodeProtectedHeader } from 'jose';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type AuthEvent, createAuthWorker, OPERATOR_SESSION_MAX_AGE_SECONDS } from '../auth';
+import { type AuthEvent, createAuthWorker } from '../auth';
 import { consumeToken, spendSignInBudget } from '../auth/store';
 import {
   ACCOUNT_HEADER,
   ARCHIVE_OPERATOR_ROLE,
   archiveAccountSchema,
   archiveErrorResponseSchema,
+  OPERATOR_SESSION_MAX_AGE_SECONDS,
   SESSION_MAX_AGE_SECONDS,
 } from '../contract';
 import {

@@ -360,17 +360,14 @@ describe('fixtureCollection.contract', () => {
     expect(fixtureCollection.contract.ownedEntries.safeParse({ entries: [envelope({ v: 4 })] }).success).toBe(false);
   });
 
-  it('page parses one list page with cursors', () => {
+  it('page parses one forward-only list page', () => {
     const parsed = fixtureCollection.contract.page.safeParse({
       cursor: null,
       entries: [envelope({ v: 4 })],
-      previous: null,
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.entries[0]?.payload.v).toBe(4);
-    expect(
-      fixtureCollection.contract.page.safeParse({ cursor: null, entries: [], extra: 1, previous: null }).success,
-    ).toBe(false);
+    expect(fixtureCollection.contract.page.safeParse({ cursor: null, entries: [], extra: 1 }).success).toBe(false);
   });
 
   it('publishInput parses {clientKey, payload} and rejects payload drift', () => {

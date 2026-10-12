@@ -109,11 +109,12 @@ Lossy or non-JSON schema output and invalid index-result shapes also throw.
 
 `contentVersion` participates in content identity. Request handling validates
 only the current collection definition; it does not interpret historical schemas.
-Archive is unreleased and provides no content-upgrade APIs.
+Archive provides no content-upgrade APIs: a new definition never reinterprets
+stored rows.
 
 Filters, tags and searchable titles are persisted data derived at publish/update
 time. Editing `index` or its vocabularies does not recompute existing projections.
-Keep the active definition and dataset consistent. For an unreleased development
+Keep the active definition and dataset consistent. For a development
 deployment, deliberately reset and reseed a fresh database when you change payload
 or projection semantics; the package does not supply a migration framework.
 Resetting destroys existing data. Perform it only as an explicit, deliberate
@@ -288,8 +289,7 @@ The issuer points to
 fresh-database initialization definitions, not upgrades. The issuer DDL initializes
 `auth_users.session_version` to `0` and stamps `auth_schema_meta.applied` as
 `AUTH_SCHEMA_VERSION` (`1`). Neither file automatically deletes or resets data.
-While Archive is unreleased, its
-canonical initial schemas are edited directly. Reset and reseed an unreleased
+Archive's canonical initial schemas are edited directly. Reset and reseed a
 development database deliberately when its schema or collection semantics no
 longer match; reapplying the initial file does not update an existing dataset.
 The initialization file also stamps the storage schema
@@ -340,10 +340,11 @@ POST   /api/v1/auth/verify                                 (guarded {token} rede
 Publishing is bounded by `maxPublications` live entries per `(collection, owner)`.
 The quota check runs inside the guarded insert.
 
-`/me/likes` without `ids`, `/me/reports`, operator reports and `/moderation-log`
-use forward keyset pages: follow `cursor` until `null`, preserving query context.
-`limit` defaults to `pageSize` and is at most `maxPageSize`; there is no total
-export bound. `/me/likes?ids=…` remains a subset lookup returning `{ ids }`, not a
+Every list — entry pages, `/me/likes` without `ids`, `/me/reports`, operator
+reports and `/moderation-log` — pages forward-only: follow `cursor` until `null`,
+preserving query context; a cursor minted for another query is a 400. `limit`
+defaults to `pageSize` and is at most `maxPageSize`; there is no total export
+bound. `/me/likes?ids=…` remains a subset lookup returning `{ ids }`, not a
 page, and cannot combine `ids` with `cursor` or `limit`.
 
 Shared wire names live in the package — `archive_session` cookie,
@@ -506,7 +507,7 @@ export function useRecipes() {
   have them; a value outside it rejects loudly.
 - Keep `canonicalize` pure and schema-true: reordered lists in, canonical form out.
 - Initialize fresh databases with the shipped DDL and deliberately reset/reseed
-  unreleased development data when collection or storage semantics change.
+  development data when collection or storage semantics change.
 - Treat `ARCHIVE_ERROR_CODES` and `archiveErrorResponseSchema` as one tested contract.
 - Pin the expected-publisher header from the identity you captured at sign-in, never from storage alone.
 - Grant the operator role claim only through your issuer, and only to accounts that

@@ -1,4 +1,5 @@
-import { Schema, s } from '@vielzeug/spell';
+import { type Schema, s } from '@vielzeug/spell';
+import { sha256Hex } from './_crypto';
 import { canonicalObjectJson } from './_json';
 import {
   ARCHIVE_COLLECTION_NAME_PATTERN,
@@ -12,6 +13,15 @@ import {
   uuidSchema,
 } from './contract';
 import { ArchiveDefinitionError, ArchiveDerivationError, type ArchiveDerivationStage } from './errors';
+
+/**
+ * Stored payloads are canonical by construction: `derive` validates, normalizes and
+ * byte-pins every payload before it is stored, and the package's schema policy is
+ * to reset/reseed databases when canonicalization semantics change. The emitted
+ * entry schemas therefore embed the plain payload schema — re-parsing a stored
+ * payload re-runs its (write-time-stable, hence idempotent) schema, never a
+ * parallel re-canonicalization.
+ */
 
 /**
  * The one seam between a deployment's content and the archive core. A collection
@@ -133,11 +143,6 @@ export interface ArchiveCollection<P extends object = object, C extends number =
   readonly tags: readonly string[];
 }
 
-const sha256Hex = async (text: string): Promise<string> =>
-  [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))]
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-
 /** The envelope shape shared by the public and owned compositions. */
 const envelopeShape = <P, C extends number>(payload: Schema<P>, contentVersion: C) =>
   ({
@@ -212,26 +217,6 @@ export function defineArchiveCollection<
   const filterValues = new Set<string>(filters);
   const tagValues = new Set<string>(tags);
 
-  const stablePayload = (raw: unknown, stage: ArchiveDerivationStage = 'response'): P | null => {
-    try {
-      const json = canonicalObjectJson(raw);
-      if (json === null) return null;
-      const parsed = payloadSchema.safeParse(JSON.parse(json));
-      if (!parsed.success || canonicalObjectJson(parsed.data, true, raw) !== json) return null;
-      return parsed.data;
-    } catch (cause) {
-      throw new ArchiveDerivationError(stage, 'Collection stable payload validation failed.', { cause });
-    }
-  };
-  const responsePayload: Schema<P> = new Schema<P>()
-    .check((raw) => (stablePayload(raw) === null ? 'Payload is not stable JSON for this collection.' : undefined))
-    .transform((raw): P => {
-      const parsed = stablePayload(raw);
-      if (parsed === null)
-        throw new ArchiveDerivationError('response', 'Payload schema changed during response parsing.');
-      return parsed;
-    });
-
   const derive = async (raw: unknown): Promise<ArchiveDerivation | null> => {
     let stage: ArchiveDerivationStage = 'schema';
     try {
@@ -255,11 +240,7 @@ export function defineArchiveCollection<
           { cause: revalidated.error },
         );
       const canonicalJson = canonicalObjectJson(revalidated.data, true, JSON.parse(normalizedJson));
-      if (
-        canonicalJson === null ||
-        canonicalJson !== normalizedJson ||
-        stablePayload(JSON.parse(canonicalJson), 'schema') === null
-      )
+      if (canonicalJson === null || canonicalJson !== normalizedJson)
         throw new ArchiveDerivationError(stage, 'Payload schema is not stable on canonical JSON.');
       if (canonicalize !== undefined) {
         const repeatedPayload = payloadSchema.parse(JSON.parse(canonicalJson));
@@ -302,9 +283,12 @@ export function defineArchiveCollection<
     }
   };
 
-  const entrySchema: Schema<ArchiveEntry<P, C>> = s.object(envelopeShape(responsePayload, contentVersion));
+  // The cast pins the envelope's payload member to the collection's output type:
+  // `payloadSchema` is `Schema<P, unknown>` (input unknown), and inference through
+  // the generic shape helper would widen the member to `unknown`.
+  const entrySchema: Schema<ArchiveEntry<P, C>> = s.object(envelopeShape(payloadSchema as Schema<P>, contentVersion));
   const ownedEntrySchema: Schema<ArchiveOwnedEntry<P, C>> = s.object({
-    ...envelopeShape(responsePayload, contentVersion),
+    ...envelopeShape(payloadSchema as Schema<P>, contentVersion),
     clientKey: uuidSchema,
     hidden: s.boolean(),
   });
@@ -315,7 +299,6 @@ export function defineArchiveCollection<
     page: s.object({
       cursor: s.string().nullable(),
       entries: s.array(entrySchema),
-      previous: s.string().nullable(),
     }),
     publishInput: s.object({ clientKey: uuidSchema, payload: payloadSchema }),
     updateInput: s.object({

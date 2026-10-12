@@ -78,7 +78,7 @@ describe('readiness and diagnostics', () => {
     worker.tap((event) => events.push(event));
     const response = await worker.fetch(req(`/collections/broken/entries/${entryId}`), env, ctx);
     expect(response.status).toBe(500);
-    expect(events.at(-1)).toMatchObject({ code: 'internal', diagnostic: { kind: 'collection' }, status: 500 });
+    expect(events.at(-1)).toMatchObject({ code: 'internal', diagnostic: { kind: 'internal' }, status: 500 });
     const body = await response.text();
     expect(body).toContain('"code":"internal"');
     expect(body).not.toContain('Private deployment details');

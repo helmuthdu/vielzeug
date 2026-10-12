@@ -1,4 +1,5 @@
 import { errors, jwtVerify, SignJWT } from 'jose';
+import { sha256Hex } from '../_crypto';
 import {
   ACCOUNT_HEADER,
   ARCHIVE_OPERATOR_ROLE,
@@ -124,12 +125,6 @@ const LINK_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 const PUBLISHER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const SUBJECT_MAX = 256;
 const CLOCK_TOLERANCE_SECONDS = 5;
-
-const hex = (bytes: ArrayBuffer): string =>
-  [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-
-const hashToken = async (token: string): Promise<string> =>
-  hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token)));
 
 const randomToken = (): string =>
   btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(TOKEN_BYTES))))
@@ -274,7 +269,7 @@ async function handleSignIn(request: Request, env: AuthWorkerEnv, config: AuthCo
     throw new ApiError(429, 'rate-limited', 'Too many sign-in emails. Try again later.', { retryAfterSeconds });
   }
   const token = randomToken();
-  const tokenHash = await hashToken(token);
+  const tokenHash = await sha256Hex(token);
   await insertToken(env.AUTH_DB, tokenHash, user.id, nowMs);
   try {
     await sendLink(env, config, user.email, `${config.publicOrigin}/api/v1/auth/verify?token=${token}`);
@@ -327,7 +322,7 @@ document.getElementById('confirm').addEventListener('click', async () => {
   const token: unknown = Reflect.get(body, 'token');
   if (typeof token !== 'string') throw badRequest('The link is not valid.');
   if (!LINK_TOKEN.test(token)) throw badRequest('The link is not valid.');
-  const user = await consumeToken(env.AUTH_DB, await hashToken(token), Date.now());
+  const user = await consumeToken(env.AUTH_DB, await sha256Hex(token), Date.now());
   if (user === null) throw new ApiError(410, 'gone', 'That link has expired or was already used.');
   const session = await mintSession(config, user.id, config.operatorEmails.has(user.email), user.sessionVersion);
   return new Response(null, {

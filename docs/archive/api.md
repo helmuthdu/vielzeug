@@ -26,7 +26,7 @@ description: "Collection definitions, browser-safe wire schemas, Worker deployme
 | --- | --- |
 | `@vielzeug/archive` | Browser-safe collections, constants, schemas and errors |
 | `@vielzeug/archive/worker` | Catalog factory, issuer-session service binding and event types |
-| `@vielzeug/archive/auth` | Issuer factory, operator lifetime and binding types |
+| `@vielzeug/archive/auth` | Issuer factory and binding types |
 
 ## Collections
 
@@ -73,7 +73,7 @@ console.log(derived.contentHash);
 | `derive(raw)` | `Promise<ArchiveDerivation \| null>` |
 | `contract.entry` | Public entry schema |
 | `contract.ownedEntry`, `ownedEntries` | Owner view with `clientKey` and `hidden` |
-| `contract.page` | Entries and forward/backward cursors |
+| `contract.page` | Entries and the forward cursor |
 | `contract.publishInput`, `updateInput` | Publish and revision-guarded update request schemas |
 | `filters`, `tags` | Frozen vocabulary snapshots |
 
@@ -83,7 +83,7 @@ submitted content. Invalid index-result shapes also throw.
 
 Const generics preserve the content-version literal and infer filter/tag unions from vocabulary arrays without `as const`. `NoInfer` prevents `index` from widening those unions; omitted arrays infer `never`, permitting only `filter: null` and empty tags.
 
-Objects serialize with recursively sorted keys; arrays preserve order unless your canonicalizer changes it. SHA-256 hashes the core-owned `{contentVersion, payload}` envelope. Response schemas require stored payloads to remain stable under parsing; a response-validation fault has stage `response`.
+Objects serialize with recursively sorted keys; arrays preserve order unless your canonicalizer changes it. SHA-256 hashes the core-owned `{contentVersion, payload}` envelope. Stored payloads are canonical by construction, so the emitted entry schemas embed the plain payload schema.
 
 `filter`, tags and searchable title are persisted projections, not computed during reads. Changing `index` or its vocabulary does not update stored rows. The active definition and persisted dataset must remain consistent; Archive has no projection-update or historical-schema API.
 
@@ -198,8 +198,8 @@ time. The sweep deletes expired links and closed per-user send windows, then
 unverified accounts with neither remaining links nor send-budget references.
 Verified accounts are retained until explicit account deletion.
 
-`@vielzeug/archive/auth` exports `OPERATOR_SESSION_MAX_AGE_SECONDS = 900` alongside
-the factory and issuer binding types.
+`OPERATOR_SESSION_MAX_AGE_SECONDS = 900` is part of the browser-safe root
+contract; `/auth` exports the factory and issuer binding types.
 
 `AUTH_JWT_PREVIOUS_PUBLIC_JWKS` optionally publishes retired public RS256 keys and verifies sessions minted before rotation; private members reject configuration. The package has no demo sign-in routes.
 
@@ -226,7 +226,7 @@ Every route below is mounted under `/api/v1`. Mutation guards require an exact a
 | `GET /health` | Public catalog readiness; 200 `ok` or 503 `degraded` |
 | `POST /sign-out` | Catalog-local sign-out; `{ ok: true }` and expired session cookie, without issuer access |
 | `GET /collections/:collection` | Collection metadata |
-| `GET /collections/:collection/entries` | `author`, `filter`, `tag`, `search`, `sort`, `cursor`, `limit`; bidirectional entry page |
+| `GET /collections/:collection/entries` | `author`, `filter`, `tag`, `search`, `sort`, `cursor`, `limit`; forward entry page |
 | `POST /collections/:collection/entries` | `{ clientKey, payload }`; 201 create or 200 replay |
 | `GET /collections/:collection/entries/:id` | Public entry; always `no-store` |
 | `PUT /collections/:collection/entries/:id` | Owner-only `{ expectedRevision, payload }` |
@@ -315,7 +315,7 @@ Effective hide, unhide, operator removal and publisher erasure append audit rows
 | `ARCHIVE_OPERATOR_ROLE` | `'archive-operator'` |
 | `SESSION_COOKIE_NAME`, `SESSION_COOKIE_PATH` | `'archive_session'`, `'/api/v1'` |
 | `SESSION_MAX_AGE_SECONDS` | `2592000` |
-| `OPERATOR_SESSION_MAX_AGE_SECONDS` | `900`; shared root contract, also re-exported by `/auth` |
+| `OPERATOR_SESSION_MAX_AGE_SECONDS` | `900`; shared root contract |
 | `ACCOUNT_HEADER` | `'X-Archive-Account'`; required issuer-account UUID on coordinated erasure |
 | `PUBLISHER_HEADER`, `REQUEST_MARKER_HEADER` | `'x-archive-publisher'`, `'x-archive-request'` |
 | `ILL_FORMED_TEXT`, `isWellFormedText(value: string): boolean` | Reject control characters and lone UTF-16 surrogates |
@@ -462,10 +462,9 @@ interface ArchiveCollection<P extends object = object, C extends number = number
 interface ArchivePage<T> {
   cursor: string | null;
   entries: readonly T[];
-  previous: string | null;
 }
 type ArchiveSort = 'liked' | 'recent';
-type ArchiveDerivationStage = 'schema' | 'canonicalize' | 'index' | 'hash' | 'response';
+type ArchiveDerivationStage = 'canonicalize' | 'hash' | 'index' | 'schema';
 type ArchiveIdentity = { id: string; name: string; operator: boolean } | null;
 type ArchiveAccount = {
   id: string; email: string; createdAt: string; lastSignInAt: string | null;
@@ -653,7 +652,7 @@ window resets atomically on a later sign-in request.
 | --- | --- | --- |
 | `ArchiveError` | Base for public package errors | `name`, `message`, optional `cause` |
 | `ArchiveDefinitionError` | Invalid collection definition or duplicate registered collection names | Extends `ArchiveError` |
-| `ArchiveDerivationError` | Unexpected schema/canonicalization/index/hash/response fault or violated collection invariant | Extends `ArchiveError`; readonly `stage: ArchiveDerivationStage`; optional `cause` |
+| `ArchiveDerivationError` | Unexpected schema/canonicalization/index/hash fault or violated collection invariant | Extends `ArchiveError`; readonly `stage: ArchiveDerivationStage`; optional `cause` |
 
 `ArchiveError` and `ArchiveDefinitionError` accept `(message: string, opts?: ErrorOptions)`.
 `ArchiveDerivationError` accepts `(stage: ArchiveDerivationStage, message: string, opts?: ErrorOptions)`.
@@ -662,8 +661,9 @@ failures use the wire envelope, not these thrown classes. Internal `ApiError` an
 `AuthOperationError` are not exported.
 
 Stored entries that fail the current wire schema return 503 `record-unavailable`.
-Unexpected exceptions in the collection's response-payload callbacks instead
-throw `ArchiveDerivationError` with stage `response` and become sanitized 500s.
+Stored payloads are canonical by construction, so the emitted entry schemas embed
+the plain payload schema: parsing a response re-runs that schema, and an
+exception from one of its callbacks becomes a sanitized 500.
 
 The complete public error signatures are:
 

@@ -155,7 +155,8 @@ console.log(parsed.entries);
 - [Usage Guide](./usage.md) — stand up a collection, deploy the Worker, wire the client.
 - [API Reference](./api.md) — every export, all three entry points, the full route table.
 - [Examples](./examples.md) — recipes from first deployment to GDPR erasure.
-- [Release Status](./migration.md) — unreleased package and fresh-database scope.
+- [Migration](./migration.md) — breaking changes after the first release and
+  fresh-database scope.
 
 </div>
 
