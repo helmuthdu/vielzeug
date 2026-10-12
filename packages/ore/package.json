@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ore",
-  "version": "26.10.6",
+  "version": "26.10.7",
   "description": "Functional web-component authoring on top of ripple",
   "repository": {
     "type": "git",

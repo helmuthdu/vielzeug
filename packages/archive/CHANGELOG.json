@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "Greenfield contract simplification (breaking): entry pages are forward-only (ArchivePage.previous removed, cursors minted against full query context), ArchiveDerivationStage drops 'response', /auth no longer re-exports OPERATOR_SESSION_MAX_AGE_SECONDS; publish-retry resolution shared between pre-read and post-insert paths.",
+            "commit": "1e0ed57c9394a2a23426b1fcd4d21190ee670ca8"
+          }
+        ]
+      },
+      "date": "Mon, 12 Oct 2026 20:24:11 GMT",
+      "tag": "@vielzeug/archive_v26.10.7",
+      "version": "26.10.7"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Add Archive community publishing for Workers and D1, with typed collections, moderation, passwordless identity, coordinated account export and erasure, account-wide session revocation, live issuer validation, readiness checks, canonical fresh-database schemas and deployment documentation.",
             "commit": "8066cd9552af4f638bbd3abe634e111a212c15f3"
           }
