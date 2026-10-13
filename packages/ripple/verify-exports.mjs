@@ -20,9 +20,9 @@ for (const rippleModule of modules) {
     throw new Error('expected disposed runtime failure');
   } catch (error) {
     if (!(error instanceof rippleModule.RippleError)) throw new Error('RippleError identity mismatch');
-    if (!(error instanceof rippleModule.RippleDisposedRuntimeError)) {
-      throw new Error('RippleDisposedRuntimeError identity mismatch');
+    if (!(error instanceof rippleModule.RippleDisposedError)) {
+      throw new Error('RippleDisposedError identity mismatch');
     }
-    if (error.name !== 'RippleDisposedRuntimeError') throw new Error(`unexpected error name: ${error.name}`);
+    if (error.name !== 'RippleDisposedError') throw new Error(`unexpected error name: ${error.name}`);
   }
 }

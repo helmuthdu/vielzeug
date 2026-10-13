@@ -1,6 +1,6 @@
-import type { RippleEvent, Scope } from '../index';
+import type { Scope } from '../index';
 
-import { createRipple, RippleDisposedRuntimeError } from '../index';
+import { createRipple, RippleCycleError, RippleDisposedError } from '../index';
 
 describe('ripple graph', () => {
   it('updates derived values and suppresses unchanged output', () => {
@@ -42,9 +42,8 @@ describe('ripple graph', () => {
 
   it('recovers when a computed first run fails and a dependency later changes', () => {
     const errors: string[] = [];
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    ripple.tap((event) => {
-      if (event.type === 'error') errors.push(`${event.context.kind}:${(event.error as Error).message}`);
+    const ripple = createRipple({
+      onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`),
     });
     const user = ripple.signal<{ name: string } | null>(null);
     const name = ripple.computed(() => user.value!.name);
@@ -67,9 +66,8 @@ describe('ripple graph', () => {
 
   it('isolates computed refresh failures so sibling dependencies stay current', () => {
     const errors: string[] = [];
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    ripple.tap((event) => {
-      if (event.type === 'error') errors.push(`${event.context.kind}:${(event.error as Error).message}`);
+    const ripple = createRipple({
+      onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`),
     });
     const source = ripple.signal(0);
     const failing = ripple.computed(() => {
@@ -285,30 +283,29 @@ describe('ripple graph', () => {
     expect(ripple.disposed).toBe(true);
     expect(signal.peek()).toBe(0);
     expect(computed.peek()).toBe(0);
-    expect(() => (signal.value = 1)).toThrow(RippleDisposedRuntimeError);
+    expect(() => (signal.value = 1)).toThrow(RippleDisposedError);
     expect(subscriptionCalls).toBe(0);
-    expect(() => signal.subscribe(() => undefined)).toThrow(RippleDisposedRuntimeError);
-    expect(() => computed.subscribe(() => undefined)).toThrow(RippleDisposedRuntimeError);
-    expect(() => ripple.signal(0)).toThrow(RippleDisposedRuntimeError);
-    expect(() => ripple.computed(() => 0)).toThrow(RippleDisposedRuntimeError);
-    expect(() => ripple.effect(() => undefined)).toThrow(RippleDisposedRuntimeError);
-    expect(() => ripple.createScope()).toThrow(RippleDisposedRuntimeError);
-    expect(() => ripple.batch(() => 0)).toThrow(RippleDisposedRuntimeError);
-    expect(() => ripple.untrack(() => 0)).toThrow(RippleDisposedRuntimeError);
+    expect(() => signal.subscribe(() => undefined)).toThrow(RippleDisposedError);
+    expect(() => computed.subscribe(() => undefined)).toThrow(RippleDisposedError);
+    expect(() => ripple.signal(0)).toThrow(RippleDisposedError);
+    expect(() => ripple.computed(() => 0)).toThrow(RippleDisposedError);
+    expect(() => ripple.effect(() => undefined)).toThrow(RippleDisposedError);
+    expect(() => ripple.createScope()).toThrow(RippleDisposedError);
+    expect(() => ripple.batch(() => 0)).toThrow(RippleDisposedError);
+    expect(() => ripple.untrack(() => 0)).toThrow(RippleDisposedError);
     expect(() =>
       ripple.watch(
         () => 0,
         () => undefined,
       ),
-    ).toThrow(RippleDisposedRuntimeError);
+    ).toThrow(RippleDisposedError);
     expect(() => ripple.dispose()).not.toThrow();
   });
 
   it('retries an effect after its first run fails', () => {
     const errors: string[] = [];
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    ripple.tap((event) => {
-      if (event.type === 'error') errors.push(`${event.context.kind}:${(event.error as Error).message}`);
+    const ripple = createRipple({
+      onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`),
     });
     const enabled = ripple.signal(true);
     const values: boolean[] = [];
@@ -327,9 +324,8 @@ describe('ripple graph', () => {
 
   it('reports cleanup failures without interrupting disposal', () => {
     const errors: string[] = [];
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    ripple.tap((event) => {
-      if (event.type === 'error') errors.push(`${event.context.kind}:${(event.error as Error).message}`);
+    const ripple = createRipple({
+      onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`),
     });
     const scope = ripple.createScope();
     let disposed = false;
@@ -349,17 +345,10 @@ describe('ripple graph', () => {
     ripple.dispose();
   });
 
-  it('reports owned cleanup and disposal events before graph taps are cleared', () => {
-    const events: string[] = [];
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    ripple.tap((event) => {
-      events.push(
-        event.type === 'error'
-          ? `error:${event.context.kind}`
-          : event.type === 'dispose'
-            ? `dispose:${event.node}`
-            : event.type,
-      );
+  it('reports cleanup failures raised during graph disposal', () => {
+    const errors: string[] = [];
+    const ripple = createRipple({
+      onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`),
     });
     ripple.effect(() => () => {
       throw new Error('cleanup failed');
@@ -367,9 +356,7 @@ describe('ripple graph', () => {
 
     ripple.dispose();
 
-    expect(events).toContain('error:cleanup');
-    expect(events).toContain('dispose:effect');
-    expect(events.at(-1)).toBe('dispose:graph');
+    expect(errors).toEqual(['cleanup:cleanup failed']);
   });
 
   it('returns last cached value from peek on disposed computed', () => {
@@ -381,6 +368,17 @@ describe('ripple graph', () => {
     ripple.dispose();
 
     expect(value.peek()).toBe(2);
+  });
+
+  it('throws from peek on a computed disposed before it was ever evaluated', () => {
+    const ripple = createRipple();
+    const source = ripple.signal(1);
+    const value = ripple.computed(() => source.value * 2);
+
+    ripple.dispose();
+
+    expect(() => value.peek()).toThrow(RippleDisposedError);
+    expect(() => value.peek()).toThrow('disposed before it was ever evaluated');
   });
 
   it('propagates derivation errors through computed peek', () => {
@@ -448,116 +446,87 @@ describe('bound helpers', () => {
   });
 });
 
-describe('tap', () => {
-  it('emits write, compute, effect, and dispose events', () => {
-    const ripple = createRipple();
-    const events: RippleEvent[] = [];
-    const stop = ripple.tap((event) => events.push(event));
-
-    const count = ripple.signal(0, { name: 'count' });
-    const doubled = ripple.computed(() => count.value * 2, { name: 'doubled' });
-    const effectStop = ripple.effect(() => void doubled.value, { name: 'logger' });
-
-    count.value = 1;
-    effectStop.dispose();
-
-    const types = events.map((e) => e.type);
-    expect(types).toContain('write');
-    expect(types).toContain('compute');
-    expect(types).toContain('effect');
-    expect(types).toContain('dispose');
-
-    const writeEvent = events.find((e) => e.type === 'write') as Extract<RippleEvent, { type: 'write' }>;
-    expect(writeEvent.name).toBe('count');
-    expect(writeEvent.next).toBe(1);
-    expect(writeEvent.previous).toBe(0);
-
-    stop();
-    ripple.dispose();
-  });
-
-  it('emits error events for effect failures', () => {
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    const errors: Array<{ kind: string; message: string }> = [];
-    const stop = ripple.tap((event) => {
-      if (event.type === 'error') {
-        errors.push({ kind: event.context.kind, message: (event.error as Error).message });
-      }
+describe('error handling', () => {
+  it('reports effect failures with their context', () => {
+    const errors: Array<{ context: { kind: string }; message: string }> = [];
+    const ripple = createRipple({
+      onError: (error, context) => errors.push({ context, message: (error as Error).message }),
     });
 
     const enabled = ripple.signal(true);
+    ripple.effect(
+      () => {
+        if (enabled.value) throw new Error('boom');
+      },
+      { name: 'guarded' },
+    );
+
+    expect(errors).toEqual([{ context: { kind: 'effect', name: 'guarded' }, message: 'boom' }]);
+    ripple.dispose();
+  });
+
+  it('swallows failing onError handlers without masking graph work', () => {
+    const writes: number[] = [];
+    const ripple = createRipple({
+      onError: () => {
+        throw new Error('handler failed');
+      },
+    });
+
+    const count = ripple.signal(0);
+    const stop = ripple.effect(() => {
+      writes.push(count.value);
+    });
+
     ripple.effect(() => {
-      if (enabled.value) throw new Error('boom');
+      throw new Error('boom');
     });
-
-    expect(errors).toEqual([{ kind: 'effect', message: 'boom' }]);
-    stop();
-    ripple.dispose();
-  });
-
-  it('swallows tap handler errors', () => {
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    const calls: string[] = [];
-
-    ripple.tap(() => {
-      throw new Error('tap handler failed');
-    });
-    ripple.tap((event) => {
-      if (event.type === 'write') calls.push('second-tap');
-    });
-
-    const count = ripple.signal(0);
     expect(() => (count.value = 1)).not.toThrow();
-    expect(calls).toEqual(['second-tap']);
+    expect(writes).toEqual([0, 1]);
+    stop.dispose();
     ripple.dispose();
   });
 
-  it('returns a no-op unsubscribe after disposal', () => {
-    const ripple = createRipple();
-    ripple.dispose();
+  it('reports a runaway flush instead of throwing from the write site', () => {
+    const errors: Array<{ kind: string; message: string }> = [];
+    const ripple = createRipple({
+      onError: (error, context) => errors.push({ kind: context.kind, message: (error as Error).message }),
+    });
+    const shared = ripple.signal(0);
+    const unrelated = ripple.signal(0);
+    const healthy: number[] = [];
 
-    const unsub = ripple.tap(() => undefined);
-    expect(typeof unsub).toBe('function');
-    expect(() => unsub()).not.toThrow();
+    // Both effects increment one shared signal: every write re-triggers the other, forever.
+    const stopLeft = ripple.effect(() => {
+      shared.value = shared.value + 1;
+    });
+    const stopRight = ripple.effect(() => {
+      shared.value = shared.value + 1;
+    });
+    const stop = ripple.effect(() => {
+      healthy.push(unrelated.value);
+    });
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.kind).toBe('flush');
+    expect(errors[0]?.message).toContain('infinite reactive flush');
+
+    // The graph stays usable: a later write still runs healthy effects.
+    expect(() => (unrelated.value = 1)).not.toThrow();
+    expect(healthy).toEqual([0, 1]);
+    stopLeft.dispose();
+    stopRight.dispose();
+    stop.dispose();
+    ripple.dispose();
   });
 
-  it('auto-detaches when signal aborts', () => {
+  it('throws a cycle error when a computed reads itself', () => {
     const ripple = createRipple();
-    const controller = new AbortController();
-    const events: RippleEvent[] = [];
-    const stop = ripple.tap((event) => events.push(event), { signal: controller.signal });
+    const counter: { current?: { value: number } } = {};
 
-    const count = ripple.signal(0);
-    count.value = 1;
-    expect(events.length).toBeGreaterThan(0);
+    counter.current = ripple.computed((): number => (counter.current?.value ?? 0) + 1);
 
-    events.length = 0;
-    controller.abort();
-    count.value = 2;
-
-    expect(events).toEqual([]);
-    stop();
-    ripple.dispose();
-  });
-
-  it('emits a dispose event on graph disposal', () => {
-    const ripple = createRipple();
-    const events: RippleEvent[] = [];
-    ripple.tap((event) => events.push(event));
-
-    ripple.dispose();
-
-    expect(events.some((e) => e.type === 'dispose')).toBe(true);
-  });
-
-  it('has zero overhead when no tappers registered', () => {
-    const ripple = createRipple();
-    const count = ripple.signal(0);
-
-    // No tap registered: emit should be a no-op early return.
-    // This test just verifies no throw and correct value propagation.
-    count.value = 1;
-    expect(count.peek()).toBe(1);
+    expect(() => counter.current?.value).toThrow(RippleCycleError);
     ripple.dispose();
   });
 });

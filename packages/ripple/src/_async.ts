@@ -1,4 +1,4 @@
-import { RippleDisposedResourceError } from './errors';
+import { RippleDisposedError } from './errors';
 import { REACTIVE } from './runtime';
 import type { Disposable, EffectHandle, Readable, Signal } from './types';
 
@@ -91,7 +91,7 @@ export const createResource =
     );
 
     const assertActive = (): void => {
-      if (stop.disposed) throw new RippleDisposedResourceError('Cannot use a disposed resource.');
+      if (stop.disposed) throw new RippleDisposedError('Cannot use a disposed resource.');
     };
     const resource: Resource<Value> = {
       get disposalSignal() {

@@ -126,6 +126,8 @@ interface Tappable<Events extends { readonly type: string }> {
 - **SHOULD:** Emit a `{ type: 'dispose' }` event before clearing tappers, so observers can clean up.
 - **SHOULD:** `tap()` after dispose returns a no-op unsubscribe. Packages with an explicit `DisposedError` class may throw instead for consistency with their other methods.
 
+Exception: `@vielzeug/ripple` exposes no `tap()` stream. Its per-operation events (write/compute/effect/dispose) fire on the hottest path in the whole UI stack and had zero consumers; failures route through the single `RippleOptions.onError` callback instead. Reactive-graph primitives report errors, they do not emit telemetry.
+
 To find current implementers, search for `tap(` in `packages/*/src`; do not maintain a list here.
 
 Rune integration (no adapter needed: rune's context-first `LogMethod` overload matches `(event, label)`):

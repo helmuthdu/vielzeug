@@ -2,6 +2,7 @@ import type { EffectHandle, Equality, Readable } from './types';
 
 export type WatchOptions<T> = {
   equals?: Equality<T>;
+  /** Run the callback once at setup, before returning the handle. */
   immediate?: boolean;
   name?: string;
 };

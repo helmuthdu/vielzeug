@@ -9,13 +9,11 @@ import type {
   EffectHandle,
   EffectOptions,
   Readable,
-  RippleEvent,
   RippleOptions,
   Scope,
   Signal,
   SignalOptions,
   Subscribable,
-  Unsubscribe,
 } from './types';
 
 export interface Ripple extends Disposable {
@@ -30,7 +28,6 @@ export interface Ripple extends Disposable {
     options?: ResourceOptions,
   ): Resource<Value>;
   signal<T>(initial: T, options?: SignalOptions<T>): Signal<T>;
-  tap(handler: (event: RippleEvent) => void, options?: { signal?: AbortSignal }): Unsubscribe;
   untrack<T>(fn: () => T): T;
   watch<T>(
     source: Readable<T> | (() => T),
@@ -65,7 +62,6 @@ export const createRipple = (options?: RippleOptions): Ripple => {
     fromSubscribable,
     resource,
     signal: runtime.signal,
-    tap: runtime.tap,
     untrack: runtime.untrack,
     watch: createWatch(runtime),
     [Symbol.dispose]: () => runtime.dispose(),

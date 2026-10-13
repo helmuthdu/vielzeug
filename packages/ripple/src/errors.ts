@@ -6,8 +6,8 @@ export class RippleError extends Error {
   }
 }
 
-export class RippleComputedCycleError extends RippleError {}
-export class RippleDisposedResourceError extends RippleError {}
-export class RippleDisposedRuntimeError extends RippleError {}
-export class RippleDisposedScopeError extends RippleError {}
-export class RippleInfiniteLoopError extends RippleError {}
+/** User code that never settles: a computed cycle or a runaway flush loop. */
+export class RippleCycleError extends RippleError {}
+
+/** Any operation against a disposed runtime, scope, resource, or bridge. */
+export class RippleDisposedError extends RippleError {}

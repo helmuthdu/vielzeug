@@ -6,6 +6,37 @@ title: Ripple Migration
 
 Ripple 3.1 removes the `once` option from `watch()` and its options type. No stored or serialized formats change.
 
+## Replace tap() and errorPolicy with one onError option
+
+The `tap()` event stream (`RippleEvent`), `RippleErrorPolicy`, and the `errorPolicy` option are removed: no consumer needed write/compute/effect/dispose telemetry, and the error half is replaced by a single `onError` callback option.
+
+```ts
+// Before
+const ripple = createRipple({ errorPolicy: 'swallow' });
+ripple.tap((event) => {
+  if (event.type === 'error') console.error(event.context.kind, event.error);
+});
+
+// After
+const ripple = createRipple({
+  onError: (error, context) => console.error(context.kind, error),
+});
+```
+
+Omitting `onError` keeps the old default: failures rethrow asynchronously. Pass a no-op to silence rethrow (the old `'swallow'`). `RippleErrorContext` gains the `'flush'` kind.
+
+## Error classes collapsed
+
+`RippleComputedCycleError` and `RippleInfiniteLoopError` become `RippleCycleError`; `RippleDisposedRuntimeError`, `RippleDisposedScopeError`, and `RippleDisposedResourceError` become `RippleDisposedError`. Catch `RippleError` or the two remaining subclasses; messages stay specific.
+
+## Flush-loop breaches are reported, not thrown
+
+Exceeding the flush iteration limit no longer throws from the signal write that happened to trigger the flush. The flush is abandoned and a `RippleCycleError` is reported to `onError` with context kind `flush`; the graph stays usable.
+
+## Disposed never-evaluated computeds throw from peek()
+
+`peek()` on a computed disposed before its first evaluation used to return an internal sentinel typed as `T`. It now throws `RippleDisposedError`. Computed values cached before disposal still read normally.
+
 ## `subscribe()` listeners fire per registration
 
 Previously, two `subscribe()` registrations that shared one callback function on signals written in the same
@@ -60,29 +91,11 @@ const user = resource(() => userId.value, async (id, { signal }) => {
 user.dispose();
 ```
 
-Resources preserve a successful `undefined` value as `previous`. After disposal, state remains readable while `reload()` and new subscriptions throw `RippleDisposedResourceError`.
+Resources preserve a successful `undefined` value as `previous`. After disposal, state remains readable while `reload()` and new subscriptions throw `RippleDisposedError`.
 
-## Replace observer and onError with tap() and errorPolicy
+## Observability history
 
-The constructor `observer` and `onError` callbacks are replaced by a runtime `tap()` method and a deterministic `errorPolicy` option.
-
-```ts
-// Before
-const ripple = createRipple({
-  observer(event) { console.log(event.kind); },
-  onError(error, context) { console.error(context.kind, error); },
-});
-
-// After
-const ripple = createRipple({ errorPolicy: 'swallow' });
-
-ripple.tap((event) => {
-  if (event.type === 'write') console.log(event.name);
-  if (event.type === 'error') console.error(event.context.kind, event.error);
-});
-```
-
-`errorPolicy` controls whether computed refresh, effect, cleanup, and listener failures rethrow (`'throw'`, default) or are silenced (`'swallow'`). Error events are always emitted through `tap()`. During runtime disposal, cleanup errors and owned-node disposal events arrive before the final graph disposal event.
+Ripple 3.0 unified the constructor `observer`/`onError` callbacks under a runtime `tap()` event stream and an `errorPolicy` option. That layer was itself removed in favor of a single `onError` option: see “Replace tap() and errorPolicy with one onError option” above.
 
 ## Use fromSubscribable for external sources
 
@@ -103,7 +116,7 @@ ripple.dispose();
 
 ## Renamed types
 
-`ReactiveEvent` is now `RippleEvent` and uses `type` instead of `kind`. Replace `ReactiveObserver` with a `tap()` handler. `ReactiveErrorContext` is now `RippleErrorContext` and includes `computed` failures. `RippleOptions` no longer accepts `observer` or `onError`; use `errorPolicy` and `tap()`.
+`ReactiveEvent` was `RippleEvent` and `ReactiveObserver` a `tap()` handler; both were later removed with the event stream. `ReactiveErrorContext` is now `RippleErrorContext` and includes `computed` and `flush` failures. `RippleOptions` no longer accepts `observer`; use `onError`.
 
 ---
 

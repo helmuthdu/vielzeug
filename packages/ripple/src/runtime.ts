@@ -1,9 +1,4 @@
-import {
-  RippleComputedCycleError,
-  RippleDisposedRuntimeError,
-  RippleDisposedScopeError,
-  RippleInfiniteLoopError,
-} from './errors';
+import { RippleCycleError, RippleDisposedError } from './errors';
 import type {
   Cleanup,
   ComputedOptions,
@@ -11,8 +6,6 @@ import type {
   EffectOptions,
   Readable,
   RippleErrorContext,
-  RippleErrorPolicy,
-  RippleEvent,
   RippleOptions,
   Scope,
   Signal,
@@ -104,10 +97,7 @@ class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
 
     if (this.equals(this.current, next)) return;
 
-    const previous = this.current;
-
     this.current = next;
-    this.runtime.emit({ name: this.name, next, previous, type: 'write' });
     this.runtime.propagate(() => this.notify());
   }
 
@@ -144,11 +134,21 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
     this.runtime.track(this);
     this.refresh();
 
-    return this.current as T;
+    return this.evaluated();
   }
 
   peek(): T {
     this.refresh();
+
+    return this.evaluated();
+  }
+
+  private evaluated(): T {
+    if (this.current === UNSET) {
+      const label = this.name === undefined ? '' : ` "${this.name}"`;
+
+      throw new RippleDisposedError(`computed${label} was disposed before it was ever evaluated`);
+    }
 
     return this.current as T;
   }
@@ -187,11 +187,10 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
     if (this.computing) {
       const label = this.name === undefined ? '' : ` "${this.name}"`;
 
-      throw new RippleComputedCycleError(`computed cycle detected${label}`);
+      throw new RippleCycleError(`computed cycle detected${label}`);
     }
 
     this.computing = true;
-    this.runtime.emit({ name: this.name, type: 'compute' });
 
     try {
       const next = this.runtime.collect(this, this.derive);
@@ -242,7 +241,7 @@ class ScopeNode implements Scope, Owned {
   }
 
   run<T>(fn: () => T): T {
-    if (this.isDisposed) throw new RippleDisposedScopeError('Cannot run a disposed scope.');
+    if (this.isDisposed) throw new RippleDisposedError('Cannot run a disposed scope.');
 
     return this.runtime.withScope(this, fn);
   }
@@ -256,7 +255,6 @@ class ScopeNode implements Scope, Owned {
     for (const owned of [...this.owned].reverse()) owned.dispose();
     this.owned.clear();
     this.disposalController.abort();
-    this.runtime.emit({ name: this.name, node: 'scope', type: 'dispose' });
   }
 
   [Symbol.dispose](): void {
@@ -305,7 +303,6 @@ class EffectNode implements ObserverNode, EffectHandle {
     this.runScope?.dispose();
     this.runScope = undefined;
     this.runCleanup();
-    this.runtime.emit({ name: this.options?.name, type: 'effect' });
 
     const owner = new ScopeNode(this.runtime);
 
@@ -336,7 +333,6 @@ class EffectNode implements ObserverNode, EffectHandle {
     this.runtime.clearDependencies(this);
     this.runCleanup();
     this.disposalController.abort();
-    this.runtime.emit({ name: this.options?.name, node: 'effect', type: 'dispose' });
   }
 
   [Symbol.dispose](): void {
@@ -372,11 +368,16 @@ export class ReactiveRuntime {
   private readonly pending = new Set<EffectNode>();
   private readonly listeners = new Set<ListenerSink>();
   private readonly rootScope: ScopeNode;
-  private readonly tappers = new Set<(event: RippleEvent) => void>();
-  private readonly errorPolicy: RippleErrorPolicy;
+  private readonly onError: (error: unknown, context: RippleErrorContext) => void;
 
   constructor(options?: RippleOptions) {
-    this.errorPolicy = options?.errorPolicy ?? 'throw';
+    this.onError =
+      options?.onError ??
+      ((error) => {
+        queueMicrotask(() => {
+          throw error;
+        });
+      });
     this.rootScope = new ScopeNode(this, 'runtime');
     this.activeScope = this.rootScope;
   }
@@ -442,45 +443,16 @@ export class ReactiveRuntime {
     return this.withObserver(undefined, fn);
   };
 
-  /** Runtime observability: see `Ripple.tap()`. */
-  readonly tap = (handler: (event: RippleEvent) => void, options?: { signal?: AbortSignal }): Unsubscribe => {
-    if (this.isDisposed) return () => {};
-
-    const signal = options?.signal;
-
-    if (signal?.aborted) {
-      this.tappers.delete(handler);
-      return () => {};
-    }
-
-    this.tappers.add(handler);
-
-    if (signal) {
-      const onAbort = () => this.tappers.delete(handler);
-
-      signal.addEventListener('abort', onAbort, { once: true });
-
-      return () => {
-        this.tappers.delete(handler);
-        signal.removeEventListener('abort', onAbort);
-      };
-    }
-
-    return () => this.tappers.delete(handler);
-  };
-
   dispose(): void {
     if (this.isDisposed) return;
 
     this.isDisposed = true;
     this.rootScope.dispose();
-    this.emit({ node: 'graph', type: 'dispose' });
-    this.tappers.clear();
   }
 
   /** Internal node guard: disposed runtimes allow inert reads but reject graph work and mutation. */
   assertActive(): void {
-    if (this.isDisposed) throw new RippleDisposedRuntimeError('Cannot use a disposed Ripple runtime.');
+    if (this.isDisposed) throw new RippleDisposedError('Cannot use a disposed Ripple runtime.');
   }
 
   track(node: Dependency): void {
@@ -571,25 +543,12 @@ export class ReactiveRuntime {
     }
   }
 
-  emit(event: RippleEvent): void {
-    if (this.tappers.size === 0) return;
-
-    for (const tapper of this.tappers) {
-      try {
-        tapper(event);
-      } catch {
-        // Observability must not affect runtime behavior.
-      }
-    }
-  }
-
   report(error: unknown, context: RippleErrorContext): void {
-    this.emit({ context, error, type: 'error' });
-
-    if (this.errorPolicy === 'throw') {
-      queueMicrotask(() => {
-        throw error;
-      });
+    try {
+      this.onError(error, context);
+    } catch {
+      // A failing error handler must not corrupt the graph or mask the
+      // original failure; the default handler rethrows asynchronously instead.
     }
   }
 
@@ -639,7 +598,16 @@ export class ReactiveRuntime {
     try {
       while (this.pending.size > 0 || this.listeners.size > 0) {
         if (++iterations > MAX_FLUSH_ITERATIONS) {
-          throw new RippleInfiniteLoopError(`infinite reactive flush (>${MAX_FLUSH_ITERATIONS} iterations)`);
+          // A runaway effect (one that keeps re-triggering itself): report it
+          // through the error channel and abandon this flush. Throwing from
+          // here would unwind into the innocent write site that happened to
+          // trigger the flush, after its value was already applied.
+          this.report(new RippleCycleError(`infinite reactive flush (>${MAX_FLUSH_ITERATIONS} iterations)`), {
+            kind: 'flush',
+          });
+          this.pending.clear();
+          this.listeners.clear();
+          break;
         }
 
         const effects = [...this.pending];

@@ -48,7 +48,7 @@ ripple.dispose();
 - Construction starts loading immediately.
 - The loader must forward or observe its signal for transport-level cancellation.
 - `reload()` returns `void`; observe completion through resource state.
-- Disposed state remains readable, but `reload()` and new subscriptions throw `RippleDisposedResourceError`.
+- Disposed state remains readable, but `reload()` and new subscriptions throw `RippleDisposedError`.
 - Use Sourcerer for paginated collections or shared keyed server-query caching.
 
 ### Related

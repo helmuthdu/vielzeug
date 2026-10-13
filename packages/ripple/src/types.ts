@@ -53,27 +53,17 @@ export interface Subscribable<T> {
 }
 
 export type RippleErrorContext = {
-  readonly kind: 'cleanup' | 'computed' | 'effect' | 'listener';
+  readonly kind: 'cleanup' | 'computed' | 'effect' | 'flush' | 'listener';
   readonly name?: string;
 };
 
-export type RippleEvent =
-  | { readonly type: 'compute'; readonly name?: string }
-  | { readonly type: 'effect'; readonly name?: string }
-  | { readonly type: 'write'; readonly name?: string; readonly next: unknown; readonly previous: unknown }
-  | { readonly type: 'dispose'; readonly name?: string; readonly node: 'effect' | 'graph' | 'scope' }
-  | { readonly type: 'error'; readonly error: unknown; readonly context: RippleErrorContext };
-
-/**
- * Deterministic error policy for runtime callback, cleanup, and listener
- * failures. Error events are always emitted through `tap()` regardless of
- * policy: this controls only whether failures also rethrow.
- *
- * - `'throw'` (default): rethrows the error asynchronously via `queueMicrotask`.
- * - `'swallow'`: silences rethrow; observe failures only through `tap()`.
- */
-export type RippleErrorPolicy = 'throw' | 'swallow';
-
 export type RippleOptions = {
-  errorPolicy?: RippleErrorPolicy;
+  /**
+   * Handles failures in runtime callbacks, cleanups, and listeners. Defaults to
+   * rethrowing asynchronously via `queueMicrotask`, so failures surface as
+   * unhandled errors instead of being swallowed. Provide a no-op function to
+   * silence rethrow. Failures inside one node never interrupt sibling
+   * propagation either way.
+   */
+  onError?: (error: unknown, context: RippleErrorContext) => void;
 };

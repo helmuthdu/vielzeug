@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "greenfield API reduction: remove tap()/RippleEvent/errorPolicy in favor of a single onError option; collapse error classes to RippleError/RippleCycleError/RippleDisposedError; report flush-loop breaches through onError instead of throwing from the write site; throw RippleDisposedError from peek() on a never-evaluated disposed computed",
+      "packageName": "@vielzeug/ripple",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

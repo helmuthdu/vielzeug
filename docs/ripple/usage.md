@@ -27,10 +27,8 @@ Use `createRipple()` for tests, SSR requests, embedded applications, or independ
 ```ts
 import { createRipple } from '@vielzeug/ripple';
 
-const ripple = createRipple({ errorPolicy: 'swallow' });
-
-ripple.tap((event) => {
-  if (event.type === 'error') console.log(event.context.kind, event.error);
+const ripple = createRipple({
+  onError: (error, context) => console.log(context.kind, error),
 });
 
 const count = ripple.signal(0);
@@ -116,26 +114,20 @@ const stopWatch = ripple.watch(
 stopWatch.dispose();
 ```
 
-## Observability
+## Error Handling
 
-`tap()` receives writes, computes, effects, disposals, and reported errors. Computed refresh failures are isolated and reported without interrupting sibling propagation. During runtime disposal, owned cleanup errors and node disposal events are emitted before the final graph disposal event; handlers remain active until that sequence completes. Tap-handler errors are swallowed.
+Failures inside effect callbacks, computed derivations, cleanups, and listeners never corrupt the graph: the failing node is reported and siblings keep propagating. The `onError` option decides what reporting means. By default failures rethrow asynchronously (via `queueMicrotask`), surfacing as unhandled errors; pass a handler to route them to a logger or error boundary instead:
 
 ```ts
-const ripple = createRipple({ errorPolicy: 'swallow' });
-
-ripple.tap((event) => {
-  switch (event.type) {
-    case 'write':
-      console.log(`${event.name}: ${event.previous} → ${event.next}`);
-      break;
-    case 'error':
-      console.error(`${event.context.kind}:`, event.error);
-      break;
-  }
+const ripple = createRipple({
+  onError: (error, context) => {
+    // context.kind: 'cleanup' | 'computed' | 'effect' | 'flush' | 'listener'
+    console.error(`${context.kind}:`, error);
+  },
 });
 ```
 
-`errorPolicy` controls whether computed refresh, effect, cleanup, and listener failures rethrow (`'throw'`, default) or are silenced (`'swallow'`). Error events are emitted through `tap()` regardless of policy.
+A runaway effect (one that keeps re-triggering itself) is caught by the flush iteration limit and reported with context kind `flush`; the flush is abandoned and the graph stays usable for later writes.
 
 ## Bridging External Sources
 
@@ -179,7 +171,7 @@ stop.dispose();
 user.dispose();
 ```
 
-Disposed resources retain readable state but reject `reload()` and new subscriptions with `RippleDisposedResourceError`. Use Sourcerer for paginated collection state and a dedicated server-state cache for shared keyed reads, retries, and invalidation.
+Disposed resources retain readable state but reject `reload()` and new subscriptions with `RippleDisposedError`. Use Sourcerer for paginated collection state and a dedicated server-state cache for shared keyed reads, retries, and invalidation.
 
 ## Object State
 
@@ -304,13 +296,21 @@ ripple.dispose();
 
 ## Gotchas
 
+### `subscribe()` is change-only
+
+`Readable.subscribe(listener)` never calls the listener on subscribe: it fires only after a tracked source changes. Read the current value at the call site when you need an initial state.
+
 ### `subscribe()` forces computed evaluation
 
 `Readable.subscribe()` calls `peek()` before registering the listener. For signals this is a no-op, but for computeds it forces `refresh()`: the derivation runs immediately even if no one reads `.value`. This ensures `equals` comparison works on the first dependency change. Avoid subscribing to expensive computeds unless you need their value.
 
+### Diamonds recompute each path once per write
+
+A computed with dependents refreshes eagerly during propagation, so effects never re-run for unchanged derived values. The tradeoff: in a diamond (`a → b, c → d`), one write to `a` recomputes both `b` and `c` and then `d` once per changed path. Values a consumer observes are always consistent: a dependent reading a stale intermediate pulls the fresh value on read, so no glitched state is ever visible. Prefer keeping diamond depth shallow when a derivation is expensive.
+
 ### Computed first-run failure is recoverable
 
-If a computed's `derive` throws on its first run (e.g., a source is `null`), the computed commits the partial dependencies it tracked before the throw. When a dependency changes and the derivation can succeed, the computed refreshes and notifies its dependents. Effects that read a failing computed report the error through `tap()` and re-run when the computed recovers.
+If a computed's `derive` throws on its first run (e.g., a source is `null`), the computed commits the partial dependencies it tracked before the throw. When a dependency changes and the derivation can succeed, the computed refreshes and notifies its dependents. Effects that read a failing computed report the error through `onError` and re-run when the computed recovers.
 
 ## Best Practices
 
@@ -321,5 +321,5 @@ If a computed's `derive` throws on its first run (e.g., a source is `null`), the
 - Batch related synchronous writes.
 - Use `watch()` only for selected source transitions; callback-only reads are untracked.
 - Dispose external-source bridges when their owner ends.
-- Use `tap()` for runtime observability; set `errorPolicy: 'swallow'` to silence rethrow.
+- Route runtime failures with `onError`; the default rethrows asynchronously.
 - Use `resource()` for focused async state and Sourcerer for paginated collection workflows.

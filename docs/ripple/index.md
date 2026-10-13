@@ -1,9 +1,9 @@
 ---
 title: 'Ripple: Reactive graphs'
-description: Framework-agnostic signals, effects, async resources, scopes, structural bridges, and observability.
+description: Framework-agnostic signals, effects, async resources, scopes, and structural bridges.
 package: ripple
 category: state
-keywords: [reactive, signals, computed, effects, graph, scope, batch, watch, tap, observability]
+keywords: [reactive, signals, computed, effects, graph, scope, batch, watch]
 related: [ore, clockwork, ledger]
 exports: [createRipple, signal, computed, effect, batch, createScope, untrack, watch, resource, fromSubscribable, isReactive]
 environments: [browser, node, ssr, deno]
@@ -106,7 +106,6 @@ ripple.dispose();
 - `batch()` coalesces synchronous writes and notifications.
 - `createScope()` groups owned reactive work.
 - `watch()` observes one selected source transition.
-- `tap()` provides runtime observability for all graph events.
 - `resource()` owns focused latest-request async state.
 - `fromSubscribable()` creates a disposable bridge for external `{ getSnapshot, subscribe }` sources.
 

@@ -54,9 +54,8 @@ describe('watch', () => {
 
   it('retries watcher after immediate callback fails', () => {
     const errors: string[] = [];
-    const ripple = createRipple({ errorPolicy: 'swallow' });
-    ripple.tap((event) => {
-      if (event.type === 'error') errors.push(`${event.context.kind}:${(event.error as Error).message}`);
+    const ripple = createRipple({
+      onError: (error, context) => errors.push(`${context.kind}:${(error as Error).message}`),
     });
     const count = ripple.signal(1);
     const values: number[] = [];

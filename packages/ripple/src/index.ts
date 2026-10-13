@@ -2,14 +2,7 @@ export type { AsyncState, Resource, ResourceOptions } from './_async';
 export { createRipple, type Ripple } from './_default';
 export type { BridgedReadable, FromSubscribableOptions } from './_subscribable';
 export type { WatchOptions } from './_watch';
-export {
-  RippleComputedCycleError,
-  RippleDisposedResourceError,
-  RippleDisposedRuntimeError,
-  RippleDisposedScopeError,
-  RippleError,
-  RippleInfiniteLoopError,
-} from './errors';
+export { RippleCycleError, RippleDisposedError, RippleError } from './errors';
 export { isReactive } from './runtime';
 export type {
   Cleanup,
@@ -20,8 +13,6 @@ export type {
   Equality,
   Readable,
   RippleErrorContext,
-  RippleErrorPolicy,
-  RippleEvent,
   RippleOptions,
   Scope,
   Signal,
