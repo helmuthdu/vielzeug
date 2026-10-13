@@ -1,5 +1,5 @@
+export { walkFlatTree } from './dom';
 export { AssayError, AssayQueryError, AssayTimeoutError } from './errors';
-
 export {
   dispatch,
   fireBlur,
@@ -12,6 +12,7 @@ export {
   fireKeyUp,
   fireSubmit,
 } from './events';
+export { installFormInternalsPolyfill } from './form-internals';
 export { getSlotted, type QueryScope, queryAllInShadow, queryInShadow, queryPart, within } from './query';
 export {
   type DelayOptions,

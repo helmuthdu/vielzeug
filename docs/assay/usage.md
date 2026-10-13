@@ -106,6 +106,19 @@ expect(onSave).toHaveBeenCalledOnce();
 Refine's testing entry point contains only Refine-specific assertions and typed mount wrappers. Import Assay helpers
 directly instead of routing generic DOM operations through another package.
 
+When a suite tests a form-associated custom element (one built on `useField()` from `@vielzeug/ore`), install the
+form-internals polyfill in the setup file so jsdom gains the `ElementInternals` API it lacks:
+
+```ts
+// vitest.setup.ts
+import { installFormInternalsPolyfill } from '@vielzeug/assay';
+import { install } from '@vielzeug/ore/testing';
+import { afterEach } from 'vitest';
+
+install(afterEach);
+installFormInternalsPolyfill();
+```
+
 ## Best Practices
 
 - Scope multiple assertions with `within()` rather than repeatedly querying the document.

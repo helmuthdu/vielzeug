@@ -111,6 +111,8 @@ await waitUntil(() => view.queryByText('Saved') !== null);
 - `fireClick`, `fireInput`, `fireKeyDown`, and peers dispatch exact synchronous events.
 - `waitUntil`, `eventually`, and `waitForEvent` provide bounded, abortable async waiting.
 - `delay` models explicit cancellable timer scheduling.
+- `walkFlatTree` traverses the flat tree across slot boundaries jsdom's light-DOM queries miss.
+- `installFormInternalsPolyfill` gives jsdom the `ElementInternals` form-association API.
 - `AssayError`, `AssayQueryError`, and `AssayTimeoutError` provide typed failures.
 
 </div>

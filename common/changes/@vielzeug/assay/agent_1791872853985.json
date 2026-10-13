@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add walkFlatTree and installFormInternalsPolyfill test-environment helpers",
+      "packageName": "@vielzeug/assay",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/assay"
+}

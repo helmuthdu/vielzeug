@@ -1,6 +1,6 @@
 ---
 title: 'Assay: API Reference'
-description: API reference for @vielzeug/assay queries, event dispatch, and async waiting.
+description: API reference for @vielzeug/assay queries, event dispatch, async waiting, and test-environment helpers.
 ---
 
 [[toc]]
@@ -15,12 +15,14 @@ description: API reference for @vielzeug/assay queries, event dispatch, and asyn
 | `fire*` / `dispatch`                         | Dispatches platform event instances         | Sync           | Does not reproduce browser default behavior      |
 | `waitUntil` / `eventually` / `waitForEvent`  | Waits for conditions, assertions, or events | Async          | Use a signal or timeout for bounded waits                     |
 | `delay`                                      | Schedules a cancellable timer               | Async          | Pass a signal to cancel a pending wait                        |
+| `walkFlatTree`                               | Walks the flat tree across slot boundaries  | Sync           | jsdom-only need: browsers already use the flat tree           |
+| `installFormInternalsPolyfill`               | Polyfills `ElementInternals` form association for jsdom | Sync | Global patches: only install in suites that need them |
 
 ## Package Entry Point
 
 | Import            | Purpose                                              |
 | ----------------- | ---------------------------------------------------- |
-| `@vielzeug/assay` | DOM queries, events, wait helpers, errors, and types |
+| `@vielzeug/assay` | DOM queries, events, wait helpers, test-environment helpers, errors, and types |
 
 ## Queries
 
@@ -112,6 +114,47 @@ await delay(100, { signal });
 `waitUntil()`, `eventually()`, and `waitForEvent()` reject with `AssayTimeoutError` when their shared deadline expires. `waitUntil()` and `eventually()` remain bounded while an asynchronous callback is pending. Abort rejects with the signal reason and removes Assay-owned timers and listeners. Callback work itself must cooperate with application cancellation.
 
 `timeout` and delay milliseconds must be finite, non-negative, and no greater than 2,147,483,647 ms; `interval` must be finite, positive, and within the same timer limit. Invalid durations throw `RangeError`. `eventually()` also accepts `message` for diagnostic timeout context.
+
+## Test-environment helpers
+
+### `walkFlatTree(root, visit)`
+
+Walks the flat tree starting at `root`, calling `visit` for every element encountered: expanding each `<slot>`
+via `assignedElements()` instead of descending into its (always empty, in jsdom) literal children. jsdom only
+implements the light DOM tree, so `querySelectorAll()` never crosses a slot into its assigned elements; real
+browsers use the flat tree for that. This helper closes the gap for tests that must find form-associated (or
+otherwise slotted) elements through shadow boundaries.
+
+```ts
+const named: HTMLElement[] = [];
+
+walkFlatTree(form, (el) => {
+  if (el.hasAttribute('name')) named.push(el);
+});
+```
+
+### `installFormInternalsPolyfill()`
+
+jsdom implements none of the `ElementInternals` form-association API: not `setFormValue`, not `setValidity`, not
+the `checkValidity`/`reportValidity`/`validity`/`validationMessage` mixin real browsers put on every
+`formAssociated: true` element, not even `FormData` collecting a form-associated element's set value, or
+`<form>.reset()` invoking `formResetCallback()`. Every one of those gaps is exercised by `useField()` from
+`@vielzeug/ore`, so any package testing a form-associated component needs all of them.
+
+Call it from a test setup when the suite tests form-associated components; it returns an `uninstall()` that
+restores every patched global. The patches are global monkey-patches (and each is a guarded no-op when its target
+already exists), so suites without form-associated components shouldn't install them. A downstream package should
+rely on this instead of hand-rolling its own copy.
+
+```ts
+// vitest.setup.ts
+import { installFormInternalsPolyfill } from '@vielzeug/assay';
+import { install } from '@vielzeug/ore/testing';
+import { afterEach } from 'vitest';
+
+install(afterEach);
+installFormInternalsPolyfill();
+```
 
 ## Types
 
