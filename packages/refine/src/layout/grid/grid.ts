@@ -35,12 +35,18 @@ const BP_FALLBACKS: Record<string, number> = {
   '--size-screen-xl': 1280,
 };
 
-type ColCount = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+const COL_COUNTS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'auto'] as const;
+const GRID_ALIGNMENTS = ['start', 'center', 'end', 'stretch', 'baseline'] as const;
+const GRID_FLOWS = ['row', 'column', 'row-dense', 'column-dense'] as const;
+const GRID_GAPS = ['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const;
+const GRID_JUSTIFICATIONS = ['start', 'center', 'end', 'stretch'] as const;
+
+type ColCount = (typeof COL_COUNTS)[number];
 
 /** Grid component properties */
 export type OreGridProps = {
   /** Align items vertically */
-  align?: 'start' | 'center' | 'end' | 'stretch' | 'baseline';
+  align?: (typeof GRID_ALIGNMENTS)[number];
   /** CSS grid-template-areas value */
   areas?: string;
   /** grid-template-areas at 2xl breakpoint (≥1536px) */
@@ -66,19 +72,19 @@ export type OreGridProps = {
   /** Columns at xl breakpoint (≥1280px) */
   colsXl?: ColCount;
   /** Grid auto flow direction */
-  flow?: 'row' | 'column' | 'row-dense' | 'column-dense';
+  flow?: (typeof GRID_FLOWS)[number];
   /** Stretch the grid to fill its container's full width */
   fullwidth?: boolean;
   /** Gap between items */
-  gap?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  gap?: (typeof GRID_GAPS)[number];
   /** Justify items horizontally */
-  justify?: 'start' | 'center' | 'end' | 'stretch';
+  justify?: (typeof GRID_JUSTIFICATIONS)[number];
   /** Minimum column width for responsive mode (default: 250px) */
   minColWidth?: string;
   /** Use auto-fit responsive columns */
   responsive?: boolean;
   /** Number of rows: '1'-'12' | 'auto' */
-  rows?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto';
+  rows?: ColCount;
 };
 
 /**
@@ -142,26 +148,26 @@ export type OreGridProps = {
 export const GRID_TAG = 'ore-grid' as const;
 define<OreGridProps>(GRID_TAG, {
   props: {
-    align: prop.string<'start' | 'center' | 'end' | 'stretch' | 'baseline'>(),
+    align: prop.oneOf(GRID_ALIGNMENTS),
     areas: prop.string(),
     areas2xl: prop.string(),
     areasLg: prop.string(),
     areasMd: prop.string(),
     areasSm: prop.string(),
     areasXl: prop.string(),
-    cols: prop.string<ColCount>(),
-    cols2xl: prop.string<ColCount>(),
-    colsLg: prop.string<ColCount>(),
-    colsMd: prop.string<ColCount>(),
-    colsSm: prop.string<ColCount>(),
-    colsXl: prop.string<ColCount>(),
-    flow: prop.string<'row' | 'column' | 'row-dense' | 'column-dense'>(),
+    cols: prop.oneOf(COL_COUNTS),
+    cols2xl: prop.oneOf(COL_COUNTS),
+    colsLg: prop.oneOf(COL_COUNTS),
+    colsMd: prop.oneOf(COL_COUNTS),
+    colsSm: prop.oneOf(COL_COUNTS),
+    colsXl: prop.oneOf(COL_COUNTS),
+    flow: prop.oneOf(GRID_FLOWS),
     fullwidth: prop.bool(false),
-    gap: prop.string<'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'>(),
-    justify: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
+    gap: prop.oneOf(GRID_GAPS),
+    justify: prop.oneOf(GRID_JUSTIFICATIONS),
     minColWidth: prop.string(),
     responsive: prop.bool(false),
-    rows: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto'>(),
+    rows: prop.oneOf(COL_COUNTS),
   },
 
   setup(props) {

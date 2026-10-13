@@ -215,12 +215,10 @@ describe('createChoiceField', () => {
       const { options } = makeOptions({ required, value });
       const field = createChoiceField(options);
 
-      expect(field.validity.value).toEqual({ valueMissing: true });
-      expect(field.validationMessage.value).toBe('Please make a selection.');
+      expect(field.validity.value).toEqual({ flags: { valueMissing: true }, message: 'Please make a selection.' });
 
       field.selectValue('alpha');
       expect(field.validity.value).toBeNull();
-      expect(field.validationMessage.value).toBe('');
     });
 
     it('is always valid when not required', () => {
@@ -238,7 +236,7 @@ describe('createChoiceField', () => {
       });
       const field = createChoiceField(options);
 
-      expect(field.validationMessage.value).toBe('Pick at least one option.');
+      expect(field.validity.value?.message).toBe('Pick at least one option.');
     });
   });
 

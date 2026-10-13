@@ -28,7 +28,8 @@ export { ICON_TAG } from '../../content/icon/icon';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-type SidebarVariant = 'floating' | 'inset';
+const SIDEBAR_VARIANTS = ['floating', 'inset'] as const;
+type SidebarVariant = (typeof SIDEBAR_VARIANTS)[number];
 type SidebarCollapseSource = 'api' | 'responsive' | 'toggle';
 type DrawerSource = 'api' | 'responsive' | 'toggle';
 type SidebarMode = 'bottom-nav' | 'collapsed' | 'default';
@@ -189,7 +190,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     'expand-label': prop.string('Expand sidebar'),
     label: prop.string('Sidebar navigation'),
     responsive: prop.string(),
-    variant: prop.string<SidebarVariant>(),
+    variant: prop.oneOf(SIDEBAR_VARIANTS),
   },
   setup(props) {
     const el = getHost();

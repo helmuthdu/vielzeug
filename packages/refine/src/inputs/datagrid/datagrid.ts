@@ -15,7 +15,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { warn } from '../../_dev';
 
-import { disablableBundle, loadableBundle } from '../../shared';
+import { DENSITY_LEVELS, type DensityLevel, disablableBundle, loadableBundle } from '../../shared';
 import { tableBaseMixin } from '../../styles';
 import componentStyles from './datagrid.css?inline';
 import { COLUMN_OBSERVED_ATTRS, parseColumnChildren } from './datagrid-column';
@@ -27,6 +27,7 @@ import {
   type DataGridView,
   type FilterOperator,
   type FilterOption,
+  SELECTION_MODES,
   type SelectionMode,
   type SortDirection,
   type SortState,
@@ -41,7 +42,8 @@ export { SELECT_TAG } from '../../inputs/select/select';
 export { POPOVER_TAG } from '../../overlay/popover/popover';
 export { COLUMN_TAG } from './datagrid-column';
 
-type SortMode = 'client' | 'server';
+const SORT_MODES = ['client', 'server'] as const;
+type SortMode = (typeof SORT_MODES)[number];
 
 export type { DataGridLabels } from './datagrid-labels';
 export type { DataGridColumn, DataGridView, FilterOperator, FilterOption } from './datagrid-model';
@@ -113,7 +115,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
    */
   columns?: DataGridColumn<T>[];
   /** Cell density: `'compact'` | `'cozy'` (default) | `'comfortable'` */
-  density?: 'compact' | 'cozy' | 'comfortable';
+  density?: DensityLevel;
   /** Disable all interaction. */
   disabled?: boolean;
   /** Text shown when there are no rows. */
@@ -340,7 +342,7 @@ export const DATAGRID_TAG = 'ore-datagrid' as const;
 define<OreDataGridProps>(DATAGRID_TAG, {
   props: {
     activeView: prop.string(),
-    density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
+    density: prop.oneOf(DENSITY_LEVELS),
     ...disablableBundle,
     ...loadableBundle,
     columns: prop.data<DataGridColumn[]>(),
@@ -357,8 +359,8 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     searchLabel: prop.data<[string, string]>(),
     searchPlaceholder: prop.string(),
     selectedKeys: prop.data<string[]>(),
-    selectionMode: prop.string<SelectionMode>('none'),
-    sortMode: prop.string<SortMode>('client'),
+    selectionMode: prop.oneOf(SELECTION_MODES, 'none'),
+    sortMode: prop.oneOf(SORT_MODES, 'client'),
     source: prop.data<DataGridSource>(),
     striped: prop.bool(false),
     views: prop.data<DataGridView[]>(),

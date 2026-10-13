@@ -1,3 +1,4 @@
+import { installFormInternalsPolyfill } from '@vielzeug/assay';
 import { install } from '@vielzeug/ore/testing';
 import axe from 'axe-core';
 
@@ -34,9 +35,9 @@ declare global {
   var axeCheck: (node: Element, options?: axe.RunOptions) => Promise<axe.AxeResults>;
 }
 
-// ElementInternals/FormData/`<form>.reset()` jsdom gaps are polyfilled by `install()` below,
-// via `@vielzeug/ore/testing`'s `installFormInternalsPolyfill()`. The gap belongs to Ore's
-// form-association feature, so the polyfill lives with that feature rather than in Refine.
+// ElementInternals/FormData/`<form>.reset()` jsdom gaps are polyfilled by
+// `installFormInternalsPolyfill()` from @vielzeug/assay (called below): the gap is in
+// jsdom's DOM environment, so the polyfill lives with Assay's other DOM test helpers.
 
 // Polyfill ClipboardEvent for jsdom
 if (typeof ClipboardEvent === 'undefined') {
@@ -49,7 +50,8 @@ if (typeof ClipboardEvent === 'undefined') {
   };
 }
 
-install(afterEach, { formInternals: true });
+install(afterEach);
+installFormInternalsPolyfill();
 
 const consoleError = globalThis.console.error;
 const consoleWarn = globalThis.console.warn;

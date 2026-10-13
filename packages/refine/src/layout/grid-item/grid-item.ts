@@ -3,22 +3,26 @@ import { computed } from '@vielzeug/ripple';
 
 import styles from './grid-item.css?inline';
 
+const GRID_ITEM_ALIGNMENTS = ['start', 'center', 'end', 'stretch'] as const;
+const GRID_ITEM_COL_SPANS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 'full'] as const;
+const GRID_ITEM_ROW_SPANS = ['1', '2', '3', '4', '5', '6', 'full'] as const;
+
 /** Grid item component properties */
 export type OreGridItemProps = {
   /** Align self vertically within the grid cell */
-  align?: 'start' | 'center' | 'end' | 'stretch';
+  align?: (typeof GRID_ITEM_ALIGNMENTS)[number];
   /** Named grid area to place the item into. */
   area?: string;
   /** Explicit grid-column value: overrides col-span (e.g. '2 / 5', 'span 3', '1 / -1'). */
   col?: string;
   /** Span N columns. Use 'full' to span all columns (1 / -1). */
-  colSpan?: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full';
+  colSpan?: (typeof GRID_ITEM_COL_SPANS)[number];
   /** Justify self horizontally within the grid cell */
-  justify?: 'start' | 'center' | 'end' | 'stretch';
+  justify?: (typeof GRID_ITEM_ALIGNMENTS)[number];
   /** Explicit grid-row value: overrides row-span (e.g. '1 / 3', 'span 2'). */
   row?: string;
   /** Span N rows. Use 'full' to span all rows (1 / -1). */
-  rowSpan?: '1' | '2' | '3' | '4' | '5' | '6' | 'full';
+  rowSpan?: (typeof GRID_ITEM_ROW_SPANS)[number];
 };
 
 /**
@@ -59,13 +63,13 @@ export type OreGridItemProps = {
 export const GRID_ITEM_TAG = 'ore-grid-item' as const;
 define<OreGridItemProps>(GRID_ITEM_TAG, {
   props: {
-    align: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
+    align: prop.oneOf(GRID_ITEM_ALIGNMENTS),
     area: prop.string(),
     col: prop.string(),
-    colSpan: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'full'>(),
-    justify: prop.string<'start' | 'center' | 'end' | 'stretch'>(),
+    colSpan: prop.oneOf(GRID_ITEM_COL_SPANS),
+    justify: prop.oneOf(GRID_ITEM_ALIGNMENTS),
     row: prop.string(),
-    rowSpan: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | 'full'>(),
+    rowSpan: prop.oneOf(GRID_ITEM_ROW_SPANS),
   },
   setup(props) {
     const gridColumn = computed(() => {

@@ -1,4 +1,4 @@
-import { bind, define, getHost, html, live, onCleanup, onElement, prop, ref, useField, useSlots } from '@vielzeug/ore';
+import { bind, define, getHost, html, model, onCleanup, onElement, prop, ref, useField, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { bindRefCallback, createTextField, lifecycleSignal } from '../../core';
 import type { TextFieldProps } from '../../shared';
@@ -13,7 +13,11 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { InputType, VisualVariant } from '../../types';
+import type { InputType } from '../../types';
+import { INPUT_VARIANTS, type InputVariant } from '../../types';
+
+const INPUT_INPUTMODES = ['none', 'text', 'decimal', 'numeric', 'tel', 'search', 'email', 'url'] as const;
+
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderStatusIcon } from '../shared/templates';
@@ -27,7 +31,7 @@ export type OreInputEvents = {
   input: InputEvent;
 };
 
-export type OreInputProps = TextFieldProps<Exclude<VisualVariant, 'frost'>> & {
+export type OreInputProps = TextFieldProps<InputVariant> & {
   /** Accessible name used when no visible label is rendered. */
   'aria-label'?: string;
   /** Autocomplete hint */
@@ -35,7 +39,7 @@ export type OreInputProps = TextFieldProps<Exclude<VisualVariant, 'frost'>> & {
   /** Show a clear (×) button when the field has a value */
   clearable?: boolean;
   /** Virtual keyboard hint for mobile devices */
-  inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+  inputmode?: (typeof INPUT_INPUTMODES)[number];
   /**
    * Shows an inline spinner inside the field and forces the inner `<input>` into
    * `disabled` for the duration: use while an async validation/submission request
@@ -155,7 +159,7 @@ define<OreInputProps>(INPUT_TAG, {
     error: prop.string(),
     fullwidth: prop.bool(false),
     helper: prop.string(),
-    inputmode: prop.string<'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url'>(),
+    inputmode: prop.oneOf(INPUT_INPUTMODES),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
     loading: prop.bool(false),
@@ -170,7 +174,7 @@ define<OreInputProps>(INPUT_TAG, {
     success: prop.bool(false),
     type: prop.oneOf(VALID_INPUT_TYPES, 'text'),
     value: prop.string(),
-    variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
+    variant: prop.oneOf(INPUT_VARIANTS),
   },
   setup(props) {
     const el = getHost();
@@ -222,7 +226,6 @@ define<OreInputProps>(INPUT_TAG, {
         disabled: tf.disabled,
         onReset: tf.reset,
         toFormValue: (v) => v,
-        validationMessage: tf.validationMessage,
         validity: tf.validity,
         value: tf.value,
       }),
@@ -324,7 +327,7 @@ define<OreInputProps>(INPUT_TAG, {
               ?disabled="${isDisabled}"
               ?readonly="${props.readonly}"
               ?required="${props.required}"
-              value="${live(fieldValue)}"
+              value="${model(fieldValue)}"
               aria-label="${props['aria-label']}"
               aria-labelledby="${ariaLabelledBy}"
               aria-describedby="${ariaDescribedBy}"

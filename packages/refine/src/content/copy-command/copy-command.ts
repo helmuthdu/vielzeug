@@ -1,7 +1,9 @@
 import { define, html, onCleanup, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { srOnlyMixin } from '../../styles';
-import type { ComponentSize, RoundedSize } from '../../types';
+import { COMPONENT_SIZES, type ComponentSize, ROUNDED_SIZES, type RoundedSize } from '../../types';
+
+const COPY_COMMAND_VARIANTS = ['flat', 'bordered', 'ghost'] as const;
 
 import componentStyles from './copy-command.css?inline';
 
@@ -72,10 +74,10 @@ export const COPY_COMMAND_TAG = 'ore-copy-command' as const;
 
 define<OreCopyCommandProps>(COPY_COMMAND_TAG, {
   props: {
-    rounded: prop.string<RoundedSize>('md'),
-    size: prop.string<ComponentSize>('md'),
+    rounded: prop.oneOf(ROUNDED_SIZES, 'md'),
+    size: prop.oneOf(COMPONENT_SIZES, 'md'),
     value: prop.string(''),
-    variant: prop.string<'flat' | 'bordered' | 'ghost'>('flat'),
+    variant: prop.oneOf(COPY_COMMAND_VARIANTS, 'flat'),
   },
 
   setup(props) {

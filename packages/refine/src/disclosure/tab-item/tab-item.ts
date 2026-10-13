@@ -3,7 +3,14 @@ import { computed } from '@vielzeug/ripple';
 import { setAriaReflection } from '../../core';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import {
+  COMPONENT_SIZES,
+  type ComponentSize,
+  THEME_COLORS,
+  type ThemeColor,
+  VISUAL_VARIANTS,
+  type VisualVariant,
+} from '../../types';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-item.css?inline';
 
@@ -62,11 +69,11 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
   props: {
     ...disablableBundle,
     active: prop.bool(false),
-    color: prop.string<ThemeColor>(),
+    color: prop.oneOf(THEME_COLORS),
     density: prop.oneOf(['compact', 'default'] as const, 'default'),
-    size: prop.string<ComponentSize>(),
+    size: prop.oneOf(COMPONENT_SIZES),
     value: prop.string(''),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.oneOf(VISUAL_VARIANTS),
   },
   setup(props) {
     const el = getHost();

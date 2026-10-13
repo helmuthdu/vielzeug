@@ -1,13 +1,14 @@
 import { define, getHost, html, onMounted, prop } from '@vielzeug/ore';
 import { watch } from '@vielzeug/ripple';
 
-import type { ThemeColor } from '../../types';
+import { THEME_COLORS, type ThemeColor } from '../../types';
 
 import componentStyles from './marquee.css?inline';
 
 export { BUTTON_TAG } from '../../inputs/button/button';
 export { ICON_TAG } from '../icon/icon';
-export type MarqueeDirection = 'left' | 'right';
+export const MARQUEE_DIRECTIONS = ['left', 'right'] as const;
+export type MarqueeDirection = (typeof MARQUEE_DIRECTIONS)[number];
 
 export type OreMarqueeProps = {
   /** Theme color for the navigation controls. */
@@ -52,8 +53,8 @@ export const MARQUEE_TAG = 'ore-marquee' as const;
 
 define<OreMarqueeProps>(MARQUEE_TAG, {
   props: {
-    color: prop.string<ThemeColor>(),
-    direction: prop.string<MarqueeDirection>('left'),
+    color: prop.oneOf(THEME_COLORS),
+    direction: prop.oneOf(MARQUEE_DIRECTIONS, 'left'),
     duration: prop.number(20),
     'pause-on-hover': prop.bool(false),
     'show-controls': prop.bool(true),

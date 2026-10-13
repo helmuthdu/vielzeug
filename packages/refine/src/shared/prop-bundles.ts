@@ -1,15 +1,15 @@
 import { prop } from '@vielzeug/ore';
 
-import type { ComponentSize, ElevationLevel, RoundedSize, ThemeColor } from './types';
+import { COMPONENT_SIZES, ELEVATION_LEVELS, ROUNDED_SIZES, THEME_COLORS } from './types';
 
 /** Prop bundle for components that support a theme colour. */
 export const themableBundle = {
-  color: prop.string<ThemeColor>(),
+  color: prop.oneOf(THEME_COLORS),
 };
 
 /** Prop bundle for components with discrete size variants. */
 export const sizableBundle = {
-  size: prop.string<ComponentSize>(),
+  size: prop.oneOf(COMPONENT_SIZES),
 };
 
 /** Prop bundle for interactive components that can be disabled. */
@@ -24,12 +24,12 @@ export const loadableBundle = {
 
 /** Prop bundle for components with configurable border-radius. */
 export const roundableBundle = {
-  rounded: prop.string<RoundedSize>(),
+  rounded: prop.oneOf(ROUNDED_SIZES),
 };
 
 /** Prop bundle for components with an elevation / box-shadow. */
 export const elevatableBundle = {
-  elevation: prop.number<ElevationLevel>(),
+  elevation: prop.oneOf(ELEVATION_LEVELS),
 };
 
 /**

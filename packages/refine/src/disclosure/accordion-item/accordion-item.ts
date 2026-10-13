@@ -2,7 +2,7 @@ import { define, getHost, html, inject, onMounted, prop, ref, useEmit, watchEffe
 import { elementDirection } from '../../core/direction';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin } from '../../styles';
-import type { ComponentSize, VisualVariant } from '../../types';
+import { COMPONENT_SIZES, type ComponentSize, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
 
@@ -80,8 +80,8 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
   props: {
     ...disablableBundle,
     expanded: prop.bool(false),
-    size: prop.string<ComponentSize>(),
-    variant: prop.string<VisualVariant>(),
+    size: prop.oneOf(COMPONENT_SIZES),
+    variant: prop.oneOf(VISUAL_VARIANTS),
   },
 
   setup(props) {

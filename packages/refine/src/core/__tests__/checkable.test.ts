@@ -175,12 +175,10 @@ describe('createCheckable', () => {
       const { options } = makeOptions({ checked, required });
       const ctrl = createCheckable(options);
 
-      expect(ctrl.validity.value).toEqual({ valueMissing: true });
-      expect(ctrl.validationMessage.value).toBe('This field is required.');
+      expect(ctrl.validity.value).toEqual({ flags: { valueMissing: true }, message: 'This field is required.' });
 
       checked.value = true;
       expect(ctrl.validity.value).toBeNull();
-      expect(ctrl.validationMessage.value).toBe('');
     });
 
     it('treats indeterminate as unchecked for validity purposes', () => {
@@ -191,7 +189,7 @@ describe('createCheckable', () => {
       });
       const ctrl = createCheckable(options);
 
-      expect(ctrl.validity.value).toEqual({ valueMissing: true });
+      expect(ctrl.validity.value?.flags).toEqual({ valueMissing: true });
     });
 
     it('is always valid when not required', () => {
@@ -209,7 +207,7 @@ describe('createCheckable', () => {
       });
       const ctrl = createCheckable(options);
 
-      expect(ctrl.validationMessage.value).toBe('You must agree to continue.');
+      expect(ctrl.validity.value?.message).toBe('You must agree to continue.');
     });
   });
 

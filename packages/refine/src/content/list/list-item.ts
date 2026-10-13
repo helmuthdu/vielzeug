@@ -137,7 +137,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
   props: {
     ...disablableBundle,
     actionable: prop.bool(false),
-    revealed: prop.oneOf<ListItemRevealSide | undefined>(['left', 'right'], undefined),
+    revealed: prop.oneOf(['left', 'right'] as const),
     value: prop.string(),
   },
 

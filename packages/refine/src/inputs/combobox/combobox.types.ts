@@ -1,6 +1,6 @@
 import type { OverlayOpenChangeDetail } from '../../core';
 import type { SelectableFieldProps } from '../../shared';
-import type { VisualVariant } from '../../types';
+import type { FieldVariant } from '../../types';
 
 export type OreComboboxEvents = {
   change: Event;
@@ -26,10 +26,7 @@ export type ComboboxOptionItem = {
   value: string;
 };
 
-export type OreComboboxProps = Omit<
-  SelectableFieldProps<Exclude<VisualVariant, 'text' | 'frost'>>,
-  'label-placement' | 'value'
-> & {
+export type OreComboboxProps = Omit<SelectableFieldProps<FieldVariant>, 'label-placement' | 'value'> & {
   /** Automatically close the dropdown after selecting an option (even in multiple mode) */
   autoclose?: boolean;
   /** Allow typing a new value to create a new option */

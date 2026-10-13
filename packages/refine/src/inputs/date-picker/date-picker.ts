@@ -10,9 +10,15 @@ import {
   parseIso,
   toIsoString,
 } from '../../core';
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../shared';
-
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
+import {
+  disablableBundle,
+  FIELD_VARIANTS,
+  type FieldVariant,
+  roundableBundle,
+  sizableBundle,
+  themableBundle,
+} from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './date-picker.css?inline';
@@ -68,7 +74,7 @@ export type OreDatePickerProps = {
    */
   value?: string;
   /** Visual variant */
-  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
+  variant?: FieldVariant;
   /**
    * Day-of-week indices to disable (0 = Sunday … 6 = Saturday).
    * Pass as a JSON array attribute or a JS property.
@@ -158,7 +164,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     required: prop.bool(false),
     success: prop.bool(false),
     value: prop.string(),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
+    variant: prop.oneOf(FIELD_VARIANTS),
     'weekend-days': prop.json([] as number[]),
   },
 

@@ -121,7 +121,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(['top', 'bottom', 'left', 'right'] as const, 'top'),
     trigger: prop.string('hover,focus'),
-    variant: prop.string<'dark' | 'light'>(),
+    variant: prop.oneOf(['dark', 'light'] as const),
   },
   setup(props) {
     const el = getHost();

@@ -6,7 +6,7 @@ import { createChoiceField, createListboxDropdown, lifecycleSignal } from '../..
 import type { SelectableFieldProps } from '../../shared';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
-import type { VisualVariant } from '../../types';
+import { INPUT_VARIANTS, type InputVariant } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './select.css?inline';
 
@@ -72,7 +72,7 @@ export type OreSelectEvents = {
   'open-change': OverlayOpenChangeDetail;
 };
 
-export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'frost'>> & {
+export type OreSelectProps = SelectableFieldProps<InputVariant> & {
   /** Hide the visible label while preserving the accessible name via `aria-label` */
   'hide-label'?: boolean;
   /** Show loading state in dropdown */
@@ -167,7 +167,7 @@ define<OreSelectProps>(SELECT_TAG, {
     required: prop.bool(false),
     success: prop.bool(false),
     value: prop.string(),
-    variant: prop.string<Exclude<VisualVariant, 'frost'>>(),
+    variant: prop.oneOf(INPUT_VARIANTS),
   },
   setup(props) {
     const el = getHost();
@@ -221,7 +221,6 @@ define<OreSelectProps>(SELECT_TAG, {
         disabled: choice.disabled,
         onReset: choice.reset,
         toFormValue: (v) => v,
-        validationMessage: choice.validationMessage,
         validity: choice.validity,
         value: choice.formValue,
       }),

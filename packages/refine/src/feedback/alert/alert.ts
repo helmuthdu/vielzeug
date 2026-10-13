@@ -10,6 +10,9 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
+
+const ALERT_VARIANTS = ['solid', 'flat', 'bordered'] as const;
+
 import componentStyles from './alert.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
@@ -39,7 +42,7 @@ export type OreAlertProps = {
   /** Alert size */
   size?: ComponentSize;
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'bordered';
+  variant?: (typeof ALERT_VARIANTS)[number];
 };
 
 /**
@@ -101,7 +104,7 @@ define<OreAlertProps>(ALERT_TAG, {
     embedded: prop.bool(false),
     heading: prop.string(),
     horizontal: prop.bool(false),
-    variant: prop.string<'solid' | 'flat' | 'bordered'>(),
+    variant: prop.oneOf(ALERT_VARIANTS),
   },
   setup(props) {
     const el = getHost();

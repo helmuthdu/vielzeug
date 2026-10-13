@@ -2,7 +2,7 @@ import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmi
 
 import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
 import { coarsePointerMixin, roundedVariantMixin } from '../../styles';
-import type { PaddingSize, RoundedSize } from '../../types';
+import { PADDING_SIZES, type PaddingSize, ROUNDED_SIZES } from '../../types';
 import { useDialogControl } from '../shared/use-dialog';
 
 import componentStyles from './dialog.css?inline';
@@ -10,8 +10,11 @@ import componentStyles from './dialog.css?inline';
 export { ICON_TAG } from '../../content/icon/icon';
 
 type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
-type DialogBackdrop = 'opaque' | 'blur' | 'transparent';
-type DialogElevation = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+const DIALOG_BACKDROPS = ['opaque', 'blur', 'transparent'] as const;
+type DialogBackdrop = (typeof DIALOG_BACKDROPS)[number];
+const DIALOG_ELEVATIONS = ['none', 'sm', 'md', 'lg', 'xl', '2xl'] as const;
+type DialogElevation = (typeof DIALOG_ELEVATIONS)[number];
+const DIALOG_ROUNDED = ['', ...ROUNDED_SIZES] as const;
 
 /** Dialog component properties */
 
@@ -48,7 +51,7 @@ export type OreDialogProps = {
    */
   'return-focus'?: boolean;
   /** Border radius */
-  rounded?: RoundedSize | '';
+  rounded?: (typeof DIALOG_ROUNDED)[number];
   /** Dialog size */
   size?: DialogSize;
 };
@@ -120,17 +123,17 @@ export type OreDialogProps = {
 export const DIALOG_TAG = 'ore-dialog' as const;
 define<OreDialogProps>(DIALOG_TAG, {
   props: {
-    backdrop: prop.string<DialogBackdrop>(),
+    backdrop: prop.oneOf(DIALOG_BACKDROPS),
     'default-open': prop.bool(false),
     dismissible: prop.bool(false),
-    elevation: prop.string<DialogElevation>(),
+    elevation: prop.oneOf(DIALOG_ELEVATIONS),
     'initial-focus': prop.string(),
     label: prop.string(),
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
-    padding: prop.string<PaddingSize>(),
+    padding: prop.oneOf(PADDING_SIZES),
     persistent: prop.bool(false),
     'return-focus': prop.bool(true),
-    rounded: prop.string<RoundedSize | ''>(),
+    rounded: prop.oneOf(DIALOG_ROUNDED),
     size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
   },
   setup(props) {

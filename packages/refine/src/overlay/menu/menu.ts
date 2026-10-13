@@ -39,7 +39,8 @@ export interface MenuSelectDetail {
   value: string;
 }
 
-export type OreMenuItemType = 'checkbox' | 'radio';
+export const ORE_MENU_ITEM_TYPES = ['checkbox', 'radio'] as const;
+export type OreMenuItemType = (typeof ORE_MENU_ITEM_TYPES)[number];
 
 export type OreMenuEvents = {
   'open-change': OverlayOpenChangeDetail;
@@ -104,7 +105,7 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
   props: {
     checked: prop.bool(false),
     disabled: prop.bool(false),
-    type: prop.string<OreMenuItemType>(),
+    type: prop.oneOf(ORE_MENU_ITEM_TYPES),
     value: prop.string(),
   },
   setup(props) {

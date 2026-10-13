@@ -15,7 +15,7 @@ import {
 import { computed, signal } from '@vielzeug/ripple';
 import { createListboxDropdown, lifecycleSignal, setAriaReflection } from '../../core';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
-import type { AddEventListeners, ComponentSize, RoundedSize } from '../../types';
+import { type AddEventListeners, COMPONENT_SIZES, ROUNDED_SIZES } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import componentStyles from './query-bar.css?inline';
 import type { OreQueryBarEvents, OreQueryBarProps } from './query-bar.types';
@@ -37,6 +37,7 @@ export * from './query-bar-grammar';
 
 /** Fixed row height of one suggestion; the dropdown positions rows against it. */
 const OPTION_ROW_HEIGHT = 36;
+const QUERY_BAR_VARIANTS = ['flat', 'solid', 'bordered', 'outline', 'ghost'] as const;
 
 /**
  * A search field that accepts free text and `key:value` tokens together, in the
@@ -110,10 +111,10 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
     'hide-label': prop.bool(false),
     label: prop.string(),
     placeholder: prop.string(),
-    rounded: prop.string<RoundedSize>(),
-    size: prop.string<ComponentSize>(),
+    rounded: prop.oneOf(ROUNDED_SIZES),
+    size: prop.oneOf(COMPONENT_SIZES),
     state: prop.data<QueryState>(),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
+    variant: prop.oneOf(QUERY_BAR_VARIANTS),
     vocabulary: prop.data<QueryTokenDef[]>(),
   },
   setup(props) {

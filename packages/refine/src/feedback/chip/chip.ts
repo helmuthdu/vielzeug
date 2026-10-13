@@ -8,13 +8,16 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import { COMPONENT_SIZES, ROUNDED_SIZES, THEME_COLORS } from '../../types';
 // ============================================
 // Styles
 // ============================================
 import componentStyles from './chip.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
+
+const CHIP_ROUNDED = ['', ...ROUNDED_SIZES] as const;
+const CHIP_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'frost'] as const;
 
 // ============================================
 // Types
@@ -23,7 +26,7 @@ export { ICON_TAG } from '../../content/icon/icon';
 /** Chip component properties */
 type ChipBaseProps = {
   /** Theme color */
-  color?: ThemeColor;
+  color?: (typeof THEME_COLORS)[number];
   /** Disable interactions */
   disabled?: boolean;
   /** Accessible label (required for icon-only chips) */
@@ -31,13 +34,13 @@ type ChipBaseProps = {
   /** Content layout: 'inline' (default) keeps icon and label on one line; 'stacked' places the icon above a wrapping label */
   layout?: 'inline' | 'stacked';
   /** Border radius override */
-  rounded?: RoundedSize | '';
+  rounded?: (typeof CHIP_ROUNDED)[number];
   /** Component size */
-  size?: ComponentSize;
+  size?: (typeof COMPONENT_SIZES)[number];
   /** Value associated with this chip: included in emitted event detail */
   value?: string;
   /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'text'>;
+  variant?: (typeof CHIP_VARIANTS)[number];
 };
 
 type OreChipMode = 'static' | 'removable' | 'selectable' | 'action';
@@ -168,16 +171,16 @@ define<OreChipComponentProps>(CHIP_TAG, {
       parse: (value: string | null) => (value == null ? undefined : value !== 'false'),
       reflect: false,
     },
-    color: prop.string<ThemeColor>(),
+    color: prop.oneOf(THEME_COLORS),
     'default-checked': prop.bool(false),
     disabled: prop.bool(false),
     label: prop.string(),
     layout: prop.oneOf(['inline', 'stacked'] as const, 'inline'),
     mode: prop.oneOf(['static', 'removable', 'selectable', 'action'] as const, 'static'),
-    rounded: prop.string<RoundedSize | ''>(),
-    size: prop.string<ComponentSize>(),
+    rounded: prop.oneOf(CHIP_ROUNDED),
+    size: prop.oneOf(COMPONENT_SIZES),
     value: prop.string(),
-    variant: prop.string<Exclude<VisualVariant, 'text'>>(),
+    variant: prop.oneOf(CHIP_VARIANTS),
   },
 
   setup(props) {

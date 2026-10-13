@@ -15,7 +15,7 @@ import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin } from '../../styles';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import { type ComponentSize, type ThemeColor, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import styles from './tabs.css?inline';
 
 /** Context provided by ore-tabs to its ore-tab-item and ore-tab-panel children. */
@@ -104,7 +104,7 @@ define<OreTabsProps>(TABS_TAG, {
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
     value: prop.string(),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.oneOf(VISUAL_VARIANTS),
   },
   setup(props) {
     const el = getHost();

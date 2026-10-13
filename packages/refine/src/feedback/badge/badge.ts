@@ -8,11 +8,15 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './badge.css?inline';
 
-type BadgeVariant = Extract<VisualVariant, 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'>;
-type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
+const BADGE_ANCHORS = ['top-end', 'top-start', 'bottom-end', 'bottom-start'] as const;
+const BADGE_SIZES = ['xs', 'sm', 'md', 'lg'] as const;
+const BADGE_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'frost'] as const;
+
+type BadgeVariant = (typeof BADGE_VARIANTS)[number];
+type BadgeSize = (typeof BADGE_SIZES)[number];
 
 /** Badge component properties */
 export type OreBadgeProps = {
@@ -21,7 +25,7 @@ export type OreBadgeProps = {
    * and the badge pins to a corner over the slotted content.
    * Value controls which corner: 'top-end' (default) | 'top-start' | 'bottom-end' | 'bottom-start'
    */
-  anchor?: 'top-end' | 'top-start' | 'bottom-end' | 'bottom-start';
+  anchor?: (typeof BADGE_ANCHORS)[number];
   /** Theme color */
   color?: ThemeColor;
   /** Numeric count to display */
@@ -82,14 +86,14 @@ export const BADGE_TAG = 'ore-badge' as const;
 define<OreBadgeProps>(BADGE_TAG, {
   props: {
     ...themableBundle,
-    size: prop.string<BadgeSize>(),
+    size: prop.oneOf(BADGE_SIZES),
     ...roundableBundle,
-    anchor: prop.string<'top-end' | 'top-start' | 'bottom-end' | 'bottom-start'>(),
+    anchor: prop.oneOf(BADGE_ANCHORS),
     count: prop.number(),
     dot: prop.bool(false),
     label: prop.string(),
     max: prop.number(),
-    variant: prop.string<BadgeVariant>(),
+    variant: prop.oneOf(BADGE_VARIANTS),
   },
   setup(props) {
     const label = computed(() => {

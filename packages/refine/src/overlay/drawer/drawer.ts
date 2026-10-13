@@ -23,8 +23,10 @@ import styles from './drawer.css?inline';
 export { ICON_TAG } from '../../content/icon/icon';
 
 type DrawerPlacement = 'left' | 'right' | 'top' | 'bottom';
-type DrawerSize = 'sm' | 'lg' | 'full';
-type DrawerBackdrop = 'opaque' | 'blur' | 'transparent';
+const DRAWER_SIZES = ['sm', 'lg', 'full'] as const;
+type DrawerSize = (typeof DRAWER_SIZES)[number];
+const DRAWER_BACKDROPS = ['opaque', 'blur', 'transparent'] as const;
+type DrawerBackdrop = (typeof DRAWER_BACKDROPS)[number];
 type DrawerDragHandlePlacement = 'outside' | 'inset';
 type DrawerSwipeConfig = {
   axis: PanAxis;
@@ -162,7 +164,7 @@ export type OreDrawerProps = {
 export const DRAWER_TAG = 'ore-drawer' as const;
 define<OreDrawerProps>(DRAWER_TAG, {
   props: {
-    backdrop: prop.string<DrawerBackdrop>(),
+    backdrop: prop.oneOf(DRAWER_BACKDROPS),
     'default-open': prop.bool(false),
     dismissible: prop.bool(true),
     'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'outside'),
@@ -172,7 +174,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
     persistent: prop.bool(false),
     placement: prop.oneOf(['left', 'right', 'top', 'bottom'] as const, 'right'),
     'return-focus': prop.bool(true),
-    size: prop.string<DrawerSize>(),
+    size: prop.oneOf(DRAWER_SIZES),
     title: prop.string(),
   },
   setup(props) {

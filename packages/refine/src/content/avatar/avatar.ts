@@ -6,7 +6,8 @@ import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './avatar.css?inline';
 
 export { ICON_TAG } from '../icon/icon';
-export type AvatarStatus = 'online' | 'offline' | 'busy' | 'away';
+export const AVATAR_STATUSES = ['online', 'offline', 'busy', 'away'] as const;
+export type AvatarStatus = (typeof AVATAR_STATUSES)[number];
 
 const STATUS_LABELS: Record<AvatarStatus, string> = {
   away: 'Away',
@@ -76,7 +77,7 @@ define<OreAvatarProps>(AVATAR_TAG, {
     alt: prop.string(),
     initials: prop.string(),
     src: prop.string(),
-    status: prop.string<AvatarStatus>(),
+    status: prop.oneOf(AVATAR_STATUSES),
   },
   setup(props) {
     const imgFailed = signal(false);

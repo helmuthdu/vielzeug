@@ -142,7 +142,6 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
         disabled: choice.disabled,
         onReset: choice.reset,
         toFormValue: (v) => v,
-        validationMessage: choice.validationMessage,
         validity: choice.validity,
         value: choice.formValue,
       }),

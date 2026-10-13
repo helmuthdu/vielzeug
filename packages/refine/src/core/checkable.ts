@@ -1,3 +1,4 @@
+import type { FormFieldValidity } from '@vielzeug/ore';
 import { computed, type Readable, type Signal, signal } from '@vielzeug/ripple';
 
 import { type ControlValidationMode, createDirtyTracker, createField, type FieldHandle } from './field-base';
@@ -22,7 +23,7 @@ export type CheckableOptions = {
   indeterminate?: Readable<boolean | undefined>;
   onToggle?: (payload: CheckableChangePayload) => void;
   prefix?: string;
-  /** Marks an unchecked control invalid: feeds `validity`/`validationMessage` (see below). */
+  /** Marks an unchecked control invalid: feeds `validity` (see below). */
   required?: Readable<boolean | undefined>;
   /** Message for the unchecked+required case. Defaults to `'This field is required.'`. */
   requiredMessage?: Readable<string | undefined>;
@@ -45,14 +46,12 @@ export type CheckableHandle = FieldHandle & {
    */
   reset: () => void;
   toggle: (event: Event) => void;
-  /** Reactive validation message paired with `validity`. Empty string when valid. */
-  validationMessage: Readable<string>;
   /**
-   * Reactive `ValidityStateFlags`: `{ valueMissing: true }` while `required` and unchecked
-   * (indeterminate counts as unchecked), `null` (valid) otherwise. Pass straight to
-   * `useField({ validity: checkable.validity })`.
+   * Reactive field validity: `{ flags: { valueMissing: true }, message }` while `required`
+   * and unchecked (indeterminate counts as unchecked), `null` (valid) otherwise. Pass
+   * straight to `useField({ validity: checkable.validity })`.
    */
-  validity: Readable<ValidityStateFlags | null>;
+  validity: Readable<FormFieldValidity | null>;
 };
 
 export const createCheckable = (options: CheckableOptions): CheckableHandle => {
@@ -70,11 +69,10 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
 
   const field = createField(options);
 
-  const validity = computed<ValidityStateFlags | null>(() =>
-    options.required?.value && (!checked.value || indeterminate.value) ? { valueMissing: true } : null,
-  );
-  const validationMessage = computed(() =>
-    validity.value ? options.requiredMessage?.value || 'This field is required.' : '',
+  const validity = computed<FormFieldValidity | null>(() =>
+    options.required?.value && (!checked.value || indeterminate.value)
+      ? { flags: { valueMissing: true }, message: options.requiredMessage?.value || 'This field is required.' }
+      : null,
   );
 
   const reset = (): void => {
@@ -127,7 +125,6 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
     indeterminate,
     reset,
     toggle,
-    validationMessage,
     validity,
   };
 };

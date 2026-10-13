@@ -1,9 +1,14 @@
 import { bind, define, getHost, html, onMounted, prop, ref, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { createDropdownPositioner } from '../../core';
-import type { VisualVariant } from '../../shared';
-
-import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import {
+  disablableBundle,
+  FIELD_VARIANTS,
+  type FieldVariant,
+  roundableBundle,
+  sizableBundle,
+  themableBundle,
+} from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './time-picker.css?inline';
@@ -58,7 +63,7 @@ export type OreTimePickerProps = {
   /** Selected time in HH:MM format (24-hour) */
   value?: string;
   /** Visual variant */
-  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
+  variant?: FieldVariant;
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -193,7 +198,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
     success: prop.bool(false),
     'time-format': prop.oneOf(['12', '24'] as const, '24'),
     value: prop.string(),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
+    variant: prop.oneOf(FIELD_VARIANTS),
   },
 
   setup(props) {

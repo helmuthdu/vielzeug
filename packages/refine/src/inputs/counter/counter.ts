@@ -9,8 +9,10 @@ import {
   frostVariantMixin,
   reducedMotionMixin,
 } from '../../styles';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, ThemeColor } from '../../types';
 import componentStyles from './counter.css?inline';
+
+const COUNTER_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost', 'frost'] as const;
 
 export { ICON_TAG } from '../../content/icon/icon';
 export type OreCounterChangeDetail = {
@@ -49,7 +51,7 @@ export type OreCounterProps = {
   /** Increment/decrement step (default: 1) */
   step?: number;
   /** Surface variant; 'frost' turns the panel into frosted glass over artwork */
-  variant?: Exclude<VisualVariant, 'text'>;
+  variant?: (typeof COUNTER_VARIANTS)[number];
   /** Current value */
   value?: number;
 };
@@ -133,7 +135,7 @@ define<OreCounterProps>(COUNTER_TAG, {
     readonly: prop.bool(false),
     step: prop.number(1),
     value: prop.number(0),
-    variant: prop.string<Exclude<VisualVariant, 'text'>>(),
+    variant: prop.oneOf(COUNTER_VARIANTS),
   },
   setup(props) {
     const el = getHost();

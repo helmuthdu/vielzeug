@@ -3,7 +3,7 @@ import { computed } from '@vielzeug/ripple';
 
 import { sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import { type ComponentSize, type ThemeColor, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import componentStyles from './pagination.css?inline';
 
 export { BUTTON_TAG } from '../../inputs/button/button';
@@ -107,7 +107,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
     'show-prev-next': prop.bool(false),
     siblings: prop.number(1),
     'total-pages': prop.number(1),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.oneOf(VISUAL_VARIANTS),
   },
   setup(props) {
     const el = getHost();

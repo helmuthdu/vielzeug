@@ -1,6 +1,7 @@
 import { bind, define, getHost, html, onMounted, prop, watchEffect } from '@vielzeug/ore';
 
 import { reducedMotionMixin, tableBaseMixin } from '../../styles';
+import { DENSITY_LEVELS, type DensityLevel } from '../../types';
 import componentStyles from './table.css?inline';
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -12,7 +13,7 @@ export type OreTableProps = {
   /** Visible caption text: also used as the accessible table label via `aria-label` */
   caption?: string;
   /** Cell density: `'compact'` | `'cozy'` (default) | `'comfortable'` */
-  density?: 'compact' | 'cozy' | 'comfortable';
+  density?: DensityLevel;
   /** Expands the table to 100% of its container width */
   fullwidth?: boolean;
   /** Applies a busy/disabled state with reduced opacity */
@@ -245,7 +246,7 @@ define<OreTableProps>(TABLE_TAG, {
   props: {
     bordered: prop.bool(false),
     caption: prop.string(),
-    density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
+    density: prop.oneOf(DENSITY_LEVELS),
     fullwidth: prop.bool(false),
     loading: prop.bool(false),
     sticky: prop.bool(false),

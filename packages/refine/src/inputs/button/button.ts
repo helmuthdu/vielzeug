@@ -13,7 +13,14 @@ import {
   shineEffectMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { ButtonType, ComponentSize, LinkTarget, RoundedSize, ThemeColor } from '../../types';
+import {
+  type ButtonType,
+  type ComponentSize,
+  LINK_TARGETS,
+  type LinkTarget,
+  type RoundedSize,
+  type ThemeColor,
+} from '../../types';
 import { useLinkProps } from '../../utils';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
 import { useFormAction } from '../shared';
@@ -25,7 +32,8 @@ export const BUTTON_VARIANTS = ['solid', 'flat', 'bordered', 'outline', 'ghost',
 export type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
 
 /** Animated border effect for ore-button. */
-export type ButtonEffect = 'shine' | 'rainbow';
+export const BUTTON_EFFECTS = ['shine', 'rainbow'] as const;
+export type ButtonEffect = (typeof BUTTON_EFFECTS)[number];
 
 /** Button component properties */
 export type OreButtonProps = {
@@ -118,14 +126,14 @@ define<OreButtonProps>(BUTTON_TAG, {
   formAssociated: true,
   props: {
     ...commonProps,
-    effect: prop.string<ButtonEffect>(),
+    effect: prop.oneOf(BUTTON_EFFECTS),
     fullheight: prop.bool(false),
     fullwidth: prop.bool(false),
     href: prop.string(),
     iconOnly: prop.bool(false),
     label: prop.string(),
     rel: prop.string(),
-    target: prop.string<LinkTarget>(),
+    target: prop.oneOf(LINK_TARGETS),
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
     variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
   },

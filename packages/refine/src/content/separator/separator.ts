@@ -1,6 +1,6 @@
 import { define, html, prop } from '@vielzeug/ore';
 import { colorThemeMixin } from '../../styles';
-import type { ThemeColor } from '../../types';
+import { THEME_COLORS, type ThemeColor } from '../../types';
 import componentStyles from './separator.css?inline';
 
 /** Separator component properties */
@@ -42,7 +42,7 @@ export type OreSeparatorProps = {
 export const SEPARATOR_TAG = 'ore-separator' as const;
 define<OreSeparatorProps>(SEPARATOR_TAG, {
   props: {
-    color: prop.string<ThemeColor>(),
+    color: prop.oneOf(THEME_COLORS),
     decorative: prop.bool(true),
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),

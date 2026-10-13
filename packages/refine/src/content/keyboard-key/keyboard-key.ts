@@ -3,7 +3,8 @@ import { reducedMotionMixin } from '../../styles';
 import componentStyles from './keyboard-key.css?inline';
 import shortcutStyles from './keyboard-shortcut.css?inline';
 
-export type KeyboardKeySize = 'sm' | 'lg';
+export const KEYBOARD_KEY_SIZES = ['sm', 'lg'] as const;
+export type KeyboardKeySize = (typeof KEYBOARD_KEY_SIZES)[number];
 
 export type OreKeyboardKeyProps = {
   pressed?: boolean;
@@ -32,7 +33,7 @@ export const KEYBOARD_KEY_TAG = 'ore-keyboard-key' as const;
 define<OreKeyboardKeyProps>(KEYBOARD_KEY_TAG, {
   props: {
     pressed: prop.bool(false),
-    size: prop.string<KeyboardKeySize>('sm'),
+    size: prop.oneOf(KEYBOARD_KEY_SIZES, 'sm'),
     symbol: prop.string(),
   },
   setup(props) {

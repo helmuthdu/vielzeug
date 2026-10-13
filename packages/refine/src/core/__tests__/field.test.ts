@@ -338,8 +338,7 @@ describe('field controls', () => {
         { componentOptions: { formAssociated: true } },
       );
 
-      expect(handle.validity.value).toEqual({ valueMissing: true });
-      expect(handle.validationMessage.value).toBe('Please make a selection.');
+      expect(handle.validity.value).toEqual({ flags: { valueMissing: true }, message: 'Please make a selection.' });
 
       handle.selectValue('alpha');
       expect(handle.validity.value).toBeNull();
@@ -1099,12 +1098,10 @@ describe('field controls', () => {
         { componentOptions: { formAssociated: true } },
       );
 
-      expect(handle.validity.value).toEqual({ valueMissing: true });
-      expect(handle.validationMessage.value).not.toBe('');
+      expect(handle.validity.value).toEqual({ flags: { valueMissing: true }, message: 'This field is required.' });
 
       value.value = 'hi';
       expect(handle.validity.value).toBeNull();
-      expect(handle.validationMessage.value).toBe('');
 
       value.value = '';
       required.value = false;
@@ -1135,7 +1132,7 @@ describe('field controls', () => {
       expect(handle.validity.value).toBeNull();
 
       readonly.value = false;
-      expect(handle.validity.value).toEqual({ valueMissing: true });
+      expect(handle.validity.value).toEqual({ flags: { valueMissing: true }, message: 'This field is required.' });
     });
 
     it('validity is always null when required is omitted', async () => {
@@ -1213,7 +1210,7 @@ describe('field controls', () => {
       expect(handle.value.value).toBe('updated-default');
     });
 
-    it('validationMessage falls back to a default, or uses requiredMessage when provided', async () => {
+    it('validity falls back to a default message, or uses requiredMessage when provided', async () => {
       let handle!: ReturnType<typeof createTextField>;
 
       await mount(
@@ -1233,7 +1230,7 @@ describe('field controls', () => {
         { componentOptions: { formAssociated: true } },
       );
 
-      expect(handle.validationMessage.value).toBe('Please enter your name.');
+      expect(handle.validity.value?.message).toBe('Please enter your name.');
     });
   });
 });

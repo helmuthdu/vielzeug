@@ -159,11 +159,11 @@ describe('ore-card', () => {
   it('remains interactive with arbitrary visual attributes', async () => {
     fixture = await mount('ore-card', {
       attrs: {
-        color: 'danger',
+        color: 'error',
         interactive: '',
-        orientation: 'vertical',
-        padding: '2xl',
-        variant: 'outlined',
+        orientation: 'horizontal',
+        padding: 'xl',
+        variant: 'flat',
       },
     });
 
@@ -172,10 +172,10 @@ describe('ore-card', () => {
     fixture.element.addEventListener('activate', handler);
     fireClick(fixture.element);
 
-    expect(fixture.element.getAttribute('color')).toBe('danger');
-    expect(fixture.element.getAttribute('padding')).toBe('2xl');
-    expect(fixture.element.getAttribute('variant')).toBe('outlined');
-    expect(fixture.element.getAttribute('orientation')).toBe('vertical');
+    expect(fixture.element.getAttribute('color')).toBe('error');
+    expect(fixture.element.getAttribute('padding')).toBe('xl');
+    expect(fixture.element.getAttribute('variant')).toBe('flat');
+    expect(fixture.element.getAttribute('orientation')).toBe('horizontal');
     expect(handler).toHaveBeenCalledTimes(1);
 
     fixture.dispose();

@@ -21,7 +21,7 @@ import {
   type OverlayOpenReason,
 } from '../../core';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
-import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
+import { type AddEventListeners, COMPONENT_SIZES, FIELD_VARIANTS, ROUNDED_SIZES, THEME_COLORS } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import componentStyles from './combobox.css?inline';
 import type {
@@ -109,7 +109,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
   formAssociated: true,
   props: {
     autoclose: prop.bool(false),
-    color: prop.string<ThemeColor>(),
+    color: prop.oneOf(THEME_COLORS),
     creatable: prop.bool(false),
     disabled: prop.bool(false),
     error: prop.string(),
@@ -125,11 +125,11 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     options: prop.data<ComboboxOptionInput[]>(),
     placeholder: prop.string('Select...'),
     required: prop.bool(false),
-    rounded: prop.string<RoundedSize>(),
-    size: prop.string<ComponentSize>(),
+    rounded: prop.oneOf(ROUNDED_SIZES),
+    size: prop.oneOf(COMPONENT_SIZES),
     success: prop.bool(false),
     value: prop.string(),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
+    variant: prop.oneOf(FIELD_VARIANTS),
   },
   setup(props) {
     const el = getHost();
@@ -194,7 +194,6 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
         disabled: choice.disabled,
         onReset: choice.reset,
         toFormValue: (v) => v,
-        validationMessage: choice.validationMessage,
         validity: choice.validity,
         value: choice.formValue,
       }),

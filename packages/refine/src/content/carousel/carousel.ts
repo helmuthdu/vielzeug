@@ -2,7 +2,7 @@ import { createPanGesture } from '@vielzeug/gesture';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { announce, createListControl, lifecycleSignal } from '../../core';
-import type { ThemeColor } from '../../types';
+import { THEME_COLORS, type ThemeColor } from '../../types';
 import componentStyles from './carousel.css?inline';
 import './carousel-slide';
 
@@ -11,8 +11,10 @@ export { PROGRESS_TAG } from '../../feedback/progress/progress';
 export { CAROUSEL_SLIDE_TAG } from './carousel-slide';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type CarouselOrientation = 'horizontal' | 'vertical';
-export type CarouselVariant = 'default' | 'fade' | 'filmstrip' | 'gallery';
+export const CAROUSEL_ORIENTATIONS = ['horizontal', 'vertical'] as const;
+export type CarouselOrientation = (typeof CAROUSEL_ORIENTATIONS)[number];
+export const CAROUSEL_VARIANTS = ['default', 'fade', 'filmstrip', 'gallery'] as const;
+export type CarouselVariant = (typeof CAROUSEL_VARIANTS)[number];
 
 export type OreCarouselEvents = {
   /** Fired when the active slide changes. */
@@ -160,14 +162,14 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
   props: {
     autoplay: prop.bool(false),
     'autoplay-interval': prop.number(5000),
-    color: prop.string<ThemeColor>(),
+    color: prop.oneOf(THEME_COLORS),
     label: prop.string('Carousel'),
     loop: prop.bool(true),
-    orientation: prop.string<CarouselOrientation>('horizontal'),
+    orientation: prop.oneOf(CAROUSEL_ORIENTATIONS, 'horizontal'),
     'show-controls': prop.bool(true),
     'show-indicators': prop.bool(true),
     'slide-index': prop.number(0),
-    variant: prop.string<CarouselVariant>('default'),
+    variant: prop.oneOf(CAROUSEL_VARIANTS, 'default'),
   },
 
   setup(props) {

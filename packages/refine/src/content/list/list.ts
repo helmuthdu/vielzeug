@@ -7,7 +7,8 @@ import type { ComponentSize } from '../../types';
 import componentStyles from './list.css?inline';
 
 /** Visual variant for `ore-list`. */
-export type ListVariant = 'bordered' | 'plain' | 'separated';
+export const LIST_VARIANTS = ['bordered', 'plain', 'separated'] as const;
+export type ListVariant = (typeof LIST_VARIANTS)[number];
 
 /** Context provided by `ore-list` to its `ore-list-item` children. */
 export type ListContext = {
@@ -104,7 +105,7 @@ define<OreListProps>(LIST_TAG, {
     ...sizableBundle,
     selectable: prop.bool(false),
     value: prop.string(),
-    variant: prop.string<ListVariant>(),
+    variant: prop.oneOf(LIST_VARIANTS),
   },
 
   setup(props) {

@@ -8,7 +8,8 @@ import componentStyles from './chat-message.css?inline';
 
 export { ICON_TAG } from '../icon/icon';
 export type ChatMessageSender = 'assistant' | 'system' | 'user';
-export type ChatMessageStatus = 'error' | 'sending' | 'sent';
+export const CHAT_MESSAGE_STATUSES = ['error', 'sending', 'sent'] as const;
+export type ChatMessageStatus = (typeof CHAT_MESSAGE_STATUSES)[number];
 
 const SENDER_LABELS: Record<ChatMessageSender, string> = {
   assistant: 'Assistant',
@@ -104,7 +105,7 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
     error: prop.string(),
     name: prop.string(),
     sender: prop.oneOf(['user', 'assistant', 'system'] as const, 'assistant'),
-    status: prop.string<ChatMessageStatus>(),
+    status: prop.oneOf(CHAT_MESSAGE_STATUSES),
     streaming: prop.bool(false),
     timestamp: prop.string(),
   },

@@ -129,7 +129,6 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
         disabled: checkable.disabled,
         onReset: checkable.reset,
         toFormValue: (v) => v,
-        validationMessage: checkable.validationMessage,
         validity: checkable.validity,
         value: checkable.checkableFormValue,
       }),

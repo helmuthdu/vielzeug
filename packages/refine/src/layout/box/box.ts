@@ -7,15 +7,27 @@ import {
   rainbowEffectMixin,
   roundedVariantMixin,
 } from '../../styles';
-import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
+import {
+  ELEVATION_LEVELS,
+  type ElevationLevel,
+  PADDING_SIZES,
+  type PaddingSize,
+  ROUNDED_SIZES,
+  type RoundedSize,
+  THEME_COLORS,
+  type ThemeColor,
+} from '../../types';
 import componentStyles from './box.css?inline';
+
+const BOX_EFFECTS = ['rainbow'] as const;
+const BOX_VARIANTS = ['flat', 'solid', 'frost'] as const;
 
 /** Box component properties */
 export type OreBoxProps = {
   /** Theme color */
   color?: ThemeColor;
   /** Animated border effect */
-  effect?: 'rainbow';
+  effect?: (typeof BOX_EFFECTS)[number];
   /** Shadow elevation level (0–5) */
   elevation?: ElevationLevel;
   /** Full width mode (100% of container) */
@@ -25,7 +37,7 @@ export type OreBoxProps = {
   /** Border radius size */
   rounded?: RoundedSize;
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'frost';
+  variant?: (typeof BOX_VARIANTS)[number];
 };
 
 /**
@@ -63,13 +75,13 @@ export type OreBoxProps = {
 export const BOX_TAG = 'ore-box' as const;
 define<OreBoxProps>(BOX_TAG, {
   props: {
-    color: prop.string<ThemeColor>(),
-    effect: prop.string<'rainbow'>(),
-    elevation: prop.number<ElevationLevel>(),
+    color: prop.oneOf(THEME_COLORS),
+    effect: prop.oneOf(BOX_EFFECTS),
+    elevation: prop.oneOf(ELEVATION_LEVELS),
     fullwidth: prop.bool(),
-    padding: prop.string<PaddingSize>(),
-    rounded: prop.string<RoundedSize>(),
-    variant: prop.string<'flat' | 'solid' | 'frost'>(),
+    padding: prop.oneOf(PADDING_SIZES),
+    rounded: prop.oneOf(ROUNDED_SIZES),
+    variant: prop.oneOf(BOX_VARIANTS),
   },
   setup() {
     return html`

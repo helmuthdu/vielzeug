@@ -22,12 +22,22 @@ import {
   reducedMotionMixin,
   roundedVariantMixin,
 } from '../../styles';
-import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import {
+  ELEVATION_LEVELS,
+  type ElevationLevel,
+  ROUNDED_SIZES,
+  type RoundedSize,
+  THEME_COLORS,
+  type ThemeColor,
+} from '../../types';
 import { computeSafeRel } from '../../utils';
 import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
 import navbarStyles from './navbar.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
+
+const NAVBAR_VARIANTS = ['flat', 'solid', 'bordered', 'outline', 'frost'] as const;
+type NavbarVariant = (typeof NAVBAR_VARIANTS)[number];
 
 const listen = <E extends Event = Event>(
   el: EventTarget | null | undefined,
@@ -129,7 +139,7 @@ export type OreNavbarProps = {
   /** Stick to top of viewport */
   sticky?: boolean;
   /** Visual style variant */
-  variant?: Exclude<VisualVariant, 'ghost' | 'text'>;
+  variant?: NavbarVariant;
 };
 
 /** Navbar item properties */
@@ -225,9 +235,9 @@ export const NAVBAR_TAG = 'ore-navbar' as const;
 define<OreNavbarProps>(NAVBAR_TAG, {
   props: {
     breakpoint: prop.string('(max-width: 768px)'),
-    color: prop.string<ThemeColor>(),
+    color: prop.oneOf(THEME_COLORS),
     'container-breakpoints': prop.bool(false),
-    elevation: prop.number<ElevationLevel>(),
+    elevation: prop.oneOf(ELEVATION_LEVELS),
     floating: prop.bool(false),
     label: prop.string('Main navigation'),
     'menu-close-icon': prop.string('x'),
@@ -235,10 +245,10 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     'menu-icon': prop.string('menu'),
     'menu-open-label': prop.string('Open navigation menu'),
     'mobile-sidebar': prop.string(),
-    rounded: prop.string<RoundedSize>(),
+    rounded: prop.oneOf(ROUNDED_SIZES),
     'scroll-threshold': prop.number(80),
     sticky: prop.bool(false),
-    variant: prop.string<Exclude<VisualVariant, 'ghost' | 'text'>>(),
+    variant: prop.oneOf(NAVBAR_VARIANTS),
   },
   setup(props) {
     const el = getHost();

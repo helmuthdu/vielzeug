@@ -1,3 +1,4 @@
+import type { FormFieldValidity } from '@vielzeug/ore';
 import { computed, type Readable, type Signal } from '@vielzeug/ripple';
 
 import { type CounterState, createCounterState, createField, type FieldHandle, type FieldOptions } from './field-base';
@@ -23,11 +24,11 @@ export type TextFieldOptions = FieldOptions & {
   /**
    * Bars the field from constraint validation while true: matches the native HTML rule that a
    * `readonly` field is never a candidate for constraint validation (a `readonly required`
-   * field is always valid, per spec), so `validity`/`validationMessage` don't feed a false
-   * `valueMissing` into `useField()` just because a read-only field happens to be blank.
+   * field is always valid, per spec), so `validity` doesn't feed a false `valueMissing`
+   * into `useField()` just because a read-only field happens to be blank.
    */
   readonly?: Readable<boolean | undefined>;
-  /** Marks a blank value invalid: feeds `validity`/`validationMessage` (see below). */
+  /** Marks a blank value invalid: feeds `validity` (see below). */
   required?: Readable<boolean | undefined>;
   /** Message for the blank+required case. Defaults to `'This field is required.'`. */
   requiredMessage?: Readable<string | undefined>;
@@ -64,13 +65,12 @@ export type TextFieldHandle = FieldHandle & {
    * after mount changes what a later reset reverts to). Wire into `useField({ onReset: tf.reset })`.
    */
   reset: () => void;
-  /** Reactive validation message paired with `validity`. Empty string when valid. */
-  validationMessage: Readable<string>;
   /**
-   * Reactive `ValidityStateFlags`: `{ valueMissing: true }` while `required` and blank,
-   * `null` (valid) otherwise. Pass straight to `useField({ validity: tf.validity })`.
+   * Reactive field validity: `{ flags: { valueMissing: true }, message }` while `required`
+   * and blank (a readonly field is always valid, per spec), `null` (valid) otherwise.
+   * Pass straight to `useField({ validity: tf.validity })`.
    */
-  validity: Readable<ValidityStateFlags | null>;
+  validity: Readable<FormFieldValidity | null>;
   /** The local mutable field value (two-way bound to the input element via `wire()`). */
   value: Signal<string>;
   /**
@@ -96,11 +96,10 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
   const field = createField(options);
   const counter = options.maxLength ? createCounterState({ maxLength: options.maxLength, value }) : null;
 
-  const validity = computed<ValidityStateFlags | null>(() =>
-    !options.readonly?.value && options.required?.value && isBlank(value.value) ? { valueMissing: true } : null,
-  );
-  const validationMessage = computed(() =>
-    validity.value ? options.requiredMessage?.value || 'This field is required.' : '',
+  const validity = computed<FormFieldValidity | null>(() =>
+    !options.readonly?.value && options.required?.value && isBlank(value.value)
+      ? { flags: { valueMissing: true }, message: options.requiredMessage?.value || 'This field is required.' }
+      : null,
   );
 
   const reset = (): void => {
@@ -159,5 +158,5 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     return detach;
   };
 
-  return { ...field, clear, counter, reset, validationMessage, validity, value, wire };
+  return { ...field, clear, counter, reset, validity, value, wire };
 };

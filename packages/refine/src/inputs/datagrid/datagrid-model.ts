@@ -26,7 +26,8 @@ export type DataGridColumn<T = Record<string, unknown>> = {
   width?: string;
 };
 
-export type SelectionMode = 'multi' | 'none' | 'single';
+export const SELECTION_MODES = ['multi', 'none', 'single'] as const;
+export type SelectionMode = (typeof SELECTION_MODES)[number];
 
 export type FilterOption = {
   key: string;

@@ -1,3 +1,4 @@
+import type { FormFieldValidity } from '@vielzeug/ore';
 import { computed, type Readable, watch } from '@vielzeug/ripple';
 
 import { createDirtyTracker, createField, type FieldHandle, type FieldOptions } from './field-base';
@@ -15,7 +16,7 @@ export type ChoiceChangeDetail = {
 
 export type ChoiceFieldOptions = FieldOptions & {
   multiple?: Readable<boolean | undefined>;
-  /** Marks an empty selection invalid: feeds `validity`/`validationMessage` (see below). */
+  /** Marks an empty selection invalid: feeds `validity` (see below). */
   required?: Readable<boolean | undefined>;
   /** Message for the empty-selection+required case. Defaults to `'Please make a selection.'`. */
   requiredMessage?: Readable<string | undefined>;
@@ -49,13 +50,12 @@ export type ChoiceFieldHandle = FieldHandle & {
    *   deselect; use `clear()` to reset a single-select field).
    */
   toggleValue: (value: string) => void;
-  /** Reactive validation message paired with `validity`. Empty string when valid. */
-  validationMessage: Readable<string>;
   /**
-   * Reactive `ValidityStateFlags`: `{ valueMissing: true }` while `required` and no option is
-   * selected, `null` (valid) otherwise. Pass straight to `useField({ validity: choice.validity })`.
+   * Reactive field validity: `{ flags: { valueMissing: true }, message }` while `required`
+   * and no option is selected, `null` (valid) otherwise. Pass straight to
+   * `useField({ validity: choice.validity })`.
    */
-  validity: Readable<ValidityStateFlags | null>;
+  validity: Readable<FormFieldValidity | null>;
 };
 
 const parseChoiceValues = (raw: string | string[] | undefined): string[] => {
@@ -129,11 +129,10 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
 
   const field = createField(options);
 
-  const validity = computed<ValidityStateFlags | null>(() =>
-    options.required?.value && selectedValues.value.length === 0 ? { valueMissing: true } : null,
-  );
-  const validationMessage = computed(() =>
-    validity.value ? options.requiredMessage?.value || 'Please make a selection.' : '',
+  const validity = computed<FormFieldValidity | null>(() =>
+    options.required?.value && selectedValues.value.length === 0
+      ? { flags: { valueMissing: true }, message: options.requiredMessage?.value || 'Please make a selection.' }
+      : null,
   );
 
   if (options.multiple) {
@@ -160,7 +159,6 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
     selectValue,
     setValues,
     toggleValue,
-    validationMessage,
     validity,
   };
 };

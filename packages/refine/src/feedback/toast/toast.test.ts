@@ -64,7 +64,7 @@ describe('ore-toast', () => {
 
     await completeExit(fixture.flush);
 
-    expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
+    await eventually(() => expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull());
     expect(dismissed).toHaveBeenCalledOnce();
   });
 
@@ -76,7 +76,7 @@ describe('ore-toast', () => {
     await fixture.flush();
     await completeExit(fixture.flush);
 
-    expect(fixture.query('ore-alert')).toBeNull();
+    await eventually(() => expect(fixture.query('ore-alert')).toBeNull());
   });
 
   it('styles snackbar entries as inverted compact bars with text-style actions', async () => {
@@ -131,7 +131,7 @@ describe('ore-toast', () => {
     await delay(80);
 
     await completeExit(fixture.flush);
-    expect(fixture.query('ore-alert')).toBeNull();
+    await eventually(() => expect(fixture.query('ore-alert')).toBeNull());
   });
 
   it('dismisses a toast after a committed swipe', async () => {
@@ -159,7 +159,7 @@ describe('ore-toast', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerup', { ...swipeEventInit, clientX: 300 }));
     await completeExit(fixture.flush);
 
-    expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
+    await eventually(() => expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull());
 
     window.matchMedia = originalMatchMedia;
   });
@@ -373,7 +373,7 @@ describe('ore-toast', () => {
     close.click();
     await completeExit(fixture.flush);
 
-    expect(root.activeElement).toBe(trigger);
+    await eventually(() => expect(root.activeElement).toBe(trigger));
     host.remove();
   });
 
@@ -399,7 +399,7 @@ describe('ore-toast', () => {
     dialog.dispatchEvent(new Event('toggle'));
     await completeExit(fixture.flush);
 
-    expect(fixture.query('ore-alert')).toBeNull();
+    await eventually(() => expect(fixture.query('ore-alert')).toBeNull());
     dialog.remove();
   });
 

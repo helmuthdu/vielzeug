@@ -10,7 +10,11 @@ import {
   reducedMotionMixin,
   roundedVariantMixin,
 } from '../../styles';
-import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
+import { ELEVATION_LEVELS, type ElevationLevel, PADDING_SIZES, type PaddingSize, type ThemeColor } from '../../types';
+
+const CARD_ORIENTATIONS = ['horizontal'] as const;
+const CARD_VARIANTS = ['solid', 'flat', 'frost'] as const;
+
 import componentStyles from './card.css?inline';
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
@@ -48,11 +52,11 @@ export type OreCardProps = {
   /** Show a loading progress bar */
   loading?: boolean;
   /** Card orientation */
-  orientation?: 'horizontal';
+  orientation?: (typeof CARD_ORIENTATIONS)[number];
   /** Internal padding size */
   padding?: PaddingSize;
   /** Visual style variant */
-  variant?: 'solid' | 'flat' | 'frost';
+  variant?: (typeof CARD_VARIANTS)[number];
 };
 
 /**
@@ -107,11 +111,11 @@ define<OreCardProps>(CARD_TAG, {
     ...themableBundle,
     ...disablableBundle,
     ...loadableBundle,
-    elevation: prop.number<ElevationLevel>(),
+    elevation: prop.oneOf(ELEVATION_LEVELS),
     interactive: prop.bool(false),
-    orientation: prop.string<'horizontal'>(),
-    padding: prop.string<PaddingSize>(),
-    variant: prop.string<'solid' | 'flat' | 'frost'>(),
+    orientation: prop.oneOf(CARD_ORIENTATIONS),
+    padding: prop.oneOf(PADDING_SIZES),
+    variant: prop.oneOf(CARD_VARIANTS),
   },
 
   setup(props) {

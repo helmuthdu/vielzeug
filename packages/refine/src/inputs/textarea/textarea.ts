@@ -3,7 +3,7 @@ import {
   define,
   getHost,
   html,
-  live,
+  model,
   onCleanup,
   onElement,
   prop,
@@ -25,11 +25,13 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { VisualVariant } from '../../types';
+import { FIELD_VARIANTS, type FieldVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
 import componentStyles from './textarea.css?inline';
+
+const TEXTAREA_RESIZE = ['none', 'both', 'horizontal', 'vertical'] as const;
 
 export { ICON_TAG } from '../../content/icon/icon';
 /** Textarea component properties */
@@ -39,7 +41,7 @@ export type OreTextareaEvents = {
   input: InputEvent;
 };
 
-export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | 'text'>> & {
+export type OreTextareaProps = TextFieldProps<FieldVariant> & {
   /** Allow auto-grow with content */
   'auto-resize'?: boolean;
   /**
@@ -60,7 +62,7 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
    */
   ref?: ((el: HTMLTextAreaElement | null) => void) | null;
   /** Resize direction override */
-  resize?: 'none' | 'horizontal' | 'both' | 'vertical';
+  resize?: (typeof TEXTAREA_RESIZE)[number];
   /** Number of visible text rows */
   rows?: number;
 };
@@ -151,11 +153,11 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     readonly: prop.bool(false),
     ref: prop.data<((el: HTMLTextAreaElement | null) => void) | null>(),
     required: prop.bool(false),
-    resize: prop.string<'none' | 'both' | 'horizontal' | 'vertical'>(),
+    resize: prop.oneOf(TEXTAREA_RESIZE),
     rows: prop.json(undefined as number | undefined),
     success: prop.bool(false),
     value: prop.string(),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
+    variant: prop.oneOf(FIELD_VARIANTS),
   },
   setup(props) {
     const el = getHost();
@@ -205,7 +207,6 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
           requestAnimationFrame(() => autoResize.recompute());
         },
         toFormValue: (v) => v,
-        validationMessage: tf.validationMessage,
         validity: tf.validity,
         value: tf.value,
       }),
@@ -277,7 +278,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
             ?disabled="${isDisabled}"
             ?readonly="${props.readonly}"
             ?required="${props.required}"
-            value="${live(tf.value)}"
+            value="${model(tf.value)}"
             aria-describedby="${ariaDescribedBy}"
             aria-errormessage="${ariaErrorMessage}"
             aria-invalid="${ariaInvalid}"

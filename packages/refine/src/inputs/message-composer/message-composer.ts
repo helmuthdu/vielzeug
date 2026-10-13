@@ -3,7 +3,7 @@ import {
   define,
   getHost,
   html,
-  live,
+  model,
   onCleanup,
   onElement,
   prop,
@@ -38,7 +38,8 @@ import {
   reducedMotionMixin,
   sizeVariantMixin,
 } from '../../styles';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, ThemeColor } from '../../types';
+import { FIELD_VARIANTS, type FieldVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
@@ -114,7 +115,7 @@ export type OreMessageComposerProps = {
   /** Current text value */
   value?: string;
   /** Visual variant of the card: same variant set as `ore-textarea`, applied to the card. */
-  variant?: Exclude<VisualVariant, 'frost' | 'text'>;
+  variant?: FieldVariant;
 };
 
 /**
@@ -211,7 +212,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     'send-shortcut': prop.oneOf(['enter', 'mod+enter'] as const, 'enter'),
     success: prop.bool(false),
     value: prop.string(),
-    variant: prop.string<Exclude<VisualVariant, 'frost' | 'text'>>(),
+    variant: prop.oneOf(FIELD_VARIANTS),
   },
   setup(props) {
     const el = getHost();
@@ -259,7 +260,6 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
           autoResize.recompute();
         },
         toFormValue: (v) => v,
-        validationMessage: tf.validationMessage,
         validity: tf.validity,
         value: tf.value,
       }),
@@ -326,7 +326,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
           ?disabled="${isDisabled}"
           ?readonly="${() => Boolean(props.readonly.value)}"
           ?required="${() => Boolean(props.required.value)}"
-          value="${live(tf.value)}"
+          value="${model(tf.value)}"
           aria-label="${() => props.label.value || 'Message'}"
           aria-keyshortcuts="${composer.keyShortcutsHint}"
           aria-describedby="${tf.ariaDescribedBy}"

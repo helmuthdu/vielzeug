@@ -1,7 +1,10 @@
 import { bind, createContext, define, getHost, html, onCleanup, prop, provide, useEmit } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
 import { createListControl, lifecycleSignal } from '../../core';
-import type { ComponentSize, VisualVariant } from '../../types';
+import { COMPONENT_SIZES, type ComponentSize, VISUAL_VARIANTS, type VisualVariant } from '../../types';
+
+const ACCORDION_SELECTION_MODES = ['single', 'multiple'] as const;
+
 import styles from './accordion.css?inline';
 
 /** Context provided by ore-accordion to its ore-accordion-item children. */
@@ -21,7 +24,7 @@ export type OreAccordionEvents = {
 
 export type OreAccordionProps = {
   /** Selection mode (single = only one opens, multiple = multiple can be open) */
-  selectionMode?: 'single' | 'multiple';
+  selectionMode?: (typeof ACCORDION_SELECTION_MODES)[number];
   /** Size for all items (propagated via context) */
   size?: ComponentSize;
   /** Visual variant for all items (propagated via context) */
@@ -68,9 +71,9 @@ export type OreAccordionProps = {
 export const ACCORDION_TAG = 'ore-accordion' as const;
 define<OreAccordionProps>(ACCORDION_TAG, {
   props: {
-    selectionMode: prop.string<'single' | 'multiple'>(),
-    size: prop.string<ComponentSize>(),
-    variant: prop.string<VisualVariant>(),
+    selectionMode: prop.oneOf(ACCORDION_SELECTION_MODES),
+    size: prop.oneOf(COMPONENT_SIZES),
+    variant: prop.oneOf(VISUAL_VARIANTS),
   },
 
   setup(props) {

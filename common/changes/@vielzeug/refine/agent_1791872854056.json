@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "adopt prop.oneOf() for union-valued props, model() for text-field bindings, and the single useField validity signal",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

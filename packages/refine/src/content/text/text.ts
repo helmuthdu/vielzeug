@@ -2,38 +2,46 @@ import { bind, define, html, prop } from '@vielzeug/ore';
 
 import styles from './text.css?inline';
 
+const TEXT_ALIGNMENTS = ['left', 'center', 'right', 'justify'] as const;
+const TEXT_ELEMENTS = ['span', 'p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'label', 'code'] as const;
+const TEXT_COLORS = [
+  'primary',
+  'secondary',
+  'info',
+  'success',
+  'warning',
+  'error',
+  'heading',
+  'body',
+  'muted',
+  'tertiary',
+  'disabled',
+  'contrast',
+] as const;
+const TEXT_SIZES = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const;
+const TEXT_VARIANTS = ['body', 'heading', 'label', 'caption', 'overline', 'code'] as const;
+const TEXT_WEIGHTS = ['normal', 'medium', 'semibold', 'bold'] as const;
+
 /** Text component properties */
 export type OreTextProps = {
   /** Text alignment */
-  align?: 'left' | 'center' | 'right' | 'justify';
+  align?: (typeof TEXT_ALIGNMENTS)[number];
   /** Semantic HTML element to render as: sets the correct ARIA role/level on the host */
-  as?: 'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code';
+  as?: (typeof TEXT_ELEMENTS)[number];
   /** Text color (semantic + theme colors) */
-  color?:
-    | 'primary'
-    | 'secondary'
-    | 'info'
-    | 'success'
-    | 'warning'
-    | 'error'
-    | 'heading'
-    | 'body'
-    | 'muted'
-    | 'tertiary'
-    | 'disabled'
-    | 'contrast';
+  color?: (typeof TEXT_COLORS)[number];
   /** Italic text style */
   italic?: boolean;
   /** Clamp text to N lines with an ellipsis (multi-line truncation) */
   lines?: number;
   /** Text size: maps to --text-* tokens for body variants and --heading-* tokens for the heading variant */
-  size?: '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  size?: (typeof TEXT_SIZES)[number];
   /** Enable single-line text truncation with ellipsis */
   truncate?: boolean;
   /** Text semantic variant */
-  variant?: 'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code';
+  variant?: (typeof TEXT_VARIANTS)[number];
   /** Font weight */
-  weight?: 'normal' | 'medium' | 'semibold' | 'bold';
+  weight?: (typeof TEXT_WEIGHTS)[number];
 };
 
 /**
@@ -72,28 +80,15 @@ export type OreTextProps = {
 export const TEXT_TAG = 'ore-text' as const;
 define<OreTextProps>(TEXT_TAG, {
   props: {
-    align: prop.string<'left' | 'center' | 'right' | 'justify'>(),
-    as: prop.string<'span' | 'p' | 'div' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'label' | 'code'>(),
-    color: prop.string<
-      | 'primary'
-      | 'secondary'
-      | 'info'
-      | 'success'
-      | 'warning'
-      | 'error'
-      | 'heading'
-      | 'body'
-      | 'muted'
-      | 'tertiary'
-      | 'disabled'
-      | 'contrast'
-    >(),
+    align: prop.oneOf(TEXT_ALIGNMENTS),
+    as: prop.oneOf(TEXT_ELEMENTS),
+    color: prop.oneOf(TEXT_COLORS),
     italic: prop.bool(),
     lines: prop.number(),
-    size: prop.string<'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'>(),
+    size: prop.oneOf(TEXT_SIZES),
     truncate: prop.bool(),
-    variant: prop.string<'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'>(),
-    weight: prop.string<'normal' | 'medium' | 'semibold' | 'bold'>(),
+    variant: prop.oneOf(TEXT_VARIANTS),
+    weight: prop.oneOf(TEXT_WEIGHTS),
   },
   setup(props) {
     bind({

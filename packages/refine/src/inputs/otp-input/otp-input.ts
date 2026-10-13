@@ -3,7 +3,8 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, ThemeColor } from '../../types';
+import { FIELD_VARIANTS, type FieldVariant } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './otp-input.css?inline';
 
@@ -36,7 +37,7 @@ export type OreOtpInputProps = {
   /** Current value */
   value?: string;
   /** Visual variant */
-  variant?: Exclude<VisualVariant, 'text' | 'frost'>;
+  variant?: FieldVariant;
 };
 
 /**
@@ -97,7 +98,7 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
     separator: prop.string(),
     type: prop.oneOf(['numeric', 'alphanumeric'] as const, 'numeric'),
     value: prop.string(),
-    variant: prop.string<Exclude<VisualVariant, 'text' | 'frost'>>(),
+    variant: prop.oneOf(FIELD_VARIANTS),
   },
   setup(props) {
     const el = getHost();

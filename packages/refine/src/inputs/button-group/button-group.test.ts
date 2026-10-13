@@ -42,9 +42,9 @@ describe('ore-button-group', () => {
     });
 
     it('applies variant', async () => {
-      fixture = await mount('ore-button-group', { attrs: { variant: 'outlined' } });
+      fixture = await mount('ore-button-group', { attrs: { variant: 'outline' } });
 
-      expect(fixture.element.getAttribute('variant')).toBe('outlined');
+      expect(fixture.element.getAttribute('variant')).toBe('outline');
     });
 
     it('applies attached', async () => {
@@ -73,7 +73,7 @@ describe('ore-button-group', () => {
   });
 
   describe('Colors', () => {
-    for (const color of ['primary', 'secondary', 'success', 'warning', 'danger']) {
+    for (const color of ['primary', 'secondary', 'success', 'warning', 'error']) {
       it(`applies ${color} color`, async () => {
         fixture = await mount('ore-button-group', { attrs: { color } });
 

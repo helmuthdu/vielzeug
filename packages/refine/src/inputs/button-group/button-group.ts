@@ -1,8 +1,14 @@
 import { createContext, define, html, prop, provide } from '@vielzeug/ore';
 import type { Readable } from '@vielzeug/ripple';
-
-import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
-import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import {
+  type ComponentSize,
+  type RoundedSize,
+  roundableBundle,
+  sizableBundle,
+  type ThemeColor,
+  themableBundle,
+  VISUAL_VARIANTS,
+} from '../../shared';
 import { roundedVariantMixin } from '../../styles';
 import type { ButtonVariant } from '../button/button';
 import componentStyles from './button-group.css?inline';
@@ -72,6 +78,8 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('O
  * </ore-button-group>
  * ```
  */
+const BUTTON_GROUP_ORIENTATIONS = ['horizontal', 'vertical'] as const;
+
 export const BUTTON_GROUP_TAG = 'ore-button-group' as const;
 define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
   props: {
@@ -81,8 +89,8 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
     attached: prop.bool(false),
     fullwidth: prop.bool(false),
     label: prop.string(),
-    orientation: prop.string<'horizontal' | 'vertical'>(),
-    variant: prop.string(),
+    orientation: prop.oneOf(BUTTON_GROUP_ORIENTATIONS),
+    variant: prop.oneOf(VISUAL_VARIANTS),
   },
   setup(props) {
     provide(BUTTON_GROUP_CTX, {

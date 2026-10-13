@@ -141,7 +141,7 @@ define<OreCookieBannerProps>(COOKIE_BANNER_TAG, {
     consent: prop.data<CookieConsentRecord>({}),
     hideOnDecide: prop.bool(true),
     labels: prop.data<Partial<OreCookieBannerLabels>>({}),
-    position: prop.string<'bottom' | 'top'>(),
+    position: prop.oneOf(['bottom', 'top'] as const),
   },
   setup(props) {
     const host = getHost() as CookieBannerElement;

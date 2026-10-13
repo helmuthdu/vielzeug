@@ -116,7 +116,7 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
     helper: prop.string(),
     label: prop.string(),
     name: prop.string(),
-    orientation: prop.string('vertical'),
+    orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
     required: prop.bool(false),
     // Not auto-reflected (`reflect: false`): the derived, interaction-updated selection
     // (`choice.formValue`) is the single writer for this attribute, via `bind()` below;
@@ -146,7 +146,6 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
         disabled: choice.disabled,
         onReset: choice.reset,
         toFormValue: (v) => v,
-        validationMessage: choice.validationMessage,
         validity: choice.validity,
         value: choice.formValue,
       }),

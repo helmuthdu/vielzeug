@@ -1,7 +1,7 @@
 import { bind, define, getHost, html, inject, prop, useSlots, watchEffect } from '@vielzeug/ore';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
-import type { ComponentSize, ThemeColor } from '../../types';
+import { COMPONENT_SIZES, type ComponentSize, THEME_COLORS, type ThemeColor } from '../../types';
 import { isStepNavigable } from './_is-step-navigable';
 import stepStyles from './step.css?inline';
 import { STEPPER_CTX } from './stepper';
@@ -71,11 +71,11 @@ export const STEP_TAG = 'ore-step' as const;
 define<OreStepProps>(STEP_TAG, {
   props: {
     ...disablableBundle,
-    color: prop.string<ThemeColor>(),
+    color: prop.oneOf(THEME_COLORS),
     error: prop.bool(false),
     optional: prop.bool(false),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
-    size: prop.string<ComponentSize>(),
+    size: prop.oneOf(COMPONENT_SIZES),
     value: prop.string(''),
   },
   setup(props) {

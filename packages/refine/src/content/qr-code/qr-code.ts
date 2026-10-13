@@ -77,11 +77,13 @@ const cssSize = (size: ComponentSize | number): number => (typeof size === 'numb
  * <ore-qr-code value="otpauth://…" error-correction="H" size="256"></ore-qr-code>
  * ```
  */
+const QR_ERROR_CORRECTIONS = ['L', 'M', 'Q', 'H'] as const satisfies readonly QrErrorCorrection[];
+
 export const QR_CODE_TAG = 'ore-qr-code' as const;
 
 define<OreQrCodeProps>(QR_CODE_TAG, {
   props: {
-    'error-correction': prop.string<QrErrorCorrection>('M'),
+    'error-correction': prop.oneOf(QR_ERROR_CORRECTIONS, 'M'),
     label: prop.string('QR code'),
     margin: prop.number(4),
     ...roundableBundle,
@@ -90,7 +92,7 @@ define<OreQrCodeProps>(QR_CODE_TAG, {
       parse: (v) => (v !== null && /^\d+$/.test(v) ? Number(v) : ((v ?? 'md') as ComponentSize)),
     },
     value: prop.string(''),
-    variant: prop.string<'flat' | 'card'>('flat'),
+    variant: prop.oneOf(['flat', 'card'] as const, 'flat'),
   },
 
   setup(props) {

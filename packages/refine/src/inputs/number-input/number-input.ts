@@ -4,7 +4,7 @@ import { computed, watch as rippleWatch, signal } from '@vielzeug/ripple';
 import { createSpinnerControl } from '../../core';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledLoadingMixin } from '../../styles';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import { type ComponentSize, type ThemeColor, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './number-input.css?inline';
 
@@ -142,7 +142,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     step: prop.number(1),
     success: prop.bool(false),
     value: prop.json(undefined as number | undefined),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.oneOf(VISUAL_VARIANTS),
   },
   setup(props) {
     const el = getHost();
