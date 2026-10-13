@@ -3,7 +3,7 @@ title: 'Sourcerer: Reactive collection sources'
 description: Framework-agnostic local and remote collection state with page, cursor, and infinite pagination.
 package: sourcerer
 category: data
-keywords: [pagination, data-source, cursor, infinite-scroll, collection]
+keywords: [pagination, data-source, cursor, infinite-scroll, collection, resource]
 related: [courier, ripple, scout, wayfinder]
 exports:
   [
@@ -11,6 +11,7 @@ exports:
     createInfiniteSource,
     createLocalSource,
     createPageSource,
+    createResource,
     CursorLoadContext,
     CursorPagination,
     CursorResult,
@@ -31,6 +32,11 @@ exports:
     PageSource,
     PageSourceConfig,
     PageSourceState,
+    PageSourceUpdate,
+    Resource,
+    ResourceConfig,
+    ResourceLoadContext,
+    ResourceState,
     SourcererError,
     SourcererConfigurationError,
     SourcererDisposedError,
@@ -131,7 +137,9 @@ try {
 - `createPageSource()`: loads numbered pages and exposes direct navigation commands
 - `createCursorSource()`: follows opaque cursors returned by the loader
 - `createInfiniteSource()`: appends pages while preserving loaded items
+- `createResource()`: loads one reactive value that can be refetched
 - `setParams()`: replaces consumer-owned loader parameters and resets pagination
+- `apply()`: sets page and parameters from one object in a single request
 - `subscribe()`: publishes complete immutable state replacements
 
 </div>

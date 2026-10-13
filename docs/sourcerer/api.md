@@ -13,6 +13,7 @@ description: Public API for @vielzeug/sourcerer.
 | `createPageSource()` | Load numbered pages | Async | Construction is inert |
 | `createCursorSource()` | Load server-issued cursor pages | Async | `after` and `before` cannot coexist initially |
 | `createInfiniteSource()` | Append numbered pages | Async | `loadMore()` is a no-op while loading or exhausted |
+| `createResource()` | Load one reactive value | Async | Starts loading during construction; `start: false` opts out |
 | `SourcererError` | Base package error | Sync | Loader errors retain their original type |
 
 ## Package Entry Point
@@ -98,6 +99,7 @@ await source.reload();
 
 | Method | Returns | Description |
 | --- | --- | --- |
+| `apply(update)` | `Promise<void>` | Reconcile `{ params, page }` in at most one load; params compare structurally |
 | `first()` | `Promise<void>` | Load page one |
 | `goTo(page)` | `Promise<void>` | Load a positive page |
 | `last()` | `Promise<void>` | Load the last known page |
@@ -108,6 +110,14 @@ await source.reload();
 | `setParams(params)` | `Promise<void>` | Reset to page one and load replacement params |
 | `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
 | `dispose()` | `void` | Abort work and stop notifications |
+
+`apply()` is the entry point for a caller that holds a desired `{ params, page }` pair rather
+than a command — a URL, a filter form, a grid state. Params are compared with `isEqual`, so a
+freshly built but structurally equal filter object is a no-op instead of a refetch, which is what
+makes it safe to call `apply()` from a render or router effect. Changed params move to `page` when
+one is given, otherwise to page one; unchanged params with a new page behave exactly like `goTo()`
+and clamp to the known range. When params do change, the committed page count belongs to the old
+params, so the requested page is validated but not clamped.
 
 ---
 
@@ -186,6 +196,49 @@ await source.loadMore();
 | `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
 | `dispose()` | `void` | Abort work and stop notifications |
 
+---
+
+### `createResource()`
+
+```ts
+function createResource<T>(config: ResourceConfig<T>): Resource<T>
+```
+
+Returns a single reactive value that loads once and can be refetched. It is the one-shot sibling
+of the paginated sources, for the `GET /thing` case where pagination would be ceremony.
+
+This is deliberately **not** a React `use()` Resource: it never throws a promise and suspends
+nothing, so it works in any framework or none.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `config.load` | `(context: ResourceLoadContext) => Promise<T>` | Loader; receives a signal aborted on disposal and on the next `reload()` |
+| `config.start` | `boolean` | Start the initial load during construction; defaults to `true` |
+
+**Returns:** `Resource<T>`.
+
+```ts
+import { createResource } from '@vielzeug/sourcerer';
+
+const profile = createResource({
+  load: ({ signal }) => fetch('/me', { signal }).then((response) => response.json()),
+});
+
+profile.subscribe((state) => console.log(state.data, state.loading, state.error));
+```
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `reload()` | `Promise<void>` | Refetch with a fresh signal; rejects so callers can await it |
+| `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
+| `dispose()` | `void` | Abort the in-flight load and stop notifications |
+
+A resource starts loading during construction, unlike the inert paginated sources, because it
+models a value that must exist rather than a window into a collection. The initial load has no
+caller to reject to, so its failure surfaces through `state.error`; a later `reload()` rejects so
+the awaiting caller sees it, and the previous `data` survives the failed refresh. A superseded or
+disposed request settles without touching state.
+
 ## Types
 
 ### Page source types
@@ -227,8 +280,14 @@ type PageSourceConfig<T, TParams = undefined> = Readonly<{
   } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
 >;
 
+type PageSourceUpdate<TParams = undefined> = Readonly<{
+  page?: number;
+  params?: TParams;
+}>;
+
 type PageSource<T, TParams = undefined> = {
   [Symbol.dispose](): void;
+  apply(update: PageSourceUpdate<TParams>): Promise<void>;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
@@ -246,6 +305,35 @@ type PageSource<T, TParams = undefined> = {
 ```
 
 The conditional config field makes `params` optional only when `TParams` includes `undefined`.
+
+### Resource types
+
+```ts
+type ResourceLoadContext = Readonly<{
+  signal: AbortSignal;
+}>;
+
+type ResourceState<T> = Readonly<{
+  data: T | undefined;
+  error: Error | null;
+  loading: boolean;
+}>;
+
+type ResourceConfig<T> = Readonly<{
+  load(context: ResourceLoadContext): Promise<T>;
+  start?: boolean;
+}>;
+
+type Resource<T> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  reload(): Promise<void>;
+  readonly state: ResourceState<T>;
+  subscribe(listener: (state: ResourceState<T>) => void): () => void;
+};
+```
 
 ### Local source types
 

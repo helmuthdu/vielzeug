@@ -38,6 +38,7 @@
     "prepublishOnly": "pnpm --silent run build",
     "preview": "vite preview",
     "test": "vitest",
+    "test:types": "tsc -p tsconfig.type-tests.json",
     "verify:exports": "node verify-exports.mjs"
   },
   "dependencies": {

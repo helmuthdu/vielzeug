@@ -26,6 +26,12 @@ for (const sourcererModule of modules) {
   if ('snapshot' in source || 'load' in source || 'updateQuery' in source || 'page' in source) {
     throw new Error('obsolete source API leaked');
   }
+  if (typeof source.apply !== 'function') throw new Error('apply contract missing');
+
+  const resource = sourcererModule.createResource({ load: async () => 'value' });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  if (resource.state.data !== 'value') throw new Error('resource contract missing');
+  resource.dispose();
 
   source.dispose();
   try {

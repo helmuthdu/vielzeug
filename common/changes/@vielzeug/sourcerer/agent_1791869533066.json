@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add PageSource.apply and createResource",
+      "packageName": "@vielzeug/sourcerer",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sourcerer"
+}

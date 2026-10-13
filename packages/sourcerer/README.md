@@ -29,6 +29,11 @@ console.log(users.state.pagination.totalItems);
 users.dispose();
 ```
 
+## Features
+
+- `apply()`: set page and parameters from one object, compared structurally, in a single request.
+- `createResource()`: load one reactive value with `reload()`, for the `GET /thing` case where pagination would be ceremony.
+
 ## Documentation
 
 - [Overview](https://vielzeug.dev/sourcerer/)

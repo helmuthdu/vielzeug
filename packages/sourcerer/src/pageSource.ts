@@ -1,3 +1,5 @@
+import { isEqual } from '@vielzeug/arsenal';
+
 import { createAsyncSource } from './asyncSource';
 import { SourcererDisposedError } from './errors';
 import { createPagePagination, positiveInteger, totalItems } from './pagination';
@@ -51,11 +53,14 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
       }),
     });
 
-  const goTo = async (page: number): Promise<void> => {
-    assertLive();
-    const normalized = hasLoaded
+  const normalizePage = (page: number): number =>
+    hasLoaded
       ? Math.min(positiveInteger(page, 'page'), asyncSource.state.pagination.pageCount)
       : positiveInteger(page, 'page');
+
+  const goTo = async (page: number): Promise<void> => {
+    assertLive();
+    const normalized = normalizePage(page);
     if (normalized === requested.page) {
       if (!asyncSource.state.loading && (!hasLoaded || !isCommitted(requested))) await fetch(requested);
       return;
@@ -65,6 +70,33 @@ export function createPageSource<T, TParams = undefined>(config: PageSourceConfi
   };
 
   const source: PageSource<T, TParams> = {
+    async apply(update) {
+      assertLive();
+      // An absent `params` means "not part of this update", which is how a source whose
+      // TParams genuinely allows undefined keeps its params: use setParams for that.
+      const params = update.params === undefined ? requested.params : update.params;
+
+      if (!isEqual(params, requested.params)) {
+        // The committed page count belongs to the previous params, so clamping here
+        // would clamp to a stale bound. The requested page is validated and sent as
+        // given; the response recomputes pagination from real totals.
+        requested = {
+          ...requested,
+          page: update.page === undefined ? 1 : positiveInteger(update.page, 'page'),
+          params,
+        };
+        await fetch(requested);
+        return;
+      }
+
+      if (update.page !== undefined) {
+        await goTo(update.page);
+        return;
+      }
+
+      if (!asyncSource.state.loading && (!hasLoaded || !isCommitted(requested))) await fetch(requested);
+    },
+
     get disposalSignal() {
       return asyncSource.disposalSignal;
     },

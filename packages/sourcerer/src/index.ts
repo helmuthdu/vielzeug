@@ -3,6 +3,7 @@ export { SourcererConfigurationError, SourcererDisposedError, SourcererError } f
 export { createInfiniteSource } from './infiniteSource';
 export { createLocalSource } from './localSource';
 export { createPageSource } from './pageSource';
+export { createResource } from './resourceSource';
 export type {
   CursorLoadContext,
   CursorPagination,
@@ -24,4 +25,9 @@ export type {
   PageSource,
   PageSourceConfig,
   PageSourceState,
+  PageSourceUpdate,
+  Resource,
+  ResourceConfig,
+  ResourceLoadContext,
+  ResourceState,
 } from './types';

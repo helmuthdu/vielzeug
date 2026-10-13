@@ -51,7 +51,7 @@ console.log(source.state.params);
 source.dispose();
 ```
 
-A non-optional parameter type requires an initial `params` value. Sourcerer compares parameter values with `Object.is`; reuse a value when setting it again should be a no-op.
+A non-optional parameter type requires an initial `params` value. `setParams()` compares values with `Object.is`; reuse a value when setting it again should be a no-op. `apply()` compares structurally instead, which is what makes it safe to call from a render or a router effect. See [Apply Page and Filter Together](#apply-page-and-filter-together).
 
 While replacement parameters load, `state.params` continues to describe the committed items and `state.pendingParams` contains the requested value. Page-only navigation does not set `pendingParams`.
 
@@ -70,6 +70,28 @@ await source.setPageSize(50);
 ```
 
 After the first successful load, navigation is clamped to the known `pageCount`. Before that load, `goTo()` accepts any positive page because the total is unknown.
+
+## Apply Page and Filter Together
+
+A URL query, a filter form, or a router state usually carries the page and the filters at once. `apply()` accepts both in one call and issues one request.
+
+```ts
+import { createPageSource } from '@vielzeug/sourcerer';
+
+type UserParams = { role: 'admin' | 'user'; search: string };
+const source = createPageSource<string, UserParams>({ load, params: { role: 'admin', search: '' } });
+
+await source.apply({ page: 3, params: { role: 'admin', search: 'ada' } });
+await source.apply({ params: { role: 'user', search: '' } }); // back to page one
+await source.apply({ page: 2 }); // same params, so page two is clamped as usual
+```
+
+Parameters are compared structurally, so a freshly built object with the same contents is a no-op
+and a re-render or router effect cannot start a request storm. When parameters really do change,
+`page` is validated but never clamped: the page count still describes the previous filter set, so
+clamping against it would silently move the reader elsewhere. Omit `page` in that case and the
+source returns to page one. When parameters are unchanged, `apply()` routes through `goTo()` and
+clamps to the known page count.
 
 ## Filter Local Collections
 
@@ -146,6 +168,28 @@ source.dispose();
 ```
 
 `loadMore()` is a no-op while another request is active or after `pagination.hasMore` becomes false. `setParams()` and `setPageSize()` replace the feed from page one.
+
+## Load a Single Value
+
+Use a resource for one reactive value: a profile, a settings document, a pricing summary. It loads once and refetches on demand.
+
+```ts
+import { createResource } from '@vielzeug/sourcerer';
+
+type Profile = { name: string };
+const profile = createResource<Profile>({
+  load: async ({ signal }) => fetch('/me', { signal }).then((response) => response.json()),
+});
+
+profile.subscribe((state) => console.log(state.data, state.loading, state.error));
+await profile.reload();
+profile.dispose();
+```
+
+A resource starts loading during construction because it models a value that must exist, not a
+window into a collection; pass `{ start: false }` to open the window yourself. The initial load has
+no caller to reject to, so its failure lands in `state.error`. A later `reload()` rejects so the
+awaiting caller sees the failure, and the previous `data` survives it.
 
 ## Handle Requests and Errors
 

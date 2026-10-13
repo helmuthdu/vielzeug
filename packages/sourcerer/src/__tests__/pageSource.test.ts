@@ -152,4 +152,92 @@ describe('createPageSource', () => {
     await expect(source.reload()).rejects.toThrow('totalItems must be a non-negative integer');
     expect(source.state.error?.message).toBe('totalItems must be a non-negative integer');
   });
+
+  describe('apply', () => {
+    const makeSource = (load: ReturnType<typeof vi.fn>) =>
+      createPageSource<string, { search: string }>({ load, pageSize: 2, params: { search: '' } });
+
+    it('is a no-op for a structurally equal params object and the current page', async () => {
+      const load = vi.fn(async () => ({ items: ['a'], totalItems: 5 }));
+      const source = makeSource(load);
+      await source.reload();
+      expect(load).toHaveBeenCalledOnce();
+
+      await source.apply({ params: { search: '' } });
+      await source.apply({ page: 1, params: { search: '' } });
+
+      expect(load).toHaveBeenCalledOnce();
+      expect(source.state.pagination.page).toBe(1);
+    });
+
+    it('resets to page 1 when params change, in a single load', async () => {
+      const load = vi.fn(async ({ params }: { params: { search: string } }) => ({
+        items: [params.search],
+        totalItems: 5,
+      }));
+      const source = makeSource(load);
+      await source.goTo(3);
+
+      await source.apply({ params: { search: 'users' } });
+
+      expect(load).toHaveBeenCalledTimes(2);
+      expect(load).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 2,
+        params: { search: 'users' },
+        signal: expect.any(AbortSignal),
+      });
+      expect(source.state.pagination.page).toBe(1);
+    });
+
+    it('combines changed params and an explicit page into one load', async () => {
+      const load = vi.fn(async ({ page, params }: { page: number; params: { search: string } }) => ({
+        items: [`${params.search}:${page}`],
+        totalItems: 9,
+      }));
+      const source = makeSource(load);
+      await source.reload();
+
+      await source.apply({ page: 2, params: { search: 'users' } });
+
+      expect(load).toHaveBeenCalledTimes(2);
+      expect(load).toHaveBeenLastCalledWith({
+        page: 2,
+        pageSize: 2,
+        params: { search: 'users' },
+        signal: expect.any(AbortSignal),
+      });
+      expect(source.state.items).toEqual(['users:2']);
+    });
+
+    it('behaves like goTo when only the page changes', async () => {
+      const load = vi.fn(async ({ page }: { page: number }) => ({ items: [page], totalItems: 5 }));
+      const source = makeSource(load);
+      await source.reload();
+
+      await source.apply({ page: 3, params: { search: '' } });
+
+      expect(load).toHaveBeenCalledTimes(2);
+      expect(source.state.pagination.page).toBe(3);
+      // Clamping still applies to same-params navigation.
+      await source.apply({ page: 99 });
+      expect(source.state.pagination.page).toBe(3);
+    });
+
+    it('validates an out-of-range page', async () => {
+      const source = makeSource(vi.fn(async () => ({ items: [], totalItems: 0 })));
+
+      await expect(source.apply({ page: 0 })).rejects.toThrow('page must be a positive integer');
+      await expect(source.apply({ page: 1.5, params: { search: 'x' } })).rejects.toThrow(
+        'page must be a positive integer',
+      );
+    });
+
+    it('rejects after disposal', async () => {
+      const source = createPageSource({ load: () => new Promise(() => undefined) });
+
+      source.dispose();
+      await expect(source.apply({ page: 2 })).rejects.toThrow('disposed');
+    });
+  });
 });

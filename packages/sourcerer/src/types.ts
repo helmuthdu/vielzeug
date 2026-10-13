@@ -42,8 +42,22 @@ export type PageResult<T> = Readonly<{
   totalItems: number;
 }>;
 
+export type PageSourceUpdate<TParams = undefined> = Readonly<{
+  /** Page to move to, 1-based. Omitted means "stay where you are", or page 1 when params change. */
+  page?: number;
+  /** Filter/sort params to apply. Compared structurally, not by reference. */
+  params?: TParams;
+}>;
+
 export type PageSource<T, TParams = undefined> = {
   [Symbol.dispose](): void;
+  /**
+   * Reconcile the source with a desired `{ params, page }` pair, issuing at most one
+   * load. Params are compared structurally, so a freshly built but equal filter object
+   * is a no-op rather than a refetch. Changed params move to `page` when given, else to
+   * page 1; unchanged params with a new page behave like `goTo`.
+   */
+  apply(update: PageSourceUpdate<TParams>): Promise<void>;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
@@ -180,3 +194,37 @@ export type InfiniteSourceConfig<T, TParams = undefined> = Readonly<
     pageSize?: number;
   } & (undefined extends TParams ? { params?: TParams } : { params: TParams })
 >;
+
+export type ResourceLoadContext = Readonly<{
+  signal: AbortSignal;
+}>;
+
+export type ResourceState<T> = Readonly<{
+  data: T | undefined;
+  error: Error | null;
+  loading: boolean;
+}>;
+
+/**
+ * A single reactive value fetched once and refetchable, not a collection.
+ *
+ * This is deliberately *not* a React `use()` Resource: it never throws a promise,
+ * suspends nothing, and caches nothing. It is the one-shot sibling of the paginated
+ * sources, for the `GET /thing` case where pagination would be ceremony.
+ */
+export type Resource<T> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  /** Refetch with a fresh signal. A superseded or disposed request settles without touching state. */
+  reload(): Promise<void>;
+  readonly state: ResourceState<T>;
+  subscribe(listener: (state: ResourceState<T>) => void): () => void;
+};
+
+export type ResourceConfig<T> = Readonly<{
+  load(context: ResourceLoadContext): Promise<T>;
+  /** Start the initial load during construction. Default true; set false to trigger `reload()` yourself. */
+  start?: boolean;
+}>;
