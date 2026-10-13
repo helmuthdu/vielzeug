@@ -11,6 +11,7 @@ description: Reference for Arsenal root utilities and category entry points.
 | --- | --- | --- | --- |
 | `groupBy` | Group values by key (prototype-pollution guarded) | Sync | Root export |
 | `chunk` / `zip` / `compact` | Typed collection transforms | Sync | Available from `/array` |
+| `paginate` | Cut one page and its totals out of a list | Sync | Pages past the last return empty `items`, unclamped |
 | `range` / `average` / `median` | Numeric generation and aggregation | Sync | Available from `/math` |
 | `assert` | Assert and narrow a condition | Sync | Available from `/function` |
 | `retry` | Retry async work | Async | Rethrows final error |
@@ -58,6 +59,45 @@ unzip(rows): tupleOfArrays
 ```
 
 `take`, `takeLast`, `drop`, and `dropLast` return new arrays and normalize negative counts to zero. Set operations accept optional selectors for object identity.
+
+### paginate
+
+```ts
+paginate<T>(items: readonly T[], options?: PaginateOptions): PageEnvelope<T>
+```
+
+Cuts one page out of an in-memory list and returns the items with the arithmetic that produced them. `pageOffset` selects the caller's page base: `1` (default) for one-based paging, `0` for zero-based servers such as Spring. `totalPages` is at least 1, even for an empty list, so `page < totalPages` never underflows. Pages past the last yield empty `items` and echo the requested page rather than clamping it. Throws `TypeError` for a non-array and `RangeError` for a non-integer `page` or a `pageSize` that is not a positive integer.
+
+```ts
+import { paginate } from '@vielzeug/arsenal/array';
+
+paginate([1, 2, 3, 4, 5], { page: 2, pageSize: 2 });
+// { items: [3, 4], page: 2, pageSize: 2, totalItems: 5, totalPages: 3 }
+
+paginate(items, { page: springPage, pageOffset: 0 });
+```
+
+The envelope is server-neutral: it models no HTTP dialect, so adapters map their response onto it and map it back out.
+
+### sort
+
+```ts
+sort<T>(array: readonly T[], selector: (item: T) => unknown, direction?: SortDirection): T[];
+sort<T>(array: readonly T[], selectors: SortSelectors<T>): T[];
+sort<T>(array: readonly T[], criteria: ReadonlyArray<SortCriterion<T>>): T[];
+```
+
+Three forms, one entry point. The selector form sorts by one extracted value; the selectors form sorts by a `{ key: direction }` object; the criteria form sorts by an ordered list of paths, which is the shape a data grid hands over when its sortable columns are runtime strings.
+
+```ts
+import { sort } from '@vielzeug/arsenal/array';
+
+sort(users, (user) => user.name);
+sort(users, { name: 'asc', age: 'desc' });
+sort(rows, [{ key: 'address.city' }, { key: 'age', direction: 'desc' }]);
+```
+
+Criteria paths are resolved with `getPath`, so dotted and bracketed paths (`'address.city'`, `'tags[0]'`) work and prototype-access segments are refused. The first criterion that differs wins and earlier ties keep their input order. Ordering is delegated to `compare`, so a column that mixes value types (a number beside a string) throws a `TypeError` instead of guessing an order.
 
 ### fuzzyFilter / fuzzyScore
 
@@ -323,6 +363,29 @@ type FuzzySelection<T> = FuzzyOptions & {
 };
 
 type ScoredResult<T> = { item: T; score: number };
+
+type PageEnvelope<T> = Readonly<{
+  items: readonly T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}>;
+
+type PaginateOptions = Readonly<{
+  page?: number;
+  pageSize?: number;
+  pageOffset?: 0 | 1;
+}>;
+
+type SortDirection = 'asc' | 'desc';
+
+type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
+
+type SortCriterion<T> = Readonly<{
+  key: keyof T | (string & {});
+  direction?: SortDirection;
+}>;
 
 type CacheOptions = {
   capacity?: number;

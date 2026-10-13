@@ -13,6 +13,7 @@ export * from './groupBy';
 export * from './indexBy';
 export * from './intersection';
 export * from './last';
+export * from './paginate';
 export * from './partition';
 export * from './replace';
 export * from './rotate';

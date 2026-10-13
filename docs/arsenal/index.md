@@ -93,6 +93,8 @@ console.log(byRole, health, profile);
 - **`tryParseJson`**: preserve JSON syntax failures from `/object`
 - **`allocate`**: lossless proportional distribution from `/math`
 - **`chunk`, `zip`, `compact`**: typed collection transforms from `/array`
+- **`paginate`**: one page plus its totals from an in-memory list, in a one- or zero-based page base
+- **`sort`**: selector, `{ key: direction }`, or ordered grid criteria from one entry point
 - **`range`, `average`, `median`**: common numeric operations from `/math`
 - **`assert`, `tap`**: typed control-flow helpers from `/function`
 - **`isEqual`**: structural equality from package root

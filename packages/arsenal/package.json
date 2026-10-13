@@ -123,6 +123,7 @@
     "preview": "vite preview",
     "sync:exports": "node ./scripts/sync-exports.mjs",
     "test": "pnpm --silent run verify:exports && vitest",
+    "test:types": "tsc -p tsconfig.type-tests.json",
     "verify:exports": "node ./scripts/sync-exports.mjs --check"
   },
   "devDependencies": {

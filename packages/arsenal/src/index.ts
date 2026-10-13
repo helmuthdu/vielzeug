@@ -2,6 +2,7 @@ export * from './array/chunk';
 export * from './array/filterMap';
 export * from './array/groupBy';
 export * from './array/indexBy';
+export * from './array/paginate';
 export * from './array/partition';
 export * from './array/sort';
 export * from './array/uniq';

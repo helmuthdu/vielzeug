@@ -37,6 +37,8 @@ pool.dispose();
 ## Features
 
 - `compressBytes` / `decompressBytes`: native compression streams with a required decompressed-byte limit, available from the root and `/encoding` entry points.
+- `paginate`: cut one page and its totals out of a list in a one- or zero-based page base, available from the root and `/array` entry points.
+- `sort`: one entry point for a selector, a `{ key: direction }` object, or ordered grid criteria with safe nested paths, available from the root and `/array` entry points.
 
 ## Documentation
 

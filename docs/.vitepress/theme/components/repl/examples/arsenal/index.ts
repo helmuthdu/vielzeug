@@ -2,8 +2,10 @@ import { arrayChunkExample } from './array-chunk';
 import { arrayFilterExample } from './array-filter';
 import { arrayGroupExample } from './array-group';
 import { arrayMapExample } from './array-map';
+import { arrayPaginateExample } from './array-paginate';
 import { arraySearchExample } from './array-search';
 import { arraySearchNormalizeExample } from './array-search-normalize';
+import { arraySortCriteriaExample } from './array-sort-criteria';
 import { arrayUniqExample } from './array-uniq';
 import { asyncAttemptExample } from './async-attempt';
 import { asyncParallelExample } from './async-parallel';
@@ -35,8 +37,10 @@ export const arsenalExamples = {
   'array-filter': arrayFilterExample,
   'array-group': arrayGroupExample,
   'array-map': arrayMapExample,
+  'array-paginate': arrayPaginateExample,
   'array-search': arraySearchExample,
   'array-search-normalize': arraySearchNormalizeExample,
+  'array-sort-criteria': arraySortCriteriaExample,
   'array-uniq': arrayUniqExample,
   'async-attempt': asyncAttemptExample,
   'async-parallel': asyncParallelExample,

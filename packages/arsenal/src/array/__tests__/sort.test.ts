@@ -120,4 +120,79 @@ describe('sort', () => {
     expect(() => sort(null as unknown as [], (x) => x)).toThrow(TypeError);
     expect(() => sort(42 as unknown as [], (x) => x)).toThrow(TypeError);
   });
+
+  describe('criteria form', () => {
+    interface Row {
+      address: { city: string };
+      age: number;
+      name: string;
+    }
+
+    const rows: Row[] = [
+      { address: { city: 'Berlin' }, age: 30, name: 'Ada' },
+      { address: { city: 'Aachen' }, age: 30, name: 'Bo' },
+      { address: { city: 'Berlin' }, age: 25, name: 'Cid' },
+    ];
+
+    it('orders by a runtime string path', () => {
+      expect(sort(rows, [{ key: 'name' }]).map((row) => row.name)).toEqual(['Ada', 'Bo', 'Cid']);
+      expect(sort(rows, [{ direction: 'desc', key: 'name' }]).map((row) => row.name)).toEqual(['Cid', 'Bo', 'Ada']);
+    });
+
+    it('orders by a nested path', () => {
+      expect(sort(rows, [{ key: 'address.city' }, { key: 'age' }]).map((row) => row.name)).toEqual([
+        'Bo',
+        'Cid',
+        'Ada',
+      ]);
+    });
+
+    it('applies each criterion direction independently', () => {
+      expect(sort(rows, [{ key: 'address.city' }, { direction: 'desc', key: 'age' }]).map((row) => row.name)).toEqual([
+        'Bo',
+        'Ada',
+        'Cid',
+      ]);
+    });
+
+    it('keeps input order on ties', () => {
+      const tied = [
+        { group: 'a', id: 1 },
+        { group: 'a', id: 2 },
+        { group: 'a', id: 3 },
+      ];
+
+      expect(sort(tied, [{ key: 'group' }])).toEqual(tied);
+    });
+
+    it('sorts an empty list and a single criterion list', () => {
+      expect(sort<Row>([], [{ key: 'name' }])).toEqual([]);
+      expect(sort(rows, [])).toEqual(rows);
+    });
+
+    it('treats a missing path as undefined, which sorts last', () => {
+      const sparse = [{ id: 1 }, { id: 2, name: 'Zed' }, { id: 3 }];
+
+      expect(sort(sparse, [{ key: 'name' }])).toEqual([{ id: 2, name: 'Zed' }, { id: 1 }, { id: 3 }]);
+    });
+
+    it('throws when a column mixes value types', () => {
+      const junk = [{ v: 1 }, { v: '2' }];
+
+      expect(() => sort(junk, [{ key: 'v' }])).toThrow(TypeError);
+    });
+
+    it('refuses prototype-access paths', () => {
+      const polluted = [{ v: 2 }, { v: 1 }];
+
+      expect(sort(polluted, [{ key: 'constructor.prototype' }])).toEqual(polluted);
+    });
+
+    it('does not mutate the original array', () => {
+      const original = [...rows];
+
+      sort(rows, [{ key: 'name' }]);
+      expect(rows).toEqual(original);
+    });
+  });
 });

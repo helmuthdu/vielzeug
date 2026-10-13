@@ -55,6 +55,45 @@ const byPrice = sort(products, (product) => product.price);
 console.log(publishedLabels, byId, byPrice);
 ```
 
+## Page an In-Memory List
+
+Use `paginate` when the whole list is local and a view needs one page plus its totals.
+
+```ts
+import { paginate } from '@vielzeug/arsenal/array';
+
+const rows = Array.from({ length: 45 }, (_, index) => ({ id: index + 1 }));
+
+const first = paginate(rows, { pageSize: 10 });
+const past = paginate(rows, { page: 9, pageSize: 10 });
+
+console.log(first.totalPages, past.items); // 5 []
+```
+
+`page` is echoed rather than clamped, so a stale page number reads as an empty page instead of
+silently jumping elsewhere. Pass `{ pageOffset: 0 }` for a zero-based caller and the envelope comes
+back in that same base.
+
+## Sort by Grid Criteria
+
+`sort` accepts the ordering a data grid already holds: an ordered list of column paths, each with a direction.
+
+```ts
+import { sort } from '@vielzeug/arsenal/array';
+
+const rows = [
+  { address: { city: 'Berlin' }, age: 41 },
+  { address: { city: 'Aachen' }, age: 30 },
+  { address: { city: 'Berlin' }, age: 27 },
+];
+
+const ordered = sort(rows, [{ key: 'address.city' }, { key: 'age', direction: 'desc' }]);
+```
+
+Paths are resolved safely, so nested and indexed columns work and prototype access is refused. The
+first criterion that differs decides the order and ties keep their input order. Keep each column
+typed: a column mixing numbers and strings throws a `TypeError` rather than guessing an order.
+
 ## Search Explicit Fields
 
 Search string arrays directly. Object collections require `select`, so callers define exactly what can match.

@@ -19,6 +19,7 @@ description: Array utility examples for Arsenal.
 - [indexBy](./array/indexBy.md)
 - [intersection](./array/intersection.md)
 - [last](./array/last.md)
+- [paginate](./array/paginate.md)
 - [partition](./array/partition.md)
 - [replace](./array/replace.md)
 - [rotate](./array/rotate.md)
