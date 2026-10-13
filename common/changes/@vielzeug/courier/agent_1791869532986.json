@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "parse RFC 9457 problem details into CourierHttpError",
+      "packageName": "@vielzeug/courier",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/courier"
+}

@@ -1,19 +1,18 @@
+export { type Courier, type CourierEvent, type CourierOptions, createCourier } from './courier.js';
 export {
-  type Courier,
   CourierAbortError,
   CourierConfigError,
   CourierDisposedError,
   CourierError,
-  type CourierEvent,
   CourierHttpError,
   CourierNetworkError,
-  type CourierOptions,
   CourierParseError,
   CourierSchemaValidationError,
   CourierTimeoutError,
-  createCourier,
-} from './courier.js';
+  problemDetailError,
+} from './errors.js';
 export { withBearerAuth, withLogging, withRequestId } from './interceptors.js';
+export { isProblemMediaType, PROBLEM_JSON_MEDIA_TYPE, type ProblemDetail } from './problem.js';
 export type { ResponseType } from './response.js';
 export type { FetchContext, Middleware, TransportOptions } from './transport.js';
 export type {

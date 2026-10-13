@@ -19,6 +19,8 @@ description: Reference for Courier HTTP, cached read, prefetch, middleware, and 
 | `withRequestId()` | Adds request identifier middleware | Sync | Default generator uses `crypto.randomUUID()` |
 | `withLogging()` | Logs request result metadata | Sync | Requires explicit logger; URLs may contain sensitive query values |
 | `tap()` | Observe structured transport events | Sync | Observation only; optional signal owns lifetime |
+| `CourierHttpError.problem` | Parsed RFC 9457 problem details from an error body | Sync | Present only when the response is `application/problem+json` |
+| `problemDetailError()` | Build an HTTP error that carries problem details | Sync | Intended for mocks and middleware, not for parsing a response |
 
 ## Package Entry Point
 
@@ -266,7 +268,7 @@ type PrefetchConfig<P extends string = string, T = unknown> = Omit<
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
 | `CourierError` | Base class for all Courier errors | Use `instanceof` to narrow |
-| `CourierHttpError` | Non-2xx HTTP response | `status`, `data`, `headers`, `method`, `url`; `CourierHttpError.is(e, status?)` narrows by status |
+| `CourierHttpError` | Non-2xx HTTP response | `status`, `data`, `headers`, `method`, `url`, `problem`; `CourierHttpError.is(e, status?)` narrows by status |
 | `CourierNetworkError` | Request failure without response | `method`, `url`, `cause` |
 | `CourierTimeoutError` | Timeout signal aborts request | `method`, `url`, `cause` |
 | `CourierAbortError` | Caller or client cancellation | `method`, `url`, `cause` |
@@ -276,3 +278,56 @@ type PrefetchConfig<P extends string = string, T = unknown> = Omit<
 | `CourierDisposedError` | Work starts after disposal | N/A |
 
 Errors thrown directly by custom middleware are preserved rather than reclassified.
+
+### Problem details
+
+```ts
+type ProblemDetail = Readonly<{
+  type?: string;
+  status?: number;
+  title?: string;
+  detail?: string;
+  instance?: string;
+  [extension: string]: unknown;
+}>;
+
+const PROBLEM_JSON_MEDIA_TYPE = 'application/problem+json';
+
+function isProblemMediaType(contentType: string | null | undefined): boolean;
+
+function problemDetailError(
+  problem: ProblemDetail,
+  options?: { message?: string; method?: string; status?: number; url?: string },
+): CourierHttpError;
+```
+
+When a non-2xx response answers with `application/problem+json` (RFC 9457), `CourierHttpError.problem`
+holds the parsed document and the error message prefers `detail`, then `title`, then the status text.
+Any other error body keeps the shape it always had, with `problem` left `undefined`.
+
+| Member | Purpose | Common gotcha |
+| --- | --- | --- |
+| `ProblemDetail` | The five registered RFC 9457 members plus extensions | Every member is optional; only `type` has a default (`about:blank`) |
+| `CourierHttpError.problem` | Parsed problem document, frozen | `undefined` unless the media type matches and the body is a JSON object |
+| `PROBLEM_JSON_MEDIA_TYPE` | Registered media type constant | Compare with `isProblemMediaType()`, not `===`, to allow parameters |
+| `isProblemMediaType()` | Match `application/problem+json` and its parameterised forms | Plain `application/json` never matches |
+| `problemDetailError()` | Build a problem-carrying `CourierHttpError` without a server | Status falls back to `problem.status`, then `500` |
+
+The HTTP status line stays authoritative: `error.status` is the response status even when
+`problem.status` disagrees, and a malformed or non-object problem body leaves `data` as the raw
+payload rather than reporting a half-parsed `problem`.
+
+```ts
+import { createCourier, CourierHttpError, type ProblemDetail } from '@vielzeug/courier';
+
+const courier = createCourier({ baseUrl: '/api' });
+
+try {
+  await courier.post('/invoices');
+} catch (error) {
+  if (CourierHttpError.is(error)) {
+    const problem: ProblemDetail | undefined = error.problem;
+    console.log(error.status, problem?.title, problem?.detail, problem?.type);
+  }
+}
+```

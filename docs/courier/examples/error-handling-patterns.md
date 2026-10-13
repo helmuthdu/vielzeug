@@ -39,11 +39,35 @@ async function loadUser(): Promise<string> {
 }
 ```
 
+#### Problem details
+
+Read `problem` when the server answers with an RFC 9457 document, and keep the status as the routing key.
+
+```ts
+import { CourierHttpError, createCourier } from '@vielzeug/courier';
+
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+
+async function submit(body: unknown): Promise<string> {
+  try {
+    await courier.post('/invoices', { body });
+    return 'Saved';
+  } catch (error) {
+    if (!CourierHttpError.is(error, 422)) throw error;
+
+    const fieldErrors = error.problem?.['errors'] as Record<string, string> | undefined;
+
+    return fieldErrors ? Object.values(fieldErrors).join(', ') : 'The request was rejected.';
+  }
+}
+```
+
 ### Pitfalls
 
 - A `CourierHttpError` has a response; a `CourierNetworkError` does not.
 - Do not display cancellation as an application error during navigation.
 - `CourierSchemaValidationError` carries the raw pre-validation `data`.
+- `problem` is `undefined` unless the response is `application/problem+json`; branch on `status` first.
 
 ### Related
 

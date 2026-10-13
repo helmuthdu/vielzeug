@@ -1,3 +1,6 @@
+import type { ProblemDetail } from './problem.js';
+import { asProblemDetail, isProblemMediaType, PROBLEM_JSON_MEDIA_TYPE } from './problem.js';
+
 /**
  * Base class for all courier errors.
  * Use `instanceof CourierError` to catch any courier-originated error in one branch.
@@ -14,6 +17,10 @@ export class CourierError extends Error {
 /**
  * Thrown when the server responds with a non-2xx HTTP status code.
  * Use `CourierHttpError.is(e, status?)` to narrow to a specific status.
+ *
+ * When the response body is an RFC 9457 problem document, `problem` holds the parsed
+ * details; `data` still carries the raw body either way, so a consumer that already
+ * reads `data` keeps working unchanged.
  */
 export class CourierHttpError extends CourierError {
   readonly url: string;
@@ -21,22 +28,38 @@ export class CourierHttpError extends CourierError {
   readonly status: number;
   readonly data: unknown;
   readonly headers: Headers;
+  /** Parsed RFC 9457 problem details, or `undefined` for any other error body. */
+  readonly problem?: ProblemDetail;
 
-  constructor(opts: { data: unknown; headers: Headers; message: string; method: string; status: number; url: string }) {
+  constructor(opts: {
+    data: unknown;
+    headers: Headers;
+    message: string;
+    method: string;
+    problem?: ProblemDetail;
+    status: number;
+    url: string;
+  }) {
     super(opts.message);
     this.url = opts.url;
     this.method = opts.method;
     this.status = opts.status;
     this.data = opts.data;
     this.headers = opts.headers;
+    this.problem = opts.problem;
   }
 
   static fromResponse(res: Response, data: unknown, method: string, url: string): CourierHttpError {
+    const problem = isProblemMediaType(res.headers.get('content-type')) ? asProblemDetail(data) : undefined;
+    // An empty statusText is common (HTTP/2 has no reason phrase), so fall back with `||`.
+    const fallback = res.statusText || `HTTP ${res.status}`;
+
     return new CourierHttpError({
       data,
       headers: res.headers,
-      message: res.statusText || `HTTP ${res.status}`,
+      message: problem?.detail || problem?.title || fallback,
       method,
+      problem,
       status: res.status,
       url,
     });
@@ -114,6 +137,32 @@ export class CourierDisposedError extends CourierError {
   constructor(clientName: string) {
     super(`${clientName} disposed`);
   }
+}
+
+/**
+ * Build a `CourierHttpError` carrying problem details without a server, for mocks,
+ * tests, and offline failure paths — so mock and real client speak the same type and
+ * consumer error handling is written once.
+ *
+ * `status` comes from `problem.status` unless overridden: on the wire the HTTP status
+ * line is authoritative, but a hand-built problem has none to defer to. Parsing a real
+ * response never rewrites `status` for the same reason.
+ */
+export function problemDetailError(
+  problem: ProblemDetail,
+  options: { message?: string; method?: string; status?: number; url?: string } = {},
+): CourierHttpError {
+  const status = options.status ?? (typeof problem.status === 'number' ? problem.status : 500);
+
+  return new CourierHttpError({
+    data: problem,
+    headers: new Headers({ 'content-type': PROBLEM_JSON_MEDIA_TYPE }),
+    message: options.message || problem.detail || problem.title || `HTTP ${status}`,
+    method: options.method ?? 'GET',
+    problem,
+    status,
+    url: options.url ?? '',
+  });
 }
 
 /** Thrown when a response body cannot be read or parsed. */

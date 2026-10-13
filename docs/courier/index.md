@@ -14,6 +14,8 @@ exports:
     CourierTimeoutError,
     CourierAbortError,
     CourierSchemaValidationError,
+    problemDetailError,
+    isProblemMediaType,
     withBearerAuth,
     withRequestId,
     withLogging,
@@ -109,6 +111,7 @@ try {
 - **`withBearerAuth()` / `withRequestId()` / `withLogging()`**: composable middleware configured at construction.
 - **`tap()`**: signal-owned structured transport observation.
 - **Error taxonomy**: HTTP, network, timeout, abort, parse, and schema failures are distinct, actionable classes.
+- **RFC 9457 problem details**: an `application/problem+json` error body parses onto `CourierHttpError.problem` while the HTTP status stays authoritative.
 - **`cancelAll()` / `dispose()`**: abort active requests and tear down the transport.
 
 </div>

@@ -191,6 +191,39 @@ async function loadUser(): Promise<string> {
 - Do not display cancellation as an application error during navigation.
 - `CourierSchemaValidationError` carries the raw pre-validation `data`.
 
+## Problem Details
+
+When a server answers a failure with `application/problem+json` (RFC 9457), Courier parses the
+document onto `CourierHttpError.problem` and uses it for the error message. Nothing is configured.
+
+```ts
+import { CourierHttpError, createCourier, type ProblemDetail } from '@vielzeug/courier';
+
+const courier = createCourier({ baseUrl: '/api' });
+
+async function submitInvoice(body: unknown): Promise<string> {
+  try {
+    await courier.post('/invoices', { body });
+    return 'Saved.';
+  } catch (error) {
+    if (!CourierHttpError.is(error)) throw error;
+
+    const problem = error.problem;
+    if (problem?.title === 'Insufficient credit') return `Blocked: ${problem.detail ?? 'no credit'}`;
+
+    // Extension members are ordinary properties on the same document.
+    const field = problem?.['errors'] as Record<string, string> | undefined;
+
+    return field ? Object.values(field).join(', ') : `Request failed (${error.status}).`;
+  }
+}
+```
+
+`error.status` is always the HTTP status from the response, so a `problem.status` that disagrees
+never overrides it. `problem` stays `undefined` for any other content type, and a `problem+json`
+body that is not a JSON object keeps its raw value on `data` instead of surfacing a partial
+document. Use `problemDetailError()` to raise the same shape from a mock or a middleware.
+
 ## Composing with a State Layer
 
 Courier owns HTTP transport and optional parsed GET caching. Observable query state, optimistic mutations, collection navigation, and stream state belong to the owning state layer (e.g. Sourcerer, TanStack Query, or consumer code). Compose Courier calls into that layer instead of nesting state machines.

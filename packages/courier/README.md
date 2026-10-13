@@ -31,6 +31,10 @@ courier.invalidateCache(['accounts', 'account-1', 'users']);
 courier.dispose();
 ```
 
+## Features
+
+- `CourierHttpError.problem`: parsed RFC 9457 problem details (`application/problem+json`) with the HTTP status kept authoritative.
+
 ## Documentation
 
 - [Overview](https://vielzeug.dev/courier/)

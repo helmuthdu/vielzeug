@@ -1,6 +1,7 @@
 import { abortError } from '@vielzeug/arsenal';
 
 import { CourierParseError } from './errors.js';
+import { isJsonMediaType, mediaTypeOf } from './mediaType.js';
 
 /** Response parsing strategy. 'raw' returns the Response object directly. */
 export type ResponseType = 'auto' | 'json' | 'text' | 'blob' | 'arrayBuffer' | 'raw';
@@ -115,13 +116,13 @@ export async function parseResponse(res: Response, responseType: ResponseType = 
 
   if (responseType === 'arrayBuffer') return res.arrayBuffer();
 
-  const contentType = res.headers.get('content-type') ?? '';
+  const mediaType = mediaTypeOf(res.headers.get('content-type')) ?? '';
 
-  if (contentType.includes('application/json') || contentType.includes('+json')) return parseJson(res);
+  if (isJsonMediaType(mediaType)) return parseJson(res);
 
-  if (contentType.startsWith('text/')) return res.text();
+  if (mediaType.startsWith('text/')) return res.text();
 
-  if (contentType.startsWith('image/') || contentType.startsWith('audio/') || contentType.startsWith('video/')) {
+  if (mediaType.startsWith('image/') || mediaType.startsWith('audio/') || mediaType.startsWith('video/')) {
     return res.blob();
   }
 

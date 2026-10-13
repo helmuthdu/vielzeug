@@ -6,10 +6,13 @@ import {
   CourierAbortError,
   CourierConfigError,
   CourierError,
+  CourierHttpError,
   CourierParseError,
   CourierSchemaValidationError,
   CourierTimeoutError,
   createCourier,
+  isProblemMediaType,
+  problemDetailError,
   withBearerAuth,
   withLogging,
   withRequestId,
@@ -801,5 +804,128 @@ describe('Courier HTTP transport', () => {
     expect((requestSignal as AbortSignal | null)?.aborted).toBe(true);
     await expect(prefetched).resolves.toBeUndefined();
     expect(() => courier.prefetch('/slow', { cache: { key: ['slow'] } })).toThrow('Courier disposed');
+  });
+});
+
+describe('RFC 9457 problem details', () => {
+  const problem = {
+    detail: 'Order 42 was already shipped',
+    orderState: 'shipped',
+    status: 404,
+    title: 'Not Found',
+    type: 'https://api.example.com/problems/order-shipped',
+  };
+
+  it('parses a problem+json error body into err.problem and prefers detail for the message', async () => {
+    const courier = createCourier({
+      fetch: vi.fn(
+        async () =>
+          new Response(JSON.stringify(problem), {
+            headers: { 'content-type': 'application/problem+json' },
+            status: 404,
+            statusText: 'Not Found',
+          }),
+      ),
+    });
+
+    const error = await courier.get('/orders/42').catch((err: unknown) => err);
+
+    expect(CourierHttpError.is(error, 404)).toBe(true);
+    expect((error as CourierHttpError).problem).toEqual(problem);
+    expect((error as CourierHttpError).message).toBe('Order 42 was already shipped');
+    // Extension members survive parsing: the index signature is part of the contract.
+    expect((error as CourierHttpError).problem?.orderState).toBe('shipped');
+    // `data` keeps the raw body so existing readers are unaffected.
+    expect((error as CourierHttpError).data).toEqual(problem);
+  });
+
+  it('matches problem+json with media-type parameters but not plain json', async () => {
+    const courier = createCourier({
+      fetch: vi.fn(
+        async () =>
+          new Response(JSON.stringify(problem), {
+            headers: { 'content-type': 'APPLICATION/PROBLEM+JSON; charset=utf-8' },
+            status: 404,
+          }),
+      ),
+    });
+    const plain = createCourier({
+      fetch: vi.fn(
+        async () =>
+          new Response(JSON.stringify(problem), { headers: { 'content-type': 'application/json' }, status: 404 }),
+      ),
+    });
+
+    await expect(courier.get('/orders/42')).rejects.toMatchObject({ problem: problem });
+    await expect(plain.get('/orders/42')).rejects.toMatchObject({ data: problem, problem: undefined });
+  });
+
+  it('keeps the HTTP status authoritative over problem.status on the wire', async () => {
+    const courier = createCourier({
+      fetch: vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ...problem, status: 500 }), {
+            headers: { 'content-type': 'application/problem+json' },
+            status: 404,
+          }),
+      ),
+    });
+
+    const error = await courier.get('/orders/42').catch((err: unknown) => err);
+
+    expect((error as CourierHttpError).status).toBe(404);
+    expect((error as CourierHttpError).problem?.status).toBe(500);
+  });
+
+  it('reports no problem for non-object bodies or malformed JSON', async () => {
+    const listCourier = createCourier({
+      fetch: vi.fn(
+        async () => new Response('["nope"]', { headers: { 'content-type': 'application/problem+json' }, status: 400 }),
+      ),
+    });
+    const brokenCourier = createCourier({
+      fetch: vi.fn(
+        async () => new Response('{bad', { headers: { 'content-type': 'application/problem+json' }, status: 500 }),
+      ),
+    });
+
+    await expect(listCourier.get('/x')).rejects.toMatchObject({ data: ['nope'], problem: undefined });
+    await expect(brokenCourier.get('/x')).rejects.toMatchObject({ data: '{bad', problem: undefined });
+  });
+
+  it('falls back to title when detail is absent', async () => {
+    const courier = createCourier({
+      fetch: vi.fn(
+        async () =>
+          new Response(JSON.stringify({ title: 'Forbidden' }), {
+            headers: { 'content-type': 'application/problem+json' },
+            status: 403,
+          }),
+      ),
+    });
+
+    await expect(courier.get('/admin')).rejects.toMatchObject({ message: 'Forbidden' });
+  });
+
+  it('builds a server-free problem error that round-trips through CourierHttpError.is', () => {
+    const error = problemDetailError(problem);
+
+    expect(CourierHttpError.is(error, 404)).toBe(true);
+    expect(error.problem).toEqual(problem);
+    expect(error.data).toEqual(problem);
+    expect(error.message).toBe('Order 42 was already shipped');
+    expect(error.headers.get('content-type')).toBe('application/problem+json');
+    expect(problemDetailError({ status: 429 }, { message: 'slow down' }).status).toBe(429);
+    expect(problemDetailError({}).status).toBe(500);
+    expect(problemDetailError(problem, { status: 503 }).status).toBe(503);
+  });
+
+  it('exposes media-type matching as a standalone helper', () => {
+    expect(isProblemMediaType('application/problem+json')).toBe(true);
+    expect(isProblemMediaType('application/problem+json; charset=utf-8')).toBe(true);
+    expect(isProblemMediaType('application/json')).toBe(false);
+    expect(isProblemMediaType('application/vnd.api+json')).toBe(false);
+    expect(isProblemMediaType(null)).toBe(false);
+    expect(isProblemMediaType(undefined)).toBe(false);
   });
 });

@@ -2,17 +2,15 @@ import { tapper } from '@vielzeug/arsenal';
 
 import { createReadCache } from './_cache.js';
 import {
-  CourierAbortError,
   CourierConfigError,
   CourierDisposedError,
   CourierError,
   CourierHttpError,
-  CourierNetworkError,
   CourierParseError,
   CourierSchemaValidationError,
-  CourierTimeoutError,
   classifyRequestError,
 } from './errors.js';
+import { isJsonMediaType } from './mediaType.js';
 import { parseResponse, trackRawResponse } from './response.js';
 import { buildRequestInit } from './serialize.js';
 import {
@@ -51,18 +49,6 @@ export type CourierEvent =
   | { readonly error: unknown; readonly method: string; readonly type: 'request-error'; readonly url: string }
   | { readonly type: 'dispose' };
 
-export {
-  CourierAbortError,
-  CourierConfigError,
-  CourierDisposedError,
-  CourierError,
-  CourierHttpError,
-  CourierNetworkError,
-  CourierParseError,
-  CourierSchemaValidationError,
-  CourierTimeoutError,
-};
-
 /** One client owns HTTP transport, explicit cached reads, middleware, and cancellation. */
 export function createCourier(options: CourierOptions = {}) {
   const { cache: cacheOptions, ...transportOptions } = options;
@@ -98,7 +84,7 @@ export function createCourier(options: CourierOptions = {}) {
       // says so: a binary success config (`responseType: 'blob'`) must not trap
       // the server's error message in an unreadable wrapper, and a failed
       // parseResponse-then-fallback double-read loses the body entirely.
-      const isJson = res.headers.get('content-type')?.includes('json') ?? false;
+      const isJson = isJsonMediaType(res.headers.get('content-type'));
       let text: string;
 
       try {
