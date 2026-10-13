@@ -25,7 +25,7 @@ export type AnimatedPriceProps = { valueUsd: string };
  */
 define<AnimatedPriceProps>('animated-price', {
   props: {
-    valueUsd: prop.string<string>('0.00'),
+    valueUsd: prop.string('0.00'),
   },
   setup(props) {
     const host = getHost();
