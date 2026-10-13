@@ -1,6 +1,6 @@
 import { computed, type Readable } from '@vielzeug/ripple';
 
-import { type MaybeReactive, resolveMaybeReactive } from '../utils/dom';
+import { type MaybeReactive, resolveClassTokens } from '../utils/dom';
 
 /**
  * Produces a reactive string of class names from an object map.
@@ -19,12 +19,5 @@ import { type MaybeReactive, resolveMaybeReactive } from '../utils/dom';
  * ```
  */
 export const classMap = (map: Record<string, MaybeReactive<boolean>>): Readable<string> => {
-  return computed(() =>
-    Object.entries(map)
-      .filter(([, v]) => resolveMaybeReactive(v))
-      // Strip whitespace from each key: spaces would inject extra class tokens.
-      .map(([k]) => k.replace(/\s+/g, ''))
-      .filter(Boolean)
-      .join(' '),
-  );
+  return computed(() => [...resolveClassTokens(map)].join(' '));
 };

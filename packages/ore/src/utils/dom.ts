@@ -177,5 +177,46 @@ export const listen = (
 
 export const toKebab = (str: string): string => str.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
+/**
+ * Normalize a CSS property name for use in a declaration (camelCase → kebab-case,
+ * injection characters stripped). Custom properties (`--*`) are case-sensitive, so
+ * they skip the kebab conversion. Shared by `styleMap()` (template side) and
+ * `bind({ style })` (host side) so both sanitize identically.
+ */
+export const cssDeclarationName = (name: string): string =>
+  sanitizeCssToken(name.startsWith('--') ? name : toKebab(name));
+
+/**
+ * Resolve a style value to its declaration text ('' for null/false/empty).
+ * Shared by `styleMap()` and `bind({ style })`.
+ */
+export const cssDeclarationValue = (value: unknown): string => {
+  const resolved = resolveMaybeReactive(value as MaybeReactive<string | number | null | undefined | false>);
+
+  if (resolved == null || resolved === false) return '';
+
+  return sanitizeCssToken(String(resolved));
+};
+
+/**
+ * Resolve a class map to the set of active class tokens: keys with truthy
+ * (possibly reactive) values, whitespace stripped from each key (spaces would
+ * inject extra class tokens). Shared by `classMap()` (joins the set into a
+ * class attribute) and `bind({ class })` (diffs the set against classList).
+ */
+export const resolveClassTokens = (record: Record<string, MaybeReactive<boolean>>): Set<string> => {
+  const tokens = new Set<string>();
+
+  for (const [key, value] of Object.entries(record)) {
+    if (!resolveMaybeReactive(value)) continue;
+
+    const token = key.replace(/\s+/g, '');
+
+    if (token) tokens.add(token);
+  }
+
+  return tokens;
+};
+
 export const isStructuredValue = (value: unknown): value is object =>
   Array.isArray(value) || (typeof value === 'object' && value !== null);

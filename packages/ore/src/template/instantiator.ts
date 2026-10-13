@@ -6,9 +6,10 @@
  * - Expose `compileTemplate()` and `html` as the public authoring API.
  */
 
-import { computed, isReactive, type Readable } from '@vielzeug/ripple';
+import { computed, isReactive, type Readable, type Signal } from '@vielzeug/ripple';
 
-import { invariant } from '../errors';
+import { isModelSource, modelDefaultEvent, modelDefaultGet } from '../directives/model';
+import { invariant, ORE_ERRORS, OreApiError } from '../errors';
 import type { Binding, HtmlBindingValue } from './binding-types';
 import { applyBinding, createAttrBindingFromValue, resolveStaticText } from './bindings';
 import { followPath, getStaticTemplate, SlotKind } from './compiler';
@@ -143,7 +144,13 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       invariant(name, 'compiled template produced an event slot without an event name');
 
       if (typeof value === 'function') {
-        bindings.push({ el, handler: value as (e: Event) => void, name, type: 'event' });
+        bindings.push({
+          el,
+          handler: value as (e: Event) => void,
+          modifiers: slot.eventModifiers,
+          name,
+          type: 'event',
+        });
       } else if (isReactive(value)) {
         const signalValue = value as Readable<unknown>;
         const handler = (e: Event) => {
@@ -152,7 +159,23 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
           if (typeof h === 'function') (h as (e: Event) => void)(e);
         };
 
-        bindings.push({ el, handler, name, type: 'event' });
+        bindings.push({ el, handler, modifiers: slot.eventModifiers, name, type: 'event' });
+      }
+
+      continue;
+    }
+
+    if (slot.kind === SlotKind.PROP) {
+      const name = slot.name;
+
+      invariant(name, 'compiled template produced a prop slot without a property name');
+
+      if (typeof value === 'function') {
+        bindings.push({ el, name, signal: computed(value as () => unknown), type: 'prop' });
+      } else if (isReactive(value)) {
+        bindings.push({ el, name, signal: value as Readable<unknown>, type: 'prop' });
+      } else {
+        bindings.push({ el, name, type: 'prop', value });
       }
 
       continue;
@@ -168,6 +191,20 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
     // attr / boolAttr
     invariant(slot.name, 'compiled template produced an attr slot without an attribute name');
+
+    if (isModelSource(value)) {
+      if (slot.mode !== 'attr') throw new OreApiError(ORE_ERRORS.modelRequiresValueBinding(slot.name));
+
+      bindings.push({
+        el,
+        event: value.event ?? modelDefaultEvent(el),
+        get: (value.get ?? modelDefaultGet) as (el: HTMLElement) => unknown,
+        signal: value.source as Signal<unknown>,
+        type: 'model',
+      });
+      continue;
+    }
+
     bindings.push(createAttrBindingFromValue(el, slot.mode ?? 'attr', slot.name, value));
   }
 

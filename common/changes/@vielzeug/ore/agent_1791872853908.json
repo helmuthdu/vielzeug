@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "add model() two-way binding, .prop= property bindings, event modifiers, indeterminate checkbox binding, and transactional each() reconcile rollback; add prop.oneOf() runtime union parsing; consolidate useField validity into a single FormFieldValidity signal; remove prop.string/prop.number type parameters and the testing form-internals polyfill (now assay installFormInternalsPolyfill)",
+      "packageName": "@vielzeug/ore",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

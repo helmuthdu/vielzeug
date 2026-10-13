@@ -69,6 +69,78 @@ import { ThemeContext } from './context';
 useField({ value, disabled });
 ```
 
+## Pass one validity signal to useField()
+
+The split `validity` + `validationMessage` options are replaced by a single `validity: Readable<FormFieldValidity | null>` where `FormFieldValidity = { flags, message }`. The platform's `setValidity()` contract couples flags and message (flags without a non-empty message throw); one input makes a desynced pair unrepresentable.
+
+```ts
+// Before
+useField({
+  validationMessage: computed(() => (isBlank() ? 'Required.' : '')),
+  validity: computed(() => (isBlank() ? { valueMissing: true } : null)),
+  value,
+});
+
+// After
+useField({
+  validity: computed(() => (isBlank() ? { flags: { valueMissing: true }, message: 'Required.' } : null)),
+  value,
+});
+```
+
+## Install the form-internals polyfill from assay
+
+The jsdom `ElementInternals`/`FormData`/`<form>.reset()` polyfill moved out of `@vielzeug/ore/testing` into `@vielzeug/assay`, and `install()` lost its options object. Suites that test form-associated components install it directly:
+
+```ts
+// Before
+install(afterEach, { formInternals: true });
+
+// After
+import { installFormInternalsPolyfill } from '@vielzeug/assay';
+
+install(afterEach);
+installFormInternalsPolyfill();
+```
+
+## Type union props with prop.oneOf()
+
+`prop.string()` and `prop.number()` no longer accept a type parameter: a generic on a runtime parser was a claim the attribute path could not keep (a raw attribute value could violate any union). Union-valued props use `prop.oneOf(allowed, defaultValue?)`, which enforces the set at runtime (`parse` falls back to the default outside the set) and accepts string or number members.
+
+```ts
+// Before
+size: prop.string<'sm' | 'md' | 'lg'>(),
+elevation: prop.number<0 | 1 | 2>(),
+
+// After
+const SIZES = ['sm', 'md', 'lg'] as const;
+const ELEVATIONS = [0, 1, 2] as const;
+
+size: prop.oneOf(SIZES),
+elevation: prop.oneOf(ELEVATIONS),
+```
+
+`prop.oneOf()`'s default is now optional: omit it for an optional prop that resolves to `undefined` when the attribute is absent.
+
+## Prefer model() for controlled inputs
+
+`model(signal)` is the two-way form binding: it replaces the `live()` + manual `@input`/`@change` write-back pair. `live()` remains for one-way bindings that only need the stale-write guard. `model()` can only drive a plain `value`/`checked` attribute binding; the boolean (`?checked=`) form throws.
+
+```ts
+// Before
+<input value=${live(query)} @input=${(e) => (query.value = e.target.value)} />
+
+// After
+<input value=${model(query)} />
+```
+
+## New template syntax
+
+- `.prop=${value}` binds an element property explicitly (structured values: arrays, objects, callbacks). Prototype-polluting names (`__proto__`, `constructor`, `prototype`) throw at compile time.
+- Event modifiers `@event.stop`, `.prevent`, `.once`, `.capture` replace manual `stopPropagation()`/`preventDefault()` boilerplate and listener options. An unknown modifier throws at compile time.
+- `indeterminate=${signal}` on a checkbox binds the property-only `indeterminate` state (no attribute exists, so none is written).
+- `each()` reconciliation is transactional: when a render throws, entries created during the failed pass are rolled back and the last good list stays on screen (reported via `ore:error`, phase `'each-reconcile'`).
+
 ## Replace removed testing conveniences
 
 Use the underlying operation directly:
@@ -79,7 +151,7 @@ Use the underlying operation directly:
 | `mountComponent(tag, definition, options)` | `define(tag, definition)` followed by `mount(tag, options)`, or inline `mount(setup, options)` |
 | `mock(tag, template)` | `customElements.define()` with a minimal test element |
 | `resetOreForTests()` | `cleanup()` or `install(afterEach)` |
-| `walkFlatTree()` | Native DOM and slot traversal in the test that needs it |
+| `walkFlatTree()` | `walkFlatTree()` from `@vielzeug/assay` |
 
 ## Account for keyed-list recovery
 

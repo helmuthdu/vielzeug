@@ -191,8 +191,9 @@ describe('useField()', () => {
     await mount(
       () => {
         handle = useField({
-          validationMessage: computed(() => (required.value && isBlank() ? 'Required.' : '')),
-          validity: computed(() => (required.value && isBlank() ? { valueMissing: true } : null)),
+          validity: computed(() =>
+            required.value && isBlank() ? { flags: { valueMissing: true }, message: 'Required.' } : null,
+          ),
           value,
         });
 

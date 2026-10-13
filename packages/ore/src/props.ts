@@ -34,16 +34,60 @@ type PropFactory = {
   data<T>(): PropDef<T | undefined>;
   data<T>(defaultValue: T): PropDef<T>;
   json<T>(defaultValue: T): PropDef<T>;
-  number<T extends number = number>(): PropDef<T | undefined>;
-  number<T extends number = number>(defaultValue: number): PropDef<T>;
-  oneOf<T extends string | undefined, D extends T = T>(allowed: readonly NonNullable<T>[], defaultValue: D): PropDef<T>;
-  string<T extends string = string>(): PropDef<T | undefined>;
-  string<T extends string = string>(defaultValue: string): PropDef<T>;
+  number(): PropDef<number | undefined>;
+  number(defaultValue: number): PropDef<number>;
+  /**
+   * Prop restricted to a fixed set of allowed values: the only honest way to
+   * type a union-valued prop, because the restriction is enforced at runtime
+   * (`parse` falls back to the default for anything outside `allowed`), not just
+   * in a type parameter a raw attribute value could violate. Numeric members are
+   * matched against the attribute value parsed as a number. Omit `defaultValue`
+   * for an optional prop (`undefined` when the attribute is absent).
+   */
+  oneOf<T extends number>(allowed: readonly T[]): PropDef<T | undefined>;
+  oneOf<T extends number>(allowed: readonly T[], defaultValue: T): PropDef<T>;
+  oneOf<T extends string>(allowed: readonly T[]): PropDef<T | undefined>;
+  oneOf<T extends string>(allowed: readonly T[], defaultValue: T): PropDef<T>;
+  string(): PropDef<string | undefined>;
+  string(defaultValue: string): PropDef<string>;
 };
 
 /** @internal JS-only prop implementation: never reads/writes attributes. */
 function _jsOnlyProp<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
   return { default: defaultValue, parse: () => defaultValue, reflect: false } as PropDef<T | undefined>;
+}
+
+/** @internal Implementation behind the overloaded `prop.number` signature. */
+function _numberProp(defaultValue?: number): PropDef<number | undefined> {
+  const def = defaultValue;
+
+  return {
+    default: def,
+    parse: (value) => {
+      if (value == null) return def;
+
+      const n = Number(value);
+
+      if (Number.isNaN(n)) {
+        warn(`prop.number(): attribute value "${value}" is not a valid number, using default (${String(def)})`);
+
+        return def;
+      }
+
+      return n;
+    },
+    reflect: true,
+  };
+}
+
+/** @internal Implementation behind the overloaded `prop.string` signature. */
+function _stringProp(defaultValue?: string): PropDef<string | undefined> {
+  // When no default provided, undefined sentinel → attribute removed when value is absent
+  return {
+    default: defaultValue,
+    parse: (value: string | null) => (value == null ? defaultValue : value),
+    reflect: true,
+  };
 }
 
 export const prop: PropFactory = {
@@ -92,47 +136,34 @@ export const prop: PropFactory = {
       reflect: false,
     };
   },
-  number<T extends number = number>(defaultValue?: number): PropDef<T> | PropDef<T | undefined> {
-    const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
-
-    return {
-      default: def,
-      parse: (value) => {
-        if (value == null) return def;
-
-        const n = Number(value);
-
-        if (Number.isNaN(n)) {
-          warn(`prop.number(): attribute value "${value}" is not a valid number, using default (${String(def)})`);
-
-          return def;
-        }
-
-        return n as T;
-      },
-      reflect: true,
-    } as PropDef<T> | PropDef<T | undefined>;
-  },
-  oneOf<T extends string | undefined, D extends T = T>(
-    allowed: readonly NonNullable<T>[],
-    defaultValue: D,
-  ): PropDef<T> {
+  number: _numberProp as PropFactory['number'],
+  oneOf<T extends string | number>(allowed: readonly T[], defaultValue?: T): PropDef<T | undefined> {
     return {
       default: defaultValue,
-      parse: (value) => (value != null && allowed.includes(value as NonNullable<T>) ? (value as T) : defaultValue),
+      parse: (value) => {
+        if (value == null) return defaultValue;
+
+        // Return the allowed member itself (correct literal type). Numeric unions
+        // arrive as attribute strings, so also try the value parsed as a number.
+        const members = allowed as readonly unknown[];
+        const direct = members.indexOf(value);
+
+        if (direct !== -1) return (allowed as readonly T[])[direct];
+
+        const asNumber = Number(value);
+
+        if (!Number.isNaN(asNumber)) {
+          const byNumber = members.indexOf(asNumber);
+
+          if (byNumber !== -1) return (allowed as readonly T[])[byNumber];
+        }
+
+        return defaultValue;
+      },
       reflect: true,
     };
   },
-  string<T extends string = string>(defaultValue?: string): PropDef<T> | PropDef<T | undefined> {
-    // When no default provided, undefined sentinel → attribute removed when value is absent
-    const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
-
-    return {
-      default: def,
-      parse: (value: string | null) => (value == null ? def : (value as T)),
-      reflect: true,
-    } as PropDef<T> | PropDef<T | undefined>;
-  },
+  string: _stringProp as PropFactory['string'],
 };
 
 const isPropDef = (value: unknown): value is PropDef<unknown> =>

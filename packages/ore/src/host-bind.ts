@@ -7,7 +7,14 @@ import { isReactive } from '@vielzeug/ripple';
 
 import { getHost, tryRegisterCleanup, watchEffect } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
-import { listen, type MaybeReactive, resolveMaybeReactive, sanitizeCssToken, setAttr, toKebab } from './utils/dom';
+import {
+  cssDeclarationName,
+  cssDeclarationValue,
+  listen,
+  type MaybeReactive,
+  resolveClassTokens,
+  setAttr,
+} from './utils/dom';
 
 /**
  * Describes a reactive or static host binding value.
@@ -121,15 +128,17 @@ function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue
 }
 
 function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | undefined {
-  const cssName = sanitizeCssToken(name.startsWith('--') ? name : toKebab(name));
+  const cssName = cssDeclarationName(name);
 
   if (!cssName) return;
 
   let owned = false;
   const setStyle = (v: string | number | boolean | null | undefined): void => {
-    if (v != null && v !== '') {
+    const declaration = cssDeclarationValue(v);
+
+    if (declaration) {
       owned = true;
-      host.style.setProperty(cssName, sanitizeCssToken(String(v)));
+      host.style.setProperty(cssName, declaration);
     } else if (owned) host.style.removeProperty(cssName);
   };
 
@@ -143,15 +152,7 @@ function applyClassMap(
   const getMap =
     typeof value === 'function'
       ? value
-      : (): Record<string, boolean> => {
-          const result: Record<string, boolean> = {};
-
-          for (const [cls, entry] of Object.entries(value)) {
-            result[cls] = resolveMaybeReactive(entry);
-          }
-
-          return result;
-        };
+      : (): Record<string, boolean> => Object.fromEntries([...resolveClassTokens(value)].map((cls) => [cls, true]));
 
   let prev = new Set<string>();
 

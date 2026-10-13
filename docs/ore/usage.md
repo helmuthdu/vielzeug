@@ -203,9 +203,46 @@ each(
 );
 ```
 
-## live form bindings
+## model: two-way form bindings
 
-Use `live(signal)` for inputs that should preserve in-progress user edits instead of overwriting the DOM on stale writes.
+Use `model(signal)` for a controlled input: it writes the signal to the control's `value`/`checked` property and
+writes user input back on the control's change event (`'change'` for checkboxes, radios, and selects; `'input'`
+otherwise). This replaces the `live()` + manual `@input` handler pair with one binding.
+
+```ts
+import { signal } from '@vielzeug/ripple';
+import { define, html, model } from '@vielzeug/ore';
+
+define('live-search', {
+  setup() {
+    const query = signal('');
+    const agree = signal(false);
+
+    return html`
+      <input value=${model(query)} />
+      <input type="checkbox" checked=${model(agree)} />
+    `;
+  },
+});
+```
+
+A native text input's `value` is always a string, so pass a `get` reader to keep a numeric signal numeric, and an
+`event` name for custom controls that emit their own change event:
+
+```ts
+const count = signal(0);
+
+html`
+  <input type="number" value=${model(count, { get: (el) => Number(el.value) })} />
+  <my-picker value=${model(pick, { event: 'pick-change', get: (el) => (el as MyPicker).selection })} />
+`;
+```
+
+## live: one-way bindings that preserve user edits
+
+Use `live(signal)` when a binding must skip a stale app-state write while the user is mid-edit, without writing
+user input back. `model()` covers the common controlled-input case; `live()` is for one-way bindings that only
+need the stale-write guard.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
@@ -578,7 +615,7 @@ define('signup-form', {
 - Bind host attributes and classes via `bind()` rather than mutating the element directly.
 - Provide context at the nearest ancestor: avoid global context singletons.
 - Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, external subscriptions).
-- Use `live(signal)` for form inputs to prevent clobbering user-in-progress edits.
+- Use `model(signal)` for two-way form inputs; use `live(signal)` for a one-way binding that must not clobber user-in-progress edits.
 - Extract composable helper functions freely: `onMounted`/`onCleanup`/`bind`/... resolve the active component through implicit context, so they work from any function called (transitively) during `setup()`, with no need to pass them in as parameters.
 - Test component mounting and lifecycle with `@vielzeug/ore/testing`; import generic DOM events, queries, and waits
   from `@vielzeug/assay`.

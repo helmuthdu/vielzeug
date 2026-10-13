@@ -3,9 +3,10 @@
  * Tests for core ore directives: each, raw
  */
 
+import { fireChange, fireInput } from '@vielzeug/assay';
 import { computed, signal } from '@vielzeug/ripple';
 
-import { classMap, each, html, live, styleMap, unsafeHtml, when } from '../index';
+import { classMap, each, html, live, model, styleMap, unsafeHtml, when } from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -617,6 +618,77 @@ describe('Directive: each()', () => {
     errorSpy.mockRestore();
   });
 
+  it('rolls back a failed reconcile pass and keeps the last good list on screen', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const oreErrorHandler = vi.fn();
+
+    document.addEventListener('ore:error', oreErrorHandler);
+
+    const boom = signal(false);
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+    ]);
+
+    const { flush, queryAll } = await mount(
+      () => html`
+        <ul>
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => {
+              // id 4 renders fine and is created earlier in the same pass; id 5
+              // throws. A correct rollback must remove the already-created id 4
+              // node, not leave it orphaned alongside the surviving list.
+              if (item.value.value === 'E' && boom.value) throw new Error('render boom');
+
+              return html`
+                <li class="item">${() => item.value.value}</li>
+              `;
+            },
+          )}
+        </ul>
+      `,
+    );
+
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A', 'B']);
+
+    boom.value = true;
+
+    // id 1/2 are reused (no re-render); id 4 mounts fine, then id 5 throws.
+    items.value = [
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+      { id: 4, value: 'D' },
+      { id: 5, value: 'E' },
+    ];
+    await flush();
+
+    // The failed pass is undone: the previous list is untouched, and neither the
+    // throwing item nor the earlier-created id 4 node survives.
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A', 'B']);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('each-reconcile'),
+      expect.objectContaining({ message: expect.stringContaining('render boom') }),
+    );
+    expect(oreErrorHandler).toHaveBeenCalledTimes(1);
+    expect(oreErrorHandler.mock.calls[0]?.[0].detail.phase).toBe('each-reconcile');
+
+    // Recovery: once the render no longer throws, the full list mounts cleanly.
+    boom.value = false;
+    items.value = [
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+      { id: 4, value: 'D' },
+      { id: 5, value: 'E' },
+    ];
+    await flush();
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A', 'B', 'D', 'E']);
+
+    document.removeEventListener('ore:error', oreErrorHandler);
+    errorSpy.mockRestore();
+  });
+
   it('renders a plain static array as a one-time snapshot', async () => {
     const staticItems = [1, 2, 3];
     const { queryAll } = await mount(
@@ -1051,5 +1123,125 @@ describe('Directive: live()', () => {
     // signal still receives it (live() marks the binding site, not the signal).
     expect(liveInput.value).toBe('user-typed');
     expect(plainInput.value).toBe('new-server');
+  });
+});
+
+describe('Directive: model()', () => {
+  it('completes the two-way loop for a text input on input events', async () => {
+    const text = signal('');
+    const { flush, query } = await mount(
+      () => html`
+        <input class="field" value=${model(text)} />
+        <span class="echo">${() => text.value}</span>
+      `,
+    );
+
+    const input = query<HTMLInputElement>('.field')!;
+
+    expect(input.value).toBe('');
+
+    // user → signal
+    input.value = 'typed';
+    fireInput(input);
+    await flush();
+    expect(query('.echo')?.textContent).toBe('typed');
+
+    // signal → control
+    text.value = 'from app';
+    await flush();
+    expect(input.value).toBe('from app');
+  });
+
+  it('writes back a checkbox on change using checked, not value', async () => {
+    const agree = signal(false);
+    const { flush, query } = await mount(
+      () => html`
+        <input class="field" type="checkbox" checked=${model(agree)} />
+        <span class="echo">${() => String(agree.value)}</span>
+      `,
+    );
+
+    const input = query<HTMLInputElement>('.field')!;
+
+    expect(input.checked).toBe(false);
+
+    input.checked = true;
+    fireChange(input);
+    await flush();
+    expect(query('.echo')?.textContent).toBe('true');
+
+    agree.value = false;
+    await flush();
+    expect(input.checked).toBe(false);
+  });
+
+  it('honours a custom get reader so numeric signals stay numeric', async () => {
+    const count = signal(0);
+    const { flush, query } = await mount(
+      () => html`
+        <input class="field" type="number" value=${model(count, { get: (el) => Number((el as HTMLInputElement).value) })} />
+        <span class="echo">${() => String(count.value)}</span>
+      `,
+    );
+
+    const input = query<HTMLInputElement>('.field')!;
+
+    input.value = '42';
+    fireInput(input);
+    await flush();
+
+    expect(count.value).toBe(42);
+    expect(typeof count.value).toBe('number');
+  });
+
+  it('honours a custom event option for custom controls', async () => {
+    const value = signal('initial');
+    const { query } = await mount(
+      () => html`
+        <div class="control" value=${model(value, { event: 'ore-change', get: (el) => (el as unknown as { value: string }).value })}></div>
+      `,
+    );
+
+    const control = query<HTMLElement & { value: string }>('.control')!;
+
+    // non-native target receives the signal write as a plain property write
+    expect(control.value).toBe('initial');
+
+    control.value = 'picked';
+    control.dispatchEvent(new Event('ore-change'));
+
+    expect(value.value).toBe('picked');
+  });
+
+  it('reads a select back on change', async () => {
+    const picked = signal('a');
+    const { flush, query } = await mount(
+      () => html`
+        <select class="field" value=${model(picked)}>
+          <option value="a">A</option>
+          <option value="b">B</option>
+        </select>
+      `,
+    );
+
+    const select = query<HTMLSelectElement>('.field')!;
+
+    expect(select.value).toBe('a');
+
+    select.value = 'b';
+    fireChange(select);
+    await flush();
+
+    expect(picked.value).toBe('b');
+  });
+
+  it('rejects model() on a boolean-attribute binding', async () => {
+    await expect(
+      mount(
+        () => html`
+          <input class="field" ?checked=${model(signal('nope'))} />
+        `,
+      ),
+    ).rejects.toThrow('not a boolean attribute');
   });
 });

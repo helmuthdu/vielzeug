@@ -3,8 +3,9 @@
  *
  * Why `Symbol.for` and not identity checks (`WeakSet`, `instanceof`): `Symbol.for` keys are
  * process-global, so brands survive a duplicated module graph (two copies of ore bundled into
- * one page: the exact failure mode `src/iife.ts`'s header documents). Identity-based checks
- * silently fail across those copies: an object stamped by one graph is invisible to the other.
+ * one page: possible whenever a consumer and a dependency each bundle their own ore, or an
+ * IIFE `window.Ore` runtime coexists with an npm import). Identity-based checks silently fail
+ * across those copies: an object stamped by one graph is invisible to the other.
  * Every branded runtime object in ore (`HTMLResult`, `DirectiveResult`,
  * `LiveBinding`, `CSSResult`) goes through this helper: do not introduce a second mechanism.
  */

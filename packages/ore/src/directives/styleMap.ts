@@ -1,6 +1,6 @@
 import { computed, type Readable } from '@vielzeug/ripple';
 
-import { resolveMaybeReactive, sanitizeCssToken, toKebab } from '../utils/dom';
+import { cssDeclarationName, cssDeclarationValue } from '../utils/dom';
 
 type StyleInput =
   | string
@@ -10,14 +10,6 @@ type StyleInput =
   | false
   | (() => string | number | null | undefined | false)
   | Readable<string | number | null | undefined | false>;
-
-const toStyleValue = (value: StyleInput): string => {
-  const resolved = resolveMaybeReactive(value);
-
-  if (resolved == null || resolved === false) return '';
-
-  return sanitizeCssToken(String(resolved));
-};
 
 /**
  * Builds a reactive inline style string from a style object.
@@ -44,11 +36,11 @@ export const styleMap = (record: Record<string, StyleInput>): Readable<string> =
     const declarations: string[] = [];
 
     for (const [name, input] of Object.entries(record)) {
-      const value = toStyleValue(input);
+      const value = cssDeclarationValue(input);
 
       if (!value) continue;
 
-      const safeName = sanitizeCssToken(toKebab(name));
+      const safeName = cssDeclarationName(name);
 
       if (!safeName) continue;
 

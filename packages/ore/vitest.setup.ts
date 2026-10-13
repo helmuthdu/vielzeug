@@ -1,9 +1,11 @@
+import { installFormInternalsPolyfill } from '@vielzeug/assay';
 import axe from 'axe-core';
 import { afterEach, vi } from 'vitest';
 
 import { install } from './src/testing';
 
-install(afterEach, { formInternals: true });
+install(afterEach);
+installFormInternalsPolyfill();
 
 globalThis.window.URL.createObjectURL = vi.fn();
 
@@ -83,5 +85,5 @@ if (typeof window.matchMedia !== 'function') {
 
 // ElementInternals/FormData/`<form>.reset()` jsdom gaps (setValidity, checkValidity, the
 // checkValidity/reportValidity host mixin, FormData collection, formResetCallback dispatch) are
-// polyfilled by `install()` above, via `installFormInternalsPolyfill()`: see that function's
-// doc comment for why this lives in `@vielzeug/ore/testing` rather than here.
+// polyfilled by `installFormInternalsPolyfill()` above: see that function's doc comment in
+// @vielzeug/assay for why the polyfill lives there.

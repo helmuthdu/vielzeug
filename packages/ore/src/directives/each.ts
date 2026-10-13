@@ -60,10 +60,12 @@ const removeItem = <T>(entry: ItemEntry<T>): void => {
 // ─── Reconciler ───────────────────────────────────────────────────────────────
 
 /**
- * Reconciles the live item map (mutated in-place) against the next array.
- * Stale entries are removed and destroyed; new entries are created and inserted.
- * Existing entries are updated in-place via signal writes.
- * Returns the ordered list of entries matching nextList.
+ * Reconciles the live item map against the next array. The pass is transactional:
+ * new entries are created first, existing entries are updated in-place via signal
+ * writes, and stale entries are destroyed only after the whole pass has succeeded.
+ * If creation throws (user render code), the caller rolls back the entries created
+ * during this pass and the previous list state survives: the last good render stays
+ * on screen. Returns the ordered list of entries matching nextList.
  */
 const reconcileItems = <T>(
   itemsMap: Map<ItemKey, ItemEntry<T>>,
@@ -72,37 +74,35 @@ const reconcileItems = <T>(
   render: (item: Readable<T>, index: Readable<number>) => HTMLResult,
   parent: ParentNode,
   endMarker: Node,
+  createdThisPass: ItemEntry<T>[],
 ): ItemEntry<T>[] => {
-  const nextKeySet = new Set(nextKeys);
-
-  // Remove stale entries from the map
-  for (const [key, entry] of itemsMap) {
-    if (!nextKeySet.has(key)) {
-      removeItem(entry);
-      itemsMap.delete(key);
-    }
-  }
-
-  // Build the next ordered list: update existing items, create new ones
-  const nextOrdered: ItemEntry<T>[] = [];
-
+  // Phase 1: create every missing entry. This is the only step that can throw
+  // (user render code), and it records what it created so a failure is undoable.
   for (let i = 0; i < next.length; i++) {
     const key = nextKeys[i];
-    const existing = itemsMap.get(key);
 
-    if (existing) {
-      batch(() => {
-        existing.data.value = next[i];
-        existing.index.value = i;
-      });
-      nextOrdered.push(existing);
-    } else {
-      const entry = untrack(() => createItem(next[i], i, render, parent, endMarker));
+    if (itemsMap.has(key)) continue;
 
-      itemsMap.set(key, entry);
+    const entry = untrack(() => createItem(next[i], i, render, parent, endMarker));
+
+    createdThisPass.push(entry);
+    itemsMap.set(key, entry);
+  }
+
+  // Phase 2: ordered list + in-place updates for reused entries (signal writes).
+  const nextOrdered: ItemEntry<T>[] = [];
+
+  batch(() => {
+    for (let i = 0; i < next.length; i++) {
+      const entry = itemsMap.get(nextKeys[i]);
+
+      invariant(entry, 'each() reconcile phase 2 lost an entry created in phase 1');
+
+      entry.data.value = next[i];
+      entry.index.value = i;
       nextOrdered.push(entry);
     }
-  }
+  });
 
   // DOM ordering: right-to-left pass: move any item not already adjacent to cursor.
   // An item is in place when its last node directly precedes the cursor; items may
@@ -124,7 +124,31 @@ const reconcileItems = <T>(
     cursor = firstNode ?? cursor;
   }
 
+  // Phase 3: commit: destroy stale entries only now that the pass has succeeded.
+  const nextKeySet = new Set(nextKeys);
+
+  for (const [key, entry] of itemsMap) {
+    if (!nextKeySet.has(key)) {
+      removeItem(entry);
+      itemsMap.delete(key);
+    }
+  }
+
   return nextOrdered;
+};
+
+/** Undo a failed reconcile pass: destroy entries created during it, restoring the last good list. */
+const rollbackCreated = <T>(itemsMap: Map<ItemKey, ItemEntry<T>>, created: ItemEntry<T>[]): void => {
+  for (const entry of created) {
+    removeItem(entry);
+
+    for (const [key, candidate] of itemsMap) {
+      if (candidate === entry) {
+        itemsMap.delete(key);
+        break;
+      }
+    }
+  }
 };
 
 const collectKeys = <T>(next: T[], keyFn: (item: T, index: number) => ItemKey): ItemKey[] => {
@@ -257,14 +281,17 @@ export function each<T>(
 
       clearFallback();
 
+      const createdThisPass: ItemEntry<T>[] = [];
+
       try {
-        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, nextKeys, render, parent, endMarker));
+        itemsOrdered = untrack(() =>
+          reconcileItems(itemsMap, nextList, nextKeys, render, parent, endMarker, createdThisPass),
+        );
       } catch (error) {
-        // Rendering may already have changed the live map, so clear it to avoid retaining partial DOM.
+        // Undo this pass instead of tearing the list down: entries created before the
+        // throw are removed, everything that was on screen stays exactly as it was.
         reportEachError(error, anchor);
-        for (const entry of itemsMap.values()) removeItem(entry);
-        itemsMap = new Map();
-        itemsOrdered = [];
+        untrack(() => rollbackCreated(itemsMap, createdThisPass));
       }
     });
 

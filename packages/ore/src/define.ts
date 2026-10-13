@@ -1,6 +1,8 @@
-import { createComponentClass } from './_component-class';
+import { BaseElement } from './base-element';
 import type { ComponentDefinition } from './component-types';
 import { ORE_ERRORS, OreApiError } from './errors';
+import { normalizePropDefinition, type PropInputDefs, type PropsDef, validatePropDefs } from './props';
+import { toKebab } from './utils/dom';
 
 /**
  * Create and register a web component.
@@ -40,9 +42,35 @@ export function define<Props extends Record<string, unknown> = Record<never, nev
   if (!tag) throw new OreApiError(ORE_ERRORS.defineRequiresTag);
   if (customElements.get(tag)) throw new OreApiError(ORE_ERRORS.defineDuplicate(tag));
 
-  const ComponentClass = createComponentClass(tag, definition);
+  const { props: propDefs } = definition;
 
-  // Registration is intentionally the sole global side effect of define().
+  const normalizedPropDefs: PropsDef<Props> | undefined = (() => {
+    if (!propDefs) return undefined;
+
+    const errors = validatePropDefs(propDefs as Record<string, unknown>);
+
+    if (errors.length > 0) throw new OreApiError(ORE_ERRORS.validationFailed(tag, errors));
+
+    const normalized: PropInputDefs = {};
+
+    for (const [key, def] of Object.entries(propDefs)) {
+      normalized[key] = normalizePropDefinition(def, key);
+    }
+
+    return normalized as PropsDef<Props>;
+  })();
+
+  const observedAttrs = normalizedPropDefs ? Object.keys(normalizedPropDefs).map(toKebab) : [];
+
+  const ComponentClass = class extends BaseElement {
+    static override _definition = definition as unknown as ComponentDefinition;
+    static override _normalizedPropDefs = normalizedPropDefs as PropsDef<Record<never, never>> | undefined;
+    static override formAssociated = definition.formAssociated ?? false;
+    static override observedAttributes = observedAttrs;
+  };
+
+  // Prop validation and class construction above are side-effect-free; registration
+  // is intentionally the last, and only global side effect of define().
   Object.defineProperty(ComponentClass, 'name', { value: tag });
   customElements.define(tag, ComponentClass);
 

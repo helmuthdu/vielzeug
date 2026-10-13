@@ -6,9 +6,9 @@
  * Runtime factories and brand guards live in `result.ts`: this module is types only.
  */
 
-import type { Readable } from '@vielzeug/ripple';
+import type { Readable, Signal } from '@vielzeug/ripple';
 
-import type { PropMeta } from '../props';
+import type { EventModifiers } from './compiler';
 import type { DirectiveResult, HTMLResult, Ref, RefCallback } from './result';
 
 // ─── Binding variants ─────────────────────────────────────────────────────────
@@ -23,8 +23,6 @@ type AttrBaseFields = {
   live?: true;
   mode: 'attr' | 'bool';
   name: string;
-  /** Pre-resolved prop metadata (if the target element is an ore component). */
-  propMeta?: PropMeta;
   type: 'attr';
 };
 
@@ -39,8 +37,29 @@ export type AttrBinding = AttrStaticBinding | AttrReactiveBinding;
 export type EventBinding = {
   el: HTMLElement;
   handler: (e: Event) => void;
+  modifiers?: EventModifiers;
   name: string;
   type: 'event';
+};
+
+/** Explicit property binding (`.prop=${value}` in a template): always writes the DOM property. */
+export type PropBinding = {
+  el: HTMLElement;
+  name: string;
+  type: 'prop';
+} & ({ signal: Readable<unknown> } | { value: unknown });
+
+/**
+ * Two-way form-control binding produced by `model()` (see directives/model.ts):
+ * writes the source signal to the control's value/checked property and writes
+ * user input back through the control's configured event.
+ */
+export type ModelBinding = {
+  el: HTMLElement;
+  event: string;
+  get: (el: HTMLElement) => unknown;
+  signal: Signal<unknown>;
+  type: 'model';
 };
 
 export type RefBinding = {
@@ -64,4 +83,11 @@ export type DirectiveBinding = {
   type: 'directive';
 };
 
-export type Binding = AttrBinding | EventBinding | RefBinding | HtmlBinding | DirectiveBinding;
+export type Binding =
+  | AttrBinding
+  | DirectiveBinding
+  | EventBinding
+  | HtmlBinding
+  | ModelBinding
+  | PropBinding
+  | RefBinding;

@@ -21,12 +21,42 @@ export const SlotKind = {
   BOOL_ATTR: 'boolAttr',
   EVENT: 'event',
   NODE: 'node',
+  PROP: 'prop',
   REF: 'ref',
 } as const;
 
 export type DetectedSlotKind = (typeof SlotKind)[keyof typeof SlotKind];
 
+/**
+ * Event modifiers accepted after `@event.` in a template: `@click.stop.prevent`.
+ * `stop`/`prevent` wrap the handler (stopPropagation/preventDefault); `once`/`capture`
+ * map to the native addEventListener options of the same name.
+ */
+export type EventModifiers = {
+  capture?: boolean;
+  once?: boolean;
+  prevent?: boolean;
+  stop?: boolean;
+};
+
+const EVENT_MODIFIERS: EventModifiers = { capture: true, once: true, prevent: true, stop: true };
+
+const parseEventModifiers = (name: string, modifiers: string[]): EventModifiers | undefined => {
+  if (modifiers.length === 0) return undefined;
+
+  const parsed: EventModifiers = {};
+
+  for (const modifier of modifiers) {
+    if (!(modifier in EVENT_MODIFIERS)) throw new OreApiError(ORE_ERRORS.eventModifierUnknown(name, modifier));
+
+    parsed[modifier as keyof EventModifiers] = true;
+  }
+
+  return parsed;
+};
+
 type DetectedSlot = {
+  eventModifiers?: EventModifiers;
   kind: DetectedSlotKind;
   name?: string;
   prefix: string;
@@ -39,6 +69,7 @@ export type NodePath = readonly number[];
 export type SlotMeta = {
   commentId?: number;
   elementId?: number;
+  eventModifiers?: EventModifiers;
   kind: DetectedSlotKind;
   mode?: 'attr' | 'bool';
   name?: string;
@@ -56,6 +87,7 @@ export type CompiledStaticTemplate = {
 const EVENT_RE = /\s+@([a-zA-Z_][-a-zA-Z0-9_.-]*)\s*=\s*["']?$/;
 const REF_RE = /\s+ref\s*=\s*["']?$/;
 const BOOL_ATTR_RE = /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
+const PROP_RE = /\s+\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 const ATTR_RE = /\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 
 const detectSlot = (str: string): DetectedSlot => {
@@ -65,9 +97,7 @@ const detectSlot = (str: string): DetectedSlot => {
     const prefix = str.slice(0, -m[0].length);
     const [name, ...modifiers] = m[1].split('.');
 
-    if (modifiers.length > 0) throw new OreApiError(ORE_ERRORS.eventModifiersUnsupported(m[1]));
-
-    return { kind: SlotKind.EVENT, name, prefix };
+    return { eventModifiers: parseEventModifiers(name, modifiers), kind: SlotKind.EVENT, name, prefix };
   }
 
   if ((m = REF_RE.exec(str))) {
@@ -76,6 +106,18 @@ const detectSlot = (str: string): DetectedSlot => {
 
   if ((m = BOOL_ATTR_RE.exec(str))) {
     return { kind: SlotKind.BOOL_ATTR, name: m[1], prefix: str.slice(0, -m[0].length) };
+  }
+
+  if ((m = PROP_RE.exec(str))) {
+    const name = m[1];
+
+    // Prototype-polluting property names are rejected at compile time: `.prop=`
+    // writes the element property directly, so these names must never be writable.
+    if (name === '__proto__' || name === 'constructor' || name === 'prototype') {
+      throw new OreApiError(ORE_ERRORS.propBindingForbiddenName(name));
+    }
+
+    return { kind: SlotKind.PROP, name, prefix: str.slice(0, -m[0].length) };
   }
 
   if ((m = ATTR_RE.exec(str))) {
@@ -212,7 +254,13 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
       const mode: 'attr' | 'bool' | undefined =
         slot.kind === SlotKind.BOOL_ATTR ? 'bool' : slot.kind === SlotKind.ATTR ? 'attr' : undefined;
 
-      slots.push({ elementId: activeElementId, kind: slot.kind, mode, name: slot.name });
+      slots.push({
+        elementId: activeElementId,
+        eventModifiers: slot.eventModifiers,
+        kind: slot.kind,
+        mode,
+        name: slot.name,
+      });
     }
   }
 

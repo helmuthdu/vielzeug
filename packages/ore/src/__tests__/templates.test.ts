@@ -593,14 +593,92 @@ describe('Template: HTML System', () => {
       ).rejects.toThrow('interpolations inside a tag must be named attributes');
     });
 
-    it('rejects event modifiers with a native-event migration message', async () => {
+    it('applies .stop and .prevent modifiers around the handler', async () => {
+      const inner = signal(0);
+      let hostSawClick = false;
+      let defaultPrevented = false;
+
+      const { query, element } = await mount(
+        () =>
+          html`
+          <button
+            class="inner"
+            @click.stop.prevent=${(e: Event) => {
+              inner.value += 1;
+              defaultPrevented = e.defaultPrevented;
+            }}>x</button>
+        `,
+      );
+
+      element.addEventListener('click', () => {
+        hostSawClick = true;
+      });
+
+      fireClick(query('.inner')!);
+
+      expect(inner.value).toBe(1);
+      // .stop: the event never reaches the host listener…
+      expect(hostSawClick).toBe(false);
+      // …and .prevent marked the (cancelable) event as handled.
+      expect(defaultPrevented).toBe(true);
+    });
+
+    it('rejects unknown event modifiers', async () => {
       await expect(
         mount(
           () => html`
-            <button @click.stop=${() => undefined}>x</button>
+            <button @click.self=${() => undefined}>x</button>
           `,
         ),
-      ).rejects.toThrow('event modifiers are unsupported');
+      ).rejects.toThrow('unknown event modifier "self"');
+    });
+  });
+
+  describe('Explicit property bindings (.prop=)', () => {
+    it('writes structured values as element properties, never attributes', async () => {
+      const data = signal<{ id: number }[]>([{ id: 1 }]);
+      const { flush, query } = await mount(
+        () => html`
+          <div class="target" .items=${data}></div>
+        `,
+      );
+
+      const target = query<HTMLElement & { items: unknown }>('.target')!;
+
+      expect(target.items).toEqual([{ id: 1 }]);
+      // property-only: nothing was reflected to an attribute
+      expect(target.hasAttribute('items')).toBe(false);
+
+      data.value = [{ id: 2 }, { id: 3 }];
+      await flush();
+
+      expect(target.items).toEqual([{ id: 2 }, { id: 3 }]);
+    });
+
+    it('writes static (non-reactive) values once', async () => {
+      const config = { size: 3, theme: 'dark' };
+      const { query } = await mount(
+        () => html`
+          <div class="target" .config=${config}></div>
+        `,
+      );
+
+      const target = query<HTMLElement & { config: { theme: string; size: number } }>('.target')!;
+
+      expect(target.config).toBe(config);
+      expect(target.hasAttribute('config')).toBe(false);
+    });
+
+    it('rejects prototype-polluting property names at compile time', async () => {
+      await expect(
+        mount(
+          () => html`
+            <div class="target" .__proto__=${{ polluted: true }}></div>
+          `,
+        ),
+      ).rejects.toThrow('forbidden property-binding name');
+
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     });
   });
 });
@@ -660,6 +738,27 @@ describe('Native value and checked binding', () => {
 
     expect(input.checked).toBe(false);
     expect(input.value).toBe('choice');
+  });
+
+  it('binds indeterminate as an element property, reactively', async () => {
+    const mixed = signal(false);
+    const { flush, query } = await mount(
+      () => html`
+        <input type="checkbox" indeterminate=${mixed} />
+      `,
+    );
+
+    const input = query<HTMLInputElement>('input')!;
+
+    expect(input.indeterminate).toBe(false);
+    // property-only concept: no attribute is ever written
+    expect(input.hasAttribute('indeterminate')).toBe(false);
+
+    mixed.value = true;
+    await flush();
+
+    expect(input.indeterminate).toBe(true);
+    expect(input.hasAttribute('indeterminate')).toBe(false);
   });
 });
 

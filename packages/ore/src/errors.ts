@@ -96,13 +96,17 @@ export const ORE_ERRORS = {
     `useField() requires define('${tag}', { formAssociated: true })`,
   defineRequiresTag: 'define() requires a tag name',
   eachDuplicateKey: (key: string, index: number): string => `each() received duplicate key "${key}" at index ${index}`,
-  eventModifiersUnsupported: (eventName: string): string =>
-    `@${eventName}: event modifiers are unsupported; call native event methods in the handler instead`,
+  eventModifierUnknown: (eventName: string, modifier: string): string =>
+    `@${eventName}.${modifier}: unknown event modifier "${modifier}". Supported: .stop, .prevent, .once, .capture`,
   injectStrictFailed: (key: string, tag: string): string => `injectStrict() could not resolve key "${key}" in <${tag}>`,
   invariantViolated: (message: string): string => `invariant violated: ${message}`,
   lifecycleOutsideSetup: 'Lifecycle hooks must be called during component setup',
   listenNullTarget: (eventName: string): string =>
     `listen() called with a null/undefined target for event "${eventName}": listener not attached`,
+  modelRequiresValueBinding: (name: string): string =>
+    `model(): "${name}" must be a plain value/checked attribute binding, not a boolean attribute. Bind it as ${name}=\${model(sig)}, not ?${name}=\${model(sig)}.`,
+  propBindingForbiddenName: (name: string): string =>
+    `html\`...\`: ".${name}" is a forbidden property-binding name (prototype pollution guard)`,
   propInvalidReflect: 'Structured props cannot use reflect:true: use prop.json() with reflect:false',
   templateInterpolationInTag:
     'html`...`: interpolations inside a tag must be named attributes, boolean attributes, events, or refs',

@@ -22,6 +22,7 @@ All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/c
 | `each()`               | Keyed list rendering with DOM diffing                 | Sync           | Duplicate keys report `ore:error`; plain `T[]` is a one-time static render  |
 | `when()`               | Conditional branch rendering                          | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription    |
 | `live(signal)`         | One-way binding that skips stale writes during input  | Sync           | Use for controlled inputs alongside a manual `@input` handler             |
+| `model(signal)`        | Two-way form-control binding (value/checked + write-back) | Sync       | Plain `value`/`checked` attribute only; pass `get` to keep numeric signals numeric   |
 | `onMounted(fn)`        | DOM-ready callback                                    | Setup only     | Must be called synchronously during `setup()`                             |
 | `onCleanup(fn)`        | Register teardown                                     | Setup only     | Called on component disconnect                                            |
 | `onEvent(target, …)`   | Scoped event listener with auto-cleanup               | Setup only     | No-ops on null target; removed on disconnect                              |
@@ -136,12 +137,13 @@ setup(_props) {
 | `prop.string(defaultValue?)`        | `PropDef<string>`  | Reflects by default                                                                                          |
 | `prop.bool(defaultValue?)`          | `PropDef<boolean>` | Any non-null attribute value other than `"false"` parses as `true`; `"false"` or absent attribute is `false` |
 | `prop.number(defaultValue?)`        | `PropDef<number>`  | Returns default (not NaN) and warns in dev when attribute is not a valid number                              |
-| `prop.oneOf(allowed, defaultValue)` | `PropDef<T>`       | Restricts to provided string union                                                                           |
+| `prop.oneOf(allowed, defaultValue?)` | `PropDef<T>`      | Restricts to a fixed set of string or number members; `parse` falls back to `defaultValue` (or `undefined` when omitted) for anything outside the set. Numeric members match the attribute parsed as a number |
 | `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse from attribute; `reflect: false`                                                                  |
 | `prop.data<T>(defaultValue?)`       | `PropDef<T>`       | JS-only: never reads/writes an attribute; use for objects, arrays, callbacks, or any non-serialisable value |
 
 > **Choosing the right prop helper:**
 >
+> - **`prop.oneOf`**: the honest way to type a union-valued prop: the restriction is enforced at runtime (`parse` falls back for anything outside the set), not just in a type parameter a raw attribute value could violate. Pass an `as const` array of the allowed string or number members.
 > - **`prop.json`**: value can be declared in HTML (`<my-el config='{"x":1}'>`); attribute string is `JSON.parse`d.
 > - **`prop.data`**: value is always set from JavaScript (objects, arrays, callbacks, class instances); the attribute is never read. Use this for both data and function props.
 
@@ -174,7 +176,16 @@ define('data-grid', {
 ### `html`
 
 Tagged template literal that returns an `HTMLResult`. Supports text interpolation, ordinary attributes (`attr=`),
-boolean attributes (`?attr=`), events (`@event=`), refs (`ref=`), and nested templates.
+boolean attributes (`?attr=`), explicit property bindings (`.prop=`), events (`@event=` with optional
+`.stop`/`.prevent`/`.once`/`.capture` modifiers), refs (`ref=`), and nested templates.
+
+`.prop=${value}` always writes the element property (never an attribute): the explicit channel for structured
+values (arrays, objects, callbacks). Prototype-polluting names (`__proto__`, `constructor`, `prototype`) are
+rejected at compile time.
+
+`@event.stop`, `.prevent`, `.once`, and `.capture` are shorthand for the matching listener behavior
+(`stopPropagation`/`preventDefault` applied before the handler runs; `once`/`capture` passed as listener
+options). An unknown modifier throws at compile time.
 
 ### `css`
 
@@ -189,9 +200,28 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 | `classMap(record)`                     | Reactive class string from object map                                                                 |
 | `styleMap(record)`                     | Reactive inline style string from object map                                                          |
 | `live(signal)`                         | One-way binding that skips stale writes during active user input; use with `@input` handler           |
+| `model(signal, options?)`              | Two-way form-control binding: writes the signal to `value`/`checked` and writes user input back on the control's change event |
 | `unsafeHtml(value)`                    | HTML rendering sink; sanitize untrusted values before calling                                           |
 
-`each()` treats number and string keys as distinct. A duplicate-key update reports `ore:error` and preserves the last valid list.
+`each()` treats number and string keys as distinct. A reconciliation failure (a duplicate key, or a render function that throws) reports `ore:error` and preserves the last valid list: entries created during the failed pass are rolled back, so the previous list stays exactly on screen.
+
+### `model(signal, options?)`
+
+Two-way binding for a form control: `value=${model(signal)}`. It writes the signal to the control's `value`/`checked` property on every change and writes user input back into the signal on the control's change event (`'change'` for checkboxes, radios, and `<select>`; `'input'` otherwise). This is the complete controlled-input loop that the `live()` + manual `@input` handler pair used to require.
+
+```ts
+const text = signal('');
+const agree = signal(false);
+const count = signal(0);
+
+html`
+  <input value=${model(text)} />
+  <input type="checkbox" checked=${model(agree)} />
+  <input type="number" value=${model(count, { get: (el) => Number(el.value) })} />
+`;
+```
+
+`options` overrides the defaults for non-native controls: `event` sets the write-back event name and `get` reads the current value out of the element (default `el.checked` for checkboxes/radios, `el.value` otherwise). Because a native text input's `value` is always a string, pass a `get` like `(el) => Number(el.value)` to keep a numeric signal numeric. `model()` can only drive a plain `value`/`checked` attribute binding; using it on a boolean (`?checked=`) or other attribute throws.
 
 ### `unsafeHtml`
 
@@ -291,6 +321,8 @@ Import from `@vielzeug/ore`.
 Wire a form-associated element to `ElementInternals`. Requires `formAssociated: true` on the component definition. The `disabled` state tracking via `internals.states` (CustomStateSet) is skipped with a dev warning if the API is unavailable in the current environment.
 
 ```ts
+type FormFieldValidity = { flags: ValidityStateFlags; message: string };
+
 type FormFieldOptions<T> = {
   disabled?: Readable<boolean>;
   /**
@@ -303,9 +335,14 @@ type FormFieldOptions<T> = {
   /** Called when the ancestor <form> resets (see onFormReset): restore local field state here. */
   onReset?: () => void;
   toFormValue?: (value: T) => File | FormData | string | null;
-  /** Recomputed reactively and passed straight to internals.setValidity(). null = always valid. */
-  validationMessage?: Readable<string>;
-  validity?: Readable<ValidityStateFlags | null>;
+  /**
+   * Recomputed reactively and passed straight to internals.setValidity().
+   * null (or omitted) = always valid. Flags and message travel together because
+   * the platform's setValidity() contract couples them (flags without a
+   * non-empty message throw); a single { flags, message } | null input makes a
+   * desynced pair unrepresentable.
+   */
+  validity?: Readable<FormFieldValidity | null>;
   value: Signal<T> | Readable<T>;
 };
 
@@ -318,15 +355,20 @@ type FormFieldHandle = {
 };
 ```
 
-Pass `validity`/`validationMessage` to make `required`-style constraints participate in native constraint validation
-through `checkValidity()` and `reportValidity()`:
+Pass a single `validity` signal to make `required`-style constraints participate in native constraint validation
+through `checkValidity()` and `reportValidity()`. The `{ flags, message }` pair is the one validity input: the old
+split `validity` + `validationMessage` options are gone, since they could drift apart into a state the platform
+rejects.
 
 ```ts
 const isBlank = (v: string) => v.trim() === '';
 
 useField({
-  validationMessage: computed(() => (required.value && isBlank(value.value) ? 'This field is required.' : '')),
-  validity: computed(() => (required.value && isBlank(value.value) ? { valueMissing: true } : null)),
+  validity: computed(() =>
+    required.value && isBlank(value.value)
+      ? { flags: { valueMissing: true }, message: 'This field is required.' }
+      : null,
+  ),
   value,
 });
 ```
@@ -339,8 +381,7 @@ Import from `@vielzeug/ore/testing`.
 | ------------------------ | ------------------------------------------------------------------------------------------ |
 | `mount(setup, options?)` | Mount a component and return a test fixture                                                |
 | `cleanup()`              | Remove all mounted elements and reset test state                                           |
-| `install(afterEach, options?)` | Register auto-cleanup; pass `{ formInternals: true }` to also install the `ElementInternals`/`FormData`/`<form>.reset()` jsdom polyfill (see below) |
-| `installFormInternalsPolyfill()` | Installs the form-internals polyfill directly (returns an `uninstall()` that restores every patched global). Usually called via `install(afterEach, { formInternals: true })` |
+| `install(afterEach)`     | Register auto-cleanup after each test                                                      |
 | `flush(options?)`        | Drain reactive updates and animation frames                                                |
 | `renderHook(setup)`      | Run lifecycle hooks in isolation; overload accepts `propDefs` as first arg for typed props |
 | `OreTimeoutError`        | Error thrown when `flush()` cannot settle tracked Ore work                                 |
@@ -350,7 +391,16 @@ Import from `@vielzeug/ore/testing`.
 Import `within`, named dispatchers such as `fireClick`, and waits such as `waitUntil` or `waitForEvent` from
 `@vielzeug/assay`.
 
-> **Form-associated component testing:** jsdom implements none of the `ElementInternals` form-association API: `install(afterEach, { formInternals: true })` polyfills `setFormValue`/`setValidity`/`checkValidity`/`reportValidity`/`validationMessage`/`validity`/`states`, mixes `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto the host element itself (real browsers do this for any `formAssociated: true` element), makes `FormData` collect a form-associated element's set value, and makes `<form>.reset()` invoke `formResetCallback()`. Every patch is a guarded no-op when its target already exists, and `installFormInternalsPolyfill()` returns an `uninstall()` that restores every patched global. The polyfill is opt-in (`{ formInternals: true }`) because the patches are global: suites without form-associated components shouldn't carry them. A downstream package (e.g. a component library built on `ore`) should rely on this instead of hand-rolling its own copy.
+> **Form-associated component testing:** jsdom implements none of the `ElementInternals` form-association API.
+> `@vielzeug/assay` exports `installFormInternalsPolyfill()` for this: it polyfills
+> `setFormValue`/`setValidity`/`checkValidity`/`reportValidity`/`validationMessage`/`validity`/`states`, mixes
+> `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto the host element itself (real browsers do
+> this for any `formAssociated: true` element), makes `FormData` collect a form-associated element's set value, and
+> makes `<form>.reset()` invoke `formResetCallback()`. Every patch is a guarded no-op when its target already
+> exists, and the function returns an `uninstall()` that restores every patched global. Call it directly from a
+> test setup (alongside `install(afterEach)`) only when the suite tests form-associated components: the patches
+> are global, so suites without them shouldn't carry them. A downstream package (e.g. a component library built
+> on `ore`) should rely on it instead of hand-rolling its own copy.
 
 #### `Fixture` interface
 
@@ -519,19 +569,27 @@ type CSSResult = {
 
 type LiveBinding<T> = { readonly source: Readable<T> };
 
+type ModelOptions<T = unknown> = {
+  /** Write-back event (default: 'change' for checkbox/radio/select, 'input' otherwise). */
+  event?: string;
+  /** Value reader (default: el.checked for checkbox/radio, el.value otherwise). */
+  get?: (el: HTMLElement) => T;
+};
+
 type EmitFn<T extends Record<string, unknown>> = {
   <K extends KeysWithoutDetail<T>>(event: K): boolean;
   <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): boolean;
 };
 // KeysWithoutDetail is an internal helper type, not exported.
 
+type FormFieldValidity = { flags: ValidityStateFlags; message: string };
+
 type FormFieldOptions<T = unknown> = {
   disabled?: Readable<boolean>;
   emptyStringForNull?: boolean;
   onReset?: () => void;
   toFormValue?: (value: T) => File | FormData | string | null;
-  validationMessage?: Readable<string>;
-  validity?: Readable<ValidityStateFlags | null>;
+  validity?: Readable<FormFieldValidity | null>;
   value: Signal<T> | Readable<T>;
 };
 

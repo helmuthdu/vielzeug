@@ -491,6 +491,78 @@ describe('component props', () => {
     });
   });
 
+  describe('prop.oneOf()', () => {
+    it('accepts an allowed string member and reflects it', async () => {
+      const { element, query } = await mount(
+        (props) => html`
+          <div class="v">${() => String(props.size.value)}</div>
+        `,
+        {
+          attrs: { size: 'lg' },
+          componentOptions: { props: { size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md') } },
+        },
+      );
+
+      expect(query('.v')?.textContent).toBe('lg');
+      expect(element.getAttribute('size')).toBe('lg');
+    });
+
+    it('falls back to the default for a value outside the allowed set', async () => {
+      const { query } = await mount(
+        (props) => html`
+          <div class="v">${() => String(props.size.value)}</div>
+        `,
+        {
+          attrs: { size: 'xl' },
+          componentOptions: { props: { size: prop.oneOf(['sm', 'md', 'lg'] as const, 'md') } },
+        },
+      );
+
+      expect(query('.v')?.textContent).toBe('md');
+    });
+
+    it('matches numeric members against the attribute parsed as a number', async () => {
+      const { query } = await mount(
+        (props) => html`
+          <div class="v">${() => String(props.level.value)}</div>
+        `,
+        {
+          attrs: { level: '3' },
+          componentOptions: { props: { level: prop.oneOf([0, 1, 2, 3] as const, 0) } },
+        },
+      );
+
+      expect(query('.v')?.textContent).toBe('3');
+    });
+
+    it('falls back to the default for an out-of-range numeric value', async () => {
+      const { query } = await mount(
+        (props) => html`
+          <div class="v">${() => String(props.level.value)}</div>
+        `,
+        {
+          attrs: { level: '9' },
+          componentOptions: { props: { level: prop.oneOf([0, 1, 2, 3] as const, 1) } },
+        },
+      );
+
+      expect(query('.v')?.textContent).toBe('1');
+    });
+
+    it('resolves to undefined when absent and no default is given', async () => {
+      const { query } = await mount(
+        (props) => html`
+          <div class="v">${() => String(props.size.value)}</div>
+        `,
+        {
+          componentOptions: { props: { size: prop.oneOf(['sm', 'md', 'lg'] as const) } },
+        },
+      );
+
+      expect(query('.v')?.textContent).toBe('undefined');
+    });
+  });
+
   describe('pre-upgrade property values', () => {
     // Frameworks that hydrate/patch server-rendered custom elements (e.g. Vue) may assign
     // a prop as a plain JS property on the element *before* it upgrades: the browser stashes

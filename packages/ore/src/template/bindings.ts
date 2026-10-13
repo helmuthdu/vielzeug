@@ -2,15 +2,15 @@
  * template/bindings.ts: Runtime binding appliers.
  *
  * Responsibilities:
- * - Apply each Binding variant to the live DOM (attr, event, html, ref,
- *   directive).
+ * - Apply each Binding variant to the live DOM (attr, event, html, model,
+ *   prop, ref, directive).
  * - Manage reactive effects and cleanup registration.
  * - Expose `applyBinding()` as the single dispatch entry point.
  * - Own the signal-to-form-control write path (`syncFormControl`) for regular
- *   attribute bindings.
+ *   attribute bindings, and the two-way `model()` write-back loop.
  */
 
-import { computed, isReactive, type Readable, effect as rawEffect, untrack } from '@vielzeug/ripple';
+import { computed, isReactive, type Readable, effect as rawEffect, type Signal, untrack } from '@vielzeug/ripple';
 
 import { isLiveBinding } from '../directives/live';
 import { invariant } from '../errors';
@@ -23,6 +23,8 @@ import type {
   EventBinding,
   HtmlBinding,
   HtmlBindingValue,
+  ModelBinding,
+  PropBinding,
   RefBinding,
 } from './binding-types';
 import { isHtmlResult } from './result';
@@ -109,26 +111,36 @@ const syncRegisteredProp = (el: HTMLElement, meta: PropMeta, binding: AttrBindin
 };
 
 export const applyAttrBinding = (binding: AttrBinding, registerCleanup: RegisterCleanup): void => {
-  const { el, mode, name, propMeta } = binding;
+  const { el, mode, name } = binding;
   const liveState: LiveWriteState = { last: undefined };
 
   const update = (value: unknown): void => {
+    // Resolved per update, not at instantiation: a nested custom element only
+    // registers its props when it is connected, which happens when this result
+    // mounts: later than binding construction. By update time the registry entry
+    // exists, so a structured value (array/object/callback) reaches a registered
+    // prop through its signal instead of an attribute round-trip that could not
+    // represent it. Unregistered targets get no such pass: structured data to
+    // them is an explicit `.prop=` binding.
+    const propMeta = getPropMeta(el, name);
+
     if (propMeta) {
       syncRegisteredProp(el, propMeta, binding, value);
 
       return;
     }
 
-    if (!isReactive(value) && isStructuredValue(value)) {
-      if (name !== '__proto__' && name !== 'constructor' && name !== 'prototype') {
-        (el as unknown as Record<string, unknown>)[name] = value;
-      }
+    if ((name === 'value' && isNativeFormInput(el)) || (name === 'checked' && el instanceof HTMLInputElement)) {
+      syncFormControl(el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, value, binding.live, liveState);
 
       return;
     }
 
-    if ((name === 'value' && isNativeFormInput(el)) || (name === 'checked' && el instanceof HTMLInputElement)) {
-      syncFormControl(el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, value, binding.live, liveState);
+    // `indeterminate` is a property-only concept on checkboxes (no attribute exists):
+    // bind it like any other element property so reactive indeterminate state works
+    // through the same `indeterminate="${sig}"` syntax as `checked`.
+    if (name === 'indeterminate' && el instanceof HTMLInputElement) {
+      el.indeterminate = Boolean(value);
 
       return;
     }
@@ -147,7 +159,85 @@ export const applyAttrBinding = (binding: AttrBinding, registerCleanup: Register
 // ─── Events ───────────────────────────────────────────────────────────────────
 
 const applyEventBinding = (binding: EventBinding, registerCleanup: RegisterCleanup): void => {
-  registerCleanup(listen(binding.el, binding.name, binding.handler));
+  const { modifiers } = binding;
+
+  const handler =
+    modifiers?.stop || modifiers?.prevent
+      ? (e: Event): void => {
+          if (modifiers.stop) e.stopPropagation();
+          if (modifiers.prevent) e.preventDefault();
+          binding.handler(e);
+        }
+      : binding.handler;
+
+  const options =
+    modifiers?.once || modifiers?.capture ? { capture: modifiers.capture, once: modifiers.once } : undefined;
+
+  registerCleanup(listen(binding.el, binding.name, handler, options));
+};
+
+// ─── Explicit property bindings ───────────────────────────────────────────────
+
+/**
+ * `.prop=${value}` binding: always writes the element property (never an
+ * attribute). This is the explicit channel for structured values (arrays,
+ * objects, callbacks): the old implicit "value happens to be an object, so set
+ * a property" fallback in the attr path is gone, so intent lives in the markup.
+ * Prototype-polluting names are rejected at compile time (see compiler.ts
+ * PROP_RE), not silently dropped here.
+ */
+const applyPropBinding = (binding: PropBinding, registerCleanup: RegisterCleanup): void => {
+  const update = (value: unknown): void => {
+    (binding.el as unknown as Record<string, unknown>)[binding.name] = value;
+  };
+
+  if ('signal' in binding) {
+    signalEffect(binding.signal, update, registerCleanup);
+  } else {
+    update(binding.value);
+  }
+};
+
+// ─── Two-way model bindings ──────────────────────────────────────────────────
+
+/**
+ * `model()` binding: signal → control property (through the same live-aware
+ * `syncFormControl` write path as `live()`, so an in-progress user edit is never
+ * clobbered) and control event → signal (the write-back that makes it two-way).
+ */
+const applyModelBinding = (binding: ModelBinding, registerCleanup: RegisterCleanup): void => {
+  const { el, get, signal } = binding;
+  const liveState: LiveWriteState = { last: undefined };
+
+  const write = (value: unknown): void => {
+    if (isNativeFormInput(el)) {
+      syncFormControl(el, value, true, liveState);
+    } else {
+      // Non-native target: plain property write (custom controls expose `value`).
+      (el as unknown as { value: unknown }).value = value;
+    }
+  };
+
+  const sub = rawEffect(() => {
+    write(signal.value);
+    return undefined;
+  });
+
+  const onEvent: EventListener = () => {
+    const next = get(el);
+
+    if (
+      !Object.is(
+        untrack(() => signal.value),
+        next,
+      )
+    ) {
+      (signal as Signal<unknown>).value = next;
+    }
+  };
+
+  registerCleanup(() => sub.dispose());
+  registerCleanup(listen(el, binding.event, onEvent));
 };
 
 // ─── Refs ─────────────────────────────────────────────────────────────────────
@@ -243,6 +333,12 @@ export const applyBinding = (binding: Binding, registerCleanup: RegisterCleanup)
     case 'html':
       applyHtmlBinding(binding, registerCleanup);
       break;
+    case 'model':
+      applyModelBinding(binding, registerCleanup);
+      break;
+    case 'prop':
+      applyPropBinding(binding, registerCleanup);
+      break;
     case 'ref':
       applyRefBinding(binding, registerCleanup);
       break;
@@ -257,21 +353,19 @@ export const createAttrBindingFromValue = (
   name: string,
   value: unknown,
 ): AttrBinding => {
-  const propMeta = getPropMeta(el, name);
-
   if (isLiveBinding(value)) {
-    return { el, live: true, mode, name, propMeta, signal: value.source, type: 'attr' };
+    return { el, live: true, mode, name, signal: value.source, type: 'attr' };
   }
 
   if (typeof value === 'function') {
-    return { el, mode, name, propMeta, signal: computed(value as () => unknown), type: 'attr' };
+    return { el, mode, name, signal: computed(value as () => unknown), type: 'attr' };
   }
 
   if (isReactive(value)) {
-    return { el, mode, name, propMeta, signal: value as Readable<unknown>, type: 'attr' };
+    return { el, mode, name, signal: value as Readable<unknown>, type: 'attr' };
   }
 
-  return { el, mode, name, propMeta, type: 'attr', value };
+  return { el, mode, name, type: 'attr', value };
 };
 
 export const resolveStaticText = (value: unknown): string => {

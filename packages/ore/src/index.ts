@@ -10,11 +10,12 @@ export { define } from './define';
 export { classMap } from './directives/classMap';
 export { each } from './directives/each';
 export { type LiveBinding, live } from './directives/live';
+export { type ModelOptions, model } from './directives/model';
 export { styleMap } from './directives/styleMap';
 export { unsafeHtml } from './directives/unsafe-html';
 export { when } from './directives/when';
 export { OreApiError, OreError, type OreErrorPhase, OreInternalError, OreLifecycleError } from './errors';
-export { type FormFieldHandle, type FormFieldOptions, useField } from './forms/field';
+export { type FormFieldHandle, type FormFieldOptions, type FormFieldValidity, useField } from './forms/field';
 export {
   type AttributeBindings,
   type BindOptions,

@@ -9,6 +9,15 @@ const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
 /** @internal */
 const activeFieldRegistry = new WeakSet<HTMLElement>();
 
+/**
+ * One field-validity state: the flags and the message travel together because
+ * the platform's `setValidity()` contract couples them (flags without a
+ * non-empty message throw). A single `{ flags, message } | null` input makes a
+ * desynced pair unrepresentable, where the old split `validity` +
+ * `validationMessage` options could drift apart.
+ */
+export type FormFieldValidity = { flags: ValidityStateFlags; message: string };
+
 export type FormFieldOptions<T = unknown> = {
   disabled?: Readable<boolean>;
   /**
@@ -28,16 +37,18 @@ export type FormFieldOptions<T = unknown> = {
   toFormValue?: (value: T) => File | FormData | string | null;
   /**
    * Recomputed reactively and passed straight to `internals.setValidity()`: `null`
-   * (or omitting `validity` entirely) means always valid. Pair with `validationMessage`.
+   * (or omitting `validity` entirely) means always valid.
    *
    * @example
    * ```ts
-   * validity: computed(() => (required.value && isBlank(value.value)) ? { valueMissing: true } : null),
-   * validationMessage: computed(() => (required.value && isBlank(value.value)) ? 'Required.' : ''),
+   * validity: computed(() =>
+   *   required.value && isBlank(value.value)
+   *     ? { flags: { valueMissing: true }, message: 'Required.' }
+   *     : null,
+   * ),
    * ```
    */
-  validationMessage?: Readable<string>;
-  validity?: Readable<ValidityStateFlags | null>;
+  validity?: Readable<FormFieldValidity | null>;
   value: Signal<T> | Readable<T>;
 };
 
@@ -106,26 +117,21 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
 
   if (options.validity) {
     watchEffect(() => {
-      const flags = options.validity?.value ?? {};
-      // Per spec, ElementInternals.setValidity() throws if any flag is true and message is
-      // empty: a caller-supplied `validity` with no matching `validationMessage` would crash
-      // this effect in a real browser. Fail safe with a generic message instead of propagating
-      // that crash, and say so loudly in dev so the real fix (pass validationMessage) gets made.
-      const hasFlag = Object.values(flags).some(Boolean);
-      const message = options.validationMessage?.value ?? '';
+      const state = options.validity?.value;
 
-      if (hasFlag && !message) {
-        warn(
-          'useField(): `validity` has a truthy flag but `validationMessage` is empty: internals.setValidity() ' +
-            'requires a non-empty message whenever any flag is true. Falling back to a generic message; pass ' +
-            '`validationMessage` to customize it.',
-        );
-        internals.setValidity(flags, 'Invalid value.');
+      if (!state) {
+        internals.setValidity({});
 
         return;
       }
 
-      internals.setValidity(flags, message);
+      // Per spec, ElementInternals.setValidity() throws if any flag is true and the
+      // message is empty. The FormFieldValidity shape makes that state rare, but a
+      // runtime empty string is still expressible: fall back to a generic message
+      // instead of crashing this effect in a real browser.
+      const hasFlag = Object.values(state.flags).some(Boolean);
+
+      internals.setValidity(state.flags, hasFlag && !state.message ? 'Invalid value.' : state.message);
     });
   }
 
