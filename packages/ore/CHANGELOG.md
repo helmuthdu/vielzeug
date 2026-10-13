@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Mon, 12 Oct 2026 20:24:11 GMT and should not be manually modified.
+This log was last generated on Tue, 13 Oct 2026 07:49:18 GMT and should not be manually modified.
 
+## 26.10.8
+Tue, 13 Oct 2026 07:49:18 GMT
+
+### Minor changes
+
+- add model() two-way binding, .prop= property bindings, event modifiers, indeterminate checkbox binding, and transactional each() reconcile rollback; add prop.oneOf() runtime union parsing; consolidate useField validity into a single FormFieldValidity signal; remove prop.string/prop.number type parameters and the testing form-internals polyfill (now assay installFormInternalsPolyfill)
 ## 26.10.7
 Mon, 12 Oct 2026 20:24:11 GMT
 

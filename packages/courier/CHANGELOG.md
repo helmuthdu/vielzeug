@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/courier
 
-This log was last generated on Mon, 12 Oct 2026 20:24:11 GMT and should not be manually modified.
+This log was last generated on Tue, 13 Oct 2026 07:49:18 GMT and should not be manually modified.
 
+## 26.10.8
+Tue, 13 Oct 2026 07:49:18 GMT
+
+### Minor changes
+
+- parse RFC 9457 problem details into CourierHttpError
 ## 26.10.7
 Mon, 12 Oct 2026 20:24:11 GMT
 

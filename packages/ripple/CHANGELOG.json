@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "greenfield API reduction: remove tap()/RippleEvent/errorPolicy in favor of a single onError option; collapse error classes to RippleError/RippleCycleError/RippleDisposedError; report flush-loop breaches through onError instead of throwing from the write site; throw RippleDisposedError from peek() on a never-evaluated disposed computed",
+            "commit": "f9f272f367a35b64f5c7165ac2e6537fa2ded6d2"
+          }
+        ]
+      },
+      "date": "Tue, 13 Oct 2026 07:49:18 GMT",
+      "tag": "@vielzeug/ripple_v26.10.8",
+      "version": "26.10.8"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",
