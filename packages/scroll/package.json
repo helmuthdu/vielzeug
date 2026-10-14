@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/scroll",
-  "version": "26.10.8",
+  "version": "26.10.9",
   "description": "Virtual list engine for large datasets",
   "repository": {
     "type": "git",

@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Fetch issuer signing keys through the required auth service binding so same-zone Cloudflare deployments can authenticate sessions.",
+            "commit": "b2119d7114c39e2cb65c0a0b62ac73aa453ff5a8"
+          }
+        ]
+      },
+      "date": "Wed, 14 Oct 2026 21:26:14 GMT",
+      "tag": "@vielzeug/archive_v26.10.9",
+      "version": "26.10.9"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "release-train",

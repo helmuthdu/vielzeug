@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/archive
 
-This log was last generated on Tue, 13 Oct 2026 07:49:18 GMT and should not be manually modified.
+This log was last generated on Wed, 14 Oct 2026 21:26:14 GMT and should not be manually modified.
 
+## 26.10.9
+Wed, 14 Oct 2026 21:26:14 GMT
+
+### Minor changes
+
+- Fetch issuer signing keys through the required auth service binding so same-zone Cloudflare deployments can authenticate sessions.
 ## 26.10.8
 Tue, 13 Oct 2026 07:49:18 GMT
 
