@@ -1,6 +1,6 @@
 ---
 title: 'Sourcerer: Usage Guide'
-description: Build local, page, cursor, and infinite collection sources.
+description: Build collection sources, reconcile page and params, and load single-value resources.
 ---
 
 [[toc]]
@@ -51,7 +51,7 @@ console.log(source.state.params);
 source.dispose();
 ```
 
-A non-optional parameter type requires an initial `params` value. `setParams()` compares values with `Object.is`; reuse a value when setting it again should be a no-op. `apply()` compares structurally instead, which is what makes it safe to call from a render or a router effect. See [Apply Page and Filter Together](#apply-page-and-filter-together).
+A non-optional parameter type requires an initial `params` value. `setParams()` compares values with `Object.is`; `apply()` compares structurally, avoiding redundant requests from a router or reactive effect. Both can load an inert source or retry an uncommitted request. See [Apply Page and Filter Together](#apply-page-and-filter-together).
 
 While replacement parameters load, `state.params` continues to describe the committed items and `state.pendingParams` contains the requested value. Page-only navigation does not set `pendingParams`.
 
@@ -73,25 +73,44 @@ After the first successful load, navigation is clamped to the known `pageCount`.
 
 ## Apply Page and Filter Together
 
-A URL query, a filter form, or a router state usually carries the page and the filters at once. `apply()` accepts both in one call and issues one request.
+A URL query, a filter form, or a router state usually carries the page and the filters at once. `apply()` accepts both in one call and issues at most one request.
 
 ```ts
 import { createPageSource } from '@vielzeug/sourcerer';
 
-type UserParams = { role: 'admin' | 'user'; search: string };
-const source = createPageSource<string, UserParams>({ load, params: { role: 'admin', search: '' } });
+const names = ['Ada', 'Grace', 'Linus', 'Ada Byron'];
+const source = createPageSource({
+  load: async ({ page, pageSize, params }) => {
+    const matching = names.filter((name) => name.includes(params.search));
+    const start = (page - 1) * pageSize;
+    return { items: matching.slice(start, start + pageSize), totalItems: matching.length };
+  },
+  pageSize: 1,
+  params: { search: '' },
+});
 
-await source.apply({ page: 3, params: { role: 'admin', search: 'ada' } });
-await source.apply({ params: { role: 'user', search: '' } }); // back to page one
-await source.apply({ page: 2 }); // same params, so page two is clamped as usual
+try {
+  await source.apply({ page: 2, params: { search: 'Ada' } });
+  console.log(source.state.items); // ['Ada Byron']
+  await source.apply({ params: { search: 'Ada' } });
+  console.log(source.state.pagination.page); // 2; no extra request
+  await source.apply({ params: { search: 'Grace' } });
+  console.log(source.state.pagination.page); // 1
+} finally {
+  source.dispose();
+}
 ```
 
-Parameters are compared structurally, so a freshly built object with the same contents is a no-op
-and a re-render or router effect cannot start a request storm. When parameters really do change,
+Parameters are compared structurally, so a freshly built object with the same contents does not
+refetch a committed result or duplicate active work. An inert source still loads, and an unchanged
+request can retry after failure. When parameters change,
 `page` is validated but never clamped: the page count still describes the previous filter set, so
 clamping against it would silently move the reader elsewhere. Omit `page` in that case and the
 source returns to page one. When parameters are unchanged, `apply()` routes through `goTo()` and
 clamps to the known page count.
+
+Omitted or `undefined` params keep the requested value. Use `setParams(undefined)` when
+your parameter type allows `undefined` and you want to replace the value with it.
 
 ## Filter Local Collections
 
@@ -178,18 +197,34 @@ import { createResource } from '@vielzeug/sourcerer';
 
 type Profile = { name: string };
 const profile = createResource<Profile>({
-  load: async ({ signal }) => fetch('/me', { signal }).then((response) => response.json()),
+  load: async ({ signal }) => {
+    const response = await fetch('/me', { signal });
+    if (!response.ok) throw new Error(`Profile request failed: ${response.status}`);
+    return response.json();
+  },
+  start: false,
 });
 
-profile.subscribe((state) => console.log(state.data, state.loading, state.error));
-await profile.reload();
-profile.dispose();
+const stop = profile.subscribe((state) => console.log(state.data, state.loading, state.error));
+console.log(profile.state);
+try {
+  await profile.reload();
+} catch (error) {
+  console.error(error);
+} finally {
+  stop();
+  profile.dispose();
+}
 ```
 
-A resource starts loading during construction because it models a value that must exist, not a
-window into a collection; pass `{ start: false }` to open the window yourself. The initial load has
-no caller to reject to, so its failure lands in `state.error`. A later `reload()` rejects so the
-awaiting caller sees the failure, and the previous `data` survives it.
+A resource starts loading during construction by default; the example uses `start: false` to await
+the first load explicitly. Automatic initial-load failures land in `state.error` without an
+unhandled rejection. Explicit `reload()` calls reject current failures and preserve previous `data`.
+Reloading aborts older work, whose promise settles without committing.
+
+Read `state` before subscribing when you need the initial snapshot: subscriptions notify only
+changes. A resource does not track Ripple signals or cache values by key; call `reload()` when
+external inputs change. Disposal aborts work and retains the last readable snapshot.
 
 ## Handle Requests and Errors
 

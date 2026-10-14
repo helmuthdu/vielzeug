@@ -1,6 +1,6 @@
 ---
 title: Getting Started
-description: 'Vielzeug is a collection of focused TypeScript packages: each one does one thing well, with zero external dependencies and full tree-shaking.'
+description: 'Choose focused TypeScript packages for reactive state, web components, HTTP transport, and community content publishing.'
 sidebar: false
 ---
 
@@ -8,10 +8,12 @@ sidebar: false
 
 **Vielzeug**: a German-inspired name meaning roughly "many things": is a collection of focused TypeScript packages. Each one solves a single problem. You pick what you need, import only what you use, and the rest never ships.
 
-Zero external dependencies. Full tree-shaking. TypeScript-first throughout.
+Independent packages. Tree-shakeable exports. TypeScript-first throughout.
 
 ::: tip Try before you install
-The [REPL](/repl) lets you run any package in the browser without installing anything.
+The [REPL](/repl) lets you run supported browser examples without installing
+anything. Archive requires Worker bindings; Ore, Refine, and Prism use DOM
+previews on their documentation pages instead.
 :::
 
 ::: info End-to-end showcase
@@ -37,6 +39,7 @@ Jump to the packages most relevant to your work.
 | Accessible overlays, menus, or list widgets     | [Focus](/focus/) → [Refine](#refine)                          |
 | Swipe interactions and touch-first UI            | [Gesture](/gesture/) → [Refine](#refine) → [Dnd](/dnd/)       |
 | Test fixtures or mock data                       | [Illusionist](/illusionist/) → [Coins](/coins/) → [Tempo](/tempo/) |
+| Community publishing with shared sign-in         | [Archive](/archive/) → [Spell](#spell) → [Courier](#courier) |
 | A table or couch app with shared state           | [Tavern](/tavern/) → [Mesh](/mesh/) → [Ripple](#ripple)         |
 
 ## Core
@@ -70,9 +73,11 @@ Custom element authoring: reactive templates, signals, slots, and automatic life
 import { define, html } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
-define('my-counter', () => {
-  const count = signal(0);
-  return html`<button @click=${() => count.value++}>Clicked ${count} times</button>`;
+define('my-counter', {
+  setup() {
+    const count = signal(0);
+    return html`<button @click=${() => count.value++}>Clicked ${count} times</button>`;
+  },
 });
 ```
 
@@ -316,7 +321,8 @@ const api = await container.resolve(ApiToken);
 
 | Package                          | What it does                                                                                       |
 | -------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **[Prism](/prism/)**             | Reactive SVG charts: line, bar, area, pie, and sparkline with signal-driven updates               |
+| **[Archive](/archive/)**         | Typed community collections, moderation, and passwordless identity for Cloudflare Workers + D1 |
+| **[Prism](/prism/)**             | Reactive SVG charts: line, bar, area, pie, radar, scatter, and sparkline with signal-driven updates |
 | **[Orbit](/orbit/)**             | Floating element positioning for tooltips, dropdowns, menus, and popovers                          |
 | **[Scroll](/scroll/)**           | Virtual list engine with variable-height rows, smooth scrolling, and zero layout thrash            |
 | **[Sentinel](/sentinel/)**       | Reactive observables for external environment state: viewport, network, media queries, element sizing |
@@ -324,7 +330,7 @@ const api = await container.resolve(ApiToken);
 | **[Focus](/focus/)**             | Keyboard list navigation and focus restoration primitives for composite widgets                      |
 | **[Gesture](/gesture/)**         | Pointer swipe recognition primitives with lifecycle-owned handles                                    |
 | **[Scout](/scout/)**             | Trigram fuzzy search with per-field weights, reactive query state, and match highlighting          |
-| **[Sourcerer](/sourcerer/)**     | Typed data-source adapter for pagination, filtering, sorting, search, and infinite scroll          |
+| **[Sourcerer](/sourcerer/)**     | Reactive paged sources and single-value resources with cancellation and observable loading state |
 | **[Pulse](/pulse/)**             | Typed WebSocket client with channel multiplexing, presence tracking, and auto-reconnect            |
 | **[Lingua](/lingua/)**           | Typed translations, pluralization, lazy locale catalogs, and SSR support                           |
 | **[Herald](/herald/)**           | Typed event bus: pub/sub with namespaces, wildcards, and once-listeners                           |
@@ -346,11 +352,12 @@ const api = await container.resolve(ApiToken);
 | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | **Ripple + Ore**          | Ore templates are powered by Ripple signals: same reactive primitives, zero glue                          |
 | **Spell + Forge**           | Pass a Spell schema as a field validator: one schema for both form and API                                  |
-| **Courier + Ripple**        | Fetch with caching, push results into a signal for reactive rendering                                        |
+| **Courier + Ripple**        | Fetch with structured HTTP errors, then push results into a signal for reactive rendering                   |
+| **Archive + Spell**         | Define each collection's payload schema once; share its request and response contracts with the client       |
 | **Vault + Courier**         | Persist query results in IndexedDB for offline-capable apps                                                  |
 | **Ward + Wayfinder**        | Check permissions in router middleware before the route handler runs                                         |
 | **Conduit + Rune**          | Register a scoped logger per service in your DI container                                                    |
-| **Sourcerer + Courier**     | Use Courier as transport inside `createPageSource` for paginated collections with caching                    |
+| **Sourcerer + Courier**     | Use Courier in `createPageSource()` or `createResource()` loaders and forward their cancellation signal       |
 | **Sourcerer + Wayfinder**   | Sync source query state (page, filters, sort) with the URL so links stay shareable                           |
 | **Scroll + Orbit**          | Render a virtualised list inside an Orbit-positioned dropdown for high-count comboboxes                      |
 | **Dnd + Scroll**            | Combine sortable drag handles with a virtual list for large reorderable datasets                             |

@@ -3,23 +3,9 @@ title: 'Courier: HTTP client'
 description: A framework-neutral HTTP client with explicit cached reads, prefetching, immutable middleware, typed paths, and structured errors.
 package: courier
 category: http
-keywords: [http-client, fetch, cache, prefetch, middleware, interceptors, errors]
+keywords: [http-client, fetch, cache, prefetch, middleware, errors, rfc9457, problem-details]
 related: [flux, spell, postmaster]
-exports:
-  [
-    createCourier,
-    CourierError,
-    CourierHttpError,
-    CourierNetworkError,
-    CourierTimeoutError,
-    CourierAbortError,
-    CourierSchemaValidationError,
-    problemDetailError,
-    isProblemMediaType,
-    withBearerAuth,
-    withRequestId,
-    withLogging,
-  ]
+exports: [createCourier, CourierHttpError, ProblemDetail, problemDetailError, withBearerAuth]
 environments: [browser, node, ssr, deno]
 ---
 

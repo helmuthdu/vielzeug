@@ -5,11 +5,14 @@ let revision = 0
 
 const profile = createResource({
   load: async ({ signal }) => {
+    if (signal.aborted) throw new Error('request aborted')
     revision += 1
     return { name: 'Ada Lovelace', revision }
   },
+  start: false,
 })
 
+console.log('Initial:', profile.state)
 profile.subscribe((state) => console.log('Notify:', state.data, 'loading:', state.loading))
 
 await profile.reload()

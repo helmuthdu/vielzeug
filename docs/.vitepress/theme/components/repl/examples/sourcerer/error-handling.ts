@@ -8,7 +8,7 @@ const source = createPageSource({
 try {
   await source.reload()
 } catch (error) {
-  console.log((error as Error).message)
+  console.log(error.message)
 }
 
 console.log(source.state.error?.message)

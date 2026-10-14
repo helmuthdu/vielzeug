@@ -178,8 +178,11 @@ in `vars`, source, or logs.
 Configure the issuer's email sending binding and verify its sender domain before
 production sign-in. `AUTH_JWT_PREVIOUS_PUBLIC_JWKS` is optional and accepts only
 retired public keys during rotation. Keep `AUTH_ISSUER` and `JWT_ISSUER` identical,
-and keep `AUDIENCE` and `JWT_AUDIENCE` identical. `JWT_JWKS_URL` must resolve to
-the issuer's public JWKS route. Set `ALLOWED_ORIGINS` in both Workers to the exact
+and keep `AUDIENCE` and `JWT_AUDIENCE` identical. Set `JWT_JWKS_URL` to the
+issuer's `/api/v1/auth/jwks.json` URL. The catalog fetches that URL through
+`AUTH_ISSUER_SERVICE`, not global `fetch`; bind it to the issuer Worker even when
+both Workers share a Cloudflare zone and API hostname. The issuer also exposes
+the JWKS route publicly. Set `ALLOWED_ORIGINS` in both Workers to the exact
 frontend origins; never use a wildcard. Same-site subdomain frontends must send
 credentials, and the cookie remains host-only on the API hostname. Serve
 `/signed-in` from the API origin as the issuer's post-confirmation handoff page.
@@ -286,9 +289,9 @@ verdict or guarantee that an already-running request is cancelled by sign-out-al
 ### Pitfalls
 
 - Hand-writing the entry envelope instead of using `collection.contract`: the
-  composed schemas pin `schemaVersion` and `contentVersion` so they cannot drift.
-- Returning an `index` value outside the declared vocabularies: the collection
-  throws `ArchiveDerivationError` and the route answers a sanitized 500; declare what you derive.
+  composed schemas pin both versions; declare every vocabulary value your
+  `index` derives or the collection throws `ArchiveDerivationError`, mapped to a
+  sanitized 500 `internal` response.
 - Treating `GET /api/v1/auth/health` as a peer probe: it checks issuer readiness
   only and does not send email or call the catalog.
 - Clearing the cookie with `/api/v1/sign-out` when the requirement is to revoke all

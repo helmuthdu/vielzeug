@@ -1,22 +1,27 @@
 export const effectOptionsExample = {
   code: `import { createRipple } from '@vielzeug/ripple'
 
-// Microtask effects coalesce writes until current task ends.
-const ripple = createRipple()
+// Runtime errors use one callback; named effects flush synchronously.
+const ripple = createRipple({
+  onError: (error, context) => console.log(context.kind, context.name, error.message),
+})
 const count = ripple.signal(0)
 const stop = ripple.effect(
-  () => console.log('count:', count.value),
-  { name: 'count logger', scheduler: 'microtask' },
+  () => {
+    if (count.value < 0) throw new Error('count must be non-negative')
+    console.log('count:', count.value)
+  },
+  { name: 'count logger' },
 )
 
-count.value = 1
-count.value = 2
+ripple.batch(() => {
+  count.value = 1
+  count.value = 2
+})
+count.value = -1
 count.value = 3
-console.log('writes complete')
 
-queueMicrotask(() => {
-  stop.dispose()
-  ripple.dispose()
-})`,
-  name: 'Microtask Effect',
+stop.dispose()
+ripple.dispose()`,
+  name: 'Named Effect and onError',
 };

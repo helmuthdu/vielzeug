@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fetch issuer signing keys through the required auth service binding so same-zone Cloudflare deployments can authenticate sessions.",
+      "packageName": "@vielzeug/archive",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

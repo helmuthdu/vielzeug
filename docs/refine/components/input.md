@@ -263,7 +263,7 @@ For first-run forms, combine a visible label, helper text, and progressive valid
 | `helper`          | `string`                                                                    | `''`        | Helper text below input  |
 | `disabled`        | `boolean`                                                                   | `false`     | Disable the input        |
 | `readonly`        | `boolean`                                                                   | `false`     | Make the input read-only |
-| `required`        | `boolean`                                                                   | `false`     | Mark field as required   |
+| `required`        | `boolean`                                                                   | `false`     | Participate in native form validation while blank (read-only inputs are exempt) |
 | `fullwidth`       | `boolean`                                                                   | `false`     | Expand to full width     |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                      | `'md'`      | Input size               |
 | `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text'`         | `'solid'`   | Visual variant           |

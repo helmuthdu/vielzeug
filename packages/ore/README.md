@@ -45,6 +45,13 @@ define('my-counter', {
 });
 ```
 
+## Features
+
+- `prop.oneOf(allowed, defaultValue?)` restricts string or number props to a runtime-checked set.
+- `model(signal, options?)` binds a form control's value or checked state in both directions.
+- Event bindings support `.stop`, `.prevent`, `.once`, and `.capture` modifiers.
+- `each()` preserves the last successful list when a render callback fails.
+
 ## Documentation
 
 - [Overview](https://vielzeug.dev/ore/)

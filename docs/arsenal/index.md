@@ -3,8 +3,8 @@ title: 'Arsenal: Utility library for TypeScript'
 description: Tree-shakeable TypeScript utilities with focused category entry points for arrays, async work, caching, objects, strings, math, and guards.
 package: arsenal
 category: utilities
-keywords: [utility, array, string, object, math, async, debounce, throttle, cache]
-exports: [groupBy, retry, debounce, isEqual, taskPool, cache, fuzzyFilter, tryParseJson, allocate, hash]
+keywords: [utility, array, pagination, sorting, string, object, math, async, cache]
+exports: [paginate, sort, retry, taskPool, cache]
 related: [tempo, sourcerer, spell, coins]
 environments: [browser, node, ssr, deno]
 ---

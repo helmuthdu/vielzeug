@@ -113,11 +113,28 @@ form-internals polyfill in the setup file so jsdom gains the `ElementInternals` 
 // vitest.setup.ts
 import { installFormInternalsPolyfill } from '@vielzeug/assay';
 import { install } from '@vielzeug/ore/testing';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach } from 'vitest';
 
 install(afterEach);
-installFormInternalsPolyfill();
+afterAll(installFormInternalsPolyfill());
 ```
+
+## Traverse slotted content in jsdom
+
+Use `walkFlatTree()` when a test must visit descendants assigned through slots. It expands each slot into its assigned
+elements, including nested slots, instead of relying on jsdom's light-DOM-only `querySelectorAll()`.
+
+```ts
+import { walkFlatTree } from '@vielzeug/assay';
+
+const named: HTMLElement[] = [];
+walkFlatTree(form, (element) => {
+  if (element.hasAttribute('name')) named.push(element);
+});
+```
+
+The callback receives descendants in the flat tree, not the root element or slot elements themselves. Browsers already
+use the flat tree for DOM algorithms; this helper is for test code that needs equivalent traversal in jsdom.
 
 ## Best Practices
 

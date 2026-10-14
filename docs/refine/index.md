@@ -253,6 +253,7 @@ Classification guides discovery and bundle selection. It is not a reason to remo
 - **Framework agnostic**: works anywhere HTML can be rendered
 - **Tree-shakeable**: import only the component entry points you register
 - **Comprehensive surface**: inputs, content, disclosure, feedback, layout, and overlay primitives
+- **Native form integration**: form-associated controls submit values, validate supported required constraints, and reset with their form
 - **Typed framework declarations**: DOM, React, and Vue tags derive from the component property contracts
 
 </div>

@@ -1,46 +1,11 @@
 ---
 title: 'Sourcerer: Reactive collection sources'
-description: Framework-agnostic local and remote collection state with page, cursor, and infinite pagination.
+description: Framework-agnostic collection pagination and observable single-value resources.
 package: sourcerer
 category: data
 keywords: [pagination, data-source, cursor, infinite-scroll, collection, resource]
 related: [courier, ripple, scout, wayfinder]
-exports:
-  [
-    createCursorSource,
-    createInfiniteSource,
-    createLocalSource,
-    createPageSource,
-    createResource,
-    CursorLoadContext,
-    CursorPagination,
-    CursorResult,
-    CursorSource,
-    CursorSourceConfig,
-    CursorSourceState,
-    InfiniteLoadContext,
-    InfinitePagination,
-    InfiniteSource,
-    InfiniteSourceConfig,
-    InfiniteSourceState,
-    LocalSource,
-    LocalSourceConfig,
-    LocalSourceState,
-    PageLoadContext,
-    PagePagination,
-    PageResult,
-    PageSource,
-    PageSourceConfig,
-    PageSourceState,
-    PageSourceUpdate,
-    Resource,
-    ResourceConfig,
-    ResourceLoadContext,
-    ResourceState,
-    SourcererError,
-    SourcererConfigurationError,
-    SourcererDisposedError,
-  ]
+exports: [createLocalSource, createPageSource, createCursorSource, createInfiniteSource, createResource]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -137,9 +102,9 @@ try {
 - `createPageSource()`: loads numbered pages and exposes direct navigation commands
 - `createCursorSource()`: follows opaque cursors returned by the loader
 - `createInfiniteSource()`: appends pages while preserving loaded items
-- `createResource()`: loads one reactive value that can be refetched
+- `createResource()`: starts loading one value immediately, or awaits `reload()` with `start: false`
 - `setParams()`: replaces consumer-owned loader parameters and resets pagination
-- `apply()`: sets page and parameters from one object in a single request
+- `PageSource.apply()`: reconciles page and structurally compared params in at most one request
 - `subscribe()`: publishes complete immutable state replacements
 
 </div>

@@ -194,7 +194,9 @@ async function loadUser(): Promise<string> {
 ## Problem Details
 
 When a server answers a failure with `application/problem+json` (RFC 9457), Courier parses the
-document onto `CourierHttpError.problem` and uses it for the error message. Nothing is configured.
+JSON object onto `CourierHttpError.problem` and chooses the message from `detail`, then `title`,
+then the HTTP status text. The parsed object is shallow-frozen; extension members remain `unknown`
+and Courier does not validate their contents. Nothing is configured.
 
 ```ts
 import { CourierHttpError, createCourier, type ProblemDetail } from '@vielzeug/courier';
@@ -221,8 +223,22 @@ async function submitInvoice(body: unknown): Promise<string> {
 
 `error.status` is always the HTTP status from the response, so a `problem.status` that disagrees
 never overrides it. `problem` stays `undefined` for any other content type, and a `problem+json`
-body that is not a JSON object keeps its raw value on `data` instead of surfacing a partial
-document. Use `problemDetailError()` to raise the same shape from a mock or a middleware.
+body that is a JSON array or primitive keeps that parsed value on `data`; malformed JSON keeps its
+raw text there. Neither case creates a partial `problem`. RFC 9457 treats an omitted `type` as
+`about:blank`, but Courier does not add a `type` property. Use `problemDetailError()` to raise the
+same error shape from a mock or middleware; it stores the supplied problem object directly on both
+`problem` and `data`.
+
+```ts
+import { problemDetailError } from '@vielzeug/courier';
+
+const mockFailure = problemDetailError(
+  { title: 'Insufficient credit', detail: 'Choose a lower amount.', status: 402 },
+  { method: 'POST', url: '/invoices' },
+);
+
+console.log(mockFailure.status, mockFailure.problem?.detail);
+```
 
 ## Composing with a State Layer
 

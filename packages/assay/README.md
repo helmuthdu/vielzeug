@@ -25,6 +25,12 @@ await eventually(() => expect(view.get('.status').textContent).toBe('Saved'), {
 });
 ```
 
+## Features
+
+- `walkFlatTree()` traverses descendants across slot boundaries in jsdom.
+- `installFormInternalsPolyfill()` supplies jsdom form-association behavior and returns a cleanup function.
+- `within()`, event helpers, and async waits work with framework-rendered or vanilla DOM.
+
 ## Documentation
 
 - [Overview](https://vielzeug.dev/assay/)

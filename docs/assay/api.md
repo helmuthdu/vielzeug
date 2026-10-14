@@ -119,8 +119,13 @@ await delay(100, { signal });
 
 ### `walkFlatTree(root, visit)`
 
-Walks the flat tree starting at `root`, calling `visit` for every element encountered: expanding each `<slot>`
-via `assignedElements()` instead of descending into its (always empty, in jsdom) literal children. jsdom only
+```ts
+function walkFlatTree(root: Element, visit: (element: HTMLElement) => void): void;
+```
+
+Walks the flat tree below `root`, calling `visit` for each assigned or ordinary descendant (not for `root` itself).
+At each `<slot>` it expands `assignedElements()` instead of descending into its (always empty, in jsdom) literal
+children. jsdom only
 implements the light DOM tree, so `querySelectorAll()` never crosses a slot into its assigned elements; real
 browsers use the flat tree for that. This helper closes the gap for tests that must find form-associated (or
 otherwise slotted) elements through shadow boundaries.
@@ -135,6 +140,10 @@ walkFlatTree(form, (el) => {
 
 ### `installFormInternalsPolyfill()`
 
+```ts
+function installFormInternalsPolyfill(): () => void;
+```
+
 jsdom implements none of the `ElementInternals` form-association API: not `setFormValue`, not `setValidity`, not
 the `checkValidity`/`reportValidity`/`validity`/`validationMessage` mixin real browsers put on every
 `formAssociated: true` element, not even `FormData` collecting a form-associated element's set value, or
@@ -142,18 +151,19 @@ the `checkValidity`/`reportValidity`/`validity`/`validationMessage` mixin real b
 `@vielzeug/ore`, so any package testing a form-associated component needs all of them.
 
 Call it from a test setup when the suite tests form-associated components; it returns an `uninstall()` that
-restores every patched global. The patches are global monkey-patches (and each is a guarded no-op when its target
-already exists), so suites without form-associated components shouldn't install them. A downstream package should
+restores every patched global. The patches are global monkey-patches and skip APIs already implemented by the
+environment, so suites without form-associated components shouldn't install them. If `ElementInternals` is absent,
+the installer is a no-op. A downstream package should
 rely on this instead of hand-rolling its own copy.
 
 ```ts
 // vitest.setup.ts
 import { installFormInternalsPolyfill } from '@vielzeug/assay';
 import { install } from '@vielzeug/ore/testing';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach } from 'vitest';
 
 install(afterEach);
-installFormInternalsPolyfill();
+afterAll(installFormInternalsPolyfill());
 ```
 
 ## Types

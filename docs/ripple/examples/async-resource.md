@@ -22,6 +22,7 @@ const user = ripple.resource(
   () => userId.value,
   async (id, { signal }) => {
     const response = await fetch(`/users/${id}`, { signal });
+    if (!response.ok) throw new Error(`User request failed: ${response.status}`);
     return response.json() as Promise<{ id: string; name: string }>;
   },
   { name: 'user' },
@@ -30,26 +31,35 @@ const user = ripple.resource(
 const stop = ripple.effect(() => {
   const state = user.value;
 
-  if (state.status === 'pending') renderPending(state.previous);
-  if (state.status === 'success') renderUser(state.value);
-  if (state.status === 'error') renderError(state.error, state.previous);
+  if (state.status === 'pending') console.log('Loading', state.previous);
+  if (state.status === 'success') console.log(state.value);
+  if (state.status === 'error') console.error(state.error, state.previous);
 });
 
 userId.value = '43';
 user.reload();
 
+// Keep the owner alive until the current request settles.
+await new Promise<void>((resolve) => {
+  if (user.peek().status !== 'pending') return resolve();
+  const unsubscribe = user.subscribe(() => {
+    if (user.peek().status === 'pending') return;
+    unsubscribe();
+    resolve();
+  });
+});
 stop.dispose();
-user.dispose();
 ripple.dispose();
 ```
 
 ### Pitfalls
 
-- Construction starts loading immediately.
-- The loader must forward or observe its signal for transport-level cancellation.
+- Construction starts loading immediately; forward the loader signal for transport cancellation.
+- Source and loader failures appear in state, not `onError`.
 - `reload()` returns `void`; observe completion through resource state.
 - Disposed state remains readable, but `reload()` and new subscriptions throw `RippleDisposedError`.
-- Use Sourcerer for paginated collections or shared keyed server-query caching.
+
+Use Sourcerer for paginated collections and a dedicated server-state cache for shared keyed reads.
 
 ### Related
 

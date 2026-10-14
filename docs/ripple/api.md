@@ -17,8 +17,12 @@ description: Complete reference for reactive graphs, signals, effects, scopes, a
 | `createScope()` | Group owned reactive work | Sync | Call `run()` to activate it |
 | `untrack()` | Read without tracking | Sync | Read still happens immediately |
 | `watch()` | Observe selected output | Sync | Use `effect()` for broad reads |
+| `resource()` | Load from tracked reactive input | Sync factory / Async loader | `reload()` returns `void`; completion is observable state |
 | `fromSubscribable()` | Bridge external source | Sync | Returned bridge must be disposed |
 | `isReactive()` | Test Ripple's marked readable contract | Sync | Not a security or provenance check |
+| `RippleError` | Base package error | Sync | Runtime callback failures retain their original value |
+| `RippleCycleError` | Computed cycle or runaway flush | Sync | Flush failures reach `onError`, not the write site |
+| `RippleDisposedError` | Work after disposal | Sync | Cached reads remain available |
 
 ## Package Entry Point
 
@@ -39,6 +43,9 @@ Creates one isolated reactive graph. Factories on the returned object share sche
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `options.onError` | `(error, context) => void` | Handles computed refresh, effect, cleanup, listener, and flush-loop failures. Default rethrows asynchronously via `queueMicrotask`; pass a no-op to silence. A failure in one node never interrupts sibling propagation. |
+
+`onError` is the only runtime option. `RippleErrorContext.kind` is `cleanup`, `computed`,
+`effect`, `flush`, or `listener`; `name` is optional. There is no event stream or error-policy option.
 
 **Returns:** `Ripple`.
 
@@ -77,7 +84,7 @@ console.log(isReactive(signal(0)));
 
 ## Default Graph Functions
 
-Root helpers (`signal`, `computed`, `effect`, `batch`, `createScope`, `untrack`, `watch`, `resource`, `fromSubscribable`) operate on a process-lifetime default graph. Use them only when the application has one graph for its entire lifetime: they are never disposed. For isolated, disposable graphs (tests, SSR, embedded features) use `createRipple()`.
+Root helpers (`signal`, `computed`, `effect`, `batch`, `createScope`, `untrack`, `watch`, `resource`, `fromSubscribable`) operate on a process-lifetime default graph. The graph itself has no public disposal handle; effects, scopes, resources, and bridges still require owner-managed disposal. For isolated, disposable graphs (tests, SSR, embedded features) use `createRipple()`.
 
 ### `signal(initial, options?)`
 
@@ -132,6 +139,12 @@ function effect(callback: () => Cleanup | undefined, options?: EffectOptions): E
 ```
 
 Runs immediately and reruns when its tracked reads change. A returned cleanup runs before the next callback or disposal.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `options.name` | `string` | Optional label in error context |
+
+Effects flush synchronously; `EffectOptions` has no scheduler option. Use `batch()` to coalesce writes.
 
 **Returns:** `EffectHandle`.
 
@@ -216,11 +229,26 @@ function resource<Source, Value>(
 
 Creates a disposable readable async state and starts loading immediately. Source changes and `reload()` abort stale work before starting the next loader. The last successful value is preserved as `previous`, including when that value is `undefined`.
 
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `source` | `() => Source` | Tracks reactive input reads |
+| `loader` | `(source, context) => Promise<Value>` | Receives input and a request-owned cancellation signal |
+| `options.name` | `string` | Optional resource label |
+
+**Returns:** `Resource<Value>`. Source and loader failures become error state, not `onError` reports.
+
+**Example:**
+
 ```ts
+import { resource, signal } from '@vielzeug/ripple';
+
+const userId = signal('42');
 const user = resource(
   () => userId.value,
   (id, { signal }) => fetch(`/users/${id}`, { signal }).then((response) => response.json()),
 );
+console.log(user.value);
+user.dispose();
 ```
 
 The state is `{ status: 'pending', previous? }`, `{ status: 'success', value }`, or `{ status: 'error', error, previous? }`. Reads remain available after disposal; `reload()` and new subscriptions throw `RippleDisposedError`.
@@ -268,12 +296,20 @@ Bridges an external `{ getSnapshot, subscribe }` source into a disposable reacti
 ```ts
 import { fromSubscribable } from '@vielzeug/ripple';
 
-const routerState = fromSubscribable({
-  getSnapshot: () => router.getSnapshot(),
-  subscribe: (cb) => router.subscribe(cb),
+let current = 'idle';
+const listeners = new Set<() => void>();
+const state = fromSubscribable({
+  getSnapshot: () => current,
+  subscribe: (listener) => {
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
+  },
 });
 
-routerState.dispose();
+current = 'ready';
+for (const listener of listeners) listener();
+console.log(state.value);
+state.dispose();
 ```
 
 ## Types
@@ -344,6 +380,10 @@ interface Ripple extends Disposable {
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `RippleError` | Base Ripple error | Use `instanceof RippleError` to narrow unknown values. |
+| `RippleError` | Base Ripple error; a new subscription to a disposed external-source bridge | Use `instanceof RippleError` to narrow unknown values. |
 | `RippleCycleError` | A computed reads itself, or a flush exceeds the iteration limit | Extends `RippleError`. A flush-loop breach is reported to `onError` (context kind `flush`) instead of throwing from the write site. |
-| `RippleDisposedError` | Any operation against a disposed runtime, scope, resource, bridge, or never-evaluated computed | Extends `RippleError`. |
+| `RippleDisposedError` | New graph work, writes, or subscriptions on a disposed runtime; `run()` on a disposed scope; `reload()` or new subscriptions on a disposed resource; reading a never-evaluated disposed computed | Extends `RippleError`. Cached reads and repeated disposal remain valid. |
+
+These are the three exported error classes. User callback failures are reported as their original
+values through `onError`; they are not wrapped in `RippleError`. A direct computed read can throw
+its derivation error to the caller.

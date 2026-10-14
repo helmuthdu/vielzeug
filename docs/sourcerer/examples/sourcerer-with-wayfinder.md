@@ -11,7 +11,7 @@ You need a bookmarkable list URL without letting raw route values corrupt source
 
 ### Solution
 
-Validate route state, set source params, and navigate with `goTo()`.
+Validate route state and reconcile page plus params with one `apply()` call.
 
 ```ts
 import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder';
@@ -27,8 +27,10 @@ const source = createPageSource({
 
 const route = router.getSnapshot();
 const parsedPage = Number.parseInt(String(route.query['page'] ?? '1'), 10);
-await source.setParams(String(route.query['search'] ?? ''));
-await source.goTo(Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1);
+await source.apply({
+  page: Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1,
+  params: String(route.query['search'] ?? ''),
+});
 
 const stop = source.subscribe((state) => {
   if (!state.loading) {
@@ -46,7 +48,7 @@ router.dispose();
 
 ### Pitfalls
 
-- Validate route values before calling `goTo()` or `setParams()`.
+- Validate route values before calling `apply()`.
 - Serialize committed `state.params`, not `state.pendingParams`.
 - Avoid route writes while `state.loading` is true.
 

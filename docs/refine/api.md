@@ -85,6 +85,14 @@ The declarations cover every supported tag and derive component properties from 
 
 Form controls expose `.value` or `.checked` and dispatch standard `input` and `change` events. Read the property from `event.currentTarget`.
 
+Finite-choice properties use Ore's `prop.oneOf()` parsing: values outside a component's documented options resolve to
+the declared default, or `undefined` when no default is declared.
+
+Form-associated controls participate in native form submission, validity checks, and reset. A named control's value
+is available through `new FormData(form)`, and supported `required` constraints affect `form.checkValidity()`,
+`form.reportValidity()`, and submit blocking. The `error` property renders and announces feedback; it does not by
+itself set native constraint validity.
+
 Stateful overlays expose controlled `open`, optional `default-open`, and an `open-change` custom event with `{ open, reason }` detail. Component pages define additional detail fields and reasons.
 
 ## Utilities

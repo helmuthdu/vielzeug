@@ -12,6 +12,7 @@ description: Reference for Arsenal root utilities and category entry points.
 | `groupBy` | Group values by key (prototype-pollution guarded) | Sync | Root export |
 | `chunk` / `zip` / `compact` | Typed collection transforms | Sync | Available from `/array` |
 | `paginate` | Cut one page and its totals out of a list | Sync | Pages past the last return empty `items`, unclamped |
+| `sort` | Sort by a selector, keyed fields, or ordered path criteria | Sync | Criteria paths are resolved safely; mixed value types throw |
 | `range` / `average` / `median` | Numeric generation and aggregation | Sync | Available from `/math` |
 | `assert` | Assert and narrow a condition | Sync | Available from `/function` |
 | `retry` | Retry async work | Async | Rethrows final error |
@@ -32,7 +33,7 @@ description: Reference for Arsenal root utilities and category entry points.
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/arsenal` | Curated common utilities |
-| `@vielzeug/arsenal/array` | Immutable transforms, set operations, sorting, fuzzy search |
+| `@vielzeug/arsenal/array` | Immutable transforms, pagination, set operations, sorting, fuzzy search |
 | `@vielzeug/arsenal/async` | Retry, cancellation, task pool, timing |
 | `@vielzeug/arsenal/cache` | In-memory cache and memoization |
 | `@vielzeug/arsenal/encoding` | Base64url and native byte compression |
@@ -66,7 +67,13 @@ unzip(rows): tupleOfArrays
 paginate<T>(items: readonly T[], options?: PaginateOptions): PageEnvelope<T>
 ```
 
-Cuts one page out of an in-memory list and returns the items with the arithmetic that produced them. `pageOffset` selects the caller's page base: `1` (default) for one-based paging, `0` for zero-based servers such as Spring. `totalPages` is at least 1, even for an empty list, so `page < totalPages` never underflows. Pages past the last yield empty `items` and echo the requested page rather than clamping it. Throws `TypeError` for a non-array and `RangeError` for a non-integer `page` or a `pageSize` that is not a positive integer.
+Cuts one page out of an in-memory list and returns the items with the arithmetic that produced them. `pageOffset` selects the caller's page base: `1` (default) for one-based paging, `0` for zero-based servers such as Spring. The default `page` is the first page in that base, and the default `pageSize` is `20`. `totalPages` is at least 1, even for an empty list, so `page < totalPages` never underflows. Pages past the last yield empty `items` and echo the requested page rather than clamping it. Throws `TypeError` for a non-array and `RangeError` when `page` is not an integer in the selected base or `pageSize` is not a positive integer.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `page` | `number` | First page in `pageOffset`'s base | Requested page; must be an integer greater than or equal to `pageOffset` |
+| `pageSize` | `number` | `20` | Number of items per page; must be a positive integer |
+| `pageOffset` | `0 \| 1` | `1` | Page-number base: `0` for zero-based callers, `1` for one-based callers |
 
 ```ts
 import { paginate } from '@vielzeug/arsenal/array';
@@ -74,7 +81,9 @@ import { paginate } from '@vielzeug/arsenal/array';
 paginate([1, 2, 3, 4, 5], { page: 2, pageSize: 2 });
 // { items: [3, 4], page: 2, pageSize: 2, totalItems: 5, totalPages: 3 }
 
-paginate(items, { page: springPage, pageOffset: 0 });
+const springPage = 0;
+paginate([1, 2, 3, 4, 5], { page: springPage, pageOffset: 0 });
+// { items: [1, 2, 3, 4, 5], page: 0, pageSize: 20, totalItems: 5, totalPages: 1 }
 ```
 
 The envelope is server-neutral: it models no HTTP dialect, so adapters map their response onto it and map it back out.
@@ -87,13 +96,19 @@ sort<T>(array: readonly T[], selectors: SortSelectors<T>): T[];
 sort<T>(array: readonly T[], criteria: ReadonlyArray<SortCriterion<T>>): T[];
 ```
 
-Three forms, one entry point. The selector form sorts by one extracted value; the selectors form sorts by a `{ key: direction }` object; the criteria form sorts by an ordered list of paths, which is the shape a data grid hands over when its sortable columns are runtime strings.
+Three forms, one entry point. The selector form sorts by one extracted value; the selectors form accepts an object mapping property keys to directions; the criteria form sorts by an ordered list of paths, which is the shape a data grid hands over when its sortable columns are runtime strings.
 
 ```ts
 import { sort } from '@vielzeug/arsenal/array';
 
+const users = [{ name: 'Ada', age: 41 }, { name: 'Grace', age: 30 }];
 sort(users, (user) => user.name);
 sort(users, { name: 'asc', age: 'desc' });
+
+const rows = [
+  { address: { city: 'Berlin' }, age: 41 },
+  { address: { city: 'Aachen' }, age: 30 },
+];
 sort(rows, [{ key: 'address.city' }, { key: 'age', direction: 'desc' }]);
 ```
 

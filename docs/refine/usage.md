@@ -60,6 +60,20 @@ grid.rows = [
 ];
 ```
 
+Enumerated properties such as `variant`, `size`, and `color` accept the values listed on each component's reference
+page. An unsupported value resolves to the property's declared default (or `undefined` when it has no default).
+
+In an Ore template, `model()` can bind a Refine field's `value` to a Ripple signal and write user input back:
+
+```ts
+import { signal } from '@vielzeug/ripple';
+import { html, model } from '@vielzeug/ore';
+import '@vielzeug/refine/input';
+
+const email = signal('');
+const field = html`<ore-input label="Email" type="email" value=${model(email)} />`;
+```
+
 ## Handle Events
 
 Form controls dispatch standard `input` and `change` events. Read their current property from `event.currentTarget`.
@@ -82,6 +96,39 @@ dialog?.addEventListener('open-change', (event: CustomEvent<OreDialogEvents['ope
   console.log(event.detail.open, event.detail.reason);
 });
 ```
+
+## Native Form Validation
+
+Refine's form-associated controls integrate with native form submission, `FormData`, validity checks, and reset.
+Use `required` for a required-value constraint; setting `error` displays and announces feedback but does not, by
+itself, invalidate the form.
+
+```html
+<form id="profile-form">
+  <ore-input name="email" type="email" label="Email" required></ore-input>
+  <ore-select name="role" label="Role" required>
+    <option value="">Choose a role…</option>
+    <option value="editor">Editor</option>
+    <option value="admin">Admin</option>
+  </ore-select>
+  <ore-button type="submit">Save</ore-button>
+</form>
+
+<script type="module">
+  import '@vielzeug/refine/input';
+  import '@vielzeug/refine/select';
+  import '@vielzeug/refine/button';
+
+  const form = document.querySelector('#profile-form');
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    console.log(new FormData(form).get('email'));
+  });
+</script>
+```
+
+The browser runs native validation before dispatching `submit`. Call `form.reportValidity()` to show validation
+feedback directly, or `form.checkValidity()` for a boolean check without the browser's validation UI.
 
 ## Compose Slots
 

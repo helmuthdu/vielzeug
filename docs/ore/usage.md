@@ -125,11 +125,13 @@ define('x-button', {
 
 ## template bindings
 
-`html` supports text, attributes, booleans, properties, events, refs, and nested templates.
+`html` supports text, attributes, booleans, properties, events, refs, and nested templates. Event bindings accept
+`.stop`, `.prevent`, `.once`, and `.capture`: the first two apply before the handler runs, while the latter two use
+native listener options. Unknown modifiers throw while Ore compiles the template.
 
 ```ts
 import { computed, signal } from '@vielzeug/ripple';
-import { define, html, ref } from '@vielzeug/ore';
+import { define, html, model, ref } from '@vielzeug/ore';
 
 define('profile-name', {
   setup() {
@@ -140,11 +142,8 @@ define('profile-name', {
       <label title=${computed(() => 'Current: ' + name.value)}>Name</label>
       <input
         ref=${inputRef}
-        value=${name}
-        aria-label=${() => 'Current name ' + name.value}
-        @input=${(event: Event) => {
-          name.value = (event.target as HTMLInputElement).value;
-        }} />
+        value=${model(name)}
+        aria-label=${() => 'Current name ' + name.value} />
       <p>Hello ${name}</p>
     `;
   },
@@ -153,8 +152,7 @@ define('profile-name', {
 
 ## directives
 
-Ore exports `each`, `classMap`, `styleMap`, `when`, `live`, and `unsafeHtml` from `@vielzeug/ore`. Use ordinary
-attribute bindings plus native event handlers for two-way input state; no special model directive is required.
+Ore exports `each`, `classMap`, `styleMap`, `when`, `live`, `model`, and `unsafeHtml` from `@vielzeug/ore`.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
@@ -202,6 +200,10 @@ each(
   () => html`<li>No items</li>`,
 );
 ```
+
+Each reactive reconciliation is transactional. Ore creates missing entries before committing updates or removing stale
+entries; if a render callback throws, entries created during that pass are rolled back and the last successful list
+remains on screen. Ore reports the failure through `ore:error` with phase `each-reconcile`.
 
 ## model: two-way form bindings
 

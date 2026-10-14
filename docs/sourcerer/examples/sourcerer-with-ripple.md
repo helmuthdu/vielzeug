@@ -11,7 +11,7 @@ You need a reactive search control to update one source and expose its current s
 
 ### Solution
 
-Subscribe once and replace source params from a Ripple effect.
+Subscribe once and reconcile source params from a Ripple effect.
 
 ```ts
 import { effect, signal } from '@vielzeug/ripple';
@@ -29,7 +29,7 @@ const search = signal('');
 const state = signal(source.state);
 const stop = source.subscribe((next) => (state.value = next));
 const stopEffect = effect(() => {
-  void source.setParams(search.value).catch(() => undefined);
+  void source.apply({ params: search.value }).catch(() => undefined);
 });
 
 search.value = 'ada';

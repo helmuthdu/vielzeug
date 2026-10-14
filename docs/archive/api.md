@@ -25,7 +25,7 @@ description: "Collection definitions, browser-safe wire schemas, Worker deployme
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/archive` | Browser-safe collections, constants, schemas and errors |
-| `@vielzeug/archive/worker` | Catalog factory, issuer-session service binding and event types |
+| `@vielzeug/archive/worker` | Catalog factory, issuer signing-key/session service binding and event types |
 | `@vielzeug/archive/auth` | Issuer factory and binding types |
 
 ## Collections
@@ -123,8 +123,13 @@ export default createArchiveWorker<ArchiveWorkerEnv>([notes]);
 | `tap(handler, { signal? }?)` | Returns unsubscribe; a pre-aborted signal registers nothing |
 
 `AUTH_ISSUER_SERVICE` is a required `fetch`-shaped service binding to the issuer.
+The catalog fetches signing keys from the configured `JWT_JWKS_URL` through that
+binding, not through global `fetch`. The URL still selects the issuer's JWKS
+route and must satisfy the environment's transport rules. Key requests use GET
+without a session cookie and do not follow redirects.
 The catalog verifies the signed JWT locally, then asks the issuer to validate its
-current account session version. It does not cache successful issuer verdicts.
+current account session version. JOSE caches signing keys; the catalog does not
+cache successful issuer session verdicts.
 If the service exchange fails or exceeds its fixed 5000 ms timeout (body decoding
 included), the catalog returns `503 auth-unavailable`; the timeout does not cancel
 work already started by the issuer.
@@ -284,8 +289,10 @@ clear the cookie. This revokes all sessions, including the caller's, after a
 successful response. Requests authorized before revocation may finish; there is
 no cross-database transactional or in-flight cancellation guarantee.
 
-The catalog requires `AUTH_ISSUER_SERVICE`, a service binding to the issuer. After
-local JWT signature/claims verification, it requests
+The catalog requires `AUTH_ISSUER_SERVICE`, a service binding to the issuer for
+both JWKS retrieval and live session validation. Signing-key retrieval uses
+`JWT_JWKS_URL` through the binding, so it does not depend on a public same-zone
+Worker-to-Worker fetch. After local JWT signature/claims verification, it requests
 `GET /api/v1/auth/session` through that binding on every private request. Only a
 strictly validated 401 `unauthenticated` remains a 401. Malformed, unexpected,
 provider and 5xx responses become 503 `auth-unavailable`; there is no authority

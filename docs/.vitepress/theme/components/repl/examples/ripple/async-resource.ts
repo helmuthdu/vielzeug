@@ -16,10 +16,10 @@ const user = ripple.resource(
 ripple.effect(() => console.log(user.value))
 
 userId.value = 'u2'
-setTimeout(() => user.reload(), 50)
-setTimeout(() => {
-  user.dispose()
-  ripple.dispose()
-}, 100)`,
+await new Promise((resolve) => setTimeout(resolve, 50))
+user.reload()
+await new Promise((resolve) => setTimeout(resolve, 50))
+user.dispose()
+ripple.dispose()`,
   name: 'Async Resource',
 };

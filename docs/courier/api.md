@@ -20,6 +20,7 @@ description: Reference for Courier HTTP, cached read, prefetch, middleware, and 
 | `withLogging()` | Logs request result metadata | Sync | Requires explicit logger; URLs may contain sensitive query values |
 | `tap()` | Observe structured transport events | Sync | Observation only; optional signal owns lifetime |
 | `CourierHttpError.problem` | Parsed RFC 9457 problem details from an error body | Sync | Present only when the response is `application/problem+json` |
+| `ProblemDetail` | RFC 9457 problem members and extension members | Sync | Extension values are `unknown`; Courier does not validate their shapes |
 | `problemDetailError()` | Build an HTTP error that carries problem details | Sync | Intended for mocks and middleware, not for parsing a response |
 
 ## Package Entry Point
@@ -282,7 +283,7 @@ Errors thrown directly by custom middleware are preserved rather than reclassifi
 ### Problem details
 
 ```ts
-type ProblemDetail = Readonly<{
+export type ProblemDetail = Readonly<{
   type?: string;
   status?: number;
   title?: string;
@@ -291,34 +292,48 @@ type ProblemDetail = Readonly<{
   [extension: string]: unknown;
 }>;
 
-const PROBLEM_JSON_MEDIA_TYPE = 'application/problem+json';
+export const PROBLEM_JSON_MEDIA_TYPE = 'application/problem+json';
 
-function isProblemMediaType(contentType: string | null | undefined): boolean;
+export function isProblemMediaType(contentType: string | null | undefined): boolean;
 
-function problemDetailError(
+export function problemDetailError(
   problem: ProblemDetail,
   options?: { message?: string; method?: string; status?: number; url?: string },
 ): CourierHttpError;
 ```
 
 When a non-2xx response answers with `application/problem+json` (RFC 9457), `CourierHttpError.problem`
-holds the parsed document and the error message prefers `detail`, then `title`, then the status text.
-Any other error body keeps the shape it always had, with `problem` left `undefined`.
+holds a shallow-frozen copy of the parsed JSON object and the error message prefers `detail`, then
+`title`, then the response status text (or `HTTP <status>` when status text is empty). Any other error
+body keeps the shape it already had on `data`, with `problem` left `undefined`. Courier checks that
+the parsed body is an object; it does not validate the types or contents of registered or extension
+members. RFC 9457 treats an omitted `type` as `about:blank`, but Courier does not insert that value
+into the object.
 
 | Member | Purpose | Common gotcha |
 | --- | --- | --- |
-| `ProblemDetail` | The five registered RFC 9457 members plus extensions | Every member is optional; only `type` has a default (`about:blank`) |
-| `CourierHttpError.problem` | Parsed problem document, frozen | `undefined` unless the media type matches and the body is a JSON object |
+| `ProblemDetail` | The five registered RFC 9457 members plus extensions | Every member is optional; extension values have type `unknown` |
+| `CourierHttpError.problem` | Parsed problem document | For response errors, it is a frozen shallow copy and is `undefined` unless the media type matches and the body is an object |
 | `PROBLEM_JSON_MEDIA_TYPE` | Registered media type constant | Compare with `isProblemMediaType()`, not `===`, to allow parameters |
 | `isProblemMediaType()` | Match `application/problem+json` and its parameterised forms | Plain `application/json` never matches |
-| `problemDetailError()` | Build a problem-carrying `CourierHttpError` without a server | Status falls back to `problem.status`, then `500` |
-
-The HTTP status line stays authoritative: `error.status` is the response status even when
-`problem.status` disagrees, and a malformed or non-object problem body leaves `data` as the raw
-payload rather than reporting a half-parsed `problem`.
+| `problemDetailError()` | Build a problem-carrying `CourierHttpError` without a server | Status defaults to numeric `problem.status`, then `500`; a supplied `options.status` takes precedence |
 
 ```ts
-import { createCourier, CourierHttpError, type ProblemDetail } from '@vielzeug/courier';
+problemDetailError(problem, options?)
+```
+
+`problemDetailError()` returns a `CourierHttpError` with the supplied problem object on both
+`error.problem` and `error.data`. Its defaults are `method: 'GET'`, `url: ''`, and status from
+`problem.status` when numeric or `500` otherwise. The error message uses `options.message`, then
+`problem.detail`, `problem.title`, and finally `HTTP <status>`. Unlike a parsed response problem,
+the supplied object is not copied or frozen.
+
+The HTTP status line stays authoritative: `error.status` is the response status even when
+`problem.status` disagrees. A JSON array or primitive leaves `data` as that parsed value; malformed
+JSON leaves `data` as its raw text. Neither produces a partial `problem`.
+
+```ts
+import { createCourier, CourierHttpError, problemDetailError, type ProblemDetail } from '@vielzeug/courier';
 
 const courier = createCourier({ baseUrl: '/api' });
 
@@ -330,4 +345,10 @@ try {
     console.log(error.status, problem?.title, problem?.detail, problem?.type);
   }
 }
+
+const mockedError = problemDetailError(
+  { title: 'Insufficient credit', detail: 'Choose a lower amount.', status: 402 },
+  { method: 'POST', url: '/invoices' },
+);
+console.log(mockedError.status, mockedError.problem?.detail);
 ```

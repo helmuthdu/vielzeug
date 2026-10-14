@@ -5,7 +5,7 @@ package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, graph, scope, batch, watch]
 related: [ore, clockwork, ledger]
-exports: [createRipple, signal, computed, effect, batch, createScope, untrack, watch, resource, fromSubscribable, isReactive]
+exports: [createRipple, signal, computed, effect, resource]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -99,7 +99,7 @@ ripple.dispose();
 
 <div class="features-grid">
 
-- `createRipple()` creates an isolated graph and lifetime boundary.
+- `createRipple({ onError })` creates an isolated graph with one runtime failure callback.
 - `signal()` stores writable values with configurable equality.
 - `computed()` derives lazy read-only values.
 - `effect()` reacts to dependency changes with cleanup support.
@@ -108,6 +108,7 @@ ripple.dispose();
 - `watch()` observes one selected source transition.
 - `resource()` owns focused latest-request async state.
 - `fromSubscribable()` creates a disposable bridge for external `{ getSnapshot, subscribe }` sources.
+- `RippleError`, `RippleCycleError`, and `RippleDisposedError` distinguish package-originated failures.
 
 </div>
 

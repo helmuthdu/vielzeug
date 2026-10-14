@@ -26,6 +26,8 @@ exports:
     eventually,
     waitForEvent,
     delay,
+    walkFlatTree,
+    installFormInternalsPolyfill,
     AssayError,
     AssayQueryError,
     AssayTimeoutError,

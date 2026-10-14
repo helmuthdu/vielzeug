@@ -50,8 +50,10 @@ are the same schemas the Worker uses. Payloads are stable JSON objects with
 sorted-key serialization; vocabularies are optional readonly arrays. The root
 entry is browser-safe. Deploy the sibling `@vielzeug/archive/auth` issuer with its
 required `AUTH_ARCHIVE` binding for coordinated account deletion, and bind the
-catalog's required `AUTH_ISSUER_SERVICE` to that issuer for an uncached
-session-version check after local JWT verification.
+catalog's required `AUTH_ISSUER_SERVICE` to that issuer for signing-key retrieval
+and an uncached session-version check after local JWT verification.
+`JWT_JWKS_URL` selects the issuer's JWKS route; the catalog fetches it through
+the service binding, not global `fetch`, including same-zone deployments.
 
 Issuer sessions carry the required `sessionVersion` claim backed by
 `auth_users.session_version`. `POST /api/v1/sign-out` only clears the current
@@ -75,7 +77,7 @@ not update existing rows.
 - [Usage Guide](https://vielzeug.dev/archive/usage)
 - [API Reference](https://vielzeug.dev/archive/api)
 - [Examples](https://vielzeug.dev/archive/examples)
-- [Release Status](https://vielzeug.dev/archive/migration)
+- [Migration](https://vielzeug.dev/archive/migration)
 
 ## License
 

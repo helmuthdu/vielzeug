@@ -1,14 +1,15 @@
 ---
-title: Ripple Migration
+title: 'Ripple: Migration Guide'
+description: Migrate removed runtime options, error classes, and entry points to current Ripple contracts.
 ---
 
-# Ripple 3.1 Migration
-
-Ripple 3.1 removes the `once` option from `watch()` and its options type. No stored or serialized formats change.
+Breaking changes ship in CalVer trains. The sections below describe removed contracts and their
+current replacements; no stored or serialized formats change.
 
 ## Replace tap() and errorPolicy with one onError option
 
-The `tap()` event stream (`RippleEvent`), `RippleErrorPolicy`, and the `errorPolicy` option are removed: no consumer needed write/compute/effect/dispose telemetry, and the error half is replaced by a single `onError` callback option.
+The `tap()` event stream (`RippleEvent`), `RippleErrorPolicy`, `observer`, and `errorPolicy` are
+removed. Use the single `onError` runtime option to handle callback failures.
 
 ```ts
 // Before
@@ -28,6 +29,22 @@ Omitting `onError` keeps the old default: failures rethrow asynchronously. Pass 
 ## Error classes collapsed
 
 `RippleComputedCycleError` and `RippleInfiniteLoopError` become `RippleCycleError`; `RippleDisposedRuntimeError`, `RippleDisposedScopeError`, and `RippleDisposedResourceError` become `RippleDisposedError`. Catch `RippleError` or the two remaining subclasses; messages stay specific.
+
+```ts
+// Before
+if (error instanceof RippleComputedCycleError || error instanceof RippleInfiniteLoopError) {
+  console.error('Reactive cycle', error);
+}
+
+// After
+if (error instanceof RippleCycleError) {
+  console.error('Reactive cycle', error);
+}
+```
+
+The exported hierarchy has exactly three classes: `RippleError`, `RippleCycleError`, and
+`RippleDisposedError`. Runtime callback errors retain their original values; resource loader
+failures appear in resource state.
 
 ## Flush-loop breaches are reported, not thrown
 
@@ -73,30 +90,6 @@ const stop = watch(count, (value) => {
 });
 ```
 
-# Ripple 3.0 Migration
-
-Ripple 3.0 adds structural store interoperability and unifies observability under `tap()`. The focused `resource()` helper remains available for reactive request succession; use Sourcerer when collection pagination or a richer loading model is required.
-
-## Resource state
-
-```ts
-import { resource, signal } from '@vielzeug/ripple';
-
-const userId = signal('42');
-const user = resource(() => userId.value, async (id, { signal }) => {
-  const response = await fetch(`/users/${id}`, { signal });
-  return response.json();
-});
-
-user.dispose();
-```
-
-Resources preserve a successful `undefined` value as `previous`. After disposal, state remains readable while `reload()` and new subscriptions throw `RippleDisposedError`.
-
-## Observability history
-
-Ripple 3.0 unified the constructor `observer`/`onError` callbacks under a runtime `tap()` event stream and an `errorPolicy` option. That layer was itself removed in favor of a single `onError` option: see “Replace tap() and errorPolicy with one onError option” above.
-
 ## Use fromSubscribable for external sources
 
 `fromSubscribable()` bridges external `{ getSnapshot, subscribe }` sources into a disposable reactive readable without the source importing Ripple. Use the instance method for isolated graph ownership and dispose the bridge with its owner.
@@ -114,17 +107,11 @@ routerState.dispose();
 ripple.dispose();
 ```
 
-## Renamed types
+## Remove the effect scheduler option
 
-`ReactiveEvent` was `RippleEvent` and `ReactiveObserver` a `tap()` handler; both were later removed with the event stream. `ReactiveErrorContext` is now `RippleErrorContext` and includes `computed` and `flush` failures. `RippleOptions` no longer accepts `observer`; use `onError`.
-
----
-
-## Remove the effect scheduler option (3.2)
-
-`EffectOptions.scheduler` is removed. Effects already coalesce: every write made during a synchronous
-flush: inside `batch()` or during a flush pass: produces a single effect run, so the extra microtask
-deferral added a second, redundant queue with no distinct behavior.
+`EffectOptions.scheduler` is removed; `EffectOptions` accepts only `name`. Effects run synchronously.
+Use `batch()` when multiple writes should produce one effect run; separate writes outside a batch
+flush individually.
 
 ```ts
 // Before
@@ -137,10 +124,6 @@ ripple.batch(() => {
   count.value = 2;
 }); // one run, sees 2
 ```
-
-# Ripple 2.0 Migration
-
-Ripple 2.0 simplifies the public API surface: one entry point, no separate Store primitive, and no dead type guards.
 
 ## Import from the root entry point
 
@@ -183,8 +166,10 @@ if (isSignal(value)) { /* ... */ }
 if (isComputed(value)) { /* ... */ }
 
 // After
-if (isReactive(value)) { /* ... */ }
+if (isReactive(value)) { /* read value.value, value.peek(), or value.subscribe() */ }
 ```
+
+`isReactive()` checks a structural marker and readable contract, not trusted provenance.
 
 ---
 

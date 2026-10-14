@@ -15,6 +15,8 @@ description: Public API for @vielzeug/sourcerer.
 | `createInfiniteSource()` | Append numbered pages | Async | `loadMore()` is a no-op while loading or exhausted |
 | `createResource()` | Load one reactive value | Async | Starts loading during construction; `start: false` opts out |
 | `SourcererError` | Base package error | Sync | Loader errors retain their original type |
+| `SourcererConfigurationError` | Invalid pagination configuration | Sync | Pages and page sizes must be positive integers |
+| `SourcererDisposedError` | Command after source disposal | Sync | In-flight work instead settles without committing |
 
 ## Package Entry Point
 
@@ -111,13 +113,13 @@ await source.reload();
 | `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
 | `dispose()` | `void` | Abort work and stop notifications |
 
-`apply()` is the entry point for a caller that holds a desired `{ params, page }` pair rather
-than a command — a URL, a filter form, a grid state. Params are compared with `isEqual`, so a
-freshly built but structurally equal filter object is a no-op instead of a refetch, which is what
-makes it safe to call `apply()` from a render or router effect. Changed params move to `page` when
-one is given, otherwise to page one; unchanged params with a new page behave exactly like `goTo()`
-and clamp to the known range. When params do change, the committed page count belongs to the old
-params, so the requested page is validated but not clamped.
+`apply(update: PageSourceUpdate<TParams>): Promise<void>` compares params structurally with
+`isEqual`. Changed params use the supplied positive page without clamping, or page one when omitted.
+Unchanged params with a page use `goTo()` and clamp after the first successful load.
+An unchanged request does not refetch a committed result or duplicate an active request; it loads
+an inert source or retries an uncommitted request after failure. Omitted or `undefined` params
+preserve the requested value; use `setParams(undefined)` when `undefined` is a valid replacement.
+The update does not include page size; use `setPageSize()` separately.
 
 ---
 
@@ -204,11 +206,8 @@ await source.loadMore();
 function createResource<T>(config: ResourceConfig<T>): Resource<T>
 ```
 
-Returns a single reactive value that loads once and can be refetched. It is the one-shot sibling
-of the paginated sources, for the `GET /thing` case where pagination would be ceremony.
-
-This is deliberately **not** a React `use()` Resource: it never throws a promise and suspends
-nothing, so it works in any framework or none.
+Returns observable state for one asynchronously loaded value. It does not suspend rendering,
+cache by key, or track external reactive inputs.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
@@ -222,9 +221,17 @@ import { createResource } from '@vielzeug/sourcerer';
 
 const profile = createResource({
   load: ({ signal }) => fetch('/me', { signal }).then((response) => response.json()),
+  start: false,
 });
 
-profile.subscribe((state) => console.log(state.data, state.loading, state.error));
+const stop = profile.subscribe((state) => console.log(state.data, state.loading, state.error));
+console.log(profile.state);
+try {
+  await profile.reload();
+} finally {
+  stop();
+  profile.dispose();
+}
 ```
 
 | Method | Returns | Description |
@@ -233,11 +240,11 @@ profile.subscribe((state) => console.log(state.data, state.loading, state.error)
 | `subscribe(listener)` | `() => void` | Register a state listener and return its unsubscribe function |
 | `dispose()` | `void` | Abort the in-flight load and stop notifications |
 
-A resource starts loading during construction, unlike the inert paginated sources, because it
-models a value that must exist rather than a window into a collection. The initial load has no
-caller to reject to, so its failure surfaces through `state.error`; a later `reload()` rejects so
-the awaiting caller sees it, and the previous `data` survives the failed refresh. A superseded or
-disposed request settles without touching state.
+Construction starts the initial load unless `start: false`. Its failure surfaces through
+`state.error`; a later `reload()` rejects and retains the previous `data` on failure.
+A superseded or disposed request settles without touching state. Subscriptions are change-only:
+read `state` for the current snapshot, including the initial loading state. `dispose()` is idempotent,
+aborts `disposalSignal`, and leaves the last snapshot readable; subscriptions after disposal are inert.
 
 ## Types
 

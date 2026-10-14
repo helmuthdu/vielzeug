@@ -140,7 +140,7 @@ console.log(parsed.entries);
 - `archiveAuthHealthSchema` + `AUTH_SCHEMA_VERSION` — typed issuer readiness checked against the issuer DDL stamp
 - `archiveErrorResponseSchema` — the one error envelope, code-typed across the wire
 - `createAuthWorker` — scanner-safe confirmation, live session-version enforcement, durable budgets, metadata export and coordinated erasure
-- `AUTH_ISSUER_SERVICE` — required uncached issuer check after local catalog JWT verification
+- `AUTH_ISSUER_SERVICE` — signing-key retrieval and an uncached issuer check after local catalog JWT verification
 - `ArchiveDerivationError` — distinguishes faulty collection code from invalid submitted content
 - Moderation — reader reports, the operator soft-hide and the report queue, keyed on a verified `roles` claim
 - `worker.tap()` / `issuer.tap()` — typed sanitized runtime events; neither core logs by default

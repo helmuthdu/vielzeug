@@ -127,6 +127,14 @@ const ripple = createRipple({
 });
 ```
 
+`onError` is the only runtime option. Effect options accept only a `name`; effects do not have a
+microtask scheduler. Use `batch()` to coalesce related writes.
+
+A direct computed read can throw its derivation error to the caller. `onError` handles computed
+refresh failures during propagation, not every possible synchronous exception. The exported
+hierarchy is `RippleError`, `RippleCycleError`, and `RippleDisposedError`; callback failures retain
+their original values.
+
 A runaway effect (one that keeps re-triggering itself) is caught by the flush iteration limit and reported with context kind `flush`; the flush is abandoned and the graph stays usable for later writes.
 
 ## Bridging External Sources
@@ -163,15 +171,19 @@ const user = ripple.resource(
 
 const stop = ripple.effect(() => {
   const state = user.value;
-  if (state.status === 'success') renderUser(state.value);
-  if (state.status === 'error') renderError(state.error);
+  if (state.status === 'success') console.log(state.value);
+  if (state.status === 'error') console.error(state.error);
 });
 
 stop.dispose();
 user.dispose();
 ```
 
-Disposed resources retain readable state but reject `reload()` and new subscriptions with `RippleDisposedError`. Use Sourcerer for paginated collection state and a dedicated server-state cache for shared keyed reads, retries, and invalidation.
+Source and loader failures become resource error state rather than `onError` reports.
+`reload()` returns `void`; observe state to know when loading finishes. Disposed resources retain
+readable state but throw `RippleDisposedError` from `reload()` and new subscriptions. Use Sourcerer
+for paginated collection state and a dedicated server-state cache for shared keyed reads, retries,
+and invalidation.
 
 ## Object State
 
@@ -321,5 +333,4 @@ If a computed's `derive` throws on its first run (e.g., a source is `null`), the
 - Batch related synchronous writes.
 - Use `watch()` only for selected source transitions; callback-only reads are untracked.
 - Dispose external-source bridges when their owner ends.
-- Route runtime failures with `onError`; the default rethrows asynchronously.
-- Use `resource()` for focused async state and Sourcerer for paginated collection workflows.
+- Route runtime failures with `onError` and observe async failures through resource state.

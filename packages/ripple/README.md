@@ -15,7 +15,9 @@ yarn add @vielzeug/ripple
 ```ts
 import { createRipple } from '@vielzeug/ripple';
 
-const ripple = createRipple();
+const ripple = createRipple({
+  onError: (error, context) => console.error(context.kind, error),
+});
 
 const count = ripple.signal(0);
 const doubled = ripple.computed(() => count.value * 2);
@@ -29,6 +31,10 @@ ripple.batch(() => {
 stop.dispose();
 ripple.dispose();
 ```
+
+`onError` handles runtime callback failures; async resource failures are state values. Effects
+flush synchronously, so use `batch()` to coalesce writes. Package errors use `RippleError`,
+`RippleCycleError`, and `RippleDisposedError`.
 
 ## Documentation
 

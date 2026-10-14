@@ -151,8 +151,8 @@ well-formed, or the route answers 503 without naming what is missing:
 | ------------------------ | ---------------------------------------------------------------- |
 | `APP_ENV`                | `local` or `production` (transport rules and the pepper policy)   |
 | `ALLOWED_ORIGINS`        | Exact canonical origins; never wildcards                          |
-| `JWT_ISSUER` / `JWT_AUDIENCE` / `JWT_JWKS_URL` | Your identity provider |
-| `AUTH_ISSUER_SERVICE`    | Required issuer service binding for live session-version checks   |
+| `JWT_ISSUER` / `JWT_AUDIENCE` / `JWT_JWKS_URL` | Exact issuer claim, audience and issuer JWKS endpoint URL |
+| `AUTH_ISSUER_SERVICE`    | Required issuer service binding for signing-key retrieval and live session-version checks |
 | `LIKES_ENABLED` / `PUBLISHING_ENABLED`        | Feature flags                     |
 | `RATE_LIMIT_KEY_SECRET`  | HMAC pepper. Required ≥ 32 chars in production; local may fall back |
 | `DB` / `READ_LIMIT` / `WRITE_LIMIT`           | D1 + rate-limit bindings |
@@ -164,6 +164,14 @@ make the header lie.
 
 Generated Env types (wrangler's `worker-configuration.d.ts`) satisfy the package's
 structural `ArchiveWorkerEnv` — no `@cloudflare/workers-types` dependency, no casts.
+
+Signing keys are fetched from `JWT_JWKS_URL` through `AUTH_ISSUER_SERVICE`, not
+global `fetch`. Point the URL at the bound issuer's `/api/v1/auth/jwks.json`
+route; retain the HTTPS production or loopback HTTP local configuration rules.
+This transport supports Workers on the same Cloudflare zone without a public
+Worker-to-Worker fetch. JOSE caches signing keys, but every private request still
+checks the current issuer session version. A signing-key provider failure is
+`503 auth-unavailable`, not a reason to clear the browser's signed-in state.
 
 ## The auth issuer
 

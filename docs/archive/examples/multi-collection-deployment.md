@@ -55,8 +55,8 @@ account hub owns `https://example.com/api/v1`, while a game runs at
 independent issuers.
 
 Route `/api/v1/auth/*` to the issuer and the other `/api/v1/*` routes to the
-catalog. Bind `AUTH_ISSUER_SERVICE` from catalog to issuer for current
-session-version checks, and `AUTH_ARCHIVE` from issuer to catalog for coordinated
+catalog. Bind `AUTH_ISSUER_SERVICE` from catalog to issuer for signing-key retrieval
+and current session-version checks, and `AUTH_ARCHIVE` from issuer to catalog for coordinated
 account erasure. The issuer's `GET /api/v1/auth/session` binding contract is not a
 frontend route. The catalog first verifies the RS256 JWT locally, then checks the
 current issuer verdict without caching it; an unavailable or invalid verdict is
@@ -70,6 +70,9 @@ Workers need exact allowed origins with credentialed CORS. The issuer's
 `AUTH_ISSUER` must equal the catalog's `JWT_ISSUER`; `AUDIENCE` and
 `JWT_AUDIENCE` must also match. Point `JWT_JWKS_URL` at the issuer's public
 `/api/v1/auth/jwks.json` route.
+The catalog requests that URL through the issuer service binding rather than
+global `fetch`, including when both Workers share a Cloudflare zone. Cached
+signing keys never replace the uncached session-version check.
 
 Forward the request marker on mutations and the captured publisher precondition
 on publisher-scoped operations.
@@ -110,12 +113,14 @@ Test the deployment with same-site HTTPS hosts, not only a localhost proxy.
 
 ### Pitfalls
 
-- Registering duplicate names: the factory throws `ArchiveDefinitionError` at startup.
-- Omitting `collection` from `/me/publications`: the route returns 400.
-- Assuming retry keys or publication quotas span collections: both scope to collection/owner.
-- Mixing payload schemas on the client: parse with the route's collection contract.
-- Treating a cross-origin subdomain as same-origin: private requests must include credentials.
-- Assuming shared sign-in synchronizes offline game data or updates other tabs immediately.
+- Registering duplicate names: the factory throws `ArchiveDefinitionError` at startup;
+  retry keys and publication quotas remain collection/owner-scoped.
+- Omitting `collection` from `/me/publications` returns 400; parse responses with
+  that collection's contract, not another payload schema.
+- Treating a cross-origin subdomain as same-origin: private requests must include
+  credentials, and the issuer binding must handle both JWKS and session requests.
+- Assuming shared sign-in synchronizes offline game data or updates other tabs
+  immediately: revalidate the session when a tab becomes visible.
 
 ### Related
 

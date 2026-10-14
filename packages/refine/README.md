@@ -57,6 +57,12 @@ import '@vielzeug/refine/time-picker';
 </ore-carousel>
 ```
 
+## Features
+
+- Form-associated controls integrate with native `FormData`, supported required validation, and form reset.
+- Enumerated component properties validate values against their documented options.
+- Import components and global styles through explicit package subpaths.
+
 ## Documentation
 
 - [Overview](https://vielzeug.dev/refine/)

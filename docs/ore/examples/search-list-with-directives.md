@@ -15,7 +15,7 @@ Use `each()` with positional arguments and `when()` for the empty-state fallback
 
 ```ts
 import { computed, signal } from '@vielzeug/ripple';
-import { define, each, html, when } from '@vielzeug/ore';
+import { define, each, html, model, when } from '@vielzeug/ore';
 
 define('search-list', {
   setup() {
@@ -26,7 +26,7 @@ define('search-list', {
     );
 
     return html`
-      <input value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
+      <input value=${model(query)} />
 
       ${when(
         () => filtered.value.length > 0,
@@ -34,7 +34,7 @@ define('search-list', {
           html`<ul>
             ${each(
               filtered,
-              (_, i) => i,
+              (name) => name,
               (name) => html`<li>${name}</li>`,
             )}
           </ul>`,

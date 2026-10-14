@@ -23,16 +23,21 @@ const users = createPageSource({
   pageSize: 20,
 });
 
-await users.reload();
-console.log(users.state.items);
-console.log(users.state.pagination.totalItems);
-users.dispose();
+try {
+  await users.apply({ page: 1 });
+  console.log(users.state.items);
+  console.log(users.state.pagination.totalItems);
+} catch (error) {
+  console.error(error);
+} finally {
+  users.dispose();
+}
 ```
 
 ## Features
 
-- `apply()`: set page and parameters from one object, compared structurally, in a single request.
-- `createResource()`: load one reactive value with `reload()`, for the `GET /thing` case where pagination would be ceremony.
+- `PageSource.apply()`: reconcile page and structurally compared parameters in at most one request.
+- `createResource()`: load one observable value immediately, or pass `start: false` and await `reload()`; failures retain previous data.
 
 ## Documentation
 

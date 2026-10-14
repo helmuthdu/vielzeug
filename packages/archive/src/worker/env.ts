@@ -1,4 +1,4 @@
-import { createRemoteJWKSet } from 'jose';
+import { createRemoteJWKSet, customFetch } from 'jose';
 import { ApiError } from './http';
 
 /**
@@ -178,7 +178,9 @@ export function apiConfig(env: ArchiveWorkerEnv): ApiConfig {
     // The exact configured issuer string is the match target — a trailing slash
     // is meaningful, never normalized away.
     issuer: requireVar(env, 'JWT_ISSUER'),
-    jwks: createRemoteJWKSet(jwksUrl),
+    jwks: createRemoteJWKSet(jwksUrl, {
+      [customFetch]: (input, init) => env.AUTH_ISSUER_SERVICE.fetch(new Request(input, init)),
+    }),
     likesEnabled: flag(requireVar(env, 'LIKES_ENABLED'), 'LIKES_ENABLED'),
     publishingEnabled: flag(requireVar(env, 'PUBLISHING_ENABLED'), 'PUBLISHING_ENABLED'),
     rateLimitPepper: rateLimitPepperFor(env, appEnv),

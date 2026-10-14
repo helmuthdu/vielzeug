@@ -37,9 +37,9 @@ history.replaceState(null, '', `?page=${source.state.pagination.page}&search=${e
 source.dispose();
 ```
 
-Calling `setParams()` and then `goTo()` would issue two requests and render the new filter at the
-old page in between. `apply()` compares params structurally, so a router effect that re-runs with
-an equal query does not refetch.
+Calling `setParams()` and then `goTo()` can issue two requests and commit page one before the
+requested page. `apply()` compares params structurally, so an unchanged committed query does not
+refetch. An inert source still loads, and a failed uncommitted request can be retried.
 
 ### Pitfalls
 

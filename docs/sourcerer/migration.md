@@ -1,10 +1,54 @@
 ---
-title: Sourcerer 3.0 Migration
+title: 'Sourcerer: Migration Guide'
+description: Migrate collection state and commands, and adopt page reconciliation and single-value resources.
 ---
 
-# Sourcerer 3.0 Migration
+Breaking changes ship in CalVer trains. Sourcerer replaces package-defined query fields with
+consumer-owned params, standardizes source state and commands, and removes the query-cache subpath.
 
-Sourcerer 3.0 narrows the package to reactive collection sources. It replaces package-defined query fields with consumer-owned params, standardizes source state and commands, and removes the query-cache subpath.
+## Reconcile page and params atomically
+
+`PageSource.apply()` is additive. Replace sequential filter and page commands when both values
+come from one URL or view-state update.
+
+```ts
+// Before
+await source.setParams(params);
+await source.goTo(page);
+
+// After
+await source.apply({ page, params });
+```
+
+The call issues at most one load and compares params structurally. Changed params use the supplied
+positive page without clamping against old totals, or page one when omitted. Unchanged params use
+normal page clamping. Omitted or `undefined` params preserve the requested value; use
+`setParams(undefined)` to replace it with `undefined`.
+
+## Use a resource for one value
+
+`createResource()` is additive; it does not restore the removed query cache. Replace collection
+wrapping when the loader returns one object.
+
+```ts
+// Before
+const profile = createPageSource({
+  load: async ({ signal }) => ({ items: [await loadProfile(signal)], totalItems: 1 }),
+});
+await profile.reload();
+console.log(profile.state.items[0]);
+
+// After
+const profile = createResource({
+  load: ({ signal }) => loadProfile(signal),
+  start: false,
+});
+await profile.reload();
+console.log(profile.state.data);
+```
+
+Without `start: false`, a resource starts during construction and reports initial failures through
+`state.error`. Explicit reloads reject current failures, preserve previous data, and abort stale work.
 
 ## Replace snapshots with state
 
@@ -104,7 +148,7 @@ console.log(source.state.params); // { search: 'ada' }
 
 ## Remove the query-cache subpath
 
-`@vielzeug/sourcerer/query`, `createQuerySource()`, query handles, keyed invalidation, retries, optimistic mutations, and cache garbage collection are removed. No replacement lives in Sourcerer 3.0.
+`@vielzeug/sourcerer/query`, `createQuerySource()`, query handles, keyed invalidation, retries, optimistic mutations, and cache garbage collection are removed. No keyed cache replacement lives in Sourcerer.
 
 Use a dedicated server-state cache when shared keyed caching is required. Keep simple uncached reads in Sourcerer loaders and keep HTTP behavior in Courier.
 
