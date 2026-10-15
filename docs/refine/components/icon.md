@@ -38,6 +38,10 @@ When icon names arrive from data rather than a known set, import the side-effect
 import '@vielzeug/refine/icon-lucide';
 ```
 
+Load the registration module before mounting elements that use those names.
+Both the published entry and source-aliased production builds retain this
+side-effect import, including VitePress sites.
+
 ## Styling and Color
 
 <ComponentPreview center>

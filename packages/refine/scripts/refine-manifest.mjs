@@ -19,7 +19,14 @@ const packageRoot = fileURLToPath(new URL('..', import.meta.url));
  * `./datagrid-column` subpath.
  */
 const PRIVATELY_REGISTERED = new Set(['datagrid-column']);
-const REFINE_SIDE_EFFECTS = ['./dist/*.js', './dist/*.cjs', './dist/core/*', './dist/styles/**', './src/core/icons.ts'];
+const REFINE_SIDE_EFFECTS = [
+  './dist/*.js',
+  './dist/*.cjs',
+  './dist/core/*',
+  './dist/styles/**',
+  './src/core/icons.ts',
+  './src/icon-lucide.ts',
+];
 
 /**
  * Discovers every published refine component entry point by scanning `src/**` for files that
