@@ -12,6 +12,7 @@ import {
   collectPackageClosure,
   dependencyFields,
   exportEntries,
+  externalOptionalPeerDependencies,
   hasSourceCondition,
   targetPaths,
 } from './lib/packed-package-model.mjs';
@@ -111,10 +112,15 @@ export async function verifyPackedPackages(targets, { progress = () => {} } = {}
     }
 
     progress(`Installing ${packed.size} packed package(s) into consumer fixture...`);
+    const dependencies = Object.fromEntries([...packed].map(([name, artifact]) => [name, `file:${artifact.tarballPath}`]));
+    Object.assign(
+      dependencies,
+      externalOptionalPeerDependencies([...closure.values()].map(({ manifest }) => manifest)),
+    );
     await writeFile(
       join(fixture, 'package.json'),
       JSON.stringify({
-        dependencies: Object.fromEntries([...packed].map(([name, artifact]) => [name, `file:${artifact.tarballPath}`])),
+        dependencies,
         private: true,
         type: 'module',
       }),

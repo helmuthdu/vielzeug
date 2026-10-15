@@ -40,7 +40,11 @@ function install(dependencies) {
   writeFileSync(join(consumerRoot, 'package.json'), JSON.stringify({ dependencies, private: true, type: 'module' }));
   execFileSync('npm', ['install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false'], {
     cwd: consumerRoot,
-    env: { ...process.env, npm_config_cache: join(tempRoot, 'npm-cache') },
+    env: {
+      ...process.env,
+      npm_config_cache: join(tempRoot, 'npm-cache'),
+      npm_config_update_notifier: 'false',
+    },
     stdio: 'inherit',
   });
 }

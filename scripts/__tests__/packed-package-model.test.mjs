@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectPackageClosure, exportEntries, hasSourceCondition, targetPaths } from '../lib/packed-package-model.mjs';
+import {
+  collectPackageClosure,
+  exportEntries,
+  externalOptionalPeerDependencies,
+  hasSourceCondition,
+  targetPaths,
+} from '../lib/packed-package-model.mjs';
 
 describe('packed-package model', () => {
   it('collects complete workspace dependency closure once', () => {
@@ -20,6 +26,24 @@ describe('packed-package model', () => {
       '@vielzeug/b',
       '@vielzeug/c',
     ]);
+  });
+
+  it('installs only external optional peers that are not already package dependencies', () => {
+    const manifests = [
+      {
+        dependencies: { installed: '^1.0.0' },
+        peerDependencies: { lucide: '^1.48.0', installed: '^2.0.0', required: '^3.0.0', '@vielzeug/ore': 'workspace:*' },
+        peerDependenciesMeta: {
+          lucide: { optional: true },
+          installed: { optional: true },
+          required: { optional: false },
+          '@vielzeug/ore': { optional: true },
+        },
+      },
+      { optionalDependencies: { alsoInstalled: '^4.0.0' } },
+    ];
+
+    expect(externalOptionalPeerDependencies(manifests)).toEqual({ lucide: '^1.48.0' });
   });
 
   it('models string and conditional exports without treating CSS as JavaScript', () => {

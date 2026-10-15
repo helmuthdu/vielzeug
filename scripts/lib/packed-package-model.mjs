@@ -10,6 +10,27 @@ export function internalDependencies(manifest) {
   return dependencyFields.flatMap((field) => Object.keys(manifest[field] ?? {}).filter((name) => name.startsWith(workspacePrefix)));
 }
 
+export function externalOptionalPeerDependencies(manifests) {
+  const installed = new Set(
+    manifests.flatMap((manifest) => Object.keys({ ...manifest.dependencies, ...manifest.optionalDependencies })),
+  );
+  const peers = new Map();
+
+  for (const manifest of manifests) {
+    for (const [name, version] of Object.entries(manifest.peerDependencies ?? {})) {
+      if (
+        !name.startsWith(workspacePrefix) &&
+        !installed.has(name) &&
+        manifest.peerDependenciesMeta?.[name]?.optional === true
+      ) {
+        peers.set(name, version);
+      }
+    }
+  }
+
+  return Object.fromEntries(peers);
+}
+
 export function collectPackageClosure(targets, projects, readPackage) {
   const folders = new Map();
   const visit = (name) => {
