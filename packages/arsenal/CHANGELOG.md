@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/arsenal
 
-This log was last generated on Wed, 14 Oct 2026 21:26:14 GMT and should not be manually modified.
+This log was last generated on Thu, 15 Oct 2026 05:00:39 GMT and should not be manually modified.
 
+## 26.10.10
+Thu, 15 Oct 2026 05:00:39 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.9
 Wed, 14 Oct 2026 21:26:14 GMT
 

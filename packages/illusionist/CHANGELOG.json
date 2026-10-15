@@ -6,6 +6,20 @@
           {
             "author": "release-train",
             "comment": "chore: align with CalVer lockstep trains: no code change this train",
+            "commit": "7b59cbd465bb935068c9df940ac828795d49fa13"
+          }
+        ]
+      },
+      "date": "Thu, 15 Oct 2026 05:00:39 GMT",
+      "tag": "@vielzeug/illusionist_v26.10.10",
+      "version": "26.10.10"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "release-train",
+            "comment": "chore: align with CalVer lockstep trains: no code change this train",
             "commit": "b2119d7114c39e2cb65c0a0b62ac73aa453ff5a8"
           }
         ]

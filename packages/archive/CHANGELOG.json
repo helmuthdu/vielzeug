@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "agent@vielzeug",
+            "comment": "feat: add nonce-protected paper-and-copper magic-link confirmation with accessible status, fixed /account recovery, bounded strict Retry-After parsing, non-blocking response-body cancellation and page-lifecycle cleanup; malformed GET links now return branded HTML 400 while guarded POST redemption and JSON errors stay unchanged",
+            "commit": "7b59cbd465bb935068c9df940ac828795d49fa13"
+          }
+        ]
+      },
+      "date": "Thu, 15 Oct 2026 05:00:39 GMT",
+      "tag": "@vielzeug/archive_v26.10.10",
+      "version": "26.10.10"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Fetch issuer signing keys through the required auth service binding so same-zone Cloudflare deployments can authenticate sessions.",
             "commit": "b2119d7114c39e2cb65c0a0b62ac73aa453ff5a8"
           }

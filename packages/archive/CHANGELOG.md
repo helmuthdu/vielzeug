@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/archive
 
-This log was last generated on Wed, 14 Oct 2026 21:26:14 GMT and should not be manually modified.
+This log was last generated on Thu, 15 Oct 2026 05:00:39 GMT and should not be manually modified.
 
+## 26.10.10
+Thu, 15 Oct 2026 05:00:39 GMT
+
+### Minor changes
+
+- feat: add nonce-protected paper-and-copper magic-link confirmation with accessible status, fixed /account recovery, bounded strict Retry-After parsing, non-blocking response-body cancellation and page-lifecycle cleanup; malformed GET links now return branded HTML 400 while guarded POST redemption and JSON errors stay unchanged
 ## 26.10.9
 Wed, 14 Oct 2026 21:26:14 GMT
 
