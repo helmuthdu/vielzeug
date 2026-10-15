@@ -2,6 +2,10 @@
 
 A responsive navigation bar with desktop and mobile layouts, plus sticky and floating modes. It includes a dedicated mobile menu slot and supports a floating-to-full-width transition when `floating` and `sticky` are used together.
 
+## Keyboard Navigation
+
+The mobile toggle announces whether its menu is expanded. Pressing Escape inside an open mobile menu closes it and returns focus to the toggle, so keyboard navigation resumes from a visible control. The menu is nonmodal and does not trap focus.
+
 ## Position Modes
 
 ### Sticky
@@ -238,10 +242,10 @@ Recommended app-shell pattern:
     </ore-navbar>
 
     <main class="shell-content">
-      <ore-text
-        >Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and
-        content. On mobile, opening the sidebar drawer pushes the entire right shell sideways.</ore-text
-      >
+      <ore-text>
+        Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and content.
+        On mobile, opening the sidebar drawer pushes the entire right shell sideways.
+      </ore-text>
     </main>
   </section>
 </div>
@@ -295,22 +299,22 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 **`ore-navbar` Attributes**
 
-| Attribute               | Type                                                                 | Default                | Description                                                                    |
-| ----------------------- | -------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
-| `label`                 | `string`                                                             | `'Main navigation'`    | Accessible nav landmark label                                                  |
-| `menu-icon`             | `string`                                                             | `'menu'`                 | Icon shown while the mobile menu is closed                                    |
-| `menu-open-label`       | `string`                                                             | `'Open navigation menu'` | Accessible label for the closed mobile menu toggle                            |
-| `menu-close-icon`       | `string`                                                             | `'x'`                    | Icon shown while the mobile menu is open                                      |
-| `menu-close-label`      | `string`                                                             | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                              |
-| `sticky`                | `boolean`                                                            | `false`                | Enables sticky mode                                                            |
-| `floating`              | `boolean`                                                            | `false`                | Enables floating mode                                                          |
-| `scroll-threshold`      | `number`                                                             | `80`                   | Scroll px threshold for floating+sticky transition                             |
-| `breakpoint`            | `string`                                                             | `'(max-width: 768px)'` | Media query used for mobile mode                                               |
-| `container-breakpoints` | `boolean`                                                            | `false`                | Evaluates parseable `max-width` breakpoints against the navbar container width |
-| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'frost'` | N/A | Surface style variant                                                          |
-| `color`                 | `ThemeColor`                                                         | N/A | Theme color                                                                    |
-| `rounded`               | `RoundedSize`                                                        | N/A | Border radius token                                                            |
-| `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | N/A | Elevation shadow level                                                         |
+| Attribute               | Type                                                      | Default                   | Description                                                                    |
+| ----------------------- | --------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------ |
+| `label`                 | `string`                                                  | `'Main navigation'`       | Accessible nav landmark label                                                  |
+| `menu-icon`             | `string`                                                  | `'menu'`                  | Icon shown while the mobile menu is closed                                     |
+| `menu-open-label`       | `string`                                                  | `'Open navigation menu'`  | Accessible label for the closed mobile menu toggle                             |
+| `menu-close-icon`       | `string`                                                  | `'x'`                     | Icon shown while the mobile menu is open                                       |
+| `menu-close-label`      | `string`                                                  | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                               |
+| `sticky`                | `boolean`                                                 | `false`                   | Enables sticky mode                                                            |
+| `floating`              | `boolean`                                                 | `false`                   | Enables floating mode                                                          |
+| `scroll-threshold`      | `number`                                                  | `80`                      | Scroll px threshold for floating+sticky transition                             |
+| `breakpoint`            | `string`                                                  | `'(max-width: 768px)'`    | Media query used for mobile mode                                               |
+| `container-breakpoints` | `boolean`                                                 | `false`                   | Evaluates parseable `max-width` breakpoints against the navbar container width |
+| `variant`               | `'flat' \| 'solid' \| 'bordered' \| 'outline' \| 'frost'` | N/A                       | Surface style variant                                                          |
+| `color`                 | `ThemeColor`                                              | N/A                       | Theme color                                                                    |
+| `rounded`               | `RoundedSize`                                             | N/A                       | Border radius token                                                            |
+| `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                  | N/A                       | Elevation shadow level                                                         |
 
 When `variant="frost"` has an explicit elevation, that elevation replaces the default frost halo so levels remain visually distinct.
 
@@ -355,7 +359,7 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 | `--navbar-border-color`      | Navbar border color                               | Theme-dependent |
 | `--navbar-shadow`            | Navbar box shadow                                 | Theme-dependent |
 | `--navbar-radius`            | Border radius (floating/sticky modes)             | Theme-dependent |
-| `--navbar-backdrop-filter`   | Backdrop filter for blur effect            | Theme-dependent |
+| `--navbar-backdrop-filter`   | Backdrop filter for blur effect                   | Theme-dependent |
 | `--navbar-item-color`        | Nav item text color                               | Theme-dependent |
 | `--navbar-item-hover-color`  | Nav item hover text color                         | Theme-dependent |
 | `--navbar-item-hover-bg`     | Nav item hover background                         | Theme-dependent |
@@ -366,11 +370,11 @@ When `variant="frost"` has an explicit elevation, that elevation replaces the de
 
 | Attribute  | Type      | Default | Description                                        |
 | ---------- | --------- | ------- | -------------------------------------------------- |
-| `href`     | `string`  | N/A | Link URL (renders anchor when set)                 |
+| `href`     | `string`  | N/A     | Link URL (renders anchor when set)                 |
 | `active`   | `boolean` | `false` | Marks item as current page (`aria-current="page"`) |
 | `disabled` | `boolean` | `false` | Disables interaction                               |
-| `rel`      | `string`  | N/A | Link relationship when `href` is set               |
-| `target`   | `string`  | N/A | Link target when `href` is set                     |
+| `rel`      | `string`  | N/A     | Link relationship when `href` is set               |
+| `target`   | `string`  | N/A     | Link target when `href` is set                     |
 
 **`ore-navbar-item` Slots**
 

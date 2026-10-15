@@ -247,9 +247,9 @@ select.options = [
 
 Render leading icon(s) next to an option's label. For native options, use `data-icon`; for JavaScript options, use `icon`. Icons are decorative and hidden from assistive technology.
 
-Icon values containing a path separator (`/`) or starting with `data:` are treated as image URLs and rendered as `<img>`: useful for custom artwork (country flags, game resources). Anything else is resolved as a lucide icon name.
+Icon values containing a path separator (`/`) or starting with `data:` are treated as image URLs and rendered as `<img>`: useful for custom artwork (country flags, game resources). Anything else is resolved as a [registered icon name](./icon.md).
 
-An option can carry several icons: pass an array to the JS `icon` property, or a space-separated list to `data-icon` (safe because neither lucide names nor URLs contain spaces).
+An option can carry several icons: pass an array to the JS `icon` property, or a space-separated list to `data-icon` (use names and URLs without spaces).
 
 ```html
 <ore-select label="Payment">

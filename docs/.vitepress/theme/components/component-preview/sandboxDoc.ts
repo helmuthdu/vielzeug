@@ -89,9 +89,10 @@ queueMicrotask(syncAllOverlays);
 
 const previewIconRuntime = `
 const registerIcons = window.Refine?.components?.content?.registerIcons;
+const lucideIcons = window.Refine?.components?.content?.lucideIcons;
 const icons = window.lucide?.icons;
-if (registerIcons && icons) {
-  registerIcons(icons);
+if (registerIcons && lucideIcons && icons) {
+  registerIcons(lucideIcons(icons));
   const refreshIcons = (root) => {
     root.querySelectorAll('ore-icon').forEach((icon) => {
       const name = icon.getAttribute('name');

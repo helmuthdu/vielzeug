@@ -1,6 +1,6 @@
 ---
 title: 'Archive Examples: Stand Up a Content Archive'
-description: "Deploy the catalog and passwordless issuer Workers with fresh D1 databases, reciprocal service bindings, and session smoke tests."
+description: 'Deploy the catalog and passwordless issuer Workers with fresh D1 databases, reciprocal service bindings, and session smoke tests.'
 ---
 
 ## Stand Up a Content Archive
@@ -76,20 +76,22 @@ without exposing an extra public endpoint.
     "JWT_AUDIENCE": "community-archive",
     "JWT_JWKS_URL": "https://api.example.com/api/v1/auth/jwks.json",
     "LIKES_ENABLED": "true",
-    "PUBLISHING_ENABLED": "true"
+    "PUBLISHING_ENABLED": "true",
   },
-  "d1_databases": [{
-    "binding": "DB",
-    "database_name": "archive-catalog",
-    "database_id": "replace-with-catalog-d1-id",
-    "migrations_dir": "./node_modules/@vielzeug/archive/migrations"
-  }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "archive-catalog",
+      "database_id": "replace-with-catalog-d1-id",
+      "migrations_dir": "./node_modules/@vielzeug/archive/migrations",
+    },
+  ],
   "ratelimits": [
     { "name": "READ_LIMIT", "namespace_id": "1001", "simple": { "limit": 120, "period": 60 } },
-    { "name": "WRITE_LIMIT", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } }
+    { "name": "WRITE_LIMIT", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
   ],
   "services": [{ "binding": "AUTH_ISSUER_SERVICE", "service": "archive-issuer" }],
-  "triggers": { "crons": ["17 4 * * *"] }
+  "triggers": { "crons": ["17 4 * * *"] },
 }
 ```
 
@@ -111,17 +113,19 @@ separate D1 database and the auth migration directory inside the installed packa
     "AUDIENCE": "community-archive",
     "OPERATOR_EMAILS": "operators@example.com",
     "PUBLIC_ORIGIN": "https://api.example.com",
-    "SENDER_ADDRESS": "archive@example.com"
+    "SENDER_ADDRESS": "archive@example.com",
   },
-  "d1_databases": [{
-    "binding": "AUTH_DB",
-    "database_name": "archive-issuer",
-    "database_id": "replace-with-issuer-d1-id",
-    "migrations_dir": "./node_modules/@vielzeug/archive/migrations/auth"
-  }],
+  "d1_databases": [
+    {
+      "binding": "AUTH_DB",
+      "database_name": "archive-issuer",
+      "database_id": "replace-with-issuer-d1-id",
+      "migrations_dir": "./node_modules/@vielzeug/archive/migrations/auth",
+    },
+  ],
   "send_email": [{ "name": "AUTH_EMAIL" }],
   "services": [{ "binding": "AUTH_ARCHIVE", "service": "archive-catalog" }],
-  "triggers": { "crons": ["23 * * * *"] }
+  "triggers": { "crons": ["23 * * * *"] },
 }
 ```
 

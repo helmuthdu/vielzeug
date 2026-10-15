@@ -1,3 +1,8 @@
+export { heroiconsIcons } from '../icons/heroicons';
+export { iconifyIcon, iconifyIcons } from '../icons/iconify';
+export { lucideIcons } from '../icons/lucide';
+export { mdiIcons } from '../icons/mdi';
+export { tablerIcons } from '../icons/tabler';
 export type { AvatarStatus, OreAvatarProps } from './avatar/avatar';
 export { AVATAR_TAG } from './avatar/avatar';
 export type { OreAvatarGroupProps } from './avatar/avatar-group';
@@ -28,7 +33,7 @@ export type { CodeWindowVariant, OreCodeWindowProps } from './code-window/code-w
 export { CODE_WINDOW_TAG } from './code-window/code-window';
 export type { OreCopyCommandEvents, OreCopyCommandProps } from './copy-command/copy-command';
 export { COPY_COMMAND_TAG } from './copy-command/copy-command';
-export type { IconNode, OreIconProps } from './icon/icon';
+export type { IconAttributes, IconDefinition, IconElement, OreIconProps } from './icon/icon';
 export { ICON_TAG, registerIcons } from './icon/icon';
 export type { KeyboardKeySize, OreKeyboardKeyProps, OreKeyboardShortcutProps } from './keyboard-key/keyboard-key';
 export { KEYBOARD_KEY_TAG, KEYBOARD_SHORTCUT_TAG } from './keyboard-key/keyboard-key';

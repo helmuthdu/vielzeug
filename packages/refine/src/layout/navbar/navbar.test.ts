@@ -88,6 +88,39 @@ describe('ore-navbar', () => {
     expect(fixture.query('[part="persistent"]')?.hasAttribute('hidden')).toBe(false);
   });
 
+  it('returns focus to the mobile toggle when Escape closes a focused menu', async () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', { html: '<a slot="mobile-menu" href="#games">Games</a>' });
+      const toggle = fixture.query<HTMLButtonElement>('[part="mobile-toggle"]')!;
+      await fixture.act(() => fireClick(toggle));
+      const link = fixture.element.querySelector<HTMLAnchorElement>('a')!;
+      link.focus();
+      expect(document.activeElement).toBe(link);
+      await fixture.act(() =>
+        link.dispatchEvent(
+          new KeyboardEvent('keydown', {
+            bubbles: true,
+            cancelable: true,
+            key: 'Escape',
+          }),
+        ),
+      );
+
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(fixture.query('[part="mobile-menu"]')?.hasAttribute('hidden')).toBe(true);
+      expect(fixture.element.shadowRoot?.activeElement).toBe(toggle);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('keeps mobile toggle hidden when no mobile-menu slot is present', async () => {
     const originalMatchMedia = window.matchMedia;
 

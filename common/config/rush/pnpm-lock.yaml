@@ -559,9 +559,6 @@ importers:
       '@vielzeug/tempo':
         specifier: workspace:*
         version: link:../tempo
-      lucide:
-        specifier: ^1.48.0
-        version: 1.50.0
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.13.0
@@ -596,6 +593,9 @@ importers:
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
+      lucide:
+        specifier: ^1.48.0
+        version: 1.50.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

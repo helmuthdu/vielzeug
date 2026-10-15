@@ -434,7 +434,10 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       const stopEscape = listen(el, 'keydown', (event: KeyboardEvent) => {
         if (event.key !== 'Escape' || !isMobileMenuOpen.value) return;
 
+        event.preventDefault();
+        event.stopPropagation();
         closeMobileMenu();
+        el.shadowRoot?.querySelector<HTMLButtonElement>('[part="mobile-toggle"]')?.focus();
       });
 
       let mediaCleanup: (() => void) | undefined;

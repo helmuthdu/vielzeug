@@ -1,6 +1,6 @@
 ---
 title: Archive Migration
-description: "Breaking contract changes after the first published release (26.10.6): forward-only entry pages and a slimmer derivation surface."
+description: 'Breaking contract changes after the first published release (26.10.6): forward-only entry pages and a slimmer derivation surface.'
 ---
 
 # Archive 26.10 Migration

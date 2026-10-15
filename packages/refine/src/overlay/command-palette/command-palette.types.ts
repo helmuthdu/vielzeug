@@ -4,7 +4,7 @@ export type CommandPaletteItemInput = {
   disabled?: boolean;
   /** Group heading the item is rendered under. Items sharing a group are clustered together. */
   group?: string;
-  /** Lucide icon name (e.g. `"file-plus"`), rendered via `ore-icon` at the start of the row. */
+  /** Registered icon name (e.g. `"file-plus"`), rendered via `ore-icon` at the start of the row. */
   icon?: string;
   /** Extra search terms matched against the query in addition to the label. */
   keywords?: string[];

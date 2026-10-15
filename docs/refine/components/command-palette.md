@@ -77,7 +77,7 @@ Pass the `items` property for programmatically generated commands instead of (or
 
 ## Groups and Icons
 
-Items sharing a `group` value are clustered under a heading, in the order groups first appear. Add an `icon` (a [Lucide](https://lucide.dev) icon name) for a leading icon.
+Items sharing a `group` value are clustered under a heading, in the order groups first appear. Add an `icon` (a [registered icon name](./icon.md)) for a leading icon.
 
 <ComponentPreview height="480px">
 

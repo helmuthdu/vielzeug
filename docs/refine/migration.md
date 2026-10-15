@@ -7,6 +7,46 @@ description: Migrate surface variants, DataGrid sources, and framework type decl
 
 Refine 3.0 simplifies translucent surfaces, aligns DataGrid sources with Sourcerer's page-source contract, and publishes complete DOM, React, and Vue element declarations.
 
+## Register library-neutral icon definitions
+
+Breaking: `IconNode` arrays are removed. `registerIcons` accepts only `IconDefinition` objects with a viewBox, presentation attributes, and recursive SVG children.
+
+```ts
+// Before
+registerIcons({ Brand: [['path', { d: 'M0 0h24v24H0z' }]] });
+
+// After
+import { registerIcons, type IconDefinition } from '@vielzeug/refine/icons';
+
+const brand: IconDefinition = {
+  viewBox: [0, 0, 24, 24],
+  presentation: { fill: 'currentColor' },
+  children: [{ tag: 'path', attrs: { d: 'M0 0h24v24H0z' } }],
+};
+registerIcons({ Brand: brand });
+```
+
+For selected Lucide data, replace `registerIcons({ Search })` with `registerIcons(lucideIcons({ Search }))`, importing `lucideIcons` from `@vielzeug/refine/icons/lucide`. Full-library registration is an explicit side-effect import of `@vielzeug/refine/icons/lucide/all`. Only grouped icon entry points are published; no aliases for the previous adapter paths are retained.
+
+Lucide is now an optional peer instead of a mandatory dependency. Applications using Lucide data or the full-set registrar must declare it explicitly (`pnpm add lucide@^1.48.0`). No icon-library dependency is needed for core components, neutral definitions, or supplied structural data.
+
+For Heroicons, Tabler, or Material Design Icons, convert local Iconify data through `@vielzeug/refine/icons/iconify`. Shared registration and types live at `@vielzeug/refine/icons`; the component remains `@vielzeug/refine/icon`. See the [icon reference](./components/icon.md) for imports, licenses, aliases, transforms, and validation.
+
+For caller-named individual data, the grouped entries `icons/heroicons`, `icons/tabler`, and `icons/mdi` expose `heroiconsIcons`, `tablerIcons`, and `mdiIcons`. This is an additive convenience; existing generic Iconify conversion remains supported:
+
+```ts
+import { registerIcons } from '@vielzeug/refine/icons';
+import { heroiconsIcons } from '@vielzeug/refine/icons/heroicons';
+import Search from '@iconify-icons/heroicons/magnifying-glass';
+import Home from '@iconify-icons/heroicons/home';
+
+registerIcons(heroiconsIcons({ Search, Home }));
+```
+
+Keys stay application-owned (`search`, `home`) rather than gaining a provider namespace. Install the chosen Iconify data package; native framework components are not accepted. Collection JSON still uses `iconifyIcons(collection, names?)`. No compatibility aliases or automatic registration are added.
+
+Presentation now comes from each definition rather than forced Lucide styling. `stroke-width` is an explicit override (otherwise native widths are retained); `solid` overrides nested fill/stroke attributes too. `absolute-stroke-width` uses SVG non-scaling strokes, including CSS sizes. Application registrations override component defaults in either import order. Names normalize case, hyphens, and underscores consistently; namespace colons are preserved. Invalid data throws `RefineError` rather than being partially rendered.
+
 ## Replace glass with frost
 
 The `glass` variant was removed because its browser-dependent SVG refraction was difficult to distinguish reliably from `frost`. Use the CSS-only `frost` variant for translucent cards, containers, navigation, tabs, accordions, and pagination.

@@ -33,6 +33,12 @@ Add the browser reset only when the application owns global element styling:
 import '@vielzeug/refine/styles/preflight.css';
 ```
 
+## Choose an Icon Library
+
+Refine includes only its internal component icons. Register application icons before mounting them: use `registerIcons` and neutral `IconDefinition` data from `@vielzeug/refine/icons`, the pure `@vielzeug/refine/icons/lucide` adapter for selected Lucide icons, or `@vielzeug/refine/icons/iconify` for local Heroicons, Tabler, and Material Design Icons data. Keep importing the component from `@vielzeug/refine/icon`. Lucide is an optional peer: install `lucide` yourself only when choosing its data or `@vielzeug/refine/icons/lucide/all`; core and structural adapters do not require it. The [icon reference](./components/icon.md) covers imports, licenses, and presentation behavior.
+
+For selected individual Iconify data, use `heroiconsIcons`, `tablerIcons`, or `mdiIcons` from `@vielzeug/refine/icons/heroicons`, `/tabler`, or `/mdi`. For example, `registerIcons(heroiconsIcons({ Search, Home }))` preserves your app keys. Install the matching `@iconify-icons/<family>` data package yourself; these helpers do not accept framework components. Keep `iconifyIcons` for collection JSON and aliases.
+
 ## Set Attributes and Properties
 
 Use attributes for serializable HTML state.

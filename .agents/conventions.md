@@ -13,7 +13,7 @@
 
 - **MUST:** Use TypeScript strict mode. No `any` in package source.
 - **MUST:** Route public root exports through `src/index.ts`.
-- **MUST:** Do not add a third-party runtime dependency without explicit approval. This does not prohibit `@vielzeug/*` workspace dependencies (`workspace:*`). Documented exceptions: `refine` bundles `lucide`; `refine`, `prism`, and `ore` use `axe-core` as a devDependency for accessibility tests (never bundled).
+- **MUST:** Do not add a third-party runtime dependency without explicit approval. This does not prohibit `@vielzeug/*` workspace dependencies (`workspace:*`). Documented exceptions: `refine` declares `lucide` as an optional peer for `./icons/lucide/all` and a devDependency for development; consumers choosing Lucide install it themselves. Core components and the structural adapters do not require Lucide. `refine`, `prism`, and `ore` use `axe-core` as a devDependency for accessibility tests (never bundled).
 - **MUST:** Treat `package.json` as the authority for name, description, and dependencies; use `.agents/reference/packages.md` for a one-page view during impact analysis.
 - **MUST:** Keep source, tests, public exports, and user-facing examples consistent.
 

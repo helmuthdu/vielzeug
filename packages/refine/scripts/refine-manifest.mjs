@@ -23,9 +23,11 @@ const REFINE_SIDE_EFFECTS = [
   './dist/*.js',
   './dist/*.cjs',
   './dist/core/*',
+  './dist/icons/**',
   './dist/styles/**',
-  './src/core/icons.ts',
-  './src/icon-lucide.ts',
+  './src/icons/defaults.ts',
+  './src/content/icon/icon.ts',
+  './src/icons/lucide/all.ts',
 ];
 
 /**
@@ -138,7 +140,13 @@ const staticExportKeys = new Set([
   './frameworks/react',
   './frameworks/vue',
   './theme',
-  './icon-lucide',
+  './icons',
+  './icons/lucide',
+  './icons/lucide/all',
+  './icons/iconify',
+  './icons/heroicons',
+  './icons/tabler',
+  './icons/mdi',
 ]);
 
 const staticCssExports = {
@@ -186,10 +194,40 @@ const staticJsExports = {
     require: './dist/theme.cjs',
     types: './dist/theme.d.ts',
   },
-  './icon-lucide': {
-    import: './dist/icon-lucide.js',
-    require: './dist/icon-lucide.cjs',
-    types: './dist/icon-lucide.d.ts',
+  './icons': {
+    import: './dist/icons/index.js',
+    require: './dist/icons/index.cjs',
+    types: './dist/icons/index.d.ts',
+  },
+  './icons/lucide': {
+    import: './dist/icons/lucide.js',
+    require: './dist/icons/lucide.cjs',
+    types: './dist/icons/lucide.d.ts',
+  },
+  './icons/lucide/all': {
+    import: './dist/icons/lucide/all.js',
+    require: './dist/icons/lucide/all.cjs',
+    types: './dist/icons/lucide/all.d.ts',
+  },
+  './icons/iconify': {
+    import: './dist/icons/iconify.js',
+    require: './dist/icons/iconify.cjs',
+    types: './dist/icons/iconify.d.ts',
+  },
+  './icons/heroicons': {
+    import: './dist/icons/heroicons.js',
+    require: './dist/icons/heroicons.cjs',
+    types: './dist/icons/heroicons.d.ts',
+  },
+  './icons/tabler': {
+    import: './dist/icons/tabler.js',
+    require: './dist/icons/tabler.cjs',
+    types: './dist/icons/tabler.d.ts',
+  },
+  './icons/mdi': {
+    import: './dist/icons/mdi.js',
+    require: './dist/icons/mdi.cjs',
+    types: './dist/icons/mdi.d.ts',
   },
 };
 
@@ -235,7 +273,13 @@ export function getRefineLibraryEntries(rootDir) {
   return Object.fromEntries([
     ['index', resolve(rootDir, './src/index')],
     ['theme', resolve(rootDir, './src/theme')],
-    ['icon-lucide', resolve(rootDir, './src/icon-lucide')],
+    ['icons/index', resolve(rootDir, './src/icons/index')],
+    ['icons/lucide', resolve(rootDir, './src/icons/lucide')],
+    ['icons/lucide/all', resolve(rootDir, './src/icons/lucide/all')],
+    ['icons/iconify', resolve(rootDir, './src/icons/iconify')],
+    ['icons/heroicons', resolve(rootDir, './src/icons/heroicons')],
+    ['icons/tabler', resolve(rootDir, './src/icons/tabler')],
+    ['icons/mdi', resolve(rootDir, './src/icons/mdi')],
     ...componentManifest.map(({ name, source }) => [name, resolve(rootDir, source)]),
   ]);
 }

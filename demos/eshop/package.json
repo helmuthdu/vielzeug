@@ -37,7 +37,8 @@
     "@vielzeug/tempo": "workspace:*",
     "@vielzeug/vault": "workspace:*",
     "@vielzeug/ward": "workspace:*",
-    "@vielzeug/wayfinder": "workspace:*"
+    "@vielzeug/wayfinder": "workspace:*",
+    "lucide": "^1.48.0"
   },
   "devDependencies": {
     "playwright": "^1.63.0",

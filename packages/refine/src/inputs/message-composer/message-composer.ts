@@ -99,7 +99,7 @@ export type OreMessageComposerProps = {
   required?: boolean;
   /** Number of visible rows before auto-resize grows the field */
   rows?: number;
-  /** Lucide icon name for the default send button (default `'arrow-up'`) */
+  /** Registered icon name for the default send button (default `'arrow-up'`) */
   'send-icon'?: string;
   /** Accessible label for the send button (default `'Send message'`) */
   'send-label'?: string;
@@ -148,7 +148,7 @@ export type OreMessageComposerProps = {
  * @attr {string} variant - Visual variant of the card: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {boolean} fullwidth - Stretch to the full width of the container
- * @attr {string} send-icon - Lucide icon name for the default send button (default 'arrow-up')
+ * @attr {string} send-icon - Registered icon name for the default send button (default 'arrow-up')
  * @attr {string} send-label - Accessible label for the send button (default 'Send message')
  * @attr {string} send-shortcut - 'enter' (default) | 'mod+enter'
  * @attr {boolean} clear-on-send - Clear the value and refocus after a non-cancelled send (default true)

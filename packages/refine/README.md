@@ -62,6 +62,8 @@ import '@vielzeug/refine/time-picker';
 - Form-associated controls integrate with native `FormData`, supported required validation, and form reset.
 - Enumerated component properties validate values against their documented options.
 - Import components and global styles through explicit package subpaths.
+- `registerIcons` from `@vielzeug/refine/icons` accepts library-neutral SVG definitions; `@vielzeug/refine/icons/iconify` adapts local Heroicons, Tabler, and Material Design Icons data, while `@vielzeug/refine/icons/lucide` adapts selected Lucide icons. Core and structural adapters need no Lucide install; declare the optional `lucide` peer yourself when using its data or `@vielzeug/refine/icons/lucide/all` (`pnpm add lucide@^1.48.0`). See the [icon reference](https://vielzeug.dev/refine/components/icon).
+- `heroiconsIcons`, `tablerIcons`, and `mdiIcons` from `@vielzeug/refine/icons/heroicons`, `/tabler`, and `/mdi` convert caller-named individual `@iconify-icons/*` data: `registerIcons(heroiconsIcons({ Search, Home }))`. They preserve your app keys without bundling collections or accepting framework components.
 
 ## Documentation
 

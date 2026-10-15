@@ -193,6 +193,9 @@ importers:
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
+      lucide:
+        specifier: ^1.48.0
+        version: 1.49.0
       monaco-editor:
         specifier: 0.56.0
         version: 0.56.0
@@ -307,6 +310,9 @@ importers:
       '@vielzeug/wayfinder':
         specifier: workspace:*
         version: link:../../packages/wayfinder
+      lucide:
+        specifier: ^1.48.0
+        version: 1.49.0
     devDependencies:
       '@vielzeug/assay':
         specifier: workspace:*
@@ -398,6 +404,9 @@ importers:
       '@vielzeug/wayfinder':
         specifier: workspace:*
         version: link:../../packages/wayfinder
+      lucide:
+        specifier: ^1.48.0
+        version: 1.49.0
     devDependencies:
       playwright:
         specifier: ^1.63.0
@@ -435,6 +444,9 @@ importers:
       '@vielzeug/wayfinder':
         specifier: workspace:*
         version: link:../../packages/wayfinder
+      lucide:
+        specifier: ^1.48.0
+        version: 1.49.0
     devDependencies:
       typescript:
         specifier: ^6.0.3
@@ -992,9 +1004,6 @@ importers:
       '@vielzeug/tempo':
         specifier: workspace:*
         version: link:../tempo
-      lucide:
-        specifier: ^1.48.0
-        version: 1.49.0
     devDependencies:
       '@axe-core/playwright':
         specifier: ^4.13.0
@@ -1029,6 +1038,9 @@ importers:
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
+      lucide:
+        specifier: ^1.48.0
+        version: 1.49.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

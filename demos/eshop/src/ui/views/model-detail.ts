@@ -30,7 +30,7 @@ import type { Configuration, FeatureKey, Model } from '../../core/types';
 import { openShareBuildDialog } from '../components/share-build-dialog';
 
 /** Icon per feature-card key (`model.features.*` in `core/i18n.ts` owns the label text) :
- * lucide names bundled through `@vielzeug/refine`'s own icon set. */
+ * Lucide names registered by the app shell through Refine's opt-in full-set adapter. */
 const FEATURE_ICON: Record<FeatureKey, string> = {
   adaptiveCruise: 'gauge',
   headUpDisplay: 'monitor',

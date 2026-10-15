@@ -7,6 +7,26 @@
  */
 import { expect, test } from '../../testing/fixtures';
 
+test.describe('Keyboard recovery', () => {
+  test('Escape closes the mobile menu and restores focus to the toggle', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await refinePage.mountComponent(
+      '<ore-navbar id="nav"><span slot="logo">Studio</span>' +
+        '<ore-navbar-item slot="mobile-menu" href="#games">Games</ore-navbar-item></ore-navbar>',
+    );
+    const navbar = page.locator('#nav');
+    const toggle = navbar.locator('[part="mobile-toggle"]');
+    await toggle.click();
+    const link = navbar.locator('ore-navbar-item').locator('a');
+    await link.focus();
+    await expect(link).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toBeFocused();
+    await expect(link).toBeHidden();
+  });
+});
+
 test.describe('Layout', () => {
   test('removes empty start and end regions from layout', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<ore-navbar id="nav"><span>Search controls</span></ore-navbar>');

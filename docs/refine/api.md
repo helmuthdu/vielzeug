@@ -24,13 +24,44 @@ description: Published component, stylesheet, framework type, and error entry po
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/refine` | Export `RefineError` and the `eventFieldValue`/`eventFieldChecked` field readers without registering components |
+| `@vielzeug/refine` | Export `registerIcons`, icon definition types, `RefineError`, and the field readers without registering components |
 | `@vielzeug/refine/<component>` | Register one component and export its tag constant, props, events, and related types |
 | `@vielzeug/refine/theme` | `createThemeController()` and its theme types |
 | `@vielzeug/refine/tokens.css` | Required global design contract |
 | `@vielzeug/refine/fouc.css` | Optional pre-upgrade visibility rule |
 | `@vielzeug/refine/styles/*` | Focused theme, animation, layer, and preflight stylesheets |
 | `@vielzeug/refine/frameworks/*` | TypeScript augmentations for DOM, React, and Vue |
+
+## Icon Registration and Adapters
+
+`registerIcons(icons: Readonly<Record<string, IconDefinition>>): void` is available from `@vielzeug/refine/icons`, `@vielzeug/refine`, and `@vielzeug/refine/icon`. The common `icons` entry and root remain free of component registration side effects.
+
+`IconDefinition`, `IconElement`, and `IconAttributes` are exported from all three entries. Shared definition and registration modules live in `src/icons/`, alongside adapters and internal SVG helpers/defaults. Definitions contain a numeric `viewBox` tuple, optional presentation attributes, and recursive SVG children; they do not require a provider identity. Invalid registrations throw the root-exported `RefineError` atomically.
+
+| Entry | Export | Purpose |
+| --- | --- | --- |
+| `@vielzeug/refine/icons` | `registerIcons`, `IconDefinition`, `IconElement`, `IconAttributes` | Common library-neutral registration and definition API |
+| `@vielzeug/refine/icons/lucide` | `lucideIcons`, `LucideIconData` | Pure adapter for selected structural Lucide SVG data |
+| `@vielzeug/refine/icons/lucide/all` | Side-effect registration | Explicitly register the full installed Lucide library |
+| `@vielzeug/refine/icons/heroicons` | `heroiconsIcons`, `IconifyIcon` | Convert a caller-named map of individual Heroicons Iconify data |
+| `@vielzeug/refine/icons/tabler` | `tablerIcons`, `IconifyIcon` | Convert a caller-named map of individual Tabler Iconify data |
+| `@vielzeug/refine/icons/mdi` | `mdiIcons`, `IconifyIcon` | Convert a caller-named map of individual MDI Iconify data |
+| `@vielzeug/refine/icons/iconify` | `iconifyIcon`, `iconifyIcons` | Convert individual Iconify data or selected/complete collections |
+| `@vielzeug/refine/icons/iconify` | `IconifyIcon`, `IconifyAlias`, `IconifyCollection`, `IconifyTransform` | Structural data types; no Iconify dependency required |
+
+Lucide is an optional peer, not a mandatory dependency. Only `icons/lucide/all` requires an installed `lucide` package; consumers selecting that entry declare it themselves. The structural `icons/lucide` adapter accepts supplied data without importing Lucide.
+
+The standalone IIFE exposes `registerIcons`, `lucideIcons`, `heroiconsIcons`, `tablerIcons`, `mdiIcons`, `iconifyIcon`, and `iconifyIcons` under `Refine.components.content`. Neither the IIFE nor component entries import Lucide. Iconify conversion drops provider `class` metadata, validates finite numeric offsets and positive finite dimensions before transforms, and retains the strict SVG allowlist. See the [icon reference](./components/icon.md) for presentation overrides, local SVG ID rewriting, supported families, and licenses.
+
+The three family adapters share this signature:
+
+```ts
+heroiconsIcons(icons: Readonly<Record<string, IconifyIcon>>): Record<string, IconDefinition>;
+tablerIcons(icons: Readonly<Record<string, IconifyIcon>>): Record<string, IconDefinition>;
+mdiIcons(icons: Readonly<Record<string, IconifyIcon>>): Record<string, IconDefinition>;
+```
+
+Each accepts individual Iconify SVG data, preserves input keys without adding a namespace, and returns definitions without registering them. They require `DOMParser`, preserve each icon's geometry/presentation/transforms, and throw `RefineError` for invalid Iconify data. They do not accept React/Vue components, collection JSON, or raw SVG path strings. Use `iconifyIcons(collection, names?)` for collections and alias resolution.
 
 ## Styles
 

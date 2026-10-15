@@ -30,7 +30,7 @@ export type OreSelectOptionInput = {
   /** Explanation displayed and announced when the option is disabled. */
   disabledReason?: string;
   group?: string;
-  /** Icon(s) rendered before the option label: lucide name(s) or image URL(s). */
+  /** Icon(s) rendered before the option label: registered name(s) or image URL(s). */
   icon?: string | string[];
   label?: string;
   value: string;
@@ -49,7 +49,7 @@ type FlatRow =
 
 /**
  * Icon sources containing a path separator or a `data:` scheme are treated as image URLs and
- * rendered as `<img>`; anything else is a lucide icon name rendered via `ore-icon`.
+ * rendered as `<img>`; anything else is a registered icon name rendered via `ore-icon`.
  */
 const isIconImage = (icon: string): boolean => icon.includes('/') || icon.startsWith('data:');
 

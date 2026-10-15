@@ -15,7 +15,6 @@
  * No dev server is required: all scripts are inlined from the built dist/ outputs.
  */
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
@@ -24,7 +23,6 @@ import { test as base } from '@playwright/test';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../../..');
 const PKG = path.resolve(__dirname, '../../..');
-const require = createRequire(import.meta.url);
 const PNPM_STORE = path.join(ROOT, 'common/temp/node_modules/.pnpm');
 
 // Paths to UMD/IIFE bundles loaded by the browser fixture.
@@ -32,7 +30,6 @@ const TEMPORAL_UMD = path.join(
   PNPM_STORE,
   '@js-temporal+polyfill@0.5.1/node_modules/@js-temporal/polyfill/dist/index.umd.js',
 );
-const LUCIDE_UMD = require.resolve('lucide/dist/umd/lucide.js');
 
 // Topological order: each IIFE bundle receives its dependencies as bare globals in its
 // invocation arguments (e.g. sentinel's tail is `})({},Arsenal)`), so a bundle MUST load
@@ -42,7 +39,7 @@ const LUCIDE_UMD = require.resolve('lucide/dist/umd/lucide.js');
 // undefined (reading 'captureFocus')". The graph below is read from each dist bundle's own
 // argument list, not from package.json.
 //   sentinel ← Arsenal · focus ← Keymap · ore ← Ripple · orbit ← Arsenal · tempo ← Temporal
-//   dnd ← Keymap, Gesture · refine ← Ore, Ripple, Lucide, Tempo, Focus, Arsenal, Orbit,
+//   dnd ← Keymap, Gesture · refine ← Ore, Ripple, Tempo, Focus, Arsenal, Orbit,
 //          Gesture, Sigil, Sentinel, Dnd, Keymap
 const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: TEMPORAL_UMD, shim: 'if(typeof temporal!=="undefined"){window.Temporal=temporal;}' },
@@ -57,7 +54,6 @@ const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: path.join(PKG, 'orbit/dist/orbit.iife.js') },
   { path: path.join(PKG, 'tempo/dist/tempo.iife.js') },
   { path: path.join(PKG, 'dnd/dist/dnd.iife.js') },
-  { path: LUCIDE_UMD, shim: 'if(typeof Lucide==="undefined"&&typeof lucide!=="undefined"){window.Lucide=lucide;}' },
   { path: path.join(PKG, 'refine/dist/refine.iife.js') },
 ];
 

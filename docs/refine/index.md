@@ -123,7 +123,7 @@ Every project needs UI primitives. Refine provides accessible web components tha
 | ------------------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size        | <PackageInfo package="refine" type="size" /> | ~145 kB                                    | ~200 kB                                    |
 | Built with         | Ore                                       | Lit                                        | Lit                                        |
-| Runtime dependencies | Vielzeug UI primitives + Lucide           | Lit + utilities                            | Lit + Material foundations                 |
+| Runtime dependencies | Vielzeug UI primitives; Lucide only for the opt-in full-library registrar | Lit + utilities | Lit + Material foundations |
 | Accessible         | WCAG AA                                     | WCAG AA                                    | WCAG AA                                    |
 | Framework agnostic | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 

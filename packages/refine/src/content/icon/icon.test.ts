@@ -1,10 +1,11 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
-import { registerIcons } from './icon';
+import { type IconDefinition, registerIcons } from './icon';
 
-const CUSTOM_ICON_NODE: Array<[string, Record<string, string | number | undefined>]> = [
-  ['path', { d: 'M0 0h24v24H0z' }],
-];
+const CUSTOM_ICON_NODE: IconDefinition = {
+  children: [{ attrs: { d: 'M0 0h24v24H0z' }, tag: 'path' }],
+  viewBox: [0, 0, 24, 24],
+};
 
 describe('ore-icon', () => {
   let fixture: Fixture<HTMLElement>;
@@ -86,6 +87,47 @@ describe('ore-icon', () => {
     expect(fixture.element.style.getPropertyValue('--_size-px')).toBe('24px');
   });
 
+  it('preserves filled, outline and mixed nested presentation and native dimensions', async () => {
+    registerIcons({
+      MixedIcon: {
+        children: [
+          {
+            children: [
+              { attrs: { d: 'M0 0h12', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5 }, tag: 'path' },
+              { attrs: { r: 3 }, tag: 'circle' },
+            ],
+            tag: 'g',
+          },
+        ],
+        presentation: { fill: 'currentColor' },
+        viewBox: [-1, -2, 32, 16],
+      },
+    });
+    fixture = await mount('ore-icon', { attrs: { name: 'mixed-icon', size: '2em' } });
+    const svg = fixture.element.shadowRoot!.querySelector('svg')!;
+    expect(svg.getAttribute('viewBox')).toBe('-1 -2 32 16');
+    expect(svg.getAttribute('fill')).toBe('currentColor');
+    expect(svg.getAttribute('stroke')).toBeNull();
+    expect(svg.querySelector('path')?.getAttribute('stroke-width')).toBe('1.5');
+    expect(fixture.element.style.getPropertyValue('--_size-px')).toBe('2em');
+    fixture.element.setAttribute('stroke-width', '3');
+    fixture.element.setAttribute('absolute-stroke-width', '');
+    await fixture.flush();
+    expect(svg.getAttribute('stroke-width')).toBe('3');
+    expect(svg.querySelector('path')?.getAttribute('stroke-width')).toBeNull();
+    expect(svg.querySelector('path')?.getAttribute('vector-effect')).toBe('non-scaling-stroke');
+    fixture.element.setAttribute('solid', '');
+    await fixture.flush();
+    expect(svg.querySelector('path')?.getAttribute('fill')).toBe('currentColor');
+    expect(svg.querySelector('path')?.getAttribute('stroke')).toBe('none');
+    fixture.element.removeAttribute('solid');
+    fixture.element.removeAttribute('stroke-width');
+    fixture.element.removeAttribute('absolute-stroke-width');
+    await fixture.flush();
+    expect(svg.querySelector('path')?.getAttribute('stroke-width')).toBe('1.5');
+    expect(svg.querySelector('path')?.getAttribute('fill')).toBe('none');
+  });
+
   describe('Accessibility', () => {
     it('passes axe checks (decorative icon)', async () => {
       fixture = await mount('ore-icon', { attrs: { 'aria-hidden': 'true', name: 'search' } });
@@ -122,9 +164,9 @@ describe('ore-icon', () => {
     });
   });
 
-  describe('icon-lucide', () => {
+  describe('icons/lucide', () => {
     it('registers the complete Lucide set beyond the built-in component icons', async () => {
-      await import('../../icon-lucide');
+      await import('../../icons/lucide/all');
 
       // atom is outside the icons refine's own components render.
       fixture = await mount('ore-icon', { attrs: { name: 'atom' } });

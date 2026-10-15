@@ -1,0 +1,106 @@
+{
+  "heroicons": {
+    "height": 24,
+    "icons": {
+      "home": {
+        "body": "<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"m2.25 12l8.955-8.955a1.124 1.124 0 0 1 1.59 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25\"/>"
+      }
+    },
+    "info": {
+      "author": {
+        "name": "Refactoring UI Inc",
+        "url": "https://github.com/tailwindlabs/heroicons"
+      },
+      "category": "UI Other / Mixed Grid",
+      "license": {
+        "spdx": "MIT",
+        "title": "MIT",
+        "url": "https://github.com/tailwindlabs/heroicons/blob/master/LICENSE"
+      },
+      "name": "HeroIcons",
+      "palette": false,
+      "samples": ["camera", "building-library", "receipt-refund", "bookmark", "cloud", "folder"],
+      "tags": ["Has Padding"],
+      "total": 1288,
+      "version": "2.2.0"
+    },
+    "prefix": "heroicons",
+    "width": 24
+  },
+  "mdi": {
+    "height": 24,
+    "icons": {
+      "home": {
+        "body": "<path fill=\"currentColor\" d=\"M10 20v-6h4v6h5v-8h3L12 3L2 12h3v8z\"/>"
+      }
+    },
+    "info": {
+      "author": {
+        "name": "Pictogrammers",
+        "url": "https://github.com/Templarian/MaterialDesign"
+      },
+      "category": "Material",
+      "height": 24,
+      "license": {
+        "spdx": "Apache-2.0",
+        "title": "Apache 2.0",
+        "url": "https://github.com/Templarian/MaterialDesign/blob/master/LICENSE"
+      },
+      "name": "Material Design Icons",
+      "palette": false,
+      "samples": [
+        "account-check",
+        "bell-alert-outline",
+        "calendar-edit",
+        "skip-previous",
+        "home-variant",
+        "lock-open-outline"
+      ],
+      "tags": ["Precise Shapes", "Has Padding"],
+      "total": 7447
+    },
+    "prefix": "mdi",
+    "width": 24
+  },
+  "tabler": {
+    "height": 24,
+    "icons": {
+      "home": {
+        "body": "<g fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\"><path d=\"M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7\"/><path d=\"M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6\"/></g>"
+      },
+      "pause": {
+        "body": "<g class=\"icon-tabler\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"4\" width=\"6\" height=\"16\" rx=\"2\"/><rect x=\"14\" y=\"4\" width=\"6\" height=\"16\" rx=\"2\"/></g>",
+        "hidden": true
+      },
+      "skip-back": {
+        "body": "<g class=\"icon-tabler\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 18V6a2 2 0 0 0-2.75-1.84L9 10.26a2 2 0 0 0 0 3.5l8.25 6.1A2 2 0 0 0 20 18.11\"/><path d=\"M4 20V4\"/></g>",
+        "hidden": true
+      },
+      "skip-forward": {
+        "body": "<g class=\"icon-tabler\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 6v12a2 2 0 0 0 2.75 1.84l8.25-6.1a2 2 0 0 0 0-3.5l-8.25-6.1A2 2 0 0 0 4 5.89\"/><path d=\"M20 4v16\"/></g>",
+        "hidden": true
+      }
+    },
+    "info": {
+      "author": {
+        "name": "Paweł Kuna",
+        "url": "https://github.com/tabler/tabler-icons"
+      },
+      "category": "UI 24px",
+      "height": 24,
+      "license": {
+        "spdx": "MIT",
+        "title": "MIT",
+        "url": "https://github.com/tabler/tabler-icons/blob/master/LICENSE"
+      },
+      "name": "Tabler Icons",
+      "palette": false,
+      "samples": ["alien", "device-desktop", "photo", "chevron-right", "check", "square-root"],
+      "tags": ["Precise Shapes", "Has Padding", "Uses Stroke"],
+      "total": 6238,
+      "version": "3.49.0"
+    },
+    "prefix": "tabler",
+    "width": 24
+  }
+}

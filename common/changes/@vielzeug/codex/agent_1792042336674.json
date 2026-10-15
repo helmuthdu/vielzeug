@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Document grouped Refine icon adapters, neutral SVG registration, migration, and supported Iconify collections.",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

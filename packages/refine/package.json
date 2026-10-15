@@ -27,7 +27,8 @@
     "node": ">=22"
   },
   "files": [
-    "dist"
+    "dist",
+    "THIRD_PARTY_NOTICES"
   ],
   "types": "./dist/index.d.ts",
   "exports": {
@@ -41,10 +42,25 @@
       "require": "./dist/theme.cjs",
       "types": "./dist/theme.d.ts"
     },
-    "./icon-lucide": {
-      "import": "./dist/icon-lucide.js",
-      "require": "./dist/icon-lucide.cjs",
-      "types": "./dist/icon-lucide.d.ts"
+    "./icons": {
+      "import": "./dist/icons/index.js",
+      "require": "./dist/icons/index.cjs",
+      "types": "./dist/icons/index.d.ts"
+    },
+    "./icons/lucide": {
+      "import": "./dist/icons/lucide.js",
+      "require": "./dist/icons/lucide.cjs",
+      "types": "./dist/icons/lucide.d.ts"
+    },
+    "./icons/lucide/all": {
+      "import": "./dist/icons/lucide/all.js",
+      "require": "./dist/icons/lucide/all.cjs",
+      "types": "./dist/icons/lucide/all.d.ts"
+    },
+    "./icons/iconify": {
+      "import": "./dist/icons/iconify.js",
+      "require": "./dist/icons/iconify.cjs",
+      "types": "./dist/icons/iconify.d.ts"
     },
     "./styles/animation.css": {
       "import": "./dist/styles/animation.css",
@@ -78,6 +94,21 @@
     },
     "./frameworks/vue": {
       "types": "./dist/frameworks/vue.d.ts"
+    },
+    "./icons/heroicons": {
+      "import": "./dist/icons/heroicons.js",
+      "require": "./dist/icons/heroicons.cjs",
+      "types": "./dist/icons/heroicons.d.ts"
+    },
+    "./icons/tabler": {
+      "import": "./dist/icons/tabler.js",
+      "require": "./dist/icons/tabler.cjs",
+      "types": "./dist/icons/tabler.d.ts"
+    },
+    "./icons/mdi": {
+      "import": "./dist/icons/mdi.js",
+      "require": "./dist/icons/mdi.cjs",
+      "types": "./dist/icons/mdi.d.ts"
     },
     "./accordion": {
       "import": "./dist/accordion.js",
@@ -465,8 +496,17 @@
       "theme": [
         "dist/theme.d.ts"
       ],
-      "icon-lucide": [
-        "dist/icon-lucide.d.ts"
+      "icons": [
+        "dist/icons/index.d.ts"
+      ],
+      "icons/lucide": [
+        "dist/icons/lucide.d.ts"
+      ],
+      "icons/lucide/all": [
+        "dist/icons/lucide/all.d.ts"
+      ],
+      "icons/iconify": [
+        "dist/icons/iconify.d.ts"
       ],
       "frameworks/elements": [
         "dist/frameworks/elements.d.ts"
@@ -476,6 +516,15 @@
       ],
       "frameworks/vue": [
         "dist/frameworks/vue.d.ts"
+      ],
+      "icons/heroicons": [
+        "dist/icons/heroicons.d.ts"
+      ],
+      "icons/tabler": [
+        "dist/icons/tabler.d.ts"
+      ],
+      "icons/mdi": [
+        "dist/icons/mdi.d.ts"
       ],
       "accordion": [
         "dist/disclosure/accordion/accordion.d.ts"
@@ -711,9 +760,11 @@
     "./dist/*.js",
     "./dist/*.cjs",
     "./dist/core/*",
+    "./dist/icons/**",
     "./dist/styles/**",
-    "./src/core/icons.ts",
-    "./src/icon-lucide.ts"
+    "./src/icons/defaults.ts",
+    "./src/content/icon/icon.ts",
+    "./src/icons/lucide/all.ts"
   ],
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
@@ -747,8 +798,15 @@
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/sentinel": "workspace:*",
     "@vielzeug/sigil": "workspace:*",
-    "@vielzeug/tempo": "workspace:*",
+    "@vielzeug/tempo": "workspace:*"
+  },
+  "peerDependencies": {
     "lucide": "^1.48.0"
+  },
+  "peerDependenciesMeta": {
+    "lucide": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -762,6 +820,7 @@
     "browserslist": "^4.29.0",
     "culori": "^4.0.2",
     "lightningcss": "^1.33.0",
+    "lucide": "^1.48.0",
     "typescript": "^6.0.3",
     "vite": "^8.3.0",
     "vitest": "^5.0.1"

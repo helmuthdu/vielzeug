@@ -4,5 +4,8 @@
  * Keeping the package root free of registration side effects makes dependency
  * ownership and bundle contents obvious to application code.
  */
+
 export { RefineError } from './errors';
+export type { IconAttributes, IconDefinition, IconElement } from './icons';
+export { registerIcons } from './icons';
 export { eventFieldChecked, eventFieldValue } from './inputs/shared/native-field-event';

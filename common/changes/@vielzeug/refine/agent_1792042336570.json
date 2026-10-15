@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Replace icon registration arrays with library-neutral definitions; group shared registration and Lucide/Iconify data adapters under icons subpaths, preserving the icon component entry. Make Lucide an optional peer owned by full-set consumers, normalize Iconify provider classes, and reject invalid geometry before transforms. Add pure Heroicons, Tabler, and MDI named-map adapters for caller-supplied individual Iconify data.",
+      "packageName": "@vielzeug/refine",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

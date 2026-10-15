@@ -19,7 +19,8 @@
     "@vielzeug/refine": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
-    "@vielzeug/wayfinder": "workspace:*"
+    "@vielzeug/wayfinder": "workspace:*",
+    "lucide": "^1.48.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

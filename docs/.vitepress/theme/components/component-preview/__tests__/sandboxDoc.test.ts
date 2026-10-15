@@ -61,7 +61,7 @@ describe('buildSandboxDoc()', () => {
     expect(fragment.indexOf('<script data-preview-refine>')).toBeLessThan(
       fragment.indexOf('<script data-preview-icons>'),
     );
-    expect(fragment).toContain('registerIcons(icons)');
+    expect(fragment).toContain('registerIcons(lucideIcons(icons))');
     expect(fragment).toContain("icon.removeAttribute('name')");
     expect(fragment).toContain("icon.setAttribute('name', name)");
   });
