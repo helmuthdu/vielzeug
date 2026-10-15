@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Thu, 15 Oct 2026 05:00:39 GMT and should not be manually modified.
+This log was last generated on Thu, 15 Oct 2026 13:45:48 GMT and should not be manually modified.
 
+## 26.10.11
+Thu, 15 Oct 2026 13:45:48 GMT
+
+### Patches
+
+- Document grouped Refine icon adapters, neutral SVG registration, migration, and supported Iconify collections.
 ## 26.10.10
 Thu, 15 Oct 2026 05:00:39 GMT
 

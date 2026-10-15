@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 15 Oct 2026 05:00:39 GMT and should not be manually modified.
+This log was last generated on Thu, 15 Oct 2026 13:45:48 GMT and should not be manually modified.
 
+## 26.10.11
+Thu, 15 Oct 2026 13:45:48 GMT
+
+### Major changes
+
+- Replace icon registration arrays with library-neutral definitions; group shared registration and Lucide/Iconify data adapters under icons subpaths, preserving the icon component entry. Make Lucide an optional peer owned by full-set consumers, normalize Iconify provider classes, and reject invalid geometry before transforms. Add pure Heroicons, Tabler, and MDI named-map adapters for caller-supplied individual Iconify data.
 ## 26.10.10
 Thu, 15 Oct 2026 05:00:39 GMT
 
