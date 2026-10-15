@@ -186,6 +186,10 @@ the JWKS route publicly. Set `ALLOWED_ORIGINS` in both Workers to the exact
 frontend origins; never use a wildcard. Same-site subdomain frontends must send
 credentials, and the cookie remains host-only on the API hostname. Serve
 `/signed-in` from the API origin as the issuer's post-confirmation handoff page.
+Serve the sign-in entry at `${PUBLIC_ORIGIN}/account`: confirmation and noscript
+recovery link directly there as “Request a new sign-in link”. These recovery and
+completion routes are fixed reference issuer conventions owned by your application.
+The initial “Back to app” exit still links to `${PUBLIC_ORIGIN}/`.
 The issuer needs no platform rate-limit bindings: its D1 admission budget allows
 20 requests per 60 seconds and its durable per-email budget allows three messages
 per hour.

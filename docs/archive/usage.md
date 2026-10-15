@@ -1,6 +1,6 @@
 ---
-title: "Archive: Usage Guide"
-description: "Define a collection, initialize fresh D1 databases, deploy the Workers, and wire your client and observation policy."
+title: 'Archive: Usage Guide'
+description: 'Define a collection, initialize fresh D1 databases, deploy the Workers, and wire your client and observation policy.'
 ---
 
 [[toc]]
@@ -68,7 +68,8 @@ if (!meResponse.ok) throw new Error('Identity unavailable');
 const me = archiveIdentitySchema.parse(await meResponse.json());
 if (me === null) throw new Error('Register a publisher first');
 const mineResponse = await fetch('/api/v1/me/publications?collection=recipes', {
-  credentials: 'same-origin', headers: { [PUBLISHER_HEADER]: me.id },
+  credentials: 'same-origin',
+  headers: { [PUBLISHER_HEADER]: me.id },
 });
 if (!mineResponse.ok) throw new Error('Own publications unavailable');
 const owned = recipesCollection.contract.ownedEntries.parse(await mineResponse.json());
@@ -147,15 +148,15 @@ anonymous read budget or call the issuer.
 The Worker reads its environment fail-closed — every binding must be present and
 well-formed, or the route answers 503 without naming what is missing:
 
-| Variable                 | Meaning                                                          |
-| ------------------------ | ---------------------------------------------------------------- |
-| `APP_ENV`                | `local` or `production` (transport rules and the pepper policy)   |
-| `ALLOWED_ORIGINS`        | Exact canonical origins; never wildcards                          |
-| `JWT_ISSUER` / `JWT_AUDIENCE` / `JWT_JWKS_URL` | Exact issuer claim, audience and issuer JWKS endpoint URL |
-| `AUTH_ISSUER_SERVICE`    | Required issuer service binding for signing-key retrieval and live session-version checks |
-| `LIKES_ENABLED` / `PUBLISHING_ENABLED`        | Feature flags                     |
-| `RATE_LIMIT_KEY_SECRET`  | HMAC pepper. Required ≥ 32 chars in production; local may fall back |
-| `DB` / `READ_LIMIT` / `WRITE_LIMIT`           | D1 + rate-limit bindings |
+| Variable                                       | Meaning                                                                                   |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `APP_ENV`                                      | `local` or `production` (transport rules and the pepper policy)                           |
+| `ALLOWED_ORIGINS`                              | Exact canonical origins; never wildcards                                                  |
+| `JWT_ISSUER` / `JWT_AUDIENCE` / `JWT_JWKS_URL` | Exact issuer claim, audience and issuer JWKS endpoint URL                                 |
+| `AUTH_ISSUER_SERVICE`                          | Required issuer service binding for signing-key retrieval and live session-version checks |
+| `LIKES_ENABLED` / `PUBLISHING_ENABLED`         | Feature flags                                                                             |
+| `RATE_LIMIT_KEY_SECRET`                        | HMAC pepper. Required ≥ 32 chars in production; local may fall back                       |
+| `DB` / `READ_LIMIT` / `WRITE_LIMIT`            | D1 + rate-limit bindings                                                                  |
 
 Both limiter bindings must run 60-second windows (`simple` limiters:
 `period: 60`): the platform binding does not expose its period at runtime, so the
@@ -186,19 +187,19 @@ sign-in time and claims the token. The issuer's D1 schema ships at
 `migrations_dir` there. The catalog's `JWT_ISSUER` and `JWT_JWKS_URL` must identify
 the issuer, and its audience must match the issuer's `AUDIENCE`.
 
-| Variable | Meaning |
-| --- | --- |
-| `APP_NAME` | The app's display name: the magic-link email's subject and copy name it |
-| `ALLOWED_ORIGINS` | Exact origins allowed to trigger unsafe routes (the app origin(s)) |
-| `APP_ENV` | `local` or `production` — production requires HTTPS and sets Secure cookies |
-| `AUDIENCE` / `AUTH_ISSUER` | The claims every minted session carries; the catalog verifies the same pair |
-| `AUTH_DB` / `AUTH_EMAIL` | The issuer's D1 and send-email bindings |
-| `AUTH_ARCHIVE` | Required service binding to the catalog Worker; deletion calls its profile-erasure route |
-| `AUTH_JWT_PRIVATE_JWK` | The RS256 private key as a JWK JSON string: a wrangler secret in production |
-| `AUTH_JWT_PREVIOUS_PUBLIC_JWKS` | Optional retired public RS256 JWKS; publish during rotation until old sessions expire |
-| `OPERATOR_EMAILS` | Comma-separated emails whose newly minted sessions carry the operator role |
-| `PUBLIC_ORIGIN` | App origin for links, confirmation POST origin checks and client navigation after sign-in |
-| `SENDER_ADDRESS` | The address magic links come from: a domain onboarded to Cloudflare Email Service |
+| Variable                        | Meaning                                                                                   |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| `APP_NAME`                      | The app's display name in magic-link email and escaped confirmation-page branding         |
+| `ALLOWED_ORIGINS`               | Exact origins allowed to trigger unsafe routes (the app origin(s))                        |
+| `APP_ENV`                       | `local` or `production` — production requires HTTPS and sets Secure cookies               |
+| `AUDIENCE` / `AUTH_ISSUER`      | The claims every minted session carries; the catalog verifies the same pair               |
+| `AUTH_DB` / `AUTH_EMAIL`        | The issuer's D1 and send-email bindings                                                   |
+| `AUTH_ARCHIVE`                  | Required service binding to the catalog Worker; deletion calls its profile-erasure route  |
+| `AUTH_JWT_PRIVATE_JWK`          | The RS256 private key as a JWK JSON string: a wrangler secret in production               |
+| `AUTH_JWT_PREVIOUS_PUBLIC_JWKS` | Optional retired public RS256 JWKS; publish during rotation until old sessions expire     |
+| `OPERATOR_EMAILS`               | Comma-separated emails whose newly minted sessions carry the operator role                |
+| `PUBLIC_ORIGIN`                 | App origin for links, confirmation POST origin checks and client navigation after sign-in |
+| `SENDER_ADDRESS`                | The address magic links come from: a domain onboarded to Cloudflare Email Service         |
 
 Under `wrangler dev` the send-email binding is simulated — the link prints to the
 issuer's console, so that console is the inbox. Demo-only Alice/Bob routes are
@@ -227,10 +228,38 @@ Opening `GET /auth/verify?token=…` renders a no-store confirmation page and do
 not consume the link or change the session, so email scanners cannot sign in by
 fetching it. A deliberate click sends `POST /auth/verify` with JSON `{ token }`,
 the request marker and an exact allowed origin or `PUBLIC_ORIGIN`.
-Success is 204 with Set-Cookie; the page then navigates to `/signed-in`. The
-redemption update and account sign-in stamp are trigger-backed and atomic.
+Success is 204 with Set-Cookie; the page then navigates to the fixed
+`${PUBLIC_ORIGIN}/signed-in` destination. Your application must serve that page;
+the issuer only serves the confirmation endpoint. The redemption update and
+account sign-in stamp are trigger-backed and atomic.
 The page removes the token from the address bar, loads no external assets, and
-sets a restrictive CSP and `Referrer-Policy: no-referrer`.
+sets a restrictive CSP and `Referrer-Policy: no-referrer`. Its inline CSS and
+script use a fresh nonce, never `unsafe-inline`. The page follows light/dark
+preferences, supports reduced motion, focuses the confirmation action and
+announces pending, success and recovery states. Without JavaScript it links to
+`${PUBLIC_ORIGIN}/account` as “Request a new sign-in link” and does not pretend
+to complete sign-in.
+
+Archive only serves the confirmation endpoint. Your application must serve its
+sign-in entry at the fixed `${PUBLIC_ORIGIN}/account` recovery destination and
+the success page at `${PUBLIC_ORIGIN}/signed-in`. These are reference issuer
+route conventions, not configurable destinations. The initial “Back to app”
+exit links to `${PUBLIC_ORIGIN}/`. No query parameter supplies a destination.
+Expired or already-used links (POST 410) require a new link rather than a retry.
+HTTP 429 enables manual retry after a `Retry-After` cooldown bounded to 1-300
+seconds, accepting unsigned integer seconds or valid HTTP-date syntax and
+defaulting to 30 seconds for missing or invalid values, including negative or
+fractional numbers. HTTP 503 and network failures offer a retry button and a
+secondary “Request a new sign-in link” action; invalid or expired links make
+that recovery action primary. The page never
+automatically retries, aborts stalled requests after 15 seconds and releases
+requests/timers when you leave it. Response bodies, including stale responses,
+are cancelled without waiting, and completed attempts abort their controllers.
+
+With valid issuer configuration, malformed GET links return HTTP 400 with branded
+recovery HTML rather than the JSON error envelope. POST errors retain the JSON
+error schema. A well-formed expired token still gets GET 200 confirmation: its
+redemption status is determined only by the deliberate POST.
 
 `GET /auth/account` exports account metadata only. For full erasure, call
 `DELETE /auth/account` with `ACCOUNT_HEADER` (`X-Archive-Account`) set to the
@@ -286,9 +315,9 @@ against the same file. Point wrangler at the directory:
     {
       "binding": "DB",
       "database_name": "my-app",
-      "migrations_dir": "./node_modules/@vielzeug/archive/migrations"
-    }
-  ]
+      "migrations_dir": "./node_modules/@vielzeug/archive/migrations",
+    },
+  ],
 }
 ```
 

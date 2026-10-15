@@ -38,7 +38,7 @@ export interface AuthWorkerEnv {
   ALLOWED_ORIGINS: string;
   /** Exactly `local` (loopback HTTP only) or `production` (non-loopback HTTPS, Secure cookies). */
   APP_ENV: string;
-  /** The app's display name: the magic-link email's subject and copy name it. */
+  /** The app's display name in magic-link email and escaped confirmation-page branding. */
   APP_NAME: string;
   AUDIENCE: string;
   /** Service binding to the sibling catalog Worker: account erasure removes the catalog profile through it. */
@@ -58,7 +58,7 @@ export interface AuthWorkerEnv {
   AUTH_JWT_PRIVATE_JWK: string;
   /** Comma-separated emails whose sessions carry the operator role claim. */
   OPERATOR_EMAILS: string;
-  /** The app's public origin: magic links, the signed-in redirect and the catalog erasure URL point here. */
+  /** The app's public origin: magic links, app recovery, signed-in navigation and catalog erasure point here. */
   PUBLIC_ORIGIN: string;
   /** The address emails come from: a domain onboarded to Cloudflare Email Service. */
   SENDER_ADDRESS: string;

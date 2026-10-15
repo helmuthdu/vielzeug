@@ -146,6 +146,18 @@ server subpaths) and their browsers (the root contract).
   Redemption requires POST JSON `{ token }`, marker, exact allowed/public origin.
   Trigger-backed token redemption and account stamping are atomic. Successful
   POST returns 204 Set-Cookie, not a redirect; confirmation owns navigation.
+  The private `auth/_confirmation.ts` renderer owns escaped `APP_NAME` branding,
+  nonce-only inline CSS/script, live status, scheme/motion preferences and manual
+  retry. With valid issuer configuration, invalid GET queries return 400 recovery
+  HTML; POST error schemas stay JSON. Keep recovery fixed at
+  `PUBLIC_ORIGIN/account` with “Request a new sign-in link”, the initial exit at
+  `PUBLIC_ORIGIN/` with “Back to app”, and success at `PUBLIC_ORIGIN/signed-in`;
+  these pages are app-owned reference issuer route conventions, not issuer routes.
+  Keep tokens only in the original private script after address-bar stripping.
+  No external assets, automatic redemption or request retries. Bound Retry-After
+  cooldowns to 1-300 seconds (invalid/missing: 30); pagehide aborts requests and
+  clears timers, bfcache resumes only cooldowns. Cancel all returned bodies without
+  waiting, including stale responses; abort each completed attempt's controller.
 - Sign-in requests create pending accounts with no sign-in stamp; verified
   redemption stamps them. Sweep deletes expired tokens and closed per-user send
   windows before deleting unverified accounts with neither reference. Verified
@@ -156,7 +168,7 @@ server subpaths) and their browsers (the root contract).
 - The catalog sweep removes expired retry keys and revocation tombstones;
   successful events count both in `removed`.
 - The catalog core never logs: runtime observation is `worker.tap(handler,
-  { signal? })` emitting `ArchiveEvent`; a pre-aborted signal is inert. Typed
+{ signal? })` emitting `ArchiveEvent`; a pre-aborted signal is inert. Typed
   diagnostics are sanitized; cache failures are observed, and scheduled failures
   emit failed events then rethrow. Deployments own the sink. The issuer also
   exposes `tap()` with public `AuthEvent` and
@@ -169,7 +181,7 @@ server subpaths) and their browsers (the root contract).
 - Unit (fast, hermetic): `pnpm vitest run packages/archive/src/__tests__/`
 - Types: `pnpm --filter @vielzeug/archive test:types`
 - Integration (real workerd + local D1): `pnpm --filter @vielzeug/archive
-  test:integration` — fixtures generate Wrangler configs into isolated run dirs;
+test:integration` — fixtures generate Wrangler configs into isolated run dirs;
   never start a second suite run until the previous one has fully exited.
 - Exercise the canonical catalog/auth DDL directly; issuer production workerd
   coverage must run the package factory, not only a signing fixture.

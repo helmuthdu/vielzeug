@@ -62,7 +62,14 @@ sessions. `GET /api/v1/auth/health` exposes the typed, read-only
 `archiveAuthHealthSchema` readiness response. Issuer admission is durable D1
 state: 20 requests per minute, plus three sends per email per hour; no issuer
 rate-limiter binding is required. Magic-link GETs show a confirmation page; only
-a deliberate guarded POST redeems the token.
+a deliberate guarded POST redeems the token. Confirmation uses escaped `APP_NAME`
+branding, nonce-protected inline styles/script and no external assets. Recovery
+links to the fixed `PUBLIC_ORIGIN/account` sign-in entry; successful sign-in
+navigates to `PUBLIC_ORIGIN/signed-in`. Your application must serve both pages.
+The initial “Back to app” exit links to `PUBLIC_ORIGIN/`. The issuer
+renders only the confirmation endpoint. Expired links require a new link, while
+temporary failures offer manual retry. With valid issuer configuration, malformed
+GET links return HTML 400 recovery; POST errors retain their JSON contract.
 
 Full account deletion revokes old issuer/subject sessions; profile-only deletion
 does not. Re-enrollment uses a fresh issuer subject. Both Worker factories expose

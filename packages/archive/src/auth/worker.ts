@@ -31,6 +31,7 @@ import {
   unauthenticated,
 } from '../worker/http';
 import type { ArchiveExecutionContext } from '../worker/worker';
+import { confirmationPage, escapeHtml } from './_confirmation';
 import { type AuthConfig, type AuthWorkerEnv, authConfig, isWellFormedEmail } from './config';
 import { type AuthDiagnostic, AuthOperationError } from './errors';
 import {
@@ -131,8 +132,6 @@ const randomToken = (): string =>
     .replaceAll('+', '-')
     .replaceAll('/', '_')
     .replace(/=+$/, '');
-
-const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
 const unavailable = (): ApiError => new AuthOperationError(503, 'catalog');
 
@@ -285,33 +284,7 @@ async function handleVerify(request: Request, env: AuthWorkerEnv, config: AuthCo
   if (request.method === 'GET') {
     const token = queryParams(new URL(request.url), ['token']).get('token') ?? '';
     if (!LINK_TOKEN.test(token)) throw badRequest('The link is not valid.');
-    const nonce = randomToken();
-    // No automatic redemption, external assets or referrers. Only a deliberate
-    // button click makes the same-origin marked POST; scanners can safely GET.
-    const html = `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Confirm sign-in</title><h1>Sign in to ${escapeHtml(config.appName)}</h1><p>Continue only if you requested this sign-in link.</p><button type="button" id="confirm">Confirm sign-in</button><p role="status" id="status"></p><script nonce="${nonce}">
-history.replaceState(null, '', location.pathname);
-document.getElementById('confirm').addEventListener('click', async () => {
-  const button = document.getElementById('confirm');
-  button.disabled = true;
-  try {
-    const response = await fetch(location.pathname, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', '${REQUEST_MARKER_HEADER}': '1' }, body: JSON.stringify({ token: '${token}' }) });
-    if (!response.ok) throw new Error();
-    location.replace(${JSON.stringify(`${config.publicOrigin}/signed-in`)});
-  } catch {
-    document.getElementById('status').textContent = 'Sign-in failed. Request a new link or try again.';
-    button.disabled = false;
-  }
-});
-</script></html>`;
-    return new Response(html, {
-      headers: {
-        ...noStore,
-        'content-security-policy': `default-src 'none'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
-        'content-type': 'text/html; charset=utf-8',
-        'referrer-policy': 'no-referrer',
-        'x-content-type-options': 'nosniff',
-      },
-    });
+    return confirmationPage({ ...config, nonce: randomToken(), token });
   }
   requireMutationGuard(request, config, true);
   queryParams(new URL(request.url), []);
@@ -533,7 +506,16 @@ export function createAuthWorker<E extends AuthWorkerEnv>(): AuthWorkerHandler<E
         response = toErrorResponse(error, requestId);
         // Failures stay readable by allowed origins; config faults have no trusted origin set.
         const config = await authConfig(env).catch(() => null);
-        if (config !== null) response = withCors(response, corsHeaders(request, config));
+        if (config !== null) {
+          if (
+            matchRoute(request) === 'verify' &&
+            request.method === 'GET' &&
+            error instanceof ApiError &&
+            error.status === 400
+          )
+            response = confirmationPage({ ...config, nonce: randomToken(), token: null });
+          response = withCors(response, corsHeaders(request, config));
+        }
       }
       if (matchRoute(request) === 'verify') {
         response.headers.set('cache-control', 'no-store');

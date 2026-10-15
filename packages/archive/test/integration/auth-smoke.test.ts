@@ -406,7 +406,38 @@ describe('production issuer smoke (real workerd, bidirectional service bindings)
       expect(res.headers.get('referrer-policy')).toBe('no-referrer');
       expect(res.headers.get('set-cookie')).toBeNull();
       expect(text).toContain('Confirm sign-in');
+      const nonce = /<style nonce="([^"]+)">/.exec(text)?.[1];
+      expect(nonce).toBeTruthy();
+      expect(res.headers.get('content-security-policy')).toContain(`style-src 'nonce-${nonce}'`);
+      expect(res.headers.get('content-security-policy')).not.toContain('unsafe-inline');
+      expect(text).toContain('<main id="main" aria-labelledby="title">');
+      expect(text).toContain('Sign in to Archive Smoke');
+      expect(text).toContain(`href="${GATEWAY}/"`);
+      expect(text).toContain(`id="recovery" href="${GATEWAY}/account" hidden>Request a new sign-in link</a>`);
+      expect(text).toContain('<noscript>');
+      expect(text).toMatch(new RegExp(`<noscript>[\\s\\S]*href="${GATEWAY}/account"`));
+      expect(text.replace(/<script[^>]*>[\s\S]*?<\/script>/g, '')).not.toContain(token);
     }
+  });
+
+  it('returns branded invalid-link HTML for GET while malformed POST remains a JSON error', async () => {
+    const invalid = await call('/api/v1/auth/verify?token=short&next=https://evil.example', { origin: null });
+    expect(invalid.res.status).toBe(400);
+    expect(invalid.res.headers.get('content-type')).toMatch(/^text\/html/);
+    expect(invalid.res.headers.get('cache-control')).toBe('no-store');
+    expect(invalid.res.headers.get('referrer-policy')).toBe('no-referrer');
+    expect(invalid.res.headers.get('set-cookie')).toBeNull();
+    expect(invalid.text).toContain('This sign-in link is not valid');
+    expect(invalid.text).toContain('Archive Smoke');
+    expect(invalid.text).toContain(
+      `class="primary" id="recovery" href="${GATEWAY}/account">Request a new sign-in link</a>`,
+    );
+    expect(invalid.text).not.toMatch(/evil.example|id="confirm"|fetch\(/);
+    const post = await confirm('short');
+    expect(post.res.status).toBe(400);
+    expect(post.res.headers.get('content-type')).toMatch(/^application\/json/);
+    expect(post.json).toMatchObject({ error: { code: 'bad-request' } });
+    expect(post.res.headers.get('set-cookie')).toBeNull();
   });
 
   it('redeems only through the guarded POST, setting the session exactly once', async () => {

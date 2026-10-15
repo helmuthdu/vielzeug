@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add nonce-protected paper-and-copper magic-link confirmation with accessible status, fixed /account recovery, bounded strict Retry-After parsing, non-blocking response-body cancellation and page-lifecycle cleanup; malformed GET links now return branded HTML 400 while guarded POST redemption and JSON errors stay unchanged",
+      "packageName": "@vielzeug/archive",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

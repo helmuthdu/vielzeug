@@ -404,24 +404,103 @@ describe('POST /verify', () => {
   });
 
   describe('GET /verify confirmation', () => {
-    it('runs confirmation script without network activity until clicked, then sends the guarded token body', async () => {
+    const browser = (html: string, send: (path: string, init: RequestInit) => Promise<Response>) => {
+      let click: (() => Promise<void>) | undefined;
+      const node = () => ({
+        addEventListener: (_type: string, handler: () => Promise<void>) => {
+          click = handler;
+        },
+        disabled: false,
+        focus: vi.fn(),
+        hidden: true,
+        removeAttribute: vi.fn(),
+        setAttribute: vi.fn(),
+        textContent: '',
+      });
+      const nodes: Record<string, ReturnType<typeof node>> = {
+        actions: node(),
+        confirm: node(),
+        exit: { ...node(), hidden: false },
+        recovery: node(),
+        status: node(),
+      };
+      const events = new Map<string, (event: { persisted?: boolean }) => void>();
+      const fetch = vi.fn(send);
+      const location = { pathname: '/api/v1/auth/verify', replace: vi.fn() };
+      const history = { replaceState: vi.fn() };
+      const script = [...html.matchAll(/<script nonce="[^"]+">([\s\S]*?)<\/script>/g)]
+        .map((match) => match[1])
+        .join('\n');
+      runInNewContext(script, {
+        AbortController,
+        addEventListener: (type: string, handler: (event: { persisted?: boolean }) => void) =>
+          events.set(type, handler),
+        clearTimeout,
+        Date,
+        document: { getElementById: (id: string) => nodes[id] },
+        fetch,
+        history,
+        location,
+        setTimeout,
+      });
+      return { click: () => click?.(), events, fetch, history, location, nodes };
+    };
+
+    const confirmation = async () => {
       const h = await harness();
       await issuer.fetch(signInRequest('interaction@example.test'), h.env);
       const token = lastLinkToken(h.sent);
       const page = await issuer.fetch(new Request(url(`/verify?token=${token}`)), h.env);
-      const html = await page.text();
+      return { h, html: await page.text(), page, token };
+    };
+
+    it('uses paper and copper with readable contrast in both confirmation themes', async () => {
+      const { html } = await confirmation();
+      const css = /<style nonce="[^"]+">([\s\S]*?)<\/style>/.exec(html)?.[1] ?? '';
+      const luminance = (color: string) =>
+        (color.slice(1).match(/../g) ?? []).reduce((total, channel, index) => {
+          const value = Number.parseInt(channel, 16) / 255;
+          return (
+            total +
+            (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4) * [0.2126, 0.7152, 0.0722][index]
+          );
+        }, 0);
+      const themes = [...css.matchAll(/:root \{([^}]+)\}/g)].map((match) =>
+        Object.fromEntries([...match[1].matchAll(/--([a-z]+): (#[0-9a-f]{6})/g)].map((color) => [color[1], color[2]])),
+      );
+      expect(themes).toHaveLength(2);
+      expect(themes[0]).toMatchObject({ accent: '#934b2b', paper: '#fcfbf9' });
+      expect(themes[1]).toMatchObject({ accent: '#e0a07b', paper: '#242220' });
+      for (const [index, theme] of themes.entries()) {
+        for (const [foreground, background] of [
+          [theme.ink, theme.paper],
+          [theme.muted, theme.paper],
+          [theme.accent, theme.paper],
+          [index === 0 ? '#ffffff' : theme.paper, theme.accent],
+          [index === 0 ? '#ffffff' : theme.paper, theme.hover],
+        ]) {
+          const light = Math.max(luminance(foreground), luminance(background));
+          const dark = Math.min(luminance(foreground), luminance(background));
+          expect((light + 0.05) / (dark + 0.05)).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+      expect(css).toContain("font-family: 'Iowan Old Style'");
+      expect(css).toContain("'Avenir Next', 'Segoe UI', sans-serif");
+    });
+
+    it('links recovery and noscript directly to the fixed account route while retaining the root exit', async () => {
+      const { html } = await confirmation();
+      expect(html).toContain(`id="recovery" href="${APP_ORIGIN}/account" hidden>Request a new sign-in link</a>`);
+      expect(html).toMatch(new RegExp(`<noscript>[\\s\\S]*href="${APP_ORIGIN}/account"`));
+      expect(html).toContain(`<footer id="exit"><a href="${APP_ORIGIN}/">Back to app</a></footer>`);
+    });
+
+    it('runs confirmation script without network activity until clicked, then sends the guarded token body', async () => {
+      const { h, html, page, token } = await confirmation();
       const script = /<script nonce="([^"]+)">([\s\S]*?)<\/script>/.exec(html);
       expect(script).not.toBeNull();
       expect(page.headers.get('content-security-policy')).toContain(`script-src 'nonce-${script?.[1]}'`);
-      let click: (() => Promise<void>) | undefined;
-      const button = {
-        addEventListener: (type: string, handler: () => Promise<void>) => {
-          expect(type).toBe('click');
-          click = handler;
-        },
-        disabled: false,
-      };
-      const fetch = vi.fn(async (_path: string, init: RequestInit) => {
+      const view = browser(html, async (_path: string, init: RequestInit) => {
         const response = await issuer.fetch(
           new Request(url('/verify'), {
             ...init,
@@ -433,28 +512,244 @@ describe('POST /verify', () => {
         expect(response.headers.get('set-cookie')).not.toBeNull();
         return response;
       });
-      const location = { pathname: '/api/v1/auth/verify', replace: vi.fn() };
-      const history = { replaceState: vi.fn() };
-      runInNewContext(script?.[2] ?? '', {
-        document: { getElementById: () => button },
-        fetch,
-        history,
-        location,
-      });
-      expect(fetch).not.toHaveBeenCalled();
-      expect(history.replaceState).toHaveBeenCalledWith(null, '', location.pathname);
-      expect(click).toBeTypeOf('function');
-      await click?.();
-      expect(fetch).toHaveBeenCalledWith(
-        location.pathname,
+      expect(view.fetch).not.toHaveBeenCalled();
+      expect(view.history.replaceState).toHaveBeenCalledWith(null, '', view.location.pathname);
+      expect(view.nodes.confirm.focus).toHaveBeenCalledOnce();
+      await view.click();
+      expect(view.fetch).toHaveBeenCalledWith(
+        view.location.pathname,
         expect.objectContaining({
           body: JSON.stringify({ token }),
           credentials: 'same-origin',
           headers: { 'content-type': 'application/json', 'x-archive-request': '1' },
           method: 'POST',
+          redirect: 'error',
+          referrerPolicy: 'no-referrer',
         }),
       );
-      expect(location.replace).toHaveBeenCalledWith(`${APP_ORIGIN}/signed-in`);
+      expect(view.nodes.status.textContent).toContain('You are signed in');
+      expect(view.location.replace).toHaveBeenCalledWith(`${APP_ORIGIN}/signed-in`);
+    });
+
+    it('announces pending state and blocks double clicks before the response arrives', async () => {
+      const { html } = await confirmation();
+      let finish: (response: Response) => void = () => undefined;
+      const view = browser(
+        html,
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const pending = view.click();
+      expect(view.nodes.confirm.disabled).toBe(true);
+      expect(view.nodes.confirm.textContent).toBe('Signing you in');
+      expect(view.nodes.status.textContent).toContain('Signing you in');
+      expect(view.nodes.actions.setAttribute).toHaveBeenCalledWith('aria-busy', 'true');
+      await view.click();
+      expect(view.fetch).toHaveBeenCalledOnce();
+      finish(new Response(null, { status: 204 }));
+      await pending;
+      await view.click();
+      expect(view.fetch).toHaveBeenCalledOnce();
+      expect(view.nodes.actions.removeAttribute).toHaveBeenCalledWith('aria-busy');
+    });
+
+    it.each([400, 410])('offers new-link recovery rather than resubmission after HTTP %s', async (status) => {
+      const { html } = await confirmation();
+      const view = browser(html, async () => new Response(null, { status }));
+      await view.click();
+      expect(view.nodes.confirm.hidden).toBe(true);
+      expect(view.nodes.recovery.hidden).toBe(false);
+      expect(view.nodes.recovery.focus).toHaveBeenCalledOnce();
+      expect(view.nodes.recovery.setAttribute).toHaveBeenCalledWith('class', 'primary');
+      expect(view.nodes.exit.hidden).toBe(true);
+      expect(view.nodes.status.textContent).toContain('Request a new sign-in link');
+      expect(view.nodes.status.textContent).toMatch(status === 410 ? /expired or was already used/ : /not valid/);
+      await view.click();
+      expect(view.fetch).toHaveBeenCalledOnce();
+      expect(view.location.replace).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['2', 2],
+      ['999999999', 300],
+      ['0', 1],
+      ['-1', 30],
+      ['1.5', 30],
+      ['+1', 30],
+      ['2026-01-01T00:00:04Z', 30],
+      ['Thu, 01 Jan 2026 24:00:04 GMT', 30],
+      ['invalid', 30],
+      [null, 30],
+      ['Thu, 01 Jan 2026 00:00:04 GMT', 4],
+      ['Thursday, 01-Jan-26 00:00:04 GMT', 4],
+      ['Thu Jan  1 00:00:04 2026', 4],
+    ])('bounds Retry-After %s to %s seconds without automatic requests', async (retryAfter, seconds) => {
+      const { html } = await confirmation();
+      vi.useFakeTimers({ now: new Date('2026-01-01T00:00:00Z') });
+      const view = browser(
+        html,
+        async () =>
+          new Response(null, {
+            headers: retryAfter === null ? {} : { 'retry-after': retryAfter },
+            status: 429,
+          }),
+      );
+      await view.click();
+      expect(view.nodes.confirm.disabled).toBe(true);
+      expect(view.nodes.status.textContent).toContain(`Wait ${seconds} seconds`);
+      expect(view.nodes.recovery.hidden).toBe(false);
+      expect(view.nodes.recovery.setAttribute).not.toHaveBeenCalledWith('class', 'primary');
+      expect(view.nodes.exit.hidden).toBe(true);
+      await view.click();
+      await vi.advanceTimersByTimeAsync((seconds - 1) * 1000);
+      expect(view.nodes.confirm.disabled).toBe(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(view.nodes.confirm.disabled).toBe(false);
+      expect(view.nodes.status.textContent).toContain('try signing in again now');
+      expect(view.fetch).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+      await view.click();
+      expect(view.fetch).toHaveBeenCalledTimes(2);
+      view.events.get('pagehide')?.({});
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it.each([503, 500, 200, 'network'])('allows deliberate retry after %s without navigating', async (failure) => {
+      const { html } = await confirmation();
+      const view = browser(html, async () => {
+        if (failure === 'network') throw new Error('private network error');
+        return new Response(null, { status: Number(failure) });
+      });
+      await view.click();
+      expect(view.nodes.confirm.disabled).toBe(false);
+      expect(view.nodes.confirm.textContent).toBe('Try again');
+      expect(view.nodes.recovery.hidden).toBe(false);
+      expect(view.nodes.status.textContent).toContain(
+        failure === 503
+          ? 'temporarily unavailable'
+          : failure === 'network'
+            ? 'Check your connection'
+            : 'could not be completed',
+      );
+      expect(view.nodes.status.textContent).not.toContain('private');
+      expect(view.location.replace).not.toHaveBeenCalled();
+      await view.click();
+      expect(view.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([204, 400, 410, 429, 503, 500, 200])('cancels unused streaming bodies after HTTP %s', async (status) => {
+      const { html } = await confirmation();
+      vi.useFakeTimers();
+      const cancel = vi.fn();
+      const response = new Response(new ReadableStream({ cancel }), { status: status === 204 ? 200 : status });
+      if (status === 204) vi.spyOn(response, 'status', 'get').mockReturnValue(204);
+      const view = browser(html, async () => response);
+      await view.click();
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(view.fetch.mock.calls[0][1].signal?.aborted).toBe(true);
+      expect(view.location.replace).toHaveBeenCalledTimes(status === 204 ? 1 : 0);
+      view.events.get('pagehide')?.({});
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it.each(['rejects', 'stalls'])('allows immediate 503 recovery even when body cancellation %s', async (failure) => {
+      const { html } = await confirmation();
+      vi.useFakeTimers();
+      const cancel = vi.fn(() =>
+        failure === 'rejects'
+          ? Promise.reject(new Error('private cancellation failure'))
+          : new Promise<void>(() => undefined),
+      );
+      const view = browser(html, async () => new Response(new ReadableStream({ cancel }), { status: 503 }));
+      await view.click();
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(view.nodes.confirm.disabled).toBe(false);
+      expect(view.nodes.status.textContent).toContain('temporarily unavailable');
+      expect(view.nodes.recovery.hidden).toBe(false);
+      expect(view.fetch.mock.calls[0][1].signal?.aborted).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
+      await view.click();
+      expect(view.fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([204, 503])(
+      'cancels stale streaming HTTP %s after pagehide and restored pageshow without changing fresh state',
+      async (status) => {
+        const { html } = await confirmation();
+        vi.useFakeTimers();
+        let finish: (response: Response) => void = () => undefined;
+        const view = browser(
+          html,
+          () =>
+            new Promise((resolve) => {
+              finish = resolve;
+            }),
+        );
+        const pending = view.click();
+        const signal = view.fetch.mock.calls[0][1].signal;
+        view.events.get('pagehide')?.({});
+        expect(signal?.aborted).toBe(true);
+        expect(vi.getTimerCount()).toBe(0);
+        view.events.get('pageshow')?.({ persisted: true });
+        expect(view.nodes.confirm.disabled).toBe(false);
+        const finishStale = finish;
+        const fresh = view.click();
+        const freshSignal = view.fetch.mock.calls[1][1].signal;
+        const finishFresh = finish;
+        const cancel = vi.fn();
+        const response = new Response(new ReadableStream({ cancel }), { status: status === 204 ? 200 : status });
+        if (status === 204) vi.spyOn(response, 'status', 'get').mockReturnValue(204);
+        finishStale(response);
+        await pending;
+        expect(cancel).toHaveBeenCalledOnce();
+        expect(view.location.replace).not.toHaveBeenCalled();
+        expect(view.nodes.status.textContent).toBe('Signing you in. Please wait.');
+        expect(view.nodes.confirm.disabled).toBe(true);
+        expect(freshSignal?.aborted).toBe(false);
+        expect(vi.getTimerCount()).toBe(1);
+        finishFresh(new Response(null, { status: 503 }));
+        await fresh;
+        expect(view.nodes.status.textContent).toContain('temporarily unavailable');
+        expect(freshSignal?.aborted).toBe(true);
+        expect(vi.getTimerCount()).toBe(0);
+      },
+    );
+
+    it('times out stalled requests and releases the timeout on network rejection', async () => {
+      const { html } = await confirmation();
+      vi.useFakeTimers();
+      const view = browser(
+        html,
+        (_path, init) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () => reject(new Error('timeout')));
+          }),
+      );
+      const pending = view.click();
+      await vi.advanceTimersByTimeAsync(15000);
+      await pending;
+      expect(view.nodes.confirm.disabled).toBe(false);
+      expect(view.nodes.status.textContent).toContain('Sign-in took too long');
+      expect(view.nodes.status.textContent).not.toContain('Check your connection');
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('restores the remaining cooldown after bfcache navigation without polling', async () => {
+      const { html } = await confirmation();
+      vi.useFakeTimers();
+      const view = browser(html, async () => new Response(null, { headers: { 'retry-after': '3' }, status: 429 }));
+      await view.click();
+      view.events.get('pagehide')?.({});
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(1000);
+      view.events.get('pageshow')?.({ persisted: true });
+      expect(view.nodes.confirm.textContent).toBe('Try again in 2s');
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(view.nodes.confirm.disabled).toBe(false);
+      expect(view.fetch).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
     });
 
     it('allows repeated scanner GETs without consuming links or setting cookies', async () => {
@@ -471,6 +766,12 @@ describe('POST /verify', () => {
           /default-src 'none'.*connect-src 'self'.*frame-ancestors 'none'/,
         );
         const html = await response.text();
+        const styleNonce = /<style nonce="([^"]+)">/.exec(html)?.[1];
+        expect(styleNonce).toBeTruthy();
+        expect(response.headers.get('content-security-policy')).toContain(`style-src 'nonce-${styleNonce}'`);
+        expect(html).toContain('<main');
+        expect(html).toContain('<noscript>');
+        expect(html).toContain(`href="${APP_ORIGIN}/"`);
         expect(html).toContain("addEventListener('click'");
         expect(html).toContain('history.replaceState');
         expect(html).toContain("'x-archive-request': '1'");
@@ -484,7 +785,71 @@ describe('POST /verify', () => {
       const malformed = await issuer.fetch(new Request(url('/verify?token=short')), h.env);
       expect(malformed.status).toBe(400);
       expect(malformed.headers.get('referrer-policy')).toBe('no-referrer');
+      expect(malformed.headers.get('content-type')).toContain('text/html');
+      expect(await malformed.text()).toContain('This sign-in link is not valid');
     });
+
+    it('escapes branding and keeps the token only in the original private script', async () => {
+      const name = '<script>alert("x")</script> &\'';
+      const escaped = '&#60;script&#62;alert(&#34;x&#34;)&#60;/script&#62; &#38;&#39;';
+      const h = await harness({ APP_NAME: name });
+      const token = 'a'.repeat(43);
+      const page = await issuer.fetch(new Request(url(`/verify?token=${token}`)), h.env);
+      const html = await page.text();
+      const csp = page.headers.get('content-security-policy') ?? '';
+      const scriptNonces = [...html.matchAll(/<script nonce="([^"]+)">/g)].map((match) => match[1]);
+      expect(scriptNonces).toHaveLength(2);
+      expect(new Set(scriptNonces).size).toBe(1);
+      expect(html).toContain(`<title>Confirm sign-in | ${escaped}</title>`);
+      expect(html).toContain(`Sign in to ${escaped}</h1>`);
+      expect(html).not.toContain(name);
+      expect(html.replace(/<script[^>]*>[\s\S]*?<\/script>/g, '')).not.toContain(token);
+      expect(csp).toContain(`style-src 'nonce-${scriptNonces[0]}'`);
+      expect(csp).not.toMatch(/unsafe-inline|https?:|data:/);
+      expect(html).toContain('aria-labelledby="title"');
+      expect(html).toContain('aria-live="polite" aria-atomic="true"');
+      expect(html).toContain('min-height: 44px');
+      expect(html).toContain('prefers-color-scheme: dark');
+      expect(html).toContain('prefers-reduced-motion: reduce');
+      expect(html).toContain('<button type="button" id="confirm" hidden>');
+      expect(html).toContain('JavaScript is required to confirm this sign-in');
+      const view = browser(html, async () => new Response(null, { status: 410 }));
+      expect(view.fetch).not.toHaveBeenCalled();
+      await view.click();
+      expect(view.nodes.status.textContent).toContain('expired');
+    });
+
+    it.each([
+      '',
+      '?token=short',
+      `?token=${'a'.repeat(43)}&token=${'b'.repeat(43)}`,
+      `?token=${'a'.repeat(43)}&next=https://evil.test`,
+    ])(
+      'renders branded 400 HTML for invalid GET query %s without echoing input or changing POST errors',
+      async (query) => {
+        const h = await harness();
+        const response = await issuer.fetch(new Request(url(`/verify${query}`)), h.env);
+        expect(response.status).toBe(400);
+        expect(response.headers.get('set-cookie')).toBeNull();
+        expect(response.headers.get('content-type')).toContain('text/html');
+        const html = await response.text();
+        expect(html).toContain('Test &#60;App&#62;');
+        expect(html).toContain(`href="${APP_ORIGIN}/account"`);
+        expect(html).toContain('class="primary" id="recovery"');
+        expect(html).toContain('Request a new sign-in link');
+        expect(html).not.toContain('<footer');
+        expect(html).not.toMatch(/evil.test|id="confirm"|fetch\(/);
+        expect(html).not.toContain('a'.repeat(43));
+        expect(html).not.toContain('b'.repeat(43));
+        const view = browser(html, async () => new Response(null, { status: 204 }));
+        expect(view.history.replaceState).toHaveBeenCalledOnce();
+        expect(view.fetch).not.toHaveBeenCalled();
+        const post = await issuer.fetch(verifyRequest('short'), h.env);
+        expect(post.status).toBe(400);
+        expect(post.headers.get('content-type')).toContain('application/json');
+        expect(archiveErrorResponseSchema.parse(await post.json()).error.code).toBe('bad-request');
+      },
+    );
   });
 
   describe('auth observations', () => {

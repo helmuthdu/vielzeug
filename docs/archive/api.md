@@ -1,32 +1,32 @@
 ---
-title: "Archive: API Reference"
-description: "Collection definitions, browser-safe wire schemas, Worker deployment, and identity issuance."
+title: 'Archive: API Reference'
+description: 'Collection definitions, browser-safe wire schemas, Worker deployment, and identity issuance.'
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `defineArchiveCollection` | Compose validation, indexing, identity and wire schemas | Sync | Invalid content derives to `null`; callback faults throw |
-| `createArchiveWorker` | Build the catalog Worker | Sync | Collection names must be unique |
-| `createAuthWorker` | Build the passwordless issuer | Sync | `AUTH_ARCHIVE` is required |
-| `worker.tap`, `issuer.tap` | Observe sanitized runtime outcomes | Sync | Neither core logs by default; observer exceptions are swallowed |
-| `ArchiveDerivationError` | Identify a collection implementation/runtime fault | Sync | Faults become sanitized 500s, not content-validation 422s |
-| `ARCHIVE_LIMITS` | Shared application bounds | Sync | Page bounds do not cap total exports |
-| `archiveErrorResponseSchema`, `archiveAuthHealthSchema` | Validate error and issuer-health responses | Sync | Unknown error codes and health states reject |
-| `ArchiveError`, `ArchiveDefinitionError` | Public base and invalid-definition errors | Sync | Thrown locally, not transmitted as error objects |
-| `sessionCookieValue` | Compose shared session-cookie attributes | Sync | Deployments must choose `secure` from their environment |
-| `isWellFormedText` | Check control characters and lone surrogates | Sync | Does not trim or impose a length bound |
+| Symbol                                                  | Purpose                                                 | Execution mode | Common gotcha                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `defineArchiveCollection`                               | Compose validation, indexing, identity and wire schemas | Sync           | Invalid content derives to `null`; callback faults throw        |
+| `createArchiveWorker`                                   | Build the catalog Worker                                | Sync           | Collection names must be unique                                 |
+| `createAuthWorker`                                      | Build the passwordless issuer                           | Sync           | `AUTH_ARCHIVE` is required                                      |
+| `worker.tap`, `issuer.tap`                              | Observe sanitized runtime outcomes                      | Sync           | Neither core logs by default; observer exceptions are swallowed |
+| `ArchiveDerivationError`                                | Identify a collection implementation/runtime fault      | Sync           | Faults become sanitized 500s, not content-validation 422s       |
+| `ARCHIVE_LIMITS`                                        | Shared application bounds                               | Sync           | Page bounds do not cap total exports                            |
+| `archiveErrorResponseSchema`, `archiveAuthHealthSchema` | Validate error and issuer-health responses              | Sync           | Unknown error codes and health states reject                    |
+| `ArchiveError`, `ArchiveDefinitionError`                | Public base and invalid-definition errors               | Sync           | Thrown locally, not transmitted as error objects                |
+| `sessionCookieValue`                                    | Compose shared session-cookie attributes                | Sync           | Deployments must choose `secure` from their environment         |
+| `isWellFormedText`                                      | Check control characters and lone surrogates            | Sync           | Does not trim or impose a length bound                          |
 
 ## Package Entry Point
 
-| Import | Purpose |
-| --- | --- |
-| `@vielzeug/archive` | Browser-safe collections, constants, schemas and errors |
+| Import                     | Purpose                                                                     |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `@vielzeug/archive`        | Browser-safe collections, constants, schemas and errors                     |
 | `@vielzeug/archive/worker` | Catalog factory, issuer signing-key/session service binding and event types |
-| `@vielzeug/archive/auth` | Issuer factory and binding types |
+| `@vielzeug/archive/auth`   | Issuer factory and binding types                                            |
 
 ## Collections
 
@@ -36,18 +36,21 @@ Creates a frozen collection and its contract; malformed names, versions or vocab
 
 ```ts
 function defineArchiveCollection<
-  P extends object, const C extends number, const F extends string = never, const T extends string = never,
+  P extends object,
+  const C extends number,
+  const F extends string = never,
+  const T extends string = never,
 >(definition: ArchiveCollectionDefinition<P, C, F, T>): ArchiveCollection<P, C>;
 ```
 
-| Parameter | Contract |
-| --- | --- |
-| `name` | Lowercase `[a-z0-9-]{1,32}` |
-| `contentVersion` | Positive safe integer |
-| `payloadSchema` | Spell schema whose output is a stable JSON object |
-| `filters`, `tags` | Optional readonly arrays; omitted means empty vocabulary |
-| `canonicalize` | Optional pure, idempotent, schema-valid normalization |
-| `index` | Derive `filter`, `tags` and searchable `title` without mutating the payload |
+| Parameter         | Contract                                                                    |
+| ----------------- | --------------------------------------------------------------------------- |
+| `name`            | Lowercase `[a-z0-9-]{1,32}`                                                 |
+| `contentVersion`  | Positive safe integer                                                       |
+| `payloadSchema`   | Spell schema whose output is a stable JSON object                           |
+| `filters`, `tags` | Optional readonly arrays; omitted means empty vocabulary                    |
+| `canonicalize`    | Optional pure, idempotent, schema-valid normalization                       |
+| `index`           | Derive `filter`, `tags` and searchable `title` without mutating the payload |
 
 **Returns:** `ArchiveCollection<P, C>`.
 
@@ -68,14 +71,14 @@ if (derived === null) throw new Error('Invalid recipe');
 console.log(derived.contentHash);
 ```
 
-| Method / property | Result |
-| --- | --- |
-| `derive(raw)` | `Promise<ArchiveDerivation \| null>` |
-| `contract.entry` | Public entry schema |
-| `contract.ownedEntry`, `ownedEntries` | Owner view with `clientKey` and `hidden` |
-| `contract.page` | Entries and the forward cursor |
+| Method / property                      | Result                                              |
+| -------------------------------------- | --------------------------------------------------- |
+| `derive(raw)`                          | `Promise<ArchiveDerivation \| null>`                |
+| `contract.entry`                       | Public entry schema                                 |
+| `contract.ownedEntry`, `ownedEntries`  | Owner view with `clientKey` and `hidden`            |
+| `contract.page`                        | Entries and the forward cursor                      |
 | `contract.publishInput`, `updateInput` | Publish and revision-guarded update request schemas |
-| `filters`, `tags` | Frozen vocabulary snapshots |
+| `filters`, `tags`                      | Frozen vocabulary snapshots                         |
 
 `derive` returns `null` for invalid JSON objects, schema-invalid input, invalid titles, too many tags and oversized canonical payloads. Unexpected schema, callback or hashing failures throw `ArchiveDerivationError`. Non-idempotent or schema-invalid canonicalization, unstable schema transformations, index mutation and out-of-vocabulary projections are also derivation faults. Routes map `null` to 422 `invalid-payload` and faults to a sanitized 500 `internal`.
 Schema output that is lossy or no longer JSON is a derivation fault, not invalid
@@ -109,18 +112,19 @@ import { createArchiveWorker, type ArchiveWorkerEnv } from '@vielzeug/archive/wo
 import { s } from '@vielzeug/spell';
 
 const notes = defineArchiveCollection({
-  name: 'notes', contentVersion: 1,
+  name: 'notes',
+  contentVersion: 1,
   payloadSchema: s.object({ title: s.string().min(1).max(128) }),
   index: ({ title }) => ({ title, filter: null, tags: [] }),
 });
 export default createArchiveWorker<ArchiveWorkerEnv>([notes]);
 ```
 
-| Method | Contract |
-| --- | --- |
-| `fetch(request, env, ctx)` | Returns `Promise<Response>` |
+| Method                            | Contract                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------- |
+| `fetch(request, env, ctx)`        | Returns `Promise<Response>`                                                      |
 | `scheduled(controller, env, ctx)` | Sweeps expired retry keys and revocation tombstones; emits failures and rethrows |
-| `tap(handler, { signal? }?)` | Returns unsubscribe; a pre-aborted signal registers nothing |
+| `tap(handler, { signal? }?)`      | Returns unsubscribe; a pre-aborted signal registers nothing                      |
 
 `AUTH_ISSUER_SERVICE` is a required `fetch`-shaped service binding to the issuer.
 The catalog fetches signing keys from the configured `JWT_JWKS_URL` through that
@@ -180,11 +184,11 @@ import { createAuthWorker, type AuthWorkerEnv } from '@vielzeug/archive/auth';
 export default createAuthWorker<AuthWorkerEnv>();
 ```
 
-| Method | Contract |
-| --- | --- |
-| `fetch(request, env, ctx?)` | Returns `Promise<Response>` |
+| Method                             | Contract                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `fetch(request, env, ctx?)`        | Returns `Promise<Response>`                                                     |
 | `scheduled(controller, env, ctx?)` | Removes expired links, closed send windows and unverified unreferenced accounts |
-| `tap(handler, { signal? }?)` | Observes typed `AuthEvent`; returns unsubscribe; pre-aborted signals are inert |
+| `tap(handler, { signal? }?)`       | Observes typed `AuthEvent`; returns unsubscribe; pre-aborted signals are inert  |
 
 Magic links expire after 15 minutes and work once. The durable per-email budget allows three sends per hour; consumption, expiration and send failure do not refund it. Ordinary sessions last at most 30 days. Operator sessions use `OPERATOR_SESSION_MAX_AGE_SECONDS` (900 seconds). `OPERATOR_EMAILS` controls newly minted role claims.
 
@@ -211,12 +215,44 @@ contract; `/auth` exports the factory and issuer binding types.
 Opening a magic link performs a safe GET that displays a click-confirmation page,
 not redemption. Only a marked POST from an exact allowed origin or
 `PUBLIC_ORIGIN` consumes `{ token }` and returns 204 with the session cookie. The
-confirmation page navigates to `/signed-in` after success; the POST is not a
-redirect. Confirmation responses are `no-store` with no-referrer and restrictive
-CSP; the page removes the token from the address bar and loads no external assets.
+confirmation page navigates to the fixed `${PUBLIC_ORIGIN}/signed-in` destination;
+your application must serve that page because the issuer serves only the
+confirmation endpoint. The POST is not a redirect. Confirmation responses are
+`no-store` with no-referrer and a restrictive CSP; inline script and styles
+require a fresh response nonce, with no
+`unsafe-inline`. The page removes the token from the address bar before rendering
+the controls and loads no external assets. `APP_NAME` supplies escaped page and
+email branding; the confirmation has keyboard focus, live status announcements,
+44-pixel minimum action heights, a warm near-white paper and copper light scheme,
+a deep neutral dark scheme, serif headings, sans-serif body text and reduced-motion
+styles. Without JavaScript, it links to `${PUBLIC_ORIGIN}/account` as “Request a
+new sign-in link” but cannot redeem a link.
 GET displays confirmation for any syntactically valid token, including a used
 token; only POST establishes whether the link is still redeemable. POST accepts
-exactly `{ token }` and rejects query parameters.
+exactly `{ token }` and rejects query parameters. With valid issuer configuration,
+invalid or missing GET tokens, duplicate token parameters and unsupported query
+parameters return HTTP 400 with branded HTML recovery, not a JSON error. POST
+errors retain the JSON `ArchiveErrorResponse` schema and their HTTP status.
+
+The button announces pending sign-in and blocks duplicate submissions. HTTP 410
+replaces it with a new-link action; HTTP 400 also disables resubmission. Every
+failure offers the fixed `${PUBLIC_ORIGIN}/account` recovery link labelled
+“Request a new sign-in link”. Like `/signed-in`, `/account` is a fixed reference
+issuer convention: the application must serve its sign-in entry there, not the issuer.
+Recovery is secondary while retry remains possible, and becomes the primary action
+for invalid or expired links. It replaces the footer exit link to avoid duplicate
+navigation. The initial “Back to app” footer links to `${PUBLIC_ORIGIN}/`.
+HTTP 429 delays manual retry using unsigned integer seconds or a syntactically valid
+HTTP-date `Retry-After`, rounded up
+and bounded to 1-300 seconds (30 seconds for missing or invalid values). HTTP 503
+and network failures offer explicit retry; no failure starts an automatic request.
+All returned response bodies, including discarded stale responses, are cancelled
+without delaying recovery; cancellation failures are ignored. Each attempt aborts
+its controller on completion. Stalled requests abort after 15 seconds with a
+timeout-specific message, distinct from connection failures. Leaving the page aborts its request and
+clears timers; bfcache restoration resumes only the remaining cooldown, not a
+request. Navigation after exact 204 success is fixed at
+`${PUBLIC_ORIGIN}/signed-in`; query input never controls either destination.
 
 The issuer never logs directly. `tap` emits sanitized request and scheduled
 outcomes; observer failures are swallowed, abort detaches the observer and failed
@@ -226,39 +262,39 @@ scheduled work emits then rethrows. `AuthDiagnostic` reports only a category.
 
 Every route below is mounted under `/api/v1`. Mutation guards require an exact allowed `Origin` and `x-archive-request: 1`. Registered publishers pin `x-archive-publisher` to the identity captured when preparing private requests. The header is a freshness precondition, not authority.
 
-| Route | Contract |
-| --- | --- |
-| `GET /health` | Public catalog readiness; 200 `ok` or 503 `degraded` |
-| `POST /sign-out` | Catalog-local sign-out; `{ ok: true }` and expired session cookie, without issuer access |
-| `GET /collections/:collection` | Collection metadata |
-| `GET /collections/:collection/entries` | `author`, `filter`, `tag`, `search`, `sort`, `cursor`, `limit`; forward entry page |
-| `POST /collections/:collection/entries` | `{ clientKey, payload }`; 201 create or 200 replay |
-| `GET /collections/:collection/entries/:id` | Public entry; always `no-store` |
-| `PUT /collections/:collection/entries/:id` | Owner-only `{ expectedRevision, payload }` |
-| `DELETE /collections/:collection/entries/:id` | Owner or operator removal; 204 |
-| `PUT` / `DELETE /collections/:collection/entries/:id/like` | Like / unlike visible entries only; guarded write and response; like-state response |
-| `POST /collections/:collection/entries/:id/report` | `{ reason }`; idempotent per entry/reporter; 204 |
-| `PUT` / `DELETE /collections/:collection/entries/:id/hidden` | Operator hide / unhide; 204 |
-| `GET /collections/:collection/reports` | Operator page; `status=unresolved` (default) or `resolved`, `cursor`, `limit` |
-| `PUT /collections/:collection/reports/:id/resolved` | Operator resolves report by its unique report ID; idempotent 204 |
-| `DELETE /publishers/:id` | Operator erases Archive profile; not issuer account |
-| `GET /moderation-log` | Operator forward page; `cursor`, `limit` |
-| `GET` / `POST` / `PUT /me` | Identity, register with optional `{ name }`, rename with required `{ name }` |
-| `DELETE /me` | Profile-only cascade; 204; does not clear cookie |
-| `DELETE /me/account` | Revoke issuer/subject and atomically erase profile; 204; coordinated issuer-erasure seam |
-| `GET /me/publications?collection=…` | Owner entries including hidden state and retry keys |
-| `GET /me/likes` | Forward page `{ ids, cursor }`; `cursor`, `limit` |
-| `GET /me/likes?ids=…` | Subset lookup `{ ids }`; at most `likeStateIds` input IDs |
-| `GET /me/reports` | Own forward report page across collections; `cursor`, `limit` |
-| `GET /auth/health` | Public issuer readiness; typed `AuthHealth`, 200 `ok` or 503 `degraded`; no email or peer probe |
-| `GET /auth/session` | Internal issuer-session check for the catalog service binding; exact `{ ok: true }`, `no-store`, no PII; 401 for an invalid, stale or absent-account session |
-| `POST /auth/sign-out-all` | Requires marker, exact origin, session and captured `ACCOUNT_HEADER`; atomically increments `session_version`, deletes outstanding links, preserves account and catalog data; 200 `{ ok: true }` with an expired cookie only on durable success |
-| `GET /auth/jwks.json` | Active and configured retired public verification keys |
-| `POST /auth/sign-in` | `{ email }` (trimmed and lowercased); 202 `{ ok: true }` |
-| `GET /auth/verify?token=…` | Safe no-store click-confirmation page; no token consumption or session change |
-| `POST /auth/verify` | JSON `{ token }`, marker and exact allowed origin or `PUBLIC_ORIGIN`; consume once; 204 with session cookie |
-| `GET /auth/account` | `{ id, email, createdAt, lastSignInAt }`; no tokens or budget data |
-| `DELETE /auth/account` | Requires `ACCOUNT_HEADER` with the captured issuer account UUID; catalog `/me/account` via `AUTH_ARCHIVE`, require exact 204, then issuer user and cookie clear; 204 |
+| Route                                                        | Contract                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`                                                | Public catalog readiness; 200 `ok` or 503 `degraded`                                                                                                                                                                                            |
+| `POST /sign-out`                                             | Catalog-local sign-out; `{ ok: true }` and expired session cookie, without issuer access                                                                                                                                                        |
+| `GET /collections/:collection`                               | Collection metadata                                                                                                                                                                                                                             |
+| `GET /collections/:collection/entries`                       | `author`, `filter`, `tag`, `search`, `sort`, `cursor`, `limit`; forward entry page                                                                                                                                                              |
+| `POST /collections/:collection/entries`                      | `{ clientKey, payload }`; 201 create or 200 replay                                                                                                                                                                                              |
+| `GET /collections/:collection/entries/:id`                   | Public entry; always `no-store`                                                                                                                                                                                                                 |
+| `PUT /collections/:collection/entries/:id`                   | Owner-only `{ expectedRevision, payload }`                                                                                                                                                                                                      |
+| `DELETE /collections/:collection/entries/:id`                | Owner or operator removal; 204                                                                                                                                                                                                                  |
+| `PUT` / `DELETE /collections/:collection/entries/:id/like`   | Like / unlike visible entries only; guarded write and response; like-state response                                                                                                                                                             |
+| `POST /collections/:collection/entries/:id/report`           | `{ reason }`; idempotent per entry/reporter; 204                                                                                                                                                                                                |
+| `PUT` / `DELETE /collections/:collection/entries/:id/hidden` | Operator hide / unhide; 204                                                                                                                                                                                                                     |
+| `GET /collections/:collection/reports`                       | Operator page; `status=unresolved` (default) or `resolved`, `cursor`, `limit`                                                                                                                                                                   |
+| `PUT /collections/:collection/reports/:id/resolved`          | Operator resolves report by its unique report ID; idempotent 204                                                                                                                                                                                |
+| `DELETE /publishers/:id`                                     | Operator erases Archive profile; not issuer account                                                                                                                                                                                             |
+| `GET /moderation-log`                                        | Operator forward page; `cursor`, `limit`                                                                                                                                                                                                        |
+| `GET` / `POST` / `PUT /me`                                   | Identity, register with optional `{ name }`, rename with required `{ name }`                                                                                                                                                                    |
+| `DELETE /me`                                                 | Profile-only cascade; 204; does not clear cookie                                                                                                                                                                                                |
+| `DELETE /me/account`                                         | Revoke issuer/subject and atomically erase profile; 204; coordinated issuer-erasure seam                                                                                                                                                        |
+| `GET /me/publications?collection=…`                          | Owner entries including hidden state and retry keys                                                                                                                                                                                             |
+| `GET /me/likes`                                              | Forward page `{ ids, cursor }`; `cursor`, `limit`                                                                                                                                                                                               |
+| `GET /me/likes?ids=…`                                        | Subset lookup `{ ids }`; at most `likeStateIds` input IDs                                                                                                                                                                                       |
+| `GET /me/reports`                                            | Own forward report page across collections; `cursor`, `limit`                                                                                                                                                                                   |
+| `GET /auth/health`                                           | Public issuer readiness; typed `AuthHealth`, 200 `ok` or 503 `degraded`; no email or peer probe                                                                                                                                                 |
+| `GET /auth/session`                                          | Internal issuer-session check for the catalog service binding; exact `{ ok: true }`, `no-store`, no PII; 401 for an invalid, stale or absent-account session                                                                                    |
+| `POST /auth/sign-out-all`                                    | Requires marker, exact origin, session and captured `ACCOUNT_HEADER`; atomically increments `session_version`, deletes outstanding links, preserves account and catalog data; 200 `{ ok: true }` with an expired cookie only on durable success |
+| `GET /auth/jwks.json`                                        | Active and configured retired public verification keys                                                                                                                                                                                          |
+| `POST /auth/sign-in`                                         | `{ email }` (trimmed and lowercased); 202 `{ ok: true }`                                                                                                                                                                                        |
+| `GET /auth/verify?token=…`                                   | Safe no-store click-confirmation HTML; with valid issuer configuration, invalid queries return 400 recovery HTML; no token consumption or session change                                                                                                                                                   |
+| `POST /auth/verify`                                          | JSON `{ token }`, marker and exact allowed origin or `PUBLIC_ORIGIN`; consume once; 204 with session cookie                                                                                                                                     |
+| `GET /auth/account`                                          | `{ id, email, createdAt, lastSignInAt }`; no tokens or budget data                                                                                                                                                                              |
+| `DELETE /auth/account`                                       | Requires `ACCOUNT_HEADER` with the captured issuer account UUID; catalog `/me/account` via `AUTH_ARCHIVE`, require exact 204, then issuer user and cookie clear; 204                                                                            |
 
 Forward pages are newest first with opaque context-bound keyset cursors. Keep the same query context when following a cursor; end at `cursor: null`. `maxPageSize` bounds each page, not the total number of liked IDs, reports or audit actions you can export. The subset-like query is not a page and cannot combine `ids` with `cursor` or `limit`.
 
@@ -314,37 +350,37 @@ Effective hide, unhide, operator removal and publisher erasure append audit rows
 
 ## Constants and Schemas
 
-| Export | Value or parsed output |
-| --- | --- |
-| `ARCHIVE_CONTRACT_VERSION`, `ARCHIVE_SCHEMA_VERSION` | Both debut at `1`; wire and storage versions are independent |
-| `AUTH_SCHEMA_VERSION` | `1`; issuer DDL stamp checked by `/auth/health` |
-| `ARCHIVE_COLLECTION_NAME_PATTERN` | `/^[a-z0-9-]{1,32}$/` |
-| `ARCHIVE_OPERATOR_ROLE` | `'archive-operator'` |
-| `SESSION_COOKIE_NAME`, `SESSION_COOKIE_PATH` | `'archive_session'`, `'/api/v1'` |
-| `SESSION_MAX_AGE_SECONDS` | `2592000` |
-| `OPERATOR_SESSION_MAX_AGE_SECONDS` | `900`; shared root contract |
-| `ACCOUNT_HEADER` | `'X-Archive-Account'`; required issuer-account UUID on coordinated erasure |
-| `PUBLISHER_HEADER`, `REQUEST_MARKER_HEADER` | `'x-archive-publisher'`, `'x-archive-request'` |
-| `ILL_FORMED_TEXT`, `isWellFormedText(value: string): boolean` | Reject control characters and lone UTF-16 surrogates |
-| `uuidSchema`, `isoTimestampSchema`, `hex64Schema` | UUID, ISO timestamp, lowercase SHA-256 hex strings |
-| `archiveAliasSchema` | Trimmed, well-formed alias of at most 24 characters |
-| `archiveAuthorSchema` | `{ id: string; name: string }` |
-| `archiveIdentitySchema` | `ArchiveIdentity` |
-| `archiveAccountSchema` | `ArchiveAccount`; issuer metadata, excluding private fields |
-| `archiveLimitsSchema` | All numeric `ARCHIVE_LIMITS` fields |
-| `archiveHealthSchema` | `ArchiveHealth` |
-| `archiveAuthHealthSchema` | `AuthHealth` |
-| `archiveErrorResponseSchema` | `ArchiveErrorResponse` |
-| `archiveOkSchema` | `{ ok: true }` |
-| `archiveCollectionMetaSchema` | `ArchiveCollectionMeta` |
-| `archiveLikedIdsSchema` | `{ ids: string[] }` subset response |
-| `archiveLikesPageSchema` | `ArchiveLikesPage` |
-| `archiveLikeStateSchema` | `{ id: string; likeCount: number; liked: boolean }` |
-| `archiveReportsSchema`, `archiveOwnReportsSchema` | `ArchiveReports`, `ArchiveOwnReports` |
-| `archiveModerationLogSchema` | `ArchiveModerationLog` |
-| `archiveSortSchema` | `ArchiveSort` |
-| `ARCHIVE_ERROR_CODES` | Values of `ArchiveErrorCode` below |
-| `ARCHIVE_MODERATION_ACTIONS` | `['hide', 'unhide', 'remove', 'erase-publisher']` |
+| Export                                                        | Value or parsed output                                                     |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `ARCHIVE_CONTRACT_VERSION`, `ARCHIVE_SCHEMA_VERSION`          | Both debut at `1`; wire and storage versions are independent               |
+| `AUTH_SCHEMA_VERSION`                                         | `1`; issuer DDL stamp checked by `/auth/health`                            |
+| `ARCHIVE_COLLECTION_NAME_PATTERN`                             | `/^[a-z0-9-]{1,32}$/`                                                      |
+| `ARCHIVE_OPERATOR_ROLE`                                       | `'archive-operator'`                                                       |
+| `SESSION_COOKIE_NAME`, `SESSION_COOKIE_PATH`                  | `'archive_session'`, `'/api/v1'`                                           |
+| `SESSION_MAX_AGE_SECONDS`                                     | `2592000`                                                                  |
+| `OPERATOR_SESSION_MAX_AGE_SECONDS`                            | `900`; shared root contract                                                |
+| `ACCOUNT_HEADER`                                              | `'X-Archive-Account'`; required issuer-account UUID on coordinated erasure |
+| `PUBLISHER_HEADER`, `REQUEST_MARKER_HEADER`                   | `'x-archive-publisher'`, `'x-archive-request'`                             |
+| `ILL_FORMED_TEXT`, `isWellFormedText(value: string): boolean` | Reject control characters and lone UTF-16 surrogates                       |
+| `uuidSchema`, `isoTimestampSchema`, `hex64Schema`             | UUID, ISO timestamp, lowercase SHA-256 hex strings                         |
+| `archiveAliasSchema`                                          | Trimmed, well-formed alias of at most 24 characters                        |
+| `archiveAuthorSchema`                                         | `{ id: string; name: string }`                                             |
+| `archiveIdentitySchema`                                       | `ArchiveIdentity`                                                          |
+| `archiveAccountSchema`                                        | `ArchiveAccount`; issuer metadata, excluding private fields                |
+| `archiveLimitsSchema`                                         | All numeric `ARCHIVE_LIMITS` fields                                        |
+| `archiveHealthSchema`                                         | `ArchiveHealth`                                                            |
+| `archiveAuthHealthSchema`                                     | `AuthHealth`                                                               |
+| `archiveErrorResponseSchema`                                  | `ArchiveErrorResponse`                                                     |
+| `archiveOkSchema`                                             | `{ ok: true }`                                                             |
+| `archiveCollectionMetaSchema`                                 | `ArchiveCollectionMeta`                                                    |
+| `archiveLikedIdsSchema`                                       | `{ ids: string[] }` subset response                                        |
+| `archiveLikesPageSchema`                                      | `ArchiveLikesPage`                                                         |
+| `archiveLikeStateSchema`                                      | `{ id: string; likeCount: number; liked: boolean }`                        |
+| `archiveReportsSchema`, `archiveOwnReportsSchema`             | `ArchiveReports`, `ArchiveOwnReports`                                      |
+| `archiveModerationLogSchema`                                  | `ArchiveModerationLog`                                                     |
+| `archiveSortSchema`                                           | `ArchiveSort`                                                              |
+| `ARCHIVE_ERROR_CODES`                                         | Values of `ArchiveErrorCode` below                                         |
+| `ARCHIVE_MODERATION_ACTIONS`                                  | `['hide', 'unhide', 'remove', 'erase-publisher']`                          |
 
 ### `sessionCookieValue`
 
@@ -354,11 +390,11 @@ Composes a session cookie using the shared security attributes.
 function sessionCookieValue(token: string, options: { maxAgeSeconds: number; secure: boolean }): string;
 ```
 
-| Parameter | Contract |
-| --- | --- |
-| `token` | Session token, or empty string when clearing |
-| `options.maxAgeSeconds` | Cookie lifetime; `0` clears it |
-| `options.secure` | Include `Secure` for production HTTPS |
+| Parameter               | Contract                                     |
+| ----------------------- | -------------------------------------------- |
+| `token`                 | Session token, or empty string when clearing |
+| `options.maxAgeSeconds` | Cookie lifetime; `0` clears it               |
+| `options.secure`        | Include `Secure` for production HTTPS        |
 
 **Returns:** the `Set-Cookie` value with `HttpOnly`, `SameSite=Strict`, the shared path and optional `Secure`.
 
@@ -397,11 +433,22 @@ console.log(isWellFormedText('Rice'), isWellFormedText('\u0000'));
 
 ```ts
 const limits = {
-  aliasChars: 24, cursorChars: 1024, idempotencyRetentionMs: 172800000,
-  likeStateIds: 50, maxPageSize: 50, maxPublications: 50, pageSize: 10,
-  payloadBytes: 8192, publicCacheSeconds: 30, reportReasonChars: 256,
-  requestBytes: 12288, searchChars: 64, searchTerms: 6, tagsPerEntry: 16,
-  titleChars: 128, vocabChars: 64,
+  aliasChars: 24,
+  cursorChars: 1024,
+  idempotencyRetentionMs: 172800000,
+  likeStateIds: 50,
+  maxPageSize: 50,
+  maxPublications: 50,
+  pageSize: 10,
+  payloadBytes: 8192,
+  publicCacheSeconds: 30,
+  reportReasonChars: 256,
+  requestBytes: 12288,
+  searchChars: 64,
+  searchTerms: 6,
+  tagsPerEntry: 16,
+  titleChars: 128,
+  vocabChars: 64,
 };
 ```
 
@@ -416,7 +463,10 @@ interface ArchiveIndexing<F extends string = string, T extends string = string> 
   title: string;
 }
 interface ArchiveCollectionDefinition<
-  P extends object, C extends number, F extends string = never, T extends string = never,
+  P extends object,
+  C extends number,
+  F extends string = never,
+  T extends string = never,
 > {
   canonicalize?(payload: P): P;
   contentVersion: C;
@@ -474,16 +524,35 @@ type ArchiveSort = 'liked' | 'recent';
 type ArchiveDerivationStage = 'canonicalize' | 'hash' | 'index' | 'schema';
 type ArchiveIdentity = { id: string; name: string; operator: boolean } | null;
 type ArchiveAccount = {
-  id: string; email: string; createdAt: string; lastSignInAt: string | null;
+  id: string;
+  email: string;
+  createdAt: string;
+  lastSignInAt: string | null;
 };
 type ArchiveCollectionMeta = { filters: string[]; name: string; tags: string[] };
 type ArchiveLikesPage = { cursor: string | null; ids: string[] };
 type ArchiveErrorCode =
-  | 'account-changed' | 'auth-unavailable' | 'bad-request' | 'conflict' | 'forbidden' | 'gone'
-  | 'internal' | 'invalid-payload' | 'likes-disabled' | 'method-not-allowed'
-  | 'not-found' | 'publisher-changed' | 'publishing-disabled' | 'quota'
-  | 'rate-limited' | 'record-unavailable' | 'timeout' | 'too-large'
-  | 'unauthenticated' | 'unavailable' | 'unsupported-media';
+  | 'account-changed'
+  | 'auth-unavailable'
+  | 'bad-request'
+  | 'conflict'
+  | 'forbidden'
+  | 'gone'
+  | 'internal'
+  | 'invalid-payload'
+  | 'likes-disabled'
+  | 'method-not-allowed'
+  | 'not-found'
+  | 'publisher-changed'
+  | 'publishing-disabled'
+  | 'quota'
+  | 'rate-limited'
+  | 'record-unavailable'
+  | 'timeout'
+  | 'too-large'
+  | 'unauthenticated'
+  | 'unavailable'
+  | 'unsupported-media';
 type ArchiveErrorResponse = {
   error: { code: ArchiveErrorCode; message: string; requestId: string };
 };
@@ -491,11 +560,22 @@ type ArchiveHealth = {
   dbSchemaVersion: number | null;
   features: { likes: boolean; publishing: boolean };
   limits: {
-    aliasChars: number; cursorChars: number; idempotencyRetentionMs: number;
-    likeStateIds: number; maxPageSize: number; maxPublications: number;
-    pageSize: number; payloadBytes: number; publicCacheSeconds: number;
-    reportReasonChars: number; requestBytes: number; searchChars: number;
-    searchTerms: number; tagsPerEntry: number; titleChars: number; vocabChars: number;
+    aliasChars: number;
+    cursorChars: number;
+    idempotencyRetentionMs: number;
+    likeStateIds: number;
+    maxPageSize: number;
+    maxPublications: number;
+    pageSize: number;
+    payloadBytes: number;
+    publicCacheSeconds: number;
+    reportReasonChars: number;
+    requestBytes: number;
+    searchChars: number;
+    searchTerms: number;
+    tagsPerEntry: number;
+    titleChars: number;
+    vocabChars: number;
   };
   schemaVersion: 1;
   status: 'ok' | 'degraded';
@@ -510,23 +590,36 @@ type AuthHealth = {
 type ArchiveReports = {
   cursor: string | null;
   reports: {
-    id: string; createdAt: string; entryId: string; entryTitle: string;
-    reason: string; reporter: { id: string; name: string }; resolvedAt: string | null;
+    id: string;
+    createdAt: string;
+    entryId: string;
+    entryTitle: string;
+    reason: string;
+    reporter: { id: string; name: string };
+    resolvedAt: string | null;
   }[];
 };
 type ArchiveOwnReports = {
   cursor: string | null;
   reports: {
-    collection: string; createdAt: string; entryId: string; id: string;
-    reason: string; resolvedAt: string | null;
+    collection: string;
+    createdAt: string;
+    entryId: string;
+    id: string;
+    reason: string;
+    resolvedAt: string | null;
   }[];
 };
 type ArchiveModerationAction = 'hide' | 'unhide' | 'remove' | 'erase-publisher';
 type ArchiveModerationLog = {
   cursor: string | null;
   actions: {
-    id: string; action: ArchiveModerationAction; collection: string | null;
-    createdAt: string; operatorId: string; targetId: string;
+    id: string;
+    action: ArchiveModerationAction;
+    collection: string | null;
+    createdAt: string;
+    operatorId: string;
+    targetId: string;
   }[];
 };
 ```
@@ -625,7 +718,7 @@ interface AuthWorkerHandler<E extends AuthWorkerEnv = AuthWorkerEnv> {
   tap(handler: (event: AuthEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
 }
 type AuthDiagnostic = {
-  readonly kind: 'configuration' | 'database' | 'email' | 'catalog' | 'internal';
+  readonly kind: 'configuration' | 'database' | 'schema' | 'email' | 'catalog' | 'internal';
 };
 type AuthEvent =
   | {
@@ -655,10 +748,10 @@ window resets atomically on a later sign-in request.
 
 ## Errors
 
-| Exported class | Trigger | Properties |
-| --- | --- | --- |
-| `ArchiveError` | Base for public package errors | `name`, `message`, optional `cause` |
-| `ArchiveDefinitionError` | Invalid collection definition or duplicate registered collection names | Extends `ArchiveError` |
+| Exported class           | Trigger                                                                              | Properties                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `ArchiveError`           | Base for public package errors                                                       | `name`, `message`, optional `cause`                                                |
+| `ArchiveDefinitionError` | Invalid collection definition or duplicate registered collection names               | Extends `ArchiveError`                                                             |
 | `ArchiveDerivationError` | Unexpected schema/canonicalization/index/hash fault or violated collection invariant | Extends `ArchiveError`; readonly `stage: ArchiveDerivationStage`; optional `cause` |
 
 `ArchiveError` and `ArchiveDefinitionError` accept `(message: string, opts?: ErrorOptions)`.
