@@ -6,7 +6,7 @@ description: "Breaking contract changes after the first published release (26.10
 # Archive 26.10 Migration
 
 Archive first shipped as 26.10.6. The next train simplifies the public contract
-in three breaking ways. There are no compatibility layers: the removed surfaces
+as described below. There are no compatibility layers: the removed surfaces
 are gone. The SQL migrations under `migrations/` still initialize fresh D1
 databases unchanged — none of these changes touch stored data.
 
@@ -52,3 +52,26 @@ import { OPERATOR_SESSION_MAX_AGE_SECONDS } from '@vielzeug/archive/auth';
 // After
 import { OPERATOR_SESSION_MAX_AGE_SECONDS } from '@vielzeug/archive';
 ```
+
+## Invalid magic-link GET responses are HTML 400
+
+With valid issuer configuration, malformed `GET /api/v1/auth/verify` queries
+(missing, invalid or duplicate tokens, or unsupported parameters) now return
+branded HTML recovery with HTTP 400, rather than a JSON `ArchiveErrorResponse`.
+Update clients that decode failed GET responses as JSON. POST redemption and its
+JSON error schema and status codes are unchanged.
+
+```ts
+// Before: invalid GET responses used the JSON error envelope
+const error = archiveErrorResponseSchema.parse(await response.json());
+
+// After: GET verification responses are HTML, including status 400
+const confirmationHtml = await response.text();
+```
+
+Serve your application's sign-in entry at the fixed `PUBLIC_ORIGIN/account`
+recovery destination. The “Request a new sign-in link” action, including noscript
+recovery, now goes directly there rather than to `PUBLIC_ORIGIN/`. Continue serving
+the fixed `PUBLIC_ORIGIN/signed-in` completion page. Both routes are reference
+issuer conventions, with no new consumer options. The initial “Back to app” exit
+still goes to the root.
