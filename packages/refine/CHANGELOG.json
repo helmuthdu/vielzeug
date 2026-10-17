@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "fix: support touch swiping in carousel slides",
+            "commit": "85367d469b45734a1b79bcc1f8bcb21e19353a0e"
+          }
+        ]
+      },
+      "date": "Sat, 17 Oct 2026 05:06:33 GMT",
+      "tag": "@vielzeug/refine_v26.10.12",
+      "version": "26.10.12"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "agent@vielzeug",
