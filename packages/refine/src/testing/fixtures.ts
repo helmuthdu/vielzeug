@@ -15,21 +15,18 @@
  * No dev server is required: all scripts are inlined from the built dist/ outputs.
  */
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import AxeBuilder from '@axe-core/playwright';
 import { test as base } from '@playwright/test';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '../../../..');
 const PKG = path.resolve(__dirname, '../../..');
-const PNPM_STORE = path.join(ROOT, 'common/temp/node_modules/.pnpm');
 
 // Paths to UMD/IIFE bundles loaded by the browser fixture.
-const TEMPORAL_UMD = path.join(
-  PNPM_STORE,
-  '@js-temporal+polyfill@0.5.1/node_modules/@js-temporal/polyfill/dist/index.umd.js',
-);
+const tempoRequire = createRequire(path.join(PKG, 'tempo/package.json'));
+const TEMPORAL_UMD = path.join(path.dirname(tempoRequire.resolve('@js-temporal/polyfill')), 'index.umd.js');
 
 // Topological order: each IIFE bundle receives its dependencies as bare globals in its
 // invocation arguments (e.g. sentinel's tail is `})({},Arsenal)`), so a bundle MUST load
@@ -84,6 +81,7 @@ function buildPage(bodyHtml = ''): string {
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>${STYLES_CSS}</style>
 <style>body{background:#fff;margin:0;padding:40px;font-family:sans-serif;}.frame{max-width:600px;}</style>
 </head>

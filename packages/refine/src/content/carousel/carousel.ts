@@ -331,7 +331,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         'aria-roledescription': () => 'carousel',
         orientation: () => props.orientation.value ?? 'horizontal',
         role: () => 'region',
-        style: () => `touch-action:${isHorizontal.value ? 'pan-y' : 'pan-x'}`,
         variant: () => props.variant.value ?? 'default',
       },
       on: {
@@ -354,21 +353,43 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     onMounted(() => {
+      let suppressClick = false;
+      const resetClick = (): void => {
+        suppressClick = false;
+      };
+      const handleClick = (event: MouseEvent): void => {
+        if (!suppressClick || event.detail === 0) return;
+
+        suppressClick = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      const handleDragStart = (event: DragEvent): void => {
+        if (event.composedPath().some((node) => node instanceof HTMLElement && slides.includes(node))) {
+          event.preventDefault();
+        }
+      };
       const pan = createPanGesture(el, {
         axis: () => (isHorizontal.value ? 'x' : 'y'),
         onEnd: ({ distance, reason }) => {
-          if (reason !== 'release' || Math.abs(distance) < 48) return;
+          if (reason !== 'release') {
+            suppressClick = false;
+            return;
+          }
+          if (Math.abs(distance) < 48) return;
 
           if (distance < 0) next();
           else prev();
+        },
+        onStart: () => {
+          suppressClick = true;
         },
         shouldStart: (event) => {
           const path = event.composedPath();
 
           return !path.some(
             (node) =>
-              node instanceof HTMLElement &&
-              (node.tagName === 'BUTTON' || node.tagName === 'ORE-BUTTON' || node.tagName === 'ORE-PROGRESS'),
+              node instanceof Element && node.getRootNode() === el.shadowRoot && node.matches('.controls, .indicators'),
           );
         },
       });
@@ -384,6 +405,9 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       };
 
       slot.addEventListener('slotchange', onSlotChange);
+      el.addEventListener('pointerdown', resetClick, true);
+      el.addEventListener('click', handleClick, true);
+      el.addEventListener('dragstart', handleDragStart);
 
       if (props.autoplay.value) {
         startAutoplay();
@@ -393,6 +417,9 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         pan.dispose();
         stopAutoplay();
         slot.removeEventListener('slotchange', onSlotChange);
+        el.removeEventListener('pointerdown', resetClick, true);
+        el.removeEventListener('click', handleClick, true);
+        el.removeEventListener('dragstart', handleDragStart);
       };
     });
 

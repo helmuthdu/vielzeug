@@ -260,7 +260,7 @@ type PanGesture = DragGesture;
 
 Options and callback details are readonly. Fixed callbacks and capture policy are snapshotted at construction. Function-valued `axis` and `disabled` options remain dynamic.
 
-Gesture tracks accepted movement with capture-phase listeners on the target's current owner document. Window blur, hidden-document transition, `pointercancel`, and `lostpointercapture` cancel active recognition.
+Gesture tracks accepted movement with capture-phase listeners on the target's current owner document. Window blur, hidden-document transition, `pointercancel`, and pointer capture loss on the gesture target cancel active recognition. A `lostpointercapture` event bubbling from a descendant does not cancel the target's gesture.
 
 ## Errors
 

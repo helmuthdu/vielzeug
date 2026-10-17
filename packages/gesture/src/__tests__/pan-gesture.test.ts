@@ -196,6 +196,38 @@ describe('createPanGesture', () => {
     expect(gesture.active).toBe(false);
   });
 
+  it.each(['light', 'shadow'] as const)('ignores capture loss bubbling from a %s DOM child', (dom) => {
+    const onEnd = vi.fn();
+    const { dispatch, gesture, target } = createGesture({ onEnd });
+    const child = document.createElement('button');
+    const container = dom === 'shadow' ? target.attachShadow({ mode: 'open' }) : target;
+
+    container.appendChild(child);
+    dispatch('pointerdown', { clientX: 0, composed: true }, child);
+    dispatch('pointermove', { clientX: 10 }, document);
+    dispatch('lostpointercapture', { clientX: 10, composed: true }, child);
+
+    expect(gesture.active).toBe(true);
+    expect(onEnd).not.toHaveBeenCalled();
+
+    dispatch('pointerup', { clientX: 60 }, document);
+
+    expect(onEnd).toHaveBeenCalledOnce();
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ distance: 60, reason: 'release' }));
+  });
+
+  it('cancels when the gesture target itself loses pointer capture', () => {
+    const onEnd = vi.fn();
+    const { dispatch, gesture } = createGesture({ onEnd });
+
+    dispatch('pointerdown', { clientX: 0 });
+    dispatch('pointermove', { clientX: 10 });
+    dispatch('lostpointercapture', { clientX: 20 });
+
+    expect(gesture.active).toBe(false);
+    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ distance: 20, reason: 'cancel' }));
+  });
+
   it('finishes cleanup when pointer capture release fails', () => {
     const onEnd = vi.fn();
     const { dispatch, gesture, target } = createGesture({ onEnd });

@@ -11,7 +11,7 @@
     width: 100%;
     min-height: var(--carousel-min-height, 240px);
     overflow: hidden;
-    touch-action: auto;
+    touch-action: pan-y pinch-zoom;
     outline: none;
     background: var(--_bg);
     border-radius: var(--_radius);
@@ -93,6 +93,7 @@
   :host([orientation='vertical']) {
     --_slide-translate-before: translateY(-100%);
     --_slide-translate-after: translateY(100%);
+    touch-action: pan-x pinch-zoom;
   }
 
   :host([orientation='vertical']) .indicators {

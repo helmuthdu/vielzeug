@@ -204,6 +204,21 @@ describe('ore-carousel', () => {
   });
 
   describe('Pointer navigation', () => {
+    const pointer = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: 'touch',
+    } as const;
+
+    const swipe = (target: Element, x: number, y = 0, end = 'pointerup'): void => {
+      target.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 100, clientY: 100 }));
+      target.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 100 + x, clientY: 100 + y }));
+      target.dispatchEvent(new PointerEvent(end, { ...pointer, clientX: 100 + x, clientY: 100 + y }));
+    };
+
     it('changes slide only after a qualifying pan is released', async () => {
       fixture = await mount('ore-carousel', { html: slides });
       await fixture.flush();
@@ -225,6 +240,145 @@ describe('ore-carousel', () => {
       await fixture.flush();
 
       expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+    });
+
+    it.each(['<article>Cover</article>', '<button>Choose cover</button>', '<ore-button>Choose cover</ore-button>'])(
+      'swipes from slotted content: %s',
+      async (content) => {
+        fixture = await mount('ore-carousel', {
+          html: `<ore-carousel-slide>${content}</ore-carousel-slide>${slides}`,
+        });
+        await fixture.flush();
+
+        swipe(getSlides(fixture)[0].firstElementChild!, -60);
+        await fixture.flush();
+
+        expect(fixture.element.getAttribute('slide-index')).toBe('1');
+      },
+    );
+
+    it('suppresses a pointer click after swiping before it reaches slide or host selection handlers', async () => {
+      fixture = await mount('ore-carousel', {
+        html: `<ore-carousel-slide><button>Cover</button></ore-carousel-slide>${slides}`,
+      });
+      await fixture.flush();
+
+      const cover = getSlides(fixture)[0].querySelector('button')!;
+      const select = vi.fn();
+      const hostSelect = vi.fn();
+
+      cover.addEventListener('click', select);
+      fixture.element.addEventListener('click', hostSelect);
+      swipe(cover, -60);
+
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, detail: 1 });
+
+      cover.dispatchEvent(click);
+      await fixture.flush();
+
+      expect(click.defaultPrevented).toBe(true);
+      expect(select).not.toHaveBeenCalled();
+      expect(hostSelect).not.toHaveBeenCalled();
+      expect(fixture.element.getAttribute('slide-index')).toBe('1');
+    });
+
+    it('preserves taps and keyboard activation after a swipe', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      const select = vi.fn();
+
+      fixture.element.addEventListener('click', select);
+      swipe(getSlides(fixture)[0], -60);
+      getSlides(fixture)[1].click();
+      swipe(getSlides(fixture)[1], 0);
+      getSlides(fixture)[1].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+
+      expect(select).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not navigate for a short drag and suppresses its accidental click', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+      const select = vi.fn();
+
+      fixture.element.addEventListener('click', select);
+      swipe(getSlides(fixture)[0], -20);
+      getSlides(fixture)[0].dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 1');
+      expect(select).not.toHaveBeenCalled();
+    });
+
+    it('does not navigate when the pointer is cancelled', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      swipe(getSlides(fixture)[0], -60, 0, 'pointercancel');
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 1');
+    });
+
+    it('leaves cross-axis gestures to page scrolling', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      swipe(getSlides(fixture)[0], -60, 100);
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 1');
+    });
+
+    it('navigates vertically when orientation is vertical', async () => {
+      fixture = await mount('ore-carousel', { attrs: { orientation: 'vertical' }, html: slides });
+      await fixture.flush();
+
+      swipe(getSlides(fixture)[0], 0, -60);
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+    });
+
+    it('respects non-looping boundaries when swiping', async () => {
+      fixture = await mount('ore-carousel', { attrs: { loop: 'false' }, html: slides });
+      await fixture.flush();
+
+      swipe(getSlides(fixture)[0], 60);
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 1');
+    });
+
+    it('does not start swiping from carousel navigation controls', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      swipe(nextBtn(fixture)!, -60);
+      swipe(dots(fixture)[0], -60);
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 1');
+    });
+
+    it('prevents native image dragging from taking over a slide swipe', async () => {
+      fixture = await mount('ore-carousel', { html: '<ore-carousel-slide><img alt="Cover"></ore-carousel-slide>' });
+      await fixture.flush();
+
+      const drag = new Event('dragstart', { bubbles: true, cancelable: true, composed: true });
+
+      fixture.element.querySelector('img')!.dispatchEvent(drag);
+
+      expect(drag.defaultPrevented).toBe(true);
+    });
+
+    it('preserves consumer inline styles', async () => {
+      fixture = await mount('ore-carousel', { attrs: { style: 'height: 200px; --carousel-bg: red;' }, html: slides });
+      await fixture.flush();
+
+      expect(fixture.element.style.height).toBe('200px');
+      expect(fixture.element.style.getPropertyValue('--carousel-bg')).toBe('red');
     });
   });
 

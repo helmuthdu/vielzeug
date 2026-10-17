@@ -401,6 +401,14 @@ A transparent wrapper. It carries `role="group"` and `aria-roledescription="slid
 | `data-after`           | `ore-carousel` | Present on slides after the active one (`default` / `fade` variants)       |
 | `data-gallery-visible` | `ore-carousel` | Present on the active slide and its immediate neighbours in `gallery` mode |
 
+## Touch and drag navigation
+
+Swipe or drag slide content at least 48 CSS pixels along the carousel's orientation, then release to change the active slide. The carousel emits the same `change` event as its navigation buttons, including when the gesture starts on a button or image inside a slide. Cancelled gestures and shorter drags do not change slides.
+
+Horizontal carousels preserve vertical page scrolling; vertical carousels preserve horizontal scrolling. Both allow pinch zoom. The carousel's own controls and indicators do not start swipes.
+
+After a drag activates, its pointer-generated click is suppressed so a cover picker or other clickable slide does not select an unintended item. Taps and keyboard activation still work. You do not need app-level touch handlers.
+
 ## Accessibility
 
 The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/).

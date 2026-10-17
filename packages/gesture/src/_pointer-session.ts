@@ -237,7 +237,10 @@ export function createPointerSession(target: Element, options: PointerSessionOpt
   const onPointerMove: EventListener = (event) => handlePointerMove(event as PointerEvent);
   const onPointerUp: EventListener = (event) => handlePointerUp(event as PointerEvent);
   const onPointerCancel: EventListener = (event) => handlePointerCancel(event as PointerEvent);
-  const onLostPointerCapture: EventListener = (event) => handlePointerCancel(event as PointerEvent);
+  const onLostPointerCapture: EventListener = (event) => {
+    // Transferring implicit touch capture from a child also bubbles capture loss here.
+    if (event.composedPath()[0] === target) handlePointerCancel(event as PointerEvent);
+  };
   const onWindowBlur: EventListener = () => cancel();
   const onVisibilityChange: EventListener = () => {
     if (trackingDocument?.visibilityState === 'hidden') cancel();

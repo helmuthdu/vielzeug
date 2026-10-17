@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: support touch swiping in carousel slides",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -321,6 +321,6 @@ Gesture owns pointer recognition: unrestricted two-dimensional drag and one-axis
 - **Use** `shouldStart` to exclude nested interactive controls.
 - **Disable** pointer capture when nested or newly revealed controls must keep native release targeting.
 - **Apply** completion thresholds and direction rules in `onEnd`; use `activationDistance` only for recognition slop.
-- **Treat** `reason: 'cancel'` as a reset path, never a commit path.
+- **Treat** `reason: 'cancel'` as a reset path, never a commit path. Pointer capture loss on the gesture target cancels; capture loss bubbling from a descendant does not.
 - **Keep** `onMove` rendering lightweight.
 - **Dispose** the handle when its target leaves the UI.
