@@ -1,12 +1,37 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it, vi } from 'vitest';
 
 import { main } from '../cli.js';
 
 describe('CLI', () => {
+  it.each(['direct', 'symlink'] as const)('prints its version when launched through a %s path', (mode) => {
+    const directory = mkdtempSync(join(tmpdir(), 'codex-cli-entry-'));
+    const source = fileURLToPath(new URL('../cli.ts', import.meta.url));
+    const entry = mode === 'symlink' ? join(directory, 'codex.ts') : source;
+
+    try {
+      if (mode === 'symlink') symlinkSync(source, entry);
+
+      const result = spawnSync(process.execPath, ['--import', 'jiti/register', entry, '--version'], {
+        cwd: fileURLToPath(new URL('../../../../', import.meta.url)),
+        encoding: 'utf8',
+        timeout: 10_000,
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.status).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toMatch(/^\d+\.\d+\.\d+\n$/);
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
   it('returns success for help without loading a snapshot', async () => {
     const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
