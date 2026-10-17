@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Sat, 17 Oct 2026 05:06:33 GMT and should not be manually modified.
+This log was last generated on Sat, 17 Oct 2026 06:46:08 GMT and should not be manually modified.
 
+## 26.10.13
+Sat, 17 Oct 2026 06:46:08 GMT
+
+### Patches
+
+- Fix MCP CLI startup through npm and npx executable symlinks.
 ## 26.10.12
 Sat, 17 Oct 2026 05:06:33 GMT
 

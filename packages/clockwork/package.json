@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/clockwork",
-  "version": "26.10.12",
+  "version": "26.10.13",
   "description": "Framework-neutral finite state machines with pure transitions and actors",
   "repository": {
     "type": "git",
