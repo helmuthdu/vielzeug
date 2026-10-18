@@ -18,9 +18,16 @@ import {
 } from '../contract';
 import {
   type ArchiveAccount,
+  OPERATOR_SESSION_MAX_AGE_SECONDS,
   ACCOUNT_HEADER as publicAccountHeader,
   archiveAccountSchema as publicAccountSchema,
+  SESSION_MAX_AGE_SECONDS,
 } from '../index';
+
+it('exports one-hour operator and thirty-day ordinary session limits', () => {
+  expect(OPERATOR_SESSION_MAX_AGE_SECONDS).toBe(3600);
+  expect(SESSION_MAX_AGE_SECONDS).toBe(2_592_000);
+});
 
 it('exports the account erasure precondition in the browser-safe root', () => {
   expect(ACCOUNT_HEADER).toBe('X-Archive-Account');

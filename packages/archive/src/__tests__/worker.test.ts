@@ -154,6 +154,42 @@ describe('readiness and diagnostics', () => {
     expect((await deleteAccountProfile(env, retry)).status).toBe(204);
   });
 
+  it.each([
+    { age: 901, lifetime: 3600, valid: true },
+    { age: 3599, lifetime: 3600, valid: true },
+    { age: 3604, lifetime: 3600, valid: true },
+    { age: 3605, lifetime: 3600, valid: false },
+    { age: 0, lifetime: 3601, valid: false },
+    { age: 905, lifetime: 900, valid: false },
+  ])(
+    'enforces operator lifetime and expiration: $age seconds old, $lifetime seconds lifetime',
+    async ({ age, lifetime, valid }) => {
+      const { env } = setup();
+      const { privateKey, publicKey } = await generateKeyPair('RS256');
+      const keys = { keys: [await exportJWK(publicKey)] };
+      const jwks = createRemoteJWKSet(new URL('http://localhost:8930/jwks'), {
+        [customFetch]: async () => Response.json(keys),
+      });
+      const config = { ...apiConfig(env), jwks };
+      const issuedAt = Math.floor(Date.now() / 1000);
+      vi.useFakeTimers({ now: (issuedAt + age) * 1000, toFake: ['Date'] });
+      const token = await new SignJWT({ roles: [ARCHIVE_OPERATOR_ROLE], sessionVersion: 0 })
+        .setProtectedHeader({ alg: 'RS256' })
+        .setSubject('operator')
+        .setIssuer(config.issuer)
+        .setAudience(config.audience)
+        .setIssuedAt(issuedAt)
+        .setExpirationTime(issuedAt + lifetime)
+        .sign(privateKey);
+      const result = verifySession(req('/me', { cookie: `archive_session=${token}` }), config, env);
+      if (valid) {
+        expect(await result).toMatchObject({ operator: true });
+      } else {
+        await expect(result).rejects.toMatchObject({ status: 401 });
+      }
+    },
+  );
+
   it('distinguishes an unavailable database from a mismatched schema and answers 503', async () => {
     const { database, env, worker, events, ctx } = setup();
     database.exec('UPDATE archive_schema_meta SET applied = 99');

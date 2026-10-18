@@ -1,5 +1,5 @@
 import { runInNewContext } from 'node:vm';
-import { decodeJwt, decodeProtectedHeader } from 'jose';
+import { decodeJwt, decodeProtectedHeader, importJWK, SignJWT } from 'jose';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type AuthEvent, createAuthWorker } from '../auth';
 import { consumeToken, spendSignInBudget } from '../auth/store';
@@ -937,13 +937,52 @@ describe('POST /verify', () => {
     });
   });
 
-  it('mints short-lived operator sessions for the roster', async () => {
+  it('mints one-hour operator sessions for the roster', async () => {
     const h = await harness();
     const verified = await signIn(h, 'op@example.test');
     expect(verified.headers.get('set-cookie')).toContain(`Max-Age=${OPERATOR_SESSION_MAX_AGE_SECONDS}`);
     const claims = decodeJwt(cookiePair(verified).split('=')[1]);
     expect(claims.roles).toEqual([ARCHIVE_OPERATOR_ROLE]);
     expect((claims.exp ?? 0) - (claims.iat ?? 0)).toBe(OPERATOR_SESSION_MAX_AGE_SECONDS);
+  });
+
+  it.each([
+    [901, 200],
+    [3599, 200],
+    [3604, 200],
+    [3605, 401],
+  ])('validates a minted operator session after %i seconds with status %i', async (age, status) => {
+    vi.useFakeTimers({ now: new Date('2026-10-12T10:00:00Z'), toFake: ['Date'] });
+    const h = await harness();
+    const cookie = cookiePair(await signIn(h, 'op@example.test'));
+    vi.setSystemTime(Date.now() + age * 1000);
+    expect((await issuer.fetch(new Request(url('/session'), { headers: { cookie } }), h.env)).status).toBe(status);
+  });
+
+  it('rejects operator tokens declaring more than one hour of authority', async () => {
+    const h = await harness();
+    const claims = decodeJwt(cookiePair(await signIn(h, 'op@example.test')).split('=')[1]);
+    const key = await importJWK(JSON.parse(h.env.AUTH_JWT_PRIVATE_JWK), 'RS256');
+    const token = await new SignJWT(claims)
+      .setProtectedHeader({ alg: 'RS256' })
+      .setExpirationTime((claims.iat ?? 0) + 3601)
+      .sign(key);
+    const response = await issuer.fetch(
+      new Request(url('/session'), { headers: { cookie: `archive_session=${token}` } }),
+      h.env,
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it('still revokes an operator session immediately during its extended lifetime', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-12T10:00:00Z'), toFake: ['Date'] });
+    const h = await harness();
+    const cookie = cookiePair(await signIn(h, 'op@example.test'));
+    vi.setSystemTime(Date.now() + 1800_000);
+    const request = () => new Request(url('/session'), { headers: { cookie } });
+    expect((await issuer.fetch(request(), h.env)).status).toBe(200);
+    h.db.sqlite.prepare('UPDATE auth_users SET session_version = session_version + 1').run();
+    expect((await issuer.fetch(request(), h.env)).status).toBe(401);
   });
 
   it('refuses an expired link', async () => {

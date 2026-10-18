@@ -132,7 +132,7 @@ server subpaths) and their browsers (the root contract).
   seconds), independent of platform limiter bindings.
   Request emails trim/lowercase; sender configuration must be canonical, and
   operator-email list entries trim/lowercase before validation.
-  Operator sessions last 900 seconds.
+  Operator sessions last 3600 seconds (60 minutes).
   Retired public verification keys support rotation; private JWKS members reject.
   Deployment-specific sign-in wrappers do not belong to the package.
 - A central deployment can own a shared backend for multiple frontends. It registers

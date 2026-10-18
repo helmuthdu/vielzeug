@@ -8,7 +8,7 @@ export const SESSION_COOKIE_PATH = '/api/v1';
  * a long-lived signed-in state. The Worker rejects older tokens at this bound.
  */
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
-export const OPERATOR_SESSION_MAX_AGE_SECONDS = 15 * 60;
+export const OPERATOR_SESSION_MAX_AGE_SECONDS = 60 * 60;
 
 /**
  * The full Set-Cookie value for the session cookie: name, token and the security
