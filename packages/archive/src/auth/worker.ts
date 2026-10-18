@@ -55,8 +55,8 @@ import {
  * signs the browser in by setting the `archive_session` cookie a catalog Worker
  * verifies — an RS256 JWT minted by the active private key, verifiable through
  * `/jwks.json` alongside any configured retired public keys. `OPERATOR_EMAILS` is
- * the one operator-membership truth; operator sessions are short-lived so a revoked
- * operator loses authority within minutes. The account routes export the issuer's
+ * the one operator-membership truth; operator sessions expire after one hour,
+ * bounding authority from previously minted role claims. The account routes export the issuer's
  * own record and erase it together with the catalog profile.
  */
 export interface AuthWorkerHandler<E extends AuthWorkerEnv = AuthWorkerEnv> {

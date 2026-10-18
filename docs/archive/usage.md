@@ -211,8 +211,8 @@ or delivering email. No rate-limiter binding is required. It then
 permits three sign-in emails per email in an hourly durable window.
 Later database or delivery failures do not refund global admission.
 Using or expiring a link never refunds sends; failed delivery also spends the
-allowance. Links expire after 15 minutes. Operator sessions expire after 900
-seconds, ordinary sessions after at most 30 days. Retain retired public keys during
+allowance. Links expire after 15 minutes. Operator sessions expire after 60 minutes
+(3600 seconds), ordinary sessions after at most 30 days. Retain retired public keys during
 rotation; the active private key signs every new session. Sign-in input trims and
 lowercases email before validation. `SENDER_ADDRESS` must already be canonical;
 `OPERATOR_EMAILS` entries are trimmed and lowercased before validation.

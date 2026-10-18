@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Extend operator sessions from 15 to 60 minutes while preserving ordinary session lifetimes and revocation.",
+      "packageName": "@vielzeug/archive",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

@@ -190,7 +190,7 @@ export default createAuthWorker<AuthWorkerEnv>();
 | `scheduled(controller, env, ctx?)` | Removes expired links, closed send windows and unverified unreferenced accounts |
 | `tap(handler, { signal? }?)`       | Observes typed `AuthEvent`; returns unsubscribe; pre-aborted signals are inert  |
 
-Magic links expire after 15 minutes and work once. The durable per-email budget allows three sends per hour; consumption, expiration and send failure do not refund it. Ordinary sessions last at most 30 days. Operator sessions use `OPERATOR_SESSION_MAX_AGE_SECONDS` (900 seconds). `OPERATOR_EMAILS` controls newly minted role claims.
+Magic links expire after 15 minutes and work once. The durable per-email budget allows three sends per hour; consumption, expiration and send failure do not refund it. Ordinary sessions last at most 30 days. Operator sessions use `OPERATOR_SESSION_MAX_AGE_SECONDS` (3600 seconds, or 60 minutes). `OPERATOR_EMAILS` controls newly minted role claims.
 
 The issuer-global admission budget is durable D1 state in `auth_sign_in_budget`:
 20 requests per 60-second window before account creation or email delivery.
@@ -207,8 +207,10 @@ time. The sweep deletes expired links and closed per-user send windows, then
 unverified accounts with neither remaining links nor send-budget references.
 Verified accounts are retained until explicit account deletion.
 
-`OPERATOR_SESSION_MAX_AGE_SECONDS = 900` is part of the browser-safe root
+`OPERATOR_SESSION_MAX_AGE_SECONDS = 3600` is part of the browser-safe root
 contract; `/auth` exports the factory and issuer binding types.
+This duration applies to newly minted sessions; existing tokens keep their signed
+expiration. Session-version revocation is still checked on every private request.
 
 `AUTH_JWT_PREVIOUS_PUBLIC_JWKS` optionally publishes retired public RS256 keys and verifies sessions minted before rotation; private members reject configuration. The package has no demo sign-in routes.
 
@@ -358,7 +360,7 @@ Effective hide, unhide, operator removal and publisher erasure append audit rows
 | `ARCHIVE_OPERATOR_ROLE`                                       | `'archive-operator'`                                                       |
 | `SESSION_COOKIE_NAME`, `SESSION_COOKIE_PATH`                  | `'archive_session'`, `'/api/v1'`                                           |
 | `SESSION_MAX_AGE_SECONDS`                                     | `2592000`                                                                  |
-| `OPERATOR_SESSION_MAX_AGE_SECONDS`                            | `900`; shared root contract                                                |
+| `OPERATOR_SESSION_MAX_AGE_SECONDS`                            | `3600` (60 minutes); shared root contract                                   |
 | `ACCOUNT_HEADER`                                              | `'X-Archive-Account'`; required issuer-account UUID on coordinated erasure |
 | `PUBLISHER_HEADER`, `REQUEST_MARKER_HEADER`                   | `'x-archive-publisher'`, `'x-archive-request'`                             |
 | `ILL_FORMED_TEXT`, `isWellFormedText(value: string): boolean` | Reject control characters and lone UTF-16 surrogates                       |
