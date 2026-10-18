@@ -13,6 +13,13 @@ const square: IconDefinition = {
 };
 
 describe('icon data', () => {
+  it('ships a dependency-free information icon for touch-accessible help', async () => {
+    await import('../defaults');
+    const info = resolveIcon('info');
+    expect(info?.viewBox).toEqual([0, 0, 24, 24]);
+    expect(info?.children.map((child) => child.tag)).toEqual(['circle', 'path']);
+  });
+
   it('never overwrites app registrations with defaults, in either import order', () => {
     registerIcons({ BeforeDefault: square });
     registerDefaultIcons({ AfterDefault: square, BeforeDefault: { ...square, viewBox: [0, 0, 24, 24] } });

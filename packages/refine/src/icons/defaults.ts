@@ -560,6 +560,20 @@ registerDefaultIcons({
     },
     viewBox: [0, 0, 24, 24],
   },
+  Info: {
+    children: [
+      { attrs: { cx: '12', cy: '12', r: '10' }, tag: 'circle' },
+      { attrs: { d: 'M12 16v-4M12 8h.01' }, tag: 'path' },
+    ],
+    presentation: {
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'stroke-width': 2,
+    },
+    viewBox: [0, 0, 24, 24],
+  },
   Loader2: {
     children: [
       {

@@ -14,6 +14,7 @@
     grid-template-columns: minmax(0, 1fr);
     gap: var(--speed-reading-gap, var(--size-4));
     min-width: 0;
+    container-type: inline-size;
   }
 
   .viewport {
@@ -107,27 +108,35 @@
     pointer-events: none;
   }
 
-  .controls {
+  .control-panel {
+    box-sizing: border-box;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: var(--size-2);
     width: 100%;
-    max-width: var(--size-80);
+    max-width: calc(var(--size-64) * 2);
+    padding: var(--size-3);
     margin-inline: auto;
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--rounded-xl);
   }
 
-  .toggle {
+  .toolbar {
+    display: grid;
+    gap: var(--size-3);
     min-width: 0;
   }
 
-  .toggle::part(button) {
-    height: auto;
-    min-height: var(--size-11);
-    white-space: normal;
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
   }
 
-  .toggle::part(content) {
-    white-space: normal;
+  .toolbar ore-button::part(button) {
+    min-width: var(--size-11);
+    min-height: var(--size-11);
   }
 
   .settings,
@@ -135,28 +144,42 @@
   .context-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--size-2);
+    gap: var(--size-4);
     align-items: center;
     min-width: 0;
   }
 
-  .settings,
   .status {
     justify-content: space-between;
+  }
+
+  .settings {
+    justify-content: center;
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  @container (min-width: 32rem) {
+    .toolbar {
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+    }
+
+    .settings {
+      justify-content: end;
+    }
   }
 
   ore-number-input {
     --input-min-width: 0;
     --number-input-min-width: 0;
-    flex: 1 1 var(--size-32);
+    flex: 1 1 var(--size-24);
     min-width: 0;
-    max-width: min(100%, var(--size-48));
+    max-width: min(100%, var(--size-40));
   }
 
   .position,
-  .status,
-  .shortcuts,
-  .pace-help {
+  .status {
     font-size: var(--text-sm);
   }
 
@@ -169,14 +192,31 @@
     color: var(--text-color-secondary);
   }
 
-  .shortcuts,
-  .pace-help {
-    margin: 0;
-    color: var(--text-color-secondary);
+  .help {
+    --popover-min-width: 0;
+    --popover-max-width: min(calc(100vw - var(--size-4)), var(--size-80));
   }
 
-  .shortcuts {
-    text-align: center;
+  .help-content {
+    display: grid;
+    gap: var(--size-3);
+    max-width: var(--size-64);
+    padding: var(--size-4);
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
+  }
+
+  .help-content p {
+    margin: 0;
+  }
+
+  .help-content p + strong {
+    margin-block-start: var(--size-2);
+  }
+
+  .help-content:focus-visible {
+    outline: var(--border-2) solid var(--color-primary);
+    outline-offset: calc(-1 * var(--size-1));
   }
 
   .recovery,

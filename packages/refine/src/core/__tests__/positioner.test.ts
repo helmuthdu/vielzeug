@@ -96,6 +96,38 @@ function makeElements(driftOptions?: { driftX?: number; driftY?: number }) {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('createDropdownPositioner()', () => {
+  it('keeps an oversized non-width-matched panel within the main-axis boundary when enabled', () => {
+    const { cleanup, floating, reference } = makeElements();
+    vi.mocked(reference.getBoundingClientRect).mockReturnValue({
+      bottom: 60,
+      height: 20,
+      left: 40,
+      right: 60,
+      toJSON: () => ({}),
+      top: 40,
+      width: 20,
+      x: 40,
+      y: 40,
+    });
+    vi.mocked(floating.getBoundingClientRect).mockImplementation(() => {
+      const x = Number.parseFloat(floating.style.left) || 0;
+      const y = Number.parseFloat(floating.style.top) || 0;
+      return { bottom: y + 80, height: 80, left: x, right: x + 40, toJSON: () => ({}), top: y, width: 40, x, y };
+    });
+    createDropdownPositioner({
+      boundary: { height: 100, width: 100, x: 0, y: 0 },
+      getFloating: () => floating,
+      getReference: () => reference,
+      matchWidth: false,
+      padding: 8,
+      shiftMainAxis: true,
+    }).update();
+    const box = floating.getBoundingClientRect();
+    expect(box.top).toBeGreaterThanOrEqual(8);
+    expect(box.bottom).toBeLessThanOrEqual(92);
+    cleanup();
+  });
+
   it('exposes the correct floating and reference accessors', () => {
     const { cleanup, floating, reference } = makeElements();
 

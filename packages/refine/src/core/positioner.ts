@@ -67,6 +67,8 @@ export type DropdownPositionerOptions = {
   onPlacementChange?: (placement: Placement) => void;
   /** Padding (px) used by flip, shift, and size middleware. Default: 6 */
   padding?: number;
+  /** Keep the panel in bounds when neither preferred nor flipped side fits. Default: false. */
+  shiftMainAxis?: boolean;
   /**
    * Whether to constrain placement to a clipping ancestor when `boundary` is unset. Default:
    * true. Disable for native Popover API panels, which render in the top layer.
@@ -103,6 +105,7 @@ export function createDropdownPositioner({
   matchWidth = true,
   onPlacementChange,
   padding = 6,
+  shiftMainAxis = false,
   useClippingAncestor = true,
 }: DropdownPositionerOptions): OverlayPositioner {
   function resolvedPlacement(): Placement {
@@ -162,7 +165,7 @@ export function createDropdownPositioner({
           return offsetPx ? [offset(offsetPx)] : [];
         })(),
         flip({ padding }),
-        shift({ padding }),
+        shift({ mainAxis: shiftMainAxis, padding }),
         ...(matchWidth ? [size({ padding })] : []),
       ],
       placement,

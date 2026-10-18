@@ -126,6 +126,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
       onPlacementChange?.(resolved);
     },
     padding: 8,
+    shiftMainAxis: true,
     useClippingAncestor: false,
   });
 

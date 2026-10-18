@@ -393,10 +393,23 @@ describe('ore-speed-reading', () => {
   it('localizes controls and announcements', async () => {
     await mountReader();
     await fixture.act(
-      () => (fixture.element.labels = { play: 'Lesen', started: 'Gestartet', wpm: 'Wörter pro Minute' }),
+      () =>
+        (fixture.element.labels = {
+          help: 'Lesehilfe',
+          play: 'Lesen',
+          started: 'Gestartet',
+          wpm: 'Wörter pro Minute',
+          wpmShort: 'WpM',
+        }),
     );
-    expect(fixture.query('.toggle')?.textContent).toBe('Lesen');
-    expect(fixture.query('ore-number-input')?.getAttribute('label')).toBe('Wörter pro Minute');
+    expect(fixture.query('.toggle')?.getAttribute('aria-label')).toBe('Lesen');
+    expect(fixture.query('ore-number-input')?.getAttribute('label')).toBe('WpM');
+    expect(fixture.query('.help ore-button')?.getAttribute('aria-label')).toBe('Lesehilfe');
+    const input = fixture
+      .query('ore-number-input')
+      ?.shadowRoot?.querySelector('ore-input')
+      ?.shadowRoot?.querySelector('input');
+    expect(input?.getAttribute('aria-label')).toBe('Wörter pro Minute');
     await fixture.act(() => fixture.element.play());
     expect(fixture.query('[role="status"]')?.textContent).toBe('Gestartet');
   });
@@ -407,19 +420,32 @@ describe('ore-speed-reading', () => {
     expect(result.violations).toEqual([]);
   });
 
-  it('distinguishes start, pause, resume and replay visibly', async () => {
+  it('names each icon-only playback action and retains visible status', async () => {
     await mountReader({ text: 'One' });
     clock();
-    expect(fixture.query('.toggle')?.textContent).toBe('Start reading');
+    expect(fixture.query('.toggle')?.getAttribute('aria-label')).toBe('Start reading');
+    expect(fixture.query('.toggle ore-icon')?.getAttribute('name')).toBe('play');
     await fixture.act(() => fixture.element.play());
-    expect(fixture.query('.toggle')?.textContent).toBe('Pause');
+    expect(fixture.query('.toggle')?.getAttribute('aria-label')).toBe('Pause');
+    expect(fixture.query('.toggle ore-icon')?.getAttribute('name')).toBe('pause');
     await fixture.act(() => fixture.element.pause());
-    expect(fixture.query('.toggle')?.textContent).toBe('Resume');
+    expect(fixture.query('.toggle')?.getAttribute('aria-label')).toBe('Resume');
     expect(query('status').textContent).toContain('Reading paused.');
     fixture.element.play();
     await advance(240);
-    expect(fixture.query('.toggle')?.textContent).toBe('Read again');
+    expect(fixture.query('.toggle')?.getAttribute('aria-label')).toBe('Read again');
     expect(query('status').textContent).toContain('Reading finished.');
+  });
+
+  it('keeps pace and keyboard explanations in help rather than persistent rows', async () => {
+    await mountReader();
+    expect(fixture.query('.control-help')).toBeNull();
+    expect(fixture.query('.help-content')?.textContent).toContain('Words per minute');
+    expect(fixture.query('.help-content')?.textContent).toContain('When the reading display is focused');
+    for (const button of fixture.queryAll('.toolbar ore-button')) {
+      expect(button.hasAttribute('icon-only')).toBe(true);
+      expect(button.getAttribute('aria-label')).toBeTruthy();
+    }
   });
 
   it('highlights the exact current token without changing the selectable source', async () => {

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Bundle updated Refine metadata and documentation for adaptive coverflow, paced speed reading with an editable playground, numeric speech playback speeds, and select keyboard navigation.",
+      "comment": "Bundle updated Refine metadata and documentation for adaptive coverflow, paced speed reading with an editable playground and responsive accessible icon controls, numeric speech playback speeds, and select keyboard navigation.",
       "packageName": "@vielzeug/codex",
       "type": "patch"
     }

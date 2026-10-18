@@ -66,13 +66,17 @@ import '@vielzeug/refine/styles';
 
 ## Playback
 
-The reader starts `idle` at word zero. The primary control says **Start reading**, **Pause**, **Resume**, or **Read again** to match its state. A visible status explains pauses and completion. **Restart** returns to word zero without playing. **Previous word** and **Next word** pause first and never wrap around the ends.
+The reader starts `idle` at word zero. Playback and Restart use icon-only controls with accessible names and hover/focus tooltips. The primary control switches between play and pause icons; its accessible action is **Start reading**, **Pause**, **Resume**, or **Read again** to match its state. A visible status explains pauses and completion. **Restart** returns to word zero without playing. **Previous word** and **Next word** pause first and never wrap around the ends.
 
 After the final word's dwell, `state` becomes `ended`. Playing again starts from the beginning. Empty text disables playback and stepping. Independent instances do not stop each other.
 
 Opening **Read full text** pauses playback, highlights the current word, and brings it into view within the scrollable passage without moving keyboard focus. The passage remains selectable. Use **Start at sentence** to choose another location, then **Resume from here** to start there. Choosing a sentence alone never starts playback. Closing the disclosure does not resume; starting playback closes it.
 
 The reader also pauses when the browser tab is hidden or the component disconnects. Returning to the tab does not resume automatically.
+
+Playback and pace controls share one compact panel. Wide containers place transport and settings side by side; narrow containers stack them, including inside desktop sidebars. Layout follows the reader's available width rather than the device viewport. Controls retain the same keyboard order in both layouts.
+
+The pace field shows **WPM** while keeping the expanded accessible name **Words per minute**. The adjacent information button opens pace guidance and keyboard shortcuts by tap, click, Enter, or Space. Opening help does not pause playback. Escape or a click outside dismisses help. Instructions are not displayed as persistent rows or hidden based on device type.
 
 ## Pace
 
@@ -167,6 +171,9 @@ reader.labels = {
   next: 'Nächstes Wort',
   fullText: 'Vollständigen Text lesen',
   wpm: 'Wörter pro Minute',
+  wpmShort: 'WpM',
+  wpmHelp: 'Wörter pro Minute legt das Grundtempo zwischen 100 und 600 fest. Beginnen Sie in einem angenehmen Tempo.',
+  help: 'Hilfe zu Lesetempo und Tastatur',
   words: 'Wörter',
   started: 'Lesen gestartet.',
   paused: 'Lesen pausiert.',
@@ -179,7 +186,8 @@ reader.labels = {
   sentence: 'Ab Satz beginnen',
   guidance: 'Ein Wort nach dem anderen. Beginnen Sie in einem angenehmen Tempo.',
   hidden: 'Pausiert, weil der Tab ausgeblendet wurde.',
-  shortcuts: 'Leertaste: Start/Pause · Pfeiltasten links/rechts: einzelnes Wort',
+  shortcutsHeading: 'Tastenkürzel',
+  shortcuts: 'Bei fokussiertem Lesefeld: Leertaste startet oder pausiert; Pfeiltasten links/rechts wechseln ein Wort.',
   paceHelp: 'WPM bestimmt das Grundtempo. Satzzeichen verlängern die Pausen.',
   invalidWpm: 'Geben Sie eine Zahl zwischen 100 und 600 ein.',
   viewport: 'Lesefeld. Leertaste zum Starten oder Pausieren; Pfeiltasten für einzelne Wörter.',
@@ -248,6 +256,6 @@ An external position change pauses playback. Reflected position updates do not e
 
 The fast visual stream is hidden from assistive technology, not announced word by word. The full-text disclosure provides ordinary reading; a polite status region announces playback transitions and overflow. The focal letter is underlined as well as colored.
 
-Playback never moves focus word by word. **Resume from here** returns focus to the primary playback control when the disclosure closes; overflow continuation returns it to the viewport so a disappearing recovery button never strands focus. On the reader viewport, **Space** toggles playback and **Left/Right Arrow** steps backward/forward. A visible shortcut hint sits below the transport controls. Keyboard handling is local: text-input editing, native button activation, and modified shortcuts retain their behavior. The full-text panel is keyboard-scrollable, and the sentence selector and resume action are keyboard accessible.
+Playback never moves focus word by word. **Resume from here** returns focus to the primary playback control when the disclosure closes; overflow continuation returns it to the viewport so a disappearing recovery button never strands focus. On the reader viewport, **Space** toggles playback and **Left/Right Arrow** steps backward/forward. The information panel explains this focus requirement. Keyboard handling is local: text-input editing, native button activation, and modified shortcuts retain their behavior. The full-text panel is keyboard-scrollable, and the sentence selector and resume action are keyboard accessible.
 
 There is no autoplay or word transition animation. Reduced motion does not make RSVP a universal accessible substitute for text; keep the full-text alternative and user controls available.

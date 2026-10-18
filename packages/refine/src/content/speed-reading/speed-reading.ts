@@ -1,6 +1,7 @@
 import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
+import type { OverlayOpenChangeDetail } from '../../core';
 import { srOnlyMixin } from '../../styles';
 import { type ReadingWord, readingWords } from './_text';
 import styles from './speed-reading.css?inline';
@@ -9,6 +10,8 @@ export { ACCORDION_ITEM_TAG } from '../../disclosure/accordion-item/accordion-it
 export { BUTTON_TAG } from '../../inputs/button/button';
 export { NUMBER_INPUT_TAG } from '../../inputs/number-input/number-input';
 export { SELECT_TAG } from '../../inputs/select/select';
+export { POPOVER_TAG } from '../../overlay/popover/popover';
+export { TOOLTIP_TAG } from '../../overlay/tooltip/tooltip';
 export { ICON_TAG } from '../icon/icon';
 
 export type SpeedReadingState = 'idle' | 'playing' | 'paused' | 'ended';
@@ -21,6 +24,7 @@ export type OreSpeedReadingLabels = {
   fullText: string;
   guidance: string;
   hidden: string;
+  help: string;
   invalidWpm: string;
   next: string;
   overflow: string;
@@ -35,10 +39,13 @@ export type OreSpeedReadingLabels = {
   resumeHere: string;
   sentence: string;
   shortcuts: string;
+  shortcutsHeading: string;
   started: string;
   viewport: string;
   words: string;
   wpm: string;
+  wpmShort: string;
+  wpmHelp: string;
 };
 
 export type OreSpeedReadingProps = {
@@ -75,6 +82,7 @@ const LABELS: OreSpeedReadingLabels = {
   finished: 'Reading finished.',
   fullText: 'Read full text',
   guidance: 'One word at a time. Start at a comfortable pace.',
+  help: 'Reading pace and keyboard help',
   hidden: 'Paused because the tab was hidden.',
   invalidWpm: 'Enter a number between 100 and 600.',
   next: 'Next word',
@@ -89,11 +97,14 @@ const LABELS: OreSpeedReadingLabels = {
   resume: 'Resume',
   resumeHere: 'Resume from here',
   sentence: 'Start at sentence',
-  shortcuts: 'Space: play/pause · ←/→: step',
+  shortcuts: 'When the reading display is focused: Space starts or pauses; Left and Right Arrow step one word.',
+  shortcutsHeading: 'Keyboard shortcuts',
   started: 'Reading started.',
   viewport: 'Paced reading. Space to play or pause; arrow keys to step.',
   words: 'words',
   wpm: 'Words per minute',
+  wpmHelp: 'Words per minute sets the base pace, from 100 to 600. Start at a comfortable pace.',
+  wpmShort: 'WPM',
 };
 
 /**
@@ -154,6 +165,25 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
     const measure = ref<HTMLElement>();
     const fullText = ref<HTMLElement>();
     const toggleButton = ref<HTMLElement>();
+    const helpButton = ref<HTMLElement>();
+    const helpContent = ref<HTMLElement>();
+    const paceControl = ref<HTMLElementTagNameMap['ore-number-input']>();
+    onMounted(() => {
+      const control = paceControl.value;
+      if (!control) return;
+      let stopLabel: (() => void) | undefined;
+      control.ref = (input) => {
+        stopLabel?.();
+        // The expanded name must take precedence over the visible abbreviation.
+        stopLabel = input
+          ? bind({ attr: { 'aria-label': () => label('wpm'), 'aria-labelledby': null } }, { target: input })
+          : undefined;
+      };
+      return () => {
+        control.ref = null;
+        stopLabel?.();
+      };
+    });
     const current = computed(() => words.value[index.value]);
     const label = (key: keyof OreSpeedReadingLabels): string => props.labels.value?.[key] ?? LABELS[key];
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -473,7 +503,12 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
 
     return html`
       <div class="reader">
-        <div class="viewport" part="viewport" ref="${viewport}" tabindex="0" role="group"
+        <div
+          class="viewport"
+          part="viewport"
+          ref="${viewport}"
+          tabindex="0"
+          role="group"
           aria-label=${() => label('viewport')}
           @keydown=${(event: KeyboardEvent) => {
             if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -489,7 +524,11 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
           <span class="word measure" ref="${measure}" aria-hidden="true">
             <span class="prefix"></span><span class="focal"></span><span class="suffix"></span>
           </span>
-          <span class="word" part="word" ref="${wordElement}" aria-hidden="true"
+          <span
+            class="word"
+            part="word"
+            ref="${wordElement}"
+            aria-hidden="true"
             data-centered=${() => (current.value?.focal ? undefined : '')}
             ?hidden=${() => overflow.value || !current.value || state.value === 'ended'}>
             <span class="prefix">${() => current.value?.prefix ?? ''}</span><span class="focal" part="focal">${() => current.value?.focal ?? ''}</span><span class="suffix">${() => current.value?.suffix ?? ''}</span>
@@ -500,48 +539,132 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
         </div>
         <div class="status" part="status">
           <span>${visibleStatus}</span>
-          <span class="position" aria-live="off">${() => (words.value.length ? index.value + 1 : 0)} / ${() => words.value.length} ${() => label('words')}</span>
+          <span class="position" aria-live="off">
+            ${() => (words.value.length ? index.value + 1 : 0)} / ${() => words.value.length} ${() => label('words')}
+          </span>
         </div>
-        <div class="controls" part="controls">
-          <ore-button icon-only rounded="full" variant="ghost" aria-label=${() => label('previous')}
-            title=${() => label('previous')} ?disabled=${() => index.value <= 0}
-            @click=${() => seek(index.value - 1)}><ore-icon name="chevron-left" aria-hidden="true"></ore-icon></ore-button>
-          <ore-button class="toggle" ref="${toggleButton}" rounded="full" variant="solid" color="primary"
-            ?disabled=${() => !words.value.length || overflow.value}
-            @click=${toggle}>${toggleLabel}</ore-button>
-          <ore-button icon-only rounded="full" variant="ghost" aria-label=${() => label('next')}
-            title=${() => label('next')}
-            ?disabled=${() => index.value + 1 >= words.value.length}
-            @click=${() => seek(index.value + 1)}><ore-icon name="chevron-right" aria-hidden="true"></ore-icon></ore-button>
+        <ore-button
+          class="recovery"
+          rounded="full"
+          variant="flat"
+          ?hidden=${() => !overflow.value}
+          @click=${continueAfterWord}>
+          ${() => label(index.value + 1 >= words.value.length ? 'finish' : 'continue')}
+        </ore-button>
+        <div class="control-panel">
+          <div class="toolbar">
+            <div class="controls" part="controls">
+              <ore-tooltip content=${() => label('previous')}>
+                <ore-button
+                  icon-only
+                  rounded="full"
+                  variant="ghost"
+                  aria-label=${() => label('previous')}
+                  ?disabled=${() => index.value <= 0}
+                  @click=${() => seek(index.value - 1)}>
+                  <ore-icon name="chevron-left" aria-hidden="true"></ore-icon>
+                </ore-button>
+              </ore-tooltip>
+              <ore-tooltip content=${toggleLabel}>
+                <ore-button
+                  class="toggle"
+                  ref="${toggleButton}"
+                  rounded="full"
+                  variant="solid"
+                  icon-only
+                  color="primary"
+                  aria-label=${toggleLabel}
+                  ?disabled=${() => !words.value.length || overflow.value}
+                  @click=${toggle}>
+                  <ore-icon name=${() => (state.value === 'playing' ? 'pause' : 'play')} aria-hidden="true"></ore-icon>
+                </ore-button>
+              </ore-tooltip>
+              <ore-tooltip content=${() => label('next')}>
+                <ore-button
+                  icon-only
+                  rounded="full"
+                  variant="ghost"
+                  aria-label=${() => label('next')}
+                  ?disabled=${() => index.value + 1 >= words.value.length}
+                  @click=${() => seek(index.value + 1)}>
+                  <ore-icon name="chevron-right" aria-hidden="true"></ore-icon>
+                </ore-button>
+              </ore-tooltip>
+            </div>
+            <div class="settings">
+              <ore-number-input
+                ref="${paceControl}"
+                size="sm"
+                min="100"
+                max="600"
+                step="25"
+                value=${wpm}
+                label=${() => label('wpmShort')}
+                error=${() => (speedError.value ? label('invalidWpm') : undefined)}
+                @input=${() => {
+                  speedError.value = false;
+                }}
+                @change=${(event: Event) => {
+                  event.stopPropagation();
+                  const target = event.currentTarget as HTMLElement & { value?: number | string };
+                  const value = target.value === '' || target.value === undefined ? Number.NaN : Number(target.value);
+                  if (!Number.isFinite(value)) {
+                    speedError.value = true;
+                    return;
+                  }
+                  speedError.value = false;
+                  const next = normalizeWpm(value);
+                  host.wpm = next;
+                  wpm.value = next;
+                  emit('wpm-change', { wpm: next });
+                }}></ore-number-input>
+              <ore-popover
+                class="help"
+                placement="bottom-end"
+                label=${() => label('help')}
+                @open-change=${(event: CustomEvent<OverlayOpenChangeDetail>) => {
+                  event.stopPropagation();
+                  if (
+                    !event.detail.open &&
+                    event.detail.reason === 'escape' &&
+                    helpContent.value?.matches(':focus-within')
+                  ) {
+                    helpButton.value?.focus();
+                  }
+                }}>
+                <ore-button
+                  ref="${helpButton}"
+                  icon-only
+                  rounded="full"
+                  variant="ghost"
+                  aria-label=${() => label('help')}>
+                  <ore-icon name="info" aria-hidden="true"></ore-icon>
+                </ore-button>
+                <div slot="content" class="help-content" ref="${helpContent}" tabindex="0">
+                  <strong>${() => label('wpm')}</strong>
+                  <p>${() => label('wpmHelp')}</p>
+                  <p>${() => label('paceHelp')}</p>
+                  <strong>${() => label('shortcutsHeading')}</strong>
+                  <p>${() => label('shortcuts')}</p>
+                </div>
+              </ore-popover>
+              <ore-tooltip content=${() => label('restart')}>
+                <ore-button
+                  icon-only
+                  rounded="full"
+                  variant="ghost"
+                  aria-label=${() => label('restart')}
+                  ?disabled=${() => !words.value.length}
+                  @click=${restart}>
+                  <ore-icon name="refresh-cw" aria-hidden="true"></ore-icon>
+                </ore-button>
+              </ore-tooltip>
+            </div>
+          </div>
         </div>
-        <p class="shortcuts">${() => label('shortcuts')}</p>
-        <ore-button class="recovery" rounded="full" variant="flat" ?hidden=${() => !overflow.value}
-          @click=${continueAfterWord}>${() => label(index.value + 1 >= words.value.length ? 'finish' : 'continue')}</ore-button>
-        <div class="settings">
-          <ore-number-input size="sm" min="100" max="600" step="25" value=${wpm}
-            label=${() => label('wpm')} error=${() => (speedError.value ? label('invalidWpm') : undefined)}
-            @input=${() => {
-              speedError.value = false;
-            }}
-            @change=${(event: Event) => {
-              event.stopPropagation();
-              const target = event.currentTarget as HTMLElement & { value?: number | string };
-              const value = target.value === '' || target.value === undefined ? Number.NaN : Number(target.value);
-              if (!Number.isFinite(value)) {
-                speedError.value = true;
-                return;
-              }
-              speedError.value = false;
-              const next = normalizeWpm(value);
-              host.wpm = next;
-              wpm.value = next;
-              emit('wpm-change', { wpm: next });
-            }}></ore-number-input>
-          <ore-button rounded="full" variant="ghost" ?disabled=${() => !words.value.length}
-            @click=${restart}>${() => label('restart')}</ore-button>
-        </div>
-        <p class="pace-help">${() => label('paceHelp')}</p>
-        <ore-accordion-item variant="bordered" ?expanded=${expanded}
+        <ore-accordion-item
+          variant="bordered"
+          ?expanded=${expanded}
           @expand=${() => {
             expanded.value = true;
             pause();
@@ -558,20 +681,33 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
               : source;
           }}</div>
           <div class="context-controls" ?hidden=${() => !words.value.length}>
-            <ore-select label=${() => label('sentence')} size="sm" value=${() => String(sentenceIndex.value)}
+            <ore-select
+              label=${() => label('sentence')}
+              size="sm"
+              value=${() => String(sentenceIndex.value)}
               @change=${(event: Event) => {
                 event.stopPropagation();
                 const target = event.currentTarget as HTMLElement & { value: string };
                 const sentence = sentences.value[Number(target.value)];
                 if (sentence) seek(sentence.index);
               }}>
-              ${() => sentences.value.map((sentence, i) => html`<option value=${String(i)}>${`${i + 1}. ${sentence.text}`}</option>`)}
+              ${() =>
+                sentences.value.map(
+                  (sentence, i) => html`
+                    <option value=${String(i)}>${`${i + 1}. ${sentence.text}`}</option>
+                  `,
+                )}
             </ore-select>
-            <ore-button variant="flat" rounded="full" ?disabled=${() => overflow.value}
+            <ore-button
+              variant="flat"
+              rounded="full"
+              ?disabled=${() => overflow.value}
               @click=${() => {
                 play();
                 if (state.value === 'playing') toggleButton.value?.focus();
-              }}>${() => label('resumeHere')}</ore-button>
+              }}>
+              ${() => label('resumeHere')}
+            </ore-button>
           </div>
         </ore-accordion-item>
       </div>

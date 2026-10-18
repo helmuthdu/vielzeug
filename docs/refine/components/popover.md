@@ -4,6 +4,8 @@ A floating interactive panel anchored to a trigger element. Unlike a tooltip, a 
 
 ## Placement
 
+Placement is a preference: the panel flips or shifts when space is limited. When a panel fits within the viewport but neither side of its trigger has enough room, it can overlap the trigger rather than extend off-screen.
+
 <ComponentPreview center height="400px">
 
 ```html

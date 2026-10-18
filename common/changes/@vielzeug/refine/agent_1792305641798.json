@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Add an adaptive coverflow carousel variant with container-fitted previews, accessible selection, and separate navigation areas; use fully rounded carousel navigation buttons. Add ore-speed-reading with stable focal positioning, punctuation-aware pacing, context highlighting, sentence navigation, and explicit overflow recovery. Add 1.5× speech playback and consistent numeric speed labels. Preserve select keyboard navigation beneath a stationary pointer.",
+      "comment": "Add an adaptive coverflow carousel variant with container-fitted previews, accessible selection, and separate navigation areas; use fully rounded carousel navigation buttons. Add ore-speed-reading with stable focal positioning, punctuation-aware pacing, context highlighting, sentence navigation, explicit overflow recovery, responsive icon-only transport, and touch-accessible pace and keyboard help. Keep popovers and tooltips within the viewport when neither side of the trigger fits. Add 1.5× speech playback and consistent numeric speed labels. Preserve select keyboard navigation beneath a stationary pointer.",
       "packageName": "@vielzeug/refine",
       "type": "minor"
     }
