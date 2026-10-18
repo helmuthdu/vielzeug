@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sat, 17 Oct 2026 06:46:08 GMT and should not be manually modified.
+This log was last generated on Sun, 18 Oct 2026 09:46:30 GMT and should not be manually modified.
 
+## 26.10.14
+Sun, 18 Oct 2026 09:46:30 GMT
+
+### Minor changes
+
+- Add an adaptive coverflow carousel variant with container-fitted previews, accessible selection, and separate navigation areas; use fully rounded carousel navigation buttons. Add ore-speed-reading with stable focal positioning, punctuation-aware pacing, context highlighting, sentence navigation, explicit overflow recovery, responsive icon-only transport, and touch-accessible pace and keyboard help. Keep popovers and tooltips within the viewport when neither side of the trigger fits. Add 1.5× speech playback and consistent numeric speed labels. Preserve select keyboard navigation beneath a stationary pointer.
 ## 26.10.13
 Sat, 17 Oct 2026 06:46:08 GMT
 

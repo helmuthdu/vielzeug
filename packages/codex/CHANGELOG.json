@@ -5,6 +5,25 @@
         "patch": [
           {
             "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "f98e005971c6f6986d9a8720ad2b75c661a0f654"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Bundle updated Refine metadata and documentation for adaptive coverflow, paced speed reading with an editable playground and responsive accessible icon controls, numeric speech playback speeds, and select keyboard navigation.",
+            "commit": "f98e005971c6f6986d9a8720ad2b75c661a0f654"
+          }
+        ]
+      },
+      "date": "Sun, 18 Oct 2026 09:46:30 GMT",
+      "tag": "@vielzeug/codex_v26.10.14",
+      "version": "26.10.14"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Fix MCP CLI startup through npm and npx executable symlinks.",
             "commit": "bcbec60dce285ecfdb4f59dd8e777438331b6607"
           }

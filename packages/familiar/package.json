@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/familiar",
-  "version": "26.10.13",
+  "version": "26.10.14",
   "description": "Web Worker pool with tasks, timeouts, cancellation",
   "repository": {
     "type": "git",

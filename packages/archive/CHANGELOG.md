@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/archive
 
-This log was last generated on Sat, 17 Oct 2026 06:46:08 GMT and should not be manually modified.
+This log was last generated on Sun, 18 Oct 2026 09:46:30 GMT and should not be manually modified.
 
+## 26.10.14
+Sun, 18 Oct 2026 09:46:30 GMT
+
+### Patches
+
+- Extend operator sessions from 15 to 60 minutes while preserving ordinary session lifetimes and revocation.
 ## 26.10.13
 Sat, 17 Oct 2026 06:46:08 GMT
 
