@@ -2,6 +2,8 @@
 
 A fully-featured, form-associated select widget that reads native `<option>` and `<optgroup>` children, supports single and multiple selection, keyboard navigation, grouped options, and ARIA combobox semantics.
 
+Keyboard navigation remains active when the options scroll beneath a stationary pointer. Move the pointer over an option to switch back to pointer navigation.
+
 ## Variants
 
 Six visual variants for different UI contexts and levels of emphasis.

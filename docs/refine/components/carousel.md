@@ -1,6 +1,6 @@
 # Carousel
 
-An accessible, keyboard-navigable carousel and slideshow. Place `<ore-carousel-slide>` children directly inside: no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and four layout variants.
+An accessible, keyboard-navigable carousel and slideshow. Place `<ore-carousel-slide>` children directly inside: no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and five layout variants.
 
 ## Basic Usage
 
@@ -329,6 +329,113 @@ The active slide dominates (~4× the size of thumbnails); the immediately adjace
 
 </ComponentPreview>
 
+### Coverflow
+
+The active card stays centered while neighboring cards overlap with bounded rotation, scale, and depth. The number of previews fits the **carousel's container**, not the viewport or a fixed count: wider containers admit more cards without changing the active card's size. A narrow container can show only the active card. Covers outside the fitted range are hidden and cannot intercept clicks.
+
+Navigation occupies a separate area below horizontal coverflow or beside vertical coverflow, rather than covering the cards. All carousel variants use fully rounded previous/next buttons to match the navigation pill.
+
+Set `--carousel-coverflow-size` to the card width and `--carousel-coverflow-spacing` to the distance between card centers. Use positive CSS lengths; smaller spacing increases overlap. Card backgrounds, imagery, captions, and active treatments remain your content's responsibility. You do not need transforms, resize handlers, or app-level hit-testing.
+
+These square covers use the same centered labels and contrast backgrounds as the other variants. Resize the containing panel to change the number of visible covers:
+
+<ComponentPreview>
+
+```html
+<ore-carousel
+  label="Coverflow carousel"
+  variant="coverflow"
+  style="height:var(--size-72);--carousel-coverflow-size:var(--size-40);--carousel-coverflow-spacing:var(--size-12)">
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 1</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 2</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 3</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 4</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 5</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 6</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 7</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 8</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Slide 9</ore-text></ore-carousel-slide
+  >
+</ore-carousel>
+```
+
+</ComponentPreview>
+
+Clicking or tapping a visible preview activates it through the same `change` event as swipes, controls, and keyboard navigation. Only the active slide's content is interactive: clicking a preview does **not** activate a link or button within it. Clicking an already active slide leaves the index unchanged and allows its controls to work normally.
+
+With `loop="true"`, the closest circular neighbors appear on either side; each slide appears once, including in two-item and even-sized collections. With `loop="false"`, previews do not wrap across the collection's ends. Resizing changes only layout: it does not change the active index, emit `change`, or move focus.
+
+For `orientation="vertical"`, `--carousel-coverflow-size` sets the card height, spacing advances vertically, and the available track height determines the preview count. Give the host an explicit height.
+
+#### Cover selection
+
+Keep domain selection in your app and map the carousel's index to an item ID. The component never loads media or initiates playback. Leave autoplay off for pickers.
+
+<ComponentPreview>
+
+```html
+<ore-carousel
+  id="cover-picker"
+  label="Choose a cover"
+  variant="coverflow"
+  show-controls="false"
+  show-indicators="false"
+  style="height:var(--size-56)">
+  <ore-carousel-slide
+    aria-label="Dawn"
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Dawn</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    aria-label="Dusk"
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Dusk</ore-text></ore-carousel-slide
+  >
+  <ore-carousel-slide
+    aria-label="Night"
+    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:auto;aspect-ratio:1;border-radius:var(--rounded-lg)"
+    ><ore-text color="heading">Night</ore-text></ore-carousel-slide
+  >
+</ore-carousel>
+<ore-text id="cover-choice" aria-live="polite">Selected: Dawn</ore-text>
+<script>
+  const covers = ['Dawn', 'Dusk', 'Night'];
+  document.getElementById('cover-picker').addEventListener('change', (event) => {
+    document.getElementById('cover-choice').textContent = `Selected: ${covers[event.detail.index]}`;
+  });
+</script>
+```
+
+</ComponentPreview>
+
+Coverflow adds `tabindex="0"` to the host when you have not supplied one, so keyboard navigation remains available even with controls and indicators hidden. It respects an explicit `tabindex`. Inactive content is inert and hidden from assistive technology; the host and navigation controls provide access to every cover. When navigation hides focused slide content, focus moves back to the carousel.
+
 ## Keyboard Navigation
 
 | Key                        | Action         |
@@ -340,6 +447,8 @@ The active slide dominates (~4× the size of thumbnails); the immediately adjace
 
 Arrow key direction adjusts automatically for `orientation="vertical"`. When `loop="false"`, navigation stops at the boundaries.
 
+Horizontal coverflow mirrors layout and Left/Right navigation for `dir="rtl"`. Arrow keys in editable slide content keep their native behavior instead of changing covers.
+
 ## API Reference
 
 **`ore-carousel` Attributes / Properties**
@@ -347,7 +456,7 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 | Name                | Type                                                                      | Default        | Description                                                                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `label`             | `string`                                                                  | `'Carousel'`   | `aria-label` for the `role="region"` landmark                                                                                                                                                                   |
-| `variant`           | `'default' \| 'fade' \| 'filmstrip' \| 'gallery'`                           | `'default'`    | Layout and transition style                                                                                                                                                                                     |
+| `variant`           | `'default' \| 'fade' \| 'filmstrip' \| 'gallery' \| 'coverflow'`             | `'default'`    | Layout and transition style                                                                                                                                                                                     |
 | `orientation`       | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Slide direction and keyboard axis                                                                                                                                                                               |
 | `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation                                                                                                                     |
 | `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last.                                                                                                                                                                                 |
@@ -370,13 +479,16 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 | `--carousel-bg`                  | `var(--color-canvas)`       | Slide area background                                                                                                                            |
 | `--carousel-radius`              | `var(--rounded-xl)`         | Host border radius                                                                                                                               |
 | `--carousel-min-height`          | `240px`                     | Fallback minimum height: set an explicit height for `filmstrip` and `gallery`                                                                   |
-| `--carousel-transition-duration` | `0.35s`                     | Slide transition duration (`default` and `fade`). Auto-set to `0s` under `prefers-reduced-motion` |
+| `--carousel-transition-duration` | `0.35s`                     | Slide transition duration, including coverflow. Auto-set to `0s` under `prefers-reduced-motion` |
 | `--carousel-dot-bg`              | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                                     |
 | `--carousel-dot-active-bg`       | `var(--color-contrast-700)` | Active indicator fill color                                                                                                                      |
 | `--carousel-filmstrip-inactive`  | `var(--size-16)`            | Collapsed width (horizontal) or height (vertical) of inactive filmstrip slides                                                                   |
 | `--carousel-filmstrip-gap`       | `var(--size-2)`             | Gap between slides in `filmstrip` mode                                                                                                           |
 | `--carousel-gallery-thumbnail`   | `var(--size-24)`            | Thumbnail width (horizontal) or height (vertical) in `gallery` mode                                                                              |
 | `--carousel-gallery-gap`         | `var(--size-2)`             | Gap between slides in `gallery` mode                                                                                                             |
+| `--carousel-coverflow-size`      | `var(--size-40)`            | Card width (horizontal) or height (vertical), constrained by available track space |
+| `--carousel-coverflow-spacing`   | `var(--size-12)`            | Positive CSS length between neighboring card centers; controls overlap and fitted preview count |
+| `--carousel-coverflow-perspective` | `calc(var(--size-64) * 4)` | Perspective distance for coverflow depth |
 
 **`ore-carousel` CSS Parts**
 
@@ -386,7 +498,7 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 | `controls`   | `<div>`       | Prev/next button wrapper                      |
 | `prev-btn`   | `<ore-button>` | Previous-slide button                         |
 | `next-btn`   | `<ore-button>` | Next-slide button                             |
-| `indicators` | `<div>`       | Indicator `tablist` container                 |
+| `indicators` | `<div>`       | Navigation bar containing the indicator `tablist` and controls |
 
 **`ore-carousel-slide`**
 
@@ -400,6 +512,7 @@ A transparent wrapper. It carries `role="group"` and `aria-roledescription="slid
 | `data-before`          | `ore-carousel` | Present on slides before the active one (`default` / `fade` variants)      |
 | `data-after`           | `ore-carousel` | Present on slides after the active one (`default` / `fade` variants)       |
 | `data-gallery-visible` | `ore-carousel` | Present on the active slide and its immediate neighbours in `gallery` mode |
+| `data-coverflow-visible` | `ore-carousel` | Present on the active slide and container-fitted previews in `coverflow` mode |
 
 ## Touch and drag navigation
 

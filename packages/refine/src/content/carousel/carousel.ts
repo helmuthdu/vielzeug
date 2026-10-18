@@ -1,19 +1,22 @@
 import { createPanGesture } from '@vielzeug/gesture';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
-import { announce, createListControl, lifecycleSignal } from '../../core';
+import { createElementSize } from '@vielzeug/sentinel';
+import { announce, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { THEME_COLORS, type ThemeColor } from '../../types';
+import { clearCoverflow, syncCoverflow } from './_coverflow';
 import componentStyles from './carousel.css?inline';
 import './carousel-slide';
 
 export { ICON_TAG } from '../../content/icon/icon';
 export { PROGRESS_TAG } from '../../feedback/progress/progress';
+export { BUTTON_TAG } from '../../inputs/button/button';
 export { CAROUSEL_SLIDE_TAG } from './carousel-slide';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export const CAROUSEL_ORIENTATIONS = ['horizontal', 'vertical'] as const;
 export type CarouselOrientation = (typeof CAROUSEL_ORIENTATIONS)[number];
-export const CAROUSEL_VARIANTS = ['default', 'fade', 'filmstrip', 'gallery'] as const;
+export const CAROUSEL_VARIANTS = ['default', 'fade', 'filmstrip', 'gallery', 'coverflow'] as const;
 export type CarouselVariant = (typeof CAROUSEL_VARIANTS)[number];
 
 export type OreCarouselEvents = {
@@ -49,6 +52,7 @@ export type OreCarouselProps = {
    * - `'fade'`: slides crossfade; no movement
    * - `'filmstrip'`: all slides visible side-by-side; active expands
    * - `'gallery'`: active slide fills the majority; adjacent slides show as thumbnails
+   * - `'coverflow'`: centered active card with overlapping, container-fitted 3D previews
    */
   variant?: CarouselVariant;
 };
@@ -68,7 +72,7 @@ export type OreCarouselProps = {
  * @attr {string}  label             - Accessible label for the carousel region
  * @attr {boolean} loop              - Loop from last slide to first (default true)
  * @attr {string}  orientation       - 'horizontal' (default) | 'vertical'
- * @attr {string}  variant           - 'default' | 'fade' | 'filmstrip' | 'gallery'
+ * @attr {string}  variant           - 'default' | 'fade' | 'filmstrip' | 'gallery' | 'coverflow'
  * @attr {boolean} show-controls     - Show prev/next buttons (default true)
  * @attr {boolean} show-indicators   - Show indicator dots (default true)
  * @attr {number}  slide-index       - Active slide index (zero-based, default 0)
@@ -87,6 +91,9 @@ export type OreCarouselProps = {
  * @cssprop --carousel-filmstrip-gap       - Gap between slides in filmstrip mode
  * @cssprop --carousel-gallery-thumbnail   - Width (horizontal) or height (vertical) of thumbnail slides in gallery mode (default var(--size-24))
  * @cssprop --carousel-gallery-gap         - Gap between slides in gallery mode (default var(--size-2))
+ * @cssprop --carousel-coverflow-size       - Card extent along the navigation axis (default var(--size-40))
+ * @cssprop --carousel-coverflow-spacing    - Distance between cover centers (default var(--size-12))
+ * @cssprop --carousel-coverflow-perspective - Coverflow perspective (default calc(var(--size-64) * 4))
  *
  * @part track      - The scrolling slide track element
  * @part controls   - The prev/next button container
@@ -179,6 +186,9 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── State ────────────────────────────────────────────────────────────────
 
     const activeIndex = signal<number>(props['slide-index'].value ?? 0);
+    const initialTabindex = el.getAttribute('tabindex');
+    let observeCoverflow = (): void => {};
+    let focusedSlide: HTMLElement | undefined;
     let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
     // Slide cache: populated immediately, refreshed on slotchange.
@@ -194,9 +204,13 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     const looping = computed(() => props.loop.value !== false);
     const showControls = computed(() => props['show-controls'].value !== false);
     const showIndicators = computed(() => props['show-indicators'].value !== false);
+    const isCoverflow = computed(() => props.variant.value === 'coverflow');
+    const isRtl = (): boolean => isCoverflow.value && isHorizontal.value && elementDirection(el) === 'rtl';
 
-    const canGoPrev = computed(() => looping.value || activeIndex.value > 0);
-    const canGoNext = computed(() => looping.value || activeIndex.value < slideCount.value - 1);
+    const canGoPrev = computed(() => slideCount.value > 1 && (looping.value || activeIndex.value > 0));
+    const canGoNext = computed(
+      () => slideCount.value > 1 && (looping.value || activeIndex.value < slideCount.value - 1),
+    );
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
@@ -241,15 +255,10 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       });
     };
 
-    watch(
-      computed(() => ({ orientation: props.orientation.value, variant: props.variant.value })),
-      syncSlideVariants,
-      { immediate: true },
-    );
-
     // ── Sync active index → slides: dispatch table ───────────────────────────
 
     const syncTable: Record<CarouselVariant, (slides: HTMLElement[], current: number) => void> = {
+      coverflow: syncFilmstripSlides,
       default: syncDefaultSlides,
       fade: syncDefaultSlides,
       filmstrip: syncFilmstripSlides,
@@ -259,10 +268,48 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     const syncActiveState = (): void => {
       const variant = (props.variant.value ?? 'default') as CarouselVariant;
 
+      syncSlideVariants();
+      observeCoverflow();
+      if (isCoverflow.value) {
+        const focused = el.ownerDocument.activeElement;
+
+        if (slides.some((slide, index) => index !== activeIndex.value && focused && slide.contains(focused))) {
+          el.focus({ preventScroll: true });
+        }
+      }
       syncTable[variant](slides, activeIndex.value);
+
+      if (isCoverflow.value) {
+        const track = el.shadowRoot?.querySelector<HTMLElement>('.track');
+        const measure = el.shadowRoot?.querySelector<HTMLElement>('.coverflow-measure');
+        const card = slides[0];
+
+        syncCoverflow(slides, activeIndex.value, {
+          extent: (isHorizontal.value ? track?.clientWidth : track?.clientHeight) ?? 0,
+          horizontal: isHorizontal.value,
+          loop: looping.value,
+          rtl: isRtl(),
+          size: (isHorizontal.value ? card?.offsetWidth : card?.offsetHeight) ?? 0,
+          spacing: (isHorizontal.value ? measure?.offsetWidth : measure?.offsetHeight) ?? 0,
+        });
+        slides.forEach((slide, index) => {
+          slide.shadowRoot?.querySelector('.content')?.toggleAttribute('inert', index !== activeIndex.value);
+        });
+      } else {
+        slides.forEach(clearCoverflow);
+      }
     };
 
-    watch(activeIndex, syncActiveState, { immediate: true });
+    watch(
+      computed(() => ({
+        index: activeIndex.value,
+        loop: props.loop.value,
+        orientation: props.orientation.value,
+        variant: props.variant.value,
+      })),
+      syncActiveState,
+      { immediate: true },
+    );
 
     // ── Autoplay ─────────────────────────────────────────────────────────────
 
@@ -291,9 +338,21 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── Keyboard navigation ──────────────────────────────────────────────────
 
     const handleKeydown = (e: KeyboardEvent): void => {
+      if (e.defaultPrevented) return;
+      if (
+        isCoverflow.value &&
+        e
+          .composedPath()
+          .some(
+            (node) =>
+              node instanceof HTMLElement && (node.matches('input, textarea, select') || node.isContentEditable),
+          )
+      )
+        return;
+
       const isH = isHorizontal.value;
-      const prevKey = isH ? 'ArrowLeft' : 'ArrowUp';
-      const nextKey = isH ? 'ArrowRight' : 'ArrowDown';
+      const prevKey = isH ? (isRtl() ? 'ArrowRight' : 'ArrowLeft') : 'ArrowUp';
+      const nextKey = isH ? (isRtl() ? 'ArrowLeft' : 'ArrowRight') : 'ArrowDown';
 
       if (e.key === prevKey) {
         e.preventDefault();
@@ -311,6 +370,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     };
 
     const indicatorNav = createListControl<number>({
+      direction: () => (isRtl() ? 'rtl' : 'ltr'),
       getItems: () => Array.from({ length: slideCount.value }, (_, index) => index),
       loop: true,
       onNavigate: ({ index }) => {
@@ -331,13 +391,24 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         'aria-roledescription': () => 'carousel',
         orientation: () => props.orientation.value ?? 'horizontal',
         role: () => 'region',
+        tabindex: () => initialTabindex ?? (isCoverflow.value ? '0' : undefined),
         variant: () => props.variant.value ?? 'default',
       },
       on: {
-        focusin: () => {
+        focusin: (event: FocusEvent) => {
+          focusedSlide = event
+            .composedPath()
+            .find((node): node is HTMLElement => node instanceof HTMLElement && slides.includes(node));
           stopAutoplay();
         },
-        focusout: () => {
+        focusout: (event: FocusEvent) => {
+          const leaving = focusedSlide;
+
+          if (!(event.relatedTarget instanceof Node) || !el.contains(event.relatedTarget)) {
+            queueMicrotask(() => {
+              if (focusedSlide === leaving && leaving?.isConnected !== false) focusedSlide = undefined;
+            });
+          }
           if (props.autoplay.value) startAutoplay();
         },
         keydown: handleKeydown,
@@ -353,16 +424,58 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     onMounted(() => {
+      const track = el.shadowRoot!.querySelector<HTMLElement>('.track')!;
+      const measure = el.shadowRoot!.querySelector<HTMLElement>('.coverflow-measure')!;
+      const sizes = new Map<Element, ReturnType<typeof createElementSize>>();
+      let layoutFrame: number | undefined;
+      const scheduleLayout = (): void => {
+        if (layoutFrame !== undefined) return;
+        layoutFrame = requestAnimationFrame(() => {
+          layoutFrame = undefined;
+          syncActiveState();
+        });
+      };
+
+      observeCoverflow = () => {
+        const targets = new Set<Element>(isCoverflow.value ? [track, measure, ...slides.slice(0, 1)] : []);
+
+        for (const [target, observer] of sizes) {
+          if (targets.has(target)) continue;
+          observer.dispose();
+          sizes.delete(target);
+        }
+        for (const target of targets) {
+          if (sizes.has(target)) continue;
+          const observer = createElementSize(target);
+
+          observer.subscribe(scheduleLayout);
+          sizes.set(target, observer);
+        }
+      };
+      syncActiveState();
+
       let suppressClick = false;
       const resetClick = (): void => {
         suppressClick = false;
       };
       const handleClick = (event: MouseEvent): void => {
-        if (!suppressClick || event.detail === 0) return;
+        if (suppressClick && event.detail !== 0) {
+          suppressClick = false;
+          event.preventDefault();
+          event.stopImmediatePropagation();
 
-        suppressClick = false;
+          return;
+        }
+        if (!isCoverflow.value) return;
+        const slide = event
+          .composedPath()
+          .find((node): node is HTMLElement => node instanceof HTMLElement && slides.includes(node));
+        const index = slide ? slides.indexOf(slide) : -1;
+
+        if (index < 0 || index === activeIndex.value || !slides[index]?.hasAttribute('data-coverflow-visible')) return;
         event.preventDefault();
-        event.stopImmediatePropagation();
+        event.stopPropagation();
+        goTo(index);
       };
       const handleDragStart = (event: DragEvent): void => {
         if (event.composedPath().some((node) => node instanceof HTMLElement && slides.includes(node))) {
@@ -378,7 +491,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
           }
           if (Math.abs(distance) < 48) return;
 
-          if (distance < 0) next();
+          if (distance * (isRtl() ? -1 : 1) < 0) next();
           else prev();
         },
         onStart: () => {
@@ -399,8 +512,14 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       // slotchange replaces MutationObserver: fires exactly when assigned
       // nodes change, scoped to this component's slot, no polling overhead.
       const onSlotChange = (): void => {
+        const previous = slides;
+
         refreshSlides();
-        syncSlideVariants();
+        previous.filter((slide) => !slides.includes(slide)).forEach(clearCoverflow);
+        if (isCoverflow.value && focusedSlide && !slides.includes(focusedSlide)) el.focus({ preventScroll: true });
+        if (slides.length > 0 && (activeIndex.value < 0 || activeIndex.value >= slides.length)) {
+          goTo(Math.max(0, Math.min(activeIndex.value, slides.length - 1)), false);
+        }
         syncActiveState();
       };
 
@@ -414,6 +533,10 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       }
 
       return () => {
+        observeCoverflow = () => {};
+        for (const observer of sizes.values()) observer.dispose();
+        if (layoutFrame !== undefined) cancelAnimationFrame(layoutFrame);
+        slides.forEach(clearCoverflow);
         pan.dispose();
         stopAutoplay();
         slot.removeEventListener('slotchange', onSlotChange);
@@ -434,16 +557,16 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
                 part="prev-btn"
                 variant="ghost"
                 color=${() => props.color.value}
-                rounded
+                rounded="full"
                 icon-only
-                aria-label="Previous slide"
+                label="Previous slide"
                 disabled=${() => (!canGoPrev.value ? true : undefined)}
                 @click=${(e: Event) => {
                   e.stopPropagation();
                   prev();
                 }}>
                 <ore-icon
-                  name=${() => (isHorizontal.value ? 'chevron-left' : 'chevron-up')}
+                  name=${() => (isHorizontal.value ? (isRtl() ? 'chevron-right' : 'chevron-left') : 'chevron-up')}
                   size="16"
                   stroke-width="2"
                   aria-hidden="true"></ore-icon>
@@ -453,16 +576,16 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
                 part="next-btn"
                 variant="ghost"
                 color=${() => props.color.value}
-                rounded
+                rounded="full"
                 icon-only
-                aria-label="Next slide"
+                label="Next slide"
                 disabled=${() => (!canGoNext.value ? true : undefined)}
                 @click=${(e: Event) => {
                   e.stopPropagation();
                   next();
                 }}>
                 <ore-icon
-                  name=${() => (isHorizontal.value ? 'chevron-right' : 'chevron-down')}
+                  name=${() => (isHorizontal.value ? (isRtl() ? 'chevron-left' : 'chevron-right') : 'chevron-down')}
                   size="16"
                   stroke-width="2"
                   aria-hidden="true"></ore-icon>
@@ -473,13 +596,15 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
 
     return html`
       <div class="track" part="track" aria-live=${() => (props.autoplay.value ? 'off' : 'polite')}>
+        <span class="coverflow-measure" aria-hidden="true"></span>
         <slot></slot>
       </div>
 
       ${() =>
         showIndicators.value && slideCount.value > 1
           ? html`
-              <div class="indicators" part="indicators" role="tablist" aria-label="Slide indicators">
+              <div class="indicators" part="indicators">
+                <div class="indicator-list" role="tablist" aria-label="Slide indicators">
                 ${() =>
                   Array.from(
                     { length: slideCount.value },
@@ -519,6 +644,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
                       </button>
                     `,
                   )}
+                </div>
                 ${renderControls}
               </div>
             `

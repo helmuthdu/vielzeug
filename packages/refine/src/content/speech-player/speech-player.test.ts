@@ -117,7 +117,7 @@ describe('ore-speech-player', () => {
 
       expect(toggleOf(fixture).disabled).toBe(false);
       expect(labelOf(fixture).textContent).toBe('Read aloud');
-      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: normal');
+      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1×');
       expect(rateOf(fixture).textContent).toContain('1×');
       expect(stopOf(fixture).hidden).toBe(true);
     });
@@ -297,7 +297,7 @@ describe('ore-speech-player', () => {
   // ── Speed ──────────────────────────────────────────────────────────────────
 
   describe('Speed', () => {
-    it('cycles normal, slow, fast and applies the rate to every utterance', async () => {
+    it('labels every speed as a multiplier and applies the rate to every utterance', async () => {
       installSpeech();
       fixture = await mountPlayer('First sentence. Second sentence.');
       const changes: number[] = [];
@@ -308,13 +308,28 @@ describe('ore-speech-player', () => {
       await startReading(fixture);
       await fixture.act(() => rateOf(fixture).click());
       expect(changes).toEqual([0.85]);
-      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: slow');
+      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 0.85×');
       expect(rateOf(fixture).textContent).toContain('0.85×');
+      expect(liveOf(fixture).textContent).toBe('Reading speed: 0.85×');
 
       await fixture.act(() => rateOf(fixture).click());
+      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1.15×');
+      expect(rateOf(fixture).textContent).toContain('1.15×');
+      expect(liveOf(fixture).textContent).toBe('Reading speed: 1.15×');
       await fixture.act(() => rateOf(fixture).click());
-      expect(changes).toEqual([0.85, 1.15, 1]);
-      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: normal');
+      expect(changes).toEqual([0.85, 1.15, 1.5]);
+      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1.5×');
+      expect(rateOf(fixture).textContent).toContain('1.5×');
+      expect(liveOf(fixture).textContent).toBe('Reading speed: 1.5×');
+      expect(spoken().at(-1)?.rate).toBe(1.5);
+      spoken().at(-1)?.onend?.();
+      await fixture.flush();
+      expect(spoken().at(-1)?.text).toBe('Second sentence.');
+      expect(spoken().at(-1)?.rate).toBe(1.5);
+      await fixture.act(() => rateOf(fixture).click());
+      expect(changes).toEqual([0.85, 1.15, 1.5, 1]);
+      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1×');
+      expect(liveOf(fixture).textContent).toBe('Reading speed: 1×');
     });
 
     it('restarts the current sentence at the new pace while reading', async () => {
@@ -543,6 +558,6 @@ describe('ore-speech-player', () => {
   });
 
   it('exposes the rate steps the speed control cycles', () => {
-    expect([...SPEECH_RATES]).toEqual([1, 0.85, 1.15]);
+    expect([...SPEECH_RATES]).toEqual([1, 0.85, 1.15, 1.5]);
   });
 });

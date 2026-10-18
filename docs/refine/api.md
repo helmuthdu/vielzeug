@@ -93,7 +93,7 @@ import type { OreButtonProps } from '@vielzeug/refine/button';
 
 | Area | Components |
 | --- | --- |
-| Content | `avatar`, `avatar-group`, `breadcrumb`, `card`, `carousel`, `chat-message`, `code-window`, `copy-command`, `icon`, `keyboard-key`, `list`, `list-item`, `marquee`, `pagination`, `separator`, `speech-player`, `stats`, `step`, `stepper`, `table`, `text` |
+| Content | `avatar`, `avatar-group`, `breadcrumb`, `card`, `carousel`, `chat-message`, `code-window`, `copy-command`, `icon`, `keyboard-key`, `list`, `list-item`, `marquee`, `pagination`, `separator`, `speech-player`, `speed-reading`, `stats`, `step`, `stepper`, `table`, `text` |
 | Disclosure | `accordion`, `accordion-item`, `tabs`, `tab-item`, `tab-panel` |
 | Feedback | `alert`, `async`, `badge`, `chip`, `cookie-banner`, `password-strength`, `progress`, `skeleton`, `toast`, `typing-indicator` |
 | Inputs | `button`, `button-group`, `calendar`, `checkbox`, `checkbox-group`, `combobox`, `counter`, `datagrid`, `date-picker`, `file-input`, `input`, `message-composer`, `number-input`, `otp-input`, `query-bar`, `radio`, `radio-group`, `rating`, `select`, `slider`, `switch`, `textarea`, `time-picker` |

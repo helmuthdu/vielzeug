@@ -19,7 +19,7 @@ test.describe('Rendering', () => {
     await expect(page.locator(TOGGLE)).toBeEnabled();
     await expect(page.locator(LABEL)).toBeVisible();
     await expect(page.locator(LABEL)).toHaveText('Read aloud');
-    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: normal');
+    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1×');
     await expect(page.locator(RATE)).toContainText('1×');
     await expect(page.locator(STOP)).toBeHidden();
   });
@@ -76,14 +76,18 @@ test.describe('Interaction', () => {
     await refinePage.mountComponent(`<${PLAYER} text="The valley sleeps under ash."></${PLAYER}>`);
 
     await page.locator(RATE).click();
-    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: slow');
+    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 0.85×');
     await expect(page.locator(RATE)).toContainText('0.85×');
 
     await page.locator(RATE).click();
-    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: fast');
+    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1.15×');
 
     await page.locator(RATE).click();
-    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: normal');
+    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1.5×');
+    await expect(page.locator(RATE)).toContainText('1.5×');
+
+    await page.locator(RATE).click();
+    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1×');
   });
 
   test('begins reading from a bound resume-at sentence', async ({ page, refinePage }) => {

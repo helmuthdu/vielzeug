@@ -32,6 +32,7 @@ import type { OreRankItemProps } from '../content/rank-list/rank-item';
 import type { OreRankListProps } from '../content/rank-list/rank-list';
 import type { OreSeparatorProps } from '../content/separator/separator';
 import type { OreSpeechPlayerEvents, SpeechPlayerElement } from '../content/speech-player/speech-player';
+import type { OreSpeedReadingEvents, SpeedReadingElement } from '../content/speed-reading/speed-reading';
 import type { OreStatsProps } from '../content/stats/stats';
 import type { OreStepProps } from '../content/stepper/step';
 import type { OreStepperEvents, OreStepperProps } from '../content/stepper/stepper';
@@ -196,6 +197,7 @@ export interface RefineElementMap {
   'ore-skeleton': HTMLElement & OreSkeletonProps;
   'ore-slider': HTMLElement & OreSliderProps & FormValidityMethods & AddEventListeners<OreSliderEvents>;
   'ore-speech-player': SpeechPlayerElement & AddEventListeners<OreSpeechPlayerEvents>;
+  'ore-speed-reading': SpeedReadingElement & AddEventListeners<OreSpeedReadingEvents>;
   'ore-stats': HTMLElement & OreStatsProps;
   'ore-step': HTMLElement & OreStepProps;
   'ore-stepper': HTMLElement & OreStepperProps & AddEventListeners<OreStepperEvents>;

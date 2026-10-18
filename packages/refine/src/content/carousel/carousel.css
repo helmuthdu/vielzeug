@@ -26,6 +26,34 @@
     min-height: 0;
   }
 
+  :host([variant='coverflow']) {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  :host([variant='coverflow']) .track {
+    grid-area: 1 / 1;
+    width: auto;
+    min-width: 0;
+    margin: var(--size-2);
+    overflow: hidden;
+    isolation: isolate;
+    perspective: var(--carousel-coverflow-perspective, calc(var(--size-64) * 4));
+  }
+
+  .coverflow-measure {
+    position: absolute;
+    visibility: hidden;
+    width: var(--carousel-coverflow-spacing, var(--size-12));
+    height: var(--carousel-coverflow-spacing, var(--size-12));
+    pointer-events: none;
+  }
+
+  :host([variant='coverflow']) .controls,
+  :host([variant='coverflow']) .indicators {
+    z-index: 1;
+  }
+
   /* ── Controls (prev / next) ────────────────────────────────────────────── */
 
   /* Controls live inside the bottom nav bar, right-aligned via margin-inline-start: auto. */
@@ -165,6 +193,13 @@
     transition: opacity var(--transition-fast);
   }
 
+  .indicator-list {
+    display: flex;
+    flex-direction: inherit;
+    gap: inherit;
+    align-items: center;
+  }
+
   .indicator > ore-progress {
     display: block;
     width: 100%;
@@ -204,6 +239,30 @@
     animation-duration: calc(var(--carousel-timeout, 4000) * 1ms);
     animation-timing-function: var(--ease-linear);
     animation-fill-mode: forwards;
+  }
+
+  :host([variant='coverflow']) .indicators,
+  :host([variant='coverflow']) > .controls {
+    position: static;
+    grid-area: 2 / 1;
+    justify-self: center;
+    margin: var(--size-3);
+    transform: none;
+  }
+
+  :host([variant='coverflow'][orientation='vertical']) {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  :host([variant='coverflow'][orientation='vertical']) .track {
+    grid-area: 1 / 2;
+  }
+
+  :host([variant='coverflow'][orientation='vertical']) .indicators,
+  :host([variant='coverflow'][orientation='vertical']) > .controls {
+    grid-area: 1 / 1;
+    align-self: center;
   }
 }
 

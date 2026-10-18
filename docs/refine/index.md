@@ -79,6 +79,7 @@ exports:
     ore-skeleton,
     ore-slider,
     ore-speech-player,
+    ore-speed-reading,
     ore-stats,
     ore-step,
     ore-stepper,
@@ -222,7 +223,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 ### Components
 
-**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-keyboard-key`, `ore-keyboard-shortcut`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-qr-code`, `ore-separator`, `ore-stats`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
+**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-keyboard-key`, `ore-keyboard-shortcut`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-qr-code`, `ore-separator`, `ore-speed-reading`, `ore-stats`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
 
 **Disclosure:** `ore-accordion`, `ore-accordion-item`, `ore-tabs`, `ore-tab-item`, `ore-tab-panel`
 

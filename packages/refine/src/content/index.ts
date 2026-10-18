@@ -61,6 +61,14 @@ export type {
   SpeechPlayerState,
 } from './speech-player/speech-player';
 export { SPEECH_PLAYER_TAG } from './speech-player/speech-player';
+export type {
+  OreSpeedReadingEvents,
+  OreSpeedReadingLabels,
+  OreSpeedReadingProps,
+  SpeedReadingElement,
+  SpeedReadingState,
+} from './speed-reading/speed-reading';
+export { SPEED_READING_TAG } from './speed-reading/speed-reading';
 export type { OreStatsProps, StatsTrendDirection, StatsVariant } from './stats/stats';
 export { STATS_TAG } from './stats/stats';
 export type { OreStepProps } from './stepper/step';

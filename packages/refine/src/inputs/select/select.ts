@@ -622,7 +622,7 @@ define<OreSelectProps>(SELECT_TAG, {
                         e.stopPropagation();
                         selectOption(row.opt, e);
                       }}"
-                      @pointerenter="${() => {
+                      @pointermove="${() => {
                         optionList.set(row.idx);
                       }}">
                       ${

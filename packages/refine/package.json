@@ -62,6 +62,21 @@
       "require": "./dist/icons/iconify.cjs",
       "types": "./dist/icons/iconify.d.ts"
     },
+    "./icons/heroicons": {
+      "import": "./dist/icons/heroicons.js",
+      "require": "./dist/icons/heroicons.cjs",
+      "types": "./dist/icons/heroicons.d.ts"
+    },
+    "./icons/tabler": {
+      "import": "./dist/icons/tabler.js",
+      "require": "./dist/icons/tabler.cjs",
+      "types": "./dist/icons/tabler.d.ts"
+    },
+    "./icons/mdi": {
+      "import": "./dist/icons/mdi.js",
+      "require": "./dist/icons/mdi.cjs",
+      "types": "./dist/icons/mdi.d.ts"
+    },
     "./styles/animation.css": {
       "import": "./dist/styles/animation.css",
       "default": "./dist/styles/animation.css"
@@ -94,21 +109,6 @@
     },
     "./frameworks/vue": {
       "types": "./dist/frameworks/vue.d.ts"
-    },
-    "./icons/heroicons": {
-      "import": "./dist/icons/heroicons.js",
-      "require": "./dist/icons/heroicons.cjs",
-      "types": "./dist/icons/heroicons.d.ts"
-    },
-    "./icons/tabler": {
-      "import": "./dist/icons/tabler.js",
-      "require": "./dist/icons/tabler.cjs",
-      "types": "./dist/icons/tabler.d.ts"
-    },
-    "./icons/mdi": {
-      "import": "./dist/icons/mdi.js",
-      "require": "./dist/icons/mdi.cjs",
-      "types": "./dist/icons/mdi.d.ts"
     },
     "./accordion": {
       "import": "./dist/accordion.js",
@@ -420,6 +420,11 @@
       "require": "./dist/speech-player.cjs",
       "types": "./dist/content/speech-player/speech-player.d.ts"
     },
+    "./speed-reading": {
+      "import": "./dist/speed-reading.js",
+      "require": "./dist/speed-reading.cjs",
+      "types": "./dist/content/speed-reading/speed-reading.d.ts"
+    },
     "./stats": {
       "import": "./dist/stats.js",
       "require": "./dist/stats.cjs",
@@ -508,15 +513,6 @@
       "icons/iconify": [
         "dist/icons/iconify.d.ts"
       ],
-      "frameworks/elements": [
-        "dist/frameworks/elements.d.ts"
-      ],
-      "frameworks/react": [
-        "dist/frameworks/react.d.ts"
-      ],
-      "frameworks/vue": [
-        "dist/frameworks/vue.d.ts"
-      ],
       "icons/heroicons": [
         "dist/icons/heroicons.d.ts"
       ],
@@ -525,6 +521,15 @@
       ],
       "icons/mdi": [
         "dist/icons/mdi.d.ts"
+      ],
+      "frameworks/elements": [
+        "dist/frameworks/elements.d.ts"
+      ],
+      "frameworks/react": [
+        "dist/frameworks/react.d.ts"
+      ],
+      "frameworks/vue": [
+        "dist/frameworks/vue.d.ts"
       ],
       "accordion": [
         "dist/disclosure/accordion/accordion.d.ts"
@@ -711,6 +716,9 @@
       ],
       "speech-player": [
         "dist/content/speech-player/speech-player.d.ts"
+      ],
+      "speed-reading": [
+        "dist/content/speed-reading/speed-reading.d.ts"
       ],
       "stats": [
         "dist/content/stats/stats.d.ts"

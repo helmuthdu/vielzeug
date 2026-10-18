@@ -19,7 +19,7 @@ The player is a three-state cycle on one toggle: play, pause, resume: plus a sto
 - **Play**: the toggle carries the visible "Read aloud" label before the first read; once engaged the label folds away and only the icons remain. `speechSynthesis` reads the text aloud, the toggle shows a pause icon, and the stop control appears beside it.
 - **Pause / Resume**: the engine pauses mid-sentence; the toggle switches between resume and pause. A pause held longer than ten seconds is resumed defensively: if the engine reports nothing within a second, the current sentence restarts: some Chromium builds resume a long pause into silence.
 - **Stop**: sits beside the toggle, with the transport controls; cancels pending speech and returns to idle. Reading also stops on its own when the text ends, when the engine fails (announced distinctly, with an `error` event), or when the element is removed from the DOM.
-- **Speed**: the gauge-marked control cycles normal → slow → fast (`1` → `0.85` → `1.15`), showing the current value. A change while reading restarts the current sentence at the new pace so it is heard at once.
+- **Speed**: the gauge-marked control cycles 1× → 0.85× → 1.15× → 1.5×, using the same numeric multipliers for visible labels and accessibility announcements. A change while reading restarts the current sentence at the new pace so it is heard at once.
 
 The `state` attribute on the host reflects playback: `idle`, `playing`, `paused`, or `unsupported`, so CSS can react:
 
@@ -92,9 +92,9 @@ player.labels = {
   resume: 'Vorlesen fortsetzen',
   stop: 'Vorlesen beenden',
   speed: 'Lesegeschwindigkeit',
-  speedNormal: 'normal',
-  speedSlow: 'langsam',
-  speedFast: 'schnell',
+  speedNormal: '1×',
+  speedSlow: '0.85×',
+  speedFast: '1.15×',
   // ... plus the announcement strings
 };
 ```
@@ -171,7 +171,7 @@ ore-speech-player::part(play) {
 | `text`      | `string` | `''`      | The text to read aloud (empty text disables the toggle)               |
 | `lang`      | `string` | N/A | Standard HTML language tag of the text; hints voice selection       |
 | `state`     | `string` | `idle`    | Reflected playback state: `idle` \| `playing` \| `paused` \| `unsupported` |
-| `rate`      | `number` | `1`       | Playback rate; the speed control cycles `1` → `0.85` → `1.15`       |
+| `rate`      | `number` | `1`       | Playback rate; the speed control cycles `1` → `0.85` → `1.15` → `1.5` |
 | `resume-at` | `number` | N/A | The sentence index playback begins from                               |
 
 ### Properties
@@ -227,4 +227,4 @@ ore-speech-player::part(play) {
 
 ## Accessibility
 
-The toggle's accessible name follows its state: "Read aloud" while idle, "Pause reading" while playing, "Resume reading" while paused, and the same string is the visible label before the first read, so sighted and assistive users get one invitation. The speed control is named with its current step ("Reading speed: slow") and the stop control is named consistently. Icons are `aria-hidden` and supplementary to the button names. A `role="status"` live region inside the shadow DOM announces every transition ("Reading aloud.", "Reading paused.", "Reading stopped.", "Reading finished.", "Reading was interrupted.") so assistive technology does not miss the state change while focus stays on the controls. Controls are 32px hit areas (≥ the 24px minimum) and visible keyboard focus rings come standard. When the Web Speech API is missing the toggle is disabled and its name explains why, instead of silently failing.
+The toggle's accessible name follows its state: "Read aloud" while idle, "Pause reading" while playing, "Resume reading" while paused, and the same string is the visible label before the first read, so sighted and assistive users get one invitation. The speed control is named with its current multiplier ("Reading speed: 0.85×") and the stop control is named consistently. Icons are `aria-hidden` and supplementary to the button names. A `role="status"` live region inside the shadow DOM announces every transition ("Reading aloud.", "Reading paused.", "Reading stopped.", "Reading finished.", "Reading was interrupted.") so assistive technology does not miss the state change while focus stays on the controls. Controls are 32px hit areas (≥ the 24px minimum) and visible keyboard focus rings come standard. When the Web Speech API is missing the toggle is disabled and its name explains why, instead of silently failing.

@@ -992,6 +992,32 @@ describe('ore-select accessibility', () => {
       expect(target.value).toBe('banana');
     });
 
+    it('preserves keyboard navigation when scrolling brings another option under a stationary pointer', async () => {
+      fixture = await mount('ore-select', { attrs: { label: 'Fruit' }, html: SELECT_OPTIONS });
+      const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
+      fireKeyDown(trigger, { key: 'Enter' });
+      await fixture.flush();
+      fireKeyDown(trigger, { key: 'Home' });
+      const cherry = fixture.query<HTMLElement>('[data-option-value="cherry"]')!;
+      cherry.dispatchEvent(new PointerEvent('pointerenter'));
+      fireKeyDown(trigger, { key: 'Enter' });
+      await fixture.flush();
+      expect((fixture.element as HTMLElement & { value: string }).value).toBe('apple');
+    });
+
+    it('follows deliberate pointer movement over an option', async () => {
+      fixture = await mount('ore-select', { attrs: { label: 'Fruit' }, html: SELECT_OPTIONS });
+      const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
+      fireKeyDown(trigger, { key: 'Enter' });
+      await fixture.flush();
+      fixture
+        .query<HTMLElement>('[data-option-value="cherry"]')!
+        .dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+      fireKeyDown(trigger, { key: 'Enter' });
+      await fixture.flush();
+      expect((fixture.element as HTMLElement & { value: string }).value).toBe('cherry');
+    });
+
     it('skips disabled options during keyboard navigation', async () => {
       fixture = await mount('ore-select', {
         attrs: { label: 'Fruit' },

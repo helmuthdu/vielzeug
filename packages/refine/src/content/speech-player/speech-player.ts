@@ -9,8 +9,8 @@ export { ICON_TAG } from '../icon/icon';
 /** The player's reflected state: `unsupported` when the Web Speech API is missing. */
 export type SpeechPlayerState = 'idle' | 'playing' | 'paused' | 'unsupported';
 
-/** The rate steps the speed control cycles through: normal, slow, fast. */
-export const SPEECH_RATES = [1, 0.85, 1.15] as const;
+/** The playback multipliers the speed control cycles through. */
+export const SPEECH_RATES = [1, 0.85, 1.15, 1.5] as const;
 export type SpeechRate = (typeof SPEECH_RATES)[number];
 
 /** Every user-facing string the component renders or announces. Override the `labels`
@@ -32,11 +32,11 @@ export type OreSpeechPlayerLabels = {
   started: string;
   /** The speed control's accessible-name stem; the current step's name follows it. */
   speed: string;
-  /** The fast speed step's name. */
+  /** The 1.15× speed step's accessible label. */
   speedFast: string;
-  /** The normal speed step's name. */
+  /** The 1× speed step's accessible label. */
   speedNormal: string;
-  /** The slow speed step's name. */
+  /** The 0.85× speed step's accessible label. */
   speedSlow: string;
   /** The stop control's accessible name. */
   stop: string;
@@ -57,9 +57,9 @@ const DEFAULT_LABELS: OreSpeechPlayerLabels = {
   resume: 'Resume reading',
   resumed: 'Reading resumed.',
   speed: 'Reading speed',
-  speedFast: 'fast',
-  speedNormal: 'normal',
-  speedSlow: 'slow',
+  speedFast: '1.15×',
+  speedNormal: '1×',
+  speedSlow: '0.85×',
   started: 'Reading aloud.',
   stop: 'Stop reading',
   stopped: 'Reading stopped.',
@@ -159,7 +159,7 @@ function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
  *
  * Renders a labeled play/pause toggle (the label folds away once engaged), a stop
  * control beside it that appears while reading, and a speed control cycling
- * normal/slow/fast. The text is spoken sentence by sentence (long sentences split into pieces under the
+ * 1×/0.85×/1.15×/1.5×. The text is spoken sentence by sentence (long sentences split into pieces under the
  * engine's truncation window), the `state` attribute reflects playback, a
  * `role="status"` live region announces transitions, and `progress` events name the
  * sentence being read so a consumer can highlight it. Only one player speaks at a
@@ -171,7 +171,7 @@ function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
  * @attr {string} text - The text to read aloud (also settable as a JavaScript property)
  * @attr {string} lang - BCP-47 tag of `text`'s language, e.g. `en` or `de-DE`
  * @attr {string} state - Reflected playback state: 'idle' | 'playing' | 'paused' | 'unsupported'
- * @attr {number} rate - Playback rate; the speed control cycles 1 → 0.85 → 1.15
+ * @attr {number} rate - Playback rate; the speed control cycles 1 → 0.85 → 1.15 → 1.5
  * @attr {number} resume-at - The sentence index playback begins from
  *
  * @fires play - Reading started. No detail.

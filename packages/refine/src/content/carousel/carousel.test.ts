@@ -451,14 +451,15 @@ describe('ore-carousel', () => {
       expect(nextBtn(fixture)?.getAttribute('aria-label')).toBe('Next slide');
     });
 
-    it('sets role="tablist" and aria-label on indicators container', async () => {
+    it('sets role="tablist" and aria-label on the indicator list, excluding navigation controls', async () => {
       fixture = await mount('ore-carousel', { html: slides });
       await fixture.flush();
 
-      const ind = fixture.query('.indicators');
+      const ind = fixture.query('.indicator-list');
 
       expect(ind?.getAttribute('role')).toBe('tablist');
       expect(ind?.getAttribute('aria-label')).toBe('Slide indicators');
+      expect(ind?.querySelector('.controls')).toBeNull();
     });
 
     it('sets role="tab" and aria-selected on indicator dots', async () => {
@@ -757,6 +758,182 @@ describe('ore-carousel', () => {
       await fixture.flush();
 
       expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+    });
+  });
+
+  describe('Coverflow', () => {
+    const manySlides = Array.from(
+      { length: 15 },
+      (_, index) => `<ore-carousel-slide><button>Cover ${index + 1}</button></ore-carousel-slide>`,
+    ).join('');
+    const measure = async (extent: number, vertical = false): Promise<void> => {
+      Object.defineProperty(fixture.query('.track'), vertical ? 'clientHeight' : 'clientWidth', {
+        configurable: true,
+        value: extent,
+      });
+      Object.defineProperty(fixture.query('.coverflow-measure'), vertical ? 'offsetHeight' : 'offsetWidth', {
+        configurable: true,
+        value: 48,
+      });
+      Object.defineProperty(getSlides(fixture)[0], vertical ? 'offsetHeight' : 'offsetWidth', {
+        configurable: true,
+        value: 160,
+      });
+      fixture.query('slot')!.dispatchEvent(new Event('slotchange'));
+      await fixture.flush();
+    };
+    const visible = (): HTMLElement[] =>
+      getSlides(fixture).filter((slide) => slide.hasAttribute('data-coverflow-visible'));
+
+    it('fits more than two previews per side when its container has room', async () => {
+      fixture = await mount('ore-carousel', { attrs: { variant: 'coverflow' }, html: manySlides });
+      await measure(400);
+      const onChange = vi.fn();
+
+      fixture.element.addEventListener('change', onChange);
+      expect(visible()).toHaveLength(5);
+      await measure(800);
+      expect(visible()).toHaveLength(13);
+      expect(activeSlide(fixture)?.textContent).toBe('Cover 1');
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it.each([0, 1, 2, 3, 4])(
+      'renders %i unique items without cloning or hiding the two-item neighbor',
+      async (count) => {
+        fixture = await mount('ore-carousel', {
+          attrs: { variant: 'coverflow' },
+          html: Array.from({ length: count }, (_, i) => `<ore-carousel-slide>Cover ${i}</ore-carousel-slide>`).join(''),
+        });
+        if (count > 0) await measure(800);
+        expect(visible()).toHaveLength(count);
+        expect(getSlides(fixture)).toHaveLength(count);
+      },
+    );
+
+    it('selects a visible preview once without activating its content', async () => {
+      fixture = await mount('ore-carousel', { attrs: { variant: 'coverflow' }, html: manySlides });
+      await measure(400);
+      const onChange = vi.fn();
+      const onClick = vi.fn();
+
+      fixture.element.addEventListener('change', onChange);
+      getSlides(fixture)[1]!.querySelector('button')!.addEventListener('click', onClick);
+      getSlides(fixture)[1]!.click();
+      await fixture.flush();
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(activeSlide(fixture)?.textContent).toBe('Cover 2');
+      expect(onClick).not.toHaveBeenCalled();
+      activeSlide(fixture)!.querySelector('button')!.click();
+      expect(onClick).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not navigate to off-window slides or wrap previews with loop=false', async () => {
+      fixture = await mount('ore-carousel', {
+        attrs: { loop: 'false', variant: 'coverflow' },
+        html: manySlides,
+      });
+      await measure(400);
+      expect(visible().map((slide) => slide.textContent)).toEqual(['Cover 1', 'Cover 2', 'Cover 3']);
+      getSlides(fixture)[14]!.click();
+      await fixture.flush();
+      expect(activeSlide(fixture)?.textContent).toBe('Cover 1');
+    });
+
+    it('makes preview content inert and restores it when switching variants', async () => {
+      fixture = await mount('ore-carousel', { attrs: { variant: 'coverflow' }, html: manySlides });
+      await measure(400);
+      expect(getSlides(fixture)[0]!.shadowRoot!.querySelector('.content')!.hasAttribute('inert')).toBe(false);
+      expect(getSlides(fixture)[1]!.shadowRoot!.querySelector('.content')!.hasAttribute('inert')).toBe(true);
+      expect(fixture.element.tabIndex).toBe(0);
+      fixture.element.setAttribute('variant', 'gallery');
+      await fixture.flush();
+      for (const slide of getSlides(fixture)) {
+        expect(slide.hasAttribute('data-coverflow-visible')).toBe(false);
+        expect(slide.style.getPropertyValue('--_coverflow-transform')).toBe('');
+        expect(slide.shadowRoot!.querySelector('.content')!.hasAttribute('inert')).toBe(false);
+      }
+      expect(fixture.element.hasAttribute('tabindex')).toBe(false);
+      expect(getSlides(fixture)[1]!.hasAttribute('data-gallery-visible')).toBe(true);
+    });
+
+    it('preserves an explicit consumer tabindex', async () => {
+      fixture = await mount('ore-carousel', { attrs: { tabindex: '-1', variant: 'coverflow' }, html: slides });
+      expect(fixture.element.tabIndex).toBe(-1);
+    });
+
+    it('fits vertical previews and navigates on the vertical keyboard axis', async () => {
+      fixture = await mount('ore-carousel', {
+        attrs: { orientation: 'vertical', variant: 'coverflow' },
+        html: manySlides,
+      });
+      await measure(800, true);
+      expect(visible()).toHaveLength(13);
+      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowDown' }));
+      await fixture.flush();
+      expect(activeSlide(fixture)?.textContent).toBe('Cover 2');
+    });
+
+    it('mirrors horizontal keyboard navigation in RTL', async () => {
+      fixture = await mount('ore-carousel', { attrs: { dir: 'rtl', variant: 'coverflow' }, html: slides });
+      fixture.element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowLeft' }));
+      await fixture.flush();
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+    });
+
+    it('does not consume arrow keys from editable content', async () => {
+      fixture = await mount('ore-carousel', {
+        attrs: { variant: 'coverflow' },
+        html: `<ore-carousel-slide><input aria-label="Caption"></ore-carousel-slide>${slides}`,
+      });
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'ArrowRight' });
+
+      fixture.element.querySelector('input')!.dispatchEvent(event);
+      await fixture.flush();
+      expect(event.defaultPrevented).toBe(false);
+      expect(activeSlide(fixture)?.querySelector('input')).toBeTruthy();
+    });
+
+    it('recovers to a valid active item after removing slides', async () => {
+      fixture = await mount('ore-carousel', {
+        attrs: { 'slide-index': '2', variant: 'coverflow' },
+        html: slides,
+      });
+      getSlides(fixture)[2]!.remove();
+      await fixture.flush();
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+      expect(fixture.element.getAttribute('slide-index')).toBe('1');
+    });
+
+    it('has no structural accessibility violations', async () => {
+      fixture = await mount('ore-carousel', {
+        attrs: { label: 'Browse covers', variant: 'coverflow' },
+        html: slides,
+      });
+      expect(
+        (await axeCheck(fixture.element)).violations.map(({ id, nodes }) => ({
+          id,
+          targets: nodes.map((node) => node.target),
+        })),
+      ).toEqual([]);
+    });
+
+    it('disconnects all size observers when leaving coverflow and when disposed', async () => {
+      const disconnect = vi.spyOn(ResizeObserver.prototype, 'disconnect');
+
+      try {
+        fixture = await mount('ore-carousel', { attrs: { variant: 'coverflow' }, html: slides });
+        fixture.element.setAttribute('variant', 'default');
+        await fixture.flush();
+        expect(disconnect).toHaveBeenCalledTimes(3);
+        fixture.element.setAttribute('variant', 'coverflow');
+        await fixture.flush();
+        fixture.dispose();
+        expect(disconnect).toHaveBeenCalledTimes(6);
+      } finally {
+        disconnect.mockRestore();
+      }
     });
   });
 

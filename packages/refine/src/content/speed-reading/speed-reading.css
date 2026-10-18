@@ -1,0 +1,240 @@
+@layer refine.base {
+  :host {
+    display: block;
+    min-width: 0;
+    color: var(--text-color-body);
+  }
+
+  :host([hidden]) {
+    display: none;
+  }
+
+  .reader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--speed-reading-gap, var(--size-4));
+    min-width: 0;
+  }
+
+  .viewport {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: var(--speed-reading-height, var(--size-32));
+    overflow: hidden;
+    background: var(--color-contrast-100);
+    border-radius: var(--rounded-xl);
+  }
+
+  .viewport::before,
+  .viewport::after {
+    position: absolute;
+    inset-inline-start: 50%;
+    width: var(--border-2);
+    height: var(--size-3);
+    content: '';
+    background: var(--color-contrast-500);
+    transform: translateX(-50%);
+  }
+
+  .viewport::before {
+    inset-block-start: var(--size-2);
+  }
+
+  .viewport::after {
+    inset-block-end: var(--size-2);
+  }
+
+  .viewport:focus-visible {
+    outline: var(--border-2) solid var(--color-primary);
+    outline-offset: var(--size-1);
+  }
+
+  .word {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    width: 100%;
+    font-size: var(--speed-reading-font-size, var(--text-2xl));
+    line-height: var(--leading-normal);
+    white-space: nowrap;
+    direction: ltr;
+  }
+
+  .prefix,
+  .suffix {
+    flex: 1 1 0;
+    width: max-content;
+    min-width: 0;
+  }
+
+  .prefix {
+    text-align: right;
+  }
+
+  .suffix {
+    text-align: left;
+  }
+
+  .focal {
+    flex: none;
+    color: var(--speed-reading-focal-color, var(--color-primary));
+    text-decoration: underline;
+    text-underline-offset: var(--size-1);
+  }
+
+  .word[data-centered] .prefix,
+  .word[data-centered] .focal {
+    display: none;
+  }
+
+  .word[data-centered] .suffix {
+    flex: none;
+    width: max-content;
+    unicode-bidi: plaintext;
+  }
+
+  .minimum {
+    position: absolute;
+    visibility: hidden;
+    font-size: var(--speed-reading-min-font-size, var(--text-base));
+  }
+
+  .measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--size-2);
+    width: 100%;
+    max-width: var(--size-80);
+    margin-inline: auto;
+  }
+
+  .toggle {
+    min-width: 0;
+  }
+
+  .toggle::part(button) {
+    height: auto;
+    min-height: var(--size-11);
+    white-space: normal;
+  }
+
+  .toggle::part(content) {
+    white-space: normal;
+  }
+
+  .settings,
+  .status,
+  .context-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .settings,
+  .status {
+    justify-content: space-between;
+  }
+
+  ore-number-input {
+    --input-min-width: 0;
+    --number-input-min-width: 0;
+    flex: 1 1 var(--size-32);
+    min-width: 0;
+    max-width: min(100%, var(--size-48));
+  }
+
+  .position,
+  .status,
+  .shortcuts,
+  .pace-help {
+    font-size: var(--text-sm);
+  }
+
+  .position {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .status {
+    color: var(--text-color-secondary);
+  }
+
+  .shortcuts,
+  .pace-help {
+    margin: 0;
+    color: var(--text-color-secondary);
+  }
+
+  .shortcuts {
+    text-align: center;
+  }
+
+  .recovery,
+  .context-controls ore-button {
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .recovery::part(button),
+  .context-controls ore-button::part(button) {
+    height: auto;
+    min-height: var(--size-11);
+  }
+
+  .recovery::part(content),
+  .context-controls ore-button::part(content) {
+    white-space: normal;
+  }
+
+  .message {
+    padding: var(--size-4);
+    font-size: var(--text-sm);
+  }
+
+  .full-text {
+    position: relative;
+    max-height: var(--size-64);
+    overflow: auto;
+    scrollbar-gutter: stable;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  .full-text:focus-visible {
+    outline: var(--border-2) solid var(--color-primary);
+    outline-offset: var(--size-1);
+  }
+
+  mark {
+    color: var(--text-color-body);
+    text-decoration: underline;
+    text-underline-offset: var(--size-1);
+    background: var(--color-primary-backdrop);
+  }
+
+  .context-controls {
+    margin-block-start: var(--size-4);
+  }
+
+  ore-select {
+    --input-min-width: 0;
+    --select-min-width: 0;
+    flex: 1 1 var(--size-48);
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  [hidden] {
+    display: none;
+  }
+}

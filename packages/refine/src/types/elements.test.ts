@@ -37,6 +37,8 @@ describe('HTMLElementTagNameMap: form-associated element type coverage', () => {
     expectTypeOf<RefineElementMap['ore-list']['selectable']>().toEqualTypeOf<boolean | undefined>();
     expectTypeOf<RefineElementMap['ore-navigation-menu']['open']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-stats']['value']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<RefineElementMap['ore-speed-reading']['wpm']>().toEqualTypeOf<number | undefined>();
+    expectTypeOf<RefineElementMap['ore-speed-reading']['seek']>().toEqualTypeOf<(index: number) => void>();
     expectTypeOf<RefineElementMap['ore-stepper']['value']>().toEqualTypeOf<string | undefined>();
     expectTypeOf<RefineElementMap['ore-typing-indicator']['label']>().toEqualTypeOf<string | undefined>();
   });

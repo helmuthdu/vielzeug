@@ -1609,6 +1609,7 @@ export default defineConfig({
                 { link: '/refine/components/separator', text: 'Separator' },
                 { link: '/refine/components/stats', text: 'Stats' },
                 { link: '/refine/components/speech-player', text: 'Speech Player' },
+                { link: '/refine/components/speed-reading', text: 'Speed Reading' },
                 { link: '/refine/components/stepper', text: 'Stepper' },
                 { link: '/refine/components/table', text: 'Table' },
                 { link: '/refine/components/text', text: 'Text' },
