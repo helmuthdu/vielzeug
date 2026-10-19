@@ -70,6 +70,11 @@ function tickElectrons(ts: number) {
   rafId = requestAnimationFrame(tickElectrons);
 }
 
+function startElectrons() {
+  cancelAnimationFrame(rafId);
+  if (!prefersReducedMotion.value) rafId = requestAnimationFrame(tickElectrons);
+}
+
 const glowPaused = ref(false);
 let glowObserver: IntersectionObserver | null = null;
 
@@ -197,16 +202,22 @@ onMounted(() => {
   mq.addEventListener('change', (e) => {
     prefersReducedMotion.value = e.matches;
     if (e.matches) cancelAnimationFrame(rafId);
-    else rafId = requestAnimationFrame(tickElectrons);
+    else startElectrons();
   });
 
-  if (!prefersReducedMotion.value) rafId = requestAnimationFrame(tickElectrons);
+  startElectrons();
 
   const logoEl = document.querySelector('.hero-logo-wrapper');
   if (logoEl) {
     glowObserver = new IntersectionObserver(
       ([entry]) => {
         glowPaused.value = !entry.isIntersecting;
+        // The electron animation is a continuous rAF loop that rebuilds every
+        // tail point each frame. Once the hero scrolls out of view it is pure
+        // wasted main-thread work, which is exactly the budget the rest of the
+        // page needs on mobile: stop it while hidden, resume when visible.
+        if (entry.isIntersecting) startElectrons();
+        else cancelAnimationFrame(rafId);
       },
       { rootMargin: '200px' },
     );

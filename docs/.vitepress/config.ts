@@ -68,13 +68,6 @@ export default defineConfig({
     ['link', { href: '/favicon/favicon.ico', rel: 'icon', type: 'image/x-icon' }],
     ['link', { href: '/favicon/apple-touch-icon.png', rel: 'apple-touch-icon', sizes: '180x180' }],
     ['link', { href: '/favicon/site.webmanifest', rel: 'manifest' }],
-    [
-      'link',
-      {
-        href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200',
-        rel: 'stylesheet',
-      },
-    ],
     // Theme and mobile app configuration
     ['meta', { content: '#f6ac2c', name: 'theme-color' }],
     ['meta', { content: 'yes', name: 'mobile-web-app-capable' }],
