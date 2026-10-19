@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Confirm sign-in page parses bare asctime Retry-After dates as GMT instead of local time",
+      "packageName": "@vielzeug/archive",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

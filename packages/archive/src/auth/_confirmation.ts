@@ -123,8 +123,12 @@ button.addEventListener('click', async () => {
     } else if (response.status === 429) {
       const value = response.headers.get('retry-after');
       const httpDate = /^(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:0[1-9]|[12]\\d|3[01]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \\d{4} (?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d GMT|(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (?:0[1-9]|[12]\\d|3[01])-(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\\d{2} (?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d GMT|(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?: [1-9]|[12]\\d|3[01]) (?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d \\d{4})$/;
+      // HTTP dates are always GMT; bare asctime forms need the suffix or Date.parse reads them as local time.
       const seconds = value && /^\\d+$/.test(value)
-        ? Number(value) : (value && httpDate.test(value) ? (Date.parse(value) - Date.now()) / 1000 : NaN);
+        ? Number(value)
+        : (value && httpDate.test(value)
+            ? (Date.parse(value.endsWith('GMT') ? value : value + ' GMT') - Date.now()) / 1000
+            : NaN);
       const wait = Number.isFinite(seconds) ? Math.min(300, Math.max(1, Math.ceil(seconds))) : 30;
       retryAt = Date.now() + wait * 1000;
       recover('Too many attempts. Wait ' + wait + ' seconds before trying again.');

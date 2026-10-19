@@ -40,17 +40,32 @@ describe('listPublicationsSql filter composition', () => {
     expect(bound.parameters).toEqual(['fixture', '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d', 11]);
   });
 
-  it('adds a scalar filter equality predicate', () => {
-    const bound = listPublicationsSql({ collection: 'fixture', filter: 'even', limit: 11, sort: 'recent' });
-    expect(bound.sql).toContain('p.filter_value = ?');
+  it('adds a filter IN predicate for one or more values', () => {
+    const bound = listPublicationsSql({ collection: 'fixture', filters: ['even'], limit: 11, sort: 'recent' });
+    expect(bound.sql).toContain('p.filter_value IN (?)');
     expect(bound.parameters).toEqual(['fixture', 'even', 11]);
+
+    const multi = listPublicationsSql({ collection: 'fixture', filters: ['even', 'odd'], limit: 11, sort: 'recent' });
+    expect(multi.sql).toContain('p.filter_value IN (?, ?)');
+    expect(multi.parameters).toEqual(['fixture', 'even', 'odd', 11]);
   });
 
-  it('adds a tag existence predicate over publication_tags', () => {
-    const bound = listPublicationsSql({ collection: 'fixture', limit: 11, sort: 'recent', tag: 'low' });
+  it('adds a tag existence predicate over publication_tags for one or more values', () => {
+    const bound = listPublicationsSql({ collection: 'fixture', limit: 11, sort: 'recent', tags: ['low'] });
     expect(bound.sql).toContain('EXISTS (');
-    expect(bound.sql).toContain('SELECT 1 FROM publication_tags t WHERE t.publication_id = p.id AND t.tag = ?');
+    expect(bound.sql).toContain('SELECT 1 FROM publication_tags t WHERE t.publication_id = p.id AND t.tag IN (?)');
     expect(bound.parameters).toEqual(['fixture', 'low', 11]);
+
+    const multi = listPublicationsSql({ collection: 'fixture', limit: 11, sort: 'recent', tags: ['low', 'high'] });
+    expect(multi.sql).toContain('t.tag IN (?, ?)');
+    expect(multi.parameters).toEqual(['fixture', 'low', 'high', 11]);
+  });
+
+  it('omits the predicates for empty value lists', () => {
+    const bound = listPublicationsSql({ collection: 'fixture', filters: [], limit: 11, sort: 'recent', tags: [] });
+    expect(bound.sql).not.toContain('p.filter_value');
+    expect(bound.sql).not.toContain('publication_tags');
+    expect(bound.parameters).toEqual(['fixture', 11]);
   });
 
   it('adds an FTS match predicate over the title index', () => {
@@ -68,14 +83,14 @@ describe('listPublicationsSql filter composition', () => {
     const bound = listPublicationsSql({
       author: '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
       collection: 'fixture',
-      filter: 'odd',
+      filters: ['odd'],
       limit: 11,
       searchMatch: '"fire"*',
       sort: 'recent',
-      tag: 'high',
+      tags: ['high'],
     });
     expect(bound.sql).toContain(
-      'WHERE p.collection = ? AND p.hidden_at IS NULL AND p.owner_id = ? AND p.filter_value = ?',
+      'WHERE p.collection = ? AND p.hidden_at IS NULL AND p.owner_id = ? AND p.filter_value IN (?)',
     );
     expect(bound.parameters).toEqual(['fixture', '0a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d', 'odd', 'high', '"fire"*', 11]);
   });

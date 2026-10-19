@@ -176,17 +176,17 @@ const searchMatchFor = (search: string | null): string | undefined => {
 const entryCursorContext = (query: {
   author?: string;
   collection: string;
-  filter?: string;
+  filters: readonly string[];
   searchMatch?: string;
   sort: 'liked' | 'recent';
-  tag?: string;
+  tags: readonly string[];
 }): string =>
   JSON.stringify([
     query.collection,
     query.sort,
     query.author ?? '',
-    query.filter ?? '',
-    query.tag ?? '',
+    query.filters,
+    query.tags,
     query.searchMatch ?? '',
   ]);
 
@@ -196,22 +196,34 @@ const cursorFromRow = (row: PublicationRow): PublicationCursor => ({
   likeCount: row.like_count,
 });
 
+/** Repeated `filter`/`tag` values one entry-list request may carry (OR within each). */
+const MAX_VOCAB_VALUES = 16;
+
+/** Reads one repeatable vocabulary param: every value must be declared, no repeats
+ *  past the bound, and the list is deduplicated and sorted so `?tag=a&tag=a` matches
+ *  `?tag=a` and value order never changes the cursor context. */
+const vocabValues = (params: URLSearchParams, key: string, declared: readonly string[]): string[] => {
+  const raw = params.getAll(key);
+  if (raw.length > MAX_VOCAB_VALUES) throw badRequest();
+  const values = [...new Set(raw)].sort();
+  if (values.some((value) => !declared.includes(value))) throw badRequest();
+  return values;
+};
+
 export async function listEntries(
   collection: ArchiveCollection,
   request: Request,
   env: ArchiveWorkerEnv,
 ): Promise<Response> {
   const url = new URL(request.url);
-  const params = queryParams(url, ['author', 'cursor', 'filter', 'limit', 'search', 'sort', 'tag']);
+  const params = queryParams(url, ['author', 'cursor', 'filter', 'limit', 'search', 'sort', 'tag'], ['filter', 'tag']);
 
   const sortRaw = params.get('sort') ?? 'recent';
   const sortParsed = archiveSortSchema.safeParse(sortRaw);
   if (!sortParsed.success) throw badRequest();
 
-  const filter = params.get('filter');
-  if (filter !== null && !collection.filters.includes(filter)) throw badRequest();
-  const tag = params.get('tag');
-  if (tag !== null && !collection.tags.includes(tag)) throw badRequest();
+  const filters = vocabValues(params, 'filter', collection.filters);
+  const tags = vocabValues(params, 'tag', collection.tags);
   const author = params.get('author');
   if (author !== null && !UUID_RE.test(author)) throw badRequest();
 
@@ -219,10 +231,10 @@ export async function listEntries(
   const context = entryCursorContext({
     author: author ?? undefined,
     collection: collection.name,
-    filter: filter ?? undefined,
+    filters,
     searchMatch,
     sort: sortParsed.data,
-    tag: tag ?? undefined,
+    tags,
   });
   const { cursor, limit } = forwardPageParams(params, context);
 
@@ -231,11 +243,11 @@ export async function listEntries(
     collection: collection.name,
     cursor:
       cursor === null ? undefined : { createdAt: cursor.createdAt, id: cursor.id, likeCount: cursor.likeCount ?? 0 },
-    filter: filter ?? undefined,
+    filters,
     limit: limit + 1,
     searchMatch,
     sort: sortParsed.data,
-    tag: tag ?? undefined,
+    tags,
   };
 
   // One bounded query — never a count: the over-read row is the next page's proof.

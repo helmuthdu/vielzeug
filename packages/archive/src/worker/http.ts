@@ -72,12 +72,14 @@ export function toErrorResponse(error: unknown, requestId: string): Response {
 /**
  * Rejects query strings with unknown or repeated parameters. Every accepted route
  * names its full allow-list; anything else is a client bug, not something to ignore.
+ * Keys listed in `repeatable` may carry several values (read back with `getAll`);
+ * every other key stays single-valued.
  */
-export function queryParams(url: URL, allowed: readonly string[]): URLSearchParams {
+export function queryParams(url: URL, allowed: readonly string[], repeatable: readonly string[] = []): URLSearchParams {
   const params = url.searchParams;
   const seen = new Set<string>();
   for (const key of params.keys()) {
-    if (!allowed.includes(key) || seen.has(key)) throw badRequest();
+    if (!allowed.includes(key) || (seen.has(key) && !repeatable.includes(key))) throw badRequest();
     seen.add(key);
   }
   return params;

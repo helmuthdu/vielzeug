@@ -143,12 +143,14 @@ export interface PublicationFilter {
   collection: string;
   /** Forward keyset boundary: `createdAt`/`id` plus the liked sort's `likeCount`. */
   cursor?: PublicationCursor;
-  filter?: string;
+  /** Declared filter values matched with OR; empty matches every entry. */
+  filters?: readonly string[];
   limit: number;
   /** Quoted word-prefix terms, normalized before reaching the SQL boundary. */
   searchMatch?: string;
   sort: 'liked' | 'recent';
-  tag?: string;
+  /** Declared tag values matched with OR; empty matches every entry. */
+  tags?: readonly string[];
 }
 
 export interface BoundSql {
@@ -168,15 +170,15 @@ export function listPublicationsSql(filter: PublicationFilter): BoundSql {
     where.push('p.owner_id = ?');
     parameters.push(filter.author);
   }
-  if (filter.filter) {
-    where.push('p.filter_value = ?');
-    parameters.push(filter.filter);
+  if (filter.filters?.length) {
+    where.push(`p.filter_value IN (${filter.filters.map(() => '?').join(', ')})`);
+    parameters.push(...filter.filters);
   }
-  if (filter.tag) {
+  if (filter.tags?.length) {
     where.push(`EXISTS (
-      SELECT 1 FROM publication_tags t WHERE t.publication_id = p.id AND t.tag = ?
+      SELECT 1 FROM publication_tags t WHERE t.publication_id = p.id AND t.tag IN (${filter.tags.map(() => '?').join(', ')})
     )`);
-    parameters.push(filter.tag);
+    parameters.push(...filter.tags);
   }
   if (filter.searchMatch) {
     where.push(`p.rowid IN (

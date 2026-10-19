@@ -1274,6 +1274,56 @@ describe('listing, filtering and paging', () => {
     expect(unknownFilter.res.status).toBe(400);
     const unknownTag = await call(API, '/api/v1/collections/recipes/entries?tag=frozen');
     expect(unknownTag.res.status).toBe(400);
+    // One unknown value among declared repeats is still a 400.
+    const mixed = await call(API, '/api/v1/collections/recipes/entries?filter=italian&filter=french');
+    expect(mixed.res.status).toBe(400);
+  });
+
+  it('matches repeated filter and tag values with OR', async () => {
+    const alice = await signIn('alice');
+    await register(alice);
+    const italian = await publish(alice, { ...recipe('or pasta'), cuisine: 'italian' });
+    const japanese = await publish(alice, { ...recipe('or ramen'), cuisine: 'japanese' });
+    const plain = await publish(alice, { ...recipe('or plain'), cuisine: 'italian' });
+    expect([italian.res.status, japanese.res.status, plain.res.status]).toEqual([201, 201, 201]);
+
+    const both = await call(API, '/api/v1/collections/recipes/entries?filter=italian&filter=japanese&limit=50');
+    const bothIds = (both.json as { entries: { id: string }[] }).entries.map((e) => e.id);
+    expect(bothIds).toEqual(expect.arrayContaining([italian.entry.id, japanese.entry.id, plain.entry.id]));
+
+    const one = await call(API, '/api/v1/collections/recipes/entries?filter=japanese&limit=50');
+    const oneIds = (one.json as { entries: { id: string }[] }).entries.map((e) => e.id);
+    expect(oneIds).toContain(japanese.entry.id);
+    expect(oneIds).not.toContain(italian.entry.id);
+    expect(oneIds).not.toContain(plain.entry.id);
+
+    // Repeating the same value is the same query as sending it once.
+    const deduped = await call(API, '/api/v1/collections/recipes/entries?filter=italian&filter=italian&limit=50');
+    const dedupedIds = (deduped.json as { entries: { id: string }[] }).entries.map((e) => e.id);
+    expect(dedupedIds).toContain(italian.entry.id);
+    expect(dedupedIds).toContain(plain.entry.id);
+    expect(dedupedIds).not.toContain(japanese.entry.id);
+
+    // Tags: the 3-ingredient recipe is `quick`, the 7-ingredient one `involved`.
+    const bothTags = await call(API, '/api/v1/collections/recipes/entries?tag=quick&tag=involved&limit=50');
+    const bothTagIds = (bothTags.json as { entries: { id: string }[] }).entries.map((e) => e.id);
+    expect(bothTagIds).toEqual(expect.arrayContaining([italian.entry.id, japanese.entry.id]));
+
+    // A cursor minted under one multi-value context cannot page another.
+    const page1 = await call(API, '/api/v1/collections/recipes/entries?filter=italian&filter=japanese&limit=1');
+    expect(page1.res.status).toBe(200);
+    const cursor = (page1.json as { cursor: string | null }).cursor;
+    expect(cursor).not.toBeNull();
+    const replay = await call(
+      API,
+      `/api/v1/collections/recipes/entries?filter=italian&limit=1&cursor=${encodeURIComponent(cursor ?? '')}`,
+    );
+    expect(replay.res.status).toBe(400);
+    const same = await call(
+      API,
+      `/api/v1/collections/recipes/entries?filter=japanese&filter=italian&limit=1&cursor=${encodeURIComponent(cursor ?? '')}`,
+    );
+    expect(same.res.status).toBe(200);
   });
 
   it('filters by cuisine, tag and search; liked sort ranks by likes', async () => {
