@@ -1,5 +1,7 @@
 # Chip
 
+The `label` shadow part lets a containing component override text wrapping without replacing chip interaction or accessibility. For example, `ore-chip::part(label) { white-space: normal; overflow-wrap: anywhere; }` keeps long filter labels readable in narrow layouts.
+
 A compact, styled label for tags, filters, and selected values. Supports a leading icon, interaction modes (static, removable, selectable), all color themes, six variants, and three sizes. Used internally by `ore-select` and `ore-combobox` in multiselect mode.
 
 ## Variants

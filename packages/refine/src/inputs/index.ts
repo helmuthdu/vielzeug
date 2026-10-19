@@ -55,7 +55,12 @@ export {
   type QueryToken,
   type QueryTokenDef,
 } from './query-bar/query-bar';
-export type { OreQueryBarEvents, OreQueryBarProps } from './query-bar/query-bar.types';
+export type {
+  OreQueryBarEvents,
+  OreQueryBarProps,
+  QueryBarLabels,
+  QueryQuickFilter,
+} from './query-bar/query-bar.types';
 export type { OreRadioEvents, OreRadioProps } from './radio/radio';
 export { RADIO_TAG } from './radio/radio';
 export type { OreRadioGroupEvents, OreRadioGroupProps } from './radio-group/radio-group';

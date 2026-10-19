@@ -17,6 +17,7 @@ describe('ore-chip', () => {
       fixture = await mount('ore-chip', { html: 'Label' });
 
       expect(fixture.element.textContent?.trim()).toBe('Label');
+      expect(fixture.query('[part="label"]')?.querySelector('slot')).toBeTruthy();
     });
 
     it('does not render remove button in static mode', async () => {

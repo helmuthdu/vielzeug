@@ -10,41 +10,36 @@
 
     display: inline-flex;
     flex-direction: column;
+    gap: var(--size-1);
     align-items: stretch;
-    min-width: var(--query-bar-min-width, 12rem);
-  }
-
-  :host([open]) {
-    /* Nothing yet: the open state is reflected for consumer styling. */
+    min-width: var(--query-bar-min-width, 0);
   }
 
   /* ore-input cursor override so the field still feels like a text input */
   .trigger::part(input) {
+    flex-basis: var(--size-24);
     cursor: text;
   }
 
-  /* Allow the field to grow vertically when pills wrap to multiple rows. */
   .trigger::part(field) {
     height: auto;
     min-height: var(--input-height, var(--size-10));
   }
 
-  /* Wrap pills + input across rows; the suffix stays on the input's row.
-     Only row-gap is set here: spacing between pills is handled via margin on
-     ore-chip so the empty prefix adds no extra offset. */
   .trigger::part(input-row) {
     flex-wrap: wrap;
     row-gap: var(--size-1);
     align-items: center;
   }
 
-  /* ========================================
-     Prefix: search icon + pill tokens
-     ======================================== */
+  .trigger,
+  .filter-group ore-input {
+    --input-min-width: 0;
+    min-width: 0;
+  }
 
-  /* display:contents removes the prefix wrapper from the flex layout so the
-     icon and chips become direct flex items of input-row. */
-  .prefix {
+  .prefix,
+  .applied {
     display: contents;
   }
 
@@ -54,18 +49,501 @@
     color: var(--text-color-tertiary);
   }
 
-  /* .pills is also display:contents so individual ore-chip elements are the
-     direct flex items, wrapping inline with the search input. */
-  .pills {
-    display: contents;
+  .toolbar,
+  .quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
   }
 
-  /* Trailing space after each chip covers both inter-chip spacing and
-     the gap between the last chip and the search input. Pills never shrink:
-     they keep their readable size and wrap instead. */
-  .prefix ore-chip {
+  @media (pointer: coarse) and (max-width: 40rem) {
+    /* Phones drop the quick-filter row entirely: the row would steal space
+       from the results, and every quick filter duplicates a drawer control,
+       so nothing becomes unreachable. Tablets keep the row. */
+    .quick-filters {
+      display: none;
+    }
+  }
+
+  /* Application content (e.g. a result count) rides the row's end; it stays
+     with the controls when the row wraps. */
+  .toolbar-end {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
+    margin-inline-start: auto;
+  }
+
+  ore-chip {
+    max-width: 100%;
+  }
+
+  .applied ore-chip {
     flex: none;
     margin-inline-end: var(--size-1);
+  }
+
+  ore-chip::part(label) {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .filter-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: var(--size-5);
+    min-height: var(--size-5);
+    padding-inline: var(--size-1);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--leading-none);
+    color: var(--text-color-secondary);
+    background: var(--color-contrast-150);
+    border-radius: var(--rounded-full);
+  }
+
+  /* 16px button + the sm chip's 2px padding and 2px border = 22px pill, under
+     the field's 24px text line: adding a pill never grows the field's height. */
+  ore-chip::part(remove-btn) {
+    width: var(--size-4);
+    height: var(--size-4);
+    background: transparent;
+    border-radius: var(--rounded-full);
+  }
+
+  .quick-filters ore-chip::part(chip-btn),
+  .toolbar ore-button::part(button) {
+    min-height: var(--size-8);
+  }
+
+  @media (pointer: coarse) {
+    /* External ::part rules win over the components' internal styles, so the
+       toolbar controls need their own 44px (WCAG 2.5.5) floor here; the
+       button's internal --_touch-target cannot shine through. */
+    .quick-filters ore-chip::part(chip-btn),
+    .toolbar ore-button::part(button) {
+      min-width: var(--size-11);
+      min-height: var(--size-11);
+    }
+
+    /* Applied pills stay slim: the remove button keeps its 44px hit area, but
+       negative block margins make it overflow the pill instead of inflating
+       the whole badge to 44px. The button is transparent, so the overflow
+       shows nothing. */
+    ore-chip::part(remove-btn) {
+      min-width: var(--size-11);
+      min-height: var(--size-11);
+      margin-block: calc((var(--size-4) - var(--size-11)) / 2);
+    }
+
+    /* Same trick for the field's clear button: 44px hit area, no field growth. */
+    .clear-btn {
+      min-width: var(--size-11);
+      min-height: var(--size-11);
+      margin-block: calc((var(--size-6) - var(--size-11)) / 2);
+    }
+  }
+
+  .filters-drawer[placement='bottom']::part(panel) {
+    height: auto;
+    max-height: 90dvh;
+  }
+
+  .filters-drawer[placement='bottom']::part(body) {
+    flex: 0 1 auto;
+  }
+
+  .filters-drawer[placement='right'] {
+    --drawer-size: var(--size-96);
+  }
+
+  .filters-drawer::part(body) {
+    min-height: 0;
+    background: var(--color-contrast-50);
+  }
+
+  .filters-drawer::part(header),
+  .filters-drawer::part(footer) {
+    background: var(--color-canvas);
+  }
+
+  .filters-drawer[placement='bottom']::part(panel) {
+    border-start-start-radius: var(--rounded-2xl);
+    border-start-end-radius: var(--rounded-2xl);
+  }
+
+  .filters-drawer::part(close-btn) {
+    width: var(--size-11);
+    height: var(--size-11);
+    border-radius: var(--rounded-full);
+  }
+
+  .filters-drawer::part(footer) {
+    padding-block-end: max(var(--size-4), env(safe-area-inset-bottom));
+  }
+
+  .drawer-heading {
+    min-width: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  .filter-groups,
+  .filter-group {
+    display: grid;
+    gap: var(--size-4);
+    min-width: 0;
+  }
+
+  .filter-group {
+    gap: var(--size-3);
+    padding: var(--size-4);
+    background: var(--color-canvas);
+    border: var(--border) solid var(--color-contrast-150);
+    border-radius: var(--rounded-lg);
+  }
+
+  .filter-group-heading {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  .filter-group-heading h3 {
+    margin: 0;
+    font: inherit;
+  }
+
+  ore-radio-group::part(legend) {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text-color-heading);
+  }
+
+  .filter-group-heading ore-button {
+    margin-inline-start: auto;
+    font-weight: var(--font-normal);
+  }
+
+  .filter-group-heading ore-button::part(button) {
+    min-height: var(--size-11);
+    white-space: normal;
+  }
+
+  ore-radio-group::part(items),
+  .filter-choices {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--size-1);
+  }
+
+  ore-radio,
+  ore-checkbox {
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    gap: var(--size-3);
+    min-width: 0;
+    min-height: var(--size-12);
+    padding: var(--size-2) var(--size-3);
+    background: transparent;
+    border: var(--border) solid transparent;
+    border-radius: var(--rounded-md);
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast);
+  }
+
+  ore-radio {
+    --radio-bg: var(--color-canvas);
+    --radio-border-color: var(--color-contrast-400);
+  }
+
+  ore-checkbox {
+    --checkbox-bg: var(--color-canvas);
+    --checkbox-border-color: var(--color-contrast-400);
+    --checkbox-radius: var(--rounded-sm);
+  }
+
+  @media (hover: hover) {
+    ore-radio:not([disabled]):hover,
+    ore-checkbox:not([disabled]):hover {
+      background: var(--color-contrast-100);
+    }
+
+    ore-radio[checked]:not([disabled]):hover,
+    ore-checkbox[checked]:not([disabled]):hover {
+      background: color-mix(in oklch, var(--color-primary) 12%, var(--color-canvas));
+    }
+  }
+
+  ore-radio[checked],
+  ore-checkbox[checked] {
+    background: color-mix(in oklch, var(--color-primary) 8%, var(--color-canvas));
+  }
+
+  ore-radio:not([disabled]):active,
+  ore-checkbox:not([disabled]):active {
+    background: var(--color-contrast-150);
+  }
+
+  ore-radio:focus-visible,
+  ore-checkbox:focus-visible {
+    outline: var(--border-2) solid var(--color-primary);
+    outline-offset: var(--border-2);
+  }
+
+  ore-radio::part(label),
+  ore-checkbox::part(label) {
+    overflow-wrap: anywhere;
+  }
+
+  @media (forced-colors: active) {
+    ore-radio[checked],
+    ore-checkbox[checked] {
+      border-color: Highlight;
+    }
+
+    ore-radio:focus-visible,
+    ore-checkbox:focus-visible {
+      outline-color: Highlight;
+    }
+  }
+
+  .choice-label {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .choice-label ore-icon {
+    --ore-icon-size: var(--size-4);
+    flex-shrink: 0;
+    padding: var(--size-4) 0 var(--size-1);
+  }
+
+  .choice-label > span {
+    min-width: 0;
+    color: var(--text-color-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  /* ========================================
+     Icon card gallery
+     A token whose every option carries an icon renders its choices as cards:
+     the checkbox/radio itself becomes the card (corner tick, centered art,
+     name below), so the real form control keeps all keyboard, checked and
+     a11y behavior. `auto-fill minmax(6rem, 1fr)` yields 3-up on the phone
+     bottom sheet and degrades to 2-up in narrow side panels.
+     ======================================== */
+
+  .filter-choices[data-cards],
+  ore-radio-group[data-cards]::part(items) {
+    grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+    gap: var(--size-2);
+  }
+
+  .filter-choices[data-cards] ore-checkbox,
+  ore-radio-group[data-cards] ore-radio {
+    position: relative;
+    /* The card wraps its content vertically; the tick floats in the corner. */
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+    min-height: 0;
+    padding: var(--size-2);
+    background: var(--color-canvas);
+    border-color: var(--color-contrast-200);
+  }
+
+  /* The unrestricted "Any" choice has no art: it stays a full-width row above
+     the gallery instead of a text-only card. */
+  ore-radio-group[data-cards] ore-radio[value='any'] {
+    flex-direction: row;
+    grid-column: 1 / -1;
+    gap: var(--size-3);
+    align-items: center;
+    min-height: var(--size-12);
+    padding: var(--size-2) var(--size-3);
+    background: transparent;
+    border-color: transparent;
+  }
+
+  ore-radio-group[data-cards] ore-radio[value='any']::part(radio) {
+    position: static;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  ore-radio-group[data-cards] ore-radio[value='any']::part(label) {
+    justify-content: flex-start;
+    width: auto;
+  }
+
+  ore-radio-group[data-cards] ore-radio[value='any'] .choice-label {
+    flex-direction: row;
+    gap: var(--size-2);
+    text-align: start;
+  }
+
+  ore-radio-group[data-cards] ore-radio[value='any'][checked] {
+    background: color-mix(in oklch, var(--color-primary) 8%, var(--color-canvas));
+  }
+
+  .filter-choices[data-cards] ore-checkbox::part(checkbox),
+  ore-radio-group[data-cards] ore-radio::part(radio) {
+    position: absolute;
+    inset-block-start: var(--size-1-5);
+    inset-inline-start: var(--size-1-5);
+    z-index: 1;
+    /* Canvas chip keeps the tick legible over dark trophy art. */
+    padding: var(--size-0-5);
+    background: var(--color-canvas);
+    border-radius: var(--rounded-full);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .filter-choices[data-cards] ore-checkbox::part(label),
+  ore-radio-group[data-cards] ore-radio::part(label) {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .filter-choices[data-cards] .choice-label,
+  ore-radio-group[data-cards] .choice-label {
+    flex-direction: column;
+    gap: var(--size-1-5);
+    text-align: center;
+  }
+
+  .filter-choices[data-cards] .choice-label ore-icon,
+  ore-radio-group[data-cards] .choice-label ore-icon {
+    --ore-icon-size: var(--size-10);
+  }
+
+  /* Two-line clamp: vocabulary labels are app-supplied and can run long. */
+  .filter-choices[data-cards] .choice-label > span,
+  ore-radio-group[data-cards] .choice-label > span {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  /* Card states mirror the list rows; the selectors carry the card attribute so
+     they outrank the card's own canvas background above. */
+  @media (hover: hover) {
+    .filter-choices[data-cards] ore-checkbox:not([disabled]):hover,
+    ore-radio-group[data-cards] ore-radio:not([disabled]):hover {
+      background: var(--color-contrast-100);
+    }
+
+    .filter-choices[data-cards] ore-checkbox[checked]:not([disabled]):hover,
+    ore-radio-group[data-cards] ore-radio[checked]:not([disabled]):hover {
+      background: color-mix(in oklch, var(--color-primary) 12%, var(--color-canvas));
+    }
+  }
+
+  .filter-choices[data-cards] ore-checkbox[checked],
+  ore-radio-group[data-cards] ore-radio[checked] {
+    background: color-mix(in oklch, var(--color-primary) 8%, var(--color-canvas));
+    border-color: var(--color-primary);
+  }
+
+  .filter-choices[data-cards] ore-checkbox:not([disabled]):active,
+  ore-radio-group[data-cards] ore-radio:not([disabled]):active {
+    background: var(--color-contrast-150);
+  }
+
+  @media (forced-colors: active) {
+    .filter-choices[data-cards] ore-checkbox[checked],
+    ore-radio-group[data-cards] ore-radio[checked] {
+      border-color: Highlight;
+    }
+  }
+
+  .filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .drawer-footer {
+    display: grid;
+    gap: var(--size-2);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .pending-changes,
+  .hidden-selections p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-color-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  .pending-changes:empty,
+  .hidden-selections[hidden] {
+    display: none;
+  }
+
+  .hidden-selections {
+    display: grid;
+    gap: var(--size-1);
+    justify-items: start;
+  }
+
+  /* Reset leads left; Cancel and Apply group right. The row wraps instead of
+     squeezing the buttons below their labels: no min-width override here, so
+     each button keeps its min-content floor and the wrap kicks in first. */
+  .filter-actions ore-button:nth-child(2) {
+    margin-inline-start: auto;
+  }
+
+  .filter-actions ore-button::part(button) {
+    min-height: var(--size-11);
+  }
+
+  .filter-actions ore-button::part(button),
+  .filter-actions ore-button::part(content) {
+    white-space: normal;
+  }
+
+  .no-options {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--text-color-secondary);
+  }
+
+  /* ore-button carries no [hidden] rule of its own; hide the host explicitly so
+     a vocabulary-less bar leaves no trace of the filter entry. */
+  .filter-button[hidden] {
+    display: none;
+  }
+
+  .toolbar[hidden],
+  .quick-filters[hidden],
+  .toolbar-end[hidden],
+  .filter-count[hidden],
+  .no-options[hidden] {
+    display: none;
   }
 
   /* ========================================
@@ -79,10 +557,16 @@
     align-items: center;
   }
 
+  /* 24px to match the field's text line: showing the button while typing
+     must not grow the field's height. Coarse pointers restore the 44px
+     target below via block-margin overflow. */
   .clear-btn {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
+    justify-content: center;
+    width: var(--size-6);
+    height: var(--size-6);
     padding: 0;
     color: var(--color-contrast-400);
     cursor: pointer;
@@ -113,7 +597,7 @@
     inset: 0 auto auto 0;
     z-index: calc(var(--z-popover, 1000) + 1);
     box-sizing: border-box;
-    min-width: var(--query-bar-dropdown-min-width, 16rem);
+    min-width: min(var(--query-bar-dropdown-min-width, 16rem), calc(100dvw - var(--size-4)));
     max-width: var(--query-bar-dropdown-max-width, min(28rem, calc(100vw - var(--size-4))));
     max-height: min(16rem, 50dvh);
     padding: var(--size-1);
@@ -157,8 +641,8 @@
     box-sizing: border-box;
     display: flex;
     gap: var(--size-2);
-    align-items: baseline;
-    height: var(--query-bar-option-height, 36px);
+    align-items: center;
+    min-height: var(--query-bar-option-height, var(--size-11));
     padding: var(--size-1) var(--size-2-5);
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
@@ -184,7 +668,7 @@
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    height: var(--query-bar-option-height, 36px);
+    min-height: var(--query-bar-option-height, var(--size-11));
     padding: var(--size-1) var(--size-2-5);
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
@@ -195,9 +679,7 @@
   .option-label {
     flex: 0 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 
   /* The muted second column names the dimension a value belongs to, or the
@@ -205,11 +687,9 @@
   .option-meta {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
     font-size: var(--text-xs);
     color: var(--text-color-tertiary);
     text-align: end;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
 }

@@ -1,16 +1,18 @@
 import { fireClick, fireInput, fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
-
+import type { OreQueryBarEvents, OreQueryBarProps } from './query-bar.types';
 import {
+  clearTokens,
   commitToken,
   parseQuery,
   type QueryState,
   type QueryTokenDef,
   removeToken,
   suggestQuery,
+  tokenValues,
 } from './query-bar-grammar';
 
-type QueryBarHost = HTMLElement & { state?: QueryState; vocabulary?: QueryTokenDef[] };
+type QueryBarHost = HTMLElement & OreQueryBarProps;
 
 /** A representative vocabulary: an issues bar's author + label keys. */
 const vocabulary: QueryTokenDef[] = [
@@ -32,15 +34,51 @@ const vocabulary: QueryTokenDef[] = [
   },
 ];
 
+const fruitVocabulary: QueryTokenDef[] = [
+  {
+    key: 'fruit',
+    label: 'Fruit',
+    options: [
+      { label: 'Apple', value: 'apple' },
+      { label: 'Banana', value: 'banana' },
+      { label: 'Mixed fruit', value: 'apple, pear' },
+    ],
+    selection: 'multiple',
+  },
+  {
+    key: 'sort',
+    label: 'Sort',
+    options: [
+      { label: 'Name', value: 'name' },
+      { label: 'Recent', value: 'recent' },
+    ],
+  },
+];
+
 describe('ore-query-bar', () => {
   let fixture: Fixture<QueryBarHost>;
 
   beforeAll(async () => {
+    HTMLDialogElement.prototype.showModal ??= function () {
+      this.setAttribute('open', '');
+    };
+    HTMLDialogElement.prototype.close ??= function () {
+      this.removeAttribute('open');
+      this.dispatchEvent(new Event('close'));
+    };
     await (() => import('./query-bar'))();
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: false })),
+    );
   });
 
   afterEach(() => {
     fixture?.dispose();
+    vi.unstubAllGlobals();
   });
 
   /**
@@ -212,24 +250,221 @@ describe('ore-query-bar', () => {
     it('commitToken appends a new key and replaces a known key in place', () => {
       const state: QueryState = { text: 'bug', tokens: [{ key: 'author', value: 'alice' }] };
 
-      expect(commitToken(state, 'label', 'bug').tokens).toEqual([
+      expect(commitToken(state, { key: 'label', value: 'bug' }).tokens).toEqual([
         { key: 'author', value: 'alice' },
         { key: 'label', value: 'bug' },
       ]);
-      expect(commitToken(state, 'author', 'bob').tokens).toEqual([{ key: 'author', value: 'bob' }]);
+      expect(commitToken(state, { key: 'author', value: 'bob' }).tokens).toEqual([{ key: 'author', value: 'bob' }]);
     });
 
-    it('removeToken drops one key', () => {
-      expect(removeToken({ text: 'bug', tokens: [{ key: 'author', value: 'alice' }] }, 'author')).toEqual({
+    it('removeToken drops an exact key/value pair', () => {
+      expect(
+        removeToken({ text: 'bug', tokens: [{ key: 'author', value: 'alice' }] }, { key: 'author', value: 'alice' }),
+      ).toEqual({
         text: 'bug',
         tokens: [],
       });
+    });
+
+    it('parses repeated keys according to each vocabulary selection mode', () => {
+      expect(parseQuery('fresh fruit:apple fruit:banana fruit:apple sort:name sort:recent', fruitVocabulary)).toEqual({
+        draft: null,
+        text: 'fresh',
+        tokens: [
+          { key: 'fruit', value: 'apple' },
+          { key: 'fruit', value: 'banana' },
+          { key: 'sort', value: 'recent' },
+        ],
+      });
+    });
+
+    it('adds unique values without changing insertion order', () => {
+      const state = { text: 'fresh', tokens: [{ key: 'fruit', value: 'apple' }] };
+      const next = commitToken(state, { key: 'fruit', value: 'banana' }, 'multiple');
+      expect(tokenValues(next, 'fruit')).toEqual(['apple', 'banana']);
+      expect(tokenValues(next, 'missing')).toEqual([]);
+      expect(commitToken(next, { key: 'fruit', value: 'apple' }, 'multiple')).toBe(next);
+      expect(state.tokens).toEqual([{ key: 'fruit', value: 'apple' }]);
+    });
+
+    it('removes one value or clears a whole group without touching other restrictions', () => {
+      const state = {
+        text: 'fresh',
+        tokens: [
+          { key: 'fruit', value: 'apple' },
+          { key: 'sort', value: 'name' },
+          { key: 'fruit', value: 'banana' },
+        ],
+      };
+      expect(removeToken(state, { key: 'fruit', value: 'apple' })).toEqual({
+        text: 'fresh',
+        tokens: [
+          { key: 'sort', value: 'name' },
+          { key: 'fruit', value: 'banana' },
+        ],
+      });
+      expect(clearTokens(state, 'fruit')).toEqual({
+        text: 'fresh',
+        tokens: [{ key: 'sort', value: 'name' }],
+      });
+      expect(commitToken(state, { key: 'fruit', value: 'banana' })).toEqual({
+        text: 'fresh',
+        tokens: [
+          { key: 'fruit', value: 'banana' },
+          { key: 'sort', value: 'name' },
+        ],
+      });
+    });
+  });
+
+  describe('Multiple selection', () => {
+    it('renders decorative option icons in both selection modes without changing token data', async () => {
+      const host = await mountBar();
+      host.vocabulary = [
+        {
+          key: 'fruit',
+          label: 'Fruit',
+          options: [
+            { icon: 'search', label: 'Apple', value: 'apple' },
+            { label: 'Banana', value: 'banana' },
+          ],
+          selection: 'multiple',
+        },
+        { key: 'sort', label: 'Sort', options: [{ icon: 'filter', label: 'Recent', value: 'recent' }] },
+      ];
+      await fixture.flush();
+      fireClick(fixture.query<HTMLElement>('.filter-button')!);
+      await fixture.flush();
+      const checkboxIcon = fixture.query('ore-checkbox .choice-label ore-icon');
+      const radioIcon = fixture.query('ore-radio .choice-label ore-icon');
+      expect(checkboxIcon?.getAttribute('name')).toBe('search');
+      expect(radioIcon?.getAttribute('name')).toBe('filter');
+      for (const icon of [checkboxIcon, radioIcon]) expect(icon?.getAttribute('aria-hidden')).toBe('true');
+      expect(fixture.queryAll('ore-checkbox')[1].querySelector('ore-icon')).toBeNull();
+      fireClick(fixture.queryAll<HTMLElement>('ore-checkbox')[0]);
+      await fixture.flush();
+      fireClick(fixture.query<HTMLElement>('.filter-actions ore-button:last-child')!);
+      await fixture.flush();
+      expect(host.state).toEqual({ text: '', tokens: [{ key: 'fruit', value: 'apple' }] });
+      expect(parseQuery('sort:recent', host.vocabulary!).tokens).toEqual([{ key: 'sort', value: 'recent' }]);
+    });
+
+    async function mountFruits(initial?: QueryState): Promise<QueryBarHost> {
+      const host = await mountBar(initial);
+      host.vocabulary = fruitVocabulary;
+      await fixture.flush();
+      return host;
+    }
+
+    async function click(selector: string): Promise<void> {
+      const target = fixture.query<HTMLElement>(selector);
+      if (!target) throw new Error(`Missing ${selector}`);
+      fireClick(target);
+      await fixture.flush();
+    }
+
+    it('adds typed and suggested values without duplicates or no-op events', async () => {
+      const host = await mountFruits();
+      const change = vi.fn();
+      host.addEventListener('change', change);
+      await typeInto('fruit:apple fruit:banana');
+      expect(host.state?.tokens).toEqual([
+        { key: 'fruit', value: 'apple' },
+        { key: 'fruit', value: 'banana' },
+      ]);
+      await typeInto('fruit:apple');
+      expect(change).toHaveBeenCalledTimes(1);
+      await typeInto('fruit:');
+      await clickOption('Mixed fruit');
+      expect(host.state?.tokens.at(-1)).toEqual({ key: 'fruit', value: 'apple, pear' });
+      expect(change).toHaveBeenCalledTimes(2);
+    });
+
+    it('removes exact pills and backspaces one value rather than the entire group', async () => {
+      const host = await mountFruits({
+        text: '',
+        tokens: [
+          { key: 'fruit', value: 'apple' },
+          { key: 'fruit', value: 'banana' },
+        ],
+      });
+      fixture.queryAll('.applied ore-chip')[0].dispatchEvent(new CustomEvent('remove', { bubbles: true }));
+      await fixture.flush();
+      expect(host.state?.tokens).toEqual([{ key: 'fruit', value: 'banana' }]);
+      await typeInto('fruit:apple');
+      fireKeyDown(getInput()!, { key: 'Backspace' });
+      await fixture.flush();
+      expect(host.state?.tokens).toEqual([{ key: 'fruit', value: 'banana' }]);
+      expect(fixture.query('.filter-button')?.getAttribute('aria-label')).toBe('Filters (1)');
+    });
+
+    it('quick toggles add and remove only their exact value', async () => {
+      const host = await mountFruits({ text: 'fresh', tokens: [{ key: 'fruit', value: 'banana' }] });
+      host['quick-filters'] = [{ key: 'fruit', label: 'Apples', value: 'apple' }];
+      await fixture.flush();
+      fireClick(fixture.query('.quick-filters ore-chip')!.shadowRoot!.querySelector<HTMLElement>('.chip-btn')!);
+      await fixture.flush();
+      expect(host.state?.tokens).toEqual([
+        { key: 'fruit', value: 'banana' },
+        { key: 'fruit', value: 'apple' },
+      ]);
+      fireClick(fixture.query('.quick-filters ore-chip')!.shadowRoot!.querySelector<HTMLElement>('.chip-btn')!);
+      await fixture.flush();
+      expect(host.state).toEqual({ text: 'fresh', tokens: [{ key: 'fruit', value: 'banana' }] });
+    });
+
+    it('stages checkbox edits and group clearing without touching applied state until Apply', async () => {
+      const host = await mountFruits({
+        text: 'fresh',
+        tokens: [
+          { key: 'fruit', value: 'apple' },
+          { key: 'sort', value: 'name' },
+        ],
+      });
+      const change = vi.fn();
+      host.addEventListener('change', change);
+      await click('.filter-button');
+      expect(fixture.queryAll('ore-checkbox')).toHaveLength(3);
+      expect(fixture.queryAll('ore-radio-group')).toHaveLength(1);
+      expect(fixture.query('ore-checkbox')?.hasAttribute('checked')).toBe(true);
+      await click('ore-checkbox:nth-child(2)');
+      expect(fixture.query('.filter-group-heading .filter-count')?.textContent?.trim()).toBe('2');
+      expect(change).not.toHaveBeenCalled();
+      await click('.filter-actions ore-button:last-child');
+      expect(tokenValues(host.state!, 'fruit')).toEqual(['apple', 'banana']);
+      expect(change).toHaveBeenCalledTimes(1);
+      expect(fixture.query('.filter-button')?.getAttribute('aria-label')).toBe('Filters (2)');
+
+      await click('.filter-button');
+      await click('.filter-group-heading ore-button');
+      expect(fixture.queryAll('ore-checkbox[checked]')).toHaveLength(0);
+      expect(tokenValues(host.state!, 'fruit')).toHaveLength(2);
+      await click('.filter-actions ore-button:last-child');
+      expect(host.state).toEqual({ text: 'fresh', tokens: [{ key: 'sort', value: 'name' }] });
+      expect(change).toHaveBeenCalledTimes(2);
+    });
+
+    it('cancels multiple selection drafts and localizes their actions and counts', async () => {
+      const host = await mountFruits({ text: '', tokens: [{ key: 'fruit', value: 'apple' }] });
+      host.labels = { clearFilter: '{filter} löschen', selected: '{count} gewählt' };
+      await fixture.flush();
+      await click('.filter-button');
+      await click('ore-checkbox:nth-child(2)');
+      expect(fixture.query('.filter-group-heading ore-button')?.textContent).toContain('Fruit löschen');
+      // The visible badge is aria-hidden: a generic span's aria-label is ignored by
+      // AT, so the localized count lives in a screen-reader-only sibling instead.
+      expect(fixture.query('.filter-group-heading .filter-count')?.getAttribute('aria-hidden')).toBe('true');
+      expect(fixture.query('.filter-group-heading .sr-only')?.textContent?.trim()).toBe('2 gewählt');
+      await click('.filter-actions ore-button:nth-child(2)');
+      await click('.filter-button');
+      expect(fixture.queryAll('ore-checkbox[checked]')).toHaveLength(1);
+      expect(tokenValues(host.state!, 'fruit')).toEqual(['apple']);
     });
   });
 
   describe('Query state', () => {
     it('renders committed tokens as removable pills', async () => {
-      await mountBar(commitToken({ text: 'bug', tokens: [] }, 'author', 'alice'));
+      await mountBar(commitToken({ text: 'bug', tokens: [] }, { key: 'author', value: 'alice' }));
 
       expect(pills()).toEqual(['Author: Alice']);
     });
@@ -257,6 +492,32 @@ describe('ore-query-bar', () => {
       expect(host.state).toEqual({ text: 'bug', tokens: [] });
     });
 
+    it('announces only committed query changes while composing and selecting tokens', async () => {
+      const host = await mountBar();
+      const input = vi.fn();
+      const change = vi.fn();
+      host.addEventListener('input', input);
+      host.addEventListener('change', change);
+
+      await focusBar();
+      await clickOption('Author');
+      await typeInto('author:al');
+      expect(input).not.toHaveBeenCalled();
+      expect(change).not.toHaveBeenCalled();
+
+      await clickOption('Alice');
+      expect(input).toHaveBeenCalledTimes(1);
+      expect(change).toHaveBeenCalledTimes(1);
+
+      await typeInto('author:alice');
+      expect(input).toHaveBeenCalledTimes(1);
+      expect(change).toHaveBeenCalledTimes(1);
+
+      await typeInto('bug');
+      expect(input).toHaveBeenCalledTimes(2);
+      expect(change).toHaveBeenCalledTimes(2);
+    });
+
     it('a value picked from a typed word consumes that word instead of searching it', async () => {
       const host = await mountBar();
 
@@ -270,7 +531,7 @@ describe('ore-query-bar', () => {
       const initial: QueryState = { text: 'bug', tokens: [] };
       const host = await mountBar(initial);
 
-      host.state = commitToken(initial, 'author', 'alice');
+      host.state = commitToken(initial, { key: 'author', value: 'alice' });
       await fixture.flush();
       expect(getInput()?.value).toBe('bug');
     });
@@ -311,7 +572,7 @@ describe('ore-query-bar', () => {
     });
 
     it('replaces the pill in place when a second value for the same key is picked', async () => {
-      const host = await mountBar(commitToken({ text: '', tokens: [] }, 'author', 'alice'));
+      const host = await mountBar(commitToken({ text: '', tokens: [] }, { key: 'author', value: 'alice' }));
       expect(pills()).toEqual(['Author: Alice']);
 
       await typeInto('author:');
@@ -372,7 +633,7 @@ describe('ore-query-bar', () => {
 
       await typeInto('author:zzz');
       expect(getInput()?.getAttribute('aria-expanded')).toBe('true');
-      expect(fixture.element.shadowRoot?.querySelector('.no-match')?.textContent).toContain('No matching Author');
+      expect(fixture.element.shadowRoot?.querySelector('.no-match')?.textContent).toContain('No matching options');
       // The dead draft never enters the search text while composing.
       expect(host.state?.text).toBe('');
     });
@@ -390,16 +651,16 @@ describe('ore-query-bar', () => {
 
     it('Escape closes the dropdown and emits open-change with the reason', async () => {
       const host = await mountBar();
-      const events: Array<{ open: boolean; reason: string }> = [];
+      const events: OreQueryBarEvents['open-change'][] = [];
       host.addEventListener('open-change', (event) => {
-        events.push((event as CustomEvent<{ open: boolean; reason: string }>).detail);
+        events.push((event as CustomEvent<OreQueryBarEvents['open-change']>).detail);
       });
 
       await focusBar();
       fireKeyDown(getInput()!, { key: 'Escape' });
       await fixture.flush();
 
-      expect(events.at(-1)).toEqual({ open: false, reason: 'escape' });
+      expect(events.at(-1)).toEqual({ open: false, reason: 'escape', surface: 'suggestions' });
       expect(options()).toEqual([]);
     });
   });
@@ -422,7 +683,7 @@ describe('ore-query-bar', () => {
     });
 
     it('the pill remove button drops its token from the state', async () => {
-      const host = await mountBar(commitToken({ text: '', tokens: [] }, 'author', 'alice'));
+      const host = await mountBar(commitToken({ text: '', tokens: [] }, { key: 'author', value: 'alice' }));
 
       const chip = fixture.element.shadowRoot?.querySelector<HTMLElement>('ore-chip');
       chip?.dispatchEvent(new CustomEvent('remove', { bubbles: true, detail: { value: 'author' } }));
@@ -431,8 +692,8 @@ describe('ore-query-bar', () => {
       expect(host.state?.tokens).toEqual([]);
     });
 
-    it('removing a pill returns focus to the field', async () => {
-      await mountBar(commitToken({ text: '', tokens: [] }, 'author', 'alice'));
+    it('removing a pill returns focus to Filters without reopening the keyboard', async () => {
+      await mountBar(commitToken({ text: '', tokens: [] }, { key: 'author', value: 'alice' }));
 
       await focusBar();
       // The real regression: focus sits on the pill's remove button, not the field.
@@ -443,7 +704,338 @@ describe('ore-query-bar', () => {
       chip?.dispatchEvent(new CustomEvent('remove', { bubbles: true, detail: { value: 'author' } }));
       await fixture.flush();
 
-      expect(fixture.element.shadowRoot?.activeElement?.tagName).toBe('ORE-INPUT');
+      expect(fixture.element.shadowRoot?.activeElement).toBe(fixture.query('.filter-button'));
+    });
+
+    describe('Filter drawer and quick filters', () => {
+      const click = async (selector: string): Promise<void> => {
+        const target = fixture.query<HTMLElement>(selector);
+        if (!target) throw new Error(`Missing ${selector}`);
+        fireClick(target);
+        await fixture.flush();
+      };
+      const choose = async (group: number, value: string): Promise<void> => {
+        fixture
+          .queryAll('ore-radio-group')
+          [group]?.dispatchEvent(
+            new CustomEvent('change', { bubbles: true, composed: true, detail: { labels: [], values: [value] } }),
+          );
+        await fixture.flush();
+      };
+
+      it('stages multiple selections and emits one change only when applied', async () => {
+        const host = await mountBar({ text: 'regression', tokens: [] });
+        const change = vi.fn();
+        const input = vi.fn();
+        host.addEventListener('change', change);
+        host.addEventListener('input', input);
+        await click('.filter-button');
+        expect(fixture.query('ore-drawer')?.hasAttribute('open')).toBe(true);
+        await choose(0, '1');
+        await choose(1, '2');
+        expect(host.state).toEqual({ text: 'regression', tokens: [] });
+        expect(change).not.toHaveBeenCalled();
+        expect(input).not.toHaveBeenCalled();
+        await click('.filter-actions ore-button:last-child');
+        expect(host.state).toEqual({
+          text: 'regression',
+          tokens: [
+            { key: 'author', value: 'alice' },
+            { key: 'label', value: 'enhancement' },
+          ],
+        });
+        expect(change).toHaveBeenCalledTimes(1);
+        expect(input).toHaveBeenCalledTimes(1);
+      });
+
+      it('cancels edits and reseeds the drawer from the applied query', async () => {
+        const host = await mountBar({ text: 'bug', tokens: [{ key: 'author', value: 'alice' }] });
+        await click('.filter-button');
+        await choose(0, '2');
+        await click('.filter-actions ore-button:nth-child(2)');
+        expect(host.state?.tokens).toEqual([{ key: 'author', value: 'alice' }]);
+        await click('.filter-button');
+        expect(fixture.query('ore-radio-group')?.getAttribute('value')).toBe('1');
+      });
+
+      it('resets filters only after Apply and never clears free text', async () => {
+        const host = await mountBar({ text: 'bug', tokens: [{ key: 'author', value: 'alice' }] });
+        await click('.filter-button');
+        await click('.filter-actions ore-button:first-child');
+        expect(host.state?.tokens).toHaveLength(1);
+        await click('.filter-actions ore-button:last-child');
+        expect(host.state).toEqual({ text: 'bug', tokens: [] });
+      });
+
+      it('shows pending feedback, protects dirty drafts, and disables empty reset', async () => {
+        const host = await mountBar();
+        await click('.filter-button');
+        expect(fixture.query('.filter-actions ore-button')?.hasAttribute('disabled')).toBe(true);
+        expect(fixture.query('.pending-changes')?.textContent).toBe('');
+        await choose(0, '1');
+        expect(fixture.query('.pending-changes')?.textContent).toBe('Changes not applied');
+        expect(fixture.query('.filter-actions ore-button')?.hasAttribute('disabled')).toBe(false);
+        for (const reason of ['outsideClick', 'swipe', 'escape', 'trigger']) {
+          const request = new CustomEvent('close-request', {
+            bubbles: true,
+            cancelable: true,
+            detail: { reason },
+          });
+          fixture.query('ore-drawer')?.dispatchEvent(request);
+          expect(request.defaultPrevented).toBe(reason === 'outsideClick' || reason === 'swipe');
+        }
+        expect(host.state?.tokens).toEqual([]);
+        await choose(0, 'any');
+        expect(fixture.query('.pending-changes')?.textContent).toBe('');
+        const request = new CustomEvent('close-request', {
+          bubbles: true,
+          cancelable: true,
+          detail: { reason: 'outsideClick' },
+        });
+        fixture.query('ore-drawer')?.dispatchEvent(request);
+        expect(request.defaultPrevented).toBe(false);
+      });
+
+      it('uses a contextual unrestricted option without changing state values', async () => {
+        const host = await mountBar();
+        host.vocabulary = [{ ...vocabulary[0]!, anyLabel: 'All authors' }];
+        await fixture.flush();
+        await click('.filter-button');
+        expect(fixture.query('ore-radio[value="any"]')?.textContent).toBe('All authors');
+        await choose(0, '1');
+        await choose(0, 'any');
+        await click('.filter-actions ore-button:last-child');
+        expect(host.state?.tokens).toEqual([]);
+      });
+
+      it('reveals search-hidden selections for both selection modes', async () => {
+        const host = await mountBar({
+          text: '',
+          tokens: [
+            { key: 'owner', value: '0' },
+            { key: 'tag', value: '1' },
+          ],
+        });
+        const many = Array.from({ length: 10 }, (_, i) => ({ label: `Option ${i}`, value: String(i) }));
+        host.vocabulary = [
+          { key: 'owner', label: 'Owner', options: many },
+          { key: 'tag', label: 'Tag', options: many, selection: 'multiple' },
+        ];
+        await fixture.flush();
+        await click('.filter-button');
+        const searches = fixture.queryAll<HTMLElementTagNameMap['ore-input']>('.filter-group ore-input');
+        // The option-search field must read as a search field: magnifier prefix.
+        for (const search of searches) {
+          expect(search.querySelector('ore-icon[slot="prefix"]')?.getAttribute('name')).toBe('search');
+        }
+        for (const search of searches) {
+          search.value = 'Option 9';
+          fireInput(search);
+        }
+        await fixture.flush();
+        const summaries = fixture.queryAll('.hidden-selections');
+        expect(summaries[0]?.textContent).toContain('Selected: Option 0');
+        expect(summaries[1]?.textContent).toContain('Selected: Option 1');
+        expect(summaries.every((summary) => !summary.hasAttribute('hidden'))).toBe(true);
+        await click('.hidden-selections ore-button');
+        expect(fixture.query('.hidden-selections')?.hasAttribute('hidden')).toBe(true);
+        expect(fixture.query('ore-radio-group')?.getAttribute('value')).toBe('1');
+      });
+
+      it('does not announce a query change when Apply changes nothing', async () => {
+        const host = await mountBar();
+        const change = vi.fn();
+        host.addEventListener('change', change);
+        await click('.filter-button');
+        await click('.filter-actions ore-button:last-child');
+        expect(change).not.toHaveBeenCalled();
+      });
+
+      it('uses Any to remove only its own restriction and preserves unknown tokens', async () => {
+        const host = await mountBar({
+          text: 'bug',
+          tokens: [
+            { key: 'author', value: 'alice' },
+            { key: 'external', value: 'preset' },
+          ],
+        });
+        await click('.filter-button');
+        await choose(0, 'any');
+        await click('.filter-actions ore-button:last-child');
+        expect(host.state).toEqual({ text: 'bug', tokens: [{ key: 'external', value: 'preset' }] });
+      });
+
+      it('toggles quick filters immediately while preserving text and unrelated tokens', async () => {
+        const host = await mountBar({ text: 'bug', tokens: [{ key: 'label', value: 'bug' }] });
+        host['quick-filters'] = [{ key: 'author', label: 'Mine', value: 'alice' }];
+        await fixture.flush();
+        const quick = () => fixture.query(' .quick-filters ore-chip')!;
+        quick().dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { checked: true } }));
+        await fixture.flush();
+        expect(host.state).toEqual({
+          text: 'bug',
+          tokens: [
+            { key: 'label', value: 'bug' },
+            { key: 'author', value: 'alice' },
+          ],
+        });
+        expect(quick().getAttribute('checked')).toBe('true');
+        quick().dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { checked: false } }));
+        await fixture.flush();
+        expect(host.state).toEqual({ text: 'bug', tokens: [{ key: 'label', value: 'bug' }] });
+      });
+
+      it('replaces a different value of the same quick-filter key instead of clearing it', async () => {
+        const host = await mountBar({ text: '', tokens: [{ key: 'author', value: 'bob' }] });
+        host['quick-filters'] = [{ key: 'author', label: 'Mine', value: 'alice' }];
+        await fixture.flush();
+        fixture.query('.quick-filters ore-chip')?.dispatchEvent(new CustomEvent('change', { bubbles: true }));
+        await fixture.flush();
+        expect(host.state?.tokens).toEqual([{ key: 'author', value: 'alice' }]);
+      });
+
+      it('keeps unavailable quick filters disabled and leaves the query unchanged', async () => {
+        const host = await mountBar();
+        host['quick-filters'] = [{ key: 'author', label: 'Former owner', value: 'deleted' }];
+        await fixture.flush();
+        expect(fixture.query('.quick-filters ore-chip')?.hasAttribute('disabled')).toBe(true);
+        fixture.query('.quick-filters ore-chip')?.dispatchEvent(new CustomEvent('change', { bubbles: true }));
+        await fixture.flush();
+        expect(host.state).toEqual({ text: '', tokens: [] });
+      });
+
+      it('adopts external text-only changes and dismisses pending drawer edits', async () => {
+        const host = await mountBar({ text: 'before', tokens: [] });
+        await click('.filter-button');
+        await choose(0, '1');
+        host.state = { text: 'after', tokens: host.state!.tokens };
+        await fixture.flush();
+        expect(getInput()?.value).toBe('after');
+        expect(fixture.query('ore-drawer')?.hasAttribute('open')).toBe(false);
+        expect(host.state).toEqual({ text: 'after', tokens: [] });
+      });
+
+      it('preserves composing text for semantically equivalent copied-state echoes', async () => {
+        const host = await mountBar();
+        await typeInto('bug author:al');
+        host.state = { text: host.state!.text, tokens: [...host.state!.tokens] };
+        await fixture.flush();
+        expect(getInput()?.value).toBe('bug author:al');
+      });
+
+      it('disables removals, quick toggles and drawer entry together', async () => {
+        const host = await mountBar({ text: '', tokens: [{ key: 'author', value: 'alice' }] });
+        host['quick-filters'] = [{ key: 'label', label: 'Bugs', value: 'bug' }];
+        host.disabled = true;
+        await fixture.flush();
+        expect(fixture.query('.filter-button')?.hasAttribute('disabled')).toBe(true);
+        for (const chip of fixture.queryAll('ore-chip')) expect(chip.hasAttribute('disabled')).toBe(true);
+        fixture
+          .query('.applied ore-chip')
+          ?.dispatchEvent(new CustomEvent('remove', { bubbles: true, detail: { value: 'author' } }));
+        await click('.filter-button');
+        expect(fixture.query('ore-drawer')?.hasAttribute('open')).toBe(false);
+        expect(host.state?.tokens).toEqual([{ key: 'author', value: 'alice' }]);
+      });
+
+      it('renders toolbar-end content at the row end and hides the container when empty', async () => {
+        fixture = await mount<QueryBarHost>('ore-query-bar', {
+          attrs: { label: 'Search issues' },
+          html: '<span slot="toolbar-end" class="count">12 results</span>',
+          props: { vocabulary },
+        });
+        // slotchange arrives as a task after the mount flush settles it.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const end = fixture.query('.toolbar-end');
+        expect(end?.hasAttribute('hidden')).toBe(false);
+        // Slotted content stays in the light DOM: assert the assignment, not shadow text.
+        expect(fixture.element.querySelector('.count')?.textContent).toBe('12 results');
+        fixture.dispose();
+
+        await mountBar();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(fixture.query('.toolbar-end')?.hasAttribute('hidden')).toBe(true);
+      });
+
+      it('dismisses stale edits when the vocabulary changes', async () => {
+        const host = await mountBar();
+        await click('.filter-button');
+        host.vocabulary = [];
+        await fixture.flush();
+        expect(fixture.query('ore-drawer')?.hasAttribute('open')).toBe(false);
+        expect(fixture.query('.toolbar')?.hasAttribute('hidden')).toBe(true);
+      });
+
+      it('hides the filter entry without a vocabulary, leaving no space', async () => {
+        const host = await mountBar();
+        host['quick-filters'] = [{ key: 'author', label: 'Mine', value: 'alice' }];
+        host.vocabulary = [];
+        await fixture.flush();
+        // The row stays for the quick filters, but the dead Filters button is gone.
+        expect(fixture.query('.toolbar')?.hasAttribute('hidden')).toBe(false);
+        expect(fixture.query('.filter-button')?.hasAttribute('hidden')).toBe(true);
+        host.vocabulary = [{ key: 'author', label: 'Author', options: [{ label: 'Alice', value: 'alice' }] }];
+        await fixture.flush();
+        expect(fixture.query('.filter-button')?.hasAttribute('hidden')).toBe(false);
+      });
+
+      it('marks a token as cards only when every option carries an icon', async () => {
+        const host = await mountBar();
+        host.vocabulary = [
+          {
+            key: 'element',
+            label: 'Element',
+            options: [
+              { icon: 'element-fire', label: 'Fire', value: 'fire' },
+              { icon: 'element-ice', label: 'Ice', value: 'ice' },
+            ],
+            selection: 'multiple',
+          },
+          {
+            key: 'hunter',
+            label: 'Hunter',
+            options: [
+              { icon: 'hunter-a', label: 'Alice', value: 'alice' },
+              { label: 'Bob', value: 'bob' },
+            ],
+          },
+        ];
+        await fixture.flush();
+        await click('.filter-button');
+        // Icon-complete multi-select token: the checkbox grid becomes a card gallery.
+        expect(fixture.element.shadowRoot?.querySelector('.filter-choices')?.hasAttribute('data-cards')).toBe(true);
+        // A single missing icon keeps the whole token a plain list row layout.
+        const radioGroup = fixture.queryAll('ore-radio-group')[0];
+        expect(radioGroup?.hasAttribute('data-cards')).toBe(false);
+      });
+
+      it('upgrades a single-select token to cards when all options carry icons', async () => {
+        const host = await mountBar();
+        host.vocabulary = [
+          {
+            key: 'sort',
+            label: 'Sort',
+            options: [
+              { icon: 'icon-recent', label: 'Recent', value: 'recent' },
+              { icon: 'icon-name', label: 'Name', value: 'name' },
+            ],
+          },
+        ];
+        await fixture.flush();
+        await click('.filter-button');
+        expect(fixture.query('ore-radio-group')?.hasAttribute('data-cards')).toBe(true);
+      });
+
+      it('localizes filter controls and accessible groups', async () => {
+        const host = await mountBar();
+        host.labels = { any: 'Alle', applied: 'Aktive Filter', apply: 'Anwenden', filters: 'Filter wählen' };
+        await fixture.flush();
+        expect(fixture.query('.filter-button')?.textContent).toContain('Filter wählen');
+        expect(fixture.query('.applied')?.getAttribute('aria-label')).toBe('Aktive Filter');
+        await click('.filter-button');
+        expect(fixture.query('.filter-actions ore-button:last-child')?.textContent).toContain('Anwenden');
+        expect(fixture.query('ore-radio[value="any"]')?.textContent).toContain('Alle');
+      });
     });
 
     it('blur reverts a bare key draft without residue', async () => {
@@ -493,10 +1085,8 @@ describe('ore-query-bar', () => {
 
       // Both removals land before any consumer round-trip: neither may compute
       // from a stale snapshot, or the second removal resurrects the first pill.
-      for (const key of ['author', 'label']) {
-        fixture.element.shadowRoot
-          ?.querySelector<HTMLElement>(`ore-chip[value="${key}"]`)
-          ?.dispatchEvent(new CustomEvent('remove', { bubbles: true, detail: { value: key } }));
+      for (let index = 0; index < 2; index++) {
+        fixture.query('.applied ore-chip')?.dispatchEvent(new CustomEvent('remove', { bubbles: true }));
       }
       await fixture.flush();
 
@@ -506,7 +1096,7 @@ describe('ore-query-bar', () => {
 
   describe('Field controls', () => {
     it('the clear button clears the free text and keeps the pills', async () => {
-      const host = await mountBar(commitToken({ text: '', tokens: [] }, 'author', 'alice'));
+      const host = await mountBar(commitToken({ text: '', tokens: [] }, { key: 'author', value: 'alice' }));
 
       await typeInto('bug');
       const clear = fixture.element.shadowRoot?.querySelector<HTMLElement>('.clear-btn');
@@ -574,7 +1164,7 @@ describe('ore-query-bar', () => {
     });
 
     it('passes axe checks closed and open', async () => {
-      await mountBar(commitToken({ text: 'bug', tokens: [] }, 'author', 'alice'));
+      await mountBar(commitToken({ text: 'bug', tokens: [] }, { key: 'author', value: 'alice' }));
 
       expect((await axeCheck(fixture.element)).violations).toHaveLength(0);
 

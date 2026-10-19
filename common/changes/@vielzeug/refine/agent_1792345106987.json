@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "BREAKING: unify query-bar filtering with a draft Apply/Cancel drawer, optional quick filters, per-key single/multiple selection, and optional registered icons beside drawer option labels. Add content-sized mobile sheets, consistent choice rows, contextual anyLabel, pending-edit protection, search-hidden selection summaries, a toolbar-end slot for application content such as a result count, and a hidden filter entry when no vocabulary exists. Preserve inline applied pills and exact-value removal, count active groups, replace token-array identity with semantic state synchronization, and tag open-change surfaces. commitToken now accepts a token object and selection mode; removeToken removes an exact pair, clearTokens clears a key, and tokenValues replaces tokenValue. Fix nested radio-group keyboard navigation, expose its legend part, and correct drawer handle semantics and canceled swipe restoration. See the Refine migration guide.",
+      "packageName": "@vielzeug/refine",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

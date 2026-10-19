@@ -7,7 +7,7 @@
     --_panel-shadow: var(--drawer-shadow, var(--shadow-xl));
     --_panel-border-color: var(--color-divider);
     --_panel-bleed: var(--size-8);
-    --_drag-handle-inset: calc(var(--size-1) * -1);
+    --_drag-handle-inset: calc(var(--size-2) * -1);
 
     display: contents;
   }

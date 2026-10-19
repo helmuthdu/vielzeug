@@ -88,6 +88,7 @@ export type OreRadioGroupEvents = {
  * @cssprop --radio-group-direction - Flex direction of the items list ('row' | 'column')
  * @cssprop --radio-group-gap - Gap between radio items
  * @part items - Items container.
+ * @part legend - Group label.
  * @example
  * ```html
  * <ore-radio-group name="plan" label="Choose a plan" value="free" required>
@@ -253,11 +254,13 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
           selectRadio((e.target as HTMLElement).getAttribute('value') ?? '', e);
         },
         keydown: (e: KeyboardEvent) => {
+          if (e.defaultPrevented) return;
           const radios = getEnabledRadios();
 
           if (!radios.length) return;
 
-          const focused = radios.indexOf(document.activeElement as HTMLElement);
+          const path = e.composedPath();
+          const focused = radios.findIndex((radio) => path.includes(radio));
 
           if (focused === -1) return;
 
@@ -276,7 +279,7 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
         aria-invalid="${choice.ariaInvalid}"
         aria-errormessage="${choice.ariaErrorMessage}"
         aria-describedby="${choice.ariaDescribedBy}">
-        <legend id="${legendId}" ?hidden=${() => !props.label.value}>
+        <legend id="${legendId}" part="legend" ?hidden=${() => !props.label.value}>
           ${props.label}${when(
             () => Boolean(props.required.value),
             () => html`

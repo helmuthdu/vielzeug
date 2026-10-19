@@ -193,6 +193,27 @@ describe('ore-drawer', () => {
       expect(panel?.style.opacity).toBe('0.2');
     });
 
+    it('restores the visible panel when a swipe close is prevented', async () => {
+      fixture = await mount('ore-drawer', { attrs: { open: '' } });
+      fixture.element.addEventListener('close-request', (event) => event.preventDefault());
+      const panel = fixture.query<HTMLElement>('.panel')!;
+      const handle = fixture.query<HTMLElement>('.drag-handle')!;
+      expect(handle.getAttribute('aria-hidden')).toBe('true');
+      expect(handle.hasAttribute('role')).toBe(false);
+      Object.defineProperty(panel, 'offsetWidth', { configurable: true, get: () => 200 });
+      handle.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 8 }));
+      handle.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 100, pointerId: 8 }));
+      handle.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 100, pointerId: 8 }));
+      const end = new Event('transitionend', { bubbles: true });
+      Object.defineProperty(end, 'propertyName', { value: 'transform' });
+      panel.dispatchEvent(end);
+      await fixture.flush();
+      expect(fixture.query('dialog')?.hasAttribute('open')).toBe(true);
+      expect(panel.style.visibility).toBe('');
+      expect(panel.style.transform).toBe('');
+      expect(panel.style.opacity).toBe('');
+    });
+
     it('commits close on pointerup when release crosses swipe threshold', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
 

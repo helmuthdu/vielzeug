@@ -15,7 +15,8 @@
  *   case-insensitive) and commits immediately — the bar moves it out of the field
  *   into a removable pill.
  * - Unknown keys and unresolved values degrade to free text, never errors.
- * - One value per key: a second token for the same key replaces the first in place.
+ * - Single-selection keys replace their value; multiple-selection keys accumulate
+ *   distinct values. Applications match values with OR within a key, AND across keys.
  * - The last fragment is a draft while the caret is inside it: `author:al…` stays
  *   out of the free text so partial tokens never leak into the live search, and it
  *   drives the suggestion list instead.
@@ -23,15 +24,21 @@
 
 /** One selectable value of a token key. */
 export interface QueryOption {
+  /** Registered ore-icon name displayed beside the option label in the drawer. */
+  icon?: string;
   label: string;
   value: string;
 }
 
 /** A vocabulary entry: the token key, its display name, and its accepted values. */
 export interface QueryTokenDef {
+  /** Label for the unrestricted single-selection choice; defaults to labels.any. */
+  anyLabel?: string;
   key: string;
   label: string;
   options: QueryOption[];
+  /** Defaults to single. Multiple values match with OR within this key. */
+  selection?: 'single' | 'multiple';
 }
 
 /** A committed `key:value` filter. */
@@ -99,21 +106,39 @@ function trailingDraft(input: string, fragments: string[], index: Map<string, Qu
   return def && resolveOption(def, candidate.valuePrefix) ? null : candidate;
 }
 
-/** One value per key: a second token replaces the first and keeps the pill's slot. */
-export function commitToken(state: QueryState, key: string, value: string): QueryState {
-  const tokens = [...state.tokens];
-  const slot = tokens.findIndex((token) => token.key === key);
-  if (slot >= 0) tokens[slot] = { key, value };
-  else tokens.push({ key, value });
+/** Adds a distinct value, or replaces a single-selection key in its existing slot. */
+export function commitToken(
+  state: QueryState,
+  { key, value }: QueryToken,
+  selection: 'single' | 'multiple' = 'single',
+): QueryState {
+  const token = { key, value };
+  if (selection === 'multiple') {
+    return state.tokens.some((item) => item.key === token.key && item.value === token.value)
+      ? state
+      : { text: state.text, tokens: [...state.tokens, token] };
+  }
+  const slot = state.tokens.findIndex((item) => item.key === token.key);
+  const tokens = state.tokens.filter((item) => item.key !== token.key);
+  tokens.splice(slot < 0 ? tokens.length : slot, 0, token);
   return { text: state.text, tokens };
 }
 
-export function removeToken(state: QueryState, key: string): QueryState {
+/** Removes only the exact key/value pair, preserving other values of the same key. */
+export function removeToken(state: QueryState, token: QueryToken): QueryState {
+  return {
+    text: state.text,
+    tokens: state.tokens.filter((item) => item.key !== token.key || item.value !== token.value),
+  };
+}
+
+/** Clears all restrictions for one key. */
+export function clearTokens(state: QueryState, key: string): QueryState {
   return { text: state.text, tokens: state.tokens.filter((token) => token.key !== key) };
 }
 
-export function tokenValue(state: QueryState, key: string): string | undefined {
-  return state.tokens.find((token) => token.key === key)?.value;
+export function tokenValues(state: QueryState, key: string): string[] {
+  return state.tokens.filter((token) => token.key === key).map((token) => token.value);
 }
 
 export const hasQueryFilters = (state: QueryState): boolean => state.text.trim() !== '' || state.tokens.length > 0;
@@ -133,20 +158,18 @@ export function parseQuery(input: string, vocabulary: readonly QueryTokenDef[]):
   const complete = draft ? fragments.slice(0, -1) : fragments;
 
   const text: string[] = [];
-  const tokens: QueryToken[] = [];
+  let state: QueryState = { text: '', tokens: [] };
   for (const fragment of complete) {
     const match = TOKEN_SYNTAX.exec(fragment);
     const def = match ? index.get(lower(match[1])) : undefined;
     const option = def && match ? resolveOption(def, match[2]) : undefined;
     if (def && option) {
-      const slot = tokens.findIndex((token) => token.key === def.key);
-      if (slot >= 0) tokens[slot] = { key: def.key, value: option.value };
-      else tokens.push({ key: def.key, value: option.value });
+      state = commitToken(state, { key: def.key, value: option.value }, def.selection);
     } else {
       text.push(fragment);
     }
   }
-  return { draft, text: text.join(' '), tokens };
+  return { draft, text: text.join(' '), tokens: state.tokens };
 }
 
 /**

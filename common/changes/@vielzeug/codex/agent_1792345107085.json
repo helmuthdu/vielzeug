@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Refresh bundled Refine query-bar documentation and metadata for the responsive filter drawer, additive per-key selection, optional option icons, quick filters, localized labels, state synchronization, and exact-value token helper contracts.",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

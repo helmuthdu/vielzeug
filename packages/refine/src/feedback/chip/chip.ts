@@ -131,6 +131,7 @@ export type OreChipProps = ChipBaseProps &
  * @part remove-btn - Remove action button.
  * @part chip-btn - Shadow part for the `chip-btn` element.
  * @part chip - Shadow part for the `chip` element.
+ * @part label - Text label, available for wrapping overrides.
  * @example
  * ```html
  * <!-- Static chip (read-only) -->
@@ -250,7 +251,7 @@ define<OreChipComponentProps>(CHIP_TAG, {
     // ============================================
     const renderChipContent = () => html`
       <slot name="icon"></slot>
-      <span class="label"><slot></slot></span>
+      <span class="label" part="label"><slot></slot></span>
     `;
 
     const removeBtnLabel = () => {
@@ -338,7 +339,7 @@ define<OreChipComponentProps>(CHIP_TAG, {
         '--_font-size': 'var(--text-xs)',
         '--_gap': 'var(--size-0-5)',
         '--_padding-x': 'var(--size-2-5)',
-        '--_padding-y': 'var(--size-px)',
+        '--_padding-y': 'var(--size-0-5)',
       },
     }),
     frostVariantMixin('.chip'),

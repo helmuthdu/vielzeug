@@ -234,6 +234,10 @@ define<OreDrawerProps>(DRAWER_TAG, {
       void dialog.offsetWidth;
 
       requestClose('swipe');
+      if (dialog.open) {
+        dialog.style.transition = '';
+        resetPanelDragStyles(panel);
+      }
     };
 
     const startSwipeClose = (panel: HTMLElement, swipe: DrawerSwipeConfig, committedDistance: number) => {
@@ -438,7 +442,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
         aria-label="${() => props.label.value ?? null}"
         aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
         <div class="panel" part="panel" ref=${panelRef}>
-          <div class="drag-handle" part="drag-handle" aria-label="Drag to close" role="button"></div>
+          <div class="drag-handle" part="drag-handle" aria-hidden="true"></div>
           <div class="header" part="header" ?hidden=${() => !hasHeader()}>
             <span class="header-title" id="${drawerLabelId}" ?hidden=${() => !hasHeaderTitle()}>
               <slot name="header">${() => getHeaderText()}</slot>

@@ -1,5 +1,7 @@
 # Drawer
 
+The drag handle is a decorative pointer-gesture affordance, not a keyboard control. Use the Close button or Escape to dismiss with a keyboard. Preventing a swipe `close-request` restores the panel without losing its contents.
+
 A slide-in panel that overlays page content from any edge of the screen. Built on the native `<dialog>` element for correct top-layer stacking, focus trapping, and `Escape`-to-close behavior.
 
 ## Placements

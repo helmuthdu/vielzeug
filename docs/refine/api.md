@@ -102,6 +102,8 @@ import type { OreButtonProps } from '@vielzeug/refine/button';
 
 Each component page lists its attributes, JavaScript properties, events, slots, parts, and CSS custom properties.
 
+The [`query-bar`](./components/query-bar.md) entry also exports `QueryState`, `QueryTokenDef`, `QueryQuickFilter`, `QueryBarLabels`, and pure grammar helpers. Vocabulary entries default to single selection; `selection: 'multiple'` allows distinct values for the same key. `anyLabel` customizes the unrestricted single-selection choice, such as “Default order” for sorting. Options accept an optional `icon` (registered `ore-icon` name), displayed beside their labels in the drawer. `tokenValues(state, key)` reads all values, `removeToken(state, token)` removes an exact pair, and `clearTokens(state, key)` clears a group. Its unified field contains applied filters, with a compact secondary row for filter entry, quick toggles, and a `toolbar-end` slot for application content such as a result count. Drawer selection uses the same state and vocabulary as typed suggestions. Pending edits block incidental backdrop/swipe dismissal; explicit Cancel, Close, and Escape discard them. Search-hidden selections remain visible in a summary.
+
 ## Framework Types
 
 ```ts

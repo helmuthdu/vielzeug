@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Render query-bar drawer choices as an icon card gallery when every option of a token carries an icon: responsive 3-up grid, corner checkbox, centered art, name below",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

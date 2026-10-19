@@ -209,10 +209,30 @@ describe('ore-radio-group', () => {
       const radios = fixture.element.querySelectorAll<HTMLElement>('ore-radio');
 
       radios[0].focus();
-      fireKeyDown(fixture.element, { key: 'ArrowRight' });
+      fireKeyDown(radios[0], { key: 'ArrowRight' });
 
       expect(radios[1].hasAttribute('checked')).toBe(true);
       expect(radios[1].getAttribute('tabindex')).toBe('0');
+    });
+
+    it('navigates unnamed radio groups inside a shadow root without skipping options', async () => {
+      const wrapper = document.createElement('div');
+      const root = wrapper.attachShadow({ mode: 'open' });
+      document.body.append(wrapper);
+      try {
+        fixture = await mount('ore-radio-group', { attrs: { value: 'a' }, container: root, html: radioHtml });
+        const radios = fixture.element.querySelectorAll<HTMLElement>('ore-radio');
+        radios[0].focus();
+        fireKeyDown(radios[0], { key: 'ArrowDown' });
+        await fixture.flush();
+        expect(radios[1].getAttribute('aria-checked')).toBe('true');
+        expect(root.activeElement).toBe(radios[1]);
+        fireKeyDown(radios[1], { key: 'ArrowDown' });
+        await fixture.flush();
+        expect(radios[2].getAttribute('aria-checked')).toBe('true');
+      } finally {
+        wrapper.remove();
+      }
     });
   });
 

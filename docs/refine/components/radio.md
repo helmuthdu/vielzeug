@@ -255,3 +255,5 @@ The radio components follow WCAG 2.1 Level AA standards.
 `ore-radio` uses `role="radio"` with `aria-checked` reflecting the current state, and `aria-disabled` reflecting the disabled state. Keyboard navigation uses `Space` or `Enter` to select a radio and `Tab` to move focus in and out of the group. Arrow keys navigate between radios within a group using a roving tabindex.
 
 `ore-radio-group` renders as a `<fieldset>` with a `<legend>` for the `label` attribute, ensuring screen readers announce the group label before each option. `aria-required` and `aria-invalid` reflect the validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
+
+Use `ore-radio-group::part(legend)` to style the group label and `::part(items)` for the option layout.

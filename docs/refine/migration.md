@@ -1,11 +1,70 @@
 ---
-title: Refine 3.0 Migration
+title: Migration
 description: Migrate surface variants, DataGrid sources, and framework type declarations to Refine 3.0.
 ---
 
-# Refine 3.0 Migration
+# Migration
 
-Refine 3.0 simplifies translucent surfaces, aligns DataGrid sources with Sourcerer's page-source contract, and publishes complete DOM, React, and Vue element declarations.
+## Query bar filter layout and state echoes
+
+The query bar retains its unified field and inline applied-filter pills. Its standard secondary row opens a vocabulary-driven drawer and can show curated quick filters. Use `::part(applied)` for inline filter styling and `::part(toolbar)` for secondary controls.
+
+Breaking: state echoes now use semantic equality instead of token-array identity. To change free text externally, assign a new state object. To echo the current query, copy its actual text and tokens; that preserves an unfinished typed token.
+
+```js
+// Before: a text-only write with the same tokens array was ignored.
+bar.state = { text: 'updated', tokens: bar.state.tokens };
+
+// After: this updates text and dismisses pending drawer edits.
+bar.state = { text: 'updated', tokens: bar.state.tokens };
+
+// Equivalent echoes preserve composition even with a copied tokens array.
+bar.state = { text: bar.state.text, tokens: [...bar.state.tokens] };
+```
+
+`open-change` now identifies the surface. Update handlers that assumed every event referred to suggestions:
+
+```js
+// Before
+bar.addEventListener('open-change', (event) => updateSuggestions(event.detail.open));
+
+// After
+bar.addEventListener('open-change', (event) => {
+  if (event.detail.surface === 'suggestions') updateSuggestions(event.detail.open);
+});
+```
+
+Suggestion rows now flow naturally, wrap long labels, and have a 44px minimum height. `--query-bar-option-height` controls minimum height rather than a fixed row height. The unused `--query-bar-icon-size` declaration was removed. Applied-pill removal returns focus to Filters instead of the text field. See the [query bar reference](./components/query-bar.md).
+
+`input` and `change` now fire only when the committed query actually changes. Composing an unfinished token or selecting an already-applied value does not announce an unchanged query.
+
+### Multiple values and token helpers
+
+Vocabulary entries default to single selection. Set `selection: 'multiple'` to allow additive values for the same key. The state remains `{ text, tokens: [{ key, value }] }`, with distinct pairs. Applications should match values with OR within a key and AND across keys; no values means unrestricted. The drawer uses checkboxes for multiple-selection keys and retains radios for single-selection keys.
+
+Breaking: helper calls now identify a token by both key and value. `tokenValue` is removed in favor of `tokenValues`, which always returns an array. `removeToken` removes an exact pair; use `clearTokens` to clear a whole group.
+
+```js
+// Before
+commitToken(state, 'fruit', 'apple');
+removeToken(state, 'fruit');
+const fruit = tokenValue(state, 'fruit');
+
+// After
+commitToken(state, { key: 'fruit', value: 'apple' }); // Single selection
+commitToken(state, { key: 'fruit', value: 'apple' }, 'multiple'); // Additive
+removeToken(state, { key: 'fruit', value: 'apple' }); // Exact value
+clearTokens(state, 'fruit'); // Entire group
+const fruits = tokenValues(state, 'fruit');
+```
+
+The Filters badge now counts active keys, not individual values. Removing a pill or deselecting a quick filter preserves other values of that key. Add `clearFilter` (`'Clear {filter}'`) and `selected` (`'{count} selected'`) to localized labels when using multiple-selection groups.
+
+### Drawer draft feedback
+
+Backdrop clicks and swipe gestures now keep the querybar drawer open when it has pending edits. Cancel, Close, and Escape still discard edits. An unchanged drawer can be dismissed through any of those paths. Reset is disabled for an empty draft.
+
+Add `pending`, `hiddenSelected`, `selectedValues`, and `showAll` to localized labels for pending-edit feedback and search-hidden selection summaries. See the [localization reference](./components/query-bar.md#localization-and-styling) for placeholders. Single-selection vocabulary entries can set `anyLabel` to describe their unrestricted choice, for example `anyLabel: 'Default order'`.
 
 ## Register library-neutral icon definitions
 

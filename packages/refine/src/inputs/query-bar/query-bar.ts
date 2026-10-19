@@ -13,13 +13,21 @@ import {
   watchEffect,
 } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { createListboxDropdown, lifecycleSignal, setAriaReflection } from '../../core';
-import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
+import {
+  type ChoiceChangeDetail,
+  createListboxDropdown,
+  lifecycleSignal,
+  type OverlayCloseDetail,
+  type OverlayOpenChangeDetail,
+  setAriaReflection,
+} from '../../core';
+import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import { type AddEventListeners, COMPONENT_SIZES, ROUNDED_SIZES } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import componentStyles from './query-bar.css?inline';
-import type { OreQueryBarEvents, OreQueryBarProps } from './query-bar.types';
+import type { OreQueryBarEvents, OreQueryBarProps, QueryBarLabels, QueryQuickFilter } from './query-bar.types';
 import {
+  clearTokens,
   commitToken,
   parseQuery,
   type QueryState,
@@ -30,27 +38,58 @@ import {
   suggestQuery,
 } from './query-bar-grammar';
 
+export { ICON_TAG } from '../../content/icon/icon';
 export { CHIP_TAG } from '../../feedback/chip/chip';
+export { DRAWER_TAG } from '../../overlay/drawer/drawer';
+export { BUTTON_TAG } from '../button/button';
+export { CHECKBOX_TAG } from '../checkbox/checkbox';
 export { INPUT_TAG } from '../input/input';
-export type { OreQueryBarEvents, OreQueryBarProps } from './query-bar.types';
+export { RADIO_TAG } from '../radio/radio';
+export { RADIO_GROUP_TAG } from '../radio-group/radio-group';
+export type { OreQueryBarEvents, OreQueryBarProps, QueryBarLabels, QueryQuickFilter } from './query-bar.types';
 export * from './query-bar-grammar';
 
-/** Fixed row height of one suggestion; the dropdown positions rows against it. */
-const OPTION_ROW_HEIGHT = 36;
 const QUERY_BAR_VARIANTS = ['flat', 'solid', 'bordered', 'outline', 'ghost'] as const;
+const LABELS: QueryBarLabels = {
+  any: 'Any',
+  applied: 'Applied filters',
+  apply: 'Apply filters',
+  cancel: 'Cancel',
+  clear: 'Clear search text',
+  clearFilter: 'Clear {filter}',
+  filters: 'Filters',
+  hiddenSelected: '{count} selected hidden by search',
+  noMatch: 'No matching options — searching as text',
+  noOptions: 'No matching options.',
+  pending: 'Changes not applied',
+  quickFilters: 'Quick filters',
+  reset: 'Reset filters',
+  searchOptions: 'Find {filter}',
+  selected: '{count} selected',
+  selectedValues: 'Selected: {values}',
+  showAll: 'Show all options',
+};
+
+const equalState = (left: QueryState, right: QueryState): boolean =>
+  left.text === right.text &&
+  left.tokens.length === right.tokens.length &&
+  left.tokens.every(
+    (token, index) => token.key === right.tokens[index]?.key && token.value === right.tokens[index]?.value,
+  );
 
 /**
  * A search field that accepts free text and `key:value` tokens together, in the
- * grammar GitHub's pull-request search made familiar. Committed tokens render as
- * removable pills inside the field; a suggestion dropdown lists the vocabulary's
- * keys and matching values while typing, so phones never need to type a colon.
+ * grammar GitHub's pull-request search made familiar. Applied filters stay inside
+ * the field. A drawer edits filters without typing; curated quick filters toggle
+ * immediately. Each vocabulary key chooses single or multiple selection; repeated
+ * keys accumulate distinct values only in multiple mode. Typed suggestions and
+ * the drawer share one vocabulary and state.
  *
  * The bar is state-driven: `vocabulary` defines the token keys and their accepted
  * values, `state` carries `{ text, tokens }`, and every edit emits `input` +
  * `change` with the new state readable from the element's `state` property. Omit
- * `state` for uncontrolled use. External `state` writes whose `tokens` array is
- * identical to the current one are treated as echoes — only token changes are
- * adopted — so text-only round-trips never wipe the field's live draft.
+ * `state` for uncontrolled use. Equivalent external states preserve live drafts;
+ * actual external changes replace both text and tokens and dismiss pending edits.
  *
  * The dropdown opens while the field holds focus (and reopens on typing after
  * Escape) and overlays the page from the top layer. Picking a key suggestion
@@ -75,16 +114,22 @@ const QUERY_BAR_VARIANTS = ['flat', 'solid', 'bordered', 'outline', 'ghost'] as 
  *
  * @prop {QueryState} state - The controlled query state; write a new object to apply external changes
  * @prop {QueryTokenDef[]} vocabulary - The token vocabulary
+ * @prop {QueryQuickFilter[]} quick-filters - Application-curated single-filter toggles
+ * @prop {Partial<QueryBarLabels>} labels - Localized built-in copy
  *
  * @fires input - The query changed; read the new state from the `state` property
  * @fires change - Same as `input`
- * @fires open-change - The suggestion dropdown opened or closed. detail: { open, reason }
+ * @fires open-change - A surface opened or closed. detail: { open, reason, surface: 'suggestions' | 'filters' }
+ *
+ * @slot toolbar-end - Application content at the end of the toolbar row, e.g. a result count
  *
  * @part wrapper - The ore-input field host
  * @part dropdown - The suggestion dropdown container
- * @cssprop --query-bar-min-width - Minimum host width (default 12rem)
- * @cssprop --query-bar-icon-size - Leading search icon size (default 16px)
- * @cssprop --query-bar-option-height - Suggestion row height (default 36px)
+ * @part toolbar - Filter button, quick filters, and the toolbar-end slot
+ * @part toolbar-end - End-aligned container for the toolbar-end slot content
+ * @part applied - Removable applied filters inside the field
+ * @cssprop --query-bar-min-width - Minimum host width (default 0)
+ * @cssprop --query-bar-option-height - Minimum suggestion row height (default var(--size-11))
  * @cssprop --query-bar-dropdown-min-width - Dropdown panel minimum width (default 16rem)
  * @cssprop --query-bar-dropdown-max-width - Dropdown panel maximum width (default 28rem, viewport-capped)
  * @cssprop --chip-* - Pill styling (see ore-chip)
@@ -110,7 +155,9 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
     helper: prop.string(),
     'hide-label': prop.bool(false),
     label: prop.string(),
+    labels: prop.data<Partial<QueryBarLabels>>(),
     placeholder: prop.string(),
+    'quick-filters': prop.data<QueryQuickFilter[]>(),
     rounded: prop.oneOf(ROUNDED_SIZES),
     size: prop.oneOf(COMPONENT_SIZES),
     state: prop.data<QueryState>(),
@@ -157,17 +204,86 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
       return draft !== null && draft.valuePrefix !== '' && suggestions.value.length === 0;
     });
 
-    const noMatchLabel = computed(() => {
-      const draft = parseQuery(field.value, vocabulary()).draft;
-      const def = draft ? defBy.value.get(draft.key) : undefined;
-      return `No matching ${def?.label ?? draft?.key ?? ''} — searching as text`;
-    });
-
     // Element refs the listbox dropdown needs; resolved as the template renders.
     let inputEl: HTMLInputElement | null = null;
-    let fieldEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
     const inputRef = ref<HTMLElement>();
+    const filterButton = ref<HTMLElement>();
+    const drawerHeading = ref<HTMLElement>();
+    const drawerOpen = signal(false);
+    const draft = signal<QueryToken[]>([]);
+    const searches = signal<Record<string, string>>({});
+    const drawerPlacement = signal<'bottom' | 'right'>('right');
+    const hasToolbarEnd = signal(false);
+    const label = (key: keyof QueryBarLabels): string => props.labels.value?.[key] ?? LABELS[key];
+    const selected = (tokens: QueryToken[], token: QueryToken): boolean =>
+      tokens.some((item) => item.key === token.key && item.value === token.value);
+    const available = (token: QueryToken): boolean =>
+      Boolean(defBy.value.get(token.key)?.options.some((option) => option.value === token.value));
+    const activeCount = computed(() => new Set(working.value.tokens.map((token) => token.key)).size);
+    const draftCount = (key: string): number => draft.value.filter((token) => token.key === key).length;
+    const dirty = computed(() => !equalState({ text: working.value.text, tokens: draft.value }, working.value));
+    const filteredOptions = (def: QueryTokenDef) => {
+      const search = (searches.value[def.key] ?? '').trim().toLocaleLowerCase();
+      return def.options
+        .map((option, index) => ({ ...option, index }))
+        .filter((option) => option.label.toLocaleLowerCase().includes(search));
+    };
+    const optionContent = (option: QueryTokenDef['options'][number]) => html`
+      <span class="choice-label">
+        ${
+          option.icon
+            ? html`
+                <ore-icon name=${option.icon} aria-hidden="true"></ore-icon>
+              `
+            : ''
+        }
+        <span>${option.label}</span>
+      </span>
+    `;
+    // A token whose every option carries an icon renders as a card gallery: the
+    // choice control becomes the card (corner tick, centered art, name below).
+    // All-or-nothing per token keeps a gallery never half art / half text, and
+    // lazily loaded art flipping a token icon-complete upgrades it automatically.
+    const usesCards = (def: QueryTokenDef): boolean =>
+      def.options.length > 0 && def.options.every((option) => !!option.icon);
+    const hiddenSelections = (def: QueryTokenDef) => {
+      const visible = new Set(filteredOptions(def).map((option) => option.value));
+      return def.options.filter(
+        (option) => selected(draft.value, { key: def.key, value: option.value }) && !visible.has(option.value),
+      );
+    };
+
+    function openFilters(): void {
+      if (props.disabled.value || !vocabulary().length) return;
+      optionList.close('programmatic');
+      inputEl?.blur();
+      // Native dialog focus must return to Filters, not the keyboard-opening search field.
+      filterButton.value?.focus();
+      draft.value = working.value.tokens.map((token) => ({ ...token }));
+      searches.value = {};
+      drawerPlacement.value = el.ownerDocument.defaultView!.matchMedia('(max-width: 40rem)').matches
+        ? 'bottom'
+        : 'right';
+      drawerOpen.value = true;
+    }
+
+    function applyFilters(): void {
+      if (props.disabled.value) return;
+      const next = { text: working.value.text, tokens: draft.value };
+      field.value = next.text;
+      drawerOpen.value = false;
+      if (!equalState(working.value, next)) commit(next);
+    }
+
+    function toggleQuickFilter(token: QueryQuickFilter): void {
+      if (props.disabled.value || !available(token)) return;
+      commit(
+        selected(working.value.tokens, token)
+          ? removeToken(working.value, token)
+          : commitToken(working.value, token, defBy.value.get(token.key)?.selection),
+      );
+    }
 
     const optionList = createListboxDropdown<QuerySuggestion>({
       getBoundary: () => el,
@@ -175,15 +291,13 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
       getItems: () => suggestions.value,
       getOptionId: (index) => `${barId}-opt-${index}`,
       getPanel: () => dropdownEl,
-      getReference: () => fieldEl,
+      getReference: () => el,
       getTrigger: () => inputEl,
       isDisabled: () => Boolean(props.disabled.value),
       isItemDisabled: () => false,
-      onClose: (reason) => emit('open-change', { open: false, reason }),
-      onOpen: (reason) => emit('open-change', { open: true, reason }),
-      // The reference is the whole (often full-row) field: matching its width would
-      // stretch the panel across the page. The dropdown sizes to its content within
-      // its own min/max bounds instead, like a menu.
+      onClose: (reason) => emit('open-change', { open: false, reason, surface: 'suggestions' }),
+      onOpen: (reason) => emit('open-change', { open: true, reason, surface: 'suggestions' }),
+      // Anchor below the complete bar so suggestions never cover filter controls.
       positioning: { matchWidth: false },
       restoreFocus: false,
       signal: abortSignal,
@@ -198,21 +312,17 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
       },
     });
 
-    // Expose the working state as a native-like `.state` property on the host: the
-    // live external channel, replacing the prop-installed property exactly as
-    // ore-combobox replaces its own `value`. Writes whose `tokens` array matches
-    // the working one are consumer echoes (v-model round-trips) and keep the
-    // field's live draft; a changed tokens array is an external write — a deep-link
-    // preset, a mode switch — and is adopted, field included.
+    // Equivalent consumer echoes must not erase an unfinished key:value draft.
     Object.defineProperty(el, 'state', {
       configurable: true,
       enumerable: true,
       get: () => working.value,
       set: (value: unknown) => {
         const next = normalizeState(value);
-        if (next === null || next.tokens === working.value.tokens) return;
+        if (next === null || equalState(next, working.value)) return;
         working.value = next;
         field.value = next.text;
+        drawerOpen.value = false;
       },
     });
 
@@ -225,18 +335,18 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
 
     /** Applies the next state locally and announces it; the consumer reads `el.state`. */
     function commit(next: QueryState): void {
+      if (equalState(working.value, next)) return;
       working.value = next;
       emitChange();
     }
 
     /** Folds parsed tokens into the working set, replacing per key and keeping slots. */
     function mergeTokens(base: QueryToken[], parsed: readonly QueryToken[]): QueryToken[] {
-      let tokens = base;
+      let state: QueryState = { text: '', tokens: base };
       for (const token of parsed) {
-        const slot = tokens.findIndex((candidate) => candidate.key === token.key);
-        tokens = slot >= 0 ? [...tokens.slice(0, slot), token, ...tokens.slice(slot + 1)] : [...tokens, token];
+        state = commitToken(state, token, defBy.value.get(token.key)?.selection);
       }
-      return tokens;
+      return state.tokens;
     }
 
     /** Parses the field, folds any complete tokens into the working state, and commits. */
@@ -251,7 +361,7 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
       applyField();
       // Typing is the strongest composing signal: the dropdown must come back after
       // Escape without a blur/refocus cycle, or the bar reads as broken.
-      if (canOpen()) optionList.open('keyboard');
+      if (!drawerOpen.value && canOpen()) optionList.open('keyboard');
     }
 
     function pick(suggestion: QuerySuggestion): void {
@@ -266,23 +376,27 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
         applyField();
       } else {
         field.value = rest;
-        commit(commitToken({ text: rest, tokens: working.value.tokens }, suggestion.key, suggestion.value));
+        commit(
+          commitToken(
+            { text: rest, tokens: working.value.tokens },
+            { key: suggestion.key, value: suggestion.value },
+            defBy.value.get(suggestion.key)?.selection,
+          ),
+        );
       }
       inputEl?.focus();
     }
 
-    function removeChip(event: Event): void {
+    function removeChip(event: Event, token: QueryToken): void {
       event.stopPropagation();
-      const key = (event as CustomEvent<{ value?: string }>).detail?.value;
-      if (key === undefined) return;
-      commit(removeToken(working.value, key));
-      // Keep the compose flow: without this, focus falls to the host and the next
-      // keystroke goes nowhere.
-      inputEl?.focus();
+      if (props.disabled.value) return;
+      commit(removeToken(working.value, token));
+      filterButton.value?.focus();
     }
 
     /** The field's own clear button: clears the free text, never the pills. */
     function clearText(): void {
+      if (props.disabled.value) return;
       field.value = '';
       commit({ text: '', tokens: working.value.tokens });
       inputEl?.focus();
@@ -307,7 +421,7 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
           // The GitHub-style touch: backspace on an empty field drops the last pill.
           if (field.value === '' && working.value.tokens.length > 0) {
             const last = working.value.tokens[working.value.tokens.length - 1];
-            if (last) commit(removeToken(working.value, last.key));
+            if (last) commit(removeToken(working.value, last));
           }
           break;
         case 'Tab':
@@ -323,10 +437,18 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
     // outside pointers, and Tab dismiss it through the machinery.
     const canOpen = (): boolean => suggestions.value.length > 0 || noMatch.value;
     const openDropdown = (): void => {
-      if (canOpen()) optionList.open('focus');
+      if (!drawerOpen.value && canOpen()) optionList.open('focus');
     };
     watch(() => {
       if (isOpen.value && !canOpen()) optionList.close('programmatic');
+      if (props.disabled.value) {
+        drawerOpen.value = false;
+        optionList.close('programmatic');
+      }
+    });
+    watch(() => {
+      void props.vocabulary.value;
+      drawerOpen.value = false;
     });
 
     /**
@@ -378,8 +500,6 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
     // attach the query-bar's ARIA and event handlers imperatively (the combobox
     // pattern: the focused element must carry the combobox semantics itself).
     onElement(inputRef, (bitInputEl) => {
-      fieldEl = bitInputEl;
-
       const rawInput = bitInputEl.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
       if (!rawInput) return;
 
@@ -401,7 +521,6 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
 
       return () => {
         inputEl = null;
-        fieldEl = null;
         rawInput.removeEventListener('input', handleInput as EventListener);
         rawInput.removeEventListener('keydown', handleKeydown as EventListener);
         rawInput.removeEventListener('focus', openDropdown);
@@ -482,20 +601,23 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
         helper="${() => props.helper.value ?? ''}"
         error="${() => props.error.value ?? ''}"
         ?disabled="${() => Boolean(props.disabled.value)}"
+        @input=${(event: Event) => event.stopPropagation()}
+        @change=${(event: Event) => event.stopPropagation()}
         part="wrapper">
         <div class="prefix" slot="prefix">
           <ore-icon name="search" size="16" aria-hidden="true"></ore-icon>
-          <span class="pills">
+          <span class="applied" part="applied" role="group" aria-label=${() => label('applied')}>
             ${() =>
               working.value.tokens.map(
                 (token) => html`
                   <ore-chip
-                    value=${token.key}
                     label=${pillLabel(token)}
                     mode="removable"
                     variant="flat"
                     size="sm"
-                    @remove=${removeChip}>
+                    rounded="full"
+                    ?disabled=${() => props.disabled.value}
+                    @remove=${(event: Event) => removeChip(event, token)}>
                     ${pillLabel(token)}
                   </ore-chip>
                 `,
@@ -507,14 +629,266 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
             class="clear-btn"
             part="clear-btn"
             type="button"
-            aria-label="Clear"
-            tabindex="-1"
+            aria-label=${() => label('clear')}
+            ?disabled=${() => props.disabled.value}
             ?hidden="${() => !props.clearable.value || field.value === ''}"
             @click="${clearText}">
             <ore-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
           </button>
         </span>
       </ore-input>
+      <div
+        class="toolbar"
+        part="toolbar"
+        ?hidden=${() => !vocabulary().length && !props['quick-filters'].value?.length && !hasToolbarEnd.value}>
+        <ore-button
+          class="filter-button"
+          ref=${filterButton}
+          variant="ghost"
+          size="sm"
+          rounded="full"
+          aria-haspopup="dialog"
+          aria-expanded=${drawerOpen}
+          aria-label=${() => `${label('filters')}${activeCount.value ? ` (${activeCount.value})` : ''}`}
+          ?disabled=${() => props.disabled.value || !vocabulary().length}
+          ?hidden=${() => !vocabulary().length}
+          @click=${openFilters}>
+          <ore-icon slot="prefix" name="filter" aria-hidden="true"></ore-icon>
+          ${() => label('filters')}
+          <span slot="suffix" class="filter-count" ?hidden=${() => !activeCount.value}>${activeCount}</span>
+        </ore-button>
+        <div
+          class="quick-filters"
+          role="group"
+          aria-label=${() => label('quickFilters')}
+          ?hidden=${() => !props['quick-filters'].value?.length}>
+          ${() =>
+            (props['quick-filters'].value ?? []).map(
+              (token) => html`
+                <ore-chip
+                  mode="selectable"
+                  variant="ghost"
+                  size="sm"
+                  color="primary"
+                  rounded="full"
+                  checked=${() => selected(working.value.tokens, token)}
+                  ?disabled=${() => props.disabled.value || !available(token)}
+                  @change=${(event: Event) => {
+                    event.stopPropagation();
+                    toggleQuickFilter(token);
+                  }}>
+                  ${token.label}
+                </ore-chip>
+              `,
+            )}
+        </div>
+        <div
+          class="toolbar-end"
+          part="toolbar-end"
+          ?hidden=${() => !hasToolbarEnd.value}
+          @slotchange=${(event: Event) => {
+            // Pretty-printed markup assigns whitespace text nodes: only real
+            // content counts, or the empty container would add a phantom gap.
+            hasToolbarEnd.value = (event.target as HTMLSlotElement)
+              .assignedNodes()
+              .some((node) => node.nodeType !== Node.TEXT_NODE || Boolean(node.textContent?.trim()));
+          }}>
+          <slot name="toolbar-end"></slot>
+        </div>
+      </div>
+      <ore-drawer
+        class="filters-drawer"
+        title=${() => label('filters')}
+        placement=${drawerPlacement}
+        drag-handle-placement="inset"
+        ?open=${drawerOpen}
+        @close-request=${(event: CustomEvent<OverlayCloseDetail>) => {
+          event.stopPropagation();
+          if (dirty.value && (event.detail.reason === 'outsideClick' || event.detail.reason === 'swipe')) {
+            event.preventDefault();
+          }
+        }}
+        @input=${(event: Event) => event.stopPropagation()}
+        @change=${(event: Event) => event.stopPropagation()}
+        @open-change=${(event: CustomEvent<OverlayOpenChangeDetail>) => {
+          event.stopPropagation();
+          drawerOpen.value = event.detail.open;
+          if (event.detail.open) drawerHeading.value?.focus();
+          emit('open-change', { ...event.detail, surface: 'filters' });
+        }}>
+        <div class="drawer-heading" ref=${drawerHeading} slot="header" tabindex="-1">${() => label('filters')}</div>
+        <div class="filter-groups">
+          ${() =>
+            vocabulary().map(
+              (def) => html`
+                <section class="filter-group">
+                  ${
+                    def.selection === 'multiple'
+                      ? html`
+                          <div class="filter-group-heading">
+                            <h3>${def.label}</h3>
+                            <span class="filter-count" aria-hidden="true" ?hidden=${() => !draftCount(def.key)}>
+                              ${() => draftCount(def.key)}
+                            </span>
+                            <span class="sr-only" ?hidden=${() => !draftCount(def.key)}>
+                              ${() => label('selected').replace('{count}', String(draftCount(def.key)))}
+                            </span>
+                            <ore-button
+                              variant="ghost"
+                              size="sm"
+                              ?disabled=${() => props.disabled.value || !draftCount(def.key)}
+                              @click=${() => {
+                                if (props.disabled.value) return;
+                                draft.value = clearTokens({ text: '', tokens: draft.value }, def.key).tokens;
+                              }}>
+                              ${() => label('clearFilter').replace('{filter}', def.label)}
+                            </ore-button>
+                          </div>
+                        `
+                      : ''
+                  }
+                  ${
+                    def.options.length > 8
+                      ? html`
+                          <ore-input
+                            label=${() => label('searchOptions').replace('{filter}', def.label)}
+                            value=${() => searches.value[def.key] ?? ''}
+                            @input=${(event: Event) => {
+                              event.stopPropagation();
+                              const input = event.currentTarget as HTMLElementTagNameMap['ore-input'];
+                              searches.value = { ...searches.value, [def.key]: input.value ?? '' };
+                            }}>
+                            <ore-icon slot="prefix" name="search" size="16" aria-hidden="true"></ore-icon>
+                          </ore-input>
+                        `
+                      : ''
+                  }
+                  <div class="hidden-selections" ?hidden=${() => !hiddenSelections(def).length}>
+                    <p role="status">
+                      ${() => {
+                        const hidden = hiddenSelections(def);
+                        return `${label('hiddenSelected').replace('{count}', String(hidden.length))}. ${label('selectedValues').replace('{values}', hidden.map((option) => option.label).join(', '))}`;
+                      }}
+                    </p>
+                    <ore-button
+                      variant="ghost"
+                      size="sm"
+                      @click=${(event: Event) => {
+                        searches.value = { ...searches.value, [def.key]: '' };
+                        (event.currentTarget as HTMLElement)
+                          .closest('.filter-group')
+                          ?.querySelector<HTMLElement>('ore-input')
+                          ?.focus();
+                      }}>
+                      ${() => label('showAll')}
+                    </ore-button>
+                  </div>
+                  ${
+                    def.selection === 'multiple'
+                      ? html`
+                          <div
+                            class="filter-choices"
+                            role="group"
+                            aria-label=${def.label}
+                            ?data-cards=${() => usesCards(def)}>
+                            ${() =>
+                              filteredOptions(def).map(
+                                (option) => html`
+                                  <ore-checkbox
+                                    color="primary"
+                                    checked=${() => selected(draft.value, { key: def.key, value: option.value })}
+                                    ?disabled=${() => props.disabled.value}
+                                    @change=${(event: Event) => {
+                                      event.stopPropagation();
+                                      if (props.disabled.value) return;
+                                      const token = { key: def.key, value: option.value };
+                                      const state = { text: '', tokens: draft.value };
+                                      draft.value = (
+                                        selected(draft.value, token)
+                                          ? removeToken(state, token)
+                                          : commitToken(state, token, 'multiple')
+                                      ).tokens;
+                                    }}>
+                                    ${optionContent(option)}
+                                  </ore-checkbox>
+                                `,
+                              )}
+                          </div>
+                        `
+                      : html`
+                          <ore-radio-group
+                            label=${def.label}
+                            color="primary"
+                            ?data-cards=${() => usesCards(def)}
+                            value=${() => {
+                              const token = draft.value.find((token) => token.key === def.key);
+                              return token
+                                ? String(def.options.findIndex((option) => option.value === token.value) + 1)
+                                : 'any';
+                            }}
+                            @change=${(event: CustomEvent<ChoiceChangeDetail>) => {
+                              event.stopPropagation();
+                              if (props.disabled.value) return;
+                              const value = event.detail.values[0];
+                              const option = value === 'any' ? undefined : def.options[Number(value) - 1];
+                              if (value !== 'any' && !option) return;
+                              draft.value = (
+                                option
+                                  ? commitToken(
+                                      { text: '', tokens: draft.value },
+                                      { key: def.key, value: option.value },
+                                    )
+                                  : clearTokens({ text: '', tokens: draft.value }, def.key)
+                              ).tokens;
+                            }}>
+                            <ore-radio value="any">${() => def.anyLabel ?? label('any')}</ore-radio>
+                            ${() => {
+                              return filteredOptions(def).map(
+                                (option) => html`
+                                  <ore-radio value=${String(option.index + 1)}>${optionContent(option)}</ore-radio>
+                                `,
+                              );
+                            }}
+                          </ore-radio-group>
+                        `
+                  }
+                  <p
+                    class="no-options"
+                    role="status"
+                    ?hidden=${() =>
+                      def.options.some((option) =>
+                        option.label
+                          .toLocaleLowerCase()
+                          .includes((searches.value[def.key] ?? '').trim().toLocaleLowerCase()),
+                      )}>
+                    ${() => label('noOptions')}
+                  </p>
+                </section>
+              `,
+            )}
+        </div>
+        <div class="drawer-footer" slot="footer">
+          <p class="pending-changes" role="status">${() => (dirty.value ? label('pending') : '')}</p>
+          <div class="filter-actions">
+            <ore-button
+              variant="ghost"
+              ?disabled=${() => !draft.value.length || props.disabled.value}
+              @click=${() => {
+                draft.value = [];
+              }}>
+              ${() => label('reset')}
+            </ore-button>
+            <ore-button
+              variant="bordered"
+              @click=${() => {
+                drawerOpen.value = false;
+              }}>
+              ${() => label('cancel')}
+            </ore-button>
+            <ore-button color="primary" @click=${applyFilters}>${() => label('apply')}</ore-button>
+          </div>
+        </div>
+      </ore-drawer>
       <div
         class="dropdown"
         part="dropdown"
@@ -527,11 +901,14 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
         <div
           role="listbox"
           id="${() => `${barId}-listbox`}"
-          style="${() => (isOpen.value && canOpen() ? `height:${(noMatch.value ? 1 : suggestions.value.length) * OPTION_ROW_HEIGHT}px;` : '')}"
           aria-label="${() => props.label.value || props.placeholder.value || 'Suggestions'}">
           ${() =>
             isOpen.value && noMatch.value
-              ? html`<div class="no-match" role="option" aria-selected="false" aria-disabled="true">${noMatchLabel.value}</div>`
+              ? html`
+                  <div class="no-match" role="option" aria-selected="false" aria-disabled="true">
+                    ${() => label('noMatch')}
+                  </div>
+                `
               : ''}
           ${() =>
             isOpen.value && suggestions.value.length > 0
@@ -544,7 +921,6 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
                       data-option-index="${index}"
                       aria-selected="false"
                       aria-disabled="false"
-                      style="${`position:absolute;top:0;left:0;right:0;transform:translateY(${index * OPTION_ROW_HEIGHT}px);`}"
                       ?data-focused=${() => focusedIndex.value === index}
                       @pointermove="${() => optionList.set(index)}"
                       @click="${() => pick(suggestion)}">
@@ -559,5 +935,5 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, reducedMotionMixin, roundedVariantMixin, componentStyles],
+  styles: [colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin, componentStyles],
 }) as unknown as AddEventListeners<OreQueryBarEvents>;

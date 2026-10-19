@@ -5,7 +5,7 @@
 
   :host {
     --_font-size: var(--input-font-size, var(--text-sm));
-    --_gap: var(--input-gap, var(--size-2));
+    --_gap: var(--input-gap, var(--size-1));
     --_field-height: var(--input-height, var(--size-10));
     --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
     --_label-block-inset: var(--input-label-block-inset, var(--size-2));
