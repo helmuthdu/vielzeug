@@ -9,14 +9,14 @@ This skill owns delivery mechanics. Code and PR quality assessment belongs to th
 
 ## Load
 
-- root `AGENTS.md` (safety, change files, conventional commits)
+- root `AGENTS.md` (safety, change files, conventional commits, and validation policy)
 - relevant subtree `AGENTS.md`
 - the `review` skill when content quality has not already been assessed
 - `.github/AGENTS.md` for workflow changes
 
 ## Preconditions
 
-Never commit, push, tag, release, publish, rewrite history, or delete branches without explicit approval for that action. Before delivery, require a cleanly stated scope, public/release impact, and validation status. Use `[BLOCKED]` when content readiness is unknown or required validation is red.
+Follow the root `AGENTS.md` Safety policy for delivery approvals. Before delivery, require a cleanly stated scope, public/release impact, and validation status. Use `[BLOCKED]` when content readiness is unknown or required validation is red.
 
 ## Flow
 
@@ -25,12 +25,13 @@ Never commit, push, tag, release, publish, rewrite history, or delete branches w
 3. For version-relevant package changes, create one scoped Rush change file per package: `node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"`. Never `rush change --bulk`.
 4. Verify generated artifacts, package metadata, change files, and release metadata are current.
 5. For publish- or release-shaped verification, run `pnpm verify:packed -- --package=@vielzeug/<name>` for each affected publishable package.
-6. Perform the approved delivery action only after explicit confirmation, then report the resulting commit, pull request, tag, or diagnostic outcome.
+6. For a pull request, read `.github/pull_request_template.md` first and draft the body from it: preserve its headings, comments, and checklist, and fill placeholders with accurate content instead of substituting a generic body.
+7. Perform the approved delivery action only after explicit confirmation, then report the resulting commit, pull request, tag, or diagnostic outcome.
 
 ## Rules
 
 - Treat docs changes as Codex release-relevant; the pre-commit hook writes codex's change file automatically.
-- Use conventional commit meaning for bump selection: `fix` patch, `feat` minor, breaking major.
+- Versions are CalVer lockstep trains (`AGENTS.md`, `RELEASE.md`): there is no patch/minor/major bump to select. The change-file type only picks the CHANGELOG section: mirror the commit kind (`fix`/`feat`/breaking) for readability, never for versioning.
 - Keep publishing diagnostics in scripts and workflows; do not bypass release checks or trusted-publishing controls.
 
 ## Validation

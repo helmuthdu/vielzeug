@@ -10,17 +10,18 @@ description: Change package source, tests, tooling, CI, or public behavior with 
 - root `AGENTS.md` (policy, safety, markers, commands)
 - `.agents/conventions.md` when editing package source
 - `.agents/reference/packages.md` when dependency impact matters
+- `.agents/skills/vielzeug/SKILL.md` when changing demos that consume `@vielzeug/*` packages
 - relevant subtree `AGENTS.md`
 
 ## Preconditions
 
 Changes are compatible by default. Use `[BLOCKED]` before changing a public API incompatibly, adding a dependency, performing an irreversible operation, or proceeding from an unrelated red baseline. A breaking change requires explicit approval, a public API/dependent impact check, and migration scope before editing.
 
-Record a baseline: the exact command, its result, and whether failures predate the work. Do not claim a regression without comparing against it.
+Use the required post-change validation as the default; do not rerun the same tests beforehand just to record a baseline. Run and record a pre-change baseline when the relevant check is already known or suspected to fail, when changing tests or validation behavior, or when a before/after comparison is needed to attribute a failure. If post-change validation fails and the baseline is unknown, run the same command against the unchanged baseline when practical before attributing the failure to the change.
 
 ## Flow
 
-1. Confirm acceptance criteria, compatibility expectation, and baseline.
+1. Confirm acceptance criteria and compatibility expectation; establish a baseline only when the preconditions above call for one.
 2. Read affected source, public surfaces, tests, and local contracts.
 3. Classify every changed surface and determine dependency, documentation, validation, and release impact. For non-trivial work, state a change map before editing: contracts affected, implementation areas, dependents, tests, docs, validation, release impact.
 4. Apply the delegation rules in `AGENTS.md` before splitting work.
@@ -39,7 +40,7 @@ Record a baseline: the exact command, its result, and whether failures predate t
 
 When tests are the primary scope:
 
-1. Run focused current tests and record the pass/fail baseline.
+1. Run focused current tests before editing only when needed to distinguish pre-existing failures or because test behavior/configuration is changing. Otherwise, run the focused tests once after the change.
 2. Read root and package Vitest configuration; confirm discovery, environment, setup files, and the package-specific test command.
 3. Read the current implementation before changing any test assertion.
 4. Group tests by behavior; remove tests that only assert intentionally removed behavior or duplicate low-value coverage.
@@ -70,7 +71,8 @@ After renaming a path or prefix, search for the old name with hidden files inclu
 
 | Changed surface                | Run                                                                                                                                       |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Package source                 | `pnpm vitest run packages/<name>/src/__tests__/`, `pnpm --filter @vielzeug/<name> lint`, `pnpm --filter @vielzeug/<name> build`           |
+| Package source                 | `pnpm vitest run packages/<name>/src/__tests__/`, `pnpm --filter @vielzeug/<name> lint`, `pnpm --filter @vielzeug/<name> build` (subtree `AGENTS.md` may add package-local gates to `build`: they fail this row) |
+| Real-browser behavior (packages declaring `test:e2e` in their manifest; find with `rg '"test:e2e"' packages/*/package.json`) | `pnpm --filter @vielzeug/<name> run test:e2e` scoped to the affected component or module; some packages build internally, refine requires a prior `build` (see `packages/refine/AGENTS.md`) |
 | Public API                     | package validation above, plus the docs/REPL rows of the `document` skill                                                                 |
 | Tests only                     | focused tests; lint/build only when config or imports changed                                                                             |
 | Cross-package call sites       | focused tests, lint, and build for every affected package                                                                                 |

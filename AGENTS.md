@@ -17,8 +17,9 @@ Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeu
 | Prepare releases, commits, or pull requests            | `.agents/skills/release/SKILL.md`  |
 | Consume `@vielzeug/*` packages (demos, Refine UI work) | `.agents/skills/vielzeug/SKILL.md` |
 
-3. Load the files in the skill's `Load` section. Load `.agents/conventions.md` before editing package source.
-4. Read the nearest subtree `AGENTS.md` before editing inside it (see the index at the end).
+3. When a task matches multiple rows, load each matching skill. In particular, code changes to demos that consume `@vielzeug/*` require both `build` and `vielzeug`.
+4. Load the files in each skill's `Load` section. Load `.agents/conventions.md` before editing package source.
+5. Read the nearest subtree `AGENTS.md` before editing inside it (see the index at the end).
 
 ## Source of truth
 
@@ -71,7 +72,7 @@ User-requested output formats take precedence, except that a safety gate always 
 
 ## Validation
 
-Every code change finishes with the narrowest useful validation for the changed surface; each skill's Validation section says which. Report commands that could not run and their exact failure; never infer success from inspection alone.
+This section is the single owner of validation commands and workflow facts; each skill's Validation table only maps changed surfaces to these commands and never restates versioning or policy facts. Every code change finishes with the narrowest useful validation for the changed surface; each skill's Validation section says which. Report commands that could not run and their exact failure; never infer success from inspection alone.
 
 ```bash
 pnpm setup                                          # fresh checkout
@@ -112,7 +113,7 @@ Repository-wide: `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm fix`. Run `pnpm f
 ### `.agents/` contents
 
 - `conventions.md`: engineering conventions: public API design, disposal, errors, tests, diagnostics, file layout.
-- `skills/<name>/SKILL.md`: task skills (`build`, `review`, `document`, `release`); `skills/vielzeug` is a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`): edit it there, and load it with `build` when working inside `demos/`.
+- `skills/<name>/SKILL.md`: task skills (`build`, `review`, `document`, `release`); `skills/vielzeug` is a symlink to `packages/codex/skills/vielzeug`, the consumer skill codex ships (`codex skills install`): edit it there. For demo code changes that consume `@vielzeug/*`, load it alongside `build` as described in Start work.
 - `reference/packages.md`: generated package table; `docs-template.md`, `readme-template.md`, `security-checklist.md`: hand-curated, shared by skills.
 
 Every `.agents/...` path mentioned anywhere in the repo must resolve; `pnpm check:ai-data` fails on a dangling reference.

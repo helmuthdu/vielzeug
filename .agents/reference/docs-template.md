@@ -53,7 +53,7 @@ Required structure, in order:
 
 1. `<PackageHero package="<pkg>" />`: replaces badges/logo/heading/quick-reference; renders from frontmatter.
 2. `## Why <PackageName>?`: one paragraph (max 3 sentences) on the concrete problem solved, followed by a single Before/After fenced code block (`// Before` then `// After`).
-3. Comparison table: columns: Feature, `<PackageName>`, 1–2 competitors. Rows must include bundle size (`<PackageInfo package="<pkg>" type="size" />`), zero dependencies, and 2–3 real differentiators. Use `<ore-icon name="check" size="16">`, `<ore-icon name="x" size="16">`, or `<ore-icon name="triangle-alert" size="16">`: never `circle-check`/`circle-x`.
+3. Comparison table: columns: Feature, `<PackageName>`, 1–2 competitors. Rows must include bundle size (`<PackageInfo package="<pkg>" type="size" />`), external (non-`@vielzeug`) runtime dependencies, and 2–3 real differentiators. Count external dependencies separately from `@vielzeug/*` workspace dependencies; internal package dependencies are encouraged when they reduce duplication. Use `<ore-icon name="check" size="16">`, `<ore-icon name="x" size="16">`, or `<ore-icon name="triangle-alert" size="16">`: never `circle-check`/`circle-x`.
 4. `<div class="decision-callout">` wrapping both **Use `<PackageName>` when** and **Consider `<alternative>` when** statements: both required.
 5. `## Installation`: `::: code-group` with pnpm/npm/yarn tabs.
 6. `## Quick Start`: a minimal but real working example, including error handling/cleanup where they'd apply.

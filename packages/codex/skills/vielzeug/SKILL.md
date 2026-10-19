@@ -5,7 +5,7 @@ description: 'Use when a project depends on any @vielzeug/* package: pick the ow
 
 # Vielzeug
 
-Vielzeug is a set of independent, zero-dependency TypeScript packages published as `@vielzeug/*`. This skill keeps an agent working *with* the installed packages: discover what exists, use the owning package, and build UI from Refine when it is present.
+Vielzeug is a monorepo of independently published TypeScript packages. "Zero dependency" refers to external (non-`@vielzeug`) runtime dependencies; `@vielzeug/*` dependencies are encouraged when they reduce duplication. This skill keeps an agent working *with* the installed packages: discover what exists, use the owning package, and build UI from Refine when it is present.
 
 ## Detect
 
@@ -22,14 +22,14 @@ Never guess exports, attributes, events, slots, or token names. Look them up:
 | Which package solves X? | `search-packages`, `list-packages` | the package list below |
 | How do I use package X? | `get-docs` (`index`, `usage`, `api`, `examples`) | `node_modules/@vielzeug/<pkg>/README.md` |
 | Exact signature of an export | `get-type-signature` | `node_modules/@vielzeug/<pkg>/dist/*.d.ts` |
-| Runnable example | `list-examples`, `get-example` | N/A |
+| Runnable example | `list-examples`, `get-example` | package README; `docs/<pkg>/examples/` when the Vielzeug repository is checked out |
 | Which Refine components exist? | `refine-list-components` | `node_modules/@vielzeug/refine/dist/custom-elements.json` |
 | Attributes, properties, events, slots, CSS parts of `ore-*` | `refine-get-component` | same manifest |
 | Available design tokens | `refine-get-tokens` | `node_modules/@vielzeug/refine/dist/styles/tokens.css` |
 | Is my markup valid? | `refine-validate-usage` | compare against the manifest |
 | Blank component scaffold | `refine-generate-template` | N/A |
 
-If the MCP server is not connected, install it with `npx -y @vielzeug/codex` (see `node_modules/@vielzeug/codex/mcp-setup.json`) or use the fallback column.
+If MCP is unavailable, use the offline fallback first. If it does not contain the needed information and MCP setup would help, ask before running `npx -y @vielzeug/codex` or changing MCP configuration; setup details are in `node_modules/@vielzeug/codex/mcp-setup.json`.
 
 ## Use the owning package
 
