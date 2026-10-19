@@ -62,6 +62,29 @@ test.describe('Layout', () => {
     expect(paddingX).toBeGreaterThanOrEqual(paddingY);
   });
 
+  test('keeps its padding inside a padding="none" ancestor card', async ({ page, refinePage }) => {
+    // `ore-card[padding='none']` sets `--_padding: 0` on its host. Custom properties
+    // inherit through the light DOM, and the button's md size tier never declared
+    // `--_padding` on its own host, so the card's zero leaked into the button's
+    // `var(--_padding, ...)` fallback and collapsed its padding (forge drawer footer).
+    await refinePage.mountComponent('<ore-card padding="none"><ore-button id="btn">Apply</ore-button></ore-card>');
+    await page.waitForSelector('ore-button');
+
+    const padding = await page.evaluate(() => {
+      const el = document.getElementById('btn') as HTMLElement & { shadowRoot: ShadowRoot };
+      const btn = el.shadowRoot.querySelector('[part="button"]') as HTMLElement;
+      const styles = getComputedStyle(btn);
+
+      return {
+        block: parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom),
+        inline: parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight),
+      };
+    });
+
+    expect(padding.inline).toBeGreaterThan(0);
+    expect(padding.block).toBeGreaterThan(0);
+  });
+
   test('link buttons suppress native anchor underlines', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<ore-button id="link" href="/docs">Documentation</ore-button>');
 

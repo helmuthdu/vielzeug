@@ -5,6 +5,18 @@
     --_border-color: var(--button-border-color, var(--color-contrast-300));
     --_radius: var(--button-radius, var(--rounded-lg));
 
+    /* The md size tier (and the `:host` default block of sizeVariantMixin) does not emit
+       --_padding/--_height/--_line-height/--_icon-size, and custom properties inherit:
+       an ancestor that also uses the `--_` convention (e.g. `ore-card[padding='none']`
+       sets `--_padding: 0`) would otherwise leak its internals into the button and zero
+       out its padding. Declaring the md defaults on the host itself makes the button's
+       own value always win over inheritance; the size-attribute tiers and the coarse
+       pointer promotion (both unlayered, higher priority) still override these. */
+    --_padding: var(--size-2) var(--size-4);
+    --_height: var(--size-10);
+    --_line-height: var(--leading-normal);
+    --_icon-size: var(--leading-6);
+
     display: inline-flex;
     align-items: center;
     justify-content: var(--button-justify, center);

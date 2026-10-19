@@ -165,6 +165,19 @@ describe('ore-button', () => {
       expect(match?.[1]).toContain('gap: var(--button-gap, var(--_gap,');
       expect(match?.[1]).toContain('font-size: var(--button-font-size, var(--_font-size,');
     });
+
+    it('declares host-level defaults for the inherited size internals', () => {
+      // Custom properties inherit: an ancestor that also uses the `--_` convention
+      // (e.g. `ore-card[padding='none']` sets `--_padding: 0`) leaks into the button
+      // because the md size tier never declares these vars on the host. The host block
+      // must declare the md defaults so the button's own value beats inheritance.
+      const hostBlock = buttonCss.match(/:host\s*{([^}]*)}/)?.[1] ?? '';
+
+      expect(hostBlock).toContain('--_padding: var(--size-2) var(--size-4)');
+      expect(hostBlock).toContain('--_height: var(--size-10)');
+      expect(hostBlock).toContain('--_line-height: var(--leading-normal)');
+      expect(hostBlock).toContain('--_icon-size: var(--leading-6)');
+    });
   });
 
   describe('Disabled state', () => {
