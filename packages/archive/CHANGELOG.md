@@ -1,7 +1,17 @@
 # Change Log - @vielzeug/archive
 
-This log was last generated on Sun, 18 Oct 2026 09:46:30 GMT and should not be manually modified.
+This log was last generated on Mon, 19 Oct 2026 10:13:34 GMT and should not be manually modified.
 
+## 26.10.15
+Mon, 19 Oct 2026 10:13:34 GMT
+
+### Minor changes
+
+- Accept repeated filter and tag query parameters on entry listings; values OR-match within each key, deduped and order-independent for cursor contexts
+
+### Patches
+
+- Confirm sign-in page parses bare asctime Retry-After dates as GMT instead of local time
 ## 26.10.14
 Sun, 18 Oct 2026 09:46:30 GMT
 

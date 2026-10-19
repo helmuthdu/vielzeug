@@ -1,7 +1,23 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 18 Oct 2026 09:46:30 GMT and should not be manually modified.
+This log was last generated on Mon, 19 Oct 2026 10:13:34 GMT and should not be manually modified.
 
+## 26.10.15
+Mon, 19 Oct 2026 10:13:34 GMT
+
+### Major changes
+
+- BREAKING: unify query-bar filtering with a draft Apply/Cancel drawer, optional quick filters, per-key single/multiple selection, and optional registered icons beside drawer option labels. Add content-sized mobile sheets, consistent choice rows, contextual anyLabel, pending-edit protection, search-hidden selection summaries, a toolbar-end slot for application content such as a result count, and a hidden filter entry when no vocabulary exists. Preserve inline applied pills and exact-value removal, count active groups, replace token-array identity with semantic state synchronization, and tag open-change surfaces. commitToken now accepts a token object and selection mode; removeToken removes an exact pair, clearTokens clears a key, and tokenValues replaces tokenValue. Fix nested radio-group keyboard navigation, expose its legend part, and correct drawer handle semantics and canceled swipe restoration. See the Refine migration guide.
+
+### Minor changes
+
+- Render query-bar drawer choices as an icon card gallery when every option of a token carries an icon: responsive 3-up grid, corner checkbox, centered art, name below
+
+### Patches
+
+- Stop ore-card padding="none" (and other --_ custom property ancestors) from leaking into ore-button: the md size tier now declares --_padding, --_height, --_line-height and --_icon-size on the host so inherited values can no longer collapse button padding.
+- Query-bar card gallery: unchecked cards drop the corner tick for a clean art-and-name resting state; the checkmark re-appears as the checked card's selection badge (forced-colors mode keeps every tick)
+- Badge size=xs uses the size-px vertical padding token instead of a hardcoded 0px
 ## 26.10.14
 Sun, 18 Oct 2026 09:46:30 GMT
 

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sourcerer",
-  "version": "26.10.14",
+  "version": "26.10.15",
   "description": "Reactive collection sources with local, page, cursor, and infinite pagination",
   "repository": {
     "type": "git",

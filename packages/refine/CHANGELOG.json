@@ -2,6 +2,44 @@
   "entries": [
     {
       "comments": {
+        "major": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "BREAKING: unify query-bar filtering with a draft Apply/Cancel drawer, optional quick filters, per-key single/multiple selection, and optional registered icons beside drawer option labels. Add content-sized mobile sheets, consistent choice rows, contextual anyLabel, pending-edit protection, search-hidden selection summaries, a toolbar-end slot for application content such as a result count, and a hidden filter entry when no vocabulary exists. Preserve inline applied pills and exact-value removal, count active groups, replace token-array identity with semantic state synchronization, and tag open-change surfaces. commitToken now accepts a token object and selection mode; removeToken removes an exact pair, clearTokens clears a key, and tokenValues replaces tokenValue. Fix nested radio-group keyboard navigation, expose its legend part, and correct drawer handle semantics and canceled swipe restoration. See the Refine migration guide.",
+            "commit": "7090bc9a0e7fb18fb4cb50ca2b019c0be86c0e88"
+          }
+        ],
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Render query-bar drawer choices as an icon card gallery when every option of a token carries an icon: responsive 3-up grid, corner checkbox, centered art, name below",
+            "commit": "7090bc9a0e7fb18fb4cb50ca2b019c0be86c0e88"
+          }
+        ],
+        "patch": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "Stop ore-card padding=\"none\" (and other --_ custom property ancestors) from leaking into ore-button: the md size tier now declares --_padding, --_height, --_line-height and --_icon-size on the host so inherited values can no longer collapse button padding.",
+            "commit": "7090bc9a0e7fb18fb4cb50ca2b019c0be86c0e88"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Query-bar card gallery: unchecked cards drop the corner tick for a clean art-and-name resting state; the checkmark re-appears as the checked card's selection badge (forced-colors mode keeps every tick)",
+            "commit": "7090bc9a0e7fb18fb4cb50ca2b019c0be86c0e88"
+          },
+          {
+            "author": "agent@vielzeug",
+            "comment": "Badge size=xs uses the size-px vertical padding token instead of a hardcoded 0px",
+            "commit": "7090bc9a0e7fb18fb4cb50ca2b019c0be86c0e88"
+          }
+        ]
+      },
+      "date": "Mon, 19 Oct 2026 10:13:34 GMT",
+      "tag": "@vielzeug/refine_v26.10.15",
+      "version": "26.10.15"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "agent@vielzeug",
