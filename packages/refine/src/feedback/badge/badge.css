@@ -15,7 +15,7 @@
 /* The one size the shared mixin does not carry. */
 :host([size='xs']) {
   --_padding-x: var(--size-1);
-  --_padding-y: 0px;
+  --_padding-y: var(--size-px);
   --_font-size: var(--text-2xs);
   --_dot-padding: var(--size-0-5);
 }

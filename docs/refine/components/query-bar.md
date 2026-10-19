@@ -151,7 +151,9 @@ Text remains visible and supplies the accessible name; icons are decorative and 
 
 ### Card Gallery
 
-When **every** option of a token carries an `icon`, its group renders as a card gallery instead of list rows: each choice becomes a card with the art centered, the label below it, and the checkbox or radio dot floating in the card's top corner. The card is the real control — clicking anywhere on it toggles the choice, and keyboard, focus, checked, disabled, and forced-colors behavior are unchanged. The grid fits as many columns as the drawer width allows (three across the phone bottom sheet, fewer in narrow side panels), and labels clamp to two lines.
+When **every** option of a token carries an `icon`, its group renders as a card gallery instead of list rows: each choice becomes a card with the art centered and the label below it. The card is the real control — clicking anywhere on it toggles the choice, and keyboard, focus, checked, disabled, and forced-colors behavior are unchanged. The grid fits as many columns as the drawer width allows (three across the phone bottom sheet, fewer in narrow side panels), and labels clamp to two lines.
+
+Unchecked cards stay clean: art and name only. A checked card shows a primary tint, a primary border, and a check badge in its top corner, so selection never relies on color alone. Forced-colors mode keeps every tick visible.
 
 The switch is automatic and all-or-nothing per token: one text-only option keeps the whole group a plain list, which is also how lazily loaded art behaves — a group whose icons register after the drawer opens upgrades itself when the vocabulary re-syncs. In single-selection groups, the **Any** row has no art and stays a full-width row above the gallery.
 

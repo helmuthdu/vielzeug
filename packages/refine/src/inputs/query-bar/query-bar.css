@@ -403,7 +403,7 @@
   }
 
   .filter-choices[data-cards] ore-checkbox::part(checkbox),
-  ore-radio-group[data-cards] ore-radio::part(radio) {
+  ore-radio-group[data-cards] ore-radio:not([value='any'])::part(radio) {
     position: absolute;
     inset-block-start: var(--size-1-5);
     inset-inline-start: var(--size-1-5);
@@ -413,6 +413,17 @@
     background: var(--color-canvas);
     border-radius: var(--rounded-full);
     box-shadow: var(--shadow-sm);
+  }
+
+  /* Unchecked cards stay clean: the tick only earns its place as the checked
+     state's selection badge, so the resting gallery is art and name alone.
+     The real input keeps focus, keyboard and a11y behavior; forced-colors
+     mode keeps every tick, where system colors flatten the tint away. */
+  @media (forced-colors: none) {
+    .filter-choices[data-cards] ore-checkbox:not([checked])::part(checkbox),
+    ore-radio-group[data-cards] ore-radio:not([checked]):not([value='any'])::part(radio) {
+      display: none;
+    }
   }
 
   .filter-choices[data-cards] ore-checkbox::part(label),

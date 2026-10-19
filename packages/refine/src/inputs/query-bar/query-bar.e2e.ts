@@ -855,8 +855,8 @@ test.describe('Icon card gallery', () => {
     await expect(choices).toHaveCSS('grid-template-columns', /repeat|px/);
     const columns = await choices.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length);
     expect(columns).toBeGreaterThanOrEqual(2);
-    // Cards carry the art: each checkbox renders its ore-icon as an svg.
-    await expect(choices.locator('ore-checkbox ore-icon svg').first()).toBeVisible();
+    // Cards carry the art: each checkbox renders its ore-icon inside the choice label.
+    await expect(choices.locator('ore-checkbox .choice-label ore-icon svg').first()).toBeVisible();
     // The card is the real control: clicking toggles the token, Apply commits it.
     await choices.getByRole('checkbox', { name: 'Fire' }).click();
     await expect(choices.getByRole('checkbox', { name: 'Fire' })).toBeChecked();
@@ -896,6 +896,59 @@ test.describe('Icon card gallery', () => {
     await page.getByRole('radio', { exact: true, name: 'Recent' }).focus();
     await page.keyboard.press('Space');
     await expect(page.getByRole('radio', { exact: true, name: 'Recent' })).toBeChecked();
+  });
+
+  test('hides the tick on unchecked cards and reveals it as the checked badge', async ({ page, refinePage }) => {
+    await mountBar(page, refinePage);
+    await registerCardIcons(page);
+    await page.locator('ore-query-bar').evaluate((el) => {
+      el.vocabulary = [
+        {
+          key: 'element',
+          label: 'Element',
+          options: [
+            { icon: 'card-a', label: 'Fire', value: 'fire' },
+            { icon: 'card-b', label: 'Ice', value: 'ice' },
+          ],
+          selection: 'multiple',
+        },
+        {
+          key: 'sort',
+          label: 'Sort',
+          options: [
+            { icon: 'card-a', label: 'Recent', value: 'recent' },
+            { icon: 'card-b', label: 'Name', value: 'name' },
+          ],
+        },
+      ];
+    });
+    await page.getByRole('button', { exact: true, name: 'Filters' }).click();
+    const tick = (name: string, role: 'checkbox' | 'radio') =>
+      page
+        .locator('ore-query-bar')
+        .locator(role === 'checkbox' ? '.filter-choices' : 'ore-radio-group[data-cards]')
+        .evaluate(
+          (root, { n, r }) => {
+            const host = [...root.querySelectorAll(r === 'checkbox' ? 'ore-checkbox' : 'ore-radio')].find(
+              (c) => (c.textContent || '').trim() === n,
+            );
+            const part = host?.shadowRoot?.querySelector(r === 'checkbox' ? '[part="checkbox"]' : '[part="radio"]');
+            return part ? getComputedStyle(part).display : 'missing';
+          },
+          { n: name, r: role },
+        );
+    // Unchecked cards are clean: no tick on either choice type.
+    expect(await tick('Fire', 'checkbox')).toBe('none');
+    expect(await tick('Recent', 'radio')).toBe('none');
+    // Checking reveals the corner badge; the Any row keeps its radio dot.
+    await page.getByRole('checkbox', { name: 'Fire' }).click();
+    expect(await tick('Fire', 'checkbox')).not.toBe('none');
+    const anyVisible = await page.locator('ore-radio-group[data-cards]').evaluate((group) => {
+      const any = group.querySelector('ore-radio[value="any"]');
+      const part = any?.shadowRoot?.querySelector('[part="radio"]');
+      return part ? getComputedStyle(part).display : 'missing';
+    });
+    expect(anyVisible).not.toBe('none');
   });
 
   test('card gallery passes accessibility checks', async ({ page, refinePage }) => {

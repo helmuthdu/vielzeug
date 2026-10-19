@@ -34,6 +34,7 @@ test.describe('Layout', () => {
       probe.style.paddingTop = 'var(--size-1)';
       probe.style.paddingRight = 'var(--size-1-5)';
       probe.style.paddingBottom = 'var(--size-0-5)';
+      probe.style.paddingLeft = 'var(--size-px)';
       probe.style.fontSize = 'var(--text-2xs)';
       host.ownerDocument.body.append(probe);
       const probeStyle = getComputedStyle(probe);
@@ -46,6 +47,7 @@ test.describe('Layout', () => {
           size1: probeStyle.paddingTop,
           size05: probeStyle.paddingBottom,
           size15: probeStyle.paddingRight,
+          sizePx: probeStyle.paddingLeft,
           text2xs: probeStyle.fontSize,
         },
       };
@@ -82,7 +84,7 @@ test.describe('Layout', () => {
     const metrics = await readMetrics(page, '#badge');
 
     expect(metrics.paddingX).toBe(metrics.token.size1);
-    expect(metrics.paddingY).toBe('0px');
+    expect(metrics.paddingY).toBe(metrics.token.sizePx);
     expect(metrics.fontSize).toBe(metrics.token.text2xs);
   });
 
