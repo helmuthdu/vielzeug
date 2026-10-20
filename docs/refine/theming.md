@@ -276,6 +276,7 @@ Refine uses an 11-step contrast scale driven by `light-dark()`. Values flip auto
 | `--color-canvas`   | `color-mix(in oklch, var(--color-contrast-50) 85%, transparent)`   | Default page/component background |
 | `--color-divider`  | `color-mix(in oklch, var(--color-contrast-300) 85%, transparent)`  | Separator lines and borders       |
 | `--color-contrast` | `color-mix(in oklch, var(--color-contrast-900) 85%, transparent)`  | Maximum-contrast text/icon color  |
+| `--color-scrim`    | `light-dark(rgb(0 0 0 / 55%), rgb(0 0 0 / 72%))`                      | Overlay dim veil (never inverts)  |
 
 ### Semantic Text Colors
 

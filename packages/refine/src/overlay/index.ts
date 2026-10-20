@@ -25,5 +25,18 @@ export {
 } from './navigation-menu/navigation-menu';
 export type { OrePopoverEvents, OrePopoverProps } from './popover/popover';
 export { POPOVER_TAG } from './popover/popover';
+export type { OreSpotlightProps, SpotlightRect } from './spotlight/spotlight';
+export { SPOTLIGHT_TAG } from './spotlight/spotlight';
 export type { OreTooltipEvents, OreTooltipProps } from './tooltip/tooltip';
 export { TOOLTIP_TAG } from './tooltip/tooltip';
+export type {
+  OreTourElement,
+  OreTourEvents,
+  OreTourLabels,
+  OreTourProps,
+  TourAnchor,
+  TourController,
+  TourPresentation,
+  TourStepSnapshot,
+} from './tour/tour';
+export { TOUR_PRESENTATIONS, TOUR_TAG } from './tour/tour';

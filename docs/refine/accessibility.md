@@ -123,6 +123,8 @@ Before each minor release:
 | `ore-popover` | `dialog` / `menu` | Escape                     | `aria-expanded`, `aria-haspopup`  |                         |
 | `ore-menu`    | `menu` + `menuitem` | Arrow / Enter / Escape   | `aria-orientation`                |                         |
 | `ore-tooltip` | `tooltip`         | Escape                     | `aria-describedby` on trigger     |                         |
+| `ore-tour`    | `dialog`          | Escape, ArrowLeft / ArrowRight | `aria-modal` (dialog modes), `aria-valuetext` on progress | Popover mode: focus on open, restored on close; dialog modes: native focus trap + background lock |
+| `ore-spotlight` | decorative      | N/A                        | `aria-hidden` on overlay          | Never captures pointer events |
 
 ### Content
 

@@ -1,0 +1,360 @@
+@layer refine.base {
+  :host {
+    --_card-bg: var(--tour-bg, var(--color-canvas));
+    --_card-blur: var(--tour-panel-blur, var(--blur-md));
+    --_card-border-color: var(--tour-border-color, var(--color-divider));
+    --_card-max-width: var(--tour-max-width, 22rem);
+    --_card-radius: var(--tour-radius, var(--rounded-lg));
+    --_card-shadow: var(--tour-shadow, var(--shadow-xl));
+    --_card-padding: var(--size-4);
+    --_card-gap: var(--size-3);
+
+    /* The card hosts three surfaces (dialog, popover panel, spotlight); none of
+       them is laid out by the host itself, so the host takes no box. */
+    display: contents;
+  }
+
+  /* =====================
+       Shared card
+       ===================== */
+
+  /* The card is a padding-less column so the media slot can sit flush against
+     its edges; the copy block below owns the inset. Padding here instead would
+     force a negative-margin bleed, and a scroll container cannot reveal
+     content overflowing its block-start edge, so an image top would clip. */
+  .card {
+    display: flex;
+    flex-direction: column;
+    background: var(--_card-bg);
+    border: var(--border) solid var(--_card-border-color);
+    border-radius: var(--_card-radius);
+    box-shadow: var(--_card-shadow);
+    /* --color-canvas is translucent by design: blur the content behind the
+       card so it stays readable over busy UI, matching ore-popover/ore-menu. */
+    backdrop-filter: blur(var(--_card-blur));
+  }
+
+  /* The cap lives on this shadow-side container, not the slotted element: a
+     descendant selector (.media img) cannot reach light-DOM slotted content,
+     and ::slotted() cannot be overridden per-presentation. Capping the region
+     guarantees a tall asset never pushes the footer off-screen, whatever is
+     slotted (img, picture, video, svg, or a wrapper). */
+  .media {
+    flex-shrink: 0;
+    max-height: var(--tour-media-max-height, min(38dvh, var(--size-64)));
+    overflow: hidden;
+    /* Follows the card's own top corners: both top radii when rounded, and the
+       sheet's square-bottom shape comes along by inheritance. */
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+  }
+
+  .media[hidden] {
+    display: none;
+  }
+
+  /* ::slotted() matches only the distributed top-level node, so it styles a
+     directly-slotted media element; nested markup still gets clipped by the
+     container cap above. */
+  .media ::slotted(img),
+  .media ::slotted(video),
+  .media ::slotted(svg) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--_card-gap);
+    padding: var(--_card-padding);
+  }
+
+  .header {
+    display: grid;
+    grid-template-rows: auto auto;
+    grid-template-columns: 1fr auto;
+    gap: var(--size-2);
+    align-items: center;
+  }
+
+  .progress-row {
+    display: flex;
+    grid-column: 1 / -1;
+    gap: var(--size-3);
+    align-items: center;
+  }
+
+  .progress {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .step-count {
+    flex-shrink: 0;
+    font-size: var(--text-xs);
+    color: var(--color-contrast-600);
+    white-space: nowrap;
+  }
+
+  .title {
+    grid-row: 2;
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-normal);
+  }
+
+  .close {
+    box-sizing: border-box;
+    display: inline-flex;
+    grid-row: 2;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-8);
+    height: var(--size-8);
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-md);
+  }
+
+  .close[hidden] {
+    display: none;
+  }
+
+  .close:hover {
+    background: color-mix(in oklch, var(--color-contrast-900) 8%, transparent);
+  }
+
+  .close:focus-visible {
+    outline: var(--focus-ring);
+  }
+
+  .body {
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    overflow-wrap: anywhere;
+  }
+
+  .footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  /* Skip ends the whole tour, so it leads the row (its DOM order matches,
+     keeping tab order honest) and is pushed apart from the Back/Next cluster:
+     a thumb aiming for Next cannot hit it. */
+  .action--skip {
+    margin-inline-end: auto;
+  }
+
+  /* The Back/Skip buttons hide contextually (first/last step). ore-button sets
+     display:inline-flex on its host, which beats the UA [hidden] rule, so the
+     wrapper carries the suppression instead of a `hidden` attribute. */
+  .action[data-hidden='true'] {
+    display: none;
+  }
+
+  /* =====================
+       Native <dialog> presentations (modal / bottom-sheet)
+       ===================== */
+
+  dialog {
+    all: unset;
+    position: fixed;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: transparent;
+    border: none;
+
+    /* display + overlay allow-discrete hold the element in the top layer during exit
+       and let @starting-style fire on entry via showModal().
+       Use fixed 200ms: --transition-normal resolves to 'none' under reduced-motion
+       which makes the entire declaration syntactically invalid if used here. */
+    transition:
+      display 200ms allow-discrete,
+      overlay 200ms allow-discrete;
+  }
+
+  /* all:unset removes the UA stylesheet's dialog:not([open]){display:none}: restore it */
+  dialog:not([open]) {
+    display: none;
+  }
+
+  dialog[open] {
+    pointer-events: auto;
+  }
+
+  dialog::backdrop {
+    background: color-mix(in oklch, var(--color-canvas) 40%, transparent);
+    opacity: 1;
+    transition:
+      opacity var(--transition-normal),
+      overlay var(--transition-normal) allow-discrete,
+      display var(--transition-normal) allow-discrete;
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  dialog.closing::backdrop {
+    opacity: 0;
+    transition:
+      opacity 150ms var(--ease-in-out),
+      overlay 150ms allow-discrete,
+      display 150ms allow-discrete;
+  }
+
+  .panel {
+    position: relative;
+    box-sizing: border-box;
+    width: var(--_card-max-width);
+    max-width: calc(100vw - var(--size-8));
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    transition:
+      opacity 200ms var(--ease-spring),
+      transform 200ms var(--ease-spring);
+
+    @starting-style {
+      opacity: 0;
+      transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
+    }
+  }
+
+  /* The card carries the visible chrome in every presentation, matching
+     ore-popover/ore-menu. It scrolls its own tall content: overflow lives on
+     the card, not the panel, so the panel box never clips the card's border
+     or drop shadow. */
+  .panel .card {
+    max-height: calc(100dvh - var(--size-8));
+    overflow: auto;
+  }
+
+  dialog.closing .panel {
+    opacity: 0;
+    transition: opacity 150ms var(--ease-in-out);
+  }
+
+  dialog.closing .panel[data-presentation='modal'] {
+    transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
+    transition:
+      opacity 150ms var(--ease-spring),
+      transform 150ms var(--ease-spring);
+  }
+
+  /* Bottom sheet: docked to the bottom edge, full width, square top corners. */
+  .panel[data-presentation='bottom-sheet'] {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100dvh - var(--size-4));
+    padding-block-end: env(safe-area-inset-bottom, 0px);
+    opacity: 1;
+    transform: translateY(0);
+
+    @starting-style {
+      transform: translateY(100%);
+    }
+  }
+
+  dialog.closing .panel[data-presentation='bottom-sheet'] {
+    transform: translateY(100%);
+    transition:
+      opacity 150ms var(--ease-in-out),
+      transform 200ms var(--ease-in-out);
+  }
+
+  .panel[data-presentation='bottom-sheet'] .card {
+    max-height: calc(100dvh - var(--size-4) - env(safe-area-inset-bottom, 0px));
+    border-block-start: var(--border) solid var(--_card-border-color);
+    border-block-end: none;
+    border-inline: none;
+    border-start-start-radius: var(--_card-radius);
+    border-start-end-radius: var(--_card-radius);
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+    box-shadow: var(--_card-shadow);
+  }
+
+  /* The sheet is the only thing on screen on a phone, so its media gets the
+     tighter ceiling: the footer must stay reachable above the home bar. */
+  .panel[data-presentation='bottom-sheet'] .media {
+    max-height: var(--tour-media-max-height, min(26dvh, var(--size-48)));
+  }
+
+  /* =====================
+       Popover presentation
+       ===================== */
+
+  .float {
+    position: fixed;
+
+    /* Popover UA resets */
+    inset: unset;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: var(--_card-max-width);
+    max-height: calc(100dvh - var(--size-8));
+    padding: 0;
+    margin: 0;
+    overflow: auto;
+    color: inherit;
+    background: transparent;
+    border: none;
+
+    /* Hidden by default */
+    opacity: 0;
+    transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
+    transition:
+      opacity var(--transition-fast),
+      transform 200ms var(--ease-spring),
+      display var(--transition-fast) allow-discrete,
+      overlay var(--transition-fast) allow-discrete;
+  }
+
+  .float[data-open] {
+    display: block;
+  }
+
+  /* Unanchored: dock at the bottom center, like a slim banner. */
+  .float:not([data-anchored]) {
+    inset-block-end: max(var(--size-4), env(safe-area-inset-bottom, 0px));
+    inset-inline: var(--size-4);
+    width: auto;
+    max-width: var(--_card-max-width);
+    margin-inline: auto;
+  }
+
+  .float:popover-open,
+  .float[data-open] {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+
+    @starting-style {
+      opacity: 0;
+      transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
+    }
+  }
+}

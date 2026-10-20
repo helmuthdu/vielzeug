@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): ore-tour and ore-spotlight overlay components; fix Back-button visibility, suppress dismiss on programmatic close, render the spotlight dim via a valid single box-shadow (a `none` ring layer invalidated the whole declaration), add a --color-scrim overlay-veil token so the dim stays a darkening veil in dark mode, blur the content behind the translucent tour card, keep the card border and shadow in modal presentation (it blended into the page), show a visible \"Step N of M\" counter, lead the footer with Skip away from Next, ring the close button on keyboard focus, add a full-bleed media slot for step illustrations with a viewport-capped height, stop the `description` body text from being blanked when the card has any light-DOM child (whitespace assigned to the default slot suppressed the slot fallback), and stop the modal-to-popover presentation flip from stealing focus back to the pre-open element after its exit animation (which stranded arrow-key control outside the card)",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -80,6 +80,7 @@ exports:
     ore-slider,
     ore-speech-player,
     ore-speed-reading,
+    ore-spotlight,
     ore-stats,
     ore-step,
     ore-stepper,
@@ -96,6 +97,7 @@ exports:
     ore-time-picker,
     ore-toast,
     ore-tooltip,
+    ore-tour,
     ore-typing-indicator,
   ]
 environments: [browser]
@@ -233,7 +235,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 **Layout:** `ore-box`, `ore-grid`, `ore-grid-item`, `ore-navbar`, `ore-sidebar`
 
-**Overlay:** `ore-command-palette`, `ore-command-palette-item`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-tooltip`
+**Overlay:** `ore-command-palette`, `ore-command-palette-item`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-spotlight`, `ore-tooltip`, `ore-tour`
 
 ## Component portfolio
 

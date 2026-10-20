@@ -1,0 +1,65 @@
+@layer refine.base {
+  :host {
+    /* A scrim is always a darkening veil; --color-scrim carries the per-scheme
+       alpha. The token lives in theme.css because component CSS is compiled by
+       lightningcss, which rewrites light-dark() inside custom properties into
+       var() switches that nothing defines. */
+    --_dim: var(--spotlight-dim, var(--color-scrim));
+    --_ring: var(--spotlight-ring, none);
+    --_geometry-transition: var(--spotlight-transition, 240ms var(--ease-spring));
+
+    /* Sits under top-layer overlays (dialogs, popovers) but above page content. */
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay, 1000);
+    display: contents;
+    pointer-events: none;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: var(--_motion-transition, opacity var(--transition-fast));
+  }
+
+  .overlay[data-visible='true'] {
+    opacity: 1;
+  }
+
+  /*
+   * The dim is a box-shadow so large it covers the whole viewport from the
+   * cutout's edges. Spreading by 100vmax in every direction guarantees coverage
+   * no matter where the cutout sits; the 0 blur keeps the hole's edges crisp.
+   *
+   * The ring lives on a pseudo-element rather than a second shadow layer here:
+   * `none` is not a legal member of a comma-separated box-shadow list, so a
+   * default of `--_ring: none` would invalidate the whole declaration and the
+   * dim would never paint.
+   */
+  .cutout {
+    position: fixed;
+    top: var(--_cutout-t, 0);
+    left: var(--_cutout-l, 0);
+    display: var(--_cutout-display, none);
+    width: var(--_cutout-w, 0);
+    height: var(--_cutout-h, 0);
+    border-radius: var(--_cutout-radius, var(--spotlight-radius, var(--rounded-lg)));
+    box-shadow: 0 0 0 100vmax var(--_dim);
+    transition:
+      top var(--_geometry-transition),
+      left var(--_geometry-transition),
+      width var(--_geometry-transition),
+      height var(--_geometry-transition);
+  }
+
+  .cutout::after {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: '';
+    border-radius: inherit;
+    box-shadow: var(--_ring);
+  }
+}
