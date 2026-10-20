@@ -77,6 +77,56 @@ test.describe('Layout', () => {
     expect(bounds[1].fillRight).toBeCloseTo(bounds[1].trackRight, 3);
     expect(bounds[1].thumbRight).toBeCloseTo(bounds[1].trackRight + SIZES.md.thumb / 2, 3);
   });
+
+  test('keeps the track usable when a long label cannot share the line', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-slider id="long" value="50" style="width: 220px">Temperature (0-200 C) extended label</ore-slider>
+    `);
+
+    const geometry = await page.locator('#long').evaluate((slider) => {
+      const container = slider.shadowRoot?.querySelector('.slider-container');
+      const label = slider.shadowRoot?.querySelector('.label');
+
+      if (!container || !label) throw new Error('Slider geometry is unavailable');
+
+      const containerRect = container.getBoundingClientRect();
+      const labelRect = label.getBoundingClientRect();
+
+      return {
+        labelBelow: labelRect.top >= containerRect.bottom - 1,
+        trackWidth: containerRect.width,
+      };
+    });
+
+    // Before the flex-basis fix the nowrap label sized the shrink-to-fit host and
+    // starved the track to near zero; it must keep at least a usable width instead.
+    expect(geometry.trackWidth).toBeGreaterThanOrEqual(120);
+    expect(geometry.labelBelow).toBe(true);
+  });
+
+  test('keeps label and track on one line when the host is wide', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <ore-slider id="wide" value="50" style="width: 640px">Volume</ore-slider>
+    `);
+
+    const geometry = await page.locator('#wide').evaluate((slider) => {
+      const container = slider.shadowRoot?.querySelector('.slider-container');
+      const label = slider.shadowRoot?.querySelector('.label');
+
+      if (!container || !label) throw new Error('Slider geometry is unavailable');
+
+      const containerRect = container.getBoundingClientRect();
+      const labelRect = label.getBoundingClientRect();
+
+      return {
+        sameLine: labelRect.top < containerRect.bottom - 1,
+        trackWidth: containerRect.width,
+      };
+    });
+
+    expect(geometry.sameLine).toBe(true);
+    expect(geometry.trackWidth).toBeGreaterThan(400);
+  });
 });
 
 test.describe('Touch layout', () => {

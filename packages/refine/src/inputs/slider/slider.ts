@@ -172,12 +172,31 @@ define<OreSliderProps>(SLIDER_TAG, {
 
     const valueSignal = signal('0');
 
+    const updateSingleCSS = (value: number) => {
+      const pct = sliderControl.toPercent(value);
+
+      el.style.setProperty('--_thumb-pos', `${pct}%`);
+      el.style.setProperty('--_fill-start', '0%');
+      el.style.setProperty('--_fill-width', `${pct}%`);
+    };
+    const updateRangeCSS = () => {
+      const s = sliderControl.toPercent(startVal.value);
+      const e = sliderControl.toPercent(endVal.value);
+
+      el.style.setProperty('--_thumb-start', `${s}%`);
+      el.style.setProperty('--_thumb-end', `${e}%`);
+      el.style.setProperty('--_fill-start', `${s}%`);
+      el.style.setProperty('--_fill-width', `${e - s}%`);
+    };
+
     if (!isRange) {
       useField({ disabled: isDisabled, value: valueSignal });
       watch(
         props.value,
         (v) => {
-          valueSignal.value = String(v);
+          const next = Number.isFinite(Number(v)) ? sliderControl.snap(Number(v)) : 0;
+          valueSignal.value = String(next);
+          updateSingleCSS(next);
         },
         { immediate: true },
       );
@@ -264,23 +283,6 @@ define<OreSliderProps>(SLIDER_TAG, {
     const thumbEndRef = ref<HTMLDivElement>();
     const startId = createId('slider-start');
     const endId = createId('slider-end');
-    // ── CSS update helpers ────────────────────────────────────────
-    const updateSingleCSS = (value: number) => {
-      const pct = sliderControl.toPercent(value);
-
-      el.style.setProperty('--_thumb-pos', `${pct}%`);
-      el.style.setProperty('--_fill-start', '0%');
-      el.style.setProperty('--_fill-width', `${pct}%`);
-    };
-    const updateRangeCSS = () => {
-      const s = sliderControl.toPercent(startVal.value);
-      const e = sliderControl.toPercent(endVal.value);
-
-      el.style.setProperty('--_thumb-start', `${s}%`);
-      el.style.setProperty('--_thumb-end', `${e}%`);
-      el.style.setProperty('--_fill-start', `${s}%`);
-      el.style.setProperty('--_fill-width', `${e - s}%`);
-    };
     const emitValueChange = () => {
       const value = isRange ? `${startVal.value},${endVal.value}` : valueSignal.value;
 
@@ -527,23 +529,28 @@ define<OreSliderProps>(SLIDER_TAG, {
       <div class="slider-container" part="slider" ref=${containerRef}>
         <div class="slider-track" part="track" ref=${trackRef}>
           <div class="slider-fill" part="fill"></div>
-          <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
-          <div
-            class="slider-thumb slider-thumb-start"
-            part="thumb-start"
-            ref=${thumbStartRef}
-            role="slider"
-            tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-            aria-describedby="${ariaDescribedBy}"
-            id="${startId}"></div>
-          <div
-            class="slider-thumb slider-thumb-end"
-            part="thumb-end"
-            ref=${thumbEndRef}
-            role="slider"
-            tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-            aria-describedby="${ariaDescribedBy}"
-            id="${endId}"></div>
+          ${
+            isRange
+              ? html`
+                <div
+                  class="slider-thumb slider-thumb-start"
+                  part="thumb-start"
+                  ref=${thumbStartRef}
+                  role="slider"
+                  tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+                  aria-describedby="${ariaDescribedBy}"
+                  id="${startId}"></div>
+                <div
+                  class="slider-thumb slider-thumb-end"
+                  part="thumb-end"
+                  ref=${thumbEndRef}
+                  role="slider"
+                  tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+                  aria-describedby="${ariaDescribedBy}"
+                  id="${endId}"></div>
+              `
+              : html`<div class="slider-thumb slider-thumb-sole" part="thumb"></div>`
+          }
         </div>
       </div>
       <span class="label" part="label" ref=${labelRef}><slot></slot></span>

@@ -25,7 +25,12 @@
     position: relative;
     display: inline-flex;
     flex-wrap: wrap;
-    gap: var(--_gap, var(--size-3));
+    /* Smaller than the column gap on purpose: when a long label wraps below the track, the
+       44px touch target already leaves ~16px of dead space under the centered track, and the
+       full column gap on top of that read as an oversized void. Matches ore-input's 4px
+       between-field-parts spacing (--input-gap) for wrapped field rows. */
+    row-gap: var(--size-1);
+    column-gap: var(--_gap, var(--size-3));
     align-items: center;
     min-width: var(--slider-min-width, 12rem);
     touch-action: none;
@@ -49,9 +54,14 @@
   position: relative;
   box-sizing: border-box;
   display: flex;
-  flex: 1;
+  /* A real flex-basis (not `flex: 1`, i.e. basis 0) so the track takes part in line-fitting:
+     in a shrink-to-fit host a long slotted label used to size the whole component to its own
+     text and starve the track to ~0 width. With a basis the track keeps a usable width, and
+     when label + track cannot share a line `flex-wrap` moves the label below instead of
+     collapsing the track. `min-width: 0` lets it shrink gracefully once wrapped. */
+  flex: 1 1 var(--slider-min-width, 12rem);
   align-items: center;
-  width: 100%;
+  min-width: 0;
   min-height: var(--_touch-target);
   padding-inline: var(--_thumb-inset);
 }
@@ -130,17 +140,6 @@
   outline: var(--border-2) solid var(--_fill);
   outline-offset: var(--size-0-5);
   box-shadow: var(--_shadow);
-}
-
-/* ── Visibility gating ──────────────────────────────────── */
-
-:host(:not([range])) .slider-thumb-start,
-:host(:not([range])) .slider-thumb-end {
-  display: none;
-}
-
-:host([range]) .slider-thumb-sole {
-  display: none;
 }
 
 @media (hover: hover) {
