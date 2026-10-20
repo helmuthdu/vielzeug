@@ -171,6 +171,12 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
     // still preceded by its own leading indentation), so this walks inward from each end,
     // fully clearing whitespace-only nodes and stopping at the first node with real content
     // on each side, rather than only touching the very first/last assigned node.
+    //
+    // Writes must be skipped when the value is unchanged: WebKit re-fires `slotchange`
+    // whenever a slotted text node's `textContent` is written, *even with an identical
+    // value*, so writing back an already-trimmed node re-enters this handler forever
+    // (infinite synchronous loop, hung page on iOS Safari; Chromium only fires on real
+    // changes). `table.ts` guards its writes for the same reason.
     const contentSlotRef = ref<HTMLSlotElement>();
 
     function trimSlotEdgeWhitespace(): void {
@@ -181,9 +187,10 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
       for (const node of nodes) {
         if (node.nodeType !== Node.TEXT_NODE) break;
 
-        const trimmed = (node.textContent ?? '').replace(/^\s+/, '');
+        const original = node.textContent ?? '';
+        const trimmed = original.replace(/^\s+/, '');
 
-        node.textContent = trimmed;
+        if (trimmed !== original) node.textContent = trimmed;
 
         if (trimmed !== '') break;
       }
@@ -193,9 +200,10 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
 
         if (node.nodeType !== Node.TEXT_NODE) break;
 
-        const trimmed = (node.textContent ?? '').replace(/\s+$/, '');
+        const original = node.textContent ?? '';
+        const trimmed = original.replace(/\s+$/, '');
 
-        node.textContent = trimmed;
+        if (trimmed !== original) node.textContent = trimmed;
 
         if (trimmed !== '') break;
       }

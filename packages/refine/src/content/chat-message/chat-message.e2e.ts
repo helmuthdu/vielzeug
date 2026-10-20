@@ -74,4 +74,43 @@ test.describe('Layout', () => {
     // Content height should be roughly one line tall (< 2 × line height)
     expect(contentHeight).toBeLessThan(fontSize * 2);
   });
+
+  test('trimming already-trimmed slot text performs no writes', async ({ page, refinePage }) => {
+    // Regression: the slot trim wrote `node.textContent` back unconditionally. WebKit
+    // re-fires `slotchange` for text-node writes even when the value is identical, so an
+    // already-trimmed message re-entered the trim handler forever: an infinite synchronous
+    // loop that hangs the page (observed on iOS Safari opening the eshop model advisor).
+    // Chromium only re-fires on real changes, so this asserts the guard itself: a slot
+    // assignment whose text needs no trimming must produce zero characterData mutations.
+    await refinePage.mountComponent('');
+    await page.evaluate(() => {
+      const el = document.createElement('ore-chat-message');
+
+      el.append('already trimmed');
+      document.body.append(el);
+    });
+    await page.waitForSelector('ore-chat-message');
+
+    const mutations = await page.evaluate(async () => {
+      const el = document.querySelector('ore-chat-message') as HTMLElement;
+      const records: string[] = [];
+      const observer = new MutationObserver((list) => {
+        for (const record of list) {
+          if (record.type === 'characterData') records.push(record.target.textContent ?? '');
+        }
+      });
+
+      observer.observe(el, { characterData: true, subtree: true });
+
+      // Re-assign the same text node: fires `slotchange` again, and the trim runs on
+      // content that is already trimmed.
+      el.append(document.createTextNode(''));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      observer.disconnect();
+
+      return records;
+    });
+
+    expect(mutations).toEqual([]);
+  });
 });
