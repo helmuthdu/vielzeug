@@ -43,10 +43,10 @@
     "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "@types/node": "^26.6.2",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
     "typescript": "^6.0.3",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.1"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }

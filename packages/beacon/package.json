@@ -1,0 +1,51 @@
+{
+  "name": "@vielzeug/beacon",
+  "version": "0.1.0",
+  "description": "Guided onboarding and contextual product tours for web applications",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/beacon"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@vielzeug/ripple": "workspace:*"
+  },
+  "scripts": {
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm --silent run build",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "jsdom": "^30.1.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}

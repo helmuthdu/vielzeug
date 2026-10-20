@@ -425,6 +425,11 @@
       "require": "./dist/speed-reading.cjs",
       "types": "./dist/content/speed-reading/speed-reading.d.ts"
     },
+    "./spotlight": {
+      "import": "./dist/spotlight.js",
+      "require": "./dist/spotlight.cjs",
+      "types": "./dist/overlay/spotlight/spotlight.d.ts"
+    },
     "./stats": {
       "import": "./dist/stats.js",
       "require": "./dist/stats.cjs",
@@ -489,6 +494,11 @@
       "import": "./dist/tooltip.js",
       "require": "./dist/tooltip.cjs",
       "types": "./dist/overlay/tooltip/tooltip.d.ts"
+    },
+    "./tour": {
+      "import": "./dist/tour.js",
+      "require": "./dist/tour.cjs",
+      "types": "./dist/overlay/tour/tour.d.ts"
     },
     "./typing-indicator": {
       "import": "./dist/typing-indicator.js",
@@ -817,21 +827,21 @@
     }
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
-    "@biomejs/biome": "^2.5.14",
+    "@axe-core/playwright": "^4.14.0",
+    "@biomejs/biome": "^2.5.15",
     "@custom-elements-manifest/analyzer": "^0.11.0",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.1",
     "@types/culori": "^4.0.1",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "@vielzeug/assay": "workspace:*",
-    "axe-core": "^4.13.0",
-    "browserslist": "^4.29.0",
+    "axe-core": "^4.14.0",
+    "browserslist": "^4.29.4",
     "culori": "^4.0.2",
     "lightningcss": "^1.33.0",
-    "lucide": "^1.48.0",
+    "lucide": "^1.59.0",
     "typescript": "^6.0.3",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.1"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   },
   "customElements": "dist/custom-elements.json"
 }

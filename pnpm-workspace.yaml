@@ -11,3 +11,12 @@ minimumReleaseAgeExclude:
   - '@modelcontextprotocol/core@2.1.0'
   - '@modelcontextprotocol/server@2.1.0'
   - prettier@3.9.9
+  - '@cloudflare/workerd-darwin-64@1.20261019.1'
+  - '@cloudflare/workerd-darwin-arm64@1.20261019.1'
+  - '@cloudflare/workerd-linux-64@1.20261019.1'
+  - '@cloudflare/workerd-linux-arm64@1.20261019.1'
+  - '@cloudflare/workerd-windows-64@1.20261019.1'
+  - browserslist@4.29.4
+  - miniflare@5.20261019.0-beta
+  - workerd@1.20261019.1
+  - wrangler@4.151.2

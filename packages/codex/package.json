@@ -58,12 +58,12 @@
     "verify:exports": "node verify-exports.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.1.0"
+    "@modelcontextprotocol/server": "2.3.1"
   },
   "devDependencies": {
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "@vielzeug/refine": "workspace:*",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.5"
   }
 }

@@ -78,10 +78,10 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.1"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }
