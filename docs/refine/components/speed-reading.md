@@ -68,19 +68,35 @@ import '@vielzeug/refine/styles';
 
 The reader starts `idle` at word zero. Playback and Restart use icon-only controls with accessible names and hover/focus tooltips. The primary control switches between play and pause icons; its accessible action is **Start reading**, **Pause**, **Resume**, or **Read again** to match its state. A visible status explains pauses and completion. **Restart** returns to word zero without playing. **Previous word** and **Next word** pause first and never wrap around the ends.
 
-After the final word's dwell, `state` becomes `ended`. Playing again starts from the beginning. Empty text disables playback and stepping. Independent instances do not stop each other.
+After the final word's dwell, `state` becomes `ended`; the last word remains visible and the status reports completion. Playing again starts from the beginning. Empty text disables playback and stepping. Independent instances do not stop each other.
 
 Opening **Read full text** pauses playback, highlights the current word, and brings it into view within the scrollable passage without moving keyboard focus. The passage remains selectable. Use **Start at sentence** to choose another location, then **Resume from here** to start there. Choosing a sentence alone never starts playback. Closing the disclosure does not resume; starting playback closes it.
 
 The reader also pauses when the browser tab is hidden or the component disconnects. Returning to the tab does not resume automatically.
 
-Playback and pace controls share one compact panel. Wide containers place transport and settings side by side; narrow containers stack them, including inside desktop sidebars. Layout follows the reader's available width rather than the device viewport. Controls retain the same keyboard order in both layouts.
+Playback and pace controls share one compact panel. Previous, play/pause, next, and restart stay together; the pace slider and help button form the settings row. Wide containers place transport and settings side by side; narrow containers stack them, including inside desktop sidebars. Layout follows the reader's available width rather than the device viewport. Controls retain the same keyboard order in both layouts.
 
-The pace field shows **WPM** while keeping the expanded accessible name **Words per minute**. The adjacent information button opens pace guidance and keyboard shortcuts by tap, click, Enter, or Space. Opening help does not pause playback. Escape or a click outside dismisses help. Instructions are not displayed as persistent rows or hidden based on device type.
+Wide readers show the **WPM** slider and selected numeric value inline with the transport controls; the information button sits at the far end of the row. Narrow readers place the transport controls on the first row, a full-width pace slider on the second, and the information button after it. The slider supports pointer, touch, and arrow-key adjustment in 25-WPM steps. The information button opens pace guidance and keyboard shortcuts by tap, click, Enter, or Space. Opening help does not pause playback. Escape or a click outside dismisses it.
+
+On touch devices, tap the center of the reading display to start or pause. Tap the reading-direction start or end third to step backward or forward. Tapping the display with a mouse does not activate these zones; use the playback buttons instead. The word count remains beside the playback status; the full-text alternative stays selectable and easy to locate.
+
+## Fullscreen
+
+The fullscreen control in the toolbar asks the browser to display the reader alone, without surrounding page content. The word display grows to fill the screen and the type size increases; controls, status, and the full-text alternative stay available below it. Playback position, pace, and state survive both transitions — entering or leaving fullscreen never pauses, seeks, or replays.
+
+```html
+<ore-speed-reading lang="en" text="Fill the screen when the page around you becomes the distraction."></ore-speed-reading>
+```
+
+The `fullscreen` attribute is read-only and reflects the browser: it appears while the reader fills the screen and disappears when the user leaves fullscreen with the browser control or Escape. `enterFullscreen()` and `exitFullscreen()` drive the same transitions programmatically. Both must follow a user gesture — calling them from a page script without one is rejected by the browser, and the reader reports the refusal with a development warning. Browsers without element fullscreen (iOS Safari, for example) disable the control and `enterFullscreen()` warns instead of failing silently.
+
+The documentation preview above runs examples in a strict iframe sandbox, and browsers only allow the Fullscreen API in sandboxed frames that also grant same-origin access. The preview button therefore stays inert and logs a refusal warning; the control works on ordinary pages.
+
+Focus moves to the reading display when fullscreen is granted and returns to the fullscreen control when it ends, so keyboard users are never left on a removed element.
 
 ## Pace
 
-The default is **250 WPM**, adjustable between **100 and 600 WPM**. The numeric control increments by 25; direct property values can use any finite pace within the range.
+The default is **250 WPM**, adjustable between **100 and 600 WPM**. The slider moves in 25-WPM steps; direct property values can use any finite pace within the range.
 
 Punctuation adds dwell to the base `60000 / wpm` milliseconds:
 
@@ -169,6 +185,9 @@ reader.labels = {
   restart: 'Neustart',
   previous: 'Vorheriges Wort',
   next: 'Nächstes Wort',
+  enterFullscreen: 'Vollbild aktivieren',
+  exitFullscreen: 'Vollbild beenden',
+  fullscreenUnsupported: 'Vollbild ist in diesem Browser nicht verfügbar.',
   fullText: 'Vollständigen Text lesen',
   wpm: 'Wörter pro Minute',
   wpmShort: 'WpM',
@@ -187,10 +206,10 @@ reader.labels = {
   guidance: 'Ein Wort nach dem anderen. Beginnen Sie in einem angenehmen Tempo.',
   hidden: 'Pausiert, weil der Tab ausgeblendet wurde.',
   shortcutsHeading: 'Tastenkürzel',
-  shortcuts: 'Bei fokussiertem Lesefeld: Leertaste startet oder pausiert; Pfeiltasten links/rechts wechseln ein Wort.',
+  shortcuts: 'Fokussiertes Lesefeld: Leertaste startet oder pausiert; Pfeiltasten links/rechts wechseln ein Wort. Tippen Sie zum Wechseln auf die Seiten und zum Starten oder Pausieren in die Mitte.',
   paceHelp: 'WPM bestimmt das Grundtempo. Satzzeichen verlängern die Pausen.',
-  invalidWpm: 'Geben Sie eine Zahl zwischen 100 und 600 ein.',
-  viewport: 'Lesefeld. Leertaste zum Starten oder Pausieren; Pfeiltasten für einzelne Wörter.',
+  tapHint: 'Tippen Sie auf die Seiten, um ein Wort zu wechseln, oder in die Mitte, um zu starten oder zu pausieren.',
+  viewport: 'Lesefeld. Leertaste oder Tippen in die Mitte startet oder pausiert; Pfeiltasten oder Tippen auf die Seiten wechseln Wörter.',
 };
 ```
 
@@ -205,8 +224,9 @@ reader.labels = {
 | `word-index` | `number` | `0` | Zero-based token index, rounded down and clamped |
 | `labels` | `Partial<OreSpeedReadingLabels>` | English | JavaScript-only labels |
 | `state` | `SpeedReadingState` | `idle` | Read-only reflected `idle`, `playing`, `paused`, or `ended` |
+| `fullscreen` | `boolean` | absent | Read-only; present while the reader fills the screen |
 
-An external position change pauses playback. Reflected position updates do not emit duplicate progress events. Finite WPM values outside the range are clamped; invalid/nonfinite property values use 250 with a development warning. An empty or invalid speed-field commit instead displays a field error and preserves the existing pace. Invalid initial positions use zero with a warning; invalid `seek()` arguments leave the position unchanged and warn. Invalid `lang` falls back to `en` with a development warning.
+An external position change pauses playback. Reflected position updates do not emit duplicate progress events. Finite WPM values outside the range are clamped; invalid/nonfinite property values use 250 with a development warning. Slider input always stays within the allowed pace range. Invalid initial positions use zero with a warning; invalid `seek()` arguments leave the position unchanged and warn. Invalid `lang` falls back to `en` with a development warning.
 
 ### Methods
 
@@ -216,6 +236,8 @@ An external position change pauses playback. Reflected position updates do not e
 | `pause()` | Cancel the timer and preserve the word |
 | `restart()` | Reset to zero and remain idle |
 | `seek(index)` | Pause and move to a clamped token index |
+| `enterFullscreen()` | Request browser fullscreen; requires a user gesture |
+| `exitFullscreen()` | Leave fullscreen while this reader holds it |
 
 ### Events
 
@@ -235,7 +257,8 @@ An external position change pauses playback. Reflected position updates do not e
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `--speed-reading-font-size` | `var(--text-2xl)` | Word display type size |
+| `--speed-reading-font-size` | `var(--text-3xl)` | Maximum word display type size; the passage may be fitted smaller |
+| `--speed-reading-fullscreen-font-size` | `min(10vw, var(--size-96))` | Maximum type size while fullscreen; the passage may be fitted smaller |
 | `--speed-reading-min-font-size` | `var(--text-base)` | Minimum passage-fitted type size |
 | `--speed-reading-height` | `var(--size-32)` | Minimum viewport height |
 | `--speed-reading-gap` | `var(--size-4)` | Gap between sections |
@@ -256,6 +279,6 @@ An external position change pauses playback. Reflected position updates do not e
 
 The fast visual stream is hidden from assistive technology, not announced word by word. The full-text disclosure provides ordinary reading; a polite status region announces playback transitions and overflow. The focal letter is underlined as well as colored.
 
-Playback never moves focus word by word. **Resume from here** returns focus to the primary playback control when the disclosure closes; overflow continuation returns it to the viewport so a disappearing recovery button never strands focus. On the reader viewport, **Space** toggles playback and **Left/Right Arrow** steps backward/forward. The information panel explains this focus requirement. Keyboard handling is local: text-input editing, native button activation, and modified shortcuts retain their behavior. The full-text panel is keyboard-scrollable, and the sentence selector and resume action are keyboard accessible.
+Playback never moves focus word by word. The word counter provides position without an additional progress indicator. **Resume from here** returns focus to the primary playback control when the disclosure closes; overflow continuation returns it to the viewport so a disappearing recovery button never strands focus. On the reader viewport, **Space** toggles playback and **Left/Right Arrow** steps backward/forward. On touch, center taps toggle playback and side taps step in reading direction. The information panel explains these interactions. Keyboard handling is local: text-input editing, native button activation, and modified shortcuts retain their behavior. The full-text panel is keyboard-scrollable, and the sentence selector and resume action are keyboard accessible. Sentence options show a numbered preview truncated to 60 characters to keep the selected value scannable.
 
-There is no autoplay or word transition animation. Reduced motion does not make RSVP a universal accessible substitute for text; keep the full-text alternative and user controls available.
+There is no autoplay or word transition animation. Reduced motion does not make RSVP a universal accessible substitute for text; keep the full-text alternative and user controls available. Fullscreen is opt-in from a visible control, never automatic; the browser announces the state change itself, and focus is moved deliberately on entry and exit rather than left to the transition.

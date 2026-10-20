@@ -149,10 +149,10 @@ describe('ore-speed-reading', () => {
     ['900', '600'],
     ['NaN', '250'],
     ['Infinity', '250'],
-  ])('normalizes WPM %s to %s in the control', async (input, expected) => {
+  ])('normalizes WPM %s to %s in the pace slider', async (input, expected) => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await mountReader({ wpm: input });
-    expect(fixture.query('ore-number-input')?.getAttribute('value')).toBe(expected);
+    expect(fixture.query('ore-slider')?.getAttribute('value')).toBe(expected);
     if (input === 'NaN' || input === 'Infinity') expect(warn).toHaveBeenCalled();
   });
 
@@ -228,9 +228,7 @@ describe('ore-speed-reading', () => {
     expect(state()).toBe('paused');
     expect(position()).toBe(1);
     await fixture.act(() =>
-      fixture
-        .query('ore-number-input')!
-        .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' })),
+      fixture.query('ore-slider')!.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' })),
     );
     expect(position()).toBe(1);
   });
@@ -331,17 +329,19 @@ describe('ore-speed-reading', () => {
     expect(position()).toBe(0);
   });
 
-  it('emits numeric speed changes from the existing number-input control', async () => {
+  it('emits numeric speed changes from the pace slider', async () => {
     await mountReader();
+    expect(fixture.query('.pace-value')?.textContent).toBe('250');
     const change = vi.fn();
     fixture.element.addEventListener('wpm-change', change);
-    const input = fixture.query('ore-number-input') as HTMLElement & { value: string };
+    const slider = fixture.query('ore-slider') as HTMLElement & { value: string };
     await fixture.act(() => {
-      input.value = '450';
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      slider.value = '450';
+      slider.dispatchEvent(new Event('change', { bubbles: true }));
     });
     expect(change.mock.calls[0][0].detail).toEqual({ wpm: 450 });
     expect(fixture.element.wpm).toBe(450);
+    expect(fixture.query('.pace-value')?.textContent).toBe('450');
   });
 
   it('disposes timers and never advances after removal', async () => {
@@ -403,13 +403,9 @@ describe('ore-speed-reading', () => {
         }),
     );
     expect(fixture.query('.toggle')?.getAttribute('aria-label')).toBe('Lesen');
-    expect(fixture.query('ore-number-input')?.getAttribute('label')).toBe('WpM');
+    expect(fixture.query('.pace')?.textContent).toBe('WpM');
+    expect(fixture.query('ore-slider')?.getAttribute('aria-label')).toBe('Wörter pro Minute');
     expect(fixture.query('.help ore-button')?.getAttribute('aria-label')).toBe('Lesehilfe');
-    const input = fixture
-      .query('ore-number-input')
-      ?.shadowRoot?.querySelector('ore-input')
-      ?.shadowRoot?.querySelector('input');
-    expect(input?.getAttribute('aria-label')).toBe('Wörter pro Minute');
     await fixture.act(() => fixture.element.play());
     expect(fixture.query('[role="status"]')?.textContent).toBe('Gestartet');
   });
@@ -441,7 +437,7 @@ describe('ore-speed-reading', () => {
     await mountReader();
     expect(fixture.query('.control-help')).toBeNull();
     expect(fixture.query('.help-content')?.textContent).toContain('Words per minute');
-    expect(fixture.query('.help-content')?.textContent).toContain('When the reading display is focused');
+    expect(fixture.query('.help-content')?.textContent).toContain('Focused reading display');
     for (const button of fixture.queryAll('.toolbar ore-button')) {
       expect(button.hasAttribute('icon-only')).toBe(true);
       expect(button.getAttribute('aria-label')).toBeTruthy();
@@ -479,25 +475,102 @@ describe('ore-speed-reading', () => {
     expect(query('status').textContent).toContain('Paused because the tab was hidden.');
   });
 
-  it('rejects an empty speed commit with field feedback instead of changing pace', async () => {
-    await mountReader({ wpm: '350' });
-    const input = fixture.query('ore-number-input') as HTMLElement & { value: string };
-    const change = vi.fn();
-    fixture.element.addEventListener('wpm-change', change);
+  it('keeps the final word visible and states completion once', async () => {
+    await mountReader({ text: 'One two' });
+    clock();
+    fixture.element.play();
+    await advance(480);
+    expect(state()).toBe('ended');
+    expect(query('word').hidden).toBe(false);
+    expect(query('word').textContent?.trim()).toBe('two');
+    expect(query('viewport').textContent).not.toContain('Reading finished.');
+    expect(query('status').textContent).toContain('Reading finished.');
+  });
+
+  it('steps and toggles through viewport tap zones', async () => {
+    await mountReader({ text: 'One two three' });
+    const display = query('viewport');
+    display.getBoundingClientRect = () => ({ height: 128, left: 100, top: 0, width: 300 }) as DOMRect;
+    const tap = async (ratio: number) => {
+      const point = { clientX: 100 + ratio * 300, clientY: 10 };
+      await fixture.act(() =>
+        display.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', ...point })),
+      );
+      await fixture.act(() =>
+        display.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch', ...point })),
+      );
+    };
+    await tap(0.9);
+    expect(position()).toBe(1);
+    await tap(0.1);
+    expect(position()).toBe(0);
+    await tap(0.5);
+    expect(state()).toBe('playing');
+    await tap(0.5);
+    expect(state()).toBe('paused');
+    await fixture.act(() =>
+      display.dispatchEvent(
+        new PointerEvent('pointerup', { bubbles: true, clientX: 250, clientY: 10, pointerType: 'mouse' }),
+      ),
+    );
+    expect(position()).toBe(0);
+  });
+
+  it('reflects the fullscreen attribute from the browser state without changing playback', async () => {
+    await mountReader();
+    fixture.element.play();
     await fixture.act(() => {
-      input.value = '';
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: fixture.element });
+      document.dispatchEvent(new Event('fullscreenchange'));
     });
-    expect(input.getAttribute('error')).toBe('Enter a number between 100 and 600.');
-    expect(fixture.element.wpm).toBe(350);
-    expect(change).not.toHaveBeenCalled();
+    expect(fixture.element.hasAttribute('fullscreen')).toBe(true);
+    expect(state()).toBe('playing');
     await fixture.act(() => {
-      input.value = '400';
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
+      document.dispatchEvent(new Event('fullscreenchange'));
     });
-    expect(input.hasAttribute('error')).toBe(false);
-    expect(fixture.element.wpm).toBe(400);
-    expect(change).toHaveBeenCalledOnce();
+    expect(fixture.element.hasAttribute('fullscreen')).toBe(false);
+    expect(state()).toBe('playing');
+  });
+
+  it('requests fullscreen through the browser API and reflects the granted state', async () => {
+    await mountReader();
+    const requestFullscreen = vi.fn(() => Promise.resolve());
+    Object.defineProperty(fixture.element, 'requestFullscreen', { configurable: true, value: requestFullscreen });
+    await fixture.act(() => fixture.element.enterFullscreen());
+    expect(requestFullscreen).toHaveBeenCalledOnce();
+    await fixture.act(() => {
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: fixture.element });
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
+    expect(fixture.element.hasAttribute('fullscreen')).toBe(true);
+    const exitFullscreen = vi.fn(() => Promise.resolve());
+    Object.defineProperty(document, 'exitFullscreen', { configurable: true, value: exitFullscreen });
+    await fixture.act(() => fixture.element.exitFullscreen());
+    expect(exitFullscreen).toHaveBeenCalledOnce();
+  });
+
+  it('warns and leaves state unchanged when the browser has no fullscreen API', async () => {
+    await mountReader();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    Object.defineProperty(fixture.element, 'requestFullscreen', { configurable: true, value: undefined });
+    await fixture.act(() => fixture.element.enterFullscreen());
+    expect(fixture.element.hasAttribute('fullscreen')).toBe(false);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('requestFullscreen is unavailable'));
+    const control = fixture.element.shadowRoot!.querySelector<HTMLElement>('.fullscreen')!;
+    await fixture.act(() => control.click());
+    expect(control.getAttribute('aria-disabled')).toBe('true');
+    expect(fixture.element.hasAttribute('fullscreen')).toBe(false);
+  });
+
+  it('names the fullscreen control for its current state', async () => {
+    await mountReader();
+    const control = fixture.element.shadowRoot!.querySelector<HTMLElement>('.fullscreen')!;
+    expect(control.getAttribute('aria-label')).toBe('Enter fullscreen');
+    await fixture.act(() => {
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: fixture.element });
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
+    expect(control.getAttribute('aria-label')).toBe('Exit fullscreen');
   });
 });

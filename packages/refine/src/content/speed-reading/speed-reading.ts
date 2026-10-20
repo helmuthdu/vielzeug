@@ -8,8 +8,8 @@ import styles from './speed-reading.css?inline';
 
 export { ACCORDION_ITEM_TAG } from '../../disclosure/accordion-item/accordion-item';
 export { BUTTON_TAG } from '../../inputs/button/button';
-export { NUMBER_INPUT_TAG } from '../../inputs/number-input/number-input';
 export { SELECT_TAG } from '../../inputs/select/select';
+export { SLIDER_TAG } from '../../inputs/slider/slider';
 export { POPOVER_TAG } from '../../overlay/popover/popover';
 export { TOOLTIP_TAG } from '../../overlay/tooltip/tooltip';
 export { ICON_TAG } from '../icon/icon';
@@ -19,13 +19,15 @@ export type SpeedReadingState = 'idle' | 'playing' | 'paused' | 'ended';
 export type OreSpeedReadingLabels = {
   continue: string;
   empty: string;
+  enterFullscreen: string;
+  exitFullscreen: string;
   finish: string;
   finished: string;
+  fullscreenUnsupported: string;
   fullText: string;
   guidance: string;
   hidden: string;
   help: string;
-  invalidWpm: string;
   next: string;
   overflow: string;
   paceHelp: string;
@@ -41,6 +43,7 @@ export type OreSpeedReadingLabels = {
   shortcuts: string;
   shortcutsHeading: string;
   started: string;
+  tapHint: string;
   viewport: string;
   words: string;
   wpm: string;
@@ -69,6 +72,8 @@ export type OreSpeedReadingEvents = {
 };
 
 export interface SpeedReadingElement extends HTMLElement, OreSpeedReadingProps {
+  enterFullscreen(): void;
+  exitFullscreen(): void;
   pause(): void;
   play(): void;
   restart(): void;
@@ -78,13 +83,15 @@ export interface SpeedReadingElement extends HTMLElement, OreSpeedReadingProps {
 const LABELS: OreSpeedReadingLabels = {
   continue: 'Continue after this word',
   empty: 'Add text to begin.',
+  enterFullscreen: 'Enter fullscreen',
+  exitFullscreen: 'Exit fullscreen',
   finish: 'Finish reading',
   finished: 'Reading finished.',
+  fullscreenUnsupported: 'Fullscreen is unavailable in this browser.',
   fullText: 'Read full text',
   guidance: 'One word at a time. Start at a comfortable pace.',
   help: 'Reading pace and keyboard help',
   hidden: 'Paused because the tab was hidden.',
-  invalidWpm: 'Enter a number between 100 and 600.',
   next: 'Next word',
   overflow: 'This word needs more space. Read it in the full text below.',
   paceHelp: 'Punctuation adds pauses. Lower the pace when needed.',
@@ -97,10 +104,12 @@ const LABELS: OreSpeedReadingLabels = {
   resume: 'Resume',
   resumeHere: 'Resume from here',
   sentence: 'Start at sentence',
-  shortcuts: 'When the reading display is focused: Space starts or pauses; Left and Right Arrow step one word.',
+  shortcuts:
+    'Focused reading display: Space starts or pauses; Left and Right Arrow step one word. Tap the sides to step, the center to start or pause.',
   shortcutsHeading: 'Keyboard shortcuts',
   started: 'Reading started.',
-  viewport: 'Paced reading. Space to play or pause; arrow keys to step.',
+  tapHint: 'Tap the sides to step one word; tap the center to start or pause.',
+  viewport: 'Paced reading. Space or a center tap plays or pauses; arrow keys or side taps step.',
   words: 'words',
   wpm: 'Words per minute',
   wpmHelp: 'Words per minute sets the base pace, from 100 to 600. Start at a comfortable pace.',
@@ -116,12 +125,14 @@ const LABELS: OreSpeedReadingLabels = {
  * @attr {number} wpm - Base words per minute, 100–600 (default 250)
  * @attr {number} word-index - Zero-based word position (default 0)
  * @attr {string} state - Read-only playback state: idle | playing | paused | ended
+ * @attr {boolean} fullscreen - Read-only; present while the reader fills the screen
  * @fires play - Playback started
  * @fires pause - Playback paused
  * @fires end - Reading finished after the final dwell or explicit overflow completion
  * @fires progress - Displayed token changed; detail: { index, total, start, end }
  * @fires wpm-change - User changed speed; detail: { wpm }
- * @cssprop --speed-reading-font-size - Display type size (default var(--text-2xl))
+ * @cssprop --speed-reading-font-size - Maximum display type size (default var(--text-3xl))
+ * @cssprop --speed-reading-fullscreen-font-size - Maximum fullscreen display type size (default min(10vw, var(--size-96)))
  * @cssprop --speed-reading-min-font-size - Minimum passage-fitted type size (default var(--text-base))
  * @cssprop --speed-reading-height - Minimum display height (default var(--size-32))
  * @cssprop --speed-reading-gap - Space between reader sections (default var(--size-4))
@@ -155,9 +166,9 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
     const words = signal<ReadingWord[]>([]);
     const expanded = signal(false);
     const announcement = signal('');
-    const overflow = signal(false);
-    const speedError = signal(false);
+    const tooWide = signal(false);
     const pauseReason = signal('');
+    const fullscreen = signal(false);
     const sentences = signal<Array<{ end: number; index: number; start: number; text: string }>>([]);
     const viewport = ref<HTMLElement>();
     const wordElement = ref<HTMLElement>();
@@ -167,24 +178,9 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
     const toggleButton = ref<HTMLElement>();
     const helpButton = ref<HTMLElement>();
     const helpContent = ref<HTMLElement>();
-    const paceControl = ref<HTMLElementTagNameMap['ore-number-input']>();
-    onMounted(() => {
-      const control = paceControl.value;
-      if (!control) return;
-      let stopLabel: (() => void) | undefined;
-      control.ref = (input) => {
-        stopLabel?.();
-        // The expanded name must take precedence over the visible abbreviation.
-        stopLabel = input
-          ? bind({ attr: { 'aria-label': () => label('wpm'), 'aria-labelledby': null } }, { target: input })
-          : undefined;
-      };
-      return () => {
-        control.ref = null;
-        stopLabel?.();
-      };
-    });
+    const fullscreenButton = ref<HTMLElement>();
     const current = computed(() => words.value[index.value]);
+    const overflow = computed(() => tooWide.value && state.value !== 'ended');
     const label = (key: keyof OreSpeedReadingLabels): string => props.labels.value?.[key] ?? LABELS[key];
     let timer: ReturnType<typeof setTimeout> | undefined;
     let frame: number | undefined;
@@ -199,6 +195,10 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
         sentences.value.findIndex((sentence) => start < sentence.end),
       );
     });
+    const sentenceOption = (sentence: { text: string }, position: number): string => {
+      const preview = sentence.text.length > 60 ? `${sentence.text.slice(0, 59).trimEnd()}…` : sentence.text;
+      return `${position + 1}. ${preview}`;
+    };
     const toggleLabel = computed(() =>
       label(
         state.value === 'playing'
@@ -224,7 +224,7 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
                 : label('guidance'),
     );
 
-    bind({ attr: { state } });
+    bind({ attr: { fullscreen, state } });
 
     const cancel = (): void => {
       generation += 1;
@@ -274,7 +274,6 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
     };
     const finish = (): void => {
       cancel();
-      overflow.value = false;
       state.value = 'ended';
       announcement.value = label('finished');
       emit('end');
@@ -326,8 +325,7 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
       // Pixel sizes are measured font geometry, not design-token replacements.
       element.style.fontSize = `${fittedSize}px`;
       probe.style.fontSize = `${fittedSize}px`;
-      overflow.value = requiredWidth(probe, current.value) > available + 1 && state.value !== 'ended';
-      element.hidden = overflow.value || state.value === 'ended';
+      tooWide.value = requiredWidth(probe, current.value) > available + 1;
       if (overflow.value) {
         pause();
         expanded.value = true;
@@ -392,6 +390,47 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
       if (state.value === 'playing') pause();
       else play();
     };
+    const supportsFullscreen = (): boolean => typeof host.requestFullscreen === 'function';
+    const fullscreenLabel = computed(() => (fullscreen.value ? label('exitFullscreen') : label('enterFullscreen')));
+    const enterFullscreen = (): void => {
+      if (!supportsFullscreen()) {
+        warn('ore-speed-reading: requestFullscreen is unavailable; fullscreen was not entered.');
+        return;
+      }
+      if (host.ownerDocument.fullscreenElement === host) return;
+      host.requestFullscreen().catch(() => {
+        warn('ore-speed-reading: the browser refused the fullscreen request.');
+      });
+    };
+    const exitFullscreen = (): void => {
+      if (host.ownerDocument.fullscreenElement !== host) return;
+      host.ownerDocument.exitFullscreen().catch(() => {
+        warn('ore-speed-reading: the browser refused to leave fullscreen.');
+      });
+    };
+    const toggleFullscreen = (): void => {
+      if (fullscreen.value) exitFullscreen();
+      else enterFullscreen();
+    };
+    let tapOrigin: { x: number; y: number } | undefined;
+    const handlePointerDown = (event: PointerEvent): void => {
+      tapOrigin = { x: event.clientX, y: event.clientY };
+    };
+    const handlePointerUp = (event: PointerEvent): void => {
+      const origin = tapOrigin;
+      tapOrigin = undefined;
+      const display = viewport.value;
+      if (!origin || !display || event.pointerType === 'mouse' || overflow.value || !words.value.length) return;
+      if (Math.abs(event.clientX - origin.x) > 8 || Math.abs(event.clientY - origin.y) > 8) return;
+      const bounds = display.getBoundingClientRect();
+      const ratio = (event.clientX - bounds.left) / bounds.width;
+      const rtl = host.matches(':dir(rtl)');
+      const forward = rtl ? ratio < 1 / 3 : ratio > 2 / 3;
+      const backward = rtl ? ratio > 2 / 3 : ratio < 1 / 3;
+      if (forward) seek(index.value + 1);
+      else if (backward) seek(index.value - 1);
+      else toggle();
+    };
     const normalizeWpm = (value: number | undefined): number => {
       if (value === undefined) return 250;
       if (!Number.isFinite(value)) {
@@ -399,6 +438,14 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
         return 250;
       }
       return Math.min(600, Math.max(100, value));
+    };
+    const handleWpmChange = (event: Event): void => {
+      event.stopPropagation();
+      const target = event.currentTarget as HTMLElement & { value?: string };
+      const next = normalizeWpm(Number(target.value));
+      host.wpm = next;
+      wpm.value = next;
+      emit('wpm-change', { wpm: next });
     };
     const rebuild = (reset: boolean): void => {
       pause();
@@ -434,8 +481,7 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
         ? Math.max(0, Math.min(Math.floor(position), Math.max(0, words.value.length - 1)))
         : 0;
       if (!Number.isFinite(position)) warn('ore-speed-reading: word-index must be a finite number; using 0.');
-      overflow.value = false;
-      speedError.value = false;
+      tooWide.value = false;
       pauseReason.value = '';
       publish();
       requestFit(true);
@@ -463,6 +509,8 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
     host.pause = pause;
     host.restart = restart;
     host.seek = seek;
+    host.enterFullscreen = enterFullscreen;
+    host.exitFullscreen = exitFullscreen;
 
     onMounted(() => {
       rebuild(false);
@@ -485,13 +533,25 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
         }
       };
       const fontsLoaded = (): void => requestFit(true);
+      const fullscreenChange = (): void => {
+        const active = host.ownerDocument.fullscreenElement === host;
+        if (active === fullscreen.value) return;
+        fullscreen.value = active;
+        // Fullscreen swaps the base type scale without a width change, so the
+        // ResizeObserver guard alone would keep the stale fitted size.
+        requestFit(true);
+        if (active) viewport.value?.focus();
+        else fullscreenButton.value?.focus();
+      };
       host.ownerDocument.addEventListener('visibilitychange', visibility);
+      host.ownerDocument.addEventListener('fullscreenchange', fullscreenChange);
       host.ownerDocument.fonts?.addEventListener('loadingdone', fontsLoaded);
       return () => {
         pause();
         observer.disconnect();
         attributes.disconnect();
         host.ownerDocument.removeEventListener('visibilitychange', visibility);
+        host.ownerDocument.removeEventListener('fullscreenchange', fullscreenChange);
         host.ownerDocument.fonts?.removeEventListener('loadingdone', fontsLoaded);
       };
     });
@@ -510,6 +570,11 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
           tabindex="0"
           role="group"
           aria-label=${() => label('viewport')}
+          @pointerdown=${handlePointerDown}
+          @pointerup=${handlePointerUp}
+          @pointercancel=${() => {
+            tapOrigin = undefined;
+          }}
           @keydown=${(event: KeyboardEvent) => {
             if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
             if (event.key === ' ') {
@@ -530,11 +595,11 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
             ref="${wordElement}"
             aria-hidden="true"
             data-centered=${() => (current.value?.focal ? undefined : '')}
-            ?hidden=${() => overflow.value || !current.value || state.value === 'ended'}>
+            ?hidden=${() => tooWide.value || !current.value}>
             <span class="prefix">${() => current.value?.prefix ?? ''}</span><span class="focal" part="focal">${() => current.value?.focal ?? ''}</span><span class="suffix">${() => current.value?.suffix ?? ''}</span>
           </span>
-          <span class="message" ?hidden=${() => Boolean(current.value) && !overflow.value && state.value !== 'ended'}>
-            ${() => (state.value === 'ended' ? label('finished') : overflow.value ? label('overflow') : label('empty'))}
+          <span class="message" ?hidden=${() => Boolean(current.value) && !overflow.value}>
+            ${() => (overflow.value ? label('overflow') : label('empty'))}
           </span>
         </div>
         <div class="status" part="status">
@@ -590,64 +655,6 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
                   <ore-icon name="chevron-right" aria-hidden="true"></ore-icon>
                 </ore-button>
               </ore-tooltip>
-            </div>
-            <div class="settings">
-              <ore-number-input
-                ref="${paceControl}"
-                size="sm"
-                min="100"
-                max="600"
-                step="25"
-                value=${wpm}
-                label=${() => label('wpmShort')}
-                error=${() => (speedError.value ? label('invalidWpm') : undefined)}
-                @input=${() => {
-                  speedError.value = false;
-                }}
-                @change=${(event: Event) => {
-                  event.stopPropagation();
-                  const target = event.currentTarget as HTMLElement & { value?: number | string };
-                  const value = target.value === '' || target.value === undefined ? Number.NaN : Number(target.value);
-                  if (!Number.isFinite(value)) {
-                    speedError.value = true;
-                    return;
-                  }
-                  speedError.value = false;
-                  const next = normalizeWpm(value);
-                  host.wpm = next;
-                  wpm.value = next;
-                  emit('wpm-change', { wpm: next });
-                }}></ore-number-input>
-              <ore-popover
-                class="help"
-                placement="bottom-end"
-                label=${() => label('help')}
-                @open-change=${(event: CustomEvent<OverlayOpenChangeDetail>) => {
-                  event.stopPropagation();
-                  if (
-                    !event.detail.open &&
-                    event.detail.reason === 'escape' &&
-                    helpContent.value?.matches(':focus-within')
-                  ) {
-                    helpButton.value?.focus();
-                  }
-                }}>
-                <ore-button
-                  ref="${helpButton}"
-                  icon-only
-                  rounded="full"
-                  variant="ghost"
-                  aria-label=${() => label('help')}>
-                  <ore-icon name="info" aria-hidden="true"></ore-icon>
-                </ore-button>
-                <div slot="content" class="help-content" ref="${helpContent}" tabindex="0">
-                  <strong>${() => label('wpm')}</strong>
-                  <p>${() => label('wpmHelp')}</p>
-                  <p>${() => label('paceHelp')}</p>
-                  <strong>${() => label('shortcutsHeading')}</strong>
-                  <p>${() => label('shortcuts')}</p>
-                </div>
-              </ore-popover>
               <ore-tooltip content=${() => label('restart')}>
                 <ore-button
                   icon-only
@@ -659,7 +666,69 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
                   <ore-icon name="refresh-cw" aria-hidden="true"></ore-icon>
                 </ore-button>
               </ore-tooltip>
+              <ore-tooltip
+                content=${() => (supportsFullscreen() ? fullscreenLabel.value : label('fullscreenUnsupported'))}>
+                <ore-button
+                  class="fullscreen"
+                  ref="${fullscreenButton}"
+                  icon-only
+                  rounded="full"
+                  variant="ghost"
+                  aria-label=${fullscreenLabel}
+                  ?disabled=${() => !supportsFullscreen()}
+                  @click=${toggleFullscreen}>
+                  <ore-icon
+                    name=${() => (fullscreen.value ? 'minimize' : 'maximize')}
+                    aria-hidden="true"></ore-icon>
+                </ore-button>
+              </ore-tooltip>
             </div>
+            <div class="pace-control">
+              <div class="pace-meta">
+                <span class="pace">${() => label('wpmShort')}</span>
+                <span class="pace-value" aria-hidden="true">${wpm}</span>
+              </div>
+              <ore-slider
+                min="100"
+                max="600"
+                step="25"
+                color="primary"
+                size="sm"
+                value=${() => String(wpm.value)}
+                aria-label=${() => label('wpm')}
+                value-text=${() => `${wpm.value} ${label('wpm')}`}
+                @change=${handleWpmChange}></ore-slider>
+            </div>
+            <ore-popover
+              class="help"
+              placement="bottom-end"
+              label=${() => label('help')}
+              @open-change=${(event: CustomEvent<OverlayOpenChangeDetail>) => {
+                event.stopPropagation();
+                if (
+                  !event.detail.open &&
+                  event.detail.reason === 'escape' &&
+                  helpContent.value?.matches(':focus-within')
+                ) {
+                  helpButton.value?.focus();
+                }
+              }}>
+              <ore-button
+                ref="${helpButton}"
+                icon-only
+                rounded="full"
+                variant="ghost"
+                aria-label=${() => label('help')}>
+                <ore-icon name="info" aria-hidden="true"></ore-icon>
+              </ore-button>
+              <div slot="content" class="help-content" ref="${helpContent}" tabindex="0">
+                <p>${() => label('wpmHelp')}</p>
+                <p>${() => label('paceHelp')}</p>
+                <p>${() => label('tapHint')}</p>
+                <strong>${() => label('shortcutsHeading')}</strong>
+                <p>${() => label('shortcuts')}</p>
+              </div>
+            </ore-popover>
           </div>
         </div>
         <ore-accordion-item
@@ -694,7 +763,7 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
               ${() =>
                 sentences.value.map(
                   (sentence, i) => html`
-                    <option value=${String(i)}>${`${i + 1}. ${sentence.text}`}</option>
+                    <option value=${String(i)}>${sentenceOption(sentence, i)}</option>
                   `,
                 )}
             </ore-select>

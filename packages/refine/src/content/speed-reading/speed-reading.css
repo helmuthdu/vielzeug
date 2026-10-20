@@ -17,6 +17,27 @@
     container-type: inline-size;
   }
 
+  :host([fullscreen]) {
+    background: var(--color-contrast-50);
+  }
+
+  :host([fullscreen]) .reader {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: var(--size-6);
+  }
+
+  :host([fullscreen]) .viewport {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  :host([fullscreen]) .word {
+    font-size: var(--speed-reading-fullscreen-font-size, min(10vw, var(--size-96)));
+  }
+
   .viewport {
     position: relative;
     display: grid;
@@ -24,6 +45,7 @@
     min-width: 0;
     min-height: var(--speed-reading-height, var(--size-32));
     overflow: hidden;
+    touch-action: manipulation;
     background: var(--color-contrast-100);
     border-radius: var(--rounded-xl);
   }
@@ -57,7 +79,7 @@
     align-items: baseline;
     justify-content: center;
     width: 100%;
-    font-size: var(--speed-reading-font-size, var(--text-2xl));
+    font-size: var(--speed-reading-font-size, var(--text-3xl));
     line-height: var(--leading-normal);
     white-space: nowrap;
     direction: ltr;
@@ -110,28 +132,39 @@
 
   .control-panel {
     box-sizing: border-box;
-    display: grid;
     width: 100%;
     max-width: calc(var(--size-64) * 2);
     padding: var(--size-3);
+    margin-block-end: var(--size-3);
     margin-inline: auto;
+    overflow-x: auto;
     border: var(--border) solid var(--color-contrast-200);
     border-radius: var(--rounded-xl);
   }
 
   .toolbar {
     display: grid;
-    gap: var(--size-3);
-    min-width: 0;
+    grid-template-areas:
+      'controls'
+      'pace'
+      'help';
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--size-2);
+    align-items: center;
+    width: 100%;
   }
 
   .controls {
     display: flex;
-    flex-wrap: wrap;
+    flex: none;
+    flex-wrap: nowrap;
+    grid-area: controls;
     gap: var(--size-2);
     align-items: center;
     justify-content: center;
-    min-width: 0;
+    width: max-content;
+    min-width: max-content;
+    margin-inline: 0;
   }
 
   .toolbar ore-button::part(button) {
@@ -153,29 +186,32 @@
     justify-content: space-between;
   }
 
-  .settings {
-    justify-content: center;
+  .pace-value {
+    min-width: 3ch;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+  }
+
+  .pace-meta {
+    display: flex;
+    gap: var(--size-3);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pace-control {
+    display: grid;
+    grid-area: pace;
+    gap: var(--size-2);
     width: 100%;
-    margin-inline: auto;
-  }
-
-  @container (min-width: 32rem) {
-    .toolbar {
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-    }
-
-    .settings {
-      justify-content: end;
-    }
-  }
-
-  ore-number-input {
-    --input-min-width: 0;
-    --number-input-min-width: 0;
-    flex: 1 1 var(--size-24);
     min-width: 0;
-    max-width: min(100%, var(--size-40));
+  }
+
+  .pace-control ore-slider {
+    --slider-min-width: 0;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
   }
 
   .position,
@@ -195,6 +231,8 @@
   .help {
     --popover-min-width: 0;
     --popover-max-width: min(calc(100vw - var(--size-4)), var(--size-80));
+    grid-area: help;
+    justify-self: end;
   }
 
   .help-content {
@@ -212,6 +250,32 @@
 
   .help-content p + strong {
     margin-block-start: var(--size-2);
+  }
+
+  @container (min-width: 28rem) {
+    .toolbar {
+      display: flex;
+      gap: var(--size-2);
+      width: 100%;
+    }
+
+    .pace-control {
+      display: flex;
+      flex: 1 1 var(--size-48);
+      gap: var(--size-2);
+      align-items: center;
+      min-width: 0;
+    }
+
+    .pace-meta {
+      flex: none;
+    }
+
+    .pace-control ore-slider {
+      flex: 1 1 var(--size-24);
+      width: auto;
+      max-width: var(--size-48);
+    }
   }
 
   .help-content:focus-visible {

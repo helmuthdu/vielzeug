@@ -32,28 +32,41 @@ test.describe('Touch help', () => {
 });
 
 test.describe('Layout', () => {
-  test('groups controls according to container width, not the desktop viewport', async ({ page, refinePage }) => {
+  test('shows a full-width pace row on narrow readers and inline pace on wide readers', async ({
+    page,
+    refinePage,
+  }) => {
     await page.setViewportSize({ height: 1000, width: 1280 });
     for (const width of [280, 480, 512, 600, 800]) {
       await refinePage.mountComponent(
         `<ore-speed-reading style="width:${width}px" text="One two three."></ore-speed-reading>`,
       );
-      const transport = (await page.locator(`${reader} .controls`).boundingBox())!;
-      const settings = (await page.locator(`${reader} .settings`).boundingBox())!;
+      const wide = width >= 448;
+      const slider = page.getByRole('slider', { name: 'Words per minute' });
+      await expect(slider).toBeVisible();
       const panel = (await page.locator(`${reader} .control-panel`).boundingBox())!;
-      if (width < 512) {
-        expect(settings.y).toBeGreaterThanOrEqual(transport.y + transport.height);
-      } else {
-        expect(Math.abs(settings.y + settings.height / 2 - (transport.y + transport.height / 2))).toBeLessThan(1);
-        expect(settings.x).toBeGreaterThanOrEqual(transport.x + transport.width);
-      }
+      const pace = (await page.locator(`${reader} .pace-control`).boundingBox())!;
+      let rowY: number | undefined;
       for (const name of ['Previous word', 'Start reading', 'Next word', 'Restart']) {
         const button = page.getByRole('button', { exact: true, name });
         const box = (await button.boundingBox())!;
-        expect(box.x).toBeGreaterThanOrEqual(panel.x);
-        expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
+        rowY ??= box.y;
+        expect(Math.abs(box.y - rowY)).toBeLessThan(1);
+      }
+      const helpButton = page.getByRole('button', { exact: true, name: 'Reading pace and keyboard help' });
+      if (wide) {
+        const sliderBox = (await slider.boundingBox())!;
+        expect(Math.abs(sliderBox.y + sliderBox.height / 2 - rowY! - 22)).toBeLessThan(2);
+        const helpBox = (await helpButton.boundingBox())!;
+        expect(helpBox.x).toBeGreaterThanOrEqual(sliderBox.x + sliderBox.width - 1);
+        expect(helpBox.x + helpBox.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
+      } else {
+        expect(pace.y).toBeGreaterThan(rowY!);
+        expect(pace.width).toBeGreaterThanOrEqual(panel.width - 32);
+        const helpBox = (await helpButton.boundingBox())!;
+        expect(helpBox.y).toBeGreaterThanOrEqual(pace.y + pace.height - 1);
       }
       const startWidth = (await page.getByRole('button', { exact: true, name: 'Start reading' }).boundingBox())!.width;
       await page.getByRole('button', { exact: true, name: 'Start reading' }).click();
@@ -74,15 +87,16 @@ test.describe('Layout', () => {
     );
     const help = page.getByRole('button', { exact: true, name: 'Reading pace and keyboard help' });
     const panel = page.getByRole('dialog', { exact: true, name: 'Reading pace and keyboard help' });
-    await expect(page.getByRole('spinbutton')).toHaveAccessibleName('Words per minute');
+    await expect(page.getByRole('slider', { name: 'Words per minute' })).toBeVisible();
     await expect(page.locator(`${reader} .control-help`)).toHaveCount(0);
     await page.getByRole('button', { exact: true, name: 'Start reading' }).click();
     await help.click();
     await expect(help).toHaveAttribute('aria-expanded', 'true');
     await expect(panel).toBeVisible();
+    await expect(page.getByRole('slider', { name: 'Words per minute' })).toBeVisible();
     const content = page.locator(`${reader} .help-content`);
     await expect(content).toBeVisible();
-    await expect(content).toContainText('When the reading display is focused');
+    await expect(content).toContainText('Focused reading display');
     await expect(page.locator(reader)).toHaveAttribute('state', 'playing');
     const box = (await panel.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
@@ -132,7 +146,7 @@ test.describe('Layout', () => {
     );
   });
 
-  test('fits translated controls and pace errors in an enlarged narrow RTL reader', async ({ page, refinePage }) => {
+  test('fits translated controls in an enlarged narrow RTL reader', async ({ page, refinePage }) => {
     await page.setViewportSize({ height: 1200, width: 1280 });
     await page.evaluate(() => (document.documentElement.style.fontSize = '200%'));
     await refinePage.mountComponent(
@@ -141,20 +155,19 @@ test.describe('Layout', () => {
     await page.locator(reader).evaluate((el) => {
       el.labels = { play: 'Mit dem Lesen beginnen', restart: 'Von vorne beginnen' };
     });
-    const input = page.getByRole('spinbutton');
-    await input.fill('');
-    await input.press('Tab');
-    await expect(page.getByText('Enter a number between 100 and 600.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('slider', { name: 'Words per minute' })).toBeVisible();
     await page.getByRole('button', { exact: true, name: 'Reading pace and keyboard help' }).click();
     const helpPanel = (await page.getByRole('dialog', { name: 'Reading pace and keyboard help' }).boundingBox())!;
     expect(helpPanel.x).toBeGreaterThanOrEqual(0);
     expect(helpPanel.x + helpPanel.width).toBeLessThanOrEqual(1280);
     await expect(page.locator(`${reader} .help-content`)).toBeVisible();
-    const panel = (await page.locator(`${reader} .control-panel`).boundingBox())!;
-    for (const control of await page.locator(`${reader} .toolbar ore-button, ${reader} ore-number-input`).all()) {
+    const transportButtons = page.locator(`${reader} .controls ore-button`);
+    const buttonBoxes = await Promise.all((await transportButtons.all()).map((control) => control.boundingBox()));
+    expect(buttonBoxes.every((box) => Math.abs(box!.y - buttonBoxes[0]!.y) < 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1280);
+    for (const control of await page.locator(`${reader} .toolbar ore-button`).all()) {
       const box = (await control.boundingBox())!;
-      expect(box.x).toBeGreaterThanOrEqual(panel.x - 1);
-      expect(box.x + box.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
+      expect(box.height).toBeGreaterThanOrEqual(44);
     }
   });
 
@@ -164,7 +177,7 @@ test.describe('Layout', () => {
       'utf8',
     );
     const examples = [...docs.matchAll(/```html\n([\s\S]*?)```/g)];
-    expect(examples).toHaveLength(2);
+    expect(examples).toHaveLength(3);
     for (const example of examples) {
       await refinePage.mountComponent(example[1]!);
       for (const script of example[1]!.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)) {
@@ -173,7 +186,7 @@ test.describe('Layout', () => {
       await expect(page.locator(reader)).toHaveAttribute('state', 'idle');
       await expect(page.locator(word)).toBeVisible();
       await expect(page.getByRole('button', { exact: true, name: 'Start reading' })).toBeVisible();
-      await expect(page.getByRole('spinbutton')).toBeVisible();
+      await expect(page.getByRole('slider', { name: 'Words per minute' })).toBeVisible();
     }
   });
 
@@ -268,14 +281,11 @@ test.describe('Interaction', () => {
     await expect(page.locator(reader)).toHaveAttribute('state', 'paused');
   });
 
-  test('changes numeric WPM without stealing editing keys', async ({ page, refinePage }) => {
+  test('changes pace from the slider without stealing stepping keys', async ({ page, refinePage }) => {
     await refinePage.mountComponent('<ore-speed-reading text="One two three"></ore-speed-reading>');
-    const input = page.getByRole('spinbutton');
-    await input.fill('450');
-    await input.press('Tab');
-    await expect(page.locator(reader)).toHaveAttribute('wpm', '450');
-    await input.focus();
-    await input.press('ArrowRight');
+    const slider = page.getByRole('slider', { name: 'Words per minute' });
+    await slider.press('ArrowRight');
+    await expect(page.locator(reader)).toHaveAttribute('wpm', '275');
     await expect(page.locator(reader)).toHaveAttribute('word-index', '0');
   });
 
@@ -292,6 +302,30 @@ test.describe('Interaction', () => {
     await expect(page.locator(reader)).toHaveAttribute('state', 'ended');
     await expect(page.getByRole('button', { exact: true, name: 'Read again' })).toBeEnabled();
     await expect(page.locator(`${reader} [part="status"]`)).toContainText('Reading finished.');
+  });
+
+  test.describe('Touch gestures', () => {
+    test.use({ hasTouch: true });
+
+    test('steps and toggles through viewport tap zones', async ({ page, refinePage }) => {
+      for (const dir of ['ltr', 'rtl']) {
+        await refinePage.mountComponent(
+          `<ore-speed-reading dir="${dir}" text="One two three four five six seven eight nine ten"></ore-speed-reading>`,
+        );
+        const box = (await page.locator(viewport).boundingBox())!;
+        const centerY = box.y + box.height / 2;
+        const start = dir === 'rtl' ? 0.9 : 0.1;
+        const end = dir === 'rtl' ? 0.1 : 0.9;
+        await page.touchscreen.tap(box.x + box.width * end, centerY);
+        await expect(page.locator(reader)).toHaveAttribute('word-index', '1');
+        await page.touchscreen.tap(box.x + box.width * start, centerY);
+        await expect(page.locator(reader)).toHaveAttribute('word-index', '0');
+        await page.touchscreen.tap(box.x + box.width / 2, centerY);
+        await expect(page.locator(reader)).toHaveAttribute('state', 'playing');
+        await page.touchscreen.tap(box.x + box.width / 2, centerY);
+        await expect(page.locator(reader)).toHaveAttribute('state', 'paused');
+      }
+    });
   });
 
   test('keeps one type size when stepping through ordinary words', async ({ page, refinePage }) => {
@@ -373,21 +407,8 @@ test.describe('Interaction', () => {
     for (const name of ['Previous word', 'Resume', 'Next word']) {
       const box = (await page.getByRole('button', { exact: true, name }).boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
-      expect(box.x + box.width).toBeLessThanOrEqual(320);
     }
-  });
-
-  test('keeps the previous pace and displays an error for an empty field commit', async ({ page, refinePage }) => {
-    await refinePage.mountComponent('<ore-speed-reading wpm="350" text="One two three."></ore-speed-reading>');
-    const input = page.getByRole('spinbutton');
-    await input.fill('');
-    await input.press('Tab');
-    await expect(page.getByText('Enter a number between 100 and 600.', { exact: true })).toBeVisible();
-    await expect(page.locator(reader)).toHaveAttribute('wpm', '350');
-    await input.fill('400');
-    await input.press('Tab');
-    await expect(page.getByText('Enter a number between 100 and 600.', { exact: true })).toBeHidden();
-    await expect(page.locator(reader)).toHaveAttribute('wpm', '400');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   });
 
   test('loads edited playground text only after an explicit action', async ({ page, refinePage }) => {
@@ -415,6 +436,49 @@ test.describe('Interaction', () => {
   });
 });
 
+test.describe('Fullscreen', () => {
+  test('fills the screen from the toolbar control and enlarges the word', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await refinePage.mountComponent('<ore-speed-reading text="One two three."></ore-speed-reading>');
+    const enter = page.getByRole('button', { exact: true, name: 'Enter fullscreen' });
+    const inlineSize = (await page.locator(word).evaluate((el) => getComputedStyle(el).fontSize)) as string;
+    await enter.click();
+    await expect(page.locator(reader)).toHaveAttribute('fullscreen', 'true');
+    await expect(page.locator(viewport)).toBeFocused();
+    await expect(
+      page.getByRole('button', { exact: true, name: 'Exit fullscreen' }).locator('ore-icon'),
+    ).toHaveAttribute('name', 'minimize');
+    const host = page.locator(reader);
+    await expect
+      .poll(async () => {
+        const box = (await host.boundingBox())!;
+        return Math.abs(box.width - 1280) < 2 && Math.abs(box.height - 900) < 2;
+      })
+      .toBe(true);
+    const fullscreenSize = (await page.locator(word).evaluate((el) => getComputedStyle(el).fontSize)) as string;
+    expect(Number.parseFloat(fullscreenSize)).toBeGreaterThan(Number.parseFloat(inlineSize));
+    await page.getByRole('button', { exact: true, name: 'Exit fullscreen' }).click();
+    await expect(page.locator(reader)).not.toHaveAttribute('fullscreen');
+    await expect(page.getByRole('button', { exact: true, name: 'Enter fullscreen' })).toBeFocused();
+    await expect
+      .poll(async () => (await page.locator(word).evaluate((el) => getComputedStyle(el).fontSize)) as string)
+      .toBe(inlineSize);
+  });
+
+  test('preserves playback position across a fullscreen round trip', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-speed-reading text="One two three four five six"></ore-speed-reading>');
+    await page.locator(reader).evaluate((el) => el.seek(3));
+    await page.getByRole('button', { exact: true, name: 'Enter fullscreen' }).click();
+    await expect(page.locator(reader)).toHaveAttribute('fullscreen', 'true');
+    await expect(page.locator(reader)).toHaveAttribute('word-index', '3');
+    await expect(page.locator(reader)).toHaveAttribute('state', 'paused');
+    await page.getByRole('button', { exact: true, name: 'Exit fullscreen' }).click();
+    await expect(page.locator(reader)).not.toHaveAttribute('fullscreen');
+    await expect(page.locator(reader)).toHaveAttribute('word-index', '3');
+    await expect(page.locator(reader)).toHaveAttribute('state', 'paused');
+  });
+});
+
 test.describe('Accessibility', () => {
   test('provides non-live words, a readable alternative, and accessible controls', async ({ page, refinePage }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -427,6 +491,7 @@ test.describe('Accessibility', () => {
     await expect(page.locator(`${reader} .help [part="panel"]`)).toBeHidden();
     await page.getByText('Read full text', { exact: true }).click();
     await expect(page.locator(`${reader} [part="full-text"]`)).toBeVisible();
+    await expect(page.locator(`${reader} ore-accordion-item .content-inner`)).toHaveCSS('opacity', '1');
     const mark = page.locator(`${reader} [part="full-text"] mark`);
     expect(await mark.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
     expect((await axeCheck(page)).violations).toEqual([]);

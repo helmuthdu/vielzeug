@@ -5,6 +5,41 @@ description: Migrate surface variants, DataGrid sources, and framework type decl
 
 # Migration
 
+## Speed-reading fullscreen support
+
+`ore-speed-reading` gains an opt-in fullscreen mode: a toolbar control, a read-only `fullscreen` attribute, and `enterFullscreen()`/`exitFullscreen()` methods. `OreSpeedReadingLabels` grows three required keys — `enterFullscreen`, `exitFullscreen`, and `fullscreenUnsupported`. The `labels` property stays `Partial`, so existing runtime usage is unaffected; code annotated with the full `OreSpeedReadingLabels` type needs the three new entries.
+
+```ts
+// Before
+const labels: OreSpeedReadingLabels = {
+  /* ...existing keys... */
+};
+
+// After
+const labels: OreSpeedReadingLabels = {
+  /* ...existing keys... */
+  enterFullscreen: 'Enter fullscreen',
+  exitFullscreen: 'Exit fullscreen',
+  fullscreenUnsupported: 'Fullscreen is unavailable in this browser.',
+};
+```
+
+## Update speed-reading controls
+
+`ore-speed-reading` replaces its numeric WPM field with an accessible slider and visible value. Wide readers show the slider inline; narrow readers show it full-width on a second row. The information button contains guidance only. The optional sentence progress bar and its `progress` label are removed; the word counter remains. The component subpath no longer re-exports `NUMBER_INPUT_TAG`; it now re-exports `SLIDER_TAG` for its nested control. `OreSpeedReadingLabels.invalidWpm` is removed because slider values are constrained, and `tapHint` is added. `--speed-reading-font-size` now defaults to `var(--text-3xl)` and represents the maximum fitted display size.
+
+```ts
+// Before
+import { NUMBER_INPUT_TAG } from '@vielzeug/refine/speed-reading';
+reader.labels = { invalidWpm: 'Enter a pace from 100 to 600.' };
+
+// After
+import { SLIDER_TAG } from '@vielzeug/refine/speed-reading';
+reader.labels = { tapHint: 'Tap the sides to step.' };
+```
+
+If your application registered nested controls through the component subpath exports, update that registration list. `wpm-change` now reports slider changes as the user adjusts the pace, rather than a committed numeric-field value.
+
 ## Query bar filter layout and state echoes
 
 The query bar retains its unified field and inline applied-filter pills. Its standard secondary row opens a vocabulary-driven drawer and can show curated quick filters. Use `::part(applied)` for inline filter styling and `::part(toolbar)` for secondary controls.
