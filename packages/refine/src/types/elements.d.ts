@@ -106,7 +106,9 @@ import type {
   OreNavigationMenuProps,
 } from '../overlay/navigation-menu/navigation-menu';
 import type { OrePopoverEvents, OrePopoverProps } from '../overlay/popover/popover';
+import type { OreSpotlightProps } from '../overlay/spotlight/spotlight';
 import type { OreTooltipEvents, OreTooltipProps } from '../overlay/tooltip/tooltip';
+import type { OreTourElement, OreTourEvents } from '../overlay/tour/tour';
 import type { AddEventListeners, FormValidityMethods } from '../shared/index';
 
 export interface RefineElementMap {
@@ -198,6 +200,7 @@ export interface RefineElementMap {
   'ore-slider': HTMLElement & OreSliderProps & FormValidityMethods & AddEventListeners<OreSliderEvents>;
   'ore-speech-player': SpeechPlayerElement & AddEventListeners<OreSpeechPlayerEvents>;
   'ore-speed-reading': SpeedReadingElement & AddEventListeners<OreSpeedReadingEvents>;
+  'ore-spotlight': HTMLElement & OreSpotlightProps;
   'ore-stats': HTMLElement & OreStatsProps;
   'ore-step': HTMLElement & OreStepProps;
   'ore-stepper': HTMLElement & OreStepperProps & AddEventListeners<OreStepperEvents>;
@@ -224,6 +227,7 @@ export interface RefineElementMap {
   'ore-time-picker': HTMLElement & OreTimePickerProps & AddEventListeners<OreTimePickerEvents>;
   'ore-toast': HTMLElement & OreToastProps & AddEventListeners<OreToastEvents>;
   'ore-tooltip': HTMLElement & OreTooltipProps & AddEventListeners<OreTooltipEvents>;
+  'ore-tour': OreTourElement & AddEventListeners<OreTourEvents>;
   // table markers (light-DOM authoring API used by ore-table)
   'ore-tr': HTMLElement & { foot?: boolean; head?: boolean };
   'ore-typing-indicator': HTMLElement & OreTypingIndicatorProps;
