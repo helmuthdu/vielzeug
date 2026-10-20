@@ -1,6 +1,6 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { SPEECH_RATES, type SpeechPlayerElement, speechSentences } from './speech-player';
+import { pickVoice, SPEECH_RATES, type SpeechPlayerElement, speechSentences } from './speech-player';
 
 // ─── Mock engine ─────────────────────────────────────────────────────────────
 
@@ -8,8 +8,10 @@ import { SPEECH_RATES, type SpeechPlayerElement, speechSentences } from './speec
 class FakeUtterance {
   text: string;
   lang = '';
+  pitch = 1;
   rate = 1;
-  voice: { lang: string } | null = null;
+  voice: { lang: string; name: string } | null = null;
+  volume = 1;
   onstart: (() => void) | null = null;
   onboundary: (() => void) | null = null;
   onend: (() => void) | null = null;
@@ -28,7 +30,11 @@ let synth: {
   speak: ReturnType<typeof vi.fn>;
 };
 
-function installSpeech(voices: Array<{ lang: string }> = [{ lang: 'en-US' }]): void {
+function installSpeech(
+  voices: Array<{ default?: boolean; lang: string; localService?: boolean; name: string }> = [
+    { lang: 'en-US', name: 'Samantha' },
+  ],
+): void {
   synth = {
     cancel: vi.fn(),
     getVoices: vi.fn(() => voices),
@@ -493,13 +499,16 @@ describe('ore-speech-player', () => {
 
   describe('Language', () => {
     it('passes lang through and picks a matching voice', async () => {
-      installSpeech([{ lang: 'de-DE' }, { lang: 'en-US' }]);
+      installSpeech([
+        { lang: 'de-DE', name: 'Anna' },
+        { lang: 'en-US', name: 'Samantha' },
+      ]);
       fixture = await mountPlayer('Das Tal schläft.', { attrs: { lang: 'de' } });
 
       await startReading(fixture);
 
       expect(spoken()[0].lang).toBe('de');
-      expect(spoken()[0].voice).toEqual({ lang: 'de-DE' });
+      expect(spoken()[0].voice).toEqual({ lang: 'de-DE', name: 'Anna' });
     });
 
     it('falls back to the lang hint when no voice has loaded', async () => {
@@ -510,6 +519,118 @@ describe('ore-speech-player', () => {
 
       expect(spoken()[0].lang).toBe('de');
       expect(spoken()[0].voice).toBeNull();
+    });
+  });
+
+  // ── Voice quality ─────────────────────────────────────────────────────────────────
+
+  describe('Voice selection', () => {
+    it('prefers a natural voice over the robotic default for the same language', async () => {
+      installSpeech([
+        { default: true, lang: 'en-US', localService: true, name: 'Alex' },
+        { lang: 'en-US', name: 'Google US English' },
+        { lang: 'en-US', name: 'Aria (Natural) English (United States)' },
+      ]);
+      fixture = await mountPlayer('The valley sleeps.', { attrs: { lang: 'en' } });
+
+      await startReading(fixture);
+
+      expect(spoken()[0].voice?.name).toBe('Aria (Natural) English (United States)');
+    });
+
+    it('reads with the named voice, case-insensitively', async () => {
+      installSpeech([
+        { lang: 'de-DE', name: 'Anna' },
+        { lang: 'de-DE', name: 'Katja (Natural)' },
+      ]);
+      fixture = await mountPlayer('Das Tal schläft.', { attrs: { lang: 'de', voice: 'anna' } });
+
+      await startReading(fixture);
+
+      expect(spoken()[0].voice?.name).toBe('Anna');
+    });
+
+    it('matches a named voice by substring', async () => {
+      installSpeech([
+        { lang: 'en-US', name: 'Samantha' },
+        { lang: 'en-GB', name: 'Sonya (Natural) English (United Kingdom)' },
+      ]);
+      fixture = await mountPlayer('The valley sleeps.', { attrs: { lang: 'en', voice: 'sonya' } });
+
+      await startReading(fixture);
+
+      expect(spoken()[0].voice?.name).toBe('Sonya (Natural) English (United Kingdom)');
+    });
+
+    it('warns once and falls back when the named voice is unavailable', async () => {
+      installSpeech([{ lang: 'en-US', name: 'Samantha' }]);
+      const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      fixture = await mountPlayer('One sentence. Two sentences.', { attrs: { lang: 'en', voice: 'Nonexistent' } });
+
+      await startReading(fixture);
+      const first = spoken()[0]!;
+      first.onend!();
+
+      expect(spoken().length).toBe(2);
+      expect(spoken()[1].voice?.name).toBe('Samantha');
+      expect(warned).toHaveBeenCalledTimes(1);
+      expect(warned.mock.calls[0][0]).toContain('no voice named "Nonexistent"');
+    });
+
+    it('passes pitch and volume to the utterance', async () => {
+      installSpeech();
+      fixture = await mountPlayer('The valley sleeps.', { attrs: { pitch: '0.5', volume: '0.8' } });
+
+      await startReading(fixture);
+
+      expect(spoken()[0].pitch).toBe(0.5);
+      expect(spoken()[0].volume).toBe(0.8);
+    });
+
+    it('clamps pitch and volume into the engine ranges', async () => {
+      installSpeech();
+      fixture = await mountPlayer('The valley sleeps.', { attrs: { pitch: '5', volume: '-2' } });
+
+      await startReading(fixture);
+
+      expect(spoken()[0].pitch).toBe(2);
+      expect(spoken()[0].volume).toBe(0);
+    });
+
+    it('warns and defaults on a non-finite pitch', async () => {
+      installSpeech();
+      const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      fixture = await mountPlayer('The valley sleeps.', { props: { pitch: Number.NaN } });
+
+      await startReading(fixture);
+
+      expect(spoken()[0].pitch).toBe(1);
+      expect(warned).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('pickVoice', () => {
+    const voices = [
+      { default: true, lang: 'en-US', localService: true, name: 'Alex' },
+      { lang: 'en-US', name: 'Samantha' },
+      { lang: 'en-GB', name: 'Arthur (Natural) English (United Kingdom)' },
+      { lang: 'de-DE', name: 'Anna' },
+    ];
+
+    it('ranks language fit above voice quality', () => {
+      expect(pickVoice(voices, 'de')?.name).toBe('Anna');
+    });
+
+    it('prefers a closer language region over a distant natural voice', () => {
+      expect(pickVoice(voices, 'en-US')?.name).toBe('Alex');
+    });
+
+    it('names an exact voice before ranking', () => {
+      expect(pickVoice(voices, 'de', 'Samantha')?.name).toBe('Samantha');
+    });
+
+    it('returns null when nothing matches the language', () => {
+      expect(pickVoice(voices, 'fr')).toBeNull();
     });
   });
 

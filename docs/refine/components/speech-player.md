@@ -72,13 +72,31 @@ Bind `resume-at` to the sentence index playback should begin from, and the playe
 
 ## Language
 
-Set the standard HTML `lang` attribute to the language **of the text being read** (not the interface language). The player passes it to the engine as a voice hint and prefers an installed voice whose language matches:
+Set the standard HTML `lang` attribute to the language **of the text being read** (not the interface language). The player passes it to the engine as a voice hint and picks the best installed voice for that language:
 
 ```html
 <ore-speech-player lang="de" text="Das Tal schläft unter Asche."></ore-speech-player>
 ```
 
 If no matching voice has loaded yet, the `lang` hint alone steers the engine. Omitting `lang` leaves the voice choice to the browser default.
+
+## Voice Quality
+
+By default the player ranks the voices the engine reports for `lang` and picks the most natural-sounding one, so a machine that has a neural voice installed never falls back to its robotic default. The ranking prefers names marked **Natural** or **Neural** first, then **Enhanced** or **Premium**, then Google's streamed voices, and only then the bare system voice; language fit always outranks voice quality, so a plain voice in the right language still beats a natural voice in the wrong one.
+
+To choose a voice by name instead, set `voice` (matched case-insensitively, exact first then as a substring). This is what a voice picker binds to: render `speechSynthesis.getVoices()` in your own list and set the chosen `voice.name`:
+
+```html
+<ore-speech-player lang="en-GB" voice="Sonya" text="The valley sleeps under ash."></ore-speech-player>
+```
+
+A `voice` name the engine does not have falls back to the ranked choice and logs a warning. Two further properties pass straight through to the engine for tone and loudness: `pitch` (0 to 2, where 1 is the voice's natural pitch) and `volume` (0 to 1), both clamped into range:
+
+```html
+<ore-speech-player pitch="0.9" volume="0.8" text="The valley sleeps under ash."></ore-speech-player>
+```
+
+The exported `pickVoice(voices, lang, name?)` runs the same ranking the player uses, so a custom picker can highlight the recommended voice for a language.
 
 ## Localizing Labels
 
@@ -169,9 +187,12 @@ ore-speech-player::part(play) {
 | Attribute    | Type     | Default   | Description                                                         |
 | ----------- | -------- | --------- | ------------------------------------------------------------------- |
 | `text`      | `string` | `''`      | The text to read aloud (empty text disables the toggle)               |
-| `lang`      | `string` | N/A | Standard HTML language tag of the text; hints voice selection       |
+| `lang`      | `string` | N/A | Standard HTML language tag of the text; selects the best voice for it |
 | `state`     | `string` | `idle`    | Reflected playback state: `idle` \| `playing` \| `paused` \| `unsupported` |
 | `rate`      | `number` | `1`       | Playback rate; the speed control cycles `1` → `0.85` → `1.15` → `1.5` |
+| `pitch`     | `number` | `1`       | Voice pitch passed to the engine, clamped to `0`–`2` (`1` is natural) |
+| `volume`    | `number` | `1`       | Voice loudness passed to the engine, clamped to `0`–`1`              |
+| `voice`     | `string` | N/A | Name of the voice to read with; unset, the most natural voice for `lang` is picked |
 | `resume-at` | `number` | N/A | The sentence index playback begins from                               |
 
 ### Properties
@@ -179,6 +200,9 @@ ore-speech-player::part(play) {
 | Property | Type                             | Description                               |
 | -------- | -------------------------------- | ----------------------------------------- |
 | `labels` | `Partial<OreSpeechPlayerLabels>` | Overrides control names, speed names, and announcements |
+| `pitch`  | `number`                         | Voice pitch passed to the engine, `0`–`2`  |
+| `volume` | `number`                         | Voice loudness passed to the engine, `0`–`1` |
+| `voice`  | `string`                         | Name of the voice to read with             |
 
 ### Methods
 
@@ -204,6 +228,7 @@ ore-speech-player::part(play) {
 | Export          | Description                                                       |
 | --------------- | ------------------------------------------------------------------ |
 | `speechSentences` | Splits text into the sentence list the reader follows: build highlighting displays from it |
+| `pickVoice`     | Ranks engine voices for a language (and optional name): the same choice the player makes, for a custom picker |
 | `SPEECH_RATES`   | The rate steps the speed control cycles through                     |
 
 ### CSS Parts

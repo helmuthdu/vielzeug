@@ -1,5 +1,6 @@
 import { bind, define, getHost, html, onCleanup, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
+import { warn } from '../../_dev';
 import { srOnlyMixin } from '../../styles';
 
 import componentStyles from './speech-player.css?inline';
@@ -70,6 +71,10 @@ const DEFAULT_LABELS: OreSpeechPlayerLabels = {
 export type OreSpeechPlayerProps = {
   /** Labels for the controls and announcements: override to localize. */
   labels?: Partial<OreSpeechPlayerLabels>;
+  /** Voice loudness passed to the engine, 0 to 1. */
+  volume?: number;
+  /** Voice pitch passed to the engine, 0 to 2 (1 is the voice's natural pitch). */
+  pitch?: number;
   /** Playback rate: bind with `rate-change` to persist the listener's choice; unbound,
    *  the speed control cycles on its own. Values outside `SPEECH_RATES` snap into the
    *  cycle at the control's first use. */
@@ -79,6 +84,10 @@ export type OreSpeechPlayerProps = {
   'resume-at'?: number;
   /** The text to read aloud. */
   text?: string;
+  /** Name of the voice to read with (case-insensitive match against the engine's voice
+   *  list). Unset, the player picks the most natural-sounding voice for `lang`; an
+   *  unknown name falls back to that choice and warns. */
+  voice?: string;
 };
 
 /** Speech player component events */
@@ -145,6 +154,74 @@ function hardSplit(sentence: string, limit: number): string[] {
  *  pieces keep their sentence's index, so `progress` never skips a highlight. */
 type SpeechPiece = { sentence: number; text: string };
 
+/** The voice fields the picker reads; keeps the ranking testable without the engine's full
+ *  voice interface. */
+type VoiceCandidate = { default?: boolean; lang: string; localService?: boolean; name: string };
+
+/** Ranks a voice for `lang`: language fit dominates, then perceived quality. "Natural"/
+ *  "Neural" names mark the modern neural voices (the audible upgrade over the legacy
+ *  synthetic defaults); "Enhanced"/"Premium" mark the improved legacy tier; Google's
+ *  streamed voices rank below both but above the bare system voice. The system default
+ *  and local service get small tiebreakers only: they are usually the most robotic. */
+function scoreVoice(voice: VoiceCandidate, lang: string | null): number {
+  const name = voice.name.toLowerCase();
+  let score = 0;
+  if (/natural|neural/.test(name)) score += 40;
+  if (/enhanced|premium/.test(name)) score += 20;
+  if (name.includes('google')) score += 10;
+  if (voice.default) score += 5;
+  if (voice.localService) score += 3;
+  if (lang) {
+    const target = lang.toLowerCase();
+    const candidate = voice.lang.toLowerCase();
+    if (candidate === target) score += 100;
+    else if (candidate.startsWith(`${target}-`)) score += 60;
+    else if (candidate.split('-')[0] === target.split('-')[0]) score += 30;
+    else return 0;
+  }
+  return score;
+}
+
+/** The voice to read with: an exact (then substring, case-insensitive) name match wins;
+ *  otherwise the best-ranked voice for `lang`, or `null` to leave the choice to the
+ *  engine's own `lang` hint. */
+export function pickVoice(voices: VoiceCandidate[], lang: string | null, name?: string): VoiceCandidate | null {
+  if (name) {
+    const wanted = name.toLowerCase();
+    return (
+      voices.find((voice) => voice.name.toLowerCase() === wanted) ??
+      voices.find((voice) => voice.name.toLowerCase().includes(wanted)) ??
+      null
+    );
+  }
+  let best: VoiceCandidate | null = null;
+  let bestScore = 0;
+  for (const voice of voices) {
+    const score = scoreVoice(voice, lang);
+    if (score > bestScore) {
+      best = voice;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/** Chromium and Safari fill `getVoices()` asynchronously: the list stays empty until the
+ *  engine has loaded, usually well before a user presses play but never guaranteed.
+ *  Calling `getVoices()` is what kicks the load off, so the player calls it as early as
+ *  the engine exists and again on `voiceschanged` (the nudge Safari needs); by play time
+ *  the live list is read directly, so a voice installed mid-session is never missed. */
+let voicesPrimed = false;
+
+function primeVoices(): void {
+  if (voicesPrimed || typeof window === 'undefined' || !window.speechSynthesis) return;
+  voicesPrimed = true;
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.addEventListener?.('voiceschanged', () => {
+    window.speechSynthesis.getVoices();
+  });
+}
+
 function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
   return sentences.flatMap((sentence, index) =>
     (sentence.length > limit ? hardSplit(sentence, limit) : [sentence]).map((text) => ({
@@ -172,6 +249,10 @@ function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
  * @attr {string} lang - BCP-47 tag of `text`'s language, e.g. `en` or `de-DE`
  * @attr {string} state - Reflected playback state: 'idle' | 'playing' | 'paused' | 'unsupported'
  * @attr {number} rate - Playback rate; the speed control cycles 1 → 0.85 → 1.15 → 1.5
+ * @attr {number} pitch - Voice pitch passed to the engine, 0 to 2 (1 is natural)
+ * @attr {number} volume - Voice loudness passed to the engine, 0 to 1
+ * @attr {string} voice - Name of the voice to read with; unset, the most natural-sounding
+ *   voice for `lang` is picked automatically
  * @attr {number} resume-at - The sentence index playback begins from
  *
  * @fires play - Reading started. No detail.
@@ -208,9 +289,12 @@ let stopActivePlayer: (() => void) | null = null;
 define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
   props: {
     labels: prop.data<Partial<OreSpeechPlayerLabels>>({}),
+    pitch: prop.number(1),
     rate: prop.number(1),
     'resume-at': prop.number(),
     text: prop.string(''),
+    voice: prop.string(),
+    volume: prop.number(1),
   },
 
   setup(props) {
@@ -218,6 +302,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     const emit = useEmit<OreSpeechPlayerEvents>();
 
     const supported = typeof window !== 'undefined' && typeof window.speechSynthesis !== 'undefined';
+    if (supported) primeVoices();
     const state = signal<SpeechPlayerState>(supported ? 'idle' : 'unsupported');
     const announcement = signal('');
 
@@ -248,6 +333,19 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     };
     const speedLabel = computed(() => `${label('speed')}: ${speedName(rate.value)}`);
 
+    // Pitch and volume pass straight to the engine, clamped to its documented ranges; a
+    // non-finite value is a consumer mistake, so it says so instead of silently muting.
+    const clamp = (value: number | undefined, fallback: number, min: number, max: number): number => {
+      if (value === undefined) return fallback;
+      if (!Number.isFinite(value)) {
+        warn('ore-speech-player: pitch and volume must be finite numbers; using the default.');
+        return fallback;
+      }
+      return Math.min(Math.max(value, min), max);
+    };
+    const utterancePitch = computed(() => clamp(props.pitch.value, 1, 0, 2));
+    const utteranceVolume = computed(() => clamp(props.volume.value, 1, 0, 1));
+
     // Reflect playback so CSS can react to it; the aria contract lives on the controls.
     bind({ attr: { state } });
 
@@ -264,21 +362,40 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     let current = 0;
     let disposed = false;
 
+    /** Resolves the voice for each piece: an explicit `voice` name wins; else, when `lang`
+     *  is set, the best-ranked voice for it (omitting `lang` leaves the choice to the
+     *  engine's default, as documented). A named voice that is unavailable says so once
+     *  per element and falls back to the ranked choice. */
+    let warnedVoice = false;
+    const applyVoice = (utterance: SpeechSynthesisUtterance): void => {
+      const lang = host.getAttribute('lang');
+      const wanted = props.voice.value;
+      const voices = window.speechSynthesis.getVoices();
+      const named = wanted ? pickVoice(voices, lang ?? null, wanted) : null;
+      if (named) {
+        utterance.voice = named as SpeechSynthesisVoice;
+        return;
+      }
+      if (wanted && !warnedVoice) {
+        warnedVoice = true;
+        warn(`ore-speech-player: no voice named "${wanted}" is available; using the default choice.`);
+      }
+      const fallback = lang ? pickVoice(voices, lang) : null;
+      if (fallback) utterance.voice = fallback as SpeechSynthesisVoice;
+    };
+
     const speakPiece = (index: number): void => {
       current = index;
       const piece = pieces.value[index]!;
       const utterance = new SpeechSynthesisUtterance(piece.text);
       utterance.rate = rate.value;
+      utterance.pitch = utterancePitch.value;
+      utterance.volume = utteranceVolume.value;
       // The native `lang` attribute names the text's language: the standard HTML
       // semantic, and hints voice selection when no explicit voice matches yet.
       const lang = host.getAttribute('lang');
-      if (lang) {
-        utterance.lang = lang;
-        const voice = window.speechSynthesis
-          .getVoices()
-          .find((candidate) => candidate.lang.toLowerCase().startsWith(lang.toLowerCase()));
-        if (voice) utterance.voice = voice;
-      }
+      if (lang) utterance.lang = lang;
+      applyVoice(utterance);
       const token = generation;
       const alive = (): void => {
         if (token === generation) enginePulse += 1;
