@@ -53,6 +53,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
     id: 'interaction',
     name: 'Interaction & UI',
     packages: [
+      { id: 'beacon', tagline: 'Product tours & onboarding' },
       { id: 'dnd', tagline: 'Drag & drop' },
       { id: 'focus', tagline: 'Keyboard nav & focus restoration' },
       { id: 'gesture', tagline: 'Swipe gesture recognition' },

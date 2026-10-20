@@ -221,6 +221,11 @@
       "packageName": "@vielzeug/archive",
       "projectFolder": "packages/archive",
       "shouldPublish": true
+    },
+    {
+      "packageName": "@vielzeug/beacon",
+      "projectFolder": "packages/beacon",
+      "shouldPublish": true
     }
   ],
   "repository": {

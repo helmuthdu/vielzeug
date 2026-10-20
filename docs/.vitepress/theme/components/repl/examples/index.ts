@@ -1,4 +1,5 @@
 import { arsenalExamples } from './arsenal';
+import { beaconExamples } from './beacon';
 import { clockworkExamples } from './clockwork';
 import { coinsExamples } from './coins';
 import { conduitExamples } from './conduit';
@@ -37,6 +38,7 @@ import { wayfinderExamples } from './wayfinder';
 
 export const examples: Record<string, Record<string, ExampleModule>> = {
   arsenal: arsenalExamples,
+  beacon: beaconExamples,
   clockwork: clockworkExamples,
   coins: coinsExamples,
   conduit: conduitExamples,

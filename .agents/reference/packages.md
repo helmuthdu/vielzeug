@@ -9,6 +9,7 @@ Generated from `packages/*/package.json` by `pnpm gen:ai-data`. Edit manifests, 
 | `@vielzeug/archive` | Community content publishing for Cloudflare Workers + D1: a hardened Worker core over per-collection payload schemas | `spell` | N/A | N/A |
 | `@vielzeug/arsenal` | Non-trivial TypeScript utilities: retry, cancellation, cache, safe-path, serialization, prototype-pollution-guarded collections | N/A | N/A | N/A |
 | `@vielzeug/assay` | Framework-agnostic DOM testing primitives: scoped queries, event dispatch, async waiting | `arsenal` | N/A | N/A |
+| `@vielzeug/beacon` | Guided onboarding and contextual product tours for web applications | `ripple` | N/A | N/A |
 | `@vielzeug/clockwork` | Framework-neutral finite state machines with pure transitions and actors | `arsenal` | N/A | N/A |
 | `@vielzeug/codex` | MCP server exposing all Vielzeug docs to AI clients | N/A | N/A | N/A |
 | `@vielzeug/coins` | Currency formatting and exchange utilities for monetary arithmetic | N/A | N/A | N/A |

@@ -144,7 +144,7 @@ function docs(name, description) {
   const pkg = `@vielzeug/${name}`;
   return {
     'index.md': `---
-title: ${title}
+title: '${title}'
 description: ${JSON.stringify(description)}
 package: ${name}
 category: utilities
@@ -215,7 +215,7 @@ import {} from '${pkg}';
 <!-- markdownlint-enable MD025 MD033 MD060 -->
 `,
     'usage.md': `---
-title: ${title}: Usage Guide
+title: '${title}: Usage Guide'
 description: How to use ${pkg}.
 ---
 
@@ -232,7 +232,7 @@ import {} from '${pkg}';
 - TODO
 `,
     'api.md': `---
-title: ${title}: API Reference
+title: '${title}: API Reference'
 description: Public API of ${pkg}.
 ---
 
@@ -251,7 +251,7 @@ description: Public API of ${pkg}.
 | \`${pkg}\` | Complete public ${title} API |
 `,
     'examples.md': `---
-title: ${title}: Examples
+title: '${title}: Examples'
 description: Practical examples and recipes for ${pkg}.
 ---
 
@@ -260,7 +260,7 @@ description: Practical examples and recipes for ${pkg}.
 - [Getting Started](./examples/getting-started.md)
 `,
     'examples/getting-started.md': `---
-title: ${title} Examples: Getting Started
+title: '${title} Examples: Getting Started'
 description: First steps with ${pkg}.
 ---
 
@@ -288,7 +288,7 @@ import {} from '${pkg}';
     // migration story lands: one section per break, old code → new code. Empty until
     // the package's first breaking train.
     'migration.md': `---
-title: ${title} Migration
+title: '${title} Migration'
 ---
 
 # ${title} Migration
