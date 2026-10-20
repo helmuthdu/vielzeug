@@ -14,6 +14,7 @@ import {
   limitShift,
   OrbitConfigError,
   OrbitError,
+  offset,
   shift,
   size,
 } from '../index';
@@ -111,6 +112,27 @@ describe('middleware', () => {
     expect(result.placement).toBe('top');
     expect(result.middlewareData.size).toBeDefined();
     expect(result.middlewareData.hide).toBeDefined();
+  });
+
+  it('settles instead of oscillating when neither side fits below an offset', () => {
+    // 213-tall panel against a 525-tall reference in an 800-tall viewport, placed so both
+    // `top` (84px) and `bottom` (83px) overflow by less than the 8px offset apart at base
+    // coordinates. Scoring the current side post-offset (92 vs 91 across restarts) while
+    // scoring candidates at base coords made each restart pick the other side, exhausting
+    // MAX_RESETS and throwing.
+    setViewport(1280, 800);
+    const { floating, reference } = makeElements(
+      { height: 525, width: 1104, x: 59, y: 137 },
+      { height: 213, width: 352 },
+    );
+
+    const result = computePosition(reference, floating, {
+      middleware: [offset(8), flip({ padding: 8 }), shift({ mainAxis: true, padding: 8 })],
+      placement: 'top',
+    });
+
+    expect(result.placement).toBe('bottom');
+    expect(result.y).toBeLessThanOrEqual(800 - 213);
   });
 
   it('selects an automatic placement', () => {

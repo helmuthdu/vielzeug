@@ -25,7 +25,15 @@ export function flip(options: FlipOptions = {}): Middleware {
     const fallbackPlacements = options.fallbackPlacements ?? [withPlacement(OPPOSITE[side], align)];
     const skipped: Placement[] = [state.placement];
     let bestPlacement = state.placement;
-    let bestScore = totalOverflow(currentOverflow);
+    // Score the current placement at base (un-offset) coordinates, like every candidate below,
+    // not at its current post-middleware position. Mixing the two is what makes the choice
+    // unstable: with an `offset()` upstream, the current side always looks `offset` px worse
+    // than it does at base coords, so when *neither* side fits and their base overflows differ
+    // by less than that margin, each pipeline restart prefers the other side and the reset
+    // loop runs until `computePosition` throws. Base-scoring both sides makes the pick
+    // idempotent: the same placement wins again on the next iteration and the loop settles
+    // (with `shift` clamping whatever overflow remains).
+    let bestScore = totalOverflow(getPlacementOverflow(state, state.placement, options));
 
     for (const candidate of fallbackPlacements) {
       const candidateOverflow = getPlacementOverflow(state, candidate, options);

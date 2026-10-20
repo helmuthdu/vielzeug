@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(orbit): flip() scores the current placement at base coordinates like its candidates, so a floating element with an offset() upstream settles on the least-overflowing side instead of oscillating between two placements until computePosition throws",
+      "packageName": "@vielzeug/orbit",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/orbit"
+}
