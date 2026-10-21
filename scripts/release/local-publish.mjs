@@ -1,5 +1,5 @@
 /**
- * Manual local fallback for publish.yml's mode=missing: for the case CI itself can't run (registry
+ * Manual local fallback for the publish-missing backfill: for the case CI itself can't run (registry
  * outage recovery aside, most commonly: publish.yml is broken, GitHub Actions
  * is down, or someone needs a version on npm right now and can't wait for a dispatch + required
  * reviewer approval). Publishes every `@vielzeug/*` package whose current `package.json` version

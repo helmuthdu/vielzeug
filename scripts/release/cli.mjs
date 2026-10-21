@@ -12,8 +12,7 @@
  *
  * Subcommands:
  *   changed-packages                        list packages with a pending change file
- *   project <pkg>                           print folder=/version= for one package
- *   apply [pkg]                             apply pending change files as a CalVer lockstep
+ *   apply                                   apply pending change files as a CalVer lockstep
  *                                            train: stamp every manifest, changelog every
  *                                            package (real entries for riders, alignment-only
  *                                            for the rest), consume the riders' change files,
@@ -24,6 +23,8 @@
  *                                            with a dangling dependency pin
  *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
+ *                                            (CI no longer runs this: `pnpm release:publish-local`
+ *                                            is the recovery path for a partially published train)
  *   tag <pkg> <version>                     git tag only: no `npm publish`, no GitHub release
  *                                            (the version must already exist on npm, e.g.
  *                                            published via `pnpm release:publish-local`)
@@ -57,7 +58,6 @@ import { planTagReleases } from './release-only-plan.mjs';
 import { planReleases } from './release-plan.mjs';
 import { applyTrain, listChangedPackageNames } from './apply-train.mjs';
 import { createTrainRelease, tagPackage } from './git-tag.mjs';
-import { findProject, listProjectNames } from './rush-project.mjs';
 
 async function main(argv) {
   const { flags, positionals } = parseArgs(argv);
@@ -74,18 +74,8 @@ async function main(argv) {
       return;
     }
 
-    case 'project': {
-      const [pkg] = args;
-      if (!listProjectNames().includes(pkg))
-        throw new Error(`Unknown package: ${pkg}\n\nValid packages:\n${listProjectNames().join('\n')}`);
-      const { folder, version } = findProject(pkg);
-      console.log(`folder=${folder}\nversion=${version}`);
-      return;
-    }
-
     case 'apply': {
-      const [pkg] = args;
-      const { riders, train } = applyTrain(pkg, { dryRun });
+      const { riders, train } = applyTrain({ dryRun });
       console.log(
         `${dryRun ? '[dry-run] would apply' : 'Applied'} release train ${train}: every package rides, real changes for: ${riders.join(', ')}`,
       );

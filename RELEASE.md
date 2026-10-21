@@ -21,10 +21,13 @@ The cost is honest and mechanical: most publishes in a train carry no code chang
 1. Land changes. Every publishable package that changed carries a change file:
    `node scripts/rush-change.mjs <pkg> <patch|minor|major> "<message>"`.
    The type only picks the changelog section: it never touches the version.
-2. Dispatch the **Publish** workflow (`publish.yml`) with `mode=all` (or `single` when only one package has real changes). It applies the train: stamps every manifest with the train number and writes a CHANGELOG entry for every package (alignment-only where there is no change file), consumes the riders' change files in one commit: then verifies every packed package, publishes the full family as a matrix, tags each published version, and creates the train's single aggregate GitHub release. CI details: `.github/AGENTS.md`.
-3. `mode=missing` backfills any released-but-unpublished version. A package is a candidate only when its CHANGELOG has an entry for its current version. Because a backfill publishes a *subset*, it refuses to publish a package whose dependency pin is neither in the same batch nor already on npm (dangling-pins.mjs), so a partial backfill can never ship a dangling pin.
+2. Dispatch the **Publish** workflow (`publish.yml`). It applies the train: stamps every manifest with the train number and writes a CHANGELOG entry for every package (alignment-only where there is no change file), consumes the riders' change files in one commit: then verifies every packed package, publishes the full family as a matrix, tags each published version, and creates the train's single aggregate GitHub release. CI details: `.github/AGENTS.md`.
 
-`mode=single` means "only this package has real changes this train": it consumes only the named package's change files, and every other package rides with an alignment entry. Sibling change files survive for a later train.
+Dispatching `publish.yml` is the only release path. There is no per-package mode: "only one package changed this train" is already what a train does (that package gets a real changelog entry, everyone else rides alignment-only), and publishing a subset of the family is exactly what lockstep rules out.
+
+If a train's publish matrix fails partway — some packages on npm, others not — re-run the failed publish jobs from the Actions UI: each one skips a version that is already on npm, so a retry only publishes what is still missing. (Re-running the *whole* workflow does not work: the train commit already consumed the change files.)
+
+When Actions itself is unavailable, `pnpm release:publish-local` (`scripts/release/local-publish.mjs`) runs the same backfill from a laptop: it publishes every `@vielzeug/*` version whose CHANGELOG entry exists but which is absent from npm, refuses a package whose dependency pin is neither in the same batch nor already on npm (`dangling-pins.mjs`), and shares the tested `publishMissing()` implementation with the CLI. Afterwards dispatch `release.yml` to land any missing tags and the aggregate release.
 
 ## Releases and tags
 

@@ -14,11 +14,8 @@
  * the same library. Selective publishing was the alternative and it required a
  * dependency-closure expansion plus a dangling-pin guard to stay installable: this design
  * removes the reason that machinery existed. `findDanglingPins` (dangling-pins.mjs) stays
- * as the guard for the paths that publish a subset: `mode=missing` backfills.
- *
- * `applyTrain(pkg)` scopes change-file consumption to one package (publish.yml mode=single:
- * "only this package has real changes this train"); every other package still rides with an
- * alignment entry, and sibling change files survive for a later train.
+ * as the guard for the paths that publish a subset: the `publish-missing` backfill behind
+ * `pnpm release:publish-local`.
  */
 
 import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -163,21 +160,15 @@ function stampManifests(packages, train, root) {
  * `{ changedPackages, riders, train }`. Every publishable package rides: `changedPackages`
  * is the full publish set (every package, in sorted order), and `riders` names the packages
  * with real change entries: the ones worth calling out in the train's release notes.
- * With `packageName` (mode=single), only that package's change files are consumed; every
- * other package still rides with an alignment entry, and sibling change files survive for a
- * later train.
  * `dryRun` computes the train and reports what it would do without touching any file :
  * the whole point of a dry run is that pending change files survive it.
  */
-export function applyTrain(packageName, { dryRun = false, now = new Date(), root = repoRoot, run = defaultRun } = {}) {
+export function applyTrain({ dryRun = false, now = new Date(), root = repoRoot, run = defaultRun } = {}) {
   const changesDir = path.join(root, 'common', 'changes');
-  const allFiles = listChangeFiles(changesDir);
-  const consumed = packageName ? allFiles.filter((f) => path.dirname(f) === packageName) : allFiles;
+  const consumed = listChangeFiles(changesDir);
 
   if (consumed.length === 0) {
-    throw new Error(
-      `No pending change files${packageName ? ` for ${packageName}` : ''}. Write one with scripts/rush-change.mjs, commit, then re-trigger.`,
-    );
+    throw new Error('No pending change files. Write one with scripts/rush-change.mjs, commit, then re-trigger.');
   }
 
   const riders = [...new Set(consumed.map((relFile) => path.dirname(relFile)))].sort();

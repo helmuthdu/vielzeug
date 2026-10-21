@@ -14,7 +14,6 @@ vi.mock('../apply-train.mjs', () => ({
   applyTrain: vi.fn(() => ({ changedPackages: [], riders: [], train: '26.10.0' })),
   listChangedPackageNames: vi.fn(),
 }));
-vi.mock('../rush-project.mjs', () => ({ findProject: vi.fn(), listProjectNames: vi.fn() }));
 vi.mock('../git-tag.mjs', () => ({ createTrainRelease: vi.fn(), tagPackage: vi.fn() }));
 
 const { publishPackage } = await import('../npm-publish.mjs');
@@ -25,7 +24,6 @@ const { planTagReleases } = await import('../release-only-plan.mjs');
 const { planReleases } = await import('../release-plan.mjs');
 const { applyTrain, listChangedPackageNames } = await import('../apply-train.mjs');
 const { createTrainRelease, tagPackage } = await import('../git-tag.mjs');
-const { findProject, listProjectNames } = await import('../rush-project.mjs');
 const { main } = await import('../cli.mjs');
 
 beforeEach(() => {
@@ -48,39 +46,17 @@ describe('changed-packages', () => {
   });
 });
 
-describe('project', () => {
-  it('prints GITHUB_OUTPUT-style folder/version lines', async () => {
-    listProjectNames.mockReturnValue(['@vielzeug/ore']);
-    findProject.mockReturnValue({ folder: 'packages/ore', version: '1.0.4' });
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-    await main(['project', '@vielzeug/ore']);
-
-    expect(log).toHaveBeenCalledWith('folder=packages/ore\nversion=1.0.4');
-  });
-
-  it('throws a clear error for an unknown package', async () => {
-    listProjectNames.mockReturnValue(['@vielzeug/ore']);
-    await expect(main(['project', '@vielzeug/does-not-exist'])).rejects.toThrow('Unknown package');
-  });
-});
-
 describe('apply', () => {
-  it('delegates to applyTrain with the given package', async () => {
-    await main(['apply', '@vielzeug/ore']);
-    expect(applyTrain).toHaveBeenCalledWith('@vielzeug/ore', { dryRun: false });
-  });
-
-  it('delegates with undefined for a bulk train', async () => {
+  it('delegates to applyTrain', async () => {
     await main(['apply']);
-    expect(applyTrain).toHaveBeenCalledWith(undefined, { dryRun: false });
+    expect(applyTrain).toHaveBeenCalledWith({ dryRun: false });
   });
 
   it('forwards DRY_RUN=1 so a dry run never stamps, changelogs, or commits', async () => {
     process.env.DRY_RUN = '1';
     try {
       await main(['apply']);
-      expect(applyTrain).toHaveBeenCalledWith(undefined, { dryRun: true });
+      expect(applyTrain).toHaveBeenCalledWith({ dryRun: true });
     } finally {
       delete process.env.DRY_RUN;
     }

@@ -11,27 +11,16 @@ name: Publish
 # Full-family lockstep: a train publishes EVERY publishable package at the train number
 # (apply-train.mjs), so a consumer upgrading to any train gets one consistent version set and
 # exact @vielzeug/* pins always resolve: never nested duplicate copies of one library.
-#
-#   mode=single   apply the train where only the named package has real changes (it must have
-#                 a pending change file); every other package rides alignment-only
-#   mode=all      apply the train + publish the full family (riders = every pending change file)
-#   mode=missing  publish any version already committed but absent from npm (no version bump)
+# Dispatching this workflow is the only release path: it applies the train (riders = every
+# pending change file, everyone else alignment-only) and publishes the whole family. There is
+# no mode dropdown: "only one package changed" is already what a train does, and publishing a
+# subset is what lockstep rules out. A matrix that failed partway is repaired by re-running the
+# failed publish jobs (each skips a version already on npm); `pnpm release:publish-local` is the
+# laptop fallback for when Actions itself cannot run.
 
 on:
   workflow_dispatch:
     inputs:
-      mode:
-        description: 'single: only the named package has real changes (needs "package") · all: full-family train from every pending change file · missing: backfill versions already committed but absent from npm (no version bump)'
-        required: true
-        type: choice
-        options:
-          - single
-          - all
-          - missing
-      package:
-        description: 'mode=single only: the one package with real changes (e.g. @vielzeug/coins). Must have a pending change file.'
-        required: false
-        type: string
       dry-run:
         description: 'Do everything except the actual npm publish / git tag / GitHub release'
         required: false
@@ -48,7 +37,6 @@ permissions:
 
 jobs:
   prepare:
-    if: inputs.mode != 'missing'
     runs-on: ubuntu-latest
     outputs:
       has-releases: ${{ steps.plan.outputs.has-releases }}
@@ -77,28 +65,16 @@ jobs:
           git checkout main
           git reset --hard origin/main
 
-      # Node-only setup: a missing/typo'd "package" input or no pending change file fails in
-      # seconds, before paying for the full install below.
+      # Node-only setup: no pending change file fails in seconds, before paying for the full
+      # install below.
       - uses: ./.github/actions/setup
         with:
           root-install: 'false'
           rush-install: 'false'
 
+      # Fails fast (non-zero exit) when nothing is pending, before paying for the full install.
       - name: Require pending change files
-        run: |
-          PENDING=$(node scripts/release/cli.mjs changed-packages)
-          if [ "${{ inputs.mode }}" = "single" ]; then
-            if [ -z "${{ inputs.package }}" ]; then
-              echo "❌ mode=single requires the 'package' input."
-              exit 1
-            fi
-            node scripts/release/cli.mjs project "${{ inputs.package }}" > /dev/null
-            if ! echo "$PENDING" | tr ' ' '\n' | grep -Fxq "${{ inputs.package }}"; then
-              echo "❌ No pending change file for ${{ inputs.package }}. Run scripts/rush-change.mjs, commit it, and re-trigger."
-              exit 1
-            fi
-          fi
-          echo "Pending change files: $PENDING"
+        run: node scripts/release/cli.mjs changed-packages
 
       - name: Configure Git
         run: |
@@ -119,14 +95,13 @@ jobs:
       # Applies the CalVer train: every manifest stamped `YY.MM.N`, a changelog entry for every
       # package (real comments for riders, alignment-only for the rest: see
       # scripts/release/apply-train.mjs), the riders' change files consumed, one commit.
-      # mode=single scopes the change-file consumption to the named package; every other package
-      # still rides alignment-only. A dry run still stamps and commits locally (the publish
+      # A dry run still stamps and commits locally (the publish
       # matrix is planned from the stamped versions) but never pushes: the push step is gated on
       # inputs.dry-run.
       - name: Apply release train
         id: apply
         run: |
-          OUT=$(node scripts/release/cli.mjs apply ${{ inputs.mode == 'single' && inputs.package || '' }})
+          OUT=$(node scripts/release/cli.mjs apply)
           echo "$OUT"
           TRAIN=$(echo "$OUT" | grep -oE 'release train [0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d' ' -f3)
           echo "train=$TRAIN" >> "$GITHUB_OUTPUT"
@@ -252,34 +227,3 @@ jobs:
 
       - name: Create the aggregate train release
         run: node scripts/release/cli.mjs train-release ${{ needs.prepare.outputs.train }}
-
-  publish-missing:
-    if: inputs.mode == 'missing'
-    runs-on: ubuntu-latest
-    # Manual approval: Settings > Environments > npm-publish (required reviewers). Every job that
-    # runs `npm publish` uses this environment, so it is the one place publish access is granted.
-    environment: npm-publish
-    permissions:
-      contents: read
-      packages: write
-      id-token: write # npm Trusted Publishing (OIDC)
-    steps:
-      - name: Require main
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "❌ Publishing can only run from main, not ${GITHUB_REF}."
-          exit 1
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: ./.github/actions/setup
-        with:
-          trusted-publishing: 'true'
-
-      - name: Build all packages
-        run: node common/scripts/install-run-rush.js rebuild --verbose
-
-      - name: Publish versions missing on npm
-        env:
-          DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
-        run: node scripts/release/cli.mjs publish-missing

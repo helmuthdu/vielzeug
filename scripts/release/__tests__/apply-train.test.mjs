@@ -96,7 +96,7 @@ describe('applyTrain()', () => {
     const repo = makeRepo();
     const run = vi.fn(() => '');
 
-    const result = applyTrain(undefined, { now: NOW, root: repo, run });
+    const result = applyTrain({ now: NOW, root: repo, run });
 
     expect(result).toEqual({
       changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'],
@@ -132,30 +132,6 @@ describe('applyTrain()', () => {
     expect(commands).toContainEqual(expect.stringContaining('chore: apply release train 26.10.0'));
   });
 
-  it('scopes a single-package train: sibling change files survive, every package still rides', () => {
-    const repo = makeRepo();
-    const run = vi.fn(() => '');
-
-    const result = applyTrain('@vielzeug/ore', { now: NOW, root: repo, run });
-
-    expect(result).toEqual({
-      changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'],
-      riders: ['@vielzeug/ore'],
-      train: '26.10.0',
-    });
-
-    expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/ore', 'agent_1.json'))).toBe(false);
-    expect(existsSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json'))).toBe(true);
-
-    // The sibling is stamped AND gets an alignment-only changelog entry: full-family
-    // lockstep means it publishes at the train number too, so any exact pin to it resolves.
-    expect(JSON.parse(readFileSync(path.join(repo, 'packages', 'orbit', 'package.json'), 'utf8')).version).toBe('26.10.0');
-    const orbitLog = readFileSync(path.join(repo, 'packages', 'orbit', 'CHANGELOG.md'), 'utf8');
-    expect(orbitLog).toContain('## 26.10.0');
-    expect(orbitLog).toContain('chore: align with CalVer lockstep trains: no code change this train');
-    expect(orbitLog).not.toContain('fix: orbit thing'); // its own pending change file was NOT consumed
-  });
-
   it('gives a package with no change file an alignment entry so it publishes at the train', () => {
     // ore rides with a real change; orbit has NO change file of its own. Under full-family
     // lockstep orbit still rides with an alignment entry, so an exact pin to orbit@26.10.0
@@ -164,7 +140,7 @@ describe('applyTrain()', () => {
     rmSync(path.join(repo, 'common', 'changes', '@vielzeug/orbit', 'agent_1.json')); // orbit no longer a rider
 
     const run = vi.fn(() => '');
-    const result = applyTrain(undefined, { now: NOW, root: repo, run });
+    const result = applyTrain({ now: NOW, root: repo, run });
 
     // The publish set is the full family: ore (rider) plus orbit (alignment-only).
     expect(result).toEqual({
@@ -186,10 +162,10 @@ describe('applyTrain()', () => {
     const repo = makeRepo();
     const run = vi.fn(() => '');
 
-    applyTrain(undefined, { now: NOW, root: repo, run });
+    applyTrain({ now: NOW, root: repo, run });
     writeChangeFile('@vielzeug/ore', 'patch', 'feat: ore rides again');
 
-    const second = applyTrain(undefined, { now: new Date('2026-10-15T12:00:00Z'), root: repo, run });
+    const second = applyTrain({ now: new Date('2026-10-15T12:00:00Z'), root: repo, run });
     expect(second.train).toBe('26.10.1');
     expect(JSON.parse(readFileSync(path.join(repo, 'packages', 'orbit', 'package.json'), 'utf8')).version).toBe('26.10.1');
   });
@@ -198,7 +174,7 @@ describe('applyTrain()', () => {
     const repo = makeRepo();
     const run = vi.fn(() => '');
 
-    const result = applyTrain(undefined, { dryRun: true, now: NOW, root: repo, run });
+    const result = applyTrain({ dryRun: true, now: NOW, root: repo, run });
 
     expect(result).toEqual({
       changedPackages: ['@vielzeug/orbit', '@vielzeug/ore'],
@@ -211,13 +187,8 @@ describe('applyTrain()', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  it('throws when no pending change file matches', () => {
-    const repo = makeRepo();
-    expect(() => applyTrain('@vielzeug/coins', { now: NOW, root: repo, run: vi.fn() })).toThrow(
-      /No pending change files for @vielzeug\/coins/,
-    );
-
+  it('throws when no pending change file exists', () => {
     root = mkdtempSync(path.join(tmpdir(), 'apply-train-empty-'));
-    expect(() => applyTrain(undefined, { now: NOW, root, run: vi.fn() })).toThrow(/No pending change files/);
+    expect(() => applyTrain({ now: NOW, root, run: vi.fn() })).toThrow(/No pending change files/);
   });
 });

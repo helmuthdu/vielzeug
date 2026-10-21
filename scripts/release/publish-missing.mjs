@@ -5,7 +5,8 @@
  * (stamped manifests whose changelog commit never landed) and pre-CalVer stamps. A one-off
  * backfill for versions that were bumped and merged but never made it to the registry (e.g.
  * a prior release run failed after the version-bump commit but before publish): normal
- * releases go through publish.yml's mode=single / mode=all instead.
+ * releases go through publish.yml, and this backfill runs from a laptop via
+ * `pnpm release:publish-local` rather than as a CI mode.
  */
 
 import { existsSync, readFileSync } from 'node:fs';

@@ -8,10 +8,11 @@
  *
  * Normal trains are safe by construction: every publishable package rides every train
  * (apply-train.mjs), so every pin resolves by the time the publish matrix runs. This guard
- * exists for the paths that publish a *subset*: `mode=missing` backfills only the versions
- * absent from npm, and a partial batch can pin a dependency that is neither in the batch nor
- * on the registry — the historical `@vielzeug/prism@26.10.2` → `@vielzeug/orbit@26.10.2`
- * breakage, where the stamp existed but nothing ever put that version on npm. `findDanglingPins`
+ * exists for the paths that publish a *subset*: the `publish-missing` backfill publishes
+ * only the versions absent from npm, and a partial batch can pin a dependency that is neither
+ * in the batch nor on the registry — the historical `@vielzeug/prism@26.10.2` →
+ * `@vielzeug/orbit@26.10.2` breakage, where the stamp existed but nothing ever put that
+ * version on npm. `findDanglingPins`
  * turns that gap into a loud release failure instead of a broken consumer install
  * (`YN0082: No candidates found`).
  */
