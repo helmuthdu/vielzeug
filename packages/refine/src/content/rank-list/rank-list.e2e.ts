@@ -55,4 +55,30 @@ test.describe('Layout', () => {
     // sized to its content would shift the second row by a different width.
     expect(Math.abs((firstLabel?.x ?? 0) - (secondLabel?.x ?? 0))).toBeLessThanOrEqual(1);
   });
+
+  test('grows the bar from the reading start in RTL', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-rank-list aria-label="Most visited pages" dir="rtl">' +
+        '<ore-rank-item value="8">Documentation</ore-rank-item>' +
+        '<ore-rank-item value="4">Pricing</ore-rank-item>' +
+        '</ore-rank-list>',
+    );
+
+    // The half-width fill must hug the track's right (reading-start) edge: a physical-left
+    // transform origin would leave the whole gap there instead. boundingBox() reports
+    // x/width only, so the edges are derived.
+    await expect
+      .poll(async () => {
+        const track = await page.locator('ore-rank-item').nth(1).locator('[part="bar"]').boundingBox();
+        const fill = await page.locator('ore-rank-item').nth(1).locator('[part="bar-fill"]').boundingBox();
+
+        if (!track || !fill || fill.width < 1) return false;
+
+        const trackRight = track.x + track.width;
+        const fillRight = fill.x + fill.width;
+
+        return Math.abs(fillRight - trackRight) <= 1 && trackRight - fill.x > track.width * 0.4;
+      })
+      .toBe(true);
+  });
 });

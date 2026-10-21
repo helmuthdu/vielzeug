@@ -19,7 +19,12 @@ Each item's `value` both sizes its bar (the widest sibling fills the track) and,
 ```html
 <ore-rank-list aria-label="Most visited pages">
   <ore-rank-item value="8">
-    <span slot="leading">avatar</span>
+    <ore-avatar
+      slot="leading"
+      initials="DP"
+      rounded="full"
+      size="sm"
+      alt=""></ore-avatar>
     Documentation
   </ore-rank-item>
   <ore-rank-item value="6">Pricing</ore-rank-item>
@@ -32,19 +37,22 @@ Each item's `value` both sizes its bar (the widest sibling fills the track) and,
 ## Non-Count Rows
 
 Set `bar="false"` on rows whose `value` is not a comparable count (a median duration, a rating):
-a scaled bar there would imply a ranking the data does not support. Such rows usually carry
+a scaled bar there would imply a ranking the data does not support. The `value` still counts
+toward the bar scale and stays available to your own sort logic, while the `trailing` slot
+carries the real display and the `description` slot the context. (A row with no `value` at all
+hides its bar automatically.) Such rows usually carry
 their own display in the `trailing` slot and their context in the `description` slot.
 
 <ComponentPreview vertical>
 
 ```html
 <ore-rank-list aria-label="Median session time">
-  <ore-rank-item value="8" bar="false">
+  <ore-rank-item value="18" bar="false">
     Documentation
     <span slot="description">6 timed sessions</span>
     <span slot="trailing">18m 24s</span>
   </ore-rank-item>
-  <ore-rank-item value="6" bar="false">
+  <ore-rank-item value="24" bar="false">
     Pricing
     <span slot="description">4 timed sessions</span>
     <span slot="trailing">24m 11s</span>
@@ -63,13 +71,19 @@ maximum (a stale value written between rescans) is clamped rather than overflowi
 
 ## Custom Colors
 
-The bar, track, and rank numeral expose tokens; everything else follows the theme.
+The bar, track, rank numeral, and row gap expose tokens; everything else follows the theme.
+The track defaults to `--color-contrast-200` so it stays visible on card surfaces (where rank
+lists usually live) without shouting on the canvas.
 
 ```css
+ore-rank-list {
+  --rank-list-gap: var(--size-2);
+}
+
 ore-rank-item {
   --rank-bar-color: var(--color-success);
-  --rank-track-color: var(--color-contrast-100);
-  --rank-number-color: var(--color-contrast-500);
+  --rank-track-color: var(--color-contrast-200);
+  --rank-number-color: var(--color-contrast-600);
   --rank-bar-height: var(--size-1);
 }
 ```
@@ -80,4 +94,6 @@ The list renders `role="list"` and each item `role="listitem"`; name the ranking
 `aria-label` on the list, same as `ore-list`. The rank numeral and the bar are `aria-hidden`:
 the list's own order carries the position and the `trailing` value carries the number, so the
 ranking never depends on the visualization. The bar's color is reinforcement, never the only
-carrier of meaning.
+carrier of meaning. In RTL documents the whole row mirrors — rank, label, value, and the bar
+all grow from the reading start. In Windows high-contrast mode the fill renders as the system
+highlight and the track as an outlined box, so the comparison survives the palette override.

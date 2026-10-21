@@ -44,10 +44,10 @@ export type OreRankItemProps = {
  * @slot description - Secondary line below the label (e.g. sample count)
  * @slot trailing - Right-aligned value display; replaces the formatted `value`
  *
- * @cssprop --rank-number-color - Rank numeral color (default --color-contrast-500)
+ * @cssprop --rank-number-color - Rank numeral color (default --color-contrast-600)
  * @cssprop --rank-number-width - Rank numeral column width (default --size-6)
  * @cssprop --rank-bar-color - Bar fill color (default --color-primary)
- * @cssprop --rank-track-color - Bar track color (default --color-contrast-100)
+ * @cssprop --rank-track-color - Bar track color (default --color-contrast-200)
  * @cssprop --rank-bar-height - Bar height (default --size-1)
  *
  * @part row - The text row (rank, leading, label, trailing)

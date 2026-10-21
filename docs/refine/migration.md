@@ -5,6 +5,10 @@ description: Migrate surface variants, DataGrid sources, and framework type decl
 
 # Migration
 
+## Rank-item bar visibility, RTL, and contrast
+
+`ore-rank-item` defaults changed so the visualization survives its usual placements. `--rank-track-color` now defaults to `--color-contrast-200` instead of `--color-contrast-100`: `-100` is the card/elevated-surface color itself, so a rank list on a card rendered an invisible track. `--rank-number-color` now defaults to `--color-contrast-600` instead of `--color-500`, which is the AA-large-text tier and missed AA at the numeral's 12px size. The bar fill now grows from the reading start: under `dir="rtl"` it anchors right like the rest of the row instead of left. In Windows high-contrast mode the fill renders as the system highlight and the track as an outlined box. A `trailing` value wider than 40% of the row now ellipsizes instead of squeezing the label to nothing.
+
 ## Speed-reading fullscreen support
 
 `ore-speed-reading` gains an opt-in fullscreen mode: a toolbar control, a read-only `fullscreen` attribute, and `enterFullscreen()`/`exitFullscreen()` methods. `OreSpeedReadingLabels` grows three required keys — `enterFullscreen`, `exitFullscreen`, and `fullscreenUnsupported`. The `labels` property stays `Partial`, so existing runtime usage is unaffected; code annotated with the full `OreSpeedReadingLabels` type needs the three new entries.
