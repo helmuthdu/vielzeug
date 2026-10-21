@@ -65,8 +65,12 @@ test.describe('Layout', () => {
       } else {
         expect(pace.y).toBeGreaterThan(rowY!);
         expect(pace.width).toBeGreaterThanOrEqual(panel.width - 32);
+        // Help shares the transport line (its own grid cell) instead of dropping to a
+        // fourth row below the pace slider, so the narrow toolbar stays two lines tall.
         const helpBox = (await helpButton.boundingBox())!;
-        expect(helpBox.y).toBeGreaterThanOrEqual(pace.y + pace.height - 1);
+        expect(helpBox.y).toBeLessThan(pace.y);
+        expect(Math.abs(helpBox.y - rowY!)).toBeLessThan(8);
+        expect(helpBox.x + helpBox.width).toBeLessThanOrEqual(panel.x + panel.width + 1);
       }
       const startWidth = (await page.getByRole('button', { exact: true, name: 'Start reading' }).boundingBox())!.width;
       await page.getByRole('button', { exact: true, name: 'Start reading' }).click();

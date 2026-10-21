@@ -733,6 +733,7 @@ define<OreSpeedReadingProps>(SPEED_READING_TAG, {
         </div>
         <ore-accordion-item
           variant="bordered"
+          style="--accordion-item-summary-padding: var(--size-4) var(--size-5)"
           ?expanded=${expanded}
           @expand=${() => {
             expanded.value = true;

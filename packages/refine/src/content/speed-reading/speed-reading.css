@@ -142,18 +142,25 @@
     border-radius: var(--rounded-xl);
   }
 
+  /* Two lines on narrow readers: transport + help share the first, the pace row
+     (meta inline with the slider) takes the second. The wide @container block below
+     collapses everything into a single flex row. */
   .toolbar {
     display: grid;
     grid-template-areas:
-      'controls'
-      'pace'
-      'help';
-    grid-template-columns: minmax(0, 1fr);
+      'controls help'
+      'pace pace';
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: var(--size-2);
     align-items: center;
     width: 100%;
   }
 
+  /* The transport row never wraps (44px touch targets stay in one line); when it does
+     not fit — 200% text, long translated tooltips — it scrolls inside its own cell so
+     the help button stays pinned at the trailing edge instead of being pushed off.
+     `safe center` left-aligns only once the buttons actually overflow, keeping them
+     all reachable; the block padding gives focus rings room inside the scroll box. */
   .controls {
     display: flex;
     flex: none;
@@ -161,10 +168,15 @@
     grid-area: controls;
     gap: var(--size-2);
     align-items: center;
-    justify-content: center;
-    width: max-content;
-    min-width: max-content;
-    margin-inline: 0;
+    justify-content: safe center;
+    min-width: 0;
+    padding-block: var(--size-1);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .controls::-webkit-scrollbar {
+    display: none;
   }
 
   .toolbar ore-button::part(button) {
@@ -182,6 +194,14 @@
     min-width: 0;
   }
 
+  /* A 100% flex basis pushes the resume control onto its own line and stretches it to
+     the full details width; the wide @container block releases it back to its content
+     size so it can sit beside the sentence select. Declared before that block so its
+     override wins on source order. */
+  .context-controls ore-button {
+    flex: 1 1 100%;
+  }
+
   .status {
     justify-content: space-between;
   }
@@ -194,21 +214,25 @@
 
   .pace-meta {
     display: flex;
+    flex: none;
     gap: var(--size-3);
     align-items: center;
-    justify-content: space-between;
   }
 
+  /* Meta ("WPM 250") rides inline with the slider on every width: stacking it above
+     the slider cost the narrow toolbar a whole line for two short words. */
   .pace-control {
-    display: grid;
+    display: flex;
     grid-area: pace;
     gap: var(--size-2);
+    align-items: center;
     width: 100%;
     min-width: 0;
   }
 
   .pace-control ore-slider {
     --slider-min-width: 0;
+    flex: 1 1 auto;
     width: 100%;
     min-width: 0;
     max-width: none;
@@ -275,6 +299,11 @@
       flex: 1 1 var(--size-24);
       width: auto;
       max-width: var(--size-48);
+    }
+
+    /* Room for both: the select keeps growing, the resume control takes its label width. */
+    .context-controls ore-button {
+      flex: 0 1 auto;
     }
   }
 
