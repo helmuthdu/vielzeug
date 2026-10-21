@@ -5,13 +5,16 @@ import { srOnlyMixin } from '../../styles';
 
 import componentStyles from './speech-player.css?inline';
 
+export { BUTTON_TAG } from '../../inputs/button/button';
+export { TOOLTIP_TAG } from '../../overlay/tooltip/tooltip';
 export { ICON_TAG } from '../icon/icon';
 
 /** The player's reflected state: `unsupported` when the Web Speech API is missing. */
 export type SpeechPlayerState = 'idle' | 'playing' | 'paused' | 'unsupported';
 
-/** The playback multipliers the speed control cycles through. */
-export const SPEECH_RATES = [1, 0.85, 1.15, 1.5] as const;
+/** The playback multipliers the speed control cycles through, in cycle order: the first
+ *  tap from the default 1× speeds the reading up, and the slow step returns last. */
+export const SPEECH_RATES = [1, 1.15, 1.5, 0.85] as const;
 export type SpeechRate = (typeof SPEECH_RATES)[number];
 
 /** Every user-facing string the component renders or announces. Override the `labels`
@@ -29,16 +32,13 @@ export type OreSpeechPlayerLabels = {
   resume: string;
   /** Announced when reading resumes. */
   resumed: string;
+  /** Announced when reading starts from a later sentence; `{sentence}` is replaced by
+   *  the one-based sentence number playback begins at. */
+  resumingFrom: string;
   /** Announced when reading starts. */
   started: string;
-  /** The speed control's accessible-name stem; the current step's name follows it. */
+  /** The speed control's accessible-name stem; the current multiplier follows it. */
   speed: string;
-  /** The 1.15× speed step's accessible label. */
-  speedFast: string;
-  /** The 1× speed step's accessible label. */
-  speedNormal: string;
-  /** The 0.85× speed step's accessible label. */
-  speedSlow: string;
   /** The stop control's accessible name. */
   stop: string;
   /** Announced when reading stops before finishing. */
@@ -57,10 +57,8 @@ const DEFAULT_LABELS: OreSpeechPlayerLabels = {
   read: 'Read aloud',
   resume: 'Resume reading',
   resumed: 'Reading resumed.',
+  resumingFrom: 'Reading from sentence {sentence}.',
   speed: 'Reading speed',
-  speedFast: '1.15×',
-  speedNormal: '1×',
-  speedSlow: '0.85×',
   started: 'Reading aloud.',
   stop: 'Stop reading',
   stopped: 'Reading stopped.',
@@ -234,21 +232,23 @@ function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
 /**
  * A text-to-speech player control: reads its `text` aloud through the Web Speech API.
  *
- * Renders a labeled play/pause toggle (the label folds away once engaged), a stop
- * control beside it that appears while reading, and a speed control cycling
- * 1×/0.85×/1.15×/1.5×. The text is spoken sentence by sentence (long sentences split into pieces under the
+ * Renders an icon-only play/pause toggle, a speed control cycling
+ * 1×/1.15×/1.5×/0.85×, a stop control that appears while reading, and a
+ * sentence-position readout. The text is spoken sentence by sentence (long sentences
+ * split into pieces under the
  * engine's truncation window), the `state` attribute reflects playback, a
  * `role="status"` live region announces transitions, and `progress` events name the
- * sentence being read so a consumer can highlight it. Only one player speaks at a
- * time: starting one stops any other. `resume-at` names the sentence to begin from,
- * so a persisted position makes resume mean it.
+ * sentence being read so a consumer can highlight it. While reading, the Media Session
+ * API (where available) exposes play/pause/stop to the browser's own media controls.
+ * Only one player speaks at a time: starting one stops any other. `resume-at` names the
+ * sentence to begin from, so a persisted position makes resume mean it.
  *
  * @element ore-speech-player
  *
  * @attr {string} text - The text to read aloud (also settable as a JavaScript property)
  * @attr {string} lang - BCP-47 tag of `text`'s language, e.g. `en` or `de-DE`
  * @attr {string} state - Reflected playback state: 'idle' | 'playing' | 'paused' | 'unsupported'
- * @attr {number} rate - Playback rate; the speed control cycles 1 → 0.85 → 1.15 → 1.5
+ * @attr {number} rate - Playback rate; the speed control cycles 1 → 1.15 → 1.5 → 0.85
  * @attr {number} pitch - Voice pitch passed to the engine, 0 to 2 (1 is natural)
  * @attr {number} volume - Voice loudness passed to the engine, 0 to 1
  * @attr {string} voice - Name of the voice to read with; unset, the most natural-sounding
@@ -263,15 +263,14 @@ function piecesOf(sentences: string[], limit = UTTERANCE_LIMIT): SpeechPiece[] {
  * @fires rate-change - The speed control moved to a new step. detail: { rate }
  *
  * @cssprop --speech-player-gap - Gap between the controls
- * @cssprop --speech-player-control-size - Each control's hit-area size (the toggle grows with its label)
+ * @cssprop --speech-player-control-size - Each control's hit-area size
  * @cssprop --speech-player-icon-color - Control icon color at rest
- * @cssprop --speech-player-active-color - Toggle color while reading (playing or paused)
  * @cssprop --speech-player-hover-bg - Control background on hover
  *
  * @part player - Outer control group
- * @part play - The play/pause toggle button
- * @part rate - The speed control
- * @part stop - The stop button (hidden while idle)
+ * @part play - The play/pause toggle (an `ore-button`: style its `button` part through it)
+ * @part rate - The speed control (an `ore-button`)
+ * @part stop - The stop button (an `ore-button`, hidden while idle)
  *
  * @example
  * ```html
@@ -318,6 +317,13 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       if (state.value === 'paused') return label('resume');
       return label('read');
     });
+    const reading = computed(() => state.value === 'playing' || state.value === 'paused');
+    const controlsDisabled = computed(() => state.value === 'unsupported' || !hasText.value);
+    // Paused shows a play triangle inside a ring: distinct from the bare idle
+    // triangle, so "held" never reads as "never started".
+    const toggleIcon = computed(() =>
+      state.value === 'playing' ? 'pause' : state.value === 'paused' ? 'play-circle' : 'play',
+    );
 
     // The rate is the consumer's to persist: bind `rate` with `rate-change` and every
     // instance follows the listener's choice; unbound, the control cycles internally.
@@ -325,13 +331,9 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     watch(props.rate, (value) => {
       if (value !== undefined) rate.value = value;
     });
-    const speedName = (value: number): string => {
-      if (value === 1) return label('speedNormal');
-      if (value === 0.85) return label('speedSlow');
-      if (value === 1.15) return label('speedFast');
-      return `${value}×`;
-    };
-    const speedLabel = computed(() => `${label('speed')}: ${speedName(rate.value)}`);
+    // The multiplier is both the visible text and the accessible name: one source, so
+    // the announced name always contains what the button shows (WCAG 2.5.3).
+    const speedLabel = computed(() => `${label('speed')}: ${rate.value}×`);
 
     // Pitch and volume pass straight to the engine, clamped to its documented ranges; a
     // non-finite value is a consumer mistake, so it says so instead of silently muting.
@@ -359,14 +361,21 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     /** Bumped by any engine callback on the live utterance: liveness evidence for the
      *  resume watchdog. */
     let enginePulse = 0;
-    let current = 0;
+    const current = signal(0);
     let disposed = false;
+
+    /** The sentence being read, one-based, for the position readout: pieces carry their
+     *  sentence's index, so the readout and `progress` can never disagree. */
+    const positionText = computed(() => {
+      const piece = pieces.value[current.value];
+      return piece ? `${piece.sentence + 1} / ${sentences.value.length}` : '';
+    });
 
     /** Resolves the voice for each piece: an explicit `voice` name wins; else, when `lang`
      *  is set, the best-ranked voice for it (omitting `lang` leaves the choice to the
      *  engine's default, as documented). A named voice that is unavailable says so once
-     *  per element and falls back to the ranked choice. */
-    let warnedVoice = false;
+     *  per name and falls back to the ranked choice. */
+    const warnedVoices = new Set<string>();
     const applyVoice = (utterance: SpeechSynthesisUtterance): void => {
       const lang = host.getAttribute('lang');
       const wanted = props.voice.value;
@@ -376,8 +385,10 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
         utterance.voice = named as SpeechSynthesisVoice;
         return;
       }
-      if (wanted && !warnedVoice) {
-        warnedVoice = true;
+      // Warn once per name, not once per element: a consumer who fixes one bad name and
+      // mistypes another hears about the second too.
+      if (wanted && !warnedVoices.has(wanted)) {
+        warnedVoices.add(wanted);
         warn(`ore-speech-player: no voice named "${wanted}" is available; using the default choice.`);
       }
       const fallback = lang ? pickVoice(voices, lang) : null;
@@ -385,7 +396,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     };
 
     const speakPiece = (index: number): void => {
-      current = index;
+      current.value = index;
       const piece = pieces.value[index]!;
       const utterance = new SpeechSynthesisUtterance(piece.text);
       utterance.rate = rate.value;
@@ -407,6 +418,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
         if (token !== generation) return;
         if (index + 1 >= pieces.value.length) {
           releaseActive();
+          releaseMediaSession();
           state.value = 'idle';
           labelOf('finished');
           emit('end');
@@ -418,6 +430,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
         alive();
         if (token !== generation) return;
         releaseActive();
+        releaseMediaSession();
         state.value = 'idle';
         labelOf('error');
         emit('error');
@@ -428,6 +441,36 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
 
     const releaseActive = (): void => {
       if (stopActivePlayer === stop) stopActivePlayer = null;
+    };
+
+    /** The Media Session API hands the browser's own media controls (OS widgets, lock
+     *  screens) this player's transport. Feature-detected: desktop Safari and jsdom
+     *  have no `mediaSession` at all. Handlers are claimed at start, so the controls
+     *  always drive the player that is actually reading. */
+    const mediaSession = (): MediaSession | null =>
+      typeof navigator !== 'undefined' && 'mediaSession' in navigator ? navigator.mediaSession : null;
+
+    const setMediaPlayback = (value: MediaSessionPlaybackState): void => {
+      const session = mediaSession();
+      if (session) session.playbackState = value;
+    };
+
+    const claimMediaSession = (): void => {
+      const session = mediaSession();
+      if (!session) return;
+      session.setActionHandler('play', () => (state.value === 'paused' ? resume() : start()));
+      session.setActionHandler('pause', pause);
+      session.setActionHandler('stop', stop);
+      session.playbackState = 'playing';
+    };
+
+    const releaseMediaSession = (): void => {
+      const session = mediaSession();
+      if (!session) return;
+      session.setActionHandler('play', null);
+      session.setActionHandler('pause', null);
+      session.setActionHandler('stop', null);
+      session.playbackState = 'none';
     };
 
     /** The first piece of the sentence to begin from: clamped into the text. */
@@ -446,9 +489,15 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       generation += 1;
       stopActivePlayer = stop;
       state.value = 'playing';
-      labelOf('started');
+      const from = pieceIndexFor(props['resume-at'].value);
+      // A persisted position is a fact the listener should hear: starting at sentence
+      // three says so instead of pretending the reading began at the top.
+      const sentence = pieces.value[from]?.sentence ?? 0;
+      announcement.value =
+        sentence > 0 ? label('resumingFrom').replace('{sentence}', String(sentence + 1)) : label('started');
       emit('play');
-      speakPiece(pieceIndexFor(props['resume-at'].value));
+      claimMediaSession();
+      speakPiece(from);
     };
 
     let pausedAt = 0;
@@ -459,6 +508,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       state.value = 'paused';
       pausedAt = performance.now();
       labelOf('paused');
+      setMediaPlayback('paused');
     };
 
     const resume = (): void => {
@@ -466,6 +516,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       window.speechSynthesis.resume();
       state.value = 'playing';
       labelOf('resumed');
+      setMediaPlayback('playing');
       // Some Chromium builds resume a long-held pause into silence: no error, no
       // event, the playing state a lie. Within ten seconds the engine is trusted;
       // beyond it, demand a pulse within a second or restart the current sentence :
@@ -476,7 +527,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
         if (disposed || state.value !== 'playing' || enginePulse !== pulse) return;
         generation += 1;
         window.speechSynthesis.cancel();
-        speakPiece(current);
+        speakPiece(current.value);
       }, 1000);
     };
 
@@ -484,6 +535,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       if (state.value === 'idle' || state.value === 'unsupported') return;
       generation += 1;
       releaseActive();
+      releaseMediaSession();
       window.speechSynthesis.cancel();
       state.value = 'idle';
       labelOf('stopped');
@@ -498,6 +550,9 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     };
 
     const cycleRate = (): void => {
+      // A disabled ore-button host still receives real clicks (its own guard covers
+      // its internals only), so the consumer guards its own handler.
+      if (controlsDisabled.value) return;
       const index = SPEECH_RATES.indexOf(rate.value as SpeechRate);
       rate.value = SPEECH_RATES[(index + 1) % SPEECH_RATES.length] ?? 1;
       announcement.value = speedLabel.value;
@@ -507,7 +562,7 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
       if (state.value === 'playing') {
         generation += 1;
         window.speechSynthesis.cancel();
-        speakPiece(current);
+        speakPiece(current.value);
       }
     };
 
@@ -518,6 +573,8 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
     onCleanup(() => {
       disposed = true;
       generation += 1;
+      // Only the player that actually holds the voice owns the browser's media controls.
+      if (stopActivePlayer === stop) releaseMediaSession();
       releaseActive();
       // The engine itself may already be gone in a tearing-down context.
       if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -525,40 +582,51 @@ define<OreSpeechPlayerProps>(SPEECH_PLAYER_TAG, {
 
     return html`
       <div class="player" part="player">
-        <button
-          class="control control--toggle"
-          part="play"
-          type="button"
-          ?disabled="${() => state.value === 'unsupported' || !hasText.value}"
-          aria-label="${toggleLabel}"
-          @click=${toggle}
-        >
-          ${() =>
-            state.value === 'playing'
-              ? html`<ore-icon name="pause" size="16" aria-hidden="true"></ore-icon>`
-              : html`<ore-icon name="play" size="16" aria-hidden="true"></ore-icon>`}
-          <span class="toggle-label" ?hidden="${() => state.value === 'playing' || state.value === 'paused'}">${() => label('read')}</span>
-        </button>
-        <button
-          class="control"
-          part="stop"
-          type="button"
-          ?hidden="${() => state.value === 'idle' || state.value === 'unsupported'}"
-          aria-label="${() => label('stop')}"
-          @click=${stop}
-        >
-          <ore-icon name="square" size="16" aria-hidden="true"></ore-icon>
-        </button>
-        <button
-          class="control control--rate"
-          part="rate"
-          type="button"
-          aria-label="${speedLabel}"
-          @click=${cycleRate}
-        >
-          <ore-icon name="gauge" size="16" aria-hidden="true"></ore-icon>
-          <span class="rate-text">${() => `${rate.value}×`}</span>
-        </button>
+        <ore-tooltip content=${toggleLabel}>
+          <ore-button
+            class="control control--toggle"
+            part="play"
+            icon-only
+            rounded="full"
+            variant="ghost"
+            aria-label=${toggleLabel}
+            ?disabled=${controlsDisabled}
+            @click=${toggle}>
+            <ore-icon name=${toggleIcon} aria-hidden="true"></ore-icon>
+          </ore-button>
+        </ore-tooltip>
+        <ore-tooltip content=${speedLabel}>
+          <ore-button
+            class="control control--rate"
+            part="rate"
+            rounded="full"
+            variant="ghost"
+            aria-label=${speedLabel}
+            ?disabled=${controlsDisabled}
+            @click=${cycleRate}>
+            <ore-icon name="gauge" aria-hidden="true"></ore-icon>
+            <span class="rate-text">${() => `${rate.value}×`}</span>
+          </ore-button>
+        </ore-tooltip>
+        <!-- The stop closes the controls: idle, the toggle and the speed control sit
+             side by side; reading, the stop appears at the end of the row and grows it
+             rightward, so no control the listener aims at ever shifts. -->
+        <ore-tooltip content=${() => label('stop')} ?disabled=${() => !reading.value}>
+          <ore-button
+            class="control control--stop"
+            part="stop"
+            icon-only
+            rounded="full"
+            variant="ghost"
+            aria-label=${() => label('stop')}
+            ?hidden=${() => !reading.value}
+            @click=${stop}>
+            <ore-icon name="square" aria-hidden="true"></ore-icon>
+          </ore-button>
+        </ore-tooltip>
+        <!-- Last in the row: the readout extends the right edge as it appears, so no
+             control the listener aims at ever moves. -->
+        <span class="position" aria-live="off" ?hidden=${() => !reading.value}>${positionText}</span>
       </div>
       <div class="sr-only" role="status">${announcement}</div>
     `;

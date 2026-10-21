@@ -70,17 +70,28 @@ async function mountPlayer(
   return mount('ore-speech-player', { attrs: { text, ...options.attrs }, props: options.props });
 }
 
-const toggleOf = (fixture: Fixture<SpeechPlayerElement>): HTMLButtonElement =>
-  fixture.element.shadowRoot?.querySelector<HTMLButtonElement>('[part="play"]')!;
+const toggleOf = (fixture: Fixture<SpeechPlayerElement>): HTMLElement =>
+  fixture.element.shadowRoot?.querySelector<HTMLElement>('[part="play"]')!;
 
-const rateOf = (fixture: Fixture<SpeechPlayerElement>): HTMLButtonElement =>
-  fixture.element.shadowRoot?.querySelector<HTMLButtonElement>('[part="rate"]')!;
+const rateOf = (fixture: Fixture<SpeechPlayerElement>): HTMLElement =>
+  fixture.element.shadowRoot?.querySelector<HTMLElement>('[part="rate"]')!;
 
-const stopOf = (fixture: Fixture<SpeechPlayerElement>): HTMLButtonElement =>
-  fixture.element.shadowRoot?.querySelector<HTMLButtonElement>('[part="stop"]')!;
+const stopOf = (fixture: Fixture<SpeechPlayerElement>): HTMLElement =>
+  fixture.element.shadowRoot?.querySelector<HTMLElement>('[part="stop"]')!;
 
-const labelOf = (fixture: Fixture<SpeechPlayerElement>): HTMLElement =>
-  fixture.element.shadowRoot?.querySelector<HTMLElement>('.toggle-label')!;
+const positionOf = (fixture: Fixture<SpeechPlayerElement>): HTMLElement =>
+  fixture.element.shadowRoot?.querySelector<HTMLElement>('.position')!;
+
+const toggleIconOf = (fixture: Fixture<SpeechPlayerElement>): string | null =>
+  toggleOf(fixture).querySelector('ore-icon')?.getAttribute('name') ?? null;
+
+/** ore-button refuses interaction through `aria-disabled` on its host, not a native
+ *  `disabled` property: that is the contract the controls expose here. */
+const isDisabled = (control: HTMLElement): boolean => control.getAttribute('aria-disabled') === 'true';
+
+/** The stop is hidden while idle: the hidden attribute is the contract, and the row
+ *  grows rightward when reading reveals it, so no visible control shifts. */
+const isHidden = (control: HTMLElement): boolean => control.hidden;
 
 const liveOf = (fixture: Fixture<SpeechPlayerElement>): HTMLElement =>
   fixture.element.shadowRoot?.querySelector<HTMLElement>('[role="status"]')!;
@@ -117,54 +128,43 @@ describe('ore-speech-player', () => {
   // ── Rendering ──────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
-    it('shows the labeled invitation and hides the stop control while idle', async () => {
+    it('shows the icon-only toggle and hides the stop control while idle', async () => {
       installSpeech();
       fixture = await mountPlayer('The valley sleeps.');
 
-      expect(toggleOf(fixture).disabled).toBe(false);
-      expect(labelOf(fixture).textContent).toBe('Read aloud');
+      expect(isDisabled(toggleOf(fixture))).toBe(false);
+      expect(toggleOf(fixture).getAttribute('aria-label')).toBe('Read aloud');
+      expect(toggleIconOf(fixture)).toBe('play');
       expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1×');
       expect(rateOf(fixture).textContent).toContain('1×');
-      expect(stopOf(fixture).hidden).toBe(true);
+      expect(isHidden(stopOf(fixture))).toBe(true);
     });
 
-    it('keeps the stop control beside the toggle and marks the speed control with a gauge icon', async () => {
+    it('keeps the stop slot last among the controls and marks the speed control with a gauge icon', async () => {
       installSpeech();
       fixture = await mountPlayer('The valley sleeps.');
 
-      const parts = [...fixture.element.shadowRoot!.querySelectorAll<HTMLButtonElement>('.control')].map((control) =>
+      const parts = [...fixture.element.shadowRoot!.querySelectorAll<HTMLElement>('.control')].map((control) =>
         control.getAttribute('part'),
       );
-      expect(parts).toEqual(['play', 'stop', 'rate']);
+      expect(parts).toEqual(['play', 'rate', 'stop']);
       expect(rateOf(fixture).querySelector('ore-icon')?.getAttribute('name')).toBe('gauge');
     });
 
-    it('disables the toggle when the text is empty or whitespace', async () => {
+    it('disables the controls when the text is empty or whitespace', async () => {
       installSpeech();
       fixture = await mountPlayer('   \n\t ');
 
-      expect(toggleOf(fixture).disabled).toBe(true);
+      expect(isDisabled(toggleOf(fixture))).toBe(true);
+      expect(isDisabled(rateOf(fixture))).toBe(true);
     });
 
-    it('carries state=unsupported and disables the toggle when the API is missing', async () => {
+    it('carries state=unsupported and disables the controls when the API is missing', async () => {
       fixture = await mountPlayer('The valley sleeps.');
 
       expect(fixture.element.getAttribute('state')).toBe('unsupported');
-      expect(toggleOf(fixture).disabled).toBe(true);
-    });
-
-    it('folds the visible label away once engaged', async () => {
-      installSpeech();
-      fixture = await mountPlayer('First sentence. Second sentence.');
-
-      await startReading(fixture);
-      expect(labelOf(fixture).hidden).toBe(true);
-
-      await fixture.act(() => toggleOf(fixture).click());
-      expect(labelOf(fixture).hidden).toBe(true);
-
-      await fixture.act(() => stopOf(fixture).click());
-      expect(labelOf(fixture).hidden).toBe(false);
+      expect(isDisabled(toggleOf(fixture))).toBe(true);
+      expect(isDisabled(rateOf(fixture))).toBe(true);
     });
   });
 
@@ -239,6 +239,36 @@ describe('ore-speech-player', () => {
       expect(liveOf(fixture).textContent).toBe('Reading resumed.');
     });
 
+    it('marks the paused toggle apart from the idle one', async () => {
+      installSpeech();
+      fixture = await mountPlayer('First sentence. Second sentence.');
+
+      expect(toggleIconOf(fixture)).toBe('play');
+      await startReading(fixture);
+      expect(toggleIconOf(fixture)).toBe('pause');
+      await fixture.act(() => toggleOf(fixture).click());
+      // Held, not idle: a ringed triangle so a paused reader never reads as unstarted.
+      expect(toggleIconOf(fixture)).toBe('play-circle');
+    });
+
+    it('shows where the reading is and hides the position while idle', async () => {
+      installSpeech();
+      fixture = await mountPlayer('One. Two. Three.');
+
+      expect(positionOf(fixture).hidden).toBe(true);
+
+      await startReading(fixture);
+      expect(positionOf(fixture).hidden).toBe(false);
+      expect(positionOf(fixture).textContent).toBe('1 / 3');
+
+      spoken()[0].onend?.();
+      await fixture.flush();
+      expect(positionOf(fixture).textContent).toBe('2 / 3');
+
+      await fixture.act(() => stopOf(fixture).click());
+      expect(positionOf(fixture).hidden).toBe(true);
+    });
+
     it('stops on the stop control and ignores the canceled utterance events', async () => {
       installSpeech();
       fixture = await mountPlayer('First sentence. Second sentence.');
@@ -281,6 +311,24 @@ describe('ore-speech-player', () => {
       expect(progressEvents).toEqual([{ sentence: 2, total: 4 }]);
     });
 
+    it('announces the sentence it resumes from', async () => {
+      installSpeech();
+      fixture = await mountPlayer('One. Two. Three. Four.', { attrs: { 'resume-at': '2' } });
+
+      await startReading(fixture);
+
+      expect(liveOf(fixture).textContent).toBe('Reading from sentence 3.');
+    });
+
+    it('announces a plain start when it begins at the first sentence', async () => {
+      installSpeech();
+      fixture = await mountPlayer('One. Two.');
+
+      await startReading(fixture);
+
+      expect(liveOf(fixture).textContent).toBe('Reading aloud.');
+    });
+
     it('clamps a resume-at beyond the end into the last sentence', async () => {
       installSpeech();
       fixture = await mountPlayer('One. Two.', { attrs: { 'resume-at': '9' } });
@@ -313,27 +361,27 @@ describe('ore-speech-player', () => {
 
       await startReading(fixture);
       await fixture.act(() => rateOf(fixture).click());
-      expect(changes).toEqual([0.85]);
-      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 0.85×');
-      expect(rateOf(fixture).textContent).toContain('0.85×');
-      expect(liveOf(fixture).textContent).toBe('Reading speed: 0.85×');
-
-      await fixture.act(() => rateOf(fixture).click());
+      expect(changes).toEqual([1.15]);
       expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1.15×');
       expect(rateOf(fixture).textContent).toContain('1.15×');
       expect(liveOf(fixture).textContent).toBe('Reading speed: 1.15×');
+
       await fixture.act(() => rateOf(fixture).click());
-      expect(changes).toEqual([0.85, 1.15, 1.5]);
       expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1.5×');
       expect(rateOf(fixture).textContent).toContain('1.5×');
       expect(liveOf(fixture).textContent).toBe('Reading speed: 1.5×');
-      expect(spoken().at(-1)?.rate).toBe(1.5);
+      await fixture.act(() => rateOf(fixture).click());
+      expect(changes).toEqual([1.15, 1.5, 0.85]);
+      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 0.85×');
+      expect(rateOf(fixture).textContent).toContain('0.85×');
+      expect(liveOf(fixture).textContent).toBe('Reading speed: 0.85×');
+      expect(spoken().at(-1)?.rate).toBe(0.85);
       spoken().at(-1)?.onend?.();
       await fixture.flush();
       expect(spoken().at(-1)?.text).toBe('Second sentence.');
-      expect(spoken().at(-1)?.rate).toBe(1.5);
+      expect(spoken().at(-1)?.rate).toBe(0.85);
       await fixture.act(() => rateOf(fixture).click());
-      expect(changes).toEqual([0.85, 1.15, 1.5, 1]);
+      expect(changes).toEqual([1.15, 1.5, 0.85, 1]);
       expect(rateOf(fixture).getAttribute('aria-label')).toBe('Reading speed: 1×');
       expect(liveOf(fixture).textContent).toBe('Reading speed: 1×');
     });
@@ -349,7 +397,7 @@ describe('ore-speech-player', () => {
       expect(synth.cancel).toHaveBeenCalled();
       expect(spoken()).toHaveLength(3);
       expect(spoken()[2]?.text).toBe('Second sentence.');
-      expect(spoken()[2]?.rate).toBe(0.85);
+      expect(spoken()[2]?.rate).toBe(1.15);
       expect(progressEvents.at(-1)).toEqual({ sentence: 1, total: 2 });
     });
 
@@ -495,6 +543,103 @@ describe('ore-speech-player', () => {
     });
   });
 
+  // ── Media Session ──────────────────────────────────────────────────────────
+
+  describe('Media Session', () => {
+    /** The browser's media controls, as jsdom never provides them: handlers are
+     *  captured so tests can drive the transport the way an OS widget would. */
+    function installMediaSession(): {
+      playbackStates: string[];
+      handlers: Record<string, (() => void) | null>;
+    } {
+      const handlers: Record<string, (() => void) | null> = {};
+      const playbackStates: string[] = [];
+      const session = {
+        set playbackState(value: string) {
+          playbackStates.push(value);
+        },
+        setActionHandler: (action: string, handler: (() => void) | null) => {
+          handlers[action] = handler;
+        },
+      };
+      Object.defineProperty(window.navigator, 'mediaSession', {
+        configurable: true,
+        value: session,
+        writable: true,
+      });
+      return { handlers, playbackStates };
+    }
+
+    afterEach(() => {
+      Object.defineProperty(window.navigator, 'mediaSession', { configurable: true, value: undefined, writable: true });
+    });
+
+    it('claims the media controls while reading and releases them on stop', async () => {
+      installSpeech();
+      const session = installMediaSession();
+      fixture = await mountPlayer('First sentence. Second sentence.');
+
+      await startReading(fixture);
+      expect(session.playbackStates).toContain('playing');
+      expect(session.handlers.pause).toBeTypeOf('function');
+
+      await fixture.act(() => toggleOf(fixture).click());
+      expect(session.playbackStates).toContain('paused');
+
+      await fixture.act(() => stopOf(fixture).click());
+      expect(session.handlers.play).toBeNull();
+      expect(session.playbackStates.at(-1)).toBe('none');
+    });
+
+    it('drives the transport from the media handlers', async () => {
+      installSpeech();
+      const session = installMediaSession();
+      fixture = await mountPlayer('First sentence. Second sentence.');
+
+      await startReading(fixture);
+      await fixture.act(() => session.handlers.pause?.());
+      expect(fixture.element.getAttribute('state')).toBe('paused');
+      await fixture.act(() => session.handlers.play?.());
+      expect(fixture.element.getAttribute('state')).toBe('playing');
+      await fixture.act(() => session.handlers.stop?.());
+      expect(fixture.element.getAttribute('state')).toBe('idle');
+    });
+
+    it('releases the media controls when the reading finishes on its own', async () => {
+      installSpeech();
+      const session = installMediaSession();
+      fixture = await mountPlayer('Only sentence.');
+
+      await startReading(fixture);
+      spoken()[0].onend?.();
+      await fixture.flush();
+
+      expect(session.handlers.play).toBeNull();
+      expect(session.playbackStates.at(-1)).toBe('none');
+    });
+
+    it('releases the media controls when the reading is interrupted', async () => {
+      installSpeech();
+      const session = installMediaSession();
+      fixture = await mountPlayer('First sentence.');
+
+      await startReading(fixture);
+      await fixture.act(() => spoken()[0].onerror?.());
+
+      expect(session.handlers.play).toBeNull();
+      expect(session.playbackStates.at(-1)).toBe('none');
+    });
+
+    it('works without a mediaSession at all', async () => {
+      installSpeech();
+      fixture = await mountPlayer('First sentence.');
+
+      await startReading(fixture);
+
+      expect(fixture.element.getAttribute('state')).toBe('playing');
+    });
+  });
+
   // ── Language ───────────────────────────────────────────────────────────────
 
   describe('Language', () => {
@@ -577,6 +722,23 @@ describe('ore-speech-player', () => {
       expect(warned.mock.calls[0][0]).toContain('no voice named "Nonexistent"');
     });
 
+    it('warns again for a different unavailable voice name', async () => {
+      installSpeech([{ lang: 'en-US', name: 'Samantha' }]);
+      const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      fixture = await mountPlayer('One sentence.', { attrs: { lang: 'en', voice: 'First' } });
+
+      await startReading(fixture);
+      await fixture.act(() => {
+        fixture.element.voice = 'Second';
+      });
+      await fixture.act(() => fixture.element.stop());
+      await fixture.act(() => fixture.element.play());
+
+      // Once per name, not once per element: the second mistyped name is not silenced.
+      expect(warned).toHaveBeenCalledTimes(2);
+      expect(warned.mock.calls[1][0]).toContain('no voice named "Second"');
+    });
+
     it('passes pitch and volume to the utterance', async () => {
       installSpeech();
       fixture = await mountPlayer('The valley sleeps.', { attrs: { pitch: '0.5', volume: '0.8' } });
@@ -644,15 +806,15 @@ describe('ore-speech-player', () => {
           labels: {
             read: 'Vorlesen',
             speed: 'Lesegeschwindigkeit',
-            speedNormal: 'normal',
             stopped: 'Vorlesen gestoppt.',
           },
         },
       });
 
       expect(toggleOf(fixture).getAttribute('aria-label')).toBe('Vorlesen');
-      expect(labelOf(fixture).textContent).toBe('Vorlesen');
-      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Lesegeschwindigkeit: normal');
+      // The multiplier is not localizable: the stem is, and the visible text and the
+      // accessible name share it, so the name always contains the shown text.
+      expect(rateOf(fixture).getAttribute('aria-label')).toBe('Lesegeschwindigkeit: 1×');
 
       await startReading(fixture);
       await fixture.act(() => stopOf(fixture).click());
@@ -679,6 +841,6 @@ describe('ore-speech-player', () => {
   });
 
   it('exposes the rate steps the speed control cycles', () => {
-    expect([...SPEECH_RATES]).toEqual([1, 0.85, 1.15, 1.5]);
+    expect([...SPEECH_RATES]).toEqual([1, 1.15, 1.5, 0.85]);
   });
 });

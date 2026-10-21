@@ -27,6 +27,30 @@ description: Migrate surface variants, DataGrid sources, and framework type decl
 </ore-card>
 ```
 
+## Speech-player transport, cycle, and readout
+
+`ore-speech-player` adopts the package's transport pattern: its controls are now `ore-button` hosts (style them through their `button` part), the speed cycle runs `1 → 1.15 → 1.5 → 0.85` so the first tap speeds the reading up, and a sentence-position readout appears at the end of the row while reading. `OreSpeechPlayerLabels` grows one required key, `resumingFrom` (with a `{sentence}` placeholder), and drops three: `speedNormal`, `speedSlow`, and `speedFast`. The speed control's name is now its `speed` stem plus the numeric multiplier, so the announced name always contains the multiplier shown on the button. The `labels` property stays `Partial`, so existing runtime usage is unaffected; code annotated with the full `OreSpeechPlayerLabels` type drops the three keys and adds `resumingFrom`. The subpath now also re-exports `BUTTON_TAG` and `TOOLTIP_TAG` for its nested controls. `--speech-player-gap` defaults to `var(--size-2)`, and both it and `--speech-player-control-size` promote automatically under `@media (pointer: coarse)`.
+
+While reading, every control now keeps one tone: the toggle no longer takes a lone accent, because an accent on one control splits the row into two colors and the playing state is already carried by the icon, the stop control, and the position readout. `--speech-player-active-color` is therefore removed; set `--speech-player-icon-color` on the host to tint the whole row.
+
+The toggle is icon-only, like the stop and speed controls: the visible "Read aloud" label is gone, and the `read` key now feeds only the tooltip and accessible name. All three controls are the same circle, so `--speech-player-control-size` sizes the whole row uniformly. The stop control moved to the end of the controls, after the speed, so it no longer needs a reserved slot: idle, the toggle and the speed control sit side by side, and revealing the stop grows the row rightward without shifting a control.
+
+```ts
+// Before
+const labels: OreSpeechPlayerLabels = {
+  /* ...existing keys... */
+  speedNormal: '1×',
+  speedSlow: '0.85×',
+  speedFast: '1.15×',
+};
+
+// After
+const labels: OreSpeechPlayerLabels = {
+  /* ...existing keys... */
+  resumingFrom: 'Reading from sentence {sentence}.',
+};
+```
+
 ## Speed-reading fullscreen support
 
 `ore-speed-reading` gains an opt-in fullscreen mode: a toolbar control, a read-only `fullscreen` attribute, and `enterFullscreen()`/`exitFullscreen()` methods. `OreSpeedReadingLabels` grows three required keys — `enterFullscreen`, `exitFullscreen`, and `fullscreenUnsupported`. The `labels` property stays `Partial`, so existing runtime usage is unaffected; code annotated with the full `OreSpeedReadingLabels` type needs the three new entries.

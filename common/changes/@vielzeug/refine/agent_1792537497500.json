@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): speech-player icon-only toggle, transport on ore-button, speed-up-first rate cycle, single-source speed name (speedNormal/speedSlow/speedFast labels removed), sentence position readout, resume announcement, Media Session, coarse-pointer targets; one tone for the control row while reading (--speech-player-active-color removed, use --speech-player-icon-color)",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

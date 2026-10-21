@@ -9,30 +9,32 @@ import { axeCheck, expect, test } from '../../testing/fixtures';
 const PLAYER = 'ore-speech-player';
 const TOGGLE = 'ore-speech-player [part="play"]';
 const RATE = 'ore-speech-player [part="rate"]';
-const LABEL = 'ore-speech-player .toggle-label';
 const STOP = 'ore-speech-player [part="stop"]';
+const POSITION = 'ore-speech-player .position';
 
 test.describe('Rendering', () => {
-  test('renders the labeled invitation, the speed control, and hides stop while idle', async ({ page, refinePage }) => {
+  test('renders the icon-only toggle, the speed control, and hides stop while idle', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`<${PLAYER} text="The valley sleeps under ash."></${PLAYER}>`);
 
     await expect(page.locator(TOGGLE)).toBeEnabled();
-    await expect(page.locator(LABEL)).toBeVisible();
-    await expect(page.locator(LABEL)).toHaveText('Read aloud');
+    await expect(page.locator(TOGGLE)).toHaveAttribute('aria-label', 'Read aloud');
     await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1×');
     await expect(page.locator(RATE)).toContainText('1×');
     await expect(page.locator(STOP)).toBeHidden();
   });
 
-  test('disables the toggle when the text is empty', async ({ page, refinePage }) => {
+  test('disables the controls when the text is empty', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`<${PLAYER} text=""></${PLAYER}>`);
 
-    await expect(page.locator(TOGGLE)).toBeDisabled();
+    // ore-button refuses interaction through aria-disabled on its host: the contract
+    // the player inherits, and what assistive tech reads.
+    await expect(page.locator(TOGGLE)).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator(RATE)).toHaveAttribute('aria-disabled', 'true');
   });
 });
 
 test.describe('Interaction', () => {
-  test('toggles to playing, folds the label, and reveals the stop control', async ({ page, refinePage }) => {
+  test('toggles to playing, swaps the icon, and reveals the stop control', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`<${PLAYER} text="The valley sleeps under ash."></${PLAYER}>`);
     await stubEngine(page);
 
@@ -40,8 +42,8 @@ test.describe('Interaction', () => {
 
     await expect(page.locator(PLAYER)).toHaveAttribute('state', 'playing');
     await expect(page.locator(TOGGLE)).toHaveAttribute('aria-label', 'Pause reading');
-    // The label folds away: its text stays in the DOM, hidden with the control.
-    await expect(page.locator(LABEL)).toBeHidden();
+    // The icon carries the state: the bare idle triangle becomes the pause bars.
+    await expect(page.locator(`${TOGGLE} ore-icon`)).toHaveAttribute('name', 'pause');
     await expect(page.locator(STOP)).toBeVisible();
   });
 
@@ -68,23 +70,24 @@ test.describe('Interaction', () => {
     await page.locator(STOP).click();
 
     await expect(page.locator(PLAYER)).toHaveAttribute('state', 'idle');
-    await expect(page.locator(LABEL)).toBeVisible();
+    await expect(page.locator(TOGGLE)).toHaveAttribute('aria-label', 'Read aloud');
     await expect(page.locator(STOP)).toBeHidden();
   });
 
   test('cycles the speed control through its steps', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`<${PLAYER} text="The valley sleeps under ash."></${PLAYER}>`);
 
-    await page.locator(RATE).click();
-    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 0.85×');
-    await expect(page.locator(RATE)).toContainText('0.85×');
-
+    // The first tap from the default speeds the reading up; the slow step returns last.
     await page.locator(RATE).click();
     await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1.15×');
+    await expect(page.locator(RATE)).toContainText('1.15×');
 
     await page.locator(RATE).click();
     await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1.5×');
-    await expect(page.locator(RATE)).toContainText('1.5×');
+
+    await page.locator(RATE).click();
+    await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 0.85×');
+    await expect(page.locator(RATE)).toContainText('0.85×');
 
     await page.locator(RATE).click();
     await expect(page.locator(RATE)).toHaveAttribute('aria-label', 'Reading speed: 1×');
@@ -117,6 +120,34 @@ test.describe('Interaction', () => {
     await page.keyboard.press('Enter');
 
     await expect(page.locator(PLAYER)).toHaveAttribute('state', 'playing');
+  });
+
+  test('shows the sentence position only while reading', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<${PLAYER} text="First sentence. Second sentence."></${PLAYER}>`);
+    await stubEngine(page);
+
+    await expect(page.locator(POSITION)).toBeHidden();
+
+    await page.locator(TOGGLE).click();
+
+    await expect(page.locator(POSITION)).toBeVisible();
+    await expect(page.locator(POSITION)).toHaveText('1 / 2');
+  });
+});
+
+test.describe('Touch layout', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+  test('promotes every control to a 44px tap target on coarse pointers', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`<${PLAYER} text="The valley sleeps under ash."></${PLAYER}>`);
+    await stubEngine(page);
+    await page.locator(TOGGLE).click();
+
+    for (const selector of [TOGGLE, STOP, RATE]) {
+      const box = (await page.locator(selector).boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+    }
   });
 });
 

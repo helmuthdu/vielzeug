@@ -1,6 +1,6 @@
 # Speech Player
 
-A text-to-speech player control that reads its `text` aloud through the browser's Web Speech API. Renders a labeled play/pause toggle, a stop control beside it that appears while reading, and a gauged speed control: useful wherever long-form copy should be heard, not just read: article bodies, how-to instructions, changelogs.
+A text-to-speech player control that reads its `text` aloud through the browser's Web Speech API. Renders an icon-only play/pause toggle, a gauged speed control, a stop control that appears while reading, and a sentence-position readout: useful wherever long-form copy should be heard, not just read: article bodies, how-to instructions, changelogs.
 
 The text is read sentence by sentence: a whole page can be read without hitting Chromium's single-utterance truncation, and the player stops any other `ore-speech-player` on the page before it starts: only one voice reads at a time. `progress` events name the sentence being read, so a consumer can highlight what the voice is saying, and a bound `resume-at` makes "resume" mean it across stops and page loads.
 
@@ -14,18 +14,19 @@ The text is read sentence by sentence: a whole page can be read without hitting 
 
 ## How It Reads
 
-The player is a three-state cycle on one toggle: play, pause, resume: plus a stop control that appears while reading and a gauged speed control that is always present:
+The player is a three-state cycle on one toggle: play, pause, resume: plus a gauged speed control that is always present and a stop control that appears while reading:
 
-- **Play**: the toggle carries the visible "Read aloud" label before the first read; once engaged the label folds away and only the icons remain. `speechSynthesis` reads the text aloud, the toggle shows a pause icon, and the stop control appears beside it.
-- **Pause / Resume**: the engine pauses mid-sentence; the toggle switches between resume and pause. A pause held longer than ten seconds is resumed defensively: if the engine reports nothing within a second, the current sentence restarts: some Chromium builds resume a long pause into silence.
-- **Stop**: sits beside the toggle, with the transport controls; cancels pending speech and returns to idle. Reading also stops on its own when the text ends, when the engine fails (announced distinctly, with an `error` event), or when the element is removed from the DOM.
-- **Speed**: the gauge-marked control cycles 1× → 0.85× → 1.15× → 1.5×, using the same numeric multipliers for visible labels and accessibility announcements. A change while reading restarts the current sentence at the new pace so it is heard at once.
+- **Play**: the toggle is a bare triangle, icon-only like the rest of the row; its tooltip and accessible name carry the invitation ("Read aloud"). `speechSynthesis` reads the text aloud, the toggle shows a pause icon, and the stop control appears at the end of the controls.
+- **Pause / Resume**: the engine pauses mid-sentence; the toggle switches between resume and pause, and its icon changes to a play triangle inside a ring: distinct from the bare idle triangle, so a paused reader never reads as unstarted. A pause held longer than ten seconds is resumed defensively: if the engine reports nothing within a second, the current sentence restarts: some Chromium builds resume a long pause into silence.
+- **Stop**: closes the controls, after the speed; cancels pending speech and returns to idle. It appears only while reading, at the end of the row, so revealing it never shifts the other controls. Reading also stops on its own when the text ends, when the engine fails (announced distinctly, with an `error` event), or when the element is removed from the DOM.
+- **Speed**: the gauge-marked control cycles 1× → 1.15× → 1.5× → 0.85×, so the first tap from the default speeds the reading up and the slow step returns last. It uses the same numeric multipliers for visible labels and accessibility announcements. A change while reading restarts the current sentence at the new pace so it is heard at once.
+- **Position**: while reading, a `1 / 8` readout names the sentence the voice is on, using the same one-based numbering the `progress` events carry. It sits at the end of the row, so it never shifts a control as it appears.
 
 The `state` attribute on the host reflects playback: `idle`, `playing`, `paused`, or `unsupported`, so CSS can react:
 
 ```css
 ore-speech-player[state='playing'] {
-  --speech-player-active-color: var(--color-success);
+  --speech-player-icon-color: var(--color-success);
 }
 ```
 
@@ -64,7 +65,7 @@ function onProgress(event: Event): void {
 
 ## Resume Position
 
-Bind `resume-at` to the sentence index playback should begin from, and the player restarts there instead of at the beginning: persist the last `progress` sentence per entry and "resume" survives stops, collapses, and page loads. A finished reading is the consumer's cue to clear the position, and a value beyond the end clamps into the last sentence.
+Bind `resume-at` to the sentence index playback should begin from, and the player restarts there instead of at the beginning: persist the last `progress` sentence per entry and "resume" survives stops, collapses, and page loads. Starting from a later sentence is announced ("Reading from sentence 3.") so the position is heard, not just implied. A finished reading is the consumer's cue to clear the position, and a value beyond the end clamps into the last sentence.
 
 ```html
 <ore-speech-player :resume-at="savedSentence" :text="passage"></ore-speech-player>
@@ -100,7 +101,7 @@ The exported `pickVoice(voices, lang, name?)` runs the same ranking the player u
 
 ## Localizing Labels
 
-Every user-facing string: control names, speed names, and live-region announcements: is overridable through the `labels` property. English is the default:
+Every user-facing string: control names and live-region announcements: is overridable through the `labels` property. The speed control's name is its stem plus the numeric multiplier ("Reading speed: 1.15×"), so only the stem is localized and the announced name always contains the multiplier shown on the button. English is the default:
 
 ```ts
 const player = document.querySelector('ore-speech-player')!;
@@ -110,9 +111,7 @@ player.labels = {
   resume: 'Vorlesen fortsetzen',
   stop: 'Vorlesen beenden',
   speed: 'Lesegeschwindigkeit',
-  speedNormal: '1×',
-  speedSlow: '0.85×',
-  speedFast: '1.15×',
+  resumingFrom: 'Vorlesen ab Satz {sentence}.',
   // ... plus the announcement strings
 };
 ```
@@ -189,7 +188,7 @@ ore-speech-player::part(play) {
 | `text`      | `string` | `''`      | The text to read aloud (empty text disables the toggle)               |
 | `lang`      | `string` | N/A | Standard HTML language tag of the text; selects the best voice for it |
 | `state`     | `string` | `idle`    | Reflected playback state: `idle` \| `playing` \| `paused` \| `unsupported` |
-| `rate`      | `number` | `1`       | Playback rate; the speed control cycles `1` → `0.85` → `1.15` → `1.5` |
+| `rate`      | `number` | `1`       | Playback rate; the speed control cycles `1` → `1.15` → `1.5` → `0.85` |
 | `pitch`     | `number` | `1`       | Voice pitch passed to the engine, clamped to `0`–`2` (`1` is natural) |
 | `volume`    | `number` | `1`       | Voice loudness passed to the engine, clamped to `0`–`1`              |
 | `voice`     | `string` | N/A | Name of the voice to read with; unset, the most natural voice for `lang` is picked |
@@ -199,7 +198,7 @@ ore-speech-player::part(play) {
 
 | Property | Type                             | Description                               |
 | -------- | -------------------------------- | ----------------------------------------- |
-| `labels` | `Partial<OreSpeechPlayerLabels>` | Overrides control names, speed names, and announcements |
+| `labels` | `Partial<OreSpeechPlayerLabels>` | Overrides control names and announcements |
 | `pitch`  | `number`                         | Voice pitch passed to the engine, `0`–`2`  |
 | `volume` | `number`                         | Voice loudness passed to the engine, `0`–`1` |
 | `voice`  | `string`                         | Name of the voice to read with             |
@@ -233,23 +232,26 @@ ore-speech-player::part(play) {
 
 ### CSS Parts
 
-| Part    | Element     | Description                                |
-| ------- | ----------- | ------------------------------------------ |
-| `player` | `<div>`     | Outer control group                        |
-| `play`   | `<button>`  | The play/pause toggle button               |
-| `rate`   | `<button>`  | The speed control                           |
-| `stop`   | `<button>`  | The stop button (hidden while idle)        |
+| Part    | Element       | Description                                                  |
+| ------- | ------------- | ------------------------------------------------------------ |
+| `player` | `<div>`      | Outer control group                                          |
+| `play`   | `<ore-button>` | The play/pause toggle (style its `button` part through it)  |
+| `rate`   | `<ore-button>` | The speed control                                            |
+| `stop`   | `<ore-button>` | The stop button (hidden while idle)                          |
 
 ### CSS Custom Properties
 
 | Property                          | Description                               | Default                       |
 | --------------------------------- | ----------------------------------------- | ----------------------------- |
-| `--speech-player-gap`             | Gap between the controls                  | `var(--size-1)`               |
-| `--speech-player-control-size`    | Each control's hit-area size (the toggle grows with its label) | `var(--size-8)` |
+| `--speech-player-gap`             | Gap between the controls                  | `var(--size-2)` (coarse: `var(--size-3)`) |
+| `--speech-player-control-size`    | Each control's hit-area size              | `var(--size-8)` (coarse: `var(--size-11)`) |
 | `--speech-player-icon-color`      | Control icon color at rest                | `var(--text-color-secondary)` |
-| `--speech-player-active-color`    | Toggle color while reading                | `var(--color-primary)`        |
 | `--speech-player-hover-bg`        | Control background on hover               | `var(--color-contrast-100)`   |
 
 ## Accessibility
 
-The toggle's accessible name follows its state: "Read aloud" while idle, "Pause reading" while playing, "Resume reading" while paused, and the same string is the visible label before the first read, so sighted and assistive users get one invitation. The speed control is named with its current multiplier ("Reading speed: 0.85×") and the stop control is named consistently. Icons are `aria-hidden` and supplementary to the button names. A `role="status"` live region inside the shadow DOM announces every transition ("Reading aloud.", "Reading paused.", "Reading stopped.", "Reading finished.", "Reading was interrupted.") so assistive technology does not miss the state change while focus stays on the controls. Controls are 32px hit areas (≥ the 24px minimum) and visible keyboard focus rings come standard. When the Web Speech API is missing the toggle is disabled and its name explains why, instead of silently failing.
+The toggle's accessible name follows its state: "Read aloud" while idle, "Pause reading" while playing, "Resume reading" while paused: the same strings its tooltip shows, so sighted and assistive users get one invitation. The speed control is named with its current multiplier ("Reading speed: 1.15×") and the stop control is named consistently. Icons are `aria-hidden` and supplementary to the button names. A `role="status"` live region inside the shadow DOM announces every transition ("Reading aloud.", "Reading from sentence 3.", "Reading paused.", "Reading stopped.", "Reading finished.", "Reading was interrupted.") so assistive technology does not miss the state change while focus stays on the controls. The controls ride `ore-button`: 32px hit areas on pointer devices, promoted to 44px tap targets with wider gaps under `@media (pointer: coarse)`, with visible keyboard focus rings standard. When the Web Speech API is missing the controls are disabled and the toggle's name explains why, instead of silently failing. The position readout is `aria-live="off"`: screen readers get the sentence transitions from the status region, not a counter ticking under their feet.
+
+## Media Session
+
+While reading, the player claims the browser's Media Session controls (OS media widgets, lock-screen transport) where the API exists: play, pause, and stop handlers drive this player, and the playback state follows it. The claim is released on stop, finish, error, and teardown, and engines without `mediaSession` (desktop Safari, jsdom) are feature-detected and unaffected.

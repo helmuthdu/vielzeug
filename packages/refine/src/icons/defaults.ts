@@ -826,6 +826,32 @@ registerDefaultIcons({
     },
     viewBox: [0, 0, 24, 24],
   },
+  PlayCircle: {
+    children: [
+      {
+        attrs: {
+          cx: '12',
+          cy: '12',
+          r: '10',
+        },
+        tag: 'circle',
+      },
+      {
+        attrs: {
+          d: 'M10 8l5 4-5 4z',
+        },
+        tag: 'path',
+      },
+    ],
+    presentation: {
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+      'stroke-width': 2,
+    },
+    viewBox: [0, 0, 24, 24],
+  },
   Plus: {
     children: [
       {

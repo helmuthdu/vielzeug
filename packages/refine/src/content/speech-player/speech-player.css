@@ -1,13 +1,15 @@
 @layer refine.base {
   :host {
-    --_gap: var(--speech-player-gap, var(--size-1));
+    /* `--_player-gap`, never `--_gap`: custom properties inherit into the slotted
+       ore-buttons, and ore-button reads an inherited `--_gap` as its own internal
+       icon/label gap (the leak note in button.css is about exactly this). A distinct
+       name keeps the row's gap out of the buttons' internals. */
+    --_player-gap: var(--speech-player-gap, var(--size-2));
     --_control-size: var(--speech-player-control-size, var(--size-8));
     --_icon-color: var(--speech-player-icon-color, var(--text-color-secondary));
-    --_active-color: var(--speech-player-active-color, var(--color-primary));
     --_hover-bg: var(--speech-player-hover-bg, var(--color-contrast-100));
 
     display: inline-flex;
-    gap: var(--_gap);
     align-items: center;
   }
 
@@ -15,68 +17,51 @@
     display: none;
   }
 
-  /* ── controls ──────────────────────────────────────────────── */
-
-  .control {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    min-width: var(--_control-size);
-    height: var(--_control-size);
-    padding: 0;
-    color: var(--_icon-color);
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    border-radius: var(--rounded-full);
-    transition:
-      background var(--transition-fast),
-      color var(--transition-fast);
+  [hidden] {
+    display: none;
   }
 
-  .control:hover:not(:disabled) {
+  .player {
+    display: inline-flex;
+    gap: var(--_player-gap);
+    align-items: center;
+  }
+
+  /* ── controls ──────────────────────────────────────────────── */
+
+  /* The transport rides ore-button's ghost variant: the player sizes that surface down
+     to a compact control row and keeps the icon's resting tone. These external
+     ::part rules outrank the button's own size tiers, so the row stays 32 px on fine
+     pointers and the coarse-pointer block below promotes it. */
+  .control {
+    --button-gap: var(--size-1-5);
+  }
+
+  .control::part(button) {
+    min-width: var(--_control-size);
+    height: var(--_control-size);
+    min-height: var(--_control-size);
+    padding-inline: var(--size-2);
+    color: var(--_icon-color);
+    background: transparent;
+  }
+
+  .control::part(button):hover {
     color: var(--text-color-body);
     background: var(--_hover-bg);
   }
 
-  .control:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 1px;
-  }
-
-  .control:disabled {
-    cursor: default;
-    opacity: 0.5;
-  }
-
-  .control[hidden] {
-    display: none;
-  }
-
-  /* The toggle is the invitation: icon and, before the first read, the label. A bare
-     triangle asks nobody. Once engaged the label folds away; the controls are known. */
-  .control--toggle {
-    gap: var(--size-1-5);
-    padding-inline: var(--size-2);
-  }
-
-  .toggle-label {
-    font-size: var(--text-sm);
-    white-space: nowrap;
-  }
-
-  .toggle-label[hidden] {
-    display: none;
-  }
-
   /* The gauge marks the pace control; the text names its step, and the widest step
-     sets the floor so the row never shifts while cycling. */
+     sets the floor so the row never shifts while cycling. Icon and text land in
+     ore-button's content part, which has no gap of its own, so the player supplies
+     the icon/label spacing. */
   .control--rate {
-    gap: var(--size-1-5);
-    padding-inline: var(--size-2);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
+  }
+
+  .control--rate::part(content) {
+    gap: var(--size-1-5);
   }
 
   .rate-text {
@@ -84,11 +69,27 @@
     text-align: center;
   }
 
-  /* While reading, the toggle carries the accent: the control's "now playing" state,
-     distinct from its resting tone without a heavier affordance. */
-  :host([state='playing']) .control--toggle,
-  :host([state='paused']) .control--toggle {
-    color: var(--_active-color);
+  /* Where the voice sits in the text, in words as well as in events: the same
+     one-based sentence numbering the `progress` detail carries. */
+  .position {
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-color-secondary);
+    white-space: nowrap;
+  }
+
+  /* No state tint: while reading the toggle, stop, and speed controls keep one tone.
+     A lone accent on the toggle splits the row into two colors, and the state is already
+     legible three ways: the icon swaps, the stop control appears, the position advances.
+     Consumers who want an accent set --speech-player-icon-color, which reaches all three. */
+
+  /* Touch: the row grows to the WCAG target with breathing room between hit areas.
+     A consumer who set the public size token chose it, and keeps it. */
+  @media (pointer: coarse) {
+    :host {
+      --_player-gap: var(--speech-player-gap, var(--size-3));
+      --_control-size: var(--speech-player-control-size, var(--size-11));
+    }
   }
 
   /* .sr-only is provided by the shared srOnlyMixin (see styles: [...] in speech-player.ts) */
