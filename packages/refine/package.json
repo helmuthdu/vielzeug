@@ -730,6 +730,9 @@
       "speed-reading": [
         "dist/content/speed-reading/speed-reading.d.ts"
       ],
+      "spotlight": [
+        "dist/overlay/spotlight/spotlight.d.ts"
+      ],
       "stats": [
         "dist/content/stats/stats.d.ts"
       ],
@@ -768,6 +771,9 @@
       ],
       "tooltip": [
         "dist/overlay/tooltip/tooltip.d.ts"
+      ],
+      "tour": [
+        "dist/overlay/tour/tour.d.ts"
       ],
       "typing-indicator": [
         "dist/feedback/typing-indicator/typing-indicator.d.ts"
