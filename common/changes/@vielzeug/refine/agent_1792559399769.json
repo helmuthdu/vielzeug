@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(refine): card keyboard guard for nested controls, scoped disabled, interactive-only hover, reduced-motion transitions, registered rounded prop, intrinsic flex-wrap horizontal collapse",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

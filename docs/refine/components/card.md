@@ -164,7 +164,7 @@ Control shadow depth with explicit elevation levels (0-5).
 
 <ore-card elevation="2">
   <ore-text slot="header" variant="heading" size="md">Elevation 2</ore-text>
-  <ore-text>Medium shadow (default).</ore-text>
+  <ore-text>Medium shadow.</ore-text>
 </ore-card>
 
 <ore-card elevation="3">
@@ -187,7 +187,7 @@ Control shadow depth with explicit elevation levels (0-5).
 
 ## Orientation
 
-Set `orientation="horizontal"` for a side-by-side media + content layout. The vertical layout is the default and requires no attribute.
+Set `orientation="horizontal"` for a side-by-side media + content layout. The vertical layout is the default and requires no attribute. Narrow cards collapse back to the stacked layout automatically: the switch tracks the card's own width, not the viewport, so a horizontal card in a phone-width list or a sidebar never squeezes its body beside a fixed-width media column.
 
 <ComponentPreview center>
 
@@ -220,7 +220,7 @@ Add images, videos, or custom content at the top of the card (or left side in ho
 <ore-card elevation="2" style="max-width: 350px;">
   <img
     slot="media"
-    src="https://images.unsplash.com/photo-1557683316-973673baf926?w=400"
+    src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='400'%20height='200'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%236366f1'/%3E%3Cstop%20offset='1'%20stop-color='%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='400'%20height='200'%20fill='url(%23g)'/%3E%3C/svg%3E"
     alt="Gradient"
     style="width: 100%; height: 200px; object-fit: cover;" />
   <ore-text slot="header" variant="heading" size="md">Beautiful Gradient</ore-text>
@@ -232,7 +232,7 @@ Add images, videos, or custom content at the top of the card (or left side in ho
 
 ### Actions Slot
 
-Separate slot for action buttons with automatic layout. If the card needs inner actions, place buttons or links in the `actions` slot: nested interactive elements do not trigger card activation.
+Separate slot for action buttons with automatic layout. If the card needs inner actions, place buttons or links in the `actions` slot: nested interactive elements do not trigger card activation. A card that hosts actions is not `interactive`: see [Interactive Cards](#interactive-cards) for why the two shapes are mutually exclusive.
 
 <ComponentPreview center>
 
@@ -254,7 +254,7 @@ Separate slot for action buttons with automatic layout. If the card needs inner 
 
 ### Disabled State
 
-Prevent interaction and show visual feedback. Use `disabled` instead of removing interactive cards from the DOM.
+Dim an interactive card that is temporarily unavailable. `disabled` is the card's own state: the card stops activating and shows a not-allowed cursor, but the dimmed surface still passes clicks through, so disable any nested controls yourself (pass `disabled` to the buttons in the `actions` slot) to keep pointer and keyboard behavior identical.
 
 <ComponentPreview center>
 
@@ -263,7 +263,7 @@ Prevent interaction and show visual feedback. Use `disabled` instead of removing
   <ore-text slot="header" variant="heading" size="md">Disabled Card</ore-text>
   <ore-text>This card is disabled and cannot be interacted with.</ore-text>
   <div slot="actions">
-    <ore-button size="sm">Action</ore-button>
+    <ore-button size="sm" disabled>Action</ore-button>
   </div>
 </ore-card>
 ```
@@ -288,6 +288,30 @@ Show an animated loading indicator while content is being fetched. Use the `load
 ## Interactive Cards
 
 Set `interactive` to enable hover/active states, keyboard activation (Enter/Space), and typed `activate` events. Make a card `interactive` only when the whole card acts as a single action.
+
+::: warning Interactive cards cannot host actions
+`role="button"` makes the card's content presentational to assistive technology: a button or link inside an interactive card is unreachable for screen readers and an ARIA `nested-interactive` violation. A card with an `actions` slot is therefore a resting card whose actions do the work; a card that is itself one action carries no inner controls. When the card should navigate, prefer a real link in the header with a stretched hit area over `interactive`:
+
+```html
+<ore-card elevation="2" style="position: relative">
+  <ore-text slot="header" variant="heading" size="md">
+    <a href="/article/1" style="text-decoration: none">Read the article</a>
+  </ore-text>
+  <ore-text>The whole card is clickable, but the accessible name is a real link.</ore-text>
+</ore-card>
+
+<style>
+  /* The link paints its hit area across the card without wrapping the content. */
+  ore-card a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+</style>
+```
+
+This keeps right-click, open-in-new-tab, and copy-link working, and screen readers announce a link with the card's content as navigable structure.
+:::
 
 <ComponentPreview center>
 
@@ -338,7 +362,7 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 <ComponentPreview center>
 
 ```html
-<ore-card elevation="2" interactive padding="none" style="max-width: 280px">
+<ore-card elevation="2" padding="none" style="max-width: 280px">
   <div
     slot="media"
     style="height: 180px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-4xl);">
@@ -405,7 +429,7 @@ Perfect for compact layouts and list views:
 
 ```html
 <div style="display: flex; flex-direction: column; gap: var(--size-3); max-width: 700px;">
-  <ore-card orientation="horizontal" variant="flat" elevation="1" interactive>
+  <ore-card orientation="horizontal" variant="flat" elevation="1">
     <div
       slot="media"
       style="background: linear-gradient(135deg, #667eea, #764ba2); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
@@ -419,7 +443,7 @@ Perfect for compact layouts and list views:
     </div>
   </ore-card>
 
-  <ore-card orientation="horizontal" variant="flat" elevation="1" interactive>
+  <ore-card orientation="horizontal" variant="flat" elevation="1">
     <div
       slot="media"
       style="background: linear-gradient(135deg, #f093fb, #f5576c); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-3xl);">
@@ -446,6 +470,7 @@ Perfect for compact layouts and list views:
 | `variant`     | `'solid' \| 'flat' \| 'frost'`                                 | N/A | Visual style variant                       |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | N/A | Color theme for the card                   |
 | `padding`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | N/A | Internal padding size                      |
+| `rounded`     | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | N/A | Border radius size                         |
 | `elevation`   | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | N/A | Shadow elevation level (0=none, 5=maximum) |
 | `orientation` | `'horizontal'`                                                            | N/A | Side-by-side media + content layout        |
 | `interactive` | `boolean`                                                                 | `false` | Enable hover/active states and activation  |
@@ -476,7 +501,7 @@ Perfect for compact layouts and list views:
 | `--card-bg`           | `var(--color-canvas)`       | Background color   |
 | `--card-color`        | `var(--color-contrast-900)` | Text color         |
 | `--card-border`       | `var(--border)`             | Border width       |
-| `--card-border-color` | `var(--color-contrast-300)` | Border color       |
+| `--card-border-color` | `var(--color-divider)`        | Border color         |
 | `--card-radius`       | `var(--rounded-lg)`         | Border radius      |
 | `--card-padding`      | `var(--size-4)`             | Internal padding   |
 | `--card-shadow`       | `var(--shadow-sm)`          | Box shadow         |
@@ -517,4 +542,4 @@ Maintain color contrast requirements (WCAG 2.1 Level AA) when using custom `--ca
 
 ## Accessibility
 
-The card component follows WCAG 2.1 Level AA standards. When `interactive` is set, `role="button"` is applied and `aria-disabled` reflects the disabled state. The `aria-busy` attribute reflects the loading state. Disabled cards receive `tabindex="-1"` and cannot receive focus. `Tab` moves focus to the card; `Enter` or `Space` activates it. Content is organized using semantic HTML with named slots that screen readers can navigate in a logical hierarchy. Use semantic headings in the `header` slot to maintain proper document structure.
+The card component follows WCAG 2.1 Level AA standards. When `interactive` is set, `role="button"` is applied and `aria-disabled` reflects the disabled state. The `aria-busy` attribute reflects the loading state. Disabled cards receive `tabindex="-1"` and cannot receive focus. `Tab` moves focus to the card; `Enter` or `Space` activates it. Pressing Enter or Space on a nested control activates that control alone, never the card as well. Because `role="button"` makes the card's content presentational, an interactive card must not host buttons or links in its slots: see [Interactive Cards](#interactive-cards). Content is organized using semantic HTML with named slots that screen readers can navigate in a logical hierarchy. Use semantic headings in the `header` slot to maintain proper document structure.

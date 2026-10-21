@@ -9,6 +9,24 @@ description: Migrate surface variants, DataGrid sources, and framework type decl
 
 `ore-rank-item` defaults changed so the visualization survives its usual placements. `--rank-track-color` now defaults to `--color-contrast-200` instead of `--color-contrast-100`: `-100` is the card/elevated-surface color itself, so a rank list on a card rendered an invisible track. `--rank-number-color` now defaults to `--color-contrast-600` instead of `--color-500`, which is the AA-large-text tier and missed AA at the numeral's 12px size. The bar fill now grows from the reading start: under `dir="rtl"` it anchors right like the rest of the row instead of left. In Windows high-contrast mode the fill renders as the system highlight and the track as an outlined box. A `trailing` value wider than 40% of the row now ellipsizes instead of squeezing the label to nothing.
 
+## Card interaction, responsiveness, and radius
+
+`ore-card` tightens its interactive contract. Pressing Enter or Space on a control nested in an interactive card (a slotted button or link) now activates that control alone instead of the control *and* the card. `disabled` no longer sets `pointer-events: none` on the whole card: the card stops activating and dims, but a click on a slotted control reaches that control, so disable nested controls yourself to keep pointer and keyboard behavior identical. The hover lift and the colored-card hover tint now apply only to `interactive` cards, and only where hover is a real state (`@media (hover: hover)`), so a resting card no longer looks clickable and a tapped card no longer stays lifted on touch. The card's own transitions now honor `prefers-reduced-motion`.
+
+`rounded` is now a registered prop (the radius variants it drives already shipped), so `card.rounded = 'xl'` works and is typed. Horizontal cards wrap to the stacked layout whenever the card itself is narrower than roughly 28rem, tracked on the card's own width rather than the viewport.
+
+```html
+<!-- Before: an interactive card hosting actions (an ARIA nested-interactive violation) -->
+<ore-card interactive>
+  <ore-button slot="actions">Buy</ore-button>
+</ore-card>
+
+<!-- After: a card with actions is a resting card; the card itself is interactive only when it is one action -->
+<ore-card>
+  <ore-button slot="actions">Buy</ore-button>
+</ore-card>
+```
+
 ## Speed-reading fullscreen support
 
 `ore-speed-reading` gains an opt-in fullscreen mode: a toolbar control, a read-only `fullscreen` attribute, and `enterFullscreen()`/`exitFullscreen()` methods. `OreSpeedReadingLabels` grows three required keys — `enterFullscreen`, `exitFullscreen`, and `fullscreenUnsupported`. The `labels` property stays `Partial`, so existing runtime usage is unaffected; code annotated with the full `OreSpeedReadingLabels` type needs the three new entries.

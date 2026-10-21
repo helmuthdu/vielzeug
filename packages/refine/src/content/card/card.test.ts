@@ -136,6 +136,53 @@ describe('ore-card', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it('does not emit activate when Enter is pressed on nested interactive content', async () => {
+    fixture = await mount('ore-card', {
+      attrs: { interactive: '' },
+      html: '<button slot="actions" id="inner-action">Inner action</button>',
+    });
+
+    const handler = vi.fn();
+
+    fixture.element.addEventListener('activate', handler);
+
+    // Keydown bubbles: the card's host listener sees it, and must ignore it because the
+    // nested control owns the press.
+    const button = fixture.element.querySelector('#inner-action') as HTMLButtonElement;
+
+    fireKeyDown(button, { key: 'Enter' });
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('maps the rounded prop to the radius variants', async () => {
+    fixture = await mount('ore-card', { attrs: { rounded: 'full' } });
+
+    expect(fixture.element.getAttribute('rounded')).toBe('full');
+  });
+
+  it('keeps a disabled card inert for activation without blocking nested clicks', async () => {
+    fixture = await mount('ore-card', {
+      attrs: { disabled: '', interactive: '' },
+      html: '<button slot="actions" id="inner-action">Inner action</button>',
+    });
+
+    const handler = vi.fn();
+    const inner = vi.fn();
+
+    fixture.element.addEventListener('activate', handler);
+    fixture.element.querySelector('#inner-action')!.addEventListener('click', inner);
+
+    // Disabled is the card's own state: the card never activates, but the subtree is not
+    // muted: the slotted control still receives its click (pointer-events: none on the
+    // host would swallow it here).
+    fireClick(fixture.element);
+    fireClick(fixture.element.querySelector('#inner-action') as HTMLButtonElement);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(inner).toHaveBeenCalledTimes(1);
+  });
+
   it('hides empty named sections and shows them when slots are populated', async () => {
     fixture = await mount('ore-card', {
       html: '<span slot="header">Title</span><span slot="footer">Footer</span>',
@@ -198,6 +245,29 @@ describe('ore-card', () => {
   describe('Accessibility', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-card', { html: 'Card content' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks as an interactive card', async () => {
+      fixture = await mount('ore-card', {
+        attrs: { interactive: '' },
+        html: '<h3 slot="header">Title</h3><p>Body</p>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks with slotted actions while resting', async () => {
+      // role="button" makes the subtree presentational, so a card that hosts actions must
+      // not also be interactive: the two shapes are mutually exclusive under ARIA.
+      fixture = await mount('ore-card', {
+        html: '<h3 slot="header">Title</h3><p>Body</p><button slot="actions">Act</button>',
+      });
 
       const results = await axeCheck(fixture.element);
 

@@ -1,7 +1,7 @@
 import { bind, define, getHost, html, prop, useEmit, useSlots, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 import { createInteraction } from '../../core';
-import { disablableBundle, loadableBundle, themableBundle } from '../../shared';
+import { disablableBundle, loadableBundle, roundableBundle, themableBundle } from '../../shared';
 import {
   colorThemeMixin,
   elevationMixin,
@@ -10,7 +10,14 @@ import {
   reducedMotionMixin,
   roundedVariantMixin,
 } from '../../styles';
-import { ELEVATION_LEVELS, type ElevationLevel, PADDING_SIZES, type PaddingSize, type ThemeColor } from '../../types';
+import {
+  ELEVATION_LEVELS,
+  type ElevationLevel,
+  PADDING_SIZES,
+  type PaddingSize,
+  type RoundedSize,
+  type ThemeColor,
+} from '../../types';
 
 const CARD_ORIENTATIONS = ['horizontal'] as const;
 const CARD_VARIANTS = ['solid', 'flat', 'frost'] as const;
@@ -55,6 +62,8 @@ export type OreCardProps = {
   orientation?: (typeof CARD_ORIENTATIONS)[number];
   /** Internal padding size */
   padding?: PaddingSize;
+  /** Border radius size */
+  rounded?: RoundedSize;
   /** Visual style variant */
   variant?: (typeof CARD_VARIANTS)[number];
 };
@@ -67,6 +76,7 @@ export type OreCardProps = {
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'frost'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} padding - Internal padding: 'none' | 'sm' | 'md' | 'lg' | 'xl'
+ * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} elevation - Shadow elevation: '0' | '1' | '2' | '3' | '4' | '5'
  * @attr {string} orientation - Card layout: 'horizontal'
  * @attr {boolean} interactive - Enable pointer/keyboard activation
@@ -115,6 +125,7 @@ define<OreCardProps>(CARD_TAG, {
     interactive: prop.bool(false),
     orientation: prop.oneOf(CARD_ORIENTATIONS),
     padding: prop.oneOf(PADDING_SIZES),
+    ...roundableBundle,
     variant: prop.oneOf(CARD_VARIANTS),
   },
 
@@ -160,6 +171,11 @@ define<OreCardProps>(CARD_TAG, {
     };
 
     const handleKeydown = (e: KeyboardEvent) => {
+      // The keyboard twin of handleClick's guard: keydown bubbles, so Enter/Space pressed
+      // on a nested control (a slotted ore-button, a link) must activate that control
+      // alone, not the card as well.
+      if (isNestedInteractiveTarget(el, e)) return;
+
       pressControl.handleKeydown(e);
     };
 
