@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/orbit
 
-This log was last generated on Mon, 19 Oct 2026 10:13:34 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Oct 2026 07:30:45 GMT and should not be manually modified.
 
+## 26.10.16
+Wed, 21 Oct 2026 07:30:45 GMT
+
+### Patches
+
+- fix(orbit): flip() scores the current placement at base coordinates like its candidates, so a floating element with an offset() upstream settles on the least-overflowing side instead of oscillating between two placements until computePosition throws
 ## 26.10.15
 Mon, 19 Oct 2026 10:13:34 GMT
 

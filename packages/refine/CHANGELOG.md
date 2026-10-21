@@ -1,7 +1,26 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Mon, 19 Oct 2026 10:13:34 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Oct 2026 07:30:45 GMT and should not be manually modified.
 
+## 26.10.16
+Wed, 21 Oct 2026 07:30:45 GMT
+
+### Minor changes
+
+- feat(refine): ore-tour and ore-spotlight overlay components; fix Back-button visibility, suppress dismiss on programmatic close, render the spotlight dim via a valid single box-shadow (a `none` ring layer invalidated the whole declaration), add a --color-scrim overlay-veil token so the dim stays a darkening veil in dark mode, blur the content behind the translucent tour card, keep the card border and shadow in modal presentation (it blended into the page), show a visible "Step N of M" counter, lead the footer with Skip away from Next, ring the close button on keyboard focus, add a full-bleed media slot for step illustrations with a viewport-capped height, stop the `description` body text from being blanked when the card has any light-DOM child (whitespace assigned to the default slot suppressed the slot fallback), and stop the modal-to-popover presentation flip from stealing focus back to the pre-open element after its exit animation (which stranded arrow-key control outside the card)
+- feat(refine): ore-tour gains bind(controller) - one call renders a beacon handle's current snapshot into the card's props and routes next/back/skip/finish/dismiss back into it; auto presentation now freezes per open so a mid-step resize never rebuilds a live card; the card re-asserts focus when a step change rebuilds its content; the spotlight cutout measures element anchors live and follows them on scroll and resize; exports OreTourElement, TourController and TourStepSnapshot for typed host access
+- feat(refine): refine responsive speed-reading controls and touch navigation
+- feat(refine): add opt-in fullscreen mode to speed-reading
+- feat(refine): speech-player picks the most natural voice for its language and gains voice, pitch, and volume controls
+- feat(refine): speech-player icon-only toggle, transport on ore-button, speed-up-first rate cycle, single-source speed name (speedNormal/speedSlow/speedFast labels removed), sentence position readout, resume announcement, Media Session, coarse-pointer targets; one tone for the control row while reading (--speech-player-active-color removed, use --speech-player-icon-color)
+- fix(refine): card keyboard guard for nested controls, scoped disabled, interactive-only hover, reduced-motion transitions, registered rounded prop, intrinsic flex-wrap horizontal collapse
+- fix(refine): rank-item visible track default, AA rank numeral, RTL bar origin, forced-colors bar, capped trailing
+- fix(refine): speed-reading two-line narrow toolbar, roomier full-text details, responsive resume control
+
+### Patches
+
+- chat-message: skip no-op textContent writes in slot trim, preventing an infinite slotchange loop on WebKit/iOS Safari
+- fix(refine): keep the slider track usable when a long label wraps below it
 ## 26.10.15
 Mon, 19 Oct 2026 10:13:34 GMT
 

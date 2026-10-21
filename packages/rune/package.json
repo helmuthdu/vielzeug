@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/rune",
-  "version": "26.10.15",
+  "version": "26.10.16",
   "description": "Structured scoped logger with remote transport",
   "repository": {
     "type": "git",

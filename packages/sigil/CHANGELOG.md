@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/sigil
 
-This log was last generated on Mon, 19 Oct 2026 10:13:34 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Oct 2026 07:30:45 GMT and should not be manually modified.
 
+## 26.10.16
+Wed, 21 Oct 2026 07:30:45 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.15
 Mon, 19 Oct 2026 10:13:34 GMT
 

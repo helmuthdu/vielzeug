@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "agent@vielzeug",
+            "comment": "feat(beacon): initial release - createTour, createCoachmark, resolveTarget with persisted resumable progress; both handles publish a live `current` snapshot whose rect stays fresh on scroll and resize, so refine's ore-tour renders them through a single bind() call",
+            "commit": "9ec5b22fd2b0eded6fb53a4ce60f1a6a3d0b7175"
+          }
+        ]
+      },
+      "date": "Wed, 21 Oct 2026 07:30:45 GMT",
+      "tag": "@vielzeug/beacon_v26.10.16",
+      "version": "26.10.16"
+    }
+  ],
+  "name": "@vielzeug/beacon"
+}

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/postmaster",
-  "version": "26.10.15",
+  "version": "26.10.16",
   "description": "Typed durable job outbox with leased processing, retries, and dead-letter recovery",
   "repository": {
     "type": "git",

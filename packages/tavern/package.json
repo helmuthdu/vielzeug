@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/tavern",
-  "version": "26.10.15",
+  "version": "26.10.16",
   "description": "Table sessions over mesh: host-owned state replication with guest command forwarding",
   "repository": {
     "type": "git",

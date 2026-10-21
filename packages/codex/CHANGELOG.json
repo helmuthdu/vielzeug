@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "agent@vielzeug",
+            "comment": "chore(codex): refresh bundled docs data",
+            "commit": "9ec5b22fd2b0eded6fb53a4ce60f1a6a3d0b7175"
+          }
+        ]
+      },
+      "date": "Wed, 21 Oct 2026 07:30:45 GMT",
+      "tag": "@vielzeug/codex_v26.10.16",
+      "version": "26.10.16"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "agent@vielzeug",
             "comment": "Refresh bundled Refine query-bar documentation and metadata for the responsive filter drawer, additive per-key selection, optional option icons, quick filters, localized labels, state synchronization, and exact-value token helper contracts.",
             "commit": "7090bc9a0e7fb18fb4cb50ca2b019c0be86c0e88"
           }
