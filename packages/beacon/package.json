@@ -29,9 +29,6 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "dependencies": {
-    "@vielzeug/ripple": "workspace:*"
-  },
   "scripts": {
     "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types",
     "build:bundle": "vite build --config vite.bundle.config.ts",
@@ -40,6 +37,9 @@
     "lint": "biome ci src",
     "prepublishOnly": "pnpm --silent run build",
     "test": "vitest"
+  },
+  "dependencies": {
+    "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
