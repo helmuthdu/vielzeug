@@ -424,8 +424,11 @@ database or schema failures. It never writes, sends email or probes the catalog.
 Operator authority is the session token's optional `roles` claim carrying
 `ARCHIVE_OPERATOR_ROLE` (`'archive-operator'`) — minted by your issuer, verified with
 the same signature, audience and issuer checks as any session, and never a separate
-credential. Moderation routes additionally require a registered publisher row: one
-accountable identity per action.
+credential. Mint operator sessions with a lifetime of at most
+`OPERATOR_SESSION_MAX_AGE_SECONDS` (3600 seconds): the catalog rejects any token
+carrying the operator role whose signed lifetime or age exceeds it, so reusing the
+ordinary long session expiry 401s operator sessions immediately. Moderation routes
+additionally require a registered publisher row: one accountable identity per action.
 
 - **Report** — any registered publisher reports a visible entry with a bounded
   free-text reason (`reportReasonChars`). Idempotent per (entry, reporter): the same
