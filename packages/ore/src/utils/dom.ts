@@ -115,6 +115,21 @@ const URL_ATTRS = new Set([
 const DANGEROUS_SCHEME_RE =
   /^\s*(?:(?:javascript|vbscript|blob):|data:(?:[^,]*\/(?:html|svg\+xml)|application\/(?:xhtml|xml)))/i;
 
+/**
+ * Control characters and spaces, normalized away before the scheme check to
+ * mirror the WHATWG URL parser browsers use when resolving URL attributes: it
+ * removes every ASCII tab/LF/CR anywhere in the input and trims C0 controls and
+ * spaces from both ends. So `java\tscript:alert(1)` executes even though the raw
+ * string does not start with `javascript:`. Testing the normalized form closes
+ * that gap while leaving benign URLs (e.g. one with an internal space) untouched.
+ */
+const URL_REMOVE_RE = /[\t\n\r]/g;
+const URL_TRIM_RE = /^[\s\p{C}]+|[\s\p{C}]+$/gu;
+
+const normalizeUrlForSchemeCheck = (value: string): string => value.replace(URL_REMOVE_RE, '').replace(URL_TRIM_RE, '');
+
+const isDangerousUrl = (value: string): boolean => DANGEROUS_SCHEME_RE.test(normalizeUrlForSchemeCheck(value));
+
 export const setAttr = (el: Element, name: string, val: unknown): void => {
   const lowerName = name.toLowerCase();
 
@@ -144,7 +159,7 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 
   const strVal = val === true ? 'true' : String(val);
 
-  if (URL_ATTRS.has(lowerName) && DANGEROUS_SCHEME_RE.test(strVal)) {
+  if (URL_ATTRS.has(lowerName) && isDangerousUrl(strVal)) {
     warn(
       `Blocked dangerous URL scheme in attribute "${name}". Only safe URLs are permitted in URL-accepting attributes.`,
     );

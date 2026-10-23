@@ -680,6 +680,24 @@ describe('Template: HTML System', () => {
 
       expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     });
+
+    it('rejects raw-HTML property names at compile time', async () => {
+      await expect(
+        mount(
+          () => html`
+            <div class="target" .innerHTML=${'<img src=x onerror=alert(1)>'}></div>
+          `,
+        ),
+      ).rejects.toThrow('parses raw HTML');
+
+      await expect(
+        mount(
+          () => html`
+            <div class="target" .outerHTML=${'<b>x</b>'}></div>
+          `,
+        ),
+      ).rejects.toThrow('parses raw HTML');
+    });
   });
 });
 

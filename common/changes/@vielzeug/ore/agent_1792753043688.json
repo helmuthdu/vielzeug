@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Block URL scheme bypass via embedded control characters and reject raw-HTML property bindings (.innerHTML/.outerHTML/.srcdoc) at compile time",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

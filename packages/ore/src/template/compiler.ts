@@ -90,6 +90,12 @@ const BOOL_ATTR_RE = /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 const PROP_RE = /\s+\.([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 const ATTR_RE = /\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 
+// Element properties that parse their assigned value as raw HTML. Binding these
+// through `.prop=` would be an unlabeled HTML-injection sink; the named
+// unsafeHtml() directive is the only supported raw-HTML path. (innerText/textContent
+// are plain-text sinks and stay allowed.)
+const HTML_INJECTION_PROPS = new Set(['innerhtml', 'outerhtml', 'srcdoc']);
+
 const detectSlot = (str: string): DetectedSlot => {
   let m: RegExpExecArray | null;
 
@@ -115,6 +121,14 @@ const detectSlot = (str: string): DetectedSlot => {
     // writes the element property directly, so these names must never be writable.
     if (name === '__proto__' || name === 'constructor' || name === 'prototype') {
       throw new OreApiError(ORE_ERRORS.propBindingForbiddenName(name));
+    }
+
+    // HTML-parsing properties are rejected for the same reason `srcdoc` and `on*`
+    // attributes are blocked in setAttr(): `.prop=` writes the property directly,
+    // so `.innerHTML=` would be an unlabeled raw-HTML sink that bypasses the
+    // named unsafeHtml() escape hatch. Sanitized HTML injection must go through it.
+    if (HTML_INJECTION_PROPS.has(name.toLowerCase())) {
+      throw new OreApiError(ORE_ERRORS.propBindingHtmlInjectionName(name));
     }
 
     return { kind: SlotKind.PROP, name, prefix: str.slice(0, -m[0].length) };

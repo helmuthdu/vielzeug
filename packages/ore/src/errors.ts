@@ -107,6 +107,8 @@ export const ORE_ERRORS = {
     `model(): "${name}" must be a plain value/checked attribute binding, not a boolean attribute. Bind it as ${name}=\${model(sig)}, not ?${name}=\${model(sig)}.`,
   propBindingForbiddenName: (name: string): string =>
     `html\`...\`: ".${name}" is a forbidden property-binding name (prototype pollution guard)`,
+  propBindingHtmlInjectionName: (name: string): string =>
+    `html\`...\`: ".${name}" parses raw HTML and is not a supported property binding. Sanitize untrusted content, then bind it with the unsafeHtml() directive.`,
   propInvalidReflect: 'Structured props cannot use reflect:true: use prop.json() with reflect:false',
   templateInterpolationInTag:
     'html`...`: interpolations inside a tag must be named attributes, boolean attributes, events, or refs',

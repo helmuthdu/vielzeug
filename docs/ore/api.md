@@ -180,8 +180,9 @@ boolean attributes (`?attr=`), explicit property bindings (`.prop=`), events (`@
 `.stop`/`.prevent`/`.once`/`.capture` modifiers), refs (`ref=`), and nested templates.
 
 `.prop=${value}` always writes the element property (never an attribute): the explicit channel for structured
-values (arrays, objects, callbacks). Prototype-polluting names (`__proto__`, `constructor`, `prototype`) are
-rejected at compile time.
+values (arrays, objects, callbacks). Prototype-polluting names (`__proto__`, `constructor`, `prototype`) and
+raw-HTML-parsing names (`innerHTML`, `outerHTML`, `srcdoc`) are rejected at compile time: render sanitized
+HTML through the `unsafeHtml()` directive instead of a property binding.
 
 `@event.stop`, `.prevent`, `.once`, and `.capture` are shorthand for the matching listener behavior
 (`stopPropagation`/`preventDefault` applied before the handler runs; `once`/`capture` passed as listener

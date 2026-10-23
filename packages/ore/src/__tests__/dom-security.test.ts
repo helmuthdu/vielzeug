@@ -96,6 +96,56 @@ describe('setAttr: URL security', () => {
     warnSpy.mockRestore();
   });
 
+  it('blocks javascript: with an embedded tab (browser URL-parser normalization)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = document.createElement('a');
+
+    // Browsers strip tab/LF/CR anywhere when resolving a URL, so this executes.
+    setAttr(el, 'href', 'java\tscript:alert(1)');
+
+    expect(el.getAttribute('href')).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Blocked dangerous URL'));
+    warnSpy.mockRestore();
+  });
+
+  it('blocks javascript: with an embedded newline', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = document.createElement('a');
+
+    setAttr(el, 'href', 'jav\nascript:alert(1)');
+
+    expect(el.getAttribute('href')).toBeNull();
+    warnSpy.mockRestore();
+  });
+
+  it('blocks data:text/html with an embedded tab', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = document.createElement('iframe');
+
+    setAttr(el, 'src', 'data\t:text/html,<script>alert(1)</script>');
+
+    expect(el.getAttribute('src')).toBeNull();
+    warnSpy.mockRestore();
+  });
+
+  it('blocks javascript: with leading C0 control characters', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = document.createElement('a');
+
+    setAttr(el, 'href', '\u0001javascript:alert(1)');
+
+    expect(el.getAttribute('href')).toBeNull();
+    warnSpy.mockRestore();
+  });
+
+  it('allows a benign URL containing an internal space', () => {
+    const el = document.createElement('a');
+
+    setAttr(el, 'href', 'https://example.com/a b');
+
+    expect(el.getAttribute('href')).toBe('https://example.com/a b');
+  });
+
   it('blocks vbscript: href', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const el = document.createElement('a');
