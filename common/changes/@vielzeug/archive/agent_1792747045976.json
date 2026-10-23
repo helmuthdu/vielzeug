@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "docs(archive): state issuer edge rate-limit and cf-connecting-ip deployment responsibilities",
+      "packageName": "@vielzeug/archive",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/archive"
+}

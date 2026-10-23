@@ -161,7 +161,10 @@ well-formed, or the route answers 503 without naming what is missing:
 Both limiter bindings must run 60-second windows (`simple` limiters:
 `period: 60`): the platform binding does not expose its period at runtime, so the
 Worker's 429 `Retry-After` header is fixed at 60 seconds — a longer window would
-make the header lie.
+make the header lie. The read limit keys on `cf-connecting-ip`, which Cloudflare
+sets authoritatively for requests that reach the Worker through its network. Keep
+that network path: never front the Worker with a proxy that forwards a
+client-supplied header of the same name.
 
 Generated Env types (wrangler's `worker-configuration.d.ts`) satisfy the package's
 structural `ArchiveWorkerEnv` — no `@cloudflare/workers-types` dependency, no casts.
@@ -209,6 +212,19 @@ The issuer first admits sign-in requests through its singleton durable
 `auth_sign_in_budget` table: 20 requests per 60 seconds before creating accounts
 or delivering email. No rate-limiter binding is required. It then
 permits three sign-in emails per email in an hourly durable window.
+Those durable budgets guard `POST /auth/sign-in` only. `POST /auth/verify` and
+`GET /auth/session` stay public: tokens are 256-bit, single-use and expire in
+15 minutes, so guessing is not the risk — but every request still costs the
+issuer: the verify GET renders the confirmation page, the verify POST performs a
+D1 token write, and the session check performs an RS256 verification plus an
+account read for a well-formed signed token. Put per-client-IP Cloudflare
+rate-limit rules (or an equivalent edge control) in front of both routes in
+production. Prefer a block action: applications check `GET /auth/session` with
+a `fetch`, and a fetch cannot solve a challenge interstitial, so challenging
+that route breaks legitimate sign-in. The verify GET is a browser navigation
+opened from the email link, so a challenge is solvable there if you want one.
+Set thresholds with CGNAT headroom (shared mobile/office egress IPs) and tune
+from observed traffic.
 Later database or delivery failures do not refund global admission.
 Using or expiring a link never refunds sends; failed delivery also spends the
 allowance. Links expire after 15 minutes. Operator sessions expire after 60 minutes
@@ -553,3 +569,5 @@ export function useRecipes() {
 - Grant the operator role claim only through your issuer, and only to accounts that
   are also registered publishers.
 - Wire a sanitized `tap()` sink and register the rate-limit pepper as a production secret.
+- Rate-limit the issuer's public `verify` and `session` routes at the edge; the
+  durable budgets cover sign-in admission only.

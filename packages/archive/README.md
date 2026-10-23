@@ -61,7 +61,8 @@ cookie; `POST /api/v1/auth/sign-out-all` advances the version and revokes all
 sessions. `GET /api/v1/auth/health` exposes the typed, read-only
 `archiveAuthHealthSchema` readiness response. Issuer admission is durable D1
 state: 20 requests per minute, plus three sends per email per hour; no issuer
-rate-limiter binding is required. Magic-link GETs show a confirmation page; only
+rate-limiter binding is required for sign-in admission, while the public verify
+and session-check routes are rate-limited at the edge. Magic-link GETs show a confirmation page; only
 a deliberate guarded POST redeems the token. Confirmation uses escaped `APP_NAME`
 branding, nonce-protected inline styles/script and no external assets. Recovery
 links to the fixed `PUBLIC_ORIGIN/account` sign-in entry; successful sign-in

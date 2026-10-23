@@ -195,7 +195,11 @@ Magic links expire after 15 minutes and work once. The durable per-email budget 
 The issuer-global admission budget is durable D1 state in `auth_sign_in_budget`:
 20 requests per 60-second window before account creation or email delivery.
 This supplements, rather than replaces, the durable per-email budget. No external
-rate-limiter binding is required.
+rate-limiter binding is required for sign-in admission; the budgets do not cover
+`POST /auth/verify` or `GET /auth/session`, which deployments rate-limit at the
+edge. Edge rules should block rather than challenge `GET /auth/session`: clients
+check it with a `fetch`, which cannot solve a challenge interstitial. The verify
+GET is a browser navigation from the email link, so a challenge is solvable there.
 Admission spends are not refunded after later database or email failures.
 Request emails are trimmed and lowercased before validation. `SENDER_ADDRESS`
 must already be canonical; `OPERATOR_EMAILS` entries are trimmed and lowercased
@@ -360,7 +364,7 @@ Effective hide, unhide, operator removal and publisher erasure append audit rows
 | `ARCHIVE_OPERATOR_ROLE`                                       | `'archive-operator'`                                                       |
 | `SESSION_COOKIE_NAME`, `SESSION_COOKIE_PATH`                  | `'archive_session'`, `'/api/v1'`                                           |
 | `SESSION_MAX_AGE_SECONDS`                                     | `2592000`                                                                  |
-| `OPERATOR_SESSION_MAX_AGE_SECONDS`                            | `3600` (60 minutes); shared root contract                                   |
+| `OPERATOR_SESSION_MAX_AGE_SECONDS`                            | `3600` (60 minutes); shared root contract                                  |
 | `ACCOUNT_HEADER`                                              | `'X-Archive-Account'`; required issuer-account UUID on coordinated erasure |
 | `PUBLISHER_HEADER`, `REQUEST_MARKER_HEADER`                   | `'x-archive-publisher'`, `'x-archive-request'`                             |
 | `ILL_FORMED_TEXT`, `isWellFormedText(value: string): boolean` | Reject control characters and lone UTF-16 surrogates                       |

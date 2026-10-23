@@ -194,9 +194,11 @@ Serve the sign-in entry at `${PUBLIC_ORIGIN}/account`: confirmation and noscript
 recovery link directly there as “Request a new sign-in link”. These recovery and
 completion routes are fixed reference issuer conventions owned by your application.
 The initial “Back to app” exit still links to `${PUBLIC_ORIGIN}/`.
-The issuer needs no platform rate-limit bindings: its D1 admission budget allows
-20 requests per 60 seconds and its durable per-email budget allows three messages
-per hour.
+The issuer needs no platform rate-limit bindings for sign-in admission: its D1
+admission budget allows 20 requests per 60 seconds and its durable per-email
+budget allows three messages per hour. Those budgets do not cover
+`POST /auth/verify` or `GET /auth/session`; add a Cloudflare rate-limit rule (or
+an equivalent edge control) for both paths on the issuer route in production.
 
 Both DDL files initialize fresh databases only. Do not point them at an existing
 database and expect an automatic upgrade, reset or data deletion. The catalog

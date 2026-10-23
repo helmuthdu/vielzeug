@@ -129,7 +129,11 @@ server subpaths) and their browsers (the root contract).
 - Issuer email send allowances are durable and atomic: consuming/expiring links
   or failed delivery never refunds sends. Singleton durable `auth_sign_in_budget`
   bounds global admission before account creation/delivery (20 requests per 60
-  seconds), independent of platform limiter bindings.
+  seconds), independent of platform limiter bindings. Those budgets cover sign-in
+  admission only: deployments rate-limit public `POST /auth/verify` and
+  `GET /auth/session` at the edge; do not add a package limiter binding for them.
+  The catalog read limit trusts `cf-connecting-ip` as Cloudflare-set; deployments
+  must keep the Worker on Cloudflare's network path.
   Request emails trim/lowercase; sender configuration must be canonical, and
   operator-email list entries trim/lowercase before validation.
   Operator sessions last 3600 seconds (60 minutes).
