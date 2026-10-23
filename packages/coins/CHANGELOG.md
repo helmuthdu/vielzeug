@@ -1,7 +1,13 @@
 # Change Log - @vielzeug/coins
 
-This log was last generated on Wed, 21 Oct 2026 07:30:45 GMT and should not be manually modified.
+This log was last generated on Fri, 23 Oct 2026 07:29:16 GMT and should not be manually modified.
 
+## 26.10.17
+Fri, 23 Oct 2026 07:29:16 GMT
+
+### Patches
+
+- chore: align with CalVer lockstep trains: no code change this train
 ## 26.10.16
 Wed, 21 Oct 2026 07:30:45 GMT
 
