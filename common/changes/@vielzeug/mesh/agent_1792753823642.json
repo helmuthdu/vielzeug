@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Bound mq2. pairing-payload decompression to prevent a decompression-bomb DoS on unauthenticated peer input",
+      "packageName": "@vielzeug/mesh",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/mesh"
+}

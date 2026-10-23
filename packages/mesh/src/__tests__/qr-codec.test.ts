@@ -115,6 +115,14 @@ describe('meshQrCodec', () => {
     await expect(meshQrCodec.decode(`mq2.${bytesToBase45(compressed)}`)).rejects.toBeInstanceOf(MeshPairingError);
   });
 
+  it('rejects a decompression bomb before it exhausts memory', async () => {
+    // A highly-compressible payload that inflates far past the decode cap:
+    // decoding must bound the output rather than materialize it.
+    const bomb = new Uint8Array(8 * 1024 * 1024); // 8 MiB of zeros, ~1:1000 deflate ratio
+    const compressed = await deflate(bomb);
+    await expect(meshQrCodec.decode(`mq2.${bytesToBase45(compressed)}`)).rejects.toBeInstanceOf(MeshPairingError);
+  });
+
   it('falls back to plain meshCodec output when CompressionStream is missing', async () => {
     const original = globalThis.CompressionStream;
     // @ts-expect-error deliberate removal for the test
