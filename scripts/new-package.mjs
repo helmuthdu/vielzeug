@@ -330,6 +330,14 @@ export function planPackage(name, description, { root = ROOT } = {}) {
     [`packages/${name}/src/__tests__/${name}.test.ts`]: `describe('${packageName}', () => {\n  it.todo('names the first observable behavior of the public API');\n});\n`,
     'rush.json': `${JSON.stringify(rush, null, 2)}\n`,
   };
+  // npm ships a package-root LICENSE in every tarball (even under `files: ["dist"]`), so
+  // license scanners find the full MIT text per package. Real copy: `npm pack` drops symlinks.
+  // `sync-package-manifests.mjs` re-copies this from the root LICENSE, so it stays in sync.
+  try {
+    files[`packages/${name}/LICENSE`] = readFileSync(path.join(root, 'LICENSE'), 'utf8');
+  } catch {
+    // Fixture roots without a LICENSE (tests): the sync script covers real repos.
+  }
   for (const [file, content] of Object.entries(configFiles(name))) {
     files[`packages/${name}/${file}`] = content;
   }

@@ -23,6 +23,7 @@
   "bugs": {
     "url": "https://github.com/helmuthdu/vielzeug/issues"
   },
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22"

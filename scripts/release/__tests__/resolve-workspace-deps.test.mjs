@@ -120,6 +120,7 @@ describe('createPublishedManifest()', () => {
         './math': { import: './dist/math.js', require: './dist/math.cjs', types: './dist/math.d.ts' },
       },
       name: '@vielzeug/example',
+      license: 'MIT',
       repository: {
         type: 'git',
         url: 'https://github.com/helmuthdu/vielzeug',

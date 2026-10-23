@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { isMain } from './lib/cli.mjs';
-import { normalizePackageManifest } from './lib/package-manifest.mjs';
+import { normalizePackageManifest, syncPackageLicenseFiles } from './lib/package-manifest.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const packages = join(root, 'packages');
@@ -20,7 +20,6 @@ function packageManifestsIn(directory) {
 export function syncPackageManifests({ check = false, packagesDir = packages, rootDir = join(packagesDir, '..') } = {}) {
   const stale = [];
   const files = [join(rootDir, 'package.json'), ...packageManifestsIn(packagesDir), ...packageManifestsIn(join(rootDir, 'demos'))];
-
   for (const file of files) {
     let original;
     try {
@@ -41,6 +40,11 @@ export function syncPackageManifests({ check = false, packagesDir = packages, ro
   }
 
   if (stale.length > 0) throw new Error(`Package manifests need normalization:\n${stale.join('\n')}`);
+
+  // Every publishable package must ship the root MIT text as its own LICENSE file so
+  // license scanners (Black Duck et al.) find it inside the tarball, not just in README prose.
+  const staleLicenses = syncPackageLicenseFiles({ packagesDir, rootLicense: join(rootDir, 'LICENSE'), check });
+  if (check && staleLicenses.length > 0) throw new Error(`Package LICENSE files need syncing:\n${staleLicenses.join('\n')}`);
 }
 
 if (isMain(import.meta.url)) {

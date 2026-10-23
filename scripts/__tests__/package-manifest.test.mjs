@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { normalizePackageManifest } from '../lib/package-manifest.mjs';
+import { normalizePackageManifest, syncPackageLicenseFiles } from '../lib/package-manifest.mjs';
 import { syncPackageManifests } from '../sync-package-manifests.mjs';
 
 const fixtures = [];
@@ -86,7 +86,33 @@ describe('normalizePackageManifest()', () => {
           version: '1.0.0',
         }),
       ),
-    ).toEqual(['name', 'version', 'description', 'repository', 'scripts', 'dependencies', 'custom']);
+    ).toEqual(['name', 'version', 'description', 'repository', 'license', 'scripts', 'dependencies', 'custom']);
+  });
+
+  it('injects the MIT license for publishable packages only', () => {
+    expect(normalizePackageManifest({ name: '@vielzeug/example', version: '1.0.0' }).license).toBe('MIT');
+    expect(normalizePackageManifest({ name: 'demo-app', version: '1.0.0', private: true }).license).toBeUndefined();
+    expect(normalizePackageManifest({ name: '@vielzeug/example', version: '1.0.0', license: 'MIT' }).license).toBe('MIT');
+  });
+});
+
+describe('syncPackageLicenseFiles()', () => {
+  it('copies the root license into publishable packages and reports stale files in check mode', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'vielzeug-license-'));
+    const packagesDirectory = path.join(directory, 'packages');
+    const packageDirectory = path.join(packagesDirectory, 'example');
+    mkdirSync(packageDirectory, { recursive: true });
+    writeFileSync(path.join(directory, 'LICENSE'), 'MIT License\n');
+    writeFileSync(path.join(packageDirectory, 'package.json'), JSON.stringify({ name: '@vielzeug/example', version: '1.0.0' }));
+    fixtures.push(directory);
+
+    const stale = syncPackageLicenseFiles({ packagesDir: packagesDirectory, rootLicense: path.join(directory, 'LICENSE'), check: true });
+    expect(stale).toEqual([path.join(packageDirectory, 'LICENSE')]);
+    expect(() => readFileSync(path.join(packageDirectory, 'LICENSE'), 'utf8')).toThrow();
+
+    expect(syncPackageLicenseFiles({ packagesDir: packagesDirectory, rootLicense: path.join(directory, 'LICENSE') })).toEqual(stale);
+    expect(readFileSync(path.join(packageDirectory, 'LICENSE'), 'utf8')).toBe('MIT License\n');
+    expect(syncPackageLicenseFiles({ packagesDir: packagesDirectory, rootLicense: path.join(directory, 'LICENSE') })).toEqual([]);
   });
 });
 

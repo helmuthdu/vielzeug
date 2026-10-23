@@ -15,6 +15,7 @@ function fixtureRoot() {
   const template = path.join(root, 'packages/coins');
   mkdirSync(template, { recursive: true });
   mkdirSync(path.join(root, 'docs'), { recursive: true });
+  writeFileSync(path.join(root, 'LICENSE'), 'MIT License\n');
   writeFileSync(path.join(template, 'package.json'), readFileSync(path.join(REPO, 'packages/coins/package.json')));
   writeFileSync(
     path.join(root, 'rush.json'),
@@ -79,7 +80,9 @@ describe('planPackage()', () => {
     expect(manifest.name).toBe('@vielzeug/widget-kit');
     expect(manifest.description).toBe('Widget utilities');
     expect(manifest.version).toBe('0.1.0');
+    expect(manifest.license).toBe('MIT');
     expect(manifest.repository.directory).toBe('packages/widget-kit');
+    expect(files['packages/widget-kit/LICENSE']).toBe('MIT License\n');
     expect(manifest.devDependencies).toEqual(JSON.parse(readFileSync(path.join(REPO, 'packages/coins/package.json'), 'utf8')).devDependencies);
 
     const rush = JSON.parse(files['rush.json']);

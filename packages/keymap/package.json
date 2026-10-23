@@ -7,6 +7,7 @@
     "url": "https://github.com/helmuthdu/vielzeug",
     "directory": "packages/keymap"
   },
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22"

@@ -7,6 +7,7 @@
     "url": "https://github.com/helmuthdu/vielzeug",
     "directory": "packages/scout"
   },
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22"

@@ -1,3 +1,6 @@
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 function stripSourceCondition(value) {
   if (Array.isArray(value)) return value.map(stripSourceCondition);
   if (typeof value !== 'object' || value === null) return value;
@@ -117,10 +120,61 @@ export function normalizePackageManifest(manifest) {
         }
       : manifest.repository;
 
+  // License scanners (Black Duck, FOSSA, ClearlyDefined, npm's own "License" column) read the
+  // manifest `license` field, not README prose. Every published @vielzeug/* package is MIT
+  // (root LICENSE), so inject it centrally like `repository` above. Root and demo manifests
+  // stay private/unpublished and keep whatever they declare.
+  const license = manifest.name?.startsWith('@vielzeug/') ? 'MIT' : manifest.license;
+
   return orderManifest({
     ...manifest,
     ...(repository && { repository }),
+    ...(license && { license }),
     ...(manifest.exports && { exports }),
     ...(typesVersions ? { typesVersions } : {}),
   });
+}
+
+/**
+ * The root MIT license text, copied to `packages/<name>/LICENSE` for every publishable
+ * package. npm always ships a package-root LICENSE in the tarball, even under a
+ * `files: ["dist"]` whitelist, so consumers and license scanners see the full text
+ * instead of only the README's "MIT ©" line. Real copies, not symlinks: `npm pack`
+ * silently drops symlinked files from tarballs.
+ */
+export function syncPackageLicenseFiles({ packagesDir, rootLicense, check = false }) {
+  let licenseText;
+  try {
+    licenseText = readFileSync(rootLicense, 'utf8');
+  } catch {
+    // No root license to propagate (fixture dirs, subtree checkouts): nothing to sync.
+    return [];
+  }
+  const stale = [];
+
+  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = join(packagesDir, entry.name, 'package.json');
+    let manifest;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    } catch {
+      continue;
+    }
+    if (!manifest.name?.startsWith('@vielzeug/')) continue;
+
+    const licensePath = join(packagesDir, entry.name, 'LICENSE');
+    let current;
+    try {
+      current = readFileSync(licensePath, 'utf8');
+    } catch {
+      current = undefined;
+    }
+    if (current === licenseText) continue;
+
+    stale.push(licensePath);
+    if (!check) writeFileSync(licensePath, licenseText);
+  }
+
+  return stale;
 }
