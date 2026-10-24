@@ -563,6 +563,9 @@ importers:
       '@vielzeug/keymap':
         specifier: workspace:*
         version: link:../keymap
+      '@vielzeug/necromancer':
+        specifier: workspace:*
+        version: link:../necromancer
       '@vielzeug/orbit':
         specifier: workspace:*
         version: link:../orbit
