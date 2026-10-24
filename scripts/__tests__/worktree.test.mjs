@@ -11,6 +11,20 @@ import {
   ROOT,
 } from '../worktree.mjs';
 
+// An isolated package in the live graph (no @vielzeug deps, no dependents), used
+// as the "independent" fixture for the cmdAdd() gating tests. Derived rather
+// than hardcoded so it cannot go stale when a new edge lands: refine's DataGrid
+// FLIP work added a refine -> necromancer edge, which made the previously
+// hardcoded necromancer fixture a non-leaf and broke these tests.
+const liveGraph = readDependencyGraph(ROOT);
+const leafPkg = [...liveGraph.keys()]
+  .filter((p) => {
+    const { dependedOnBy, dependsOn } = describeCoupling(p, liveGraph);
+
+    return dependsOn.length === 0 && dependedOnBy.length === 0;
+  })
+  .sort()[0];
+
 describe('readDependencyGraph()', () => {
   const graph = readDependencyGraph(ROOT);
 
@@ -99,10 +113,15 @@ describe('describeCoupling() / isIndependent() / formatDep()', () => {
     expect(describeCoupling('ripple', graph).dependedOnBy.length).toBeGreaterThan(0);
   });
 
-  it('matches the real graph: a leaf package with no known dependents is independent', () => {
-    const graph = readDependencyGraph(ROOT);
-    // necromancer has no @vielzeug deps and nothing depends on it
-    expect(isIndependent('necromancer', graph)).toBe(true);
+  it('matches the real graph: an isolated package has no edges in either direction', () => {
+    // Proves the graph has an isolated package and that isIndependent agrees
+    // with the raw describeCoupling edges (both directions empty).
+    const { dependedOnBy, dependsOn } = describeCoupling(leafPkg, liveGraph);
+
+    expect(leafPkg).toBeTruthy();
+    expect(dependsOn).toEqual([]);
+    expect(dependedOnBy).toEqual([]);
+    expect(isIndependent(leafPkg, liveGraph)).toBe(true);
   });
 });
 
@@ -150,15 +169,15 @@ describe('cmdAdd(): dependency-graph gating, with a fake runner (no real git/rus
 
   it('proceeds for an independent package without needing --force', () => {
     const { calls, run } = fakeRun();
-    const result = cmdAdd('necromancer', { run });
+    const result = cmdAdd(leafPkg, { run });
     expect(result.created).toBe(true);
     expect(calls.map((c) => c.cmd)).toEqual(['git', 'git', 'rush']);
   });
 
   it('generates a timestamped branch name when none is given', () => {
     const { run } = fakeRun();
-    const result = cmdAdd('necromancer', { run });
-    expect(result.branchName).toMatch(/^agent\/necromancer-\d+$/);
+    const result = cmdAdd(leafPkg, { run });
+    expect(result.branchName).toMatch(new RegExp(`^agent/${leafPkg}-\\d+$`));
   });
 
   it('cleans up the branch it created if `git worktree add` itself fails', () => {
@@ -169,10 +188,10 @@ describe('cmdAdd(): dependency-graph gating, with a fake runner (no real git/rus
         throw new Error('simulated failure');
       }
     };
-    expect(() => cmdAdd('necromancer', { branch: 'doomed-branch', run })).toThrow(/git worktree add failed/);
+    expect(() => cmdAdd(leafPkg, { branch: 'doomed-branch', run })).toThrow(/git worktree add failed/);
     expect(calls).toEqual([
       { args: ['worktree', 'prune'], cmd: 'git' },
-      { args: ['worktree', 'add', expect.stringContaining('.worktrees/necromancer'), '-b', 'doomed-branch'], cmd: 'git' },
+      { args: ['worktree', 'add', expect.stringContaining(`.worktrees/${leafPkg}`), '-b', 'doomed-branch'], cmd: 'git' },
       { args: ['branch', '-D', 'doomed-branch'], cmd: 'git' },
     ]);
   });
