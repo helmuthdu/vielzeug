@@ -1,4 +1,4 @@
-import { type BeaconStorage, createCoachmark, createTour } from '@vielzeug/beacon';
+import { type BeaconStorage, type BeaconTargetResolver, createCoachmark, createTour } from '@vielzeug/beacon';
 import type { OreTourElement } from '@vielzeug/refine/tour';
 import { computed, type Disposable, type Readable } from '@vielzeug/ripple';
 import { productTour, shareCoachmark } from '../core/tours';
@@ -23,6 +23,12 @@ export interface OnboardingHandle extends Disposable {
 export interface MountOnboardingOptions {
   /** The `ore-tour` element that renders the coachmark (single step, custom footer). */
   coachCard: OreTourElement;
+  /**
+   * Live resolver for the navigation step's anchor. The shell owns it because
+   * the navigation control differs per viewport: the sidebar group on desktop,
+   * the sidebar's bottom bar on phones.
+   */
+  navigationTarget?: BeaconTargetResolver;
   /** Progress persistence; omit for in-memory-only (this session). */
   storage?: BeaconStorage;
   /** The `ore-tour` element that renders the product tour. */
@@ -38,10 +44,16 @@ export interface MountOnboardingOptions {
  * choreography.
  */
 export function mountOnboarding(options: MountOnboardingOptions): OnboardingHandle {
-  const { coachCard, storage, tourCard } = options;
+  const { coachCard, navigationTarget, storage, tourCard } = options;
   const controller = new AbortController();
 
-  const tour = createTour({ ...productTour, autoStart: true, storage });
+  // The shell may re-point the navigation step at a viewport-specific control;
+  // every other step keeps its declared target.
+  const steps = navigationTarget
+    ? productTour.steps.map((step) => (step.id === 'navigation' ? { ...step, target: navigationTarget } : step))
+    : productTour.steps;
+
+  const tour = createTour({ ...productTour, autoStart: true, steps, storage });
   const coachmark = createCoachmark({ ...shareCoachmark, autoShow: false, storage });
 
   // ── Tour card ← controller ─────────────────────────────────────────────────
@@ -91,7 +103,7 @@ export function mountOnboarding(options: MountOnboardingOptions): OnboardingHand
       return `Tour running — step ${Math.max(0, stepIndex) + 1} of ${totalSteps}.`;
     }
     if (status === 'completed') return 'Tour complete. The share hint points at the next thing to try.';
-    if (status === 'dismissed') return 'Tour dismissed. Replay it any time from the controls below.';
+    if (status === 'dismissed') return 'Tour dismissed. Replay it any time from Getting started.';
 
     return '';
   });

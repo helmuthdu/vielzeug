@@ -15,6 +15,7 @@
   "dependencies": {
     "@vielzeug/beacon": "workspace:*",
     "@vielzeug/ore": "workspace:*",
+    "@vielzeug/prism": "workspace:*",
     "@vielzeug/refine": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "lucide": "^1.59.0"

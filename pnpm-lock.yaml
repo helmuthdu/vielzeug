@@ -429,6 +429,9 @@ importers:
       '@vielzeug/ore':
         specifier: workspace:*
         version: link:../../packages/ore
+      '@vielzeug/prism':
+        specifier: workspace:*
+        version: link:../../packages/prism
       '@vielzeug/refine':
         specifier: workspace:*
         version: link:../../packages/refine

@@ -1,4 +1,6 @@
+import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/badge';
+import '@vielzeug/refine/box';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/grid';
@@ -6,84 +8,54 @@ import '@vielzeug/refine/icon';
 import '@vielzeug/refine/icons/lucide/all';
 import '@vielzeug/refine/list';
 import '@vielzeug/refine/list-item';
+import '@vielzeug/refine/menu';
 import '@vielzeug/refine/navbar';
-import '@vielzeug/refine/spotlight';
+import '@vielzeug/refine/sidebar';
+import '@vielzeug/refine/stats';
+import '@vielzeug/refine/table';
 import '@vielzeug/refine/tour';
-import { define, each, getHost, html, onCleanup, onMounted } from '@vielzeug/ore';
+import { define, each, getHost, html, onCleanup, onMounted, ref } from '@vielzeug/ore';
+import type { ChartHandle } from '@vielzeug/prism';
+import { createLineChart } from '@vielzeug/prism';
+import type { MenuSelectDetail } from '@vielzeug/refine/menu';
+import type { SidebarElement } from '@vielzeug/refine/sidebar';
 import type { OreTourElement } from '@vielzeug/refine/tour';
-import { signal } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
+import {
+  type BoardMetric,
+  boardMetrics,
+  eventSeed,
+  fmt,
+  type MetricId,
+  reportRows,
+  type StreamEvent,
+} from '../core/data';
 import { createLocalBeaconStorage } from '../core/storage';
 import { setTheme, theme } from '../core/theme';
 import { mountOnboarding, type OnboardingHandle } from './onboarding';
 
 type ViewId = 'boards' | 'events' | 'reports';
 
-interface Tile {
-  id: string;
-  metric: string;
-  pinned: boolean;
-  value: string;
-}
-
-interface StreamEvent {
-  detail: string;
-  icon: string;
-  id: number;
-  time: string;
-  tone: 'info' | 'success' | 'warning';
-}
-
-interface Report {
+interface ReportRow {
   cadence: string;
+  delivered: string;
   id: string;
+  lastRun: string;
   name: string;
+  nextRun: string;
   owner: string;
 }
 
-const tiles = signal<Tile[]>([
-  { id: 'sessions', metric: 'Sessions today', pinned: true, value: '18,402' },
-  { id: 'conversion', metric: 'Conversion', pinned: false, value: '3.8%' },
-  { id: 'latency', metric: 'p95 latency', pinned: false, value: '212 ms' },
-  { id: 'errors', metric: 'Error rate', pinned: false, value: '0.42%' },
-  { id: 'revenue', metric: 'Revenue (24h)', pinned: true, value: '€41,208' },
-  { id: 'queue', metric: 'Queue depth', pinned: false, value: '7' },
-]);
+const views: { icon: string; id: ViewId; label: string }[] = [
+  { icon: 'layout-dashboard', id: 'boards', label: 'Boards' },
+  { icon: 'activity', id: 'events', label: 'Events' },
+  { icon: 'file-bar-chart', id: 'reports', label: 'Reports' },
+];
 
-const pinnedCount = signal(2);
-const activeView = signal<ViewId>('boards');
-const statusText = signal('');
-
-const refreshPinnedCount = (): void => {
-  pinnedCount.value = tiles.value.filter((tile) => tile.pinned).length;
-};
-
-const togglePin = (id: string): void => {
-  tiles.value = tiles.value.map((tile) => (tile.id === id ? { ...tile, pinned: !tile.pinned } : tile));
-  refreshPinnedCount();
-};
-
-// The board claims to be live, so it should look live: a slow drift on the
-// counters sells "real-time" without pretending the numbers mean anything.
-const drift = (value: string, delta: number): string => {
-  const digits = Number.parseFloat(value.replace(/[^\d.]/g, ''));
-
-  if (!Number.isFinite(digits)) return value;
-
-  const next = Math.max(0, digits + delta);
-
-  return value.replace(/[\d.,]+/, (match) =>
-    match.includes(',') ? Math.round(next).toLocaleString('en-US') : next.toFixed(match.includes('.') ? 2 : 0),
-  );
-};
-
-const tickMetrics = (): void => {
-  tiles.value = tiles.value.map((tile) => {
-    if (tile.id === 'sessions') return { ...tile, value: drift(tile.value, Math.ceil(Math.random() * 40)) };
-    if (tile.id === 'revenue') return { ...tile, value: drift(tile.value, Math.ceil(Math.random() * 400)) };
-    if (tile.id === 'queue') return { ...tile, value: drift(tile.value, Math.random() > 0.5 ? 1 : -1) };
-
-    return tile;
-  });
+const viewTitle: Record<ViewId, string> = {
+  boards: 'Product analytics',
+  events: 'Event stream',
+  reports: 'Reports',
 };
 
 const clock = (agoSeconds = 0): string =>
@@ -93,74 +65,189 @@ const clock = (agoSeconds = 0): string =>
     second: '2-digit',
   });
 
-const eventSeed: Omit<StreamEvent, 'id' | 'time'>[] = [
-  { detail: 'checkout-e2e flagged 3 slow responses', icon: 'alert-triangle', tone: 'warning' },
-  { detail: 'Board "Product analytics" shared with 4 teammates', icon: 'share-2', tone: 'info' },
-  { detail: 'Deploy 4f2c1a promoted to production', icon: 'rocket', tone: 'success' },
-  { detail: 'Conversion crossed its 7-day high', icon: 'trending-up', tone: 'success' },
-  { detail: 'Queue depth back under its alert line', icon: 'check-circle', tone: 'success' },
-  { detail: 'Nightly report delivered to #analytics', icon: 'mail', tone: 'info' },
-];
+// Prism's line scale accepts numeric keys, so the hourly series is charted at
+// its index and the axis prints the clock hour the index stands for.
+const hourTickFormat = (value: number): string => `${String(value + 9).padStart(2, '0')}:00`; // taste-skill-ignore: clock hour, not a step label
 
 let eventId = 0;
-
-const events = signal<StreamEvent[]>(
-  eventSeed.map((seed, index) => ({ ...seed, id: ++eventId, time: clock((index + 1) * 47) })),
-);
-
-const pushEvent = (): void => {
-  const seed = eventSeed[Math.floor(Math.random() * eventSeed.length)];
-
-  events.value = [{ ...seed, id: ++eventId, time: clock() }, ...events.value].slice(0, 8);
-};
-
-const reports: Report[] = [
-  { cadence: 'Daily · 07:00', id: 'funnel', name: 'Signup funnel', owner: 'Maya' },
-  { cadence: 'Weekly · Mon', id: 'latency', name: 'Latency budget', owner: 'Tomas' },
-  { cadence: 'Weekly · Mon', id: 'revenue', name: 'Revenue by plan', owner: 'Ines' },
-  { cadence: 'Monthly', id: 'churn', name: 'Churn post-mortem', owner: 'Ada' },
-];
-
-const views: { icon: string; id: ViewId; label: string }[] = [
-  { icon: 'layout-dashboard', id: 'boards', label: 'Boards' },
-  { icon: 'activity', id: 'events', label: 'Events' },
-  { icon: 'file-bar-chart', id: 'reports', label: 'Reports' },
-];
-
-const viewHead: Record<ViewId, { eyebrow: string; subtitle: string; title: string }> = {
-  boards: {
-    eyebrow: 'LIVE BOARD',
-    subtitle:
-      'A fictional workspace. The guided tour and the share hint are real @vielzeug/beacon flows over ore-tour.',
-    title: 'Product analytics',
-  },
-  events: {
-    eyebrow: 'LIVE STREAM',
-    subtitle: 'Everything Signalbox notices, as it happens. New events land at the top of the list.',
-    title: 'Event stream',
-  },
-  reports: {
-    eyebrow: 'SAVED',
-    subtitle: 'Reports run on their own schedule and land in your inbox or channel.',
-    title: 'Reports',
-  },
-};
 
 define('onboarding-shell', {
   setup() {
     const host = getHost();
+    const chartBox = ref<HTMLElement>();
     let handle: OnboardingHandle | null = null;
+    let chart: ChartHandle | null = null;
+    // The container the handle was built against, so a replaced container is
+    // detected rather than silently updated while detached.
+    let chartHost: HTMLElement | null = null;
 
-    // Switching away from the toured view ends the tour: its remaining steps
-    // anchor to board controls that just left the screen, and beacon would wait
-    // for them to return. Ending is the honest state — the controls offer a replay.
+    // ── State ────────────────────────────────────────────────────────────────
+    // The board's metrics are mutable copies: the live drift rewrites the last
+    // point of a series, and the tile figure is always that last point.
+    const metrics = signal<BoardMetric[]>(boardMetrics.map((metric) => ({ ...metric })));
+    const selectedId = signal<MetricId>('latency');
+    const pinnedIds = signal<string[]>(['sessions', 'revenue']);
+    const activeView = signal<ViewId>('boards');
+    const statusText = signal('');
+    const updated = signal(clock());
+
+    const events = signal<StreamEvent[]>(
+      eventSeed.map((seed, index) => ({ ...seed, id: ++eventId, time: clock((index + 1) * 47) })),
+    );
+    const reports = signal<ReportRow[]>([...reportRows]);
+
+    const selectedMetric = computed(
+      () => metrics.value.find((metric) => metric.id === selectedId.value) ?? metrics.value[0],
+    );
+    const isPinned = (id: string): boolean => pinnedIds.value.includes(id);
+    const activeLabel = computed(() => views.find((view) => view.id === activeView.value)?.label ?? '');
+
     const selectView = (id: ViewId): void => {
       if (id === activeView.value) return;
 
       activeView.value = id;
+      // Switching away from the toured view ends the tour: its remaining steps
+      // anchor to board controls that just left the screen, and beacon would
+      // wait for them to return. Ending is the honest state; the sidebar widget
+      // replays.
       handle?.endTour();
+      scheduleChart();
     };
 
+    const selectMetric = (id: MetricId): void => {
+      selectedId.value = id;
+      scheduleChart();
+    };
+
+    const togglePin = (id: string): void => {
+      pinnedIds.value = isPinned(id) ? pinnedIds.value.filter((pinned) => pinned !== id) : [...pinnedIds.value, id];
+    };
+
+    const addTile = (): void => {
+      const id = `metric-${Date.now()}` as MetricId;
+
+      metrics.value = [...metrics.value, { format: fmt.int, id, name: 'New metric', series: [], value: Number.NaN }];
+      selectMetric(id);
+    };
+
+    const addReport = (): void => {
+      reports.value = [
+        ...reports.value,
+        {
+          cadence: 'Daily · 07:00',
+          delivered: 'You',
+          id: `report-${Date.now()}`,
+          lastRun: '—',
+          name: 'Untitled report',
+          nextRun: 'Tomorrow 07:00',
+          owner: 'You',
+        },
+      ];
+    };
+
+    // The workspace menu only holds actions the demo really performs: the
+    // three tour controls, same handlers the sidebar widget uses.
+    const onAccountSelect = (event: Event): void => {
+      const { value } = (event as CustomEvent<MenuSelectDetail>).detail;
+
+      if (value === 'replay-tour') {
+        selectView('boards');
+        handle?.replayTour();
+      } else if (value === 'share-hint') {
+        handle?.showShareHint();
+      } else if (value === 'reset') {
+        handle?.resetAll();
+      }
+    };
+
+    // The board claims to be live, so the counters drift: the last point of a
+    // series moves with its tile figure, and the chart re-renders to match.
+    const drift = (id: MetricId, delta: number): void => {
+      metrics.value = metrics.value.map((metric) => {
+        if (metric.id !== id || metric.series.length === 0) return metric;
+
+        const next = Math.max(0, metric.value + delta);
+        const series = [...metric.series];
+
+        series[series.length - 1] = next;
+
+        return { ...metric, series, value: next };
+      });
+      scheduleChart();
+    };
+
+    const tickMetrics = (): void => {
+      drift('sessions', Math.ceil(Math.random() * 40));
+      drift('revenue', Math.ceil(Math.random() * 400));
+      drift('queue', Math.random() > 0.5 ? 1 : -1);
+      updated.value = clock();
+    };
+
+    const pushEvent = (): void => {
+      const seed = eventSeed[Math.floor(Math.random() * eventSeed.length)];
+
+      events.value = [{ ...seed, id: ++eventId, time: clock() }, ...events.value].slice(0, 8);
+    };
+
+    // ── Chart rendering ──────────────────────────────────────────────────────
+    // Prism owns the chart: one handle, updated (never rebuilt) on selection and
+    // drift, and rebuilt only when the container itself is replaced. Rendering is
+    // deferred a macrotask so ore's DOM updates have landed and the container has
+    // width.
+    const chartSeries = (metric: BoardMetric) => ({
+      color: 'var(--color-primary)',
+      curve: 'linear' as const,
+      data: metric.series.map((value, key) => ({ key, value })),
+      name: metric.name,
+      showPoints: true,
+    });
+
+    const renderChart = (): void => {
+      const container = chartBox.value;
+
+      if (!container) return;
+
+      const metric = selectedMetric.value;
+
+      if (!metric || metric.series.length === 0) {
+        chart?.dispose();
+        chart = null;
+        chartHost = null;
+        container.innerHTML = '<p class="chart-empty">No data in this range yet.</p>';
+
+        return;
+      }
+
+      // Leaving and returning to the board re-creates the panel, so the handle
+      // can outlive its container: updating a detached node would leave the
+      // panel blank for good. A new container means a new chart.
+      if (chart && chartHost !== container) {
+        chart.dispose();
+        chart = null;
+      }
+
+      if (!chart) {
+        container.textContent = '';
+        chart = createLineChart(container, {
+          a11y: { ariaLabel: `${metric.name}, hourly from 09:00 to 22:00` },
+          series: [chartSeries(metric)],
+          tooltip: { valueFormat: (value) => metric.format(value) },
+          xAxis: { grid: false, tickCount: 5, tickFormat: (value) => hourTickFormat(value as number) },
+          yAxis: { grid: true },
+        });
+        chartHost = container;
+
+        return;
+      }
+
+      chart.update([chartSeries(metric)]);
+    };
+
+    function scheduleChart(): void {
+      window.setTimeout(renderChart, 0);
+    }
+
+    // ── Onboarding wiring ────────────────────────────────────────────────────
     // Beacon needs the two <ore-tour> cards in the tree before it can drive
     // them, so wiring happens after the first mount, not during setup.
     onMounted(() => {
@@ -169,8 +256,19 @@ define('onboarding-shell', {
 
       if (!tourCard || !coachCard) return;
 
+      // The navigation step anchors to the sidebar group on desktop and to the
+      // sidebar's bottom bar on phones, where the group lives in the drawer.
+      const navigationTarget = (): Element | null => {
+        if (!window.matchMedia('(max-width: 720px)').matches) {
+          return host.querySelector('#nav-group');
+        }
+
+        return host.querySelector<SidebarElement>('.side')?.shadowRoot?.querySelector('.bottom-bar') ?? null;
+      };
+
       handle = mountOnboarding({
         coachCard,
+        navigationTarget,
         storage: createLocalBeaconStorage(),
         tourCard,
       });
@@ -179,6 +277,8 @@ define('onboarding-shell', {
         statusText.value = handle?.statusText.value ?? '';
       });
       statusText.value = handle.statusText.value;
+
+      scheduleChart();
 
       return () => {
         unsubscribe();
@@ -194,209 +294,374 @@ define('onboarding-shell', {
       window.clearInterval(metricTimer);
       window.clearInterval(eventTimer);
       handle?.dispose();
+      chart?.dispose();
+      chart = null;
+      chartHost = null;
     });
 
+    // ── Fragments ────────────────────────────────────────────────────────────
+    // bottom-nav promotes each item into the sidebar's phone bottom bar: items
+    // nested in a group are only picked up when they carry the attribute.
     const navItem = (view: (typeof views)[number]) => html`
-      <ore-navbar-item ?active=${() => activeView.value === view.id} @click=${() => selectView(view.id)}>
+      <ore-sidebar-item
+        bottom-nav
+        bottom-nav-label=${view.label}
+        ?active=${() => activeView.value === view.id}
+        @click=${() => selectView(view.id)}>
         <ore-icon slot="icon" name=${view.icon} size="18" aria-hidden="true"></ore-icon>
         ${view.label}
-      </ore-navbar-item>
+      </ore-sidebar-item>
     `;
 
-    const tileCard = (item: { value: Tile }, isTourTarget: boolean) => html`
-      <ore-card class="tile" padding="lg" variant="flat">
-        <div class="tile__head" slot="header">
-          <span class="tile__metric">${() => item.value.metric}</span>
+    const formatValue = (metric: BoardMetric): string =>
+      Number.isFinite(metric.value) ? metric.format(metric.value) : '—';
+
+    // Each metric is a button wrapping an ore-stats cell: the button carries the
+    // keyboard focus and the selected/pressed state, the stats carries the label
+    // and figure. Clicking the cell selects the metric the panel below charts.
+    const metricCell = (item: { value: BoardMetric }, isFirst: boolean) => {
+      const metric = item.value;
+
+      return html`
+        <div class="kpi" data-selected=${() => (selectedId.value === metric.id ? 'true' : null)}>
           <button
-            class="tile__pin"
+            class="kpi__stats"
             type="button"
-            data-tour=${isTourTarget ? 'pinned-tile' : null}
-            aria-label=${() => (item.value.pinned ? `Unpin ${item.value.metric}` : `Pin ${item.value.metric}`)}
-            aria-pressed=${() => String(item.value.pinned)}
-            @click=${() => togglePin(item.value.id)}>
-            <ore-icon aria-hidden="true" name=${() => (item.value.pinned ? 'star' : 'star-off')} size="16"></ore-icon>
+            aria-pressed=${() => String(selectedId.value === metric.id)}
+            @click=${() => selectMetric(metric.id)}>
+            <ore-stats label=${metric.name} size="sm" value=${() => formatValue(metric)} variant="plain"></ore-stats>
+          </button>
+          <button
+            class="kpi__pin"
+            type="button"
+            data-tour=${isFirst ? 'pinned-tile' : null}
+            aria-label=${() => (isPinned(metric.id) ? `Unpin ${metric.name}` : `Pin ${metric.name}`)}
+            aria-pressed=${() => String(isPinned(metric.id))}
+            @click=${() => togglePin(metric.id)}>
+            <ore-icon
+              aria-hidden="true"
+              name=${() => (isPinned(metric.id) ? 'star' : 'star-off')}
+              size="16"></ore-icon>
           </button>
         </div>
-        <strong class="tile__value">${() => item.value.value}</strong>
-      </ore-card>
-    `;
+      `;
+    };
 
     const eventRow = (item: { value: StreamEvent }) => html`
       <ore-list-item>
-        <ore-icon
-          slot="leading"
-          class=${`event__icon event__icon--${item.value.tone}`}
-          name=${item.value.icon}
-          size="18"
-          aria-hidden="true"></ore-icon>
+        <ore-icon slot="leading" class="event__icon" name=${item.value.icon} size="18" aria-hidden="true"></ore-icon>
         <span class="event__detail">${item.value.detail}</span>
-        <span slot="description">signalbox / production</span>
-        <span slot="trailing" class="event__time">${item.value.time}</span>
+        <span slot="description">signalbox-labs / production</span>
+        <span slot="trailing" class="event__time num">${item.value.time}</span>
       </ore-list-item>
     `;
 
-    const reportRow = (report: Report) => html`
-      <ore-list-item>
-        <ore-icon slot="leading" name="file-bar-chart" size="18" aria-hidden="true"></ore-icon>
-        <span>${report.name}</span>
-        <span slot="description">${report.owner}</span>
-        <span slot="trailing" class="report__cadence">${report.cadence}</span>
-      </ore-list-item>
-    `;
+    const freshness = () => html`<span class="fresh num">Updated ${() => updated.value}</span>`;
 
+    // ── Views ────────────────────────────────────────────────────────────────
     const boardsView = () => html`
-      <section class="board" data-tour="board" aria-label="Metrics board">
-        <div class="board__bar">
-          <ore-badge color="primary" variant="flat">${() => `${pinnedCount.value} pinned`}</ore-badge>
-          <span class="board__hint">
-            <ore-icon name="mouse-pointer-click" size="14" aria-hidden="true"></ore-icon>
-            Pin a tile with the star
-          </span>
+      <div class="lead">
+        <p class="lead__finding">
+          p95 latency sits 12 ms over its 200 ms budget after the 4f2c1a deploy at 18:00.
+        </p>
+        <div class="lead__side">
+          ${freshness()}
+          <ore-button class="add-tile" color="primary" data-tour="add-tile" @click=${addTile}>
+            <ore-icon slot="prefix" name="plus" size="16" aria-hidden="true"></ore-icon>
+            Add tile
+          </ore-button>
         </div>
-        <ore-grid cols="1" cols-lg="3" cols-sm="2" gap="md">
+      </div>
+
+      <section class="tray" data-tour="board" aria-label="Metrics board">
+        <ore-grid
+          class="tray__strip"
+          cols="2"
+          cols-sm="3"
+          cols-lg="6"
+          gap="none"
+          role="group"
+          aria-label="Board metrics, pick one to chart">
           ${each(
-            tiles,
-            (tile) => tile.id,
-            (item, index) => tileCard(item, index.value === 0),
+            metrics,
+            (metric) => metric.id,
+            (item, index) => metricCell(item, index.value === 0),
           )}
         </ore-grid>
+        <ore-card class="panel panel--chart" padding="none" variant="flat">
+          <div slot="header" class="panel__head">
+            <div class="panel__figure">
+              <h2 class="panel__title">${() => selectedMetric.value.name}</h2>
+              <strong class="panel__value num">${() => formatValue(selectedMetric.value)}</strong>
+            </div>
+            <span class="panel__meta">Hourly · 09:00-22:00</span>
+          </div>
+          <div class="panel__chart" ref=${chartBox}></div>
+        </ore-card>
       </section>
+
+      <ore-card class="panel" padding="none" variant="flat">
+        <div slot="header" class="panel__head">
+          <h2 class="panel__title">Recent activity</h2>
+          <ore-button size="sm" variant="ghost" @click=${() => selectView('events')}>View all</ore-button>
+        </div>
+        <ore-list class="rows rows--compact" variant="bordered">
+          ${each(
+            () => events.value.slice(0, 5),
+            (event) => event.id,
+            (item) => eventRow(item),
+          )}
+        </ore-list>
+      </ore-card>
     `;
 
     const eventsView = () => html`
-      <section class="stream" aria-label="Event stream">
-        <ore-list variant="separated">
+      <div class="lead">
+        <p class="lead__finding">New events land at the top of the stream.</p>
+        <div class="lead__side">${freshness()}</div>
+      </div>
+      <ore-card class="panel" padding="none" variant="flat">
+        <div slot="header" class="panel__head">
+          <h2 class="panel__title">Event stream</h2>
+          <span class="panel__meta">${() => `${events.value.length} events`} · signalbox-labs / production</span>
+        </div>
+        <ore-list class="rows" variant="bordered">
           ${each(
             events,
             (event) => event.id,
             (item) => eventRow(item),
           )}
         </ore-list>
-      </section>
+      </ore-card>
     `;
 
     const reportsView = () => html`
-      <section class="stream" aria-label="Saved reports">
-        <ore-list variant="separated">${reports.map(reportRow)}</ore-list>
-      </section>
+      <div class="lead">
+        <p class="lead__finding">${() => `${reports.value.length} reports run on their schedule.`}</p>
+        <div class="lead__side">
+          <ore-button color="primary" @click=${addReport}>
+            <ore-icon slot="prefix" name="plus" size="16" aria-hidden="true"></ore-icon>
+            Add report
+          </ore-button>
+        </div>
+      </div>
+      <ore-grid
+        class="reports"
+        areas="'table' 'aside'"
+        areas-md="'table table aside'"
+        cols="1"
+        cols-md="3"
+        gap="md"
+        align="start">
+        <ore-card class="panel reports__table" padding="none" variant="flat">
+          <div slot="header" class="panel__head">
+            <h2 class="panel__title">Saved reports</h2>
+            <span class="panel__meta">${() => `${reports.value.length} reports`}</span>
+          </div>
+          <ore-table class="report-table" density="cozy">
+            <ore-tr head>
+              <ore-th>Report</ore-th>
+              <ore-th>Cadence</ore-th>
+              <ore-th>Last run</ore-th>
+              <ore-th>Next run</ore-th>
+              <ore-th>Delivered to</ore-th>
+            </ore-tr>
+            ${each(
+              reports,
+              (report) => report.id,
+              (item) => html`
+                <ore-tr>
+                  <ore-td>
+                    <span class="report-table__name">${item.value.name}</span>
+                    <span class="report-table__sub">${item.value.owner}</span>
+                  </ore-td>
+                  <ore-td>${item.value.cadence}</ore-td>
+                  <ore-td>${item.value.lastRun}</ore-td>
+                  <ore-td>${item.value.nextRun}</ore-td>
+                  <ore-td>${item.value.delivered}</ore-td>
+                </ore-tr>
+              `,
+            )}
+          </ore-table>
+        </ore-card>
+        <ore-card class="panel reports__aside" padding="none" variant="flat">
+          <div slot="header" class="panel__head">
+            <h2 class="panel__title">This week</h2>
+          </div>
+          <ore-box class="well-box" padding="md">
+            <dl class="well">
+              <div class="well__row">
+                <dt>Runs delivered</dt>
+                <dd class="num">2</dd>
+              </div>
+              <div class="well__row">
+                <dt>Next delivery</dt>
+                <dd class="num">Mon 26 Oct</dd>
+              </div>
+              <div class="well__row">
+                <dt>Owners</dt>
+                <dd class="num">${() => new Set(reports.value.map((report) => report.owner)).size}</dd>
+              </div>
+            </dl>
+          </ore-box>
+        </ore-card>
+      </ore-grid>
+    `;
+
+    // The tour controls live in the sidebar footer: a permanent widget on the
+    // navigation rail, not content that scrolls away with the page. On phones
+    // the footer rides inside the drawer and the navbar's workspace menu keeps
+    // the same three actions reachable.
+    const tourWidget = () => html`
+      <div slot="footer" class="getting">
+        <h2 class="getting__title">Getting started</h2>
+        <p class="getting__desc">Five steps over the board, about 40 seconds.</p>
+        <div class="getting__actions">
+          <ore-button
+            class="getting__btn"
+            size="sm"
+            variant="ghost"
+            @click=${() => {
+              // Steps anchor to board controls, so replaying from another view
+              // would wait on targets that never mount. Return first.
+              selectView('boards');
+              handle?.replayTour();
+            }}>
+            <ore-icon slot="prefix" name="rotate-ccw" size="14" aria-hidden="true"></ore-icon>
+            Start tour
+          </ore-button>
+          <ore-button class="getting__btn" size="sm" variant="ghost" @click=${() => handle?.showShareHint()}>
+            <ore-icon slot="prefix" name="lightbulb" size="14" aria-hidden="true"></ore-icon>
+            Show share hint
+          </ore-button>
+          <ore-button class="getting__btn" size="sm" variant="ghost" @click=${() => handle?.resetAll()}>
+            <ore-icon slot="prefix" name="eraser" size="14" aria-hidden="true"></ore-icon>
+            Reset progress
+          </ore-button>
+        </div>
+        <p class="getting__keys">
+          <kbd>←</kbd> / <kbd>→</kbd> step, <kbd>Esc</kbd> close.
+        </p>
+        <p class="status" role="status" aria-live="polite">${() => statusText.value}</p>
+      </div>
     `;
 
     return html`
-      <div class="shell">
-        <ore-navbar
-          class="shell__nav"
-          label="Signalbox"
-          elevation="1"
-          rounded="none"
-          sticky
-          breakpoint="(max-width: 720px)"
-          menu-label="Open navigation">
-          <span class="brand" slot="logo">
-            <span class="brand__mark" aria-hidden="true"><ore-icon name="radar" size="18"></ore-icon></span>
-            Signalbox
-          </span>
-          <!-- The navigation step anchors to the items themselves, not the bar:
-               a full-width bar would put a bottom-start card in the far gutter
-               and ring the whole header. A plain wrapper keeps the items' navbar
-               context (injection walks the DOM ancestors, slots included). -->
-          <div class="nav-items" data-tour="navigation">${views.map(navItem)}</div>
-          <!-- The navbar collapses below its breakpoint and hides the default
-               (center) and end regions. mobile-menu content brings back a
-               hamburger with a stacked copy of the items; persistent survives
-               the collapse, so Share/theme stay tappable on phones, which also
-               keeps the share coachmark's anchor a real on-screen rect. -->
-          <div class="nav-mobile" slot="mobile-menu">
-            ${views.map(navItem)}
+      <div class="frame">
+        <ore-sidebar class="side" label="Signalbox navigation" bottom-nav-at="(max-width: 720px)">
+          <div slot="header" class="brand">
+            <span class="brand__mark" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round">
+                <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle>
+                <path d="M8.5 15.5a5 5 0 0 1 0-7"></path>
+                <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                <path d="M6 18a9 9 0 0 1 0-12" opacity="0.55"></path>
+                <path d="M18 6a9 9 0 0 1 0 12" opacity="0.55"></path>
+              </svg>
+            </span>
+            <span class="brand__text">
+              Signalbox
+              <span class="brand__scope">signalbox-labs / production</span>
+            </span>
           </div>
-          <div class="nav-actions" slot="persistent">
-            <ore-button data-tour="share" size="sm" variant="ghost" @click=${() => handle?.showShareHint()}>
-              <ore-icon slot="prefix" name="share-2" size="16" aria-hidden="true"></ore-icon>
-              Share
-            </ore-button>
-            <ore-button
-              class="theme-toggle"
-              size="sm"
-              variant="ghost"
-              icon-only
-              label=${() => (theme.value === 'dark' ? 'Switch to light theme' : 'Switch to dark theme')}
-              @click=${() => setTheme(theme.value === 'dark' ? 'light' : 'dark')}>
-              <ore-icon name=${() => (theme.value === 'dark' ? 'sun' : 'moon')} size="16" aria-hidden="true"></ore-icon>
-            </ore-button>
-          </div>
-        </ore-navbar>
+          <ore-sidebar-group id="nav-group" label="Workspace">${views.map(navItem)}</ore-sidebar-group>
+          ${tourWidget()}
+        </ore-sidebar>
 
-        <main class="page">
-          <header class="page__head">
-            <div>
-              <span class="eyebrow">${() => viewHead[activeView.value].eyebrow}</span>
-              <h1>${() => viewHead[activeView.value].title}</h1>
-              <p>${() => viewHead[activeView.value].subtitle}</p>
+        <div class="frame__main">
+          <ore-navbar
+            class="topbar"
+            breakpoint="(max-width: 720px)"
+            elevation="0"
+            label="Signalbox workspace"
+            mobile-sidebar=".side">
+            <span slot="logo" class="brand brand--bar">
+              <span class="brand__mark" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round">
+                  <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle>
+                  <path d="M8.5 15.5a5 5 0 0 1 0-7"></path>
+                  <path d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+                  <path d="M6 18a9 9 0 0 1 0-12" opacity="0.55"></path>
+                  <path d="M18 6a9 9 0 0 1 0 12" opacity="0.55"></path>
+                </svg>
+              </span>
+              Signalbox
+            </span>
+            <div slot="start" class="crumbs">
+              <span class="crumbs__product">Signalbox</span>
+              <span class="crumbs__sep" aria-hidden="true">/</span>
+              <span class="crumbs__view">${() => activeLabel.value}</span>
+              <ore-badge class="live" color="success" size="sm" variant="flat">
+                <span class="live__dot" slot="icon" aria-hidden="true"></span>
+                Live
+              </ore-badge>
             </div>
+            <div slot="persistent" class="topbar__actions">
+              <ore-button data-tour="share" size="sm" variant="ghost" @click=${() => handle?.showShareHint()}>
+                <ore-icon slot="prefix" name="share-2" size="16" aria-hidden="true"></ore-icon>
+                Share
+              </ore-button>
+              <ore-button
+                class="theme-toggle"
+                size="sm"
+                variant="ghost"
+                icon-only
+                label=${() => (theme.value === 'dark' ? 'Switch to light theme' : 'Switch to dark theme')}
+                @click=${() => setTheme(theme.value === 'dark' ? 'light' : 'dark')}>
+                <ore-icon
+                  name=${() => (theme.value === 'dark' ? 'sun' : 'moon')}
+                  size="16"
+                  aria-hidden="true"></ore-icon>
+              </ore-button>
+              <ore-menu class="account" placement="bottom-end" @select=${onAccountSelect}>
+                <button
+                  class="account__trigger"
+                  slot="trigger"
+                  type="button"
+                  aria-label="Workspace menu: tour controls">
+                  <ore-avatar color="primary" initials="SB" rounded="full" size="sm"></ore-avatar>
+                </button>
+                <ore-menu-item value="replay-tour">
+                  <ore-icon slot="icon" name="rotate-ccw" size="15" aria-hidden="true"></ore-icon>
+                  Replay tour
+                </ore-menu-item>
+                <ore-menu-item value="share-hint">
+                  <ore-icon slot="icon" name="lightbulb" size="15" aria-hidden="true"></ore-icon>
+                  Show share hint
+                </ore-menu-item>
+                <ore-menu-separator></ore-menu-separator>
+                <ore-menu-item value="reset">
+                  <ore-icon slot="icon" name="eraser" size="15" aria-hidden="true"></ore-icon>
+                  Reset tour progress
+                </ore-menu-item>
+              </ore-menu>
+            </div>
+          </ore-navbar>
+
+          <main class="sheet">
+            <h1 class="sheet__title">${() => viewTitle[activeView.value]}</h1>
             ${() =>
               activeView.value === 'boards'
-                ? html`
-                    <ore-button
-                      class="add-tile"
-                      data-tour="add-tile"
-                      color="primary"
-                      @click=${() =>
-                        (tiles.value = [
-                          ...tiles.value,
-                          {
-                            id: `tile-${Date.now()}`,
-                            metric: 'New metric',
-                            pinned: false,
-                            value: '—',
-                          },
-                        ])}>
-                      <ore-icon slot="prefix" name="plus" size="18" aria-hidden="true"></ore-icon>
-                      Add tile
-                    </ore-button>
-                  `
-                : ''}
-          </header>
-
-          ${() =>
-            activeView.value === 'boards' ? boardsView() : activeView.value === 'events' ? eventsView() : reportsView()}
-
-          <section class="controls" aria-labelledby="controls-title">
-            <div class="controls__body">
-              <span class="controls__icon" aria-hidden="true"><ore-icon name="compass" size="18"></ore-icon></span>
-              <div>
-                <h2 id="controls-title">Tour controls</h2>
-                <p>
-                  Progress is stored in <code>localStorage</code>, so a reload keeps the tour completed until you reset
-                  it. While it runs, <kbd>←</kbd> / <kbd>→</kbd> step through it and <kbd>Esc</kbd> closes it.
-                </p>
-              </div>
-            </div>
-            <div class="controls__row">
-              <ore-button
-                color="primary"
-                variant="flat"
-                @click=${() => {
-                  // Steps 3-5 anchor to board controls, so replaying from
-                  // Events or Reports would wait forever on targets that never
-                  // mount. Return to the toured view first; selectView is a
-                  // no-op when already there, and replayTour restarts either way.
-                  selectView('boards');
-                  handle?.replayTour();
-                }}>
-                <ore-icon slot="prefix" name="rotate-ccw" size="16" aria-hidden="true"></ore-icon>
-                Replay tour
-              </ore-button>
-              <ore-button variant="flat" @click=${() => handle?.showShareHint()}>
-                <ore-icon slot="prefix" name="lightbulb" size="16" aria-hidden="true"></ore-icon>
-                Show share hint
-              </ore-button>
-              <ore-button variant="ghost" @click=${() => handle?.resetAll()}>
-                <ore-icon slot="prefix" name="eraser" size="16" aria-hidden="true"></ore-icon>
-                Reset progress
-              </ore-button>
-            </div>
-            <p class="status" role="status" aria-live="polite">${() => statusText.value}</p>
-          </section>
-        </main>
+                ? boardsView()
+                : activeView.value === 'events'
+                  ? eventsView()
+                  : reportsView()}
+          </main>
+        </div>
 
         <ore-tour id="tour-card" spotlight></ore-tour>
 
