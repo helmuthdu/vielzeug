@@ -4,7 +4,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 
 import { announce, createListControl, lifecycleSignal, parseOptionalBool } from '../../core';
-import { reducedMotionMixin } from '../../styles';
+import { createLayoutMotion } from '../../shared/layout-motion';
 import { useDialogControl } from '../shared/use-dialog';
 import componentStyles from './command-palette.css?inline';
 import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
@@ -150,6 +150,19 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     const filteredItems = computed(() => filterItems(allItems.value, query.value, Boolean(props['no-filter'].value)));
     const rows = computed(() => buildRows(filteredItems.value));
 
+    // ── Result reflow motion ──
+    // Filtering rewrites the list under the caret, and an instant swap makes the
+    // focused command jump out of context. Rows are tracked by the item's
+    // `value`, not by node identity: ore reuses row nodes positionally, so the
+    // element carrying a key after a keystroke is often a different node than
+    // the one that carried it before — necromancer's key matching animates the
+    // value from its old slot to its new one either way. No stagger: rows
+    // arrive and leave every keystroke, a cascade would read as lag.
+    const resultMotion = createLayoutMotion(el, abortSignal, {
+      elements: () => [...(el.shadowRoot?.querySelectorAll<HTMLElement>('.item[data-value]') ?? [])],
+      getKey: (item) => item.dataset.value || undefined,
+    });
+
     // ── Keyboard navigation over the filtered list (Up/Down/Home/End) ──
     const scrollFocusedIntoView = (): void => {
       listboxEl?.querySelector<HTMLElement>('[data-focused]')?.scrollIntoView({ block: 'nearest' });
@@ -180,8 +193,10 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
 
     // ── Dialog chrome: native <dialog>, focus trap, Escape, backdrop click ──
     const resetSearch = (): void => {
-      query.value = '';
-      list.reset();
+      resultMotion.run(() => {
+        query.value = '';
+        list.reset();
+      });
     };
 
     const { closeWithAnimation, handleBackdropClick, overlay, requestClose, mount } = useDialogControl({
@@ -260,8 +275,10 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     function handleInput(e: Event): void {
       const value = (e.target as HTMLInputElement).value;
 
-      query.value = value;
-      list.navigate('first');
+      resultMotion.run(() => {
+        query.value = value;
+        list.navigate('first');
+      });
       emit('search', { query: value });
 
       const count = filteredItems.value.length;
@@ -336,6 +353,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
                         class="item"
                         part="item"
                         role="option"
+                        data-value="${row.item.value}"
                         id="${`${listboxId}-opt-${row.idx}`}"
                         aria-selected="${() => String(focusedIndex.value === row.idx)}"
                         aria-disabled="${() => String(row.item.disabled)}"
@@ -403,5 +421,5 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       </dialog>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

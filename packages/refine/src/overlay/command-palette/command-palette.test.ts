@@ -54,6 +54,19 @@ describe('ore-command-palette', () => {
       expect(fixture.query('[role="listbox"]')).toBeTruthy();
     });
 
+    it('keys every result row by item value', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, html: itemsHtml });
+
+      // The result-reflow FLIP tracks rows by `data-value`: ore reuses row nodes
+      // positionally, so node identity cannot carry a command across a keystroke.
+      expect(getRows().map((row) => row.dataset.value)).toEqual([
+        'new-file',
+        'open-file',
+        'close-file',
+        'toggle-theme',
+      ]);
+    });
+
     it('is hidden when not open', async () => {
       fixture = await mount('ore-command-palette', { html: itemsHtml });
 

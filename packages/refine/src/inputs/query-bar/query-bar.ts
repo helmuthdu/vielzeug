@@ -21,7 +21,7 @@ import {
   type OverlayOpenChangeDetail,
   setAriaReflection,
 } from '../../core';
-import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
+import { colorThemeMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import { type AddEventListeners, COMPONENT_SIZES, ROUNDED_SIZES } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import componentStyles from './query-bar.css?inline';
@@ -935,5 +935,5 @@ define<OreQueryBarProps>(QUERY_BAR_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin, componentStyles],
+  styles: [colorThemeMixin, roundedVariantMixin, srOnlyMixin, componentStyles],
 }) as unknown as AddEventListeners<OreQueryBarEvents>;

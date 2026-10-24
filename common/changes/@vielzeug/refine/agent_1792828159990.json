@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix reduced-motion bypasses (datagrid/navbar/command-palette spinners, marquee), add FLIP reflow motion to command-palette results and the toast stack via a shared layout-motion helper, and adopt --animate-* tokens in the light-DOM animation utilities",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

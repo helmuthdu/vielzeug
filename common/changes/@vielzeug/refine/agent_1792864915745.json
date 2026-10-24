@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "toast: status model replaces color/variant - neutral light-dark surface, per-status icons, danger drives urgency",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

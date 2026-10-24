@@ -37,8 +37,12 @@ describe('--focus-ring', () => {
     expect(definition, 'theme.css must define --focus-ring').toBeDefined();
     // Consumers write `outline: var(--focus-ring)` with their own
     // outline-offset, so the value must be a full outline shorthand
-    // (<width> solid <color>), not a bare color.
-    expect(definition?.[1].trim()).toMatch(/^var\(--border-2\)\s+solid\s+var\(--color-primary\)$/);
+    // (<width> solid <color>), not a bare color. The width/color come from
+    // the --focus-ring-width/--focus-ring-color primitives so the increased-
+    // contrast layer can thicken every ring at once by re-declaring one token.
+    expect(definition?.[1].trim()).toMatch(/^var\(--focus-ring-width\)\s+solid\s+var\(--focus-ring-color\)$/);
+    expect(themeCss).toMatch(/^\s*--focus-ring-width:\s*var\(--border-2\);/m);
+    expect(themeCss).toMatch(/^\s*--focus-ring-color:\s*var\(--color-primary\);/m);
   });
 
   it('has at least one component consumer (guards the test itself)', () => {

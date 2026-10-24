@@ -98,6 +98,8 @@ export { createSliderControl, type SliderControl, type SliderControlOptions } fr
 export { createSpinnerControl, type SpinnerControl, type SpinnerControlOptions } from './spinner';
 // ── Text field ────────────────────────────────────────────────────────────────
 export { createTextField, type TextFieldDetach, type TextFieldHandle, type TextFieldOptions } from './text-field';
+// ── Truncation reveal ─────────────────────────────────────────────────────────
+export { applyTruncationReveal, truncationRevealRef } from './truncation';
 
 // ── Shared component primitives ──────────────────────────────────────────────
 

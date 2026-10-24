@@ -122,7 +122,7 @@ export const CONTRAST_SCALE = [
   { dark: '26% 0.001 250deg', light: '94% 0.001 264deg', note: 'Nested cards, hover states', step: 200 },
   { dark: '32% 0.001 250deg', light: '89% 0.002 264deg', note: 'Borders, dividers', step: 300 },
   { dark: '40% 0.001 250deg', light: '81% 0.002 264deg', note: 'Disabled backgrounds, subtle UI', step: 400 },
-  { dark: '58% 0.001 250deg', light: '49% 0.002 264deg', note: 'Tertiary text - AA large-text compliant', step: 500 },
+  { dark: '62% 0.001 250deg', light: '49% 0.002 264deg', note: 'Tertiary text - AA compliant (4.5:1 on canvas/card/sunken)', step: 500 },
   { dark: '68% 0.001 250deg', light: '40% 0.002 264deg', note: 'Secondary text - AA compliant', step: 600 },
   { dark: '78% 0.001 250deg', light: '32% 0.002 264deg', note: 'Body text - AAA compliant', step: 700 },
   { dark: '88% 0.001 250deg', light: '22% 0.002 264deg', note: 'Headings - AAA compliant', step: 800 },

@@ -79,7 +79,7 @@ export type OreGridProps = {
   gap?: (typeof GRID_GAPS)[number];
   /** Justify items horizontally */
   justify?: (typeof GRID_JUSTIFICATIONS)[number];
-  /** Minimum column width for responsive mode (default: 250px) */
+  /** Minimum column width for responsive mode (default: var(--grid-min-item-width)) */
   minColWidth?: string;
   /** Use auto-fit responsive columns */
   responsive?: boolean;
@@ -90,10 +90,14 @@ export type OreGridProps = {
 /**
  * ore-grid: Flexible grid layout with responsive column control.
  *
- * Columns are computed in JS and applied as `--_cols` inline, so they respond
- * to the element's own width via ResizeObserver. CSS custom properties
- * `--grid-cols`, `--grid-rows`, `--grid-gap`, `--grid-row-gap`, `--grid-col-gap`
- * are honoured as fallbacks when no attribute is set.
+ * The grid is container-responsive: `cols-*` breakpoints compare against the
+ * element's own width (measured with a ResizeObserver), not the viewport, so a
+ * narrow grid in a sidebar gets its mobile layout even on a wide screen.
+ * Breakpoint thresholds come from the `--size-screen-*` tokens. Fixed counts
+ * resolve through the `--grid-1`–`--grid-12` tokens; the responsive floor uses
+ * `--grid-min-item-width`. CSS custom properties `--grid-cols`, `--grid-rows`,
+ * `--grid-gap`, `--grid-row-gap`, `--grid-col-gap` are honoured as fallbacks
+ * when no attribute is set.
  *
  * @element ore-grid
  *
@@ -109,7 +113,7 @@ export type OreGridProps = {
  * @attr {string} justify - justify-items: 'start' | 'center' | 'end' | 'stretch'
  * @attr {string} flow - grid-auto-flow: 'row' | 'column' | 'row-dense' | 'column-dense'
  * @attr {boolean} responsive - Enables auto-fit columns without a fixed count
- * @attr {string} min-col-width - Min column width for responsive mode (default: 250px)
+ * @attr {string} min-col-width - Min column width for responsive mode (default: var(--grid-min-item-width))
  * @attr {boolean} fullwidth - Stretch the grid to fill its container's full width
  * @attr {string} areas - CSS grid-template-areas value (e.g. "'header header' 'nav main'")
  * @attr {string} areas-sm - grid-template-areas when width ≥ 640px
@@ -121,6 +125,7 @@ export type OreGridProps = {
  * @slot - Grid items
  *
  * @cssprop --grid-cols - Fallback column template (used when no cols attr is set)
+ * @cssprop --grid-min-item-width - Floor for auto-fit column width (default: 250px)
  * @cssprop --grid-rows - Fallback row template
  * @cssprop --grid-gap - Fallback gap
  * @cssprop --grid-row-gap - Fallback row gap
@@ -176,10 +181,13 @@ define<OreGridProps>(GRID_TAG, {
 
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
       if (activeCols === 'auto' || (!activeCols && responsive)) {
-        return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
+        const min = minW || 'var(--grid-min-item-width)';
+        return `repeat(auto-fit, minmax(${min}, 1fr))`;
       }
 
-      return activeCols ? `repeat(${activeCols}, 1fr)` : null;
+      // Fixed counts resolve through the --grid-N theme tokens so a theme can
+      // redefine the track sizing (e.g. bleed-aware fractions) globally.
+      return activeCols ? `var(--grid-${activeCols}, repeat(${activeCols}, 1fr))` : null;
     };
     const updateCols = () => {
       const w = el.offsetWidth;

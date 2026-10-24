@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fireClick, fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
@@ -883,6 +885,20 @@ describe('ore-calendar', () => {
       const results = await axeCheck(fixture.element);
 
       expect(results.violations).toHaveLength(0);
+    });
+  });
+
+  describe('View switching CSS', () => {
+    // The grids hide through ?hidden, but each grid also declares its own
+    // `display`. A bare `[hidden]` selector has the same specificity as those
+    // class selectors, so the later rule used to win and all three views
+    // stacked at once (a 639px-tall broken layout). The rule must stay
+    // class-qualified to outrank them.
+    const css = readFileSync(join(import.meta.dirname, 'calendar.css'), 'utf-8');
+
+    it('hides grids with a class-qualified [hidden] rule', () => {
+      expect(css).toMatch(/\.cal-grid\[hidden\]\s*\{[^}]*display:\s*none/);
+      expect(css).not.toMatch(/^\s*\[hidden\]\s*\{/m);
     });
   });
 });

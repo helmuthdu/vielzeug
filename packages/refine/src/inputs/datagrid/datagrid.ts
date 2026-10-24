@@ -14,6 +14,7 @@ import {
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { warn } from '../../_dev';
+import { lifecycleSignal } from '../../core';
 
 import { DENSITY_LEVELS, type DensityLevel, disablableBundle, loadableBundle } from '../../shared';
 import { tableBaseMixin } from '../../styles';
@@ -32,6 +33,7 @@ import {
   type SortDirection,
   type SortState,
 } from './datagrid-model';
+import { createRowMotion } from './datagrid-motion';
 import { createGridNav, type GridNavHandle } from './datagrid-nav';
 
 export { ICON_TAG } from '../../content/icon/icon';
@@ -557,6 +559,22 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       sortMode: computed(() => props.sortMode.value ?? 'client'),
     });
 
+    // FLIP row motion for sort mutations (necromancer): capture the current row
+    // layout, mutate, animate the delta on the next frame. Only client-side
+    // sort reorders rows in place here — paging and filtering arrive through
+    // prop/source updates whose mutation is not synchronous with this call.
+    // Source-backed grids skip it: their rows change asynchronously.
+    const rowMotion = createRowMotion(el, lifecycleSignal(onCleanup));
+    const sortWithMotion = (mutate: () => void): void => {
+      if (hasSource.value || props.sortMode.value === 'server') {
+        mutate();
+
+        return;
+      }
+
+      rowMotion.run(mutate);
+    };
+
     const activeSortType = computed<'number' | 'text'>(() => {
       const column = resolvedColumns.value.find((candidate) => candidate.key === model.sortState.value.key);
 
@@ -887,7 +905,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                       size="sm"
                       icon-only
                       label="${() => labels.value.clearSort}"
-                      @click="${() => model.sortTo('', 'none')}">
+                      @click="${() => sortWithMotion(() => model.sortTo('', 'none'))}">
                       <ore-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
                     </ore-button>
                   `
@@ -909,7 +927,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                 const key = controlValues(event)[0] ?? '';
                 const dir = model.sortState.value.direction === 'none' ? 'asc' : model.sortState.value.direction;
 
-                model.sortTo(key, dir);
+                sortWithMotion(() => model.sortTo(key, dir));
               }}"></ore-select>
             <ore-select
               class="dg-pop-dir-select"
@@ -924,7 +942,9 @@ define<OreDataGridProps>(DATAGRID_TAG, {
               options="${sortDirectionOptions}"
               @change="${(event: Event) => {
                 if (model.sortState.value.key) {
-                  model.sortTo(model.sortState.value.key, (controlValues(event)[0] ?? 'asc') as 'asc' | 'desc');
+                  sortWithMotion(() =>
+                    model.sortTo(model.sortState.value.key, (controlValues(event)[0] ?? 'asc') as 'asc' | 'desc'),
+                  );
                 }
               }}"></ore-select>
           </div>
@@ -1266,7 +1286,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                                   label="${col.headerLabel ?? col.label}"
                                   disabled="${() => isDisabled.value || undefined}"
                                   @click="${() => {
-                                    if (!isDisabled.value) model.sortBy(col.key);
+                                    if (!isDisabled.value) sortWithMotion(() => model.sortBy(col.key));
                                   }}">
                                   ${col.label}
                                   <ore-icon
@@ -1352,6 +1372,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                         class="dg-tr"
                         part="row"
                         role="row"
+                        data-row-key="${key}"
                         aria-selected="${() =>
                           selectionMode.value !== 'none' ? String(model.selectedKeys.value.has(key)) : null}"
                         aria-expanded="${() => (hasExpander.value ? String(expandedKeys.value.has(key)) : null)}"

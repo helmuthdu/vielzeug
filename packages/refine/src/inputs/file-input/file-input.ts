@@ -20,13 +20,12 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 import { bindRefCallback, createInteraction } from '../../core';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   disabledLoadingMixin,
   forcedColorsFocusMixin,
-  reducedMotionMixin,
   roundedVariantMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import componentStyles from './file-input.css?inline';
 import { createFileQueue, type FileRejectReason, type FileUploadFn, formatBytes } from './file-input-upload';
@@ -709,8 +708,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
   shadow: { delegatesFocus: true },
   styles: [
     colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
+    touchTargetMixin,
     roundedVariantMixin,
     disabledLoadingMixin,
     sizeVariantMixin(FILE_INPUT_SIZE_PRESET),

@@ -24,6 +24,7 @@ import {
   type OverlayOpenChangeDetail,
   type OverlayOpenReason,
   parseOptionalBool,
+  truncationRevealRef,
 } from '../../core';
 import { disablableBundle, MENU_SIZE_PRESET, sizableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
@@ -142,13 +143,13 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
             aria-disabled="${props.disabled}">
             <span class="item-check" aria-hidden="true"></span>
             <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
-            <span class="item-label" part="item-label"><slot></slot></span>
+            <span class="item-label" part="item-label" ref=${truncationRevealRef()}><slot></slot></span>
           </div>
         `
       : html`
           <div class="item" part="item" tabindex="-1" role="menuitem" aria-disabled="${props.disabled}">
             <span class="icon-slot" part="icon-slot"><slot name="icon"></slot></span>
-            <span class="item-label" part="item-label"><slot></slot></span>
+            <span class="item-label" part="item-label" ref=${truncationRevealRef()}><slot></slot></span>
           </div>
         `;
   },

@@ -421,37 +421,6 @@ importers:
         specifier: 5.0.5
         version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-v8@5.0.5)(jsdom@30.1.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0))
 
-  demos/onboarding:
-    dependencies:
-      '@vielzeug/beacon':
-        specifier: workspace:*
-        version: link:../../packages/beacon
-      '@vielzeug/ore':
-        specifier: workspace:*
-        version: link:../../packages/ore
-      '@vielzeug/prism':
-        specifier: workspace:*
-        version: link:../../packages/prism
-      '@vielzeug/refine':
-        specifier: workspace:*
-        version: link:../../packages/refine
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../../packages/ripple
-      lucide:
-        specifier: ^1.59.0
-        version: 1.59.0
-    devDependencies:
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.3.4
-        version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)
-      vitest:
-        specifier: 5.0.5
-        version: 5.0.5(@types/node@26.6.5)(@vitest/coverage-v8@5.0.5)(jsdom@30.1.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0))
-
   demos/voyage:
     dependencies:
       '@vielzeug/coins':
@@ -1039,6 +1008,9 @@ importers:
       '@vielzeug/keymap':
         specifier: workspace:*
         version: link:../keymap
+      '@vielzeug/necromancer':
+        specifier: workspace:*
+        version: link:../necromancer
       '@vielzeug/orbit':
         specifier: workspace:*
         version: link:../orbit

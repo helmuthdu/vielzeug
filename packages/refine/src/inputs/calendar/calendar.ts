@@ -10,7 +10,7 @@ import {
 } from '../../core';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, reducedMotionMixin } from '../../styles';
+import { colorThemeMixin } from '../../styles';
 import componentStyles from './calendar.css?inline';
 
 export { ICON_TAG } from '../../content/icon/icon';
@@ -590,5 +590,5 @@ define<OreCalendarProps>(CALENDAR_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
+  styles: [colorThemeMixin, componentStyles],
 });

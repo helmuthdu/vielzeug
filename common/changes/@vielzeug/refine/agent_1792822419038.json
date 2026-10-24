@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Adopt human-interface-guideline contracts: unconditional 44px touch targets, button emphasis roles, expandable text with truncation reveal, tooltip dwell defaults, 11px type floor, surface/target-gap/safe-area tokens, increased-contrast and reduced-transparency paths, token-driven grid, public design-token checker",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

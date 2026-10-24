@@ -3,11 +3,11 @@ import { computed } from '@vielzeug/ripple';
 import { createCheckable, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   disabledStateMixin,
   forcedColorsFormControlMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
@@ -258,7 +258,7 @@ define<OreRadioProps>(RADIO_TAG, {
     colorThemeMixin,
     forcedColorsFormControlMixin,
     disabledStateMixin,
-    coarsePointerMixin,
+    touchTargetMixin,
     sizeVariantMixin(CONTROL_SIZE_PRESET),
     componentStyles,
   ],

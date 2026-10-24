@@ -195,6 +195,17 @@
     backdrop-filter: blur(var(--blur-lg)) saturate(180%);
   }
 
+  /* Reduced transparency: opaque tablist, no blur. */
+  @media (prefers-reduced-transparency: reduce) {
+    :host([variant='frost']) {
+      --_tablist-bg: var(--tabs-tablist-bg, var(--color-canvas));
+    }
+
+    :host([variant='frost']) [role='tablist'] {
+      backdrop-filter: none;
+    }
+  }
+
   :host([variant='frost']) .indicator {
     display: none;
   }

@@ -2,7 +2,6 @@ import { define, getHost, html, onEvent, onMounted, prop, ref, useEmit, useSlots
 import { computed, watch } from '@vielzeug/ripple';
 
 import { announce } from '../../core';
-import { reducedMotionMixin } from '../../styles';
 
 import componentStyles from './chat-message.css?inline';
 
@@ -277,5 +276,5 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
       </div>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

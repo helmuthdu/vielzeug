@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = resolve(__dirname, '../src');
+const STYLES_DIR = join(SRC_DIR, 'styles');
 
 // ── Mixin emission sets, derived from the mixin sources ──────────────────────
 // Every `export const <name> = ...` in `src/styles/mixins/*.css.ts` is scanned for the `--_*`
@@ -408,10 +409,111 @@ function checkFile(filePath) {
   return violations.length > 0 ? violations : null;
 }
 
+// ── Public design-token contract ──────────────────────────────────────────────
+// The `--_*` pass above covers a component's *private* variables. A fallback-less
+// `var(--color-error-600)` — a *public* token that does not exist — fails the same way
+// (the declaration is dropped at computed-value time, silently) and is just as easy to
+// introduce by typing a shade that the generator never emitted. Nine of those shipped
+// before this pass existed.
+//
+// The namespaces in scope are derived from the token layer itself: the first segment of
+// every custom property declared under `src/styles/**`. So `var(--color-*)` and
+// `var(--size-*)` are checked, while a component's own documented hook
+// (`var(--accordion-bg, …)`) is not: `--accordion` is not a token-layer namespace. A
+// component that declares a token-layer name locally (e.g. overrides
+// `--color-primary-hue` for its own subtree) is likewise covered by the local set.
+
+/** Every `.css` file under `dir`, recursively. */
+function* walkCss(dir) {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    const stat = statSync(full);
+
+    if (stat.isDirectory()) {
+      if (entry === '__tests__' || entry === 'testing') continue;
+
+      yield* walkCss(full);
+    } else if (entry.endsWith('.css')) {
+      yield full;
+    }
+  }
+}
+
+const DECLARATION_PATTERN = /(?:^|[;{}\n])\s*(--[\w-]+)\s*:/g;
+
+/** Collects the custom properties a source declares, ignoring comments. */
+function collectDeclarations(source, into) {
+  const stripped = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  let match;
+
+  DECLARATION_PATTERN.lastIndex = 0;
+
+  while ((match = DECLARATION_PATTERN.exec(stripped))) into.add(match[1]);
+
+  return into;
+}
+
+/**
+ * System token names + the namespaces they occupy, from `src/styles/**` (the authored and
+ * generated theme layers) and the mixin sources (a mixin may set a public token, e.g. a
+ * per-component `--color-*` override).
+ */
+function deriveSystemTokens() {
+  const definitions = new Set();
+
+  for (const file of walkCss(STYLES_DIR)) collectDeclarations(readFileSync(file, 'utf8'), definitions);
+
+  for (const entry of readdirSync(MIXIN_DIR)) {
+    if (!entry.endsWith('.css.ts')) continue;
+
+    collectDeclarations(readFileSync(join(MIXIN_DIR, entry), 'utf8'), definitions);
+  }
+
+  const namespaces = new Set();
+
+  for (const name of definitions) {
+    const segment = /^--([a-z0-9]+)-/.exec(name);
+
+    if (segment) namespaces.add(segment[1]);
+  }
+
+  return { definitions, namespaces };
+}
+
+const SYSTEM_TOKENS = deriveSystemTokens();
+
+/**
+ * Fallback-less reads of a namespaced token that nothing defines, in one stylesheet.
+ * `var(--x, fallback)` is exempt: a documented hook that self-degrades is the intended
+ * pattern, not a broken reference.
+ */
+function checkPublicTokens(cssPath, cssSource) {
+  const local = collectDeclarations(cssSource, new Set());
+  const stripped = cssSource.replace(/\/\*[\s\S]*?\*\//g, '');
+  const readPattern = /var\(\s*(--[\w-]+)\s*\)/g;
+  const violations = [];
+  const seen = new Set();
+  let match;
+
+  while ((match = readPattern.exec(stripped))) {
+    const propName = match[1];
+    const segment = /^--([a-z0-9]+)-/.exec(propName);
+
+    if (!segment || !SYSTEM_TOKENS.namespaces.has(segment[1])) continue;
+    if (SYSTEM_TOKENS.definitions.has(propName) || local.has(propName) || seen.has(propName)) continue;
+
+    seen.add(propName);
+    violations.push(propName);
+  }
+
+  return violations;
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 function main() {
   const allViolations = [];
+  const allTokenViolations = [];
 
   for (const file of walk(SRC_DIR)) {
     const violations = checkFile(file);
@@ -423,21 +525,38 @@ function main() {
     }
   }
 
-  if (allViolations.length === 0) {
-    process.stdout.write('[refine] --_* custom-property contract: OK\n');
-
-    return;
+  for (const cssPath of walkCss(SRC_DIR)) {
+    for (const propName of checkPublicTokens(cssPath, readFileSync(cssPath, 'utf8'))) {
+      allTokenViolations.push({ cssPath, propName });
+    }
   }
 
-  process.stderr.write(`[refine] --_* custom-property contract violations (${allViolations.length}):\n\n`);
+  if (allViolations.length === 0) process.stdout.write('[refine] --_* custom-property contract: OK\n');
+  if (allTokenViolations.length === 0) process.stdout.write('[refine] public design-token contract: OK\n');
 
-  for (const v of allViolations) {
-    process.stderr.write(
-      `  ${v.cssPath}\n    reads ${v.propName}, but no mixin in ${v.sourceFile}'s styles: [...] emits it\n\n`,
-    );
+  if (allViolations.length > 0) {
+    process.stderr.write(`[refine] --_* custom-property contract violations (${allViolations.length}):\n\n`);
+
+    for (const v of allViolations) {
+      process.stderr.write(
+        `  ${v.cssPath}\n    reads ${v.propName}, but no mixin in ${v.sourceFile}'s styles: [...] emits it\n\n`,
+      );
+    }
+
+    process.exitCode = 1;
   }
 
-  process.exitCode = 1;
+  if (allTokenViolations.length > 0) {
+    process.stderr.write(`[refine] public design-token contract violations (${allTokenViolations.length}):\n\n`);
+
+    for (const v of allTokenViolations) {
+      process.stderr.write(
+        `  ${v.cssPath}\n    reads ${v.propName} with no fallback, but no token under src/styles/** defines it\n\n`,
+      );
+    }
+
+    process.exitCode = 1;
+  }
 }
 
 main();

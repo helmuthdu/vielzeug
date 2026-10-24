@@ -1,7 +1,7 @@
 import { define, getHost, html, prop, styleMap, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 import { sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
+import { colorThemeMixin, forcedColorsMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import componentStyles from './progress.css?inline';
 
@@ -215,5 +215,5 @@ define<OreProgressProps>(PROGRESS_TAG, {
     `;
   },
 
-  styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],
+  styles: [colorThemeMixin, forcedColorsMixin, componentStyles],
 });

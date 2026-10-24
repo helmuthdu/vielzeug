@@ -337,6 +337,49 @@ describe('ore-dialog', () => {
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
   });
+
+  // HIG: one primary action per view. The footer slot warns (dev builds) when
+  // more than one slotted ore-button carries emphasis="primary".
+  describe('Dev diagnostics', () => {
+    let warnSpy: { mock: { calls: unknown[][] } };
+
+    beforeEach(() => {
+      warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.mocked(console.warn).mockRestore();
+    });
+
+    it('warns when the footer holds two primary buttons', async () => {
+      fixture = await mount('ore-dialog', {
+        attrs: { open: '' },
+        html: `
+          <ore-button slot="footer" emphasis="primary">Save</ore-button>
+          <ore-button slot="footer" emphasis="primary">Also save</ore-button>
+        `,
+      });
+      await fixture.flush();
+
+      const calls = warnSpy.mock.calls.filter((args) => String(args[0]).includes('emphasis="primary"'));
+
+      expect(calls).toHaveLength(1);
+      expect(String(calls[0][0])).toContain('ore-dialog footer');
+    });
+
+    it('stays silent for a single primary button', async () => {
+      fixture = await mount('ore-dialog', {
+        attrs: { open: '' },
+        html: `
+          <ore-button slot="footer" emphasis="primary">Save</ore-button>
+          <ore-button slot="footer" emphasis="cancel">Cancel</ore-button>
+        `,
+      });
+      await fixture.flush();
+
+      expect(warnSpy.mock.calls.filter((args) => String(args[0]).includes('emphasis="primary"'))).toHaveLength(0);
+    });
+  });
 });
 
 describe('ore-dialog accessibility', () => {

@@ -36,8 +36,19 @@
   -webkit-line-clamp: var(--_lines);
 }
 
-/* Inline semantic tags, but not when align/truncate force block layout */
-:host(:is([as='span'], [as='label'], [as='code']):not([align], [truncate])) {
+/* Expandable, expanded: lift the clamp/ellipsis so the full text shows. Unlayered
+   and after the [lines] rule so it wins by source order at equal specificity, and
+   it beats the layered [truncate] rule outright. */
+:host([data-expanded]) {
+  display: block;
+  overflow: visible;
+  text-overflow: clip;
+  -webkit-line-clamp: unset;
+  white-space: normal;
+}
+
+/* Inline semantic tags, but not when align/truncate/expanded force block layout */
+:host(:is([as='span'], [as='label'], [as='code']):not([align], [truncate], [data-expanded])) {
   display: inline;
 }
 

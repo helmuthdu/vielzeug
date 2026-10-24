@@ -2,7 +2,7 @@ import { bind, createId, define, getHost, html, prop, useField } from '@vielzeug
 import { computed, signal } from '@vielzeug/ripple';
 import { createErrorHelperState, createSliderControl } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import { colorThemeMixin, sizeVariantMixin, touchTargetMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
@@ -236,5 +236,5 @@ define<OreRatingProps>(RATING_TAG, {
       ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, componentStyles],
+  styles: [colorThemeMixin, sizeVariantMixin({}), touchTargetMixin, componentStyles],
 });

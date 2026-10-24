@@ -1,7 +1,7 @@
 import { define, getHost, html, inject, onMounted, prop, ref, useEmit, watchEffect } from '@vielzeug/ore';
 import { elementDirection } from '../../core/direction';
 import { disablableBundle } from '../../shared';
-import { coarsePointerMixin } from '../../styles';
+import { touchTargetMixin } from '../../styles';
 import { COMPONENT_SIZES, type ComponentSize, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
@@ -304,5 +304,5 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
     `;
   },
 
-  styles: [coarsePointerMixin, styles],
+  styles: [touchTargetMixin, styles],
 });

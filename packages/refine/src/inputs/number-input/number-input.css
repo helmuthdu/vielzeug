@@ -79,8 +79,8 @@
 
   button[part='decrement-btn']:focus-visible,
   button[part='increment-btn']:focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: -2px;
+    outline: var(--focus-ring-width) solid var(--color-primary);
+    outline-offset: calc(-1 * var(--focus-ring-width));
   }
 }
 

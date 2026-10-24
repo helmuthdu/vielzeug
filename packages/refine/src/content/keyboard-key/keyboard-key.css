@@ -63,7 +63,7 @@
   }
 
   :host([size='lg']) .key[data-has-symbol] .label {
-    font-size: var(--text-md);
+    font-size: var(--text-base);
   }
 }
 

@@ -2,7 +2,6 @@ import { bind, define, getHost, html, onCleanup, onMounted, prop } from '@vielze
 import { computed, fromSubscribable, signal, watch } from '@vielzeug/ripple';
 import { createIntersection } from '@vielzeug/sentinel';
 import { sizableBundle } from '../../shared';
-import { reducedMotionMixin } from '../../styles';
 import type { ComponentSize } from '../../types';
 import { safeCSSLength } from '../../utils';
 import componentStyles from './skeleton.css?inline';
@@ -152,5 +151,5 @@ define<OreSkeletonProps>(SKELETON_TAG, {
       </div>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

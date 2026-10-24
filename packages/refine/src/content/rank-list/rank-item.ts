@@ -1,7 +1,6 @@
 import { bind, define, html, inject, prop, useSlots } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
-import { reducedMotionMixin } from '../../styles';
 import componentStyles from './rank-item.css?inline';
 import { RANK_CTX } from './rank-list';
 
@@ -140,5 +139,5 @@ define<OreRankItemProps>(RANK_ITEM_TAG, {
     `;
   },
 
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

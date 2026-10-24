@@ -1,5 +1,4 @@
 import { define, html, prop } from '@vielzeug/ore';
-import { reducedMotionMixin } from '../../styles';
 import componentStyles from './keyboard-key.css?inline';
 import shortcutStyles from './keyboard-shortcut.css?inline';
 
@@ -26,7 +25,7 @@ define<OreKeyboardShortcutProps>(KEYBOARD_SHORTCUT_TAG, {
       <span class="shortcut" part="shortcut" ?data-pressed="${props.pressed}"><slot></slot></span>
     `;
   },
-  styles: [reducedMotionMixin, shortcutStyles],
+  styles: [shortcutStyles],
 });
 
 export const KEYBOARD_KEY_TAG = 'ore-keyboard-key' as const;
@@ -44,5 +43,5 @@ define<OreKeyboardKeyProps>(KEYBOARD_KEY_TAG, {
       </kbd>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

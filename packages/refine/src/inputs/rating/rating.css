@@ -3,7 +3,7 @@
     --_star-size: var(--rating-star-size, var(--size-7));
     --_color-empty: var(--rating-color-empty, var(--color-contrast-200));
     --_color-filled: var(--rating-color-filled, var(--_theme-base, var(--color-warning)));
-    --_gap: var(--rating-gap, var(--size-0_5));
+    --_gap: var(--rating-gap, var(--size-0-5));
 
     display: inline-flex;
     flex-wrap: wrap;

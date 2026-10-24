@@ -97,16 +97,17 @@
   :host([data-mode='sticky']) .navbar,
   :host([floating][sticky][data-scrolled]) .navbar {
     max-width: 100%;
+    padding-block-start: calc(var(--size-2) + var(--safe-area-inset-block-start));
     border-inline: none;
     border-radius: 0;
   }
 
   :host([data-mode-transitioning][data-mode='sticky']) .navbar {
-    animation: navbar-floating-to-sticky var(--transition-normal) var(--ease-in-out);
+    animation: var(--_motion-animation, navbar-floating-to-sticky var(--transition-normal) var(--ease-in-out));
   }
 
   :host([data-mode-transitioning][data-mode='floating']) .navbar {
-    animation: navbar-sticky-to-floating var(--transition-normal) var(--ease-in-out);
+    animation: var(--_motion-animation, navbar-sticky-to-floating var(--transition-normal) var(--ease-in-out));
   }
 
   .navbar-logo[hidden],
@@ -214,7 +215,7 @@
     box-shadow: var(--_shadow, var(--_navbar-shadow));
     backdrop-filter: var(--navbar-backdrop-filter, blur(var(--blur-md)));
     transform-origin: top;
-    animation: navbar-mobile-in var(--transition-fast) var(--ease-out);
+    animation: var(--_motion-animation, navbar-mobile-in var(--transition-fast) var(--ease-out));
   }
 
   /* `:not([hidden])`: same reasoning as `.mobile-toggle` above: this panel's own `?hidden=`

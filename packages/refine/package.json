@@ -818,6 +818,7 @@
     "@vielzeug/focus": "workspace:*",
     "@vielzeug/gesture": "workspace:*",
     "@vielzeug/keymap": "workspace:*",
+    "@vielzeug/necromancer": "workspace:*",
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ore": "workspace:*",
     "@vielzeug/ripple": "workspace:*",

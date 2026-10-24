@@ -1,7 +1,11 @@
 @layer refine.base {
   :host {
-    --_bg: var(--accordion-bg);
-    --_border-color: var(--accordion-border-color);
+    /* Unvariant containers are transparent and borderless: every variant block below
+       re-declares both with its own default. The explicit `transparent` fallback keeps
+       the documented `--accordion-bg` / `--accordion-border-color` hooks live here too
+       without a fallback-less read that would resolve to nothing. */
+    --_bg: var(--accordion-bg, transparent);
+    --_border-color: var(--accordion-border-color, transparent);
 
     display: flex;
     flex-direction: column;
@@ -70,6 +74,14 @@
   /* Frost variant - canvas-based transparency */
   :host([variant='frost']) {
     --_bg: var(--accordion-bg, color-mix(in oklch, var(--color-canvas) 55%, transparent));
+  }
+
+  /* Reduced transparency: the 55% canvas fill becomes opaque and the blur drops. */
+  @media (prefers-reduced-transparency: reduce) {
+    :host([variant='frost']) {
+      --_bg: var(--accordion-bg, var(--color-canvas));
+      backdrop-filter: none;
+    }
   }
 
   /* Nested item border radius for the frost variant */

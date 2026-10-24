@@ -1,12 +1,6 @@
 import { bind, define, html, prop, useSlots } from '@vielzeug/ore';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
-import {
-  colorThemeMixin,
-  forcedColorsMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-  sizeVariantMixin,
-} from '../../styles';
+import { colorThemeMixin, forcedColorsMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './stats.css?inline';
 
@@ -156,7 +150,6 @@ define<OreStatsProps>(STATS_TAG, {
         padding: 'var(--stats-padding, var(--size-3))',
       },
     }),
-    reducedMotionMixin,
     forcedColorsMixin,
     componentStyles,
   ],

@@ -13,8 +13,8 @@ import {
 } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
+import { truncationRevealRef } from '../../core';
 import { disablableBundle } from '../../shared';
-import { reducedMotionMixin } from '../../styles';
 import { createRevealState } from './_list-item-reveal';
 import { LIST_CTX } from './list';
 import componentStyles from './list-item.css?inline';
@@ -271,8 +271,12 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
         @keydown="${handleRowKeydown}">
         <span class="leading" part="leading" ?hidden="${() => !hasLeading.value}"><slot name="leading"></slot></span>
         <span class="content" part="content">
-          <span class="title" part="title"><slot></slot></span>
-          <span class="description" part="description"><slot name="description"></slot></span>
+          <!-- HIG truncation reveal: each line clips with an ellipsis, so mirror the
+               full text into title while (and only while) the line is actually clipped. -->
+          <span class="title" part="title" ref=${truncationRevealRef()}><slot></slot></span>
+          <span class="description" part="description" ref=${truncationRevealRef()}>
+            <slot name="description"></slot>
+          </span>
         </span>
         <span class="trailing" part="trailing" ?hidden="${() => !hasTrailing.value}"><slot name="trailing"></slot></span>
       </div>
@@ -282,5 +286,5 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
   },
 
   shadow: { delegatesFocus: true },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

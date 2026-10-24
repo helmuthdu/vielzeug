@@ -29,14 +29,13 @@ import {
   themableBundle,
 } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   disabledLoadingMixin,
   fieldVariantMixin,
   forcedColorsFocusMixin,
   forcedColorsMixin,
-  reducedMotionMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import { FIELD_VARIANTS, type FieldVariant } from '../../types';
@@ -367,8 +366,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
   shadow: { delegatesFocus: true },
   styles: [
     colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
+    touchTargetMixin,
     disabledLoadingMixin,
     forcedColorsMixin,
     forcedColorsFocusMixin('.field'),

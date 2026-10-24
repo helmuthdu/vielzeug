@@ -95,12 +95,12 @@
 
   /* Category descriptions arrive as the checkbox's helper text (aria-describedby-
      wired); sized up to --text-sm because they carry the consent decision's
-     substance, and recolored to --text-muted: the checkbox's default helper mix
-     measures 3.77:1 on the sunken panel, below AA. */
+     substance, and recolored to --text-color-secondary: the checkbox's default
+     helper mix measures 3.77:1 on the sunken panel, below AA. */
   .category-row ore-checkbox::part(helper-text) {
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
-    color: var(--text-muted);
+    color: var(--text-color-secondary);
   }
 
   .actions {

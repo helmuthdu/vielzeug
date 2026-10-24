@@ -48,6 +48,26 @@
     }
   }
 
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
   @keyframes fade-in-up {
     from {
       opacity: 0;
@@ -57,6 +77,56 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /* Directional slide-ins: the same displacement the overlay-enter tokens
+     use for @starting-style transitions, so both motion paths agree. */
+  @keyframes slide-in-from-top {
+    from {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y, -4px)) scale(var(--overlay-enter-scale, 0.97));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slide-in-from-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y-up, 4px)) scale(var(--overlay-enter-scale, 0.97));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slide-in-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-4px) scale(var(--overlay-enter-scale, 0.97));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  @keyframes slide-in-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(4px) scale(var(--overlay-enter-scale, 0.97));
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0) scale(1);
     }
   }
 
@@ -84,11 +154,15 @@
 }
 
 @layer refine.utilities {
+  /* Light-DOM utilities: consume the named-animation tokens directly. Inside a
+     component's shadow root a token cannot work (its keyframes would have to be
+     duplicated per shadow root), which is why components use the keyframes with
+     a local @keyframes and the --_motion-animation escape hatch instead. */
   .animate-fade-in-up {
-    animation: fade-in-up var(--transition-normal) forwards;
+    animation: var(--animate-fade-in-up);
   }
 
   .animate-scale-in {
-    animation: scale-in var(--transition-normal) var(--ease-spring) forwards;
+    animation: var(--animate-scale-in);
   }
 }

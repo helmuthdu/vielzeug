@@ -6,7 +6,6 @@
     --_radius: var(--alert-radius, var(--rounded-lg));
     --_padding: var(--alert-padding, var(--size-4));
     --_gap: var(--alert-gap, var(--size-3));
-    --_font-size: var(--alert-font-size, var(--text-sm));
     --_shadow: var(--alert-shadow, var(--shadow-none));
 
     display: block;
@@ -64,7 +63,10 @@
     row-gap: var(--size-1);
     padding: var(--_padding);
     overflow: hidden;
-    font-size: var(--_font-size);
+    /* The public hook is consulted here, not through --_font-size: the size-variant
+       mixin emits --_font-size unlayered on :host, which would outrank a layered
+       mapping and leave --alert-font-size inert. */
+    font-size: var(--alert-font-size, var(--_font-size));
     line-height: var(--leading-normal);
     color: var(--_color);
     background: var(--_bg);
@@ -85,14 +87,9 @@
     grid-row: 1;
     grid-column: 1;
     align-items: center;
-    align-self: start;
+    align-self: center;
     justify-content: center;
     margin-inline-end: var(--_gap);
-  }
-
-  /* Without heading: icon aligns with the body content */
-  .alert:has(.header[hidden]) .icon {
-    align-self: center;
   }
 
   .icon[hidden] {
@@ -106,7 +103,10 @@
     grid-row: 1;
     grid-column: 2;
     gap: var(--size-2);
+    /* The close button's touch target sets row 1's height; center the header
+       (and the icon) in it so title, icon, and close glyph share one axis. */
     align-items: baseline;
+    align-self: center;
   }
 
   .header[hidden] {
@@ -141,10 +141,13 @@
     margin-top: var(--size-1);
   }
 
-  /* Without heading: body moves up to share row with icon and close */
+  /* Without heading: body moves up to share row with icon and close. Center it
+     like the icon: the close button's touch target sets the row height, and a
+     block-aligned message would sit above the icon/close axis. */
   .alert:has(.header[hidden]) .body {
     grid-row: 1;
     grid-column: 2;
+    align-self: center;
     margin-top: 0;
   }
 
@@ -196,7 +199,6 @@
 
   :host([horizontal]) .close {
     grid-column: 4;
-    align-self: center;
   }
 
   /* Phones: the horizontal action stacks below a wrapped message: a right-column action
@@ -217,23 +219,21 @@
     :host([horizontal]) .close {
       grid-row: 1;
       grid-column: 3;
-      align-self: center;
     }
   }
 
   /* ── Close button ──────────────────────────────── */
 
   .close {
+    position: relative;
     display: inline-flex;
     grid-row: 1;
     grid-column: 3;
     align-items: center;
-    align-self: start;
+    align-self: center;
     justify-content: center;
-    width: var(--size-5);
-    min-width: var(--_touch-target);
-    height: var(--size-5);
-    min-height: var(--_touch-target);
+    width: var(--size-6);
+    height: var(--size-6);
     padding: 0;
     margin-inline-start: var(--_gap);
     color: inherit;
@@ -245,6 +245,21 @@
     transition:
       opacity var(--transition-fast),
       background var(--transition-fast);
+  }
+
+  /* The touch target must not inflate the header row: a 44px layout box next to
+     a ~20px heading pushes the title ~12px below the card's top padding while
+     the bottom padding stays put. The layout box stays glyph-sized and the hit
+     area grows to the full target through this pseudo-element, which bleeds
+     into the card's own padding. */
+  .close::before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--_touch-target);
+    height: var(--_touch-target);
+    content: '';
+    transform: translate(-50%, -50%);
   }
 
   .close[hidden] {

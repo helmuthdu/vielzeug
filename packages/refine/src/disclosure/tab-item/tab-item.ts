@@ -2,7 +2,7 @@ import { bind, define, getHost, html, inject, onMounted, prop, ref, watchEffect 
 import { computed } from '@vielzeug/ripple';
 import { setAriaReflection } from '../../core';
 import { disablableBundle } from '../../shared';
-import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
+import { colorThemeMixin, forcedColorsFocusMixin, touchTargetMixin } from '../../styles';
 import {
   COMPONENT_SIZES,
   type ComponentSize,
@@ -162,5 +162,5 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
       </button>
     `;
   },
-  styles: [colorThemeMixin, forcedColorsFocusMixin('button'), coarsePointerMixin, styles],
+  styles: [colorThemeMixin, forcedColorsFocusMixin('button'), touchTargetMixin, styles],
 });

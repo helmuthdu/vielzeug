@@ -2,7 +2,7 @@ import { define, getHost, html, prop } from '@vielzeug/ore';
 import { watch } from '@vielzeug/ripple';
 import { announce } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import { colorThemeMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import componentStyles from './typing-indicator.css?inline';
 
@@ -72,7 +72,6 @@ define<OreTypingIndicatorProps>(TYPING_INDICATOR_TAG, {
   },
   styles: [
     colorThemeMixin,
-    reducedMotionMixin,
     sizeVariantMixin({
       lg: {
         gap: 'var(--typing-indicator-gap, var(--size-1-5))',

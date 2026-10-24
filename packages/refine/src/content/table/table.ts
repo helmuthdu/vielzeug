@@ -1,6 +1,6 @@
 import { bind, define, getHost, html, onMounted, prop, watchEffect } from '@vielzeug/ore';
 
-import { reducedMotionMixin, tableBaseMixin } from '../../styles';
+import { tableBaseMixin } from '../../styles';
 import { DENSITY_LEVELS, type DensityLevel } from '../../types';
 import componentStyles from './table.css?inline';
 
@@ -344,5 +344,5 @@ define<OreTableProps>(TABLE_TAG, {
     `;
   },
 
-  styles: [reducedMotionMixin, tableBaseMixin('table'), componentStyles],
+  styles: [tableBaseMixin('table'), componentStyles],
 });

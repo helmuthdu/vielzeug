@@ -2,7 +2,6 @@ import { bind, define, getHost, html, inject, onMounted, prop, ref, styleMap, wa
 import { computed, signal } from '@vielzeug/ripple';
 
 import { setAriaReflection } from '../../core';
-import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-panel.css?inline';
 
@@ -130,5 +129,5 @@ define<OreTabPanelProps>(TAB_PANEL_TAG, {
       </div>
     `;
   },
-  styles: [reducedMotionMixin, styles],
+  styles: [styles],
 });

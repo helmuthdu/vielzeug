@@ -1,6 +1,6 @@
 @layer refine.base {
   :host {
-    --_panel-bg: var(--popover-bg, var(--color-canvas));
+    --_panel-bg: var(--popover-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
     --_panel-blur: var(--popover-panel-blur, var(--blur-md));
     --_panel-border-color: var(--popover-border-color, var(--color-divider));
     --_panel-shadow: var(--popover-shadow, var(--shadow-xl));

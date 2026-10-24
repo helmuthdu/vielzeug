@@ -5,7 +5,7 @@
  */
 
 // Accessibility Mixins
-export { coarsePointerMixin, reducedMotionMixin, SR_ONLY_INLINE_STYLE, srOnlyMixin } from './mixins/accessibility.css';
+export { SR_ONLY_INLINE_STYLE, srOnlyMixin, touchTargetMixin } from './mixins/accessibility.css';
 // Effects
 export {
   rainbowEffectMixin,

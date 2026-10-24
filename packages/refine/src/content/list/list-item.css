@@ -39,7 +39,7 @@
   }
 
   :host([data-two-line]) .row {
-    min-height: var(--_min-height-two-line, var(--size-18));
+    min-height: var(--_min-height-two-line, var(--size-16));
   }
 
   :host([actionable]) .row {

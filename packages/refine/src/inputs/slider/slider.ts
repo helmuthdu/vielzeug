@@ -15,7 +15,7 @@ import {
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createErrorHelperState, createSliderControl } from '../../core';
 import { disablableBundle, SLIDER_SIZE_PRESET, sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, disabledStateMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
@@ -557,11 +557,5 @@ define<OreSliderProps>(SLIDER_TAG, {
       ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
-  styles: [
-    disabledStateMixin,
-    colorThemeMixin,
-    sizeVariantMixin(SLIDER_SIZE_PRESET),
-    componentStyles,
-    reducedMotionMixin,
-  ],
+  styles: [disabledStateMixin, colorThemeMixin, sizeVariantMixin(SLIDER_SIZE_PRESET), componentStyles],
 });

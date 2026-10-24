@@ -21,12 +21,24 @@ const LEFT_GAP_COMPENSATION = 4;
 const DEFAULT_TOOLTIP_TRIGGERS: TooltipTrigger[] = ['hover', 'focus'];
 const VALID_TOOLTIP_TRIGGERS = new Set<TooltipTrigger>(['click', 'focus', 'hover']);
 
-const parseDelayMs = (value: string | null): number => {
-  if (value == null || value.trim() === '') return 0;
+/**
+ * Hover dwell before an unset `delay` opens the tooltip. Sweeping a pointer
+ * across a toolbar would otherwise fire every tooltip in sequence; a short
+ * dwell opens only the one the pointer actually rested on. Keyboard focus and
+ * click skip the dwell: both are deliberate, and a focused user needs the help
+ * immediately.
+ */
+const HOVER_DWELL_MS = 300;
+/** Grace period before an unset `close-delay` hides the tooltip, absorbing pointer jitter across the trigger edge. */
+const CLOSE_DWELL_MS = 100;
+
+/** `undefined` (attribute unset or unparseable) means "use the trigger-dependent default", keeping an explicit `delay="0"` immediate. */
+const parseDelayMs = (value: string | null): number | undefined => {
+  if (value == null || value.trim() === '') return undefined;
 
   const parsed = Number(value);
 
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 };
 
 const normalizeTriggers = (value: string | null | undefined): TooltipTrigger[] =>
@@ -68,7 +80,8 @@ export type OreTooltipProps = {
  * @attr {string} content - Tooltip text content
  * @attr {string} placement - 'top' | 'bottom' | 'left' | 'right' (default: 'top')
  * @attr {string} trigger - 'hover' | 'focus' | 'click' or comma-separated combination
- * @attr {number} delay - Show delay in milliseconds (default: 0)
+ * @attr {number} delay - Show delay in milliseconds (default: 300 on hover, immediate on focus/click)
+ * @attr {number} close-delay - Hide delay in milliseconds (default: 100 on pointer leave, immediate on focus out)
  * @attr {boolean} open - Controlled open state
  * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
@@ -114,10 +127,10 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
   props: {
     ...sizableBundle,
     ...disablableBundle,
-    'close-delay': { default: 0, parse: parseDelayMs },
+    'close-delay': { default: undefined as number | undefined, parse: parseDelayMs },
     content: prop.string(),
     'default-open': prop.bool(false),
-    delay: { default: 0, parse: parseDelayMs },
+    delay: { default: undefined as number | undefined, parse: parseDelayMs },
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(['top', 'bottom', 'left', 'right'] as const, 'top'),
     trigger: prop.string('hover,focus'),
@@ -183,7 +196,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       clearHideTimer();
       clearShowTimer();
 
-      const delay = Number(props.delay.value) || 0;
+      const delay = props.delay.value ?? (reason === 'hover' ? HOVER_DWELL_MS : 0);
 
       if (delay > 0) {
         showTimer = setTimeout(() => {
@@ -197,12 +210,14 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       }
     }
 
-    function hide(): void {
+    // 'focus' dismissal skips the close grace: keyboard users expect the tooltip
+    // to be gone the moment focus leaves, and there is no pointer jitter to absorb.
+    function hide(reason?: 'focus'): void {
       if (isControlled.value) return;
 
       clearShowTimer();
 
-      const closeDelay = Number(props['close-delay'].value) || 0;
+      const closeDelay = props['close-delay'].value ?? (reason === 'focus' ? 0 : CLOSE_DWELL_MS);
 
       if (closeDelay > 0) {
         clearHideTimer();
@@ -238,12 +253,12 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
 
         if (t.includes('hover')) {
           addEvent(triggerEl, 'pointerenter', () => show('hover'));
-          addEvent(triggerEl, 'pointerleave', hide);
+          addEvent(triggerEl, 'pointerleave', () => hide());
         }
 
         if (t.includes('focus')) {
           addEvent(triggerEl, 'focusin', () => show('focus'));
-          addEvent(triggerEl, 'focusout', hide);
+          addEvent(triggerEl, 'focusout', () => hide('focus'));
         }
 
         if (t.includes('click')) {

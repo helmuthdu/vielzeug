@@ -56,13 +56,13 @@ Follow these when authoring or reviewing component styles and behaviour:
 
 - **4-point grid**: all spacing and dimensions use multiples of 4 via `var(--size-*)`.
 - **Whitespace**: sections breathe at 32 px / `var(--section-spacing)`; use proximity and containers to group related elements.
-- **Responsiveness**: 12-col desktop, 8-col tablet, 4-col mobile.
+- **Responsiveness**: `ore-grid` is container-responsive — `cols-*` breakpoints react to the grid's own width (not the viewport), so a narrow grid in a sidebar collapses to its mobile layout on a wide screen. Pick column counts per breakpoint (`cols="1" cols-md="2" cols-lg="4"`); a common content rhythm is 1-col mobile → 2-col tablet → 3–4-col desktop, scaling up to 12 for dense dashboards. Fixed counts resolve through the `--grid-1`–`--grid-12` tokens.
 
 ### Typography
 
 - Single sans-serif font via `var(--font-sans)`.
 - Headers: letter-spacing `var(--tracking-header)` (−5%), line-height `var(--leading-tight)` (115%).
-- Six font sizes max (`--text-xs` → `--text-2xl`); avoid sizes above 24 px on high-density pages.
+- Component type scale: seven steps (`--text-2xs` 11px → `--text-2xl` 24px); `--text-3xl` is reserved for display values like the circular-progress label. Never render component text below `--text-2xs` (11px floor); avoid sizes above 24 px on high-density pages.
 - Hierarchy via size, weight, and color: most important content large/bold/top.
 
 ### Color and Depth

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Add named animation tokens, three-state motion mode (setMotionMode/getMotionMode), navigation-menu panel cross-fade, and necromancer-powered FLIP datagrid row motion",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

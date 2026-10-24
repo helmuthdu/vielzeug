@@ -2,7 +2,7 @@
   :host {
     --_backdrop-bg: var(--drawer-backdrop-bg, color-mix(in oklch, var(--color-canvas) 40%, transparent));
     --_backdrop-filter: none;
-    --_panel-bg: var(--drawer-bg, var(--color-canvas));
+    --_panel-bg: var(--drawer-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
     --_panel-blur: var(--drawer-panel-blur, var(--blur-md));
     --_panel-shadow: var(--drawer-shadow, var(--shadow-xl));
     --_panel-border-color: var(--color-divider);
@@ -102,6 +102,8 @@
     inset-inline-start: 0;
     width: calc(var(--drawer-size, 20rem) + var(--_panel-bleed));
     max-width: calc(100dvw + var(--_panel-bleed));
+    padding-block-start: var(--safe-area-inset-block-start);
+    padding-block-end: var(--safe-area-inset-block-end);
     padding-inline-start: var(--_panel-bleed);
     margin-inline-start: calc(var(--_panel-bleed) * -1);
     border-block: none;
@@ -117,6 +119,8 @@
     inset-inline-end: 0;
     width: calc(var(--drawer-size, 20rem) + var(--_panel-bleed));
     max-width: calc(100dvw + var(--_panel-bleed));
+    padding-block-start: var(--safe-area-inset-block-start);
+    padding-block-end: var(--safe-area-inset-block-end);
     padding-inline-end: var(--_panel-bleed);
     margin-inline-end: calc(var(--_panel-bleed) * -1);
     border-block: none;
@@ -131,7 +135,7 @@
     inset-inline: 0;
     height: calc(var(--drawer-size, 16rem) + var(--_panel-bleed));
     max-height: calc(100dvh + var(--_panel-bleed));
-    padding-block-start: var(--_panel-bleed);
+    padding-block-start: calc(var(--_panel-bleed) + var(--safe-area-inset-block-start));
     margin-block-start: calc(var(--_panel-bleed) * -1);
     border-block-start: none;
     border-inline: none;
@@ -145,7 +149,7 @@
     inset-inline: 0;
     height: calc(var(--drawer-size, 16rem) + var(--_panel-bleed));
     max-height: calc(100dvh + var(--_panel-bleed));
-    padding-block-end: var(--_panel-bleed);
+    padding-block-end: calc(var(--_panel-bleed) + var(--safe-area-inset-block-end));
     margin-block-end: calc(var(--_panel-bleed) * -1);
     border-block-end: none;
     border-inline: none;

@@ -65,11 +65,17 @@ export type OreSwitchProps = CheckableProps & {
  * ```
  */
 export const SWITCH_TAG = 'ore-switch' as const;
-const switchCoarsePointerMixin = css`
+const switchTouchTargetMixin = css`
+  /* The 44px target is unconditional (same contract as touchTargetMixin); only the
+     switch-specific tier promotion is coarse-pointer-only, because the track/thumb
+     geometry here (--_height/--_thumb-size/--_width) differs from the generic tiers. */
+  :host {
+    --_touch-target: var(--size-11);
+  }
+
   @media (pointer: coarse) {
     :host,
     :host([size='md']) {
-      --_touch-target: var(--size-11);
       --_font-size: var(--text-base);
       --_gap: var(--size-3);
       --_height: var(--size-7);
@@ -78,16 +84,11 @@ const switchCoarsePointerMixin = css`
     }
 
     :host([size='sm']) {
-      --_touch-target: var(--size-11);
       --_font-size: var(--text-sm);
       --_gap: var(--size-2);
       --_height: var(--size-5);
       --_thumb-size: var(--size-4);
       --_width: var(--size-10);
-    }
-
-    :host([size='lg']) {
-      --_touch-target: var(--size-11);
     }
   }
 `;
@@ -162,7 +163,7 @@ define<OreSwitchProps>(SWITCH_TAG, {
     forcedColorsFormControlMixin,
     disabledStateMixin,
     sizeVariantMixin(SWITCH_SIZE_PRESET),
-    switchCoarsePointerMixin,
+    switchTouchTargetMixin,
     componentStyles,
   ],
 });

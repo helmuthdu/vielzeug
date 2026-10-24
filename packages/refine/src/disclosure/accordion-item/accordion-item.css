@@ -195,6 +195,18 @@
     --accordion-item-hover-bg: color-mix(in oklch, var(--color-canvas) 20%, transparent);
   }
 
+  /* Reduced transparency: opaque fill, no blur. */
+  @media (prefers-reduced-transparency: reduce) {
+    :host([variant='frost']) {
+      --accordion-item-bg: var(--color-canvas);
+    }
+
+    :host([variant='frost']) summary,
+    :host([variant='frost']) .content-wrapper {
+      backdrop-filter: none;
+    }
+  }
+
   :host([variant='frost']) summary {
     text-shadow: var(--text-shadow-2xs);
   }

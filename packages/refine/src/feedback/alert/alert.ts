@@ -1,13 +1,13 @@
 import { define, getHost, html, prop, useEmit, useSlots } from '@vielzeug/ore';
+import { warnMultiplePrimaryActions } from '../../_dev';
 import { awaitExit } from '../../overlay/shared/await-exit';
 import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   forcedColorsMixin,
-  reducedMotionMixin,
   roundedVariantMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -113,6 +113,12 @@ define<OreAlertProps>(ALERT_TAG, {
 
     let announceEl: HTMLElement | null = null;
 
+    const checkActions = (e: Event) => {
+      const slot = e.target as HTMLSlotElement;
+
+      warnMultiplePrimaryActions(slot.assignedElements({ flatten: true }), 'ore-alert actions');
+    };
+
     const announce = (message: string) => {
       if (!announceEl) return;
 
@@ -170,7 +176,7 @@ define<OreAlertProps>(ALERT_TAG, {
           </div>
         </div>
         <div class="actions" part="actions" ?hidden="${() => !slots.has('actions').value}">
-          <slot name="actions"></slot>
+          <slot name="actions" @slotchange="${checkActions}"></slot>
         </div>
         <button
           class="close"
@@ -186,8 +192,7 @@ define<OreAlertProps>(ALERT_TAG, {
   },
   styles: [
     colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
+    touchTargetMixin,
     roundedVariantMixin,
     forcedColorsMixin,
     sizeVariantMixin({

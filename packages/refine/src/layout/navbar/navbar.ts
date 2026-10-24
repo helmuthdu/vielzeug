@@ -15,12 +15,11 @@ import {
 import { computed, fromSubscribable, type Readable, signal, untrack, watch } from '@vielzeug/ripple';
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   elevationMixin,
   frostVariantMixin,
-  reducedMotionMixin,
   roundedVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import {
   ELEVATION_LEVELS,
@@ -784,8 +783,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     colorThemeMixin,
     elevationMixin,
     roundedVariantMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
+    touchTargetMixin,
     frostVariantMixin('.navbar'),
     navbarStyles,
   ],
@@ -921,5 +919,5 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
       }}
     `;
   },
-  styles: [coarsePointerMixin, navbarStyles],
+  styles: [touchTargetMixin, navbarStyles],
 });

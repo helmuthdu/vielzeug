@@ -2,13 +2,7 @@ import { bind, createId, define, getHost, html, onCleanup, prop, useEmit } from 
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { createSpinnerControl } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import {
-  coarsePointerMixin,
-  colorThemeMixin,
-  disabledStateMixin,
-  frostVariantMixin,
-  reducedMotionMixin,
-} from '../../styles';
+import { colorThemeMixin, disabledStateMixin, frostVariantMixin, touchTargetMixin } from '../../styles';
 import type { ComponentSize, ThemeColor } from '../../types';
 import componentStyles from './counter.css?inline';
 
@@ -351,12 +345,5 @@ define<OreCounterProps>(COUNTER_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [
-    colorThemeMixin,
-    disabledStateMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
-    frostVariantMixin('.counter'),
-    componentStyles,
-  ],
+  styles: [colorThemeMixin, disabledStateMixin, touchTargetMixin, frostVariantMixin('.counter'), componentStyles],
 });

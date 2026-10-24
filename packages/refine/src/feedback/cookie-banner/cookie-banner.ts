@@ -1,8 +1,6 @@
 import { createId, define, each, getHost, html, prop, useEmit, when } from '@vielzeug/ore';
 import { signal, watch } from '@vielzeug/ripple';
 
-import { reducedMotionMixin } from '../../styles';
-
 // The child components this banner renders. The bare-import form is not enough:
 // the per-entry library build drops side-effect-only imports between entry
 // modules, so these re-export the tags as bindings: the bundler keeps the
@@ -262,5 +260,5 @@ define<OreCookieBannerProps>(COOKIE_BANNER_TAG, {
       </div>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

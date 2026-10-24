@@ -1,6 +1,6 @@
 import { bind, define, getHost, html, inject, prop, useSlots, watchEffect } from '@vielzeug/ore';
 import { disablableBundle } from '../../shared';
-import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
+import { colorThemeMixin, forcedColorsFocusMixin, touchTargetMixin } from '../../styles';
 import { COMPONENT_SIZES, type ComponentSize, THEME_COLORS, type ThemeColor } from '../../types';
 import { isStepNavigable } from './_is-step-navigable';
 import stepStyles from './step.css?inline';
@@ -281,5 +281,5 @@ define<OreStepProps>(STEP_TAG, {
       </li>
     `;
   },
-  styles: [colorThemeMixin, coarsePointerMixin, forcedColorsFocusMixin('button.control'), stepStyles],
+  styles: [colorThemeMixin, touchTargetMixin, forcedColorsFocusMixin('button.control'), stepStyles],
 });

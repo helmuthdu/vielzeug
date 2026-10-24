@@ -122,7 +122,11 @@
 
   /* ── Grid base ───────────────────────────────────────────────────────────── */
 
-  [hidden] {
+  /* Class-qualified on purpose: each grid below declares its own `display`, and
+     a bare `[hidden]` has the same specificity as those class selectors, so the
+     later rule would win and the inactive views would stack under the active
+     one. `.cal-grid[hidden]` outranks them all. */
+  .cal-grid[hidden] {
     display: none;
   }
 

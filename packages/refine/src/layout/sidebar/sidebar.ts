@@ -15,9 +15,9 @@ import {
 } from '@vielzeug/ore';
 import { computed, fromSubscribable, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
-
+import { truncationRevealRef } from '../../core';
 import { createBackgroundLock } from '../../overlay/shared/background-lock';
-import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
+import { touchTargetMixin } from '../../styles';
 import { computeSafeRel } from '../../utils';
 import { parseMaxWidthPx, readContainerWidth, resolveContainerElement } from '../shared';
 import sidebarStyles from './sidebar.css?inline';
@@ -742,7 +742,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       </div>
     `;
   },
-  styles: [coarsePointerMixin, reducedMotionMixin, sidebarStyles],
+  styles: [touchTargetMixin, sidebarStyles],
 });
 
 // ─── ore-sidebar-group styles ────────────────────────────────────────────────
@@ -854,7 +854,7 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
       </details>
     `;
   },
-  styles: [reducedMotionMixin, groupStyles],
+  styles: [groupStyles],
 });
 
 // ─── ore-sidebar-item styles ─────────────────────────────────────────────────
@@ -968,7 +968,7 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
       <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
         <slot name="icon"></slot>
       </span>
-      <span class="item-label" part="item-label"><slot></slot></span>
+      <span class="item-label" part="item-label" ref=${truncationRevealRef()}><slot></slot></span>
       <span class="item-end" part="item-end" ?hidden=${() => !hasEnd()}>
         <slot name="end"></slot>
       </span>
@@ -1021,5 +1021,5 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
       }}
     `;
   },
-  styles: [coarsePointerMixin, itemStyles],
+  styles: [touchTargetMixin, itemStyles],
 });

@@ -120,6 +120,14 @@
     backdrop-filter: blur(var(--blur-xl)) saturate(200%);
   }
 
+  /* Reduced transparency: opaque fill, no blur. */
+  @media (prefers-reduced-transparency: reduce) {
+    :host([variant='frost']) button {
+      background: var(--_theme-base);
+      backdrop-filter: none;
+    }
+  }
+
   :host([variant='frost']) button:hover:not(:disabled, [aria-current='page']) {
     background: color-mix(in oklch, var(--_theme-backdrop) 65%, transparent);
     border-color: color-mix(in oklch, var(--_theme-focus) 55%, transparent);
@@ -206,7 +214,7 @@
 @layer refine.utilities {
   :host([size='sm']) {
     --pagination-item-size: var(--size-7);
-    --pagination-gap: var(--size-0_5);
+    --pagination-gap: var(--size-0-5);
     --_font-size: var(--text-xs);
   }
 

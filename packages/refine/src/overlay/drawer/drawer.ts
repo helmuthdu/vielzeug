@@ -16,7 +16,7 @@ import { signal } from '@vielzeug/ripple';
 
 import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
 
-import { coarsePointerMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
+import { forcedColorsMixin, touchTargetMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import styles from './drawer.css?inline';
 
@@ -467,5 +467,5 @@ define<OreDrawerProps>(DRAWER_TAG, {
       </dialog>
     `;
   },
-  styles: [forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
+  styles: [forcedColorsMixin, touchTargetMixin, styles],
 });

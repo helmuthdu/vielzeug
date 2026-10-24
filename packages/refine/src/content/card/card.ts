@@ -2,14 +2,7 @@ import { bind, define, getHost, html, prop, useEmit, useSlots, watchEffect } fro
 import { computed } from '@vielzeug/ripple';
 import { createInteraction } from '../../core';
 import { disablableBundle, loadableBundle, roundableBundle, themableBundle } from '../../shared';
-import {
-  colorThemeMixin,
-  elevationMixin,
-  frostVariantMixin,
-  paddingMixin,
-  reducedMotionMixin,
-  roundedVariantMixin,
-} from '../../styles';
+import { colorThemeMixin, elevationMixin, frostVariantMixin, paddingMixin, roundedVariantMixin } from '../../styles';
 import {
   ELEVATION_LEVELS,
   type ElevationLevel,
@@ -220,7 +213,6 @@ define<OreCardProps>(CARD_TAG, {
     paddingMixin,
     roundedVariantMixin,
     frostVariantMixin('.card'),
-    reducedMotionMixin,
     componentStyles,
   ],
 });

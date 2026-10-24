@@ -78,4 +78,26 @@ export const frostVariantMixin = (selector: string) => css`
     backdrop-filter: blur(var(--blur-3xl)) saturate(240%) brightness(1.2);
     -webkit-backdrop-filter: blur(var(--blur-3xl)) saturate(240%) brightness(1.2);
   }
+
+  /* Reduced transparency: frost is a legibility gamble for people who asked the
+     OS to reduce transparency, so the translucent fill becomes opaque and the
+     blur is dropped. Kept inside this mixin (rather than a shared token) because
+     the opaque fallback is the family's own base color, which differs per
+     variant: no single token can name it. Last in the result, so it wins over
+     the frost rules above by source order at equal specificity. */
+  @media (prefers-reduced-transparency: reduce) {
+    :host([variant='frost']:not([color])) ${selector},
+    :host([variant='frost']:not([color])) ${selector}:hover {
+      background: var(--color-canvas);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    :host([variant='frost'][color]) ${selector},
+    :host([variant='frost'][color]) ${selector}:hover {
+      background: var(--_theme-base);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
 `;

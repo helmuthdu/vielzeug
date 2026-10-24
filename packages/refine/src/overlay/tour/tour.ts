@@ -22,7 +22,6 @@ import {
   type OverlayOpenChangeDetail,
   parseOptionalBool,
 } from '../../core';
-import { reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import type { SpotlightRect } from '../spotlight/spotlight';
 
@@ -865,5 +864,5 @@ define<OreTourProps>(TOUR_TAG, {
       )}
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

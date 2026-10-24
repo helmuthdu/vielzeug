@@ -10,7 +10,7 @@ import { expect, test } from '../../testing/fixtures';
 test.describe('Interaction', () => {
   test('shows tooltip above its trigger on hover', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
-      '<ore-tooltip content="Helpful hint">' + '<ore-button>Hover me</ore-button>' + '</ore-tooltip>',
+      '<ore-tooltip content="Helpful hint" delay="0">' + '<ore-button>Hover me</ore-button>' + '</ore-tooltip>',
     );
 
     await page.locator('ore-button').hover();

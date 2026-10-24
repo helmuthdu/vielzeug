@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "calendar: inactive month/year views no longer stack under the day grid (hidden rule class-qualified to outrank the grids' own display declarations)",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

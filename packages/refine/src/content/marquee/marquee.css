@@ -21,7 +21,10 @@
     gap: var(--marquee-gap, var(--size-4));
     align-items: stretch;
     width: max-content;
-    animation: marquee-scroll var(--_marquee-duration, 20s) linear infinite;
+    /* The root-level --_motion-animation escape hatch (theme.css) stops the scroll
+       for both the OS preference and data-motion='reduced', and honors
+       data-motion='full'; a component-local media query would ignore the mode. */
+    animation: var(--_motion-animation, marquee-scroll var(--_marquee-duration, 20s) linear infinite);
     will-change: transform;
   }
 
@@ -76,8 +79,11 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .track {
-    animation: none;
+/* The control scrim sits over arbitrary slide content: with transparency
+   reduced it becomes opaque so the controls stay legible. */
+@media (prefers-reduced-transparency: reduce) {
+  :host > .controls {
+    background: var(--color-canvas);
+    backdrop-filter: none;
   }
 }

@@ -2,7 +2,6 @@ import { define, each, getHost, html, onCleanup, onMounted, prop, ref, useEmit, 
 import { watch } from '@vielzeug/ripple';
 
 import type { DialogCloseReason, OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
-import { reducedMotionMixin } from '../../styles';
 
 import componentStyles from './chat-panel.css?inline';
 
@@ -343,5 +342,5 @@ define<OreChatPanelProps>(CHAT_PANEL_TAG, {
       </aside>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

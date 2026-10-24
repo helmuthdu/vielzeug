@@ -4,7 +4,7 @@
     --_max-width: var(--command-palette-max-width, 40rem);
     --_preview-width: var(--command-palette-preview-width, 18rem);
     --_backdrop-bg: var(--command-palette-backdrop, color-mix(in oklch, var(--color-canvas) 40%, transparent));
-    --_panel-bg: var(--command-palette-bg, var(--color-canvas));
+    --_panel-bg: var(--command-palette-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
     --_panel-border-color: var(--command-palette-border-color, var(--color-divider));
     --_option-hover-bg: var(--command-palette-option-hover-bg, var(--color-contrast-100));
     --_option-focus-bg: var(
@@ -118,6 +118,7 @@
 
     dialog {
       padding-block-start: var(--size-4);
+      padding-block-end: var(--safe-area-inset-block-end);
     }
 
     /* No horizontal room for a side-by-side pane: the preview drops under the
@@ -158,7 +159,7 @@
     min-width: 0;
     padding: 0;
     font: inherit;
-    font-size: var(--text-md);
+    font-size: var(--text-base);
     color: var(--color-contrast-900);
     outline: none;
     background: transparent;
@@ -177,7 +178,7 @@
     border: 2px solid var(--color-contrast-300);
     border-inline-end-color: transparent;
     border-radius: 50%;
-    animation: command-palette-spin var(--transition-loader) infinite;
+    animation: var(--_motion-animation, command-palette-spin var(--transition-loader) infinite);
   }
 
   .search-loader[hidden] {

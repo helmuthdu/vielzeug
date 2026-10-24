@@ -4,7 +4,9 @@ import { type Fixture, mount } from '@vielzeug/ore/testing';
 import { createToastService } from './toast';
 
 const completeExit = async (flush: () => Promise<void>) => {
-  // Exits finalize on a timeout (exit duration + buffer), not a transition event.
+  // jsdom runs no CSS transitions, so exits finalize on the store's backstop
+  // timeout (exit duration + buffer) here; real browsers finalize early on
+  // transitionend. Both paths land inside this window.
   await delay(400);
   await flush();
 };
@@ -40,7 +42,7 @@ describe('ore-toast', () => {
 
   it('renders the service store in polite and assertive live regions', async () => {
     service.add({ duration: 0, message: 'Saved' });
-    service.add({ color: 'error', duration: 0, message: 'Failed' });
+    service.add({ duration: 0, message: 'Failed', status: 'danger' });
     await fixture.flush();
 
     expect(fixture.query('[aria-live="polite"] ore-alert')?.textContent).toContain('Saved');
@@ -68,6 +70,69 @@ describe('ore-toast', () => {
     expect(dismissed).toHaveBeenCalledOnce();
   });
 
+  // jsdom resolves no custom properties, so the themed-duration branches are
+  // only reachable through a getComputedStyle stub. These guard the unit: the
+  // tokens are authored in milliseconds, and a misread (seconds) would push the
+  // backstop out by three orders of magnitude and look like a hang.
+  it('honors a themed --toast-exit-duration instead of clipping it', async () => {
+    const original = window.getComputedStyle;
+
+    vi.stubGlobal('getComputedStyle', (element: Element) =>
+      element instanceof HTMLElement && element.classList.contains('toast-inner')
+        ? ({ getPropertyValue: (name: string) => (name === '--_exit-duration' ? '600ms' : '') } as CSSStyleDeclaration)
+        : original.call(window, element),
+    );
+
+    try {
+      const id = service.add({ duration: 0, message: 'Slow fade' });
+
+      await fixture.flush();
+
+      service.dismiss(id);
+      await fixture.flush();
+      await delay(300);
+
+      // Still fading: the 600ms theme outlasts the 200ms default budget.
+      expect(fixture.query(`[data-toast-id="${id}"]`)).toBeTruthy();
+
+      await delay(450);
+      await fixture.flush();
+
+      await eventually(() => expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull());
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('removes near-instantly when reduced motion replaces the exit transition', async () => {
+    const original = window.getComputedStyle;
+
+    vi.stubGlobal('getComputedStyle', (element: Element) =>
+      element instanceof HTMLElement && element.classList.contains('toast-inner')
+        ? ({
+            getPropertyValue: (name: string) => (name === '--_motion-transition' ? 'none' : ''),
+          } as CSSStyleDeclaration)
+        : original.call(window, element),
+    );
+
+    try {
+      const id = service.add({ duration: 0, message: 'Reduced' });
+
+      await fixture.flush();
+
+      service.dismiss(id);
+      await fixture.flush();
+      await delay(150);
+      await fixture.flush();
+
+      // Zero fade: only the buffer remains, so the entry is already gone at
+      // 150ms - the 250ms default budget would still have it here.
+      expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('allows the alert close button to dismiss through its bound store', async () => {
     service.add({ duration: 0, message: 'Closable' });
     await fixture.flush();
@@ -90,10 +155,57 @@ describe('ore-toast', () => {
     expect(snack.classList.contains('snackbar')).toBe(true);
     expect(standard.classList.contains('snackbar')).toBe(false);
     expect(snack.getAttribute('style')).toContain('var(--rounded-sm)');
-    expect(snack.querySelector('ore-alert')?.getAttribute('variant')).toBe('flat');
-    expect(standard.querySelector('ore-alert')?.getAttribute('variant')).toBe('solid');
     expect(snack.querySelector('ore-button')?.getAttribute('variant')).toBe('ghost');
-    expect(standard.querySelector('ore-button')?.getAttribute('variant')).toBe('flat');
+    expect(standard.querySelector('ore-button')?.getAttribute('variant')).toBe('ghost');
+  });
+
+  it('renders a status icon only for statuses that carry one', async () => {
+    service.add({ duration: 0, message: 'Plain' });
+    service.add({ duration: 0, message: 'Done', status: 'success' });
+    service.add({ duration: 0, message: 'Careful', status: 'warning' });
+    service.add({ duration: 0, message: 'Broke', status: 'danger' });
+    await fixture.flush();
+
+    const icons = [...(fixture.element.shadowRoot?.querySelectorAll<HTMLElement>('.toast-status-icon') ?? [])];
+
+    expect(icons.map((icon) => icon.getAttribute('name'))).toEqual(['check', 'triangle-alert', 'circle-alert']);
+    expect(icons.every((icon) => icon.getAttribute('slot') === 'icon')).toBe(true);
+  });
+
+  it('renders an avatar in the leading slot instead of the status icon', async () => {
+    service.add({
+      avatar: { alt: 'Jane Doe', initials: 'JD' },
+      duration: 0,
+      message: 'Jane mentioned you',
+      status: 'success',
+    });
+    await fixture.flush();
+
+    const avatar = fixture.query<HTMLElement>('.toast-avatar')!;
+
+    expect(avatar.getAttribute('slot')).toBe('icon');
+    expect(avatar.getAttribute('initials')).toBe('JD');
+    expect(avatar.getAttribute('alt')).toBe('Jane Doe');
+    // The avatar replaces the glyph, but the status still tints the accent.
+    expect(fixture.query('.toast-status-icon')).toBeNull();
+    const inner = fixture.query<HTMLElement>('.toast-inner')!;
+
+    expect(inner.getAttribute('style')).toContain('--_toast-accent: var(--color-success)');
+  });
+
+  it('tints the accent from the status, never the surface', async () => {
+    const id = service.add({ duration: 0, message: 'Broke', status: 'danger' });
+
+    await fixture.flush();
+
+    const inner = fixture.query<HTMLElement>(`[data-toast-id="${id}"] .toast-inner`)!;
+
+    expect(inner.getAttribute('style')).toContain('--_toast-accent: var(--color-error)');
+    // The embedded alert carries no color/variant: the surface stays neutral.
+    const alert = inner.querySelector('ore-alert')!;
+
+    expect(alert.hasAttribute('color')).toBe(false);
+    expect(alert.hasAttribute('variant')).toBe(false);
   });
 
   it('evicts the oldest notification when the scoped service max is reached', async () => {
@@ -135,10 +247,6 @@ describe('ore-toast', () => {
   });
 
   it('dismisses a toast after a committed swipe', async () => {
-    const originalMatchMedia = window.matchMedia;
-
-    window.matchMedia = vi.fn().mockReturnValue({ matches: false });
-
     const id = service.add({ duration: 0, message: 'Swipe me' });
 
     await fixture.flush();
@@ -157,11 +265,15 @@ describe('ore-toast', () => {
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { ...swipeEventInit, clientX: 0 }));
     wrapper.dispatchEvent(new PointerEvent('pointermove', { ...swipeEventInit, clientX: 300 }));
     wrapper.dispatchEvent(new PointerEvent('pointerup', { ...swipeEventInit, clientX: 300 }));
+
+    const flight = wrapper.querySelector<HTMLElement>('.toast-inner')!.style.transition;
+
+    expect(flight).toContain('transform');
+    expect(flight).toContain('opacity');
+
     await completeExit(fixture.flush);
 
     await eventually(() => expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull());
-
-    window.matchMedia = originalMatchMedia;
   });
 
   it('does not start a swipe from an action button', async () => {
@@ -416,7 +528,7 @@ describe('ore-toast', () => {
     expect(fixture.query<HTMLElement>(`[data-toast-id="${persistent}"] .toast-progress`)?.hidden).toBe(true);
   });
 
-  it('renders action buttons flat by default and keyed to their label', async () => {
+  it('renders action buttons ghost by default and keyed to their label', async () => {
     const id = service.add({
       actions: [{ label: 'Undo' }, { label: 'Open', variant: 'solid' }],
       duration: 0,
@@ -427,7 +539,32 @@ describe('ore-toast', () => {
 
     const buttons = fixture.queryAll<HTMLElement>(`[data-toast-id="${id}"] ore-button`);
 
-    expect(buttons.map((button) => button.getAttribute('variant'))).toEqual(['flat', 'solid']);
+    expect(buttons.map((button) => button.getAttribute('variant'))).toEqual(['ghost', 'solid']);
+  });
+
+  it('passes action emphasis through and lets it drive the treatment', async () => {
+    const id = service.add({
+      actions: [
+        { emphasis: 'cancel', label: 'Cancel' },
+        { emphasis: 'destructive', label: 'Delete' },
+        { color: 'success', emphasis: 'primary', label: 'Keep' },
+      ],
+      duration: 0,
+      message: 'Delete file?',
+      status: 'danger',
+    });
+
+    await fixture.flush();
+
+    const buttons = fixture.queryAll<HTMLElement>(`[data-toast-id="${id}"] ore-button`);
+
+    // Emphasis reaches the button. The toast withholds its ghost/primary default so
+    // the button's own emphasis mapping applies: a destructive action must never
+    // carry the forced 'ghost' default (it resolves to 'text', or is unset before
+    // ore reflects it). An explicit color still wins over the withheld default.
+    expect(buttons.map((button) => button.getAttribute('emphasis'))).toEqual(['cancel', 'destructive', 'primary']);
+    expect(buttons[1]?.getAttribute('variant')).not.toBe('ghost');
+    expect(buttons[2]?.getAttribute('color')).toBe('success');
   });
 });
 
@@ -562,15 +699,15 @@ describe('toast service shortcuts and promises', () => {
   });
 
   it.each([
-    ['success', 'success'],
-    ['error', 'error'],
+    ['success', 'check'],
+    ['error', 'circle-alert'],
     ['info', 'info'],
-    ['warning', 'warning'],
-  ] as const)('%s shortcut uses the %s colour', async (shortcut, color) => {
+    ['warning', 'triangle-alert'],
+  ] as const)('%s shortcut renders the %s status icon', async (shortcut, icon) => {
     service[shortcut]('Message', { duration: 0 });
     await fixture.flush();
 
-    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe(color);
+    expect(fixture.query('.toast-status-icon')?.getAttribute('name')).toBe(icon);
   });
 
   it('updates its loading toast when a promise resolves', async () => {
@@ -586,6 +723,6 @@ describe('toast service shortcuts and promises', () => {
     await eventually(() => {
       expect(fixture.query('ore-alert')?.textContent).toContain('Uploaded file');
     });
-    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe('success');
+    expect(fixture.query('.toast-status-icon')?.getAttribute('name')).toBe('check');
   });
 });

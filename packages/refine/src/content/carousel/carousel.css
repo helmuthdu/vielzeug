@@ -272,6 +272,16 @@
   }
 }
 
+/* The control/indicator scrims sit over arbitrary slide content: with
+   transparency reduced they become opaque so the controls stay legible. */
+@media (prefers-reduced-transparency: reduce) {
+  :host > .controls,
+  .indicators {
+    background: var(--color-canvas);
+    backdrop-filter: none;
+  }
+}
+
 @keyframes carousel-fill {
   from {
     width: 0%;

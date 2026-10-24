@@ -1,6 +1,5 @@
 import { define, html, prop } from '@vielzeug/ore';
 
-import { reducedMotionMixin } from '../../styles';
 import styles from './spotlight.css?inline';
 
 /** The rectangle a spotlight cuts out of its dim layer, in viewport pixels. */
@@ -91,5 +90,5 @@ define<OreSpotlightProps>(SPOTLIGHT_TAG, {
       </div>
     `;
   },
-  styles: [reducedMotionMixin, styles],
+  styles: [styles],
 });

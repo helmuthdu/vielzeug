@@ -1,18 +1,31 @@
 import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 import { define, each, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
-import { reducedMotionMixin } from '../../styles';
+import type { OreAvatarProps } from '../../content/avatar/avatar';
+import { lifecycleSignal } from '../../core';
+import type { ButtonEmphasis, ButtonVariant } from '../../inputs/button/button';
+import { createLayoutMotion } from '../../shared/layout-motion';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
 
+// The avatar is a rendered child: registering it through a TAG re-export keeps
+// the custom-element link alive across cross-entry chunking.
+export { AVATAR_TAG } from '../../content/avatar/avatar';
+export { ICON_TAG } from '../../content/icon/icon';
 export { ALERT_TAG } from '../alert/alert';
 
 /**
- * The single exit budget: removal happens this many milliseconds (plus a small buffer)
- * after dismissal, on a store-owned timeout. The CSS exit transition
- * (`--toast-exit-duration`, default 200ms) must stay within it or the fade is clipped.
+ * Default exit budget in milliseconds: without a bound view, removal happens
+ * this long (plus a small buffer) after dismissal on a store-owned timeout.
+ * A bound view reschedules the same timeout with the real exit-transition
+ * duration (`--toast-exit-duration`, read from computed style) and finalizes
+ * early on `transitionend`, so a themed duration is never clipped; this
+ * constant only covers a viewless store or an unparseable token.
  */
-const TOAST_EXIT_MS = 200;
+const DEFAULT_EXIT_MS = 200;
+
+/** Slack added to a measured exit duration before the backstop fires. */
+const EXIT_BUFFER_MS = 50;
 
 export type OreToastEvents = {
   add: { id: string };
@@ -27,15 +40,39 @@ export type OreToastProps = {
   position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 };
 
+/**
+ * Notification severity. Drives the status icon, the accent color, and the
+ * default screen-reader urgency; it never fills the surface, which stays a
+ * neutral light/dark card so a stack of notifications stays calm and legible.
+ */
+export const TOAST_STATUSES = ['neutral', 'info', 'success', 'warning', 'danger'] as const;
+export type ToastStatus = (typeof TOAST_STATUSES)[number];
+
 /** Individual toast notification. */
 export type ToastItem = {
   actions?: Array<{
+    /** Explicit button color; overrides `emphasis`. */
     color?: ThemeColor;
+    /**
+     * Semantic role of the action, reusing ore-button's emphasis: 'primary' (accent
+     * fill), 'cancel' (neutral ghost), 'destructive' (error ink), or 'normal'. Picks
+     * the treatment so a confirm/cancel pair reads with real hierarchy. An explicit
+     * `color`/`variant` overrides it. Deliberately independent of the toast `status`:
+     * a danger toast's Undo is a recovery action, not a destructive one.
+     */
+    emphasis?: ButtonEmphasis;
     label: string;
     onClick?: () => void;
-    variant?: 'solid' | 'flat' | 'bordered';
+    /** Explicit button variant; overrides `emphasis`. */
+    variant?: ButtonVariant;
   }>;
-  color?: ThemeColor;
+  /**
+   * Avatar rendered in the leading slot instead of the status icon: pass an
+   * ore-avatar props object (`initials`, `src`, `alt`, `color`, `status`) for a
+   * person-centric notification. The avatar replaces the icon, so `status` no
+   * longer renders its glyph (it still tints the accent and sets urgency).
+   */
+  avatar?: Partial<OreAvatarProps>;
   dismissible?: boolean;
   /** Auto-dismiss delay in ms. Set to 0 for persistent toasts (default: 5000). */
   duration?: number;
@@ -57,21 +94,25 @@ export type ToastItem = {
   rounded?: RoundedSize | '';
   /**
    * Material-style compact bar: an inverted neutral surface (dark chip in light themes,
-   * light chip in dark themes) with single-row padding, and actions rendered as flat text
-   * buttons. Overrides the alert `variant`; the close button inherits the surface's text
-   * color. Style through `--toast-snackbar-*` custom properties.
+   * light chip in dark themes) with single-row padding. The close button inherits the
+   * surface's text color. Style through `--toast-snackbar-*` custom properties.
    */
   snackbar?: boolean;
   size?: ComponentSize;
   /**
-   * Screen-reader announcement urgency. Error-coloured toasts are assertive by
-   * default; all other toasts are polite.
+   * Notification severity: `neutral` (default, no icon), `info`, `success`,
+   * `warning`, or `danger`. Renders a status icon and tints the accent; `danger`
+   * announces assertively by default.
+   */
+  status?: ToastStatus;
+  /**
+   * Screen-reader announcement urgency. Defaults to `assertive` for `danger`
+   * and `polite` for every other status.
    */
   urgency?: 'polite' | 'assertive';
-  variant?: 'solid' | 'flat' | 'bordered';
 };
 
-type ToastPhase = 'entering' | 'active' | 'exiting';
+type ToastPhase = 'active' | 'exiting';
 
 type ToastTimer = {
   remaining: number;
@@ -129,20 +170,14 @@ class ToastStore {
       duration: item.duration ?? (item.actions?.length ? 0 : 5000),
       exitTimeoutId: null,
       id,
-      phase: 'entering',
+      // Entry motion is pure CSS (@starting-style supplies the pre-mount frame),
+      // so a new entry needs no JS phase to animate in.
+      phase: 'active',
       timer: null,
     };
 
     this.#setEntries([...this.#entries.value, entry]);
     this.#dispatch({ id, type: 'add' });
-
-    // Two frames: the first lets the browser compute styles for the `entering` state,
-    // the second flips to `active` so the CSS transition has a start value to animate from.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (this.#entry(id)?.phase === 'entering') this.#update(id, { phase: 'active' });
-      });
-    });
 
     if (entry.duration > 0) {
       // While paused the window is recorded without arming a timeout; resume arms it.
@@ -185,7 +220,12 @@ class ToastStore {
     if (!entry || entry.phase === 'exiting' || this.#disposed) return;
 
     this.#update(id, { ...this.#clearTimer(entry), phase: 'exiting' });
-    this.scheduleFinalization(id, TOAST_EXIT_MS + 50);
+
+    // Arm the default budget only if the bound view has not already budgeted
+    // this exit: a synchronous watcher can run syncControls inside the
+    // #update notification above, and clobbering the view's themed duration
+    // with the default would re-clip it.
+    if (this.#entry(id)?.exitTimeoutId == null) this.scheduleFinalization(id, DEFAULT_EXIT_MS + EXIT_BUFFER_MS);
   }
 
   finalize(id: string): void {
@@ -202,38 +242,48 @@ class ToastStore {
     this.#dispatch({ id, type: 'dismiss' });
   }
 
-  pauseTimers(): void {
-    if (this.#disposed || this.#paused) return;
+  /**
+   * Single pause seam for the view: hover, in-region focus, and open
+   * top-layer surfaces all collapse into one boolean. Pausing records each
+   * timer's remaining window without an armed timeout; resuming re-arms it.
+   */
+  setPaused(paused: boolean): void {
+    if (this.#disposed || paused === this.#paused) return;
 
-    this.#paused = true;
+    this.#paused = paused;
 
-    this.#setEntries(
-      this.#entries.value.map((entry) => {
-        if (!entry.timer) return entry;
+    if (paused) {
+      this.#setEntries(
+        this.#entries.value.map((entry) => {
+          if (!entry.timer) return entry;
 
-        if (entry.timer.timeoutId) clearTimeout(entry.timer.timeoutId);
+          if (entry.timer.timeoutId) clearTimeout(entry.timer.timeoutId);
 
-        return {
-          ...entry,
-          timer: {
-            ...entry.timer,
-            remaining: Math.max(0, entry.timer.remaining - (Date.now() - entry.timer.startedAt)),
-          },
-        };
-      }),
-    );
-  }
+          return {
+            ...entry,
+            timer: {
+              ...entry.timer,
+              remaining: Math.max(0, entry.timer.remaining - (Date.now() - entry.timer.startedAt)),
+            },
+          };
+        }),
+      );
 
-  resumeTimers(): void {
-    if (this.#disposed || !this.#paused) return;
-
-    this.#paused = false;
+      return;
+    }
 
     for (const entry of this.#entries.value) {
       if (entry.timer && entry.timer.remaining > 0) this.#scheduleTimer(entry.id, entry.timer.remaining);
     }
   }
 
+  /**
+   * Arms (or re-arms) the removal backstop for an exiting entry. The store
+   * arms a default budget at dismissal; a bound view calls this with the
+   * themed exit duration so a long `--toast-exit-duration` is never clipped
+   * and a reduced-motion zero is honored. `finalize()` is idempotent, so the
+   * backstop racing an early `transitionend` finalize is harmless.
+   */
   scheduleFinalization(id: string, delay: number): void {
     const entry = this.#entry(id);
 
@@ -288,7 +338,7 @@ class ToastStore {
     this.#update(id, { ...cleared, ...patch, id });
 
     if (patch.duration !== undefined && patch.duration > 0) {
-      // Same pause contract as add(): record the window, let resumeTimers() arm it,
+      // Same pause contract as add(): record the window, let setPaused() arm it,
       // so a toast updated behind an open dialog does not expire unseen.
       if (this.#paused) {
         this.#update(id, { timer: { remaining: patch.duration, startedAt: Date.now(), timeoutId: null } });
@@ -353,8 +403,26 @@ const bindToastHost = (host: HTMLElement, store: ToastStore): void => {
 
 const NO_ACTIONS: NonNullable<ToastItem['actions']> = [];
 
+/** Accent color token per status; `neutral` borrows primary so the progress bar stays visible. */
+const STATUS_ACCENT: Record<ToastStatus, string> = {
+  danger: 'error',
+  info: 'info',
+  neutral: 'primary',
+  success: 'success',
+  warning: 'warning',
+};
+
+/** Status icon per severity; `neutral` carries none (a plain message needs no status glyph). */
+const STATUS_ICON: Record<ToastStatus, string | undefined> = {
+  danger: 'circle-alert',
+  info: 'info',
+  neutral: undefined,
+  success: 'check',
+  warning: 'triangle-alert',
+};
+
 const urgencyOf = (entry: ToastEntry): 'polite' | 'assertive' =>
-  entry.urgency ?? (entry.color === 'error' ? 'assertive' : 'polite');
+  entry.urgency ?? (entry.status === 'danger' ? 'assertive' : 'polite');
 
 /** Renders the action buttons for a toast entry. Buttons are keyed so focus survives store updates. */
 function renderToastActions(item: Readable<ToastEntry>, dismiss: () => void) {
@@ -371,8 +439,9 @@ function renderToastActions(item: Readable<ToastEntry>, dismiss: () => void) {
                 (action) => html`
                   <ore-button
                     size="sm"
-                    color=${() => action.value.color || item.value.color || 'primary'}
-                    variant=${() => action.value.variant || (item.value.snackbar ? 'ghost' : 'flat')}
+                    emphasis=${() => action.value.emphasis ?? null}
+                    color=${() => action.value.color || (action.value.emphasis ? null : 'primary')}
+                    variant=${() => action.value.variant || (action.value.emphasis ? null : 'ghost')}
                     @click=${() => {
                       action.value.onClick?.();
                       dismiss();
@@ -406,7 +475,11 @@ export const TOAST_TAG = 'ore-toast' as const;
  *
  * @cssprop --toast-max-width - Panel width cap (default 400px; full width on phones).
  * @cssprop --toast-gap - Gap between notifications.
- * @cssprop --toast-bg - Opaque surface for flat/bordered notifications.
+ * @cssprop --toast-bg - Neutral notification surface (default the elevated contrast surface).
+ * @cssprop --toast-color - Notification text color.
+ * @cssprop --toast-border-color - Notification border.
+ * @cssprop --toast-icon-size - Status icon size (default --size-5).
+ * @cssprop --toast-avatar-size - Leading avatar diameter (default --size-8).
  * @cssprop --toast-shadow - Elevation shadow.
  * @cssprop --toast-enter-duration / --toast-exit-duration - Motion durations.
  * @cssprop --toast-progress-height - Height of the auto-dismiss progress bar.
@@ -436,7 +509,22 @@ define<OreToastProps>(TOAST_TAG, {
     const modalPaused = signal(false);
     const paused = computed(() => hoverPaused.value || focusPaused.value || modalPaused.value);
     const swipeControls = new Map<string, { element: HTMLElement; gesture: PanGesture }>();
+    /** Exiting entries whose removal backstop the view has already re-armed. */
+    const exitBudgeted = new Set<string>();
     let pendingSyncFrame: number | undefined;
+
+    // ── Stack reflow motion ──
+    // A toast entering or leaving the stack shifts every neighbour by a full
+    // card height, and an instant shift reads as a glitch. Wrappers are keyed by
+    // the entry id, which survives the keyed `each()` reconciliation, so a
+    // survivor animates from its old slot to its new one. The entering toast is
+    // skipped by the key match (it has no captured slot) and keeps its own CSS
+    // enter transition; a dismissed toast holds its slot until finalized, so the
+    // stack moves once, when it actually leaves.
+    const stackMotion = createLayoutMotion(el, lifecycleSignal(onCleanup), {
+      elements: () => [...(el.shadowRoot?.querySelectorAll<HTMLElement>('.toast-wrapper[data-toast-id]') ?? [])],
+      getKey: (wrapper) => wrapper.dataset.toastId || undefined,
+    });
     let store: ToastStore | null = null;
     let unsubscribeEntries = () => {};
     let unsubscribeEvents = () => {};
@@ -450,6 +538,46 @@ define<OreToastProps>(TOAST_TAG, {
 
     const getInner = (wrapper: HTMLElement): HTMLElement | null => {
       return wrapper.querySelector<HTMLElement>('.toast-inner');
+    };
+
+    /**
+     * Exit fade duration from the theme, in milliseconds. The root
+     * `--_motion-transition` hatch (theme.css Reduced Motion) replaces the
+     * whole transition under the OS preference or data-motion='reduced', so the
+     * fade is instant and the duration is 0; otherwise it is the themed
+     * `--toast-exit-duration`. The token is authored in milliseconds
+     * (`--duration-200: 200ms`), so parseFloat of the computed value is already
+     * ms - the same convention `createLayoutMotion` reads. An unparseable value
+     * (jsdom resolves no custom properties) falls back to the store's default.
+     */
+    const readExitDuration = (inner: HTMLElement): number => {
+      const style = getComputedStyle(inner);
+
+      if (style.getPropertyValue('--_motion-transition').trim() === 'none') return 0;
+
+      const ms = Number.parseFloat(style.getPropertyValue('--_exit-duration').trim());
+
+      return Number.isFinite(ms) ? ms : DEFAULT_EXIT_MS;
+    };
+
+    /** The same duration plus the store's removal buffer. */
+    const readExitBudget = (inner: HTMLElement): number => readExitDuration(inner) + EXIT_BUFFER_MS;
+
+    /** The exit transition is the finish signal: remove the entry as soon as the
+     *  fade completes instead of waiting for the backstop. Only an entry the
+     *  store already marks exiting may finalize here, so an enter transition
+     *  finishing on a live toast can never remove it; FLIP motion (WAAPI) fires
+     *  no transition events and never reaches this path. */
+    const onTransitionEnd = (event: TransitionEvent): void => {
+      if (event.propertyName !== 'opacity' && event.propertyName !== 'transform') return;
+
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement) || !target.classList.contains('toast-inner')) return;
+
+      const id = wrapperFromEvent(event)?.dataset.toastId;
+
+      if (id && entries.value.some((entry) => entry.id === id && entry.phase === 'exiting')) store?.finalize(id);
     };
 
     const wrapperFromEvent = (event: Event): HTMLElement | null =>
@@ -554,23 +682,29 @@ define<OreToastProps>(TOAST_TAG, {
 
           store.dismiss(id);
 
-          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          // One duration knob for all exit motion: the flight reuses the themed
+          // exit duration, so swipe, fade, and backstop stay in lockstep. A zero
+          // duration (Reduced Motion) skips the flight and just hides the card;
+          // the backstop, rescheduled to the buffer-only budget, removes it.
+          const flight = readExitDuration(inner);
+
+          if (flight <= 0) {
+            inner.style.transition = 'none';
             inner.style.opacity = '0';
-            store.scheduleFinalization(id, 0);
 
             return;
           }
 
           const direction = distance >= 0 ? 1 : -1;
 
-          inner.style.transition = 'transform 0.22s ease-out, opacity 0.22s ease-out';
+          inner.style.transition = `transform ${flight}ms ease-out, opacity ${flight}ms ease-out`;
+          // Force a style flush so the transition starts from the current
+          // position instead of batching with the target values below.
           void inner.offsetWidth;
           inner.style.transform = `translateX(${direction * 120}%)`;
           inner.style.opacity = '0';
-
-          // Removal spans the 0.22s flight; the store's dismiss() timeout is rescheduled
-          // here so the swipe animation finishes before the node leaves the DOM.
-          store.scheduleFinalization(id, 300);
+          // transitionend on the exiting inner finalizes; the backstop covers
+          // engines where the transition never runs.
         },
         onMove: ({ distance }) => {
           const inner = getInner(wrapper);
@@ -597,6 +731,7 @@ define<OreToastProps>(TOAST_TAG, {
           control.gesture.dispose();
 
           swipeControls.delete(id);
+          exitBudgeted.delete(id);
         }
       }
 
@@ -628,6 +763,18 @@ define<OreToastProps>(TOAST_TAG, {
           control?.gesture.dispose();
           swipeControls.set(entry.id, { element: wrapper, gesture: createToastSwipe(entry.id, wrapper) });
         }
+
+        // Replace the store's default exit budget with the themed one, once per
+        // entry: a --toast-exit-duration longer than the default is honored,
+        // and transitionend finalizes early when the fade finishes sooner.
+        if (entry.phase === 'exiting' && !exitBudgeted.has(entry.id) && store) {
+          const inner = wrapper ? getInner(wrapper) : null;
+
+          if (inner) {
+            exitBudgeted.add(entry.id);
+            store.scheduleFinalization(entry.id, readExitBudget(inner));
+          }
+        }
       }
     };
 
@@ -643,10 +790,7 @@ define<OreToastProps>(TOAST_TAG, {
     };
 
     watch(entries, scheduleSyncControls);
-    watch(paused, (isPaused) => {
-      if (isPaused) store?.pauseTimers();
-      else store?.resumeTimers();
-    });
+    watch(paused, (isPaused) => store?.setPaused(isPaused));
 
     const bind = (nextStore: ToastStore): void => {
       if (store === nextStore) return;
@@ -657,14 +801,16 @@ define<OreToastProps>(TOAST_TAG, {
       store = nextStore;
       store.setMax(props.max.value);
       unsubscribeEntries = store.subscribe((nextEntries) => {
-        entries.value = nextEntries;
+        stackMotion.run(() => {
+          entries.value = nextEntries;
+        });
       });
       unsubscribeEvents = store.tap((event) => {
         if (event.type === 'dispose') return;
         emit(event.type, { id: event.id });
       });
 
-      if (paused.value) store.pauseTimers();
+      if (paused.value) store.setPaused(true);
     };
 
     /** Escape dismisses the notification that currently holds focus. */
@@ -686,14 +832,12 @@ define<OreToastProps>(TOAST_TAG, {
       const dismiss = () => store?.dismiss(id);
       const meta = computed(() => item.value.meta ?? '');
       const innerClass = computed(
-        () =>
-          `toast-inner${item.value.phase !== 'active' ? ` ${item.value.phase}` : ''}${
-            item.value.snackbar ? ' snackbar' : ''
-          }`,
+        () => `toast-inner${item.value.phase === 'exiting' ? ' exiting' : ''}${item.value.snackbar ? ' snackbar' : ''}`,
       );
+      const statusIcon = computed(() => STATUS_ICON[item.value.status ?? 'neutral']);
       const innerStyle = computed(
         () =>
-          `--_toast-accent: var(--color-${item.value.color || 'primary'}); --_toast-radius: var(--rounded-${
+          `--_toast-accent: var(--color-${STATUS_ACCENT[item.value.status ?? 'neutral']}); --_toast-radius: var(--rounded-${
             item.value.rounded || (item.value.snackbar ? 'sm' : 'md')
           })`,
       );
@@ -712,14 +856,31 @@ define<OreToastProps>(TOAST_TAG, {
           <div class=${() => innerClass.value} style=${() => innerStyle.value} part="toast-inner">
             <ore-alert
               embedded
-              color=${() => item.value.color || (urgencyOf(item.value) === 'assertive' ? 'error' : 'primary')}
-              variant=${() => (item.value.snackbar ? 'flat' : item.value.variant || 'solid')}
               size=${() => item.value.size || 'md'}
               rounded=${() => item.value.rounded || 'md'}
               ?horizontal=${() => Boolean(item.value.horizontal)}
               heading=${() => item.value.heading || null}
               ?dismissible=${() => item.value.dismissible}
               @dismiss=${dismiss}>
+              ${() =>
+                item.value.avatar
+                  ? html`<ore-avatar
+                      class="toast-avatar"
+                      slot="icon"
+                      alt=${() => item.value.avatar?.alt ?? null}
+                      color=${() => item.value.avatar?.color ?? null}
+                      initials=${() => item.value.avatar?.initials ?? null}
+                      rounded=${() => item.value.avatar?.rounded ?? null}
+                      size=${() => item.value.avatar?.size ?? null}
+                      src=${() => item.value.avatar?.src ?? null}
+                      status=${() => item.value.avatar?.status ?? null}></ore-avatar>`
+                  : statusIcon.value
+                    ? html`<ore-icon
+                        class="toast-status-icon"
+                        name=${statusIcon.value}
+                        slot="icon"
+                        aria-hidden="true"></ore-icon>`
+                    : ''}
               <span slot="meta" ?hidden=${() => !meta.value}>${() => meta.value}</span>
               ${() => item.value.message} ${renderToastActions(item, dismiss)}
             </ore-alert>
@@ -800,6 +961,7 @@ define<OreToastProps>(TOAST_TAG, {
         @focusin=${onToastFocusIn}
         @focusout=${onToastFocusOut}
         @keydown=${onKeydown}
+        @transitionend=${onTransitionEnd}
         part="container">
         <div
           role="region"
@@ -823,7 +985,7 @@ define<OreToastProps>(TOAST_TAG, {
       </div>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });
 
 export type ToastServiceConfig = OreToastProps;
@@ -947,40 +1109,40 @@ export function createToastService(root: ParentNode = document.body): ToastServi
     },
 
     error(message, opts) {
-      return service.add({ color: 'error', ...opts, message });
+      return service.add({ status: 'danger', ...opts, message });
     },
 
     info(message, opts) {
-      return service.add({ color: 'info', ...opts, message });
+      return service.add({ status: 'info', ...opts, message });
     },
 
     async promise(promise, messages) {
       // The loading entry stays dismissible: if the promise never settles, the user keeps
       // an escape hatch instead of an immortal notification.
-      const id = service.add({ color: 'primary', duration: 0, message: messages.loading });
+      const id = service.add({ duration: 0, message: messages.loading });
 
       try {
         const data = await promise;
 
         service.update(id, {
-          color: 'success',
           duration: 5000,
           message: typeof messages.success === 'function' ? messages.success(data) : messages.success,
+          status: 'success',
         });
 
         return data;
       } catch (err) {
         service.update(id, {
-          color: 'error',
           duration: 5000,
           message: typeof messages.error === 'function' ? messages.error(err) : messages.error,
+          status: 'danger',
         });
         throw err;
       }
     },
 
     success(message, opts) {
-      return service.add({ color: 'success', ...opts, message });
+      return service.add({ status: 'success', ...opts, message });
     },
 
     tap(handler, options) {
@@ -996,7 +1158,7 @@ export function createToastService(root: ParentNode = document.body): ToastServi
     },
 
     warning(message, opts) {
-      return service.add({ color: 'warning', ...opts, message });
+      return service.add({ status: 'warning', ...opts, message });
     },
   };
 

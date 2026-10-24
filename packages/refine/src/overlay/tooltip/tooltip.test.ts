@@ -92,6 +92,130 @@ describe('ore-tooltip', () => {
     });
   });
 
+  // HIG: hover needs a dwell so sweeping a toolbar does not fire every tooltip;
+  // focus and click are deliberate and stay immediate.
+  describe('Dwell', () => {
+    const hover = (host: HTMLElement): void => {
+      host.querySelector('button')?.dispatchEvent(new Event('pointerenter'));
+    };
+
+    const leave = (host: HTMLElement): void => {
+      host.querySelector('button')?.dispatchEvent(new Event('pointerleave'));
+    };
+
+    const hidden = (host: HTMLElement): boolean =>
+      host.shadowRoot?.querySelector('.tooltip')?.getAttribute('aria-hidden') === 'true';
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('holds an unset hover delay for the dwell period', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', trigger: 'hover' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+      // Only setTimeout is faked: fixture.flush() awaits requestAnimationFrame, which
+      // full fake timers would also intercept and never advance.
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+      hover(fixture.element);
+      expect(hidden(fixture.element)).toBe(true);
+
+      vi.advanceTimersByTime(299);
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(true);
+
+      vi.advanceTimersByTime(1);
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(false);
+    });
+
+    it('opens immediately on focus without a dwell', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', trigger: 'focus' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+
+      fixture.element.querySelector('button')?.dispatchEvent(new Event('focusin'));
+      await fixture.flush();
+
+      expect(hidden(fixture.element)).toBe(false);
+    });
+
+    it('honours an explicit zero delay on hover', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', delay: '0', trigger: 'hover' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+
+      hover(fixture.element);
+      await fixture.flush();
+
+      expect(hidden(fixture.element)).toBe(false);
+    });
+
+    it('respects an explicit hover delay', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', delay: '500', trigger: 'hover' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+      hover(fixture.element);
+      vi.advanceTimersByTime(300);
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(true);
+
+      vi.advanceTimersByTime(200);
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(false);
+    });
+
+    it('grace-periods pointer leave before closing', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', delay: '0', trigger: 'hover' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+      hover(fixture.element);
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(false);
+
+      leave(fixture.element);
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(false);
+
+      vi.advanceTimersByTime(100);
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(true);
+    });
+
+    it('closes immediately when focus leaves', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', trigger: 'focus' },
+        html: '<button>Trigger</button>',
+      });
+      await fixture.flush();
+
+      const btn = fixture.element.querySelector('button')!;
+
+      btn.dispatchEvent(new Event('focusin'));
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(false);
+
+      btn.dispatchEvent(new Event('focusout'));
+      await fixture.flush();
+      expect(hidden(fixture.element)).toBe(true);
+    });
+  });
+
   describe('ARIA', () => {
     it('tooltip element has role tooltip', async () => {
       fixture = await mount('ore-tooltip', { attrs: { content: 'tip' } });

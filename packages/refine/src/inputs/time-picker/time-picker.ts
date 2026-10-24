@@ -9,7 +9,7 @@ import {
   sizableBundle,
   themableBundle,
 } from '../../shared';
-import { colorThemeMixin, reducedMotionMixin } from '../../styles';
+import { colorThemeMixin } from '../../styles';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './time-picker.css?inline';
 
@@ -637,5 +637,5 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
   },
 
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, reducedMotionMixin, componentStyles],
+  styles: [colorThemeMixin, componentStyles],
 });

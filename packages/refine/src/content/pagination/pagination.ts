@@ -2,7 +2,7 @@ import { define, getHost, html, prop, useEmit } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import { sizableBundle, themableBundle } from '../../shared';
-import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
+import { colorThemeMixin, sizeVariantMixin, touchTargetMixin } from '../../styles';
 import { type ComponentSize, type ThemeColor, VISUAL_VARIANTS, type VisualVariant } from '../../types';
 import componentStyles from './pagination.css?inline';
 
@@ -233,5 +233,5 @@ define<OrePaginationProps>(PAGINATION_TAG, {
     `;
   },
 
-  styles: [coarsePointerMixin, colorThemeMixin, sizeVariantMixin(), componentStyles],
+  styles: [touchTargetMixin, colorThemeMixin, sizeVariantMixin(), componentStyles],
 });

@@ -5,7 +5,7 @@ import type { OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
 import { createChoiceField, createListboxDropdown, lifecycleSignal } from '../../core';
 import type { SelectableFieldProps } from '../../shared';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
+import { colorThemeMixin, roundedVariantMixin } from '../../styles';
 import { INPUT_VARIANTS, type InputVariant } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './select.css?inline';
@@ -653,5 +653,5 @@ define<OreSelectProps>(SELECT_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [colorThemeMixin, reducedMotionMixin, roundedVariantMixin, componentStyles],
+  styles: [colorThemeMixin, roundedVariantMixin, componentStyles],
 });

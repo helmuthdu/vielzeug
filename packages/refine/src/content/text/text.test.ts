@@ -1,3 +1,4 @@
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-text', () => {
@@ -93,6 +94,104 @@ describe('ore-text', () => {
       fixture = await mount('ore-text', { attrs: { truncate: '' }, html: 'Long text' });
 
       expect(fixture.element.textContent?.trim()).toBe('Long text');
+    });
+  });
+
+  describe('expandable', () => {
+    it('wires button semantics only when expandable', async () => {
+      fixture = await mount('ore-text', { attrs: { lines: '2' } });
+
+      expect(fixture.element.hasAttribute('role')).toBe(false);
+      expect(fixture.element.hasAttribute('tabindex')).toBe(false);
+      expect(fixture.element.hasAttribute('aria-expanded')).toBe(false);
+
+      fixture.dispose();
+      fixture = await mount('ore-text', { attrs: { expandable: '', lines: '2' } });
+
+      expect(fixture.element.getAttribute('role')).toBe('button');
+      expect(fixture.element.getAttribute('tabindex')).toBe('0');
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('drops aria-level when expandable overrides a heading role with button', async () => {
+      fixture = await mount('ore-text', { attrs: { as: 'h3', expandable: '', lines: '2' } });
+
+      expect(fixture.element.getAttribute('role')).toBe('button');
+      // aria-level is only valid alongside role="heading"; the button override
+      // must not leave an orphan aria-level behind.
+      expect(fixture.element.hasAttribute('aria-level')).toBe(false);
+    });
+
+    it('toggles expansion on click and emits expand-change', async () => {
+      fixture = await mount('ore-text', { attrs: { expandable: '', lines: '2' }, html: 'Long paragraph' });
+
+      const onExpandChange = vi.fn();
+
+      fixture.element.addEventListener('expand-change', onExpandChange);
+      fireClick(fixture.element);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-expanded')).toBe(true);
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('true');
+      expect((onExpandChange.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ expanded: true });
+
+      fireClick(fixture.element);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-expanded')).toBe(false);
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('toggles expansion with Enter and Space', async () => {
+      fixture = await mount('ore-text', { attrs: { expandable: '', lines: '2' } });
+
+      fireKeyDown(fixture.element, { key: 'Enter' });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('true');
+
+      fireKeyDown(fixture.element, { key: ' ' });
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('starts expanded with default-expanded', async () => {
+      fixture = await mount('ore-text', { attrs: { 'default-expanded': '', expandable: '', lines: '2' } });
+
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('true');
+      expect(fixture.element.hasAttribute('data-expanded')).toBe(true);
+    });
+
+    it('stays controlled when expanded is set: reflects the prop, emits, does not self-toggle', async () => {
+      fixture = await mount('ore-text', { attrs: { expandable: '', expanded: 'false', lines: '2' } });
+
+      const onExpandChange = vi.fn();
+
+      fixture.element.addEventListener('expand-change', onExpandChange);
+      fireClick(fixture.element);
+      await fixture.flush();
+
+      // The component asked to expand but the owner did not move the prop: state unchanged.
+      expect((onExpandChange.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ expanded: true });
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('false');
+      expect(fixture.element.hasAttribute('data-expanded')).toBe(false);
+
+      // The owner applying the change drives the state instead.
+      fixture.element.setAttribute('expanded', '');
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('aria-expanded')).toBe('true');
+      expect(fixture.element.hasAttribute('data-expanded')).toBe(true);
+    });
+
+    it('warns (dev) when expandable has nothing to clamp', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      fixture = await mount('ore-text', { attrs: { expandable: '' } });
+
+      expect(warnSpy.mock.calls.some((args) => String(args[0]).includes('nothing to expand'))).toBe(true);
+      vi.mocked(console.warn).mockRestore();
     });
   });
 

@@ -3,11 +3,11 @@ import { computed } from '@vielzeug/ripple';
 import { createCheckable, lifecycleSignal } from '../../core';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   disabledStateMixin,
   forcedColorsFormControlMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
@@ -186,7 +186,7 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
     colorThemeMixin,
     forcedColorsFormControlMixin,
     disabledStateMixin,
-    coarsePointerMixin,
+    touchTargetMixin,
     sizeVariantMixin(CONTROL_SIZE_PRESET),
     componentStyles,
   ],

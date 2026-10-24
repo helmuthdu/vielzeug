@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "toast/alert UX pass: row-1 centering (icon/heading/close share one axis), close hit area via pseudo-element instead of 44px layout box, ghost action buttons by default, new --button-min-height hook",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

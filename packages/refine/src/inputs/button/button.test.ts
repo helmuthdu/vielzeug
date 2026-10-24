@@ -498,6 +498,61 @@ describe('ore-button', () => {
       expect(btn.getAttribute('variant')).toBe('ghost');
       destroy();
     });
+
+    it('group context keeps precedence over the emphasis mapping', async () => {
+      const { btn, destroy } = await mountInGroup({ color: 'secondary', variant: 'bordered' }, { emphasis: 'primary' });
+
+      expect(btn.getAttribute('color')).toBe('secondary');
+      expect(btn.getAttribute('variant')).toBe('bordered');
+      destroy();
+    });
+  });
+
+  // HIG button roles: the semantic emphasis picks the treatment, an explicit
+  // color/variant stays the escape hatch, and the group context keeps its
+  // existing precedence over own props (see the describe block above).
+  describe('Emphasis', () => {
+    it('primary maps to the accent color and the default (solid) variant', async () => {
+      fixture = await mount('ore-button', { attrs: { emphasis: 'primary' } });
+
+      expect(fixture.element.getAttribute('color')).toBe('primary');
+      expect(fixture.element.getAttribute('variant')).toBeNull();
+    });
+
+    it('cancel maps to the ghost variant and the default neutral color', async () => {
+      fixture = await mount('ore-button', { attrs: { emphasis: 'cancel' } });
+
+      expect(fixture.element.getAttribute('variant')).toBe('ghost');
+      expect(fixture.element.getAttribute('color')).toBeNull();
+    });
+
+    it('destructive maps to error ink with no filled background (text variant)', async () => {
+      fixture = await mount('ore-button', { attrs: { emphasis: 'destructive' } });
+
+      expect(fixture.element.getAttribute('color')).toBe('error');
+      expect(fixture.element.getAttribute('variant')).toBe('text');
+    });
+
+    it('normal is a no-op', async () => {
+      fixture = await mount('ore-button', { attrs: { emphasis: 'normal' } });
+
+      expect(fixture.element.getAttribute('color')).toBeNull();
+      expect(fixture.element.getAttribute('variant')).toBeNull();
+    });
+
+    it('explicit variant overrides the emphasis mapping', async () => {
+      fixture = await mount('ore-button', { attrs: { emphasis: 'primary', variant: 'flat' } });
+
+      expect(fixture.element.getAttribute('variant')).toBe('flat');
+      expect(fixture.element.getAttribute('color')).toBe('primary');
+    });
+
+    it('explicit color overrides the emphasis mapping', async () => {
+      fixture = await mount('ore-button', { attrs: { color: 'success', emphasis: 'destructive' } });
+
+      expect(fixture.element.getAttribute('color')).toBe('success');
+      expect(fixture.element.getAttribute('variant')).toBe('text');
+    });
   });
 });
 

@@ -112,6 +112,8 @@
     --grid-10: repeat(10, minmax(0, 1fr));
     --grid-11: repeat(11, minmax(0, 1fr));
     --grid-12: repeat(12, minmax(0, 1fr));
+    /* Smallest column a responsive (auto-fit) grid may shrink a track to. */
+    --grid-min-item-width: 15.625rem; /* 250px */
 
     /* ========================================
        Z-Index Scale
@@ -271,7 +273,9 @@
     --leading-10: 2.5rem; /* 40px */
 
     /* Component UI Font Sizes (7 steps: used inside components) */
-    --text-2xs: 0.625rem; /* 10px - micro labels, dot-only badges */
+    /* Floor: 11px is the smallest size kept legible (HIG minimum micro label);
+       never ship component text below --text-2xs. */
+    --text-2xs: 0.6875rem; /* 11px - micro labels, dot-only badges */
     --text-xs: 0.75rem; /* 12px - small labels only */
     --text-sm: 0.875rem; /* 14px - secondary text */
     --text-base: 1rem; /* 16px - body text (minimum) */
@@ -340,13 +344,77 @@
     --overlay-enter-scale: 0.97; /* slight scale-in for menus / panels */
     --overlay-enter-scale-dialog: 0.96; /* slightly more pronounced for dialogs */
 
-    /* Focus ring: the outline shorthand consumed by :focus-visible rules
-       across navbar, sidebar, list-item, drawer, and navigation-menu. Those
-       rules write `outline: var(--focus-ring)` (with their own
-       `outline-offset`), so this must be a full outline shorthand, not a
-       color. Matches the `var(--border-2) solid var(--color-primary)` ring
-       the button/card/tab focus styles already use. */
-    --focus-ring: var(--border-2) solid var(--color-primary);
+    /* ========================================
+       Named Animations
+       Keyframe + house timing as one unit, composed from the duration/easing
+       tokens above so the Reduced Motion block below governs every one of
+       them. Consume as `animation: var(--animate-fade-in)`; inside a
+       component, wrap with the escape hatch —
+       `animation: var(--_motion-animation, var(--animate-fade-in))` — so the
+       reducedMotionMixin can switch it off. Keyframes ship in animation.css.
+       ======================================== */
+    --animate-fade-in: fade-in var(--duration-150) var(--ease-out) both;
+    --animate-fade-out: fade-out var(--duration-150) var(--ease-in) both;
+    --animate-fade-in-up: fade-in-up var(--duration-300) var(--ease-move) both;
+    --animate-scale-in: scale-in var(--duration-200) var(--ease-overshoot) both;
+    --animate-slide-in-from-top: slide-in-from-top var(--duration-300) var(--ease-move) both;
+    --animate-slide-in-from-bottom: slide-in-from-bottom var(--duration-300) var(--ease-move) both;
+    --animate-slide-in-from-left: slide-in-from-left var(--duration-300) var(--ease-move) both;
+    --animate-slide-in-from-right: slide-in-from-right var(--duration-300) var(--ease-move) both;
+    --animate-spin: spin var(--transition-loader) infinite;
+    --animate-ping: ping var(--duration-1000) var(--ease-out) infinite;
+    --animate-pulse: pulse var(--duration-1000) var(--ease-in-out) infinite;
+    --animate-bounce: bounce var(--duration-1000) var(--ease-in-out) infinite;
+    --animate-progress-bar: progress-bar var(--duration-1400) var(--ease-in-out) infinite;
+
+    /* ========================================
+       Focus Ring
+       One set of primitives for every keyboard focus indicator in the
+       library. `--focus-ring` stays the convenience shorthand for the common
+       case (`outline: var(--focus-ring)`); a rule that needs a different ink
+       (an error-coloured field) or an inward ring (a stepper button inside a
+       bordered field) composes the same width/offset primitives instead of
+       re-typing a literal, so ring weight and offset can never drift.
+       ======================================== */
+    --focus-ring-width: var(--border-2);
+    --focus-ring-offset: 2px;
+    --focus-ring-color: var(--color-primary);
+    --focus-ring: var(--focus-ring-width) solid var(--focus-ring-color);
+
+    /* ========================================
+       Surfaces
+       Purpose-named backgrounds, derived from the neutral contrast ramp below.
+       A component picks a ROLE, never a ramp step, so depth is automatic in
+       both appearances: `--surface-overlay` reads as a foreground surface in
+       both schemes, so a dialog or popover separates from the page behind it
+       without each component re-picking a ramp step.
+       ======================================== */
+    --surface-base: var(--color-contrast-50);
+    --surface-sunken: var(--color-contrast-100);
+    --surface-raised: var(--color-contrast-100);
+    --surface-overlay: var(--color-contrast-100);
+    --surface-inset: var(--color-contrast-150);
+
+    /* ========================================
+       Target Spacing
+       Space between interactive controls matters as much as their size: too
+       little and a mis-tap hits the neighbour. Bezeled controls already read
+       as separate boxes, so they need less; borderless or icon-only controls
+       have no visible edge to aim at and need more.
+       ======================================== */
+    --target-gap-bezel: var(--size-3); /* 12px between bordered controls */
+    --target-gap-open: var(--size-6); /* 24px around borderless/icon-only controls */
+
+    /* ========================================
+       Safe-area Insets
+       Edge-docked chrome (docked dialogs, drawers, bottom nav, command
+       palettes, toasts) must clear notches and home indicators. Defaults to 0
+       off-device, so `max()` against a spacing token keeps the design intact.
+       ======================================== */
+    --safe-area-inset-block-start: env(safe-area-inset-top, 0px);
+    --safe-area-inset-block-end: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-inline-start: env(safe-area-inset-left, 0px);
+    --safe-area-inset-inline-end: env(safe-area-inset-right, 0px);
 
     /* ── theme-tokens:generated:begin: run `pnpm run sync:theme`, do not hand-edit ── */
     /* ── Contrast scale: Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */
@@ -364,8 +432,8 @@
     ); /* Disabled backgrounds, subtle UI */
     --color-contrast-500: light-dark(
       oklch(49% 0.002 264deg),
-      oklch(58% 0.001 250deg)
-    ); /* Tertiary text - AA large-text compliant */
+      oklch(62% 0.001 250deg)
+    ); /* Tertiary text - AA compliant (4.5:1 on canvas/card/sunken) */
     --color-contrast-600: light-dark(
       oklch(40% 0.002 264deg),
       oklch(68% 0.001 250deg)
@@ -716,16 +784,34 @@
      Reduced Motion
      ======================================== */
 
+  /* Three-state motion mode, mirroring necromancer's MotionMode:
+     - OS preference (default): reduced when the OS says so.
+     - data-motion='reduced': the app forces reduction.
+     - data-motion='full': the app opts back in despite the OS.
+     Set the attribute with setMotionMode() ('@vielzeug/refine'); 'system'
+     removes it. The declaration list is duplicated across the two blocks
+     because CSS has no shared declaration list across a media query and a
+     plain selector; keep the two in sync.
+
+     The --_motion-* pair is the component-level escape hatch (53 consumers
+     write `animation: var(--_motion-animation, ...)`). It lives here on
+     :root rather than in a per-component mixin because custom properties
+     inherit through shadow boundaries, so one root declaration reaches every
+     component, and unlike a media-query-only mixin it can honor the
+     data-motion='full' opt-out. */
   @media (prefers-reduced-motion: reduce) {
-    :root {
+    :root:not([data-motion='full']) {
       --duration-75: 0ms;
       --duration-100: 0ms;
       --duration-150: 0ms;
       --duration-200: 0ms;
       --duration-300: 0ms;
       --duration-500: 0ms;
+      --duration-600: 0ms;
       --duration-700: 0ms;
       --duration-1000: 0ms;
+      --duration-1400: 0ms;
+      --duration-1500: 0ms;
       --transition-fast: none;
       --transition-normal: none;
       --transition-slow: none;
@@ -733,7 +819,32 @@
       --transition-spring: none;
       --transition-exit: none;
       --transition-loader: none;
+      --_motion-transition: none;
+      --_motion-animation: none;
     }
+  }
+
+  :root[data-motion='reduced'] {
+    --duration-75: 0ms;
+    --duration-100: 0ms;
+    --duration-150: 0ms;
+    --duration-200: 0ms;
+    --duration-300: 0ms;
+    --duration-500: 0ms;
+    --duration-600: 0ms;
+    --duration-700: 0ms;
+    --duration-1000: 0ms;
+    --duration-1400: 0ms;
+    --duration-1500: 0ms;
+    --transition-fast: none;
+    --transition-normal: none;
+    --transition-slow: none;
+    --transition-slower: none;
+    --transition-spring: none;
+    --transition-exit: none;
+    --transition-loader: none;
+    --_motion-transition: none;
+    --_motion-animation: none;
   }
 
   /* Refine's dark-mode contract: toggle `classList.add/remove('dark')` on   */
@@ -750,10 +861,37 @@
 
   /* this class toggle. */
   html.dark {
+    --surface-overlay: var(--color-contrast-200);
     color-scheme: dark;
   }
 
   html:not(.dark) {
     color-scheme: light;
+  }
+
+  /* ========================================
+     Increased Contrast
+     A third appearance context alongside light and dark. The OS "increase
+     contrast" setting and an explicit `html.contrast-more` class both push the
+     neutral ramp toward the extremes, thicken separators, and strengthen focus
+     rings, so a consumer that cannot read the default ramp has a verified
+     higher-contrast path instead of no path at all.
+     ======================================== */
+  @media (prefers-contrast: more) {
+    :root {
+      --color-contrast-500: light-dark(oklch(43% 0.002 264deg), oklch(72% 0.001 250deg));
+      --color-contrast-600: light-dark(oklch(34% 0.002 264deg), oklch(80% 0.001 250deg));
+      --color-contrast-300: light-dark(oklch(74% 0.002 264deg), oklch(46% 0.001 250deg));
+      --color-divider: var(--color-contrast-300);
+      --focus-ring-width: var(--border-4);
+    }
+  }
+
+  html.contrast-more {
+    --color-contrast-500: light-dark(oklch(43% 0.002 264deg), oklch(72% 0.001 250deg));
+    --color-contrast-600: light-dark(oklch(34% 0.002 264deg), oklch(80% 0.001 250deg));
+    --color-contrast-300: light-dark(oklch(74% 0.002 264deg), oklch(46% 0.001 250deg));
+    --color-divider: var(--color-contrast-300);
+    --focus-ring-width: var(--border-4);
   }
 }

@@ -2,16 +2,15 @@ import { bind, define, getHost, html, inject, prop, useField } from '@vielzeug/o
 import { computed } from '@vielzeug/ripple';
 import { commonProps } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   disabledLoadingMixin,
   forcedColorsMixin,
   frostVariantMixin,
   rainbowEffectMixin,
-  reducedMotionMixin,
   roundedVariantMixin,
   shineEffectMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import {
   type ButtonType,
@@ -35,6 +34,25 @@ export type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
 export const BUTTON_EFFECTS = ['shine', 'rainbow'] as const;
 export type ButtonEffect = (typeof BUTTON_EFFECTS)[number];
 
+/**
+ * Semantic role of a button's action, following the four-role model Apple's
+ * Human Interface Guidelines use for buttons: Normal, Primary, Cancel,
+ * Destructive. The role picks the treatment, so prominence stops being a
+ * styling accident:
+ *
+ * - `primary` — the action most people will choose: accent fill (solid).
+ * - `cancel` — dismiss without changing anything: neutral ghost.
+ * - `destructive` — deletes or is otherwise hard to undo: error ink with no
+ *   filled background (HIG's destructive treatment is red text, not a red
+ *   slab; a filled error button can be mistaken for a primary action).
+ * - `normal` — the default treatment, unchanged from no emphasis at all.
+ *
+ * An explicit `color`/`variant` attribute always wins over the mapping, so
+ * `emphasis` is a shortcut, not a lock-in.
+ */
+export const BUTTON_EMPHASIS = ['normal', 'primary', 'cancel', 'destructive'] as const;
+export type ButtonEmphasis = (typeof BUTTON_EMPHASIS)[number];
+
 /** Button component properties */
 export type OreButtonProps = {
   /** Theme color */
@@ -43,6 +61,12 @@ export type OreButtonProps = {
   disabled?: boolean;
   /** Animated border effect: 'shine' (color-aware neon sweep) or 'rainbow' */
   effect?: ButtonEffect;
+  /**
+   * Semantic role of the action: 'normal' | 'primary' | 'cancel' | 'destructive'.
+   * Picks the color/variant treatment for the role; an explicit `color`/`variant`
+   * attribute overrides it. See BUTTON_EMPHASIS.
+   */
+  emphasis?: ButtonEmphasis;
   /**
    * Full height button (100% of container): the inner `[part="button"]` fills its host's
    * height instead of the size preset's fixed height. Useful when the button itself is the
@@ -88,6 +112,7 @@ export type OreButtonProps = {
  * @attr {string} size - Button size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {string} effect - Animated border effect: 'shine' | 'rainbow'
+ * @attr {string} emphasis - Semantic role: 'normal' | 'primary' | 'cancel' | 'destructive' (explicit color/variant wins)
  * @attr {boolean} icon-only - Icon-only mode (square aspect ratio, no padding)
  * @attr {boolean} fullwidth - Full width button (100% of container)
  * @attr {boolean} fullheight - Full height button (100% of container)
@@ -110,6 +135,7 @@ export type OreButtonProps = {
  * @cssprop --button-padding - Inner padding override
  * @cssprop --button-gap - Gap between icon and text override
  * @cssprop --button-font-size - Font size override
+ * @cssprop --button-min-height - Minimum height override (defaults to the 44px touch target)
  * @cssprop --button-frost-active-bg - Background when pressed (frost variant)
  * @cssprop --button-frost-active-border-color - Border color when pressed (frost variant)
  *
@@ -127,6 +153,7 @@ define<OreButtonProps>(BUTTON_TAG, {
   props: {
     ...commonProps,
     effect: prop.oneOf(BUTTON_EFFECTS),
+    emphasis: prop.oneOf(BUTTON_EMPHASIS),
     fullheight: prop.bool(false),
     fullwidth: prop.bool(false),
     href: prop.string(),
@@ -135,16 +162,51 @@ define<OreButtonProps>(BUTTON_TAG, {
     rel: prop.string(),
     target: prop.oneOf(LINK_TARGETS),
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
-    variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
+    variant: prop.oneOf(BUTTON_VARIANTS),
   },
   setup(props) {
     const el = getHost();
 
-    // Prefer group context over own props for color/size/variant.
+    // Prefer group context over own props for color/size/variant (existing
+    // contract, covered in button.test.ts). The emphasis mapping sits below both:
+    // it is a default picked by the semantic role, never an override of an
+    // explicit group tint or own attribute, so `emphasis` composes safely with
+    // `ore-button-group` and explicit styling. `normal` maps to nothing: a no-op.
     const groupCtx = inject(BUTTON_GROUP_CTX);
-    const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
+    const emphasisColor = computed(() => {
+      switch (props.emphasis.value) {
+        case 'primary': {
+          return 'primary';
+        }
+
+        case 'destructive': {
+          return 'error';
+        }
+
+        default: {
+          // cancel: the default theme is already neutral; normal: no-op.
+          return undefined;
+        }
+      }
+    });
+    const emphasisVariant = computed(() => {
+      switch (props.emphasis.value) {
+        case 'cancel': {
+          return 'ghost';
+        }
+
+        case 'destructive': {
+          return 'text';
+        }
+
+        default: {
+          return undefined;
+        }
+      }
+    });
+    const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value ?? emphasisColor.value);
+    const effectiveVariant = computed(() => groupCtx?.variant.value ?? props.variant.value ?? emphasisVariant.value);
     const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value);
-    const effectiveVariant = computed(() => groupCtx?.variant.value ?? props.variant.value);
 
     const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
 
@@ -239,8 +301,7 @@ define<OreButtonProps>(BUTTON_TAG, {
   shadow: { delegatesFocus: false },
   styles: [
     colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
+    touchTargetMixin,
     roundedVariantMixin,
     forcedColorsMixin,
     sizeVariantMixin({

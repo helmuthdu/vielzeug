@@ -78,7 +78,7 @@
     align-items: center;
     justify-content: center;
     padding: var(--size-10) var(--size-6);
-    color: var(--color-error-600);
+    color: var(--color-error);
     text-align: center;
   }
 
@@ -105,7 +105,7 @@
   .error-state .title {
     font-size: var(--text-sm);
     font-weight: var(--font-semibold);
-    color: var(--color-error-700);
+    color: var(--color-error);
   }
 
   .error-state .description {
@@ -122,7 +122,7 @@
     padding: var(--size-2) var(--size-4);
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
-    color: var(--color-error-700);
+    color: var(--color-error);
     cursor: pointer;
     background: none;
     border: 1px solid currentcolor;
@@ -135,12 +135,12 @@
   }
 
   .error-state .retry-btn:hover {
-    background: color-mix(in oklch, var(--color-error-500) 10%, transparent);
+    background: color-mix(in oklch, var(--color-error) 10%, transparent);
   }
 
   .error-state .retry-btn:focus-visible {
-    outline: 2px solid var(--color-error-500);
-    outline-offset: 2px;
+    outline: var(--focus-ring-width) solid var(--color-error);
+    outline-offset: var(--focus-ring-offset);
   }
 
   /* ── Loading (fallback skeleton block) ───────────────────────────── */

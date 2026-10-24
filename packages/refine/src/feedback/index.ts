@@ -21,7 +21,14 @@ export type { OreProgressProps } from './progress/progress';
 export { PROGRESS_TAG } from './progress/progress';
 export type { OreSkeletonProps } from './skeleton/skeleton';
 export { SKELETON_TAG } from './skeleton/skeleton';
-export type { OreToastEvents, OreToastProps, ToastItem, ToastService, ToastServiceConfig } from './toast/toast';
-export { createToastService, TOAST_TAG, toast } from './toast/toast';
+export type {
+  OreToastEvents,
+  OreToastProps,
+  ToastItem,
+  ToastService,
+  ToastServiceConfig,
+  ToastStatus,
+} from './toast/toast';
+export { createToastService, TOAST_STATUSES, TOAST_TAG, toast } from './toast/toast';
 export type { OreTypingIndicatorProps } from './typing-indicator/typing-indicator';
 export { TYPING_INDICATOR_TAG } from './typing-indicator/typing-indicator';

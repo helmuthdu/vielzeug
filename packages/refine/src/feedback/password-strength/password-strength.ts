@@ -1,7 +1,6 @@
 import { bind, define, html, prop } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
-import { reducedMotionMixin } from '../../styles';
 import componentStyles from './password-strength.css?inline';
 
 /** Scoring levels for password strength. */
@@ -178,5 +177,5 @@ define<OrePasswordStrengthProps>(PASSWORD_STRENGTH_TAG, {
     `;
   },
 
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

@@ -44,18 +44,26 @@ export const srOnlyMixin = css`
 `;
 
 /**
- * Coarse Pointer Mixin
+ * Touch Target Mixin
  *
- * Under `@media (pointer: coarse)`, promotes the full component one size tier
- * so padding, gap, font-size, height, and icon-size all grow proportionally
- * with the WCAG 44 px touch target: not just the minimum height in isolation:
+ * Two responsibilities, one mixin:
  *
- * - default / `size="md"` → lg-scale tokens + `--_touch-target: var(--size-11)`
- * - `size="sm"` → md-scale tokens + `--_touch-target: var(--size-11)`
- * - `size="lg"` → touch target only (already at max scale)
+ * 1. **Guarantees the 44 px target on every pointer.** `--_touch-target` is set
+ *    unconditionally on `:host`, so a component's `min-height: var(--_touch-target)`
+ *    always resolves. It used to live inside `@media (pointer: coarse)`, which meant
+ *    the documented "≥ 44×44" contract (docs/refine/accessibility.md) silently failed
+ *    on a mouse: on a fine pointer the property was undefined, the `min-height`
+ *    declaration was dropped at computed-value time, and the smaller declared desktop
+ *    size won (dialog close 32 px, pagination 36 px, button md 40 px).
+ * 2. **Promotes the whole component one size tier under a coarse pointer** so padding,
+ *    gap, font-size, height, and icon-size grow *with* the target, not just its
+ *    minimum height in isolation:
+ *    - default / `size="md"` → lg-scale tokens
+ *    - `size="sm"` → md-scale tokens
+ *    - `size="lg"` → nothing (already at max scale)
  *
- * Interactive elements inside the component that need a guaranteed tap target
- * should still reference `--_touch-target`:
+ * The target is the same 44 px on both pointers, so the coarse block no longer
+ * re-declares it. Interactive elements inside the component reference it directly:
  *
  * ```css
  * .close { min-height: var(--_touch-target); min-width: var(--_touch-target); }
@@ -63,20 +71,23 @@ export const srOnlyMixin = css`
  *
  * @example
  * ```ts
- * import { coarsePointerMixin } from '../../styles';
+ * import { touchTargetMixin } from '../../styles';
  *
  * return {
- *   styles: [coarsePointerMixin, componentStyles],
+ *   styles: [touchTargetMixin, componentStyles],
  *   template: html`...`
  * };
  * ```
  */
-export const coarsePointerMixin = css`
+export const touchTargetMixin = css`
+  :host {
+    --_touch-target: var(--size-11);
+  }
+
   @media (pointer: coarse) {
     /* Default / md size: promote all scale tokens one tier up (md → lg) */
     :host,
     :host([size='md']) {
-      --_touch-target: var(--size-11);
       --_font-size: var(--text-base);
       --_gap: var(--size-2-5);
       --_height: var(--size-12);
@@ -87,7 +98,6 @@ export const coarsePointerMixin = css`
 
     /* sm size: promote to md scale */
     :host([size='sm']) {
-      --_touch-target: var(--size-11);
       --_font-size: var(--text-sm);
       --_gap: var(--size-2);
       --_height: var(--size-10);
@@ -95,41 +105,14 @@ export const coarsePointerMixin = css`
       --_icon-size: var(--size-5);
       --_padding: var(--size-2) var(--size-4);
     }
-
-    /* lg size: already max, just enforce touch target */
-    :host([size='lg']) {
-      --_touch-target: var(--size-11);
-    }
   }
 `;
 
-/**
- * Reduced Motion Mixin
- *
- * Defines `--_motion-transition: none` and `--_motion-animation: none` on
- * `:host` under `@media (prefers-reduced-motion: reduce)`.
- * Component CSS opts in via CSS variable fallbacks:
- *
- * ```css
- * .panel { transition: var(--_motion-transition, opacity 300ms ease); }
- * .loader { animation: var(--_motion-animation, spin 0.6s linear infinite); }
- * ```
- *
- * @example
- * ```ts
- * import { reducedMotionMixin } from '../../styles';
- *
- * return {
- *   styles: [reducedMotionMixin, componentStyles],
- *   template: html`...`
- * };
- * ```
- */
-export const reducedMotionMixin = css`
-  @media (prefers-reduced-motion: reduce) {
-    :host {
-      --_motion-transition: none;
-      --_motion-animation: none;
-    }
-  }
-`;
+/* Reduced motion is NOT a mixin: it is a `:root` declaration in theme.css
+   (the "Reduced Motion" block), which inherits through shadow boundaries,
+   so it reaches every component without per-component opt-in, and it honors
+   the three-state motion mode (`setMotionMode()` / `data-motion`) that a
+   media-query-only mixin could never express. Component CSS keeps opting in
+   per declaration with the escape-hatch fallbacks:
+   `transition: var(--_motion-transition, ...)` /
+   `animation: var(--_motion-animation, ...)`. */

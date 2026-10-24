@@ -5,7 +5,7 @@ import type { OverlayOpenChangeDetail } from '../../core';
 
 import { createDropdownPositioner, createOutsidePointerDismissal, lifecycleSignal } from '../../core';
 import { disablableBundle } from '../../shared';
-import { reducedMotionMixin } from '../../styles';
+import { touchTargetMixin } from '../../styles';
 import hostStyles from './navigation-menu.css?inline';
 import itemStyles from './navigation-menu-item.css?inline';
 import panelStyles from './navigation-menu-panel.css?inline';
@@ -57,7 +57,7 @@ define<OreNavigationMenuItemProps>(NAVIGATION_MENU_ITEM_TAG, {
       <button class="trigger" type="button" ?disabled=${props.disabled}><slot></slot></button>
     `;
   },
-  styles: [itemStyles],
+  styles: [touchTargetMixin, itemStyles],
 });
 
 /**
@@ -349,5 +349,5 @@ define<OreNavigationMenuProps>(NAVIGATION_MENU_TAG, {
       <slot name="footer"></slot>
     `;
   },
-  styles: [reducedMotionMixin, hostStyles],
+  styles: [hostStyles],
 });

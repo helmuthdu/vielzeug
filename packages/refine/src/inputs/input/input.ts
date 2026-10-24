@@ -4,14 +4,13 @@ import { bindRefCallback, createTextField, lifecycleSignal } from '../../core';
 import type { TextFieldProps } from '../../shared';
 import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   disabledLoadingMixin,
   fieldVariantMixin,
   forcedColorsFocusMixin,
-  reducedMotionMixin,
   roundedVariantMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import type { InputType } from '../../types';
 import { INPUT_VARIANTS, type InputVariant } from '../../types';
@@ -379,8 +378,7 @@ define<OreInputProps>(INPUT_TAG, {
   shadow: { delegatesFocus: true },
   styles: [
     colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
+    touchTargetMixin,
     roundedVariantMixin,
     disabledLoadingMixin,
     sizeVariantMixin(FIELD_SIZE_PRESET),

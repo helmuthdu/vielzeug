@@ -1,7 +1,6 @@
 import { bind, define, html, prop, useEmit, when } from '@vielzeug/ore';
 import { type Readable, signal } from '@vielzeug/ripple';
 
-import { reducedMotionMixin } from '../../styles';
 import componentStyles from './async.css?inline';
 
 export type AsyncStatus = 'idle' | 'loading' | 'empty' | 'error' | 'success';
@@ -175,5 +174,5 @@ define<OreAsyncProps>(ASYNC_TAG, {
       </div>
     `;
   },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [componentStyles],
 });

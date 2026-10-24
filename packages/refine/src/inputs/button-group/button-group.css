@@ -4,7 +4,7 @@
        ======================================== */
 
   :host {
-    --group-gap: var(--size-2);
+    --group-gap: var(--target-gap-bezel);
     --group-radius: var(--_radius, var(--rounded-lg));
     display: inline-flex;
   }

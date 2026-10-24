@@ -717,7 +717,7 @@
   }
 
   .dg-spin {
-    animation: dg-spin 1s linear infinite;
+    animation: var(--_motion-animation, dg-spin var(--transition-loader) infinite);
   }
 
   @keyframes dg-spin {

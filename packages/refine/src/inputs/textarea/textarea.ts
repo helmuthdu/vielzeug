@@ -16,14 +16,13 @@ import { bindRefCallback, createAutoResize, createTextField, lifecycleSignal } f
 import type { TextFieldProps } from '../../shared';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
 import {
-  coarsePointerMixin,
   colorThemeMixin,
   disabledLoadingMixin,
   fieldVariantMixin,
   forcedColorsFocusMixin,
-  reducedMotionMixin,
   roundedVariantMixin,
   sizeVariantMixin,
+  touchTargetMixin,
 } from '../../styles';
 import { FIELD_VARIANTS, type FieldVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
@@ -294,8 +293,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
   shadow: { delegatesFocus: true },
   styles: [
     colorThemeMixin,
-    coarsePointerMixin,
-    reducedMotionMixin,
+    touchTargetMixin,
     roundedVariantMixin,
     disabledLoadingMixin,
     sizeVariantMixin(TEXTAREA_SIZE_PRESET),

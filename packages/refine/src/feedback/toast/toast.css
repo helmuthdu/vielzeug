@@ -102,6 +102,11 @@
 
   /* ── Inner (motion target) ────────────────────────────────────────────── */
 
+  /* Entry is pure CSS: @starting-style supplies the pre-mount frame (the same
+     pattern the dialog, menu, and navigation-menu overlays use), so a newly
+     inserted notification transitions in without a JS phase or a class toggle.
+     Engines without @starting-style skip the enter animation and show the
+     toast directly - a graceful degradation, not a break. */
   .toast-inner {
     position: relative;
     overflow: hidden;
@@ -110,58 +115,73 @@
     transform: none;
     transition: var(
       --_motion-transition,
+      opacity var(--_enter-duration) var(--ease-out),
+      transform var(--_enter-duration) var(--ease-out)
+    );
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--_offset)) scale(0.98);
+    }
+  }
+
+  /* Exit: fade and drift toward the anchored edge; the wrapper stays in flow
+     until finalized. The view measures this transition's duration to time
+     removal (and finalizes early on transitionend), so a themed
+     --toast-exit-duration is never clipped. */
+  .toast-inner.exiting {
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(var(--_offset)) scale(0.96);
+    transition: var(
+      --_motion-transition,
       opacity var(--_exit-duration) var(--ease-out),
       transform var(--_exit-duration) var(--ease-out)
     );
   }
 
-  /* Entry: mount invisible without a transition; removing the class animates in. */
-  .toast-inner.entering {
-    opacity: 0;
-    transform: translateY(var(--_offset)) scale(0.98);
-    transition: none;
-  }
-
-  .toast-inner:not(.entering, .exiting) {
-    transition: var(
-      --_motion-transition,
-      opacity var(--_enter-duration) var(--ease-out),
-      transform var(--_enter-duration) var(--ease-out)
-    );
-  }
-
-  /* Exit: fade and drift toward the anchored edge; the wrapper stays in flow until finalized. */
-  .toast-inner.exiting {
-    pointer-events: none;
-    opacity: 0;
-    transform: translateY(var(--_offset)) scale(0.96);
-  }
-
   /* ── Alert inside toast ───────────────────────────────────────────────── */
 
   /* A floating notification must read as a layer over arbitrary content: opaque surface and real elevation.
-     --color-canvas is translucent by design (it expects a dimmed backdrop), so mix on the opaque contrast base. */
+     --color-canvas is translucent by design (it expects a dimmed backdrop), so the surface is the
+     opaque elevated contrast token, which light-dark() flips per scheme. The surface stays neutral
+     for every status: severity lives in the status icon and the accent, so a stack of five
+     notifications reads calm and errors still stand out. */
   ore-alert {
+    --alert-bg: var(--toast-bg, var(--color-contrast-100));
+    --alert-color: var(--toast-color, var(--color-contrast-800));
+    --alert-border-color: var(--toast-border-color, color-mix(in oklch, var(--color-contrast-900) 8%, transparent));
     --alert-shadow: var(--toast-shadow, var(--shadow-xl));
 
     width: 100%;
     margin: 0;
   }
 
-  ore-alert:not([variant='solid']) {
-    --alert-bg: var(--toast-bg, color-mix(in oklab, var(--color-contrast-50) 92%, var(--_toast-accent)));
+  /* The status icon is the redundant (non-color-only) severity channel: tinted
+     with the entry's accent, sized through the public --ore-icon-size hook. */
+  .toast-status-icon {
+    --ore-icon-size: var(--toast-icon-size, var(--size-5));
+    color: var(--_toast-accent);
   }
 
-  /* Single-line notifications centre the close control on the text. */
-  ore-alert:not([heading])::part(close) {
-    align-self: center;
+  /* A person-centric toast swaps the status glyph for an ore-avatar in the
+     leading slot. It keeps its own diameter (the alert icon cell centers it),
+     so the toast exposes one size hook for it. */
+  .toast-avatar {
+    --avatar-size: var(--toast-avatar-size, var(--size-8));
+  }
+
+  /* On the inverted snackbar chip the accent can clash with the surface: the
+     icon inherits the chip's own text color instead. */
+  .toast-inner.snackbar .toast-status-icon {
+    color: inherit;
   }
 
   /* ── Snackbar (Material-style compact bar) ────────────────────────────── */
 
   /* The snackbar inverts the surface: the dark end of the contrast ramp in light themes,
      the light end in dark themes, with the opposite end for text. Compact single-row
-     padding; borderless; real elevation. Actions render as flat text buttons. */
+     padding; borderless; real elevation. */
   .toast-inner.snackbar ore-alert {
     --alert-bg: var(--toast-snackbar-bg, var(--color-contrast-900));
     --alert-color: var(--toast-snackbar-color, var(--color-contrast-100));
@@ -204,6 +224,12 @@
     pointer-events: none;
     background: var(--toast-progress-color, var(--_toast-accent));
     opacity: 0.6;
+    /* Base state is empty, so the bar is only visible while its animation runs:
+       the root --_motion-animation hatch (theme.css) replaces the animation with
+       `none` under the OS preference AND data-motion='reduced', leaving the bar
+       at scaleX(0), and honors data-motion='full' by letting it run. A
+       component-local media query would ignore the mode; this needs none. */
+    transform: scaleX(0);
     transform-origin: left center;
     animation: var(--_motion-animation, ore-toast-progress var(--_toast-duration) linear var(--_toast-elapsed) both);
   }
@@ -222,18 +248,23 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .toast-progress {
-      display: none;
-    }
-  }
-
   /* ── Action buttons ───────────────────────────────────────────────────── */
 
   .toast-actions {
     display: flex;
-    gap: var(--size-2);
+    gap: var(--target-gap-bezel);
     justify-content: flex-end;
+  }
+
+  /* A notification's action is a light-weight affordance, not the card's
+     primary control: the button's 44px touch-target floor makes a small ghost
+     action read as a bulky block that dwarfs the message (and overruns the
+     snackbar's own single-row height). On a fine pointer the target floor drops
+     to the compact sm row; touch keeps the full 44px hit area. */
+  @media (hover: hover) and (pointer: fine) {
+    .toast-actions ore-button {
+      --button-min-height: var(--size-8);
+    }
   }
 
   /* ── Responsive: phones use the full width above the safe area ────────── */

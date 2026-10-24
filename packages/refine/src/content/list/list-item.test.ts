@@ -25,6 +25,22 @@ describe('ore-list-item', () => {
       expect(fixture.element.textContent?.trim()).toBe('Inbox');
     });
 
+    it('mirrors the full title into the title element while it is clipped', async () => {
+      fixture = await mount('ore-list-item', { html: 'Inbox' });
+
+      const title = fixture.query('[part="title"]')!;
+
+      // jsdom has no layout: simulate clipping, then re-assign the slot so the
+      // reveal re-syncs against the stubbed geometry.
+      Object.defineProperty(title, 'scrollWidth', { configurable: true, value: 200 });
+      Object.defineProperty(title, 'clientWidth', { configurable: true, value: 40 });
+      fixture.element.textContent = '';
+      fixture.element.append('A very long conversation label');
+      await fixture.flush();
+
+      expect(title.getAttribute('title')).toBe('A very long conversation label');
+    });
+
     it('renders leading/trailing/description slots', async () => {
       fixture = await mount('ore-list-item', {
         html: '<span slot="leading">L</span>Title<span slot="description">D</span><span slot="trailing">T</span>',

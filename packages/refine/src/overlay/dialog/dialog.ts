@@ -1,7 +1,8 @@
 import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
 
+import { warnMultiplePrimaryActions } from '../../_dev';
 import { type OverlayOpenChangeDetail, parseOptionalBool } from '../../core';
-import { coarsePointerMixin, roundedVariantMixin } from '../../styles';
+import { roundedVariantMixin, touchTargetMixin } from '../../styles';
 import { PADDING_SIZES, type PaddingSize, ROUNDED_SIZES } from '../../types';
 import { useDialogControl } from '../shared/use-dialog';
 
@@ -145,6 +146,12 @@ define<OreDialogProps>(DIALOG_TAG, {
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;
 
+    const checkFooterActions = (e: Event) => {
+      const slot = e.target as HTMLSlotElement;
+
+      warnMultiplePrimaryActions(slot.assignedElements({ flatten: true }), 'ore-dialog footer');
+    };
+
     const { closeWithAnimation, handleBackdropClick, overlay, requestClose, mount } = useDialogControl({
       defaultOpen: props['default-open'],
       dialogRef,
@@ -202,11 +209,11 @@ define<OreDialogProps>(DIALOG_TAG, {
             <slot></slot>
           </div>
           <div class="footer" part="footer" ?hidden=${() => !hasFooter()}>
-            <slot name="footer"></slot>
+            <slot name="footer" @slotchange=${checkFooterActions}></slot>
           </div>
         </div>
       </dialog>
     `;
   },
-  styles: [roundedVariantMixin, coarsePointerMixin, componentStyles],
+  styles: [roundedVariantMixin, touchTargetMixin, componentStyles],
 });

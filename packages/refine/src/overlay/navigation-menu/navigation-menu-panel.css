@@ -10,11 +10,25 @@
     margin: 0;
     overflow: auto;
     overscroll-behavior: contain;
-    background: var(--navigation-menu-bg, var(--color-canvas));
+    background: var(--navigation-menu-bg, color-mix(in oklch, var(--surface-overlay) 85%, transparent));
     border: var(--border) solid var(--navigation-menu-border-color, var(--color-divider));
     border-radius: var(--navigation-menu-radius, var(--rounded-lg));
     box-shadow: var(--navigation-menu-shadow, var(--shadow-xl));
+
+    /* Closed state doubles as the exit target. Literal durations throughout:
+       --transition-* resolves to 'none' under reduced motion, and one 'none'
+       member invalidates the entire transition shorthand, which would drop the
+       display/overlay allow-discrete hold and teleport the panel out of the
+       top layer mid-exit (same trap dialog.css documents). Ease tokens are
+       never zeroed, so they stay token-driven. */
+    opacity: 0;
     backdrop-filter: blur(var(--navigation-menu-backdrop-blur, var(--blur-xl))) saturate(180%);
+    transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
+    transition:
+      opacity 200ms var(--ease-spring),
+      transform 200ms var(--ease-spring),
+      display 200ms allow-discrete,
+      overlay 200ms allow-discrete;
   }
 
   :host([hidden]) {
@@ -24,6 +38,13 @@
   :host(:popover-open),
   :host([data-open]) {
     display: block;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
+    }
   }
 
   .content {
