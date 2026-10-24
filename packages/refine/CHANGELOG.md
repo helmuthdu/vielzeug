@@ -1,7 +1,24 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 23 Oct 2026 14:23:06 GMT and should not be manually modified.
+This log was last generated on Sat, 24 Oct 2026 19:56:28 GMT and should not be manually modified.
 
+## 26.10.19
+Sat, 24 Oct 2026 19:56:28 GMT
+
+### Minor changes
+
+- Adopt human-interface-guideline contracts: unconditional 44px touch targets, button emphasis roles, expandable text with truncation reveal, tooltip dwell defaults, 11px type floor, surface/target-gap/safe-area tokens, increased-contrast and reduced-transparency paths, token-driven grid, public design-token checker
+- Add named animation tokens, three-state motion mode (setMotionMode/getMotionMode), navigation-menu panel cross-fade, and necromancer-powered FLIP datagrid row motion
+- Fix reduced-motion bypasses (datagrid/navbar/command-palette spinners, marquee), add FLIP reflow motion to command-palette results and the toast stack via a shared layout-motion helper, and adopt --animate-* tokens in the light-DOM animation utilities
+- toast: greenfield exit refactor - pure-CSS @starting-style enter (no JS phase class), exit finalizes on transitionend with the themed --toast-exit-duration measured by the view (no longer clipped by a fixed timer), swipe flight reuses the same duration and motion mode instead of a hardcoded matchMedia check, progress bar honors three-state motion mode, store pause seam collapses to setPaused(boolean)
+- toast: status model replaces color/variant - neutral light-dark surface, per-status icons, danger drives urgency
+- toast/alert UX pass: row-1 centering (icon/heading/close share one axis), close hit area via pseudo-element instead of 44px layout box, ghost action buttons by default, new --button-min-height hook
+- toast: action emphasis (primary/cancel/destructive) reuses ore-button roles; docs reorganized with confirm/cancel and snackbar live examples
+- toast: render an ore-avatar in the leading slot via the new avatar option (--toast-avatar-size); alert: --alert-font-size now applies (was shadowed by the size-variant mixin)
+
+### Patches
+
+- calendar: inactive month/year views no longer stack under the day grid (hidden rule class-qualified to outrank the grids' own display declarations)
 ## 26.10.18
 Fri, 23 Oct 2026 14:23:06 GMT
 

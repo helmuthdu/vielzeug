@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/focus",
-  "version": "26.10.18",
+  "version": "26.10.19",
   "description": "Framework-neutral list navigation and focus restoration primitives",
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/flux",
-  "version": "26.10.18",
+  "version": "26.10.19",
   "description": "Minimal push streams with explicit ownership, bounded buffering, and structural bridges",
   "repository": {
     "type": "git",
