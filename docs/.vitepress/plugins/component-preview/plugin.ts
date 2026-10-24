@@ -51,7 +51,7 @@ const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide
 // and Focus before Keymap, leaving both with an undefined dependency.
 //   Temporal → Ripple → Arsenal → Keymap → Sigil → Gesture → Sentinel(Arsenal)
 //   → Focus(Keymap) → Ore(Ripple) → Orbit(Arsenal) → Prism(Orbit) → Tempo(Temporal)
-//   → Dnd(Keymap,Gesture) → Lucide
+//   → Dnd(Keymap,Gesture) → Necromancer → Lucide
 const depPaths = [
   temporalUmd,
   resolve(pkgDir, 'ripple/dist/ripple.iife.js'),
@@ -66,6 +66,7 @@ const depPaths = [
   resolve(pkgDir, 'prism/dist/prism.iife.js'),
   resolve(pkgDir, 'tempo/dist/tempo.iife.js'),
   resolve(pkgDir, 'dnd/dist/dnd.iife.js'),
+  resolve(pkgDir, 'necromancer/dist/necromancer.iife.js'),
   lucideUmd,
 ];
 

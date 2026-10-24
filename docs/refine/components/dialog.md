@@ -4,7 +4,7 @@ A modal dialog that blocks page interaction, traps focus, and dismisses on `Esca
 
 ## Opening and Closing
 
-Use `open` as the controlled state and update it in response to `open-change`. Use `default-open` only to initialize an uncontrolled dialog. Always include a clearly labelled cancel or close action in the `footer` slot so keyboard and pointer users can dismiss without relying solely on `Escape`.
+Use `open` as the controlled state and update it in response to `open-change`. Use `default-open` only to initialize an uncontrolled dialog. Always include a clearly labelled cancel or close action in the `footer` slot so keyboard and pointer users can dismiss without relying solely on `Escape`. Give footer buttons a semantic `emphasis` (see [Button emphasis](./button.md)); keep exactly one primary action per dialog. In development, a footer with more than one `emphasis="primary"` button logs a warning.
 
 ```html
 <ore-button id="open-btn">Open dialog</ore-button>
@@ -12,8 +12,8 @@ Use `open` as the controlled state and update it in response to `open-change`. U
 <ore-dialog label="Confirm action" dismissible id="dialog">
   <p>Are you sure you want to delete this item? This action cannot be undone.</p>
   <div slot="footer">
-    <ore-button variant="ghost" id="cancel-btn">Cancel</ore-button>
-    <ore-button color="error" id="confirm-btn">Delete</ore-button>
+    <ore-button emphasis="cancel" id="cancel-btn">Cancel</ore-button>
+    <ore-button emphasis="destructive" id="confirm-btn">Delete</ore-button>
   </div>
 </ore-dialog>
 

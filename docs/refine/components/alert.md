@@ -128,7 +128,7 @@ Use the `meta` slot to add secondary information (e.g. a timestamp) displayed al
 
 ## Actions
 
-Use the `actions` slot to add call-to-action buttons below the message. Avoid nesting complex interactive controls in the default slot; keep alerts primarily informational.
+Use the `actions` slot to add call-to-action buttons below the message. Avoid nesting complex interactive controls in the default slot; keep alerts primarily informational. Give actions a semantic `emphasis` (see [Button emphasis](./button.md)) and keep one primary per alert: in development, an actions row with more than one `emphasis="primary"` button logs a warning.
 
 <ComponentPreview center vertical>
 

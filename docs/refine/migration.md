@@ -1,9 +1,84 @@
 ---
 title: Migration
-description: Migrate surface variants, DataGrid sources, and framework type declarations to Refine 3.0.
+description: Migrate toast statuses, the human-interface-guideline adoption, surface variants, DataGrid sources, and framework type declarations to Refine.
 ---
 
 # Migration
+
+## Toast statuses replace color and variant
+
+`ToastItem` no longer has `color` or `variant`. Both were borrowed from `ore-alert` and made every
+toast a filled block in a saturated theme color, which is rare in current product UI and fought the
+page beneath it. Toasts now render on one neutral light-dark surface, and a single `status` option
+carries meaning:
+
+```ts
+// Before: a solid primary block
+toast.add({ color: 'success', message: 'Saved', variant: 'flat' });
+
+// After: neutral surface, status icon, tinted accent
+toast.add({ status: 'success', message: 'Saved' });
+```
+
+| Old option              | New option                                   |
+| ----------------------- | -------------------------------------------- |
+| `color: 'success'`      | `status: 'success'`                          |
+| `color: 'error'`        | `status: 'danger'`                           |
+| `color: 'primary'` / unset | leave `status` unset (`neutral`, no icon) |
+| `variant: 'solid' / 'flat' / 'bordered'` | removed: toasts always render the neutral surface |
+
+- `status` takes `'neutral' | 'info' | 'success' | 'warning' | 'danger'` (exported as
+  `TOAST_STATUSES` / `ToastStatus`). Each non-neutral status renders a status icon and tints the
+  progress bar; `neutral` (the default) shows a plain message.
+- The shortcuts are unchanged: `toast.success()`, `info()`, `warning()`, `error()` map to the
+  matching status, and `toast.promise()` still updates loading → success/error.
+- Urgency now derives from status: `danger` is assertive by default (previously `color: 'error'`).
+  `urgency` still overrides.
+- Action buttons keep their own `color` and `variant` options; those are `ore-button` styling.
+  Their default changed from `flat` to `ghost`: a lighter text treatment that keeps action rows
+  from competing with the message. Pass `variant: 'flat'` (or any button variant) per action to
+  opt back in.
+- `snackbar` stays as the compact-bar layout axis; it no longer interacts with `variant`.
+- CSS: `--toast-bg` now defaults to the neutral elevated surface (`--color-contrast-100`) instead
+  of a color-tinted `--color-contrast-50`. New hooks: `--toast-color`, `--toast-border-color`, and
+  `--toast-icon-size`.
+
+## Human-interface-guideline adoption
+
+A pass aligned the design system with platform human-interface guidance. Four contracts changed; the rest of the pass is additive (new tokens, `emphasis`, `expandable`, truncation reveal, increased-contrast and reduced-transparency paths).
+
+**Text floor.** `--text-2xs` moves from 10px to 11px, the smallest size kept legible. Component text never ships below it. If you pinned a consumer to the old 10px micro-label, set `--text-2xs` explicitly.
+
+**Tooltip dwell.** An unset `delay` now opens after 300ms on hover (immediate on focus/click), and an unset `close-delay` hides after 100ms on pointer leave (immediate on focus out). Previously both defaulted to 0. To restore the old instant behavior, set `delay="0"` and `close-delay="0"`.
+
+**Button variant default.** `variant` no longer reflects `solid` when unset; the solid treatment is now applied by a `:not([variant])` rule, so a plain `<ore-button>` looks identical. Only code that read the `variant` attribute back (rather than the property) is affected.
+
+**Dark tertiary text.** `--color-contrast-500`'s dark value lifts from 58% to 62% lightness so tertiary text clears 4.5:1 on canvas, card, and sunken surfaces.
+
+```html
+<!-- Before: instant tooltip on every trigger -->
+<ore-tooltip content="Copy">…</ore-tooltip>
+
+<!-- After: same instant behavior, now explicit -->
+<ore-tooltip content="Copy" delay="0" close-delay="0">…</ore-tooltip>
+```
+
+## Motion mode, named animations, and component motion
+
+Motion is now a first-class theme axis. Most of this is additive: a set of `--animate-*` named-animation tokens (`fade-in`, `scale-in`, `slide-in-from-*`, `spin`, `ping`, `pulse`, `bounce`, `progress-bar`) with matching keyframes, and a three-state motion mode driven by `setMotionMode(mode)` / `getMotionMode()` writing a `data-motion` attribute on the document root. `system` (the default) follows `prefers-reduced-motion`; `full` and `reduced` force either side regardless of the OS setting.
+
+Four existing components gained motion, so their visible behavior changed:
+
+- **Navigation-menu panels** now cross-fade with a small rise on open and hold the same fade through the top-layer close, instead of appearing and disappearing instantly.
+- **DataGrid sorting** now plays a FLIP row transition (via `@vielzeug/necromancer`) when a client-side sort reorders rows. It is skipped for `source` data and `sort-mode="server"`, where the rows are replaced rather than reordered.
+- **Command-palette results** slide to their new slots as the query filters the list, instead of snapping.
+- **Toast stacks** slide their neighbours when a notification enters or leaves, instead of snapping. A toast now enters through pure CSS (`@starting-style`, no script-driven phase class) and, on dismissal, is removed the moment its `--toast-exit-duration` transition ends rather than on a fixed ~250ms timer, so a themed exit duration longer than the 200ms default is no longer clipped. The swipe-to-dismiss flight reuses that same duration, and the auto-dismiss progress bar hides under motion-mode reduction (previously it read only the OS preference).
+
+All four honor reduced motion automatically: the tokens zero out, so the navigation-menu fade collapses to an instant show/hide and the FLIP transitions are skipped entirely. To force motion on regardless of the OS setting, call `setMotionMode('full')` (or set `data-motion="full"` on `<html>`); to force it off, use `'reduced'`. To slow or silence one component without a global mode, override its duration token (for the DataGrid FLIP, `--duration-200`; set it to `0` to disable the transition).
+
+Four components that animated unconditionally now honor the motion mode: the DataGrid, command-palette, and input-style loading spinners and the navbar's mode/mobile-menu animations previously ignored `prefers-reduced-motion` and kept moving; the marquee ticker previously read the OS preference through its own media query and ignored `data-motion`. If you relied on any of them animating under a reduced-motion setting, opt back in with `setMotionMode('full')`.
+
+Internally, the per-component reduced-motion mixin was removed; reduced motion is now declared once at `:root` (honoring the three-state mode) rather than mixed into every component's styles. That mixin was never exported from the package's public subpaths, so this is not a public API break.
 
 ## Rank-item bar visibility, RTL, and contrast
 

@@ -101,10 +101,11 @@ Monospace text for inline code snippets.
 
 ## Size Options
 
-Choose from 6 size steps. The token scale resolved depends on the active variant:
+Choose from 7 size steps. The token scale resolved depends on the active variant:
 
 | `size` | Body scale token | Value | Heading scale token | Value |
 | ------ | ---------------- | ----- | ------------------- | ----- |
+| `2xs`  | `--text-2xs`     | 11px  | (no heading step)     | 11px  |
 | `xs`   | `--text-xs`      | 12px  | `--heading-xs`      | 14px  |
 | `sm`   | `--text-sm`      | 14px  | `--heading-sm`      | 16px  |
 | `md`   | `--text-base`    | 16px  | `--heading-md`      | 24px  |
@@ -112,7 +113,9 @@ Choose from 6 size steps. The token scale resolved depends on the active variant
 | `xl`   | `--text-xl`      | 20px  | `--heading-xl`      | 48px  |
 | `2xl`  | `--text-2xl`     | 24px  | `--heading-2xl`     | 64px  |
 
-`variant="heading"` resolves sizes against the **heading scale**. All other variants (`body`, `label`, `caption`, `overline`, `code`) resolve against the **body scale**.
+`variant="heading"` resolves sizes against the **heading scale**. All other variants (`body`, `label`, `caption`, `overline`, `code`) resolve against the **body scale**. The heading scale has no `2xs` step, so `size="2xs"` resolves against the body scale even on a heading and renders at 11px.
+
+`--text-2xs` (11px) is the legibility floor: never render component text below it.
 
 <ComponentPreview center vertical>
 
@@ -253,6 +256,34 @@ Clamp text to a fixed number of lines with an ellipsis: ideal for card descripti
 
 </ComponentPreview>
 
+### Expandable
+
+`expandable` lets a reader tap or click clamped text to reveal the rest. Pair it with `truncate` or `lines`: without a clamp there is nothing to expand, and the dev build warns. The host takes `role="button"`, `tabindex="0"`, and `aria-expanded`, so keyboard users can toggle it with Enter or Space.
+
+<ComponentPreview center vertical>
+
+```html
+<ore-box style="width: 100%; max-width: 400px;">
+  <ore-text lines="2" expandable>
+    Tap this paragraph to read the rest. Clamped text stays collapsed until the reader asks for more, keeping cards and
+    lists scannable while the full content stays one tap away.
+  </ore-text>
+</ore-box>
+```
+
+</ComponentPreview>
+
+Every `ore-text` that is actually clipped mirrors its full text into a `title` attribute, so a pointer user can hover to read what the ellipsis hid. The `title` is dropped as soon as there is room, so it never shadows a real tooltip.
+
+For a controlled disclosure (an accordion header, a "Show more" button elsewhere), set `expanded` and listen for `expand-change`; the component then only emits and never toggles itself.
+
+```html
+<ore-text id="bio" lines="3" expandable expanded>…</ore-text>
+<script>
+  bio.addEventListener('expand-change', (e) => console.log(e.detail.expanded));
+</script>
+```
+
 ### Italic Style
 
 Apply italic styling to text.
@@ -384,6 +415,9 @@ Show file information with truncation using width constraints.
 | `align`    | `'left' \| 'center' \| 'right' \| 'justify'`                                                                                                          | N/A | Text alignment (forces `display: block`)                                                                                   |
 | `truncate` | `boolean`                                                                                                                                             | N/A | Single-line truncation with ellipsis                                                                                       |
 | `lines`    | `number`                                                                                                                                              | N/A | Clamp to N lines with ellipsis (multi-line truncation)                                                                     |
+| `expandable` | `boolean`                                                                                                                                           | `false` | Reveal clamped text on click/tap; adds `role="button"` + `aria-expanded`. Pairs with `truncate` or `lines`            |
+| `expanded` | `boolean`                                                                                                                                             | N/A | Controlled expanded state. When set, the component shows this and only emits `expand-change`                               |
+| `default-expanded` | `boolean`                                                                                                                                     | `false` | Initial uncontrolled expanded state. Ignored when `expanded` is set                                                        |
 | `italic`   | `boolean`                                                                                                                                             | N/A | Italic font style                                                                                                          |
 | `as`       | `'span' \| 'p' \| 'div' \| 'h1' \| 'h2' \| 'h3' \| 'h4' \| 'h5' \| 'h6' \| 'label' \| 'code'`                                                         | N/A | Semantic element; `h1`–`h6` auto-sets `role="heading"` + `aria-level`                                                      |
 
@@ -403,6 +437,12 @@ Show file information with truncation using width constraints.
 | Slot      | Description  |
 | --------- | ------------ |
 | (default) | Text content |
+
+### Events
+
+| Event            | Detail                | Fires when                                    |
+| ---------------- | --------------------- | --------------------------------------------- |
+| `expand-change`  | `{ expanded: boolean }` | An `expandable` text is toggled by the reader |
 
 ### CSS Custom Properties
 

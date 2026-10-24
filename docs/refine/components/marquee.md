@@ -69,4 +69,4 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 
 ## Accessibility
 
-The animation stops automatically for `prefers-reduced-motion: reduce`. Add `pause-on-hover` whenever pointer users may need to read the content. Because a ticker repeats continuously, do not use it for essential instructions, time-sensitive actions, or content that needs keyboard interaction.
+The animation stops automatically for `prefers-reduced-motion: reduce`, and for `data-motion="reduced"` regardless of the OS setting; `data-motion="full"` keeps it scrolling despite the OS preference (see [Motion Mode](/refine/theming#motion-mode)). Add `pause-on-hover` whenever pointer users may need to read the content. Because a ticker repeats continuously, do not use it for essential instructions, time-sensitive actions, or content that needs keyboard interaction.

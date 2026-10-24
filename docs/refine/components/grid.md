@@ -410,7 +410,7 @@ Provide different area templates at each breakpoint. The grid switches between t
 
 ## Responsive Auto-fit Mode
 
-Use `responsive` to let the grid fit as many columns as possible based on a minimum column width. Set `min-col-width` to control the threshold (default: `250px`). Do not mix `responsive` with a fixed `cols` attribute; they target different layout modes.
+Use `responsive` to let the grid fit as many columns as possible based on a minimum column width. Set `min-col-width` to control the threshold (default: `var(--grid-min-item-width)`, 250px). Do not mix `responsive` with a fixed `cols` attribute; they target different layout modes.
 
 <ComponentPreview center vertical>
 
@@ -449,7 +449,7 @@ Use `responsive` for fluid layouts where column count depends on available space
 | `justify`       | `'start' \| 'center' \| 'end' \| 'stretch'`               | -       | `justify-items` for all cells                     |
 | `flow`          | `'row' \| 'column' \| 'row-dense' \| 'column-dense'`      | `'row'` | `grid-auto-flow` direction                        |
 | `responsive`    | `boolean`                                                 | `false` | Enable `auto-fit` mode                            |
-| `min-col-width` | `string`                                                  | `250px` | Minimum column width in `responsive` mode         |
+| `min-col-width` | `string`                                                  | `--grid-min-item-width` | Minimum column width in `responsive` mode |
 | `fullwidth`     | `boolean`                                                 | `false` | Stretch the grid to fill its container's width    |
 | `areas`         | `string`                                                  | -       | CSS `grid-template-areas` value                   |
 | `areas-sm`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 640px  |
@@ -471,15 +471,16 @@ Use `responsive` for fluid layouts where column count depends on available space
 
 ### CSS Custom Properties
 
-These are fallback values: attributes take precedence when set.
+These are fallback values: attributes take precedence when set. Fixed column counts resolve through the `--grid-1`–`--grid-12` theme tokens, so a theme can redefine the track sizing globally.
 
-| Property         | Default           | Description              |
-| ---------------- | ----------------- | ------------------------ |
-| `--grid-cols`    | -                 | Fallback column template |
-| `--grid-rows`    | -                 | Fallback row template    |
-| `--grid-gap`     | `var(--size-4)`   | Fallback gap             |
-| `--grid-row-gap` | `var(--grid-gap)` | Fallback row gap         |
-| `--grid-col-gap` | `var(--grid-gap)` | Fallback column gap      |
+| Property                | Default                              | Description                          |
+| ----------------------- | ------------------------------------ | ------------------------------------ |
+| `--grid-cols`           | -                                    | Fallback column template             |
+| `--grid-rows`           | -                                    | Fallback row template                |
+| `--grid-gap`            | `var(--size-4)`                      | Fallback gap                         |
+| `--grid-row-gap`        | `var(--grid-gap)`                    | Fallback row gap                     |
+| `--grid-col-gap`        | `var(--grid-gap)`                    | Fallback column gap                  |
+| `--grid-min-item-width` | `15.625rem` (250px)                  | Floor for `auto-fit` column width    |
 
 ## Examples
 

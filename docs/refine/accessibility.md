@@ -137,6 +137,7 @@ Before each minor release:
 | `ore-stepper`    | `navigation` + `list`     | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled` | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |
 | `ore-list-item`  | `listitem` or `option` (`selectable`) | Enter / Space (activation); Tab reaches slotted `actions-left`/`actions-right` content | `aria-selected`, `aria-disabled` | Swipe-revealed action panels stay reachable via `:focus-within`, independent of the gesture |
 | `ore-table`      | `table` (native)          | Standard      | `aria-label`, `aria-busy`    |
+| `ore-text`       | heading (`as="h1"`–`h6`) or `button` (`expandable`) | Enter / Space (`expandable`) | `role="heading"` + `aria-level`; `role="button"` + `aria-expanded` when `expandable` | Clipped text mirrors its full content into `title` while truncated |
 | `ore-pagination` | `navigation`              | Standard      | `aria-label`, `aria-current` |
 | `ore-breadcrumb` | `navigation`              | Standard      | `aria-label`, `aria-current` |
 | `ore-avatar`     | None                      | N/A | `alt` or `aria-label`        |
@@ -149,6 +150,13 @@ Before each minor release:
 | `ore-navbar`  | Navigation landmark: provide `aria-label` for screen readers  |
 | `ore-grid`    | Layout only, no interactive semantics                          |
 | `ore-box`     | Layout only, no interactive semantics                          |
+
+## Built-in Guarantees
+
+- **Touch targets are 44×44 on every pointer.** Interactive components set a 44px minimum target unconditionally, not only under a coarse pointer: a mouse user gets the same hit area as a touch user. Under a coarse pointer the whole component also promotes one size tier, so padding and icons grow with the target.
+- **Truncated text is recoverable.** Any label clipped by an ellipsis (`ore-text`, `ore-list-item`, `ore-menu-item`, `ore-sidebar-item`) mirrors its full text into a `title` while it is actually clipped, and drops it as soon as there is room. `ore-text` additionally supports `expandable` for a tap-to-reveal disclosure.
+- **Focus rings share one primitive.** Every keyboard focus indicator composes `--focus-ring`, so the increased-contrast path (`prefers-contrast: more` or `html.contrast-more`) thickens all rings at once by re-declaring one token.
+- **Reduced motion and reduced transparency are honored.** `prefers-reduced-motion` zeroes every duration token; an app can force either direction with `setMotionMode('reduced' | 'full')` (see [Theming → Motion Mode](/refine/theming#motion-mode)). `prefers-reduced-transparency` swaps translucent frost fills for opaque ones.
 
 ## Compliance Contract
 

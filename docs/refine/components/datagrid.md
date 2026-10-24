@@ -56,6 +56,8 @@ The `columns` JS property takes precedence over `<ore-column>` children when bot
 
 Set `sortable: true` on any column. Clicking or pressing Enter/Space on the header cycles `none → ascending → descending → none`. Text columns show `A → Z / Z → A`; set `sortType: 'number'` for numeric columns to show `0 → 9 / 9 → 0`. When `sortType` is omitted, raw numeric row values are detected automatically.
 
+Client-side sorts animate rows into their new positions with a FLIP transition (built on `@vielzeug/necromancer`), so the reordering is easy to follow. The motion reads its duration from `--duration-200`, so it reduces to an instant swap under reduced motion or `setMotionMode('reduced')`. It is skipped for server-side sort and source-backed grids, where rows arrive asynchronously.
+
 <ComponentPreview>
 
 ```html

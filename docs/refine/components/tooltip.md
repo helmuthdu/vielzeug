@@ -81,9 +81,11 @@ Prefer `variant="light"` on dark backgrounds.
 
 </ComponentPreview>
 
-## Show Delay
+## Show and Hide Delay
 
-Use `delay` (milliseconds) to add a pause before the tooltip shows: useful for dense UIs. A value of `400`–`600`ms works well in action-dense toolbars to avoid visual noise on quick cursor sweeps.
+An unset `delay` opens on a trigger-aware dwell: 300ms on hover (so sweeping a pointer across a toolbar fires only the tooltip you rested on), and immediate on focus or click (both are deliberate). An unset `close-delay` hides after a 100ms grace on pointer leave (absorbing jitter across the trigger edge), and immediately on focus out.
+
+Set `delay` or `close-delay` explicitly to override; `delay="0"` forces an immediate open on every trigger.
 
 <ComponentPreview>
 
@@ -149,8 +151,8 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 | `content`     | `string`                                 | `''`            | Tooltip text                                                                                        |
 | `placement`   | `'top' \| 'bottom' \| 'left' \| 'right'` | `'top'`         | Preferred placement (auto-flips near viewport edges)                                                |
 | `trigger`     | `string`                                 | `'hover,focus'` | Trigger mode(s), comma-separated                                                                    |
-| `delay`       | `number`                                 | `0`             | Show delay in milliseconds                                                                          |
-| `close-delay` | `number`                                 | `0`             | Hide delay in milliseconds: useful to keep the tooltip open when moving between trigger and bubble |
+| `delay`       | `number`                                 | 300 hover / immediate focus·click | Show delay in ms: 300 on hover, immediate on focus/click when unset          |
+| `close-delay` | `number`                                 | 100 pointer-leave / immediate focus-out | Hide delay in ms: 100 on pointer leave, immediate on focus out when unset |
 | `open`        | `boolean`                                | N/A | Controlled open state; when set, trigger events are ignored                                         |
 | `default-open`| `boolean`                                | `false`         | Initial visibility when `open` is not provided                                                       |
 | `variant`     | `'dark' \| 'light'`                      | N/A | Visual style (`dark` appearance is the unset default)                                               |

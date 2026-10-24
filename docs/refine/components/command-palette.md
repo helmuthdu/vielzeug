@@ -156,6 +156,8 @@ By default, selecting an item closes the palette. Set `keep-open-on-select` for 
 
 Override the global shortcut with `shortcut`, or set it to an empty string to disable the built-in trigger entirely and open the palette from your own UI instead. Use `no-filter` when `items` is already filtered server-side, and `empty-text` to customize the no-results message.
 
+As the query narrows, surviving rows slide from their old slot to their new one instead of snapping, so the focused command never jumps out of context. The reflow honors [Motion Mode](/refine/theming#motion-mode): it is skipped under reduced motion and can be forced on with `data-motion="full"`.
+
 <ComponentPreview height="480px">
 
 ```html

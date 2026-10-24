@@ -38,6 +38,30 @@ Six semantic colors communicate intent.
 
 </ComponentPreview>
 
+## Emphasis
+
+`emphasis` names the semantic role of a button's action so prominence is a deliberate choice, not a styling accident. It follows the four-role model: Normal, Primary, Cancel, Destructive. Each role picks a `color`/`variant` default; an explicit `color` or `variant` attribute always overrides it, so `emphasis` is a shortcut, not a lock-in.
+
+<ComponentPreview center>
+
+```html
+<ore-button emphasis="normal">Normal</ore-button>
+<ore-button emphasis="primary">Primary</ore-button>
+<ore-button emphasis="cancel">Cancel</ore-button>
+<ore-button emphasis="destructive">Delete</ore-button>
+```
+
+</ComponentPreview>
+
+| Emphasis      | Renders as                       | Use for                                                    |
+| ------------- | -------------------------------- | ---------------------------------------------------------- |
+| `normal`      | default treatment (unchanged)    | secondary actions with no special weight                   |
+| `primary`     | accent fill (solid)              | the one action most people will choose                     |
+| `cancel`      | neutral ghost                    | dismiss without changing anything                          |
+| `destructive` | error ink, no filled background  | deletes or actions that are hard to undo                   |
+
+Destructive uses red text rather than a filled red slab: a filled error button can be mistaken for a primary action. Keep one `primary` per view. In development, an `ore-dialog` footer or `ore-alert` actions row with more than one `emphasis="primary"` button logs a warning.
+
 ## Sizes
 
 <ComponentPreview center>
@@ -289,7 +313,8 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 
 | Attribute   | Type                                                                            | Default    | Description                                                                 |
 | ----------- | ------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`  | Visual style                                                                |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`  | Visual style; renders solid when omitted                                    |
+| `emphasis`  | `'normal' \| 'primary' \| 'cancel' \| 'destructive'`                           | `'normal'` | Semantic role that picks a `color`/`variant` default; an explicit one wins  |
 | `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | N/A | Semantic color; uncolored neutral when omitted                              |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                          | `'md'`     | Button size                                                                 |
 | `type`      | `'button' \| 'submit' \| 'reset'`                                               | `'button'` | HTML button type for form association                                       |
@@ -371,6 +396,7 @@ Removes spacing and connects buttons with shared borders: use for segmented cont
 | `--button-padding`                   | Inner padding                                                | Size-dependent      |
 | `--button-gap`                       | Gap between icon and text                                    | Size-dependent      |
 | `--button-font-size`                 | Font size                                                    | Size-dependent      |
+| `--button-min-height`                | Minimum height floor                                         | `44px` touch target |
 | `--button-frost-active-bg`           | Background when hovered/pressed in frost variant             | Variant-dependent   |
 | `--button-frost-active-border-color` | Border color when hovered/pressed in frost variant           | Variant-dependent   |
 

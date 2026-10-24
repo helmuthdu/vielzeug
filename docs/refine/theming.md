@@ -144,6 +144,31 @@ A flat color override is always light (or always dark). Use `light-dark()` to ke
 
 OKLCH is recommended for custom colors: lightness steps are perceptually uniform, contrast ratios stay consistent across the ramp, and the wide gamut covers P3 displays.
 
+## Increased Contrast
+
+A third appearance context sits alongside light and dark. The OS "increase contrast" setting is honored automatically, and an explicit `html.contrast-more` class gives an app the same path without an OS setting:
+
+```css
+@media (prefers-contrast: more) { /* applied automatically */ }
+html.contrast-more { /* manual opt-in, same effect */ }
+```
+
+Both push the neutral ramp toward the extremes, thicken separators, and widen every focus ring (via `--focus-ring-width`), so a reader who cannot parse the default ramp has a verified higher-contrast path.
+
+## Surfaces
+
+Components pick a background by role, never by a raw contrast-ramp step, so depth stays correct in both appearances:
+
+| Token               | Role                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| `--surface-base`    | default page-level surface                                  |
+| `--surface-sunken`  | recessed wells, inset fields                                |
+| `--surface-raised`  | cards and panels resting on the base                        |
+| `--surface-overlay` | floating layers (dialog, popover, menu, drawer, command palette) |
+| `--surface-inset`   | deepest inset fill                                          |
+
+`--surface-overlay` reads as a foreground surface in both schemes; in dark mode it steps one ramp level brighter (`html.dark` re-declares it) so a dialog separates from the page behind it.
+
 ## Custom Themes
 
 ### Scoped Theme Class
@@ -329,7 +354,7 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
 
 | Token         | Value           |
 | ------------- | --------------- |
-| `--text-2xs`  | 0.625rem (10px) |
+| `--text-2xs`  | 0.6875rem (11px) |
 | `--text-xs`   | 0.75rem (12px)  |
 | `--text-sm`   | 0.875rem (14px) |
 | `--text-base` | 1rem (16px)     |
@@ -337,6 +362,8 @@ One shared, monotonic stacking scale for an entire page: sticky headers, dropdow
 | `--text-xl`   | 1.25rem (20px)  |
 | `--text-2xl`  | 1.5rem (24px)   |
 | `--text-3xl`  | 1.875rem (30px) |
+
+`--text-2xs` (11px) is the legibility floor: component text never ships smaller. `--text-3xl` is reserved for display values (e.g. a circular-progress label), not running text.
 
 **Heading scale (`--heading-*`)**: used by `<ore-text variant="heading">`:
 
@@ -442,6 +469,63 @@ transition: color var(--transition-fast), background var(--transition-fast);
 ```
 :::
 
+**Named animations:**
+
+Keyframe + house timing as one token, composed from the duration/easing scale above so reduced motion governs every one of them. The keyframes ship in `@vielzeug/refine/styles/animation.css`.
+
+| Token                        | Keyframe            | Timing                          |
+| ---------------------------- | ------------------- | ------------------------------- |
+| `--animate-fade-in`          | `fade-in`           | `150ms ease-out both`           |
+| `--animate-fade-out`         | `fade-out`          | `150ms ease-in both`            |
+| `--animate-fade-in-up`       | `fade-in-up`        | `300ms ease-move both`          |
+| `--animate-scale-in`         | `scale-in`          | `200ms ease-overshoot both`     |
+| `--animate-slide-in-from-top`| `slide-in-from-top` | `300ms ease-move both`          |
+| `--animate-slide-in-from-bottom` | `slide-in-from-bottom` | `300ms ease-move both`   |
+| `--animate-slide-in-from-left` | `slide-in-from-left` | `300ms ease-move both`       |
+| `--animate-slide-in-from-right` | `slide-in-from-right` | `300ms ease-move both`      |
+| `--animate-spin`             | `spin`              | loader duration, linear, infinite |
+| `--animate-ping`             | `ping`              | `1000ms ease-out infinite`      |
+| `--animate-pulse`            | `pulse`             | `1000ms ease-in-out infinite`   |
+| `--animate-bounce`           | `bounce`            | `1000ms ease-in-out infinite`   |
+| `--animate-progress-bar`     | `progress-bar`      | `1400ms ease-in-out infinite`   |
+
+Consume them anywhere — inside a component's shadow DOM they inherit through the boundary like any custom property:
+
+```css
+.banner {
+  animation: var(--animate-fade-in-up);
+}
+```
+
+Inside a Refine component stylesheet, wrap with the escape hatch so motion mode can switch the declaration off: `animation: var(--_motion-animation, var(--animate-fade-in-up));`
+
+## Motion Mode
+
+Reduced motion has three states, mirroring `@vielzeug/necromancer`'s `MotionMode`:
+
+| State | How | Effect |
+| --- | --- | --- |
+| System (default) | no `data-motion` attribute | Follows `prefers-reduced-motion` |
+| Reduced | `data-motion="reduced"` on `<html>` | Forces reduction regardless of the OS |
+| Full | `data-motion="full"` on `<html>` | Opts back in despite an OS-level reduction |
+
+Set it from JavaScript with `setMotionMode()` (or read the current state with `getMotionMode()`):
+
+```ts
+import { getMotionMode, setMotionMode } from '@vielzeug/refine';
+
+setMotionMode('reduced'); // an app "reduce motion" setting forces reduction
+setMotionMode('system'); // back to following the OS preference
+```
+
+The mode drives the token layer: every `--duration-*`/`--transition-*` token zeroes and the `--_motion-*` escape hatches switch to `none`, which reaches every CSS animation and transition in the library — including inside shadow DOMs, because custom properties inherit through the boundary. Programmatic motion built on necromancer honors the same preference through its own `motion` option.
+
+The components that move their content programmatically — DataGrid row sorting, command-palette result filtering, and the toast stack — read their timing from the same tokens at animation time, so a zeroed `--duration-200` skips the reflow entirely rather than playing it instantly. Override `--duration-200` on one component to retune (or `0` to silence) just its reflow.
+
+::: tip
+Overlay enter/exit transitions use literal durations on purpose in a few places (dialog, navigation-menu panel): a `none` member invalidates an entire `transition` shorthand, which would drop the `display allow-discrete` hold that keeps the element in the top layer during exit. Those transitions still reduce, because the eased properties collapse to their zero-duration siblings' behavior under the mode.
+:::
+
 ### All Token Categories
 
 | Category                   | Prefix                                      | Description                                        |
@@ -454,6 +538,11 @@ transition: color var(--transition-fast), background var(--transition-fast);
 | **Aspect Ratios**          | `--aspect-*`                                | Common aspect ratios (square, video, wide…)        |
 | **3D Perspective**         | `--perspective-*`                           | Transform perspective distances                    |
 | **Grid Templates**         | `--grid-{1–12}`                             | CSS Grid column repeat helpers                     |
+| **Grid Auto-fit Floor**    | `--grid-min-item-width`                     | Minimum `auto-fit` column width (250px)            |
+| **Surfaces**               | `--surface-{base,sunken,raised,overlay,inset}` | Role-named backgrounds, appearance-aware        |
+| **Target Spacing**         | `--target-gap-{bezel,open}`                 | Minimum gap between controls (bezeled / borderless) |
+| **Safe-area Insets**       | `--safe-area-inset-block/inline-*`          | Notch/home-indicator clearance (0 off-device)      |
+| **Focus Ring**             | `--focus-ring{,-width,-color,-offset}`      | Keyboard focus indicator primitives                |
 | **Border Widths**          | `--border-*`                                | Stroke widths (0, 1px, 2px, 4px, 8px)              |
 | **Ring Utilities**         | `--ring-*`                                  | Focus ring box-shadow helpers                      |
 | **Border Radius**          | `--rounded-*`                               | Corner rounding scale                              |
@@ -468,6 +557,8 @@ transition: color var(--transition-fast), background var(--transition-fast);
 | **Shade Ramp**              | `--shade-*`                                 | Shared lighter/light/dark/darker derivation recipe |
 | **Contrast Scale**         | `--color-contrast-{50–900}`                 | 11-step light/dark adaptive palette                |
 | **Section Spacing**        | `--section-spacing`                         | Default block section gap (2rem)                   |
+| **Named Animations**       | `--animate-*`                               | Keyframe + house timing as one token               |
+| **Overlay Enter**          | `--overlay-enter-*`                         | Shared enter displacement/scale for overlays       |
 
 ::: details View theme.css
 <<< @/../packages/refine/src/styles/theme.css
