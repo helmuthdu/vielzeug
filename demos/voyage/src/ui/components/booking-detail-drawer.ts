@@ -116,7 +116,7 @@ define('booking-detail-drawer', {
           `,
         )}
         <div slot="footer">
-          <ore-button variant="ghost" @click=${close}>Close</ore-button>
+          <ore-button emphasis="cancel" @click=${close}>Close</ore-button>
           <ore-button
             color="primary"
             @click=${() =>

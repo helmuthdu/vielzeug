@@ -62,7 +62,7 @@ export async function setupOfflineSync(): Promise<void> {
 
 export function simulateOffline(): void {
   networkStatus.value = 'offline';
-  bus.emit('toast:show', { message: 'Offline mode enabled. Changes will be queued.', variant: 'info' });
+  bus.emit('toast:show', { message: 'Offline mode enabled. Changes will be queued.', status: 'info' });
 }
 
 export async function reconnect(): Promise<void> {
@@ -70,5 +70,5 @@ export async function reconnect(): Promise<void> {
   networkStatus.value = 'syncing';
   await postmaster.flush();
   networkStatus.value = 'online';
-  bus.emit('toast:show', { message: 'All queued changes synced.', variant: 'success' });
+  bus.emit('toast:show', { message: 'All queued changes synced.', status: 'success' });
 }

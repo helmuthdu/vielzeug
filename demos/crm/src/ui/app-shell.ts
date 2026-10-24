@@ -150,7 +150,7 @@ define('crm-app-shell', {
       userMenuOpen.value = false;
     };
     const runHistory = (action: () => Promise<void>): void => {
-      void action().catch(() => toast.add({ color: 'error', message: t('action.historyFailed') }));
+      void action().catch(() => toast.add({ message: t('action.historyFailed'), status: 'danger' }));
     };
     const paletteItems = (): PaletteItem[] => {
       const items: PaletteItem[] = [
@@ -353,11 +353,11 @@ define('crm-app-shell', {
         { when: (event) => !typing(event) },
       );
       const unmountKeymap = keymap.mount(document);
-      const unsubscribeToast = bus.on('toast:show', ({ action, message, variant }) =>
+      const unsubscribeToast = bus.on('toast:show', ({ action, message, status }) =>
         toast.add({
           actions: action ? [{ label: action.label, onClick: action.run }] : undefined,
-          color: variant,
           message,
+          status,
         }),
       );
       const createListener = (): void => {

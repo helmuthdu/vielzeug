@@ -146,9 +146,9 @@ define('compare-view', {
     const share = async (): Promise<void> => {
       try {
         await navigator.clipboard.writeText(location.href);
-        bus.emit('toast:show', { message: t('compare.shareCopied'), variant: 'success' });
+        bus.emit('toast:show', { message: t('compare.shareCopied'), status: 'success' });
       } catch {
-        bus.emit('toast:show', { message: t('compare.shareFailed'), variant: 'error' });
+        bus.emit('toast:show', { message: t('compare.shareFailed'), status: 'danger' });
       }
     };
     const chooseModels = (): void => {

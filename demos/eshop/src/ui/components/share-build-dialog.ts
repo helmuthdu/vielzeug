@@ -79,7 +79,7 @@ define('share-build-dialog', {
           </details>
         </div>
         <div slot="footer">
-          <ore-button rounded variant="bordered" @click=${onClose}>${() => t('common.close')}</ore-button>
+          <ore-button rounded emphasis="cancel" @click=${onClose}>${() => t('common.close')}</ore-button>
         </div>
       </ore-dialog>
     `;

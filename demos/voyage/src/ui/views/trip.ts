@@ -37,7 +37,7 @@ define('trip-view', {
         type: 'activity',
       });
       activityOpen.value = false;
-      toast.add({ color: 'success', message: 'Activity added to 13 October.' });
+      toast.add({ message: 'Activity added to 13 October.', status: 'success' });
     };
     const markerStyle = (city: keyof RouteGeometry['points']): string => {
       const point = routeGeometry.value.points[city];
@@ -78,7 +78,7 @@ define('trip-view', {
                 variant="frost"
                 size="sm"
                 @click=${() => {
-                  toast.add({ color: 'info', message: 'A private trip link was copied.' });
+                  toast.add({ message: 'A private trip link was copied.', status: 'info' });
                 }}>
                 <ore-icon slot="prefix" name="share-2" size="16" aria-hidden="true"></ore-icon>
                 Share
@@ -374,13 +374,13 @@ define('trip-view', {
           </div>
           <div slot="footer">
             <ore-button
-              variant="ghost"
+              emphasis="cancel"
               @click=${() => {
                 activityOpen.value = false;
               }}>
               Cancel
             </ore-button>
-            <ore-button color="primary" @click=${addActivity}>Add to itinerary</ore-button>
+            <ore-button emphasis="primary" @click=${addActivity}>Add to itinerary</ore-button>
           </div>
         </ore-dialog>
       </article>

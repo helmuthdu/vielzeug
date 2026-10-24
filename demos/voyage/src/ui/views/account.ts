@@ -15,7 +15,7 @@ import { checkedOf, valueOf } from '../format';
 define('account-view', {
   setup() {
     const save = (message: string): void => {
-      toast.add({ color: 'success', message });
+      toast.add({ message, status: 'success' });
     };
 
     if (activeRoute.value === 'settings') {

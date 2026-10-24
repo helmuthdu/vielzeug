@@ -25,7 +25,7 @@ export async function archiveActivity(id: string): Promise<boolean> {
   bus.emit('toast:show', {
     action: { label: t('action.undo'), run: () => void ledger.undo() },
     message: t('activity.activityArchived'),
-    variant: 'success',
+    status: 'success',
   });
   return true;
 }

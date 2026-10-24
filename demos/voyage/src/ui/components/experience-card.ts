@@ -3,6 +3,7 @@ import '@vielzeug/refine/button';
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/skeleton';
+import '@vielzeug/refine/text';
 import { html } from '@vielzeug/ore';
 import { toast } from '@vielzeug/refine/toast';
 import type { Experience } from '../../core/types';
@@ -24,7 +25,9 @@ export function experienceCard(experience: Experience) {
           </span>
         </div>
         <h3 class="experience-card__title">${experience.name}</h3>
-        <p class="experience-card__description">${experience.description}</p>
+        <ore-text as="p" lines="2" expandable class="experience-card__description">
+          ${experience.description}
+        </ore-text>
         <div class="experience-card__footer">
           <p class="experience-card__price"><strong>${money(experience.price)}</strong><span>per person</span></p>
           <ore-button
@@ -34,7 +37,7 @@ export function experienceCard(experience: Experience) {
             rounded="full"
             variant="flat"
             aria-label=${`Add ${experience.name} to trip`}
-            @click=${() => toast.add({ color: 'success', message: `${experience.name} added to your trip.` })}>
+            @click=${() => toast.add({ message: `${experience.name} added to your trip.`, status: 'success' })}>
             <ore-icon slot="prefix" name="plus" size="14" aria-hidden="true"></ore-icon>
             Add to trip
           </ore-button>

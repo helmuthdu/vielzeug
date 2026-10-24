@@ -11,7 +11,7 @@ export type AppEvents = {
   'compare:changed': { modelIds: string[] };
   'order:placed': { orderId: string };
   'order:status-changed': { orderId: string; status: OrderStatus };
-  'toast:show': { message: string; variant: 'error' | 'info' | 'success' };
+  'toast:show': { message: string; status: 'danger' | 'info' | 'success' };
 };
 
 export const bus = createBus<AppEvents>();

@@ -478,14 +478,14 @@ define('crm-record-dialog', {
             @change=${patch('ownerId')}></ore-select>
           <div class="dialog-actions">
             <ore-button
-              variant="ghost"
+              emphasis="cancel"
               type="button"
               @click=${() => {
                 request.value = null;
               }}>
               ${() => t('recordDialog.cancel')}
             </ore-button>
-            <ore-button color="primary" type="submit">
+            <ore-button emphasis="primary" type="submit">
               ${() => (isEdit.value ? t('recordDialog.saveChanges') : title.value)}
             </ore-button>
           </div>

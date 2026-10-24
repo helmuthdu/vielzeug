@@ -9,10 +9,10 @@ import type { Order, OrderStatus } from './types';
 
 type OrderAction = 'cancel' | 'create' | 'read' | 'updateStatus';
 
-function notify(message: string, variant: 'error' | 'info' | 'success' = 'error'): void {
-  bus.emit('toast:show', { message, variant });
+function notify(message: string, status: 'danger' | 'info' | 'success' = 'danger'): void {
+  bus.emit('toast:show', { message, status });
 
-  if (variant === 'error') logger.warn(message);
+  if (status === 'danger') logger.warn(message);
   else logger.info(message);
 }
 

@@ -20,7 +20,7 @@ export async function moveOpportunity(id: string, to: OpportunityStage): Promise
   if (!canTransition(id, from, to)) {
     bus.emit('toast:show', {
       message: `Cannot move opportunity from ${from.replace('-', ' ')} to ${to.replace('-', ' ')}.`,
-      variant: 'error',
+      status: 'danger',
     });
     return false;
   }
@@ -44,7 +44,7 @@ export async function moveOpportunity(id: string, to: OpportunityStage): Promise
   bus.emit('toast:show', {
     action: { label: 'Undo', run: () => void ledger.undo() },
     message: `Opportunity moved to ${to.replace('-', ' ')}.`,
-    variant: 'success',
+    status: 'success',
   });
   return true;
 }
@@ -66,7 +66,7 @@ export async function editOpportunity(id: string, patch: Partial<Opportunity>): 
   bus.emit('toast:show', {
     action: { label: 'Undo', run: () => void ledger.undo() },
     message: 'Opportunity updated.',
-    variant: 'success',
+    status: 'success',
   });
   return true;
 }

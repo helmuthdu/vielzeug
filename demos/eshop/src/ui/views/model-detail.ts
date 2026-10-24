@@ -221,13 +221,13 @@ define<ModelConfiguratorProps>('model-configurator', {
 
     function onAddToCart(): void {
       if (model().availability === 'coming-soon') {
-        bus.emit('toast:show', { message: t('model.notifyMeSuccess'), variant: 'success' });
+        bus.emit('toast:show', { message: t('model.notifyMeSuccess'), status: 'success' });
         return;
       }
 
       if (!addToCart(configuration.value)) return;
       if (model().availability === 'limited') {
-        bus.emit('toast:show', { message: t('model.limitedAvailabilityNotice'), variant: 'info' });
+        bus.emit('toast:show', { message: t('model.limitedAvailabilityNotice'), status: 'info' });
       }
       void router.navigate({ name: 'cart' });
     }

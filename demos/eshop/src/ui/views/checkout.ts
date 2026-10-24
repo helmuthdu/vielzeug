@@ -79,7 +79,7 @@ function goto(name: RouteNames, params?: Record<string, string>): void {
 }
 
 function notifyAndRedirect(messageKey: string, target: RouteNames): false {
-  bus.emit('toast:show', { message: t(messageKey), variant: 'error' });
+  bus.emit('toast:show', { message: t(messageKey), status: 'danger' });
   goto(target);
 
   return false;

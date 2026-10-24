@@ -13,7 +13,7 @@ export type OpportunityInput = Omit<Opportunity, 'id'>;
 
 function permitted(action: 'create' | 'update'): boolean {
   if (can(action)) return true;
-  bus.emit('toast:show', { message: `You do not have permission to ${action} CRM records.`, variant: 'error' });
+  bus.emit('toast:show', { message: `You do not have permission to ${action} CRM records.`, status: 'danger' });
   return false;
 }
 
@@ -34,7 +34,7 @@ function activity(
 }
 
 function success(message: string): void {
-  bus.emit('toast:show', { message, variant: 'success' });
+  bus.emit('toast:show', { message, status: 'success' });
 }
 
 export function createCompany(input: CompanyInput): string | null {

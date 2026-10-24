@@ -436,9 +436,8 @@ define('orders-view', {
                                     () => canCancelOrder(order.value),
                                     () => html`
                                       <ore-button
-                                        variant="ghost"
+                                        emphasis="destructive"
                                         size="sm"
-                                        color="error"
                                         label=${() => t('orders.cancelNamed', { id: orderNumber(order.value.id) })}
                                         @click=${() => (cancelTarget.value = order.value)}>
                                         ${() => t('orders.cancel')}
@@ -470,10 +469,12 @@ define('orders-view', {
           ${() => t('orders.cancelConfirmBody', { id: cancelTarget.value ? orderNumber(cancelTarget.value.id) : '' })}
         </p>
         <div slot="footer">
-          <ore-button variant="outline" @click=${() => (cancelTarget.value = null)}>
+          <ore-button emphasis="cancel" @click=${() => (cancelTarget.value = null)}>
             ${() => t('orders.cancelConfirmKeep')}
           </ore-button>
-          <ore-button color="error" @click=${onCancelConfirm}>${() => t('orders.cancelConfirmAction')}</ore-button>
+          <ore-button emphasis="destructive" @click=${onCancelConfirm}>
+            ${() => t('orders.cancelConfirmAction')}
+          </ore-button>
         </div>
       </ore-dialog>
     `;

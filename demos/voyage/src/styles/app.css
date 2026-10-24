@@ -845,13 +845,11 @@ ore-date-picker {
   color: var(--voyage-muted);
 }
 
+/* The two-line clamp itself comes from ore-text lines="2" expandable, which also
+   reveals the full text on tap. */
 .experience-card__description {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
   min-height: var(--size-11);
   margin: 0;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--voyage-muted);

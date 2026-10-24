@@ -16,8 +16,8 @@ export function hotelCard(hotel: Hotel, options: { horizontal?: boolean } = {}) 
   const toggleSaved = (): void => {
     const saved = toggleSavedHotel(hotel.id);
     toast.add({
-      color: saved ? 'success' : 'info',
       message: saved ? `${hotel.name} saved.` : `${hotel.name} removed.`,
+      status: saved ? 'success' : 'info',
     });
   };
   const openHotel = (event: MouseEvent): void => {

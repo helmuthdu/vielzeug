@@ -177,9 +177,9 @@ define('settings-view', {
         .join('\n');
       try {
         await navigator.clipboard.writeText(text);
-        bus.emit('toast:show', { message: t('settings.logCopied'), variant: 'success' });
+        bus.emit('toast:show', { message: t('settings.logCopied'), status: 'success' });
       } catch {
-        bus.emit('toast:show', { message: t('settings.logCopyFailed'), variant: 'error' });
+        bus.emit('toast:show', { message: t('settings.logCopyFailed'), status: 'danger' });
       }
     };
 

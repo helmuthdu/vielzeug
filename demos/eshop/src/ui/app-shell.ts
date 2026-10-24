@@ -321,8 +321,8 @@ define('app-shell', {
   setup() {
     toast.configure({ position: 'bottom-right' });
 
-    const unsubscribeToast = bus.on('toast:show', ({ message, variant }) => {
-      toast.add({ color: variant, message });
+    const unsubscribeToast = bus.on('toast:show', ({ message, status }) => {
+      toast.add({ message, status });
     });
 
     onCleanup(unsubscribeToast);

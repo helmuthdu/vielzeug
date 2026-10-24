@@ -22,8 +22,8 @@ define('hotel-view', {
     const toggleSaved = (): void => {
       const isSaved = toggleSavedHotel(hotel.value.id);
       toast.add({
-        color: isSaved ? 'success' : 'info',
         message: isSaved ? `${hotel.value.name} saved.` : `${hotel.value.name} removed.`,
+        status: isSaved ? 'success' : 'info',
       });
     };
     return html`

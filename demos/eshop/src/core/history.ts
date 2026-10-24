@@ -71,19 +71,19 @@ export function toggleSavedModel(modelId: string): void {
   const saved = savedModelIds.value.includes(modelId);
 
   savedModelIds.value = saved ? savedModelIds.value.filter((id) => id !== modelId) : [...savedModelIds.value, modelId];
-  bus.emit('toast:show', { message: t(saved ? 'saved.removed' : 'saved.added'), variant: saved ? 'info' : 'success' });
+  bus.emit('toast:show', { message: t(saved ? 'saved.removed' : 'saved.added'), status: saved ? 'info' : 'success' });
 }
 
 export function toggleCompare(modelId: string): void {
   if (compareModelIds.value.includes(modelId)) {
     removeFromCompare(modelId);
-    bus.emit('toast:show', { message: t('compare.removed'), variant: 'info' });
+    bus.emit('toast:show', { message: t('compare.removed'), status: 'info' });
 
     return;
   }
 
   if (compareModelIds.value.length >= MAX_COMPARE) {
-    bus.emit('toast:show', { message: t('compare.limitReached'), variant: 'info' });
+    bus.emit('toast:show', { message: t('compare.limitReached'), status: 'info' });
 
     return;
   }
@@ -91,6 +91,6 @@ export function toggleCompare(modelId: string): void {
   addToCompare(modelId);
   bus.emit('toast:show', {
     message: t('compare.added', { count: compareModelIds.value.length }),
-    variant: 'success',
+    status: 'success',
   });
 }

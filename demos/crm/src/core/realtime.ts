@@ -56,7 +56,7 @@ export function simulateLiveActivity(): void {
     opportunityId: opportunity.id,
   });
   bus.emit('activity:add', { actor: 'Maria Silva', description, opportunityId: opportunity.id });
-  bus.emit('toast:show', { message: 'Live activity received from Maria Silva.', variant: 'info' });
+  bus.emit('toast:show', { message: 'Live activity received from Maria Silva.', status: 'info' });
   requestAnimationFrame(() => {
     const item = document.querySelector('crm-activity-item');
     if (!item) return;

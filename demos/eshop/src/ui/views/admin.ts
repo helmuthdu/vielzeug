@@ -135,7 +135,7 @@ define('admin-view', {
 
     async function onExportCsv(): Promise<void> {
       await exportOrdersAsCsv(allOrdersSignal.value);
-      bus.emit('toast:show', { message: t('admin.exportSuccess'), variant: 'success' });
+      bus.emit('toast:show', { message: t('admin.exportSuccess'), status: 'success' });
     }
 
     async function onApplyBulkStatus(): Promise<void> {
