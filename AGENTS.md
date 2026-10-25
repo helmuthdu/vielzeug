@@ -74,6 +74,14 @@ User-requested output formats take precedence, except that a safety gate always 
 
 This section is the single owner of validation commands and workflow facts; each skill's Validation table only maps changed surfaces to these commands and never restates versioning or policy facts. Every code change finishes with the narrowest useful validation for the changed surface; each skill's Validation section says which. Report commands that could not run and their exact failure; never infer success from inspection alone.
 
+### Build Scheduling
+
+- Treat package and docs builds as final validation gates, not checks to repeat after each edit, component, or plan step. During implementation, use focused source-backed tests, lint/type checks, and source-backed browser previews.
+- Plan one build per affected package after its implementation changes are complete, in dependency order. Batch checks that consume built output after that build. A successful build also satisfies the final build gate while its inputs remain unchanged; do not repeat it just because another plan step or skill lists it.
+- Build earlier only when the next check actually consumes built artifacts and they are missing or stale, or when investigating build/output behavior. Before each build, state the artifact consumer and why an existing result cannot be reused. Never test changed source against stale dist and claim it validates the change.
+- After a successful build, rebuild only if a relevant input changed (source, styles, generated inputs, exports, dependency artifacts, or build configuration). Test-only or docs-only edits do not invalidate a library build unless that build consumes them. Reuse unchanged dependency artifacts; do not rebuild the monorepo to validate one package.
+- VitePress local development aliases workspace packages to source, so package edits do not require a rebuild for `docs:dev` preview. Keep required production builds (including Codex before the docs build) for the final gate; preview is not a substitute for production-output verification.
+
 ```bash
 pnpm setup                                          # fresh checkout
 pnpm vitest run packages/<name>/src/__tests__/      # standard test path

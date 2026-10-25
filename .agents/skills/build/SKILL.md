@@ -26,7 +26,7 @@ Use the required post-change validation as the default; do not rerun the same te
 3. Classify every changed surface and determine dependency, documentation, validation, and release impact. For non-trivial work, state a change map before editing: contracts affected, implementation areas, dependents, tests, docs, validation, release impact.
 4. Apply the delegation rules in `AGENTS.md` before splitting work.
 5. Apply every relevant change flow below.
-6. Run the validation row below for every changed surface.
+6. Run the validation row below for every changed surface, following `AGENTS.md` Build Scheduling: use focused source-backed checks during iteration, then batch required builds and artifact-dependent checks at the final gate. Reuse successful checks across plan steps while their inputs remain unchanged.
 7. Report (see Report) and confirm every completion criterion.
 
 ## Behavior change

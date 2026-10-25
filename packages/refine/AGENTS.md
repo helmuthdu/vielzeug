@@ -31,6 +31,8 @@ Two test layers cover different concerns.
 
 **Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed: loads the built IIFE stack via `page.setContent()`. Requires a prior `pnpm build`.
 
+Follow root Build Scheduling: iterate with focused jsdom tests and the source-backed docs preview, then build Refine once after the implementation changes and batch the affected e2e files against that output. Do not build once per component or test file. E2E-test-only edits can reuse that build; changes to bundled source/styles or consumed dependency artifacts require a fresh build before the next e2e run. If an earlier dist-backed check is necessary, explain why before building; never substitute a stale-dist test pass for validation of source edits.
+
 ```bash
 cd packages/refine
 pnpm test:e2e                                      # run all e2e tests
