@@ -1,7 +1,16 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sat, 24 Oct 2026 19:56:28 GMT and should not be manually modified.
+This log was last generated on Sun, 25 Oct 2026 05:13:02 GMT and should not be manually modified.
 
+## 26.10.20
+Sun, 25 Oct 2026 05:13:02 GMT
+
+### Minor changes
+
+- ore-button: add opt-in resting elevation; fix keyboard focus ring never painting and being erased while pressed; fix dark-mode neutral halo painting a dark seam on the top edge
+- ore-dialog: give mobile footer actions edge padding that matches their sides and adds the home-indicator inset on top
+- refine: motion system hardening - every transition/animation timing now token-driven, component-local prefers-reduced-motion blocks replaced by the root motion-mode hatches (data-motion='full' now opts back in everywhere), hover-move affordances guarded behind @media (hover: hover), new --duration-250/350/1200 tokens
+- WCAG 2.2 AA: marquee pauses on hover/focus by default, slider slot label mirrors to aria-label, file drop zone and query-bar filter named from visible content, AA-compliant helper-text token, calendar/date-picker outside-day color token, sticky-header scroll-padding, WCAG 2.2 axe tag set with real-browser scans for all 44 components
 ## 26.10.19
 Sat, 24 Oct 2026 19:56:28 GMT
 
